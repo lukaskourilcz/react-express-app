@@ -2,7 +2,7 @@ export interface Question {
   id: string;
   question: string;
   options: string[];
-  category: 'react' | 'typescript' | 'git';
+  category: 'react' | 'typescript' | 'git' | 'javascript';
 }
 
 export interface QuizResult {

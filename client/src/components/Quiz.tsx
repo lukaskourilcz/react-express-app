@@ -25,6 +25,8 @@ const getCategoryColor = (category: string) => {
       return 'secondary';
     case 'git':
       return 'warning';
+    case 'javascript':
+      return 'success';
     default:
       return 'default';
   }
@@ -155,7 +157,7 @@ function Quiz() {
             Ready to test your knowledge?
           </Typography>
           <Typography variant="body1" sx={{ mb: 4 }}>
-            {questions.length} questions about React, TypeScript, and Git
+            {questions.length} questions about React, TypeScript, JavaScript, and Git
           </Typography>
           <Button
             variant="contained"
