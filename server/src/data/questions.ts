@@ -427,7 +427,7 @@ export const questions: Question[] = [
   // TYPESCRIPT
   {
     id: '51',
-    question: 'How do you define an optional property in TypeScript?',
+    question: 'How do you define an optional property in TypeScript?\n\n```ts\ninterface User {\n  name: string;\n  age??? // How to make this optional?\n}\n```',
     options: ['property?: type', 'property: type?', 'optional property: type', 'property: type | undefined'],
     correctAnswer: 0,
     category: 'typescript',
@@ -435,7 +435,7 @@ export const questions: Question[] = [
   },
   {
     id: '52',
-    question: 'What is the correct way to define a typed array?',
+    question: 'What is the correct way to define a typed array?\n\n```ts\n// Which syntax is valid?\nconst names: ??? = ["Alice", "Bob"];\n```',
     options: ['Array<string>', 'string[]', 'Both A and B', 'string{}'],
     correctAnswer: 2,
     category: 'typescript',
@@ -443,7 +443,7 @@ export const questions: Question[] = [
   },
   {
     id: '53',
-    question: 'What does the "as" keyword do?',
+    question: 'What does the "as" keyword do?\n\n```ts\nconst input = document.getElementById("input");\nconst value = (input as HTMLInputElement).value;\n```',
     options: ['Creates an alias', 'Type assertion', 'Type declaration', 'Creates a new type'],
     correctAnswer: 1,
     category: 'typescript',
@@ -451,7 +451,7 @@ export const questions: Question[] = [
   },
   {
     id: '54',
-    question: 'What is an interface in TypeScript?',
+    question: 'What is an interface in TypeScript?\n\n```ts\ninterface User {\n  id: number;\n  name: string;\n  email: string;\n}\n```',
     options: ['A class', 'A contract that defines object shape', 'A function', 'A module'],
     correctAnswer: 1,
     category: 'typescript',
@@ -459,7 +459,7 @@ export const questions: Question[] = [
   },
   {
     id: '55',
-    question: 'How do you define a union type?',
+    question: 'How do you define a union type?\n\n```ts\n// Value can be string OR number\nlet value: string ??? number;\n```',
     options: ['type A && B', 'type A | B', 'type A + B', 'type A & B'],
     correctAnswer: 1,
     category: 'typescript',
@@ -467,7 +467,7 @@ export const questions: Question[] = [
   },
   {
     id: '56',
-    question: 'What is the "never" type used for?',
+    question: 'What is the "never" type used for?\n\n```ts\nfunction throwError(msg: string): never {\n  throw new Error(msg);\n}\n```',
     options: ['Variables never used', 'Functions that never return', 'Optional parameters', 'Nullable types'],
     correctAnswer: 1,
     category: 'typescript',
@@ -475,7 +475,7 @@ export const questions: Question[] = [
   },
   {
     id: '57',
-    question: 'What is the difference between interface and type?',
+    question: 'What is the difference between interface and type?\n\n```ts\n// Interface - can be merged\ninterface User { name: string; }\ninterface User { age: number; }\n\n// Type - more flexible\ntype Status = "active" | "inactive";\n```',
     options: ['No difference', 'Interfaces can be extended, types cannot', 'Types are more flexible, interfaces can be merged', 'Types are older'],
     correctAnswer: 2,
     category: 'typescript',
@@ -483,7 +483,7 @@ export const questions: Question[] = [
   },
   {
     id: '58',
-    question: 'What does the readonly modifier do?',
+    question: 'What does the readonly modifier do?\n\n```ts\ninterface Config {\n  readonly apiKey: string;\n}\nconst config: Config = { apiKey: "abc" };\nconfig.apiKey = "xyz"; // ???\n```',
     options: ['Makes property optional', 'Prevents property modification', 'Makes property private', 'Makes property static'],
     correctAnswer: 1,
     category: 'typescript',
@@ -491,7 +491,7 @@ export const questions: Question[] = [
   },
   {
     id: '59',
-    question: 'What is a generic in TypeScript?',
+    question: 'What is a generic in TypeScript?\n\n```ts\nfunction identity<T>(arg: T): T {\n  return arg;\n}\nidentity<string>("hello");\nidentity<number>(42);\n```',
     options: ['A general type', 'A type parameter that allows reusable components', 'A basic type', 'An any type'],
     correctAnswer: 1,
     category: 'typescript',
@@ -499,7 +499,7 @@ export const questions: Question[] = [
   },
   {
     id: '60',
-    question: 'How do you type a function that returns nothing?',
+    question: 'How do you type a function that returns nothing?\n\n```ts\nfunction logMessage(msg: string): ??? {\n  console.log(msg);\n}\n```',
     options: ['null', 'undefined', 'void', 'never'],
     correctAnswer: 2,
     category: 'typescript',
@@ -507,7 +507,7 @@ export const questions: Question[] = [
   },
   {
     id: '61',
-    question: 'What is the unknown type?',
+    question: 'What is the unknown type?\n\n```ts\nlet value: unknown = getData();\n// Must check type before using\nif (typeof value === "string") {\n  console.log(value.toUpperCase());\n}\n```',
     options: ['Same as any', 'A type-safe any', 'An error type', 'A null type'],
     correctAnswer: 1,
     category: 'typescript',
@@ -515,7 +515,7 @@ export const questions: Question[] = [
   },
   {
     id: '62',
-    question: 'What is an intersection type?',
+    question: 'What is an intersection type?\n\n```ts\ntype Employee = Person & Worker;\n// Employee must have ALL properties\n// from both Person AND Worker\n```',
     options: ['A | B', 'A & B', 'A + B', 'A - B'],
     correctAnswer: 1,
     category: 'typescript',
@@ -523,7 +523,7 @@ export const questions: Question[] = [
   },
   {
     id: '63',
-    question: 'What does Partial<T> do?',
+    question: 'What does Partial<T> do?\n\n```ts\ninterface User {\n  name: string;\n  age: number;\n}\ntype PartialUser = Partial<User>;\n// { name?: string; age?: number; }\n```',
     options: ['Makes all properties required', 'Makes all properties optional', 'Removes all properties', 'Adds new properties'],
     correctAnswer: 1,
     category: 'typescript',
@@ -531,7 +531,7 @@ export const questions: Question[] = [
   },
   {
     id: '64',
-    question: 'What does Required<T> do?',
+    question: 'What does Required<T> do?\n\n```ts\ninterface Props {\n  name?: string;\n  age?: number;\n}\ntype RequiredProps = Required<Props>;\n// { name: string; age: number; }\n```',
     options: ['Makes all properties optional', 'Makes all properties required', 'Removes all properties', 'Validates properties'],
     correctAnswer: 1,
     category: 'typescript',
@@ -539,7 +539,7 @@ export const questions: Question[] = [
   },
   {
     id: '65',
-    question: 'What does Pick<T, K> do?',
+    question: 'What does Pick<T, K> do?\n\n```ts\ninterface User {\n  id: number;\n  name: string;\n  email: string;\n}\ntype UserPreview = Pick<User, "id" | "name">;\n// { id: number; name: string; }\n```',
     options: ['Removes properties K from T', 'Creates a type with only properties K from T', 'Adds properties K to T', 'Validates K in T'],
     correctAnswer: 1,
     category: 'typescript',
@@ -547,7 +547,7 @@ export const questions: Question[] = [
   },
   {
     id: '66',
-    question: 'What does Omit<T, K> do?',
+    question: 'What does Omit<T, K> do?\n\n```ts\ninterface User {\n  id: number;\n  name: string;\n  password: string;\n}\ntype SafeUser = Omit<User, "password">;\n// { id: number; name: string; }\n```',
     options: ['Creates a type with only K', 'Creates a type without properties K', 'Adds K to T', 'Validates T'],
     correctAnswer: 1,
     category: 'typescript',
@@ -555,7 +555,7 @@ export const questions: Question[] = [
   },
   {
     id: '67',
-    question: 'How do you type an object with dynamic keys?',
+    question: 'How do you type an object with dynamic keys?\n\n```ts\n// Object with any string keys\nconst scores: { [key: string]: number } = {\n  alice: 95,\n  bob: 87\n};\n```',
     options: ['{ key: value }', '{ [key: string]: value }', '{ any: value }', '{ dynamic: value }'],
     correctAnswer: 1,
     category: 'typescript',
@@ -563,7 +563,7 @@ export const questions: Question[] = [
   },
   {
     id: '68',
-    question: 'What is a type guard?',
+    question: 'What is a type guard?\n\n```ts\nfunction isString(value: unknown): value is string {\n  return typeof value === "string";\n}\n\nif (isString(data)) {\n  // TypeScript knows data is string here\n  console.log(data.toUpperCase());\n}\n```',
     options: ['A security feature', 'A way to narrow types', 'A type validator', 'A compiler option'],
     correctAnswer: 1,
     category: 'typescript',
@@ -571,7 +571,7 @@ export const questions: Question[] = [
   },
   {
     id: '69',
-    question: 'What does the "keyof" operator return?',
+    question: 'What does the "keyof" operator return?\n\n```ts\ninterface User {\n  name: string;\n  age: number;\n}\ntype UserKeys = keyof User;\n// "name" | "age"\n```',
     options: ['All values of an object', 'All keys of a type as a union', 'The first key', 'A boolean'],
     correctAnswer: 1,
     category: 'typescript',
@@ -579,7 +579,7 @@ export const questions: Question[] = [
   },
   {
     id: '70',
-    question: 'What is a tuple in TypeScript?',
+    question: 'What is a tuple in TypeScript?\n\n```ts\n// Fixed length, specific types\nconst point: [number, number] = [10, 20];\nconst record: [string, number] = ["age", 25];\n```',
     options: ['A dynamic array', 'A fixed-length array with specific types', 'An object', 'A map'],
     correctAnswer: 1,
     category: 'typescript',
@@ -587,7 +587,7 @@ export const questions: Question[] = [
   },
   {
     id: '71',
-    question: 'How do you make a property non-nullable?',
+    question: 'How do you make a property non-nullable?\n\n```ts\ntype MaybeString = string | null | undefined;\ntype DefinitelyString = NonNullable<MaybeString>;\n// string\n```',
     options: ['property!', 'NonNullable<property>', 'property!!', 'Required<property>'],
     correctAnswer: 1,
     category: 'typescript',
@@ -595,7 +595,7 @@ export const questions: Question[] = [
   },
   {
     id: '72',
-    question: 'What is the typeof operator used for in TypeScript?',
+    question: 'What is the typeof operator used for in TypeScript?\n\n```ts\nconst user = { name: "John", age: 30 };\n\n// Create type from variable\ntype User = typeof user;\n// { name: string; age: number; }\n```',
     options: ['Runtime type checking only', 'Getting the type of a variable', 'Creating new types', 'Both B and C'],
     correctAnswer: 3,
     category: 'typescript',
@@ -603,7 +603,7 @@ export const questions: Question[] = [
   },
   {
     id: '73',
-    question: 'What does Record<K, V> create?',
+    question: 'What does Record<K, V> create?\n\n```ts\ntype Roles = "admin" | "user" | "guest";\ntype RolePermissions = Record<Roles, string[]>;\n// { admin: string[]; user: string[]; guest: string[]; }\n```',
     options: ['An array', 'An object type with keys K and values V', 'A tuple', 'A map'],
     correctAnswer: 1,
     category: 'typescript',
@@ -611,7 +611,7 @@ export const questions: Question[] = [
   },
   {
     id: '74',
-    question: 'What is the ReturnType<T> utility type?',
+    question: 'What is the ReturnType<T> utility type?\n\n```ts\nfunction getUser() {\n  return { id: 1, name: "John" };\n}\n\ntype User = ReturnType<typeof getUser>;\n// { id: number; name: string; }\n```',
     options: ['Returns function parameters', 'Returns the return type of a function', 'Returns void', 'Returns never'],
     correctAnswer: 1,
     category: 'typescript',
@@ -619,7 +619,7 @@ export const questions: Question[] = [
   },
   {
     id: '75',
-    question: 'What is a discriminated union?',
+    question: 'What is a discriminated union?\n\n```ts\ntype Shape =\n  | { kind: "circle"; radius: number }\n  | { kind: "square"; size: number };\n\nfunction area(shape: Shape) {\n  if (shape.kind === "circle") {\n    return Math.PI * shape.radius ** 2;\n  }\n}\n```',
     options: ['A union with no common properties', 'A union with a common literal property', 'An intersection type', 'A generic type'],
     correctAnswer: 1,
     category: 'typescript',
