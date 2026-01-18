@@ -629,7 +629,7 @@ export const questions: Question[] = [
   // GIT
   {
     id: '76',
-    question: 'What does git init do?',
+    question: 'What does git init do?\n\n```bash\n$ git init\nInitialized empty Git repository in /project/.git/\n```',
     options: ['Clones a repository', 'Creates a new Git repository', 'Initializes a branch', 'Starts git daemon'],
     correctAnswer: 1,
     category: 'git',
@@ -637,7 +637,7 @@ export const questions: Question[] = [
   },
   {
     id: '77',
-    question: 'What does git clone do?',
+    question: 'What does git clone do?\n\n```bash\n$ git clone https://github.com/user/repo.git\nCloning into \'repo\'...\n```',
     options: ['Creates a new branch', 'Copies a repository', 'Merges branches', 'Deletes a repository'],
     correctAnswer: 1,
     category: 'git',
@@ -645,7 +645,7 @@ export const questions: Question[] = [
   },
   {
     id: '78',
-    question: 'What does git add do?',
+    question: 'What does git add do?\n\n```bash\n$ git add file.txt      # Stage specific file\n$ git add .             # Stage all changes\n```',
     options: ['Commits changes', 'Stages changes for commit', 'Pushes changes', 'Creates a branch'],
     correctAnswer: 1,
     category: 'git',
@@ -653,7 +653,7 @@ export const questions: Question[] = [
   },
   {
     id: '79',
-    question: 'What does git commit -m do?',
+    question: 'What does git commit -m do?\n\n```bash\n$ git commit -m "Add new feature"\n[main abc1234] Add new feature\n 2 files changed, 50 insertions(+)\n```',
     options: ['Merges branches', 'Creates a commit with a message', 'Pushes to remote', 'Creates a branch'],
     correctAnswer: 1,
     category: 'git',
@@ -661,7 +661,7 @@ export const questions: Question[] = [
   },
   {
     id: '80',
-    question: 'What does git push do?',
+    question: 'What does git push do?\n\n```bash\n$ git push origin main\nCounting objects: 5, done.\nTo github.com:user/repo.git\n   abc1234..def5678  main -> main\n```',
     options: ['Downloads changes', 'Uploads local commits to remote', 'Creates a branch', 'Merges branches'],
     correctAnswer: 1,
     category: 'git',
@@ -669,7 +669,7 @@ export const questions: Question[] = [
   },
   {
     id: '81',
-    question: 'What does git pull do?',
+    question: 'What does git pull do?\n\n```bash\n$ git pull origin main\nremote: Counting objects: 3, done.\nFrom github.com:user/repo\n   abc1234..def5678  main -> origin/main\nUpdating abc1234..def5678\n```',
     options: ['Uploads changes', 'Fetches and merges remote changes', 'Creates a branch', 'Deletes a branch'],
     correctAnswer: 1,
     category: 'git',
@@ -677,7 +677,7 @@ export const questions: Question[] = [
   },
   {
     id: '82',
-    question: 'What is the difference between git fetch and git pull?',
+    question: 'What is the difference between git fetch and git pull?\n\n```bash\n$ git fetch origin        # Downloads, no merge\n$ git pull origin main    # Downloads AND merges\n```',
     options: ['No difference', 'Fetch downloads without merging, pull downloads and merges', 'Pull downloads without merging', 'Fetch uploads changes'],
     correctAnswer: 1,
     category: 'git',
@@ -685,7 +685,7 @@ export const questions: Question[] = [
   },
   {
     id: '83',
-    question: 'What does git merge do?',
+    question: 'What does git merge do?\n\n```bash\n$ git checkout main\n$ git merge feature-branch\nMerge made by the \'recursive\' strategy.\n```',
     options: ['Splits a branch', 'Combines branches', 'Deletes a branch', 'Creates a branch'],
     correctAnswer: 1,
     category: 'git',
@@ -693,7 +693,7 @@ export const questions: Question[] = [
   },
   {
     id: '84',
-    question: 'What does git rebase do?',
+    question: 'What does git rebase do?\n\n```bash\n$ git checkout feature\n$ git rebase main\nFirst, rewinding head to replay your work...\nApplying: Add feature\n```',
     options: ['Deletes commits', 'Moves commits to a new base', 'Merges branches', 'Creates a branch'],
     correctAnswer: 1,
     category: 'git',
@@ -701,7 +701,7 @@ export const questions: Question[] = [
   },
   {
     id: '85',
-    question: 'What is the main difference between merge and rebase?',
+    question: 'What is the main difference between merge and rebase?\n\n```bash\n# Merge: preserves history\n$ git merge feature    # Creates merge commit\n\n# Rebase: rewrites history\n$ git rebase main      # Replays commits\n```',
     options: ['No difference', 'Merge creates a merge commit, rebase rewrites history', 'Rebase creates a merge commit', 'Merge rewrites history'],
     correctAnswer: 1,
     category: 'git',
@@ -709,7 +709,7 @@ export const questions: Question[] = [
   },
   {
     id: '86',
-    question: 'What does git branch do without arguments?',
+    question: 'What does git branch do without arguments?\n\n```bash\n$ git branch\n  feature\n* main\n  bugfix\n```',
     options: ['Creates a branch', 'Lists branches', 'Deletes a branch', 'Switches branch'],
     correctAnswer: 1,
     category: 'git',
@@ -717,7 +717,7 @@ export const questions: Question[] = [
   },
   {
     id: '87',
-    question: 'How do you create and switch to a new branch?',
+    question: 'How do you create and switch to a new branch?\n\n```bash\n$ git checkout -b feature\nSwitched to a new branch \'feature\'\n\n$ git switch -c feature   # Modern alternative\nSwitched to a new branch \'feature\'\n```',
     options: ['git branch new', 'git checkout -b new', 'git switch new', 'Both B and C'],
     correctAnswer: 3,
     category: 'git',
@@ -725,7 +725,7 @@ export const questions: Question[] = [
   },
   {
     id: '88',
-    question: 'What does git stash do?',
+    question: 'What does git stash do?\n\n```bash\n$ git stash\nSaved working directory and index state WIP on main\n\n$ git stash list\nstash@{0}: WIP on main: abc1234 Last commit\n```',
     options: ['Deletes changes', 'Temporarily saves changes', 'Commits changes', 'Pushes changes'],
     correctAnswer: 1,
     category: 'git',
@@ -733,7 +733,7 @@ export const questions: Question[] = [
   },
   {
     id: '89',
-    question: 'How do you apply stashed changes?',
+    question: 'How do you apply stashed changes?\n\n```bash\n$ git stash apply   # Applies and keeps stash\n$ git stash pop     # Applies and removes stash\n```',
     options: ['git stash apply', 'git stash pop', 'Both A and B', 'git stash get'],
     correctAnswer: 2,
     category: 'git',
@@ -741,7 +741,7 @@ export const questions: Question[] = [
   },
   {
     id: '90',
-    question: 'What does git reset --hard do?',
+    question: 'What does git reset --hard do?\n\n```bash\n$ git reset --hard HEAD~1\nHEAD is now at abc1234 Previous commit\n# WARNING: All changes are lost!\n```',
     options: ['Soft reset', 'Discards all changes and resets to specified commit', 'Creates a commit', 'Merges branches'],
     correctAnswer: 1,
     category: 'git',
@@ -749,7 +749,7 @@ export const questions: Question[] = [
   },
   {
     id: '91',
-    question: 'What does git reset --soft do?',
+    question: 'What does git reset --soft do?\n\n```bash\n$ git reset --soft HEAD~1\n# HEAD moves back, but changes stay staged\n$ git status\nChanges to be committed:\n  modified: file.txt\n```',
     options: ['Discards all changes', 'Moves HEAD but keeps changes staged', 'Creates a branch', 'Deletes commits'],
     correctAnswer: 1,
     category: 'git',
@@ -757,7 +757,7 @@ export const questions: Question[] = [
   },
   {
     id: '92',
-    question: 'What does git revert do?',
+    question: 'What does git revert do?\n\n```bash\n$ git revert abc1234\n[main def5678] Revert "Add feature"\n 1 file changed, 5 deletions(-)\n```',
     options: ['Deletes a commit', 'Creates a new commit that undoes changes', 'Resets to previous state', 'Merges branches'],
     correctAnswer: 1,
     category: 'git',
@@ -765,7 +765,7 @@ export const questions: Question[] = [
   },
   {
     id: '93',
-    question: 'What is HEAD in Git?',
+    question: 'What is HEAD in Git?\n\n```bash\n$ cat .git/HEAD\nref: refs/heads/main\n\n$ git log -1 HEAD\ncommit abc1234 (HEAD -> main)\n```',
     options: ['The first commit', 'A pointer to the current commit', 'The remote repository', 'A branch name'],
     correctAnswer: 1,
     category: 'git',
@@ -773,7 +773,7 @@ export const questions: Question[] = [
   },
   {
     id: '94',
-    question: 'What does git log show?',
+    question: 'What does git log show?\n\n```bash\n$ git log --oneline\nabc1234 (HEAD -> main) Add feature\ndef5678 Fix bug\nghi9012 Initial commit\n```',
     options: ['Staged files', 'Commit history', 'Remote branches', 'Stashed changes'],
     correctAnswer: 1,
     category: 'git',
@@ -781,7 +781,7 @@ export const questions: Question[] = [
   },
   {
     id: '95',
-    question: 'What does git status show?',
+    question: 'What does git status show?\n\n```bash\n$ git status\nOn branch main\nChanges to be committed:\n  modified: app.js\nUntracked files:\n  newfile.txt\n```',
     options: ['Commit history', 'Working tree status', 'Remote URL', 'Branch list'],
     correctAnswer: 1,
     category: 'git',
@@ -789,7 +789,7 @@ export const questions: Question[] = [
   },
   {
     id: '96',
-    question: 'What does git diff show?',
+    question: 'What does git diff show?\n\n```bash\n$ git diff\n-const old = "value";\n+const new = "updated";\n\n$ git diff --staged   # Staged changes\n```',
     options: ['Commit history', 'Changes between commits or working tree', 'Branch differences', 'Remote status'],
     correctAnswer: 1,
     category: 'git',
@@ -797,7 +797,7 @@ export const questions: Question[] = [
   },
   {
     id: '97',
-    question: 'How do you delete a local branch?',
+    question: 'How do you delete a local branch?\n\n```bash\n$ git branch -d feature\nDeleted branch feature (was abc1234).\n\n$ git branch -D feature   # Force delete\n```',
     options: ['git branch -d branchname', 'git delete branchname', 'git remove branchname', 'git branch --delete-remote'],
     correctAnswer: 0,
     category: 'git',
@@ -805,7 +805,7 @@ export const questions: Question[] = [
   },
   {
     id: '98',
-    question: 'How do you delete a remote branch?',
+    question: 'How do you delete a remote branch?\n\n```bash\n$ git push origin --delete feature\nTo github.com:user/repo.git\n - [deleted]  feature\n```',
     options: ['git branch -d origin/branch', 'git push origin --delete branch', 'git delete remote branch', 'git remote delete branch'],
     correctAnswer: 1,
     category: 'git',
@@ -813,7 +813,7 @@ export const questions: Question[] = [
   },
   {
     id: '99',
-    question: 'What is a Git conflict?',
+    question: 'What is a Git conflict?\n\n```bash\n$ git merge feature\nCONFLICT (content): Merge conflict in app.js\n<<<<<<< HEAD\nconst a = 1;\n=======\nconst a = 2;\n>>>>>>> feature\n```',
     options: ['A bug in Git', 'When changes in different branches affect the same lines', 'A network error', 'A permission issue'],
     correctAnswer: 1,
     category: 'git',
@@ -821,7 +821,7 @@ export const questions: Question[] = [
   },
   {
     id: '100',
-    question: 'What does git cherry-pick do?',
+    question: 'What does git cherry-pick do?\n\n```bash\n$ git cherry-pick abc1234\n[main def5678] Add specific feature\n 1 file changed, 10 insertions(+)\n```',
     options: ['Deletes a commit', 'Applies a specific commit to current branch', 'Creates a branch', 'Merges all commits'],
     correctAnswer: 1,
     category: 'git',
