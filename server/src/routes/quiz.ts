@@ -18,9 +18,9 @@ function shuffleArray<T>(array: T[]): T[] {
 
 // Get all questions (shuffled questions and shuffled answers)
 quizRouter.get('/questions', (_req, res) => {
-  // Shuffle and select 20 questions
+  // Shuffle and select 10 questions
   const shuffledQuestions = shuffleArray(questions);
-  const selected = shuffledQuestions.slice(0, 20);
+  const selected = shuffledQuestions.slice(0, 10);
 
   // Generate a session ID
   const sessionId = Math.random().toString(36).substring(2, 15);

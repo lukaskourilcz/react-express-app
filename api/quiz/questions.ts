@@ -2,9 +2,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { questions, shuffleArray, encodeSession } from './data.js';
 
 export default function handler(_req: VercelRequest, res: VercelResponse) {
-  // Shuffle and select 20 questions
+  // Shuffle and select 10 questions
   const shuffledQuestions = shuffleArray(questions);
-  const selected = shuffledQuestions.slice(0, 20);
+  const selected = shuffledQuestions.slice(0, 10);
 
   // Shuffle options for each question and track correct answers
   const sessionData: { questionId: string; correctAnswer: number }[] = [];
