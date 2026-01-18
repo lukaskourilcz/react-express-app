@@ -213,6 +213,21 @@ function Quiz() {
                   Correct: <strong>{question.options[questionResult?.correctAnswer ?? 0]}</strong>
                 </Typography>
               )}
+              {questionResult?.explanation && (
+                <Typography
+                  variant="body2"
+                  sx={{
+                    mt: 1.5,
+                    p: 1.5,
+                    backgroundColor: 'rgba(0,0,0,0.04)',
+                    borderRadius: 1,
+                    borderLeft: '3px solid',
+                    borderLeftColor: 'primary.main',
+                  }}
+                >
+                  {questionResult.explanation}
+                </Typography>
+              )}
             </Paper>
           );
         })}

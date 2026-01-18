@@ -4,6 +4,7 @@ export interface Question {
   options: string[];
   correctAnswer: number;
   category: 'react' | 'typescript' | 'git';
+  explanation: string;
 }
 
 export const questions: Question[] = [
@@ -14,6 +15,7 @@ export const questions: Question[] = [
     options: ['A single value', 'An array with value and setter', 'An object with value and setter', 'A promise'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'useState returns an array with exactly two elements: the current state value and a function to update it. This pattern allows for easy destructuring like [count, setCount].',
   },
   {
     id: '2',
@@ -21,6 +23,7 @@ export const questions: Question[] = [
     options: ['Nothing', 'Component re-renders', 'Page refreshes', 'State updates without re-render'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Calling the setter function schedules a re-render of the component with the new state value. React batches multiple state updates for performance.',
   },
   {
     id: '3',
@@ -28,6 +31,7 @@ export const questions: Question[] = [
     options: ['setState(state + 1)', 'setState(prev => prev + 1)', 'setState(this.state + 1)', 'state++'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'When the new state depends on the previous state, use the functional update form: setState(prev => prev + 1). This ensures you always work with the latest state value.',
   },
   {
     id: '4',
@@ -35,6 +39,7 @@ export const questions: Question[] = [
     options: ['Default value on every render', 'Initial value only on first render', 'Fallback value', 'Validation'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'The initial value is only used during the first render. On subsequent renders, React ignores this parameter and uses the current state value.',
   },
   {
     id: '5',
@@ -42,6 +47,7 @@ export const questions: Question[] = [
     options: ['No, only primitives', 'Yes, but they are immutable', 'Yes, any value type', 'Only arrays'],
     correctAnswer: 2,
     category: 'react',
+    explanation: 'useState can hold any JavaScript value including objects, arrays, strings, numbers, and booleans. However, you should treat state as immutable and create new objects when updating.',
   },
 
   // REACT - useEffect
@@ -51,6 +57,7 @@ export const questions: Question[] = [
     options: ['Only on mount', 'After every render', 'Before every render', 'Only on unmount'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Without a dependency array, useEffect runs after every render (initial render and all updates). This is rarely what you want, so always consider adding dependencies.',
   },
   {
     id: '7',
@@ -58,6 +65,7 @@ export const questions: Question[] = [
     options: ['Runs on every render', 'Runs only on mount', 'Runs only on unmount', 'Disables the effect'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'An empty dependency array [] tells React the effect has no dependencies, so it only runs once after the initial render (mount). This is useful for one-time setup like fetching data.',
   },
   {
     id: '8',
@@ -65,6 +73,7 @@ export const questions: Question[] = [
     options: ['Returns a value', 'Cleanup function', 'Error handler', 'Nothing'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'The return function is a cleanup function that runs before the component unmounts and before every re-run of the effect. Use it to clean up subscriptions, timers, or event listeners.',
   },
   {
     id: '9',
@@ -72,6 +81,7 @@ export const questions: Question[] = [
     options: ['Before the effect runs and on unmount', 'Only on mount', 'Only when dependencies change', 'Never automatically'],
     correctAnswer: 0,
     category: 'react',
+    explanation: 'The cleanup function runs before each re-execution of the effect (when dependencies change) and when the component unmounts. This prevents memory leaks and stale closures.',
   },
   {
     id: '10',
@@ -79,6 +89,7 @@ export const questions: Question[] = [
     options: ['Effect never runs', 'Effect runs once', 'Effect runs after every render', 'Compilation error'],
     correctAnswer: 2,
     category: 'react',
+    explanation: 'Omitting the dependency array causes the effect to run after every single render, which can lead to performance issues or infinite loops if the effect updates state.',
   },
 
   // REACT - useCallback
@@ -88,6 +99,7 @@ export const questions: Question[] = [
     options: ['To call functions', 'To memoize callback functions', 'To create callbacks', 'To handle async operations'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'useCallback returns a memoized version of a callback that only changes when its dependencies change. This helps prevent unnecessary re-renders when passing callbacks to optimized child components.',
   },
   {
     id: '12',
@@ -95,6 +107,7 @@ export const questions: Question[] = [
     options: ['For all functions', 'When passing callbacks to optimized child components', 'Never', 'Only for async functions'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Use useCallback when passing callbacks to child components wrapped in React.memo, or when a callback is a dependency of other hooks. Overusing it can actually hurt performance.',
   },
   {
     id: '13',
@@ -102,6 +115,7 @@ export const questions: Question[] = [
     options: ['The result of the callback', 'A memoized version of the callback', 'A new function every time', 'A promise'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'useCallback returns the same function reference between renders as long as its dependencies haven\'t changed. This referential equality is what enables optimization.',
   },
   {
     id: '14',
@@ -109,6 +123,7 @@ export const questions: Question[] = [
     options: ['The callback function', 'The return value', 'Dependency array', 'Options object'],
     correctAnswer: 2,
     category: 'react',
+    explanation: 'The second argument is a dependency array. The callback is only recreated when values in this array change. Omitting dependencies can lead to stale closures.',
   },
   {
     id: '15',
@@ -116,6 +131,7 @@ export const questions: Question[] = [
     options: ['useMemo(fn, deps)', 'useMemo(() => fn, deps)', 'useMemo(fn(), deps)', 'useMemo(() => fn(), deps)'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'useCallback(fn, deps) is syntactic sugar for useMemo(() => fn, deps). Both memoize the function reference, but useCallback is more readable for this specific use case.',
   },
 
   // REACT - useMemo
@@ -125,6 +141,7 @@ export const questions: Question[] = [
     options: ['To memorize values', 'To memoize expensive calculations', 'To create memos', 'To store data permanently'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'useMemo caches the result of an expensive calculation between re-renders. It only recomputes when dependencies change, avoiding unnecessary recalculations.',
   },
   {
     id: '17',
@@ -132,6 +149,7 @@ export const questions: Question[] = [
     options: ['Every render', 'Never', 'When dependencies change', 'Only on mount'],
     correctAnswer: 2,
     category: 'react',
+    explanation: 'useMemo recomputes the memoized value only when one of its dependencies changes. If dependencies stay the same, it returns the cached value from the previous render.',
   },
   {
     id: '18',
@@ -139,6 +157,7 @@ export const questions: Question[] = [
     options: ['A function', 'The memoized value', 'A ref object', 'A setter function'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'useMemo returns the memoized result of calling the provided function. Unlike useCallback which returns a function, useMemo returns whatever your function returns.',
   },
   {
     id: '19',
@@ -146,6 +165,7 @@ export const questions: Question[] = [
     options: ['Yes, always', 'No, only for expensive computations', 'Only for objects', 'Only for arrays'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Only use useMemo for genuinely expensive computations. For simple calculations, the overhead of useMemo itself can outweigh the benefits. Profile before optimizing.',
   },
   {
     id: '20',
@@ -153,6 +173,7 @@ export const questions: Question[] = [
     options: ['Value computed every render', 'Value computed once on mount', 'Value is undefined', 'Error is thrown'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'An empty dependency array means the value is computed only once during the initial render and never recomputed, similar to how useEffect with [] runs only on mount.',
   },
 
   // REACT - useRef
@@ -162,6 +183,7 @@ export const questions: Question[] = [
     options: ['A mutable ref object', 'A DOM element', 'A state value', 'A callback function'],
     correctAnswer: 0,
     category: 'react',
+    explanation: 'useRef returns a mutable ref object with a .current property. This object persists for the full lifetime of the component and can hold any value.',
   },
   {
     id: '22',
@@ -169,6 +191,7 @@ export const questions: Question[] = [
     options: ['Yes', 'No', 'Only if connected to state', 'Only on mount'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Mutating ref.current does NOT trigger a re-render. This makes refs perfect for storing values you need to persist but don\'t want to cause updates when changed.',
   },
   {
     id: '23',
@@ -176,6 +199,7 @@ export const questions: Question[] = [
     options: ['value', 'current', 'ref', 'data'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'The ref object has a single property called "current" that holds the actual value. Access it as myRef.current to read or write the stored value.',
   },
   {
     id: '24',
@@ -183,6 +207,7 @@ export const questions: Question[] = [
     options: ['Managing form state', 'Accessing DOM elements', 'Fetching data', 'Routing'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'A primary use case for useRef is accessing DOM elements directly, like focusing an input or measuring element dimensions. Pass the ref to an element\'s ref attribute.',
   },
   {
     id: '25',
@@ -190,6 +215,7 @@ export const questions: Question[] = [
     options: ['ref={myRef.current}', 'ref={myRef}', 'useRef={myRef}', 'current={myRef}'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Pass the ref object directly to the ref attribute: ref={myRef}. React will set myRef.current to the DOM element when it mounts and to null when it unmounts.',
   },
 
   // REACT - React Router
@@ -199,6 +225,7 @@ export const questions: Question[] = [
     options: ['useHistory', 'useLocation', 'useRoute', 'useURL'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'useLocation returns the current location object containing pathname, search, hash, and state. It updates whenever the URL changes.',
   },
   {
     id: '27',
@@ -206,6 +233,7 @@ export const questions: Question[] = [
     options: ['useHistory', 'useNavigate', 'useRouter', 'useRedirect'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'In React Router v6, useNavigate replaced useHistory. Call navigate("/path") to navigate programmatically, or navigate(-1) to go back.',
   },
   {
     id: '28',
@@ -213,6 +241,7 @@ export const questions: Question[] = [
     options: ['useQuery', 'useParams', 'useURLParams', 'useSearch'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'useParams returns an object of key/value pairs of URL parameters from the current route. For route "/users/:id", useParams() returns { id: "123" }.',
   },
   {
     id: '29',
@@ -220,6 +249,7 @@ export const questions: Question[] = [
     options: ['Switch', 'Routes', 'Router', 'Route'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'In v6, Routes (plural) replaced Switch. It wraps Route components and renders the first matching route. Route components go inside Routes.',
   },
   {
     id: '30',
@@ -227,6 +257,7 @@ export const questions: Question[] = [
     options: ['<a href="/">', '<Link to="/">', '<Route to="/">', '<Navigate to="/">'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Use the Link component for navigation without page reloads. Unlike <a> tags, Link handles client-side routing and preserves React state.',
   },
   {
     id: '31',
@@ -234,6 +265,7 @@ export const questions: Question[] = [
     options: ['Creates a new route', 'Renders child routes', 'Redirects users', 'Handles 404 errors'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Outlet is a placeholder that renders the matching child route. It enables nested routing where parent layouts wrap child content.',
   },
   {
     id: '32',
@@ -241,6 +273,7 @@ export const questions: Question[] = [
     options: ['<Route notFound>', '<Route path="*">', '<Route 404>', '<NotFound>'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Use path="*" to match any URL that hasn\'t matched other routes. Place this route last in your Routes component to catch all unmatched paths.',
   },
   {
     id: '33',
@@ -248,6 +281,7 @@ export const questions: Question[] = [
     options: ['useParams', 'useSearchParams', 'useQuery', 'useLocation'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'useSearchParams returns the current URL search params and a function to update them. It works like useState but syncs with the URL query string.',
   },
 
   // REACT - React Hook Form
@@ -257,6 +291,7 @@ export const questions: Question[] = [
     options: ['useForm', 'useFormState', 'useController', 'useWatch'],
     correctAnswer: 0,
     category: 'react',
+    explanation: 'useForm is the primary hook that returns methods like register, handleSubmit, and formState. It manages the entire form state and validation.',
   },
   {
     id: '35',
@@ -264,6 +299,7 @@ export const questions: Question[] = [
     options: ['register prop', 'name prop only', 'ref prop', '{...register("fieldName")}'],
     correctAnswer: 3,
     category: 'react',
+    explanation: 'Spread the register function onto your input: {...register("fieldName")}. This adds the necessary ref and onChange handlers to track the input.',
   },
   {
     id: '36',
@@ -271,6 +307,7 @@ export const questions: Question[] = [
     options: ['onSubmit', 'handleSubmit', 'submit', 'processForm'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'handleSubmit wraps your submit handler, validates the form first, and only calls your function if validation passes. Use it like onSubmit={handleSubmit(onSubmit)}.',
   },
   {
     id: '37',
@@ -278,6 +315,7 @@ export const questions: Question[] = [
     options: ['errors object from useForm', 'formState.errors', 'getErrors()', 'useErrors()'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Access errors through formState.errors from the useForm hook. Each field\'s error is available as formState.errors.fieldName with message and type properties.',
   },
   {
     id: '38',
@@ -285,6 +323,7 @@ export const questions: Question[] = [
     options: ['Validates inputs', 'Watches for form submission', 'Subscribes to input changes', 'Resets the form'],
     correctAnswer: 2,
     category: 'react',
+    explanation: 'watch subscribes to input changes and returns their values. Use it for conditional rendering based on form values or to react to specific field changes.',
   },
   {
     id: '39',
@@ -292,6 +331,7 @@ export const questions: Question[] = [
     options: ['defaultValue prop', 'defaultValues in useForm', 'initial prop', 'value prop'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Pass defaultValues to useForm: useForm({ defaultValues: { name: "John" } }). This sets initial values and is used when reset() is called.',
   },
   {
     id: '40',
@@ -299,6 +339,7 @@ export const questions: Question[] = [
     options: ['Clears errors only', 'Resets form to default values', 'Submits the form', 'Validates all fields'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'reset() restores the form to its default values and clears all errors. You can also pass new default values to reset to specific values.',
   },
 
   // REACT - General
@@ -308,6 +349,7 @@ export const questions: Question[] = [
     options: ['To memoize values', 'To prevent unnecessary re-renders of components', 'To create memos', 'To store data'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'React.memo is a higher-order component that memoizes the rendered output. It skips re-rendering if props haven\'t changed, improving performance.',
   },
   {
     id: '42',
@@ -315,6 +357,7 @@ export const questions: Question[] = [
     options: ['A component with refs', 'A component whose value is controlled by React state', 'A class component', 'A pure component'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'A controlled component has its form value controlled by React state. The input\'s value comes from state, and onChange updates that state.',
   },
   {
     id: '43',
@@ -322,6 +365,7 @@ export const questions: Question[] = [
     options: ['A copy of the real DOM in memory', 'A browser feature', 'A JavaScript engine', 'A CSS framework'],
     correctAnswer: 0,
     category: 'react',
+    explanation: 'The virtual DOM is a lightweight JavaScript representation of the real DOM. React uses it to compute the minimal set of changes needed, then batches updates to the real DOM.',
   },
   {
     id: '44',
@@ -329,6 +373,7 @@ export const questions: Question[] = [
     options: ['Styling', 'Help React identify which items changed', 'Security', 'Performance only'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Keys help React identify which items have changed, been added, or removed. Use stable, unique identifiers as keys—avoid using array indexes when items can reorder.',
   },
   {
     id: '45',
@@ -336,6 +381,7 @@ export const questions: Question[] = [
     options: ['useState', 'useContext', 'useReducer', 'useRef'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'useContext reads and subscribes to context. Pass the context object (from createContext) to useContext to get the current context value.',
   },
   {
     id: '46',
@@ -343,6 +389,7 @@ export const questions: Question[] = [
     options: ['A performance technique', 'Passing props through multiple levels', 'A testing method', 'A build process'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Prop drilling is passing props through intermediate components that don\'t need them, just to reach deeply nested components. Context or state management libraries can help avoid this.',
   },
   {
     id: '47',
@@ -350,6 +397,7 @@ export const questions: Question[] = [
     options: ['Production optimization', 'Highlighting potential problems', 'Security', 'Styling'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'StrictMode activates additional checks and warnings in development. It intentionally double-renders components to help detect side effects and deprecated APIs.',
   },
   {
     id: '48',
@@ -357,6 +405,7 @@ export const questions: Question[] = [
     options: ['Breaking components', 'Grouping elements without adding extra DOM nodes', 'Creating partial renders', 'Code splitting'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Fragments let you group multiple elements without adding an extra wrapper div to the DOM. Use <></> or <Fragment> when you need to return multiple elements.',
   },
   {
     id: '49',
@@ -364,6 +413,7 @@ export const questions: Question[] = [
     options: ['No difference', 'State is mutable, props are read-only', 'Props are mutable, state is read-only', 'Both are immutable'],
     correctAnswer: 1,
     category: 'react',
+    explanation: 'Props are passed from parent to child and are read-only. State is managed within a component and can be updated. Both trigger re-renders when they change.',
   },
   {
     id: '50',
@@ -371,6 +421,7 @@ export const questions: Question[] = [
     options: ['Moving state to a higher component', 'Increasing state value', 'Optimizing state', 'Removing state'],
     correctAnswer: 0,
     category: 'react',
+    explanation: 'Lifting state up means moving shared state to the closest common ancestor of the components that need it. This enables sibling components to share and sync data.',
   },
 
   // TYPESCRIPT
@@ -380,6 +431,7 @@ export const questions: Question[] = [
     options: ['property?: type', 'property: type?', 'optional property: type', 'property: type | undefined'],
     correctAnswer: 0,
     category: 'typescript',
+    explanation: 'Use the question mark after the property name: property?: type. This makes the property optional, meaning it can be omitted when creating objects of that type.',
   },
   {
     id: '52',
@@ -387,6 +439,7 @@ export const questions: Question[] = [
     options: ['Array<string>', 'string[]', 'Both A and B', 'string{}'],
     correctAnswer: 2,
     category: 'typescript',
+    explanation: 'Both Array<string> and string[] are valid and equivalent ways to define an array of strings. The choice is mostly stylistic preference.',
   },
   {
     id: '53',
@@ -394,6 +447,7 @@ export const questions: Question[] = [
     options: ['Creates an alias', 'Type assertion', 'Type declaration', 'Creates a new type'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'The "as" keyword performs type assertion, telling TypeScript to treat a value as a specific type. Use it when you know more about a type than TypeScript can infer.',
   },
   {
     id: '54',
@@ -401,6 +455,7 @@ export const questions: Question[] = [
     options: ['A class', 'A contract that defines object shape', 'A function', 'A module'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'An interface defines the shape of an object—what properties and methods it should have. It\'s a compile-time contract that doesn\'t exist in the JavaScript output.',
   },
   {
     id: '55',
@@ -408,6 +463,7 @@ export const questions: Question[] = [
     options: ['type A && B', 'type A | B', 'type A + B', 'type A & B'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'The pipe operator | creates a union type: string | number means the value can be either a string or a number. The ampersand & creates an intersection type.',
   },
   {
     id: '56',
@@ -415,6 +471,7 @@ export const questions: Question[] = [
     options: ['Variables never used', 'Functions that never return', 'Optional parameters', 'Nullable types'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'The never type represents values that never occur. It\'s used for functions that always throw errors or have infinite loops—they never return normally.',
   },
   {
     id: '57',
@@ -422,6 +479,7 @@ export const questions: Question[] = [
     options: ['No difference', 'Interfaces can be extended, types cannot', 'Types are more flexible, interfaces can be merged', 'Types are older'],
     correctAnswer: 2,
     category: 'typescript',
+    explanation: 'Types are more flexible (unions, intersections, mapped types), while interfaces support declaration merging (multiple declarations combine). Both can be extended.',
   },
   {
     id: '58',
@@ -429,6 +487,7 @@ export const questions: Question[] = [
     options: ['Makes property optional', 'Prevents property modification', 'Makes property private', 'Makes property static'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'The readonly modifier prevents a property from being reassigned after initialization. It\'s a compile-time check that helps prevent accidental mutations.',
   },
   {
     id: '59',
@@ -436,6 +495,7 @@ export const questions: Question[] = [
     options: ['A general type', 'A type parameter that allows reusable components', 'A basic type', 'An any type'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'Generics are type parameters (like <T>) that let you create reusable components that work with multiple types while maintaining type safety.',
   },
   {
     id: '60',
@@ -443,6 +503,7 @@ export const questions: Question[] = [
     options: ['null', 'undefined', 'void', 'never'],
     correctAnswer: 2,
     category: 'typescript',
+    explanation: 'Use void for functions that don\'t return a value or return undefined implicitly. Use never for functions that never return (throw or infinite loop).',
   },
   {
     id: '61',
@@ -450,6 +511,7 @@ export const questions: Question[] = [
     options: ['Same as any', 'A type-safe any', 'An error type', 'A null type'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'unknown is like any but type-safe. You must narrow the type before using an unknown value, making it safer for values of uncertain type.',
   },
   {
     id: '62',
@@ -457,6 +519,7 @@ export const questions: Question[] = [
     options: ['A | B', 'A & B', 'A + B', 'A - B'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'The ampersand & creates an intersection type that combines multiple types. A & B means the value must satisfy both type A AND type B.',
   },
   {
     id: '63',
@@ -464,6 +527,7 @@ export const questions: Question[] = [
     options: ['Makes all properties required', 'Makes all properties optional', 'Removes all properties', 'Adds new properties'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'Partial<T> constructs a type with all properties of T set to optional. It\'s useful for update functions where you only want to change some properties.',
   },
   {
     id: '64',
@@ -471,6 +535,7 @@ export const questions: Question[] = [
     options: ['Makes all properties optional', 'Makes all properties required', 'Removes all properties', 'Validates properties'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'Required<T> constructs a type with all properties of T set to required, removing optional modifiers. It\'s the opposite of Partial<T>.',
   },
   {
     id: '65',
@@ -478,6 +543,7 @@ export const questions: Question[] = [
     options: ['Removes properties K from T', 'Creates a type with only properties K from T', 'Adds properties K to T', 'Validates K in T'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'Pick<T, K> constructs a type by picking only the specified properties K from T. Pick<User, "name" | "email"> creates a type with just name and email.',
   },
   {
     id: '66',
@@ -485,6 +551,7 @@ export const questions: Question[] = [
     options: ['Creates a type with only K', 'Creates a type without properties K', 'Adds K to T', 'Validates T'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'Omit<T, K> constructs a type by removing the specified properties K from T. It\'s the opposite of Pick. Omit<User, "password"> removes the password property.',
   },
   {
     id: '67',
@@ -492,6 +559,7 @@ export const questions: Question[] = [
     options: ['{ key: value }', '{ [key: string]: value }', '{ any: value }', '{ dynamic: value }'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'Index signatures like { [key: string]: value } define the type for dynamic keys. This allows any string key with values of the specified type.',
   },
   {
     id: '68',
@@ -499,6 +567,7 @@ export const questions: Question[] = [
     options: ['A security feature', 'A way to narrow types', 'A type validator', 'A compiler option'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'Type guards are expressions that narrow types at runtime. Using typeof, instanceof, or custom type predicates helps TypeScript understand the specific type in a block.',
   },
   {
     id: '69',
@@ -506,6 +575,7 @@ export const questions: Question[] = [
     options: ['All values of an object', 'All keys of a type as a union', 'The first key', 'A boolean'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'keyof produces a union type of all property names (keys) of a type. keyof { name: string; age: number } produces "name" | "age".',
   },
   {
     id: '70',
@@ -513,6 +583,7 @@ export const questions: Question[] = [
     options: ['A dynamic array', 'A fixed-length array with specific types', 'An object', 'A map'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'A tuple is a fixed-length array where each element has a specific type. [string, number] defines a two-element tuple with a string first and number second.',
   },
   {
     id: '71',
@@ -520,6 +591,7 @@ export const questions: Question[] = [
     options: ['property!', 'NonNullable<property>', 'property!!', 'Required<property>'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'NonNullable<T> removes null and undefined from T. The ! operator (non-null assertion) tells TypeScript a value is not null, but doesn\'t create a new type.',
   },
   {
     id: '72',
@@ -527,6 +599,7 @@ export const questions: Question[] = [
     options: ['Runtime type checking only', 'Getting the type of a variable', 'Creating new types', 'Both B and C'],
     correctAnswer: 3,
     category: 'typescript',
+    explanation: 'In TypeScript, typeof works both at runtime (JavaScript behavior) and at the type level to extract a type from a variable. type T = typeof myVariable creates a type.',
   },
   {
     id: '73',
@@ -534,6 +607,7 @@ export const questions: Question[] = [
     options: ['An array', 'An object type with keys K and values V', 'A tuple', 'A map'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'Record<K, V> constructs an object type with keys of type K and values of type V. Record<string, number> means any string key with number values.',
   },
   {
     id: '74',
@@ -541,6 +615,7 @@ export const questions: Question[] = [
     options: ['Returns function parameters', 'Returns the return type of a function', 'Returns void', 'Returns never'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'ReturnType<T> extracts the return type of a function type T. ReturnType<() => string> produces string. Useful for inferring types from existing functions.',
   },
   {
     id: '75',
@@ -548,6 +623,7 @@ export const questions: Question[] = [
     options: ['A union with no common properties', 'A union with a common literal property', 'An intersection type', 'A generic type'],
     correctAnswer: 1,
     category: 'typescript',
+    explanation: 'A discriminated union has a common property with literal types that TypeScript can use to narrow the type. A "type" or "kind" field often serves as the discriminant.',
   },
 
   // GIT
@@ -557,6 +633,7 @@ export const questions: Question[] = [
     options: ['Clones a repository', 'Creates a new Git repository', 'Initializes a branch', 'Starts git daemon'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git init creates a new Git repository in the current directory by creating a .git subdirectory with all necessary repository files.',
   },
   {
     id: '77',
@@ -564,6 +641,7 @@ export const questions: Question[] = [
     options: ['Creates a new branch', 'Copies a repository', 'Merges branches', 'Deletes a repository'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git clone creates a local copy of a remote repository, including all files, branches, and commit history. It also sets up the remote tracking.',
   },
   {
     id: '78',
@@ -571,6 +649,7 @@ export const questions: Question[] = [
     options: ['Commits changes', 'Stages changes for commit', 'Pushes changes', 'Creates a branch'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git add stages changes for the next commit. It moves changes from the working directory to the staging area (index), preparing them to be committed.',
   },
   {
     id: '79',
@@ -578,6 +657,7 @@ export const questions: Question[] = [
     options: ['Merges branches', 'Creates a commit with a message', 'Pushes to remote', 'Creates a branch'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git commit -m creates a new commit with staged changes and the provided message. The -m flag lets you write the commit message inline.',
   },
   {
     id: '80',
@@ -585,6 +665,7 @@ export const questions: Question[] = [
     options: ['Downloads changes', 'Uploads local commits to remote', 'Creates a branch', 'Merges branches'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git push uploads local commits to the remote repository. It updates the remote branch to match your local branch.',
   },
   {
     id: '81',
@@ -592,6 +673,7 @@ export const questions: Question[] = [
     options: ['Uploads changes', 'Fetches and merges remote changes', 'Creates a branch', 'Deletes a branch'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git pull is a combination of git fetch and git merge. It downloads changes from the remote and automatically merges them into your current branch.',
   },
   {
     id: '82',
@@ -599,6 +681,7 @@ export const questions: Question[] = [
     options: ['No difference', 'Fetch downloads without merging, pull downloads and merges', 'Pull downloads without merging', 'Fetch uploads changes'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git fetch downloads commits from the remote but doesn\'t merge them. git pull does both—it fetches and then merges. Fetch is safer for reviewing changes first.',
   },
   {
     id: '83',
@@ -606,6 +689,7 @@ export const questions: Question[] = [
     options: ['Splits a branch', 'Combines branches', 'Deletes a branch', 'Creates a branch'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git merge combines the histories of two branches. It creates a merge commit (unless fast-forward) that has two parent commits.',
   },
   {
     id: '84',
@@ -613,6 +697,7 @@ export const questions: Question[] = [
     options: ['Deletes commits', 'Moves commits to a new base', 'Merges branches', 'Creates a branch'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git rebase moves or replays your commits onto a different base commit. It rewrites history to create a linear sequence of commits.',
   },
   {
     id: '85',
@@ -620,6 +705,7 @@ export const questions: Question[] = [
     options: ['No difference', 'Merge creates a merge commit, rebase rewrites history', 'Rebase creates a merge commit', 'Merge rewrites history'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'Merge preserves history by creating a merge commit. Rebase rewrites history by moving commits, creating a cleaner but altered history. Never rebase public branches.',
   },
   {
     id: '86',
@@ -627,6 +713,7 @@ export const questions: Question[] = [
     options: ['Creates a branch', 'Lists branches', 'Deletes a branch', 'Switches branch'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'Running git branch without arguments lists all local branches. The current branch is marked with an asterisk (*). Use -a to see remote branches too.',
   },
   {
     id: '87',
@@ -634,6 +721,7 @@ export const questions: Question[] = [
     options: ['git branch new', 'git checkout -b new', 'git switch new', 'Both B and C'],
     correctAnswer: 3,
     category: 'git',
+    explanation: 'Both "git checkout -b branch" and "git switch -c branch" create and switch to a new branch. switch is newer and more intuitive for branch operations.',
   },
   {
     id: '88',
@@ -641,6 +729,7 @@ export const questions: Question[] = [
     options: ['Deletes changes', 'Temporarily saves changes', 'Commits changes', 'Pushes changes'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git stash temporarily saves uncommitted changes and reverts to a clean working directory. Useful when you need to switch branches but aren\'t ready to commit.',
   },
   {
     id: '89',
@@ -648,6 +737,7 @@ export const questions: Question[] = [
     options: ['git stash apply', 'git stash pop', 'Both A and B', 'git stash get'],
     correctAnswer: 2,
     category: 'git',
+    explanation: 'Both apply and pop restore stashed changes. The difference: pop removes the stash after applying, while apply keeps it in the stash list for potential reuse.',
   },
   {
     id: '90',
@@ -655,6 +745,7 @@ export const questions: Question[] = [
     options: ['Soft reset', 'Discards all changes and resets to specified commit', 'Creates a commit', 'Merges branches'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git reset --hard discards ALL changes (staged and unstaged) and resets your working directory to match the specified commit. Use with caution—changes are lost.',
   },
   {
     id: '91',
@@ -662,6 +753,7 @@ export const questions: Question[] = [
     options: ['Discards all changes', 'Moves HEAD but keeps changes staged', 'Creates a branch', 'Deletes commits'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git reset --soft moves HEAD to the specified commit but keeps all changes staged. Useful for combining multiple commits into one.',
   },
   {
     id: '92',
@@ -669,6 +761,7 @@ export const questions: Question[] = [
     options: ['Deletes a commit', 'Creates a new commit that undoes changes', 'Resets to previous state', 'Merges branches'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git revert creates a new commit that undoes the changes from a specific commit. Unlike reset, it doesn\'t rewrite history, making it safe for shared branches.',
   },
   {
     id: '93',
@@ -676,6 +769,7 @@ export const questions: Question[] = [
     options: ['The first commit', 'A pointer to the current commit', 'The remote repository', 'A branch name'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'HEAD is a pointer to the current commit you\'re working on, usually pointing to the tip of the current branch. It moves when you commit or checkout.',
   },
   {
     id: '94',
@@ -683,6 +777,7 @@ export const questions: Question[] = [
     options: ['Staged files', 'Commit history', 'Remote branches', 'Stashed changes'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git log displays the commit history, showing commit hashes, authors, dates, and messages. Use flags like --oneline or --graph for different formats.',
   },
   {
     id: '95',
@@ -690,6 +785,7 @@ export const questions: Question[] = [
     options: ['Commit history', 'Working tree status', 'Remote URL', 'Branch list'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git status shows the state of your working directory and staging area. It lists staged, unstaged, and untracked files.',
   },
   {
     id: '96',
@@ -697,6 +793,7 @@ export const questions: Question[] = [
     options: ['Commit history', 'Changes between commits or working tree', 'Branch differences', 'Remote status'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git diff shows the differences between various Git states—working directory vs staging, staging vs last commit, or between any two commits.',
   },
   {
     id: '97',
@@ -704,6 +801,7 @@ export const questions: Question[] = [
     options: ['git branch -d branchname', 'git delete branchname', 'git remove branchname', 'git branch --delete-remote'],
     correctAnswer: 0,
     category: 'git',
+    explanation: 'Use "git branch -d branchname" to delete a local branch. Use -D (uppercase) to force delete an unmerged branch.',
   },
   {
     id: '98',
@@ -711,6 +809,7 @@ export const questions: Question[] = [
     options: ['git branch -d origin/branch', 'git push origin --delete branch', 'git delete remote branch', 'git remote delete branch'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'Use "git push origin --delete branchname" to delete a remote branch. This removes the branch from the remote repository.',
   },
   {
     id: '99',
@@ -718,6 +817,7 @@ export const questions: Question[] = [
     options: ['A bug in Git', 'When changes in different branches affect the same lines', 'A network error', 'A permission issue'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'A merge conflict occurs when Git can\'t automatically merge changes because different branches modified the same lines. You must manually resolve these conflicts.',
   },
   {
     id: '100',
@@ -725,6 +825,7 @@ export const questions: Question[] = [
     options: ['Deletes a commit', 'Applies a specific commit to current branch', 'Creates a branch', 'Merges all commits'],
     correctAnswer: 1,
     category: 'git',
+    explanation: 'git cherry-pick applies the changes from a specific commit to your current branch. It\'s useful for selectively bringing changes without merging entire branches.',
   },
 ];
 

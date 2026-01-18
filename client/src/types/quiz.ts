@@ -14,6 +14,7 @@ export interface QuizResult {
     selectedIndex: number;
     correctAnswer: number;
     isCorrect: boolean;
+    explanation: string;
   }[];
 }
 

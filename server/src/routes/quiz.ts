@@ -83,6 +83,7 @@ quizRouter.post('/submit', (req, res) => {
   let correct = 0;
   const results = Object.entries(answers).map(([questionId, selectedIndex]) => {
     const questionData = sessionData.find((q) => q.questionId === questionId);
+    const question = questions.find((q) => q.id === questionId);
     const isCorrect = questionData?.correctAnswer === selectedIndex;
     if (isCorrect) correct++;
 
@@ -91,6 +92,7 @@ quizRouter.post('/submit', (req, res) => {
       selectedIndex,
       correctAnswer: questionData?.correctAnswer,
       isCorrect,
+      explanation: question?.explanation || '',
     };
   });
 

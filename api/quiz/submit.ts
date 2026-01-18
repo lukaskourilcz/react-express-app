@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { decodeSession } from './data.js';
+import { decodeSession, questions } from './data.js';
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -20,6 +20,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   let correct = 0;
   const results = Object.entries(answers).map(([questionId, selectedIndex]) => {
     const questionData = sessionData.find((q) => q.questionId === questionId);
+    const question = questions.find((q) => q.id === questionId);
     const isCorrect = questionData?.correctAnswer === selectedIndex;
     if (isCorrect) correct++;
 
@@ -28,6 +29,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
       selectedIndex,
       correctAnswer: questionData?.correctAnswer,
       isCorrect,
+      explanation: question?.explanation || '',
     };
   });
 
