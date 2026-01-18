@@ -11,7 +11,7 @@ export const questions: Question[] = [
   // REACT - useState
   {
     id: '1',
-    question: 'What does useState return?',
+    question: 'What does useState return?\n\n```jsx\nconst [value, setValue] = useState(initialValue);\n```',
     options: ['A single value', 'An array with value and setter', 'An object with value and setter', 'A promise'],
     correctAnswer: 1,
     category: 'react',
@@ -19,7 +19,7 @@ export const questions: Question[] = [
   },
   {
     id: '2',
-    question: 'What happens when you call the setter function from useState?',
+    question: 'What happens when you call the setter function from useState?\n\n```jsx\nconst [count, setCount] = useState(0);\nsetCount(5); // What happens here?\n```',
     options: ['Nothing', 'Component re-renders', 'Page refreshes', 'State updates without re-render'],
     correctAnswer: 1,
     category: 'react',
@@ -27,7 +27,7 @@ export const questions: Question[] = [
   },
   {
     id: '3',
-    question: 'How do you update state based on previous state?',
+    question: 'How do you update state based on previous state?\n\n```jsx\nconst [count, setCount] = useState(0);\n// Which approach is correct?\n```',
     options: ['setState(state + 1)', 'setState(prev => prev + 1)', 'setState(this.state + 1)', 'state++'],
     correctAnswer: 1,
     category: 'react',
@@ -35,7 +35,7 @@ export const questions: Question[] = [
   },
   {
     id: '4',
-    question: 'What is the initial value parameter in useState used for?',
+    question: 'What is the initial value parameter in useState used for?\n\n```jsx\nconst [name, setName] = useState("John");\n//                              ^^^^^^\n```',
     options: ['Default value on every render', 'Initial value only on first render', 'Fallback value', 'Validation'],
     correctAnswer: 1,
     category: 'react',
@@ -43,7 +43,7 @@ export const questions: Question[] = [
   },
   {
     id: '5',
-    question: 'Can useState hold objects?',
+    question: 'Can useState hold objects?\n\n```jsx\nconst [user, setUser] = useState({ name: "John", age: 25 });\n```',
     options: ['No, only primitives', 'Yes, but they are immutable', 'Yes, any value type', 'Only arrays'],
     correctAnswer: 2,
     category: 'react',
@@ -53,7 +53,7 @@ export const questions: Question[] = [
   // REACT - useEffect
   {
     id: '6',
-    question: 'When does useEffect run by default?',
+    question: 'When does useEffect run by default?\n\n```jsx\nuseEffect(() => {\n  // effect code\n});\n```',
     options: ['Only on mount', 'After every render', 'Before every render', 'Only on unmount'],
     correctAnswer: 1,
     category: 'react',
@@ -61,7 +61,7 @@ export const questions: Question[] = [
   },
   {
     id: '7',
-    question: 'What does an empty dependency array in useEffect do?',
+    question: 'What does an empty dependency array in useEffect do?\n\n```jsx\nuseEffect(() => {\n  fetchData();\n}, []); // <-- empty array\n```',
     options: ['Runs on every render', 'Runs only on mount', 'Runs only on unmount', 'Disables the effect'],
     correctAnswer: 1,
     category: 'react',
@@ -69,7 +69,7 @@ export const questions: Question[] = [
   },
   {
     id: '8',
-    question: 'What does the return function in useEffect do?',
+    question: 'What does the return function in useEffect do?\n\n```jsx\nuseEffect(() => {\n  subscribe();\n  return () => {\n    unsubscribe(); // <-- this function\n  };\n}, []);\n```',
     options: ['Returns a value', 'Cleanup function', 'Error handler', 'Nothing'],
     correctAnswer: 1,
     category: 'react',
@@ -77,7 +77,7 @@ export const questions: Question[] = [
   },
   {
     id: '9',
-    question: 'When is the cleanup function in useEffect called?',
+    question: 'When is the cleanup function in useEffect called?\n\n```jsx\nuseEffect(() => {\n  const timer = setInterval(tick, 1000);\n  return () => clearInterval(timer);\n}, [dependency]);\n```',
     options: ['Before the effect runs and on unmount', 'Only on mount', 'Only when dependencies change', 'Never automatically'],
     correctAnswer: 0,
     category: 'react',
@@ -85,7 +85,7 @@ export const questions: Question[] = [
   },
   {
     id: '10',
-    question: 'What happens if you omit the dependency array in useEffect?',
+    question: 'What happens if you omit the dependency array in useEffect?\n\n```jsx\nuseEffect(() => {\n  console.log("Effect ran");\n}); // no dependency array\n```',
     options: ['Effect never runs', 'Effect runs once', 'Effect runs after every render', 'Compilation error'],
     correctAnswer: 2,
     category: 'react',
@@ -95,7 +95,7 @@ export const questions: Question[] = [
   // REACT - useCallback
   {
     id: '11',
-    question: 'What is the purpose of useCallback?',
+    question: 'What is the purpose of useCallback?\n\n```jsx\nconst memoizedFn = useCallback(() => {\n  doSomething(a, b);\n}, [a, b]);\n```',
     options: ['To call functions', 'To memoize callback functions', 'To create callbacks', 'To handle async operations'],
     correctAnswer: 1,
     category: 'react',
@@ -103,7 +103,7 @@ export const questions: Question[] = [
   },
   {
     id: '12',
-    question: 'When should you use useCallback?',
+    question: 'When should you use useCallback?\n\n```jsx\nconst handleClick = useCallback(() => {\n  console.log(value);\n}, [value]);\n\nreturn <MemoizedChild onClick={handleClick} />;\n```',
     options: ['For all functions', 'When passing callbacks to optimized child components', 'Never', 'Only for async functions'],
     correctAnswer: 1,
     category: 'react',
@@ -111,7 +111,7 @@ export const questions: Question[] = [
   },
   {
     id: '13',
-    question: 'What does useCallback return?',
+    question: 'What does useCallback return?\n\n```jsx\nconst fn = useCallback(() => {\n  // function body\n}, [deps]);\n// What is fn?\n```',
     options: ['The result of the callback', 'A memoized version of the callback', 'A new function every time', 'A promise'],
     correctAnswer: 1,
     category: 'react',
@@ -119,7 +119,7 @@ export const questions: Question[] = [
   },
   {
     id: '14',
-    question: 'What is the second argument to useCallback?',
+    question: 'What is the second argument to useCallback?\n\n```jsx\nconst fn = useCallback(\n  () => { /* callback */ },\n  [a, b] // <-- What is this?\n);\n```',
     options: ['The callback function', 'The return value', 'Dependency array', 'Options object'],
     correctAnswer: 2,
     category: 'react',
@@ -127,7 +127,7 @@ export const questions: Question[] = [
   },
   {
     id: '15',
-    question: 'useCallback(fn, deps) is equivalent to which useMemo call?',
+    question: 'useCallback(fn, deps) is equivalent to which useMemo call?\n\n```jsx\n// These are equivalent:\nuseCallback(fn, deps)\n// vs\nuseMemo(???, deps)\n```',
     options: ['useMemo(fn, deps)', 'useMemo(() => fn, deps)', 'useMemo(fn(), deps)', 'useMemo(() => fn(), deps)'],
     correctAnswer: 1,
     category: 'react',
@@ -137,7 +137,7 @@ export const questions: Question[] = [
   // REACT - useMemo
   {
     id: '16',
-    question: 'What is the purpose of useMemo?',
+    question: 'What is the purpose of useMemo?\n\n```jsx\nconst memoizedValue = useMemo(\n  () => computeExpensiveValue(a, b),\n  [a, b]\n);\n```',
     options: ['To memorize values', 'To memoize expensive calculations', 'To create memos', 'To store data permanently'],
     correctAnswer: 1,
     category: 'react',
@@ -145,7 +145,7 @@ export const questions: Question[] = [
   },
   {
     id: '17',
-    question: 'When does useMemo recompute its value?',
+    question: 'When does useMemo recompute its value?\n\n```jsx\nconst result = useMemo(\n  () => filterItems(items, query),\n  [items, query]\n);\n```',
     options: ['Every render', 'Never', 'When dependencies change', 'Only on mount'],
     correctAnswer: 2,
     category: 'react',
@@ -153,7 +153,7 @@ export const questions: Question[] = [
   },
   {
     id: '18',
-    question: 'What does useMemo return?',
+    question: 'What does useMemo return?\n\n```jsx\nconst sortedList = useMemo(\n  () => [...items].sort(),\n  [items]\n);\n// What is sortedList?\n```',
     options: ['A function', 'The memoized value', 'A ref object', 'A setter function'],
     correctAnswer: 1,
     category: 'react',
@@ -161,7 +161,7 @@ export const questions: Question[] = [
   },
   {
     id: '19',
-    question: 'Should you use useMemo for all computed values?',
+    question: 'Should you use useMemo for all computed values?\n\n```jsx\n// Is this necessary?\nconst doubled = useMemo(() => count * 2, [count]);\n```',
     options: ['Yes, always', 'No, only for expensive computations', 'Only for objects', 'Only for arrays'],
     correctAnswer: 1,
     category: 'react',
@@ -169,7 +169,7 @@ export const questions: Question[] = [
   },
   {
     id: '20',
-    question: 'What happens if useMemo dependencies are empty []?',
+    question: 'What happens if useMemo dependencies are empty []?\n\n```jsx\nconst config = useMemo(\n  () => parseConfig(data),\n  [] // empty array\n);\n```',
     options: ['Value computed every render', 'Value computed once on mount', 'Value is undefined', 'Error is thrown'],
     correctAnswer: 1,
     category: 'react',
@@ -179,7 +179,7 @@ export const questions: Question[] = [
   // REACT - useRef
   {
     id: '21',
-    question: 'What does useRef return?',
+    question: 'What does useRef return?\n\n```jsx\nconst myRef = useRef(initialValue);\nconsole.log(myRef); // What is logged?\n```',
     options: ['A mutable ref object', 'A DOM element', 'A state value', 'A callback function'],
     correctAnswer: 0,
     category: 'react',
@@ -187,7 +187,7 @@ export const questions: Question[] = [
   },
   {
     id: '22',
-    question: 'Does changing useRef.current trigger a re-render?',
+    question: 'Does changing useRef.current trigger a re-render?\n\n```jsx\nconst countRef = useRef(0);\ncountRef.current = 5; // Does this re-render?\n```',
     options: ['Yes', 'No', 'Only if connected to state', 'Only on mount'],
     correctAnswer: 1,
     category: 'react',
@@ -195,7 +195,7 @@ export const questions: Question[] = [
   },
   {
     id: '23',
-    question: 'What property holds the value in a ref object?',
+    question: 'What property holds the value in a ref object?\n\n```jsx\nconst ref = useRef("hello");\nconsole.log(ref.???); // "hello"\n```',
     options: ['value', 'current', 'ref', 'data'],
     correctAnswer: 1,
     category: 'react',
@@ -203,7 +203,7 @@ export const questions: Question[] = [
   },
   {
     id: '24',
-    question: 'What is a common use case for useRef?',
+    question: 'What is a common use case for useRef?\n\n```jsx\nconst inputRef = useRef(null);\n\nconst focusInput = () => {\n  inputRef.current.focus();\n};\n```',
     options: ['Managing form state', 'Accessing DOM elements', 'Fetching data', 'Routing'],
     correctAnswer: 1,
     category: 'react',
@@ -211,7 +211,7 @@ export const questions: Question[] = [
   },
   {
     id: '25',
-    question: 'How do you attach a ref to a DOM element?',
+    question: 'How do you attach a ref to a DOM element?\n\n```jsx\nconst inputRef = useRef(null);\nreturn <input ??? />;\n```',
     options: ['ref={myRef.current}', 'ref={myRef}', 'useRef={myRef}', 'current={myRef}'],
     correctAnswer: 1,
     category: 'react',
@@ -221,7 +221,7 @@ export const questions: Question[] = [
   // REACT - React Router
   {
     id: '26',
-    question: 'Which hook returns the current URL location in React Router?',
+    question: 'Which hook returns the current URL location in React Router?\n\n```jsx\nconst location = use???();\n// location = { pathname, search, hash, state }\n```',
     options: ['useHistory', 'useLocation', 'useRoute', 'useURL'],
     correctAnswer: 1,
     category: 'react',
@@ -229,7 +229,7 @@ export const questions: Question[] = [
   },
   {
     id: '27',
-    question: 'What hook is used for programmatic navigation in React Router v6?',
+    question: 'What hook is used for programmatic navigation in React Router v6?\n\n```jsx\nconst navigate = use???();\nnavigate("/dashboard");\nnavigate(-1); // go back\n```',
     options: ['useHistory', 'useNavigate', 'useRouter', 'useRedirect'],
     correctAnswer: 1,
     category: 'react',
@@ -237,7 +237,7 @@ export const questions: Question[] = [
   },
   {
     id: '28',
-    question: 'How do you access URL parameters in React Router?',
+    question: 'How do you access URL parameters in React Router?\n\n```jsx\n// Route: "/users/:id"\nconst { id } = use???();\n```',
     options: ['useQuery', 'useParams', 'useURLParams', 'useSearch'],
     correctAnswer: 1,
     category: 'react',
@@ -245,7 +245,7 @@ export const questions: Question[] = [
   },
   {
     id: '29',
-    question: 'What component is used to define routes in React Router v6?',
+    question: 'What component is used to define routes in React Router v6?\n\n```jsx\n<???>\n  <Route path="/" element={<Home />} />\n  <Route path="/about" element={<About />} />\n</???>\n```',
     options: ['Switch', 'Routes', 'Router', 'Route'],
     correctAnswer: 1,
     category: 'react',
@@ -253,7 +253,7 @@ export const questions: Question[] = [
   },
   {
     id: '30',
-    question: 'How do you create a link in React Router?',
+    question: 'How do you create a link in React Router?\n\n```jsx\n<??? to="/about">About</???>\n```',
     options: ['<a href="/">', '<Link to="/">', '<Route to="/">', '<Navigate to="/">'],
     correctAnswer: 1,
     category: 'react',
@@ -261,7 +261,7 @@ export const questions: Question[] = [
   },
   {
     id: '31',
-    question: 'What does the Outlet component do in React Router?',
+    question: 'What does the Outlet component do in React Router?\n\n```jsx\nfunction Layout() {\n  return (\n    <div>\n      <Nav />\n      <Outlet /> {/* What renders here? */}\n    </div>\n  );\n}\n```',
     options: ['Creates a new route', 'Renders child routes', 'Redirects users', 'Handles 404 errors'],
     correctAnswer: 1,
     category: 'react',
@@ -269,7 +269,7 @@ export const questions: Question[] = [
   },
   {
     id: '32',
-    question: 'How do you handle 404 pages in React Router v6?',
+    question: 'How do you handle 404 pages in React Router v6?\n\n```jsx\n<Routes>\n  <Route path="/" element={<Home />} />\n  <Route path=??? element={<NotFound />} />\n</Routes>\n```',
     options: ['<Route notFound>', '<Route path="*">', '<Route 404>', '<NotFound>'],
     correctAnswer: 1,
     category: 'react',
@@ -277,7 +277,7 @@ export const questions: Question[] = [
   },
   {
     id: '33',
-    question: 'What hook gives you access to search/query parameters?',
+    question: 'What hook gives you access to search/query parameters?\n\n```jsx\n// URL: /search?q=react\nconst [searchParams, setSearchParams] = use???();\nconst query = searchParams.get("q"); // "react"\n```',
     options: ['useParams', 'useSearchParams', 'useQuery', 'useLocation'],
     correctAnswer: 1,
     category: 'react',
@@ -287,7 +287,7 @@ export const questions: Question[] = [
   // REACT - React Hook Form
   {
     id: '34',
-    question: 'What hook is the main entry point for React Hook Form?',
+    question: 'What hook is the main entry point for React Hook Form?\n\n```jsx\nconst { register, handleSubmit, formState } = use???();\n```',
     options: ['useForm', 'useFormState', 'useController', 'useWatch'],
     correctAnswer: 0,
     category: 'react',
@@ -295,7 +295,7 @@ export const questions: Question[] = [
   },
   {
     id: '35',
-    question: 'How do you register an input with React Hook Form?',
+    question: 'How do you register an input with React Hook Form?\n\n```jsx\nconst { register } = useForm();\nreturn <input ??? />;\n```',
     options: ['register prop', 'name prop only', 'ref prop', '{...register("fieldName")}'],
     correctAnswer: 3,
     category: 'react',
@@ -303,7 +303,7 @@ export const questions: Question[] = [
   },
   {
     id: '36',
-    question: 'What function handles form submission in React Hook Form?',
+    question: 'What function handles form submission in React Hook Form?\n\n```jsx\nconst { handleSubmit } = useForm();\nconst onSubmit = (data) => console.log(data);\n\nreturn <form onSubmit={???(onSubmit)}>...</form>;\n```',
     options: ['onSubmit', 'handleSubmit', 'submit', 'processForm'],
     correctAnswer: 1,
     category: 'react',
@@ -311,7 +311,7 @@ export const questions: Question[] = [
   },
   {
     id: '37',
-    question: 'How do you access form errors in React Hook Form?',
+    question: 'How do you access form errors in React Hook Form?\n\n```jsx\nconst { formState: { errors } } = useForm();\n// How to access email field error?\n```',
     options: ['errors object from useForm', 'formState.errors', 'getErrors()', 'useErrors()'],
     correctAnswer: 1,
     category: 'react',
@@ -319,7 +319,7 @@ export const questions: Question[] = [
   },
   {
     id: '38',
-    question: 'What does the watch function do in React Hook Form?',
+    question: 'What does the watch function do in React Hook Form?\n\n```jsx\nconst { watch } = useForm();\nconst emailValue = watch("email");\n// What does emailValue contain?\n```',
     options: ['Validates inputs', 'Watches for form submission', 'Subscribes to input changes', 'Resets the form'],
     correctAnswer: 2,
     category: 'react',
@@ -327,7 +327,7 @@ export const questions: Question[] = [
   },
   {
     id: '39',
-    question: 'How do you set default values in React Hook Form?',
+    question: 'How do you set default values in React Hook Form?\n\n```jsx\nconst { register } = useForm({\n  ???: { name: "John", email: "" }\n});\n```',
     options: ['defaultValue prop', 'defaultValues in useForm', 'initial prop', 'value prop'],
     correctAnswer: 1,
     category: 'react',
@@ -335,7 +335,7 @@ export const questions: Question[] = [
   },
   {
     id: '40',
-    question: 'What does reset() do in React Hook Form?',
+    question: 'What does reset() do in React Hook Form?\n\n```jsx\nconst { reset } = useForm();\nreset(); // What happens?\n```',
     options: ['Clears errors only', 'Resets form to default values', 'Submits the form', 'Validates all fields'],
     correctAnswer: 1,
     category: 'react',
@@ -377,7 +377,7 @@ export const questions: Question[] = [
   },
   {
     id: '45',
-    question: 'What hook would you use to access context?',
+    question: 'What hook would you use to access context?\n\n```jsx\nconst ThemeContext = createContext("light");\n\nfunction Button() {\n  const theme = use???(ThemeContext);\n  return <button className={theme}>Click</button>;\n}\n```',
     options: ['useState', 'useContext', 'useReducer', 'useRef'],
     correctAnswer: 1,
     category: 'react',

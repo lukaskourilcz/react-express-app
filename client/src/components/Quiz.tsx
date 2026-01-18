@@ -30,6 +30,22 @@ const getCategoryColor = (category: string) => {
   }
 };
 
+// Render question text with code blocks
+const renderQuestion = (text: string) => {
+  const parts = text.split(/(```[\s\S]*?```)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('```')) {
+      const code = part.replace(/```\w*\n?/, '').replace(/```$/, '');
+      return (
+        <pre key={index} className="quiz-code-block">
+          <code>{code}</code>
+        </pre>
+      );
+    }
+    return <span key={index}>{part}</span>;
+  });
+};
+
 function Quiz() {
   const [state, setState] = useState<QuizState>('loading');
   const [sessionId, setSessionId] = useState<string>('');
@@ -202,9 +218,9 @@ function Quiz() {
                   color={getCategoryColor(question.category) as any}
                 />
               </Box>
-              <Typography variant="body1" sx={{ mb: 2, fontWeight: 500 }}>
-                {question.question}
-              </Typography>
+              <Box sx={{ mb: 2, fontWeight: 500 }}>
+                {renderQuestion(question.question)}
+              </Box>
               <Typography variant="body2">
                 Your answer: <strong>{question.options[questionResult?.selectedIndex ?? 0]}</strong>
               </Typography>
@@ -274,9 +290,9 @@ function Quiz() {
             />
           </div>
 
-          <p className="quiz-question-text">
-            {currentQuestion.question}
-          </p>
+          <div className="quiz-question-text">
+            {renderQuestion(currentQuestion.question)}
+          </div>
 
           <RadioGroup
             value={answers[currentQuestion.id] ?? ''}
