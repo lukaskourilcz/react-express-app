@@ -1,7 +1,7 @@
 {
   "name": "react-express-quiz-app",
   "version": "1.0.0",
-  "description": "Quiz app with React, Express, MaterialUI, and StyleX",
+  "description": "Quiz app with React, TypeScript, and MaterialUI",
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cd server && npm run dev",
@@ -13,6 +13,7 @@
     "install:all": "npm install && cd server && npm install && cd ../client && npm install"
   },
   "devDependencies": {
+    "@vercel/node": "^3.0.0",
     "concurrently": "^8.2.2"
   }
 }
