@@ -27,21 +27,22 @@ function App() {
             sx={{
               fontWeight: 700,
               color: '#ffffff',
-              fontSize: { xs: '1.5rem', sm: '1.75rem', md: '2rem' },
+              fontSize: { xs: '1.6rem', sm: '1.9rem', md: '2.2rem' },
               letterSpacing: '-0.5px',
             }}
           >
-            Code Quiz
+            Frontend Quiz App
           </Typography>
           <Typography
             variant="subtitle1"
             sx={{
-              color: 'rgba(255,255,255,0.75)',
+              color: 'rgba(255,255,255,0.8)',
               mt: 1,
-              fontSize: { xs: '0.85rem', sm: '0.9rem' },
+              fontSize: { xs: '0.85rem', sm: '0.95rem' },
+              fontWeight: 400,
             }}
           >
-            Test your knowledge of React, TypeScript, and Git
+            Master React, TypeScript, JavaScript & Git
           </Typography>
         </Box>
         <Quiz />

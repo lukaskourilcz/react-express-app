@@ -104,8 +104,13 @@
 }
 
 .quiz-start-card {
-  padding: clamp(2rem, 6vw, 3rem) clamp(1.25rem, 4vw, 2rem);
+  padding: clamp(2rem, 6vw, 2.5rem) clamp(1.5rem, 5vw, 2.5rem);
   text-align: center;
+}
+
+.quiz-card {
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
 .quiz-code-block {

@@ -158,52 +158,110 @@ function Quiz() {
     return (
       <Card className="quiz-card">
         <CardContent className="quiz-start-card">
-          <Typography variant="h4" sx={{ mb: 2 }}>
+          <Typography
+            variant="h4"
+            sx={{
+              mb: 1,
+              fontWeight: 600,
+              color: '#1a202c',
+            }}
+          >
             Ready to test your knowledge?
           </Typography>
-          <Typography variant="body1" sx={{ mb: 3 }}>
-            Questions about React, TypeScript, JavaScript, and Git
-          </Typography>
-          <Typography variant="body2" sx={{ mb: 1.5, color: 'text.secondary' }}>
-            How many questions?
-          </Typography>
-          <ToggleButtonGroup
-            value={questionCount}
-            exclusive
-            onChange={(_, value) => value && setQuestionCount(value)}
-            sx={{ mb: 4 }}
+          <Typography
+            variant="body2"
+            sx={{
+              mb: 3,
+              color: 'text.secondary',
+              fontSize: '0.9rem',
+            }}
           >
-            {QUESTION_COUNT_OPTIONS.map((count) => (
-              <ToggleButton
-                key={count}
-                value={count}
-                sx={{
-                  px: 2.5,
-                  py: 1,
-                  fontWeight: 600,
-                  '&.Mui-selected': {
-                    backgroundColor: 'primary.main',
-                    color: 'white',
-                    '&:hover': {
-                      backgroundColor: 'primary.dark',
-                    },
-                  },
-                }}
-              >
-                {count}
-              </ToggleButton>
-            ))}
-          </ToggleButtonGroup>
-          <Box>
-            <Button
-              variant="contained"
-              size="large"
-              onClick={handleStart}
-              sx={quizStyles.startButton}
-            >
-              Start Quiz
-            </Button>
+            200 questions across 4 categories
+          </Typography>
+
+          <Box sx={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: 1,
+            flexWrap: 'wrap',
+            mb: 3.5,
+          }}>
+            <Chip label="React" color="primary" size="small" />
+            <Chip label="TypeScript" color="secondary" size="small" />
+            <Chip label="JavaScript" color="success" size="small" />
+            <Chip label="Git" color="warning" size="small" />
           </Box>
+
+          <Box sx={{
+            backgroundColor: 'rgba(0,0,0,0.02)',
+            borderRadius: 2,
+            p: 2.5,
+            mb: 3,
+          }}>
+            <Typography
+              variant="body2"
+              sx={{
+                mb: 1.5,
+                color: 'text.secondary',
+                fontWeight: 500,
+                fontSize: '0.8rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}
+            >
+              Number of questions
+            </Typography>
+            <ToggleButtonGroup
+              value={questionCount}
+              exclusive
+              onChange={(_, value) => value && setQuestionCount(value)}
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+              }}
+            >
+              {QUESTION_COUNT_OPTIONS.map((count) => (
+                <ToggleButton
+                  key={count}
+                  value={count}
+                  sx={{
+                    px: { xs: 2, sm: 2.5 },
+                    py: 1,
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    border: '1px solid rgba(0,0,0,0.12)',
+                    '&.Mui-selected': {
+                      backgroundColor: 'primary.main',
+                      color: 'white',
+                      borderColor: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      },
+                    },
+                  }}
+                >
+                  {count}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Box>
+
+          <Button
+            variant="contained"
+            size="large"
+            onClick={handleStart}
+            fullWidth
+            sx={{
+              ...quizStyles.startButton,
+              py: 1.5,
+              fontSize: '1rem',
+              fontWeight: 600,
+              textTransform: 'none',
+              borderRadius: 2,
+            }}
+          >
+            Start Quiz
+          </Button>
         </CardContent>
       </Card>
     );
