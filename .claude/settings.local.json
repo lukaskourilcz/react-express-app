@@ -13,7 +13,9 @@
       "Bash(npm uninstall:*)",
       "Bash(node add-difficulty.js:*)",
       "Bash(npx tsc:*)",
-      "Bash(node add-introductions.js:*)"
+      "Bash(node add-introductions.js:*)",
+      "Bash(vercel --prod:*)",
+      "Bash(node add-tags.js:*)"
     ]
   }
 }

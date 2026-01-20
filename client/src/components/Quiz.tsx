@@ -464,6 +464,25 @@ function Quiz() {
             />
           </div>
 
+          {currentQuestion.tags && currentQuestion.tags.length > 0 && (
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1.5 }}>
+              {currentQuestion.tags.map((tag, idx) => (
+                <Chip
+                  key={idx}
+                  label={tag}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    fontSize: '0.7rem',
+                    height: '22px',
+                    borderColor: 'rgba(0,0,0,0.15)',
+                    color: 'text.secondary',
+                  }}
+                />
+              ))}
+            </Box>
+          )}
+
           {currentQuestion.introduction && (
             <Typography
               variant="body2"
