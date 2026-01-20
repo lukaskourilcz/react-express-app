@@ -436,7 +436,7 @@ export const questions: Question[] = [
   {
     id: '52',
     question: 'What is the correct way to define a typed array?\n\n```ts\n// Which syntax is valid?\nconst names: ??? = ["Alice", "Bob"];\n```',
-    options: ['Array<string>', 'string[]', 'Both A and B', 'string{}'],
+    options: ['Only Array<string>', 'Only string[]', 'Both Array<string> and string[]', 'string{}'],
     correctAnswer: 2,
     category: 'typescript',
     explanation: 'Both Array<string> and string[] are valid and equivalent ways to define an array of strings. The choice is mostly stylistic preference.',
@@ -596,7 +596,7 @@ export const questions: Question[] = [
   {
     id: '72',
     question: 'What is the typeof operator used for in TypeScript?\n\n```ts\nconst user = { name: "John", age: 30 };\n\n// Create type from variable\ntype User = typeof user;\n// { name: string; age: number; }\n```',
-    options: ['Runtime type checking only', 'Getting the type of a variable', 'Creating new types', 'Both B and C'],
+    options: ['Runtime type checking only', 'Only getting the type of a variable', 'Only creating new types', 'Both getting types and creating new types'],
     correctAnswer: 3,
     category: 'typescript',
     explanation: 'In TypeScript, typeof works both at runtime (JavaScript behavior) and at the type level to extract a type from a variable. type T = typeof myVariable creates a type.',
@@ -718,7 +718,7 @@ export const questions: Question[] = [
   {
     id: '87',
     question: 'How do you create and switch to a new branch?\n\n```bash\n$ git checkout -b feature\nSwitched to a new branch \'feature\'\n\n$ git switch -c feature   # Modern alternative\nSwitched to a new branch \'feature\'\n```',
-    options: ['git branch new', 'git checkout -b new', 'git switch new', 'Both B and C'],
+    options: ['git branch new', 'git checkout -b new', 'git switch -c new', 'Both checkout -b and switch -c'],
     correctAnswer: 3,
     category: 'git',
     explanation: 'Both "git checkout -b branch" and "git switch -c branch" create and switch to a new branch. switch is newer and more intuitive for branch operations.',
@@ -734,7 +734,7 @@ export const questions: Question[] = [
   {
     id: '89',
     question: 'How do you apply stashed changes?\n\n```bash\n$ git stash apply   # Applies and keeps stash\n$ git stash pop     # Applies and removes stash\n```',
-    options: ['git stash apply', 'git stash pop', 'Both A and B', 'git stash get'],
+    options: ['Only git stash apply', 'Only git stash pop', 'Both apply and pop', 'git stash get'],
     correctAnswer: 2,
     category: 'git',
     explanation: 'Both apply and pop restore stashed changes. The difference: pop removes the stash after applying, while apply keeps it in the stash list for potential reuse.',
