@@ -17,10 +17,14 @@ function shuffleArray<T>(array: T[]): T[] {
 }
 
 // Get all questions (shuffled questions and shuffled answers)
-quizRouter.get('/questions', (_req, res) => {
-  // Shuffle and select 10 questions
+quizRouter.get('/questions', (req, res) => {
+  // Get count from query parameter, default to 10, max 50
+  const countParam = parseInt(req.query.count as string) || 10;
+  const count = Math.min(Math.max(countParam, 1), 50);
+
+  // Shuffle and select questions
   const shuffledQuestions = shuffleArray(questions);
-  const selected = shuffledQuestions.slice(0, 10);
+  const selected = shuffledQuestions.slice(0, count);
 
   // Generate a session ID
   const sessionId = Math.random().toString(36).substring(2, 15);

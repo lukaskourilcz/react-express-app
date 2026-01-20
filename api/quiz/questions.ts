@@ -1,10 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { questions, shuffleArray, encodeSession } from './data.js';
 
-export default function handler(_req: VercelRequest, res: VercelResponse) {
-  // Shuffle and select 10 questions
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  // Get count from query parameter, default to 10, max 50
+  const countParam = parseInt(req.query.count as string) || 10;
+  const count = Math.min(Math.max(countParam, 1), 50);
+
+  // Shuffle and select questions
   const shuffledQuestions = shuffleArray(questions);
-  const selected = shuffledQuestions.slice(0, 10);
+  const selected = shuffledQuestions.slice(0, count);
 
   // Shuffle options for each question and track correct answers
   const sessionData: { questionId: string; correctAnswer: number }[] = [];

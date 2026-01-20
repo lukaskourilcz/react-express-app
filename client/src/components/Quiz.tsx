@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -12,6 +12,8 @@ import {
   Alert,
   Chip,
   Paper,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import type { Question, QuizResult, QuizState } from '../types/quiz';
 import { quizStyles } from '../theme/MuiTheme';
@@ -48,28 +50,27 @@ const renderQuestion = (text: string) => {
   });
 };
 
+const QUESTION_COUNT_OPTIONS = [10, 20, 30, 40, 50];
+
 function Quiz() {
-  const [state, setState] = useState<QuizState>('loading');
+  const [state, setState] = useState<QuizState>('ready');
   const [sessionId, setSessionId] = useState<string>('');
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [result, setResult] = useState<QuizResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [questionCount, setQuestionCount] = useState<number>(10);
 
-  useEffect(() => {
-    fetchQuestions();
-  }, []);
-
-  const fetchQuestions = async () => {
+  const fetchQuestions = async (count: number) => {
     try {
       setState('loading');
-      const response = await fetch('/api/quiz/questions');
+      const response = await fetch(`/api/quiz/questions?count=${count}`);
       if (!response.ok) throw new Error('Failed to fetch questions');
       const data = await response.json();
       setSessionId(data.sessionId);
       setQuestions(data.questions);
-      setState('ready');
+      setState('in-progress');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setState('error');
@@ -77,10 +78,10 @@ function Quiz() {
   };
 
   const handleStart = () => {
-    setState('in-progress');
     setCurrentIndex(0);
     setAnswers({});
     setResult(null);
+    fetchQuestions(questionCount);
   };
 
   const handleAnswer = (questionId: string, answerIndex: number) => {
@@ -116,7 +117,11 @@ function Quiz() {
   };
 
   const handleRestart = () => {
-    fetchQuestions();
+    setState('ready');
+    setQuestions([]);
+    setResult(null);
+    setAnswers({});
+    setCurrentIndex(0);
   };
 
   if (state === 'loading') {
@@ -140,7 +145,7 @@ function Quiz() {
         <CardContent sx={{ padding: '2rem' }}>
           <Alert
             severity="error"
-            action={<Button onClick={fetchQuestions} color="inherit">Retry</Button>}
+            action={<Button onClick={() => fetchQuestions(questionCount)} color="inherit">Retry</Button>}
           >
             {error}
           </Alert>
@@ -156,17 +161,49 @@ function Quiz() {
           <Typography variant="h4" sx={{ mb: 2 }}>
             Ready to test your knowledge?
           </Typography>
-          <Typography variant="body1" sx={{ mb: 4 }}>
-            {questions.length} questions about React, TypeScript, JavaScript, and Git
+          <Typography variant="body1" sx={{ mb: 3 }}>
+            Questions about React, TypeScript, JavaScript, and Git
           </Typography>
-          <Button
-            variant="contained"
-            size="large"
-            onClick={handleStart}
-            sx={quizStyles.startButton}
+          <Typography variant="body2" sx={{ mb: 1.5, color: 'text.secondary' }}>
+            How many questions?
+          </Typography>
+          <ToggleButtonGroup
+            value={questionCount}
+            exclusive
+            onChange={(_, value) => value && setQuestionCount(value)}
+            sx={{ mb: 4 }}
           >
-            Start Quiz
-          </Button>
+            {QUESTION_COUNT_OPTIONS.map((count) => (
+              <ToggleButton
+                key={count}
+                value={count}
+                sx={{
+                  px: 2.5,
+                  py: 1,
+                  fontWeight: 600,
+                  '&.Mui-selected': {
+                    backgroundColor: 'primary.main',
+                    color: 'white',
+                    '&:hover': {
+                      backgroundColor: 'primary.dark',
+                    },
+                  },
+                }}
+              >
+                {count}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+          <Box>
+            <Button
+              variant="contained"
+              size="large"
+              onClick={handleStart}
+              sx={quizStyles.startButton}
+            >
+              Start Quiz
+            </Button>
+          </Box>
         </CardContent>
       </Card>
     );
