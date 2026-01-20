@@ -16,6 +16,7 @@ import {
 import type { Question, QuizResult, QuizState } from '../types/quiz';
 import { quizStyles } from '../theme/MuiTheme';
 import './Quiz.css';
+import StyleXTest from './StyleXTest';
 
 const getCategoryColor = (category: string) => {
   switch (category) {
@@ -259,6 +260,7 @@ function Quiz() {
 
   return (
     <>
+      <StyleXTest />
       <div className="quiz-progress-container">
         <div className="quiz-progress-text">
           <span>Question {currentIndex + 1} of {questions.length}</span>

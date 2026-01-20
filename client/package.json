@@ -12,10 +12,14 @@
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
     "@mui/material": "^5.15.6",
+    "@stylexjs/babel-plugin": "^0.17.5",
+    "@stylexjs/stylex": "^0.17.5",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "vite-plugin-babel": "^1.4.1"
   },
   "devDependencies": {
+    "@types/node": "^25.0.9",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18",
     "@vitejs/plugin-react": "^4.2.1",
