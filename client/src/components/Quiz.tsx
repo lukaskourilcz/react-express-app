@@ -183,7 +183,7 @@ function Quiz() {
               fontSize: '0.9rem',
             }}
           >
-            255 questions across 4 categories
+            275 questions across 4 categories
           </Typography>
 
           <Box sx={{
