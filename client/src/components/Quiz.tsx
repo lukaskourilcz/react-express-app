@@ -464,6 +464,25 @@ function Quiz() {
             />
           </div>
 
+          {currentQuestion.introduction && (
+            <Typography
+              variant="body2"
+              sx={{
+                color: 'text.secondary',
+                mb: 2,
+                p: 1.5,
+                backgroundColor: 'rgba(90, 103, 216, 0.08)',
+                borderRadius: 1,
+                borderLeft: '3px solid',
+                borderLeftColor: 'primary.main',
+                fontSize: '0.85rem',
+                lineHeight: 1.6,
+              }}
+            >
+              {currentQuestion.introduction}
+            </Typography>
+          )}
+
           <div className="quiz-question-text">
             {renderQuestion(currentQuestion.question)}
           </div>

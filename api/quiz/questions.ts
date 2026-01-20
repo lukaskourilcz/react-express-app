@@ -60,6 +60,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     // Return question without the correct answer
     return {
       id: question.id,
+      introduction: question.introduction,
       question: question.question,
       options: shuffledOptions,
       category: question.category,

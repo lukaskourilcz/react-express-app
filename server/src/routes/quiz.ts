@@ -79,6 +79,7 @@ quizRouter.get('/questions', (req, res) => {
     // Return question without the correct answer
     return {
       id: question.id,
+      introduction: question.introduction,
       question: question.question,
       options: shuffledOptions,
       category: question.category,

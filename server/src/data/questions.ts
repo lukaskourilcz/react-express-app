@@ -1,5 +1,6 @@
 export interface Question {
   id: string;
+  introduction: string;
   question: string;
   options: string[];
   correctAnswer: number;
@@ -14,6 +15,7 @@ export const questions: Question[] = [
   // REACT - useState
   {
     id: '1',
+    introduction: 'useState is a React Hook that lets you add state to functional components. It returns an array with the current state and a function to update it.',
     question: 'What does useState return?\n\n```jsx\nconst [value, setValue] = useState(initialValue);\n```',
     options: ['A single value', 'An array with value and setter', 'An object with value and setter', 'A promise'],
     correctAnswer: 1,
@@ -23,6 +25,7 @@ export const questions: Question[] = [
   },
   {
     id: '2',
+    introduction: 'useState provides a setter function that triggers re-renders when called. Understanding how state updates work is crucial for React development.',
     question: 'What happens when you call the setter function from useState?\n\n```jsx\nconst [count, setCount] = useState(0);\nsetCount(5); // What happens here?\n```',
     options: ['Nothing', 'Component re-renders', 'Page refreshes', 'State updates without re-render'],
     correctAnswer: 1,
@@ -32,6 +35,7 @@ export const questions: Question[] = [
   },
   {
     id: '3',
+    introduction: 'When updating state based on the previous value, React provides a functional update pattern to ensure you always work with the latest state.',
     question: 'How do you update state based on previous state?\n\n```jsx\nconst [count, setCount] = useState(0);\n// Which approach is correct?\n```',
     options: ['setState(state + 1)', 'setState(prev => prev + 1)', 'setState(this.state + 1)', 'state++'],
     correctAnswer: 1,
@@ -41,6 +45,7 @@ export const questions: Question[] = [
   },
   {
     id: '4',
+    introduction: 'useState accepts an initial value that determines the starting state. Understanding when this value is used is important for optimization.',
     question: 'What is the initial value parameter in useState used for?\n\n```jsx\nconst [name, setName] = useState("John");\n//                              ^^^^^^\n```',
     options: ['Default value on every render', 'Initial value only on first render', 'Fallback value', 'Validation'],
     correctAnswer: 1,
@@ -50,6 +55,7 @@ export const questions: Question[] = [
   },
   {
     id: '5',
+    introduction: 'useState can hold any JavaScript value, including complex data types. Knowing how to work with objects in state is essential.',
     question: 'Can useState hold objects?\n\n```jsx\nconst [user, setUser] = useState({ name: "John", age: 25 });\n```',
     options: ['No, only primitives', 'Yes, but they are immutable', 'Yes, any value type', 'Only arrays'],
     correctAnswer: 2,
@@ -61,6 +67,7 @@ export const questions: Question[] = [
   // REACT - useEffect
   {
     id: '6',
+    introduction: 'useEffect is a Hook for performing side effects in functional components, such as data fetching, subscriptions, or DOM manipulation.',
     question: 'When does useEffect run by default?\n\n```jsx\nuseEffect(() => {\n  // effect code\n});\n```',
     options: ['Only on mount', 'After every render', 'Before every render', 'Only on unmount'],
     correctAnswer: 1,
@@ -70,6 +77,7 @@ export const questions: Question[] = [
   },
   {
     id: '7',
+    introduction: 'The dependency array in useEffect controls when the effect runs. An empty array is a common pattern for one-time setup.',
     question: 'What does an empty dependency array in useEffect do?\n\n```jsx\nuseEffect(() => {\n  fetchData();\n}, []); // <-- empty array\n```',
     options: ['Runs on every render', 'Runs only on mount', 'Runs only on unmount', 'Disables the effect'],
     correctAnswer: 1,
@@ -79,6 +87,7 @@ export const questions: Question[] = [
   },
   {
     id: '8',
+    introduction: 'useEffect can return a cleanup function to prevent memory leaks and clean up subscriptions or timers.',
     question: 'What does the return function in useEffect do?\n\n```jsx\nuseEffect(() => {\n  subscribe();\n  return () => {\n    unsubscribe(); // <-- this function\n  };\n}, []);\n```',
     options: ['Returns a value', 'Cleanup function', 'Error handler', 'Nothing'],
     correctAnswer: 1,
@@ -88,6 +97,7 @@ export const questions: Question[] = [
   },
   {
     id: '9',
+    introduction: 'Understanding when cleanup functions execute helps prevent bugs related to stale data and memory leaks.',
     question: 'When is the cleanup function in useEffect called?\n\n```jsx\nuseEffect(() => {\n  const timer = setInterval(tick, 1000);\n  return () => clearInterval(timer);\n}, [dependency]);\n```',
     options: ['Before the effect runs and on unmount', 'Only on mount', 'Only when dependencies change', 'Never automatically'],
     correctAnswer: 0,
@@ -97,6 +107,7 @@ export const questions: Question[] = [
   },
   {
     id: '10',
+    introduction: 'The dependency array is a key concept in useEffect. Omitting it entirely has different behavior than providing an empty array.',
     question: 'What happens if you omit the dependency array in useEffect?\n\n```jsx\nuseEffect(() => {\n  console.log("Effect ran");\n}); // no dependency array\n```',
     options: ['Effect never runs', 'Effect runs once', 'Effect runs after every render', 'Compilation error'],
     correctAnswer: 2,
@@ -108,6 +119,7 @@ export const questions: Question[] = [
   // REACT - useCallback
   {
     id: '11',
+    introduction: 'useCallback is a Hook that memoizes functions to prevent unnecessary re-creations on every render.',
     question: 'What is the purpose of useCallback?\n\n```jsx\nconst memoizedFn = useCallback(() => {\n  doSomething(a, b);\n}, [a, b]);\n```',
     options: ['To call functions', 'To memoize callback functions', 'To create callbacks', 'To handle async operations'],
     correctAnswer: 1,
@@ -117,6 +129,7 @@ export const questions: Question[] = [
   },
   {
     id: '12',
+    introduction: 'useCallback returns the same function reference between renders if dependencies haven\'t changed, which helps optimize child components.',
     question: 'When should you use useCallback?\n\n```jsx\nconst handleClick = useCallback(() => {\n  console.log(value);\n}, [value]);\n\nreturn <MemoizedChild onClick={handleClick} />;\n```',
     options: ['For all functions', 'When passing callbacks to optimized child components', 'Never', 'Only for async functions'],
     correctAnswer: 1,
@@ -126,6 +139,7 @@ export const questions: Question[] = [
   },
   {
     id: '13',
+    introduction: 'Using useCallback effectively requires understanding when functions actually need to be memoized.',
     question: 'What does useCallback return?\n\n```jsx\nconst fn = useCallback(() => {\n  // function body\n}, [deps]);\n// What is fn?\n```',
     options: ['The result of the callback', 'A memoized version of the callback', 'A new function every time', 'A promise'],
     correctAnswer: 1,
@@ -135,6 +149,7 @@ export const questions: Question[] = [
   },
   {
     id: '14',
+    introduction: 'useCallback and useMemo serve different purposes but follow similar patterns with dependency arrays.',
     question: 'What is the second argument to useCallback?\n\n```jsx\nconst fn = useCallback(\n  () => { /* callback */ },\n  [a, b] // <-- What is this?\n);\n```',
     options: ['The callback function', 'The return value', 'Dependency array', 'Options object'],
     correctAnswer: 2,
@@ -144,6 +159,7 @@ export const questions: Question[] = [
   },
   {
     id: '15',
+    introduction: 'Combining useCallback with React.memo can significantly optimize rendering performance in complex applications.',
     question: 'useCallback(fn, deps) is equivalent to which useMemo call?\n\n```jsx\n// These are equivalent:\nuseCallback(fn, deps)\n// vs\nuseMemo(???, deps)\n```',
     options: ['useMemo(fn, deps)', 'useMemo(() => fn, deps)', 'useMemo(fn(), deps)', 'useMemo(() => fn(), deps)'],
     correctAnswer: 1,
@@ -155,6 +171,7 @@ export const questions: Question[] = [
   // REACT - useMemo
   {
     id: '16',
+    introduction: 'useMemo is a Hook that memoizes computed values to avoid expensive recalculations on every render.',
     question: 'What is the purpose of useMemo?\n\n```jsx\nconst memoizedValue = useMemo(\n  () => computeExpensiveValue(a, b),\n  [a, b]\n);\n```',
     options: ['To memorize values', 'To memoize expensive calculations', 'To create memos', 'To store data permanently'],
     correctAnswer: 1,
@@ -164,6 +181,7 @@ export const questions: Question[] = [
   },
   {
     id: '17',
+    introduction: 'useMemo caches the result of a computation and only recalculates when dependencies change.',
     question: 'When does useMemo recompute its value?\n\n```jsx\nconst result = useMemo(\n  () => filterItems(items, query),\n  [items, query]\n);\n```',
     options: ['Every render', 'Never', 'When dependencies change', 'Only on mount'],
     correctAnswer: 2,
@@ -173,6 +191,7 @@ export const questions: Question[] = [
   },
   {
     id: '18',
+    introduction: 'Understanding the difference between useMemo and useCallback is important for choosing the right optimization tool.',
     question: 'What does useMemo return?\n\n```jsx\nconst sortedList = useMemo(\n  () => [...items].sort(),\n  [items]\n);\n// What is sortedList?\n```',
     options: ['A function', 'The memoized value', 'A ref object', 'A setter function'],
     correctAnswer: 1,
@@ -182,6 +201,7 @@ export const questions: Question[] = [
   },
   {
     id: '19',
+    introduction: 'Premature optimization with useMemo can add complexity. Knowing when to use it is as important as knowing how.',
     question: 'Should you use useMemo for all computed values?\n\n```jsx\n// Is this necessary?\nconst doubled = useMemo(() => count * 2, [count]);\n```',
     options: ['Yes, always', 'No, only for expensive computations', 'Only for objects', 'Only for arrays'],
     correctAnswer: 1,
@@ -191,6 +211,7 @@ export const questions: Question[] = [
   },
   {
     id: '20',
+    introduction: 'The dependency array in useMemo determines when the cached value should be recalculated.',
     question: 'What happens if useMemo dependencies are empty []?\n\n```jsx\nconst config = useMemo(\n  () => parseConfig(data),\n  [] // empty array\n);\n```',
     options: ['Value computed every render', 'Value computed once on mount', 'Value is undefined', 'Error is thrown'],
     correctAnswer: 1,
@@ -202,6 +223,7 @@ export const questions: Question[] = [
   // REACT - useRef
   {
     id: '21',
+    introduction: 'useRef creates a mutable reference that persists across renders without causing re-renders when changed.',
     question: 'What does useRef return?\n\n```jsx\nconst myRef = useRef(initialValue);\nconsole.log(myRef); // What is logged?\n```',
     options: ['A mutable ref object', 'A DOM element', 'A state value', 'A callback function'],
     correctAnswer: 0,
@@ -211,6 +233,7 @@ export const questions: Question[] = [
   },
   {
     id: '22',
+    introduction: 'useRef is commonly used to access DOM elements directly, similar to how refs work in class components.',
     question: 'Does changing useRef.current trigger a re-render?\n\n```jsx\nconst countRef = useRef(0);\ncountRef.current = 5; // Does this re-render?\n```',
     options: ['Yes', 'No', 'Only if connected to state', 'Only on mount'],
     correctAnswer: 1,
@@ -220,6 +243,7 @@ export const questions: Question[] = [
   },
   {
     id: '23',
+    introduction: 'Unlike state, updating a ref\'s current value doesn\'t trigger a re-render, making it useful for certain patterns.',
     question: 'What property holds the value in a ref object?\n\n```jsx\nconst ref = useRef("hello");\nconsole.log(ref.???); // "hello"\n```',
     options: ['value', 'current', 'ref', 'data'],
     correctAnswer: 1,
@@ -229,6 +253,7 @@ export const questions: Question[] = [
   },
   {
     id: '24',
+    introduction: 'useRef can store any mutable value, not just DOM references, making it versatile for various use cases.',
     question: 'What is a common use case for useRef?\n\n```jsx\nconst inputRef = useRef(null);\n\nconst focusInput = () => {\n  inputRef.current.focus();\n};\n```',
     options: ['Managing form state', 'Accessing DOM elements', 'Fetching data', 'Routing'],
     correctAnswer: 1,
@@ -238,6 +263,7 @@ export const questions: Question[] = [
   },
   {
     id: '25',
+    introduction: 'Combining useRef with useEffect allows for advanced patterns like tracking previous values or measuring DOM elements.',
     question: 'How do you attach a ref to a DOM element?\n\n```jsx\nconst inputRef = useRef(null);\nreturn <input ??? />;\n```',
     options: ['ref={myRef.current}', 'ref={myRef}', 'useRef={myRef}', 'current={myRef}'],
     correctAnswer: 1,
@@ -249,6 +275,7 @@ export const questions: Question[] = [
   // REACT - React Router
   {
     id: '26',
+    introduction: 'useContext is a Hook that lets you subscribe to React context, enabling data sharing without prop drilling.',
     question: 'Which hook returns the current URL location in React Router?\n\n```jsx\nconst location = use???();\n// location = { pathname, search, hash, state }\n```',
     options: ['useHistory', 'useLocation', 'useRoute', 'useURL'],
     correctAnswer: 1,
@@ -258,6 +285,7 @@ export const questions: Question[] = [
   },
   {
     id: '27',
+    introduction: 'Context provides a way to pass data through the component tree without manually passing props at every level.',
     question: 'What hook is used for programmatic navigation in React Router v6?\n\n```jsx\nconst navigate = use???();\nnavigate("/dashboard");\nnavigate(-1); // go back\n```',
     options: ['useHistory', 'useNavigate', 'useRouter', 'useRedirect'],
     correctAnswer: 1,
@@ -267,6 +295,7 @@ export const questions: Question[] = [
   },
   {
     id: '28',
+    introduction: 'Understanding when to use Context vs props is important for maintaining clean and performant React applications.',
     question: 'How do you access URL parameters in React Router?\n\n```jsx\n// Route: "/users/:id"\nconst { id } = use???();\n```',
     options: ['useQuery', 'useParams', 'useURLParams', 'useSearch'],
     correctAnswer: 1,
@@ -276,6 +305,7 @@ export const questions: Question[] = [
   },
   {
     id: '29',
+    introduction: 'useContext re-renders the component whenever the context value changes, which has performance implications.',
     question: 'What component is used to define routes in React Router v6?\n\n```jsx\n<???>\n  <Route path="/" element={<Home />} />\n  <Route path="/about" element={<About />} />\n</???>\n```',
     options: ['Switch', 'Routes', 'Router', 'Route'],
     correctAnswer: 1,
@@ -285,6 +315,7 @@ export const questions: Question[] = [
   },
   {
     id: '30',
+    introduction: 'Combining Context with useReducer creates a powerful state management pattern similar to Redux.',
     question: 'How do you create a link in React Router?\n\n```jsx\n<??? to="/about">About</???>\n```',
     options: ['<a href="/">', '<Link to="/">', '<Route to="/">', '<Navigate to="/">'],
     correctAnswer: 1,
@@ -294,6 +325,7 @@ export const questions: Question[] = [
   },
   {
     id: '31',
+    introduction: 'useReducer is a Hook for managing complex state logic, following the reducer pattern familiar from Redux.',
     question: 'What does the Outlet component do in React Router?\n\n```jsx\nfunction Layout() {\n  return (\n    <div>\n      <Nav />\n      <Outlet /> {/* What renders here? */}\n    </div>\n  );\n}\n```',
     options: ['Creates a new route', 'Renders child routes', 'Redirects users', 'Handles 404 errors'],
     correctAnswer: 1,
@@ -303,6 +335,7 @@ export const questions: Question[] = [
   },
   {
     id: '32',
+    introduction: 'Reducers take the current state and an action, returning a new state based on the action type.',
     question: 'How do you handle 404 pages in React Router v6?\n\n```jsx\n<Routes>\n  <Route path="/" element={<Home />} />\n  <Route path=??? element={<NotFound />} />\n</Routes>\n```',
     options: ['<Route notFound>', '<Route path="*">', '<Route 404>', '<NotFound>'],
     correctAnswer: 1,
@@ -312,6 +345,7 @@ export const questions: Question[] = [
   },
   {
     id: '33',
+    introduction: 'Understanding when to use useReducer vs useState helps you choose the right tool for your state management needs.',
     question: 'What hook gives you access to search/query parameters?\n\n```jsx\n// URL: /search?q=react\nconst [searchParams, setSearchParams] = use???();\nconst query = searchParams.get("q"); // "react"\n```',
     options: ['useParams', 'useSearchParams', 'useQuery', 'useLocation'],
     correctAnswer: 1,
@@ -323,6 +357,7 @@ export const questions: Question[] = [
   // REACT - React Hook Form
   {
     id: '34',
+    introduction: 'The dispatch function from useReducer is stable and doesn\'t change between renders, making it safe to pass to child components.',
     question: 'What hook is the main entry point for React Hook Form?\n\n```jsx\nconst { register, handleSubmit, formState } = use???();\n```',
     options: ['useForm', 'useFormState', 'useController', 'useWatch'],
     correctAnswer: 0,
@@ -332,6 +367,7 @@ export const questions: Question[] = [
   },
   {
     id: '35',
+    introduction: 'useReducer is particularly useful when state transitions are complex or when the next state depends on the previous one.',
     question: 'How do you register an input with React Hook Form?\n\n```jsx\nconst { register } = useForm();\nreturn <input ??? />;\n```',
     options: ['register prop', 'name prop only', 'ref prop', '{...register("fieldName")}'],
     correctAnswer: 3,
@@ -341,6 +377,7 @@ export const questions: Question[] = [
   },
   {
     id: '36',
+    introduction: 'Custom Hooks let you extract component logic into reusable functions, following React\'s composition model.',
     question: 'What function handles form submission in React Hook Form?\n\n```jsx\nconst { handleSubmit } = useForm();\nconst onSubmit = (data) => console.log(data);\n\nreturn <form onSubmit={???(onSubmit)}>...</form>;\n```',
     options: ['onSubmit', 'handleSubmit', 'submit', 'processForm'],
     correctAnswer: 1,
@@ -350,6 +387,7 @@ export const questions: Question[] = [
   },
   {
     id: '37',
+    introduction: 'Custom Hooks can use other Hooks internally, allowing you to compose complex behavior from simpler pieces.',
     question: 'How do you access form errors in React Hook Form?\n\n```jsx\nconst { formState: { errors } } = useForm();\n// How to access email field error?\n```',
     options: ['errors object from useForm', 'formState.errors', 'getErrors()', 'useErrors()'],
     correctAnswer: 1,
@@ -359,6 +397,7 @@ export const questions: Question[] = [
   },
   {
     id: '38',
+    introduction: 'Naming custom Hooks with the \'use\' prefix is a convention that enables React to apply the Rules of Hooks.',
     question: 'What does the watch function do in React Hook Form?\n\n```jsx\nconst { watch } = useForm();\nconst emailValue = watch("email");\n// What does emailValue contain?\n```',
     options: ['Validates inputs', 'Watches for form submission', 'Subscribes to input changes', 'Resets the form'],
     correctAnswer: 2,
@@ -368,6 +407,7 @@ export const questions: Question[] = [
   },
   {
     id: '39',
+    introduction: 'Custom Hooks can return any value: primitives, objects, arrays, or even other functions.',
     question: 'How do you set default values in React Hook Form?\n\n```jsx\nconst { register } = useForm({\n  ???: { name: "John", email: "" }\n});\n```',
     options: ['defaultValue prop', 'defaultValues in useForm', 'initial prop', 'value prop'],
     correctAnswer: 1,
@@ -377,6 +417,7 @@ export const questions: Question[] = [
   },
   {
     id: '40',
+    introduction: 'Extracting logic into custom Hooks improves code organization, testability, and reusability across components.',
     question: 'What does reset() do in React Hook Form?\n\n```jsx\nconst { reset } = useForm();\nreset(); // What happens?\n```',
     options: ['Clears errors only', 'Resets form to default values', 'Submits the form', 'Validates all fields'],
     correctAnswer: 1,
@@ -388,6 +429,7 @@ export const questions: Question[] = [
   // REACT - General
   {
     id: '41',
+    introduction: 'React Hooks have specific rules that must be followed for them to work correctly and predictably.',
     question: 'What is the purpose of React.memo?',
     options: ['To memoize values', 'To prevent unnecessary re-renders of components', 'To create memos', 'To store data'],
     correctAnswer: 1,
@@ -397,6 +439,7 @@ export const questions: Question[] = [
   },
   {
     id: '42',
+    introduction: 'Hooks must be called at the top level of your component, not inside conditions, loops, or nested functions.',
     question: 'What is a controlled component in React?',
     options: ['A component with refs', 'A component whose value is controlled by React state', 'A class component', 'A pure component'],
     correctAnswer: 1,
@@ -406,6 +449,7 @@ export const questions: Question[] = [
   },
   {
     id: '43',
+    introduction: 'The \'only call Hooks from React functions\' rule ensures Hooks are used in the correct context.',
     question: 'What is the virtual DOM?',
     options: ['A copy of the real DOM in memory', 'A browser feature', 'A JavaScript engine', 'A CSS framework'],
     correctAnswer: 0,
@@ -415,6 +459,7 @@ export const questions: Question[] = [
   },
   {
     id: '44',
+    introduction: 'Understanding why Hook rules exist helps you avoid subtle bugs and write more predictable React code.',
     question: 'What is the purpose of keys in React lists?',
     options: ['Styling', 'Help React identify which items changed', 'Security', 'Performance only'],
     correctAnswer: 1,
@@ -424,6 +469,7 @@ export const questions: Question[] = [
   },
   {
     id: '45',
+    introduction: 'The ESLint plugin for React Hooks can automatically detect violations of the Rules of Hooks.',
     question: 'What hook would you use to access context?\n\n```jsx\nconst ThemeContext = createContext("light");\n\nfunction Button() {\n  const theme = use???(ThemeContext);\n  return <button className={theme}>Click</button>;\n}\n```',
     options: ['useState', 'useContext', 'useReducer', 'useRef'],
     correctAnswer: 1,
@@ -433,6 +479,7 @@ export const questions: Question[] = [
   },
   {
     id: '46',
+    introduction: 'Advanced Hook patterns enable sophisticated state management and side effect handling in React applications.',
     question: 'What is prop drilling?',
     options: ['A performance technique', 'Passing props through multiple levels', 'A testing method', 'A build process'],
     correctAnswer: 1,
@@ -442,6 +489,7 @@ export const questions: Question[] = [
   },
   {
     id: '47',
+    introduction: 'Composing multiple Hooks together allows for powerful abstractions while keeping code readable.',
     question: 'What is the StrictMode component used for?',
     options: ['Production optimization', 'Highlighting potential problems', 'Security', 'Styling'],
     correctAnswer: 1,
@@ -451,6 +499,7 @@ export const questions: Question[] = [
   },
   {
     id: '48',
+    introduction: 'Understanding Hook execution order and timing is crucial for debugging complex React applications.',
     question: 'What is a React Fragment used for?',
     options: ['Breaking components', 'Grouping elements without adding extra DOM nodes', 'Creating partial renders', 'Code splitting'],
     correctAnswer: 1,
@@ -460,6 +509,7 @@ export const questions: Question[] = [
   },
   {
     id: '49',
+    introduction: 'Some Hooks are designed for specific advanced use cases like external store subscriptions or imperative handles.',
     question: 'What is the difference between state and props?',
     options: ['No difference', 'State is mutable, props are read-only', 'Props are mutable, state is read-only', 'Both are immutable'],
     correctAnswer: 1,
@@ -469,6 +519,7 @@ export const questions: Question[] = [
   },
   {
     id: '50',
+    introduction: 'Mastering Hook patterns allows you to write cleaner, more maintainable React code.',
     question: 'What does lifting state up mean?',
     options: ['Moving state to a higher component', 'Increasing state value', 'Optimizing state', 'Removing state'],
     correctAnswer: 0,
@@ -480,6 +531,7 @@ export const questions: Question[] = [
   // TYPESCRIPT
   {
     id: '51',
+    introduction: 'TypeScript adds static type checking to JavaScript, helping catch errors at compile time rather than runtime.',
     question: 'How do you define an optional property in TypeScript?\n\n```ts\ninterface User {\n  name: string;\n  age??? // How to make this optional?\n}\n```',
     options: ['property?: type', 'property: type?', 'optional property: type', 'property: type | undefined'],
     correctAnswer: 0,
@@ -489,6 +541,7 @@ export const questions: Question[] = [
   },
   {
     id: '52',
+    introduction: 'TypeScript provides multiple ways to define array types, each with slightly different syntax.',
     question: 'What is the correct way to define a typed array?\n\n```ts\n// Which syntax is valid?\nconst names: ??? = ["Alice", "Bob"];\n```',
     options: ['Only Array<string>', 'Only string[]', 'Both Array<string> and string[]', 'string{}'],
     correctAnswer: 2,
@@ -498,6 +551,7 @@ export const questions: Question[] = [
   },
   {
     id: '53',
+    introduction: 'Union types in TypeScript allow a value to be one of several types, providing flexibility with type safety.',
     question: 'What does the "as" keyword do?\n\n```ts\nconst input = document.getElementById("input");\nconst value = (input as HTMLInputElement).value;\n```',
     options: ['Creates an alias', 'Type assertion', 'Type declaration', 'Creates a new type'],
     correctAnswer: 1,
@@ -507,6 +561,7 @@ export const questions: Question[] = [
   },
   {
     id: '54',
+    introduction: 'Type annotations explicitly declare what type a variable, parameter, or return value should be.',
     question: 'What is an interface in TypeScript?\n\n```ts\ninterface User {\n  id: number;\n  name: string;\n  email: string;\n}\n```',
     options: ['A class', 'A contract that defines object shape', 'A function', 'A module'],
     correctAnswer: 1,
@@ -516,6 +571,7 @@ export const questions: Question[] = [
   },
   {
     id: '55',
+    introduction: 'TypeScript can often infer types automatically, reducing the need for explicit annotations while maintaining type safety.',
     question: 'How do you define a union type?\n\n```ts\n// Value can be string OR number\nlet value: string ??? number;\n```',
     options: ['type A && B', 'type A | B', 'type A + B', 'type A & B'],
     correctAnswer: 1,
@@ -525,6 +581,7 @@ export const questions: Question[] = [
   },
   {
     id: '56',
+    introduction: 'The \'any\' type opts out of type checking, which should be used sparingly as it defeats TypeScript\'s purpose.',
     question: 'What is the "never" type used for?\n\n```ts\nfunction throwError(msg: string): never {\n  throw new Error(msg);\n}\n```',
     options: ['Variables never used', 'Functions that never return', 'Optional parameters', 'Nullable types'],
     correctAnswer: 1,
@@ -534,6 +591,7 @@ export const questions: Question[] = [
   },
   {
     id: '57',
+    introduction: 'Understanding the difference between \'any\' and \'unknown\' helps write safer TypeScript code.',
     question: 'What is the difference between interface and type?\n\n```ts\n// Interface - can be merged\ninterface User { name: string; }\ninterface User { age: number; }\n\n// Type - more flexible\ntype Status = "active" | "inactive";\n```',
     options: ['No difference', 'Interfaces can be extended, types cannot', 'Types are more flexible, interfaces can be merged', 'Types are older'],
     correctAnswer: 2,
@@ -543,6 +601,7 @@ export const questions: Question[] = [
   },
   {
     id: '58',
+    introduction: 'TypeScript\'s strict null checks help prevent common null/undefined errors at compile time.',
     question: 'What does the readonly modifier do?\n\n```ts\ninterface Config {\n  readonly apiKey: string;\n}\nconst config: Config = { apiKey: "abc" };\nconfig.apiKey = "xyz"; // ???\n```',
     options: ['Makes property optional', 'Prevents property modification', 'Makes property private', 'Makes property static'],
     correctAnswer: 1,
@@ -552,6 +611,7 @@ export const questions: Question[] = [
   },
   {
     id: '59',
+    introduction: 'The optional chaining operator provides safe property access on potentially null or undefined values.',
     question: 'What is a generic in TypeScript?\n\n```ts\nfunction identity<T>(arg: T): T {\n  return arg;\n}\nidentity<string>("hello");\nidentity<number>(42);\n```',
     options: ['A general type', 'A type parameter that allows reusable components', 'A basic type', 'An any type'],
     correctAnswer: 1,
@@ -561,6 +621,7 @@ export const questions: Question[] = [
   },
   {
     id: '60',
+    introduction: 'Type narrowing allows TypeScript to infer more specific types within conditional blocks.',
     question: 'How do you type a function that returns nothing?\n\n```ts\nfunction logMessage(msg: string): ??? {\n  console.log(msg);\n}\n```',
     options: ['null', 'undefined', 'void', 'never'],
     correctAnswer: 2,
@@ -570,6 +631,7 @@ export const questions: Question[] = [
   },
   {
     id: '61',
+    introduction: 'Interfaces in TypeScript define the shape of objects, enabling type checking for complex data structures.',
     question: 'What is the unknown type?\n\n```ts\nlet value: unknown = getData();\n// Must check type before using\nif (typeof value === "string") {\n  console.log(value.toUpperCase());\n}\n```',
     options: ['Same as any', 'A type-safe any', 'An error type', 'A null type'],
     correctAnswer: 1,
@@ -579,6 +641,7 @@ export const questions: Question[] = [
   },
   {
     id: '62',
+    introduction: 'Optional properties in interfaces allow for flexible object shapes where some properties may be absent.',
     question: 'What is an intersection type?\n\n```ts\ntype Employee = Person & Worker;\n// Employee must have ALL properties\n// from both Person AND Worker\n```',
     options: ['A | B', 'A & B', 'A + B', 'A - B'],
     correctAnswer: 1,
@@ -588,6 +651,7 @@ export const questions: Question[] = [
   },
   {
     id: '63',
+    introduction: 'Both \'interface\' and \'type\' can define object shapes, but they have subtle differences in capabilities.',
     question: 'What does Partial<T> do?\n\n```ts\ninterface User {\n  name: string;\n  age: number;\n}\ntype PartialUser = Partial<User>;\n// { name?: string; age?: number; }\n```',
     options: ['Makes all properties required', 'Makes all properties optional', 'Removes all properties', 'Adds new properties'],
     correctAnswer: 1,
@@ -597,6 +661,7 @@ export const questions: Question[] = [
   },
   {
     id: '64',
+    introduction: 'Readonly properties prevent accidental mutations, promoting immutable data patterns.',
     question: 'What does Required<T> do?\n\n```ts\ninterface Props {\n  name?: string;\n  age?: number;\n}\ntype RequiredProps = Required<Props>;\n// { name: string; age: number; }\n```',
     options: ['Makes all properties optional', 'Makes all properties required', 'Removes all properties', 'Validates properties'],
     correctAnswer: 1,
@@ -606,6 +671,7 @@ export const questions: Question[] = [
   },
   {
     id: '65',
+    introduction: 'Index signatures allow interfaces to describe objects with dynamic keys while maintaining type safety.',
     question: 'What does Pick<T, K> do?\n\n```ts\ninterface User {\n  id: number;\n  name: string;\n  email: string;\n}\ntype UserPreview = Pick<User, "id" | "name">;\n// { id: number; name: string; }\n```',
     options: ['Removes properties K from T', 'Creates a type with only properties K from T', 'Adds properties K to T', 'Validates K in T'],
     correctAnswer: 1,
@@ -615,6 +681,7 @@ export const questions: Question[] = [
   },
   {
     id: '66',
+    introduction: 'Extending interfaces creates new interfaces that inherit properties from existing ones.',
     question: 'What does Omit<T, K> do?\n\n```ts\ninterface User {\n  id: number;\n  name: string;\n  password: string;\n}\ntype SafeUser = Omit<User, "password">;\n// { id: number; name: string; }\n```',
     options: ['Creates a type with only K', 'Creates a type without properties K', 'Adds K to T', 'Validates T'],
     correctAnswer: 1,
@@ -624,6 +691,7 @@ export const questions: Question[] = [
   },
   {
     id: '67',
+    introduction: 'Intersection types combine multiple types into one, requiring all properties from each type.',
     question: 'How do you type an object with dynamic keys?\n\n```ts\n// Object with any string keys\nconst scores: { [key: string]: number } = {\n  alice: 95,\n  bob: 87\n};\n```',
     options: ['{ key: value }', '{ [key: string]: value }', '{ any: value }', '{ dynamic: value }'],
     correctAnswer: 1,
@@ -633,6 +701,7 @@ export const questions: Question[] = [
   },
   {
     id: '68',
+    introduction: 'Type aliases can represent complex types including unions, intersections, and mapped types.',
     question: 'What is a type guard?\n\n```ts\nfunction isString(value: unknown): value is string {\n  return typeof value === "string";\n}\n\nif (isString(data)) {\n  // TypeScript knows data is string here\n  console.log(data.toUpperCase());\n}\n```',
     options: ['A security feature', 'A way to narrow types', 'A type validator', 'A compiler option'],
     correctAnswer: 1,
@@ -642,6 +711,7 @@ export const questions: Question[] = [
   },
   {
     id: '69',
+    introduction: 'Generic interfaces enable reusable type definitions that work with multiple data types.',
     question: 'What does the "keyof" operator return?\n\n```ts\ninterface User {\n  name: string;\n  age: number;\n}\ntype UserKeys = keyof User;\n// "name" | "age"\n```',
     options: ['All values of an object', 'All keys of a type as a union', 'The first key', 'A boolean'],
     correctAnswer: 1,
@@ -651,6 +721,7 @@ export const questions: Question[] = [
   },
   {
     id: '70',
+    introduction: 'Understanding when to use interfaces vs types helps write more idiomatic TypeScript code.',
     question: 'What is a tuple in TypeScript?\n\n```ts\n// Fixed length, specific types\nconst point: [number, number] = [10, 20];\nconst record: [string, number] = ["age", 25];\n```',
     options: ['A dynamic array', 'A fixed-length array with specific types', 'An object', 'A map'],
     correctAnswer: 1,
@@ -660,6 +731,7 @@ export const questions: Question[] = [
   },
   {
     id: '71',
+    introduction: 'Literal types in TypeScript restrict values to specific strings, numbers, or booleans.',
     question: 'How do you make a property non-nullable?\n\n```ts\ntype MaybeString = string | null | undefined;\ntype DefinitelyString = NonNullable<MaybeString>;\n// string\n```',
     options: ['property!', 'NonNullable<property>', 'property!!', 'Required<property>'],
     correctAnswer: 1,
@@ -669,6 +741,7 @@ export const questions: Question[] = [
   },
   {
     id: '72',
+    introduction: 'The \'typeof\' operator in TypeScript can extract the type from an existing value or variable.',
     question: 'What is the typeof operator used for in TypeScript?\n\n```ts\nconst user = { name: "John", age: 30 };\n\n// Create type from variable\ntype User = typeof user;\n// { name: string; age: number; }\n```',
     options: ['Runtime type checking only', 'Only getting the type of a variable', 'Only creating new types', 'Both getting types and creating new types'],
     correctAnswer: 3,
@@ -678,6 +751,7 @@ export const questions: Question[] = [
   },
   {
     id: '73',
+    introduction: 'Generics enable writing reusable code that works with multiple types while maintaining type safety.',
     question: 'What does Record<K, V> create?\n\n```ts\ntype Roles = "admin" | "user" | "guest";\ntype RolePermissions = Record<Roles, string[]>;\n// { admin: string[]; user: string[]; guest: string[]; }\n```',
     options: ['An array', 'An object type with keys K and values V', 'A tuple', 'A map'],
     correctAnswer: 1,
@@ -687,6 +761,7 @@ export const questions: Question[] = [
   },
   {
     id: '74',
+    introduction: 'Generic constraints limit what types can be used with a generic, ensuring required properties exist.',
     question: 'What is the ReturnType<T> utility type?\n\n```ts\nfunction getUser() {\n  return { id: 1, name: "John" };\n}\n\ntype User = ReturnType<typeof getUser>;\n// { id: number; name: string; }\n```',
     options: ['Returns function parameters', 'Returns the return type of a function', 'Returns void', 'Returns never'],
     correctAnswer: 1,
@@ -696,6 +771,7 @@ export const questions: Question[] = [
   },
   {
     id: '75',
+    introduction: 'Mapped types create new types by transforming properties of existing types.',
     question: 'What is a discriminated union?\n\n```ts\ntype Shape =\n  | { kind: "circle"; radius: number }\n  | { kind: "square"; size: number };\n\nfunction area(shape: Shape) {\n  if (shape.kind === "circle") {\n    return Math.PI * shape.radius ** 2;\n  }\n}\n```',
     options: ['A union with no common properties', 'A union with a common literal property', 'An intersection type', 'A generic type'],
     correctAnswer: 1,
@@ -707,6 +783,7 @@ export const questions: Question[] = [
   // GIT
   {
     id: '76',
+    introduction: 'Conditional types enable type-level programming, selecting types based on conditions.',
     question: 'What does git init do?\n\n```bash\n$ git init\nInitialized empty Git repository in /project/.git/\n```',
     options: ['Clones a repository', 'Creates a new Git repository', 'Initializes a branch', 'Starts git daemon'],
     correctAnswer: 1,
@@ -716,6 +793,7 @@ export const questions: Question[] = [
   },
   {
     id: '77',
+    introduction: 'The \'keyof\' operator creates a union type of all property names of an object type.',
     question: 'What does git clone do?\n\n```bash\n$ git clone https://github.com/user/repo.git\nCloning into \'repo\'...\n```',
     options: ['Creates a new branch', 'Copies a repository', 'Merges branches', 'Deletes a repository'],
     correctAnswer: 1,
@@ -725,6 +803,7 @@ export const questions: Question[] = [
   },
   {
     id: '78',
+    introduction: 'Utility types like Partial, Required, and Pick help transform existing types without redefining them.',
     question: 'What does git add do?\n\n```bash\n$ git add file.txt      # Stage specific file\n$ git add .             # Stage all changes\n```',
     options: ['Commits changes', 'Stages changes for commit', 'Pushes changes', 'Creates a branch'],
     correctAnswer: 1,
@@ -734,6 +813,7 @@ export const questions: Question[] = [
   },
   {
     id: '79',
+    introduction: 'The \'infer\' keyword in conditional types allows extracting types from complex type expressions.',
     question: 'What does git commit -m do?\n\n```bash\n$ git commit -m "Add new feature"\n[main abc1234] Add new feature\n 2 files changed, 50 insertions(+)\n```',
     options: ['Merges branches', 'Creates a commit with a message', 'Pushes to remote', 'Creates a branch'],
     correctAnswer: 1,
@@ -743,6 +823,7 @@ export const questions: Question[] = [
   },
   {
     id: '80',
+    introduction: 'Template literal types enable string manipulation at the type level.',
     question: 'What does git push do?\n\n```bash\n$ git push origin main\nCounting objects: 5, done.\nTo github.com:user/repo.git\n   abc1234..def5678  main -> main\n```',
     options: ['Downloads changes', 'Uploads local commits to remote', 'Creates a branch', 'Merges branches'],
     correctAnswer: 1,
@@ -752,6 +833,7 @@ export const questions: Question[] = [
   },
   {
     id: '81',
+    introduction: 'Type guards help TypeScript narrow types within conditional blocks using runtime checks.',
     question: 'What does git pull do?\n\n```bash\n$ git pull origin main\nremote: Counting objects: 3, done.\nFrom github.com:user/repo\n   abc1234..def5678  main -> origin/main\nUpdating abc1234..def5678\n```',
     options: ['Uploads changes', 'Fetches and merges remote changes', 'Creates a branch', 'Deletes a branch'],
     correctAnswer: 1,
@@ -761,6 +843,7 @@ export const questions: Question[] = [
   },
   {
     id: '82',
+    introduction: 'Discriminated unions use a common property to distinguish between union members.',
     question: 'What is the difference between git fetch and git pull?\n\n```bash\n$ git fetch origin        # Downloads, no merge\n$ git pull origin main    # Downloads AND merges\n```',
     options: ['No difference', 'Fetch downloads without merging, pull downloads and merges', 'Pull downloads without merging', 'Fetch uploads changes'],
     correctAnswer: 1,
@@ -770,6 +853,7 @@ export const questions: Question[] = [
   },
   {
     id: '83',
+    introduction: 'The \'never\' type represents values that never occur, useful for exhaustive checking.',
     question: 'What does git merge do?\n\n```bash\n$ git checkout main\n$ git merge feature-branch\nMerge made by the \'recursive\' strategy.\n```',
     options: ['Splits a branch', 'Combines branches', 'Deletes a branch', 'Creates a branch'],
     correctAnswer: 1,
@@ -779,6 +863,7 @@ export const questions: Question[] = [
   },
   {
     id: '84',
+    introduction: 'Function overloads allow defining multiple function signatures for the same function.',
     question: 'What does git rebase do?\n\n```bash\n$ git checkout feature\n$ git rebase main\nFirst, rewinding head to replay your work...\nApplying: Add feature\n```',
     options: ['Deletes commits', 'Moves commits to a new base', 'Merges branches', 'Creates a branch'],
     correctAnswer: 1,
@@ -788,6 +873,7 @@ export const questions: Question[] = [
   },
   {
     id: '85',
+    introduction: 'The \'as const\' assertion creates deeply readonly types with literal values.',
     question: 'What is the main difference between merge and rebase?\n\n```bash\n# Merge: preserves history\n$ git merge feature    # Creates merge commit\n\n# Rebase: rewrites history\n$ git rebase main      # Replays commits\n```',
     options: ['No difference', 'Merge creates a merge commit, rebase rewrites history', 'Rebase creates a merge commit', 'Merge rewrites history'],
     correctAnswer: 1,
@@ -797,6 +883,7 @@ export const questions: Question[] = [
   },
   {
     id: '86',
+    introduction: 'Module augmentation allows extending existing module types with additional declarations.',
     question: 'What does git branch do without arguments?\n\n```bash\n$ git branch\n  feature\n* main\n  bugfix\n```',
     options: ['Creates a branch', 'Lists branches', 'Deletes a branch', 'Switches branch'],
     correctAnswer: 1,
@@ -806,6 +893,7 @@ export const questions: Question[] = [
   },
   {
     id: '87',
+    introduction: 'Declaration merging combines multiple declarations of the same name into a single definition.',
     question: 'How do you create and switch to a new branch?\n\n```bash\n$ git checkout -b feature\nSwitched to a new branch \'feature\'\n\n$ git switch -c feature   # Modern alternative\nSwitched to a new branch \'feature\'\n```',
     options: ['git branch new', 'git checkout -b new', 'git switch -c new', 'Both checkout -b and switch -c'],
     correctAnswer: 3,
@@ -815,6 +903,7 @@ export const questions: Question[] = [
   },
   {
     id: '88',
+    introduction: 'Branded types create nominal typing in TypeScript\'s structural type system.',
     question: 'What does git stash do?\n\n```bash\n$ git stash\nSaved working directory and index state WIP on main\n\n$ git stash list\nstash@{0}: WIP on main: abc1234 Last commit\n```',
     options: ['Deletes changes', 'Temporarily saves changes', 'Commits changes', 'Pushes changes'],
     correctAnswer: 1,
@@ -824,6 +913,7 @@ export const questions: Question[] = [
   },
   {
     id: '89',
+    introduction: 'Recursive types can reference themselves, enabling types for tree-like structures.',
     question: 'How do you apply stashed changes?\n\n```bash\n$ git stash apply   # Applies and keeps stash\n$ git stash pop     # Applies and removes stash\n```',
     options: ['Only git stash apply', 'Only git stash pop', 'Both apply and pop', 'git stash get'],
     correctAnswer: 2,
@@ -833,6 +923,7 @@ export const questions: Question[] = [
   },
   {
     id: '90',
+    introduction: 'The Exclude and Extract utility types filter union types based on conditions.',
     question: 'What does git reset --hard do?\n\n```bash\n$ git reset --hard HEAD~1\nHEAD is now at abc1234 Previous commit\n# WARNING: All changes are lost!\n```',
     options: ['Soft reset', 'Discards all changes and resets to specified commit', 'Creates a commit', 'Merges branches'],
     correctAnswer: 1,
@@ -842,6 +933,7 @@ export const questions: Question[] = [
   },
   {
     id: '91',
+    introduction: 'TypeScript enums provide a way to define a set of named constants.',
     question: 'What does git reset --soft do?\n\n```bash\n$ git reset --soft HEAD~1\n# HEAD moves back, but changes stay staged\n$ git status\nChanges to be committed:\n  modified: file.txt\n```',
     options: ['Discards all changes', 'Moves HEAD but keeps changes staged', 'Creates a branch', 'Deletes commits'],
     correctAnswer: 1,
@@ -851,6 +943,7 @@ export const questions: Question[] = [
   },
   {
     id: '92',
+    introduction: 'Type assertions tell TypeScript to treat a value as a specific type when you know more than the compiler.',
     question: 'What does git revert do?\n\n```bash\n$ git revert abc1234\n[main def5678] Revert "Add feature"\n 1 file changed, 5 deletions(-)\n```',
     options: ['Deletes a commit', 'Creates a new commit that undoes changes', 'Resets to previous state', 'Merges branches'],
     correctAnswer: 1,
@@ -860,6 +953,7 @@ export const questions: Question[] = [
   },
   {
     id: '93',
+    introduction: 'The \'satisfies\' operator validates that a value matches a type while preserving its specific type.',
     question: 'What is HEAD in Git?\n\n```bash\n$ cat .git/HEAD\nref: refs/heads/main\n\n$ git log -1 HEAD\ncommit abc1234 (HEAD -> main)\n```',
     options: ['The first commit', 'A pointer to the current commit', 'The remote repository', 'A branch name'],
     correctAnswer: 1,
@@ -869,6 +963,7 @@ export const questions: Question[] = [
   },
   {
     id: '94',
+    introduction: 'Tuple types represent arrays with fixed lengths and specific types at each position.',
     question: 'What does git log show?\n\n```bash\n$ git log --oneline\nabc1234 (HEAD -> main) Add feature\ndef5678 Fix bug\nghi9012 Initial commit\n```',
     options: ['Staged files', 'Commit history', 'Remote branches', 'Stashed changes'],
     correctAnswer: 1,
@@ -878,6 +973,7 @@ export const questions: Question[] = [
   },
   {
     id: '95',
+    introduction: 'The NonNullable utility type removes null and undefined from a type.',
     question: 'What does git status show?\n\n```bash\n$ git status\nOn branch main\nChanges to be committed:\n  modified: app.js\nUntracked files:\n  newfile.txt\n```',
     options: ['Commit history', 'Working tree status', 'Remote URL', 'Branch list'],
     correctAnswer: 1,
@@ -887,6 +983,7 @@ export const questions: Question[] = [
   },
   {
     id: '96',
+    introduction: 'ReturnType extracts the return type from a function type.',
     question: 'What does git diff show?\n\n```bash\n$ git diff\n-const old = "value";\n+const new = "updated";\n\n$ git diff --staged   # Staged changes\n```',
     options: ['Commit history', 'Changes between commits or working tree', 'Branch differences', 'Remote status'],
     correctAnswer: 1,
@@ -896,6 +993,7 @@ export const questions: Question[] = [
   },
   {
     id: '97',
+    introduction: 'Parameters extracts the parameter types from a function type as a tuple.',
     question: 'How do you delete a local branch?\n\n```bash\n$ git branch -d feature\nDeleted branch feature (was abc1234).\n\n$ git branch -D feature   # Force delete\n```',
     options: ['git branch -d branchname', 'git delete branchname', 'git remove branchname', 'git branch --delete-remote'],
     correctAnswer: 0,
@@ -905,6 +1003,7 @@ export const questions: Question[] = [
   },
   {
     id: '98',
+    introduction: 'Awaited extracts the resolved type from a Promise type.',
     question: 'How do you delete a remote branch?\n\n```bash\n$ git push origin --delete feature\nTo github.com:user/repo.git\n - [deleted]  feature\n```',
     options: ['git branch -d origin/branch', 'git push origin --delete branch', 'git delete remote branch', 'git remote delete branch'],
     correctAnswer: 1,
@@ -914,6 +1013,7 @@ export const questions: Question[] = [
   },
   {
     id: '99',
+    introduction: 'ConstructorParameters extracts parameter types from a class constructor.',
     question: 'What is a Git conflict?\n\n```bash\n$ git merge feature\nCONFLICT (content): Merge conflict in app.js\n<<<<<<< HEAD\nconst a = 1;\n=======\nconst a = 2;\n>>>>>>> feature\n```',
     options: ['A bug in Git', 'When changes in different branches affect the same lines', 'A network error', 'A permission issue'],
     correctAnswer: 1,
@@ -923,6 +1023,7 @@ export const questions: Question[] = [
   },
   {
     id: '100',
+    introduction: 'InstanceType extracts the instance type from a class constructor type.',
     question: 'What does git cherry-pick do?\n\n```bash\n$ git cherry-pick abc1234\n[main def5678] Add specific feature\n 1 file changed, 10 insertions(+)\n```',
     options: ['Deletes a commit', 'Applies a specific commit to current branch', 'Creates a branch', 'Merges all commits'],
     correctAnswer: 1,
@@ -934,6 +1035,7 @@ export const questions: Question[] = [
   // PACKAGE-LOCK.JSON CONFLICTS
   {
     id: '101',
+    introduction: 'Package-lock.json conflicts are common in team projects. Knowing how to resolve them properly ensures consistent dependencies.',
     question: 'How do you resolve package-lock.json conflicts?\n\n```bash\n$ git checkout --ours package-lock.json\n$ npm install\n$ git add package-lock.json\n```',
     options: ['Manually edit the lock file', 'Delete and regenerate with npm install', 'Always use --theirs', 'Ignore the file'],
     correctAnswer: 1,
@@ -943,6 +1045,7 @@ export const questions: Question[] = [
   },
   {
     id: '102',
+    introduction: 'Understanding --ours and --theirs in Git helps resolve merge conflicts by choosing the correct version.',
     question: 'What does --ours mean in git checkout?\n\n```bash\n$ git checkout --ours package-lock.json\n# vs\n$ git checkout --theirs package-lock.json\n```',
     options: ['Remote version', 'Your current branch version', 'Base version', 'Latest version'],
     correctAnswer: 1,
@@ -952,6 +1055,7 @@ export const questions: Question[] = [
   },
   {
     id: '103',
+    introduction: 'Package-lock.json is auto-generated by npm and should not be manually edited to avoid breaking dependency resolution.',
     question: 'Why should you never manually edit package-lock.json?\n\n```json\n// package-lock.json has thousands of lines\n{\n  "lockfileVersion": 3,\n  "packages": { /* complex dependency tree */ }\n}\n```',
     options: ['It\'s read-only', 'It\'s auto-generated and complex', 'It doesn\'t affect anything', 'npm will reject it'],
     correctAnswer: 1,
@@ -961,6 +1065,7 @@ export const questions: Question[] = [
   },
   {
     id: '104',
+    introduction: 'The staging area in Git (also called the index) holds changes that will be included in the next commit.',
     question: 'What command regenerates package-lock.json after conflict?\n\n```bash\n$ git checkout --ours package-lock.json\n$ ???\n$ git add package-lock.json\n```',
     options: ['npm update', 'npm install', 'npm ci', 'npm rebuild'],
     correctAnswer: 1,
@@ -970,6 +1075,7 @@ export const questions: Question[] = [
   },
   {
     id: '105',
+    introduction: 'Git commit creates a snapshot of your staged changes with a descriptive message.',
     question: 'What is the difference between npm install and npm ci?\n\n```bash\n$ npm install   # Development\n$ npm ci        # CI/CD pipelines\n```',
     options: ['No difference', 'ci is faster and uses exact lock file versions', 'install is for production', 'ci updates packages'],
     correctAnswer: 1,
@@ -981,6 +1087,7 @@ export const questions: Question[] = [
   // JAVASCRIPT FUNDAMENTALS
   {
     id: '106',
+    introduction: 'Git pull fetches changes from a remote repository and merges them into your current branch.',
     question: 'What is the difference between == and ===?\n\n```js\n5 == "5"   // true\n5 === "5"  // false\n```',
     options: ['No difference', '=== checks type and value, == only value', '== is for objects', '=== is slower'],
     correctAnswer: 1,
@@ -990,6 +1097,7 @@ export const questions: Question[] = [
   },
   {
     id: '107',
+    introduction: 'Git push uploads your local commits to a remote repository, sharing your work with others.',
     question: 'What does the spread operator do?\n\n```js\nconst arr1 = [1, 2];\nconst arr2 = [...arr1, 3, 4]; // [1, 2, 3, 4]\n\nconst obj1 = { a: 1 };\nconst obj2 = { ...obj1, b: 2 }; // { a: 1, b: 2 }\n```',
     options: ['Deep clones objects', 'Expands iterables into individual elements', 'Merges databases', 'Compresses data'],
     correctAnswer: 1,
@@ -999,6 +1107,7 @@ export const questions: Question[] = [
   },
   {
     id: '108',
+    introduction: 'Branches in Git allow parallel development without affecting the main codebase.',
     question: 'What is destructuring in JavaScript?\n\n```js\nconst { name, age } = user;\nconst [first, second] = array;\n```',
     options: ['Deleting properties', 'Extracting values into variables', 'Creating objects', 'Type checking'],
     correctAnswer: 1,
@@ -1008,6 +1117,7 @@ export const questions: Question[] = [
   },
   {
     id: '109',
+    introduction: 'Git merge combines changes from different branches into a single branch.',
     question: 'What is the difference between let, const, and var?\n\n```js\nvar x = 1;   // Function-scoped, hoisted\nlet y = 2;   // Block-scoped\nconst z = 3; // Block-scoped, cannot reassign\n```',
     options: ['No difference', 'Scope and reassignment rules differ', 'Only const works in functions', 'var is newest'],
     correctAnswer: 1,
@@ -1017,6 +1127,7 @@ export const questions: Question[] = [
   },
   {
     id: '110',
+    introduction: 'Git clone creates a local copy of a remote repository with full history.',
     question: 'What is a Promise in JavaScript?\n\n```js\nfetch("/api/data")\n  .then(response => response.json())\n  .then(data => console.log(data))\n  .catch(error => console.error(error));\n```',
     options: ['A synchronous operation', 'An object representing eventual completion/failure', 'A loop construct', 'A variable type'],
     correctAnswer: 1,
@@ -1026,6 +1137,7 @@ export const questions: Question[] = [
   },
   {
     id: '111',
+    introduction: 'Git fetch downloads changes from remote without merging, letting you review before integrating.',
     question: 'What does async/await do?\n\n```js\nasync function getData() {\n  try {\n    const response = await fetch("/api/data");\n    const data = await response.json();\n    return data;\n  } catch (error) {\n    console.error(error);\n  }\n}\n```',
     options: ['Makes code synchronous', 'Syntactic sugar for Promises', 'Blocks the main thread', 'Replaces callbacks entirely'],
     correctAnswer: 1,
@@ -1035,6 +1147,7 @@ export const questions: Question[] = [
   },
   {
     id: '112',
+    introduction: 'Git stash temporarily saves uncommitted changes so you can switch branches cleanly.',
     question: 'What is the event loop in JavaScript?\n\n```js\nconsole.log("1");\nsetTimeout(() => console.log("2"), 0);\nconsole.log("3");\n// Output: 1, 3, 2\n```',
     options: ['A for loop for events', 'Mechanism that handles async callbacks', 'A React feature', 'A debugging tool'],
     correctAnswer: 1,
@@ -1044,6 +1157,7 @@ export const questions: Question[] = [
   },
   {
     id: '113',
+    introduction: 'Git log shows the commit history, helping you understand how the project evolved.',
     question: 'What is closure in JavaScript?\n\n```js\nfunction outer() {\n  const secret = "hidden";\n  return function inner() {\n    return secret; // Still accessible!\n  };\n}\nconst fn = outer();\nfn(); // "hidden"\n```',
     options: ['A way to close functions', 'Function retaining access to outer scope', 'A design pattern', 'A memory leak'],
     correctAnswer: 1,
@@ -1053,6 +1167,7 @@ export const questions: Question[] = [
   },
   {
     id: '114',
+    introduction: 'Git diff shows the differences between commits, branches, or your working directory.',
     question: 'What does Array.map() return?\n\n```js\nconst numbers = [1, 2, 3];\nconst doubled = numbers.map(n => n * 2);\n// doubled = [2, 4, 6]\n```',
     options: ['Modifies original array', 'Returns new array with transformed elements', 'Returns undefined', 'Returns a single value'],
     correctAnswer: 1,
@@ -1062,6 +1177,7 @@ export const questions: Question[] = [
   },
   {
     id: '115',
+    introduction: 'Git reset moves the branch pointer and can modify the staging area and working directory.',
     question: 'What does Array.filter() do?\n\n```js\nconst numbers = [1, 2, 3, 4, 5];\nconst evens = numbers.filter(n => n % 2 === 0);\n// evens = [2, 4]\n```',
     options: ['Removes all elements', 'Returns elements that pass the test', 'Modifies original array', 'Sorts the array'],
     correctAnswer: 1,
@@ -1071,6 +1187,7 @@ export const questions: Question[] = [
   },
   {
     id: '116',
+    introduction: 'Git revert creates a new commit that undoes changes from a previous commit safely.',
     question: 'What does Array.reduce() do?\n\n```js\nconst numbers = [1, 2, 3, 4];\nconst sum = numbers.reduce((acc, curr) => acc + curr, 0);\n// sum = 10\n```',
     options: ['Reduces array size', 'Accumulates array into single value', 'Filters elements', 'Sorts elements'],
     correctAnswer: 1,
@@ -1080,6 +1197,7 @@ export const questions: Question[] = [
   },
   {
     id: '117',
+    introduction: 'Git checkout switches branches or restores files from different commits.',
     question: 'What is the nullish coalescing operator?\n\n```js\nconst value = null ?? "default";  // "default"\nconst zero = 0 ?? "default";      // 0\nconst empty = "" ?? "default";    // ""\n```',
     options: ['Same as ||', 'Returns right side only for null/undefined', 'Type checking operator', 'Comparison operator'],
     correctAnswer: 1,
@@ -1089,6 +1207,7 @@ export const questions: Question[] = [
   },
   {
     id: '118',
+    introduction: 'The .gitignore file specifies which files Git should not track.',
     question: 'What is optional chaining?\n\n```js\nconst city = user?.address?.city;\n// Instead of:\n// user && user.address && user.address.city\n```',
     options: ['Required property access', 'Safe property access that returns undefined if null', 'Type assertion', 'Destructuring'],
     correctAnswer: 1,
@@ -1100,6 +1219,7 @@ export const questions: Question[] = [
   // MORE REACT ESSENTIALS
   {
     id: '119',
+    introduction: 'Git blame shows who last modified each line of a file and when.',
     question: 'Why do React lists need keys?\n\n```jsx\n{items.map(item => (\n  <li key={item.id}>{item.name}</li>\n))}\n```',
     options: ['For styling', 'To help React identify which items changed', 'For accessibility', 'Keys are optional'],
     correctAnswer: 1,
@@ -1109,6 +1229,7 @@ export const questions: Question[] = [
   },
   {
     id: '120',
+    introduction: 'Git tags mark specific points in history, commonly used for release versions.',
     question: 'What is the virtual DOM?\n\n```jsx\n// React creates a virtual representation\nconst element = <div>Hello</div>;\n// Then diffs and updates real DOM efficiently\n```',
     options: ['A browser feature', 'In-memory representation of the real DOM', 'A testing tool', 'A CSS framework'],
     correctAnswer: 1,
@@ -1118,6 +1239,7 @@ export const questions: Question[] = [
   },
   {
     id: '121',
+    introduction: 'Remote repositories are versions of your project hosted on a server like GitHub.',
     question: 'What causes unnecessary re-renders?\n\n```jsx\n// This creates a new object every render!\n<Child style={{ color: "red" }} />\n\n// This creates a new function every render!\n<Button onClick={() => doSomething()} />\n```',
     options: ['Using useState', 'Creating new objects/functions in render', 'Using useEffect', 'Having child components'],
     correctAnswer: 1,
@@ -1127,6 +1249,7 @@ export const questions: Question[] = [
   },
   {
     id: '122',
+    introduction: 'Git rebasing replays commits on top of another branch, creating a linear history.',
     question: 'What is prop drilling and how to avoid it?\n\n```jsx\n// Passing props through many levels\n<App user={user}>\n  <Layout user={user}>\n    <Sidebar user={user}>\n      <Profile user={user} />\n```',
     options: ['It\'s recommended practice', 'Pass props through many components; use Context', 'Use global variables', 'Avoid child components'],
     correctAnswer: 1,
@@ -1136,6 +1259,7 @@ export const questions: Question[] = [
   },
   {
     id: '123',
+    introduction: 'Interactive rebase allows you to modify, squash, or reorder commits before applying them.',
     question: 'What is React.memo() used for?\n\n```jsx\nconst MemoizedComponent = React.memo(function MyComponent({ name }) {\n  return <div>{name}</div>;\n});\n```',
     options: ['Stores data in memory', 'Prevents re-renders if props unchanged', 'Creates memos/notes', 'Improves SEO'],
     correctAnswer: 1,
@@ -1145,6 +1269,7 @@ export const questions: Question[] = [
   },
   {
     id: '124',
+    introduction: 'Git cherry-pick applies specific commits from one branch to another.',
     question: 'What is the useReducer hook for?\n\n```jsx\nconst [state, dispatch] = useReducer(reducer, initialState);\n\ndispatch({ type: "INCREMENT" });\ndispatch({ type: "SET_VALUE", payload: 5 });\n```',
     options: ['Reducing bundle size', 'Complex state logic with actions', 'Reducing re-renders', 'API calls'],
     correctAnswer: 1,
@@ -1154,6 +1279,7 @@ export const questions: Question[] = [
   },
   {
     id: '125',
+    introduction: 'Git reflog records all changes to branch tips, helping recover lost commits.',
     question: 'What is a controlled component?\n\n```jsx\nconst [value, setValue] = useState("");\n<input\n  value={value}\n  onChange={(e) => setValue(e.target.value)}\n/>\n```',
     options: ['Component with limited features', 'Form element controlled by React state', 'Component with access control', 'Server-rendered component'],
     correctAnswer: 1,
@@ -1163,6 +1289,7 @@ export const questions: Question[] = [
   },
   {
     id: '126',
+    introduction: 'Fast-forward merges occur when there\'s a direct path between branches, creating no merge commit.',
     question: 'What is the useLayoutEffect hook?\n\n```jsx\nuseLayoutEffect(() => {\n  // Runs synchronously after DOM mutations\n  // Before browser paints\n}, []);\n```',
     options: ['For CSS layouts', 'Like useEffect but fires synchronously after DOM changes', 'For responsive design', 'Deprecated hook'],
     correctAnswer: 1,
@@ -1172,6 +1299,7 @@ export const questions: Question[] = [
   },
   {
     id: '127',
+    introduction: 'Merge commits have two parents and record the integration of divergent branches.',
     question: 'How do you handle errors in React components?\n\n```jsx\nclass ErrorBoundary extends React.Component {\n  state = { hasError: false };\n  static getDerivedStateFromError(error) {\n    return { hasError: true };\n  }\n  render() {\n    if (this.state.hasError) return <h1>Something went wrong.</h1>;\n    return this.props.children;\n  }\n}\n```',
     options: ['try/catch in render', 'Error Boundaries (class components)', 'window.onerror', 'Ignore errors'],
     correctAnswer: 1,
@@ -1181,6 +1309,7 @@ export const questions: Question[] = [
   },
   {
     id: '128',
+    introduction: 'Detached HEAD state occurs when you checkout a specific commit instead of a branch.',
     question: 'What is React.lazy() used for?\n\n```jsx\nconst LazyComponent = React.lazy(() => import("./HeavyComponent"));\n\n<Suspense fallback={<Loading />}>\n  <LazyComponent />\n</Suspense>\n```',
     options: ['Delays rendering', 'Code-splitting and lazy loading components', 'Performance monitoring', 'State management'],
     correctAnswer: 1,
@@ -1190,6 +1319,7 @@ export const questions: Question[] = [
   },
   {
     id: '129',
+    introduction: 'Git worktrees allow multiple working directories attached to a single repository.',
     question: 'What is the purpose of useId hook?\n\n```jsx\nconst id = useId();\n<label htmlFor={id}>Name</label>\n<input id={id} />\n```',
     options: ['Generates database IDs', 'Generates unique IDs for accessibility', 'Creates user IDs', 'For list keys'],
     correctAnswer: 1,
@@ -1199,6 +1329,7 @@ export const questions: Question[] = [
   },
   {
     id: '130',
+    introduction: 'Shallow clones download limited history, useful for large repositories.',
     question: 'What is the difference between state and props?\n\n```jsx\n// Props: passed from parent, read-only\n<Child name="John" />\n\n// State: managed internally, can change\nconst [count, setCount] = useState(0);\n```',
     options: ['No difference', 'Props are external/read-only, state is internal/mutable', 'State is faster', 'Props are newer'],
     correctAnswer: 1,
@@ -1210,6 +1341,7 @@ export const questions: Question[] = [
   // MORE useState QUESTIONS
   {
     id: '131',
+    introduction: 'Git submodules include other repositories as subdirectories of your project.',
     question: 'Why does this counter not work correctly?\n\n```jsx\nfunction Counter() {\n  const [count, setCount] = useState(0);\n  \n  const handleClick = () => {\n    setCount(count + 1);\n    setCount(count + 1);\n    setCount(count + 1);\n    // count is still 1, not 3!\n  };\n}\n```',
     options: ['useState is broken', 'State updates are batched and use stale closure value', 'You can only call setCount once', 'Need to use useReducer'],
     correctAnswer: 1,
@@ -1219,6 +1351,7 @@ export const questions: Question[] = [
   },
   {
     id: '132',
+    introduction: 'Git hooks are scripts that run automatically at certain points in the Git workflow.',
     question: 'How to fix multiple state updates in one handler?\n\n```jsx\n// Wrong - all use stale value\nsetCount(count + 1);\nsetCount(count + 1);\n\n// Correct - uses latest value\nsetCount(prev => prev + 1);\nsetCount(prev => prev + 1);\n```',
     options: ['Use useReducer instead', 'Use functional update form with previous state', 'Call setState only once', 'Use setTimeout between calls'],
     correctAnswer: 1,
@@ -1228,6 +1361,7 @@ export const questions: Question[] = [
   },
   {
     id: '133',
+    introduction: 'Pre-commit hooks run before a commit is created, often used for linting and tests.',
     question: 'What happens with object state updates?\n\n```jsx\nconst [user, setUser] = useState({ name: "John", age: 25 });\n\n// Wrong - mutates existing object\nuser.age = 26;\nsetUser(user); // Won\'t re-render!\n\n// Correct - creates new object\nsetUser({ ...user, age: 26 });\n```',
     options: ['Both work the same', 'Must create new object reference to trigger re-render', 'Objects cannot be in state', 'Use useRef for objects'],
     correctAnswer: 1,
@@ -1237,6 +1371,7 @@ export const questions: Question[] = [
   },
   {
     id: '134',
+    introduction: 'Git bisect helps find the commit that introduced a bug using binary search.',
     question: 'What is lazy initialization in useState?\n\n```jsx\n// Runs expensive function on EVERY render\nconst [data, setData] = useState(expensiveCalculation());\n\n// Runs expensive function only ONCE\nconst [data, setData] = useState(() => expensiveCalculation());\n```',
     options: ['No difference', 'Function form only runs on initial render', 'Function form is slower', 'Function form runs on every render'],
     correctAnswer: 1,
@@ -1246,6 +1381,7 @@ export const questions: Question[] = [
   },
   {
     id: '135',
+    introduction: 'Git clean removes untracked files from your working directory.',
     question: 'How do you update nested state correctly?\n\n```jsx\nconst [user, setUser] = useState({\n  name: "John",\n  address: { city: "NYC", zip: "10001" }\n});\n\n// Update nested city\nsetUser({\n  ...user,\n  address: { ...user.address, city: "LA" }\n});\n```',
     options: ['Just modify user.address.city directly', 'Spread at each nesting level to preserve immutability', 'Use JSON.parse(JSON.stringify())', 'Nested state is not allowed'],
     correctAnswer: 1,
@@ -1255,6 +1391,7 @@ export const questions: Question[] = [
   },
   {
     id: '136',
+    introduction: 'Git archive creates a tar or zip file of your repository contents.',
     question: 'What does useState return and why is order important?\n\n```jsx\n// Array destructuring - order matters!\nconst [count, setCount] = useState(0);\nconst [name, setName] = useState("");\n\n// You can name them anything\nconst [myValue, updateMyValue] = useState(42);\n```',
     options: ['Returns an object with value and setter', 'Returns array with [currentValue, setterFunction]', 'Returns only the value', 'Returns a Promise'],
     correctAnswer: 1,
@@ -1266,6 +1403,7 @@ export const questions: Question[] = [
   // MORE useCallback QUESTIONS
   {
     id: '137',
+    introduction: 'Sparse checkout allows cloning only specific directories from a repository.',
     question: 'Why use useCallback? What problem does it solve?\n\n```jsx\n// Without useCallback - new function every render\nconst handleClick = () => { doSomething(id); };\n\n// With useCallback - same function reference\nconst handleClick = useCallback(() => {\n  doSomething(id);\n}, [id]);\n```',
     options: ['Makes functions faster', 'Prevents creating new function reference on every render', 'Required for all functions', 'Adds error handling'],
     correctAnswer: 1,
@@ -1275,6 +1413,7 @@ export const questions: Question[] = [
   },
   {
     id: '138',
+    introduction: 'Git LFS (Large File Storage) handles large binary files more efficiently.',
     question: 'When should you NOT use useCallback?\n\n```jsx\n// Unnecessary useCallback - no child optimization\nfunction App() {\n  const handleClick = useCallback(() => {\n    console.log("clicked");\n  }, []);\n  \n  return <button onClick={handleClick}>Click</button>;\n}\n```',
     options: ['Always use useCallback', 'When function is not passed to memoized children', 'When function has dependencies', 'When using TypeScript'],
     correctAnswer: 1,
@@ -1284,6 +1423,7 @@ export const questions: Question[] = [
   },
   {
     id: '139',
+    introduction: 'Signed commits verify the author\'s identity using GPG keys.',
     question: 'What happens if you forget a dependency in useCallback?\n\n```jsx\nconst [count, setCount] = useState(0);\n\n// Bug: count is stale!\nconst logCount = useCallback(() => {\n  console.log(count); // Always logs 0!\n}, []); // Missing count dependency\n```',
     options: ['It auto-detects dependencies', 'Function uses stale/outdated values (closure bug)', 'React throws an error', 'It works correctly'],
     correctAnswer: 1,
@@ -1293,6 +1433,7 @@ export const questions: Question[] = [
   },
   {
     id: '140',
+    introduction: 'Git notes attach extra information to commits without modifying them.',
     question: 'How does useCallback work with React.memo?\n\n```jsx\nconst MemoChild = React.memo(({ onClick }) => {\n  console.log("Child rendered");\n  return <button onClick={onClick}>Click</button>;\n});\n\nfunction Parent() {\n  // Without useCallback: Child re-renders every time\n  // With useCallback: Child only re-renders when needed\n  const handleClick = useCallback(() => {\n    console.log("clicked");\n  }, []);\n  \n  return <MemoChild onClick={handleClick} />;\n}\n```',
     options: ['They are unrelated', 'useCallback keeps same reference so memo can skip re-render', 'memo makes useCallback faster', 'You cannot use them together'],
     correctAnswer: 1,
@@ -1302,6 +1443,7 @@ export const questions: Question[] = [
   },
   {
     id: '141',
+    introduction: 'The upstream branch is the remote branch that your local branch tracks.',
     question: 'What is the difference between useCallback and useMemo?\n\n```jsx\n// useCallback: memoizes the FUNCTION itself\nconst fn = useCallback(() => compute(a, b), [a, b]);\n\n// useMemo: memoizes the RESULT of calling function\nconst value = useMemo(() => compute(a, b), [a, b]);\n\n// These are equivalent:\nuseCallback(fn, deps)\nuseMemo(() => fn, deps)\n```',
     options: ['No difference', 'useCallback memoizes function, useMemo memoizes return value', 'useMemo is for functions only', 'useCallback is deprecated'],
     correctAnswer: 1,
@@ -1311,6 +1453,7 @@ export const questions: Question[] = [
   },
   {
     id: '142',
+    introduction: 'Git pull --rebase fetches and rebases instead of merging, avoiding merge commits.',
     question: 'How to handle useCallback with changing dependencies?\n\n```jsx\nconst [items, setItems] = useState([]);\n\n// This function identity changes when items changes\nconst addItem = useCallback((item) => {\n  setItems([...items, item]);\n}, [items]);\n\n// Better: use functional update, no items dependency\nconst addItem = useCallback((item) => {\n  setItems(prev => [...prev, item]);\n}, []); // Empty deps - stable reference!\n```',
     options: ['Always include all dependencies', 'Use functional state updates to reduce dependencies', 'Disable the eslint rule', 'Don\'t use useCallback'],
     correctAnswer: 1,
@@ -1322,6 +1465,7 @@ export const questions: Question[] = [
   // MORE useRef QUESTIONS
   {
     id: '143',
+    introduction: 'Force push overwrites remote history and should be used carefully on shared branches.',
     question: 'What makes useRef different from useState?\n\n```jsx\nconst countRef = useRef(0);\nconst [countState, setCountState] = useState(0);\n\n// useRef: changes do NOT trigger re-render\ncountRef.current = 5; // No re-render!\n\n// useState: changes DO trigger re-render\nsetCountState(5); // Re-renders!\n```',
     options: ['useRef is faster', 'useRef changes don\'t cause re-renders', 'useState can\'t hold numbers', 'They are the same'],
     correctAnswer: 1,
@@ -1331,6 +1475,7 @@ export const questions: Question[] = [
   },
   {
     id: '144',
+    introduction: 'Git gc (garbage collection) cleans up unnecessary files and optimizes the repository.',
     question: 'How do you access a DOM element with useRef?\n\n```jsx\nfunction TextInput() {\n  const inputRef = useRef(null);\n  \n  const focusInput = () => {\n    inputRef.current.focus(); // Direct DOM access!\n  };\n  \n  return (\n    <>\n      <input ref={inputRef} />\n      <button onClick={focusInput}>Focus</button>\n    </>\n  );\n}\n```',
     options: ['Use document.querySelector', 'Attach ref to element, access via ref.current', 'Use getElementById', 'DOM access is not possible in React'],
     correctAnswer: 1,
@@ -1340,6 +1485,7 @@ export const questions: Question[] = [
   },
   {
     id: '145',
+    introduction: 'Rerere (reuse recorded resolution) remembers how you resolved merge conflicts.',
     question: 'How to track previous state value with useRef?\n\n```jsx\nfunction Counter() {\n  const [count, setCount] = useState(0);\n  const prevCountRef = useRef();\n  \n  useEffect(() => {\n    prevCountRef.current = count; // Store after render\n  });\n  \n  const prevCount = prevCountRef.current;\n  \n  return <p>Now: {count}, Before: {prevCount}</p>;\n}\n```',
     options: ['useState can track previous values', 'Store current value in ref after each render', 'Use a global variable', 'Previous values cannot be tracked'],
     correctAnswer: 1,
@@ -1349,6 +1495,7 @@ export const questions: Question[] = [
   },
   {
     id: '146',
+    introduction: 'Git filter-branch can rewrite repository history, useful for removing sensitive data.',
     question: 'Why use useRef for interval/timeout IDs?\n\n```jsx\nfunction Timer() {\n  const intervalRef = useRef(null);\n  \n  const startTimer = () => {\n    intervalRef.current = setInterval(() => {\n      console.log("tick");\n    }, 1000);\n  };\n  \n  const stopTimer = () => {\n    clearInterval(intervalRef.current);\n  };\n  \n  useEffect(() => {\n    return () => clearInterval(intervalRef.current);\n  }, []);\n}\n```',
     options: ['Intervals require refs', 'Ref persists the ID without causing re-renders', 'useState cannot store numbers', 'It\'s required by React'],
     correctAnswer: 1,
@@ -1358,6 +1505,7 @@ export const questions: Question[] = [
   },
   {
     id: '147',
+    introduction: 'BFG Repo-Cleaner is a faster alternative to filter-branch for cleaning repository history.',
     question: 'What is the initial value of useRef?\n\n```jsx\n// Initial value passed to useRef\nconst myRef = useRef(initialValue);\n\n// Examples:\nconst countRef = useRef(0);        // current = 0\nconst inputRef = useRef(null);     // current = null\nconst objRef = useRef({ x: 1 });   // current = { x: 1 }\n```',
     options: ['Always undefined', 'Always null', 'Whatever you pass as argument becomes .current', 'Must be a DOM element'],
     correctAnswer: 2,
@@ -1367,6 +1515,7 @@ export const questions: Question[] = [
   },
   {
     id: '148',
+    introduction: 'Git bundle packages repository data for transfer without network access.',
     question: 'How to avoid null checks with useRef for DOM elements?\n\n```jsx\nfunction Form() {\n  const inputRef = useRef<HTMLInputElement>(null);\n  \n  const handleSubmit = () => {\n    // Option 1: Optional chaining\n    inputRef.current?.focus();\n    \n    // Option 2: Null check\n    if (inputRef.current) {\n      inputRef.current.focus();\n    }\n    \n    // Option 3: Non-null assertion (when certain)\n    inputRef.current!.focus();\n  };\n}\n```',
     options: ['Refs are never null', 'Use optional chaining, null checks, or assertion', 'Initialize with a fake element', 'Don\'t use TypeScript'],
     correctAnswer: 1,
@@ -1376,6 +1525,7 @@ export const questions: Question[] = [
   },
   {
     id: '149',
+    introduction: 'Grafts and replace refs can alter how Git perceives commit ancestry.',
     question: 'When should you use useRef vs useState?\n\n```jsx\n// Use useState when:\n// - Value should be displayed in UI\n// - Changes should trigger re-render\nconst [count, setCount] = useState(0);\n\n// Use useRef when:\n// - Value should NOT trigger re-render\n// - Accessing DOM elements\n// - Storing mutable values (timers, previous values)\nconst renderCount = useRef(0);\n```',
     options: ['Always use useState', 'useRef for no-render updates and DOM, useState for UI state', 'Always use useRef', 'They are interchangeable'],
     correctAnswer: 1,
@@ -1385,6 +1535,7 @@ export const questions: Question[] = [
   },
   {
     id: '150',
+    introduction: 'Git maintenance automates repository optimization tasks.',
     question: 'How does useRef work with forwardRef?\n\n```jsx\nconst FancyInput = forwardRef((props, ref) => {\n  return <input ref={ref} className="fancy" />;\n});\n\nfunction Parent() {\n  const inputRef = useRef(null);\n  \n  return (\n    <>\n      <FancyInput ref={inputRef} />\n      <button onClick={() => inputRef.current.focus()}>\n        Focus\n      </button>\n    </>\n  );\n}\n```',
     options: ['forwardRef is deprecated', 'forwardRef passes ref through to child component', 'You cannot ref custom components', 'Use a different prop name'],
     correctAnswer: 1,
@@ -1396,6 +1547,7 @@ export const questions: Question[] = [
   // GENERAL FRONTEND & JAVASCRIPT CONCEPTS
   {
     id: '151',
+    introduction: 'JavaScript components go through lifecycle phases: mounting (creation), updating, and unmounting (removal).',
     question: 'What does "mounting" mean in React?\n\n```jsx\nfunction Component() {\n  useEffect(() => {\n    console.log("Component mounted!");\n    \n    return () => {\n      console.log("Component unmounted!");\n    };\n  }, []);\n}\n```',
     options: ['Styling a component', 'Component is created and inserted into the DOM', 'Updating component props', 'Removing event listeners'],
     correctAnswer: 1,
@@ -1405,6 +1557,7 @@ export const questions: Question[] = [
   },
   {
     id: '152',
+    introduction: 'Understanding mount and unmount concepts is essential for managing side effects and cleanup in applications.',
     question: 'What is the React component lifecycle?\n\n```jsx\n// Mounting: Component created & added to DOM\n// Updating: Props or state change -> re-render\n// Unmounting: Component removed from DOM\n\nuseEffect(() => {\n  // Runs after mount and updates\n  return () => { /* Cleanup before unmount */ };\n}, [dependencies]);\n```',
     options: ['Only mounting exists', 'Mount -> Update -> Unmount', 'Render -> Paint -> Layout', 'Compile -> Bundle -> Deploy'],
     correctAnswer: 1,
@@ -1414,6 +1567,7 @@ export const questions: Question[] = [
   },
   {
     id: '153',
+    introduction: 'Babel is a JavaScript compiler that transforms modern code to work in older browsers.',
     question: 'What does Node.js do?\n\n```js\n// Node.js lets you run JavaScript outside the browser\nconst http = require("http");\n\nhttp.createServer((req, res) => {\n  res.end("Hello from server!");\n}).listen(3000);\n```',
     options: ['A frontend framework', 'JavaScript runtime for server-side code', 'A database', 'A CSS preprocessor'],
     correctAnswer: 1,
@@ -1423,6 +1577,7 @@ export const questions: Question[] = [
   },
   {
     id: '154',
+    introduction: 'Webpack is a module bundler that packages JavaScript files and assets for the browser.',
     question: 'What does npm do?\n\n```bash\n$ npm init              # Create package.json\n$ npm install react     # Install a package\n$ npm install -D jest   # Install dev dependency\n$ npm run build         # Run a script\n```',
     options: ['Node Package Manager - installs and manages dependencies', 'A JavaScript compiler', 'A testing framework', 'A web server'],
     correctAnswer: 0,
@@ -1432,6 +1587,7 @@ export const questions: Question[] = [
   },
   {
     id: '155',
+    introduction: 'npm (Node Package Manager) manages JavaScript packages and dependencies for your projects.',
     question: 'What is package.json?\n\n```json\n{\n  "name": "my-app",\n  "version": "1.0.0",\n  "dependencies": {\n    "react": "^18.2.0"\n  },\n  "devDependencies": {\n    "typescript": "^5.0.0"\n  },\n  "scripts": {\n    "start": "vite",\n    "build": "vite build"\n  }\n}\n```',
     options: ['A config for CSS', 'Project manifest with dependencies and scripts', 'A database schema', 'TypeScript configuration'],
     correctAnswer: 1,
@@ -1441,6 +1597,7 @@ export const questions: Question[] = [
   },
   {
     id: '156',
+    introduction: 'Node.js allows running JavaScript outside the browser, enabling server-side development.',
     question: 'What is the difference between dependencies and devDependencies?\n\n```json\n{\n  "dependencies": {\n    "react": "^18.0.0"    // Needed at runtime\n  },\n  "devDependencies": {\n    "jest": "^29.0.0"     // Only needed for development\n  }\n}\n```',
     options: ['No difference', 'dependencies are for runtime, devDependencies for development only', 'devDependencies are optional', 'dependencies are outdated'],
     correctAnswer: 1,
@@ -1450,6 +1607,7 @@ export const questions: Question[] = [
   },
   {
     id: '157',
+    introduction: 'Package.json is the manifest file that defines your project\'s dependencies and scripts.',
     question: 'What does Webpack do?\n\n```js\n// webpack.config.js\nmodule.exports = {\n  entry: "./src/index.js",\n  output: { filename: "bundle.js" },\n  module: {\n    rules: [\n      { test: /\\.css$/, use: ["style-loader", "css-loader"] }\n    ]\n  }\n};\n```',
     options: ['A testing framework', 'Module bundler that combines files into bundles', 'A CSS framework', 'A JavaScript runtime'],
     correctAnswer: 1,
@@ -1459,6 +1617,7 @@ export const questions: Question[] = [
   },
   {
     id: '158',
+    introduction: 'ESLint analyzes JavaScript code for potential errors and enforces coding style rules.',
     question: 'What does Babel do?\n\n```js\n// Babel transforms modern JS to older syntax\n// Input (ES6+):\nconst fn = () => console.log("arrow function");\n\n// Output (ES5):\nvar fn = function() { console.log("arrow function"); };\n```',
     options: ['A database ORM', 'JavaScript compiler that transforms modern code for older browsers', 'A CSS preprocessor', 'A package manager'],
     correctAnswer: 1,
@@ -1468,6 +1627,7 @@ export const questions: Question[] = [
   },
   {
     id: '159',
+    introduction: 'Prettier is a code formatter that automatically formats your code to ensure consistency.',
     question: 'What does Vite do?\n\n```bash\n$ npm create vite@latest my-app\n$ cd my-app && npm install && npm run dev\n# Instant server start with hot module replacement\n```',
     options: ['A testing library', 'Fast build tool and dev server using native ES modules', 'A state management library', 'A database'],
     correctAnswer: 1,
@@ -1477,6 +1637,7 @@ export const questions: Question[] = [
   },
   {
     id: '160',
+    introduction: 'The DOM (Document Object Model) is the browser\'s representation of HTML that JavaScript can manipulate.',
     question: 'What is the DOM?\n\n```js\n// DOM = Document Object Model\n// Tree representation of HTML that JavaScript can manipulate\n\ndocument.getElementById("app");\ndocument.querySelector(".button");\nelement.addEventListener("click", handler);\n```',
     options: ['A JavaScript framework', 'Tree representation of HTML document', 'A CSS methodology', 'A build tool'],
     correctAnswer: 1,
@@ -1486,6 +1647,7 @@ export const questions: Question[] = [
   },
   {
     id: '161',
+    introduction: 'Chrome DevTools Network tab lets you inspect all HTTP requests and responses made by your application.',
     question: 'What can you inspect in the Network tab of Chrome DevTools?',
     options: ['Only HTML files', 'All HTTP requests, responses, headers, timing, and payload data', 'Only images', 'Network tab doesn\'t exist'],
     correctAnswer: 1,
@@ -1495,6 +1657,7 @@ export const questions: Question[] = [
   },
   {
     id: '162',
+    introduction: 'Chrome DevTools has multiple panels, each serving different debugging and inspection purposes.',
     question: 'What are the main Chrome DevTools panels?\n\n```\nElements - Inspect/edit HTML & CSS\nConsole - JavaScript console, logs, errors\nNetwork - HTTP requests, responses, timing\nSources - Debugger, breakpoints, files\nApplication - Storage, cookies, cache\nPerformance - Runtime performance profiling\n```',
     options: ['Only Console exists', 'Elements, Console, Network, Sources, Application, Performance', 'HTML and CSS panels only', 'DevTools has no panels'],
     correctAnswer: 1,
@@ -1504,6 +1667,7 @@ export const questions: Question[] = [
   },
   {
     id: '163',
+    introduction: 'Breakpoints pause code execution, allowing you to inspect variables and step through code.',
     question: 'How to debug JavaScript with breakpoints?\n\n```js\n// Method 1: In DevTools Sources panel\n// Click line number to add breakpoint\n\n// Method 2: In code\nfunction calculate() {\n  debugger; // Execution pauses here\n  return 42;\n}\n```',
     options: ['Breakpoints don\'t exist in JavaScript', 'Click line numbers in Sources or use debugger statement', 'Only console.log works', 'Use alert() for debugging'],
     correctAnswer: 1,
@@ -1513,6 +1677,7 @@ export const questions: Question[] = [
   },
   {
     id: '164',
+    introduction: 'The console object provides various methods for logging and debugging JavaScript code.',
     question: 'What does console.log() do and what other console methods exist?\n\n```js\nconsole.log("Info");          // General output\nconsole.error("Error!");       // Red error message\nconsole.warn("Warning");       // Yellow warning\nconsole.table([{a:1}, {a:2}]); // Table format\nconsole.time("timer");         // Start timer\nconsole.timeEnd("timer");      // End timer\n```',
     options: ['Only console.log exists', 'Outputs to console, plus error, warn, table, time methods', 'Saves to a file', 'Displays an alert'],
     correctAnswer: 1,
@@ -1522,6 +1687,7 @@ export const questions: Question[] = [
   },
   {
     id: '165',
+    introduction: 'JSON (JavaScript Object Notation) is a lightweight format for storing and exchanging data.',
     question: 'What is JSON?\n\n```js\n// JSON = JavaScript Object Notation\nconst json = \'{"name": "John", "age": 30}\';\n\n// Parse JSON string to object\nconst obj = JSON.parse(json);\n\n// Convert object to JSON string\nconst str = JSON.stringify({ name: "John" });\n```',
     options: ['A programming language', 'Data format for storing and exchanging data', 'A database', 'A JavaScript framework'],
     correctAnswer: 1,
@@ -1531,6 +1697,7 @@ export const questions: Question[] = [
   },
   {
     id: '166',
+    introduction: 'APIs (Application Programming Interfaces) define how different software components communicate.',
     question: 'What is an API?\n\n```js\n// API = Application Programming Interface\n// A way for programs to communicate\n\nfetch("https://api.example.com/users")\n  .then(res => res.json())\n  .then(data => console.log(data));\n```',
     options: ['A programming language', 'Interface for applications to communicate', 'A type of database', 'A CSS framework'],
     correctAnswer: 1,
@@ -1540,6 +1707,7 @@ export const questions: Question[] = [
   },
   {
     id: '167',
+    introduction: 'HTTP methods indicate the desired action to be performed on a resource.',
     question: 'What are HTTP methods?\n\n```js\n// GET - Retrieve data\nfetch("/api/users");\n\n// POST - Create new data\nfetch("/api/users", { method: "POST", body: data });\n\n// PUT - Update existing data\nfetch("/api/users/1", { method: "PUT", body: data });\n\n// DELETE - Remove data\nfetch("/api/users/1", { method: "DELETE" });\n```',
     options: ['Only GET exists', 'GET, POST, PUT, DELETE for different operations', 'HTTP has no methods', 'Methods are optional'],
     correctAnswer: 1,
@@ -1549,6 +1717,7 @@ export const questions: Question[] = [
   },
   {
     id: '168',
+    introduction: 'Understanding HTTP status codes helps debug API issues and handle responses appropriately.',
     question: 'What is localStorage?\n\n```js\n// Store data in browser (persists after closing)\nlocalStorage.setItem("user", "John");\nlocalStorage.getItem("user"); // "John"\nlocalStorage.removeItem("user");\nlocalStorage.clear(); // Remove all\n\n// Only stores strings!\nlocalStorage.setItem("obj", JSON.stringify({a:1}));\n```',
     options: ['Server-side storage', 'Browser storage that persists across sessions', 'Temporary memory only', 'A database system'],
     correctAnswer: 1,
@@ -1558,6 +1727,7 @@ export const questions: Question[] = [
   },
   {
     id: '169',
+    introduction: 'Async/await is modern JavaScript syntax for working with asynchronous operations more cleanly.',
     question: 'What is the difference between localStorage and sessionStorage?\n\n```js\n// localStorage - persists forever (until cleared)\nlocalStorage.setItem("permanent", "stays");\n\n// sessionStorage - cleared when tab closes\nsessionStorage.setItem("temporary", "goes away");\n```',
     options: ['No difference', 'localStorage persists forever, sessionStorage clears on tab close', 'sessionStorage is larger', 'localStorage is deprecated'],
     correctAnswer: 1,
@@ -1567,6 +1737,7 @@ export const questions: Question[] = [
   },
   {
     id: '170',
+    introduction: 'Promises represent the eventual completion or failure of an asynchronous operation.',
     question: 'What is ESLint?\n\n```js\n// .eslintrc.js\nmodule.exports = {\n  rules: {\n    "no-unused-vars": "error",\n    "semi": ["error", "always"]\n  }\n};\n\n// ESLint finds and reports:\n// - Unused variables\n// - Missing semicolons\n// - Code style issues\n```',
     options: ['A JavaScript compiler', 'Static code analysis tool that finds problems', 'A testing framework', 'A bundler'],
     correctAnswer: 1,
@@ -1576,6 +1747,7 @@ export const questions: Question[] = [
   },
   {
     id: '171',
+    introduction: 'Event handling allows JavaScript to respond to user interactions and browser events.',
     question: 'What is Prettier?\n\n```js\n// Before Prettier:\nconst x={a:1,b:2}\nfunction foo(  ){return true}\n\n// After Prettier:\nconst x = { a: 1, b: 2 };\nfunction foo() {\n  return true;\n}\n```',
     options: ['A testing library', 'Code formatter that enforces consistent style', 'A JavaScript compiler', 'A package manager'],
     correctAnswer: 1,
@@ -1585,6 +1757,7 @@ export const questions: Question[] = [
   },
   {
     id: '172',
+    introduction: 'Local Storage provides persistent key-value storage in the browser.',
     question: 'What is TypeScript?\n\n```ts\n// TypeScript = JavaScript + Static Types\nfunction greet(name: string): string {\n  return "Hello, " + name;\n}\n\ngreet("World"); // OK\ngreet(123);     // Error: Argument must be string\n```',
     options: ['A different programming language', 'JavaScript superset with static typing', 'A testing framework', 'A CSS preprocessor'],
     correctAnswer: 1,
@@ -1594,6 +1767,7 @@ export const questions: Question[] = [
   },
   {
     id: '173',
+    introduction: 'Session Storage is similar to Local Storage but clears when the browser tab closes.',
     question: 'What is hot module replacement (HMR)?\n\n```js\n// During development:\n// 1. You edit a file\n// 2. Changes appear instantly WITHOUT full page reload\n// 3. Application state is preserved\n\n// Vite and Webpack support HMR\n```',
     options: ['Replacing hardware modules', 'Updates code in browser without full reload', 'A type of caching', 'Server restart'],
     correctAnswer: 1,
@@ -1603,6 +1777,7 @@ export const questions: Question[] = [
   },
   {
     id: '174',
+    introduction: 'Web Workers run scripts in background threads, keeping the main thread responsive.',
     question: 'What is tree shaking?\n\n```js\n// utils.js\nexport const used = () => "I am used";\nexport const unused = () => "Never imported";\n\n// app.js\nimport { used } from "./utils";\n// "unused" is removed from final bundle (tree shaken)\n```',
     options: ['Organizing folder structure', 'Removing unused code from bundles', 'A testing technique', 'CSS optimization'],
     correctAnswer: 1,
@@ -1612,6 +1787,7 @@ export const questions: Question[] = [
   },
   {
     id: '175',
+    introduction: 'Service Workers enable offline functionality and push notifications in web applications.',
     question: 'What is code splitting?\n\n```js\n// Instead of one large bundle, split into smaller chunks\n// Load code only when needed\n\nconst LazyComponent = React.lazy(\n  () => import("./HeavyComponent")\n);\n\n// HeavyComponent is loaded only when rendered\n```',
     options: ['Writing code in multiple files', 'Breaking bundles into chunks loaded on demand', 'Splitting strings', 'A git branching strategy'],
     correctAnswer: 1,
@@ -1621,6 +1797,7 @@ export const questions: Question[] = [
   },
   {
     id: '176',
+    introduction: 'The Fetch API provides a modern interface for making HTTP requests.',
     question: 'What is a CDN?\n\n```html\n<!-- Loading React from a CDN -->\n<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>\n\n<!-- CDN servers are distributed globally\n     Users download from nearest server -->\n```',
     options: ['A JavaScript framework', 'Content Delivery Network - globally distributed servers', 'A database type', 'A CSS methodology'],
     correctAnswer: 1,
@@ -1630,6 +1807,7 @@ export const questions: Question[] = [
   },
   {
     id: '177',
+    introduction: 'CORS (Cross-Origin Resource Sharing) controls how resources are shared between different domains.',
     question: 'What is CORS?\n\n```js\n// CORS = Cross-Origin Resource Sharing\n// Browser security: scripts can only request from same origin\n\n// Error without CORS:\n// "Access blocked by CORS policy"\n\n// Server must send header:\n// Access-Control-Allow-Origin: *\n```',
     options: ['A CSS framework', 'Browser security policy for cross-origin requests', 'A JavaScript library', 'A type of database'],
     correctAnswer: 1,
@@ -1639,6 +1817,7 @@ export const questions: Question[] = [
   },
   {
     id: '178',
+    introduction: 'Cookies store small pieces of data that are sent with every HTTP request.',
     question: 'What is semantic HTML?\n\n```html\n<!-- Non-semantic: doesn\'t describe content -->\n<div class="header">...</div>\n<div class="nav">...</div>\n\n<!-- Semantic: describes meaning -->\n<header>...</header>\n<nav>...</nav>\n<main>...</main>\n<article>...</article>\n<footer>...</footer>\n```',
     options: ['HTML with inline styles', 'Using meaningful tags that describe content', 'HTML5 only features', 'Server-rendered HTML'],
     correctAnswer: 1,
@@ -1648,6 +1827,7 @@ export const questions: Question[] = [
   },
   {
     id: '179',
+    introduction: 'IndexedDB is a low-level browser database for storing large amounts of structured data.',
     question: 'What is responsive design?\n\n```css\n/* Responsive: adapts to screen size */\n.container {\n  width: 100%;\n  max-width: 1200px;\n}\n\n@media (max-width: 768px) {\n  .sidebar { display: none; }\n}\n```',
     options: ['Fast-loading websites', 'Design that adapts to different screen sizes', 'Server-side rendering', 'A CSS framework'],
     correctAnswer: 1,
@@ -1657,6 +1837,7 @@ export const questions: Question[] = [
   },
   {
     id: '180',
+    introduction: 'WebSockets enable real-time, bidirectional communication between client and server.',
     question: 'What is the difference between SSR, CSR, and SSG?\n\n```\nSSR (Server-Side Rendering):\n  Server renders HTML for each request\n\nCSR (Client-Side Rendering):\n  Browser renders with JavaScript\n\nSSG (Static Site Generation):\n  HTML generated at build time\n```',
     options: ['They are the same', 'Different strategies for when/where HTML is generated', 'Database types', 'Testing methodologies'],
     correctAnswer: 1,
@@ -1668,6 +1849,7 @@ export const questions: Question[] = [
   // MORE REACT HOOKS
   {
     id: '181',
+    introduction: 'Custom hooks allow you to extract and reuse stateful logic across multiple components.',
     question: 'What are the Rules of Hooks?\n\n```jsx\n// Rule 1: Only call hooks at the top level\nfunction Component() {\n  if (condition) {\n    useState(0); // WRONG: inside condition\n  }\n  useState(0); // CORRECT: top level\n}\n\n// Rule 2: Only call hooks from React functions\nfunction regularFunction() {\n  useState(0); // WRONG: not a React component\n}\n```',
     options: ['There are no rules', 'Top level only, React functions only', 'Hooks can be called anywhere', 'Only one hook per component'],
     correctAnswer: 1,
@@ -1677,6 +1859,7 @@ export const questions: Question[] = [
   },
   {
     id: '182',
+    introduction: 'The useId hook generates unique IDs for accessibility attributes, useful for form labels.',
     question: 'Why can\'t hooks be called conditionally?\n\n```jsx\n// WRONG - hooks called in different order each render\nfunction Component({ isLoggedIn }) {\n  if (isLoggedIn) {\n    const [user, setUser] = useState(null); // Sometimes 1st\n  }\n  const [count, setCount] = useState(0); // Sometimes 1st or 2nd\n}\n\n// React tracks hooks by call ORDER, not by name!\n```',
     options: ['It\'s a syntax error', 'React tracks hooks by call order, not name', 'Hooks are too slow', 'Conditions are not allowed in React'],
     correctAnswer: 1,
@@ -1686,6 +1869,7 @@ export const questions: Question[] = [
   },
   {
     id: '183',
+    introduction: 'useSyncExternalStore is designed for subscribing to external data sources in a concurrent-safe way.',
     question: 'What is a custom hook?\n\n```jsx\n// Custom hook - reusable stateful logic\nfunction useWindowSize() {\n  const [size, setSize] = useState({ width: 0, height: 0 });\n  \n  useEffect(() => {\n    const handleResize = () => {\n      setSize({ width: window.innerWidth, height: window.innerHeight });\n    };\n    window.addEventListener("resize", handleResize);\n    return () => window.removeEventListener("resize", handleResize);\n  }, []);\n  \n  return size;\n}\n\n// Usage\nconst { width, height } = useWindowSize();\n```',
     options: ['A built-in React hook', 'A function starting with "use" that uses other hooks', 'A class method', 'A higher-order component'],
     correctAnswer: 1,
@@ -1695,6 +1879,7 @@ export const questions: Question[] = [
   },
   {
     id: '184',
+    introduction: 'Building a custom useFetch hook demonstrates how to compose built-in hooks for common patterns.',
     question: 'How to create a custom useFetch hook?\n\n```jsx\nfunction useFetch(url) {\n  const [data, setData] = useState(null);\n  const [loading, setLoading] = useState(true);\n  const [error, setError] = useState(null);\n  \n  useEffect(() => {\n    fetch(url)\n      .then(res => res.json())\n      .then(setData)\n      .catch(setError)\n      .finally(() => setLoading(false));\n  }, [url]);\n  \n  return { data, loading, error };\n}\n\n// Usage\nconst { data, loading, error } = useFetch("/api/users");\n```',
     options: ['Custom hooks cannot fetch data', 'Combine useState and useEffect to manage fetch state', 'Use a class component instead', 'Fetch must be in useLayoutEffect'],
     correctAnswer: 1,
@@ -1704,6 +1889,7 @@ export const questions: Question[] = [
   },
   {
     id: '185',
+    introduction: 'useContext provides a way to pass data through the component tree without prop drilling.',
     question: 'What does useContext do?\n\n```jsx\n// 1. Create context\nconst ThemeContext = createContext("light");\n\n// 2. Provide value\nfunction App() {\n  return (\n    <ThemeContext.Provider value="dark">\n      <Child />\n    </ThemeContext.Provider>\n  );\n}\n\n// 3. Consume with useContext\nfunction Child() {\n  const theme = useContext(ThemeContext); // "dark"\n  return <div className={theme}>...</div>;\n}\n```',
     options: ['Creates global variables', 'Subscribes to context and gets current value', 'Replaces Redux completely', 'Only works with class components'],
     correctAnswer: 1,
@@ -1713,6 +1899,7 @@ export const questions: Question[] = [
   },
   {
     id: '186',
+    introduction: 'Choosing between Context and props depends on how deeply nested your data needs to travel.',
     question: 'When should you use useContext vs props?\n\n```jsx\n// Props: Good for 1-2 levels\n<Parent>\n  <Child user={user} />\n</Parent>\n\n// Context: Good for deep/many consumers\n<UserContext.Provider value={user}>\n  <DeepChild /> {/* Can access user without prop drilling */}\n</UserContext.Provider>\n```',
     options: ['Always use Context', 'Always use props', 'Context for deep/shared data, props for direct children', 'They are the same'],
     correctAnswer: 2,
@@ -1722,6 +1909,7 @@ export const questions: Question[] = [
   },
   {
     id: '187',
+    introduction: 'The cleanup function in useEffect prevents memory leaks and ensures proper resource management.',
     question: 'What is the useEffect cleanup function for?\n\n```jsx\nuseEffect(() => {\n  const subscription = api.subscribe(data => {\n    setData(data);\n  });\n  \n  // Cleanup: runs before next effect and on unmount\n  return () => {\n    subscription.unsubscribe();\n  };\n}, []);\n```',
     options: ['It\'s optional and does nothing', 'Cleans up side effects to prevent memory leaks', 'Only runs on mount', 'Runs before the effect'],
     correctAnswer: 1,
@@ -1731,6 +1919,7 @@ export const questions: Question[] = [
   },
   {
     id: '188',
+    introduction: 'Understanding useEffect\'s dependency array behavior is crucial for controlling when effects run.',
     question: 'What happens if useEffect has no dependency array?\n\n```jsx\n// No dependency array: runs after EVERY render\nuseEffect(() => {\n  console.log("Runs every render");\n});\n\n// Empty array: runs only on mount\nuseEffect(() => {\n  console.log("Runs once on mount");\n}, []);\n\n// With deps: runs when deps change\nuseEffect(() => {\n  console.log("Runs when count changes");\n}, [count]);\n```',
     options: ['Never runs', 'Runs only once', 'Runs after every render', 'Throws an error'],
     correctAnswer: 2,
@@ -1740,6 +1929,7 @@ export const questions: Question[] = [
   },
   {
     id: '189',
+    introduction: 'Running effects only on updates (not mount) requires a ref to track the first render.',
     question: 'How to run useEffect only on update (not on mount)?\n\n```jsx\nfunction Component() {\n  const isFirstRender = useRef(true);\n  \n  useEffect(() => {\n    if (isFirstRender.current) {\n      isFirstRender.current = false;\n      return; // Skip first render\n    }\n    \n    console.log("Only runs on updates!");\n  }, [someValue]);\n}\n```',
     options: ['Use useUpdateEffect (built-in)', 'Use useRef to track first render and skip it', 'Set dependency to "update"', 'Not possible with hooks'],
     correctAnswer: 1,
@@ -1749,6 +1939,7 @@ export const questions: Question[] = [
   },
   {
     id: '190',
+    introduction: 'useMemo caches expensive calculations, only recomputing when dependencies change.',
     question: 'What is useMemo for and when to use it?\n\n```jsx\nfunction Component({ items }) {\n  // Without useMemo: recalculates every render\n  const total = items.reduce((sum, i) => sum + i.price, 0);\n  \n  // With useMemo: only recalculates when items change\n  const total = useMemo(() => {\n    return items.reduce((sum, i) => sum + i.price, 0);\n  }, [items]);\n}\n```',
     options: ['Memoizes functions', 'Memoizes computed values to skip expensive recalculations', 'Stores data in memory', 'Required for all calculations'],
     correctAnswer: 1,
@@ -1758,6 +1949,7 @@ export const questions: Question[] = [
   },
   {
     id: '191',
+    introduction: 'useCallback and useMemo both provide memoization but for different use cases.',
     question: 'What is the difference between useMemo and useCallback?\n\n```jsx\n// useMemo: returns memoized VALUE\nconst memoizedValue = useMemo(() => {\n  return computeExpensiveValue(a, b);\n}, [a, b]);\n\n// useCallback: returns memoized FUNCTION\nconst memoizedFn = useCallback(() => {\n  doSomething(a, b);\n}, [a, b]);\n\n// useCallback(fn, deps) is equivalent to:\n// useMemo(() => fn, deps)\n```',
     options: ['No difference', 'useMemo caches values, useCallback caches functions', 'useCallback is faster', 'useMemo is deprecated'],
     correctAnswer: 1,
@@ -1767,6 +1959,7 @@ export const questions: Question[] = [
   },
   {
     id: '192',
+    introduction: 'useReducer provides Redux-like state management for complex state logic in components.',
     question: 'What does useReducer return?\n\n```jsx\nconst initialState = { count: 0 };\n\nfunction reducer(state, action) {\n  switch (action.type) {\n    case "increment": return { count: state.count + 1 };\n    case "decrement": return { count: state.count - 1 };\n    default: return state;\n  }\n}\n\nfunction Counter() {\n  const [state, dispatch] = useReducer(reducer, initialState);\n  \n  return (\n    <button onClick={() => dispatch({ type: "increment" })}>\n      Count: {state.count}\n    </button>\n  );\n}\n```',
     options: ['Only the state', 'State and a dispatch function', 'A reducer function', 'An action object'],
     correctAnswer: 1,
@@ -1776,6 +1969,7 @@ export const questions: Question[] = [
   },
   {
     id: '193',
+    introduction: 'Choosing between useState and useReducer depends on the complexity of your state updates.',
     question: 'When should you use useReducer instead of useState?\n\n```jsx\n// useState: simple, independent state\nconst [name, setName] = useState("");\nconst [email, setEmail] = useState("");\n\n// useReducer: complex, related state with logic\nconst [state, dispatch] = useReducer(formReducer, {\n  name: "",\n  email: "",\n  errors: {},\n  isSubmitting: false\n});\n```',
     options: ['Always use useReducer', 'Always use useState', 'useReducer for complex/related state logic', 'They cannot be used together'],
     correctAnswer: 2,
@@ -1785,6 +1979,7 @@ export const questions: Question[] = [
   },
   {
     id: '194',
+    introduction: 'useImperativeHandle customizes the ref value exposed to parent components.',
     question: 'What is useImperativeHandle for?\n\n```jsx\nconst FancyInput = forwardRef((props, ref) => {\n  const inputRef = useRef();\n  \n  useImperativeHandle(ref, () => ({\n    // Expose only specific methods to parent\n    focus: () => inputRef.current.focus(),\n    clear: () => inputRef.current.value = ""\n  }));\n  \n  return <input ref={inputRef} />;\n});\n\n// Parent can only call focus() and clear()\nparentRef.current.focus();\n```',
     options: ['Handles keyboard input', 'Customizes what ref exposes to parent', 'Improves performance', 'Handles form submission'],
     correctAnswer: 1,
@@ -1794,6 +1989,7 @@ export const questions: Question[] = [
   },
   {
     id: '195',
+    introduction: 'useDebugValue adds labels to custom hooks visible in React DevTools for easier debugging.',
     question: 'What is useDebugValue for?\n\n```jsx\nfunction useOnlineStatus() {\n  const [isOnline, setIsOnline] = useState(true);\n  \n  // Shows "Online" or "Offline" in React DevTools\n  useDebugValue(isOnline ? "Online" : "Offline");\n  \n  return isOnline;\n}\n```',
     options: ['Logs errors to console', 'Displays debug info in React DevTools', 'Pauses execution for debugging', 'Only works in production'],
     correctAnswer: 1,
@@ -1803,6 +1999,7 @@ export const questions: Question[] = [
   },
   {
     id: '196',
+    introduction: 'Sharing state between components can be done by lifting state up or using Context.',
     question: 'How to share state between components with hooks?\n\n```jsx\n// Option 1: Lift state up\nfunction Parent() {\n  const [value, setValue] = useState("");\n  return (\n    <>\n      <Input value={value} onChange={setValue} />\n      <Display value={value} />\n    </>\n  );\n}\n\n// Option 2: Context\nconst ValueContext = createContext();\nfunction Child() {\n  const value = useContext(ValueContext);\n}\n```',
     options: ['Hooks cannot share state', 'Lift state up or use Context', 'Use global variables', 'Each component must have its own state'],
     correctAnswer: 1,
@@ -1812,6 +2009,7 @@ export const questions: Question[] = [
   },
   {
     id: '197',
+    introduction: 'useTransition marks state updates as non-urgent, improving perceived performance in React 18.',
     question: 'What is the useTransition hook (React 18)?\n\n```jsx\nfunction App() {\n  const [isPending, startTransition] = useTransition();\n  const [search, setSearch] = useState("");\n  const [results, setResults] = useState([]);\n  \n  const handleChange = (e) => {\n    setSearch(e.target.value); // Urgent: update input\n    \n    startTransition(() => {\n      setResults(filterData(e.target.value)); // Non-urgent\n    });\n  };\n  \n  return isPending ? <Spinner /> : <Results data={results} />;\n}\n```',
     options: ['Animates transitions', 'Marks state updates as non-urgent for better UX', 'Handles page navigation', 'Transitions between components'],
     correctAnswer: 1,
@@ -1821,6 +2019,7 @@ export const questions: Question[] = [
   },
   {
     id: '198',
+    introduction: 'useDeferredValue lets you defer updating part of the UI to keep other parts responsive.',
     question: 'What is useDeferredValue (React 18)?\n\n```jsx\nfunction SearchResults({ query }) {\n  // deferredQuery updates with lower priority\n  const deferredQuery = useDeferredValue(query);\n  \n  // UI stays responsive while computing new results\n  const results = useMemo(\n    () => heavyFilter(data, deferredQuery),\n    [deferredQuery]\n  );\n  \n  return <List items={results} />;\n}\n```',
     options: ['Delays rendering forever', 'Defers updating a value until urgent updates complete', 'Stores previous value', 'Only works with strings'],
     correctAnswer: 1,
@@ -1830,6 +2029,7 @@ export const questions: Question[] = [
   },
   {
     id: '199',
+    introduction: 'Preventing infinite loops in useEffect requires understanding dependency arrays and functional updates.',
     question: 'How to avoid infinite loops in useEffect?\n\n```jsx\n// INFINITE LOOP - state change triggers effect, effect changes state\nuseEffect(() => {\n  setCount(count + 1); // Changes state, triggers re-render, runs effect again...\n});\n\n// FIXED - add dependency array\nuseEffect(() => {\n  setCount(count + 1);\n}, []); // Runs once\n\n// FIXED - use functional update\nuseEffect(() => {\n  setCount(c => c + 1);\n}, []); // Doesn\'t need count in deps\n```',
     options: ['Infinite loops are impossible', 'Add correct dependencies, use functional updates', 'Always use empty dependency array', 'Remove useEffect entirely'],
     correctAnswer: 1,
@@ -1839,6 +2039,7 @@ export const questions: Question[] = [
   },
   {
     id: '200',
+    introduction: 'Following a consistent order when calling hooks improves code readability and follows conventions.',
     question: 'What is the correct order to call hooks?\n\n```jsx\nfunction Component() {\n  // 1. All useState calls first\n  const [a, setA] = useState(0);\n  const [b, setB] = useState("");\n  \n  // 2. useRef\n  const ref = useRef(null);\n  \n  // 3. useMemo / useCallback\n  const memoized = useMemo(() => compute(a), [a]);\n  \n  // 4. useEffect last\n  useEffect(() => {\n    // side effects\n  }, []);\n  \n  return <div>...</div>;\n}\n```',
     options: ['Order doesn\'t matter', 'useState, useRef, useMemo/useCallback, useEffect', 'useEffect must be first', 'Only one hook allowed'],
     correctAnswer: 1,
@@ -1850,6 +2051,7 @@ export const questions: Question[] = [
   // BASIC TERMINOLOGY - Git
   {
     id: '201',
+    introduction: 'A remote in Git is a reference to a repository hosted elsewhere, enabling collaboration.',
     question: 'What is a "remote" in Git?',
     options: ['A local backup', 'A reference to a repository hosted elsewhere (e.g., GitHub)', 'A deleted branch', 'A type of commit'],
     correctAnswer: 1,
@@ -1859,6 +2061,7 @@ export const questions: Question[] = [
   },
   {
     id: '202',
+    introduction: 'Origin is the default name Git gives to the server you cloned from.',
     question: 'What does "origin" typically refer to in Git?',
     options: ['The first commit ever made', 'The default name for your remote repository', 'The main branch', 'Your local repository'],
     correctAnswer: 1,
@@ -1868,6 +2071,7 @@ export const questions: Question[] = [
   },
   {
     id: '203',
+    introduction: 'Branches allow multiple lines of development to proceed in parallel without interfering.',
     question: 'What is a "branch" in Git?',
     options: ['A copy of the entire repository', 'A pointer to a specific commit allowing parallel development', 'A backup of your code', 'A type of merge'],
     correctAnswer: 1,
@@ -1877,6 +2081,7 @@ export const questions: Question[] = [
   },
   {
     id: '204',
+    introduction: 'A commit is a snapshot of your project at a specific point in time.',
     question: 'What is a "commit" in Git?',
     options: ['A saved file', 'A snapshot of your repository at a specific point in time', 'A branch name', 'A remote server'],
     correctAnswer: 1,
@@ -1886,6 +2091,7 @@ export const questions: Question[] = [
   },
   {
     id: '205',
+    introduction: 'HEAD is a pointer to the current branch or commit you\'re working on.',
     question: 'What does "HEAD" refer to in Git?',
     options: ['The first commit', 'A pointer to the current branch/commit you\'re on', 'The main branch', 'The remote repository'],
     correctAnswer: 1,
@@ -1897,6 +2103,7 @@ export const questions: Question[] = [
   // BASIC TERMINOLOGY - JavaScript
   {
     id: '206',
+    introduction: 'Promises handle asynchronous operations, representing values that may be available in the future.',
     question: 'What is a "Promise" in JavaScript?',
     options: ['A guaranteed function result', 'An object representing a future value from an async operation', 'A type of loop', 'A variable declaration'],
     correctAnswer: 1,
@@ -1906,6 +2113,7 @@ export const questions: Question[] = [
   },
   {
     id: '207',
+    introduction: 'Callbacks are functions passed as arguments to be executed later, a foundational async pattern.',
     question: 'What is a "callback" function?',
     options: ['A function that calls itself', 'A function passed as an argument to be executed later', 'A function that returns another function', 'A built-in JavaScript function'],
     correctAnswer: 1,
@@ -1915,6 +2123,7 @@ export const questions: Question[] = [
   },
   {
     id: '208',
+    introduction: 'Closures are functions that remember variables from their outer scope even after that scope has closed.',
     question: 'What is a "closure" in JavaScript?',
     options: ['A way to close the browser', 'A function that has access to variables from its outer scope', 'A method to end a loop', 'A type of error'],
     correctAnswer: 1,
@@ -1924,6 +2133,7 @@ export const questions: Question[] = [
   },
   {
     id: '209',
+    introduction: 'Hoisting is JavaScript\'s behavior of moving declarations to the top of their scope during compilation.',
     question: 'What is "hoisting" in JavaScript?',
     options: ['Moving code to the cloud', 'Moving declarations to the top of their scope during compilation', 'Raising an error', 'A loop optimization'],
     correctAnswer: 1,
@@ -1933,6 +2143,7 @@ export const questions: Question[] = [
   },
   {
     id: '210',
+    introduction: 'Scope determines where variables are accessible in your code.',
     question: 'What is "scope" in JavaScript?',
     options: ['The size of a variable', 'The context where variables are accessible', 'A debugging tool', 'A type of function'],
     correctAnswer: 1,
@@ -1942,6 +2153,7 @@ export const questions: Question[] = [
   },
   {
     id: '211',
+    introduction: 'The Fetch API provides a modern way to make network requests in JavaScript.',
     question: 'What does the "fetch" API do?',
     options: ['Fetches local files only', 'Makes HTTP requests to get or send data', 'Downloads npm packages', 'Reads from localStorage'],
     correctAnswer: 1,
@@ -1951,6 +2163,7 @@ export const questions: Question[] = [
   },
   {
     id: '212',
+    introduction: 'Events are actions or occurrences that JavaScript can detect and respond to.',
     question: 'What is an "event" in JavaScript?',
     options: ['A scheduled meeting', 'An action or occurrence that the browser or user triggers', 'A type of variable', 'A CSS property'],
     correctAnswer: 1,
@@ -1960,6 +2173,7 @@ export const questions: Question[] = [
   },
   {
     id: '213',
+    introduction: 'Async/await makes asynchronous code look and behave like synchronous code.',
     question: 'What is "async/await" in JavaScript?',
     options: ['A new variable type', 'Syntax for working with Promises more readably', 'A loop structure', 'A way to pause the browser'],
     correctAnswer: 1,
@@ -1969,6 +2183,7 @@ export const questions: Question[] = [
   },
   {
     id: '214',
+    introduction: 'The DOM is the programming interface that lets JavaScript interact with HTML documents.',
     question: 'What is the "DOM" (Document Object Model)?',
     options: ['A JavaScript framework', 'A tree-structured representation of HTML that JavaScript can manipulate', 'A CSS feature', 'A database'],
     correctAnswer: 1,
@@ -1978,6 +2193,7 @@ export const questions: Question[] = [
   },
   {
     id: '215',
+    introduction: 'Nodes are the individual points in the DOM tree, representing elements, text, and attributes.',
     question: 'What is a "node" in the DOM?',
     options: ['A Node.js server', 'Any element, text, or attribute in the DOM tree', 'A JavaScript variable', 'A CSS selector'],
     correctAnswer: 1,
@@ -1989,6 +2205,7 @@ export const questions: Question[] = [
   // BASIC TERMINOLOGY - React
   {
     id: '216',
+    introduction: 'Rendering is when React converts your components into actual DOM elements on screen.',
     question: 'What does "render" mean in React?',
     options: ['Deleting components', 'The process of converting components into DOM elements on screen', 'Styling components', 'Importing modules'],
     correctAnswer: 1,
@@ -1998,6 +2215,7 @@ export const questions: Question[] = [
   },
   {
     id: '217',
+    introduction: 'Mounting occurs when a component is first created and inserted into the DOM.',
     question: 'What does "mount" mean in React?',
     options: ['Styling a component', 'When a component is first added to the DOM', 'Removing a component', 'Updating state'],
     correctAnswer: 1,
@@ -2007,6 +2225,7 @@ export const questions: Question[] = [
   },
   {
     id: '218',
+    introduction: 'Unmounting is when a component is removed from the DOM, triggering cleanup.',
     question: 'What does "unmount" mean in React?',
     options: ['Hiding a component with CSS', 'When a component is removed from the DOM', 'Restarting the app', 'Updating props'],
     correctAnswer: 1,
@@ -2016,6 +2235,7 @@ export const questions: Question[] = [
   },
   {
     id: '219',
+    introduction: 'Props are read-only data passed from parent to child components.',
     question: 'What is a "prop" in React?',
     options: ['A CSS property', 'Data passed from parent to child component', 'Internal component state', 'A hook'],
     correctAnswer: 1,
@@ -2025,6 +2245,7 @@ export const questions: Question[] = [
   },
   {
     id: '220',
+    introduction: 'State is mutable data that belongs to a component and triggers re-renders when changed.',
     question: 'What is "state" in React?',
     options: ['Global variables', 'Data that belongs to a component and can change over time', 'CSS styles', 'HTML attributes'],
     correctAnswer: 1,
@@ -2036,6 +2257,7 @@ export const questions: Question[] = [
   // BASIC TERMINOLOGY - Web/API
   {
     id: '221',
+    introduction: 'APIs define how software components communicate and exchange data.',
     question: 'What is an "API" (Application Programming Interface)?',
     options: ['A programming language', 'A set of rules for how software components should interact', 'A web browser', 'A database'],
     correctAnswer: 1,
@@ -2045,6 +2267,7 @@ export const questions: Question[] = [
   },
   {
     id: '222',
+    introduction: 'JSON is a lightweight data format that\'s easy for both humans and machines to read.',
     question: 'What is "JSON" (JavaScript Object Notation)?',
     options: ['A JavaScript framework', 'A lightweight data format for storing and transporting data', 'A database', 'A programming language'],
     correctAnswer: 1,
@@ -2054,6 +2277,7 @@ export const questions: Question[] = [
   },
   {
     id: '223',
+    introduction: 'HTTP methods indicate what operation should be performed on a resource.',
     question: 'What are HTTP methods GET and POST used for?',
     options: ['GET downloads files, POST uploads files', 'GET retrieves data, POST sends data to create/update', 'They are the same', 'GET is faster than POST'],
     correctAnswer: 1,
@@ -2063,6 +2287,7 @@ export const questions: Question[] = [
   },
   {
     id: '224',
+    introduction: 'REST is an architectural style for designing web APIs using HTTP methods.',
     question: 'What is "REST" (Representational State Transfer)?',
     options: ['A JavaScript library', 'An architectural style for designing networked APIs', 'A database type', 'A testing framework'],
     correctAnswer: 1,
@@ -2072,6 +2297,7 @@ export const questions: Question[] = [
   },
   {
     id: '225',
+    introduction: 'CORS is a browser security feature that controls cross-origin resource access.',
     question: 'What is "CORS" (Cross-Origin Resource Sharing)?',
     options: ['A CSS framework', 'A security mechanism controlling access to resources from different origins', 'A JavaScript library', 'A database feature'],
     correctAnswer: 1,
@@ -2083,6 +2309,7 @@ export const questions: Question[] = [
   // JAVASCRIPT FUNDAMENTALS - Arrays
   {
     id: '226',
+    introduction: 'Arrays are ordered collections of values, one of the most fundamental data structures in JavaScript.',
     question: 'What is an array in JavaScript?',
     options: ['A single value', 'An ordered list of values', 'A function', 'A CSS property'],
     correctAnswer: 1,
@@ -2092,6 +2319,7 @@ export const questions: Question[] = [
   },
   {
     id: '227',
+    introduction: 'JavaScript provides multiple ways to create arrays, each with its own syntax.',
     question: 'How do you create an array in JavaScript?\n\n```javascript\n// Which is correct?\nconst a = [1, 2, 3];\nconst b = new Array(1, 2, 3);\n```',
     options: ['Only with new Array()', 'Only with square brackets []', 'Both [] and new Array() work', 'Arrays cannot be created'],
     correctAnswer: 2,
@@ -2101,6 +2329,7 @@ export const questions: Question[] = [
   },
   {
     id: '228',
+    introduction: 'Arrays in JavaScript are zero-indexed, meaning the first element is at index 0.',
     question: 'How do you access the first element of an array?\n\n```javascript\nconst fruits = ["apple", "banana", "cherry"];\n// How to get "apple"?\n```',
     options: ['fruits[1]', 'fruits[0]', 'fruits.first()', 'fruits.get(0)'],
     correctAnswer: 1,
@@ -2110,6 +2339,7 @@ export const questions: Question[] = [
   },
   {
     id: '229',
+    introduction: 'The length property tells you how many elements are in an array.',
     question: 'What does array.length return?\n\n```javascript\nconst numbers = [10, 20, 30, 40];\nconsole.log(numbers.length); // ?\n```',
     options: ['The last index (3)', 'The number of elements (4)', 'The sum of elements', 'undefined'],
     correctAnswer: 1,
@@ -2119,6 +2349,7 @@ export const questions: Question[] = [
   },
   {
     id: '230',
+    introduction: 'Push adds elements to the end of an array, modifying the original array.',
     question: 'What does array.push() do?\n\n```javascript\nconst arr = [1, 2];\narr.push(3);\nconsole.log(arr); // ?\n```',
     options: ['Removes the last element', 'Adds element to the end', 'Adds element to the beginning', 'Sorts the array'],
     correctAnswer: 1,
@@ -2128,6 +2359,7 @@ export const questions: Question[] = [
   },
   {
     id: '231',
+    introduction: 'Pop removes and returns the last element from an array.',
     question: 'What does array.pop() do?\n\n```javascript\nconst arr = [1, 2, 3];\nconst removed = arr.pop();\nconsole.log(removed); // ?\n```',
     options: ['Returns 1', 'Returns 3', 'Returns the array', 'Returns undefined'],
     correctAnswer: 1,
@@ -2137,6 +2369,7 @@ export const questions: Question[] = [
   },
   {
     id: '232',
+    introduction: 'Map creates a new array by transforming every element with a function.',
     question: 'What does array.map() do?\n\n```javascript\nconst nums = [1, 2, 3];\nconst doubled = nums.map(n => n * 2);\nconsole.log(doubled); // ?\n```',
     options: ['[1, 2, 3]', '[2, 4, 6]', '12', 'undefined'],
     correctAnswer: 1,
@@ -2146,6 +2379,7 @@ export const questions: Question[] = [
   },
   {
     id: '233',
+    introduction: 'Filter creates a new array containing only elements that pass a test.',
     question: 'What does array.filter() do?\n\n```javascript\nconst nums = [1, 2, 3, 4, 5];\nconst evens = nums.filter(n => n % 2 === 0);\nconsole.log(evens); // ?\n```',
     options: ['[1, 3, 5]', '[2, 4]', '[1, 2, 3, 4, 5]', '2'],
     correctAnswer: 1,
@@ -2155,6 +2389,7 @@ export const questions: Question[] = [
   },
   {
     id: '234',
+    introduction: 'forEach executes a function for each array element but doesn\'t return a new array.',
     question: 'What does array.forEach() do?\n\n```javascript\nconst arr = [1, 2, 3];\narr.forEach(x => console.log(x));\n```',
     options: ['Returns a new array', 'Executes a function for each element', 'Filters the array', 'Sorts the array'],
     correctAnswer: 1,
@@ -2164,6 +2399,7 @@ export const questions: Question[] = [
   },
   {
     id: '235',
+    introduction: 'Find returns the first element that satisfies a testing function.',
     question: 'What does array.find() return?\n\n```javascript\nconst users = [{name: "Ann"}, {name: "Bob"}];\nconst result = users.find(u => u.name === "Bob");\n```',
     options: ['The index 1', 'The object {name: "Bob"}', 'An array with Bob', 'true'],
     correctAnswer: 1,
@@ -2173,6 +2409,7 @@ export const questions: Question[] = [
   },
   {
     id: '236',
+    introduction: 'Includes checks whether an array contains a specific value.',
     question: 'What does array.includes() check?\n\n```javascript\nconst arr = [1, 2, 3];\nconsole.log(arr.includes(2)); // ?\n```',
     options: ['false', 'true', '1', 'undefined'],
     correctAnswer: 1,
@@ -2184,6 +2421,7 @@ export const questions: Question[] = [
   // JAVASCRIPT FUNDAMENTALS - Objects
   {
     id: '237',
+    introduction: 'Objects store data as key-value pairs, fundamental for representing complex data in JavaScript.',
     question: 'What is an object in JavaScript?',
     options: ['A numbered list', 'A collection of key-value pairs', 'A function type', 'A primitive value'],
     correctAnswer: 1,
@@ -2193,6 +2431,7 @@ export const questions: Question[] = [
   },
   {
     id: '238',
+    introduction: 'JavaScript provides multiple syntaxes for creating objects.',
     question: 'How do you create an object in JavaScript?\n\n```javascript\n// Which creates an object?\nconst a = { name: "John", age: 30 };\nconst b = new Object();\n```',
     options: ['Only with new Object()', 'Only with curly braces {}', 'Both {} and new Object() work', 'Objects cannot be created'],
     correctAnswer: 2,
@@ -2202,6 +2441,7 @@ export const questions: Question[] = [
   },
   {
     id: '239',
+    introduction: 'Object properties can be accessed using dot notation or bracket notation.',
     question: 'How do you access object properties?\n\n```javascript\nconst person = { name: "John", age: 30 };\n// How to get "John"?\n```',
     options: ['person.name or person["name"]', 'person[0]', 'person.get("name")', 'person->name'],
     correctAnswer: 0,
@@ -2211,6 +2451,7 @@ export const questions: Question[] = [
   },
   {
     id: '240',
+    introduction: 'Bracket notation is required when property names are dynamic or contain special characters.',
     question: 'When must you use bracket notation for objects?\n\n```javascript\nconst key = "name";\nconst obj = { name: "John", "my-key": "value" };\n```',
     options: ['Never, dot notation always works', 'When key is a variable or has special characters', 'Only for numbers', 'Bracket notation is deprecated'],
     correctAnswer: 1,
@@ -2220,6 +2461,7 @@ export const questions: Question[] = [
   },
   {
     id: '241',
+    introduction: 'JavaScript objects are dynamic—you can add new properties at any time.',
     question: 'How do you add a new property to an object?\n\n```javascript\nconst car = { brand: "Toyota" };\n// Add color: "red"\n```',
     options: ['car.color = "red"', 'car.add("color", "red")', 'car.push("color", "red")', 'Cannot add properties'],
     correctAnswer: 0,
@@ -2229,6 +2471,7 @@ export const questions: Question[] = [
   },
   {
     id: '242',
+    introduction: 'Object.keys() returns an array of an object\'s property names.',
     question: 'What does Object.keys() return?\n\n```javascript\nconst obj = { a: 1, b: 2, c: 3 };\nconsole.log(Object.keys(obj)); // ?\n```',
     options: ['[1, 2, 3]', '["a", "b", "c"]', '{a: 1, b: 2, c: 3}', '3'],
     correctAnswer: 1,
@@ -2238,6 +2481,7 @@ export const questions: Question[] = [
   },
   {
     id: '243',
+    introduction: 'Object.values() returns an array of an object\'s property values.',
     question: 'What does Object.values() return?\n\n```javascript\nconst obj = { a: 1, b: 2, c: 3 };\nconsole.log(Object.values(obj)); // ?\n```',
     options: ['[1, 2, 3]', '["a", "b", "c"]', '{a: 1, b: 2, c: 3}', '6'],
     correctAnswer: 0,
@@ -2247,6 +2491,7 @@ export const questions: Question[] = [
   },
   {
     id: '244',
+    introduction: 'Checking if an object has a property can be done in several ways in JavaScript.',
     question: 'How do you check if an object has a property?\n\n```javascript\nconst obj = { name: "John" };\n// Check if "name" exists\n```',
     options: ['"name" in obj', 'obj.has("name")', 'obj.contains("name")', 'obj.exists("name")'],
     correctAnswer: 0,
@@ -2256,6 +2501,7 @@ export const questions: Question[] = [
   },
   {
     id: '245',
+    introduction: 'Destructuring provides a concise way to extract properties from objects into variables.',
     question: 'What is object destructuring?\n\n```javascript\nconst person = { name: "John", age: 30 };\nconst { name, age } = person;\n```',
     options: ['Deleting object properties', 'Extracting properties into variables', 'Creating a copy', 'Sorting properties'],
     correctAnswer: 1,
@@ -2267,6 +2513,7 @@ export const questions: Question[] = [
   // JAVASCRIPT FUNDAMENTALS - Classes
   {
     id: '246',
+    introduction: 'Classes are blueprints for creating objects with predefined properties and methods.',
     question: 'What is a class in JavaScript?',
     options: ['A CSS selector', 'A template for creating objects', 'A type of array', 'A built-in function'],
     correctAnswer: 1,
@@ -2276,6 +2523,7 @@ export const questions: Question[] = [
   },
   {
     id: '247',
+    introduction: 'The class keyword provides a cleaner syntax for creating constructor functions and prototypes.',
     question: 'How do you define a class in JavaScript?\n\n```javascript\n// Which is correct?\nclass Person {\n  constructor(name) {\n    this.name = name;\n  }\n}\n```',
     options: ['function Person() {}', 'class Person { }', 'new Class("Person")', 'define Person { }'],
     correctAnswer: 1,
@@ -2285,6 +2533,7 @@ export const questions: Question[] = [
   },
   {
     id: '248',
+    introduction: 'The constructor method initializes new instances when you create objects with \'new\'.',
     question: 'What is a constructor in a class?\n\n```javascript\nclass Car {\n  constructor(brand) {\n    this.brand = brand;\n  }\n}\n```',
     options: ['A method that deletes objects', 'A special method called when creating new instances', 'A static property', 'An optional decorator'],
     correctAnswer: 1,
@@ -2294,6 +2543,7 @@ export const questions: Question[] = [
   },
   {
     id: '249',
+    introduction: 'Creating instances with \'new\' allocates memory and calls the constructor.',
     question: 'How do you create an instance of a class?\n\n```javascript\nclass Dog {\n  constructor(name) {\n    this.name = name;\n  }\n}\n// Create a dog named "Buddy"\n```',
     options: ['Dog("Buddy")', 'new Dog("Buddy")', 'Dog.create("Buddy")', 'create Dog("Buddy")'],
     correctAnswer: 1,
@@ -2303,6 +2553,7 @@ export const questions: Question[] = [
   },
   {
     id: '250',
+    introduction: 'The \'this\' keyword refers to the current instance inside class methods.',
     question: 'What does "this" refer to in a class method?\n\n```javascript\nclass Person {\n  constructor(name) {\n    this.name = name;\n  }\n  greet() {\n    return "Hi, " + this.name;\n  }\n}\n```',
     options: ['The class itself', 'The current instance of the class', 'The window object', 'undefined'],
     correctAnswer: 1,
@@ -2312,6 +2563,7 @@ export const questions: Question[] = [
   },
   {
     id: '251',
+    introduction: 'Methods defined inside a class are available on all instances of that class.',
     question: 'How do you add a method to a class?\n\n```javascript\nclass Calculator {\n  add(a, b) {\n    return a + b;\n  }\n}\n```',
     options: ['Define a function inside the class body', 'Use Calculator.prototype.add', 'Methods cannot be added', 'Use the method keyword'],
     correctAnswer: 0,
@@ -2321,6 +2573,7 @@ export const questions: Question[] = [
   },
   {
     id: '252',
+    introduction: 'Inheritance allows classes to share behavior through parent-child relationships.',
     question: 'What is class inheritance?\n\n```javascript\nclass Animal {\n  speak() { return "Sound"; }\n}\nclass Dog extends Animal {\n  speak() { return "Woof"; }\n}\n```',
     options: ['Copying a class', 'A class receiving properties/methods from another class', 'Deleting a class', 'Renaming a class'],
     correctAnswer: 1,
@@ -2330,6 +2583,7 @@ export const questions: Question[] = [
   },
   {
     id: '253',
+    introduction: 'The \'extends\' keyword creates a subclass that inherits from a parent class.',
     question: 'What does the "extends" keyword do?\n\n```javascript\nclass Cat extends Animal { }\n```',
     options: ['Makes the class longer', 'Creates inheritance from another class', 'Adds extra properties', 'Exports the class'],
     correctAnswer: 1,
@@ -2339,6 +2593,7 @@ export const questions: Question[] = [
   },
   {
     id: '254',
+    introduction: 'The super() function calls the parent class constructor from a child class.',
     question: 'What does super() do in a constructor?\n\n```javascript\nclass Dog extends Animal {\n  constructor(name) {\n    super(); // What does this do?\n    this.name = name;\n  }\n}\n```',
     options: ['Makes the class faster', 'Calls the parent class constructor', 'Skips initialization', 'Creates a copy'],
     correctAnswer: 1,
@@ -2348,6 +2603,7 @@ export const questions: Question[] = [
   },
   {
     id: '255',
+    introduction: 'Static methods belong to the class itself rather than instances of the class.',
     question: 'What is a static method?\n\n```javascript\nclass MathHelper {\n  static add(a, b) {\n    return a + b;\n  }\n}\n// How to call it?\n```',
     options: ['new MathHelper().add(1, 2)', 'MathHelper.add(1, 2)', 'add(1, 2)', 'this.add(1, 2)'],
     correctAnswer: 1,
@@ -2359,6 +2615,7 @@ export const questions: Question[] = [
   // CHROME DEVTOOLS - Advanced
   {
     id: '256',
+    introduction: 'The Network tab is essential for debugging API calls and understanding data flow.',
     question: 'What information can you see when clicking on a request in the Network tab?',
     options: ['Only the URL', 'Headers, Preview, Response, Timing, and Cookies', 'Nothing, requests cannot be inspected', 'Only the status code'],
     correctAnswer: 1,
@@ -2368,6 +2625,7 @@ export const questions: Question[] = [
   },
   {
     id: '257',
+    introduction: 'Filtering network requests helps you focus on specific types of traffic.',
     question: 'How can you filter requests in the Network tab?',
     options: ['You cannot filter requests', 'By type (XHR, JS, CSS, Img), text search, or status code', 'Only by URL', 'Only by file size'],
     correctAnswer: 1,
@@ -2377,6 +2635,7 @@ export const questions: Question[] = [
   },
   {
     id: '258',
+    introduction: 'The XHR/Fetch filter shows only JavaScript-initiated API requests.',
     question: 'What does the XHR/Fetch filter show in Network tab?',
     options: ['All requests', 'Only API calls made by JavaScript (AJAX requests)', 'Only images', 'Only HTML files'],
     correctAnswer: 1,
@@ -2386,6 +2645,7 @@ export const questions: Question[] = [
   },
   {
     id: '259',
+    introduction: 'The Elements tab lets you inspect and modify the DOM and CSS in real-time.',
     question: 'What can you do in the Elements tab of DevTools?',
     options: ['Only view HTML', 'Inspect, edit HTML/CSS live, see computed styles, and debug layout', 'Only delete elements', 'Elements tab doesn\'t exist'],
     correctAnswer: 1,
@@ -2395,6 +2655,7 @@ export const questions: Question[] = [
   },
   {
     id: '260',
+    introduction: 'The Application tab provides access to all browser storage mechanisms.',
     question: 'What is stored in the Application tab of DevTools?',
     options: ['Only cookies', 'Local Storage, Session Storage, Cookies, IndexedDB, and Cache', 'Application source code', 'Nothing'],
     correctAnswer: 1,
@@ -2404,6 +2665,7 @@ export const questions: Question[] = [
   },
   {
     id: '261',
+    introduction: 'Network throttling simulates slow connections for testing loading states.',
     question: 'How do you simulate slow network in DevTools?',
     options: ['Not possible', 'Network tab > Throttling dropdown (Slow 3G, Offline, etc.)', 'Only in Settings', 'Requires an extension'],
     correctAnswer: 1,
@@ -2413,6 +2675,7 @@ export const questions: Question[] = [
   },
   {
     id: '262',
+    introduction: 'Preserve log keeps network entries visible across page navigations.',
     question: 'What does "Preserve log" do in the Network tab?',
     options: ['Saves logs to a file', 'Keeps network requests visible across page reloads', 'Prevents logging', 'Encrypts the log'],
     correctAnswer: 1,
@@ -2422,6 +2685,7 @@ export const questions: Question[] = [
   },
   {
     id: '263',
+    introduction: 'Copying requests as cURL commands is useful for testing APIs in terminal.',
     question: 'How can you copy a request as cURL from DevTools?',
     options: ['Not possible', 'Right-click request > Copy > Copy as cURL', 'Only export as HAR', 'Use keyboard shortcut'],
     correctAnswer: 1,
@@ -2431,6 +2695,7 @@ export const questions: Question[] = [
   },
   {
     id: '264',
+    introduction: 'The $0 variable in Console provides quick access to the selected element.',
     question: 'What does the Console tab\'s $0 variable refer to?',
     options: ['The first variable defined', 'The currently selected element in Elements tab', 'Always undefined', 'The document object'],
     correctAnswer: 1,
@@ -2440,6 +2705,7 @@ export const questions: Question[] = [
   },
   {
     id: '265',
+    introduction: 'Lighthouse audits your page for performance, accessibility, and best practices.',
     question: 'What does the Lighthouse tab in DevTools analyze?',
     options: ['Only load time', 'Performance, Accessibility, Best Practices, SEO, and PWA scores', 'Only SEO', 'Network speed'],
     correctAnswer: 1,
@@ -2451,6 +2717,7 @@ export const questions: Question[] = [
   // REACT DEVELOPER TOOLS
   {
     id: '266',
+    introduction: 'React DevTools is an essential browser extension for debugging React applications.',
     question: 'What is React Developer Tools?',
     options: ['A code editor', 'A browser extension for debugging React applications', 'A React framework', 'A testing library'],
     correctAnswer: 1,
@@ -2460,6 +2727,7 @@ export const questions: Question[] = [
   },
   {
     id: '267',
+    introduction: 'React DevTools adds specialized tabs for inspecting React-specific information.',
     question: 'What tabs does React DevTools add to Chrome DevTools?',
     options: ['Only "React"', 'Components and Profiler tabs', 'Network and Console', 'No new tabs'],
     correctAnswer: 1,
@@ -2469,6 +2737,7 @@ export const questions: Question[] = [
   },
   {
     id: '268',
+    introduction: 'The Components tab shows your React component hierarchy and their data.',
     question: 'What can you see in the Components tab of React DevTools?',
     options: ['Only component names', 'Component tree, props, state, hooks, and source location', 'Only HTML', 'Nothing'],
     correctAnswer: 1,
@@ -2478,6 +2747,7 @@ export const questions: Question[] = [
   },
   {
     id: '269',
+    introduction: 'React DevTools allows interactive editing of component props and state.',
     question: 'Can you edit props and state in React DevTools?',
     options: ['No, it\'s read-only', 'Yes, you can edit values and see changes immediately', 'Only in development mode', 'Only props, not state'],
     correctAnswer: 1,
@@ -2487,6 +2757,7 @@ export const questions: Question[] = [
   },
   {
     id: '270',
+    introduction: 'The Profiler helps identify performance bottlenecks in your React application.',
     question: 'What does the Profiler tab in React DevTools measure?',
     options: ['Network speed', 'Component render times and why components re-rendered', 'Memory usage only', 'Bundle size'],
     correctAnswer: 1,
@@ -2496,6 +2767,7 @@ export const questions: Question[] = [
   },
   {
     id: '271',
+    introduction: 'Understanding why components re-render is key to optimizing React performance.',
     question: 'How do you find why a component re-rendered in React DevTools?',
     options: ['Not possible', 'Profiler > Record > Click component > "Why did this render?"', 'Console tab only', 'Use console.log'],
     correctAnswer: 1,
@@ -2505,6 +2777,7 @@ export const questions: Question[] = [
   },
   {
     id: '272',
+    introduction: 'Highlight updates provides visual feedback about which components are re-rendering.',
     question: 'What does the highlight updates feature do in React DevTools?',
     options: ['Highlights code errors', 'Visually shows which components re-render with colored borders', 'Highlights selected text', 'Shows CSS changes'],
     correctAnswer: 1,
@@ -2514,6 +2787,7 @@ export const questions: Question[] = [
   },
   {
     id: '273',
+    introduction: 'React DevTools can inspect all types of hooks used by your components.',
     question: 'Can React DevTools inspect hooks values?',
     options: ['No, hooks cannot be inspected', 'Yes, it shows all hooks and their current values', 'Only useState', 'Only in class components'],
     correctAnswer: 1,
@@ -2523,6 +2797,7 @@ export const questions: Question[] = [
   },
   {
     id: '274',
+    introduction: 'Searching for components helps navigate large component trees quickly.',
     question: 'How do you search for a component in React DevTools?',
     options: ['You cannot search', 'Use the search box at the top of Components tab', 'Only through Elements tab', 'Search is in Settings'],
     correctAnswer: 1,
@@ -2532,6 +2807,7 @@ export const questions: Question[] = [
   },
   {
     id: '275',
+    introduction: 'View source links components directly to their source code for quick navigation.',
     question: 'What does clicking "View source" do for a component in React DevTools?',
     options: ['Opens Google', 'Jumps to the component\'s source code in Sources tab', 'Shows HTML only', 'Nothing'],
     correctAnswer: 1,
