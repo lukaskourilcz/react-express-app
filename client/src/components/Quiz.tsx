@@ -306,13 +306,14 @@ function Quiz() {
                     },
                   }}
                 >
-                  <span>{option.label}</span>
+                  <span style={{ color: 'inherit' }}>{option.label}</span>
                   <Typography
                     component="span"
                     sx={{
                       fontSize: '0.65rem',
-                      opacity: 0.8,
+                      opacity: 0.85,
                       fontWeight: 400,
+                      color: 'inherit',
                     }}
                   >
                     {option.description}
