@@ -5,7 +5,10 @@ export interface Question {
   correctAnswer: number;
   category: 'react' | 'typescript' | 'git' | 'javascript';
   explanation: string;
+  difficulty: 1 | 2 | 3 | 4 | 5;
 }
+
+export type DifficultyMode = 'easy' | 'advanced' | 'zero-to-hero';
 
 export const questions: Question[] = [
   // REACT - useState
@@ -16,6 +19,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useState returns an array with exactly two elements: the current state value and a function to update it. This pattern allows for easy destructuring like [count, setCount].',
+    difficulty: 1,
   },
   {
     id: '2',
@@ -24,6 +28,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Calling the setter function schedules a re-render of the component with the new state value. React batches multiple state updates for performance.',
+    difficulty: 2,
   },
   {
     id: '3',
@@ -32,6 +37,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'When the new state depends on the previous state, use the functional update form: setState(prev => prev + 1). This ensures you always work with the latest state value.',
+    difficulty: 2,
   },
   {
     id: '4',
@@ -40,6 +46,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'The initial value is only used during the first render. On subsequent renders, React ignores this parameter and uses the current state value.',
+    difficulty: 1,
   },
   {
     id: '5',
@@ -48,6 +55,7 @@ export const questions: Question[] = [
     correctAnswer: 2,
     category: 'react',
     explanation: 'useState can hold any JavaScript value including objects, arrays, strings, numbers, and booleans. However, you should treat state as immutable and create new objects when updating.',
+    difficulty: 2,
   },
 
   // REACT - useEffect
@@ -58,6 +66,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Without a dependency array, useEffect runs after every render (initial render and all updates). This is rarely what you want, so always consider adding dependencies.',
+    difficulty: 2,
   },
   {
     id: '7',
@@ -66,6 +75,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'An empty dependency array [] tells React the effect has no dependencies, so it only runs once after the initial render (mount). This is useful for one-time setup like fetching data.',
+    difficulty: 2,
   },
   {
     id: '8',
@@ -74,6 +84,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'The return function is a cleanup function that runs before the component unmounts and before every re-run of the effect. Use it to clean up subscriptions, timers, or event listeners.',
+    difficulty: 2,
   },
   {
     id: '9',
@@ -82,6 +93,7 @@ export const questions: Question[] = [
     correctAnswer: 0,
     category: 'react',
     explanation: 'The cleanup function runs before each re-execution of the effect (when dependencies change) and when the component unmounts. This prevents memory leaks and stale closures.',
+    difficulty: 3,
   },
   {
     id: '10',
@@ -90,6 +102,7 @@ export const questions: Question[] = [
     correctAnswer: 2,
     category: 'react',
     explanation: 'Omitting the dependency array causes the effect to run after every single render, which can lead to performance issues or infinite loops if the effect updates state.',
+    difficulty: 2,
   },
 
   // REACT - useCallback
@@ -100,6 +113,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useCallback returns a memoized version of a callback that only changes when its dependencies change. This helps prevent unnecessary re-renders when passing callbacks to optimized child components.',
+    difficulty: 3,
   },
   {
     id: '12',
@@ -108,6 +122,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Use useCallback when passing callbacks to child components wrapped in React.memo, or when a callback is a dependency of other hooks. Overusing it can actually hurt performance.',
+    difficulty: 3,
   },
   {
     id: '13',
@@ -116,6 +131,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useCallback returns the same function reference between renders as long as its dependencies haven\'t changed. This referential equality is what enables optimization.',
+    difficulty: 3,
   },
   {
     id: '14',
@@ -124,6 +140,7 @@ export const questions: Question[] = [
     correctAnswer: 2,
     category: 'react',
     explanation: 'The second argument is a dependency array. The callback is only recreated when values in this array change. Omitting dependencies can lead to stale closures.',
+    difficulty: 3,
   },
   {
     id: '15',
@@ -132,6 +149,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useCallback(fn, deps) is syntactic sugar for useMemo(() => fn, deps). Both memoize the function reference, but useCallback is more readable for this specific use case.',
+    difficulty: 3,
   },
 
   // REACT - useMemo
@@ -142,6 +160,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useMemo caches the result of an expensive calculation between re-renders. It only recomputes when dependencies change, avoiding unnecessary recalculations.',
+    difficulty: 3,
   },
   {
     id: '17',
@@ -150,6 +169,7 @@ export const questions: Question[] = [
     correctAnswer: 2,
     category: 'react',
     explanation: 'useMemo recomputes the memoized value only when one of its dependencies changes. If dependencies stay the same, it returns the cached value from the previous render.',
+    difficulty: 3,
   },
   {
     id: '18',
@@ -158,6 +178,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useMemo returns the memoized result of calling the provided function. Unlike useCallback which returns a function, useMemo returns whatever your function returns.',
+    difficulty: 3,
   },
   {
     id: '19',
@@ -166,6 +187,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Only use useMemo for genuinely expensive computations. For simple calculations, the overhead of useMemo itself can outweigh the benefits. Profile before optimizing.',
+    difficulty: 3,
   },
   {
     id: '20',
@@ -174,6 +196,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'An empty dependency array means the value is computed only once during the initial render and never recomputed, similar to how useEffect with [] runs only on mount.',
+    difficulty: 4,
   },
 
   // REACT - useRef
@@ -184,6 +207,7 @@ export const questions: Question[] = [
     correctAnswer: 0,
     category: 'react',
     explanation: 'useRef returns a mutable ref object with a .current property. This object persists for the full lifetime of the component and can hold any value.',
+    difficulty: 3,
   },
   {
     id: '22',
@@ -192,6 +216,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Mutating ref.current does NOT trigger a re-render. This makes refs perfect for storing values you need to persist but don\'t want to cause updates when changed.',
+    difficulty: 3,
   },
   {
     id: '23',
@@ -200,6 +225,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'The ref object has a single property called "current" that holds the actual value. Access it as myRef.current to read or write the stored value.',
+    difficulty: 2,
   },
   {
     id: '24',
@@ -208,6 +234,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'A primary use case for useRef is accessing DOM elements directly, like focusing an input or measuring element dimensions. Pass the ref to an element\'s ref attribute.',
+    difficulty: 3,
   },
   {
     id: '25',
@@ -216,6 +243,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Pass the ref object directly to the ref attribute: ref={myRef}. React will set myRef.current to the DOM element when it mounts and to null when it unmounts.',
+    difficulty: 3,
   },
 
   // REACT - React Router
@@ -226,6 +254,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useLocation returns the current location object containing pathname, search, hash, and state. It updates whenever the URL changes.',
+    difficulty: 3,
   },
   {
     id: '27',
@@ -234,6 +263,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'In React Router v6, useNavigate replaced useHistory. Call navigate("/path") to navigate programmatically, or navigate(-1) to go back.',
+    difficulty: 3,
   },
   {
     id: '28',
@@ -242,6 +272,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useParams returns an object of key/value pairs of URL parameters from the current route. For route "/users/:id", useParams() returns { id: "123" }.',
+    difficulty: 3,
   },
   {
     id: '29',
@@ -250,6 +281,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'In v6, Routes (plural) replaced Switch. It wraps Route components and renders the first matching route. Route components go inside Routes.',
+    difficulty: 2,
   },
   {
     id: '30',
@@ -258,6 +290,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Use the Link component for navigation without page reloads. Unlike <a> tags, Link handles client-side routing and preserves React state.',
+    difficulty: 3,
   },
   {
     id: '31',
@@ -266,6 +299,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Outlet is a placeholder that renders the matching child route. It enables nested routing where parent layouts wrap child content.',
+    difficulty: 3,
   },
   {
     id: '32',
@@ -274,6 +308,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Use path="*" to match any URL that hasn\'t matched other routes. Place this route last in your Routes component to catch all unmatched paths.',
+    difficulty: 3,
   },
   {
     id: '33',
@@ -282,6 +317,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useSearchParams returns the current URL search params and a function to update them. It works like useState but syncs with the URL query string.',
+    difficulty: 3,
   },
 
   // REACT - React Hook Form
@@ -292,6 +328,7 @@ export const questions: Question[] = [
     correctAnswer: 0,
     category: 'react',
     explanation: 'useForm is the primary hook that returns methods like register, handleSubmit, and formState. It manages the entire form state and validation.',
+    difficulty: 4,
   },
   {
     id: '35',
@@ -300,6 +337,7 @@ export const questions: Question[] = [
     correctAnswer: 3,
     category: 'react',
     explanation: 'Spread the register function onto your input: {...register("fieldName")}. This adds the necessary ref and onChange handlers to track the input.',
+    difficulty: 3,
   },
   {
     id: '36',
@@ -308,6 +346,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'handleSubmit wraps your submit handler, validates the form first, and only calls your function if validation passes. Use it like onSubmit={handleSubmit(onSubmit)}.',
+    difficulty: 3,
   },
   {
     id: '37',
@@ -316,6 +355,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Access errors through formState.errors from the useForm hook. Each field\'s error is available as formState.errors.fieldName with message and type properties.',
+    difficulty: 3,
   },
   {
     id: '38',
@@ -324,6 +364,7 @@ export const questions: Question[] = [
     correctAnswer: 2,
     category: 'react',
     explanation: 'watch subscribes to input changes and returns their values. Use it for conditional rendering based on form values or to react to specific field changes.',
+    difficulty: 4,
   },
   {
     id: '39',
@@ -332,6 +373,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Pass defaultValues to useForm: useForm({ defaultValues: { name: "John" } }). This sets initial values and is used when reset() is called.',
+    difficulty: 4,
   },
   {
     id: '40',
@@ -340,6 +382,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'reset() restores the form to its default values and clears all errors. You can also pass new default values to reset to specific values.',
+    difficulty: 4,
   },
 
   // REACT - General
@@ -350,6 +393,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'React.memo is a higher-order component that memoizes the rendered output. It skips re-rendering if props haven\'t changed, improving performance.',
+    difficulty: 3,
   },
   {
     id: '42',
@@ -358,6 +402,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'A controlled component has its form value controlled by React state. The input\'s value comes from state, and onChange updates that state.',
+    difficulty: 3,
   },
   {
     id: '43',
@@ -366,6 +411,7 @@ export const questions: Question[] = [
     correctAnswer: 0,
     category: 'react',
     explanation: 'The virtual DOM is a lightweight JavaScript representation of the real DOM. React uses it to compute the minimal set of changes needed, then batches updates to the real DOM.',
+    difficulty: 3,
   },
   {
     id: '44',
@@ -374,6 +420,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Keys help React identify which items have changed, been added, or removed. Use stable, unique identifiers as keys—avoid using array indexes when items can reorder.',
+    difficulty: 3,
   },
   {
     id: '45',
@@ -382,6 +429,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useContext reads and subscribes to context. Pass the context object (from createContext) to useContext to get the current context value.',
+    difficulty: 4,
   },
   {
     id: '46',
@@ -390,6 +438,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Prop drilling is passing props through intermediate components that don\'t need them, just to reach deeply nested components. Context or state management libraries can help avoid this.',
+    difficulty: 4,
   },
   {
     id: '47',
@@ -398,6 +447,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'StrictMode activates additional checks and warnings in development. It intentionally double-renders components to help detect side effects and deprecated APIs.',
+    difficulty: 4,
   },
   {
     id: '48',
@@ -406,6 +456,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Fragments let you group multiple elements without adding an extra wrapper div to the DOM. Use <></> or <Fragment> when you need to return multiple elements.',
+    difficulty: 4,
   },
   {
     id: '49',
@@ -414,6 +465,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Props are passed from parent to child and are read-only. State is managed within a component and can be updated. Both trigger re-renders when they change.',
+    difficulty: 3,
   },
   {
     id: '50',
@@ -422,6 +474,7 @@ export const questions: Question[] = [
     correctAnswer: 0,
     category: 'react',
     explanation: 'Lifting state up means moving shared state to the closest common ancestor of the components that need it. This enables sibling components to share and sync data.',
+    difficulty: 3,
   },
 
   // TYPESCRIPT
@@ -432,6 +485,7 @@ export const questions: Question[] = [
     correctAnswer: 0,
     category: 'typescript',
     explanation: 'Use the question mark after the property name: property?: type. This makes the property optional, meaning it can be omitted when creating objects of that type.',
+    difficulty: 4,
   },
   {
     id: '52',
@@ -440,6 +494,7 @@ export const questions: Question[] = [
     correctAnswer: 2,
     category: 'typescript',
     explanation: 'Both Array<string> and string[] are valid and equivalent ways to define an array of strings. The choice is mostly stylistic preference.',
+    difficulty: 4,
   },
   {
     id: '53',
@@ -448,6 +503,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'The "as" keyword performs type assertion, telling TypeScript to treat a value as a specific type. Use it when you know more about a type than TypeScript can infer.',
+    difficulty: 4,
   },
   {
     id: '54',
@@ -456,6 +512,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'An interface defines the shape of an object—what properties and methods it should have. It\'s a compile-time contract that doesn\'t exist in the JavaScript output.',
+    difficulty: 2,
   },
   {
     id: '55',
@@ -464,6 +521,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'The pipe operator | creates a union type: string | number means the value can be either a string or a number. The ampersand & creates an intersection type.',
+    difficulty: 4,
   },
   {
     id: '56',
@@ -472,6 +530,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'The never type represents values that never occur. It\'s used for functions that always throw errors or have infinite loops—they never return normally.',
+    difficulty: 2,
   },
   {
     id: '57',
@@ -480,6 +539,7 @@ export const questions: Question[] = [
     correctAnswer: 2,
     category: 'typescript',
     explanation: 'Types are more flexible (unions, intersections, mapped types), while interfaces support declaration merging (multiple declarations combine). Both can be extended.',
+    difficulty: 4,
   },
   {
     id: '58',
@@ -488,6 +548,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'The readonly modifier prevents a property from being reassigned after initialization. It\'s a compile-time check that helps prevent accidental mutations.',
+    difficulty: 3,
   },
   {
     id: '59',
@@ -496,6 +557,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'Generics are type parameters (like <T>) that let you create reusable components that work with multiple types while maintaining type safety.',
+    difficulty: 4,
   },
   {
     id: '60',
@@ -504,6 +566,7 @@ export const questions: Question[] = [
     correctAnswer: 2,
     category: 'typescript',
     explanation: 'Use void for functions that don\'t return a value or return undefined implicitly. Use never for functions that never return (throw or infinite loop).',
+    difficulty: 3,
   },
   {
     id: '61',
@@ -512,6 +575,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'unknown is like any but type-safe. You must narrow the type before using an unknown value, making it safer for values of uncertain type.',
+    difficulty: 5,
   },
   {
     id: '62',
@@ -520,6 +584,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'The ampersand & creates an intersection type that combines multiple types. A & B means the value must satisfy both type A AND type B.',
+    difficulty: 4,
   },
   {
     id: '63',
@@ -528,6 +593,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'Partial<T> constructs a type with all properties of T set to optional. It\'s useful for update functions where you only want to change some properties.',
+    difficulty: 3,
   },
   {
     id: '64',
@@ -536,6 +602,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'Required<T> constructs a type with all properties of T set to required, removing optional modifiers. It\'s the opposite of Partial<T>.',
+    difficulty: 3,
   },
   {
     id: '65',
@@ -544,6 +611,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'Pick<T, K> constructs a type by picking only the specified properties K from T. Pick<User, "name" | "email"> creates a type with just name and email.',
+    difficulty: 1,
   },
   {
     id: '66',
@@ -552,6 +620,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'Omit<T, K> constructs a type by removing the specified properties K from T. It\'s the opposite of Pick. Omit<User, "password"> removes the password property.',
+    difficulty: 3,
   },
   {
     id: '67',
@@ -560,6 +629,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'Index signatures like { [key: string]: value } define the type for dynamic keys. This allows any string key with values of the specified type.',
+    difficulty: 2,
   },
   {
     id: '68',
@@ -568,6 +638,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'Type guards are expressions that narrow types at runtime. Using typeof, instanceof, or custom type predicates helps TypeScript understand the specific type in a block.',
+    difficulty: 2,
   },
   {
     id: '69',
@@ -576,6 +647,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'keyof produces a union type of all property names (keys) of a type. keyof { name: string; age: number } produces "name" | "age".',
+    difficulty: 2,
   },
   {
     id: '70',
@@ -584,6 +656,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'A tuple is a fixed-length array where each element has a specific type. [string, number] defines a two-element tuple with a string first and number second.',
+    difficulty: 2,
   },
   {
     id: '71',
@@ -592,6 +665,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'NonNullable<T> removes null and undefined from T. The ! operator (non-null assertion) tells TypeScript a value is not null, but doesn\'t create a new type.',
+    difficulty: 3,
   },
   {
     id: '72',
@@ -600,6 +674,7 @@ export const questions: Question[] = [
     correctAnswer: 3,
     category: 'typescript',
     explanation: 'In TypeScript, typeof works both at runtime (JavaScript behavior) and at the type level to extract a type from a variable. type T = typeof myVariable creates a type.',
+    difficulty: 2,
   },
   {
     id: '73',
@@ -608,6 +683,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'Record<K, V> constructs an object type with keys of type K and values of type V. Record<string, number> means any string key with number values.',
+    difficulty: 3,
   },
   {
     id: '74',
@@ -616,6 +692,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'ReturnType<T> extracts the return type of a function type T. ReturnType<() => string> produces string. Useful for inferring types from existing functions.',
+    difficulty: 3,
   },
   {
     id: '75',
@@ -624,6 +701,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'A discriminated union has a common property with literal types that TypeScript can use to narrow the type. A "type" or "kind" field often serves as the discriminant.',
+    difficulty: 3,
   },
 
   // GIT
@@ -634,6 +712,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git init creates a new Git repository in the current directory by creating a .git subdirectory with all necessary repository files.',
+    difficulty: 3,
   },
   {
     id: '77',
@@ -642,6 +721,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git clone creates a local copy of a remote repository, including all files, branches, and commit history. It also sets up the remote tracking.',
+    difficulty: 2,
   },
   {
     id: '78',
@@ -650,6 +730,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git add stages changes for the next commit. It moves changes from the working directory to the staging area (index), preparing them to be committed.',
+    difficulty: 3,
   },
   {
     id: '79',
@@ -658,6 +739,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git commit -m creates a new commit with staged changes and the provided message. The -m flag lets you write the commit message inline.',
+    difficulty: 3,
   },
   {
     id: '80',
@@ -666,6 +748,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git push uploads local commits to the remote repository. It updates the remote branch to match your local branch.',
+    difficulty: 3,
   },
   {
     id: '81',
@@ -674,6 +757,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git pull is a combination of git fetch and git merge. It downloads changes from the remote and automatically merges them into your current branch.',
+    difficulty: 3,
   },
   {
     id: '82',
@@ -682,6 +766,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git fetch downloads commits from the remote but doesn\'t merge them. git pull does both—it fetches and then merges. Fetch is safer for reviewing changes first.',
+    difficulty: 4,
   },
   {
     id: '83',
@@ -690,6 +775,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git merge combines the histories of two branches. It creates a merge commit (unless fast-forward) that has two parent commits.',
+    difficulty: 3,
   },
   {
     id: '84',
@@ -698,6 +784,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git rebase moves or replays your commits onto a different base commit. It rewrites history to create a linear sequence of commits.',
+    difficulty: 3,
   },
   {
     id: '85',
@@ -706,6 +793,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'Merge preserves history by creating a merge commit. Rebase rewrites history by moving commits, creating a cleaner but altered history. Never rebase public branches.',
+    difficulty: 4,
   },
   {
     id: '86',
@@ -714,6 +802,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'Running git branch without arguments lists all local branches. The current branch is marked with an asterisk (*). Use -a to see remote branches too.',
+    difficulty: 4,
   },
   {
     id: '87',
@@ -722,6 +811,7 @@ export const questions: Question[] = [
     correctAnswer: 3,
     category: 'git',
     explanation: 'Both "git checkout -b branch" and "git switch -c branch" create and switch to a new branch. switch is newer and more intuitive for branch operations.',
+    difficulty: 4,
   },
   {
     id: '88',
@@ -730,6 +820,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git stash temporarily saves uncommitted changes and reverts to a clean working directory. Useful when you need to switch branches but aren\'t ready to commit.',
+    difficulty: 5,
   },
   {
     id: '89',
@@ -738,6 +829,7 @@ export const questions: Question[] = [
     correctAnswer: 2,
     category: 'git',
     explanation: 'Both apply and pop restore stashed changes. The difference: pop removes the stash after applying, while apply keeps it in the stash list for potential reuse.',
+    difficulty: 3,
   },
   {
     id: '90',
@@ -746,6 +838,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git reset --hard discards ALL changes (staged and unstaged) and resets your working directory to match the specified commit. Use with caution—changes are lost.',
+    difficulty: 3,
   },
   {
     id: '91',
@@ -754,6 +847,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git reset --soft moves HEAD to the specified commit but keeps all changes staged. Useful for combining multiple commits into one.',
+    difficulty: 4,
   },
   {
     id: '92',
@@ -762,6 +856,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git revert creates a new commit that undoes the changes from a specific commit. Unlike reset, it doesn\'t rewrite history, making it safe for shared branches.',
+    difficulty: 4,
   },
   {
     id: '93',
@@ -770,6 +865,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'HEAD is a pointer to the current commit you\'re working on, usually pointing to the tip of the current branch. It moves when you commit or checkout.',
+    difficulty: 4,
   },
   {
     id: '94',
@@ -778,6 +874,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git log displays the commit history, showing commit hashes, authors, dates, and messages. Use flags like --oneline or --graph for different formats.',
+    difficulty: 4,
   },
   {
     id: '95',
@@ -786,6 +883,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git status shows the state of your working directory and staging area. It lists staged, unstaged, and untracked files.',
+    difficulty: 4,
   },
   {
     id: '96',
@@ -794,6 +892,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git diff shows the differences between various Git states—working directory vs staging, staging vs last commit, or between any two commits.',
+    difficulty: 4,
   },
   {
     id: '97',
@@ -802,6 +901,7 @@ export const questions: Question[] = [
     correctAnswer: 0,
     category: 'git',
     explanation: 'Use "git branch -d branchname" to delete a local branch. Use -D (uppercase) to force delete an unmerged branch.',
+    difficulty: 4,
   },
   {
     id: '98',
@@ -810,6 +910,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'Use "git push origin --delete branchname" to delete a remote branch. This removes the branch from the remote repository.',
+    difficulty: 4,
   },
   {
     id: '99',
@@ -818,6 +919,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'A merge conflict occurs when Git can\'t automatically merge changes because different branches modified the same lines. You must manually resolve these conflicts.',
+    difficulty: 4,
   },
   {
     id: '100',
@@ -826,6 +928,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'git cherry-pick applies the changes from a specific commit to your current branch. It\'s useful for selectively bringing changes without merging entire branches.',
+    difficulty: 4,
   },
 
   // PACKAGE-LOCK.JSON CONFLICTS
@@ -836,6 +939,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'The safest way to resolve package-lock.json conflicts is to accept one version (usually --ours), then run npm install to regenerate a valid lock file based on package.json.',
+    difficulty: 5,
   },
   {
     id: '102',
@@ -844,6 +948,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: '--ours refers to the version from YOUR current branch (the one you\'re merging INTO). --theirs refers to the version from the branch being merged. During rebase, these are swapped!',
+    difficulty: 1,
   },
   {
     id: '103',
@@ -852,6 +957,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'package-lock.json is auto-generated by npm and contains complex dependency resolution data. Manual edits can break the integrity checksums and cause installation failures.',
+    difficulty: 5,
   },
   {
     id: '104',
@@ -860,6 +966,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'git',
     explanation: 'npm install reads package.json and regenerates a valid package-lock.json. npm ci requires an existing valid lock file, so it won\'t work during conflict resolution.',
+    difficulty: 1,
   },
   {
     id: '105',
@@ -868,6 +975,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'npm ci deletes node_modules and installs exact versions from package-lock.json. It\'s faster, stricter, and ideal for CI/CD. npm install may update the lock file.',
+    difficulty: 1,
   },
 
   // JAVASCRIPT FUNDAMENTALS
@@ -878,6 +986,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: '=== (strict equality) checks both type and value without coercion. == (loose equality) converts types before comparing. Always prefer === to avoid unexpected behavior.',
+    difficulty: 4,
   },
   {
     id: '107',
@@ -886,6 +995,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'The spread operator (...) expands arrays/objects into individual elements. It creates shallow copies, so nested objects still share references.',
+    difficulty: 4,
   },
   {
     id: '108',
@@ -894,6 +1004,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'Destructuring extracts values from objects or arrays into distinct variables. It\'s a concise way to unpack values and is heavily used in React for props and state.',
+    difficulty: 2,
   },
   {
     id: '109',
@@ -902,6 +1013,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'var is function-scoped and hoisted. let and const are block-scoped. const prevents reassignment (but objects can still be mutated). Prefer const, then let, avoid var.',
+    difficulty: 4,
   },
   {
     id: '110',
@@ -910,6 +1022,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'A Promise represents an asynchronous operation that will eventually complete (resolve) or fail (reject). It allows chaining with .then() and error handling with .catch().',
+    difficulty: 4,
   },
   {
     id: '111',
@@ -918,6 +1031,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'async/await is syntactic sugar for Promises, making asynchronous code look synchronous. await pauses execution until the Promise resolves, but doesn\'t block the main thread.',
+    difficulty: 2,
   },
   {
     id: '112',
@@ -926,6 +1040,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'The event loop continuously checks if the call stack is empty, then pushes callbacks from the queue. Even setTimeout with 0ms waits for the stack to clear first.',
+    difficulty: 5,
   },
   {
     id: '113',
@@ -934,6 +1049,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'A closure is a function that remembers variables from its outer scope even after the outer function has returned. This is how React hooks maintain state between renders.',
+    difficulty: 4,
   },
   {
     id: '114',
@@ -942,6 +1058,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'map() creates a NEW array with results of calling a function on every element. It doesn\'t modify the original array. Essential for rendering lists in React.',
+    difficulty: 2,
   },
   {
     id: '115',
@@ -950,6 +1067,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'filter() creates a new array with elements that pass the provided test function. Returns true to keep the element, false to exclude it. Original array unchanged.',
+    difficulty: 4,
   },
   {
     id: '116',
@@ -958,6 +1076,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'reduce() executes a reducer function on each element, accumulating into a single value. The second argument (0) is the initial accumulator value. Powerful for aggregations.',
+    difficulty: 5,
   },
   {
     id: '117',
@@ -966,6 +1085,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: '?? returns the right side only when left is null or undefined. Unlike ||, it doesn\'t trigger for falsy values like 0, "", or false. Great for default values.',
+    difficulty: 2,
   },
   {
     id: '118',
@@ -974,6 +1094,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: '?. safely accesses nested properties, returning undefined instead of throwing an error if any part is null/undefined. Avoids "Cannot read property of undefined" errors.',
+    difficulty: 5,
   },
 
   // MORE REACT ESSENTIALS
@@ -984,6 +1105,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Keys help React identify which items have changed, been added, or removed. This enables efficient re-rendering. Use stable, unique IDs—never array indices for dynamic lists.',
+    difficulty: 5,
   },
   {
     id: '120',
@@ -992,6 +1114,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'The Virtual DOM is a lightweight JavaScript representation of the real DOM. React compares (diffs) the virtual DOM trees and updates only the changed parts in the real DOM.',
+    difficulty: 3,
   },
   {
     id: '121',
@@ -1000,6 +1123,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Creating new objects, arrays, or functions during render creates new references each time, causing child components to re-render. Use useMemo/useCallback to memoize them.',
+    difficulty: 4,
   },
   {
     id: '122',
@@ -1008,6 +1132,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Prop drilling passes data through many component levels. Avoid it with React Context, state management libraries (Redux, Zustand), or component composition patterns.',
+    difficulty: 4,
   },
   {
     id: '123',
@@ -1016,6 +1141,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'React.memo() is a higher-order component that memoizes the result. If props haven\'t changed (shallow comparison), React skips rendering and reuses the last result.',
+    difficulty: 3,
   },
   {
     id: '124',
@@ -1024,6 +1150,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useReducer manages complex state logic using actions. It\'s preferred over useState when state updates depend on previous state or when you have multiple related state values.',
+    difficulty: 3,
   },
   {
     id: '125',
@@ -1032,6 +1159,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'A controlled component has its value controlled by React state. The input\'s value is driven by state, and onChange updates the state. React is the "single source of truth".',
+    difficulty: 3,
   },
   {
     id: '126',
@@ -1040,6 +1168,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useLayoutEffect fires synchronously after DOM mutations but before the browser paints. Use it for DOM measurements or to prevent visual flicker. Prefer useEffect normally.',
+    difficulty: 4,
   },
   {
     id: '127',
@@ -1048,6 +1177,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Error Boundaries are class components that catch JavaScript errors in child components. They can\'t catch errors in event handlers, async code, or server-side rendering.',
+    difficulty: 3,
   },
   {
     id: '128',
@@ -1056,6 +1186,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'React.lazy() enables code-splitting by loading components dynamically. The component is only fetched when rendered. Must be wrapped in Suspense with a fallback UI.',
+    difficulty: 5,
   },
   {
     id: '129',
@@ -1064,6 +1195,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useId generates stable, unique IDs that are consistent between server and client rendering. Perfect for accessibility attributes like htmlFor/id pairs. Don\'t use for list keys.',
+    difficulty: 3,
   },
   {
     id: '130',
@@ -1072,6 +1204,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Props are passed from parent components and are read-only. State is managed within a component and can be updated. Props flow down, state changes trigger re-renders.',
+    difficulty: 4,
   },
 
   // MORE useState QUESTIONS
@@ -1082,6 +1215,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Each setCount uses the same stale "count" value from the closure. React batches updates, so all three use count=0. Use functional updates: setCount(prev => prev + 1) to fix this.',
+    difficulty: 5,
   },
   {
     id: '132',
@@ -1090,6 +1224,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'The functional update form (prev => prev + 1) receives the latest pending state, not the stale closure value. Each update builds on the previous one correctly.',
+    difficulty: 5,
   },
   {
     id: '133',
@@ -1098,6 +1233,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'React uses Object.is() to compare state. Mutating the same object keeps the same reference, so React thinks nothing changed. Always create a new object with spread operator.',
+    difficulty: 5,
   },
   {
     id: '134',
@@ -1106,6 +1242,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Passing a function to useState (lazy initialization) ensures the expensive calculation only runs once during the initial render, not on every re-render.',
+    difficulty: 5,
   },
   {
     id: '135',
@@ -1114,6 +1251,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'For nested objects, you must spread at each level to create new references. This preserves immutability and ensures React detects the change. Consider flattening deeply nested state.',
+    difficulty: 1,
   },
   {
     id: '136',
@@ -1122,6 +1260,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useState returns a 2-element array: [currentValue, setterFunction]. Array destructuring lets you name them anything. React tracks hooks by call order, not by name.',
+    difficulty: 1,
   },
 
   // MORE useCallback QUESTIONS
@@ -1132,6 +1271,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useCallback memoizes a function, returning the same reference unless dependencies change. This prevents unnecessary re-renders of child components that receive the function as a prop.',
+    difficulty: 1,
   },
   {
     id: '138',
@@ -1140,6 +1280,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useCallback adds overhead. Only use it when passing callbacks to optimized child components (React.memo) or when the function is a dependency of other hooks. Native elements don\'t benefit.',
+    difficulty: 4,
   },
   {
     id: '139',
@@ -1148,6 +1289,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Missing dependencies cause stale closures. The function captures the initial value and never updates. Always include all values from component scope that the function uses.',
+    difficulty: 1,
   },
   {
     id: '140',
@@ -1156,6 +1298,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'React.memo does shallow prop comparison. Without useCallback, a new function reference is created each render, failing the comparison. useCallback preserves the reference.',
+    difficulty: 1,
   },
   {
     id: '141',
@@ -1164,6 +1307,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useCallback(fn, deps) returns the memoized function. useMemo(() => value, deps) returns the memoized computed value. useCallback is shorthand for useMemo(() => fn, deps).',
+    difficulty: 1,
   },
   {
     id: '142',
@@ -1172,6 +1316,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Using functional updates (setItems(prev => ...)) removes the need to include state in dependencies. This keeps the callback reference stable across renders.',
+    difficulty: 1,
   },
 
   // MORE useRef QUESTIONS
@@ -1182,6 +1327,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useRef returns a mutable object that persists across renders. Changing .current does NOT trigger a re-render, unlike useState. Use refs for values you need to track without causing updates.',
+    difficulty: 2,
   },
   {
     id: '144',
@@ -1190,6 +1336,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Pass the ref object to an element\'s ref prop. React sets ref.current to the DOM node when mounted and null when unmounted. This gives you direct DOM access when needed.',
+    difficulty: 5,
   },
   {
     id: '145',
@@ -1198,6 +1345,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useRef persists values across renders without causing re-renders. By updating the ref in useEffect (after render), you capture the "previous" value that existed before the current render.',
+    difficulty: 2,
   },
   {
     id: '146',
@@ -1206,6 +1354,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Timer IDs need to persist across renders to be cleared later, but changing them shouldn\'t trigger re-renders. useRef is perfect: it persists the value without affecting the render cycle.',
+    difficulty: 5,
   },
   {
     id: '147',
@@ -1214,6 +1363,7 @@ export const questions: Question[] = [
     correctAnswer: 2,
     category: 'react',
     explanation: 'The argument to useRef becomes the initial value of ref.current. For DOM refs, use null as initial value. For other values, pass whatever makes sense for your use case.',
+    difficulty: 2,
   },
   {
     id: '148',
@@ -1222,6 +1372,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'DOM refs are null until the component mounts. Use optional chaining (?.), null checks, or non-null assertion (!) when you\'re certain the element exists. TypeScript enforces this safety.',
+    difficulty: 5,
   },
   {
     id: '149',
@@ -1230,6 +1381,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Use useState for values that affect what\'s rendered (triggers re-render on change). Use useRef for values that shouldn\'t trigger re-renders: DOM access, timer IDs, previous values, render counts.',
+    difficulty: 5,
   },
   {
     id: '150',
@@ -1238,6 +1390,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'By default, refs don\'t pass through to custom components. forwardRef lets a component receive a ref and forward it to a child DOM element, enabling parent components to access child DOM nodes.',
+    difficulty: 5,
   },
 
   // GENERAL FRONTEND & JAVASCRIPT CONCEPTS
@@ -1248,6 +1401,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Mounting is when a component is created and inserted into the DOM for the first time. Unmounting is when it\'s removed from the DOM. useEffect with [] runs on mount, its cleanup runs on unmount.',
+    difficulty: 1,
   },
   {
     id: '152',
@@ -1256,6 +1410,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Components go through three phases: Mounting (creation), Updating (re-renders from state/prop changes), and Unmounting (removal). Understanding this helps manage side effects properly.',
+    difficulty: 2,
   },
   {
     id: '153',
@@ -1264,6 +1419,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'Node.js is a JavaScript runtime built on Chrome\'s V8 engine. It lets you run JavaScript on servers, enabling backend development, CLI tools, and build scripts with JavaScript.',
+    difficulty: 2,
   },
   {
     id: '154',
@@ -1272,6 +1428,7 @@ export const questions: Question[] = [
     correctAnswer: 0,
     category: 'javascript',
     explanation: 'npm (Node Package Manager) manages JavaScript packages/dependencies. It installs libraries, manages versions via package.json, and runs scripts. Alternatives include yarn and pnpm.',
+    difficulty: 2,
   },
   {
     id: '155',
@@ -1280,6 +1437,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'package.json is the project manifest. It lists dependencies, dev dependencies, npm scripts, project metadata, and more. It\'s the central config file for any Node.js/JavaScript project.',
+    difficulty: 2,
   },
   {
     id: '156',
@@ -1288,6 +1446,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'dependencies are required at runtime (React, Express). devDependencies are only for development (testing, bundling, linting). Production builds exclude devDependencies to reduce size.',
+    difficulty: 2,
   },
   {
     id: '157',
@@ -1296,6 +1455,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'Webpack is a module bundler. It combines JavaScript files, CSS, images into optimized bundles for the browser. It handles imports, code splitting, and asset optimization.',
+    difficulty: 2,
   },
   {
     id: '158',
@@ -1304,6 +1464,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'Babel is a JavaScript compiler/transpiler. It transforms modern JavaScript (ES6+) and JSX into backwards-compatible code that older browsers can understand.',
+    difficulty: 2,
   },
   {
     id: '159',
@@ -1312,6 +1473,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'Vite is a modern build tool with instant dev server startup. It uses native ES modules during development for speed, and Rollup for optimized production builds. Much faster than Webpack.',
+    difficulty: 2,
   },
   {
     id: '160',
@@ -1320,6 +1482,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'The DOM (Document Object Model) is a tree structure representing the HTML document. JavaScript uses the DOM API to read, modify, and respond to the page structure and content.',
+    difficulty: 2,
   },
   {
     id: '161',
@@ -1328,6 +1491,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'Chrome DevTools opens with F12, Ctrl+Shift+I (Cmd+Option+I on Mac), or right-click -> Inspect. It\'s essential for debugging, network inspection, performance analysis, and more.',
+    difficulty: 2,
   },
   {
     id: '162',
@@ -1336,6 +1500,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'DevTools has multiple panels: Elements (DOM/CSS), Console (logs), Network (requests), Sources (debugging), Application (storage), Performance (profiling), and more.',
+    difficulty: 3,
   },
   {
     id: '163',
@@ -1344,6 +1509,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'Set breakpoints by clicking line numbers in DevTools Sources panel, or add "debugger;" in code. When hit, execution pauses and you can inspect variables, step through code, and more.',
+    difficulty: 3,
   },
   {
     id: '164',
@@ -1352,6 +1518,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'console.log() outputs to the browser console. Other methods: error() for errors, warn() for warnings, table() for tabular data, time()/timeEnd() for measuring execution time.',
+    difficulty: 3,
   },
   {
     id: '165',
@@ -1360,6 +1527,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'JSON (JavaScript Object Notation) is a lightweight data format. It\'s used for API responses, config files, and data storage. JSON.parse() and JSON.stringify() convert between strings and objects.',
+    difficulty: 3,
   },
   {
     id: '166',
@@ -1368,6 +1536,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'API (Application Programming Interface) defines how software components communicate. REST APIs use HTTP to exchange data (usually JSON). Frontend apps call APIs to get/send data to servers.',
+    difficulty: 3,
   },
   {
     id: '167',
@@ -1376,6 +1545,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'HTTP methods indicate the action: GET (read), POST (create), PUT/PATCH (update), DELETE (remove). RESTful APIs use these methods to perform CRUD operations on resources.',
+    difficulty: 3,
   },
   {
     id: '168',
@@ -1384,6 +1554,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'localStorage stores key-value pairs in the browser that persist even after closing. Limited to ~5MB, stores only strings. Use sessionStorage for session-only data.',
+    difficulty: 3,
   },
   {
     id: '169',
@@ -1392,6 +1563,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'localStorage persists until explicitly cleared. sessionStorage is cleared when the browser tab closes. Both have ~5MB limit and store only strings. Use based on data lifetime needs.',
+    difficulty: 3,
   },
   {
     id: '170',
@@ -1400,6 +1572,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'ESLint is a linting tool that analyzes code for errors, bugs, and style issues. It\'s configurable with rules and plugins. Helps maintain code quality and consistency across teams.',
+    difficulty: 3,
   },
   {
     id: '171',
@@ -1408,6 +1581,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'Prettier is an opinionated code formatter. It automatically formats code to a consistent style (spacing, line length, quotes). Unlike ESLint, it focuses only on formatting, not code quality.',
+    difficulty: 3,
   },
   {
     id: '172',
@@ -1416,6 +1590,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'typescript',
     explanation: 'TypeScript is JavaScript with static types. It catches type errors at compile time, provides better IDE support, and compiles down to plain JavaScript. Widely used in modern development.',
+    difficulty: 3,
   },
   {
     id: '173',
@@ -1424,6 +1599,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'HMR (Hot Module Replacement) updates changed modules in the browser without a full page reload. This preserves application state and speeds up development. Vite has very fast HMR.',
+    difficulty: 3,
   },
   {
     id: '174',
@@ -1432,6 +1608,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'Tree shaking eliminates dead/unused code from the final bundle. Bundlers analyze imports and remove code that\'s never used. Requires ES modules (import/export) to work properly.',
+    difficulty: 4,
   },
   {
     id: '175',
@@ -1440,6 +1617,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'Code splitting breaks your bundle into smaller chunks loaded on demand. This improves initial load time by only loading code when needed. React.lazy() enables component-level splitting.',
+    difficulty: 3,
   },
   {
     id: '176',
@@ -1448,6 +1626,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'CDN (Content Delivery Network) distributes content across global servers. Users download from the nearest server, reducing latency. Often used for libraries, images, and static assets.',
+    difficulty: 3,
   },
   {
     id: '177',
@@ -1456,6 +1635,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'CORS (Cross-Origin Resource Sharing) is a browser security feature. It blocks requests to different origins unless the server explicitly allows it via headers. Common issue in API development.',
+    difficulty: 3,
   },
   {
     id: '178',
@@ -1464,6 +1644,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'Semantic HTML uses tags that describe their content (header, nav, article, footer) instead of generic divs. It improves accessibility, SEO, and code readability.',
+    difficulty: 3,
   },
   {
     id: '179',
@@ -1472,6 +1653,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'Responsive design makes websites adapt to different screen sizes (desktop, tablet, mobile). Uses flexible layouts, media queries, and relative units. Essential for mobile-friendly sites.',
+    difficulty: 3,
   },
   {
     id: '180',
@@ -1480,6 +1662,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'SSR renders on server per request (Next.js), CSR renders in browser (Create React App), SSG pre-builds HTML at build time (Gatsby). Each has trade-offs for performance, SEO, and complexity.',
+    difficulty: 4,
   },
 
   // MORE REACT HOOKS
@@ -1490,6 +1673,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Rules of Hooks: 1) Only call hooks at the top level (not inside loops, conditions, or nested functions). 2) Only call hooks from React function components or custom hooks. This ensures hooks are called in the same order every render.',
+    difficulty: 4,
   },
   {
     id: '182',
@@ -1498,6 +1682,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'React identifies hooks by their call order, not variable names. If hooks are called conditionally, the order changes between renders, causing React to mix up which state belongs to which hook.',
+    difficulty: 4,
   },
   {
     id: '183',
@@ -1506,6 +1691,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Custom hooks are functions starting with "use" that can call other hooks. They let you extract and reuse stateful logic between components. The "use" prefix tells React it follows hook rules.',
+    difficulty: 4,
   },
   {
     id: '184',
@@ -1514,6 +1700,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Custom hooks combine built-in hooks to create reusable logic. useFetch uses useState for data/loading/error state and useEffect to trigger the fetch. Returns an object with all states.',
+    difficulty: 4,
   },
   {
     id: '185',
@@ -1522,6 +1709,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useContext subscribes to a React context and returns its current value. It finds the nearest Provider above in the tree. When the Provider value changes, components using useContext re-render.',
+    difficulty: 4,
   },
   {
     id: '186',
@@ -1530,6 +1718,7 @@ export const questions: Question[] = [
     correctAnswer: 2,
     category: 'react',
     explanation: 'Use props for direct parent-child communication (1-2 levels). Use Context for deeply nested components or data needed by many components (theme, user, locale). Avoid Context for everything—it can cause unnecessary re-renders.',
+    difficulty: 4,
   },
   {
     id: '187',
@@ -1538,6 +1727,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'The cleanup function prevents memory leaks by cleaning up subscriptions, timers, event listeners, etc. It runs before the next effect execution and when the component unmounts.',
+    difficulty: 4,
   },
   {
     id: '188',
@@ -1546,6 +1736,7 @@ export const questions: Question[] = [
     correctAnswer: 2,
     category: 'react',
     explanation: 'No dependency array = runs after every render. Empty array [] = runs once on mount. Array with values = runs when those values change. Choose based on when you need the effect to run.',
+    difficulty: 4,
   },
   {
     id: '189',
@@ -1554,6 +1745,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'There\'s no built-in hook for update-only effects. Use a ref to track the first render, then skip the effect logic on that first run. This pattern is common in custom useUpdateEffect hooks.',
+    difficulty: 4,
   },
   {
     id: '190',
@@ -1562,6 +1754,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useMemo caches the result of a computation. It only recalculates when dependencies change. Use for expensive calculations, not for every value. Premature optimization can add unnecessary complexity.',
+    difficulty: 4,
   },
   {
     id: '191',
@@ -1570,6 +1763,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useMemo returns a memoized value (result of computation). useCallback returns a memoized function (the function itself). useCallback(fn, deps) is shorthand for useMemo(() => fn, deps).',
+    difficulty: 4,
   },
   {
     id: '192',
@@ -1578,6 +1772,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useReducer returns [state, dispatch]. State is the current value. dispatch() sends actions to the reducer function, which returns the new state. Similar to Redux pattern.',
+    difficulty: 5,
   },
   {
     id: '193',
@@ -1586,6 +1781,7 @@ export const questions: Question[] = [
     correctAnswer: 2,
     category: 'react',
     explanation: 'Use useState for simple, independent values. Use useReducer when: state logic is complex, multiple values are related, next state depends on previous, or you want predictable state transitions.',
+    difficulty: 5,
   },
   {
     id: '194',
@@ -1594,6 +1790,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useImperativeHandle customizes the value exposed to parent components when using ref. Instead of exposing the entire DOM node, you can expose specific methods. Use sparingly—prefer declarative code.',
+    difficulty: 5,
   },
   {
     id: '195',
@@ -1602,6 +1799,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useDebugValue displays a label for custom hooks in React DevTools. It helps debug custom hooks by showing their current state. Only use in custom hooks, not regular components.',
+    difficulty: 5,
   },
   {
     id: '196',
@@ -1610,6 +1808,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Share state by lifting it to a common parent (pass down as props) or using Context (for deeper/wider sharing). For complex apps, consider state management libraries like Zustand or Redux.',
+    difficulty: 5,
   },
   {
     id: '197',
@@ -1618,6 +1817,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useTransition marks state updates as non-urgent. React can interrupt these updates to handle urgent ones (like typing) first. isPending indicates if transition is ongoing. Improves perceived performance.',
+    difficulty: 5,
   },
   {
     id: '198',
@@ -1626,6 +1826,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'useDeferredValue accepts a value and returns a deferred version that "lags behind". React updates it with lower priority, keeping the UI responsive during expensive re-renders.',
+    difficulty: 5,
   },
   {
     id: '199',
@@ -1634,6 +1835,7 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Infinite loops happen when an effect changes state that triggers itself. Fix by: adding proper dependencies, using functional updates (setCount(c => c + 1)), or rethinking the logic.',
+    difficulty: 1,
   },
   {
     id: '200',
@@ -1642,9 +1844,271 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'While React only requires consistent order, convention is: useState (state), useRef (refs), useMemo/useCallback (computed values), useEffect (side effects). This improves readability and follows data flow.',
+    difficulty: 1,
+  },
+
+  // BASIC TERMINOLOGY - Git
+  {
+    id: '201',
+    question: 'What is a "remote" in Git?',
+    options: ['A local backup', 'A reference to a repository hosted elsewhere (e.g., GitHub)', 'A deleted branch', 'A type of commit'],
+    correctAnswer: 1,
+    category: 'git',
+    explanation: 'A remote is a reference to a repository hosted on a server (like GitHub, GitLab). It allows you to push/pull changes between your local repo and the remote server.',
+    difficulty: 1,
+  },
+  {
+    id: '202',
+    question: 'What does "origin" typically refer to in Git?',
+    options: ['The first commit ever made', 'The default name for your remote repository', 'The main branch', 'Your local repository'],
+    correctAnswer: 1,
+    category: 'git',
+    explanation: 'Origin is the conventional default name given to the remote repository when you clone or add a remote. It\'s just a shorthand name for the URL.',
+    difficulty: 1,
+  },
+  {
+    id: '203',
+    question: 'What is a "branch" in Git?',
+    options: ['A copy of the entire repository', 'A pointer to a specific commit allowing parallel development', 'A backup of your code', 'A type of merge'],
+    correctAnswer: 1,
+    category: 'git',
+    explanation: 'A branch is a lightweight movable pointer to a commit. It allows multiple lines of development to happen in parallel without affecting each other.',
+    difficulty: 1,
+  },
+  {
+    id: '204',
+    question: 'What is a "commit" in Git?',
+    options: ['A saved file', 'A snapshot of your repository at a specific point in time', 'A branch name', 'A remote server'],
+    correctAnswer: 1,
+    category: 'git',
+    explanation: 'A commit is a snapshot of all tracked files at a point in time. Each commit has a unique ID (SHA hash), a message, author info, and points to its parent commit(s).',
+    difficulty: 1,
+  },
+  {
+    id: '205',
+    question: 'What does "HEAD" refer to in Git?',
+    options: ['The first commit', 'A pointer to the current branch/commit you\'re on', 'The main branch', 'The remote repository'],
+    correctAnswer: 1,
+    category: 'git',
+    explanation: 'HEAD is a pointer that refers to the current branch (and its latest commit) or a specific commit when in "detached HEAD" state. It represents where you are in the Git history.',
+    difficulty: 2,
+  },
+
+  // BASIC TERMINOLOGY - JavaScript
+  {
+    id: '206',
+    question: 'What is a "Promise" in JavaScript?',
+    options: ['A guaranteed function result', 'An object representing a future value from an async operation', 'A type of loop', 'A variable declaration'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'A Promise is an object representing the eventual completion or failure of an asynchronous operation. It can be pending, fulfilled, or rejected.',
+    difficulty: 2,
+  },
+  {
+    id: '207',
+    question: 'What is a "callback" function?',
+    options: ['A function that calls itself', 'A function passed as an argument to be executed later', 'A function that returns another function', 'A built-in JavaScript function'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'A callback is a function passed to another function as an argument, which is then invoked inside the outer function. It\'s a fundamental pattern for handling async operations.',
+    difficulty: 1,
+  },
+  {
+    id: '208',
+    question: 'What is a "closure" in JavaScript?',
+    options: ['A way to close the browser', 'A function that has access to variables from its outer scope', 'A method to end a loop', 'A type of error'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'A closure is a function that remembers and can access variables from its outer (enclosing) scope, even after the outer function has finished executing.',
+    difficulty: 3,
+  },
+  {
+    id: '209',
+    question: 'What is "hoisting" in JavaScript?',
+    options: ['Moving code to the cloud', 'Moving declarations to the top of their scope during compilation', 'Raising an error', 'A loop optimization'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'Hoisting is JavaScript\'s behavior of moving variable and function declarations to the top of their scope before execution. var and function declarations are hoisted; let/const are hoisted but not initialized.',
+    difficulty: 2,
+  },
+  {
+    id: '210',
+    question: 'What is "scope" in JavaScript?',
+    options: ['The size of a variable', 'The context where variables are accessible', 'A debugging tool', 'A type of function'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'Scope determines where variables and functions are accessible in your code. JavaScript has global scope, function scope, and block scope (with let/const).',
+    difficulty: 1,
+  },
+  {
+    id: '211',
+    question: 'What does the "fetch" API do?',
+    options: ['Fetches local files only', 'Makes HTTP requests to get or send data', 'Downloads npm packages', 'Reads from localStorage'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'The fetch API provides a modern way to make HTTP requests. It returns a Promise that resolves to the Response object representing the response to the request.',
+    difficulty: 2,
+  },
+  {
+    id: '212',
+    question: 'What is an "event" in JavaScript?',
+    options: ['A scheduled meeting', 'An action or occurrence that the browser or user triggers', 'A type of variable', 'A CSS property'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'An event is an action that happens in the browser (click, keypress, load, etc.). JavaScript can listen for and respond to events using event handlers/listeners.',
+    difficulty: 1,
+  },
+  {
+    id: '213',
+    question: 'What is "async/await" in JavaScript?',
+    options: ['A new variable type', 'Syntax for working with Promises more readably', 'A loop structure', 'A way to pause the browser'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'async/await is syntactic sugar for working with Promises. An async function returns a Promise, and await pauses execution until a Promise resolves, making async code look synchronous.',
+    difficulty: 2,
+  },
+  {
+    id: '214',
+    question: 'What is the "DOM" (Document Object Model)?',
+    options: ['A JavaScript framework', 'A tree-structured representation of HTML that JavaScript can manipulate', 'A CSS feature', 'A database'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'The DOM is a programming interface for HTML documents. It represents the page as a tree of nodes that JavaScript can read, modify, add to, or delete.',
+    difficulty: 1,
+  },
+  {
+    id: '215',
+    question: 'What is a "node" in the DOM?',
+    options: ['A Node.js server', 'Any element, text, or attribute in the DOM tree', 'A JavaScript variable', 'A CSS selector'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'A node is any single point in the DOM tree. This includes element nodes (HTML tags), text nodes (text content), attribute nodes, and comment nodes.',
+    difficulty: 1,
+  },
+
+  // BASIC TERMINOLOGY - React
+  {
+    id: '216',
+    question: 'What does "render" mean in React?',
+    options: ['Deleting components', 'The process of converting components into DOM elements on screen', 'Styling components', 'Importing modules'],
+    correctAnswer: 1,
+    category: 'react',
+    explanation: 'Rendering is when React calls your component function to determine what should appear on screen, then updates the DOM to match. Components re-render when their state or props change.',
+    difficulty: 1,
+  },
+  {
+    id: '217',
+    question: 'What does "mount" mean in React?',
+    options: ['Styling a component', 'When a component is first added to the DOM', 'Removing a component', 'Updating state'],
+    correctAnswer: 1,
+    category: 'react',
+    explanation: 'Mounting is when a component is created and inserted into the DOM for the first time. This is when useEffect with an empty dependency array runs.',
+    difficulty: 1,
+  },
+  {
+    id: '218',
+    question: 'What does "unmount" mean in React?',
+    options: ['Hiding a component with CSS', 'When a component is removed from the DOM', 'Restarting the app', 'Updating props'],
+    correctAnswer: 1,
+    category: 'react',
+    explanation: 'Unmounting is when a component is removed from the DOM. This is when useEffect cleanup functions run. It happens when a component is conditionally removed or the page navigates away.',
+    difficulty: 1,
+  },
+  {
+    id: '219',
+    question: 'What is a "prop" in React?',
+    options: ['A CSS property', 'Data passed from parent to child component', 'Internal component state', 'A hook'],
+    correctAnswer: 1,
+    category: 'react',
+    explanation: 'Props (short for properties) are read-only data passed from a parent component to a child component. They allow components to be configurable and reusable.',
+    difficulty: 1,
+  },
+  {
+    id: '220',
+    question: 'What is "state" in React?',
+    options: ['Global variables', 'Data that belongs to a component and can change over time', 'CSS styles', 'HTML attributes'],
+    correctAnswer: 1,
+    category: 'react',
+    explanation: 'State is mutable data that belongs to a component. When state changes, the component re-renders. State is managed with useState or useReducer hooks.',
+    difficulty: 1,
+  },
+
+  // BASIC TERMINOLOGY - Web/API
+  {
+    id: '221',
+    question: 'What is an "API" (Application Programming Interface)?',
+    options: ['A programming language', 'A set of rules for how software components should interact', 'A web browser', 'A database'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'An API defines how different software components should communicate. In web development, it often refers to endpoints that allow frontend apps to interact with backend servers.',
+    difficulty: 1,
+  },
+  {
+    id: '222',
+    question: 'What is "JSON" (JavaScript Object Notation)?',
+    options: ['A JavaScript framework', 'A lightweight data format for storing and transporting data', 'A database', 'A programming language'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'JSON is a text-based data format that\'s easy for humans to read and machines to parse. It\'s commonly used to send data between servers and web applications.',
+    difficulty: 1,
+  },
+  {
+    id: '223',
+    question: 'What are HTTP methods GET and POST used for?',
+    options: ['GET downloads files, POST uploads files', 'GET retrieves data, POST sends data to create/update', 'They are the same', 'GET is faster than POST'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'GET requests retrieve data without side effects (read-only). POST requests send data to the server to create or update resources. GET params are in URL; POST data is in the body.',
+    difficulty: 2,
+  },
+  {
+    id: '224',
+    question: 'What is "REST" (Representational State Transfer)?',
+    options: ['A JavaScript library', 'An architectural style for designing networked APIs', 'A database type', 'A testing framework'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'REST is an architectural style for APIs that uses HTTP methods (GET, POST, PUT, DELETE) and URLs to represent resources. RESTful APIs are stateless and follow consistent conventions.',
+    difficulty: 2,
+  },
+  {
+    id: '225',
+    question: 'What is "CORS" (Cross-Origin Resource Sharing)?',
+    options: ['A CSS framework', 'A security mechanism controlling access to resources from different origins', 'A JavaScript library', 'A database feature'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'CORS is a browser security feature that restricts web pages from making requests to a different domain than the one serving the page, unless the server explicitly allows it.',
+    difficulty: 3,
   },
 ];
 
 // Fisher-Yates shuffle algorithm
 export function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Simple signing for session data (in production, use proper JWT)
+const SECRET = process.env.SESSION_SECRET || 'quiz-secret-key-change-in-production';
+
+export function encodeSession(data: { questionId: string; correctAnswer: number }[]): string {
+  const payload = JSON.stringify(data);
+  const encoded = Buffer.from(payload).toString('base64');
+  const signature = Buffer.from(SECRET + encoded).toString('base64').slice(0, 16);
+  return `${encoded}.${signature}`;
+}
+
+export function decodeSession(token: string): { questionId: string; correctAnswer: number }[] | null {
+  try {
+    const [encoded, signature] = token.split('.');
+    const expectedSig = Buffer.from(SECRET + encoded).toString('base64').slice(0, 16);
+    if (signature !== expectedSig) return null;
+    const payload = Buffer.from(encoded, 'base64').toString('utf-8');
+    return JSON.parse(payload);
+  } catch {
+    return null;
+  }
+}

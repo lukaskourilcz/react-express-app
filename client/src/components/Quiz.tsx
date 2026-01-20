@@ -15,7 +15,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
-import type { Question, QuizResult, QuizState } from '../types/quiz';
+import type { Question, QuizResult, QuizState, DifficultyMode } from '../types/quiz';
 import { quizStyles } from '../theme/MuiTheme';
 import './Quiz.css';
 
@@ -52,6 +52,12 @@ const renderQuestion = (text: string) => {
 
 const QUESTION_COUNT_OPTIONS = [10, 20, 30, 40, 50];
 
+const DIFFICULTY_OPTIONS: { value: DifficultyMode; label: string; description: string }[] = [
+  { value: 'easy', label: 'Easy', description: 'Difficulty 1-2' },
+  { value: 'advanced', label: 'Advanced', description: 'Difficulty 3-5' },
+  { value: 'zero-to-hero', label: 'Zero to Hero', description: '1→5 progressive' },
+];
+
 function Quiz() {
   const [state, setState] = useState<QuizState>('ready');
   const [sessionId, setSessionId] = useState<string>('');
@@ -61,11 +67,12 @@ function Quiz() {
   const [result, setResult] = useState<QuizResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [questionCount, setQuestionCount] = useState<number>(10);
+  const [difficultyMode, setDifficultyMode] = useState<DifficultyMode>('zero-to-hero');
 
-  const fetchQuestions = async (count: number) => {
+  const fetchQuestions = async (count: number, difficulty: DifficultyMode) => {
     try {
       setState('loading');
-      const response = await fetch(`/api/quiz/questions?count=${count}`);
+      const response = await fetch(`/api/quiz/questions?count=${count}&difficulty=${difficulty}`);
       if (!response.ok) throw new Error('Failed to fetch questions');
       const data = await response.json();
       setSessionId(data.sessionId);
@@ -81,7 +88,7 @@ function Quiz() {
     setCurrentIndex(0);
     setAnswers({});
     setResult(null);
-    fetchQuestions(questionCount);
+    fetchQuestions(questionCount, difficultyMode);
   };
 
   const handleAnswer = (questionId: string, answerIndex: number) => {
@@ -145,7 +152,7 @@ function Quiz() {
         <CardContent sx={{ padding: '2rem' }}>
           <Alert
             severity="error"
-            action={<Button onClick={() => fetchQuestions(questionCount)} color="inherit">Retry</Button>}
+            action={<Button onClick={() => fetchQuestions(questionCount, difficultyMode)} color="inherit">Retry</Button>}
           >
             {error}
           </Alert>
@@ -176,7 +183,7 @@ function Quiz() {
               fontSize: '0.9rem',
             }}
           >
-            200 questions across 4 categories
+            225 questions across 4 categories
           </Typography>
 
           <Box sx={{
@@ -241,6 +248,75 @@ function Quiz() {
                   }}
                 >
                   {count}
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Box>
+
+          <Box sx={{
+            backgroundColor: 'rgba(0,0,0,0.02)',
+            borderRadius: 2,
+            p: 2.5,
+            mb: 3,
+          }}>
+            <Typography
+              variant="body2"
+              sx={{
+                mb: 1.5,
+                color: 'text.secondary',
+                fontWeight: 500,
+                fontSize: '0.8rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}
+            >
+              Difficulty Level
+            </Typography>
+            <ToggleButtonGroup
+              value={difficultyMode}
+              exclusive
+              onChange={(_, value) => value && setDifficultyMode(value)}
+              sx={{
+                display: 'flex',
+                justifyContent: 'center',
+                flexWrap: 'wrap',
+                gap: 0.5,
+              }}
+            >
+              {DIFFICULTY_OPTIONS.map((option) => (
+                <ToggleButton
+                  key={option.value}
+                  value={option.value}
+                  sx={{
+                    px: { xs: 1.5, sm: 2 },
+                    py: 1,
+                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    border: '1px solid rgba(0,0,0,0.12)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 0.25,
+                    '&.Mui-selected': {
+                      backgroundColor: 'primary.main',
+                      color: 'white',
+                      borderColor: 'primary.main',
+                      '&:hover': {
+                        backgroundColor: 'primary.dark',
+                      },
+                    },
+                  }}
+                >
+                  <span>{option.label}</span>
+                  <Typography
+                    component="span"
+                    sx={{
+                      fontSize: '0.65rem',
+                      opacity: 0.8,
+                      fontWeight: 400,
+                    }}
+                  >
+                    {option.description}
+                  </Typography>
                 </ToggleButton>
               ))}
             </ToggleButtonGroup>

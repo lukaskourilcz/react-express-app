@@ -1,14 +1,42 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { questions, shuffleArray, encodeSession } from './data.js';
+import { questions, shuffleArray, encodeSession, type DifficultyMode } from './data.js';
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   // Get count from query parameter, default to 10, max 50
   const countParam = parseInt(req.query.count as string) || 10;
   const count = Math.min(Math.max(countParam, 1), 50);
 
-  // Shuffle and select questions
-  const shuffledQuestions = shuffleArray(questions);
-  const selected = shuffledQuestions.slice(0, count);
+  // Get difficulty mode from query parameter
+  const difficultyMode = (req.query.difficulty as DifficultyMode) || 'zero-to-hero';
+
+  // Filter and select questions based on difficulty mode
+  let selected: typeof questions;
+
+  if (difficultyMode === 'easy') {
+    // Easy mode: only difficulty 1-2
+    const easyQuestions = questions.filter(q => q.difficulty <= 2);
+    const shuffled = shuffleArray(easyQuestions);
+    selected = shuffled.slice(0, count);
+  } else if (difficultyMode === 'advanced') {
+    // Advanced mode: only difficulty 3-5
+    const advancedQuestions = questions.filter(q => q.difficulty >= 3);
+    const shuffled = shuffleArray(advancedQuestions);
+    selected = shuffled.slice(0, count);
+  } else {
+    // Zero to hero mode: progressive difficulty 1 → 5
+    // Distribute questions evenly across difficulty levels
+    const questionsPerDifficulty = Math.ceil(count / 5);
+    const selectedByDifficulty: typeof questions = [];
+
+    for (let diff = 1; diff <= 5; diff++) {
+      const questionsAtDifficulty = questions.filter(q => q.difficulty === diff);
+      const shuffled = shuffleArray(questionsAtDifficulty);
+      selectedByDifficulty.push(...shuffled.slice(0, questionsPerDifficulty));
+    }
+
+    // Take exactly the count needed, maintaining order (easy to hard)
+    selected = selectedByDifficulty.slice(0, count);
+  }
 
   // Shuffle options for each question and track correct answers
   const sessionData: { questionId: string; correctAnswer: number }[] = [];
@@ -35,6 +63,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
       question: question.question,
       options: shuffledOptions,
       category: question.category,
+      difficulty: question.difficulty,
     };
   });
 

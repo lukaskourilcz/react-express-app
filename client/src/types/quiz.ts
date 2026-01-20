@@ -3,7 +3,10 @@ export interface Question {
   question: string;
   options: string[];
   category: 'react' | 'typescript' | 'git' | 'javascript';
+  difficulty: 1 | 2 | 3 | 4 | 5;
 }
+
+export type DifficultyMode = 'easy' | 'advanced' | 'zero-to-hero';
 
 export interface QuizResult {
   totalQuestions: number;
