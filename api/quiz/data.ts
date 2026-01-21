@@ -2253,7 +2253,7 @@ export const questions: Question[] = [
   {
     id: '201',
     tags: ["Remote","Terminology"],
-    introduction: 'A remote in Git is a reference to a repository hosted elsewhere, enabling collaboration.',
+    introduction: 'When working with Git, you often need to collaborate with others and sync your code with a server like GitHub.',
     question: 'What is a "remote" in Git?',
     options: ['A local backup', 'A reference to a repository hosted elsewhere (e.g., GitHub)', 'A deleted branch', 'A type of commit'],
     correctAnswer: 1,
@@ -2264,7 +2264,7 @@ export const questions: Question[] = [
   {
     id: '202',
     tags: ["Origin","Remote","Terminology"],
-    introduction: 'Origin is the default name Git gives to the server you cloned from.',
+    introduction: 'After cloning a repository, Git automatically sets up a connection to where you cloned from.',
     question: 'What does "origin" typically refer to in Git?',
     options: ['The first commit ever made', 'The default name for your remote repository', 'The main branch', 'Your local repository'],
     correctAnswer: 1,
@@ -2275,7 +2275,7 @@ export const questions: Question[] = [
   {
     id: '203',
     tags: ["Branch","Terminology"],
-    introduction: 'Branches allow multiple lines of development to proceed in parallel without interfering.',
+    introduction: 'In Git, teams need a way to work on features independently without affecting each other\'s code.',
     question: 'What is a "branch" in Git?',
     options: ['A copy of the entire repository', 'A pointer to a specific commit allowing parallel development', 'A backup of your code', 'A type of merge'],
     correctAnswer: 1,
@@ -2286,7 +2286,7 @@ export const questions: Question[] = [
   {
     id: '204',
     tags: ["Commit","Terminology"],
-    introduction: 'A commit is a snapshot of your project at a specific point in time.',
+    introduction: 'Git tracks changes to your project by saving them in discrete units that can be navigated and reverted.',
     question: 'What is a "commit" in Git?',
     options: ['A saved file', 'A snapshot of your repository at a specific point in time', 'A branch name', 'A remote server'],
     correctAnswer: 1,
@@ -2297,7 +2297,7 @@ export const questions: Question[] = [
   {
     id: '205',
     tags: ["HEAD","Terminology"],
-    introduction: 'HEAD is a pointer to the current branch or commit you\'re working on.',
+    introduction: 'Git needs to track where you currently are in your project\'s history as you navigate between commits and branches.',
     question: 'What does "HEAD" refer to in Git?',
     options: ['The first commit', 'A pointer to the current branch/commit you\'re on', 'The main branch', 'The remote repository'],
     correctAnswer: 1,
@@ -2310,7 +2310,7 @@ export const questions: Question[] = [
   {
     id: '206',
     tags: ["Promise","Asynchronous","Terminology"],
-    introduction: 'Promises handle asynchronous operations, representing values that may be available in the future.',
+    introduction: 'JavaScript is single-threaded, so it needs special mechanisms to handle operations that take time without blocking.',
     question: 'What is a "Promise" in JavaScript?',
     options: ['A guaranteed function result', 'An object representing a future value from an async operation', 'A type of loop', 'A variable declaration'],
     correctAnswer: 1,
@@ -2321,7 +2321,7 @@ export const questions: Question[] = [
   {
     id: '207',
     tags: ["Callback","Functions","Terminology"],
-    introduction: 'Callbacks are functions passed as arguments to be executed later, a foundational async pattern.',
+    introduction: 'Before Promises, JavaScript used a different pattern to handle operations that complete at an unknown time.',
     question: 'What is a "callback" function?',
     options: ['A function that calls itself', 'A function passed as an argument to be executed later', 'A function that returns another function', 'A built-in JavaScript function'],
     correctAnswer: 1,
@@ -2343,7 +2343,7 @@ export const questions: Question[] = [
   {
     id: '209',
     tags: ["Hoisting","Variables","Terminology"],
-    introduction: 'Hoisting is JavaScript\'s behavior of moving declarations to the top of their scope during compilation.',
+    introduction: 'JavaScript has a unique behavior that can let you use variables before they appear in your code.',
     question: 'What is "hoisting" in JavaScript?',
     options: ['Moving code to the cloud', 'Moving declarations to the top of their scope during compilation', 'Raising an error', 'A loop optimization'],
     correctAnswer: 1,
@@ -2354,7 +2354,7 @@ export const questions: Question[] = [
   {
     id: '210',
     tags: ["Scope","Variables","Terminology"],
-    introduction: 'Scope determines where variables are accessible in your code.',
+    introduction: 'Understanding why some variables are accessible in certain parts of your code but not others is fundamental to JavaScript.',
     question: 'What is "scope" in JavaScript?',
     options: ['The size of a variable', 'The context where variables are accessible', 'A debugging tool', 'A type of function'],
     correctAnswer: 1,
@@ -2422,7 +2422,7 @@ export const questions: Question[] = [
   {
     id: '216',
     tags: ["Render","Terminology","Lifecycle"],
-    introduction: 'Rendering is when React converts your components into actual DOM elements on screen.',
+    introduction: 'React components describe what the UI should look like, but something needs to actually put it on screen.',
     question: 'What does "render" mean in React?',
     options: ['Deleting components', 'The process of converting components into DOM elements on screen', 'Styling components', 'Importing modules'],
     correctAnswer: 1,
@@ -2433,7 +2433,7 @@ export const questions: Question[] = [
   {
     id: '217',
     tags: ["Mount","Terminology","Lifecycle"],
-    introduction: 'Mounting occurs when a component is first created and inserted into the DOM.',
+    introduction: 'React components go through different phases of their lifecycle, starting when they first appear.',
     question: 'What does "mount" mean in React?',
     options: ['Styling a component', 'When a component is first added to the DOM', 'Removing a component', 'Updating state'],
     correctAnswer: 1,
@@ -2444,7 +2444,7 @@ export const questions: Question[] = [
   {
     id: '218',
     tags: ["Unmount","Terminology","Lifecycle"],
-    introduction: 'Unmounting is when a component is removed from the DOM, triggering cleanup.',
+    introduction: 'Components don\'t always stay on screen forever—they need to clean up resources when they leave.',
     question: 'What does "unmount" mean in React?',
     options: ['Hiding a component with CSS', 'When a component is removed from the DOM', 'Restarting the app', 'Updating props'],
     correctAnswer: 1,
@@ -2455,7 +2455,7 @@ export const questions: Question[] = [
   {
     id: '219',
     tags: ["Props","Terminology","Data Flow"],
-    introduction: 'Props are read-only data passed from parent to child components.',
+    introduction: 'React components need a way to receive configuration and data from their parent components.',
     question: 'What is a "prop" in React?',
     options: ['A CSS property', 'Data passed from parent to child component', 'Internal component state', 'A hook'],
     correctAnswer: 1,
@@ -2466,7 +2466,7 @@ export const questions: Question[] = [
   {
     id: '220',
     tags: ["State","Terminology","Data"],
-    introduction: 'State is mutable data that belongs to a component and triggers re-renders when changed.',
+    introduction: 'Interactive UIs need to track information that changes based on user actions or other events.',
     question: 'What is "state" in React?',
     options: ['Global variables', 'Data that belongs to a component and can change over time', 'CSS styles', 'HTML attributes'],
     correctAnswer: 1,
@@ -3096,7 +3096,7 @@ export const questions: Question[] = [
   {
     id: '276',
     tags: ["Terminology","Git","Rebase"],
-    introduction: 'Rebase is a Git operation that changes how commit history is organized.',
+    introduction: 'Sometimes you want to integrate changes from another branch while keeping a clean, linear history.',
     question: 'What does "rebase" mean in Git?',
     options: ['Delete all commits', 'Move commits to a new base commit, rewriting history', 'Create a backup', 'Merge two repositories'],
     correctAnswer: 1,
@@ -3107,7 +3107,7 @@ export const questions: Question[] = [
   {
     id: '277',
     tags: ["Terminology","Build","Compilation"],
-    introduction: 'Building is the process of preparing code for production deployment.',
+    introduction: 'Before shipping code to users, it often needs to be transformed and prepared for efficient delivery.',
     question: 'What does "build" mean in web development?',
     options: ['Writing new code', 'The process of compiling and optimizing code for production', 'Testing the application', 'Deploying to server'],
     correctAnswer: 1,
@@ -3118,7 +3118,7 @@ export const questions: Question[] = [
   {
     id: '278',
     tags: ["Terminology","Bundle","Webpack"],
-    introduction: 'Bundling combines multiple files into fewer files for better performance.',
+    introduction: 'Modern JavaScript projects often have hundreds of small files that would be slow to load individually.',
     question: 'What is a "bundle" in web development?',
     options: ['A zip file', 'Combined JavaScript/CSS files packaged together for the browser', 'A testing framework', 'A deployment tool'],
     correctAnswer: 1,
@@ -3162,7 +3162,7 @@ export const questions: Question[] = [
   {
     id: '282',
     tags: ["Terminology","Linting","Code Quality"],
-    introduction: 'Linting analyzes code for potential errors and style issues.',
+    introduction: 'Catching bugs and maintaining consistent code style is easier with automated tools that check your code.',
     question: 'What does "linting" mean?',
     options: ['Removing lint from clothes', 'Analyzing code for errors and style violations', 'Compressing files', 'Testing performance'],
     correctAnswer: 1,
@@ -3173,7 +3173,7 @@ export const questions: Question[] = [
   {
     id: '283',
     tags: ["Terminology","Transpiling","Babel"],
-    introduction: 'Transpiling converts code from one version of a language to another.',
+    introduction: 'Not all browsers support the latest JavaScript features, so your code needs to work on older environments too.',
     question: 'What does "transpiling" mean?',
     options: ['Translating to another programming language', 'Converting modern JavaScript to older versions for compatibility', 'Compressing code', 'Encrypting code'],
     correctAnswer: 1,
@@ -3184,7 +3184,7 @@ export const questions: Question[] = [
   {
     id: '284',
     tags: ["Terminology","Minification","Optimization"],
-    introduction: 'Minification reduces file size by removing unnecessary characters.',
+    introduction: 'Large JavaScript files slow down page loads, so production code is optimized to be as small as possible.',
     question: 'What is "minification"?',
     options: ['Making code smaller by removing whitespace and shortening names', 'Deleting unused files', 'Compressing images', 'Reducing server load'],
     correctAnswer: 0,
@@ -3195,7 +3195,7 @@ export const questions: Question[] = [
   {
     id: '285',
     tags: ["Terminology","Tree Shaking","Optimization"],
-    introduction: 'Tree shaking removes unused code from the final bundle.',
+    introduction: 'When you import a library, you often only use a small part of it—including everything would bloat your app.',
     question: 'What is "tree shaking"?',
     options: ['A JavaScript animation', 'Removing unused code from bundles to reduce size', 'Reorganizing file structure', 'Randomizing code order'],
     correctAnswer: 1,
@@ -3206,7 +3206,7 @@ export const questions: Question[] = [
   {
     id: '286',
     tags: ["Terminology","Hot Reload","Development"],
-    introduction: 'Hot reload updates code in the browser without losing application state.',
+    introduction: 'During development, constantly refreshing the browser to see changes is tedious and loses your current state.',
     question: 'What is "hot reload" (or Hot Module Replacement)?',
     options: ['Restarting the server', 'Updating code in the browser without full page refresh', 'Clearing the cache', 'Deploying to production'],
     correctAnswer: 1,
@@ -3217,7 +3217,7 @@ export const questions: Question[] = [
   {
     id: '287',
     tags: ["Terminology","SSR","Rendering"],
-    introduction: 'SSR generates HTML on the server before sending it to the browser.',
+    introduction: 'SEO and initial page load performance can suffer when JavaScript builds the entire page in the browser.',
     question: 'What is "SSR" (Server-Side Rendering)?',
     options: ['Styling with CSS', 'Generating HTML on the server before sending to the browser', 'Running tests on server', 'Server security rules'],
     correctAnswer: 1,
@@ -3228,7 +3228,7 @@ export const questions: Question[] = [
   {
     id: '288',
     tags: ["Terminology","CSR","Rendering"],
-    introduction: 'CSR renders content in the browser using JavaScript.',
+    introduction: 'Single-page applications handle most UI building locally rather than requesting new pages from the server.',
     question: 'What is "CSR" (Client-Side Rendering)?',
     options: ['CSS Styling Rules', 'Rendering content in the browser using JavaScript', 'Server caching', 'Code style review'],
     correctAnswer: 1,
@@ -3239,7 +3239,7 @@ export const questions: Question[] = [
   {
     id: '289',
     tags: ["Terminology","Hydration","SSR"],
-    introduction: 'Hydration makes server-rendered HTML interactive on the client.',
+    introduction: 'Server-rendered HTML arrives as static content, but users expect buttons and forms to actually work.',
     question: 'What is "hydration" in web development?',
     options: ['Adding water effects', 'Attaching JavaScript event handlers to server-rendered HTML', 'Caching data', 'Loading images'],
     correctAnswer: 1,
@@ -3250,7 +3250,7 @@ export const questions: Question[] = [
   {
     id: '290',
     tags: ["Terminology","Middleware","Backend"],
-    introduction: 'Middleware processes requests between receiving and responding.',
+    introduction: 'In backend applications, you often need to perform common tasks like logging or authentication before handling requests.',
     question: 'What is "middleware"?',
     options: ['Software in the middle of the screen', 'Functions that process requests between receiving and sending responses', 'Medium-sized applications', 'Middleware is not used in web development'],
     correctAnswer: 1,
@@ -3261,7 +3261,7 @@ export const questions: Question[] = [
   {
     id: '291',
     tags: ["Terminology","Route","Navigation"],
-    introduction: 'Routes map URLs to specific pages or handlers in an application.',
+    introduction: 'Web applications need to show different content based on what URL the user visits.',
     question: 'What is a "route" in web development?',
     options: ['A travel direction', 'A URL path that maps to specific content or handler', 'A network cable', 'A database table'],
     correctAnswer: 1,
@@ -3272,7 +3272,7 @@ export const questions: Question[] = [
   {
     id: '292',
     tags: ["Terminology","Endpoint","API"],
-    introduction: 'Endpoints are specific URLs where APIs receive requests.',
+    introduction: 'Frontend applications need to communicate with servers to fetch data and perform actions.',
     question: 'What is an "endpoint" in API development?',
     options: ['The end of code', 'A specific URL where an API receives and responds to requests', 'A database connection', 'A JavaScript function'],
     correctAnswer: 1,
@@ -3283,7 +3283,7 @@ export const questions: Question[] = [
   {
     id: '293',
     tags: ["Terminology","Payload","Data"],
-    introduction: 'Payload is the data sent in an HTTP request or response body.',
+    introduction: 'When making API requests, you need to send information to the server and receive results back.',
     question: 'What is a "payload" in web development?',
     options: ['Payment information', 'The data sent in the body of an HTTP request or response', 'Server load', 'A security feature'],
     correctAnswer: 1,
@@ -3294,7 +3294,7 @@ export const questions: Question[] = [
   {
     id: '294',
     tags: ["Terminology","Token","Authentication"],
-    introduction: 'Tokens are used to verify identity and authorize access.',
+    introduction: 'After a user logs in, the server needs a way to remember who they are on subsequent requests.',
     question: 'What is a "token" in authentication?',
     options: ['A game coin', 'A string that proves identity and grants access to resources', 'A CSS unit', 'A JavaScript keyword'],
     correctAnswer: 1,
@@ -3305,7 +3305,7 @@ export const questions: Question[] = [
   {
     id: '295',
     tags: ["Terminology","Authentication","Security"],
-    introduction: 'Authentication verifies who a user is.',
+    introduction: 'Applications with user accounts need to confirm that someone logging in is who they claim to be.',
     question: 'What is "authentication"?',
     options: ['Making something look real', 'Verifying a user\'s identity (who they are)', 'Encrypting data', 'Testing code'],
     correctAnswer: 1,
@@ -3316,7 +3316,7 @@ export const questions: Question[] = [
   {
     id: '296',
     tags: ["Terminology","Authorization","Security"],
-    introduction: 'Authorization determines what an authenticated user can access.',
+    introduction: 'Even after knowing who a user is, you need to control what features and data they can access.',
     question: 'What is "authorization"?',
     options: ['Writing a book', 'Determining what resources a user is allowed to access', 'Creating a user account', 'Encrypting passwords'],
     correctAnswer: 1,
@@ -3327,7 +3327,7 @@ export const questions: Question[] = [
   {
     id: '297',
     tags: ["Terminology","Deployment","DevOps"],
-    introduction: 'Deployment makes an application available for users to access.',
+    introduction: 'Once your application is built and tested, you need to put it somewhere users can actually use it.',
     question: 'What does "deployment" mean?',
     options: ['Writing code', 'Making an application available on a server for users', 'Testing locally', 'Creating documentation'],
     correctAnswer: 1,
@@ -3338,7 +3338,7 @@ export const questions: Question[] = [
   {
     id: '298',
     tags: ["Terminology","CI/CD","DevOps"],
-    introduction: 'CI/CD automates testing and deployment of code changes.',
+    introduction: 'Manually testing and deploying code for every change is error-prone and slow for active projects.',
     question: 'What is "CI/CD"?',
     options: ['A programming language', 'Continuous Integration/Continuous Deployment - automated testing and deployment', 'A CSS framework', 'A database type'],
     correctAnswer: 1,
@@ -3349,7 +3349,7 @@ export const questions: Question[] = [
   {
     id: '299',
     tags: ["Terminology","Environment Variables","Configuration"],
-    introduction: 'Environment variables store configuration outside of code.',
+    introduction: 'Secrets like API keys shouldn\'t be in your code, and settings often differ between dev and production.',
     question: 'What are "environment variables"?',
     options: ['Variables about the weather', 'Configuration values stored outside code, different per environment', 'Global JavaScript variables', 'CSS custom properties'],
     correctAnswer: 1,
@@ -3360,12 +3360,56 @@ export const questions: Question[] = [
   {
     id: '300',
     tags: ["Terminology","Cache","Performance"],
-    introduction: 'Caching stores data temporarily to speed up future requests.',
+    introduction: 'When your app repeatedly fetches the same data, you need a strategy to avoid unnecessary network requests.',
     question: 'What is "caching"?',
     options: ['Hiding code', 'Storing data temporarily to avoid repeated expensive operations', 'Encrypting data', 'Compressing files'],
     correctAnswer: 1,
     category: 'javascript',
     explanation: 'Caching stores frequently accessed data in fast storage (memory, disk) to avoid repeating expensive operations like API calls or database queries.',
+    difficulty: 1,
+  },
+  {
+    id: '301',
+    tags: ["Terminology","CDN","Performance"],
+    introduction: 'Large websites need to deliver content quickly to users around the world, regardless of their location.',
+    question: 'What is a "CDN" (Content Delivery Network)?',
+    options: ['A JavaScript framework', 'A network of servers that delivers content from locations closest to users', 'A code debugging tool', 'A database system'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'A CDN is a geographically distributed network of servers that caches and delivers content from the location nearest to each user, reducing latency and load times.',
+    difficulty: 1,
+  },
+  {
+    id: '302',
+    tags: ["Terminology","Polyfill","Compatibility"],
+    introduction: 'Older browsers don\'t support all modern JavaScript features, but you still want your code to work everywhere.',
+    question: 'What is a "polyfill"?',
+    options: ['A CSS property', 'Code that implements modern features in older browsers that lack support', 'A testing tool', 'A type of variable'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'A polyfill is code that adds missing functionality to older browsers. For example, a polyfill can add Promise support to browsers that don\'t have it natively.',
+    difficulty: 1,
+  },
+  {
+    id: '303',
+    tags: ["Terminology","Dependency","npm"],
+    introduction: 'Modern projects use external packages to avoid reinventing the wheel for common functionality.',
+    question: 'What is a "dependency" in software development?',
+    options: ['A bug in code', 'External code or package that your project requires to function', 'A CSS file', 'A test case'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'A dependency is an external library or package your code needs. Dependencies are listed in package.json and installed via npm or yarn.',
+    difficulty: 1,
+  },
+  {
+    id: '304',
+    tags: ["Terminology","Runtime","Execution"],
+    introduction: 'Understanding when your code executes helps you debug issues and optimize performance.',
+    question: 'What does "runtime" mean in programming?',
+    options: ['How fast code runs', 'The period when a program is executing', 'A JavaScript library', 'The time to write code'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation: 'Runtime is when a program is running and executing code, as opposed to compile time when code is being prepared. Runtime errors occur during execution.',
     difficulty: 1,
   },
 ];
