@@ -484,11 +484,16 @@ function Quiz() {
             </Box>
           )}
 
+          <div className="quiz-question-text">
+            {renderQuestion(currentQuestion.question)}
+          </div>
+
           {currentQuestion.introduction && (
             <Typography
               variant="body2"
               sx={{
                 color: 'text.secondary',
+                mt: 2,
                 mb: 2,
                 p: 1.5,
                 backgroundColor: 'rgba(90, 103, 216, 0.08)',
@@ -499,13 +504,9 @@ function Quiz() {
                 lineHeight: 1.6,
               }}
             >
-              {currentQuestion.introduction}
+              <strong>Hint:</strong> {currentQuestion.introduction}
             </Typography>
           )}
-
-          <div className="quiz-question-text">
-            {renderQuestion(currentQuestion.question)}
-          </div>
 
           <RadioGroup
             value={answers[currentQuestion.id] ?? ''}
