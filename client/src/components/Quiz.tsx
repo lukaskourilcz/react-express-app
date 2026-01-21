@@ -53,6 +53,7 @@ const renderQuestion = (text: string) => {
 const QUESTION_COUNT_OPTIONS = [10, 20, 30, 40, 50];
 
 const DIFFICULTY_OPTIONS: { value: DifficultyMode; label: string; description: string }[] = [
+  { value: 'terminology', label: 'Terminology', description: 'Basic terms only' },
   { value: 'easy', label: 'Easy', description: 'Difficulty 1-2' },
   { value: 'advanced', label: 'Advanced', description: 'Difficulty 3-5' },
   { value: 'zero-to-hero', label: 'Zero to Hero', description: '1→5 progressive' },
@@ -183,7 +184,7 @@ function Quiz() {
               fontSize: '0.9rem',
             }}
           >
-            275 questions across 4 categories
+            300 questions across 4 categories
           </Typography>
 
           <Box sx={{
@@ -469,7 +470,7 @@ function Quiz() {
               {currentQuestion.tags.map((tag, idx) => (
                 <Chip
                   key={idx}
-                  label={tag}
+                  label={`#${tag}`}
                   size="small"
                   variant="outlined"
                   sx={{

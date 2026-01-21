@@ -22,6 +22,11 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     const advancedQuestions = questions.filter(q => q.difficulty >= 3);
     const shuffled = shuffleArray(advancedQuestions);
     selected = shuffled.slice(0, count);
+  } else if (difficultyMode === 'terminology') {
+    // Terminology mode: only questions with "Terminology" tag
+    const terminologyQuestions = questions.filter(q => q.tags.includes('Terminology'));
+    const shuffled = shuffleArray(terminologyQuestions);
+    selected = shuffled.slice(0, count);
   } else {
     // Zero to hero mode: progressive difficulty 1 → 5
     // Distribute questions evenly across difficulty levels
