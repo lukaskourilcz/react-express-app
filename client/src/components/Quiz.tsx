@@ -231,8 +231,7 @@ function Quiz() {
         backgroundColor: '#fff',
         borderRadius: 2,
         border: '1px solid #e0e0e0',
-        borderTop: '4px solid transparent',
-        borderImage: `${CATEGORY_GRADIENT} 1`,
+        borderTop: '4px solid #339933',
         boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
       }}>
         <Typography
@@ -399,21 +398,12 @@ function Quiz() {
             fontWeight: 600,
             textTransform: 'none',
             borderRadius: 1,
-            background: CATEGORY_GRADIENT,
-            backgroundSize: '200% 100%',
-            animation: 'gradientShift 3s ease infinite',
-            '@keyframes gradientShift': {
-              '0%': { backgroundPosition: '0% 50%' },
-              '50%': { backgroundPosition: '100% 50%' },
-              '100%': { backgroundPosition: '0% 50%' },
-            },
+            backgroundColor: '#339933',
             '&:hover': {
-              background: CATEGORY_GRADIENT,
-              backgroundSize: '200% 100%',
-              filter: 'brightness(1.1)',
+              backgroundColor: '#2d8a2d',
             },
             '&:disabled': {
-              background: '#ccc',
+              backgroundColor: '#ccc',
             },
           }}
         >
