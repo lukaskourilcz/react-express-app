@@ -15,7 +15,8 @@
       "Bash(npx tsc:*)",
       "Bash(node add-introductions.js:*)",
       "Bash(vercel --prod:*)",
-      "Bash(node add-tags.js:*)"
+      "Bash(node add-tags.js:*)",
+      "Bash(npx vercel logs:*)"
     ]
   }
 }

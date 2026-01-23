@@ -12,8 +12,6 @@ import {
   Alert,
   Chip,
   Paper,
-  ToggleButton,
-  ToggleButtonGroup,
 } from '@mui/material';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { quizStyles } from '../theme/MuiTheme';
