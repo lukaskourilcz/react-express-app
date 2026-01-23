@@ -15,7 +15,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
-import type { Question, QuizResult, QuizState, DifficultyMode } from '../types/quiz';
+import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { quizStyles } from '../theme/MuiTheme';
 import './Quiz.css';
 
@@ -29,10 +29,23 @@ const getCategoryColor = (category: string) => {
       return 'warning';
     case 'javascript':
       return 'success';
+    case 'nodejs':
+      return 'info';
+    case 'frontend':
+      return 'error';
     default:
       return 'default';
   }
 };
+
+const CATEGORY_OPTIONS: { value: CategoryType; label: string; color: string }[] = [
+  { value: 'javascript', label: 'JavaScript', color: '#4caf50' },
+  { value: 'typescript', label: 'TypeScript', color: '#9c27b0' },
+  { value: 'react', label: 'React', color: '#5a67d8' },
+  { value: 'nodejs', label: 'Node.js', color: '#0288d1' },
+  { value: 'git', label: 'Git', color: '#ed6c02' },
+  { value: 'frontend', label: 'General Frontend', color: '#d32f2f' },
+];
 
 // Render question text with code blocks
 const renderQuestion = (text: string) => {
@@ -69,11 +82,13 @@ function Quiz() {
   const [error, setError] = useState<string | null>(null);
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [difficultyMode, setDifficultyMode] = useState<DifficultyMode>('zero-to-hero');
+  const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>(['javascript', 'typescript', 'react', 'nodejs', 'git', 'frontend']);
 
-  const fetchQuestions = async (count: number, difficulty: DifficultyMode) => {
+  const fetchQuestions = async (count: number, difficulty: DifficultyMode, categories: CategoryType[]) => {
     try {
       setState('loading');
-      const response = await fetch(`/api/quiz/questions?count=${count}&difficulty=${difficulty}`);
+      const categoriesParam = categories.join(',');
+      const response = await fetch(`/api/quiz/questions?count=${count}&difficulty=${difficulty}&categories=${categoriesParam}`);
       if (!response.ok) throw new Error('Failed to fetch questions');
       const data = await response.json();
       setSessionId(data.sessionId);
@@ -86,10 +101,22 @@ function Quiz() {
   };
 
   const handleStart = () => {
+    if (selectedCategories.length === 0) {
+      setError('Please select at least one category');
+      return;
+    }
     setCurrentIndex(0);
     setAnswers({});
     setResult(null);
-    fetchQuestions(questionCount, difficultyMode);
+    fetchQuestions(questionCount, difficultyMode, selectedCategories);
+  };
+
+  const handleCategoryToggle = (category: CategoryType) => {
+    setSelectedCategories(prev =>
+      prev.includes(category)
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    );
   };
 
   const handleAnswer = (questionId: string, answerIndex: number) => {
@@ -153,7 +180,7 @@ function Quiz() {
         <CardContent sx={{ padding: '2rem' }}>
           <Alert
             severity="error"
-            action={<Button onClick={() => fetchQuestions(questionCount, difficultyMode)} color="inherit">Retry</Button>}
+            action={<Button onClick={() => fetchQuestions(questionCount, difficultyMode, selectedCategories)} color="inherit">Retry</Button>}
           >
             {error}
           </Alert>
@@ -184,20 +211,57 @@ function Quiz() {
               fontSize: '0.9rem',
             }}
           >
-            300 questions across 4 categories
+            Frontend quiz with 400+ questions
           </Typography>
 
           <Box sx={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: 1,
-            flexWrap: 'wrap',
-            mb: 3.5,
+            backgroundColor: 'rgba(0,0,0,0.02)',
+            borderRadius: 2,
+            p: 2.5,
+            mb: 3,
           }}>
-            <Chip label="React" color="primary" size="small" />
-            <Chip label="TypeScript" color="secondary" size="small" />
-            <Chip label="JavaScript" color="success" size="small" />
-            <Chip label="Git" color="warning" size="small" />
+            <Typography
+              variant="body2"
+              sx={{
+                mb: 1.5,
+                color: 'text.secondary',
+                fontWeight: 500,
+                fontSize: '0.8rem',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }}
+            >
+              Select Categories
+            </Typography>
+            <Box sx={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 1,
+              flexWrap: 'wrap',
+            }}>
+              {CATEGORY_OPTIONS.map((cat) => (
+                <Chip
+                  key={cat.value}
+                  label={cat.label}
+                  onClick={() => handleCategoryToggle(cat.value)}
+                  sx={{
+                    cursor: 'pointer',
+                    backgroundColor: selectedCategories.includes(cat.value) ? cat.color : 'transparent',
+                    color: selectedCategories.includes(cat.value) ? 'white' : 'text.primary',
+                    border: `2px solid ${cat.color}`,
+                    fontWeight: 600,
+                    '&:hover': {
+                      backgroundColor: selectedCategories.includes(cat.value) ? cat.color : `${cat.color}20`,
+                    },
+                  }}
+                />
+              ))}
+            </Box>
+            {selectedCategories.length === 0 && (
+              <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
+                Please select at least one category
+              </Typography>
+            )}
           </Box>
 
           <Box sx={{

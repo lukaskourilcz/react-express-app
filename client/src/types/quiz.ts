@@ -1,10 +1,12 @@
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'frontend';
+
 export interface Question {
   id: string;
   tags: string[];
   introduction: string;
   question: string;
   options: string[];
-  category: 'react' | 'typescript' | 'git' | 'javascript';
+  category: CategoryType;
   difficulty: 1 | 2 | 3 | 4 | 5;
 }
 

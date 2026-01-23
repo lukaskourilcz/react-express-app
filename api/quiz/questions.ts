@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { questions, shuffleArray, encodeSession, type DifficultyMode } from './data.js';
+import { questions, shuffleArray, encodeSession, type DifficultyMode, type CategoryType } from './data.js';
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   // Get count from query parameter, default to 10, max 50
@@ -9,22 +9,31 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   // Get difficulty mode from query parameter
   const difficultyMode = (req.query.difficulty as DifficultyMode) || 'zero-to-hero';
 
+  // Get categories from query parameter
+  const categoriesParam = req.query.categories as string || '';
+  const selectedCategories: CategoryType[] = categoriesParam
+    ? (categoriesParam.split(',') as CategoryType[])
+    : ['javascript', 'typescript', 'react', 'git', 'nodejs', 'frontend'];
+
+  // First filter by selected categories
+  const categoryFiltered = questions.filter(q => selectedCategories.includes(q.category));
+
   // Filter and select questions based on difficulty mode
   let selected: typeof questions;
 
   if (difficultyMode === 'easy') {
     // Easy mode: only difficulty 1-2
-    const easyQuestions = questions.filter(q => q.difficulty <= 2);
+    const easyQuestions = categoryFiltered.filter(q => q.difficulty <= 2);
     const shuffled = shuffleArray(easyQuestions);
     selected = shuffled.slice(0, count);
   } else if (difficultyMode === 'advanced') {
     // Advanced mode: only difficulty 3-5
-    const advancedQuestions = questions.filter(q => q.difficulty >= 3);
+    const advancedQuestions = categoryFiltered.filter(q => q.difficulty >= 3);
     const shuffled = shuffleArray(advancedQuestions);
     selected = shuffled.slice(0, count);
   } else if (difficultyMode === 'terminology') {
     // Terminology mode: only questions with "Terminology" tag
-    const terminologyQuestions = questions.filter(q => q.tags.includes('Terminology'));
+    const terminologyQuestions = categoryFiltered.filter(q => q.tags.includes('Terminology'));
     const shuffled = shuffleArray(terminologyQuestions);
     selected = shuffled.slice(0, count);
   } else {
@@ -34,7 +43,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     const selectedByDifficulty: typeof questions = [];
 
     for (let diff = 1; diff <= 5; diff++) {
-      const questionsAtDifficulty = questions.filter(q => q.difficulty === diff);
+      const questionsAtDifficulty = categoryFiltered.filter(q => q.difficulty === diff);
       const shuffled = shuffleArray(questionsAtDifficulty);
       selectedByDifficulty.push(...shuffled.slice(0, questionsPerDifficulty));
     }
