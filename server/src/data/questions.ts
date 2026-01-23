@@ -1,4 +1,4 @@
-export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'frontend';
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'frontend' | 'code-snippets';
 
 export interface Question {
   id: string;
@@ -12,7 +12,7 @@ export interface Question {
   difficulty: 1 | 2 | 3 | 4 | 5;
 }
 
-export type DifficultyMode = 'easy' | 'advanced' | 'zero-to-hero' | 'terminology' | 'code-snippets';
+export type DifficultyMode = 'easy' | 'advanced' | 'zero-to-hero' | 'terminology';
 
 export const questions: Question[] = [
   // REACT - useState

@@ -13,10 +13,18 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   const categoriesParam = req.query.categories as string || '';
   const selectedCategories: CategoryType[] = categoriesParam
     ? (categoriesParam.split(',') as CategoryType[])
-    : ['javascript', 'typescript', 'react', 'git', 'nodejs', 'frontend'];
+    : ['javascript', 'typescript', 'react', 'git', 'nodejs', 'frontend', 'code-snippets'];
 
-  // First filter by selected categories
-  const categoryFiltered = questions.filter(q => selectedCategories.includes(q.category));
+  // Separate code-snippets from regular categories
+  const includeCodeSnippets = selectedCategories.includes('code-snippets');
+  const regularCategories = selectedCategories.filter(c => c !== 'code-snippets') as CategoryType[];
+
+  // Filter questions: include regular category matches OR code snippets if selected
+  const categoryFiltered = questions.filter(q => {
+    const matchesRegularCategory = regularCategories.includes(q.category);
+    const isCodeSnippet = includeCodeSnippets && q.tags.includes('Code Output');
+    return matchesRegularCategory || isCodeSnippet;
+  });
 
   // Filter and select questions based on difficulty mode
   let selected: typeof questions;
@@ -35,11 +43,6 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     // Terminology mode: only questions with "Terminology" tag
     const terminologyQuestions = categoryFiltered.filter(q => q.tags.includes('Terminology'));
     const shuffled = shuffleArray(terminologyQuestions);
-    selected = shuffled.slice(0, count);
-  } else if (difficultyMode === 'code-snippets') {
-    // Code snippets mode: only questions with "Code Output" tag
-    const codeQuestions = categoryFiltered.filter(q => q.tags.includes('Code Output'));
-    const shuffled = shuffleArray(codeQuestions);
     selected = shuffled.slice(0, count);
   } else {
     // Zero to hero mode: progressive difficulty 1 → 5

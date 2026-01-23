@@ -38,14 +38,17 @@ const getCategoryColor = (category: string) => {
   }
 };
 
-const CATEGORY_OPTIONS: { value: CategoryType; label: string; color: string }[] = [
-  { value: 'javascript', label: 'JavaScript', color: '#4caf50' },
-  { value: 'typescript', label: 'TypeScript', color: '#9c27b0' },
-  { value: 'react', label: 'React', color: '#5a67d8' },
-  { value: 'nodejs', label: 'Node.js', color: '#0288d1' },
-  { value: 'git', label: 'Git', color: '#ed6c02' },
-  { value: 'frontend', label: 'General Frontend', color: '#d32f2f' },
+const CATEGORY_OPTIONS: { value: CategoryType; label: string }[] = [
+  { value: 'javascript', label: 'JavaScript' },
+  { value: 'typescript', label: 'TypeScript' },
+  { value: 'react', label: 'React' },
+  { value: 'nodejs', label: 'Node.js' },
+  { value: 'git', label: 'Git' },
+  { value: 'frontend', label: 'General Frontend' },
+  { value: 'code-snippets', label: 'Code Snippets' },
 ];
+
+const ALL_CATEGORIES: CategoryType[] = ['javascript', 'typescript', 'react', 'nodejs', 'git', 'frontend', 'code-snippets'];
 
 // Render question text with code blocks
 const renderQuestion = (text: string) => {
@@ -66,11 +69,10 @@ const renderQuestion = (text: string) => {
 const QUESTION_COUNT_OPTIONS = [10, 20, 30, 40, 50];
 
 const DIFFICULTY_OPTIONS: { value: DifficultyMode; label: string; description: string }[] = [
-  { value: 'terminology', label: 'Terminology', description: 'Basic terms only' },
-  { value: 'code-snippets', label: 'Code Snippets', description: 'What does this return?' },
+  { value: 'zero-to-hero', label: 'Zero to Hero', description: '1→5 progressive' },
   { value: 'easy', label: 'Easy', description: 'Difficulty 1-2' },
   { value: 'advanced', label: 'Advanced', description: 'Difficulty 3-5' },
-  { value: 'zero-to-hero', label: 'Zero to Hero', description: '1→5 progressive' },
+  { value: 'terminology', label: 'Terminology', description: 'Basic terms only' },
 ];
 
 function Quiz() {
@@ -83,7 +85,7 @@ function Quiz() {
   const [error, setError] = useState<string | null>(null);
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [difficultyMode, setDifficultyMode] = useState<DifficultyMode>('zero-to-hero');
-  const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>(['javascript', 'typescript', 'react', 'nodejs', 'git', 'frontend']);
+  const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>(ALL_CATEGORIES);
 
   const fetchQuestions = async (count: number, difficulty: DifficultyMode, categories: CategoryType[]) => {
     try {
@@ -119,6 +121,16 @@ function Quiz() {
         : [...prev, category]
     );
   };
+
+  const handleSelectAll = () => {
+    if (selectedCategories.length === ALL_CATEGORIES.length) {
+      setSelectedCategories([]);
+    } else {
+      setSelectedCategories(ALL_CATEGORIES);
+    }
+  };
+
+  const isAllSelected = selectedCategories.length === ALL_CATEGORIES.length;
 
   const handleAnswer = (questionId: string, answerIndex: number) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answerIndex }));
@@ -192,221 +204,178 @@ function Quiz() {
 
   if (state === 'ready') {
     return (
-      <Card className="quiz-card">
-        <CardContent className="quiz-start-card">
-          <Typography
-            variant="h4"
-            sx={{
-              mb: 1,
-              fontWeight: 600,
-              color: '#1a202c',
-            }}
-          >
-            Ready to test your knowledge?
+      <Box sx={{ maxWidth: 500, mx: 'auto', p: 2 }}>
+        <Typography
+          variant="h5"
+          sx={{
+            mb: 0.5,
+            fontWeight: 600,
+            color: '#1a1a1a',
+            textAlign: 'center',
+          }}
+        >
+          Frontend Quiz
+        </Typography>
+        <Typography
+          variant="body2"
+          sx={{
+            mb: 4,
+            color: '#666',
+            fontSize: '0.85rem',
+            textAlign: 'center',
+          }}
+        >
+          400+ questions
+        </Typography>
+
+        {/* Categories Section */}
+        <Box sx={{ mb: 4 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+            <Typography variant="body2" sx={{ color: '#888', fontWeight: 500, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Categories
+            </Typography>
+            <Button
+              size="small"
+              onClick={handleSelectAll}
+              sx={{
+                fontSize: '0.7rem',
+                textTransform: 'none',
+                color: '#666',
+                minWidth: 'auto',
+                p: '2px 8px',
+                '&:hover': { backgroundColor: '#f5f5f5' }
+              }}
+            >
+              {isAllSelected ? 'Deselect All' : 'Select All'}
+            </Button>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
+            {CATEGORY_OPTIONS.map((cat) => (
+              <Chip
+                key={cat.value}
+                label={cat.label}
+                size="small"
+                onClick={() => handleCategoryToggle(cat.value)}
+                sx={{
+                  cursor: 'pointer',
+                  backgroundColor: selectedCategories.includes(cat.value) ? '#1a1a1a' : '#fff',
+                  color: selectedCategories.includes(cat.value) ? '#fff' : '#1a1a1a',
+                  border: '1px solid #e0e0e0',
+                  fontWeight: 500,
+                  fontSize: '0.8rem',
+                  '&:hover': {
+                    backgroundColor: selectedCategories.includes(cat.value) ? '#333' : '#f5f5f5',
+                  },
+                }}
+              />
+            ))}
+          </Box>
+          {selectedCategories.length === 0 && (
+            <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block' }}>
+              Select at least one category
+            </Typography>
+          )}
+        </Box>
+
+        {/* Selected Categories Display */}
+        {selectedCategories.length > 0 && selectedCategories.length < ALL_CATEGORIES.length && (
+          <Box sx={{ mb: 4, p: 1.5, backgroundColor: '#fafafa', borderRadius: 1 }}>
+            <Typography variant="caption" sx={{ color: '#888', display: 'block', mb: 0.5 }}>
+              Selected ({selectedCategories.length}):
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.8rem' }}>
+              {selectedCategories.map(cat => CATEGORY_OPTIONS.find(c => c.value === cat)?.label).join(', ')}
+            </Typography>
+          </Box>
+        )}
+
+        {/* Question Count */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="body2" sx={{ color: '#888', fontWeight: 500, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', mb: 1.5 }}>
+            Questions
           </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              mb: 3,
-              color: 'text.secondary',
-              fontSize: '0.9rem',
-            }}
-          >
-            Frontend quiz with 400+ questions
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            {QUESTION_COUNT_OPTIONS.map((count) => (
+              <Button
+                key={count}
+                variant={questionCount === count ? 'contained' : 'outlined'}
+                size="small"
+                onClick={() => setQuestionCount(count)}
+                sx={{
+                  minWidth: 44,
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  backgroundColor: questionCount === count ? '#1a1a1a' : '#fff',
+                  color: questionCount === count ? '#fff' : '#1a1a1a',
+                  border: '1px solid #e0e0e0',
+                  '&:hover': {
+                    backgroundColor: questionCount === count ? '#333' : '#f5f5f5',
+                    border: '1px solid #e0e0e0',
+                  },
+                }}
+              >
+                {count}
+              </Button>
+            ))}
+          </Box>
+        </Box>
+
+        {/* Difficulty */}
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="body2" sx={{ color: '#888', fontWeight: 500, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.5px', mb: 1.5 }}>
+            Difficulty
           </Typography>
-
-          <Box sx={{
-            backgroundColor: 'rgba(0,0,0,0.02)',
-            borderRadius: 2,
-            p: 2.5,
-            mb: 3,
-          }}>
-            <Typography
-              variant="body2"
-              sx={{
-                mb: 1.5,
-                color: 'text.secondary',
-                fontWeight: 500,
-                fontSize: '0.8rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}
-            >
-              Select Categories
-            </Typography>
-            <Box sx={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: 1,
-              flexWrap: 'wrap',
-            }}>
-              {CATEGORY_OPTIONS.map((cat) => (
-                <Chip
-                  key={cat.value}
-                  label={cat.label}
-                  onClick={() => handleCategoryToggle(cat.value)}
-                  sx={{
-                    cursor: 'pointer',
-                    backgroundColor: selectedCategories.includes(cat.value) ? cat.color : 'transparent',
-                    color: selectedCategories.includes(cat.value) ? 'white' : 'text.primary',
-                    border: `2px solid ${cat.color}`,
-                    fontWeight: 600,
-                    '&:hover': {
-                      backgroundColor: selectedCategories.includes(cat.value) ? cat.color : `${cat.color}20`,
-                    },
-                  }}
-                />
-              ))}
-            </Box>
-            {selectedCategories.length === 0 && (
-              <Typography variant="caption" color="error" sx={{ mt: 1, display: 'block', textAlign: 'center' }}>
-                Please select at least one category
-              </Typography>
-            )}
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {DIFFICULTY_OPTIONS.map((option) => (
+              <Button
+                key={option.value}
+                variant={difficultyMode === option.value ? 'contained' : 'outlined'}
+                size="small"
+                onClick={() => setDifficultyMode(option.value)}
+                sx={{
+                  fontWeight: 500,
+                  fontSize: '0.8rem',
+                  textTransform: 'none',
+                  backgroundColor: difficultyMode === option.value ? '#1a1a1a' : '#fff',
+                  color: difficultyMode === option.value ? '#fff' : '#1a1a1a',
+                  border: '1px solid #e0e0e0',
+                  '&:hover': {
+                    backgroundColor: difficultyMode === option.value ? '#333' : '#f5f5f5',
+                    border: '1px solid #e0e0e0',
+                  },
+                }}
+              >
+                {option.label}
+              </Button>
+            ))}
           </Box>
+        </Box>
 
-          <Box sx={{
-            backgroundColor: 'rgba(0,0,0,0.02)',
-            borderRadius: 2,
-            p: 2.5,
-            mb: 3,
-          }}>
-            <Typography
-              variant="body2"
-              sx={{
-                mb: 1.5,
-                color: 'text.secondary',
-                fontWeight: 500,
-                fontSize: '0.8rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}
-            >
-              Number of questions
-            </Typography>
-            <ToggleButtonGroup
-              value={questionCount}
-              exclusive
-              onChange={(_, value) => value && setQuestionCount(value)}
-              sx={{
-                display: 'flex',
-                justifyContent: 'center',
-              }}
-            >
-              {QUESTION_COUNT_OPTIONS.map((count) => (
-                <ToggleButton
-                  key={count}
-                  value={count}
-                  sx={{
-                    px: { xs: 2, sm: 2.5 },
-                    py: 1,
-                    fontWeight: 600,
-                    fontSize: '0.9rem',
-                    border: '1px solid rgba(0,0,0,0.12)',
-                    '&.Mui-selected': {
-                      backgroundColor: 'primary.main',
-                      color: 'white',
-                      borderColor: 'primary.main',
-                      '&:hover': {
-                        backgroundColor: 'primary.dark',
-                      },
-                    },
-                  }}
-                >
-                  {count}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Box>
-
-          <Box sx={{
-            backgroundColor: 'rgba(0,0,0,0.02)',
-            borderRadius: 2,
-            p: 2.5,
-            mb: 3,
-          }}>
-            <Typography
-              variant="body2"
-              sx={{
-                mb: 1.5,
-                color: 'text.secondary',
-                fontWeight: 500,
-                fontSize: '0.8rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.5px',
-              }}
-            >
-              Difficulty Level
-            </Typography>
-            <ToggleButtonGroup
-              value={difficultyMode}
-              exclusive
-              onChange={(_, value) => value && setDifficultyMode(value)}
-              sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                flexWrap: 'wrap',
-                gap: 0.5,
-              }}
-            >
-              {DIFFICULTY_OPTIONS.map((option) => (
-                <ToggleButton
-                  key={option.value}
-                  value={option.value}
-                  sx={{
-                    px: { xs: 1.5, sm: 2 },
-                    py: 1,
-                    fontWeight: 600,
-                    fontSize: '0.85rem',
-                    border: '1px solid rgba(0,0,0,0.12)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 0.25,
-                    '&.Mui-selected': {
-                      backgroundColor: 'primary.main',
-                      color: 'white',
-                      borderColor: 'primary.main',
-                      '&:hover': {
-                        backgroundColor: 'primary.dark',
-                      },
-                    },
-                  }}
-                >
-                  <span style={{ color: 'inherit' }}>{option.label}</span>
-                  <Typography
-                    component="span"
-                    sx={{
-                      fontSize: '0.65rem',
-                      opacity: 0.85,
-                      fontWeight: 400,
-                      color: 'inherit',
-                    }}
-                  >
-                    {option.description}
-                  </Typography>
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Box>
-
-          <Button
-            variant="contained"
-            size="large"
-            onClick={handleStart}
-            fullWidth
-            sx={{
-              ...quizStyles.startButton,
-              py: 1.5,
-              fontSize: '1rem',
-              fontWeight: 600,
-              textTransform: 'none',
-              borderRadius: 2,
-            }}
-          >
-            Start Quiz
-          </Button>
-        </CardContent>
-      </Card>
+        {/* Start Button */}
+        <Button
+          variant="contained"
+          size="large"
+          onClick={handleStart}
+          disabled={selectedCategories.length === 0}
+          fullWidth
+          sx={{
+            py: 1.5,
+            fontSize: '0.95rem',
+            fontWeight: 600,
+            textTransform: 'none',
+            borderRadius: 1,
+            backgroundColor: '#1a1a1a',
+            '&:hover': {
+              backgroundColor: '#333',
+            },
+            '&:disabled': {
+              backgroundColor: '#ccc',
+            },
+          }}
+        >
+          Start Quiz
+        </Button>
+      </Box>
     );
   }
 
