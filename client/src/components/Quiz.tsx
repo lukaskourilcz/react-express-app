@@ -287,15 +287,15 @@ function Quiz() {
                 onClick={() => handleCategoryToggle(cat.value)}
                 sx={{
                   cursor: 'pointer',
-                  backgroundColor: '#fff',
-                  color: '#1a1a1a',
-                  border: '1px solid #1a1a1a',
+                  backgroundColor: selectedCategories.includes(cat.value) ? `${cat.color}15` : '#fff',
+                  color: selectedCategories.includes(cat.value) ? cat.color : '#555',
+                  border: selectedCategories.includes(cat.value) ? `2px solid ${cat.color}` : '1px solid #ddd',
                   borderLeft: `4px solid ${cat.color}`,
                   borderRadius: 1,
-                  fontWeight: 500,
+                  fontWeight: selectedCategories.includes(cat.value) ? 600 : 500,
                   fontSize: '0.8rem',
                   '&:hover': {
-                    backgroundColor: '#f5f5f5',
+                    backgroundColor: selectedCategories.includes(cat.value) ? `${cat.color}20` : '#f8f8f8',
                   },
                 }}
               />
