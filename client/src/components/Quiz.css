@@ -1,6 +1,6 @@
 .quiz-progress-container {
   margin-bottom: 1.5rem;
-  background: rgba(255, 255, 255, 0.15);
+  background: #f5f5f5;
   border-radius: 8px;
   padding: 0.75rem 1rem;
 }
@@ -9,13 +9,15 @@
   display: flex;
   justify-content: space-between;
   margin-bottom: 0.6rem;
-  color: #ffffff;
+  color: #666;
   font-weight: 500;
   font-size: 0.8rem;
 }
 
 .quiz-card {
   margin-bottom: 0;
+  background: #ffffff;
+  border: 1px solid #eee;
 }
 
 .quiz-card-content {
@@ -31,7 +33,7 @@
 
 .quiz-question-number {
   font-weight: 600;
-  color: #5a67d8;
+  color: #1a1a1a;
   font-size: 0.75rem;
 }
 
@@ -39,7 +41,7 @@
   font-size: clamp(0.9rem, 3vw, 1rem);
   margin-bottom: 1.5rem;
   font-weight: 500;
-  color: #2d3748;
+  color: #1a1a1a;
   line-height: 1.6;
 }
 
@@ -64,7 +66,7 @@
 .quiz-score-text {
   font-size: clamp(2.5rem, 10vw, 3.5rem);
   font-weight: 700;
-  color: #5a67d8;
+  color: #1a1a1a;
   margin-bottom: 0.5rem;
 }
 
@@ -72,6 +74,8 @@
   padding: clamp(1rem, 3vw, 1.25rem) clamp(1rem, 3vw, 1.5rem);
   margin-bottom: 0.75rem;
   border-radius: 8px;
+  background: #fff;
+  border: 1px solid #eee;
 }
 
 .quiz-result-item.correct {
@@ -93,15 +97,13 @@
 }
 
 .quiz-review-header {
-  color: #ffffff !important;
-  font-weight: 700;
-  margin-top: 3rem;
-  margin-bottom: 1.5rem;
-  font-size: clamp(1.2rem, 4vw, 1.5rem);
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
-  padding: 1rem 0;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.4);
-  letter-spacing: 0.5px;
+  color: #1a1a1a !important;
+  font-weight: 600;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+  font-size: clamp(1rem, 4vw, 1.1rem);
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #eee;
 }
 
 .quiz-start-card {
@@ -109,19 +111,14 @@
   text-align: center;
 }
 
-.quiz-card {
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
 .quiz-code-block {
-  background-color: #1e1e1e;
-  color: #d4d4d4;
+  background-color: #1a1a1a;
+  color: #e0e0e0;
   padding: 1rem;
   border-radius: 6px;
   margin: 1rem 0;
   overflow-x: auto;
-  font-family: 'Fira Code', 'Consolas', 'Monaco', monospace;
+  font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
   font-size: 0.85rem;
   line-height: 1.5;
 }

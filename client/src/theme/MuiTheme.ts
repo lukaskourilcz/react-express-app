@@ -4,53 +4,63 @@ export const theme = createTheme({
   palette: {
     mode: 'light',
     primary: {
-      main: '#5a67d8',
-      light: '#7c85e0',
-      dark: '#4c56c0',
+      main: '#1a1a1a',
+      light: '#333333',
+      dark: '#000000',
     },
     secondary: {
-      main: '#764ba2',
-      light: '#9b6fc7',
-      dark: '#5a3480',
+      main: '#666666',
+      light: '#888888',
+      dark: '#444444',
     },
     success: {
-      main: '#48bb78',
-      light: '#68d391',
-      dark: '#38a169',
+      main: '#22c55e',
+      light: '#4ade80',
+      dark: '#16a34a',
     },
     error: {
-      main: '#f56565',
-      light: '#fc8181',
-      dark: '#e53e3e',
+      main: '#ef4444',
+      light: '#f87171',
+      dark: '#dc2626',
+    },
+    warning: {
+      main: '#f59e0b',
+      light: '#fbbf24',
+      dark: '#d97706',
+    },
+    info: {
+      main: '#3b82f6',
+      light: '#60a5fa',
+      dark: '#2563eb',
     },
     background: {
-      default: '#f7fafc',
+      default: '#ffffff',
       paper: '#ffffff',
     },
     text: {
-      primary: '#2d3748',
-      secondary: '#718096',
+      primary: '#1a1a1a',
+      secondary: '#666666',
     },
   },
   typography: {
-    fontFamily: 'Roboto, -apple-system, BlinkMacSystemFont, sans-serif',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     h4: {
       fontWeight: 600,
-      color: '#2d3748',
+      color: '#1a1a1a',
     },
     h5: {
       fontWeight: 600,
-      color: '#4a5568',
+      color: '#1a1a1a',
     },
     h6: {
       fontWeight: 600,
-      color: '#4a5568',
+      color: '#1a1a1a',
     },
     body1: {
-      color: '#2d3748',
+      color: '#1a1a1a',
     },
     body2: {
-      color: '#718096',
+      color: '#666666',
     },
   },
   shape: {
@@ -62,14 +72,14 @@ export const theme = createTheme({
         root: {
           textTransform: 'none',
           fontWeight: 500,
-          borderRadius: 8,
-          padding: '8px 20px',
+          borderRadius: 6,
+          padding: '8px 16px',
           boxShadow: 'none',
         },
         containedPrimary: {
-          backgroundColor: '#5a67d8',
+          backgroundColor: '#1a1a1a',
           '&:hover': {
-            backgroundColor: '#4c56c0',
+            backgroundColor: '#333333',
             boxShadow: 'none',
           },
         },
@@ -79,8 +89,8 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 12,
-          boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-          border: '1px solid #e2e8f0',
+          boxShadow: 'none',
+          border: '1px solid #e5e5e5',
         },
       },
     },
@@ -88,21 +98,20 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           fontWeight: 500,
-          textTransform: 'capitalize',
-          fontSize: '0.75rem',
+          fontSize: '0.8rem',
         },
       },
     },
     MuiRadio: {
       styleOverrides: {
         root: {
-          padding: '2px',
-          color: '#a0aec0',
+          padding: '4px',
+          color: '#d4d4d4',
           '& .MuiSvgIcon-root': {
-            fontSize: '1rem',
+            fontSize: '1.1rem',
           },
           '&.Mui-checked': {
-            color: '#5a67d8',
+            color: '#1a1a1a',
           },
         },
       },
@@ -110,13 +119,13 @@ export const theme = createTheme({
     MuiLinearProgress: {
       styleOverrides: {
         root: {
-          height: 6,
-          borderRadius: 3,
-          backgroundColor: '#e2e8f0',
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: '#e5e5e5',
         },
         bar: {
-          borderRadius: 3,
-          backgroundColor: '#5a67d8',
+          borderRadius: 2,
+          backgroundColor: '#1a1a1a',
         },
       },
     },
@@ -138,20 +147,20 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           margin: 0,
-          padding: '6px 10px',
-          borderRadius: 6,
-          border: '1px solid #e2e8f0',
+          padding: '10px 12px',
+          borderRadius: 8,
+          border: '1px solid #e5e5e5',
           backgroundColor: '#ffffff',
           transition: 'all 0.15s ease',
           '&:hover': {
-            borderColor: '#cbd5e0',
-            backgroundColor: '#f7fafc',
+            borderColor: '#d4d4d4',
+            backgroundColor: '#fafafa',
           },
         },
         label: {
           fontWeight: 400,
-          color: '#4a5568',
-          fontSize: '0.8rem',
+          color: '#1a1a1a',
+          fontSize: '0.9rem',
         },
       },
     },
@@ -168,46 +177,43 @@ export const quizStyles = {
   submitButton: {
     px: 3,
     py: 1,
-    backgroundColor: '#ffffff',
-    color: '#5a67d8',
-    border: '1px solid #5a67d8',
+    backgroundColor: '#1a1a1a',
+    color: '#ffffff',
     '&:hover': {
-      backgroundColor: '#f7fafc',
+      backgroundColor: '#333333',
     },
     '&.Mui-disabled': {
-      backgroundColor: '#f7fafc',
-      color: '#a0aec0',
-      borderColor: '#e2e8f0',
+      backgroundColor: '#e5e5e5',
+      color: '#a3a3a3',
     },
   },
   nextButton: {
     px: 3,
     py: 1,
-    backgroundColor: '#ffffff',
-    color: '#5a67d8',
-    border: '1px solid #5a67d8',
+    backgroundColor: '#1a1a1a',
+    color: '#ffffff',
     '&:hover': {
-      backgroundColor: '#f7fafc',
+      backgroundColor: '#333333',
     },
   },
   previousButton: {
     px: 3,
     py: 1,
     backgroundColor: '#ffffff',
-    color: '#4a5568',
-    border: '1px solid #e2e8f0',
+    color: '#666666',
+    border: '1px solid #e5e5e5',
     '&:hover': {
-      backgroundColor: '#f7fafc',
-      borderColor: '#cbd5e0',
+      backgroundColor: '#fafafa',
+      borderColor: '#d4d4d4',
     },
     '&.Mui-disabled': {
-      backgroundColor: 'transparent',
-      color: 'rgba(255,255,255,0.4)',
-      borderColor: 'rgba(255,255,255,0.2)',
+      backgroundColor: '#fafafa',
+      color: '#d4d4d4',
+      borderColor: '#e5e5e5',
     },
   },
   optionSelected: {
-    borderColor: '#5a67d8',
-    backgroundColor: '#ebf4ff',
+    borderColor: '#1a1a1a',
+    backgroundColor: '#fafafa',
   },
 };

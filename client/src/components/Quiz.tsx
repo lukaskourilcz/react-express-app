@@ -17,10 +17,10 @@ import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } fr
 import { quizStyles } from '../theme/MuiTheme';
 import './Quiz.css';
 
-const getCategoryColor = (category: string) => {
+const getCategoryColor = (category: string): "default" | "primary" | "secondary" | "success" | "error" | "info" | "warning" => {
   switch (category) {
     case 'react':
-      return 'primary';
+      return 'info';
     case 'typescript':
       return 'secondary';
     case 'git':
@@ -28,7 +28,7 @@ const getCategoryColor = (category: string) => {
     case 'javascript':
       return 'success';
     case 'nodejs':
-      return 'info';
+      return 'success';
     case 'frontend':
       return 'error';
     default:
