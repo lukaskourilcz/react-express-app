@@ -19,7 +19,7 @@ export const questions: Question[] = [
   {
     id: '1',
     tags: ["useState","Hooks"],
-    introduction: 'useState is a React Hook that lets you add state to functional components. It returns an array with the current state and a function to update it.',
+    introduction: 'useState is one of the most fundamental React Hooks. Understanding its return value is key to using it correctly.',
     question: 'What does useState return?\n\n```jsx\nconst [value, setValue] = useState(initialValue);\n```',
     options: ['A single value', 'An array with value and setter', 'An object with value and setter', 'A promise'],
     correctAnswer: 1,
@@ -30,7 +30,7 @@ export const questions: Question[] = [
   {
     id: '2',
     tags: ["useState","Hooks","Re-render"],
-    introduction: 'useState provides a setter function that triggers re-renders when called. Understanding how state updates work is crucial for React development.',
+    introduction: 'React state management involves understanding how components respond to state changes. This is fundamental to React\'s reactive nature.',
     question: 'What happens when you call the setter function from useState?\n\n```jsx\nconst [count, setCount] = useState(0);\nsetCount(5); // What happens here?\n```',
     options: ['Nothing', 'Component re-renders', 'Page refreshes', 'State updates without re-render'],
     correctAnswer: 1,
@@ -41,7 +41,7 @@ export const questions: Question[] = [
   {
     id: '3',
     tags: ["useState","Hooks","State Update"],
-    introduction: 'When updating state based on the previous value, React provides a functional update pattern to ensure you always work with the latest state.',
+    introduction: 'State updates in React can be tricky when the new value depends on the previous one, especially with batched updates.',
     question: 'How do you update state based on previous state?\n\n```jsx\nconst [count, setCount] = useState(0);\n// Which approach is correct?\n```',
     options: ['setState(state + 1)', 'setState(prev => prev + 1)', 'setState(this.state + 1)', 'state++'],
     correctAnswer: 1,
@@ -52,7 +52,7 @@ export const questions: Question[] = [
   {
     id: '4',
     tags: ["useState","Hooks","Initial Value"],
-    introduction: 'useState accepts an initial value that determines the starting state. Understanding when this value is used is important for optimization.',
+    introduction: 'useState accepts a parameter when called. Understanding how React handles this parameter across renders is important.',
     question: 'What is the initial value parameter in useState used for?\n\n```jsx\nconst [name, setName] = useState("John");\n//                              ^^^^^^\n```',
     options: ['Default value on every render', 'Initial value only on first render', 'Fallback value', 'Validation'],
     correctAnswer: 1,
@@ -87,7 +87,7 @@ export const questions: Question[] = [
   {
     id: '7',
     tags: ["useEffect","Hooks","Dependency Array"],
-    introduction: 'The dependency array in useEffect controls when the effect runs. An empty array is a common pattern for one-time setup.',
+    introduction: 'The dependency array in useEffect is a powerful feature. Different configurations lead to different behaviors.',
     question: 'What does an empty dependency array in useEffect do?\n\n```jsx\nuseEffect(() => {\n  fetchData();\n}, []); // <-- empty array\n```',
     options: ['Runs on every render', 'Runs only on mount', 'Runs only on unmount', 'Disables the effect'],
     correctAnswer: 1,
@@ -98,7 +98,7 @@ export const questions: Question[] = [
   {
     id: '8',
     tags: ["useEffect","Hooks","Cleanup"],
-    introduction: 'useEffect can return a cleanup function to prevent memory leaks and clean up subscriptions or timers.',
+    introduction: 'useEffect allows you to return something from its callback. Understanding this pattern is important for resource management.',
     question: 'What does the return function in useEffect do?\n\n```jsx\nuseEffect(() => {\n  subscribe();\n  return () => {\n    unsubscribe(); // <-- this function\n  };\n}, []);\n```',
     options: ['Returns a value', 'Cleanup function', 'Error handler', 'Nothing'],
     correctAnswer: 1,
@@ -133,7 +133,7 @@ export const questions: Question[] = [
   {
     id: '11',
     tags: ["useCallback","Hooks","Memoization"],
-    introduction: 'useCallback is a Hook that memoizes functions to prevent unnecessary re-creations on every render.',
+    introduction: 'useCallback is a performance optimization Hook. Understanding when and why to use it is key to writing efficient React code.',
     question: 'What is the purpose of useCallback?\n\n```jsx\nconst memoizedFn = useCallback(() => {\n  doSomething(a, b);\n}, [a, b]);\n```',
     options: ['To call functions', 'To memoize callback functions', 'To create callbacks', 'To handle async operations'],
     correctAnswer: 1,
@@ -190,7 +190,7 @@ export const questions: Question[] = [
   {
     id: '16',
     tags: ["useMemo","Hooks","Memoization"],
-    introduction: 'useMemo is a Hook that memoizes computed values to avoid expensive recalculations on every render.',
+    introduction: 'useMemo is a performance optimization Hook in React. It helps manage expensive computations efficiently.',
     question: 'What is the purpose of useMemo?\n\n```jsx\nconst memoizedValue = useMemo(\n  () => computeExpensiveValue(a, b),\n  [a, b]\n);\n```',
     options: ['To memorize values', 'To memoize expensive calculations', 'To create memos', 'To store data permanently'],
     correctAnswer: 1,
@@ -201,7 +201,7 @@ export const questions: Question[] = [
   {
     id: '17',
     tags: ["useMemo","Hooks","Performance"],
-    introduction: 'useMemo caches the result of a computation and only recalculates when dependencies change.',
+    introduction: 'Understanding when useMemo recalculates is crucial for using it effectively in performance optimization.',
     question: 'When does useMemo recompute its value?\n\n```jsx\nconst result = useMemo(\n  () => filterItems(items, query),\n  [items, query]\n);\n```',
     options: ['Every render', 'Never', 'When dependencies change', 'Only on mount'],
     correctAnswer: 2,
@@ -234,7 +234,7 @@ export const questions: Question[] = [
   {
     id: '20',
     tags: ["useMemo","Hooks","Dependency Array"],
-    introduction: 'The dependency array in useMemo determines when the cached value should be recalculated.',
+    introduction: 'Like other hooks, useMemo accepts a dependency array. Understanding edge cases like empty arrays is important.',
     question: 'What happens if useMemo dependencies are empty []?\n\n```jsx\nconst config = useMemo(\n  () => parseConfig(data),\n  [] // empty array\n);\n```',
     options: ['Value computed every render', 'Value computed once on mount', 'Value is undefined', 'Error is thrown'],
     correctAnswer: 1,
@@ -247,7 +247,7 @@ export const questions: Question[] = [
   {
     id: '21',
     tags: ["useRef","Hooks","Refs"],
-    introduction: 'useRef creates a mutable reference that persists across renders without causing re-renders when changed.',
+    introduction: 'useRef is a versatile Hook with unique characteristics. Understanding what it returns is fundamental.',
     question: 'What does useRef return?\n\n```jsx\nconst myRef = useRef(initialValue);\nconsole.log(myRef); // What is logged?\n```',
     options: ['A mutable ref object', 'A DOM element', 'A state value', 'A callback function'],
     correctAnswer: 0,
@@ -258,7 +258,7 @@ export const questions: Question[] = [
   {
     id: '22',
     tags: ["useRef","Hooks","DOM"],
-    introduction: 'useRef is commonly used to access DOM elements directly, similar to how refs work in class components.',
+    introduction: 'useRef has different characteristics than useState. Understanding how it affects component behavior is important.',
     question: 'Does changing useRef.current trigger a re-render?\n\n```jsx\nconst countRef = useRef(0);\ncountRef.current = 5; // Does this re-render?\n```',
     options: ['Yes', 'No', 'Only if connected to state', 'Only on mount'],
     correctAnswer: 1,
@@ -303,8 +303,8 @@ export const questions: Question[] = [
   // REACT - React Router
   {
     id: '26',
-    tags: ["useContext","Hooks","Context"],
-    introduction: 'useContext is a Hook that lets you subscribe to React context, enabling data sharing without prop drilling.',
+    tags: ["useLocation","React Router","Hooks"],
+    introduction: 'React Router provides several hooks for accessing routing information. Each hook serves a specific purpose.',
     question: 'Which hook returns the current URL location in React Router?\n\n```jsx\nconst location = use???();\n// location = { pathname, search, hash, state }\n```',
     options: ['useHistory', 'useLocation', 'useRoute', 'useURL'],
     correctAnswer: 1,
@@ -393,8 +393,8 @@ export const questions: Question[] = [
   // REACT - React Hook Form
   {
     id: '34',
-    tags: ["useReducer","Hooks","Dispatch"],
-    introduction: 'The dispatch function from useReducer is stable and doesn\'t change between renders, making it safe to pass to child components.',
+    tags: ["React Hook Form","Forms","Hooks"],
+    introduction: 'React Hook Form is a popular library for handling forms in React. It provides several hooks for different purposes.',
     question: 'What hook is the main entry point for React Hook Form?\n\n```jsx\nconst { register, handleSubmit, formState } = use???();\n```',
     options: ['useForm', 'useFormState', 'useController', 'useWatch'],
     correctAnswer: 0,
@@ -516,8 +516,8 @@ export const questions: Question[] = [
   },
   {
     id: '45',
-    tags: ["Rules of Hooks","ESLint","Hooks"],
-    introduction: 'The ESLint plugin for React Hooks can automatically detect violations of the Rules of Hooks.',
+    tags: ["useContext","Hooks","Context"],
+    introduction: 'React Context provides a way to share data across the component tree. React offers a hook to consume context values.',
     question: 'What hook would you use to access context?\n\n```jsx\nconst ThemeContext = createContext("light");\n\nfunction Button() {\n  const theme = use???(ThemeContext);\n  return <button className={theme}>Click</button>;\n}\n```',
     options: ['useState', 'useContext', 'useReducer', 'useRef'],
     correctAnswer: 1,
@@ -861,8 +861,8 @@ export const questions: Question[] = [
   // GIT
   {
     id: '76',
-    tags: ["Conditional Types","Advanced"],
-    introduction: 'Conditional types enable type-level programming, selecting types based on conditions.',
+    tags: ["git init","Git Basics","Terminology"],
+    introduction: 'Git commands are essential for version control. Understanding what each command does is fundamental to using Git.',
     question: 'What does git init do?\n\n```bash\n$ git init\nInitialized empty Git repository in /project/.git/\n```',
     options: ['Clones a repository', 'Creates a new Git repository', 'Initializes a branch', 'Starts git daemon'],
     correctAnswer: 1,
@@ -872,8 +872,8 @@ export const questions: Question[] = [
   },
   {
     id: '77',
-    tags: ["keyof Operator","Type Operators"],
-    introduction: 'The \'keyof\' operator creates a union type of all property names of an object type.',
+    tags: ["git clone","Git Basics","Terminology"],
+    introduction: 'Git provides commands to work with remote repositories. This is one of the first commands you learn when collaborating.',
     question: 'What does git clone do?\n\n```bash\n$ git clone https://github.com/user/repo.git\nCloning into \'repo\'...\n```',
     options: ['Creates a new branch', 'Copies a repository', 'Merges branches', 'Deletes a repository'],
     correctAnswer: 1,
@@ -1150,7 +1150,7 @@ export const questions: Question[] = [
   {
     id: '102',
     tags: ["--ours --theirs","Merge Conflicts"],
-    introduction: 'Understanding --ours and --theirs in Git helps resolve merge conflicts by choosing the correct version.',
+    introduction: 'Git provides flags to help resolve merge conflicts by choosing one version over another. The naming can be confusing.',
     question: 'What does --ours mean in git checkout?\n\n```bash\n$ git checkout --ours package-lock.json\n# vs\n$ git checkout --theirs package-lock.json\n```',
     options: ['Remote version', 'Your current branch version', 'Base version', 'Latest version'],
     correctAnswer: 1,
@@ -1171,8 +1171,8 @@ export const questions: Question[] = [
   },
   {
     id: '104',
-    tags: ["Staging Area","git add"],
-    introduction: 'The staging area in Git (also called the index) holds changes that will be included in the next commit.',
+    tags: ["npm","package-lock","Merge Conflicts"],
+    introduction: 'When resolving merge conflicts involving package-lock.json, you need to regenerate it properly rather than manually editing it.',
     question: 'What command regenerates package-lock.json after conflict?\n\n```bash\n$ git checkout --ours package-lock.json\n$ ???\n$ git add package-lock.json\n```',
     options: ['npm update', 'npm install', 'npm ci', 'npm rebuild'],
     correctAnswer: 1,
@@ -1340,8 +1340,8 @@ export const questions: Question[] = [
   // MORE REACT ESSENTIALS
   {
     id: '119',
-    tags: ["git blame","History"],
-    introduction: 'Git blame shows who last modified each line of a file and when.',
+    tags: ["React Lists","Keys","Performance"],
+    introduction: 'When rendering lists in React, there is a special prop that React uses to optimize updates. Understanding why it matters is important.',
     question: 'Why do React lists need keys?\n\n```jsx\n{items.map(item => (\n  <li key={item.id}>{item.name}</li>\n))}\n```',
     options: ['For styling', 'To help React identify which items changed', 'For accessibility', 'Keys are optional'],
     correctAnswer: 1,
@@ -1701,7 +1701,7 @@ export const questions: Question[] = [
   {
     id: '151',
     tags: ["Component Lifecycle","Mount/Unmount"],
-    introduction: 'JavaScript components go through lifecycle phases: mounting (creation), updating, and unmounting (removal).',
+    introduction: 'React components have a lifecycle with distinct phases. Understanding terminology helps when reading documentation.',
     question: 'What does "mounting" mean in React?\n\n```jsx\nfunction Component() {\n  useEffect(() => {\n    console.log("Component mounted!");\n    \n    return () => {\n      console.log("Component unmounted!");\n    };\n  }, []);\n}\n```',
     options: ['Styling a component', 'Component is created and inserted into the DOM', 'Updating component props', 'Removing event listeners'],
     correctAnswer: 1,
@@ -2231,7 +2231,7 @@ export const questions: Question[] = [
   {
     id: '199',
     tags: ["useEffect","Infinite Loop","Debugging"],
-    introduction: 'Preventing infinite loops in useEffect requires understanding dependency arrays and functional updates.',
+    introduction: 'useEffect can cause infinite loops if not used carefully. This is a common pitfall for React developers.',
     question: 'How to avoid infinite loops in useEffect?\n\n```jsx\n// INFINITE LOOP - state change triggers effect, effect changes state\nuseEffect(() => {\n  setCount(count + 1); // Changes state, triggers re-render, runs effect again...\n});\n\n// FIXED - add dependency array\nuseEffect(() => {\n  setCount(count + 1);\n}, []); // Runs once\n\n// FIXED - use functional update\nuseEffect(() => {\n  setCount(c => c + 1);\n}, []); // Doesn\'t need count in deps\n```',
     options: ['Infinite loops are impossible', 'Add correct dependencies, use functional updates', 'Always use empty dependency array', 'Remove useEffect entirely'],
     correctAnswer: 1,
@@ -2424,7 +2424,7 @@ export const questions: Question[] = [
   {
     id: '216',
     tags: ["Render","Terminology","Lifecycle"],
-    introduction: 'React components describe what the UI should look like, but something needs to actually put it on screen.',
+    introduction: 'React has specific terminology for its processes. Understanding these terms helps communicate with other developers.',
     question: 'What does "render" mean in React?',
     options: ['Deleting components', 'The process of converting components into DOM elements on screen', 'Styling components', 'Importing modules'],
     correctAnswer: 1,
@@ -2435,7 +2435,7 @@ export const questions: Question[] = [
   {
     id: '217',
     tags: ["Mount","Terminology","Lifecycle"],
-    introduction: 'React components go through different phases of their lifecycle, starting when they first appear.',
+    introduction: 'React lifecycle terminology is important for understanding documentation and debugging issues.',
     question: 'What does "mount" mean in React?',
     options: ['Styling a component', 'When a component is first added to the DOM', 'Removing a component', 'Updating state'],
     correctAnswer: 1,
