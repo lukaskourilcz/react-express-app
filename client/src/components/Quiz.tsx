@@ -20,31 +20,6 @@ import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } fr
 import { quizStyles } from '../theme/MuiTheme';
 import './Quiz.css';
 
-const getCategoryColor = (category: string): "default" | "primary" | "secondary" | "success" | "error" | "info" | "warning" => {
-  switch (category) {
-    case 'react':
-      return 'info';
-    case 'typescript':
-      return 'secondary';
-    case 'git':
-      return 'warning';
-    case 'javascript':
-      return 'success';
-    case 'nodejs':
-      return 'success';
-    case 'html':
-      return 'error';
-    case 'css':
-      return 'info';
-    case 'frontend':
-      return 'warning';
-    case 'backend':
-      return 'primary';
-    default:
-      return 'default';
-  }
-};
-
 const CATEGORY_OPTIONS: { value: CategoryType; label: string; color: string }[] = [
   { value: 'html', label: 'HTML', color: '#e34c26' },
   { value: 'css', label: 'CSS', color: '#264de4' },
@@ -57,6 +32,14 @@ const CATEGORY_OPTIONS: { value: CategoryType; label: string; color: string }[] 
   { value: 'backend', label: 'Backend', color: '#06b6d4' },
   { value: 'code-snippets', label: 'Code Snippets', color: '#ec4899' },
 ];
+
+// Gradient using category colors
+const CATEGORY_GRADIENT = 'linear-gradient(90deg, #e34c26, #264de4, #f7df1e, #3178c6, #61dafb, #339933, #f05032, #8b5cf6, #06b6d4, #ec4899)';
+
+// Get category color by category value
+const getCategoryHexColor = (category: string): string => {
+  return CATEGORY_OPTIONS.find(c => c.value === category)?.color || '#666';
+};
 
 const ALL_CATEGORIES: CategoryType[] = ['html', 'css', 'javascript', 'typescript', 'react', 'nodejs', 'git', 'frontend', 'backend', 'code-snippets'];
 
@@ -208,7 +191,16 @@ function Quiz() {
             Loading questions...
           </Typography>
           <Box sx={{ width: '100%', maxWidth: 300 }}>
-            <LinearProgress sx={{ backgroundColor: 'primary.light' }} />
+            <LinearProgress
+              sx={{
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: 'rgba(0,0,0,0.1)',
+                '& .MuiLinearProgress-bar': {
+                  background: CATEGORY_GRADIENT,
+                }
+              }}
+            />
           </Box>
         </CardContent>
       </Card>
@@ -239,7 +231,9 @@ function Quiz() {
         backgroundColor: '#fff',
         borderRadius: 2,
         border: '1px solid #e0e0e0',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        borderTop: '4px solid transparent',
+        borderImage: `${CATEGORY_GRADIENT} 1`,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
       }}>
         <Typography
           variant="h5"
@@ -405,12 +399,21 @@ function Quiz() {
             fontWeight: 600,
             textTransform: 'none',
             borderRadius: 1,
-            backgroundColor: '#1a1a1a',
+            background: CATEGORY_GRADIENT,
+            backgroundSize: '200% 100%',
+            animation: 'gradientShift 3s ease infinite',
+            '@keyframes gradientShift': {
+              '0%': { backgroundPosition: '0% 50%' },
+              '50%': { backgroundPosition: '100% 50%' },
+              '100%': { backgroundPosition: '0% 50%' },
+            },
             '&:hover': {
-              backgroundColor: '#333',
+              background: CATEGORY_GRADIENT,
+              backgroundSize: '200% 100%',
+              filter: 'brightness(1.1)',
             },
             '&:disabled': {
-              backgroundColor: '#ccc',
+              background: '#ccc',
             },
           }}
         >
@@ -423,12 +426,22 @@ function Quiz() {
   if (state === 'submitted' && result) {
     return (
       <>
-        <Card className="quiz-card">
+        <Card className="quiz-card" sx={{ borderTop: `4px solid transparent`, borderImage: `${CATEGORY_GRADIENT} 1` }}>
           <CardContent className="quiz-result-card">
             <Typography variant="h4" sx={{ mb: 2 }}>
               Quiz Complete!
             </Typography>
-            <Typography className="quiz-score-text">{result.percentage}%</Typography>
+            <Typography
+              className="quiz-score-text"
+              sx={{
+                background: CATEGORY_GRADIENT,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}
+            >
+              {result.percentage}%
+            </Typography>
             <Typography variant="h6" sx={{ mt: 1 }}>
               {result.correctAnswers} out of {result.totalQuestions} correct
             </Typography>
@@ -437,7 +450,14 @@ function Quiz() {
                 variant="contained"
                 size="large"
                 onClick={handleRestart}
-                sx={quizStyles.startButton}
+                sx={{
+                  ...quizStyles.startButton,
+                  background: CATEGORY_GRADIENT,
+                  '&:hover': {
+                    background: CATEGORY_GRADIENT,
+                    filter: 'brightness(1.1)',
+                  },
+                }}
               >
                 Try Again
               </Button>
@@ -465,7 +485,11 @@ function Quiz() {
                 <Chip
                   label={question.category}
                   size="small"
-                  color={getCategoryColor(question.category) as any}
+                  sx={{
+                    backgroundColor: getCategoryHexColor(question.category),
+                    color: ['javascript', 'react'].includes(question.category) ? '#1a1a1a' : '#fff',
+                    fontWeight: 600,
+                  }}
                 />
               </Box>
               <Box sx={{ mb: 2, fontWeight: 500 }}>
@@ -485,10 +509,9 @@ function Quiz() {
                   sx={{
                     mt: 1.5,
                     p: 1.5,
-                    backgroundColor: 'rgba(0,0,0,0.04)',
+                    backgroundColor: `${getCategoryHexColor(question.category)}10`,
                     borderRadius: 1,
-                    borderLeft: '3px solid',
-                    borderLeftColor: 'primary.main',
+                    borderLeft: `4px solid ${getCategoryHexColor(question.category)}`,
                   }}
                 >
                   {questionResult.explanation}
@@ -521,7 +544,7 @@ function Quiz() {
             backgroundColor: 'rgba(255,255,255,0.3)',
             '& .MuiLinearProgress-bar': {
               borderRadius: 3,
-              backgroundColor: '#ffffff',
+              background: CATEGORY_GRADIENT,
             }
           }}
         />
@@ -536,7 +559,11 @@ function Quiz() {
             <Chip
               label={currentQuestion.category}
               size="small"
-              color={getCategoryColor(currentQuestion.category) as any}
+              sx={{
+                backgroundColor: getCategoryHexColor(currentQuestion.category),
+                color: ['javascript', 'react'].includes(currentQuestion.category) ? '#1a1a1a' : '#fff',
+                fontWeight: 600,
+              }}
             />
           </div>
 
@@ -571,10 +598,9 @@ function Quiz() {
                 mt: 2,
                 mb: 2,
                 p: 1.5,
-                backgroundColor: 'rgba(90, 103, 216, 0.08)',
+                backgroundColor: `${getCategoryHexColor(currentQuestion.category)}10`,
                 borderRadius: 1,
-                borderLeft: '3px solid',
-                borderLeftColor: 'primary.main',
+                borderLeft: `4px solid ${getCategoryHexColor(currentQuestion.category)}`,
                 fontSize: '0.85rem',
                 lineHeight: 1.6,
               }}
