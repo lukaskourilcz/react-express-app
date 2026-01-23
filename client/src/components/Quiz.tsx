@@ -30,8 +30,12 @@ const getCategoryColor = (category: string): "default" | "primary" | "secondary"
       return 'success';
     case 'nodejs':
       return 'success';
-    case 'frontend':
+    case 'html':
       return 'error';
+    case 'css':
+      return 'info';
+    case 'frontend':
+      return 'warning';
     case 'backend':
       return 'primary';
     default:
@@ -40,6 +44,8 @@ const getCategoryColor = (category: string): "default" | "primary" | "secondary"
 };
 
 const CATEGORY_OPTIONS: { value: CategoryType; label: string }[] = [
+  { value: 'html', label: 'HTML' },
+  { value: 'css', label: 'CSS' },
   { value: 'javascript', label: 'JavaScript' },
   { value: 'typescript', label: 'TypeScript' },
   { value: 'react', label: 'React' },
@@ -50,7 +56,7 @@ const CATEGORY_OPTIONS: { value: CategoryType; label: string }[] = [
   { value: 'code-snippets', label: 'Code Snippets' },
 ];
 
-const ALL_CATEGORIES: CategoryType[] = ['javascript', 'typescript', 'react', 'nodejs', 'git', 'frontend', 'backend', 'code-snippets'];
+const ALL_CATEGORIES: CategoryType[] = ['html', 'css', 'javascript', 'typescript', 'react', 'nodejs', 'git', 'frontend', 'backend', 'code-snippets'];
 
 // Render question text with code blocks
 const renderQuestion = (text: string) => {
@@ -224,7 +230,7 @@ function Quiz() {
             textAlign: 'center',
           }}
         >
-          Frontend Quiz
+          Web Development Quiz
         </Typography>
         <Typography
           variant="body2"
@@ -235,7 +241,7 @@ function Quiz() {
             textAlign: 'center',
           }}
         >
-          400+ questions
+          500+ questions
         </Typography>
 
         {/* Categories Section */}

@@ -29,7 +29,7 @@ quizRouter.get('/questions', (req, res) => {
   const categoriesParam = req.query.categories as string || '';
   const selectedCategories: CategoryType[] = categoriesParam
     ? (categoriesParam.split(',') as CategoryType[])
-    : ['javascript', 'typescript', 'react', 'git', 'nodejs', 'frontend', 'backend', 'code-snippets'];
+    : ['html', 'css', 'javascript', 'typescript', 'react', 'git', 'nodejs', 'frontend', 'backend', 'code-snippets'];
 
   // Separate special categories from regular categories
   const includeCodeSnippets = selectedCategories.includes('code-snippets');
