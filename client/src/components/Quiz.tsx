@@ -338,12 +338,12 @@ function Quiz() {
                   minWidth: 44,
                   fontWeight: 600,
                   fontSize: '0.85rem',
-                  backgroundColor: questionCount === count ? '#1a1a1a' : '#fff',
-                  color: questionCount === count ? '#fff' : '#1a1a1a',
-                  border: '1px solid #e0e0e0',
+                  backgroundColor: questionCount === count ? '#339933' : '#fff',
+                  color: questionCount === count ? '#fff' : '#555',
+                  border: questionCount === count ? '1px solid #339933' : '1px solid #ddd',
                   '&:hover': {
-                    backgroundColor: questionCount === count ? '#333' : '#f5f5f5',
-                    border: '1px solid #e0e0e0',
+                    backgroundColor: questionCount === count ? '#2d8a2d' : '#f8f8f8',
+                    border: questionCount === count ? '1px solid #2d8a2d' : '1px solid #ccc',
                   },
                 }}
               >
@@ -369,12 +369,12 @@ function Quiz() {
                     fontWeight: 500,
                     fontSize: '0.8rem',
                     textTransform: 'none',
-                    backgroundColor: difficultyMode === option.value ? '#1a1a1a' : '#fff',
-                    color: difficultyMode === option.value ? '#fff' : '#1a1a1a',
-                    border: '1px solid #e0e0e0',
+                    backgroundColor: difficultyMode === option.value ? '#339933' : '#fff',
+                    color: difficultyMode === option.value ? '#fff' : '#555',
+                    border: difficultyMode === option.value ? '1px solid #339933' : '1px solid #ddd',
                     '&:hover': {
-                      backgroundColor: difficultyMode === option.value ? '#333' : '#f5f5f5',
-                      border: '1px solid #e0e0e0',
+                      backgroundColor: difficultyMode === option.value ? '#2d8a2d' : '#f8f8f8',
+                      border: difficultyMode === option.value ? '1px solid #2d8a2d' : '1px solid #ccc',
                     },
                   }}
                 >
