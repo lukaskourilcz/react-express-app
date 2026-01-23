@@ -58,7 +58,16 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
       selectedByDifficulty.push(...shuffled.slice(0, questionsPerDifficulty));
     }
 
-    // Take exactly the count needed, maintaining order (easy to hard)
+    // If we don't have enough questions from progressive selection,
+    // fill remaining slots from shuffled pool of all filtered questions
+    if (selectedByDifficulty.length < count) {
+      const selectedIds = new Set(selectedByDifficulty.map(q => q.id));
+      const remaining = categoryFiltered.filter(q => !selectedIds.has(q.id));
+      const shuffledRemaining = shuffleArray(remaining);
+      selectedByDifficulty.push(...shuffledRemaining.slice(0, count - selectedByDifficulty.length));
+    }
+
+    // Take exactly the count needed
     selected = selectedByDifficulty.slice(0, count);
   }
 

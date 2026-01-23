@@ -45,6 +45,26 @@ const getCategoryColor = (category: string): "default" | "primary" | "secondary"
   }
 };
 
+// Get a consistent color for tags based on tag name
+const getTagColor = (tag: string): string => {
+  const colors = [
+    '#3b82f6', // blue
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#ef4444', // red
+    '#8b5cf6', // purple
+    '#ec4899', // pink
+    '#06b6d4', // cyan
+    '#f97316', // orange
+  ];
+  // Simple hash to get consistent color for same tag
+  let hash = 0;
+  for (let i = 0; i < tag.length; i++) {
+    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return colors[Math.abs(hash) % colors.length];
+};
+
 const CATEGORY_OPTIONS: { value: CategoryType; label: string }[] = [
   { value: 'html', label: 'HTML' },
   { value: 'css', label: 'CSS' },
@@ -314,13 +334,15 @@ function Quiz() {
         </Box>
 
         {/* Selected Categories Display */}
-        {selectedCategories.length > 0 && selectedCategories.length < ALL_CATEGORIES.length && (
+        {selectedCategories.length > 0 && (
           <Box sx={{ mb: 4, p: 1.5, backgroundColor: '#fafafa', borderRadius: 1 }}>
             <Typography variant="caption" sx={{ color: '#888', display: 'block', mb: 0.5 }}>
-              Selected ({selectedCategories.length}):
+              Selected ({selectedCategories.length}/{ALL_CATEGORIES.length}):
             </Typography>
             <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.8rem' }}>
-              {selectedCategories.map(cat => CATEGORY_OPTIONS.find(c => c.value === cat)?.label).join(', ')}
+              {selectedCategories.length === ALL_CATEGORIES.length
+                ? 'All categories'
+                : selectedCategories.map(cat => CATEGORY_OPTIONS.find(c => c.value === cat)?.label).join(', ')}
             </Typography>
           </Box>
         )}
@@ -538,20 +560,29 @@ function Quiz() {
 
           {currentQuestion.tags && currentQuestion.tags.length > 0 && (
             <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1.5 }}>
-              {currentQuestion.tags.map((tag, idx) => (
-                <Chip
-                  key={idx}
-                  label={`#${tag}`}
-                  size="small"
-                  variant="outlined"
-                  sx={{
-                    fontSize: '0.7rem',
-                    height: '22px',
-                    borderColor: 'rgba(0,0,0,0.15)',
-                    color: 'text.secondary',
-                  }}
-                />
-              ))}
+              {currentQuestion.tags.map((tag, idx) => {
+                const tagColor = getTagColor(tag);
+                return (
+                  <Chip
+                    key={idx}
+                    label={`#${tag}`}
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      fontSize: '0.7rem',
+                      height: '22px',
+                      borderColor: 'rgba(0,0,0,0.1)',
+                      borderLeft: `3px solid ${tagColor}`,
+                      borderRadius: '4px',
+                      color: 'text.secondary',
+                      backgroundColor: `${tagColor}08`,
+                      '& .MuiChip-label': {
+                        paddingLeft: '6px',
+                      },
+                    }}
+                  />
+                );
+              })}
             </Box>
           )}
 
