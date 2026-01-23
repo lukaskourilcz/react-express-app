@@ -12,6 +12,7 @@ import {
   Alert,
   Chip,
   Paper,
+  Tooltip,
 } from '@mui/material';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { quizStyles } from '../theme/MuiTheme';
@@ -31,6 +32,8 @@ const getCategoryColor = (category: string): "default" | "primary" | "secondary"
       return 'success';
     case 'frontend':
       return 'error';
+    case 'backend':
+      return 'primary';
     default:
       return 'default';
   }
@@ -42,11 +45,12 @@ const CATEGORY_OPTIONS: { value: CategoryType; label: string }[] = [
   { value: 'react', label: 'React' },
   { value: 'nodejs', label: 'Node.js' },
   { value: 'git', label: 'Git' },
-  { value: 'frontend', label: 'General Frontend' },
+  { value: 'frontend', label: 'Frontend' },
+  { value: 'backend', label: 'Backend' },
   { value: 'code-snippets', label: 'Code Snippets' },
 ];
 
-const ALL_CATEGORIES: CategoryType[] = ['javascript', 'typescript', 'react', 'nodejs', 'git', 'frontend', 'code-snippets'];
+const ALL_CATEGORIES: CategoryType[] = ['javascript', 'typescript', 'react', 'nodejs', 'git', 'frontend', 'backend', 'code-snippets'];
 
 // Render question text with code blocks
 const renderQuestion = (text: string) => {
@@ -66,11 +70,11 @@ const renderQuestion = (text: string) => {
 
 const QUESTION_COUNT_OPTIONS = [10, 20, 30, 40, 50];
 
-const DIFFICULTY_OPTIONS: { value: DifficultyMode; label: string; description: string }[] = [
-  { value: 'zero-to-hero', label: 'Zero to Hero', description: '1→5 progressive' },
-  { value: 'easy', label: 'Easy', description: 'Difficulty 1-2' },
-  { value: 'advanced', label: 'Advanced', description: 'Difficulty 3-5' },
-  { value: 'terminology', label: 'Terminology', description: 'Basic terms only' },
+const DIFFICULTY_OPTIONS: { value: DifficultyMode; label: string; tooltip: string }[] = [
+  { value: 'zero-to-hero', label: 'Zero to Hero', tooltip: 'Progressive difficulty from 1 to 5. Great for learning!' },
+  { value: 'easy', label: 'Easy', tooltip: 'Only difficulty levels 1-2. Perfect for beginners.' },
+  { value: 'advanced', label: 'Advanced', tooltip: 'Difficulty levels 3-5. For experienced developers.' },
+  { value: 'terminology', label: 'Terminology', tooltip: 'Focus on definitions and basic terms.' },
 ];
 
 function Quiz() {
@@ -202,7 +206,15 @@ function Quiz() {
 
   if (state === 'ready') {
     return (
-      <Box sx={{ maxWidth: 500, mx: 'auto', p: 2 }}>
+      <Box sx={{
+        maxWidth: 500,
+        mx: 'auto',
+        p: 3,
+        backgroundColor: '#fff',
+        borderRadius: 2,
+        border: '1px solid #e0e0e0',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+      }}>
         <Typography
           variant="h5"
           sx={{
@@ -325,26 +337,27 @@ function Quiz() {
           </Typography>
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
             {DIFFICULTY_OPTIONS.map((option) => (
-              <Button
-                key={option.value}
-                variant={difficultyMode === option.value ? 'contained' : 'outlined'}
-                size="small"
-                onClick={() => setDifficultyMode(option.value)}
-                sx={{
-                  fontWeight: 500,
-                  fontSize: '0.8rem',
-                  textTransform: 'none',
-                  backgroundColor: difficultyMode === option.value ? '#1a1a1a' : '#fff',
-                  color: difficultyMode === option.value ? '#fff' : '#1a1a1a',
-                  border: '1px solid #e0e0e0',
-                  '&:hover': {
-                    backgroundColor: difficultyMode === option.value ? '#333' : '#f5f5f5',
+              <Tooltip key={option.value} title={option.tooltip} arrow placement="top">
+                <Button
+                  variant={difficultyMode === option.value ? 'contained' : 'outlined'}
+                  size="small"
+                  onClick={() => setDifficultyMode(option.value)}
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: '0.8rem',
+                    textTransform: 'none',
+                    backgroundColor: difficultyMode === option.value ? '#1a1a1a' : '#fff',
+                    color: difficultyMode === option.value ? '#fff' : '#1a1a1a',
                     border: '1px solid #e0e0e0',
-                  },
-                }}
-              >
-                {option.label}
-              </Button>
+                    '&:hover': {
+                      backgroundColor: difficultyMode === option.value ? '#333' : '#f5f5f5',
+                      border: '1px solid #e0e0e0',
+                    },
+                  }}
+                >
+                  {option.label}
+                </Button>
+              </Tooltip>
             ))}
           </Box>
         </Box>

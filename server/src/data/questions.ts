@@ -1,4 +1,4 @@
-export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'frontend' | 'code-snippets';
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'frontend' | 'backend' | 'code-snippets';
 
 export interface Question {
   id: string;
@@ -1755,7 +1755,7 @@ export const questions: Question[] = [
   },
   {
     id: '156',
-    tags: ["Node.js","Runtime"],
+    tags: ["Node.js","Backend","Runtime"],
     introduction: 'Node.js allows running JavaScript outside the browser, enabling server-side development.',
     question: 'What is the difference between dependencies and devDependencies?\n\n```json\n{\n  "dependencies": {\n    "react": "^18.0.0"    // Needed at runtime\n  },\n  "devDependencies": {\n    "jest": "^29.0.0"     // Only needed for development\n  }\n}\n```',
     options: ['No difference', 'dependencies are for runtime, devDependencies for development only', 'devDependencies are optional', 'dependencies are outdated'],
@@ -3418,7 +3418,7 @@ export const questions: Question[] = [
   // NODE.JS QUESTIONS (305-354)
   {
     id: '305',
-    tags: ["Node.js","Runtime","Terminology"],
+    tags: ["Node.js","Backend","Runtime","Terminology"],
     introduction: 'Node.js allows JavaScript to run outside the browser, enabling server-side development.',
     question: 'What is Node.js?',
     options: ['A JavaScript framework', 'A JavaScript runtime built on Chrome\'s V8 engine', 'A database', 'A web browser'],
@@ -3429,7 +3429,7 @@ export const questions: Question[] = [
   },
   {
     id: '306',
-    tags: ["Node.js","require","Modules"],
+    tags: ["Node.js","Backend","require","Modules"],
     introduction: 'Node.js has a module system for organizing and sharing code between files.',
     question: 'What does `require()` do in Node.js?',
     options: ['Installs a package', 'Imports a module', 'Creates a new file', 'Starts the server'],
@@ -3440,7 +3440,7 @@ export const questions: Question[] = [
   },
   {
     id: '307',
-    tags: ["Node.js","module.exports","Modules"],
+    tags: ["Node.js","Backend","module.exports","Modules"],
     introduction: 'To share code from one file to another, Node.js uses exports.',
     question: 'How do you export a function from a Node.js module?',
     options: ['export function', 'module.exports = function', 'return function', 'public function'],
@@ -3451,7 +3451,7 @@ export const questions: Question[] = [
   },
   {
     id: '308',
-    tags: ["Node.js","__dirname","Path"],
+    tags: ["Node.js","Backend","__dirname","Path"],
     introduction: 'Node.js provides special variables for working with file paths.',
     question: 'What does `__dirname` contain in Node.js?',
     options: ['Current working directory', 'Directory of the current module', 'Home directory', 'Root directory'],
@@ -3462,7 +3462,7 @@ export const questions: Question[] = [
   },
   {
     id: '309',
-    tags: ["Node.js","__filename","Path"],
+    tags: ["Node.js","Backend","__filename","Path"],
     introduction: 'Similar to __dirname, Node.js provides the full path to the current file.',
     question: 'What does `__filename` contain in Node.js?',
     options: ['Just the file name', 'The full path to the current file', 'The file extension', 'The file size'],
@@ -3473,7 +3473,7 @@ export const questions: Question[] = [
   },
   {
     id: '310',
-    tags: ["Node.js","npm","Package Manager"],
+    tags: ["Node.js","Backend","npm","Package Manager"],
     introduction: 'npm is the default package manager for Node.js projects.',
     question: 'What does npm stand for?',
     options: ['Node Project Manager', 'Node Package Manager', 'New Package Module', 'Node Program Manager'],
@@ -3484,7 +3484,7 @@ export const questions: Question[] = [
   },
   {
     id: '311',
-    tags: ["Node.js","package.json","Configuration"],
+    tags: ["Node.js","Backend","package.json","Configuration"],
     introduction: 'Every Node.js project typically has a configuration file that describes the project.',
     question: 'What is the purpose of package.json?',
     options: ['Store database config', 'Define project metadata and dependencies', 'Configure the web server', 'Store environment variables'],
@@ -3495,7 +3495,7 @@ export const questions: Question[] = [
   },
   {
     id: '312',
-    tags: ["Node.js","npm install","Dependencies"],
+    tags: ["Node.js","Backend","npm install","Dependencies"],
     introduction: 'Installing packages is a common task when working with Node.js projects.',
     question: 'What does `npm install` do?',
     options: ['Installs Node.js', 'Installs dependencies listed in package.json', 'Updates npm itself', 'Creates a new project'],
@@ -3506,7 +3506,7 @@ export const questions: Question[] = [
   },
   {
     id: '313',
-    tags: ["Node.js","Event Loop","Asynchronous"],
+    tags: ["Node.js","Backend","Event Loop","Asynchronous"],
     introduction: 'Node.js handles concurrent operations differently than multi-threaded languages.',
     question: 'What is the event loop in Node.js?',
     options: ['A for loop for events', 'A mechanism that handles async operations', 'A debugging tool', 'A type of event listener'],
@@ -3517,7 +3517,7 @@ export const questions: Question[] = [
   },
   {
     id: '314',
-    tags: ["Node.js","fs","File System"],
+    tags: ["Node.js","Backend","fs","File System"],
     introduction: 'Node.js can read and write files on the server.',
     question: 'Which module is used to work with the file system in Node.js?',
     options: ['file', 'fs', 'filesystem', 'io'],
@@ -3528,7 +3528,7 @@ export const questions: Question[] = [
   },
   {
     id: '315',
-    tags: ["Node.js","fs.readFile","File System"],
+    tags: ["Node.js","Backend","fs.readFile","File System"],
     introduction: 'Reading files is a common operation in Node.js applications.',
     question: 'What does `fs.readFile()` return by default?',
     options: ['A string', 'A Buffer', 'A JSON object', 'An array'],
@@ -3539,7 +3539,7 @@ export const questions: Question[] = [
   },
   {
     id: '316',
-    tags: ["Node.js","Buffer","Binary Data"],
+    tags: ["Node.js","Backend","Buffer","Binary Data"],
     introduction: 'Node.js handles binary data differently than browsers.',
     question: 'What is a Buffer in Node.js?',
     options: ['A temporary variable', 'A container for raw binary data', 'A type of array', 'A caching mechanism'],
@@ -3550,7 +3550,7 @@ export const questions: Question[] = [
   },
   {
     id: '317',
-    tags: ["Node.js","http","Server"],
+    tags: ["Node.js","Backend","http","Server"],
     introduction: 'Node.js can create web servers without external frameworks.',
     question: 'Which built-in module creates an HTTP server in Node.js?',
     options: ['server', 'http', 'web', 'net'],
@@ -3561,7 +3561,7 @@ export const questions: Question[] = [
   },
   {
     id: '318',
-    tags: ["Node.js","http.createServer","Server"],
+    tags: ["Node.js","Backend","http.createServer","Server"],
     introduction: 'Creating a basic server is one of the first things you learn in Node.js.',
     question: 'What does `http.createServer()` return?',
     options: ['A URL', 'A Server object', 'A port number', 'An HTML page'],
@@ -3572,7 +3572,7 @@ export const questions: Question[] = [
   },
   {
     id: '319',
-    tags: ["Node.js","Express","Framework"],
+    tags: ["Node.js","Backend","Express","Framework"],
     introduction: 'Express is the most popular web framework for Node.js.',
     question: 'What is Express.js?',
     options: ['A database', 'A minimal web framework for Node.js', 'A testing library', 'A template engine'],
@@ -3583,7 +3583,7 @@ export const questions: Question[] = [
   },
   {
     id: '320',
-    tags: ["Node.js","Express","Routing"],
+    tags: ["Node.js","Backend","Express","Routing"],
     introduction: 'Express makes it easy to define routes for different URLs.',
     question: 'How do you define a GET route in Express?',
     options: ['app.route("/path")', 'app.get("/path", handler)', 'app.GET("/path")', 'route.get("/path")'],
@@ -3594,7 +3594,7 @@ export const questions: Question[] = [
   },
   {
     id: '321',
-    tags: ["Node.js","Express","Middleware"],
+    tags: ["Node.js","Backend","Express","Middleware"],
     introduction: 'Middleware is a core concept in Express applications.',
     question: 'What is middleware in Express?',
     options: ['The middle layer of MVC', 'Functions that execute during request-response cycle', 'A database connector', 'A routing system'],
@@ -3605,7 +3605,7 @@ export const questions: Question[] = [
   },
   {
     id: '322',
-    tags: ["Node.js","process.env","Environment"],
+    tags: ["Node.js","Backend","process.env","Environment"],
     introduction: 'Configuration often differs between development and production environments.',
     question: 'How do you access environment variables in Node.js?',
     options: ['env.get()', 'process.env.VARIABLE_NAME', 'global.env', 'require("env")'],
@@ -3616,7 +3616,7 @@ export const questions: Question[] = [
   },
   {
     id: '323',
-    tags: ["Node.js","path","File System"],
+    tags: ["Node.js","Backend","path","File System"],
     introduction: 'Working with file paths across different operating systems requires care.',
     question: 'Why should you use the path module instead of string concatenation for paths?',
     options: ['It\'s faster', 'It handles OS-specific path separators', 'It\'s required by Node.js', 'It encrypts paths'],
@@ -3627,7 +3627,7 @@ export const questions: Question[] = [
   },
   {
     id: '324',
-    tags: ["Node.js","path.join","File System"],
+    tags: ["Node.js","Backend","path.join","File System"],
     introduction: 'Combining path segments safely is important for cross-platform compatibility.',
     question: 'What does `path.join()` do?',
     options: ['Joins two strings', 'Joins path segments with the correct separator', 'Creates a new directory', 'Validates a path'],
@@ -3638,7 +3638,7 @@ export const questions: Question[] = [
   },
   {
     id: '325',
-    tags: ["Node.js","Streams","Data"],
+    tags: ["Node.js","Backend","Streams","Data"],
     introduction: 'Handling large files efficiently requires a different approach than loading everything into memory.',
     question: 'What are Streams in Node.js used for?',
     options: ['Playing video', 'Processing data piece by piece without loading all into memory', 'Creating animations', 'Managing database connections'],
@@ -3649,7 +3649,7 @@ export const questions: Question[] = [
   },
   {
     id: '326',
-    tags: ["Node.js","async/await","Asynchronous"],
+    tags: ["Node.js","Backend","async/await","Asynchronous"],
     introduction: 'Modern Node.js code often uses async/await for cleaner asynchronous code.',
     question: 'What does an async function return in Node.js?',
     options: ['undefined', 'A Promise', 'The return value directly', 'A callback'],
@@ -3660,7 +3660,7 @@ export const questions: Question[] = [
   },
   {
     id: '327',
-    tags: ["Node.js","Error Handling","try/catch"],
+    tags: ["Node.js","Backend","Error Handling","try/catch"],
     introduction: 'Proper error handling prevents your Node.js application from crashing.',
     question: 'How do you handle errors in async/await code?',
     options: ['Use .catch() only', 'Use try/catch blocks', 'Errors are handled automatically', 'Use error callbacks'],
@@ -3671,7 +3671,7 @@ export const questions: Question[] = [
   },
   {
     id: '328',
-    tags: ["Node.js","JSON","Data"],
+    tags: ["Node.js","Backend","JSON","Data"],
     introduction: 'JSON is the most common data format in Node.js applications.',
     question: 'How do you parse a JSON string in Node.js?',
     options: ['JSON.decode()', 'JSON.parse()', 'parseJSON()', 'json.read()'],
@@ -3682,7 +3682,7 @@ export const questions: Question[] = [
   },
   {
     id: '329',
-    tags: ["Node.js","JSON","Data"],
+    tags: ["Node.js","Backend","JSON","Data"],
     introduction: 'Converting objects to JSON strings is often needed for APIs and file storage.',
     question: 'How do you convert an object to a JSON string?',
     options: ['JSON.encode()', 'JSON.stringify()', 'toString()', 'object.toJSON()'],
@@ -3693,7 +3693,7 @@ export const questions: Question[] = [
   },
   {
     id: '330',
-    tags: ["Node.js","npm scripts","Configuration"],
+    tags: ["Node.js","Backend","npm scripts","Configuration"],
     introduction: 'npm scripts automate common tasks in Node.js projects.',
     question: 'How do you run a script defined in package.json?',
     options: ['node script-name', 'npm run script-name', 'npm script-name', 'run script-name'],
@@ -3704,7 +3704,7 @@ export const questions: Question[] = [
   },
   {
     id: '331',
-    tags: ["Node.js","nodemon","Development"],
+    tags: ["Node.js","Backend","nodemon","Development"],
     introduction: 'Restarting the server manually after every code change is tedious during development.',
     question: 'What does nodemon do?',
     options: ['Monitors network traffic', 'Automatically restarts Node.js when files change', 'Manages npm packages', 'Debugs Node.js code'],
@@ -3715,7 +3715,7 @@ export const questions: Question[] = [
   },
   {
     id: '332',
-    tags: ["Node.js","process","Global"],
+    tags: ["Node.js","Backend","process","Global"],
     introduction: 'Node.js provides a global object with information about the current process.',
     question: 'What information does the `process` object provide?',
     options: ['Only environment variables', 'Information about the current Node.js process', 'CPU usage only', 'Network status'],
@@ -3726,7 +3726,7 @@ export const questions: Question[] = [
   },
   {
     id: '333',
-    tags: ["Node.js","process.argv","CLI"],
+    tags: ["Node.js","Backend","process.argv","CLI"],
     introduction: 'Command-line arguments let users pass options to your Node.js scripts.',
     question: 'What does `process.argv` contain?',
     options: ['Environment variables', 'An array of command-line arguments', 'The current directory', 'Node.js version'],
@@ -3737,7 +3737,7 @@ export const questions: Question[] = [
   },
   {
     id: '334',
-    tags: ["Node.js","setTimeout","Timers"],
+    tags: ["Node.js","Backend","setTimeout","Timers"],
     introduction: 'Timers in Node.js work similarly to browsers but with some differences.',
     question: 'Does `setTimeout` in Node.js block the event loop?',
     options: ['Yes, always', 'No, it\'s non-blocking', 'Only with long delays', 'Depends on the callback'],
@@ -3748,7 +3748,7 @@ export const questions: Question[] = [
   },
   {
     id: '335',
-    tags: ["Node.js","setImmediate","Timers"],
+    tags: ["Node.js","Backend","setImmediate","Timers"],
     introduction: 'Node.js has additional timer functions not found in browsers.',
     question: 'What does `setImmediate()` do in Node.js?',
     options: ['Executes immediately, blocking other code', 'Schedules callback after current event loop phase', 'Same as setTimeout(fn, 0)', 'Runs before any setTimeout'],
@@ -3759,7 +3759,7 @@ export const questions: Question[] = [
   },
   {
     id: '336',
-    tags: ["Node.js","Events","EventEmitter"],
+    tags: ["Node.js","Backend","Events","EventEmitter"],
     introduction: 'Node.js uses an event-driven architecture for many of its core modules.',
     question: 'What is an EventEmitter in Node.js?',
     options: ['A logging tool', 'A class that emits and handles events', 'An error handler', 'A stream type'],
@@ -3770,7 +3770,7 @@ export const questions: Question[] = [
   },
   {
     id: '337',
-    tags: ["Node.js","Events","Listeners"],
+    tags: ["Node.js","Backend","Events","Listeners"],
     introduction: 'Listening for events is fundamental to Node.js programming.',
     question: 'How do you listen for an event on an EventEmitter?',
     options: ['emitter.listen("event", handler)', 'emitter.on("event", handler)', 'emitter.watch("event", handler)', 'emitter.catch("event", handler)'],
@@ -3781,7 +3781,7 @@ export const questions: Question[] = [
   },
   {
     id: '338',
-    tags: ["Node.js","child_process","System"],
+    tags: ["Node.js","Backend","child_process","System"],
     introduction: 'Sometimes you need to run other programs or scripts from Node.js.',
     question: 'Which module is used to spawn child processes in Node.js?',
     options: ['subprocess', 'child_process', 'spawn', 'exec'],
@@ -3792,7 +3792,7 @@ export const questions: Question[] = [
   },
   {
     id: '339',
-    tags: ["Node.js","cluster","Scaling"],
+    tags: ["Node.js","Backend","cluster","Scaling"],
     introduction: 'Node.js is single-threaded, but you can utilize multiple CPU cores.',
     question: 'What is the cluster module used for in Node.js?',
     options: ['Database clustering', 'Creating multiple instances to handle more load', 'Managing microservices', 'Load balancing external servers'],
@@ -3803,7 +3803,7 @@ export const questions: Question[] = [
   },
   {
     id: '340',
-    tags: ["Node.js","cors","Security"],
+    tags: ["Node.js","Backend","cors","Security"],
     introduction: 'Web browsers restrict cross-origin requests for security.',
     question: 'What is CORS and why is it needed in Node.js servers?',
     options: ['A database feature', 'A mechanism to allow cross-origin requests', 'A caching system', 'An authentication method'],
@@ -3814,7 +3814,7 @@ export const questions: Question[] = [
   },
   {
     id: '341',
-    tags: ["Node.js","dotenv","Configuration"],
+    tags: ["Node.js","Backend","dotenv","Configuration"],
     introduction: 'Keeping secrets out of your code is a security best practice.',
     question: 'What does the dotenv package do?',
     options: ['Creates .env files', 'Loads environment variables from a .env file', 'Encrypts environment variables', 'Validates environment variables'],
@@ -3825,7 +3825,7 @@ export const questions: Question[] = [
   },
   {
     id: '342',
-    tags: ["Node.js","ES Modules","import"],
+    tags: ["Node.js","Backend","ES Modules","import"],
     introduction: 'Node.js now supports ES modules alongside CommonJS.',
     question: 'How do you use ES modules (import/export) in Node.js?',
     options: ['They work automatically', 'Add "type": "module" to package.json or use .mjs extension', 'Install a package', 'Use a transpiler'],
@@ -3836,7 +3836,7 @@ export const questions: Question[] = [
   },
   {
     id: '343',
-    tags: ["Node.js","REST API","Express"],
+    tags: ["Node.js","Backend","REST API","Express"],
     introduction: 'Express makes building REST APIs straightforward.',
     question: 'How do you access the request body in Express?',
     options: ['req.data', 'req.body (with middleware)', 'req.content', 'req.payload'],
@@ -3847,7 +3847,7 @@ export const questions: Question[] = [
   },
   {
     id: '344',
-    tags: ["Node.js","Express","Response"],
+    tags: ["Node.js","Backend","Express","Response"],
     introduction: 'Express provides convenient methods for sending responses.',
     question: 'How do you send a JSON response in Express?',
     options: ['res.write(json)', 'res.json(object)', 'res.send(JSON.stringify(obj))', 'res.return(json)'],
@@ -3858,7 +3858,7 @@ export const questions: Question[] = [
   },
   {
     id: '345',
-    tags: ["Node.js","Express","Status Codes"],
+    tags: ["Node.js","Backend","Express","Status Codes"],
     introduction: 'HTTP status codes indicate the result of a request.',
     question: 'How do you set the HTTP status code in Express?',
     options: ['res.code(404)', 'res.status(404)', 'res.setStatus(404)', 'res.httpStatus(404)'],
@@ -3869,7 +3869,7 @@ export const questions: Question[] = [
   },
   {
     id: '346',
-    tags: ["Node.js","Error","uncaughtException"],
+    tags: ["Node.js","Backend","Error","uncaughtException"],
     introduction: 'Unhandled errors can crash your Node.js application.',
     question: 'What happens when an error is not caught in Node.js?',
     options: ['It\'s ignored', 'The process crashes', 'It\'s logged automatically', 'It retries the operation'],
@@ -3880,7 +3880,7 @@ export const questions: Question[] = [
   },
   {
     id: '347',
-    tags: ["Node.js","npm","devDependencies"],
+    tags: ["Node.js","Backend","npm","devDependencies"],
     introduction: 'Some packages are only needed during development.',
     question: 'What is the difference between dependencies and devDependencies?',
     options: ['No difference', 'devDependencies are only installed in development', 'dependencies are newer', 'devDependencies are faster'],
@@ -3891,7 +3891,7 @@ export const questions: Question[] = [
   },
   {
     id: '348',
-    tags: ["Node.js","npm","Semantic Versioning"],
+    tags: ["Node.js","Backend","npm","Semantic Versioning"],
     introduction: 'Package versions follow a specific format with meaning.',
     question: 'In version "1.2.3", what does each number represent?',
     options: ['Year.Month.Day', 'Major.Minor.Patch', 'Release.Update.Fix', 'Primary.Secondary.Tertiary'],
@@ -3902,7 +3902,7 @@ export const questions: Question[] = [
   },
   {
     id: '349',
-    tags: ["Node.js","npm","package-lock.json"],
+    tags: ["Node.js","Backend","npm","package-lock.json"],
     introduction: 'Reproducible builds require locking dependency versions.',
     question: 'What is the purpose of package-lock.json?',
     options: ['Prevents npm install', 'Locks exact versions of all dependencies', 'Stores npm credentials', 'Compresses node_modules'],
@@ -3913,7 +3913,7 @@ export const questions: Question[] = [
   },
   {
     id: '350',
-    tags: ["Node.js","util","Promisify"],
+    tags: ["Node.js","Backend","util","Promisify"],
     introduction: 'Converting callback-based functions to Promises makes them easier to use with async/await.',
     question: 'What does `util.promisify()` do?',
     options: ['Creates a new Promise', 'Converts a callback-based function to return a Promise', 'Wraps a function in try/catch', 'Makes a function async'],
@@ -3924,7 +3924,7 @@ export const questions: Question[] = [
   },
   {
     id: '351',
-    tags: ["Node.js","fs","promises"],
+    tags: ["Node.js","Backend","fs","promises"],
     introduction: 'The fs module has a Promise-based API for cleaner async code.',
     question: 'How do you use the Promise-based fs API?',
     options: ['const fs = require("fs").promises', 'const fs = require("fs/promises")', 'Both A and B work', 'fs.usePromises()'],
@@ -3935,7 +3935,7 @@ export const questions: Question[] = [
   },
   {
     id: '352',
-    tags: ["Node.js","crypto","Security"],
+    tags: ["Node.js","Backend","crypto","Security"],
     introduction: 'Node.js has built-in cryptographic functionality.',
     question: 'Which module provides cryptographic functionality in Node.js?',
     options: ['encrypt', 'crypto', 'security', 'hash'],
@@ -3946,7 +3946,7 @@ export const questions: Question[] = [
   },
   {
     id: '353',
-    tags: ["Node.js","os","System"],
+    tags: ["Node.js","Backend","os","System"],
     introduction: 'Node.js can access operating system information.',
     question: 'Which module provides operating system information?',
     options: ['system', 'os', 'platform', 'machine'],
@@ -3957,7 +3957,7 @@ export const questions: Question[] = [
   },
   {
     id: '354',
-    tags: ["Node.js","global","Variables"],
+    tags: ["Node.js","Backend","global","Variables"],
     introduction: 'Node.js has global objects and variables available everywhere.',
     question: 'What is the equivalent of `window` in Node.js?',
     options: ['window still works', 'global', 'root', 'this'],

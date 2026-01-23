@@ -6,7 +6,7 @@ function App() {
     <Box
       sx={{
         minHeight: '100vh',
-        backgroundColor: '#ffffff',
+        backgroundColor: '#f8f9fa',
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',

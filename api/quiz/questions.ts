@@ -13,17 +13,19 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   const categoriesParam = req.query.categories as string || '';
   const selectedCategories: CategoryType[] = categoriesParam
     ? (categoriesParam.split(',') as CategoryType[])
-    : ['javascript', 'typescript', 'react', 'git', 'nodejs', 'frontend', 'code-snippets'];
+    : ['javascript', 'typescript', 'react', 'git', 'nodejs', 'frontend', 'backend', 'code-snippets'];
 
-  // Separate code-snippets from regular categories
+  // Separate special categories from regular categories
   const includeCodeSnippets = selectedCategories.includes('code-snippets');
-  const regularCategories = selectedCategories.filter(c => c !== 'code-snippets') as CategoryType[];
+  const includeBackend = selectedCategories.includes('backend');
+  const regularCategories = selectedCategories.filter(c => c !== 'code-snippets' && c !== 'backend') as CategoryType[];
 
-  // Filter questions: include regular category matches OR code snippets if selected
+  // Filter questions: include regular category matches OR special categories if selected
   const categoryFiltered = questions.filter(q => {
     const matchesRegularCategory = regularCategories.includes(q.category);
     const isCodeSnippet = includeCodeSnippets && q.tags.includes('Code Output');
-    return matchesRegularCategory || isCodeSnippet;
+    const isBackend = includeBackend && q.tags.includes('Backend');
+    return matchesRegularCategory || isCodeSnippet || isBackend;
   });
 
   // Filter and select questions based on difficulty mode
