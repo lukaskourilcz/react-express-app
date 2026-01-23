@@ -10,7 +10,7 @@ export interface Question {
   difficulty: 1 | 2 | 3 | 4 | 5;
 }
 
-export type DifficultyMode = 'easy' | 'advanced' | 'zero-to-hero' | 'terminology';
+export type DifficultyMode = 'easy' | 'advanced' | 'zero-to-hero' | 'terminology' | 'code-snippets';
 
 export interface QuizResult {
   totalQuestions: number;

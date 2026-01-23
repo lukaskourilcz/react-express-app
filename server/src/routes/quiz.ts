@@ -52,6 +52,11 @@ quizRouter.get('/questions', (req, res) => {
     const terminologyQuestions = categoryFiltered.filter(q => q.tags.includes('Terminology'));
     const shuffled = shuffleArray(terminologyQuestions);
     selected = shuffled.slice(0, count);
+  } else if (difficultyMode === 'code-snippets') {
+    // Code snippets mode: only questions with "Code Output" tag
+    const codeQuestions = categoryFiltered.filter(q => q.tags.includes('Code Output'));
+    const shuffled = shuffleArray(codeQuestions);
+    selected = shuffled.slice(0, count);
   } else {
     // Zero to hero mode: progressive difficulty 1 → 5
     // Distribute questions evenly across difficulty levels

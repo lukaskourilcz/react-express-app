@@ -67,6 +67,7 @@ const QUESTION_COUNT_OPTIONS = [10, 20, 30, 40, 50];
 
 const DIFFICULTY_OPTIONS: { value: DifficultyMode; label: string; description: string }[] = [
   { value: 'terminology', label: 'Terminology', description: 'Basic terms only' },
+  { value: 'code-snippets', label: 'Code Snippets', description: 'What does this return?' },
   { value: 'easy', label: 'Easy', description: 'Difficulty 1-2' },
   { value: 'advanced', label: 'Advanced', description: 'Difficulty 3-5' },
   { value: 'zero-to-hero', label: 'Zero to Hero', description: '1→5 progressive' },
