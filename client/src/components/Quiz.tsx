@@ -45,37 +45,17 @@ const getCategoryColor = (category: string): "default" | "primary" | "secondary"
   }
 };
 
-// Get a consistent color for tags based on tag name
-const getTagColor = (tag: string): string => {
-  const colors = [
-    '#3b82f6', // blue
-    '#10b981', // green
-    '#f59e0b', // amber
-    '#ef4444', // red
-    '#8b5cf6', // purple
-    '#ec4899', // pink
-    '#06b6d4', // cyan
-    '#f97316', // orange
-  ];
-  // Simple hash to get consistent color for same tag
-  let hash = 0;
-  for (let i = 0; i < tag.length; i++) {
-    hash = tag.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-};
-
-const CATEGORY_OPTIONS: { value: CategoryType; label: string }[] = [
-  { value: 'html', label: 'HTML' },
-  { value: 'css', label: 'CSS' },
-  { value: 'javascript', label: 'JavaScript' },
-  { value: 'typescript', label: 'TypeScript' },
-  { value: 'react', label: 'React' },
-  { value: 'nodejs', label: 'Node.js' },
-  { value: 'git', label: 'Git' },
-  { value: 'frontend', label: 'Frontend' },
-  { value: 'backend', label: 'Backend' },
-  { value: 'code-snippets', label: 'Code Snippets' },
+const CATEGORY_OPTIONS: { value: CategoryType; label: string; color: string }[] = [
+  { value: 'html', label: 'HTML', color: '#e34c26' },
+  { value: 'css', label: 'CSS', color: '#264de4' },
+  { value: 'javascript', label: 'JavaScript', color: '#f7df1e' },
+  { value: 'typescript', label: 'TypeScript', color: '#3178c6' },
+  { value: 'react', label: 'React', color: '#61dafb' },
+  { value: 'nodejs', label: 'Node.js', color: '#339933' },
+  { value: 'git', label: 'Git', color: '#f05032' },
+  { value: 'frontend', label: 'Frontend', color: '#8b5cf6' },
+  { value: 'backend', label: 'Backend', color: '#06b6d4' },
+  { value: 'code-snippets', label: 'Code Snippets', color: '#ec4899' },
 ];
 
 const ALL_CATEGORIES: CategoryType[] = ['html', 'css', 'javascript', 'typescript', 'react', 'nodejs', 'git', 'frontend', 'backend', 'code-snippets'];
@@ -317,6 +297,8 @@ function Quiz() {
                   backgroundColor: selectedCategories.includes(cat.value) ? '#1a1a1a' : '#fff',
                   color: selectedCategories.includes(cat.value) ? '#fff' : '#1a1a1a',
                   border: '1px solid #e0e0e0',
+                  borderLeft: `3px solid ${cat.color}`,
+                  borderRadius: '4px',
                   fontWeight: 500,
                   fontSize: '0.8rem',
                   '&:hover': {
@@ -560,29 +542,20 @@ function Quiz() {
 
           {currentQuestion.tags && currentQuestion.tags.length > 0 && (
             <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1.5 }}>
-              {currentQuestion.tags.map((tag, idx) => {
-                const tagColor = getTagColor(tag);
-                return (
-                  <Chip
-                    key={idx}
-                    label={`#${tag}`}
-                    size="small"
-                    variant="outlined"
-                    sx={{
-                      fontSize: '0.7rem',
-                      height: '22px',
-                      borderColor: 'rgba(0,0,0,0.1)',
-                      borderLeft: `3px solid ${tagColor}`,
-                      borderRadius: '4px',
-                      color: 'text.secondary',
-                      backgroundColor: `${tagColor}08`,
-                      '& .MuiChip-label': {
-                        paddingLeft: '6px',
-                      },
-                    }}
-                  />
-                );
-              })}
+              {currentQuestion.tags.map((tag, idx) => (
+                <Chip
+                  key={idx}
+                  label={`#${tag}`}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    fontSize: '0.7rem',
+                    height: '22px',
+                    borderColor: 'rgba(0,0,0,0.15)',
+                    color: 'text.secondary',
+                  }}
+                />
+              ))}
             </Box>
           )}
 
