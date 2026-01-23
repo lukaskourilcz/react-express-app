@@ -331,19 +331,19 @@ function Quiz() {
             {QUESTION_COUNT_OPTIONS.map((count) => (
               <Button
                 key={count}
-                variant={questionCount === count ? 'contained' : 'outlined'}
+                variant="outlined"
                 size="small"
                 onClick={() => setQuestionCount(count)}
                 sx={{
                   minWidth: 44,
                   fontWeight: 600,
                   fontSize: '0.85rem',
-                  backgroundColor: questionCount === count ? '#339933' : '#fff',
-                  color: questionCount === count ? '#fff' : '#555',
-                  border: questionCount === count ? '1px solid #339933' : '1px solid #ddd',
+                  backgroundColor: '#fff',
+                  color: questionCount === count ? '#339933' : '#555',
+                  border: questionCount === count ? '2px solid #339933' : '1px solid #ddd',
                   '&:hover': {
-                    backgroundColor: questionCount === count ? '#2d8a2d' : '#f8f8f8',
-                    border: questionCount === count ? '1px solid #2d8a2d' : '1px solid #ccc',
+                    backgroundColor: '#f8f8f8',
+                    border: questionCount === count ? '2px solid #339933' : '1px solid #ccc',
                   },
                 }}
               >
@@ -362,19 +362,19 @@ function Quiz() {
             {DIFFICULTY_OPTIONS.map((option) => (
               <Tooltip key={option.value} title={option.tooltip} arrow placement="top">
                 <Button
-                  variant={difficultyMode === option.value ? 'contained' : 'outlined'}
+                  variant="outlined"
                   size="small"
                   onClick={() => setDifficultyMode(option.value)}
                   sx={{
                     fontWeight: 500,
                     fontSize: '0.8rem',
                     textTransform: 'none',
-                    backgroundColor: difficultyMode === option.value ? '#339933' : '#fff',
-                    color: difficultyMode === option.value ? '#fff' : '#555',
-                    border: difficultyMode === option.value ? '1px solid #339933' : '1px solid #ddd',
+                    backgroundColor: '#fff',
+                    color: difficultyMode === option.value ? '#339933' : '#555',
+                    border: difficultyMode === option.value ? '2px solid #339933' : '1px solid #ddd',
                     '&:hover': {
-                      backgroundColor: difficultyMode === option.value ? '#2d8a2d' : '#f8f8f8',
-                      border: difficultyMode === option.value ? '1px solid #2d8a2d' : '1px solid #ccc',
+                      backgroundColor: '#f8f8f8',
+                      border: difficultyMode === option.value ? '2px solid #339933' : '1px solid #ccc',
                     },
                   }}
                 >
