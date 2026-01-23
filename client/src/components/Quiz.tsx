@@ -14,6 +14,8 @@ import {
   Paper,
   Tooltip,
 } from '@mui/material';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { quizStyles } from '../theme/MuiTheme';
 import './Quiz.css';
@@ -58,16 +60,34 @@ const CATEGORY_OPTIONS: { value: CategoryType; label: string }[] = [
 
 const ALL_CATEGORIES: CategoryType[] = ['html', 'css', 'javascript', 'typescript', 'react', 'nodejs', 'git', 'frontend', 'backend', 'code-snippets'];
 
-// Render question text with code blocks
+// Render question text with syntax-highlighted code blocks
 const renderQuestion = (text: string) => {
   const parts = text.split(/(```[\s\S]*?```)/g);
   return parts.map((part, index) => {
     if (part.startsWith('```')) {
-      const code = part.replace(/```\w*\n?/, '').replace(/```$/, '');
+      // Extract language from code fence (e.g., ```javascript)
+      const langMatch = part.match(/```(\w*)\n?/);
+      const language = langMatch?.[1] || 'javascript';
+      const code = part.replace(/```\w*\n?/, '').replace(/```$/, '').trim();
       return (
-        <pre key={index} className="quiz-code-block">
-          <code>{code}</code>
-        </pre>
+        <SyntaxHighlighter
+          key={index}
+          language={language === 'js' ? 'javascript' : language === 'ts' ? 'typescript' : language || 'javascript'}
+          style={oneDark}
+          customStyle={{
+            margin: '1rem 0',
+            borderRadius: '6px',
+            fontSize: '0.85rem',
+            padding: '1rem',
+          }}
+          codeTagProps={{
+            style: {
+              fontFamily: '"SF Mono", "Consolas", "Monaco", monospace',
+            }
+          }}
+        >
+          {code}
+        </SyntaxHighlighter>
       );
     }
     return <span key={index}>{part}</span>;
