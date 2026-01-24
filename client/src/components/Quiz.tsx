@@ -276,27 +276,31 @@ function Quiz() {
               {isAllSelected ? 'Deselect All' : 'Select All'}
             </Button>
           </Box>
-          <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
-            {CATEGORY_OPTIONS.map((cat) => (
-              <Chip
-                key={cat.value}
-                label={cat.label}
-                size="small"
-                onClick={() => handleCategoryToggle(cat.value)}
-                sx={{
-                  cursor: 'pointer',
-                  backgroundColor: '#fff',
-                  color: selectedCategories.includes(cat.value) ? cat.color : '#555',
-                  border: selectedCategories.includes(cat.value) ? `2px solid ${cat.color}` : '1px solid #ddd',
-                  borderLeft: `4px solid ${cat.color}`,
-                  borderRadius: 1,
-                  fontWeight: selectedCategories.includes(cat.value) ? 600 : 500,
-                  fontSize: '0.8rem',
-                  '&:hover': {
-                    backgroundColor: '#f8f8f8',
-                  },
-                }}
-              />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+            {[0, 4].map((startIndex) => (
+              <Box key={startIndex} sx={{ display: 'flex', gap: 0.75, justifyContent: 'center' }}>
+                {CATEGORY_OPTIONS.slice(startIndex, startIndex + 4).map((cat) => (
+                  <Chip
+                    key={cat.value}
+                    label={cat.label}
+                    size="small"
+                    onClick={() => handleCategoryToggle(cat.value)}
+                    sx={{
+                      cursor: 'pointer',
+                      backgroundColor: '#fff',
+                      color: selectedCategories.includes(cat.value) ? cat.color : '#555',
+                      border: selectedCategories.includes(cat.value) ? `2px solid ${cat.color}` : '1px solid #ddd',
+                      borderLeft: `4px solid ${cat.color}`,
+                      borderRadius: 1,
+                      fontWeight: selectedCategories.includes(cat.value) ? 600 : 500,
+                      fontSize: '0.8rem',
+                      '&:hover': {
+                        backgroundColor: '#f8f8f8',
+                      },
+                    }}
+                  />
+                ))}
+              </Box>
             ))}
           </Box>
           {selectedCategories.length === 0 && (
