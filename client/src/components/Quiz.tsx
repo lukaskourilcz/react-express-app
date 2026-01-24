@@ -311,14 +311,28 @@ function Quiz() {
         {/* Selected Categories Display */}
         {selectedCategories.length > 0 && (
           <Box sx={{ mb: 4, p: 1.5, backgroundColor: '#fafafa', borderRadius: 1 }}>
-            <Typography variant="caption" sx={{ color: '#888', display: 'block', mb: 0.5 }}>
+            <Typography variant="caption" sx={{ color: '#888', display: 'block', mb: 1 }}>
               Selected ({selectedCategories.length}/{ALL_CATEGORIES.length}):
             </Typography>
-            <Typography variant="body2" sx={{ color: '#1a1a1a', fontSize: '0.8rem' }}>
-              {selectedCategories.length === ALL_CATEGORIES.length
-                ? 'All categories'
-                : selectedCategories.map(cat => CATEGORY_OPTIONS.find(c => c.value === cat)?.label).join(', ')}
-            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+              {selectedCategories.map(cat => {
+                const category = CATEGORY_OPTIONS.find(c => c.value === cat);
+                return (
+                  <Chip
+                    key={cat}
+                    label={category?.label}
+                    size="small"
+                    sx={{
+                      height: '22px',
+                      fontSize: '0.7rem',
+                      fontWeight: 500,
+                      backgroundColor: category?.color,
+                      color: ['javascript', 'react'].includes(cat) ? '#1a1a1a' : '#fff',
+                    }}
+                  />
+                );
+              })}
+            </Box>
           </Box>
         )}
 
