@@ -1182,8 +1182,8 @@ export const questions: Question[] = [
   },
   {
     id: '105',
-    tags: ["git commit","Basics"],
-    introduction: 'Git commit creates a snapshot of your staged changes with a descriptive message.',
+    tags: ["npm","Package Management"],
+    introduction: 'npm provides different commands for installing dependencies depending on the use case.',
     question: 'What is the difference between npm install and npm ci?\n\n```bash\n$ npm install   # Development\n$ npm ci        # CI/CD pipelines\n```',
     options: ['No difference', 'ci is faster and uses exact lock file versions', 'install is for production', 'ci updates packages'],
     correctAnswer: 1,
@@ -1195,8 +1195,8 @@ export const questions: Question[] = [
   // JAVASCRIPT FUNDAMENTALS
   {
     id: '106',
-    tags: ["git pull","Remote"],
-    introduction: 'Git pull fetches changes from a remote repository and merges them into your current branch.',
+    tags: ["Equality","Operators"],
+    introduction: 'JavaScript has two types of equality operators with different behaviors regarding type coercion.',
     question: 'What is the difference between == and ===?\n\n```js\n5 == "5"   // true\n5 === "5"  // false\n```',
     options: ['No difference', '=== checks type and value, == only value', '== is for objects', '=== is slower'],
     correctAnswer: 1,
@@ -1206,8 +1206,8 @@ export const questions: Question[] = [
   },
   {
     id: '107',
-    tags: ["git push","Remote"],
-    introduction: 'Git push uploads your local commits to a remote repository, sharing your work with others.',
+    tags: ["Spread Operator","ES6"],
+    introduction: 'The spread operator is a powerful ES6 feature for working with arrays and objects.',
     question: 'What does the spread operator do?\n\n```js\nconst arr1 = [1, 2];\nconst arr2 = [...arr1, 3, 4]; // [1, 2, 3, 4]\n\nconst obj1 = { a: 1 };\nconst obj2 = { ...obj1, b: 2 }; // { a: 1, b: 2 }\n```',
     options: ['Deep clones objects', 'Expands iterables into individual elements', 'Merges databases', 'Compresses data'],
     correctAnswer: 1,
@@ -1217,8 +1217,8 @@ export const questions: Question[] = [
   },
   {
     id: '108',
-    tags: ["Branches","git branch"],
-    introduction: 'Branches in Git allow parallel development without affecting the main codebase.',
+    tags: ["Destructuring","ES6"],
+    introduction: 'Destructuring is a convenient way to extract values from arrays and objects.',
     question: 'What is destructuring in JavaScript?\n\n```js\nconst { name, age } = user;\nconst [first, second] = array;\n```',
     options: ['Deleting properties', 'Extracting values into variables', 'Creating objects', 'Type checking'],
     correctAnswer: 1,
@@ -1228,8 +1228,8 @@ export const questions: Question[] = [
   },
   {
     id: '109',
-    tags: ["git merge","Branches"],
-    introduction: 'Git merge combines changes from different branches into a single branch.',
+    tags: ["Variables","Scope"],
+    introduction: 'JavaScript has three ways to declare variables, each with different scoping rules.',
     question: 'What is the difference between let, const, and var?\n\n```js\nvar x = 1;   // Function-scoped, hoisted\nlet y = 2;   // Block-scoped\nconst z = 3; // Block-scoped, cannot reassign\n```',
     options: ['No difference', 'Scope and reassignment rules differ', 'Only const works in functions', 'var is newest'],
     correctAnswer: 1,
@@ -1239,8 +1239,8 @@ export const questions: Question[] = [
   },
   {
     id: '110',
-    tags: ["git clone","Remote"],
-    introduction: 'Git clone creates a local copy of a remote repository with full history.',
+    tags: ["Promises","Async"],
+    introduction: 'Promises are a fundamental part of handling asynchronous operations in JavaScript.',
     question: 'What is a Promise in JavaScript?\n\n```js\nfetch("/api/data")\n  .then(response => response.json())\n  .then(data => console.log(data))\n  .catch(error => console.error(error));\n```',
     options: ['A synchronous operation', 'An object representing eventual completion/failure', 'A loop construct', 'A variable type'],
     correctAnswer: 1,
@@ -1250,8 +1250,8 @@ export const questions: Question[] = [
   },
   {
     id: '111',
-    tags: ["git fetch","Remote"],
-    introduction: 'Git fetch downloads changes from remote without merging, letting you review before integrating.',
+    tags: ["Async/Await","Promises"],
+    introduction: 'Async/await provides a cleaner syntax for working with Promises.',
     question: 'What does async/await do?\n\n```js\nasync function getData() {\n  try {\n    const response = await fetch("/api/data");\n    const data = await response.json();\n    return data;\n  } catch (error) {\n    console.error(error);\n  }\n}\n```',
     options: ['Makes code synchronous', 'Syntactic sugar for Promises', 'Blocks the main thread', 'Replaces callbacks entirely'],
     correctAnswer: 1,
@@ -1261,8 +1261,8 @@ export const questions: Question[] = [
   },
   {
     id: '112',
-    tags: ["git stash","Working Directory"],
-    introduction: 'Git stash temporarily saves uncommitted changes so you can switch branches cleanly.',
+    tags: ["Event Loop","Async"],
+    introduction: 'The event loop is central to how JavaScript handles asynchronous operations.',
     question: 'What is the event loop in JavaScript?\n\n```js\nconsole.log("1");\nsetTimeout(() => console.log("2"), 0);\nconsole.log("3");\n// Output: 1, 3, 2\n```',
     options: ['A for loop for events', 'Mechanism that handles async callbacks', 'A React feature', 'A debugging tool'],
     correctAnswer: 1,
@@ -1272,8 +1272,8 @@ export const questions: Question[] = [
   },
   {
     id: '113',
-    tags: ["git log","History"],
-    introduction: 'Git log shows the commit history, helping you understand how the project evolved.',
+    tags: ["Closures","Functions"],
+    introduction: 'Closures are a powerful feature where functions remember their lexical scope.',
     question: 'What is closure in JavaScript?\n\n```js\nfunction outer() {\n  const secret = "hidden";\n  return function inner() {\n    return secret; // Still accessible!\n  };\n}\nconst fn = outer();\nfn(); // "hidden"\n```',
     options: ['A way to close functions', 'Function retaining access to outer scope', 'A design pattern', 'A memory leak'],
     correctAnswer: 1,
@@ -1283,8 +1283,8 @@ export const questions: Question[] = [
   },
   {
     id: '114',
-    tags: ["git diff","Changes"],
-    introduction: 'Git diff shows the differences between commits, branches, or your working directory.',
+    tags: ["Array Methods","map"],
+    introduction: 'Array.map() is one of the most commonly used array methods in JavaScript.',
     question: 'What does Array.map() return?\n\n```js\nconst numbers = [1, 2, 3];\nconst doubled = numbers.map(n => n * 2);\n// doubled = [2, 4, 6]\n```',
     options: ['Modifies original array', 'Returns new array with transformed elements', 'Returns undefined', 'Returns a single value'],
     correctAnswer: 1,
@@ -1294,8 +1294,8 @@ export const questions: Question[] = [
   },
   {
     id: '115',
-    tags: ["git reset","Undo Changes"],
-    introduction: 'Git reset moves the branch pointer and can modify the staging area and working directory.',
+    tags: ["Array Methods","filter"],
+    introduction: 'Array.filter() creates a new array with elements that pass a test condition.',
     question: 'What does Array.filter() do?\n\n```js\nconst numbers = [1, 2, 3, 4, 5];\nconst evens = numbers.filter(n => n % 2 === 0);\n// evens = [2, 4]\n```',
     options: ['Removes all elements', 'Returns elements that pass the test', 'Modifies original array', 'Sorts the array'],
     correctAnswer: 1,
@@ -1305,8 +1305,8 @@ export const questions: Question[] = [
   },
   {
     id: '116',
-    tags: ["git revert","Undo Changes"],
-    introduction: 'Git revert creates a new commit that undoes changes from a previous commit safely.',
+    tags: ["Array Methods","reduce"],
+    introduction: 'Array.reduce() is a versatile method for accumulating values from an array.',
     question: 'What does Array.reduce() do?\n\n```js\nconst numbers = [1, 2, 3, 4];\nconst sum = numbers.reduce((acc, curr) => acc + curr, 0);\n// sum = 10\n```',
     options: ['Reduces array size', 'Accumulates array into single value', 'Filters elements', 'Sorts elements'],
     correctAnswer: 1,
@@ -1316,8 +1316,8 @@ export const questions: Question[] = [
   },
   {
     id: '117',
-    tags: ["git checkout","Branches"],
-    introduction: 'Git checkout switches branches or restores files from different commits.',
+    tags: ["Operators","ES2020"],
+    introduction: 'The nullish coalescing operator provides a way to handle null and undefined values.',
     question: 'What is the nullish coalescing operator?\n\n```js\nconst value = null ?? "default";  // "default"\nconst zero = 0 ?? "default";      // 0\nconst empty = "" ?? "default";    // ""\n```',
     options: ['Same as ||', 'Returns right side only for null/undefined', 'Type checking operator', 'Comparison operator'],
     correctAnswer: 1,
@@ -1327,8 +1327,8 @@ export const questions: Question[] = [
   },
   {
     id: '118',
-    tags: [".gitignore","Configuration"],
-    introduction: 'The .gitignore file specifies which files Git should not track.',
+    tags: ["Operators","ES2020"],
+    introduction: 'Optional chaining provides a safe way to access nested object properties.',
     question: 'What is optional chaining?\n\n```js\nconst city = user?.address?.city;\n// Instead of:\n// user && user.address && user.address.city\n```',
     options: ['Required property access', 'Safe property access that returns undefined if null', 'Type assertion', 'Destructuring'],
     correctAnswer: 1,
@@ -1351,8 +1351,8 @@ export const questions: Question[] = [
   },
   {
     id: '120',
-    tags: ["git tag","Releases"],
-    introduction: 'Git tags mark specific points in history, commonly used for release versions.',
+    tags: ["Virtual DOM","Performance"],
+    introduction: 'The virtual DOM is a key concept in how React efficiently updates the UI.',
     question: 'What is the virtual DOM?\n\n```jsx\n// React creates a virtual representation\nconst element = <div>Hello</div>;\n// Then diffs and updates real DOM efficiently\n```',
     options: ['A browser feature', 'In-memory representation of the real DOM', 'A testing tool', 'A CSS framework'],
     correctAnswer: 1,
@@ -1362,8 +1362,8 @@ export const questions: Question[] = [
   },
   {
     id: '121',
-    tags: ["Remote Repository","GitHub"],
-    introduction: 'Remote repositories are versions of your project hosted on a server like GitHub.',
+    tags: ["Re-renders","Performance"],
+    introduction: 'Understanding what triggers re-renders is crucial for React performance.',
     question: 'What causes unnecessary re-renders?\n\n```jsx\n// This creates a new object every render!\n<Child style={{ color: "red" }} />\n\n// This creates a new function every render!\n<Button onClick={() => doSomething()} />\n```',
     options: ['Using useState', 'Creating new objects/functions in render', 'Using useEffect', 'Having child components'],
     correctAnswer: 1,
@@ -1373,8 +1373,8 @@ export const questions: Question[] = [
   },
   {
     id: '122',
-    tags: ["git rebase","History"],
-    introduction: 'Git rebasing replays commits on top of another branch, creating a linear history.',
+    tags: ["Props","Context"],
+    introduction: 'Prop drilling is a common pattern problem in React component hierarchies.',
     question: 'What is prop drilling and how to avoid it?\n\n```jsx\n// Passing props through many levels\n<App user={user}>\n  <Layout user={user}>\n    <Sidebar user={user}>\n      <Profile user={user} />\n```',
     options: ['It\'s recommended practice', 'Pass props through many components; use Context', 'Use global variables', 'Avoid child components'],
     correctAnswer: 1,
@@ -1384,8 +1384,8 @@ export const questions: Question[] = [
   },
   {
     id: '123',
-    tags: ["Interactive Rebase","git rebase"],
-    introduction: 'Interactive rebase allows you to modify, squash, or reorder commits before applying them.',
+    tags: ["React.memo","Performance"],
+    introduction: 'React.memo is a higher-order component for optimizing functional components.',
     question: 'What is React.memo() used for?\n\n```jsx\nconst MemoizedComponent = React.memo(function MyComponent({ name }) {\n  return <div>{name}</div>;\n});\n```',
     options: ['Stores data in memory', 'Prevents re-renders if props unchanged', 'Creates memos/notes', 'Improves SEO'],
     correctAnswer: 1,
@@ -1395,8 +1395,8 @@ export const questions: Question[] = [
   },
   {
     id: '124',
-    tags: ["git cherry-pick","Commits"],
-    introduction: 'Git cherry-pick applies specific commits from one branch to another.',
+    tags: ["useReducer","Hooks"],
+    introduction: 'useReducer is an alternative to useState for complex state logic.',
     question: 'What is the useReducer hook for?\n\n```jsx\nconst [state, dispatch] = useReducer(reducer, initialState);\n\ndispatch({ type: "INCREMENT" });\ndispatch({ type: "SET_VALUE", payload: 5 });\n```',
     options: ['Reducing bundle size', 'Complex state logic with actions', 'Reducing re-renders', 'API calls'],
     correctAnswer: 1,
@@ -1406,8 +1406,8 @@ export const questions: Question[] = [
   },
   {
     id: '125',
-    tags: ["git reflog","Recovery"],
-    introduction: 'Git reflog records all changes to branch tips, helping recover lost commits.',
+    tags: ["Controlled Components","Forms"],
+    introduction: 'Controlled components tie form elements to React state.',
     question: 'What is a controlled component?\n\n```jsx\nconst [value, setValue] = useState("");\n<input\n  value={value}\n  onChange={(e) => setValue(e.target.value)}\n/>\n```',
     options: ['Component with limited features', 'Form element controlled by React state', 'Component with access control', 'Server-rendered component'],
     correctAnswer: 1,
@@ -1417,8 +1417,8 @@ export const questions: Question[] = [
   },
   {
     id: '126',
-    tags: ["Fast-forward Merge","git merge"],
-    introduction: 'Fast-forward merges occur when there\'s a direct path between branches, creating no merge commit.',
+    tags: ["useLayoutEffect","Hooks"],
+    introduction: 'useLayoutEffect is similar to useEffect but fires synchronously after DOM mutations.',
     question: 'What is the useLayoutEffect hook?\n\n```jsx\nuseLayoutEffect(() => {\n  // Runs synchronously after DOM mutations\n  // Before browser paints\n}, []);\n```',
     options: ['For CSS layouts', 'Like useEffect but fires synchronously after DOM changes', 'For responsive design', 'Deprecated hook'],
     correctAnswer: 1,
@@ -1428,8 +1428,8 @@ export const questions: Question[] = [
   },
   {
     id: '127',
-    tags: ["Merge Commit","git merge"],
-    introduction: 'Merge commits have two parents and record the integration of divergent branches.',
+    tags: ["Error Boundaries","Error Handling"],
+    introduction: 'Error boundaries catch JavaScript errors in their child component tree.',
     question: 'How do you handle errors in React components?\n\n```jsx\nclass ErrorBoundary extends React.Component {\n  state = { hasError: false };\n  static getDerivedStateFromError(error) {\n    return { hasError: true };\n  }\n  render() {\n    if (this.state.hasError) return <h1>Something went wrong.</h1>;\n    return this.props.children;\n  }\n}\n```',
     options: ['try/catch in render', 'Error Boundaries (class components)', 'window.onerror', 'Ignore errors'],
     correctAnswer: 1,
@@ -1439,8 +1439,8 @@ export const questions: Question[] = [
   },
   {
     id: '128',
-    tags: ["Detached HEAD","HEAD"],
-    introduction: 'Detached HEAD state occurs when you checkout a specific commit instead of a branch.',
+    tags: ["React.lazy","Code Splitting"],
+    introduction: 'React.lazy enables dynamic imports for code-splitting components.',
     question: 'What is React.lazy() used for?\n\n```jsx\nconst LazyComponent = React.lazy(() => import("./HeavyComponent"));\n\n<Suspense fallback={<Loading />}>\n  <LazyComponent />\n</Suspense>\n```',
     options: ['Delays rendering', 'Code-splitting and lazy loading components', 'Performance monitoring', 'State management'],
     correctAnswer: 1,
@@ -1450,8 +1450,8 @@ export const questions: Question[] = [
   },
   {
     id: '129',
-    tags: ["git worktree","Advanced"],
-    introduction: 'Git worktrees allow multiple working directories attached to a single repository.',
+    tags: ["useId","Hooks"],
+    introduction: 'useId generates unique IDs that are stable across server and client rendering.',
     question: 'What is the purpose of useId hook?\n\n```jsx\nconst id = useId();\n<label htmlFor={id}>Name</label>\n<input id={id} />\n```',
     options: ['Generates database IDs', 'Generates unique IDs for accessibility', 'Creates user IDs', 'For list keys'],
     correctAnswer: 1,
@@ -1461,8 +1461,8 @@ export const questions: Question[] = [
   },
   {
     id: '130',
-    tags: ["Shallow Clone","git clone"],
-    introduction: 'Shallow clones download limited history, useful for large repositories.',
+    tags: ["State","Props"],
+    introduction: 'State and props are both ways to manage data in React but serve different purposes.',
     question: 'What is the difference between state and props?\n\n```jsx\n// Props: passed from parent, read-only\n<Child name="John" />\n\n// State: managed internally, can change\nconst [count, setCount] = useState(0);\n```',
     options: ['No difference', 'Props are external/read-only, state is internal/mutable', 'State is faster', 'Props are newer'],
     correctAnswer: 1,
@@ -1474,8 +1474,8 @@ export const questions: Question[] = [
   // MORE useState QUESTIONS
   {
     id: '131',
-    tags: ["git submodule","Advanced"],
-    introduction: 'Git submodules include other repositories as subdirectories of your project.',
+    tags: ["useState","State Batching"],
+    introduction: 'React batches state updates for performance, which can cause unexpected behavior.',
     question: 'Why does this counter not work correctly?\n\n```jsx\nfunction Counter() {\n  const [count, setCount] = useState(0);\n  \n  const handleClick = () => {\n    setCount(count + 1);\n    setCount(count + 1);\n    setCount(count + 1);\n    // count is still 1, not 3!\n  };\n}\n```',
     options: ['useState is broken', 'State updates are batched and use stale closure value', 'You can only call setCount once', 'Need to use useReducer'],
     correctAnswer: 1,
@@ -1485,8 +1485,8 @@ export const questions: Question[] = [
   },
   {
     id: '132',
-    tags: ["Git Hooks","Automation"],
-    introduction: 'Git hooks are scripts that run automatically at certain points in the Git workflow.',
+    tags: ["useState","Functional Updates"],
+    introduction: 'Functional updates ensure you always work with the latest state value.',
     question: 'How to fix multiple state updates in one handler?\n\n```jsx\n// Wrong - all use stale value\nsetCount(count + 1);\nsetCount(count + 1);\n\n// Correct - uses latest value\nsetCount(prev => prev + 1);\nsetCount(prev => prev + 1);\n```',
     options: ['Use useReducer instead', 'Use functional update form with previous state', 'Call setState only once', 'Use setTimeout between calls'],
     correctAnswer: 1,
@@ -1496,8 +1496,8 @@ export const questions: Question[] = [
   },
   {
     id: '133',
-    tags: ["Pre-commit Hook","Git Hooks"],
-    introduction: 'Pre-commit hooks run before a commit is created, often used for linting and tests.',
+    tags: ["useState","Immutability"],
+    introduction: 'React state updates require immutability to detect changes correctly.',
     question: 'What happens with object state updates?\n\n```jsx\nconst [user, setUser] = useState({ name: "John", age: 25 });\n\n// Wrong - mutates existing object\nuser.age = 26;\nsetUser(user); // Won\'t re-render!\n\n// Correct - creates new object\nsetUser({ ...user, age: 26 });\n```',
     options: ['Both work the same', 'Must create new object reference to trigger re-render', 'Objects cannot be in state', 'Use useRef for objects'],
     correctAnswer: 1,
@@ -1507,8 +1507,8 @@ export const questions: Question[] = [
   },
   {
     id: '134',
-    tags: ["git bisect","Debugging"],
-    introduction: 'Git bisect helps find the commit that introduced a bug using binary search.',
+    tags: ["useState","Lazy Initialization"],
+    introduction: 'Lazy initialization prevents expensive computations from running on every render.',
     question: 'What is lazy initialization in useState?\n\n```jsx\n// Runs expensive function on EVERY render\nconst [data, setData] = useState(expensiveCalculation());\n\n// Runs expensive function only ONCE\nconst [data, setData] = useState(() => expensiveCalculation());\n```',
     options: ['No difference', 'Function form only runs on initial render', 'Function form is slower', 'Function form runs on every render'],
     correctAnswer: 1,
@@ -1518,8 +1518,8 @@ export const questions: Question[] = [
   },
   {
     id: '135',
-    tags: ["git clean","Working Directory"],
-    introduction: 'Git clean removes untracked files from your working directory.',
+    tags: ["useState","Nested State"],
+    introduction: 'Updating nested state requires spreading at each level to maintain immutability.',
     question: 'How do you update nested state correctly?\n\n```jsx\nconst [user, setUser] = useState({\n  name: "John",\n  address: { city: "NYC", zip: "10001" }\n});\n\n// Update nested city\nsetUser({\n  ...user,\n  address: { ...user.address, city: "LA" }\n});\n```',
     options: ['Just modify user.address.city directly', 'Spread at each nesting level to preserve immutability', 'Use JSON.parse(JSON.stringify())', 'Nested state is not allowed'],
     correctAnswer: 1,
@@ -1529,8 +1529,8 @@ export const questions: Question[] = [
   },
   {
     id: '136',
-    tags: ["git archive","Export"],
-    introduction: 'Git archive creates a tar or zip file of your repository contents.',
+    tags: ["useState","Hooks"],
+    introduction: 'Understanding what useState returns is fundamental to using React hooks.',
     question: 'What does useState return and why is order important?\n\n```jsx\n// Array destructuring - order matters!\nconst [count, setCount] = useState(0);\nconst [name, setName] = useState("");\n\n// You can name them anything\nconst [myValue, updateMyValue] = useState(42);\n```',
     options: ['Returns an object with value and setter', 'Returns array with [currentValue, setterFunction]', 'Returns only the value', 'Returns a Promise'],
     correctAnswer: 1,
@@ -1542,8 +1542,8 @@ export const questions: Question[] = [
   // MORE useCallback QUESTIONS
   {
     id: '137',
-    tags: ["Sparse Checkout","Advanced"],
-    introduction: 'Sparse checkout allows cloning only specific directories from a repository.',
+    tags: ["useCallback","Performance"],
+    introduction: 'useCallback helps optimize performance by memoizing function references.',
     question: 'Why use useCallback? What problem does it solve?\n\n```jsx\n// Without useCallback - new function every render\nconst handleClick = () => { doSomething(id); };\n\n// With useCallback - same function reference\nconst handleClick = useCallback(() => {\n  doSomething(id);\n}, [id]);\n```',
     options: ['Makes functions faster', 'Prevents creating new function reference on every render', 'Required for all functions', 'Adds error handling'],
     correctAnswer: 1,
@@ -1553,8 +1553,8 @@ export const questions: Question[] = [
   },
   {
     id: '138',
-    tags: ["Git LFS","Large Files"],
-    introduction: 'Git LFS (Large File Storage) handles large binary files more efficiently.',
+    tags: ["useCallback","Optimization"],
+    introduction: 'useCallback is not always necessary and can add unnecessary overhead.',
     question: 'When should you NOT use useCallback?\n\n```jsx\n// Unnecessary useCallback - no child optimization\nfunction App() {\n  const handleClick = useCallback(() => {\n    console.log("clicked");\n  }, []);\n  \n  return <button onClick={handleClick}>Click</button>;\n}\n```',
     options: ['Always use useCallback', 'When function is not passed to memoized children', 'When function has dependencies', 'When using TypeScript'],
     correctAnswer: 1,
@@ -1564,8 +1564,8 @@ export const questions: Question[] = [
   },
   {
     id: '139',
-    tags: ["Signed Commits","Security"],
-    introduction: 'Signed commits verify the author\'s identity using GPG keys.',
+    tags: ["useCallback","Dependencies"],
+    introduction: 'Missing dependencies in useCallback can cause stale closure bugs.',
     question: 'What happens if you forget a dependency in useCallback?\n\n```jsx\nconst [count, setCount] = useState(0);\n\n// Bug: count is stale!\nconst logCount = useCallback(() => {\n  console.log(count); // Always logs 0!\n}, []); // Missing count dependency\n```',
     options: ['It auto-detects dependencies', 'Function uses stale/outdated values (closure bug)', 'React throws an error', 'It works correctly'],
     correctAnswer: 1,
@@ -1575,8 +1575,8 @@ export const questions: Question[] = [
   },
   {
     id: '140',
-    tags: ["git notes","Metadata"],
-    introduction: 'Git notes attach extra information to commits without modifying them.',
+    tags: ["useCallback","React.memo"],
+    introduction: 'useCallback and React.memo work together to prevent unnecessary re-renders.',
     question: 'How does useCallback work with React.memo?\n\n```jsx\nconst MemoChild = React.memo(({ onClick }) => {\n  console.log("Child rendered");\n  return <button onClick={onClick}>Click</button>;\n});\n\nfunction Parent() {\n  // Without useCallback: Child re-renders every time\n  // With useCallback: Child only re-renders when needed\n  const handleClick = useCallback(() => {\n    console.log("clicked");\n  }, []);\n  \n  return <MemoChild onClick={handleClick} />;\n}\n```',
     options: ['They are unrelated', 'useCallback keeps same reference so memo can skip re-render', 'memo makes useCallback faster', 'You cannot use them together'],
     correctAnswer: 1,
@@ -1586,8 +1586,8 @@ export const questions: Question[] = [
   },
   {
     id: '141',
-    tags: ["Upstream Branch","Remote"],
-    introduction: 'The upstream branch is the remote branch that your local branch tracks.',
+    tags: ["useCallback","useMemo"],
+    introduction: 'useCallback and useMemo are related but serve different purposes.',
     question: 'What is the difference between useCallback and useMemo?\n\n```jsx\n// useCallback: memoizes the FUNCTION itself\nconst fn = useCallback(() => compute(a, b), [a, b]);\n\n// useMemo: memoizes the RESULT of calling function\nconst value = useMemo(() => compute(a, b), [a, b]);\n\n// These are equivalent:\nuseCallback(fn, deps)\nuseMemo(() => fn, deps)\n```',
     options: ['No difference', 'useCallback memoizes function, useMemo memoizes return value', 'useMemo is for functions only', 'useCallback is deprecated'],
     correctAnswer: 1,
@@ -1597,8 +1597,8 @@ export const questions: Question[] = [
   },
   {
     id: '142',
-    tags: ["git pull --rebase","Rebase"],
-    introduction: 'Git pull --rebase fetches and rebases instead of merging, avoiding merge commits.',
+    tags: ["useCallback","Functional Updates"],
+    introduction: 'Using functional state updates can help reduce useCallback dependencies.',
     question: 'How to handle useCallback with changing dependencies?\n\n```jsx\nconst [items, setItems] = useState([]);\n\n// This function identity changes when items changes\nconst addItem = useCallback((item) => {\n  setItems([...items, item]);\n}, [items]);\n\n// Better: use functional update, no items dependency\nconst addItem = useCallback((item) => {\n  setItems(prev => [...prev, item]);\n}, []); // Empty deps - stable reference!\n```',
     options: ['Always include all dependencies', 'Use functional state updates to reduce dependencies', 'Disable the eslint rule', 'Don\'t use useCallback'],
     correctAnswer: 1,
@@ -1610,8 +1610,8 @@ export const questions: Question[] = [
   // MORE useRef QUESTIONS
   {
     id: '143',
-    tags: ["Force Push","Remote"],
-    introduction: 'Force push overwrites remote history and should be used carefully on shared branches.',
+    tags: ["useRef","useState"],
+    introduction: 'useRef and useState are both for storing values but behave differently with renders.',
     question: 'What makes useRef different from useState?\n\n```jsx\nconst countRef = useRef(0);\nconst [countState, setCountState] = useState(0);\n\n// useRef: changes do NOT trigger re-render\ncountRef.current = 5; // No re-render!\n\n// useState: changes DO trigger re-render\nsetCountState(5); // Re-renders!\n```',
     options: ['useRef is faster', 'useRef changes don\'t cause re-renders', 'useState can\'t hold numbers', 'They are the same'],
     correctAnswer: 1,
@@ -1621,8 +1621,8 @@ export const questions: Question[] = [
   },
   {
     id: '144',
-    tags: ["git gc","Maintenance"],
-    introduction: 'Git gc (garbage collection) cleans up unnecessary files and optimizes the repository.',
+    tags: ["useRef","DOM"],
+    introduction: 'useRef provides a way to directly access DOM elements in React.',
     question: 'How do you access a DOM element with useRef?\n\n```jsx\nfunction TextInput() {\n  const inputRef = useRef(null);\n  \n  const focusInput = () => {\n    inputRef.current.focus(); // Direct DOM access!\n  };\n  \n  return (\n    <>\n      <input ref={inputRef} />\n      <button onClick={focusInput}>Focus</button>\n    </>\n  );\n}\n```',
     options: ['Use document.querySelector', 'Attach ref to element, access via ref.current', 'Use getElementById', 'DOM access is not possible in React'],
     correctAnswer: 1,
@@ -1632,8 +1632,8 @@ export const questions: Question[] = [
   },
   {
     id: '145',
-    tags: ["git rerere","Merge Conflicts"],
-    introduction: 'Rerere (reuse recorded resolution) remembers how you resolved merge conflicts.',
+    tags: ["useRef","Previous Value"],
+    introduction: 'useRef can be used to track previous values across renders.',
     question: 'How to track previous state value with useRef?\n\n```jsx\nfunction Counter() {\n  const [count, setCount] = useState(0);\n  const prevCountRef = useRef();\n  \n  useEffect(() => {\n    prevCountRef.current = count; // Store after render\n  });\n  \n  const prevCount = prevCountRef.current;\n  \n  return <p>Now: {count}, Before: {prevCount}</p>;\n}\n```',
     options: ['useState can track previous values', 'Store current value in ref after each render', 'Use a global variable', 'Previous values cannot be tracked'],
     correctAnswer: 1,
@@ -1643,8 +1643,8 @@ export const questions: Question[] = [
   },
   {
     id: '146',
-    tags: ["git filter-branch","History Rewrite"],
-    introduction: 'Git filter-branch can rewrite repository history, useful for removing sensitive data.',
+    tags: ["useRef","Timers"],
+    introduction: 'useRef is ideal for storing values that need to persist without triggering re-renders.',
     question: 'Why use useRef for interval/timeout IDs?\n\n```jsx\nfunction Timer() {\n  const intervalRef = useRef(null);\n  \n  const startTimer = () => {\n    intervalRef.current = setInterval(() => {\n      console.log("tick");\n    }, 1000);\n  };\n  \n  const stopTimer = () => {\n    clearInterval(intervalRef.current);\n  };\n  \n  useEffect(() => {\n    return () => clearInterval(intervalRef.current);\n  }, []);\n}\n```',
     options: ['Intervals require refs', 'Ref persists the ID without causing re-renders', 'useState cannot store numbers', 'It\'s required by React'],
     correctAnswer: 1,
@@ -1654,8 +1654,8 @@ export const questions: Question[] = [
   },
   {
     id: '147',
-    tags: ["BFG Repo-Cleaner","History Rewrite"],
-    introduction: 'BFG Repo-Cleaner is a faster alternative to filter-branch for cleaning repository history.',
+    tags: ["useRef","Initialization"],
+    introduction: 'useRef accepts an initial value that becomes the starting value of .current.',
     question: 'What is the initial value of useRef?\n\n```jsx\n// Initial value passed to useRef\nconst myRef = useRef(initialValue);\n\n// Examples:\nconst countRef = useRef(0);        // current = 0\nconst inputRef = useRef(null);     // current = null\nconst objRef = useRef({ x: 1 });   // current = { x: 1 }\n```',
     options: ['Always undefined', 'Always null', 'Whatever you pass as argument becomes .current', 'Must be a DOM element'],
     correctAnswer: 2,
@@ -1665,8 +1665,8 @@ export const questions: Question[] = [
   },
   {
     id: '148',
-    tags: ["git bundle","Transfer"],
-    introduction: 'Git bundle packages repository data for transfer without network access.',
+    tags: ["useRef","TypeScript"],
+    introduction: 'DOM refs start as null and require proper null handling in TypeScript.',
     question: 'How to avoid null checks with useRef for DOM elements?\n\n```jsx\nfunction Form() {\n  const inputRef = useRef<HTMLInputElement>(null);\n  \n  const handleSubmit = () => {\n    // Option 1: Optional chaining\n    inputRef.current?.focus();\n    \n    // Option 2: Null check\n    if (inputRef.current) {\n      inputRef.current.focus();\n    }\n    \n    // Option 3: Non-null assertion (when certain)\n    inputRef.current!.focus();\n  };\n}\n```',
     options: ['Refs are never null', 'Use optional chaining, null checks, or assertion', 'Initialize with a fake element', 'Don\'t use TypeScript'],
     correctAnswer: 1,
@@ -1676,8 +1676,8 @@ export const questions: Question[] = [
   },
   {
     id: '149',
-    tags: ["Grafts","Advanced"],
-    introduction: 'Grafts and replace refs can alter how Git perceives commit ancestry.',
+    tags: ["useRef","useState","Hooks"],
+    introduction: 'Choosing between useRef and useState depends on whether you need re-renders.',
     question: 'When should you use useRef vs useState?\n\n```jsx\n// Use useState when:\n// - Value should be displayed in UI\n// - Changes should trigger re-render\nconst [count, setCount] = useState(0);\n\n// Use useRef when:\n// - Value should NOT trigger re-render\n// - Accessing DOM elements\n// - Storing mutable values (timers, previous values)\nconst renderCount = useRef(0);\n```',
     options: ['Always use useState', 'useRef for no-render updates and DOM, useState for UI state', 'Always use useRef', 'They are interchangeable'],
     correctAnswer: 1,
@@ -1687,8 +1687,8 @@ export const questions: Question[] = [
   },
   {
     id: '150',
-    tags: ["git maintenance","Optimization"],
-    introduction: 'Git maintenance automates repository optimization tasks.',
+    tags: ["useRef","forwardRef"],
+    introduction: 'forwardRef allows passing refs through custom components to child elements.',
     question: 'How does useRef work with forwardRef?\n\n```jsx\nconst FancyInput = forwardRef((props, ref) => {\n  return <input ref={ref} className="fancy" />;\n});\n\nfunction Parent() {\n  const inputRef = useRef(null);\n  \n  return (\n    <>\n      <FancyInput ref={inputRef} />\n      <button onClick={() => inputRef.current.focus()}>\n        Focus\n      </button>\n    </>\n  );\n}\n```',
     options: ['forwardRef is deprecated', 'forwardRef passes ref through to child component', 'You cannot ref custom components', 'Use a different prop name'],
     correctAnswer: 1,
@@ -5623,3 +5623,35 @@ export const questions: Question[] = [
     difficulty: 2,
   },
 ];
+
+// Fisher-Yates shuffle algorithm
+export function shuffleArray<T>(array: T[]): T[] {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+// Simple signing for session data (in production, use proper JWT)
+const SECRET = process.env.SESSION_SECRET || 'quiz-secret-key-change-in-production';
+
+export function encodeSession(data: { questionId: string; correctAnswer: number }[]): string {
+  const payload = JSON.stringify(data);
+  const encoded = Buffer.from(payload).toString('base64');
+  const signature = Buffer.from(SECRET + encoded).toString('base64').slice(0, 16);
+  return `${encoded}.${signature}`;
+}
+
+export function decodeSession(token: string): { questionId: string; correctAnswer: number }[] | null {
+  try {
+    const [encoded, signature] = token.split('.');
+    const expectedSig = Buffer.from(SECRET + encoded).toString('base64').slice(0, 16);
+    if (signature !== expectedSig) return null;
+    const payload = Buffer.from(encoded, 'base64').toString('utf-8');
+    return JSON.parse(payload);
+  } catch {
+    return null;
+  }
+}
