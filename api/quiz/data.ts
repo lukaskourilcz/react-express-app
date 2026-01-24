@@ -639,8 +639,8 @@ export const questions: Question[] = [
   },
   {
     id: '56',
-    tags: ["any Type","Basics"],
-    introduction: 'The \'any\' type opts out of type checking, which should be used sparingly as it defeats TypeScript\'s purpose.',
+    tags: ["never Type","Type System"],
+    introduction: 'The never type represents values that never occur, used for functions that never return.',
     question: 'What is the "never" type used for?\n\n```ts\nfunction throwError(msg: string): never {\n  throw new Error(msg);\n}\n```',
     options: ['Variables never used', 'Functions that never return', 'Optional parameters', 'Nullable types'],
     correctAnswer: 1,
