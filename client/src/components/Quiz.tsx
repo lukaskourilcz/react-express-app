@@ -276,9 +276,9 @@ function Quiz() {
               {isAllSelected ? 'Deselect All' : 'Select All'}
             </Button>
           </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {[0, 4].map((startIndex) => (
-              <Box key={startIndex} sx={{ display: 'flex', gap: '24px', justifyContent: 'center' }}>
+              <Box key={startIndex} sx={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
                 {CATEGORY_OPTIONS.slice(startIndex, startIndex + 4).map((cat) => (
                   <Chip
                     key={cat.value}
