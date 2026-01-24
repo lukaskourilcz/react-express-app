@@ -57,10 +57,10 @@ quizRouter.get('/questions', (req, res) => {
     const advancedQuestions = categoryFiltered.filter(q => q.difficulty >= 3);
     const shuffled = shuffleArray(advancedQuestions);
     selected = shuffled.slice(0, count);
-  } else if (difficultyMode === 'terminology') {
-    // Terminology mode: only questions with "Terminology" tag
-    const terminologyQuestions = categoryFiltered.filter(q => q.tags.includes('Terminology'));
-    const shuffled = shuffleArray(terminologyQuestions);
+  } else if (difficultyMode === 'basics') {
+    // Basics mode: only questions with "Terminology" tag
+    const basicsQuestions = categoryFiltered.filter(q => q.tags.includes('Terminology'));
+    const shuffled = shuffleArray(basicsQuestions);
     selected = shuffled.slice(0, count);
   } else {
     // Zero to hero mode: progressive difficulty 1 → 5

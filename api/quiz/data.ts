@@ -12,7 +12,7 @@ export interface Question {
   difficulty: 1 | 2 | 3 | 4 | 5;
 }
 
-export type DifficultyMode = 'easy' | 'advanced' | 'zero-to-hero' | 'terminology';
+export type DifficultyMode = 'basics' | 'easy' | 'zero-to-hero' | 'advanced';
 
 export const questions: Question[] = [
   // REACT - useState

@@ -80,10 +80,10 @@ const renderQuestion = (text: string) => {
 const QUESTION_COUNT_OPTIONS = [10, 20, 30, 40, 50];
 
 const DIFFICULTY_OPTIONS: { value: DifficultyMode; label: string; tooltip: string }[] = [
-  { value: 'zero-to-hero', label: 'Zero to Hero', tooltip: 'Progressive difficulty from 1 to 5. Great for learning!' },
+  { value: 'basics', label: 'Basics', tooltip: 'Focus on definitions and basic terms.' },
   { value: 'easy', label: 'Easy', tooltip: 'Only difficulty levels 1-2. Perfect for beginners.' },
+  { value: 'zero-to-hero', label: 'Zero to Hero', tooltip: 'Progressive difficulty from 1 to 5. Great for learning!' },
   { value: 'advanced', label: 'Advanced', tooltip: 'Difficulty levels 3-5. For experienced developers.' },
-  { value: 'terminology', label: 'Terminology', tooltip: 'Focus on definitions and basic terms.' },
 ];
 
 function Quiz() {
