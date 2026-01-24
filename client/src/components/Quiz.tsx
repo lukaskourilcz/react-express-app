@@ -276,7 +276,7 @@ function Quiz() {
               {isAllSelected ? 'Deselect All' : 'Select All'}
             </Button>
           </Box>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0.75 }}>
+          <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap' }}>
             {CATEGORY_OPTIONS.map((cat) => (
               <Chip
                 key={cat.value}
@@ -292,7 +292,6 @@ function Quiz() {
                   borderRadius: 1,
                   fontWeight: selectedCategories.includes(cat.value) ? 600 : 500,
                   fontSize: '0.8rem',
-                  justifyContent: 'flex-start',
                   '&:hover': {
                     backgroundColor: '#f8f8f8',
                   },
