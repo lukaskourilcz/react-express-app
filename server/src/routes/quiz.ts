@@ -29,20 +29,10 @@ quizRouter.get('/questions', (req, res) => {
   const categoriesParam = req.query.categories as string || '';
   const selectedCategories: CategoryType[] = categoriesParam
     ? (categoriesParam.split(',') as CategoryType[])
-    : ['html', 'css', 'javascript', 'typescript', 'react', 'git', 'nodejs', 'frontend', 'backend', 'code-snippets'];
+    : ['html', 'css', 'javascript', 'typescript', 'react', 'git', 'nodejs', 'dev-world'];
 
-  // Separate special categories from regular categories
-  const includeCodeSnippets = selectedCategories.includes('code-snippets');
-  const includeBackend = selectedCategories.includes('backend');
-  const regularCategories = selectedCategories.filter(c => c !== 'code-snippets' && c !== 'backend') as CategoryType[];
-
-  // Filter questions: include regular category matches OR special categories if selected
-  const categoryFiltered = questions.filter(q => {
-    const matchesRegularCategory = regularCategories.includes(q.category);
-    const isCodeSnippet = includeCodeSnippets && q.tags.includes('Code Output');
-    const isBackend = includeBackend && q.tags.includes('Backend');
-    return matchesRegularCategory || isCodeSnippet || isBackend;
-  });
+  // Filter questions by selected categories
+  const categoryFiltered = questions.filter(q => selectedCategories.includes(q.category));
 
   // Filter and select questions based on difficulty mode
   let selected: typeof questions;
