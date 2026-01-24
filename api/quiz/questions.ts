@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { questions, shuffleArray, encodeSession, type DifficultyMode, type CategoryType } from './data.js';
+import { questions, shuffleArray, encodeSession, type DifficultyMode, type CategoryType } from './data';
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   // Get count from query parameter, default to 10, max 50
