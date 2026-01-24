@@ -82,6 +82,7 @@ const DIFFICULTY_OPTIONS: { value: DifficultyMode; label: string; tooltip: strin
   { value: 'easy', label: 'Easy', tooltip: 'Only difficulty levels 1-2. Perfect for beginners.' },
   { value: 'zero-to-hero', label: 'Zero to Hero', tooltip: 'Progressive difficulty from 1 to 5. Great for learning!' },
   { value: 'advanced', label: 'Advanced', tooltip: 'Difficulty levels 3-5. For experienced developers.' },
+  { value: 'mixed', label: 'Mixed', tooltip: 'Random mix of all difficulty levels.' },
 ];
 
 function Quiz() {

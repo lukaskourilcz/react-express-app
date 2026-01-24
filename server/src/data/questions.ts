@@ -12,7 +12,7 @@ export interface Question {
   difficulty: 1 | 2 | 3 | 4 | 5;
 }
 
-export type DifficultyMode = 'basics' | 'easy' | 'zero-to-hero' | 'advanced';
+export type DifficultyMode = 'basics' | 'easy' | 'zero-to-hero' | 'advanced' | 'mixed';
 
 export const questions: Question[] = [
   // REACT - useState
@@ -404,8 +404,8 @@ export const questions: Question[] = [
   },
   {
     id: '35',
-    tags: ["useReducer","Hooks","Complex State"],
-    introduction: 'useReducer is particularly useful when state transitions are complex or when the next state depends on the previous one.',
+    tags: ["React Hook Form","Forms","Input Registration"],
+    introduction: 'React Hook Form provides a simple API for registering inputs using the spread syntax to connect form fields.',
     question: 'How do you register an input with React Hook Form?\n\n```jsx\nconst { register } = useForm();\nreturn <input ??? />;\n```',
     options: ['register prop', 'name prop only', 'ref prop', '{...register("fieldName")}'],
     correctAnswer: 3,
@@ -905,8 +905,8 @@ export const questions: Question[] = [
   },
   {
     id: '80',
-    tags: ["Template Literal Types","Advanced"],
-    introduction: 'Template literal types enable string manipulation at the type level.',
+    tags: ["Git Push","Remote","Version Control"],
+    introduction: 'Git push uploads your local commits to a remote repository, sharing your work with others.',
     question: 'What does git push do?\n\n```bash\n$ git push origin main\nCounting objects: 5, done.\nTo github.com:user/repo.git\n   abc1234..def5678  main -> main\n```',
     options: ['Downloads changes', 'Uploads local commits to remote', 'Creates a branch', 'Merges branches'],
     correctAnswer: 1,
@@ -916,8 +916,8 @@ export const questions: Question[] = [
   },
   {
     id: '81',
-    tags: ["Type Guards","Type Narrowing"],
-    introduction: 'Type guards help TypeScript narrow types within conditional blocks using runtime checks.',
+    tags: ["Git Pull","Remote","Version Control"],
+    introduction: 'Git pull is a combination command that fetches remote changes and merges them into your local branch.',
     question: 'What does git pull do?\n\n```bash\n$ git pull origin main\nremote: Counting objects: 3, done.\nFrom github.com:user/repo\n   abc1234..def5678  main -> origin/main\nUpdating abc1234..def5678\n```',
     options: ['Uploads changes', 'Fetches and merges remote changes', 'Creates a branch', 'Deletes a branch'],
     correctAnswer: 1,
@@ -927,8 +927,8 @@ export const questions: Question[] = [
   },
   {
     id: '82',
-    tags: ["Discriminated Unions","Union Types"],
-    introduction: 'Discriminated unions use a common property to distinguish between union members.',
+    tags: ["Git Fetch","Git Pull","Version Control"],
+    introduction: 'Understanding the difference between fetch and pull helps you control when and how remote changes are integrated.',
     question: 'What is the difference between git fetch and git pull?\n\n```bash\n$ git fetch origin        # Downloads, no merge\n$ git pull origin main    # Downloads AND merges\n```',
     options: ['No difference', 'Fetch downloads without merging, pull downloads and merges', 'Pull downloads without merging', 'Fetch uploads changes'],
     correctAnswer: 1,
@@ -938,8 +938,8 @@ export const questions: Question[] = [
   },
   {
     id: '83',
-    tags: ["never Type","Special Types"],
-    introduction: 'The \'never\' type represents values that never occur, useful for exhaustive checking.',
+    tags: ["Git Merge","Branching","Version Control"],
+    introduction: 'Git merge combines the history of two branches, bringing changes from one branch into another.',
     question: 'What does git merge do?\n\n```bash\n$ git checkout main\n$ git merge feature-branch\nMerge made by the \'recursive\' strategy.\n```',
     options: ['Splits a branch', 'Combines branches', 'Deletes a branch', 'Creates a branch'],
     correctAnswer: 1,
@@ -949,8 +949,8 @@ export const questions: Question[] = [
   },
   {
     id: '84',
-    tags: ["Function Overloads","Functions"],
-    introduction: 'Function overloads allow defining multiple function signatures for the same function.',
+    tags: ["Git Rebase","History","Version Control"],
+    introduction: 'Git rebase rewrites commit history by moving your commits onto a new base, creating a linear history.',
     question: 'What does git rebase do?\n\n```bash\n$ git checkout feature\n$ git rebase main\nFirst, rewinding head to replay your work...\nApplying: Add feature\n```',
     options: ['Deletes commits', 'Moves commits to a new base', 'Merges branches', 'Creates a branch'],
     correctAnswer: 1,
@@ -960,8 +960,8 @@ export const questions: Question[] = [
   },
   {
     id: '85',
-    tags: ["as const","Assertions"],
-    introduction: 'The \'as const\' assertion creates deeply readonly types with literal values.',
+    tags: ["Merge vs Rebase","Branching","Version Control"],
+    introduction: 'Choosing between merge and rebase affects how your project history looks and how changes are integrated.',
     question: 'What is the main difference between merge and rebase?\n\n```bash\n# Merge: preserves history\n$ git merge feature    # Creates merge commit\n\n# Rebase: rewrites history\n$ git rebase main      # Replays commits\n```',
     options: ['No difference', 'Merge creates a merge commit, rebase rewrites history', 'Rebase creates a merge commit', 'Merge rewrites history'],
     correctAnswer: 1,
@@ -971,8 +971,8 @@ export const questions: Question[] = [
   },
   {
     id: '86',
-    tags: ["Module Augmentation","Modules"],
-    introduction: 'Module augmentation allows extending existing module types with additional declarations.',
+    tags: ["Git Branch","Branching","Version Control"],
+    introduction: 'The git branch command is essential for managing branches, letting you list, create, or delete branches.',
     question: 'What does git branch do without arguments?\n\n```bash\n$ git branch\n  feature\n* main\n  bugfix\n```',
     options: ['Creates a branch', 'Lists branches', 'Deletes a branch', 'Switches branch'],
     correctAnswer: 1,
@@ -982,8 +982,8 @@ export const questions: Question[] = [
   },
   {
     id: '87',
-    tags: ["Declaration Merging","Advanced"],
-    introduction: 'Declaration merging combines multiple declarations of the same name into a single definition.',
+    tags: ["Git Checkout","Git Switch","Branching"],
+    introduction: 'Git provides multiple commands for creating and switching branches, with newer alternatives being more intuitive.',
     question: 'How do you create and switch to a new branch?\n\n```bash\n$ git checkout -b feature\nSwitched to a new branch \'feature\'\n\n$ git switch -c feature   # Modern alternative\nSwitched to a new branch \'feature\'\n```',
     options: ['git branch new', 'git checkout -b new', 'git switch -c new', 'Both checkout -b and switch -c'],
     correctAnswer: 3,
@@ -993,8 +993,8 @@ export const questions: Question[] = [
   },
   {
     id: '88',
-    tags: ["Branded Types","Nominal Typing"],
-    introduction: 'Branded types create nominal typing in TypeScript\'s structural type system.',
+    tags: ["Git Stash","Temporary Storage","Version Control"],
+    introduction: 'Git stash lets you temporarily save uncommitted changes so you can switch contexts without committing.',
     question: 'What does git stash do?\n\n```bash\n$ git stash\nSaved working directory and index state WIP on main\n\n$ git stash list\nstash@{0}: WIP on main: abc1234 Last commit\n```',
     options: ['Deletes changes', 'Temporarily saves changes', 'Commits changes', 'Pushes changes'],
     correctAnswer: 1,
@@ -1004,8 +1004,8 @@ export const questions: Question[] = [
   },
   {
     id: '89',
-    tags: ["Recursive Types","Advanced"],
-    introduction: 'Recursive types can reference themselves, enabling types for tree-like structures.',
+    tags: ["Git Stash","Temporary Storage","Version Control"],
+    introduction: 'After stashing changes, you can retrieve them using apply or pop, each with different behaviors.',
     question: 'How do you apply stashed changes?\n\n```bash\n$ git stash apply   # Applies and keeps stash\n$ git stash pop     # Applies and removes stash\n```',
     options: ['Only git stash apply', 'Only git stash pop', 'Both apply and pop', 'git stash get'],
     correctAnswer: 2,
@@ -1015,8 +1015,8 @@ export const questions: Question[] = [
   },
   {
     id: '90',
-    tags: ["Exclude & Extract","Utility Types"],
-    introduction: 'The Exclude and Extract utility types filter union types based on conditions.',
+    tags: ["Git Reset","History","Version Control"],
+    introduction: 'Git reset --hard is a powerful but destructive command that discards changes and resets your working directory.',
     question: 'What does git reset --hard do?\n\n```bash\n$ git reset --hard HEAD~1\nHEAD is now at abc1234 Previous commit\n# WARNING: All changes are lost!\n```',
     options: ['Soft reset', 'Discards all changes and resets to specified commit', 'Creates a commit', 'Merges branches'],
     correctAnswer: 1,
@@ -1026,8 +1026,8 @@ export const questions: Question[] = [
   },
   {
     id: '91',
-    tags: ["Enums","Data Types"],
-    introduction: 'TypeScript enums provide a way to define a set of named constants.',
+    tags: ["Git Reset","History","Version Control"],
+    introduction: 'Git reset --soft moves HEAD but keeps your changes staged, useful for combining or amending commits.',
     question: 'What does git reset --soft do?\n\n```bash\n$ git reset --soft HEAD~1\n# HEAD moves back, but changes stay staged\n$ git status\nChanges to be committed:\n  modified: file.txt\n```',
     options: ['Discards all changes', 'Moves HEAD but keeps changes staged', 'Creates a branch', 'Deletes commits'],
     correctAnswer: 1,
@@ -1037,8 +1037,8 @@ export const questions: Question[] = [
   },
   {
     id: '92',
-    tags: ["Type Assertions","Casting"],
-    introduction: 'Type assertions tell TypeScript to treat a value as a specific type when you know more than the compiler.',
+    tags: ["Git Revert","History","Version Control"],
+    introduction: 'Git revert is a safe way to undo changes because it creates a new commit rather than rewriting history.',
     question: 'What does git revert do?\n\n```bash\n$ git revert abc1234\n[main def5678] Revert "Add feature"\n 1 file changed, 5 deletions(-)\n```',
     options: ['Deletes a commit', 'Creates a new commit that undoes changes', 'Resets to previous state', 'Merges branches'],
     correctAnswer: 1,
@@ -1048,8 +1048,8 @@ export const questions: Question[] = [
   },
   {
     id: '93',
-    tags: ["satisfies Operator","Type Checking"],
-    introduction: 'The \'satisfies\' operator validates that a value matches a type while preserving its specific type.',
+    tags: ["Git HEAD","References","Version Control"],
+    introduction: 'HEAD is a special pointer in Git that indicates which commit you are currently working on.',
     question: 'What is HEAD in Git?\n\n```bash\n$ cat .git/HEAD\nref: refs/heads/main\n\n$ git log -1 HEAD\ncommit abc1234 (HEAD -> main)\n```',
     options: ['The first commit', 'A pointer to the current commit', 'The remote repository', 'A branch name'],
     correctAnswer: 1,
@@ -1059,8 +1059,8 @@ export const questions: Question[] = [
   },
   {
     id: '94',
-    tags: ["Tuple Types","Array Types"],
-    introduction: 'Tuple types represent arrays with fixed lengths and specific types at each position.',
+    tags: ["Git Log","History","Version Control"],
+    introduction: 'Git log displays the commit history, helping you understand the evolution of your project.',
     question: 'What does git log show?\n\n```bash\n$ git log --oneline\nabc1234 (HEAD -> main) Add feature\ndef5678 Fix bug\nghi9012 Initial commit\n```',
     options: ['Staged files', 'Commit history', 'Remote branches', 'Stashed changes'],
     correctAnswer: 1,
@@ -1070,8 +1070,8 @@ export const questions: Question[] = [
   },
   {
     id: '95',
-    tags: ["NonNullable","Utility Types"],
-    introduction: 'The NonNullable utility type removes null and undefined from a type.',
+    tags: ["Git Status","Working Directory","Version Control"],
+    introduction: 'Git status is your go-to command for understanding the current state of your repository.',
     question: 'What does git status show?\n\n```bash\n$ git status\nOn branch main\nChanges to be committed:\n  modified: app.js\nUntracked files:\n  newfile.txt\n```',
     options: ['Commit history', 'Working tree status', 'Remote URL', 'Branch list'],
     correctAnswer: 1,
@@ -1081,8 +1081,8 @@ export const questions: Question[] = [
   },
   {
     id: '96',
-    tags: ["ReturnType","Utility Types"],
-    introduction: 'ReturnType extracts the return type from a function type.',
+    tags: ["Git Diff","Changes","Version Control"],
+    introduction: 'Git diff shows you exactly what has changed, helping you review modifications before committing.',
     question: 'What does git diff show?\n\n```bash\n$ git diff\n-const old = "value";\n+const new = "updated";\n\n$ git diff --staged   # Staged changes\n```',
     options: ['Commit history', 'Changes between commits or working tree', 'Branch differences', 'Remote status'],
     correctAnswer: 1,
@@ -1092,8 +1092,8 @@ export const questions: Question[] = [
   },
   {
     id: '97',
-    tags: ["Parameters","Utility Types"],
-    introduction: 'Parameters extracts the parameter types from a function type as a tuple.',
+    tags: ["Git Branch","Branching","Version Control"],
+    introduction: 'Deleting branches helps keep your repository clean after features are merged or abandoned.',
     question: 'How do you delete a local branch?\n\n```bash\n$ git branch -d feature\nDeleted branch feature (was abc1234).\n\n$ git branch -D feature   # Force delete\n```',
     options: ['git branch -d branchname', 'git delete branchname', 'git remove branchname', 'git branch --delete-remote'],
     correctAnswer: 0,

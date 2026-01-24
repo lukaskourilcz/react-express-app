@@ -52,6 +52,10 @@ quizRouter.get('/questions', (req, res) => {
     const basicsQuestions = categoryFiltered.filter(q => q.tags.includes('Terminology'));
     const shuffled = shuffleArray(basicsQuestions);
     selected = shuffled.slice(0, count);
+  } else if (difficultyMode === 'mixed') {
+    // Mixed mode: random mix of all difficulty levels
+    const shuffled = shuffleArray(categoryFiltered);
+    selected = shuffled.slice(0, count);
   } else {
     // Zero to hero mode: progressive difficulty 1 → 5
     // Distribute questions evenly across difficulty levels
