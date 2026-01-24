@@ -96,7 +96,7 @@ function Quiz() {
   const [error, setError] = useState<string | null>(null);
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [difficultyMode, setDifficultyMode] = useState<DifficultyMode>('zero-to-hero');
-  const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>(ALL_CATEGORIES);
+  const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
 
   const fetchQuestions = async (count: number, difficulty: DifficultyMode, categories: CategoryType[]) => {
     try {
