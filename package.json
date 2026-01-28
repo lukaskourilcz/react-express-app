@@ -16,5 +16,8 @@
     "@vercel/node": "^3.0.0",
     "concurrently": "^8.2.2",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.93.2"
   }
 }

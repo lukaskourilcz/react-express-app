@@ -16,8 +16,10 @@ import {
 } from '@mui/material';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { useAuth0 } from '@auth0/auth0-react';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { quizStyles } from '../theme/MuiTheme';
+import { updateQuizResult, createOrUpdateUserStats } from '../lib/supabase';
 import './Quiz.css';
 
 const CATEGORY_OPTIONS: { value: CategoryType; label: string; color: string }[] = [
@@ -97,6 +99,17 @@ function Quiz() {
   const [difficultyMode, setDifficultyMode] = useState<DifficultyMode>('zero-to-hero');
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
 
+  let isAuthenticated = false;
+  let user: { sub?: string; email?: string; name?: string; picture?: string } | undefined;
+
+  try {
+    const auth0 = useAuth0();
+    isAuthenticated = auth0.isAuthenticated;
+    user = auth0.user;
+  } catch {
+    // Auth0 not configured
+  }
+
   const fetchQuestions = async (count: number, difficulty: DifficultyMode, categories: CategoryType[]) => {
     try {
       setState('loading');
@@ -169,6 +182,22 @@ function Quiz() {
       const data = await response.json();
       setResult(data);
       setState('submitted');
+
+      // Update user stats if authenticated
+      if (isAuthenticated && user?.sub) {
+        try {
+          // Ensure user profile exists first
+          await createOrUpdateUserStats(user.sub, {
+            email: user.email,
+            name: user.name,
+            picture: user.picture,
+          });
+          // Update quiz stats
+          await updateQuizResult(user.sub, data.correctAnswers, data.totalQuestions);
+        } catch (statsError) {
+          console.error('Failed to update user stats:', statsError);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit');
     }
