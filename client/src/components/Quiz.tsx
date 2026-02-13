@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -88,7 +88,7 @@ const DIFFICULTY_OPTIONS: { value: DifficultyMode; label: string; tooltip: strin
   { value: 'mixed', label: 'Mixed', tooltip: 'Random mix of all difficulty levels.' },
 ];
 
-function Quiz() {
+function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }) {
   const [state, setState] = useState<QuizState>('ready');
   const [sessionId, setSessionId] = useState<string>('');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -102,6 +102,10 @@ function Quiz() {
   const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
   const [revealedAnswers, setRevealedAnswers] = useState<Record<string, boolean>>({});
   const [revealedExplanations, setRevealedExplanations] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    onActiveChange?.(state !== 'ready');
+  }, [state, onActiveChange]);
 
   let isAuthenticated = false;
   let user: { sub?: string; email?: string; name?: string; picture?: string } | undefined;

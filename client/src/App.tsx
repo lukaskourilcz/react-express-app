@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Button, IconButton } from '@mui/material';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -19,6 +20,7 @@ const GitHubIcon = () => (
 
 function App() {
   const location = useLocation();
+  const [quizActive, setQuizActive] = useState(false);
   let isAuthenticated = false;
 
   try {
@@ -31,7 +33,7 @@ function App() {
   return (
     <Box sx={{ minHeight: '100vh', backgroundColor: '#f8f9fa', display: 'flex', flexDirection: 'column' }}>
       {/* Navigation Bar */}
-      <AppBar
+      {(!quizActive || location.pathname !== '/') && <AppBar
         position="static"
         elevation={0}
         sx={{
@@ -91,7 +93,7 @@ function App() {
             <AuthButton />
           </Box>
         </Toolbar>
-      </AppBar>
+      </AppBar>}
 
       {/* Main Content */}
       <Box
@@ -111,14 +113,14 @@ function App() {
           }}
         >
           <Routes>
-            <Route path="/" element={<Quiz />} />
+            <Route path="/" element={<Quiz onActiveChange={setQuizActive} />} />
             <Route path="/profile" element={<Profile />} />
           </Routes>
         </Box>
       </Box>
 
       {/* Footer */}
-      <Box
+      {(!quizActive || location.pathname !== '/') && <Box
         component="footer"
         sx={{
           py: 2,
@@ -157,7 +159,7 @@ function App() {
             <GitHubIcon />
           </IconButton>
         </Box>
-      </Box>
+      </Box>}
     </Box>
   );
 }
