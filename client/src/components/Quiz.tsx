@@ -315,7 +315,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </Button>
           </Box>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {[0, 4].map((startIndex) => (
+            {[0, 4, 8].map((startIndex) => (
               <Box key={startIndex} sx={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
                 {CATEGORY_OPTIONS.slice(startIndex, startIndex + 4).map((cat) => (
                   <Chip
@@ -590,32 +590,34 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   return (
     <>
-      <div className="quiz-progress-container">
-        <div className="quiz-progress-text">
-          <span>Question {currentIndex + 1} of {questions.length}</span>
-          <span>{Object.keys(answers).length} answered</span>
-        </div>
-        <LinearProgress
-          variant="determinate"
-          value={progress}
-          sx={{
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: 'rgba(255,255,255,0.3)',
-            '& .MuiLinearProgress-bar': {
-              borderRadius: 3,
-              background: CATEGORY_GRADIENT,
-            }
-          }}
-        />
-      </div>
-
       <Card className="quiz-card">
         <CardContent className="quiz-card-content">
-          <div className="quiz-question-header">
-            <span className="quiz-question-number">
-              Question {currentIndex + 1}
-            </span>
+          {/* Progress: question count and bar on the same line */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+            <Typography variant="caption" sx={{ color: '#888', fontWeight: 500, whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
+              {currentIndex + 1}/{questions.length}
+            </Typography>
+            <LinearProgress
+              variant="determinate"
+              value={progress}
+              sx={{
+                flex: 1,
+                height: 6,
+                borderRadius: 3,
+                backgroundColor: 'rgba(0,0,0,0.08)',
+                '& .MuiLinearProgress-bar': {
+                  borderRadius: 3,
+                  background: CATEGORY_GRADIENT,
+                }
+              }}
+            />
+            <Typography variant="caption" sx={{ color: '#888', fontWeight: 500, whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
+              {Object.keys(answers).length} answered
+            </Typography>
+          </Box>
+
+          {/* Category chip and tags on the same line */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', mb: 1.5 }}>
             <Chip
               label={currentQuestion.category}
               size="small"
@@ -625,26 +627,21 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 fontWeight: 600,
               }}
             />
-          </div>
-
-          {currentQuestion.tags && currentQuestion.tags.length > 0 && (
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mb: 1.5 }}>
-              {currentQuestion.tags.map((tag, idx) => (
-                <Chip
-                  key={idx}
-                  label={`#${tag}`}
-                  size="small"
-                  variant="outlined"
-                  sx={{
-                    fontSize: '0.7rem',
-                    height: '22px',
-                    borderColor: 'rgba(0,0,0,0.15)',
-                    color: 'text.secondary',
-                  }}
-                />
-              ))}
-            </Box>
-          )}
+            {currentQuestion.tags && currentQuestion.tags.length > 0 && currentQuestion.tags.map((tag, idx) => (
+              <Chip
+                key={idx}
+                label={`#${tag}`}
+                size="small"
+                variant="outlined"
+                sx={{
+                  fontSize: '0.7rem',
+                  height: '22px',
+                  borderColor: 'rgba(0,0,0,0.15)',
+                  color: 'text.secondary',
+                }}
+              />
+            ))}
+          </Box>
 
           <div className="quiz-question-text">
             {renderQuestion(currentQuestion.question)}
