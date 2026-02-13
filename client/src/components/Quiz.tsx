@@ -100,6 +100,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [difficultyMode, setDifficultyMode] = useState<DifficultyMode>('zero-to-hero');
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
   const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
+  const [revealedOptions, setRevealedOptions] = useState<Record<string, boolean>>({});
   const [revealedAnswers, setRevealedAnswers] = useState<Record<string, boolean>>({});
   const [revealedExplanations, setRevealedExplanations] = useState<Record<string, boolean>>({});
 
@@ -672,25 +673,44 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </Typography>
           )}
 
-          <RadioGroup
-            value={answers[currentQuestion.id] ?? ''}
-            onChange={(e) => handleAnswer(currentQuestion.id, parseInt(e.target.value))}
+          <Box
+            onClick={() => {
+              if (!revealedOptions[currentQuestion.id]) {
+                setRevealedOptions(prev => ({ ...prev, [currentQuestion.id]: true }));
+              }
+            }}
+            sx={{
+              cursor: revealedOptions[currentQuestion.id] ? 'default' : 'pointer',
+              filter: revealedOptions[currentQuestion.id] ? 'none' : 'blur(5px)',
+              userSelect: revealedOptions[currentQuestion.id] ? 'auto' : 'none',
+              transition: 'filter 0.3s ease',
+              pointerEvents: revealedOptions[currentQuestion.id] ? 'auto' : 'auto',
+            }}
           >
-            <div className="quiz-options-container">
-              {currentQuestion.options.map((option, index) => {
-                const isSelected = answers[currentQuestion.id] === index;
-                return (
-                  <FormControlLabel
-                    key={index}
-                    value={index}
-                    control={<Radio />}
-                    label={option}
-                    sx={isSelected ? quizStyles.optionSelected : undefined}
-                  />
-                );
-              })}
-            </div>
-          </RadioGroup>
+            <RadioGroup
+              value={answers[currentQuestion.id] ?? ''}
+              onChange={(e) => {
+                if (revealedOptions[currentQuestion.id]) {
+                  handleAnswer(currentQuestion.id, parseInt(e.target.value));
+                }
+              }}
+            >
+              <div className="quiz-options-container">
+                {currentQuestion.options.map((option, index) => {
+                  const isSelected = answers[currentQuestion.id] === index;
+                  return (
+                    <FormControlLabel
+                      key={index}
+                      value={index}
+                      control={<Radio />}
+                      label={option}
+                      sx={isSelected ? quizStyles.optionSelected : undefined}
+                    />
+                  );
+                })}
+              </div>
+            </RadioGroup>
+          </Box>
         </CardContent>
       </Card>
 
