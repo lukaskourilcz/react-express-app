@@ -316,9 +316,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </Button>
           </Box>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {[0, 4, 8].map((startIndex) => (
+            {[0, 5].map((startIndex) => (
               <Box key={startIndex} sx={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                {CATEGORY_OPTIONS.slice(startIndex, startIndex + 4).map((cat) => (
+                {CATEGORY_OPTIONS.slice(startIndex, startIndex + 5).map((cat) => (
                   <Chip
                     key={cat.value}
                     label={cat.label}
