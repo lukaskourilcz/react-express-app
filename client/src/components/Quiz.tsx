@@ -684,16 +684,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               filter: revealedOptions[currentQuestion.id] ? 'none' : 'blur(5px)',
               userSelect: revealedOptions[currentQuestion.id] ? 'auto' : 'none',
               transition: 'filter 0.3s ease',
-              pointerEvents: revealedOptions[currentQuestion.id] ? 'auto' : 'auto',
+              pointerEvents: 'auto',
             }}
           >
             <RadioGroup
               value={answers[currentQuestion.id] ?? ''}
-              onChange={(e) => {
-                if (revealedOptions[currentQuestion.id]) {
-                  handleAnswer(currentQuestion.id, parseInt(e.target.value));
-                }
-              }}
+              onChange={(e) => handleAnswer(currentQuestion.id, parseInt(e.target.value))}
+              sx={{ pointerEvents: revealedOptions[currentQuestion.id] ? 'auto' : 'none' }}
             >
               <div className="quiz-options-container">
                 {currentQuestion.options.map((option, index) => {
