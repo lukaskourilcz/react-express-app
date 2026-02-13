@@ -99,6 +99,9 @@ function Quiz() {
   const [questionCount, setQuestionCount] = useState<number>(10);
   const [difficultyMode, setDifficultyMode] = useState<DifficultyMode>('zero-to-hero');
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
+  const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
+  const [revealedAnswers, setRevealedAnswers] = useState<Record<string, boolean>>({});
+  const [revealedExplanations, setRevealedExplanations] = useState<Record<string, boolean>>({});
 
   let isAuthenticated = false;
   let user: { sub?: string; email?: string; name?: string; picture?: string } | undefined;
@@ -536,19 +539,35 @@ function Quiz() {
                 Your answer: <strong>{question.options[questionResult?.selectedIndex ?? 0]}</strong>
               </Typography>
               {!isCorrect && (
-                <Typography variant="body2" color="success.main" sx={{ mt: 0.75 }}>
+                <Typography
+                  variant="body2"
+                  color="success.main"
+                  onClick={() => setRevealedAnswers(prev => ({ ...prev, [question.id]: true }))}
+                  sx={{
+                    mt: 0.75,
+                    cursor: revealedAnswers[question.id] ? 'default' : 'pointer',
+                    filter: revealedAnswers[question.id] ? 'none' : 'blur(5px)',
+                    userSelect: revealedAnswers[question.id] ? 'auto' : 'none',
+                    transition: 'filter 0.3s ease',
+                  }}
+                >
                   Correct: <strong>{question.options[questionResult?.correctAnswer ?? 0]}</strong>
                 </Typography>
               )}
               {questionResult?.explanation && (
                 <Typography
                   variant="body2"
+                  onClick={() => setRevealedExplanations(prev => ({ ...prev, [question.id]: true }))}
                   sx={{
                     mt: 1.5,
                     p: 1.5,
                     backgroundColor: `${getCategoryHexColor(question.category)}10`,
                     borderRadius: 1,
                     borderLeft: `4px solid ${getCategoryHexColor(question.category)}`,
+                    cursor: revealedExplanations[question.id] ? 'default' : 'pointer',
+                    filter: revealedExplanations[question.id] ? 'none' : 'blur(5px)',
+                    userSelect: revealedExplanations[question.id] ? 'auto' : 'none',
+                    transition: 'filter 0.3s ease',
                   }}
                 >
                   {questionResult.explanation}
@@ -630,6 +649,7 @@ function Quiz() {
           {currentQuestion.introduction && (
             <Typography
               variant="body2"
+              onClick={() => setRevealedHints(prev => ({ ...prev, [currentQuestion.id]: true }))}
               sx={{
                 color: 'text.secondary',
                 mt: 2,
@@ -640,6 +660,11 @@ function Quiz() {
                 borderLeft: `4px solid ${getCategoryHexColor(currentQuestion.category)}`,
                 fontSize: '0.85rem',
                 lineHeight: 1.6,
+                cursor: revealedHints[currentQuestion.id] ? 'default' : 'pointer',
+                filter: revealedHints[currentQuestion.id] ? 'none' : 'blur(5px)',
+                userSelect: revealedHints[currentQuestion.id] ? 'auto' : 'none',
+                transition: 'filter 0.3s ease',
+                position: 'relative',
               }}
             >
               <strong>Hint:</strong> {currentQuestion.introduction}
