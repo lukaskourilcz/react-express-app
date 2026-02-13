@@ -101,8 +101,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
   const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
   const [revealedOptions, setRevealedOptions] = useState<Record<string, boolean>>({});
-  const [revealedAnswers, setRevealedAnswers] = useState<Record<string, boolean>>({});
-  const [revealedExplanations, setRevealedExplanations] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     onActiveChange?.(state !== 'ready');
@@ -547,14 +545,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 <Typography
                   variant="body2"
                   color="success.main"
-                  onClick={() => setRevealedAnswers(prev => ({ ...prev, [question.id]: true }))}
-                  sx={{
-                    mt: 0.75,
-                    cursor: revealedAnswers[question.id] ? 'default' : 'pointer',
-                    filter: revealedAnswers[question.id] ? 'none' : 'blur(5px)',
-                    userSelect: revealedAnswers[question.id] ? 'auto' : 'none',
-                    transition: 'filter 0.3s ease',
-                  }}
+                  sx={{ mt: 0.75 }}
                 >
                   Correct: <strong>{question.options[questionResult?.correctAnswer ?? 0]}</strong>
                 </Typography>
@@ -562,17 +553,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               {questionResult?.explanation && (
                 <Typography
                   variant="body2"
-                  onClick={() => setRevealedExplanations(prev => ({ ...prev, [question.id]: true }))}
                   sx={{
                     mt: 1.5,
                     p: 1.5,
                     backgroundColor: `${getCategoryHexColor(question.category)}10`,
                     borderRadius: 1,
                     borderLeft: `4px solid ${getCategoryHexColor(question.category)}`,
-                    cursor: revealedExplanations[question.id] ? 'default' : 'pointer',
-                    filter: revealedExplanations[question.id] ? 'none' : 'blur(5px)',
-                    userSelect: revealedExplanations[question.id] ? 'auto' : 'none',
-                    transition: 'filter 0.3s ease',
                   }}
                 >
                   {questionResult.explanation}
@@ -684,16 +670,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               filter: revealedOptions[currentQuestion.id] ? 'none' : 'blur(5px)',
               userSelect: revealedOptions[currentQuestion.id] ? 'auto' : 'none',
               transition: 'filter 0.3s ease',
-              pointerEvents: revealedOptions[currentQuestion.id] ? 'auto' : 'auto',
+              pointerEvents: 'auto',
             }}
           >
             <RadioGroup
               value={answers[currentQuestion.id] ?? ''}
-              onChange={(e) => {
-                if (revealedOptions[currentQuestion.id]) {
-                  handleAnswer(currentQuestion.id, parseInt(e.target.value));
-                }
-              }}
+              onChange={(e) => handleAnswer(currentQuestion.id, parseInt(e.target.value))}
+              sx={{ pointerEvents: revealedOptions[currentQuestion.id] ? 'auto' : 'none' }}
             >
               <div className="quiz-options-container">
                 {currentQuestion.options.map((option, index) => {
