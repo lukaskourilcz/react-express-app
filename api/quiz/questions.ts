@@ -34,8 +34,17 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   } else if (difficultyMode === 'basics') {
     // Basics mode: only questions with "Terminology" tag
     const basicsQuestions = categoryFiltered.filter(q => q.tags.includes('Terminology'));
-    const shuffled = shuffleArray(basicsQuestions);
-    selected = shuffled.slice(0, count);
+    if (basicsQuestions.length > 0) {
+      const shuffled = shuffleArray(basicsQuestions);
+      selected = shuffled.slice(0, count);
+    } else {
+      // Fallback: pick the easiest available questions sorted by difficulty
+      const sorted = [...categoryFiltered].sort((a, b) => a.difficulty - b.difficulty);
+      const easiestDifficulty = sorted[0]?.difficulty ?? 1;
+      const easiest = sorted.filter(q => q.difficulty === easiestDifficulty);
+      const shuffled = shuffleArray(easiest);
+      selected = shuffled.slice(0, count);
+    }
   } else if (difficultyMode === 'mixed') {
     // Mixed mode: random mix of all difficulty levels
     const shuffled = shuffleArray(categoryFiltered);

@@ -61,7 +61,7 @@ const renderQuestion = (text: string) => {
           customStyle={{
             margin: '1rem 0',
             borderRadius: '6px',
-            fontSize: '0.85rem',
+            fontSize: '0.75rem',
             padding: '1rem',
           }}
           codeTagProps={{
