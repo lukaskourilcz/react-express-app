@@ -605,8 +605,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </Typography>
           </Box>
 
-          {/* Category chip and tags on the same line */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', mb: 1.5 }}>
+          {/* Category chip on the left, tags on the right */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
             <Chip
               label={currentQuestion.category}
               size="small"
@@ -616,20 +616,24 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 fontWeight: 600,
               }}
             />
-            {currentQuestion.tags && currentQuestion.tags.length > 0 && currentQuestion.tags.map((tag, idx) => (
-              <Chip
-                key={idx}
-                label={`#${tag}`}
-                size="small"
-                variant="outlined"
-                sx={{
-                  fontSize: '0.7rem',
-                  height: '22px',
-                  borderColor: 'rgba(0,0,0,0.15)',
-                  color: 'text.secondary',
-                }}
-              />
-            ))}
+            {currentQuestion.tags && currentQuestion.tags.length > 0 && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', ml: 'auto' }}>
+                {currentQuestion.tags.map((tag, idx) => (
+                  <Chip
+                    key={idx}
+                    label={`#${tag}`}
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      fontSize: '0.7rem',
+                      height: '22px',
+                      borderColor: 'rgba(0,0,0,0.15)',
+                      color: 'text.secondary',
+                    }}
+                  />
+                ))}
+              </Box>
+            )}
           </Box>
 
           <div className="quiz-question-text" style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
