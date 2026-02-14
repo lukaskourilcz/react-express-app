@@ -13,6 +13,8 @@ import {
   Chip,
   Paper,
   Tooltip,
+  ClickAwayListener,
+  IconButton,
 } from '@mui/material';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
@@ -630,34 +632,56 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             ))}
           </Box>
 
-          <div className="quiz-question-text">
-            {renderQuestion(currentQuestion.question)}
+          <div className="quiz-question-text" style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+            <div style={{ flex: 1 }}>{renderQuestion(currentQuestion.question)}</div>
+            {currentQuestion.introduction && (
+              <ClickAwayListener onClickAway={() => setRevealedHints(prev => ({ ...prev, [currentQuestion.id]: false }))}>
+                <div>
+                  <Tooltip
+                    title={currentQuestion.introduction}
+                    open={!!revealedHints[currentQuestion.id]}
+                    disableFocusListener
+                    disableHoverListener
+                    disableTouchListener
+                    arrow
+                    placement="bottom"
+                    slotProps={{
+                      tooltip: {
+                        sx: {
+                          backgroundColor: '#333',
+                          fontSize: '0.82rem',
+                          lineHeight: 1.6,
+                          p: 1.5,
+                          maxWidth: 320,
+                        },
+                      },
+                      arrow: {
+                        sx: { color: '#333' },
+                      },
+                    }}
+                  >
+                    <IconButton
+                      size="small"
+                      onClick={() => setRevealedHints(prev => ({ ...prev, [currentQuestion.id]: !prev[currentQuestion.id] }))}
+                      sx={{
+                        mt: '1px',
+                        color: revealedHints[currentQuestion.id]
+                          ? getCategoryHexColor(currentQuestion.category)
+                          : 'text.disabled',
+                        '&:hover': {
+                          color: getCategoryHexColor(currentQuestion.category),
+                        },
+                      }}
+                    >
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
+                      </svg>
+                    </IconButton>
+                  </Tooltip>
+                </div>
+              </ClickAwayListener>
+            )}
           </div>
-
-          {currentQuestion.introduction && (
-            <Typography
-              variant="body2"
-              onClick={() => setRevealedHints(prev => ({ ...prev, [currentQuestion.id]: true }))}
-              sx={{
-                color: 'text.secondary',
-                mt: 2,
-                mb: 2,
-                p: 1.5,
-                backgroundColor: `${getCategoryHexColor(currentQuestion.category)}10`,
-                borderRadius: 1,
-                borderLeft: `4px solid ${getCategoryHexColor(currentQuestion.category)}`,
-                fontSize: '0.85rem',
-                lineHeight: 1.6,
-                cursor: revealedHints[currentQuestion.id] ? 'default' : 'pointer',
-                filter: revealedHints[currentQuestion.id] ? 'none' : 'blur(5px)',
-                userSelect: revealedHints[currentQuestion.id] ? 'auto' : 'none',
-                transition: 'filter 0.3s ease',
-                position: 'relative',
-              }}
-            >
-              <strong>Hint:</strong> {currentQuestion.introduction}
-            </Typography>
-          )}
 
           <Box
             onClick={() => {
