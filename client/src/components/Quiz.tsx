@@ -315,31 +315,27 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               {isAllSelected ? 'Deselect All' : 'Select All'}
             </Button>
           </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {[0, 5].map((startIndex) => (
-              <Box key={startIndex} sx={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                {CATEGORY_OPTIONS.slice(startIndex, startIndex + 5).map((cat) => (
-                  <Chip
-                    key={cat.value}
-                    label={cat.label}
-                    size="small"
-                    onClick={() => handleCategoryToggle(cat.value)}
-                    sx={{
-                      cursor: 'pointer',
-                      backgroundColor: '#fff',
-                      color: selectedCategories.includes(cat.value) ? cat.color : '#555',
-                      border: selectedCategories.includes(cat.value) ? `2px solid ${cat.color}` : '1px solid #ddd',
-                      borderLeft: `4px solid ${cat.color}`,
-                      borderRadius: 1,
-                      fontWeight: selectedCategories.includes(cat.value) ? 600 : 500,
-                      fontSize: '0.8rem',
-                      '&:hover': {
-                        backgroundColor: '#f8f8f8',
-                      },
-                    }}
-                  />
-                ))}
-              </Box>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
+            {CATEGORY_OPTIONS.map((cat) => (
+              <Chip
+                key={cat.value}
+                label={cat.label}
+                size="small"
+                onClick={() => handleCategoryToggle(cat.value)}
+                sx={{
+                  cursor: 'pointer',
+                  backgroundColor: '#fff',
+                  color: selectedCategories.includes(cat.value) ? cat.color : '#555',
+                  border: selectedCategories.includes(cat.value) ? `2px solid ${cat.color}` : '1px solid #ddd',
+                  borderLeft: `4px solid ${cat.color}`,
+                  borderRadius: 1,
+                  fontWeight: selectedCategories.includes(cat.value) ? 600 : 500,
+                  fontSize: '0.8rem',
+                  '&:hover': {
+                    backgroundColor: '#f8f8f8',
+                  },
+                }}
+              />
             ))}
           </Box>
           {selectedCategories.length === 0 && (
