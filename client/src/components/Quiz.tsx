@@ -315,31 +315,27 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               {isAllSelected ? 'Deselect All' : 'Select All'}
             </Button>
           </Box>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {[0, 5].map((startIndex) => (
-              <Box key={startIndex} sx={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                {CATEGORY_OPTIONS.slice(startIndex, startIndex + 5).map((cat) => (
-                  <Chip
-                    key={cat.value}
-                    label={cat.label}
-                    size="small"
-                    onClick={() => handleCategoryToggle(cat.value)}
-                    sx={{
-                      cursor: 'pointer',
-                      backgroundColor: '#fff',
-                      color: selectedCategories.includes(cat.value) ? cat.color : '#555',
-                      border: selectedCategories.includes(cat.value) ? `2px solid ${cat.color}` : '1px solid #ddd',
-                      borderLeft: `4px solid ${cat.color}`,
-                      borderRadius: 1,
-                      fontWeight: selectedCategories.includes(cat.value) ? 600 : 500,
-                      fontSize: '0.8rem',
-                      '&:hover': {
-                        backgroundColor: '#f8f8f8',
-                      },
-                    }}
-                  />
-                ))}
-              </Box>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
+            {CATEGORY_OPTIONS.map((cat) => (
+              <Chip
+                key={cat.value}
+                label={cat.label}
+                size="small"
+                onClick={() => handleCategoryToggle(cat.value)}
+                sx={{
+                  cursor: 'pointer',
+                  backgroundColor: '#fff',
+                  color: selectedCategories.includes(cat.value) ? cat.color : '#555',
+                  border: selectedCategories.includes(cat.value) ? `2px solid ${cat.color}` : '1px solid #ddd',
+                  borderLeft: `4px solid ${cat.color}`,
+                  borderRadius: 1,
+                  fontWeight: selectedCategories.includes(cat.value) ? 600 : 500,
+                  fontSize: '0.8rem',
+                  '&:hover': {
+                    backgroundColor: '#f8f8f8',
+                  },
+                }}
+              />
             ))}
           </Box>
           {selectedCategories.length === 0 && (
@@ -605,8 +601,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </Typography>
           </Box>
 
-          {/* Category chip and tags on the same line */}
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', mb: 1.5 }}>
+          {/* Category chip on the left, tags on the right */}
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5 }}>
             <Chip
               label={currentQuestion.category}
               size="small"
@@ -616,20 +612,24 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 fontWeight: 600,
               }}
             />
-            {currentQuestion.tags && currentQuestion.tags.length > 0 && currentQuestion.tags.map((tag, idx) => (
-              <Chip
-                key={idx}
-                label={`#${tag}`}
-                size="small"
-                variant="outlined"
-                sx={{
-                  fontSize: '0.7rem',
-                  height: '22px',
-                  borderColor: 'rgba(0,0,0,0.15)',
-                  color: 'text.secondary',
-                }}
-              />
-            ))}
+            {currentQuestion.tags && currentQuestion.tags.length > 0 && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', ml: 'auto' }}>
+                {currentQuestion.tags.map((tag, idx) => (
+                  <Chip
+                    key={idx}
+                    label={`#${tag}`}
+                    size="small"
+                    variant="outlined"
+                    sx={{
+                      fontSize: '0.7rem',
+                      height: '22px',
+                      borderColor: 'rgba(0,0,0,0.15)',
+                      color: 'text.secondary',
+                    }}
+                  />
+                ))}
+              </Box>
+            )}
           </Box>
 
           <div className="quiz-question-text" style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
