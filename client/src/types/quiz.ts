@@ -1,4 +1,4 @@
-export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'html' | 'css' | 'dev-world' | 'custom';
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'html' | 'css' | 'dev-world' | 'custom' | 'code-snippets';
 
 export interface Question {
   id: string;

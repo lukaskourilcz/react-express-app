@@ -34,6 +34,7 @@ const CATEGORY_OPTIONS: { value: CategoryType; label: string; color: string }[] 
   { value: 'git', label: 'Git', color: '#f05032' },
   { value: 'dev-world', label: 'Dev World', color: '#8b5cf6' },
   { value: 'custom', label: 'Custom', color: '#06b6d4' },
+  { value: 'code-snippets', label: 'Code Snippets', color: '#ec4899' },
 ];
 
 // Gradient using category colors
@@ -44,7 +45,7 @@ const getCategoryHexColor = (category: string): string => {
   return CATEGORY_OPTIONS.find(c => c.value === category)?.color || '#666';
 };
 
-const ALL_CATEGORIES: CategoryType[] = ['html', 'css', 'javascript', 'typescript', 'react', 'nodejs', 'git', 'dev-world', 'custom'];
+const ALL_CATEGORIES: CategoryType[] = ['html', 'css', 'javascript', 'typescript', 'react', 'nodejs', 'git', 'dev-world', 'custom', 'code-snippets'];
 
 // Render question text with syntax-highlighted code blocks
 const renderQuestion = (text: string) => {
