@@ -29,7 +29,7 @@ quizRouter.get('/questions', (req, res) => {
   const categoriesParam = req.query.categories as string || '';
   const selectedCategories: CategoryType[] = categoriesParam
     ? (categoriesParam.split(',') as CategoryType[])
-    : ['html', 'css', 'javascript', 'typescript', 'react', 'git', 'nodejs', 'dev-world', 'custom'];
+    : ['html', 'css', 'javascript', 'typescript', 'react', 'git', 'nodejs', 'dev-world', 'custom', 'code-snippets'];
 
   // Filter questions by selected categories
   const categoryFiltered = questions.filter(q => selectedCategories.includes(q.category));
