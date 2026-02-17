@@ -316,7 +316,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               {isAllSelected ? 'Deselect All' : 'Select All'}
             </Button>
           </Box>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: '6px', sm: '10px' }, justifyContent: 'center' }}>
             {CATEGORY_OPTIONS.map((cat) => (
               <Chip
                 key={cat.value}
@@ -331,7 +331,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   borderLeft: `4px solid ${cat.color}`,
                   borderRadius: 1,
                   fontWeight: selectedCategories.includes(cat.value) ? 600 : 500,
-                  fontSize: '0.8rem',
+                  fontSize: { xs: '0.65rem', sm: '0.8rem' },
+                  height: { xs: '26px', sm: '32px' },
                   '&:hover': {
                     backgroundColor: '#f8f8f8',
                   },
@@ -352,7 +353,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             <Typography variant="caption" sx={{ color: '#888', display: 'block', mb: 1 }}>
               Selected ({selectedCategories.length}/{ALL_CATEGORIES.length}):
             </Typography>
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            <Box sx={{ display: 'flex', gap: { xs: 0.25, sm: 0.5 }, flexWrap: 'wrap' }}>
               {selectedCategories.map(cat => {
                 const category = CATEGORY_OPTIONS.find(c => c.value === cat);
                 return (
@@ -361,11 +362,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                     label={category?.label}
                     size="small"
                     sx={{
-                      height: '22px',
-                      fontSize: '0.7rem',
+                      height: { xs: '18px', sm: '22px' },
+                      fontSize: { xs: '0.55rem', sm: '0.7rem' },
                       fontWeight: 500,
                       backgroundColor: category?.color,
                       color: ['javascript', 'react'].includes(cat) ? '#1a1a1a' : '#fff',
+                      '& .MuiChip-label': {
+                        px: { xs: 0.5, sm: 1 },
+                      },
                     }}
                   />
                 );
@@ -531,6 +535,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                     backgroundColor: getCategoryHexColor(question.category),
                     color: ['javascript', 'react'].includes(question.category) ? '#1a1a1a' : '#fff',
                     fontWeight: 600,
+                    fontSize: { xs: '0.65rem', sm: '0.8rem' },
+                    height: { xs: '22px', sm: '32px' },
                   }}
                 />
               </Box>
@@ -611,10 +617,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 backgroundColor: getCategoryHexColor(currentQuestion.category),
                 color: ['javascript', 'react'].includes(currentQuestion.category) ? '#1a1a1a' : '#fff',
                 fontWeight: 600,
+                fontSize: { xs: '0.65rem', sm: '0.8rem' },
+                height: { xs: '22px', sm: '32px' },
               }}
             />
             {currentQuestion.tags && currentQuestion.tags.length > 0 && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', ml: 'auto' }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.25, sm: 0.5 }, flexWrap: 'wrap', ml: 'auto' }}>
                 {currentQuestion.tags.map((tag, idx) => (
                   <Chip
                     key={idx}
@@ -622,10 +630,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                     size="small"
                     variant="outlined"
                     sx={{
-                      fontSize: '0.7rem',
-                      height: '22px',
+                      fontSize: { xs: '0.55rem', sm: '0.7rem' },
+                      height: { xs: '18px', sm: '22px' },
                       borderColor: 'rgba(0,0,0,0.15)',
                       color: 'text.secondary',
+                      '& .MuiChip-label': {
+                        px: { xs: 0.5, sm: 1 },
+                      },
                     }}
                   />
                 ))}
