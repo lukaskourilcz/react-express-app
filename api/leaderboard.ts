@@ -48,9 +48,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!category || category.length > 50) {
         return jsonError(res, 400, 'bad_request', 'category required');
       }
+      const minParam = parseInt(req.query.min_attempts as string, 10);
+      const minAttempts = Number.isFinite(minParam)
+        ? Math.min(Math.max(minParam, 1), 100)
+        : 5;
       const { data, error } = await supabase.rpc('category_leaderboard', {
         p_category: category,
         p_limit: limit,
+        p_min_attempts: minAttempts,
       });
       if (error) {
         if (/function .* does not exist/i.test(error.message)) {
@@ -60,7 +65,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return jsonError(res, 500, 'db_error', 'Could not load category leaderboard');
       }
       res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
-      return res.json({ period: 'category', category, entries: data });
+      return res.json({ period: 'category', category, min_attempts: minAttempts, entries: data });
     }
 
     if (period === 'daily') {

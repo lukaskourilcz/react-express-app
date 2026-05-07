@@ -24,6 +24,7 @@ import {
   controlMatch,
   submitMatchAnswer,
   fetchDistribution,
+  sendHeartbeat,
   type Match,
   type Participant,
   type ScoreboardEntry,
@@ -210,6 +211,9 @@ export function PlayMatch() {
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const isHost = !!(user?.sub && match?.host_sub === user.sub);
+  // Records when the local client first observed the current question_started_at,
+  // so a slow broadcast doesn't unfairly penalise the speed bonus.
+  const clientReceivedAtRef = useRef<string | null>(null);
 
   // Initial join + state load.
   useEffect(() => {
@@ -276,7 +280,30 @@ export function PlayMatch() {
     setSelected(null);
     setSubmitted(false);
     setQuestionShownAt(Date.now());
+    clientReceivedAtRef.current = new Date().toISOString();
   }, [match?.current_index, match?.status]);
+
+  // Host heartbeat — keeps the match from being auto-finished by the
+  // server's stale-match cleanup (5 min). Pinged every 30 s while the
+  // host is actively viewing the page.
+  useEffect(() => {
+    if (!isHost || !user?.sub || !code) return;
+    if (match?.status !== 'lobby' && match?.status !== 'running') return;
+    let cancelled = false;
+    const tick = () => {
+      sendHeartbeat(code, user.sub!).catch(() => {
+        /* ignore — UI keeps working, server will auto-finish if truly gone */
+      });
+    };
+    tick();
+    const id = window.setInterval(() => {
+      if (!cancelled) tick();
+    }, 30_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [isHost, user?.sub, code, match?.status]);
 
   const broadcastUpdate = () => {
     channelRef.current?.send('match_updated', { at: Date.now() });
@@ -321,6 +348,7 @@ export function PlayMatch() {
         question_idx: match.current_index,
         selected_idx: selected,
         duration_ms: Date.now() - questionShownAt,
+        client_received_at: clientReceivedAtRef.current ?? new Date().toISOString(),
       });
       setSubmitted(true);
       broadcastUpdate();

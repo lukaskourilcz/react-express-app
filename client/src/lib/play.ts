@@ -109,10 +109,17 @@ export const submitMatchAnswer = (input: {
   question_idx: number;
   selected_idx: number;
   duration_ms: number;
+  client_received_at?: string;
 }) =>
-  apiFetch<{ ok: true; is_correct: boolean }>('/api/play/answer', {
+  apiFetch<{ ok: true; is_correct: boolean; speed_bonus?: number }>('/api/play/answer', {
     method: 'POST',
     body: JSON.stringify(input),
+  });
+
+export const sendHeartbeat = (code: string, host_sub: string) =>
+  apiFetch<{ ok: true }>('/api/play/heartbeat', {
+    method: 'POST',
+    body: JSON.stringify({ code, host_sub }),
   });
 
 export const fetchLeaderboard = (

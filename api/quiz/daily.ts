@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { questions, encodeSession } from './data';
+import { questions, encodeSession } from '../../lib/quiz-data';
 import { createHash } from 'node:crypto';
 
 // Daily challenge: deterministic 5-question selection per UTC date.

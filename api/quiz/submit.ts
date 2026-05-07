@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { decodeSession, questions } from './data';
+import { decodeSession, questions } from '../../lib/quiz-data';
 
 const MAX_ANSWERS = 50;
 

@@ -5,7 +5,7 @@ import {
   secureShuffle,
   type DifficultyMode,
   type CategoryType,
-} from './data';
+} from '../../lib/quiz-data';
 
 const ALL_CATEGORIES: CategoryType[] = [
   'html',
