@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import '../api/client.dart';
 import '../api/user.dart';
 import '../auth/auth_service.dart';
+import '../lib/achievements.dart';
+import '../lib/bookmarks.dart';
 import '../models/user_stats.dart';
 import '../theme.dart';
+import '../widgets/achievements_grid.dart';
+import 'bookmarks_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,28 +21,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserStats? _stats;
   bool _loading = true;
   String? _error;
+  int _perfectQuizzes = 0;
 
   @override
   void initState() {
     super.initState();
+    AuthService.instance.addListener(_onAuth);
+    BookmarkStore.instance.addListener(_onBookmarks);
     _load();
+  }
+
+  @override
+  void dispose() {
+    AuthService.instance.removeListener(_onAuth);
+    BookmarkStore.instance.removeListener(_onBookmarks);
+    super.dispose();
+  }
+
+  void _onAuth() {
+    if (!mounted) return;
+    setState(() {});
+    _load();
+  }
+
+  void _onBookmarks() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _load() async {
     final auth = AuthService.instance;
-    if (auth.sub == null) {
-      setState(() => _loading = false);
-      return;
-    }
+    setState(() => _loading = true);
     try {
-      var s = await _userApi.getStats(auth.sub!);
-      s ??= await _userApi.upsertProfile(
-        auth0Id: auth.sub!,
-        email: auth.email,
-        name: auth.name,
-        picture: auth.picture,
-      );
-      if (mounted) setState(() => _stats = s);
+      _perfectQuizzes = await readPerfectQuizCount();
+      if (auth.sub != null) {
+        var s = await _userApi.getStats(auth.sub!);
+        s ??= await _userApi.upsertProfile(
+          auth0Id: auth.sub!,
+          email: auth.email,
+          name: auth.name,
+          picture: auth.picture,
+        );
+        if (mounted) setState(() => _stats = s);
+      }
     } catch (err) {
       if (mounted) setState(() => _error = friendlyError(err));
     } finally {
@@ -53,7 +77,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       appBar: AppBar(title: const Text('Profile')),
       body: SafeArea(
         child: !auth.isAuthenticated
-            ? _GuestPanel(onSignedIn: _load)
+            ? _SignInPanel(onSignedIn: _load)
             : _loading
                 ? const Center(child: CircularProgressIndicator(color: BrandColors.green))
                 : _error != null
@@ -65,185 +89,247 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           OutlinedButton(onPressed: _load, child: const Text('Retry')),
                         ]),
                       )
-                    : ListView(
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          _Header(name: auth.name, email: auth.email, picture: auth.picture),
-                          const SizedBox(height: 16),
-                          if ((_stats?.totalQuizzes ?? 0) == 0)
-                            const _ZeroState()
-                          else
-                            _StatsBlock(stats: _stats!),
-                          const SizedBox(height: 16),
-                          OutlinedButton.icon(
-                            onPressed: () async {
-                              await AuthService.instance.clear();
-                              if (context.mounted) Navigator.pop(context);
-                            },
-                            icon: const Icon(Icons.logout),
-                            label: const Text('Sign out'),
-                          ),
-                        ],
+                    : _Body(
+                        stats: _stats,
+                        perfectQuizzes: _perfectQuizzes,
+                        onSignOut: () async {
+                          await AuthService.instance.signOut();
+                          if (mounted) Navigator.pop(context);
+                        },
                       ),
       ),
     );
   }
 }
 
-class _GuestPanel extends StatelessWidget {
-  const _GuestPanel({required this.onSignedIn});
+class _SignInPanel extends StatefulWidget {
+  const _SignInPanel({required this.onSignedIn});
   final VoidCallback onSignedIn;
+
+  @override
+  State<_SignInPanel> createState() => _SignInPanelState();
+}
+
+class _SignInPanelState extends State<_SignInPanel> {
+  final _name = TextEditingController();
+  bool _signingIn = false;
+
+  Future<void> _withAuth0() async {
+    setState(() => _signingIn = true);
+    final ok = await AuthService.instance.signInWithAuth0();
+    if (mounted) setState(() => _signingIn = false);
+    if (ok) widget.onSignedIn();
+    else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sign-in cancelled or Auth0 not configured.')),
+      );
+    }
+  }
+
+  Future<void> _asGuest() async {
+    final n = _name.text.trim();
+    if (n.isEmpty) return;
+    await AuthService.instance.setGuest(displayName: n);
+    widget.onSignedIn();
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final controller = TextEditingController();
+    final auth0Configured = AuthService.instance.isAuth0Configured;
     return Padding(
       padding: const EdgeInsets.all(20),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const Text('You are playing as a guest',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+      child: ListView(children: [
+        const Text('Sign in', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
-        const Text(
-          'Sign in to save your streak, climb the leaderboard, and play multiplayer matches.',
-          style: TextStyle(fontSize: 14),
+        Text(
+          'Track your streak, climb the leaderboard, and host live matches.',
+          style: TextStyle(color: Colors.grey[700]),
         ),
         const SizedBox(height: 24),
-        const Text(
-          'Quick start (no Auth0 setup needed):',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
+        if (auth0Configured) ...[
+          ElevatedButton.icon(
+            onPressed: _signingIn ? null : _withAuth0,
+            icon: const Icon(Icons.login),
+            label: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(_signingIn ? 'Opening Auth0…' : 'Continue with Auth0'),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 8),
+        ],
+        Text('Or continue as a guest',
+            style: TextStyle(fontWeight: FontWeight.w600, color: Colors.grey[700])),
         const SizedBox(height: 4),
         Text(
-          'Pick a display name. Your stats will sync to that identity on this device.',
+          'Stats sync to a stable identity tied to this device.',
           style: TextStyle(color: Colors.grey[600], fontSize: 13),
         ),
         const SizedBox(height: 12),
         TextField(
-          controller: controller,
+          controller: _name,
           decoration: const InputDecoration(
             labelText: 'Display name',
             border: OutlineInputBorder(),
           ),
+          onSubmitted: (_) => _asGuest(),
         ),
         const SizedBox(height: 12),
-        ElevatedButton(
-          onPressed: () async {
-            final name = controller.text.trim();
-            if (name.isEmpty) return;
-            // Generate a stable client-side sub. Replace with Auth0 once you
-            // wire it up; the server treats sub as opaque.
-            final id = 'local|${DateTime.now().millisecondsSinceEpoch}';
-            await AuthService.instance.setUser(sub: id, name: name);
-            onSignedIn();
-          },
-          child: const Text('Continue'),
+        OutlinedButton(
+          onPressed: _asGuest,
+          child: const Text('Continue as guest'),
         ),
+        if (!auth0Configured)
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Text(
+              "Auth0 isn't configured for this build. Pass --dart-define=AUTH0_DOMAIN=… and AUTH0_CLIENT_ID=… to enable real sign-in.",
+              style: TextStyle(color: Colors.grey[500], fontSize: 12),
+            ),
+          ),
       ]),
     );
   }
 }
 
-class _Header extends StatelessWidget {
-  const _Header({this.name, this.email, this.picture});
-  final String? name;
-  final String? email;
-  final String? picture;
+class _Body extends StatelessWidget {
+  const _Body({required this.stats, required this.perfectQuizzes, required this.onSignOut});
+  final UserStats? stats;
+  final int perfectQuizzes;
+  final VoidCallback onSignOut;
+
   @override
   Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: Color(0xFFE5E5E5)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: BrandColors.greenSoft,
-            backgroundImage: picture != null ? NetworkImage(picture!) : null,
-            child: picture == null
-                ? Text(
-                    (name?.isNotEmpty ?? false) ? name![0].toUpperCase() : '?',
-                    style: const TextStyle(
-                        fontSize: 22, fontWeight: FontWeight.w700, color: BrandColors.green),
-                  )
-                : null,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(name ?? 'Anonymous',
-                  style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-              if (email != null)
-                Text(email!, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+    final auth = AuthService.instance;
+    final achievements = computeAchievements(AchievementContext(
+      stats: stats,
+      bookmarkCount: BookmarkStore.instance.count,
+      perfectQuizzes: perfectQuizzes,
+    ));
+    final isFirst = (stats?.totalQuizzes ?? 0) == 0;
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: BrandColors.greenSoft,
+                backgroundImage: auth.picture != null ? NetworkImage(auth.picture!) : null,
+                child: auth.picture == null
+                    ? Text(
+                        (auth.name?.isNotEmpty ?? false) ? auth.name![0].toUpperCase() : '?',
+                        style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: BrandColors.green),
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(auth.name ?? 'Anonymous',
+                      style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                  if (auth.email != null)
+                    Text(auth.email!, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                ]),
+              ),
             ]),
           ),
-        ]),
-      ),
-    );
-  }
-}
-
-class _ZeroState extends StatelessWidget {
-  const _ZeroState();
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(children: [
-          const Text('No quizzes yet',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-          const SizedBox(height: 8),
-          Text('Take your first quiz to start a streak.',
-              style: TextStyle(color: Colors.grey[600])),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Start a quiz'),
+        ),
+        const SizedBox(height: 12),
+        if (isFirst)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(children: [
+                const Text('No quizzes yet',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                Text('Take your first quiz to start a streak.',
+                    style: TextStyle(color: Colors.grey[600])),
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Start a quiz'),
+                ),
+              ]),
+            ),
+          )
+        else ...[
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(children: [
+                const Text('STREAKS',
+                    style: TextStyle(
+                        fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6)),
+                const SizedBox(height: 12),
+                Row(children: [
+                  Expanded(
+                      child: _BigStat('${stats!.currentStreak}', 'Current streak',
+                          const Color(0xFFD97706))),
+                  const SizedBox(width: 16, child: VerticalDivider()),
+                  Expanded(
+                      child: _BigStat('${stats!.longestStreak}', 'Longest streak',
+                          BrandColors.green)),
+                ]),
+              ]),
+            ),
           ),
-        ]),
-      ),
+          const SizedBox(height: 12),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                const Text('STATISTICS',
+                    style: TextStyle(
+                        fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6)),
+                const SizedBox(height: 8),
+                _StatRow('Quizzes completed', '${stats!.totalQuizzes}'),
+                _StatRow('Questions answered', '${stats!.totalQuestions}'),
+                _StatRow('Correct answers', '${stats!.totalCorrect}'),
+                _StatRow('Average score', '${stats!.accuracyPct}%',
+                    highlight: stats!.accuracyPct >= 70),
+              ]),
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+        AchievementsGrid(achievements: achievements),
+        if (BookmarkStore.instance.count > 0) ...[
+          const SizedBox(height: 12),
+          Card(
+            child: ListTile(
+              leading: const Icon(Icons.bookmark, color: BrandColors.green),
+              title: Text('Bookmarks (${BookmarkStore.instance.count})'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const BookmarksScreen()),
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 16),
+        OutlinedButton.icon(
+          onPressed: onSignOut,
+          icon: const Icon(Icons.logout),
+          label: const Text('Sign out'),
+        ),
+      ],
     );
-  }
-}
-
-class _StatsBlock extends StatelessWidget {
-  const _StatsBlock({required this.stats});
-  final UserStats stats;
-  @override
-  Widget build(BuildContext context) {
-    return Column(children: [
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(children: [
-            const Text('STREAKS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6)),
-            const SizedBox(height: 12),
-            Row(children: [
-              Expanded(child: _BigStat('${stats.currentStreak}', 'Current streak', const Color(0xFFD97706))),
-              const SizedBox(width: 16, child: VerticalDivider()),
-              Expanded(child: _BigStat('${stats.longestStreak}', 'Longest streak', BrandColors.green)),
-            ]),
-          ]),
-        ),
-      ),
-      const SizedBox(height: 12),
-      Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            const Text('STATISTICS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 0.6)),
-            const SizedBox(height: 8),
-            _StatRow('Quizzes completed', '${stats.totalQuizzes}'),
-            _StatRow('Questions answered', '${stats.totalQuestions}'),
-            _StatRow('Correct answers', '${stats.totalCorrect}'),
-            _StatRow('Average score', '${stats.accuracyPct}%',
-                highlight: stats.accuracyPct >= 70),
-          ]),
-        ),
-      ),
-    ]);
   }
 }
 
@@ -256,7 +342,8 @@ class _BigStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(children: [
       Text(value,
-          style: TextStyle(fontSize: 36, fontWeight: FontWeight.w700, color: color, height: 1)),
+          style: TextStyle(
+              fontSize: 36, fontWeight: FontWeight.w700, color: color, height: 1)),
       const SizedBox(height: 4),
       Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
     ]);

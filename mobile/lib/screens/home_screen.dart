@@ -5,9 +5,12 @@ import '../auth/auth_service.dart';
 import '../models/quiz.dart';
 import '../theme.dart';
 import '../widgets/category_chip.dart';
+import 'bookmarks_screen.dart';
 import 'leaderboard_screen.dart';
+import 'play_landing_screen.dart';
 import 'profile_screen.dart';
 import 'quiz_screen.dart';
+import 'sandbox_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,6 +28,22 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _startingDaily = false;
   String? _error;
   bool _attempted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AuthService.instance.addListener(_onAuth);
+  }
+
+  @override
+  void dispose() {
+    AuthService.instance.removeListener(_onAuth);
+    super.dispose();
+  }
+
+  void _onAuth() {
+    if (mounted) setState(() {});
+  }
 
   Future<void> _start() async {
     setState(() => _attempted = true);
@@ -70,7 +89,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = AuthService.instance;
     return Scaffold(
       appBar: AppBar(
         title: const Text('DevQuiz'),
@@ -84,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           IconButton(
-            tooltip: auth.isAuthenticated ? 'Profile' : 'Sign in',
+            tooltip: 'Profile',
             icon: const Icon(Icons.person_outline),
             onPressed: () => Navigator.push(
               context,
@@ -105,23 +123,56 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600])),
             const SizedBox(height: 16),
 
-            // Today's challenge
-            OutlinedButton.icon(
-              icon: const Text('🗓️', style: TextStyle(fontSize: 16)),
-              label: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Text("Today's challenge"),
-                    const SizedBox(width: 6),
-                    Text('5 questions',
-                        style: TextStyle(fontSize: 11, color: Colors.grey[500])),
-                  ],
+            // Quick-action tiles.
+            Row(children: [
+              Expanded(
+                child: _Tile(
+                  emoji: '🗓️',
+                  title: "Today's challenge",
+                  subtitle: '5 questions',
+                  loading: _startingDaily,
+                  onTap: _startDaily,
                 ),
               ),
-              onPressed: _startingDaily ? null : _startDaily,
-            ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _Tile(
+                  emoji: '⚡',
+                  title: 'Play live',
+                  subtitle: 'multiplayer · classroom',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const PlayLandingScreen()),
+                  ),
+                ),
+              ),
+            ]),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(
+                child: _Tile(
+                  emoji: '🧪',
+                  title: 'Code playground',
+                  subtitle: 'JS · TS · Python',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SandboxScreen()),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _Tile(
+                  emoji: '🔖',
+                  title: 'Bookmarks',
+                  subtitle: 'Saved questions',
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BookmarksScreen()),
+                  ),
+                ),
+              ),
+            ]),
 
             const SizedBox(height: 24),
             _SectionTitle('Categories'),
@@ -215,10 +266,66 @@ class _HomeScreenState extends State<HomeScreen> {
             if (_error != null)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
-                child: _ErrorBanner(_error!),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(_error!),
+                ),
               ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _Tile extends StatelessWidget {
+  const _Tile({
+    required this.emoji,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.loading = false,
+  });
+  final String emoji;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: loading ? null : onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFE5E5E5)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Text(emoji, style: const TextStyle(fontSize: 18)),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(title,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  overflow: TextOverflow.ellipsis),
+            ),
+            if (loading)
+              const SizedBox(
+                width: 12,
+                height: 12,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+          ]),
+          const SizedBox(height: 4),
+          Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+        ]),
       ),
     );
   }
@@ -237,26 +344,6 @@ class _SectionTitle extends StatelessWidget {
         letterSpacing: 0.6,
         color: Colors.grey[600],
       ),
-    );
-  }
-}
-
-class _ErrorBanner extends StatelessWidget {
-  const _ErrorBanner(this.message);
-  final String message;
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.errorContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(children: [
-        Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error, size: 18),
-        const SizedBox(width: 8),
-        Expanded(child: Text(message)),
-      ]),
     );
   }
 }

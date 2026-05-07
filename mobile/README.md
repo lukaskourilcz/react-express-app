@@ -1,161 +1,182 @@
 # DevQuiz mobile (Flutter)
 
-A Flutter client for the DevQuiz app. Talks to the same Vercel API + Supabase
-backend as the web client, so this directory **adds** an iOS / Android / web
-target without touching the existing infrastructure.
-
-## What's here
-
-```
-mobile/
-├── pubspec.yaml          # Dart deps (http, auth0_flutter, flutter_highlight…)
-├── analysis_options.yaml
-├── lib/
-│   ├── main.dart         # entry, MaterialApp, theme mode
-│   ├── theme.dart        # brand green #2D7A2D, light/dark
-│   ├── api/              # client.dart, quiz.dart, user.dart, leaderboard.dart
-│   ├── auth/             # auth_service.dart (guest mode + Auth0-ready)
-│   ├── models/           # quiz, user_stats, leaderboard
-│   ├── widgets/          # code_block, category_chip
-│   └── screens/          # Home, Quiz, Result, Profile, Leaderboard
-└── ios/Runner/Info.plist.template   # iOS keys to merge after scaffolding
-```
+A Flutter client for the DevQuiz app — iOS, Android, and web from one
+codebase. Talks to the same Vercel API + Supabase backend as the web client,
+so this directory **adds** mobile targets without touching backend infra.
 
 ## What's implemented
 
-| Screen | Status |
+| Feature | Status |
 | --- | --- |
-| Home (categories / count / difficulty / start, plus Today's Challenge) | ✅ |
+| Home (categories / count / difficulty / tiles for sub-features) | ✅ |
 | Quiz (questions, options, code highlighting, navigation, submit) | ✅ |
-| Result (score, per-question review with explanations) | ✅ |
-| Profile (stats, streaks, guest sign-in fallback) | ✅ |
+| Result (score, per-question review with explanations, bookmark + report buttons) | ✅ |
+| Profile (stats, streaks, achievements grid, bookmarks shortcut) | ✅ |
 | Leaderboard (Global / Daily / Category tabs with category picker) | ✅ |
 | Daily challenge | ✅ |
 | Per-category stats reporting | ✅ |
-| Multiplayer (live matches) | 🚧 deferred — needs Supabase realtime + extra work |
-| Code sandbox (JS/TS/Python) | 🚧 deferred — would need WebView + Pyodide |
-| Question reporting dialog | 🚧 deferred — small addition |
-| Bookmarks panel | 🚧 deferred — small addition |
-| Achievements grid | 🚧 deferred — port the rules from `client/src/lib/achievements.ts` |
-| Auth0 native sign-in | 🚧 wired-but-stubbed (see "Real Auth0" below). Guest mode works today. |
+| **Bookmarks** — local persistence, dedicated screen, toggles on result rows | ✅ |
+| **Achievements** — 10 client-side badges in a grid on Profile | ✅ |
+| **Question reporting** — dialog from result rows, posts to API | ✅ |
+| **Multiplayer + classroom** — lobby / running / finished, host heartbeat, countdown timer, speed bonus, classroom histogram, Supabase Realtime + 4s polling fallback | ✅ |
+| **Code sandbox** — JS / TypeScript (sucrase) / Python (Pyodide) in a sandboxed `WebView` | ✅ |
+| **Real Auth0 sign-in** — `auth0_flutter` universal login, guest mode fallback when not configured | ✅ |
 
-## One-time setup (on your Mac)
+## Project layout
+
+```
+mobile/
+├── pubspec.yaml
+├── analysis_options.yaml
+├── assets/
+│   └── sandbox_runner.html        # JS/TS/Python runner loaded by WebView
+├── lib/
+│   ├── main.dart                  # Supabase + Auth + Bookmarks bootstrap
+│   ├── theme.dart                 # brand green #2D7A2D, light/dark
+│   ├── api/                       # client.dart, quiz, user, leaderboard, play
+│   ├── auth/                      # auth_service.dart (Auth0 + guest)
+│   ├── lib/                       # bookmarks, achievements
+│   ├── models/                    # quiz, user_stats, leaderboard, play
+│   ├── realtime/realtime.dart     # Supabase Realtime broadcast channel
+│   ├── widgets/                   # code_block, category_chip, achievements_grid, report_dialog
+│   └── screens/
+│       ├── home_screen.dart
+│       ├── quiz_screen.dart
+│       ├── result_screen.dart
+│       ├── profile_screen.dart
+│       ├── leaderboard_screen.dart
+│       ├── bookmarks_screen.dart
+│       ├── sandbox_screen.dart
+│       ├── play_landing_screen.dart
+│       └── play_match_screen.dart
+└── ios/Runner/Info.plist.template
+```
+
+## Setup (one-time, on your Mac)
 
 You need:
-- **Flutter SDK** ≥ 3.19. Install from <https://docs.flutter.dev/get-started/install/macos>
-- **Xcode** ≥ 15 with Command Line Tools and an Apple Developer account (free for simulator, $99/year for App Store)
+- **Flutter SDK** ≥ 3.19 — <https://docs.flutter.dev/get-started/install/macos>
+- **Xcode** ≥ 15 + Command Line Tools, free Apple Developer account for the
+  simulator, $99/yr to ship to App Store
 - **CocoaPods** (`sudo gem install cocoapods`)
-
-Then, from the repo root:
 
 ```bash
 cd mobile
 flutter create --org com.devquiz --project-name devquiz \
                --platforms ios,android,web \
                --description "DevQuiz – test your web dev skills" .
-```
-
-`flutter create` over an existing directory **adds** the missing iOS/Android/web
-platform folders without overwriting `lib/`. If it warns that `pubspec.yaml`
-already exists, keep ours (it has the deps you actually need).
-
-```bash
 flutter pub get
 ```
 
-## Pointing at your backend
+`flutter create` over an existing directory adds the missing iOS/Android/web
+platform folders without overwriting `lib/`. Keep our `pubspec.yaml`.
 
-The API base URL defaults to `https://devquiz.vercel.app`. Override at run/build
-time:
+## Build flags
+
+The app is fully configurable at run/build time via `--dart-define`:
+
+| Flag | Default | What it does |
+| --- | --- | --- |
+| `API_BASE_URL` | `https://devquiz.vercel.app` | Base URL for all API calls |
+| `SUPABASE_URL` | _(empty)_ | Enables Realtime broadcast for multiplayer |
+| `SUPABASE_ANON_KEY` | _(empty)_ | Same |
+| `AUTH0_DOMAIN` | _(empty)_ | Enables native Auth0 sign-in |
+| `AUTH0_CLIENT_ID` | _(empty)_ | Same |
+| `AUTH0_AUDIENCE` | _(empty)_ | Optional API audience for access tokens |
+
+Without `SUPABASE_URL` / `SUPABASE_ANON_KEY`, multiplayer falls back to 4-second
+polling (still works, just less snappy). Without Auth0, the Profile screen
+shows guest mode (display-name only).
+
+## Run
 
 ```bash
-# Run against your own Vercel deployment
-flutter run --dart-define=API_BASE_URL=https://your-app.vercel.app
-
-# Run against `vercel dev` on your Mac (use your machine's LAN IP for a
-# physical device; localhost is fine for the simulator)
-flutter run --dart-define=API_BASE_URL=http://192.168.1.50:3000
-```
-
-> **Note:** iOS blocks plain `http://` by default (App Transport Security). For
-> local development against `vercel dev`, add the LAN host to `NSAppTransport
-> Security.NSExceptionDomains` in `ios/Runner/Info.plist`, or just deploy a
-> preview build to Vercel and point at that.
-
-## Run on iOS simulator
-
-```bash
+# iOS simulator
 open -a Simulator
 flutter run -d ios
+
+# Physical iPhone
+flutter devices                 # confirm your phone is listed
+flutter run -d <device-id> \
+  --dart-define=API_BASE_URL=https://devquiz.vercel.app \
+  --dart-define=SUPABASE_URL=https://xxx.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=… \
+  --dart-define=AUTH0_DOMAIN=your-tenant.auth0.com \
+  --dart-define=AUTH0_CLIENT_ID=…
 ```
 
-## Run on a physical iPhone
+## Native config required for Auth0 + WebView
 
-```bash
-# Plug in your phone, trust this Mac, then
-flutter devices            # confirm your phone is listed
-flutter run -d <device-id>
+### iOS — `ios/Runner/Info.plist`
+
+After `flutter create`, merge these keys:
+
+```xml
+<key>CFBundleURLTypes</key>
+<array>
+  <dict>
+    <key>CFBundleTypeRole</key><string>None</string>
+    <key>CFBundleURLName</key><string>auth0</string>
+    <key>CFBundleURLSchemes</key>
+    <array><string>com.devquiz.app</string></array>
+  </dict>
+</array>
 ```
 
-Xcode will likely ask you to sign the app the first time — open
-`ios/Runner.xcworkspace`, select the **Runner** target, and pick your team
-under *Signing & Capabilities*.
+In your **Auth0 application** dashboard, add this as an *Allowed Callback URL*:
 
-## Build a release IPA for App Store
+```
+com.devquiz.app://YOUR_TENANT.auth0.com/ios/com.devquiz/callback
+```
+
+### Android — `android/app/build.gradle`
+
+```groovy
+defaultConfig {
+    manifestPlaceholders = [
+        auth0Domain: "YOUR_TENANT.auth0.com",
+        auth0Scheme: "com.devquiz.app"
+    ]
+}
+```
+
+Allowed Callback URL on Auth0:
+
+```
+com.devquiz.app://YOUR_TENANT.auth0.com/android/com.devquiz/callback
+```
+
+## Release IPA (App Store)
 
 ```bash
 flutter build ipa --release \
-    --dart-define=API_BASE_URL=https://your-app.vercel.app
+  --dart-define=API_BASE_URL=https://your-app.vercel.app \
+  --dart-define=SUPABASE_URL=https://xxx.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=… \
+  --dart-define=AUTH0_DOMAIN=… \
+  --dart-define=AUTH0_CLIENT_ID=…
 open build/ios/archive/Runner.xcarchive
 ```
 
 Then submit through Xcode → Organizer → Distribute App.
 
-## Real Auth0 (optional)
+## App Store submission checklist
 
-Out of the box the app works in **guest mode**: you pick a display name on the
-Profile screen and your stats are tied to a stable client-side ID. To wire up
-real Auth0 universal login:
-
-1. In your Auth0 dashboard, create a **Native** application alongside the
-   existing SPA.
-2. Add the iOS callback URL: `com.devquiz.app://YOUR_TENANT/ios/com.devquiz/callback`
-3. Add the Android callback URL similarly.
-4. In `mobile/lib/auth/auth_service.dart`, call `Auth0(domain, clientId)
-   .webAuthentication().login(...)` from the package `auth0_flutter` and
-   forward the resulting profile into `setUser(...)`.
-5. Build with `--dart-define`:
-   ```bash
-   flutter run \
-     --dart-define=AUTH0_DOMAIN=your-tenant.auth0.com \
-     --dart-define=AUTH0_CLIENT_ID=your-native-client-id \
-     --dart-define=AUTH0_AUDIENCE=https://your-api-identifier
-   ```
-
-The server endpoints already accept the same `auth0_id` shape (`sub`) for
-guest and Auth0 modes; nothing on the backend changes.
-
-## App Store submission checklist (when you get there)
-
-- App Store Connect listing with screenshots (6.7" + 5.5" required as of 2025)
+- App Store Connect listing with screenshots (6.7" + 5.5" required)
 - Privacy policy URL (Auth0 + Supabase store user data; mention both)
-- App tracking declaration: this app does not track users across other apps,
-  so your *App Privacy* form should be straightforward
+- App tracking declaration: this app does not track across other apps
 - Bundle identifier `com.devquiz.app` registered in Apple Developer portal
-- Push notification entitlement only if you want it; the app doesn't use one yet
+- *Sign in with Apple* — Apple Guideline 4.8 may require this if you ship
+  third-party sign-in. Auth0 supports it as an Identity Provider.
 
-## Deferred features — when you want them
+## Honest limits
 
-These exist on web but were skipped here for scope. Each is a contained pass:
-
-- **Multiplayer + classroom**: subscribe to the Supabase realtime channel
-  `match:<code>` via `supabase_flutter`, mirror the lobby/run/result UI from
-  `client/src/components/Play.tsx`. The API endpoints already work.
-- **Code sandbox**: embed a `WebView` (`webview_flutter`) pointing at a tiny
-  `/sandbox-runner.html` you ship in `assets/`, reuse the existing iframe
-  protocol. Pyodide will work; sucrase needs a JS bundle bundled as an asset.
-- **Bookmarks / achievements / report dialog**: pure UI ports of the existing
-  client logic (`client/src/lib/{bookmarks,achievements}.ts` and
-  `client/src/components/ReportDialog.tsx`).
-
-Tell me which one you want next and I'll add it.
+- **Sandbox**: runs JS / TS / Python. The `WebView` shares the parent app's
+  origin, so Pyodide is sandboxed by being WASM (no DOM, no `fetch` to your
+  servers by default), but it isn't a full security boundary. Don't run
+  untrusted code on a phone with sensitive data.
+- **Multiplayer**: per-question countdown is 30s server-side, client polls at
+  4s in addition to Realtime broadcasts. Host abandonment auto-finishes after
+  5 min via the server-side cleanup (matches web).
+- **Auth0 silent refresh** is wired but only attempts after a successful first
+  sign-in. Cold start without network falls back to whatever was last persisted.
