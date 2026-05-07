@@ -1,10 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
+import { apiFetch } from './api';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials not configured. User stats will not be persisted.');
+  if (import.meta.env.DEV) {
+    console.warn('Supabase credentials not configured. User stats will not be persisted.');
+  }
 }
 
 export const supabase = supabaseUrl && supabaseAnonKey
@@ -27,132 +30,74 @@ export interface UserStats {
   updated_at: string;
 }
 
+// Reads/writes go through the API route which is the authorized boundary.
+// Direct anon-key writes were removed; client RLS is "USING (true)" today
+// and therefore not safe (see supabase-schema-002.sql for the fix).
+
 export async function getUserStats(auth0Id: string): Promise<UserStats | null> {
-  if (!supabase) return null;
-
-  const { data, error } = await supabase
-    .from('user_stats')
-    .select('*')
-    .eq('auth0_id', auth0Id)
-    .single();
-
-  if (error && error.code !== 'PGRST116') {
-    console.error('Error fetching user stats:', error);
-    return null;
-  }
-
+  const { data } = await apiFetch<{ data: UserStats | null }>(
+    `/api/user/stats?auth0_id=${encodeURIComponent(auth0Id)}`,
+  );
   return data;
 }
 
 export async function createOrUpdateUserStats(
   auth0Id: string,
-  userInfo: { email?: string; name?: string; picture?: string }
+  userInfo: { email?: string; name?: string; picture?: string },
 ): Promise<UserStats | null> {
-  if (!supabase) return null;
-
-  const { data: existing } = await supabase
-    .from('user_stats')
-    .select('*')
-    .eq('auth0_id', auth0Id)
-    .single();
-
-  if (existing) {
-    const { data, error } = await supabase
-      .from('user_stats')
-      .update({
-        email: userInfo.email || existing.email,
-        name: userInfo.name || existing.name,
-        picture: userInfo.picture || existing.picture,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('auth0_id', auth0Id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error updating user stats:', error);
-      return null;
-    }
-    return data;
-  }
-
-  const { data, error } = await supabase
-    .from('user_stats')
-    .insert({
-      auth0_id: auth0Id,
-      email: userInfo.email,
-      name: userInfo.name,
-      picture: userInfo.picture,
-    })
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error creating user stats:', error);
-    return null;
-  }
-
+  const { data } = await apiFetch<{ data: UserStats | null }>('/api/user/stats', {
+    method: 'POST',
+    body: JSON.stringify({ auth0_id: auth0Id, ...userInfo }),
+  });
   return data;
 }
 
-export async function updateQuizResult(
+export async function recordQuizResult(
   auth0Id: string,
-  correctAnswers: number,
-  totalQuestions: number
+  correct: number,
+  total: number,
 ): Promise<UserStats | null> {
-  if (!supabase) return null;
-
-  const { data: existing } = await supabase
-    .from('user_stats')
-    .select('*')
-    .eq('auth0_id', auth0Id)
-    .single();
-
-  if (!existing) {
-    console.error('User stats not found');
-    return null;
-  }
-
-  const today = new Date().toISOString().split('T')[0];
-  const lastQuizDate = existing.last_quiz_date;
-
-  let newStreak = existing.current_streak;
-
-  if (lastQuizDate) {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-    if (lastQuizDate === yesterdayStr) {
-      newStreak += 1;
-    } else if (lastQuizDate !== today) {
-      newStreak = 1;
-    }
-  } else {
-    newStreak = 1;
-  }
-
-  const longestStreak = Math.max(newStreak, existing.longest_streak);
-
-  const { data, error } = await supabase
-    .from('user_stats')
-    .update({
-      total_quizzes: existing.total_quizzes + 1,
-      total_correct: existing.total_correct + correctAnswers,
-      total_questions: existing.total_questions + totalQuestions,
-      current_streak: newStreak,
-      longest_streak: longestStreak,
-      last_quiz_date: today,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('auth0_id', auth0Id)
-    .select()
-    .single();
-
-  if (error) {
-    console.error('Error updating quiz result:', error);
-    return null;
-  }
-
+  const { data } = await apiFetch<{ data: UserStats | null }>('/api/user/stats', {
+    method: 'POST',
+    body: JSON.stringify({
+      auth0_id: auth0Id,
+      quiz_result: { correct, total },
+    }),
+  });
   return data;
+}
+
+export interface DailyChallenge {
+  date: string;
+  sessionId: string;
+  questions: Array<{
+    id: string;
+    tags: string[];
+    introduction: string;
+    question: string;
+    options: string[];
+    category: string;
+    difficulty: number;
+  }>;
+}
+
+export async function getDailyChallenge(): Promise<DailyChallenge> {
+  return apiFetch<DailyChallenge>('/api/quiz/daily');
+}
+
+export async function reportQuestion(input: {
+  questionId: string;
+  reason: 'incorrect-answer' | 'unclear' | 'typo' | 'outdated' | 'duplicate' | 'other';
+  detail?: string;
+  reporterSub?: string;
+}) {
+  await apiFetch('/api/quiz/report', {
+    method: 'POST',
+    body: JSON.stringify({
+      question_id: input.questionId,
+      reason: input.reason,
+      detail: input.detail,
+      reporter_sub: input.reporterSub,
+    }),
+  });
 }

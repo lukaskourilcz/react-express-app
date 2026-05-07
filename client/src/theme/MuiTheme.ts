@@ -1,71 +1,72 @@
-import { createTheme } from '@mui/material/styles';
+import { createTheme, type ThemeOptions } from '@mui/material/styles';
+import type { PaletteMode } from '@mui/material';
 
-export const theme = createTheme({
+export const BRAND = {
+  green: '#2d7a2d',
+  greenHover: '#246124',
+  greenSoft: 'rgba(45, 122, 45, 0.08)',
+  textTertiary: '#6b6b6b',
+};
+
+export const CATEGORY_GRADIENT =
+  'linear-gradient(90deg, #e34c26, #264de4, #f7df1e, #3178c6, #61dafb, #339933, #f05032, #8b5cf6, #06b6d4, #ec4899)';
+
+const baseOptions = (mode: PaletteMode): ThemeOptions => ({
   palette: {
-    mode: 'light',
+    mode,
     primary: {
-      main: '#1a1a1a',
-      light: '#333333',
-      dark: '#000000',
+      main: mode === 'light' ? '#1a1a1a' : '#ffffff',
+      light: mode === 'light' ? '#333333' : '#e5e5e5',
+      dark: mode === 'light' ? '#000000' : '#bdbdbd',
     },
     secondary: {
-      main: '#666666',
-      light: '#888888',
+      main: '#6b6b6b',
+      light: '#8a8a8a',
       dark: '#444444',
     },
     success: {
-      main: '#22c55e',
+      main: '#16a34a',
       light: '#4ade80',
-      dark: '#16a34a',
+      dark: '#15803d',
     },
     error: {
-      main: '#ef4444',
+      main: '#dc2626',
       light: '#f87171',
-      dark: '#dc2626',
+      dark: '#b91c1c',
     },
     warning: {
-      main: '#f59e0b',
+      main: '#d97706',
       light: '#fbbf24',
-      dark: '#d97706',
+      dark: '#b45309',
     },
     info: {
-      main: '#3b82f6',
+      main: '#2563eb',
       light: '#60a5fa',
-      dark: '#2563eb',
+      dark: '#1d4ed8',
     },
     background: {
-      default: '#ffffff',
-      paper: '#ffffff',
+      default: mode === 'light' ? '#f8f9fa' : '#0f1115',
+      paper: mode === 'light' ? '#ffffff' : '#181a20',
     },
     text: {
-      primary: '#1a1a1a',
-      secondary: '#666666',
+      primary: mode === 'light' ? '#1a1a1a' : '#f5f5f5',
+      secondary: mode === 'light' ? '#525252' : '#b5b5b5',
     },
+    divider: mode === 'light' ? '#e5e5e5' : '#2a2d35',
   },
   typography: {
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    h4: {
+    h4: { fontWeight: 600 },
+    h5: { fontWeight: 600 },
+    h6: { fontWeight: 600 },
+    overline: {
+      fontSize: '0.7rem',
       fontWeight: 600,
-      color: '#1a1a1a',
-    },
-    h5: {
-      fontWeight: 600,
-      color: '#1a1a1a',
-    },
-    h6: {
-      fontWeight: 600,
-      color: '#1a1a1a',
-    },
-    body1: {
-      color: '#1a1a1a',
-    },
-    body2: {
-      color: '#666666',
+      letterSpacing: '0.6px',
+      textTransform: 'uppercase',
     },
   },
-  shape: {
-    borderRadius: 8,
-  },
+  shape: { borderRadius: 8 },
   components: {
     MuiButton: {
       styleOverrides: {
@@ -75,12 +76,19 @@ export const theme = createTheme({
           borderRadius: 6,
           padding: '8px 16px',
           boxShadow: 'none',
+          '&:focus-visible': {
+            outline: `2px solid ${BRAND.green}`,
+            outlineOffset: '2px',
+          },
         },
-        containedPrimary: {
-          backgroundColor: '#1a1a1a',
-          '&:hover': {
-            backgroundColor: '#333333',
-            boxShadow: 'none',
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          '&:focus-visible': {
+            outline: `2px solid ${BRAND.green}`,
+            outlineOffset: '2px',
           },
         },
       },
@@ -90,130 +98,105 @@ export const theme = createTheme({
         root: {
           borderRadius: 12,
           boxShadow: 'none',
-          border: '1px solid #e5e5e5',
+          border: mode === 'light' ? '1px solid #e5e5e5' : '1px solid #2a2d35',
         },
       },
     },
     MuiChip: {
       styleOverrides: {
-        root: {
-          fontWeight: 500,
-          fontSize: '0.8rem',
-        },
+        root: { fontWeight: 500, fontSize: '0.8rem' },
       },
     },
     MuiRadio: {
       styleOverrides: {
         root: {
           padding: '4px',
-          color: '#d4d4d4',
-          '& .MuiSvgIcon-root': {
-            fontSize: '1.1rem',
-          },
-          '&.Mui-checked': {
-            color: '#1a1a1a',
-          },
+          color: mode === 'light' ? '#bdbdbd' : '#6b6b6b',
+          '& .MuiSvgIcon-root': { fontSize: '1.1rem' },
+          '&.Mui-checked': { color: BRAND.green },
         },
       },
     },
     MuiLinearProgress: {
       styleOverrides: {
         root: {
-          height: 4,
-          borderRadius: 2,
-          backgroundColor: '#e5e5e5',
-        },
-        bar: {
-          borderRadius: 2,
-          backgroundColor: '#1a1a1a',
+          height: 6,
+          borderRadius: 3,
+          backgroundColor: mode === 'light' ? '#e5e5e5' : '#2a2d35',
         },
       },
     },
-    MuiAlert: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-        },
-      },
-    },
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-        },
-      },
-    },
+    MuiAlert: { styleOverrides: { root: { borderRadius: 8 } } },
+    MuiPaper: { styleOverrides: { root: { borderRadius: 8 } } },
     MuiFormControlLabel: {
       styleOverrides: {
         root: {
           margin: 0,
           padding: '10px 12px',
           borderRadius: 8,
-          border: '1px solid #e5e5e5',
-          backgroundColor: '#ffffff',
+          border: mode === 'light' ? '1px solid #e5e5e5' : '1px solid #2a2d35',
+          backgroundColor: mode === 'light' ? '#ffffff' : '#181a20',
           transition: 'all 0.15s ease',
+          minHeight: 44,
           '&:hover': {
-            borderColor: '#d4d4d4',
-            backgroundColor: '#fafafa',
+            borderColor: BRAND.green,
+            backgroundColor: mode === 'light' ? '#fafafa' : '#1f222a',
+          },
+          '&:focus-within': {
+            borderColor: BRAND.green,
+            boxShadow: `0 0 0 2px ${BRAND.greenSoft}`,
           },
         },
-        label: {
-          fontWeight: 400,
-          color: '#1a1a1a',
-          fontSize: '0.9rem',
-        },
+        label: { fontWeight: 400, fontSize: '0.9rem' },
       },
     },
   },
 });
 
-// Custom style variants for specific use cases
+export const createAppTheme = (mode: PaletteMode) => createTheme(baseOptions(mode));
+
+export const theme = createAppTheme('light');
+
 export const quizStyles = {
-  startButton: {
-    px: 4,
-    py: 1.25,
-    fontSize: '1rem',
+  startButton: { px: 4, py: 1.25, fontSize: '1rem' },
+  brandButton: {
+    backgroundColor: BRAND.green,
+    color: '#ffffff',
+    '&:hover': { backgroundColor: BRAND.greenHover },
+    '&.Mui-disabled': {
+      backgroundColor: 'rgba(0,0,0,0.12)',
+      color: 'rgba(0,0,0,0.38)',
+    },
   },
   submitButton: {
     px: 3,
     py: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: BRAND.green,
     color: '#ffffff',
-    '&:hover': {
-      backgroundColor: '#333333',
-    },
+    '&:hover': { backgroundColor: BRAND.greenHover },
     '&.Mui-disabled': {
-      backgroundColor: '#e5e5e5',
-      color: '#a3a3a3',
+      backgroundColor: 'rgba(0,0,0,0.08)',
+      color: 'rgba(0,0,0,0.38)',
     },
   },
   nextButton: {
     px: 3,
     py: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: BRAND.green,
     color: '#ffffff',
-    '&:hover': {
-      backgroundColor: '#333333',
-    },
+    '&:hover': { backgroundColor: BRAND.greenHover },
   },
   previousButton: {
     px: 3,
     py: 1,
-    backgroundColor: '#ffffff',
-    color: '#666666',
-    border: '1px solid #e5e5e5',
-    '&:hover': {
-      backgroundColor: '#fafafa',
-      borderColor: '#d4d4d4',
-    },
-    '&.Mui-disabled': {
-      backgroundColor: '#fafafa',
-      color: '#d4d4d4',
-      borderColor: '#e5e5e5',
-    },
+    backgroundColor: 'transparent',
+    color: 'text.secondary',
+    border: '1px solid',
+    borderColor: 'divider',
+    '&:hover': { borderColor: BRAND.green, color: BRAND.green },
   },
   optionSelected: {
-    borderColor: '#1a1a1a',
-    backgroundColor: '#fafafa',
+    borderColor: BRAND.green,
+    backgroundColor: BRAND.greenSoft,
   },
 };
