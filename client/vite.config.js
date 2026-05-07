@@ -4,12 +4,9 @@ export default defineConfig({
     plugins: [react()],
     server: {
         port: 3000,
-        proxy: {
-            '/api': {
-                target: 'http://localhost:3001',
-                changeOrigin: true,
-            },
-        },
+        // For local dev, run `vercel dev` from the repo root which serves the
+        // client + api/ routes together. Plain `vite` is fine if you don't need
+        // the API.
     },
     build: {
         target: 'es2020',

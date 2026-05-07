@@ -14,6 +14,9 @@ import {
 import { getUserStats, createOrUpdateUserStats, type UserStats } from '../lib/supabase';
 import { friendlyError } from '../lib/api';
 import { BRAND } from '../theme/MuiTheme';
+import { useBookmarks, removeBookmark } from '../lib/bookmarks';
+import { computeAchievements, readPerfectQuizCount } from '../lib/achievements';
+import { renderQuestion } from './CodeBlock';
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
 
@@ -103,6 +106,48 @@ function Profile() {
       ? Math.round((stats.total_correct / stats.total_questions) * 100)
       : 0;
   const isFirstTime = totalQuizzes === 0;
+  return (
+    <ProfileBody
+      user={user}
+      stats={stats}
+      totalQuizzes={totalQuizzes}
+      totalCorrect={totalCorrect}
+      totalQuestions={totalQuestions}
+      averageScore={averageScore}
+      isFirstTime={isFirstTime}
+      navigate={navigate}
+    />
+  );
+}
+
+interface ProfileBodyProps {
+  user: { name?: string; email?: string; picture?: string };
+  stats: UserStats | null;
+  totalQuizzes: number;
+  totalCorrect: number;
+  totalQuestions: number;
+  averageScore: number;
+  isFirstTime: boolean;
+  navigate: (path: string) => void;
+}
+
+function ProfileBody({
+  user,
+  stats,
+  totalQuizzes,
+  totalCorrect,
+  totalQuestions,
+  averageScore,
+  isFirstTime,
+  navigate,
+}: ProfileBodyProps) {
+  const { questions: bookmarkedQuestions } = useBookmarks();
+  const achievements = computeAchievements({
+    stats,
+    bookmarkCount: bookmarkedQuestions.length,
+    perfectQuizzes: readPerfectQuizCount(),
+  });
+  const earned = achievements.filter((a) => a.earned);
 
   return (
     <Box sx={{ maxWidth: 500, mx: 'auto' }}>
@@ -205,6 +250,86 @@ function Profile() {
           </Box>
         </Box>
       </Paper>
+
+      <Paper elevation={0} sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+        <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
+          Achievements ({earned.length}/{achievements.length})
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          {achievements.map((a) => (
+            <Box
+              key={a.id}
+              title={a.description}
+              aria-label={`${a.label}: ${a.earned ? 'earned' : 'locked'}. ${a.description}`}
+              sx={{
+                p: 1,
+                width: 88,
+                textAlign: 'center',
+                border: '1px solid',
+                borderColor: a.earned ? BRAND.green : 'divider',
+                borderRadius: 1,
+                backgroundColor: a.earned ? 'rgba(45,122,45,0.06)' : 'transparent',
+                opacity: a.earned ? 1 : 0.45,
+              }}
+            >
+              <div style={{ fontSize: 28, lineHeight: 1 }} aria-hidden>
+                {a.emoji}
+              </div>
+              <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mt: 0.5 }}>
+                {a.label}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </Paper>
+
+      {bookmarkedQuestions.length > 0 && (
+        <Paper elevation={0} sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+          <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
+            Bookmarks ({bookmarkedQuestions.length})
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+            {bookmarkedQuestions.slice(0, 20).map((q) => (
+              <Box
+                key={q.id}
+                sx={{
+                  p: 1.5,
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  borderRadius: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 1,
+                }}
+              >
+                <Box sx={{ fontSize: '0.9rem' }}>{renderQuestion(q.question)}</Box>
+                <Typography variant="caption" color="success.dark">
+                  Answer: {q.options[q.correctIndex] ?? '—'}
+                </Typography>
+                {q.explanation && (
+                  <Typography variant="caption" color="text.secondary">
+                    {q.explanation}
+                  </Typography>
+                )}
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button
+                    size="small"
+                    onClick={() => removeBookmark(q.id)}
+                    sx={{ textTransform: 'none', color: 'text.secondary' }}
+                  >
+                    Remove
+                  </Button>
+                </Box>
+              </Box>
+            ))}
+            {bookmarkedQuestions.length > 20 && (
+              <Typography variant="caption" color="text.secondary">
+                Showing 20 of {bookmarkedQuestions.length}
+              </Typography>
+            )}
+          </Box>
+        </Paper>
+      )}
 
       <Button
         variant="contained"

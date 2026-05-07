@@ -21,10 +21,21 @@ import {
 import { useAuth0 } from '@auth0/auth0-react';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { quizStyles, BRAND, CATEGORY_GRADIENT } from '../theme/MuiTheme';
-import { recordQuizResult, createOrUpdateUserStats } from '../lib/supabase';
+import {
+  recordQuizResult,
+  createOrUpdateUserStats,
+  getDailyChallenge,
+  reportQuestion,
+} from '../lib/supabase';
 import { apiFetch, friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
+import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
+import { useSettings, playCorrect, playComplete } from '../lib/settings';
+import { recordPerfectQuiz } from '../lib/achievements';
+import { ReportDialog } from './ReportDialog';
 import './Quiz.css';
+
+type QuizMode = 'standard' | 'daily';
 
 const CATEGORY_OPTIONS: { value: CategoryType; label: string; color: string }[] = [
   { value: 'html', label: 'HTML', color: '#e34c26' },
@@ -58,31 +69,14 @@ const getCategoryHexColor = (category: string) => CATEGORY_LOOKUP.get(category a
 const getCategoryLabel = (category: string) => CATEGORY_LOOKUP.get(category as CategoryType)?.label || category;
 
 const PROGRESS_KEY = 'devquiz:in-progress';
-const BOOKMARK_KEY = 'devquiz:bookmarks';
 
 interface PersistedProgress {
   sessionId: string;
   questions: Question[];
   answers: Record<string, number>;
   currentIndex: number;
+  mode: QuizMode;
 }
-
-const loadBookmarks = (): Record<string, true> => {
-  try {
-    const raw = localStorage.getItem(BOOKMARK_KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-};
-
-const saveBookmarks = (b: Record<string, true>) => {
-  try {
-    localStorage.setItem(BOOKMARK_KEY, JSON.stringify(b));
-  } catch {
-    // ignore
-  }
-};
 
 const HintIcon = () => (
   <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
@@ -120,8 +114,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
   const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
   const [attemptedStart, setAttemptedStart] = useState(false);
-  const [bookmarks, setBookmarks] = useState<Record<string, true>>(() => loadBookmarks());
+  const { ids: bookmarks } = useBookmarks();
   const [snack, setSnack] = useState<string | null>(null);
+  const [mode, setMode] = useState<QuizMode>('standard');
+  const [reportTarget, setReportTarget] = useState<string | null>(null);
+  const [settings, updateSettings] = useSettings();
 
   const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
@@ -151,6 +148,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setQuestions(saved.questions);
       setAnswers(saved.answers || {});
       setCurrentIndex(Math.min(saved.currentIndex || 0, saved.questions.length - 1));
+      setMode(saved.mode || 'standard');
       setState('in-progress');
     } catch {
       // ignore corrupt state
@@ -161,12 +159,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   useEffect(() => {
     if (state !== 'in-progress' || questions.length === 0) return;
     try {
-      const payload: PersistedProgress = { sessionId, questions, answers, currentIndex };
+      const payload: PersistedProgress = { sessionId, questions, answers, currentIndex, mode };
       sessionStorage.setItem(PROGRESS_KEY, JSON.stringify(payload));
     } catch {
       // quota or private mode — ignore
     }
-  }, [state, sessionId, questions, answers, currentIndex]);
+  }, [state, sessionId, questions, answers, currentIndex, mode]);
 
   const clearProgress = useCallback(() => {
     try {
@@ -199,6 +197,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         setQuestions(data.questions);
         setAnswers({});
         setCurrentIndex(0);
+        setMode('standard');
         setState('in-progress');
       } catch (err) {
         if (controller.signal.aborted) return;
@@ -208,6 +207,23 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     },
     [],
   );
+
+  const startDailyChallenge = useCallback(async () => {
+    setState('loading');
+    setError(null);
+    try {
+      const data = await getDailyChallenge();
+      setSessionId(data.sessionId);
+      setQuestions(data.questions as Question[]);
+      setAnswers({});
+      setCurrentIndex(0);
+      setMode('daily');
+      setState('in-progress');
+    } catch (err) {
+      setError(friendlyError(err));
+      setState('error');
+    }
+  }, []);
 
   const handleStart = () => {
     setAttemptedStart(true);
@@ -234,7 +250,26 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   const handleAnswer = (questionId: string, answerIndex: number) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answerIndex }));
+    if (settings.soundEffects) {
+      // soft confirmation tone on each pick — no correctness reveal until submit.
+      playCorrect();
+    }
   };
+
+  const handleReport = useCallback(
+    async (reason: 'incorrect-answer' | 'unclear' | 'typo' | 'outdated' | 'duplicate' | 'other', detail?: string) => {
+      if (!reportTarget) return;
+      try {
+        await reportQuestion({ questionId: reportTarget, reason, detail, reporterSub: user?.sub });
+        setSnack('Thanks — report sent');
+      } catch {
+        setSnack('Could not send report');
+      } finally {
+        setReportTarget(null);
+      }
+    },
+    [reportTarget, user],
+  );
 
   const handleNext = useCallback(() => {
     setCurrentIndex((i) => Math.min(i + 1, questions.length - 1));
@@ -256,8 +291,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setResult(data);
       setState('submitted');
       clearProgress();
+      playComplete();
+      if (data.percentage === 100) recordPerfectQuiz();
 
-      if (isAuthenticated && user?.sub) {
+      // Practice mode: don't write stats. Daily challenge: write stats.
+      if (settings.practiceMode) {
+        setSnack('Practice mode — stats not updated');
+      } else if (isAuthenticated && user?.sub) {
         try {
           await createOrUpdateUserStats(user.sub, {
             email: user.email,
@@ -275,7 +315,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     } finally {
       setSubmitting(false);
     }
-  }, [answers, clearProgress, isAuthenticated, sessionId, submitting, user]);
+  }, [answers, clearProgress, isAuthenticated, sessionId, submitting, user, settings.practiceMode]);
 
   const handleRestart = () => {
     clearProgress();
@@ -284,6 +324,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     setResult(null);
     setAnswers({});
     setCurrentIndex(0);
+    setMode('standard');
     setError(null);
   };
 
@@ -293,19 +334,16 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     }
   };
 
-  const toggleBookmark = (questionId: string) => {
-    setBookmarks((prev) => {
-      const next = { ...prev };
-      if (next[questionId]) {
-        delete next[questionId];
-        setSnack('Removed bookmark');
-      } else {
-        next[questionId] = true;
-        setSnack('Bookmarked');
-      }
-      saveBookmarks(next);
-      return next;
+  const toggleBookmark = (q: Question, correctIndex: number, explanation: string) => {
+    const added = toggleBookmarkLib({
+      id: q.id,
+      question: q.question,
+      category: q.category,
+      options: q.options,
+      correctIndex,
+      explanation,
     });
+    setSnack(added ? 'Bookmarked' : 'Removed bookmark');
   };
 
   const handleShare = async () => {
@@ -438,9 +476,31 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         <Typography variant="h5" component="h1" sx={{ mb: 0.5, fontWeight: 600, textAlign: 'center' }}>
           Web Development Quiz
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 4, fontSize: '0.85rem', textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontSize: '0.85rem', textAlign: 'center' }}>
           500+ questions · keyboard shortcuts supported
         </Typography>
+
+        <Button
+          fullWidth
+          onClick={startDailyChallenge}
+          variant="outlined"
+          sx={{
+            mb: 3,
+            py: 1.25,
+            textTransform: 'none',
+            borderColor: BRAND.green,
+            color: BRAND.green,
+            display: 'flex',
+            justifyContent: 'space-between',
+            '&:hover': { borderColor: BRAND.greenHover, backgroundColor: 'rgba(45,122,45,0.06)' },
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span aria-hidden>🗓️</span>
+            <span>Today’s challenge</span>
+          </span>
+          <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>5 questions · same for everyone</span>
+        </Button>
 
         <Box component="fieldset" sx={{ mb: 4, p: 0, border: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
@@ -608,6 +668,21 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           Start quiz
         </Button>
 
+        <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'space-between', flexWrap: 'wrap' }}>
+          <ToggleRow
+            label="Practice mode"
+            description="Skip stats updates this session"
+            checked={settings.practiceMode}
+            onChange={(v) => updateSettings({ practiceMode: v })}
+          />
+          <ToggleRow
+            label="Sound effects"
+            description="Subtle ticks on answer / submit"
+            checked={settings.soundEffects}
+            onChange={(v) => updateSettings({ soundEffects: v })}
+          />
+        </Box>
+
         <Snackbar
           open={!!snack}
           autoHideDuration={2500}
@@ -651,6 +726,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               {result.correctAnswers} out of {result.totalQuestions} correct
             </Typography>
 
+            {mode === 'daily' && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2 }}>
+                Today’s challenge complete — see you tomorrow.
+              </Typography>
+            )}
             <Box sx={{ mt: 3, display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
               <Button
                 variant="contained"
@@ -719,10 +799,27 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                     size="small"
                     aria-pressed={isBookmarked}
                     aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark this question'}
-                    onClick={() => toggleBookmark(question.id)}
+                    onClick={() =>
+                      toggleBookmark(
+                        question,
+                        questionResult?.correctAnswer ?? 0,
+                        questionResult?.explanation ?? '',
+                      )
+                    }
                     sx={{ color: isBookmarked ? BRAND.green : 'text.secondary' }}
                   >
                     <BookmarkIcon filled={isBookmarked} />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    aria-label="Report this question"
+                    onClick={() => setReportTarget(question.id)}
+                    sx={{ color: 'text.secondary' }}
+                  >
+                    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                      <line x1="4" y1="22" x2="4" y2="15" />
+                    </svg>
                   </IconButton>
                   <Chip
                     label={getCategoryLabel(question.category)}
@@ -831,7 +928,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               size="small"
               aria-pressed={isBookmarked}
               aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark this question'}
-              onClick={() => toggleBookmark(currentQuestion.id)}
+              onClick={() => toggleBookmark(currentQuestion, 0, '')}
               sx={{ color: isBookmarked ? BRAND.green : 'text.secondary' }}
             >
               <BookmarkIcon filled={isBookmarked} />
@@ -967,8 +1064,56 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         message={snack ?? ''}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
+      <ReportDialog
+        open={!!reportTarget}
+        onClose={() => setReportTarget(null)}
+        onSubmit={handleReport}
+      />
     </>
   );
 }
+
+const ToggleRow = ({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string;
+  description: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+}) => (
+  <Box
+    component="label"
+    sx={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 1.5,
+      p: 1.25,
+      flex: '1 1 200px',
+      border: '1px solid',
+      borderColor: checked ? BRAND.green : 'divider',
+      borderRadius: 1,
+      cursor: 'pointer',
+      backgroundColor: checked ? 'rgba(45,122,45,0.04)' : 'transparent',
+    }}
+  >
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+      style={{ accentColor: BRAND.green }}
+    />
+    <Box>
+      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+        {label}
+      </Typography>
+      <Typography variant="caption" color="text.secondary">
+        {description}
+      </Typography>
+    </Box>
+  </Box>
+);
 
 export default Quiz;

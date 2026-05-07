@@ -6189,6 +6189,166 @@ export const questions: Question[] = [
     explanation: 'The finally block always executes, and if it contains a return statement, it overrides any previous return from try or catch. The function returns "finally". This is generally considered a bad practice — avoid return statements in finally blocks.',
     difficulty: 3,
   },
+  // ── New question formats ─────────────────────────────────────────────
+  // Spot the bug
+  {
+    id: '1001',
+    tags: ['Spot the Bug', 'JavaScript', 'Async'],
+    introduction: 'Spot the bug — three of the four lines below are fine. Pick the buggy one.',
+    question:
+      'Which line breaks this Promise chain?\n\n```javascript\nfetch(url)                        // (1)\n  .then(res => res.json)         // (2)\n  .then(data => render(data))    // (3)\n  .catch(err => console.error(err)); // (4)\n```',
+    options: ['Line 1', 'Line 2', 'Line 3', 'Line 4'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation:
+      'Line 2 is missing the call: `res.json` returns the function reference, not the parsed JSON. It should be `res.json()`. The chain then receives the function instead of the parsed data and silently misbehaves.',
+    difficulty: 2,
+  },
+  // Predict the type (TypeScript)
+  {
+    id: '1002',
+    tags: ['Predict the Type', 'TypeScript'],
+    introduction: 'Type inference question. What does TypeScript infer for `result`?',
+    question:
+      'What is the inferred type of `result`?\n\n```ts\nconst arr = [1, "two", true] as const;\nconst result = arr[1];\n```',
+    options: ['string', 'number | string | boolean', '"two"', 'any'],
+    correctAnswer: 2,
+    category: 'typescript',
+    explanation:
+      '`as const` makes the tuple readonly with literal element types. `arr[1]` therefore has the literal type `"two"`, not just `string`.',
+    difficulty: 4,
+  },
+  // Two truths and a lie
+  {
+    id: '1003',
+    tags: ['Two Truths and a Lie', 'React'],
+    introduction: 'Two of these statements about React keys are true. One is false — pick it.',
+    question: 'Which statement about `key` props in React lists is FALSE?',
+    options: [
+      'Keys help React identify which items have changed between renders.',
+      'Keys must be unique among siblings, but not globally.',
+      'Using array indices as keys is always safe and recommended.',
+      'Keys do not get passed to the component as a prop.',
+    ],
+    correctAnswer: 2,
+    category: 'react',
+    explanation:
+      'Indices as keys are only safe when the list never reorders or filters. Reordering with index keys causes incorrect state reuse and visual bugs. The other three statements are all true.',
+    difficulty: 2,
+  },
+  // Big-O guessing
+  {
+    id: '1004',
+    tags: ['Big-O', 'Algorithms', 'JavaScript'],
+    introduction: 'Estimate the time complexity of the function below.',
+    question:
+      'What is the time complexity of this function?\n\n```javascript\nfunction f(arr) {\n  for (let i = 0; i < arr.length; i++) {\n    for (let j = i; j < arr.length; j++) {\n      console.log(arr[i], arr[j]);\n    }\n  }\n}\n```',
+    options: ['O(1)', 'O(n)', 'O(n log n)', 'O(n²)'],
+    correctAnswer: 3,
+    category: 'javascript',
+    explanation:
+      'The inner loop runs roughly n − i times across n outer iterations, summing to ~n(n+1)/2 — that is O(n²). The starting offset doesn\'t change the asymptotic behaviour.',
+    difficulty: 3,
+  },
+  // Browser console error
+  {
+    id: '1005',
+    tags: ['Console Error', 'JavaScript'],
+    introduction: 'You see this error in the browser console. What\'s the most likely cause?',
+    question:
+      'Browser console says:\n\n```\nUncaught TypeError: Cannot read properties of undefined (reading \'map\')\n    at App.tsx:42\n```\n\nMost likely cause?',
+    options: [
+      'A variable is being used before it is declared',
+      'An array prop or state is undefined when first rendered',
+      'An infinite render loop',
+      'A network request was blocked by CORS',
+    ],
+    correctAnswer: 1,
+    category: 'react',
+    explanation:
+      'This is the classic "data not loaded yet" pattern: the component renders once with `items === undefined` before the fetch resolves, and `undefined.map()` throws. Fix with `items?.map(...)`, a default of `[]`, or a loading guard.',
+    difficulty: 2,
+  },
+  // Diff mode — which is the fix?
+  {
+    id: '1006',
+    tags: ['Diff', 'React', 'Performance'],
+    introduction: 'Which of these versions actually fixes the unnecessary re-renders?',
+    question:
+      'Original (re-renders every parent render):\n\n```jsx\n<Child onSelect={(id) => setSelected(id)} />\n```\n\nWhich version prevents the child from re-rendering on every parent render?',
+    options: [
+      'Wrap the inline arrow with `useCallback(fn, [])` and pass that.',
+      'Wrap the child in `React.memo` and keep the inline arrow.',
+      'Wrap the child in `React.memo` AND pass a `useCallback`-wrapped handler.',
+      'Move `setSelected` into a `useEffect`.',
+    ],
+    correctAnswer: 2,
+    category: 'react',
+    explanation:
+      '`React.memo` alone still re-renders because the inline arrow is a new reference every parent render. `useCallback` alone doesn\'t help because the child isn\'t memoized. You need both — memoization on the child plus a stable handler reference.',
+    difficulty: 4,
+  },
+  // CSS visual match
+  {
+    id: '1007',
+    tags: ['CSS', 'Layout'],
+    introduction:
+      'You want a 3-column layout where each column is at least 200px and grows equally to fill the row, wrapping if needed. Which CSS does it?',
+    question:
+      'Goal: responsive 3-column grid, min 200px per column, fills the row, wraps cleanly.',
+    options: [
+      '`display: flex; flex-wrap: wrap;` (with `flex: 1 0 200px` on children)',
+      '`display: grid; grid-template-columns: repeat(3, 1fr);`',
+      '`display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));`',
+      '`display: grid; grid-template-columns: 200px 200px 200px;`',
+    ],
+    correctAnswer: 2,
+    category: 'css',
+    explanation:
+      '`auto-fit` + `minmax(200px, 1fr)` is the canonical responsive pattern: columns grow to fill the row, wrap automatically below the min size, no media queries needed. The fixed `repeat(3, 1fr)` and three explicit 200px columns don\'t wrap.',
+    difficulty: 3,
+  },
+  // Regex challenge
+  {
+    id: '1008',
+    tags: ['Regex', 'JavaScript'],
+    introduction: 'Which strings does this regex match?',
+    question:
+      'Which string is matched by `/^(?!_)\\w{3,8}$/`?\n\n(`\\w` = letters, digits, underscore)',
+    options: ['`_hello`', '`hi`', '`username`', '`username_123`'],
+    correctAnswer: 2,
+    category: 'javascript',
+    explanation:
+      'The negative lookahead `(?!_)` rejects strings starting with `_`, so `_hello` is out. `hi` is too short (min 3). `username_123` is 12 chars, exceeding the 8 max. `username` is exactly 8 chars and doesn\'t start with `_`.',
+    difficulty: 4,
+  },
+  // Estimation
+  {
+    id: '1009',
+    tags: ['Estimation', 'Performance'],
+    introduction: 'Order-of-magnitude question. Pick the closest answer.',
+    question: 'Roughly how much data can a typical residential 100 Mbps connection transfer in 1 second?',
+    options: ['~1 MB', '~12 MB', '~100 MB', '~1 GB'],
+    correctAnswer: 1,
+    category: 'dev-world',
+    explanation:
+      '100 Mbps = 100 megabits per second ≈ 12.5 megabytes per second (divide by 8). The headline number on your ISP plan is in bits, file sizes are in bytes — a frequent gotcha when budgeting for HTTP payloads.',
+    difficulty: 2,
+  },
+  // Order of execution (event loop)
+  {
+    id: '1010',
+    tags: ['Event Loop', 'Async', 'JavaScript'],
+    introduction: 'Pick the output order. Knowing microtasks vs macrotasks is the key.',
+    question:
+      'What is logged in order?\n\n```javascript\nconsole.log("A");\nsetTimeout(() => console.log("B"), 0);\nPromise.resolve().then(() => console.log("C"));\nconsole.log("D");\n```',
+    options: ['A B C D', 'A D C B', 'A D B C', 'A C D B'],
+    correctAnswer: 1,
+    category: 'javascript',
+    explanation:
+      'Synchronous code runs first (A, D). Microtasks (Promise callbacks) drain before the next macrotask (setTimeout), so C precedes B. Result: A, D, C, B.',
+    difficulty: 3,
+  },
 ];
 
 // Fisher-Yates shuffle algorithm

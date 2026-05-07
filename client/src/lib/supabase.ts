@@ -66,3 +66,38 @@ export async function recordQuizResult(
   });
   return data;
 }
+
+export interface DailyChallenge {
+  date: string;
+  sessionId: string;
+  questions: Array<{
+    id: string;
+    tags: string[];
+    introduction: string;
+    question: string;
+    options: string[];
+    category: string;
+    difficulty: number;
+  }>;
+}
+
+export async function getDailyChallenge(): Promise<DailyChallenge> {
+  return apiFetch<DailyChallenge>('/api/quiz/daily');
+}
+
+export async function reportQuestion(input: {
+  questionId: string;
+  reason: 'incorrect-answer' | 'unclear' | 'typo' | 'outdated' | 'duplicate' | 'other';
+  detail?: string;
+  reporterSub?: string;
+}) {
+  await apiFetch('/api/quiz/report', {
+    method: 'POST',
+    body: JSON.stringify({
+      question_id: input.questionId,
+      reason: input.reason,
+      detail: input.detail,
+      reporter_sub: input.reporterSub,
+    }),
+  });
+}
