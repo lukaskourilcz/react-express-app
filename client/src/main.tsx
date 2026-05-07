@@ -1,27 +1,32 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { ThemeProvider, CssBaseline } from '@mui/material';
 import { Auth0Provider } from '@auth0/auth0-react';
 import { BrowserRouter } from 'react-router-dom';
-import { theme } from './theme/MuiTheme';
 import App from './App';
+import { ColorModeProvider } from './theme/ColorModeContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN;
 const auth0ClientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
+const auth0Audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
 const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
   if (!auth0Domain || !auth0ClientId) {
-    console.warn('Auth0 credentials not configured. Authentication disabled.');
+    if (import.meta.env.DEV) {
+      console.warn('Auth0 credentials not configured. Authentication disabled.');
+    }
     return <>{children}</>;
   }
-
   return (
     <Auth0Provider
       domain={auth0Domain}
       clientId={auth0ClientId}
       authorizationParams={{
         redirect_uri: window.location.origin,
+        ...(auth0Audience ? { audience: auth0Audience } : {}),
       }}
+      cacheLocation="localstorage"
+      useRefreshTokens
     >
       {children}
     </Auth0Provider>
@@ -30,13 +35,14 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AuthWrapper>
-      <BrowserRouter>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <App />
-        </ThemeProvider>
-      </BrowserRouter>
-    </AuthWrapper>
-  </React.StrictMode>
+    <ErrorBoundary>
+      <AuthWrapper>
+        <BrowserRouter>
+          <ColorModeProvider>
+            <App />
+          </ColorModeProvider>
+        </BrowserRouter>
+      </AuthWrapper>
+    </ErrorBoundary>
+  </React.StrictMode>,
 );

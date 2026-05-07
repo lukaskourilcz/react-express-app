@@ -6193,32 +6193,87 @@ export const questions: Question[] = [
 
 // Fisher-Yates shuffle algorithm
 export function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
+  // Re-exported via secureShuffle below; Math.random remained too predictable
+  // for an answer-key shuffle that influences scoring.
+  const out = [...array];
+  for (let i = out.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    [out[i], out[j]] = [out[j], out[i]];
   }
-  return shuffled;
+  return out;
 }
 
-// Simple signing for session data (in production, use proper JWT)
-const SECRET = process.env.SESSION_SECRET || 'quiz-secret-key-change-in-production';
+// HMAC-signed session token. SESSION_SECRET MUST be set in production
+// (Vercel project env). In development we allow a fallback so local dev runs.
+import { createHmac, timingSafeEqual, randomInt } from 'node:crypto';
+
+const SECRET = process.env.SESSION_SECRET;
+const IS_PROD = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+
+if (IS_PROD && !SECRET) {
+  // Fail closed: do not start the function with an unsigned/forgeable secret in prod.
+  throw new Error('SESSION_SECRET is required in production');
+}
+
+const RESOLVED_SECRET = SECRET || 'dev-only-not-for-production';
+const TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
+
+function b64url(buf: Buffer): string {
+  return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function fromB64url(s: string): Buffer {
+  const pad = s.length % 4 === 0 ? '' : '='.repeat(4 - (s.length % 4));
+  return Buffer.from(s.replace(/-/g, '+').replace(/_/g, '/') + pad, 'base64');
+}
+
+interface SessionPayload {
+  questions: { questionId: string; correctAnswer: number }[];
+  iat: number;
+  exp: number;
+}
 
 export function encodeSession(data: { questionId: string; correctAnswer: number }[]): string {
-  const payload = JSON.stringify(data);
-  const encoded = Buffer.from(payload).toString('base64');
-  const signature = Buffer.from(SECRET + encoded).toString('base64').slice(0, 16);
+  const now = Date.now();
+  const payload: SessionPayload = {
+    questions: data,
+    iat: now,
+    exp: now + TOKEN_TTL_MS,
+  };
+  const encoded = b64url(Buffer.from(JSON.stringify(payload)));
+  const signature = b64url(createHmac('sha256', RESOLVED_SECRET).update(encoded).digest());
   return `${encoded}.${signature}`;
 }
 
-export function decodeSession(token: string): { questionId: string; correctAnswer: number }[] | null {
+export function decodeSession(
+  token: string,
+): { questionId: string; correctAnswer: number }[] | null {
+  if (typeof token !== 'string' || !token.includes('.')) return null;
+  const [encoded, signature] = token.split('.');
+  if (!encoded || !signature) return null;
+
   try {
-    const [encoded, signature] = token.split('.');
-    const expectedSig = Buffer.from(SECRET + encoded).toString('base64').slice(0, 16);
-    if (signature !== expectedSig) return null;
-    const payload = Buffer.from(encoded, 'base64').toString('utf-8');
-    return JSON.parse(payload);
+    const expected = createHmac('sha256', RESOLVED_SECRET).update(encoded).digest();
+    const provided = fromB64url(signature);
+    if (provided.length !== expected.length) return null;
+    if (!timingSafeEqual(provided, expected)) return null;
+
+    const payload = JSON.parse(fromB64url(encoded).toString('utf-8')) as SessionPayload;
+    if (!payload || typeof payload !== 'object') return null;
+    if (!Array.isArray(payload.questions)) return null;
+    if (typeof payload.exp !== 'number' || Date.now() > payload.exp) return null;
+    return payload.questions;
   } catch {
     return null;
   }
+}
+
+// Cryptographically-strong shuffle (replaces Math.random in shuffleArray).
+export function secureShuffle<T>(array: T[]): T[] {
+  const out = [...array];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = randomInt(0, i + 1);
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
 }
