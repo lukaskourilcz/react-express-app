@@ -24,7 +24,6 @@ engines see at <https://devquiz.vercel.app> (or wherever you deploy).
 /play         → Multiplayer / classroom landing
 /play/:code   → Match (lobby / running / finished)
 /leaderboard  → Global / Daily / Category tabs
-/sandbox      → Code playground (JS / TS / Python)
 /cards        → Memory-card self-review (due cards by default)
 /drill        → Auto-graded drill from due cards (SRS-driven)
 /profile      → Stats / streaks / achievements / bookmarks / cards-shortcut
@@ -44,7 +43,7 @@ Initial route (Quiz home) at last measurement:
 - `router.js` — 56 KB gz
 - ≈ **~200 KB gz initial** vs the original ~370 KB monolithic chunk
 
-Lazy chunks: `Profile.js` (2 KB), `Leaderboard.js` (2 KB), `CodeSandbox.js` (4 KB), `Play.js` (5 KB), `prism.js` (228 KB — only loaded when a code question renders), `index-BFIkqOIO.js` (sucrase, 48 KB — only when sandbox TS is selected).
+Lazy chunks: `Profile.js` (2 KB), `Leaderboard.js` (2 KB), `Play.js` (5 KB), `Cards.js` (3 KB), `Drill.js` (3 KB), `prism.js` (228 KB — only loaded when a code-snippet question renders).
 
 ## Component map
 
@@ -57,7 +56,6 @@ Lazy chunks: `Profile.js` (2 KB), `Leaderboard.js` (2 KB), `CodeSandbox.js` (4 K
 - `Profile.tsx` — auth-aware. Loads `user_stats`, computes achievements, shows bookmarks shortcut. Refactored into `Profile` (auth gates) + `ProfileBody` (rendering with hooks) so all hooks stay top-level.
 - `Leaderboard.tsx` — three tabs (Global / Daily / Category). Effect deps gated by active tab so changing the category chip on Global doesn't refetch.
 - `Play.tsx` — exports `PlayLanding` and `PlayMatch`. Match screen polls `/api/play/state` every 4s plus listens to Supabase Realtime broadcast on `match:<code>`. Host heartbeat every 30s. Live countdown derived from `question_started_at`.
-- `CodeSandbox.tsx` — sandboxed iframe with persistent runner. Pyodide and sucrase load on demand inside the iframe (not the parent).
 - `Cards.tsx` — flashcard self-review. Filters to **due** cards by default (with a "Review anyway" escape hatch when nothing is due). One card at a time, "Reveal answer" → optional self-pick → "Got it" / "Need more practice". Six correct in a row graduates a card.
 - `Drill.tsx` — auto-graded mini-quiz built from the user's due cards. Picks 10, MCQ-style, locks in answers like a normal quiz. Each correct answer advances the SRS schedule; each wrong answer resets it. Final score screen with a "Drill again" CTA when more cards are still due.
 - `SyncBoot.tsx` — invisible component that bridges Auth0 state to `cards-sync`. Mounted once at the root.
@@ -95,8 +93,6 @@ Why not a global store? Each cross-component concern is small (bookmarks, theme,
 - **`React.lazy`** every route in `App.tsx`.
 - **Vite `manualChunks`** in `vite.config.ts`: `react`, `router`, `mui`, `auth0`, `supabase` are stable vendor chunks for cache reuse across deploys.
 - **Code highlighter** (`react-syntax-highlighter`) imported via the Prism-only entry path (`react-syntax-highlighter/dist/esm/prism`) to avoid bundling highlight.js. Saves ~600 KB of language definitions.
-- **Sucrase** (TypeScript transform for the sandbox) is dynamically imported only when the user picks TS.
-- **Pyodide** is loaded from CDN on demand, not bundled.
 - **No `useMemo`/`useCallback` cargo culting** — only where dep arrays are stable and the child is memoized.
 
 ## Accessibility

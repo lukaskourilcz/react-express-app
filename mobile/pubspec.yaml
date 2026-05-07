@@ -17,8 +17,6 @@ dependencies:
   url_launcher: ^6.3.1
   # Realtime broadcast channels for multiplayer / classroom matches.
   supabase_flutter: ^2.5.6
-  # WebView for the code sandbox (JS / TS / Python via Pyodide).
-  webview_flutter: ^4.10.0
   # Native Auth0 universal-login flow.
   auth0_flutter: ^1.7.1
   # Crash and error reporting. Init is conditional on SENTRY_DSN.
@@ -31,5 +29,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  assets:
-    - assets/sandbox_runner.html

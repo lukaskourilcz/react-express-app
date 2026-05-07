@@ -139,10 +139,6 @@ events are sent).
 - Check the browser console for `Auth0Provider` warnings.
 - Verify the deployed origin is in the Auth0 application's *Allowed Callback URLs* and *Allowed Web Origins*.
 
-### Pyodide download fails
-- Open browser dev tools, look for blocked requests to `cdn.jsdelivr.net`.
-- The CSP in `vercel.json` allows `cdn.jsdelivr.net` for `script-src` and `connect-src`. If you've customized the CSP, make sure these are still present.
-
 ## Rolling back
 
 Vercel: **Deployments** tab → pick the previous green deploy → *Promote to Production*. Instant.

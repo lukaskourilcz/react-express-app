@@ -155,7 +155,7 @@ clearing app data wipes the identity. There's no recovery.
 
 - ✅ Brand secret (`SESSION_SECRET`) only on server, never in client bundle.
 - ✅ `react-syntax-highlighter` content is server-controlled (static question bank), not user input.
-- ✅ CSP in `vercel.json` allows only `self` + jsdelivr (for Pyodide) + Auth0 + Supabase.
+- ✅ CSP in `vercel.json` is locked to `self` + Auth0 + Supabase only — no wildcard CDNs, no `unsafe-eval`.
 - ✅ JWT verification on the server (`lib/auth.ts`), env-gated via `AUTH0_DOMAIN`.
 - ⚠️ RLS depends on Supabase third-party Auth0 setup, which is a manual step.
 - ✅ No service role key referenced anywhere in the API.

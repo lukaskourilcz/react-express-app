@@ -9,7 +9,6 @@ import { BRAND } from './theme/MuiTheme';
 const Quiz = lazy(() => import('./components/Quiz'));
 const Profile = lazy(() => import('./components/Profile'));
 const Leaderboard = lazy(() => import('./components/Leaderboard'));
-const CodeSandbox = lazy(() => import('./components/CodeSandbox'));
 const Cards = lazy(() => import('./components/Cards'));
 const Drill = lazy(() => import('./components/Drill'));
 const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayLanding })));
@@ -19,7 +18,6 @@ const ROUTE_TITLES: Record<string, string> = {
   '/': 'DevQuiz — Test your web dev skills',
   '/profile': 'Profile · DevQuiz',
   '/leaderboard': 'Leaderboard · DevQuiz',
-  '/sandbox': 'Code playground · DevQuiz',
   '/cards': 'Memory cards · DevQuiz',
   '/drill': 'Drill mode · DevQuiz',
   '/play': 'Play live · DevQuiz',
@@ -151,16 +149,6 @@ function App() {
               >
                 Cards
               </Button>
-              <Button
-                component={Link}
-                to="/sandbox"
-                sx={{
-                  ...navLinkSx(location.pathname === '/sandbox'),
-                  display: { xs: 'none', sm: 'inline-flex' },
-                }}
-              >
-                Sandbox
-              </Button>
               {isAuthenticated && (
                 <Button component={Link} to="/profile" sx={navLinkSx(location.pathname === '/profile')}>
                   Profile
@@ -201,7 +189,6 @@ function App() {
               <Route path="/" element={<Quiz onActiveChange={setQuizActive} />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
-              <Route path="/sandbox" element={<CodeSandbox />} />
               <Route path="/cards" element={<Cards />} />
               <Route path="/drill" element={<Drill />} />
               <Route path="/play" element={<PlayLanding />} />

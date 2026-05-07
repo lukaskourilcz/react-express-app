@@ -19,7 +19,6 @@ so this directory **adds** mobile targets without touching backend infra.
 | **Achievements** — 10 client-side badges in a grid on Profile | ✅ |
 | **Question reporting** — dialog from result rows, posts to API | ✅ |
 | **Multiplayer + classroom** — lobby / running / finished, host heartbeat, countdown timer, speed bonus, classroom histogram, Supabase Realtime + 4s polling fallback | ✅ |
-| **Code sandbox** — JS / TypeScript (sucrase) / Python (Pyodide) in a sandboxed `WebView` | ✅ |
 | **Real Auth0 sign-in** — `auth0_flutter` universal login, guest mode fallback when not configured | ✅ |
 
 ## Project layout
@@ -28,8 +27,6 @@ so this directory **adds** mobile targets without touching backend infra.
 mobile/
 ├── pubspec.yaml
 ├── analysis_options.yaml
-├── assets/
-│   └── sandbox_runner.html        # JS/TS/Python runner loaded by WebView
 ├── lib/
 │   ├── main.dart                  # Supabase + Auth + Bookmarks bootstrap
 │   ├── theme.dart                 # brand green #2D7A2D, light/dark
@@ -46,7 +43,6 @@ mobile/
 │       ├── profile_screen.dart
 │       ├── leaderboard_screen.dart
 │       ├── bookmarks_screen.dart
-│       ├── sandbox_screen.dart
 │       ├── play_landing_screen.dart
 │       └── play_match_screen.dart
 └── ios/Runner/Info.plist.template
@@ -171,10 +167,6 @@ Then submit through Xcode → Organizer → Distribute App.
 
 ## Honest limits
 
-- **Sandbox**: runs JS / TS / Python. The `WebView` shares the parent app's
-  origin, so Pyodide is sandboxed by being WASM (no DOM, no `fetch` to your
-  servers by default), but it isn't a full security boundary. Don't run
-  untrusted code on a phone with sensitive data.
 - **Multiplayer**: per-question countdown is 30s server-side, client polls at
   4s in addition to Realtime broadcasts. Host abandonment auto-finishes after
   5 min via the server-side cleanup (matches web).

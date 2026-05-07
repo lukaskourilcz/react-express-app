@@ -132,7 +132,6 @@ The web client **does not** write to Supabase directly. It used to (early commit
 | --- | --- | --- |
 | Supabase down | Profile won't load; quiz still works (questions are static) | Quiz state machine continues; Profile shows error with Retry |
 | Auth0 down | Sign-in fails, app continues in guest mode | Web client try/catches `useAuth0()`; Flutter falls back to guest panel |
-| Pyodide CDN blocked | Sandbox JS/TS still works; Python shows download error in console | User notified; can switch language |
 | Vercel function timeout (>10s) | API call rejects with timeout; client `apiFetch` shows friendly message | `withTimeout` wrapper inside Supabase calls (5s) keeps cold-start budget safe |
 | Migration not applied | API endpoint returns 503 with `rpc_missing`; UI shows "Run supabase-schema-NNN.sql" | Each RPC call catches the missing-function error |
 | Host disconnects mid-match | After 5 min, match is auto-finished by lazy cleanup in `state` endpoint | `last_heartbeat_at` column + cleanup on next `state` read |

@@ -13,7 +13,6 @@ import 'leaderboard_screen.dart';
 import 'play_landing_screen.dart';
 import 'profile_screen.dart';
 import 'quiz_screen.dart';
-import 'sandbox_screen.dart';
 import '../lib/cards.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -150,15 +149,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const PlayLandingScreen()),
-                  ),
-                ),
-                _Tile(
-                  emoji: '🧪',
-                  title: 'Code playground',
-                  subtitle: 'JS · TS · Python',
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SandboxScreen()),
                   ),
                 ),
                 _Tile(

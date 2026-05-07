@@ -68,7 +68,7 @@ react-express-app/
 │   │   ├── App.tsx            ← routing + chrome
 │   │   ├── main.tsx           ← root, ErrorBoundary, Auth0Provider
 │   │   ├── theme/             ← MuiTheme.ts, ColorModeContext.tsx
-│   │   ├── components/        ← Quiz, Profile, Leaderboard, Play, CodeSandbox, Cards, …
+│   │   ├── components/        ← Quiz, Profile, Leaderboard, Play, Cards, …
 │   │   └── lib/               ← api, supabase, achievements, bookmarks, cards, settings, play
 │   ├── vite.config.ts         ← manualChunks for React/MUI/Auth0/Supabase
 │   └── package.json
@@ -92,7 +92,6 @@ react-express-app/
 ├── mobile/                    ← Flutter app (iOS + Android + web)
 │   ├── pubspec.yaml
 │   ├── lib/                   ← Dart sources (mirrors web feature set)
-│   ├── assets/sandbox_runner.html
 │   └── ios/Runner/Info.plist.template
 │
 ├── supabase-schema.sql        ← Migration 001 (initial)
@@ -199,7 +198,6 @@ The web client + Flutter both run in **degraded mode** without these. Auth0 miss
   wrapper), and Flutter (`sentry_flutter`). All three are no-ops until you set the DSN env vars.
 - **Speed-bonus ping correction** allows up to 1s grace via `client_received_at`. Cheating is bounded but not eliminated.
 - **No host-abandonment recovery beyond auto-finish** at 5min via lazy cleanup in `/api/play/state`.
-- **Sandbox is iframe-isolated, not cross-origin-isolated**. WASM is sandboxed by being WASM but shares parent origin.
 
 Each is documented further in `docs/operations.md`.
 

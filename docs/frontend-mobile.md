@@ -25,7 +25,6 @@ Adding RN later remains an option if Flutter friction becomes a real problem; no
 | Realtime | `supabase_flutter` (channels only — REST goes via `package:http`) |
 | Auth | `auth0_flutter` (universal login via `ASWebAuthenticationSession` on iOS) |
 | Code highlighting | `flutter_highlight` |
-| Sandbox | `webview_flutter` + `assets/sandbox_runner.html` |
 | Storage | `shared_preferences` |
 | State | `setState` + `ChangeNotifier` for cross-screen |
 | Tests | None yet |
@@ -36,8 +35,6 @@ Adding RN later remains an option if Flutter friction becomes a real problem; no
 mobile/
 ├── pubspec.yaml
 ├── analysis_options.yaml
-├── assets/
-│   └── sandbox_runner.html         # JS / TS / Python WebView runner
 ├── lib/
 │   ├── main.dart                   # Bootstrap: Supabase + Auth + Bookmarks
 │   ├── theme.dart                  # BrandColors + light/dark themes
@@ -76,7 +73,6 @@ mobile/
 │       ├── bookmarks_screen.dart
 │       ├── cards_screen.dart       # Self-review (due-by-default + "review anyway")
 │       ├── drill_screen.dart       # Auto-graded SRS drill from due cards
-│       ├── sandbox_screen.dart
 │       ├── play_landing_screen.dart
 │       └── play_match_screen.dart
 └── ios/Runner/Info.plist.template  # Native config to merge after `flutter create`
@@ -225,7 +221,6 @@ flutter build ipa --release \
 
 ## Honest limits
 
-- **Sandbox security**: Pyodide runs in a `WebView` that shares the parent app's origin (no cross-origin isolation). Pyodide is sandboxed by being WASM (no DOM, no network by default), but it's not a hard security boundary — don't run untrusted user code on a phone with sensitive data.
 - **Multiplayer host abandonment**: server-side cleanup auto-finishes a match after 5 min of no heartbeat, but a participant on a flaky connection can still get stuck on a stale screen until they refresh.
 - **Sign in with Apple**: required by App Review when shipping third-party sign-in. Configure inside Auth0, no client code changes.
 - **No automated test suite**. `flutter analyze` is the closest thing to a check.
