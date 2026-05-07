@@ -4,11 +4,13 @@ import '../api/user.dart';
 import '../auth/auth_service.dart';
 import '../lib/achievements.dart';
 import '../lib/bookmarks.dart';
+import '../lib/cards.dart';
 import '../models/user_stats.dart';
 import '../responsive.dart';
 import '../theme.dart';
 import '../widgets/achievements_grid.dart';
 import 'bookmarks_screen.dart';
+import 'cards_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -29,6 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     AuthService.instance.addListener(_onAuth);
     BookmarkStore.instance.addListener(_onBookmarks);
+    CardStore.instance.addListener(_onBookmarks);
     _load();
   }
 
@@ -36,6 +39,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void dispose() {
     AuthService.instance.removeListener(_onAuth);
     BookmarkStore.instance.removeListener(_onBookmarks);
+    CardStore.instance.removeListener(_onBookmarks);
     super.dispose();
   }
 
@@ -309,6 +313,30 @@ class _Body extends StatelessWidget {
                 _StatRow('Average score', '${stats!.accuracyPct}%',
                     highlight: stats!.accuracyPct >= 70),
               ]),
+            ),
+          ),
+        ],
+        if (CardStore.instance.count > 0) ...[
+          const SizedBox(height: 12),
+          Card(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: BrandColors.green),
+            ),
+            color: BrandColors.greenSoft,
+            child: ListTile(
+              leading: const Text('🃏', style: TextStyle(fontSize: 28)),
+              title: Text(
+                '${CardStore.instance.count} memory card${CardStore.instance.count == 1 ? '' : 's'} ready',
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              subtitle: const Text('Drill the questions you missed.',
+                  style: TextStyle(fontSize: 12)),
+              trailing: const Icon(Icons.chevron_right, color: BrandColors.green),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CardsScreen()),
+              ),
             ),
           ),
         ],

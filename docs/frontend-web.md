@@ -25,7 +25,8 @@ engines see at <https://devquiz.vercel.app> (or wherever you deploy).
 /play/:code   → Match (lobby / running / finished)
 /leaderboard  → Global / Daily / Category tabs
 /sandbox      → Code playground (JS / TS / Python)
-/profile      → Stats / streaks / achievements / bookmarks
+/cards        → Memory-card review for failed questions
+/profile      → Stats / streaks / achievements / bookmarks / cards-shortcut
 ```
 
 All routes are lazy-loaded via `React.lazy(() => import(...))` in
@@ -56,6 +57,7 @@ Lazy chunks: `Profile.js` (2 KB), `Leaderboard.js` (2 KB), `CodeSandbox.js` (4 K
 - `Leaderboard.tsx` — three tabs (Global / Daily / Category). Effect deps gated by active tab so changing the category chip on Global doesn't refetch.
 - `Play.tsx` — exports `PlayLanding` and `PlayMatch`. Match screen polls `/api/play/state` every 4s plus listens to Supabase Realtime broadcast on `match:<code>`. Host heartbeat every 30s. Live countdown derived from `question_started_at`.
 - `CodeSandbox.tsx` — sandboxed iframe with persistent runner. Pyodide and sucrase load on demand inside the iframe (not the parent).
+- `Cards.tsx` — flashcard review for failed questions. One card at a time, "Reveal answer" → optional self-pick → "Got it" / "Need more practice". Two correct in a row graduates a card. Empty state when the deck is empty; session-complete summary when all cards are reviewed.
 - `CodeBlock.tsx` — lazy-renders `react-syntax-highlighter` Prism build with a plain `<pre><code>` fallback so first-paint isn't blocked.
 - `AuthButton.tsx` — login / avatar menu. Real `<ButtonBase>` with `aria-haspopup`/`aria-expanded` (NOT a `<Box onClick>`).
 - `ErrorBoundary.tsx` — root-level catch with a Reset button.
@@ -66,6 +68,7 @@ Lazy chunks: `Profile.js` (2 KB), `Leaderboard.js` (2 KB), `CodeSandbox.js` (4 K
 - `supabase.ts` — supabase client + thin REST wrappers (`getUserStats`, `recordQuizResult`, `recordCategoryStats`, `reportQuestion`, `getDailyChallenge`).
 - `play.ts` — multiplayer API client + leaderboard fetchers.
 - `bookmarks.ts` — localStorage-backed store with `addListener`/`removeListener` for cross-component sync.
+- `cards.ts` — flashcard deck. Auto-populated by Quiz on submit (every wrong answer becomes a card). `markCardCorrect` graduates a card after `rightStreak ≥ 2`; `markCardWrong` resets the streak. localStorage-only; no server sync.
 - `achievements.ts` — pure functions: `computeAchievements(ctx)` returns the badge list with earned/locked.
 - `settings.ts` — practice-mode + sound-effects toggles, plus tiny WebAudio `playCorrect/playComplete` helpers.
 

@@ -7,11 +7,13 @@ import '../responsive.dart';
 import '../theme.dart';
 import '../widgets/category_chip.dart';
 import 'bookmarks_screen.dart';
+import 'cards_screen.dart';
 import 'leaderboard_screen.dart';
 import 'play_landing_screen.dart';
 import 'profile_screen.dart';
 import 'quiz_screen.dart';
 import 'sandbox_screen.dart';
+import '../lib/cards.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,11 +36,13 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     AuthService.instance.addListener(_onAuth);
+    CardStore.instance.addListener(_onAuth);
   }
 
   @override
   void dispose() {
     AuthService.instance.removeListener(_onAuth);
+    CardStore.instance.removeListener(_onAuth);
     super.dispose();
   }
 
@@ -165,6 +169,18 @@ class _HomeScreenState extends State<HomeScreen> {
                     MaterialPageRoute(builder: (_) => const BookmarksScreen()),
                   ),
                 ),
+                _Tile(
+                  emoji: '🃏',
+                  title: 'Memory cards',
+                  subtitle: CardStore.instance.count == 0
+                      ? 'No cards yet'
+                      : '${CardStore.instance.count} to review',
+                  badge: CardStore.instance.count,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CardsScreen()),
+                  ),
+                ),
               ],
             ),
 
@@ -282,12 +298,14 @@ class _Tile extends StatelessWidget {
     required this.subtitle,
     required this.onTap,
     this.loading = false,
+    this.badge = 0,
   });
   final String emoji;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
   final bool loading;
+  final int badge;
 
   @override
   Widget build(BuildContext context) {
@@ -297,8 +315,12 @@ class _Tile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFFE5E5E5)),
+          border: Border.all(
+            color: badge > 0 ? BrandColors.green : const Color(0xFFE5E5E5),
+            width: badge > 0 ? 1.5 : 1,
+          ),
           borderRadius: BorderRadius.circular(8),
+          color: badge > 0 ? BrandColors.greenSoft : null,
         ),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
@@ -314,6 +336,19 @@ class _Tile extends StatelessWidget {
                 width: 12,
                 height: 12,
                 child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else if (badge > 0)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: BrandColors.green,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$badge',
+                  style: const TextStyle(
+                      color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700),
+                ),
               ),
           ]),
           const SizedBox(height: 4),

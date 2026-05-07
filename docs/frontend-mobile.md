@@ -52,6 +52,7 @@ mobile/
 │   │   └── auth_service.dart       # Auth0 + guest mode (ChangeNotifier)
 │   ├── lib/
 │   │   ├── bookmarks.dart          # Local store, persisted to prefs
+│   │   ├── cards.dart              # Flashcard deck (auto-populated on quiz submit)
 │   │   └── achievements.dart       # Pure rules engine
 │   ├── models/
 │   │   ├── quiz.dart               # Question, QuizSession, QuizResult, …
@@ -72,6 +73,7 @@ mobile/
 │       ├── profile_screen.dart
 │       ├── leaderboard_screen.dart
 │       ├── bookmarks_screen.dart
+│       ├── cards_screen.dart
 │       ├── sandbox_screen.dart
 │       ├── play_landing_screen.dart
 │       └── play_match_screen.dart

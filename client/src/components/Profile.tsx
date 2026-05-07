@@ -16,6 +16,7 @@ import { friendlyError } from '../lib/api';
 import { BRAND } from '../theme/MuiTheme';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
 import { computeAchievements, readPerfectQuizCount } from '../lib/achievements';
+import { useCards } from '../lib/cards';
 import { renderQuestion } from './CodeBlock';
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
@@ -140,6 +141,7 @@ function ProfileBody({
   navigate,
 }: ProfileBodyProps) {
   const { questions: bookmarkedQuestions } = useBookmarks();
+  const cards = useCards();
   const achievements = computeAchievements({
     stats,
     bookmarkCount: bookmarkedQuestions.length,
@@ -280,6 +282,38 @@ function ProfileBody({
           ))}
         </Box>
       </Paper>
+
+      {cards.length > 0 && (
+        <Paper
+          elevation={0}
+          sx={{
+            p: 2,
+            mb: 2,
+            border: '1px solid',
+            borderColor: BRAND.green,
+            borderRadius: 2,
+            backgroundColor: 'rgba(45,122,45,0.04)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+          }}
+        >
+          <Box sx={{ fontSize: 32 }} aria-hidden>
+            🃏
+          </Box>
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography variant="body1" sx={{ fontWeight: 700 }}>
+              {cards.length} memory card{cards.length === 1 ? '' : 's'} ready to review
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Drill the questions you missed. Two correct in a row graduates a card.
+            </Typography>
+          </Box>
+          <Button variant="contained" size="small" onClick={() => navigate('/cards')}>
+            Review
+          </Button>
+        </Paper>
+      )}
 
       {bookmarkedQuestions.length > 0 && (
         <Paper elevation={0} sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>

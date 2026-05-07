@@ -3,6 +3,7 @@ import '../api/client.dart';
 import '../api/quiz.dart';
 import '../api/user.dart';
 import '../auth/auth_service.dart';
+import '../lib/cards.dart';
 import '../models/quiz.dart';
 import '../responsive.dart';
 import '../theme.dart';
@@ -45,6 +46,25 @@ class _QuizScreenState extends State<QuizScreen> {
         sessionId: widget.session.sessionId,
         answers: _answers,
       );
+
+      // Auto-collect every wrong answer as a flashcard. Existing cards bump
+      // wrongCount; correct ones don't touch the deck.
+      for (final r in result.results) {
+        if (r.isCorrect) continue;
+        final q = widget.session.questions.firstWhere(
+          (qq) => qq.id == r.questionId,
+          orElse: () => widget.session.questions.first,
+        );
+        if (q.id != r.questionId) continue;
+        await CardStore.instance.addFailed(
+          id: q.id,
+          question: q.question,
+          options: q.options,
+          correctIndex: r.correctAnswer,
+          explanation: r.explanation,
+          category: q.category,
+        );
+      }
 
       // Best-effort stat update for signed-in users.
       final auth = AuthService.instance;

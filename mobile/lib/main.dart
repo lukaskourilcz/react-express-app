@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'auth/auth_service.dart';
 import 'lib/bookmarks.dart';
+import 'lib/cards.dart';
 import 'screens/home_screen.dart';
 import 'theme.dart';
 
@@ -27,6 +28,7 @@ void main() async {
 
   await AuthService.instance.loadFromStorage();
   await BookmarkStore.instance.load();
+  await CardStore.instance.load();
 
   runApp(const DevQuizApp());
 }

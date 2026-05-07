@@ -68,8 +68,8 @@ react-express-app/
 │   │   ├── App.tsx            ← routing + chrome
 │   │   ├── main.tsx           ← root, ErrorBoundary, Auth0Provider
 │   │   ├── theme/             ← MuiTheme.ts, ColorModeContext.tsx
-│   │   ├── components/        ← Quiz, Profile, Leaderboard, Play, CodeSandbox, …
-│   │   └── lib/               ← api, supabase, achievements, bookmarks, settings, play
+│   │   ├── components/        ← Quiz, Profile, Leaderboard, Play, CodeSandbox, Cards, …
+│   │   └── lib/               ← api, supabase, achievements, bookmarks, cards, settings, play
 │   ├── vite.config.ts         ← manualChunks for React/MUI/Auth0/Supabase
 │   └── package.json
 │

@@ -10,6 +10,7 @@ const Quiz = lazy(() => import('./components/Quiz'));
 const Profile = lazy(() => import('./components/Profile'));
 const Leaderboard = lazy(() => import('./components/Leaderboard'));
 const CodeSandbox = lazy(() => import('./components/CodeSandbox'));
+const Cards = lazy(() => import('./components/Cards'));
 const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayLanding })));
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 
@@ -18,6 +19,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/profile': 'Profile · DevQuiz',
   '/leaderboard': 'Leaderboard · DevQuiz',
   '/sandbox': 'Code playground · DevQuiz',
+  '/cards': 'Memory cards · DevQuiz',
   '/play': 'Play live · DevQuiz',
 };
 
@@ -139,6 +141,16 @@ function App() {
               </Button>
               <Button
                 component={Link}
+                to="/cards"
+                sx={{
+                  ...navLinkSx(location.pathname === '/cards'),
+                  display: { xs: 'none', sm: 'inline-flex' },
+                }}
+              >
+                Cards
+              </Button>
+              <Button
+                component={Link}
                 to="/sandbox"
                 sx={{
                   ...navLinkSx(location.pathname === '/sandbox'),
@@ -188,6 +200,7 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/sandbox" element={<CodeSandbox />} />
+              <Route path="/cards" element={<Cards />} />
               <Route path="/play" element={<PlayLanding />} />
               <Route path="/play/:code" element={<PlayMatch />} />
             </Routes>

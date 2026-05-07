@@ -33,6 +33,7 @@ import { renderQuestion } from './CodeBlock';
 import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
 import { useSettings, playCorrect, playComplete } from '../lib/settings';
 import { recordPerfectQuiz } from '../lib/achievements';
+import { addFailedCard } from '../lib/cards';
 import { ReportDialog } from './ReportDialog';
 import './Quiz.css';
 
@@ -294,6 +295,23 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       clearProgress();
       playComplete();
       if (data.percentage === 100) recordPerfectQuiz();
+
+      // Auto-collect every wrong answer as a flashcard. Existing cards have
+      // their wrongCount bumped (see lib/cards.ts) so repeated misses raise
+      // priority; correct answers don't touch existing cards.
+      for (const r of data.results) {
+        if (r.isCorrect) continue;
+        const q = questions.find((qq) => qq.id === r.questionId);
+        if (!q) continue;
+        addFailedCard({
+          id: q.id,
+          question: q.question,
+          options: q.options,
+          correctIndex: r.correctAnswer,
+          explanation: r.explanation,
+          category: q.category,
+        });
+      }
 
       // Practice mode: don't write stats. Daily challenge: write stats.
       if (settings.practiceMode) {
