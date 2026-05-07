@@ -6,6 +6,15 @@ interface MatchQuestion {
   correct_index: number;
 }
 
+const MAX_BONUS = 50; // points awarded for instant correct answer
+const DEFAULT_DURATION_S = 30;
+
+function computeSpeedBonus(elapsedMs: number, durationS: number): number {
+  if (elapsedMs <= 0) return MAX_BONUS;
+  const fraction = Math.max(0, 1 - elapsedMs / (durationS * 1000));
+  return Math.round(fraction * MAX_BONUS);
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -26,14 +35,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'bad_request', 'question_idx must be a non-negative integer');
   if (typeof body.selected_idx !== 'number' || !Number.isInteger(body.selected_idx) || body.selected_idx < 0 || body.selected_idx > 25)
     return jsonError(res, 400, 'bad_request', 'selected_idx out of range');
-  const duration = typeof body.duration_ms === 'number' && body.duration_ms >= 0 && body.duration_ms < 5 * 60 * 1000
-    ? Math.round(body.duration_ms)
-    : 0;
+
+  const clientDuration =
+    typeof body.duration_ms === 'number' && body.duration_ms >= 0 && body.duration_ms < 5 * 60 * 1000
+      ? Math.round(body.duration_ms)
+      : null;
 
   const code = body.code.toUpperCase();
   const { data: match } = await supabase
     .from('matches')
-    .select('id, status, current_index, questions')
+    .select('id, status, current_index, questions, question_started_at, question_duration_s')
     .eq('code', code)
     .maybeSingle();
   if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
@@ -45,7 +56,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const q = questions[body.question_idx];
   if (!q) return jsonError(res, 400, 'bad_request', 'question_idx out of range');
 
+  // Authoritative elapsed time from question_started_at; fall back to
+  // client-supplied duration_ms if the column isn't populated yet.
+  let serverElapsedMs = 0;
+  if (match.question_started_at) {
+    serverElapsedMs = Date.now() - new Date(match.question_started_at).getTime();
+  } else if (clientDuration !== null) {
+    serverElapsedMs = clientDuration;
+  }
+
   const isCorrect = q.correct_index === body.selected_idx;
+  const durationS = match.question_duration_s ?? DEFAULT_DURATION_S;
+  const speedBonus = isCorrect ? computeSpeedBonus(serverElapsedMs, durationS) : 0;
 
   const { error } = await supabase.from('match_answers').upsert({
     match_id: match.id,
@@ -54,7 +76,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     question_idx: body.question_idx,
     selected_idx: body.selected_idx,
     is_correct: isCorrect,
-    duration_ms: duration,
+    duration_ms: serverElapsedMs,
+    speed_bonus: speedBonus,
   });
 
   if (error) {
@@ -62,6 +85,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 500, 'db_error', 'Could not record answer');
   }
 
-  logEvent('play/answer', { status: 200, code, q: body.question_idx, ok: isCorrect });
-  return res.json({ ok: true, is_correct: isCorrect });
+  logEvent('play/answer', { status: 200, code, q: body.question_idx, ok: isCorrect, bonus: speedBonus });
+  return res.json({ ok: true, is_correct: isCorrect, speed_bonus: speedBonus });
 }

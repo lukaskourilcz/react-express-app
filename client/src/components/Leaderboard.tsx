@@ -8,30 +8,51 @@ import {
   Avatar,
   Skeleton,
   Alert,
+  Chip,
 } from '@mui/material';
-import { fetchLeaderboard, type LeaderboardGlobalEntry, type LeaderboardDailyEntry } from '../lib/play';
+import {
+  fetchLeaderboard,
+  type LeaderboardGlobalEntry,
+  type LeaderboardDailyEntry,
+  type CategoryLeaderboardEntry,
+} from '../lib/play';
 import { friendlyError } from '../lib/api';
 import { BRAND } from '../theme/MuiTheme';
 
-type Tab = 'global' | 'daily';
+type Tab = 'global' | 'daily' | 'category';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+const CATEGORIES: { value: string; label: string; color: string }[] = [
+  { value: 'javascript', label: 'JavaScript', color: '#f7df1e' },
+  { value: 'typescript', label: 'TypeScript', color: '#3178c6' },
+  { value: 'react', label: 'React', color: '#61dafb' },
+  { value: 'html', label: 'HTML', color: '#e34c26' },
+  { value: 'css', label: 'CSS', color: '#264de4' },
+  { value: 'nodejs', label: 'Node.js', color: '#339933' },
+  { value: 'git', label: 'Git', color: '#f05032' },
+  { value: 'dev-world', label: 'Dev World', color: '#8b5cf6' },
+  { value: 'code-snippets', label: 'Code Snippets', color: '#ec4899' },
+];
+
+type Entry = LeaderboardGlobalEntry | LeaderboardDailyEntry | CategoryLeaderboardEntry;
+
 function Leaderboard() {
   const [tab, setTab] = useState<Tab>('global');
+  const [category, setCategory] = useState<string>('javascript');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [entries, setEntries] = useState<(LeaderboardGlobalEntry | LeaderboardDailyEntry)[]>([]);
+  const [entries, setEntries] = useState<Entry[]>([]);
   const [date] = useState<string>(today());
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchLeaderboard(tab, date)
+    fetchLeaderboard(tab, { date, category })
       .then((res) => {
         if (cancelled) return;
-        setEntries(res.entries);
+        setEntries(res.entries as Entry[]);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -43,7 +64,7 @@ function Leaderboard() {
     return () => {
       cancelled = true;
     };
-  }, [tab, date]);
+  }, [tab, date, category]);
 
   return (
     <Box sx={{ maxWidth: 600, mx: 'auto' }}>
@@ -61,7 +82,31 @@ function Leaderboard() {
       >
         <ToggleButton value="global">All-time</ToggleButton>
         <ToggleButton value="daily">Today</ToggleButton>
+        <ToggleButton value="category">By category</ToggleButton>
       </ToggleButtonGroup>
+
+      {tab === 'category' && (
+        <Box sx={{ display: 'flex', gap: 0.75, flexWrap: 'wrap', mb: 2 }}>
+          {CATEGORIES.map((c) => (
+            <Chip
+              key={c.value}
+              label={c.label}
+              clickable
+              onClick={() => setCategory(c.value)}
+              role="radio"
+              aria-checked={category === c.value}
+              sx={{
+                borderLeft: `4px solid ${c.color}`,
+                fontWeight: category === c.value ? 600 : 500,
+                border: category === c.value ? `2px solid ${c.color}` : '1px solid',
+                borderColor: category === c.value ? c.color : 'divider',
+                backgroundColor: 'background.paper',
+                color: category === c.value ? c.color : 'text.secondary',
+              }}
+            />
+          ))}
+        </Box>
+      )}
 
       <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 2, overflow: 'hidden' }}>
         {loading && (
@@ -85,7 +130,11 @@ function Leaderboard() {
 
         {!loading && !error && entries.length === 0 && (
           <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
-            <Typography variant="body2">No entries yet — be the first.</Typography>
+            <Typography variant="body2">
+              {tab === 'category'
+                ? `No ${CATEGORIES.find((c) => c.value === category)?.label} attempts yet.`
+                : 'No entries yet — be the first.'}
+            </Typography>
           </Box>
         )}
 
@@ -97,22 +146,37 @@ function Leaderboard() {
       </Paper>
 
       <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-        Updated every 60s. Take a quiz to appear here.
+        {tab === 'category'
+          ? 'Minimum 5 questions in this category to qualify. Updated every 60s.'
+          : 'Updated every 60s. Take a quiz to appear here.'}
       </Typography>
     </Box>
   );
 }
 
-function Row({
-  rank,
-  entry,
-  tab,
-}: {
-  rank: number;
-  entry: LeaderboardGlobalEntry | LeaderboardDailyEntry;
-  tab: Tab;
-}) {
+function Row({ rank, entry, tab }: { rank: number; entry: Entry; tab: Tab }) {
   const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+
+  let primary = 0;
+  let primaryLabel = '';
+  let secondary = '';
+
+  if (tab === 'global') {
+    const e = entry as LeaderboardGlobalEntry;
+    primary = e.total_correct;
+    primaryLabel = 'correct';
+    secondary = `${e.total_quizzes} quizzes · 🔥 ${e.longest_streak}d longest`;
+  } else if (tab === 'daily') {
+    const e = entry as LeaderboardDailyEntry;
+    primary = e.correct;
+    primaryLabel = 'today';
+    secondary = formatMs(e.duration_ms);
+  } else {
+    const e = entry as CategoryLeaderboardEntry;
+    primary = e.total_correct;
+    primaryLabel = 'correct';
+    secondary = `${e.total_questions} attempts · ${e.accuracy_pct}% accuracy`;
+  }
 
   return (
     <Box
@@ -132,25 +196,24 @@ function Row({
       </Box>
       <Avatar src={entry.picture ?? undefined} alt="" sx={{ width: 32, height: 32 }} />
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="body2" sx={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        <Typography
+          variant="body2"
+          sx={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        >
           {entry.display_name}
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          {tab === 'global'
-            ? `${(entry as LeaderboardGlobalEntry).total_quizzes} quizzes · 🔥 ${
-                (entry as LeaderboardGlobalEntry).longest_streak
-              }d longest`
-            : `${formatMs((entry as LeaderboardDailyEntry).duration_ms)}`}
+          {secondary}
         </Typography>
       </Box>
       <Box sx={{ textAlign: 'right' }}>
         <Typography variant="body1" sx={{ fontWeight: 700 }}>
-          {tab === 'global'
-            ? (entry as LeaderboardGlobalEntry).total_correct
-            : `${(entry as LeaderboardDailyEntry).correct}/${(entry as LeaderboardDailyEntry).total}`}
+          {tab === 'daily'
+            ? `${(entry as LeaderboardDailyEntry).correct}/${(entry as LeaderboardDailyEntry).total}`
+            : primary}
         </Typography>
         <Typography variant="caption" color="text.secondary">
-          {tab === 'global' ? 'correct' : 'today'}
+          {primaryLabel}
         </Typography>
       </Box>
     </Box>

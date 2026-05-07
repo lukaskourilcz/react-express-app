@@ -14,7 +14,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const { data: match } = await supabase
     .from('matches')
-    .select('id, code, mode, host_sub, host_name, status, current_index, questions, ended_at')
+    .select(
+      'id, code, mode, host_sub, host_name, status, current_index, questions, ended_at, question_started_at, question_duration_s',
+    )
     .eq('code', code)
     .maybeSingle();
 

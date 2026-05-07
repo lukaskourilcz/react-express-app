@@ -1,8 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { supabase, jsonError, isShortString, logEvent } from './_lib';
 
-// Host-only actions: start, advance, finish.
 type Action = 'start' | 'advance' | 'finish';
+
+const QUESTION_DURATION_S = 30;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -31,24 +32,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const totalQuestions = Array.isArray(match.questions) ? match.questions.length : 0;
   const patch: Record<string, unknown> = {};
+  const now = new Date().toISOString();
 
   if (action === 'start') {
     if (match.status !== 'lobby') return jsonError(res, 409, 'bad_state', 'Match already started');
     patch.status = 'running';
     patch.current_index = 0;
-    patch.started_at = new Date().toISOString();
+    patch.started_at = now;
+    patch.question_started_at = now;
+    patch.question_duration_s = QUESTION_DURATION_S;
   } else if (action === 'advance') {
     if (match.status !== 'running') return jsonError(res, 409, 'bad_state', 'Match is not running');
     const next = (match.current_index ?? 0) + 1;
     if (next >= totalQuestions) {
       patch.status = 'finished';
-      patch.ended_at = new Date().toISOString();
+      patch.ended_at = now;
     } else {
       patch.current_index = next;
+      patch.question_started_at = now;
     }
   } else {
     patch.status = 'finished';
-    patch.ended_at = new Date().toISOString();
+    patch.ended_at = now;
   }
 
   const { error } = await supabase.from('matches').update(patch).eq('id', match.id);

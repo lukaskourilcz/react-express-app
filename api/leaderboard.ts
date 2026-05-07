@@ -43,6 +43,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ period: 'global', entries: data });
     }
 
+    if (period === 'category') {
+      const category = (req.query.category as string) || '';
+      if (!category || category.length > 50) {
+        return jsonError(res, 400, 'bad_request', 'category required');
+      }
+      const { data, error } = await supabase.rpc('category_leaderboard', {
+        p_category: category,
+        p_limit: limit,
+      });
+      if (error) {
+        if (/function .* does not exist/i.test(error.message)) {
+          return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-005.sql');
+        }
+        logEvent({ status: 500, error: error.message });
+        return jsonError(res, 500, 'db_error', 'Could not load category leaderboard');
+      }
+      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+      return res.json({ period: 'category', category, entries: data });
+    }
+
     if (period === 'daily') {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
         return jsonError(res, 400, 'bad_request', 'date must be YYYY-MM-DD');
@@ -62,7 +82,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.json({ period: 'daily', date: dateParam, entries: data });
     }
 
-    return jsonError(res, 400, 'bad_request', 'period must be "global" or "daily"');
+    return jsonError(res, 400, 'bad_request', 'period must be "global", "daily", or "category"');
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
     logEvent({ status: 500, error: message });

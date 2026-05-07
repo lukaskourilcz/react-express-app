@@ -27,6 +27,7 @@ import {
   getDailyChallenge,
   reportQuestion,
 } from '../lib/supabase';
+import { recordCategoryStats } from '../lib/play';
 import { apiFetch, friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
@@ -305,6 +306,24 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             picture: user.picture,
           });
           await recordQuizResult(user.sub, data.correctAnswers, data.totalQuestions);
+
+          // Per-category breakdown for category leaderboards.
+          const byCategory: Record<string, { correct: number; total: number }> = {};
+          for (const q of questions) {
+            const r = data.results.find((x) => x.questionId === q.id);
+            if (!r) continue;
+            const bucket = byCategory[q.category] ?? { correct: 0, total: 0 };
+            bucket.total += 1;
+            if (r.isCorrect) bucket.correct += 1;
+            byCategory[q.category] = bucket;
+          }
+          if (Object.keys(byCategory).length > 0) {
+            try {
+              await recordCategoryStats(user.sub, byCategory);
+            } catch (catErr) {
+              console.error('Category stats failed:', catErr);
+            }
+          }
         } catch (statsErr) {
           console.error('Failed to update user stats:', statsErr);
           setSnack('We saved your score but could not update your streak.');

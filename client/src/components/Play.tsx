@@ -23,9 +23,11 @@ import {
   fetchMatchState,
   controlMatch,
   submitMatchAnswer,
+  fetchDistribution,
   type Match,
   type Participant,
   type ScoreboardEntry,
+  type DistributionBucket,
 } from '../lib/play';
 import { joinMatchChannel, type RealtimeChannel } from '../lib/realtime';
 import { friendlyError } from '../lib/api';
@@ -207,7 +209,7 @@ export function PlayMatch() {
   const [questionShownAt, setQuestionShownAt] = useState<number>(Date.now());
 
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const isHost = user?.sub && match?.host_sub === user.sub;
+  const isHost = !!(user?.sub && match?.host_sub === user.sub);
 
   // Initial join + state load.
   useEffect(() => {
@@ -349,7 +351,6 @@ export function PlayMatch() {
 
   const totalQuestions = match.questions.length;
   const currentQuestion = match.questions[match.current_index];
-  const willHostHide = match.mode === 'multiplayer' && !isHost;
 
   return (
     <Box sx={{ maxWidth: 600, mx: 'auto' }}>
@@ -375,27 +376,29 @@ export function PlayMatch() {
         <Lobby
           match={match}
           participants={participants}
-          isHost={!!isHost}
+          isHost={isHost}
           onStart={startMatch}
         />
       )}
 
       {match.status === 'running' && currentQuestion && (
         <RunningQuestion
+          match={match}
           questionIdx={match.current_index}
           total={totalQuestions}
           q={currentQuestion}
-          isHost={!!isHost}
+          isHost={isHost}
           mode={match.mode}
           selected={selected}
           submitted={submitted}
-          willHide={willHostHide && match.mode === 'multiplayer' && false}
           onSelect={setSelected}
           onSubmit={submitAnswer}
           onAdvance={advance}
           onFinish={finish}
           scoreboard={scoreboard}
           participants={participants}
+          hostSub={user?.sub}
+          code={code}
         />
       )}
 
@@ -518,6 +521,7 @@ function Lobby({
 }
 
 function RunningQuestion({
+  match,
   questionIdx,
   total,
   q,
@@ -531,7 +535,10 @@ function RunningQuestion({
   onFinish,
   scoreboard,
   participants,
+  hostSub,
+  code,
 }: {
+  match: Match;
   questionIdx: number;
   total: number;
   q: NonNullable<Match['questions'][number]>;
@@ -539,13 +546,14 @@ function RunningQuestion({
   mode: Match['mode'];
   selected: number | null;
   submitted: boolean;
-  willHide?: boolean;
   onSelect: (i: number) => void;
   onSubmit: () => void;
   onAdvance: () => void;
   onFinish: () => void;
   scoreboard: ScoreboardEntry[];
   participants: Participant[];
+  hostSub?: string;
+  code: string;
 }) {
   const lastQuestion = questionIdx >= total - 1;
   const answeredCount = useMemo(
@@ -553,11 +561,62 @@ function RunningQuestion({
     [scoreboard, participants],
   );
 
+  // Countdown derived from question_started_at + question_duration_s.
+  const durationS = match.question_duration_s ?? 30;
+  const startedMs = match.question_started_at ? new Date(match.question_started_at).getTime() : null;
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, []);
+  const remainingMs = startedMs ? Math.max(0, startedMs + durationS * 1000 - now) : durationS * 1000;
+  const remainingS = Math.ceil(remainingMs / 1000);
+  const pctLeft = startedMs ? (remainingMs / (durationS * 1000)) * 100 : 100;
+
+  // Time-up auto-lock for non-host
+  useEffect(() => {
+    if (!isHost && !submitted && remainingMs === 0 && selected !== null) {
+      onSubmit();
+    }
+  }, [remainingMs, isHost, submitted, selected, onSubmit]);
+
   return (
     <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <Typography variant="caption" color="text.secondary">
-        Question {questionIdx + 1} of {total} · {q.category} · difficulty {q.difficulty}
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+        <Typography variant="caption" color="text.secondary">
+          Question {questionIdx + 1} of {total} · {q.category} · difficulty {q.difficulty}
+        </Typography>
+        <Typography
+          variant="caption"
+          sx={{
+            fontFamily: 'monospace',
+            fontWeight: 700,
+            color: remainingS <= 5 ? 'error.main' : remainingS <= 10 ? 'warning.dark' : 'text.secondary',
+          }}
+          aria-live="polite"
+          aria-atomic="true"
+        >
+          ⏱ {remainingS}s
+        </Typography>
+      </Box>
+      <Box
+        sx={{
+          height: 4,
+          borderRadius: 2,
+          backgroundColor: 'action.hover',
+          overflow: 'hidden',
+          mb: 2,
+        }}
+      >
+        <Box
+          sx={{
+            height: '100%',
+            width: `${pctLeft}%`,
+            backgroundColor: remainingS <= 5 ? 'error.main' : BRAND.green,
+            transition: 'width 0.25s linear',
+          }}
+        />
+      </Box>
       <Box sx={{ my: 2 }}>{renderQuestion(q.question)}</Box>
 
       <RadioGroup
@@ -607,6 +666,11 @@ function RunningQuestion({
           <Typography variant="caption" color="text.secondary">
             Live answers received: {answeredCount}/{participants.length}
           </Typography>
+
+          {mode === 'classroom' && hostSub && (
+            <DistributionChart code={code} q={questionIdx} hostSub={hostSub} options={q.options} correctIndex={q.correct_index} />
+          )}
+
           <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
             <Button variant="outlined" onClick={onFinish}>
               End match
@@ -655,13 +719,115 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
               {s.display_name}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 700 }}>
-              {s.correct}
+              {s.score ?? s.correct}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              · {(s.total_ms / 1000).toFixed(1)}s
+              {s.score != null ? `· ${s.correct}✓` : ''} · {(s.total_ms / 1000).toFixed(1)}s
             </Typography>
           </Box>
         ))}
+      </Box>
+    </Box>
+  );
+}
+
+function DistributionChart({
+  code,
+  q,
+  hostSub,
+  options,
+  correctIndex,
+}: {
+  code: string;
+  q: number;
+  hostSub: string;
+  options: string[];
+  correctIndex?: number;
+}) {
+  const [buckets, setBuckets] = useState<DistributionBucket[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = () => {
+      fetchDistribution(code, q, hostSub)
+        .then((r) => {
+          if (!cancelled) setBuckets(r.buckets);
+        })
+        .catch(() => {
+          /* ignore — UI keeps last known state */
+        });
+    };
+    load();
+    const id = window.setInterval(load, 1500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [code, q, hostSub]);
+
+  const total = buckets.reduce((sum, b) => sum + b.count, 0) || 1;
+
+  return (
+    <Box sx={{ mt: 2 }}>
+      <Typography variant="overline" color="text.secondary" component="h3" sx={{ display: 'block', mb: 1 }}>
+        Class answers (live)
+      </Typography>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+        {options.map((opt, i) => {
+          const b = buckets.find((x) => x.selected_idx === i);
+          const count = b?.count ?? 0;
+          const pct = (count / total) * 100;
+          const isCorrect = correctIndex === i;
+          return (
+            <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography
+                variant="caption"
+                sx={{ width: 18, fontWeight: 700, color: isCorrect ? BRAND.green : 'text.secondary' }}
+              >
+                {String.fromCharCode(65 + i)}
+              </Typography>
+              <Box
+                sx={{
+                  flex: 1,
+                  height: 22,
+                  borderRadius: 1,
+                  backgroundColor: 'action.hover',
+                  overflow: 'hidden',
+                  position: 'relative',
+                }}
+              >
+                <Box
+                  sx={{
+                    height: '100%',
+                    width: `${pct}%`,
+                    backgroundColor: isCorrect ? BRAND.green : 'rgba(0,0,0,0.25)',
+                    transition: 'width 0.4s ease',
+                  }}
+                />
+                <Typography
+                  variant="caption"
+                  sx={{
+                    position: 'absolute',
+                    left: 8,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: 'text.primary',
+                    fontWeight: 500,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    maxWidth: 'calc(100% - 50px)',
+                  }}
+                >
+                  {opt}
+                </Typography>
+              </Box>
+              <Typography variant="caption" sx={{ width: 36, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                {count}
+              </Typography>
+            </Box>
+          );
+        })}
       </Box>
     </Box>
   );

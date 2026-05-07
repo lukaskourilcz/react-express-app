@@ -20,6 +20,8 @@ export interface Match {
   current_index: number;
   questions: MatchQuestion[];
   ended_at?: string | null;
+  question_started_at?: string | null;
+  question_duration_s?: number;
 }
 
 export interface Participant {
@@ -32,7 +34,22 @@ export interface ScoreboardEntry {
   auth0_sub: string;
   display_name: string;
   correct: number;
+  score: number;
   total_ms: number;
+}
+
+export interface DistributionBucket {
+  selected_idx: number;
+  count: number;
+  correct: boolean;
+}
+
+export interface CategoryLeaderboardEntry {
+  display_name: string;
+  picture: string | null;
+  total_correct: number;
+  total_questions: number;
+  accuracy_pct: number;
 }
 
 export interface LeaderboardGlobalEntry {
@@ -98,12 +115,28 @@ export const submitMatchAnswer = (input: {
     body: JSON.stringify(input),
   });
 
-export const fetchLeaderboard = (period: 'global' | 'daily' = 'global', date?: string) => {
+export const fetchLeaderboard = (
+  period: 'global' | 'daily' | 'category' = 'global',
+  options: { date?: string; category?: string } = {},
+) => {
   const qs = new URLSearchParams({ period });
-  if (date && period === 'daily') qs.set('date', date);
+  if (options.date && period === 'daily') qs.set('date', options.date);
+  if (options.category && period === 'category') qs.set('category', options.category);
   return apiFetch<{
     period: string;
     date?: string;
-    entries: LeaderboardGlobalEntry[] | LeaderboardDailyEntry[];
+    category?: string;
+    entries: LeaderboardGlobalEntry[] | LeaderboardDailyEntry[] | CategoryLeaderboardEntry[];
   }>(`/api/leaderboard?${qs}`);
 };
+
+export const fetchDistribution = (code: string, q: number, hostSub: string) =>
+  apiFetch<{ buckets: DistributionBucket[] }>(
+    `/api/play/distribution?code=${encodeURIComponent(code)}&q=${q}&auth0_sub=${encodeURIComponent(hostSub)}`,
+  );
+
+export const recordCategoryStats = (auth0_id: string, by_category: Record<string, { correct: number; total: number }>) =>
+  apiFetch<{ ok: true; applied: number }>('/api/user/category-stats', {
+    method: 'POST',
+    body: JSON.stringify({ auth0_id, by_category }),
+  });
