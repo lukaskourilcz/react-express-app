@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { withSentry } from '../../lib/observability';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -17,7 +18,7 @@ function logEvent(event: Record<string, unknown>) {
   console.log(JSON.stringify({ ts: new Date().toISOString(), route: 'quiz/report', ...event }));
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default withSentry(async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
@@ -61,4 +62,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   logEvent({ status: 200, question_id: body.question_id, reason: body.reason });
   return res.json({ ok: true });
-}
+});

@@ -7,6 +7,8 @@ import {
   logEvent,
   generateMatchCode,
 } from '../../lib/play-helpers';
+import { authenticate } from '../../lib/auth';
+import { withSentry } from '../../lib/observability';
 
 const MAX_QUESTIONS = 20;
 const MIN_QUESTIONS = 3;
@@ -31,7 +33,7 @@ function computeSpeedBonus(elapsedMs: number, durationS: number): number {
   return Math.round(fraction * MAX_BONUS);
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default withSentry(async function handler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Match backend is not configured');
 
   const action = String(req.query.action || '').toLowerCase();
@@ -54,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     default:
       return jsonError(res, 404, 'unknown_action', `Unknown play action: ${action}`);
   }
-}
+});
 
 async function create(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -69,8 +71,12 @@ async function create(req: VercelRequest, res: VercelResponse) {
     categories?: unknown;
   };
 
-  if (!isShortString(body.host_sub)) return jsonError(res, 400, 'bad_request', 'host_sub required');
-  const hostSub = body.host_sub;
+  const auth = await authenticate(
+    req,
+    typeof body.host_sub === 'string' ? body.host_sub : undefined,
+  );
+  if (!auth.ok) return jsonError(res, auth.status, auth.code, auth.message);
+  const hostSub = auth.sub;
   const hostName = isShortString(body.host_name, 80) ? body.host_name : 'Host';
   const mode = body.mode === 'classroom' ? 'classroom' : 'multiplayer';
   const requestedCount = typeof body.count === 'number' ? body.count : 10;
@@ -150,7 +156,11 @@ async function join(req: VercelRequest, res: VercelResponse) {
   }
   const body = (req.body || {}) as { code?: unknown; auth0_sub?: unknown; display_name?: unknown };
   if (!isShortString(body.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
-  if (!isShortString(body.auth0_sub)) return jsonError(res, 400, 'bad_request', 'auth0_sub required');
+  const auth = await authenticate(
+    req,
+    typeof body.auth0_sub === 'string' ? body.auth0_sub : undefined,
+  );
+  if (!auth.ok) return jsonError(res, auth.status, auth.code, auth.message);
   if (!isShortString(body.display_name, 60))
     return jsonError(res, 400, 'bad_request', 'display_name required');
 
@@ -169,11 +179,11 @@ async function join(req: VercelRequest, res: VercelResponse) {
   if (match.status === 'finished') return jsonError(res, 410, 'finished', 'Match is over');
 
   await supabase!.from('match_participants').upsert(
-    { match_id: match.id, auth0_sub: body.auth0_sub, display_name: body.display_name },
+    { match_id: match.id, auth0_sub: auth.sub, display_name: body.display_name },
     { onConflict: 'match_id,auth0_sub' },
   );
 
-  const isHost = match.host_sub === body.auth0_sub;
+  const isHost = match.host_sub === auth.sub;
   const sanitized = (match.questions as Array<Record<string, unknown>>).map((q) => {
     if (isHost) return q;
     const { correct_index: _ci, explanation: _e, ...rest } = q as Record<string, unknown> & {
@@ -262,7 +272,11 @@ async function control(req: VercelRequest, res: VercelResponse) {
   }
   const body = (req.body || {}) as { code?: unknown; host_sub?: unknown; action?: unknown };
   if (!isShortString(body.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
-  if (!isShortString(body.host_sub)) return jsonError(res, 400, 'bad_request', 'host_sub required');
+  const auth = await authenticate(
+    req,
+    typeof body.host_sub === 'string' ? body.host_sub : undefined,
+  );
+  if (!auth.ok) return jsonError(res, auth.status, auth.code, auth.message);
   if (body.action !== 'start' && body.action !== 'advance' && body.action !== 'finish') {
     return jsonError(res, 400, 'bad_request', 'action must be start | advance | finish');
   }
@@ -276,7 +290,7 @@ async function control(req: VercelRequest, res: VercelResponse) {
     .maybeSingle();
 
   if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
-  if (match.host_sub !== body.host_sub)
+  if (match.host_sub !== auth.sub)
     return jsonError(res, 403, 'forbidden', 'Only the host can do this');
 
   const totalQuestions = Array.isArray(match.questions) ? match.questions.length : 0;
@@ -330,7 +344,11 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     client_received_at?: unknown;
   };
   if (!isShortString(body.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
-  if (!isShortString(body.auth0_sub)) return jsonError(res, 400, 'bad_request', 'auth0_sub required');
+  const auth = await authenticate(
+    req,
+    typeof body.auth0_sub === 'string' ? body.auth0_sub : undefined,
+  );
+  if (!auth.ok) return jsonError(res, auth.status, auth.code, auth.message);
   if (typeof body.question_idx !== 'number' || !Number.isInteger(body.question_idx) || body.question_idx < 0)
     return jsonError(res, 400, 'bad_request', 'question_idx must be a non-negative integer');
   if (typeof body.selected_idx !== 'number' || !Number.isInteger(body.selected_idx) || body.selected_idx < 0 || body.selected_idx > 25)
@@ -384,7 +402,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
 
   const { error } = await supabase!.from('match_answers').upsert({
     match_id: match.id,
-    auth0_sub: body.auth0_sub,
+    auth0_sub: auth.sub,
     question_id: q.id,
     question_idx: body.question_idx,
     selected_idx: body.selected_idx,
@@ -421,8 +439,10 @@ async function distribution(req: VercelRequest, res: VercelResponse) {
 
   if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
 
-  const sub = req.query.auth0_sub as string;
-  if (sub !== match.host_sub) {
+  const claimedSub = req.query.auth0_sub as string;
+  const auth = await authenticate(req, claimedSub);
+  if (!auth.ok) return jsonError(res, auth.status, auth.code, auth.message);
+  if (auth.sub !== match.host_sub) {
     return jsonError(res, 403, 'forbidden', 'Only the host can view distribution');
   }
 
@@ -449,7 +469,11 @@ async function heartbeat(req: VercelRequest, res: VercelResponse) {
   }
   const body = (req.body || {}) as { code?: unknown; host_sub?: unknown };
   if (!isShortString(body.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
-  if (!isShortString(body.host_sub)) return jsonError(res, 400, 'bad_request', 'host_sub required');
+  const auth = await authenticate(
+    req,
+    typeof body.host_sub === 'string' ? body.host_sub : undefined,
+  );
+  if (!auth.ok) return jsonError(res, auth.status, auth.code, auth.message);
 
   const code = body.code.toUpperCase();
   const { data: match } = await supabase!
@@ -458,7 +482,7 @@ async function heartbeat(req: VercelRequest, res: VercelResponse) {
     .eq('code', code)
     .maybeSingle();
   if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
-  if (match.host_sub !== body.host_sub)
+  if (match.host_sub !== auth.sub)
     return jsonError(res, 403, 'forbidden', 'Only the host can send heartbeats');
   if (match.status !== 'running' && match.status !== 'lobby')
     return jsonError(res, 409, 'bad_state', 'Match is not active');

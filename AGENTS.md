@@ -183,8 +183,8 @@ API code degrades gracefully when an RPC is missing (returns `503 rpc_missing`),
 | --- | --- | --- |
 | **Vercel** | Hosting (web build + serverless API) | `SESSION_SECRET` env var, project linked to repo |
 | **Supabase** | Postgres, RLS, Realtime broadcast | URL + anon key as `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`. Realtime must be enabled in project settings |
-| **Auth0** | Sign-in (SPA + native via mobile) | `VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID`, optional `VITE_AUTH0_AUDIENCE` |
-| **Sentry** | Error tracking | Not wired yet — `VITE_SENTRY_DSN` is the planned name |
+| **Auth0** | Sign-in (SPA + native via mobile). Server enforces JWT when `AUTH0_DOMAIN` is set. | `VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID`, optional `VITE_AUTH0_AUDIENCE`; server also reads `AUTH0_DOMAIN` / `AUTH0_AUDIENCE` |
+| **Sentry** | Error tracking on web / API / mobile | `VITE_SENTRY_DSN` (web), `SENTRY_DSN` (server), `--dart-define=SENTRY_DSN=…` (mobile). All silent no-ops without a DSN. |
 
 The web client + Flutter both run in **degraded mode** without these. Auth0 missing → guest mode. Supabase missing → no stats, no leaderboard, no multiplayer realtime (polling only).
 
@@ -192,10 +192,11 @@ The web client + Flutter both run in **degraded mode** without these. Auth0 miss
 
 ## Known limits / TODOs
 
-- **Auth0 JWT verification on the server is a TODO** (`api/user/[op].ts` has the comment).
-  Today the API trusts `auth0_id` from the request body. Mitigation: tightened RLS policies once
-  Supabase third-party auth is configured (migration 002 already includes the policies).
-- **No Sentry / error tracking**. Boilerplate documented in `docs/operations.md`.
+- **Auth0 JWT verification on the server is implemented** in `lib/auth.ts`, env-gated by
+  `AUTH0_DOMAIN`. Production deploys must set this env var to enforce verification; without it,
+  the handler logs `auth.degraded_mode` per request and falls back to trusting the request body.
+- **Sentry is wired** across web (`@sentry/react`), API (`@sentry/node` via `withSentry`
+  wrapper), and Flutter (`sentry_flutter`). All three are no-ops until you set the DSN env vars.
 - **Speed-bonus ping correction** allows up to 1s grace via `client_received_at`. Cheating is bounded but not eliminated.
 - **No host-abandonment recovery beyond auto-finish** at 5min via lazy cleanup in `/api/play/state`.
 - **Sandbox is iframe-isolated, not cross-origin-isolated**. WASM is sandboxed by being WASM but shares parent origin.

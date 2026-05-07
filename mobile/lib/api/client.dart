@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../auth/auth_service.dart';
 
 /// Base URL for the API. Override at build time:
 ///   flutter run --dart-define=API_BASE_URL=https://your-app.vercel.app
@@ -27,25 +28,28 @@ class ApiClient {
   final http.Client _client;
   final Duration timeout;
 
+  Map<String, String> _baseHeaders({bool withBody = false}) {
+    final h = <String, String>{
+      'Accept': 'application/json',
+      if (withBody) 'Content-Type': 'application/json',
+    };
+    final token = AuthService.instance.accessToken;
+    if (token != null && token.isNotEmpty) {
+      h['Authorization'] = 'Bearer $token';
+    }
+    return h;
+  }
+
   Future<Map<String, dynamic>> get(String path, {Map<String, String>? query}) async {
     final uri = Uri.parse('$apiBaseUrl$path').replace(queryParameters: query);
-    final res = await _client
-        .get(uri, headers: {'Accept': 'application/json'})
-        .timeout(timeout);
+    final res = await _client.get(uri, headers: _baseHeaders()).timeout(timeout);
     return _decode(res);
   }
 
   Future<Map<String, dynamic>> post(String path, Object body) async {
     final uri = Uri.parse('$apiBaseUrl$path');
     final res = await _client
-        .post(
-          uri,
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-          },
-          body: jsonEncode(body),
-        )
+        .post(uri, headers: _baseHeaders(withBody: true), body: jsonEncode(body))
         .timeout(timeout);
     return _decode(res);
   }

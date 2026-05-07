@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'auth/auth_service.dart';
 import 'lib/bookmarks.dart';
@@ -9,8 +10,10 @@ import 'theme.dart';
 
 const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const _supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
+const _sentryDsn = String.fromEnvironment('SENTRY_DSN');
+const _sentryEnv = String.fromEnvironment('SENTRY_ENV', defaultValue: 'production');
 
-void main() async {
+Future<void> _bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialise Supabase only when keys are provided. Without them,
@@ -45,6 +48,36 @@ void main() async {
   onAuthChange();
 
   runApp(const DevQuizApp());
+}
+
+void main() {
+  if (_sentryDsn.isEmpty) {
+    _bootstrap();
+    return;
+  }
+  SentryFlutter.init(
+    (options) {
+      options.dsn = _sentryDsn;
+      options.environment = _sentryEnv;
+      options.tracesSampleRate = 0.1;
+      options.attachScreenshot = false;
+      options.attachViewHierarchy = false;
+      // Strip auth-bearing query params from breadcrumbs.
+      options.beforeBreadcrumb = (breadcrumb, _) {
+        final data = breadcrumb?.data;
+        final url = data?['url'];
+        if (breadcrumb != null && url is String) {
+          final scrubbed = url.replaceAllMapped(
+            RegExp(r'(token|auth0_id|sub)=[^&]+', caseSensitive: false),
+            (m) => '${m.group(1)}=[redacted]',
+          );
+          return breadcrumb.copyWith(data: {...?data, 'url': scrubbed});
+        }
+        return breadcrumb;
+      };
+    },
+    appRunner: _bootstrap,
+  );
 }
 
 class DevQuizApp extends StatelessWidget {

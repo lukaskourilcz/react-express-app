@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { questions, encodeSession } from '../../lib/quiz-data';
 import { createHash } from 'node:crypto';
+import { withSentry } from '../../lib/observability';
 
 // Daily challenge: deterministic 5-question selection per UTC date.
 // Same set for every user on the same day, so leaderboards are comparable
@@ -30,7 +31,7 @@ function seededShuffle<T>(arr: T[], seed: string): T[] {
   return out;
 }
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default withSentry(function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
@@ -78,4 +79,4 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     sessionId,
     questions: dailyQuestions,
   });
-}
+});

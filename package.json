@@ -13,6 +13,8 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.93.2"
+    "@sentry/node": "^10.52.0",
+    "@supabase/supabase-js": "^2.93.2",
+    "jose": "^6.2.3"
   }
 }

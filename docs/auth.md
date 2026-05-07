@@ -87,46 +87,46 @@ flow when `AUTH0_DOMAIN` / `AUTH0_CLIENT_ID` aren't set via `--dart-define`.
 On cold start, it tries `credentialsManager.credentials()` to silently
 refresh.
 
-## Server side: the TODO
+## Server side: JWT verification
 
-**Today** (as of the last commit): API handlers like `api/user/[op].ts`
-accept `auth0_id` directly in the request body and trust it. This is
-**not** secure. Anyone can `curl -X POST` to overwrite anyone's stats.
+Implemented in `lib/auth.ts` and wired into every handler that takes a
+user identifier. The flow:
 
-The mitigation is RLS on the database side — once Supabase is configured
-with Auth0 as a third-party JWT provider, the policies in
-`supabase-schema-002.sql` (`auth0_id = auth.jwt() ->> 'sub'`) enforce
-per-user access at the DB layer. **But** the API uses the Supabase
-*anon key* and never forwards the user's JWT, so RLS effectively grants
-read/write to everyone via the API.
-
-To close this gap:
-
-1. **Frontend**: get the access token after `loginWithRedirect()`:
-   ```tsx
-   const token = await getAccessTokenSilently();
-   fetch('/api/user/stats', {
-     headers: { Authorization: `Bearer ${token}` },
-     ...
-   });
-   ```
-2. **API**: verify the JWT before trusting `auth0_id`:
+1. **Frontend** (`client/src/components/SyncBoot.tsx`): on Auth0 sign-in,
+   sets a token provider on `apiFetch`. Every API call now sends
+   `Authorization: Bearer <jwt>`.
+2. **Mobile** (`mobile/lib/api/client.dart`): pulls the access token from
+   `AuthService.instance.accessToken` (set during the `auth0_flutter`
+   universal-login flow) and includes the same Bearer header.
+3. **Server** (`lib/auth.ts`):
    ```ts
-   import { createRemoteJWKSet, jwtVerify } from 'jose';
    const JWKS = createRemoteJWKSet(new URL(`https://${AUTH0_DOMAIN}/.well-known/jwks.json`));
-
-   const auth = req.headers.authorization;
-   if (!auth?.startsWith('Bearer ')) return jsonError(res, 401, 'unauthorized', '...');
-   const { payload } = await jwtVerify(auth.slice(7), JWKS, {
+   const { payload } = await jwtVerify(token, JWKS, {
      issuer: `https://${AUTH0_DOMAIN}/`,
-     audience: AUTH0_AUDIENCE,
+     audience: AUTH0_AUDIENCE, // optional
    });
    const verifiedSub = payload.sub as string;
    ```
-3. **Always use `verifiedSub`**, never `body.auth0_id`.
-4. **Configure Supabase** Project Settings → Auth → Third-party Auth → Add Auth0 as a provider. After this, RLS policies that use `auth.jwt() ->> 'sub'` actually do something useful.
+   Every handler calls `await authenticate(req, claimedId)` and uses the
+   returned `auth.sub` instead of any user-supplied `auth0_id`.
 
-This is documented as a TODO in `api/user/[op].ts` and tracked in `docs/operations.md`.
+### Environment-gated rollout
+
+`authenticate()` is a no-op (degraded mode, trusts the request body) when
+`AUTH0_DOMAIN` is **not** set on the server. This is intentional so
+existing deployments can migrate without breaking. To enforce verification:
+
+1. Set `AUTH0_DOMAIN` (and optionally `AUTH0_AUDIENCE`) in the Vercel
+   project env. After this, all `auth0_id`-bearing endpoints reject
+   requests without a valid Bearer token.
+2. Set `VITE_AUTH0_AUDIENCE` (web) and `--dart-define=AUTH0_AUDIENCE=…`
+   (mobile) so the issued access tokens carry the right audience.
+3. Optional but recommended: configure Supabase Project → Auth →
+   Third-party Auth → Add Auth0 so RLS policies (`auth0_id = auth.jwt()
+   ->> 'sub'`) work end-to-end at the DB layer.
+
+In degraded mode, the handler emits a `auth.degraded_mode` warning log
+line per request when running on Vercel, so the gap is visible in logs.
 
 ## Guest mode internals
 
@@ -156,6 +156,6 @@ clearing app data wipes the identity. There's no recovery.
 - ✅ Brand secret (`SESSION_SECRET`) only on server, never in client bundle.
 - ✅ `react-syntax-highlighter` content is server-controlled (static question bank), not user input.
 - ✅ CSP in `vercel.json` allows only `self` + jsdelivr (for Pyodide) + Auth0 + Supabase.
-- ⚠️ JWT verification on the server is not yet implemented (TODO above).
+- ✅ JWT verification on the server (`lib/auth.ts`), env-gated via `AUTH0_DOMAIN`.
 - ⚠️ RLS depends on Supabase third-party Auth0 setup, which is a manual step.
 - ✅ No service role key referenced anywhere in the API.

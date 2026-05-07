@@ -6,6 +6,7 @@ import {
   type DifficultyMode,
   type CategoryType,
 } from '../../lib/quiz-data';
+import { withSentry } from '../../lib/observability';
 
 const ALL_CATEGORIES: CategoryType[] = [
   'html',
@@ -30,7 +31,7 @@ function logEvent(event: Record<string, unknown>) {
   console.log(JSON.stringify({ ts: new Date().toISOString(), route: 'quiz/questions', ...event }));
 }
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default withSentry(function handler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
 
   if (req.method !== 'GET') {
@@ -116,4 +117,4 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   logEvent({ status: 200, count: selected.length, difficulty: difficultyMode, latency_ms: Date.now() - started });
 
   res.json({ sessionId, questions: questionsWithShuffledOptions });
-}
+});

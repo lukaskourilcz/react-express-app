@@ -1,5 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { authenticate } from '../../lib/auth';
+import { withSentry } from '../../lib/observability';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -52,7 +54,7 @@ function withTimeout<T>(p: PromiseLike<T>, ms = 5000): Promise<T> {
   });
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default withSentry(async function handler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
 
   const op = String(req.query.op || '').toLowerCase();
@@ -60,18 +62,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (op === 'category-stats') return categoryStats(req, res);
   if (op === 'cards') return cards(req, res);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
-}
+});
 
 async function stats(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
   try {
     if (req.method === 'GET') {
-      const { auth0_id } = req.query;
-      if (!isShortString(auth0_id, 256)) {
-        return jsonError(res, 400, 'bad_request', 'auth0_id is required');
-      }
+      const claimed = req.query.auth0_id;
+      const auth = await authenticate(req, typeof claimed === 'string' ? claimed : undefined);
+      if (!auth.ok) return jsonError(res, auth.status, auth.code, auth.message);
       const { data, error } = await withTimeout(
-        supabase!.from('user_stats').select(STATS_FIELDS).eq('auth0_id', auth0_id).maybeSingle(),
+        supabase!.from('user_stats').select(STATS_FIELDS).eq('auth0_id', auth.sub).maybeSingle(),
       );
       if (error) {
         logEvent('stats', { status: 500, reason: 'select_failed', error: error.message });
@@ -90,9 +91,12 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         quiz_result?: unknown;
       };
 
-      if (!isShortString(body.auth0_id, 256))
-        return jsonError(res, 400, 'bad_request', 'auth0_id is required');
-      const auth0_id = body.auth0_id;
+      const auth = await authenticate(
+        req,
+        typeof body.auth0_id === 'string' ? body.auth0_id : undefined,
+      );
+      if (!auth.ok) return jsonError(res, auth.status, auth.code, auth.message);
+      const auth0_id = auth.sub;
 
       if (body.quiz_result !== undefined) {
         const qr = body.quiz_result as { correct?: unknown; total?: unknown };
@@ -170,11 +174,14 @@ async function categoryStats(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
+  const claimedBody = (req.body || {}) as { auth0_id?: unknown };
+  const auth = await authenticate(
+    req,
+    typeof claimedBody.auth0_id === 'string' ? claimedBody.auth0_id : undefined,
+  );
+  if (!auth.ok) return jsonError(res, auth.status, auth.code, auth.message);
 
   const body = (req.body || {}) as { auth0_id?: unknown; by_category?: unknown };
-  if (typeof body.auth0_id !== 'string' || body.auth0_id.length === 0 || body.auth0_id.length > 256) {
-    return jsonError(res, 400, 'bad_request', 'auth0_id required');
-  }
   if (!body.by_category || typeof body.by_category !== 'object' || Array.isArray(body.by_category)) {
     return jsonError(res, 400, 'bad_request', 'by_category must be an object');
   }
@@ -204,7 +211,7 @@ async function categoryStats(req: VercelRequest, res: VercelResponse) {
   }
 
   const { error } = await supabase!.rpc('record_category_stats', {
-    p_auth0_id: body.auth0_id,
+    p_auth0_id: auth.sub,
     p_breakdown: cleaned,
   });
 
@@ -222,17 +229,16 @@ async function cards(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
 
   if (req.method === 'GET') {
-    const { auth0_id } = req.query;
-    if (!isShortString(auth0_id, 256)) {
-      return jsonError(res, 400, 'bad_request', 'auth0_id is required');
-    }
+    const claimed = req.query.auth0_id;
+    const auth = await authenticate(req, typeof claimed === 'string' ? claimed : undefined);
+    if (!auth.ok) return jsonError(res, auth.status, auth.code, auth.message);
     const { data, error } = await withTimeout(
       supabase!
         .from('user_cards')
         .select(
           'question_id, question, options, correct_index, explanation, category, added_at, right_streak, wrong_count, due_at, last_reviewed_at, updated_at',
         )
-        .eq('auth0_id', auth0_id)
+        .eq('auth0_id', auth.sub)
         .order('updated_at', { ascending: false }),
     );
     if (error) {
@@ -250,9 +256,11 @@ async function cards(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'POST') {
     const body = (req.body || {}) as { auth0_id?: unknown; cards?: unknown };
-    if (!isShortString(body.auth0_id, 256)) {
-      return jsonError(res, 400, 'bad_request', 'auth0_id required');
-    }
+    const auth = await authenticate(
+      req,
+      typeof body.auth0_id === 'string' ? body.auth0_id : undefined,
+    );
+    if (!auth.ok) return jsonError(res, auth.status, auth.code, auth.message);
     if (!Array.isArray(body.cards)) {
       return jsonError(res, 400, 'bad_request', 'cards must be an array');
     }
@@ -262,7 +270,7 @@ async function cards(req: VercelRequest, res: VercelResponse) {
 
     const { error } = await withTimeout(
       supabase!.rpc('replace_user_cards', {
-        p_auth0_id: body.auth0_id,
+        p_auth0_id: auth.sub,
         p_cards: body.cards,
       }),
     );

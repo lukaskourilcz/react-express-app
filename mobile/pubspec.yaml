@@ -21,6 +21,8 @@ dependencies:
   webview_flutter: ^4.10.0
   # Native Auth0 universal-login flow.
   auth0_flutter: ^1.7.1
+  # Crash and error reporting. Init is conditional on SENTRY_DSN.
+  sentry_flutter: ^8.10.1
 
 dev_dependencies:
   flutter_test:

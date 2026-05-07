@@ -1,5 +1,19 @@
 const DEFAULT_TIMEOUT_MS = 15_000;
 
+/**
+ * Optional access-token provider. When set (typically by SyncBoot once
+ * Auth0 is loaded), every apiFetch call gets an `Authorization: Bearer <jwt>`
+ * header — which the API uses to verify the user's identity instead of
+ * trusting body fields. Falsy returns are silently ignored (e.g. guest mode).
+ */
+let tokenProvider: (() => Promise<string | null | undefined>) | null = null;
+
+export function setAccessTokenProvider(
+  provider: (() => Promise<string | null | undefined>) | null,
+): void {
+  tokenProvider = provider;
+}
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -23,14 +37,23 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
   }
 
   try {
+    const headers: Record<string, string> = {
+      Accept: 'application/json',
+      ...(rest.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(rest.headers as Record<string, string> | undefined),
+    };
+    if (tokenProvider) {
+      try {
+        const token = await tokenProvider();
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+      } catch {
+        // ignore — request still goes through, server will 401 if it needs the token
+      }
+    }
     const res = await fetch(url, {
       ...rest,
       signal: controller.signal,
-      headers: {
-        Accept: 'application/json',
-        ...(rest.body ? { 'Content-Type': 'application/json' } : {}),
-        ...rest.headers,
-      },
+      headers,
     });
 
     if (!res.ok) {

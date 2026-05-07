@@ -30,7 +30,11 @@ flutter run -d ios \
 | `VITE_SUPABASE_ANON_KEY` | Client + Server | Public, gated by RLS. |
 | `SUPABASE_URL`, `SUPABASE_ANON_KEY` | Server (fallback) | Same values as above; the API checks both names. |
 | `VITE_AUTH0_DOMAIN`, `VITE_AUTH0_CLIENT_ID` | Client | Optional — without these, sign-in is disabled and the app runs in degraded mode. |
-| `VITE_AUTH0_AUDIENCE` | Client | Optional, only needed once you wire JWT verification. |
+| `VITE_AUTH0_AUDIENCE` | Client | Optional but recommended — issued tokens carry this audience. |
+| `AUTH0_DOMAIN` | Server | **Set this to enforce JWT verification.** Without it the API trusts `auth0_id` from the request body (degraded mode). |
+| `AUTH0_AUDIENCE` | Server | Optional — verifies that incoming tokens have this audience. |
+| `SENTRY_DSN` | Server | Enables Sentry error tracking on Vercel functions. |
+| `VITE_SENTRY_DSN` | Client | Enables Sentry on the web client. |
 
 ## Deploying
 
@@ -83,41 +87,28 @@ Then submit through Xcode → Organizer → Distribute App.
 - **Mobile**: `debugPrint` only. No crash reporting.
 
 ### What's not yet wired
-- ❌ **Sentry** (or any APM) — see "Adding Sentry" below.
+- ⚠️ **Sentry** is integrated but conditional on env vars. Set `VITE_SENTRY_DSN` (web), `SENTRY_DSN` (server), and `--dart-define=SENTRY_DSN=…` (mobile) to enable. The SDKs are no-ops without a DSN.
 - ❌ **Uptime monitoring** — Vercel sends alerts on function errors but there's no synthetic ping. Add an UptimeRobot or BetterUptime check on `/api/leaderboard?period=global&limit=1`.
 - ❌ **Real-user metrics** (Web Vitals) — no analytics installed.
 
-## Adding Sentry (when you do)
+## Sentry — already wired, needs DSNs
 
-```bash
-# Web
-cd client && npm install @sentry/react
-```
+The SDK is initialised in three places, all conditional on env vars:
 
-```tsx
-// client/src/main.tsx
-import * as Sentry from '@sentry/react';
-if (import.meta.env.VITE_SENTRY_DSN) {
-  Sentry.init({
-    dsn: import.meta.env.VITE_SENTRY_DSN,
-    environment: import.meta.env.MODE,
-    tracesSampleRate: 0.1,
-  });
-}
-// wrap app: <Sentry.ErrorBoundary fallback={<ErrorFallback />}>
-```
+- **Web** — `client/src/main.tsx` reads `VITE_SENTRY_DSN`. The existing
+  root `ErrorBoundary` forwards exceptions to `Sentry.captureException`.
+- **Server (Vercel)** — `lib/observability.ts` exports `withSentry()` which
+  wraps every handler. Reads `SENTRY_DSN` (set in Vercel project env).
+- **Mobile** — `mobile/lib/main.dart` initialises `SentryFlutter` when
+  `--dart-define=SENTRY_DSN=…` is provided.
 
-```bash
-# API
-cd /your/repo && npm install @sentry/node
-```
+To enable: create three Sentry projects (web / api / mobile) in your Sentry
+org, copy each DSN into the corresponding env var, and redeploy. With no
+DSN set, all three runtimes silently no-op.
 
-```ts
-// In each api/*.ts handler (or a shared wrapper):
-import * as Sentry from '@sentry/node';
-Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0.1 });
-// wrap handler in try/catch, Sentry.captureException(err) inside catch
-```
+Auth tokens and user IDs are stripped from breadcrumb URLs in all three
+runtimes (`token=`, `auth0_id=`, `sub=` query params are redacted before
+events are sent).
 
 ## Common failures and runbook
 
@@ -170,8 +161,10 @@ For an indie app with a few thousand MAU, total monthly cost is essentially $99/
 ## Things that should exist but don't
 
 In rough priority order:
-1. **JWT verification on the server** (see `docs/auth.md`).
-2. **Sentry** for error tracking.
-3. **An automated test suite**. Right now we rely on `tsc -b` passing and `npm run build` succeeding. There's a security audit + UX audit + perf audit harness via the Claude subagents, but no Jest / Vitest / Playwright.
-4. **Supabase migration tooling** (`supabase db push` via the CLI).
-5. **Health-check endpoint** at `/api/health` for uptime monitoring.
+1. **An automated test suite**. Right now we rely on `tsc -b` passing and `npm run build` succeeding. There's a security audit + UX audit + perf audit harness via the Claude subagents, but no Jest / Vitest / Playwright.
+2. **Supabase migration tooling** (`supabase db push` via the CLI).
+3. **Health-check endpoint** at `/api/health` for uptime monitoring.
+
+Recently closed:
+- ✅ JWT verification on the server (`lib/auth.ts`, env-gated by `AUTH0_DOMAIN`).
+- ✅ Sentry across web / API / mobile (env-gated by DSN vars).

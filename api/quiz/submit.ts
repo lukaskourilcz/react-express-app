@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { decodeSession, questions } from '../../lib/quiz-data';
+import { withSentry } from '../../lib/observability';
 
 const MAX_ANSWERS = 50;
 
@@ -11,7 +12,7 @@ function logEvent(event: Record<string, unknown>) {
   console.log(JSON.stringify({ ts: new Date().toISOString(), route: 'quiz/submit', ...event }));
 }
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default withSentry(function handler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
 
   if (req.method !== 'POST') {
@@ -81,4 +82,4 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     percentage,
     results,
   });
-}
+});

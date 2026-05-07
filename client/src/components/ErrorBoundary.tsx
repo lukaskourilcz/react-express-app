@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react';
 import { Box, Button, Typography, Paper } from '@mui/material';
+import * as Sentry from '@sentry/react';
 
 interface Props {
   children: ReactNode;
@@ -19,6 +20,12 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: { componentStack?: string | null }) {
     console.error('ErrorBoundary caught:', error, info.componentStack);
+    // Forward to Sentry if it's been initialised. If not, this is a no-op.
+    Sentry.captureException(error, {
+      contexts: {
+        react: { componentStack: info.componentStack ?? undefined },
+      },
+    });
   }
 
   handleReset = () => {
