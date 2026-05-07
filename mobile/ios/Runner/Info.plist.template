@@ -1,0 +1,47 @@
+<!--
+  Reference Info.plist additions for the DevQuiz iOS app.
+  After running `flutter create --org com.devquiz --platforms ios .`,
+  Flutter will generate the full ios/Runner/Info.plist. Merge the keys
+  below into the generated file (don't replace it wholesale, since it
+  also has Flutter-specific entries).
+
+  Keys you typically want to add or update:
+
+  - `CFBundleDisplayName`: what shows under the app icon. "DevQuiz".
+  - `LSApplicationQueriesSchemes`: lets `url_launcher` open social links.
+  - `NSAppTransportSecurity`: not needed if your API is HTTPS (it is).
+  - `CFBundleURLTypes`: only required if you wire Auth0 with deep-link
+    callback. For Auth0 the entry should look like:
+       <key>CFBundleURLTypes</key>
+       <array>
+         <dict>
+           <key>CFBundleTypeRole</key><string>None</string>
+           <key>CFBundleURLName</key><string>auth0</string>
+           <key>CFBundleURLSchemes</key>
+           <array><string>com.devquiz.app</string></array>
+         </dict>
+       </array>
+  - For the iPad you'll want `UIRequiresFullScreen=false` and standard
+    orientation arrays.
+
+  This file is a TEMPLATE — Flutter does not read it. It exists so that
+  the iOS-specific config is documented in source.
+-->
+
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDisplayName</key>
+    <string>DevQuiz</string>
+
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>https</string>
+        <string>http</string>
+    </array>
+
+    <!-- Required for in-app browser / Auth0 universal login -->
+    <key>FlutterDeepLinkingEnabled</key>
+    <true/>
+</dict>
+</plist>
