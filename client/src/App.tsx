@@ -8,10 +8,17 @@ import { BRAND } from './theme/MuiTheme';
 
 const Quiz = lazy(() => import('./components/Quiz'));
 const Profile = lazy(() => import('./components/Profile'));
+const Leaderboard = lazy(() => import('./components/Leaderboard'));
+const CodeSandbox = lazy(() => import('./components/CodeSandbox'));
+const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayLanding })));
+const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 
 const ROUTE_TITLES: Record<string, string> = {
   '/': 'DevQuiz — Test your web dev skills',
   '/profile': 'Profile · DevQuiz',
+  '/leaderboard': 'Leaderboard · DevQuiz',
+  '/sandbox': 'Code playground · DevQuiz',
+  '/play': 'Play live · DevQuiz',
 };
 
 const InstagramIcon = () => (
@@ -59,7 +66,9 @@ function App() {
   }
 
   useEffect(() => {
-    document.title = ROUTE_TITLES[location.pathname] ?? 'DevQuiz';
+    document.title =
+      ROUTE_TITLES[location.pathname] ??
+      (location.pathname.startsWith('/play/') ? 'Live match · DevQuiz' : 'DevQuiz');
     const main = document.getElementById('main-content');
     if (main) {
       main.focus({ preventScroll: true });
@@ -114,6 +123,30 @@ function App() {
               <Button component={Link} to="/" sx={navLinkSx(location.pathname === '/')}>
                 Quiz
               </Button>
+              <Button
+                component={Link}
+                to="/play"
+                sx={navLinkSx(location.pathname.startsWith('/play'))}
+              >
+                Play
+              </Button>
+              <Button
+                component={Link}
+                to="/leaderboard"
+                sx={navLinkSx(location.pathname === '/leaderboard')}
+              >
+                Leaderboard
+              </Button>
+              <Button
+                component={Link}
+                to="/sandbox"
+                sx={{
+                  ...navLinkSx(location.pathname === '/sandbox'),
+                  display: { xs: 'none', sm: 'inline-flex' },
+                }}
+              >
+                Sandbox
+              </Button>
               {isAuthenticated && (
                 <Button component={Link} to="/profile" sx={navLinkSx(location.pathname === '/profile')}>
                   Profile
@@ -153,6 +186,10 @@ function App() {
             <Routes>
               <Route path="/" element={<Quiz onActiveChange={setQuizActive} />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/sandbox" element={<CodeSandbox />} />
+              <Route path="/play" element={<PlayLanding />} />
+              <Route path="/play/:code" element={<PlayMatch />} />
             </Routes>
           </Suspense>
         </Box>
