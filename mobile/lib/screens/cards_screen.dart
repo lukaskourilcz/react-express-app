@@ -43,8 +43,9 @@ class _CardsScreenState extends State<CardsScreen> {
     }
   }
 
-  void _restart({bool notify = true}) {
-    final ids = CardStore.instance.all.map((c) => c.id).toList()..shuffle(Random());
+  void _restart({bool notify = true, bool forceAll = false}) {
+    final source = forceAll ? CardStore.instance.all : CardStore.instance.dueCards();
+    final ids = source.map((c) => c.id).toList()..shuffle(Random());
     final fn = () {
       _sessionIds = ids;
       _index = 0;

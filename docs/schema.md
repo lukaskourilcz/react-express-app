@@ -197,6 +197,12 @@ All `SECURITY DEFINER` and granted to `authenticated`/`anon`.
 ### `daily_leaderboard(date, limit)` → table
 **Migration 004.** Joins `daily_attempts` with `user_stats` for a given UTC date, ordered by `correct DESC, duration_ms ASC`.
 
+### `replace_user_cards(auth0_id, cards jsonb)` → void
+**Migration 007.** Atomically replaces the user's deck. Validates per-element
+shape and length limits inside the function; bad rows are dropped, good rows
+inserted. Capped at 1000 cards per call. Used by the mobile + web sync layers
+which push the full local deck on a debounced timer.
+
 ### `category_leaderboard(category, limit, min_attempts)` → table
 **Migration 005, replaced in 006.** Top users in a single category. `min_attempts` defaults to 5 (capped at 100). Joins `user_category_stats` with `user_stats` for display name + picture.
 

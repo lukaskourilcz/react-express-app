@@ -11,6 +11,7 @@ import '../theme.dart';
 import '../widgets/achievements_grid.dart';
 import 'bookmarks_screen.dart';
 import 'cards_screen.dart';
+import 'drill_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -321,22 +322,63 @@ class _Body extends StatelessWidget {
           Card(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              side: const BorderSide(color: BrandColors.green),
+              side: BorderSide(
+                color: CardStore.instance.dueCount > 0 ? BrandColors.green : Colors.grey.shade300,
+              ),
             ),
-            color: BrandColors.greenSoft,
-            child: ListTile(
-              leading: const Text('🃏', style: TextStyle(fontSize: 28)),
-              title: Text(
-                '${CardStore.instance.count} memory card${CardStore.instance.count == 1 ? '' : 's'} ready',
-                style: const TextStyle(fontWeight: FontWeight.w700),
-              ),
-              subtitle: const Text('Drill the questions you missed.',
-                  style: TextStyle(fontSize: 12)),
-              trailing: const Icon(Icons.chevron_right, color: BrandColors.green),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const CardsScreen()),
-              ),
+            color: CardStore.instance.dueCount > 0 ? BrandColors.greenSoft : null,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(children: [
+                const Text('🃏', style: TextStyle(fontSize: 28)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        CardStore.instance.dueCount > 0
+                            ? '${CardStore.instance.dueCount} card${CardStore.instance.dueCount == 1 ? '' : 's'} due now'
+                            : '${CardStore.instance.count} card${CardStore.instance.count == 1 ? '' : 's'} in deck',
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      Text(
+                        'Drill auto-grades; Cards lets you self-review.',
+                        style: TextStyle(color: Colors.grey[700], fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Wrap(spacing: 6, children: [
+                  ElevatedButton(
+                    onPressed: CardStore.instance.dueCount == 0
+                        ? null
+                        : () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const DrillScreen()),
+                            ),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: Text(
+                      'Drill${CardStore.instance.dueCount > 0 ? ' (${CardStore.instance.dueCount.clamp(0, 10)})' : ''}',
+                    ),
+                  ),
+                  OutlinedButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CardsScreen()),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    child: const Text('Cards'),
+                  ),
+                ]),
+              ]),
             ),
           ),
         ],

@@ -16,7 +16,7 @@ import { friendlyError } from '../lib/api';
 import { BRAND } from '../theme/MuiTheme';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
 import { computeAchievements, readPerfectQuizCount } from '../lib/achievements';
-import { useCards } from '../lib/cards';
+import { useCards, useDueCount } from '../lib/cards';
 import { renderQuestion } from './CodeBlock';
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
@@ -142,6 +142,7 @@ function ProfileBody({
 }: ProfileBodyProps) {
   const { questions: bookmarkedQuestions } = useBookmarks();
   const cards = useCards();
+  const dueCount = useDueCount();
   const achievements = computeAchievements({
     stats,
     bookmarkCount: bookmarkedQuestions.length,
@@ -303,15 +304,27 @@ function ProfileBody({
           </Box>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Typography variant="body1" sx={{ fontWeight: 700 }}>
-              {cards.length} memory card{cards.length === 1 ? '' : 's'} ready to review
+              {dueCount > 0
+                ? `${dueCount} card${dueCount === 1 ? '' : 's'} due now`
+                : `${cards.length} card${cards.length === 1 ? '' : 's'} in deck`}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Drill the questions you missed. Two correct in a row graduates a card.
+              Drill mode auto-grades; Cards lets you self-review.
             </Typography>
           </Box>
-          <Button variant="contained" size="small" onClick={() => navigate('/cards')}>
-            Review
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <Button
+              variant="contained"
+              size="small"
+              onClick={() => navigate('/drill')}
+              disabled={dueCount === 0}
+            >
+              Drill{dueCount > 0 ? ` (${Math.min(dueCount, 10)})` : ''}
+            </Button>
+            <Button variant="outlined" size="small" onClick={() => navigate('/cards')}>
+              Cards
+            </Button>
+          </Box>
         </Paper>
       )}
 

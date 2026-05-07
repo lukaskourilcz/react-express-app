@@ -25,7 +25,8 @@ engines see at <https://devquiz.vercel.app> (or wherever you deploy).
 /play/:code   → Match (lobby / running / finished)
 /leaderboard  → Global / Daily / Category tabs
 /sandbox      → Code playground (JS / TS / Python)
-/cards        → Memory-card review for failed questions
+/cards        → Memory-card self-review (due cards by default)
+/drill        → Auto-graded drill from due cards (SRS-driven)
 /profile      → Stats / streaks / achievements / bookmarks / cards-shortcut
 ```
 
@@ -57,7 +58,9 @@ Lazy chunks: `Profile.js` (2 KB), `Leaderboard.js` (2 KB), `CodeSandbox.js` (4 K
 - `Leaderboard.tsx` — three tabs (Global / Daily / Category). Effect deps gated by active tab so changing the category chip on Global doesn't refetch.
 - `Play.tsx` — exports `PlayLanding` and `PlayMatch`. Match screen polls `/api/play/state` every 4s plus listens to Supabase Realtime broadcast on `match:<code>`. Host heartbeat every 30s. Live countdown derived from `question_started_at`.
 - `CodeSandbox.tsx` — sandboxed iframe with persistent runner. Pyodide and sucrase load on demand inside the iframe (not the parent).
-- `Cards.tsx` — flashcard review for failed questions. One card at a time, "Reveal answer" → optional self-pick → "Got it" / "Need more practice". Two correct in a row graduates a card. Empty state when the deck is empty; session-complete summary when all cards are reviewed.
+- `Cards.tsx` — flashcard self-review. Filters to **due** cards by default (with a "Review anyway" escape hatch when nothing is due). One card at a time, "Reveal answer" → optional self-pick → "Got it" / "Need more practice". Six correct in a row graduates a card.
+- `Drill.tsx` — auto-graded mini-quiz built from the user's due cards. Picks 10, MCQ-style, locks in answers like a normal quiz. Each correct answer advances the SRS schedule; each wrong answer resets it. Final score screen with a "Drill again" CTA when more cards are still due.
+- `SyncBoot.tsx` — invisible component that bridges Auth0 state to `cards-sync`. Mounted once at the root.
 - `CodeBlock.tsx` — lazy-renders `react-syntax-highlighter` Prism build with a plain `<pre><code>` fallback so first-paint isn't blocked.
 - `AuthButton.tsx` — login / avatar menu. Real `<ButtonBase>` with `aria-haspopup`/`aria-expanded` (NOT a `<Box onClick>`).
 - `ErrorBoundary.tsx` — root-level catch with a Reset button.
@@ -68,7 +71,8 @@ Lazy chunks: `Profile.js` (2 KB), `Leaderboard.js` (2 KB), `CodeSandbox.js` (4 K
 - `supabase.ts` — supabase client + thin REST wrappers (`getUserStats`, `recordQuizResult`, `recordCategoryStats`, `reportQuestion`, `getDailyChallenge`).
 - `play.ts` — multiplayer API client + leaderboard fetchers.
 - `bookmarks.ts` — localStorage-backed store with `addListener`/`removeListener` for cross-component sync.
-- `cards.ts` — flashcard deck. Auto-populated by Quiz on submit (every wrong answer becomes a card). `markCardCorrect` graduates a card after `rightStreak ≥ 2`; `markCardWrong` resets the streak. localStorage-only; no server sync.
+- `cards.ts` — SRS-backed flashcard deck. Auto-populated by Quiz on submit (every wrong answer becomes a card). Spaced-repetition intervals: 10 min → 1d → 3d → 7d → 14d → 30d. `markCardCorrect` advances streak and reschedules `dueAt`; six in a row graduates the card. `markCardWrong` resets the streak and makes the card due now. `getDueCards()` filters for cards whose time has come.
+- `cards-sync.ts` — server sync. On sign-in, pulls server deck, merges with local (last-write-wins on `updatedAt`), pushes the merged result. Subsequent local mutations are pushed via a 1.5s debounce. Graceful no-op if user is unauthenticated or offline.
 - `achievements.ts` — pure functions: `computeAchievements(ctx)` returns the badge list with earned/locked.
 - `settings.ts` — practice-mode + sound-effects toggles, plus tiny WebAudio `playCorrect/playComplete` helpers.
 

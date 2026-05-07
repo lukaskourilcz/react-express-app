@@ -58,6 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const op = String(req.query.op || '').toLowerCase();
   if (op === 'stats') return stats(req, res);
   if (op === 'category-stats') return categoryStats(req, res);
+  if (op === 'cards') return cards(req, res);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
 }
 
@@ -215,4 +216,69 @@ async function categoryStats(req: VercelRequest, res: VercelResponse) {
   }
 
   return res.json({ ok: true, applied: Object.keys(cleaned).length });
+}
+
+async function cards(req: VercelRequest, res: VercelResponse) {
+  const started = Date.now();
+
+  if (req.method === 'GET') {
+    const { auth0_id } = req.query;
+    if (!isShortString(auth0_id, 256)) {
+      return jsonError(res, 400, 'bad_request', 'auth0_id is required');
+    }
+    const { data, error } = await withTimeout(
+      supabase!
+        .from('user_cards')
+        .select(
+          'question_id, question, options, correct_index, explanation, category, added_at, right_streak, wrong_count, due_at, last_reviewed_at, updated_at',
+        )
+        .eq('auth0_id', auth0_id)
+        .order('updated_at', { ascending: false }),
+    );
+    if (error) {
+      // user_cards table missing — degrade gracefully so clients still work
+      // before migration 007 is applied.
+      if (/relation .* does not exist/i.test(error.message)) {
+        return res.json({ data: [], warning: 'table_missing' });
+      }
+      logEvent('cards', { status: 500, reason: 'select_failed', error: error.message });
+      return jsonError(res, 500, 'db_error', 'Could not load cards');
+    }
+    logEvent('cards', { status: 200, op: 'get', count: data?.length ?? 0, latency_ms: Date.now() - started });
+    return res.json({ data });
+  }
+
+  if (req.method === 'POST') {
+    const body = (req.body || {}) as { auth0_id?: unknown; cards?: unknown };
+    if (!isShortString(body.auth0_id, 256)) {
+      return jsonError(res, 400, 'bad_request', 'auth0_id required');
+    }
+    if (!Array.isArray(body.cards)) {
+      return jsonError(res, 400, 'bad_request', 'cards must be an array');
+    }
+    if (body.cards.length > 1000) {
+      return jsonError(res, 413, 'too_many_cards', 'At most 1000 cards per sync');
+    }
+
+    const { error } = await withTimeout(
+      supabase!.rpc('replace_user_cards', {
+        p_auth0_id: body.auth0_id,
+        p_cards: body.cards,
+      }),
+    );
+
+    if (error) {
+      if (/function .* does not exist/i.test(error.message)) {
+        return res.json({ ok: true, warning: 'rpc_missing' });
+      }
+      logEvent('cards', { status: 500, reason: 'rpc_failed', error: error.message });
+      return jsonError(res, 500, 'db_error', 'Could not save cards');
+    }
+
+    logEvent('cards', { status: 200, op: 'replace', count: body.cards.length, latency_ms: Date.now() - started });
+    return res.json({ ok: true, count: body.cards.length });
+  }
+
+  res.setHeader('Allow', 'GET, POST');
+  return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
 }

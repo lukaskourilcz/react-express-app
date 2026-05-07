@@ -8,6 +8,7 @@ import '../theme.dart';
 import '../widgets/category_chip.dart';
 import 'bookmarks_screen.dart';
 import 'cards_screen.dart';
+import 'drill_screen.dart';
 import 'leaderboard_screen.dart';
 import 'play_landing_screen.dart';
 import 'profile_screen.dart';
@@ -174,12 +175,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   title: 'Memory cards',
                   subtitle: CardStore.instance.count == 0
                       ? 'No cards yet'
-                      : '${CardStore.instance.count} to review',
+                      : '${CardStore.instance.count} in deck',
                   badge: CardStore.instance.count,
                   onTap: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const CardsScreen()),
                   ),
+                ),
+                _Tile(
+                  emoji: '🎯',
+                  title: 'Drill due',
+                  subtitle: CardStore.instance.dueCount == 0
+                      ? 'Nothing due yet'
+                      : '${CardStore.instance.dueCount} due now',
+                  badge: CardStore.instance.dueCount,
+                  onTap: CardStore.instance.dueCount == 0
+                      ? null
+                      : () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const DrillScreen()),
+                          ),
                 ),
               ],
             ),
@@ -303,16 +318,19 @@ class _Tile extends StatelessWidget {
   final String emoji;
   final String title;
   final String subtitle;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
   final bool loading;
   final int badge;
 
   @override
   Widget build(BuildContext context) {
+    final disabled = onTap == null;
     return InkWell(
-      onTap: loading ? null : onTap,
+      onTap: loading || disabled ? null : onTap,
       borderRadius: BorderRadius.circular(8),
-      child: Container(
+      child: Opacity(
+        opacity: disabled ? 0.55 : 1,
+        child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           border: Border.all(
@@ -354,6 +372,7 @@ class _Tile extends StatelessWidget {
           const SizedBox(height: 4),
           Text(subtitle, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
         ]),
+        ),
       ),
     );
   }

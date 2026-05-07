@@ -14,6 +14,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import {
   type FlashCard,
+  getDueCards,
   markCardCorrect,
   markCardWrong,
   removeCard,
@@ -64,9 +65,11 @@ function Cards() {
   const navigate = useNavigate();
   const cards = useCards();
 
-  // Frozen review session: capture the deck on mount so cards graduating
-  // mid-session don't reorder under us. Re-shuffled on demand.
-  const [sessionIds, setSessionIds] = useState<string[]>(() => shuffle(cards.map((c) => c.id)));
+  // Frozen review session: capture the *due* cards on mount so cards
+  // graduating mid-session don't reorder under us. Re-shuffled on demand.
+  const [sessionIds, setSessionIds] = useState<string[]>(() =>
+    shuffle(getDueCards().map((c) => c.id)),
+  );
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [picked, setPicked] = useState<number | null>(null);
@@ -118,7 +121,7 @@ function Cards() {
   };
 
   const handleRestart = () => {
-    const ids = shuffle(cards.map((c) => c.id));
+    const ids = shuffle(getDueCards().map((c) => c.id));
     setSessionIds(ids);
     setIndex(0);
     setRevealed(false);
@@ -154,6 +157,61 @@ function Cards() {
           <Button variant="contained" onClick={() => navigate('/')}>
             Take a quiz
           </Button>
+        </Paper>
+      </Box>
+    );
+  }
+
+  // Cards exist but none are due yet (all scheduled for later)
+  if (sessionIds.length === 0 && !finished) {
+    const upcoming = cards
+      .map((c) => +new Date(c.dueAt))
+      .sort((a, b) => a - b)[0];
+    return (
+      <Box sx={{ maxWidth: 560, mx: 'auto' }}>
+        <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mb: 2 }}>
+          Memory cards
+        </Typography>
+        <Paper
+          elevation={0}
+          sx={{
+            p: 4,
+            textAlign: 'center',
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+          }}
+        >
+          <Typography variant="h2" sx={{ mb: 1 }} aria-hidden>
+            ⏳
+          </Typography>
+          <Typography variant="h6" sx={{ mb: 1 }}>
+            Nothing due right now
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            {cards.length} card{cards.length === 1 ? '' : 's'} in your deck. The next one is due{' '}
+            {new Date(upcoming).toLocaleString(undefined, {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+            })}.
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center' }}>
+            <Button variant="contained" onClick={() => navigate('/')}>
+              Take a quiz
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                // Force-include all cards (study-ahead session, no SRS impact).
+                setSessionIds(shuffle(cards.map((c) => c.id)));
+                setIndex(0);
+                setRevealed(false);
+                setPicked(null);
+              }}
+            >
+              Review anyway
+            </Button>
+          </Box>
         </Paper>
       </Box>
     );

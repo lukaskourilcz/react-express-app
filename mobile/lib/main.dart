@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'auth/auth_service.dart';
 import 'lib/bookmarks.dart';
 import 'lib/cards.dart';
+import 'lib/cards_sync.dart';
 import 'screens/home_screen.dart';
 import 'theme.dart';
 
@@ -29,6 +30,19 @@ void main() async {
   await AuthService.instance.loadFromStorage();
   await BookmarkStore.instance.load();
   await CardStore.instance.load();
+
+  // Bridge auth state → card sync. Whenever the user signs in / out,
+  // (re)initialise the sync layer.
+  void onAuthChange() {
+    final sub = AuthService.instance.sub;
+    if (sub != null) {
+      initCardSync(sub);
+    } else {
+      resetCardSync();
+    }
+  }
+  AuthService.instance.addListener(onAuthChange);
+  onAuthChange();
 
   runApp(const DevQuizApp());
 }

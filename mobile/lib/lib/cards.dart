@@ -12,7 +12,9 @@ class FlashCard {
   final DateTime addedAt;
   final int rightStreak;
   final int wrongCount;
+  final DateTime dueAt;
   final DateTime? lastReviewedAt;
+  final DateTime updatedAt;
 
   FlashCard({
     required this.id,
@@ -24,7 +26,9 @@ class FlashCard {
     required this.addedAt,
     required this.rightStreak,
     required this.wrongCount,
+    required this.dueAt,
     this.lastReviewedAt,
+    required this.updatedAt,
   });
 
   FlashCard copyWith({
@@ -35,7 +39,9 @@ class FlashCard {
     String? category,
     int? rightStreak,
     int? wrongCount,
+    DateTime? dueAt,
     DateTime? lastReviewedAt,
+    DateTime? updatedAt,
   }) =>
       FlashCard(
         id: id,
@@ -47,7 +53,9 @@ class FlashCard {
         addedAt: addedAt,
         rightStreak: rightStreak ?? this.rightStreak,
         wrongCount: wrongCount ?? this.wrongCount,
+        dueAt: dueAt ?? this.dueAt,
         lastReviewedAt: lastReviewedAt ?? this.lastReviewedAt,
+        updatedAt: updatedAt ?? this.updatedAt,
       );
 
   factory FlashCard.fromJson(Map<String, dynamic> j) => FlashCard(
@@ -60,9 +68,15 @@ class FlashCard {
         addedAt: DateTime.parse(j['addedAt'] as String),
         rightStreak: (j['rightStreak'] as num?)?.toInt() ?? 0,
         wrongCount: (j['wrongCount'] as num?)?.toInt() ?? 0,
+        dueAt: j['dueAt'] is String
+            ? DateTime.parse(j['dueAt'] as String)
+            : DateTime.now(),
         lastReviewedAt: j['lastReviewedAt'] is String
             ? DateTime.tryParse(j['lastReviewedAt'] as String)
             : null,
+        updatedAt: j['updatedAt'] is String
+            ? DateTime.parse(j['updatedAt'] as String)
+            : DateTime.now(),
       );
 
   Map<String, dynamic> toJson() => {
@@ -75,20 +89,66 @@ class FlashCard {
         'addedAt': addedAt.toIso8601String(),
         'rightStreak': rightStreak,
         'wrongCount': wrongCount,
+        'dueAt': dueAt.toIso8601String(),
         if (lastReviewedAt != null) 'lastReviewedAt': lastReviewedAt!.toIso8601String(),
+        'updatedAt': updatedAt.toIso8601String(),
       };
 }
+
+/// Spaced-repetition intervals. Index = `rightStreak` (after the increment).
+/// Reaching the end (6 in a row) graduates the card.
+const _intervalsDays = <double>[
+  10 / (60 * 24), // ~10 minutes (immediate retry inside the same session)
+  1,
+  3,
+  7,
+  14,
+  30,
+];
+const _graduateAt = 6;
+
+DateTime _nextDue(int streak) {
+  final idx = streak.clamp(0, _intervalsDays.length - 1);
+  final ms = (_intervalsDays[idx] * 24 * 60 * 60 * 1000).round();
+  return DateTime.now().add(Duration(milliseconds: ms));
+}
+
+/// Listener for card mutations that should trigger a sync push (separate
+/// channel from UI listeners so the sync layer can debounce).
+typedef SyncListener = void Function();
 
 class CardStore extends ChangeNotifier {
   CardStore._();
   static final instance = CardStore._();
   static const _key = 'devquiz:cards';
   static const _maxCards = 500;
-  static const _graduateAt = 2;
 
   List<FlashCard> _all = [];
+  final Set<SyncListener> _syncListeners = {};
+
   List<FlashCard> get all => List.unmodifiable(_all);
   int get count => _all.length;
+  int get dueCount {
+    final now = DateTime.now();
+    return _all.where((c) => !c.dueAt.isAfter(now)).length;
+  }
+
+  List<FlashCard> dueCards() {
+    final now = DateTime.now();
+    final due = _all.where((c) => !c.dueAt.isAfter(now)).toList()
+      ..sort((a, b) => a.dueAt.compareTo(b.dueAt));
+    return due;
+  }
+
+  void addSyncListener(SyncListener fn) => _syncListeners.add(fn);
+  void removeSyncListener(SyncListener fn) => _syncListeners.remove(fn);
+
+  void _notify() {
+    notifyListeners();
+    for (final fn in List<SyncListener>.from(_syncListeners)) {
+      fn();
+    }
+  }
 
   Future<void> load() async {
     final prefs = await SharedPreferences.getInstance();
@@ -111,7 +171,6 @@ class CardStore extends ChangeNotifier {
     await prefs.setString(_key, jsonEncode(_all.map((c) => c.toJson()).toList()));
   }
 
-  /// Add a card on submit failure (or refresh & bump wrongCount if it exists).
   Future<void> addFailed({
     required String id,
     required String question,
@@ -120,6 +179,7 @@ class CardStore extends ChangeNotifier {
     required String explanation,
     required String category,
   }) async {
+    final now = DateTime.now();
     final idx = _all.indexWhere((c) => c.id == id);
     if (idx >= 0) {
       _all[idx] = _all[idx].copyWith(
@@ -130,6 +190,8 @@ class CardStore extends ChangeNotifier {
         category: category,
         wrongCount: _all[idx].wrongCount + 1,
         rightStreak: 0,
+        dueAt: now,
+        updatedAt: now,
       );
     } else {
       _all = [
@@ -140,60 +202,82 @@ class CardStore extends ChangeNotifier {
           correctIndex: correctIndex,
           explanation: explanation,
           category: category,
-          addedAt: DateTime.now(),
+          addedAt: now,
           rightStreak: 0,
           wrongCount: 1,
+          dueAt: now,
+          updatedAt: now,
         ),
         ..._all,
       ];
     }
     if (_all.length > _maxCards) _all = _all.take(_maxCards).toList();
     await _persist();
-    notifyListeners();
+    _notify();
   }
 
-  /// Returns `(streak, graduated)`. When the streak reaches the threshold the
-  /// card is removed from the deck.
   Future<({int streak, bool graduated})> markCorrect(String id) async {
     final idx = _all.indexWhere((c) => c.id == id);
     if (idx < 0) return (streak: 0, graduated: false);
-    final next = _all[idx].copyWith(
-      rightStreak: _all[idx].rightStreak + 1,
-      lastReviewedAt: DateTime.now(),
-    );
-    if (next.rightStreak >= _graduateAt) {
+    final newStreak = _all[idx].rightStreak + 1;
+    if (newStreak >= _graduateAt) {
       _all.removeAt(idx);
       await _persist();
-      notifyListeners();
-      return (streak: next.rightStreak, graduated: true);
+      _notify();
+      return (streak: newStreak, graduated: true);
     }
-    _all[idx] = next;
+    final now = DateTime.now();
+    _all[idx] = _all[idx].copyWith(
+      rightStreak: newStreak,
+      dueAt: _nextDue(newStreak),
+      lastReviewedAt: now,
+      updatedAt: now,
+    );
     await _persist();
-    notifyListeners();
-    return (streak: next.rightStreak, graduated: false);
+    _notify();
+    return (streak: newStreak, graduated: false);
   }
 
   Future<void> markWrong(String id) async {
     final idx = _all.indexWhere((c) => c.id == id);
     if (idx < 0) return;
+    final now = DateTime.now();
     _all[idx] = _all[idx].copyWith(
       rightStreak: 0,
       wrongCount: _all[idx].wrongCount + 1,
-      lastReviewedAt: DateTime.now(),
+      dueAt: now,
+      lastReviewedAt: now,
+      updatedAt: now,
     );
     await _persist();
-    notifyListeners();
+    _notify();
   }
 
   Future<void> remove(String id) async {
     _all.removeWhere((c) => c.id == id);
     await _persist();
-    notifyListeners();
+    _notify();
   }
 
   Future<void> clearAll() async {
     _all = [];
     await _persist();
-    notifyListeners();
+    _notify();
+  }
+
+  /// Replace local deck with merged result (last-write-wins on `updatedAt`).
+  Future<void> mergeFromServer(List<FlashCard> serverCards) async {
+    final merged = <String, FlashCard>{
+      for (final c in serverCards) c.id: c,
+    };
+    for (final c in _all) {
+      final theirs = merged[c.id];
+      if (theirs == null || c.updatedAt.isAfter(theirs.updatedAt)) {
+        merged[c.id] = c;
+      }
+    }
+    _all = merged.values.toList();
+    await _persist();
+    _notify();
   }
 }

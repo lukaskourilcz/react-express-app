@@ -155,6 +155,38 @@ recomputes streaks server-side (timezone-correct UTC date math).
 
 ---
 
+## `GET /api/user/cards` and `POST /api/user/cards`
+
+Memory-card deck sync (under `api/user/[op].ts` with `op=cards`).
+
+### GET
+**Query**: `auth0_id` (required).
+**Response 200**: `{ data: ServerCard[] }` where each row mirrors `user_cards`
+columns. Returns `{ data: [], warning: "table_missing" }` if migration 007
+hasn't been applied yet (graceful degradation — the local-only deck still
+works).
+
+### POST
+**Body**:
+```json
+{
+  "auth0_id": "...",
+  "cards": [{
+    "question_id", "question", "options", "correct_index",
+    "explanation", "category", "added_at",
+    "right_streak", "wrong_count",
+    "due_at", "last_reviewed_at", "updated_at"
+  }, …]
+}
+```
+Atomic full-deck replacement via `replace_user_cards` RPC. Cap: 1000 cards.
+Returns `{ ok: true, count }` or `{ ok: true, warning: "rpc_missing" }` if
+migration 007 isn't applied.
+
+The client treats local storage as the source of truth and pushes the full
+deck on a 1.5s debounce after every mutation. Conflict resolution is
+last-write-wins on `updated_at`.
+
 ## `POST /api/user/category-stats`
 
 Records per-category breakdown after a quiz. Used to power category leaderboards.

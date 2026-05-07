@@ -52,7 +52,8 @@ mobile/
 │   │   └── auth_service.dart       # Auth0 + guest mode (ChangeNotifier)
 │   ├── lib/
 │   │   ├── bookmarks.dart          # Local store, persisted to prefs
-│   │   ├── cards.dart              # Flashcard deck (auto-populated on quiz submit)
+│   │   ├── cards.dart              # SRS flashcard deck (intervals 10m/1d/3d/7d/14d/30d)
+│   │   ├── cards_sync.dart         # Pull/merge/push to /api/user/cards on auth
 │   │   └── achievements.dart       # Pure rules engine
 │   ├── models/
 │   │   ├── quiz.dart               # Question, QuizSession, QuizResult, …
@@ -73,7 +74,8 @@ mobile/
 │       ├── profile_screen.dart
 │       ├── leaderboard_screen.dart
 │       ├── bookmarks_screen.dart
-│       ├── cards_screen.dart
+│       ├── cards_screen.dart       # Self-review (due-by-default + "review anyway")
+│       ├── drill_screen.dart       # Auto-graded SRS drill from due cards
 │       ├── sandbox_screen.dart
 │       ├── play_landing_screen.dart
 │       └── play_match_screen.dart

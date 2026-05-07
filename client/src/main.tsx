@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { ColorModeProvider } from './theme/ColorModeContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { SyncBoot } from './components/SyncBoot';
 
 const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN;
 const auth0ClientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
@@ -39,6 +40,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <AuthWrapper>
         <BrowserRouter>
           <ColorModeProvider>
+            <SyncBoot />
             <App />
           </ColorModeProvider>
         </BrowserRouter>

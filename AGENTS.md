@@ -171,6 +171,7 @@ react-express-app/
 | `supabase-schema-004.sql` | `matches`, `match_participants`, `match_answers`, leaderboard RPCs | ✅ |
 | `supabase-schema-005.sql` | `user_category_stats`, speed_bonus column, histogram RPC | ✅ |
 | `supabase-schema-006.sql` | `last_heartbeat_at` column, tunable `category_leaderboard` | ✅ |
+| `supabase-schema-007.sql` | `user_cards` table + `replace_user_cards` RPC for memory-card sync | ✅ |
 
 API code degrades gracefully when an RPC is missing (returns `503 rpc_missing`), but **column-missing errors are not caught** — always apply migrations in order before deploying API changes that depend on them.
 

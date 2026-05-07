@@ -11,6 +11,7 @@ const Profile = lazy(() => import('./components/Profile'));
 const Leaderboard = lazy(() => import('./components/Leaderboard'));
 const CodeSandbox = lazy(() => import('./components/CodeSandbox'));
 const Cards = lazy(() => import('./components/Cards'));
+const Drill = lazy(() => import('./components/Drill'));
 const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayLanding })));
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 
@@ -20,6 +21,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/leaderboard': 'Leaderboard · DevQuiz',
   '/sandbox': 'Code playground · DevQuiz',
   '/cards': 'Memory cards · DevQuiz',
+  '/drill': 'Drill mode · DevQuiz',
   '/play': 'Play live · DevQuiz',
 };
 
@@ -201,6 +203,7 @@ function App() {
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/sandbox" element={<CodeSandbox />} />
               <Route path="/cards" element={<Cards />} />
+              <Route path="/drill" element={<Drill />} />
               <Route path="/play" element={<PlayLanding />} />
               <Route path="/play/:code" element={<PlayMatch />} />
             </Routes>
