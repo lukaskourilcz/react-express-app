@@ -5,6 +5,7 @@ import '../auth/auth_service.dart';
 import '../lib/achievements.dart';
 import '../lib/bookmarks.dart';
 import '../models/quiz.dart';
+import '../responsive.dart';
 import '../theme.dart';
 import '../widgets/code_block.dart';
 import '../widgets/report_dialog.dart';
@@ -96,10 +97,8 @@ class _ResultScreenState extends State<ResultScreen> {
           onPressed: () => Navigator.of(context).popUntil((r) => r.isFirst),
         ),
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+      body: ResponsiveListView(
+        children: [
             Card(
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
@@ -280,7 +279,6 @@ class _ResultScreenState extends State<ResultScreen> {
               );
             }),
           ],
-        ),
       ),
     );
   }

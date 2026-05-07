@@ -3,6 +3,7 @@ import '../api/client.dart';
 import '../api/quiz.dart';
 import '../auth/auth_service.dart';
 import '../models/quiz.dart';
+import '../responsive.dart';
 import '../theme.dart';
 import '../widgets/category_chip.dart';
 import 'bookmarks_screen.dart';
@@ -111,10 +112,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+      body: ResponsiveListView(
+        children: [
             const SizedBox(height: 8),
             Text('Web Development Quiz',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
@@ -123,20 +122,23 @@ class _HomeScreenState extends State<HomeScreen> {
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600])),
             const SizedBox(height: 16),
 
-            // Quick-action tiles.
-            Row(children: [
-              Expanded(
-                child: _Tile(
+            // Quick-action tiles. Grid adapts: 2 cols on phone, 4 on tablet/desktop.
+            GridView.count(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisCount: gridColumns(context),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: isWide(context) ? 1.6 : 2.4,
+              children: [
+                _Tile(
                   emoji: '🗓️',
                   title: "Today's challenge",
                   subtitle: '5 questions',
                   loading: _startingDaily,
                   onTap: _startDaily,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _Tile(
+                _Tile(
                   emoji: '⚡',
                   title: 'Play live',
                   subtitle: 'multiplayer · classroom',
@@ -145,12 +147,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     MaterialPageRoute(builder: (_) => const PlayLandingScreen()),
                   ),
                 ),
-              ),
-            ]),
-            const SizedBox(height: 8),
-            Row(children: [
-              Expanded(
-                child: _Tile(
+                _Tile(
                   emoji: '🧪',
                   title: 'Code playground',
                   subtitle: 'JS · TS · Python',
@@ -159,10 +156,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     MaterialPageRoute(builder: (_) => const SandboxScreen()),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _Tile(
+                _Tile(
                   emoji: '🔖',
                   title: 'Bookmarks',
                   subtitle: 'Saved questions',
@@ -171,8 +165,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     MaterialPageRoute(builder: (_) => const BookmarksScreen()),
                   ),
                 ),
-              ),
-            ]),
+              ],
+            ),
 
             const SizedBox(height: 24),
             _SectionTitle('Categories'),
@@ -276,7 +270,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
           ],
-        ),
       ),
     );
   }

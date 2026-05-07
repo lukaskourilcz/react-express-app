@@ -7,6 +7,7 @@ import '../auth/auth_service.dart';
 import '../models/play.dart';
 import '../models/quiz.dart' show categoryColorsHex, categoryLabels;
 import '../realtime/realtime.dart';
+import '../responsive.dart';
 import '../theme.dart';
 import '../widgets/code_block.dart';
 
@@ -178,7 +179,10 @@ class _PlayMatchScreenState extends State<PlayMatchScreen> {
         ]),
       ),
       body: SafeArea(
-        child: s == null
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: contentMaxWidth(context)),
+            child: s == null
             ? const Center(child: CircularProgressIndicator(color: BrandColors.green))
             : Column(children: [
                 if (_error != null)
@@ -224,6 +228,8 @@ class _PlayMatchScreenState extends State<PlayMatchScreen> {
                   },
                 ),
               ]),
+          ),
+        ),
       ),
     );
   }

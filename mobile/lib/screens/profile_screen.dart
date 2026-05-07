@@ -5,6 +5,7 @@ import '../auth/auth_service.dart';
 import '../lib/achievements.dart';
 import '../lib/bookmarks.dart';
 import '../models/user_stats.dart';
+import '../responsive.dart';
 import '../theme.dart';
 import '../widgets/achievements_grid.dart';
 import 'bookmarks_screen.dart';
@@ -76,27 +77,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
       body: SafeArea(
-        child: !auth.isAuthenticated
-            ? _SignInPanel(onSignedIn: _load)
-            : _loading
-                ? const Center(child: CircularProgressIndicator(color: BrandColors.green))
-                : _error != null
-                    ? Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(children: [
-                          Text(_error!),
-                          const SizedBox(height: 12),
-                          OutlinedButton(onPressed: _load, child: const Text('Retry')),
-                        ]),
-                      )
-                    : _Body(
-                        stats: _stats,
-                        perfectQuizzes: _perfectQuizzes,
-                        onSignOut: () async {
-                          await AuthService.instance.signOut();
-                          if (mounted) Navigator.pop(context);
-                        },
-                      ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: contentMaxWidth(context)),
+            child: !auth.isAuthenticated
+                ? _SignInPanel(onSignedIn: _load)
+                : _loading
+                    ? const Center(child: CircularProgressIndicator(color: BrandColors.green))
+                    : _error != null
+                        ? Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(children: [
+                              Text(_error!),
+                              const SizedBox(height: 12),
+                              OutlinedButton(onPressed: _load, child: const Text('Retry')),
+                            ]),
+                          )
+                        : _Body(
+                            stats: _stats,
+                            perfectQuizzes: _perfectQuizzes,
+                            onSignOut: () async {
+                              await AuthService.instance.signOut();
+                              if (mounted) Navigator.pop(context);
+                            },
+                          ),
+          ),
+        ),
       ),
     );
   }

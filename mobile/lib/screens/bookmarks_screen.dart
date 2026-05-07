@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../lib/bookmarks.dart';
 import '../models/quiz.dart';
+import '../responsive.dart';
 import '../theme.dart';
 import '../widgets/code_block.dart';
 
@@ -33,7 +34,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     return Scaffold(
       appBar: AppBar(title: Text('Bookmarks (${all.length})')),
       body: SafeArea(
-        child: all.isEmpty
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: contentMaxWidth(context)),
+            child: all.isEmpty
             ? Center(
                 child: Padding(
                   padding: const EdgeInsets.all(32),
@@ -115,6 +119,8 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                   );
                 },
               ),
+          ),
+        ),
       ),
     );
   }

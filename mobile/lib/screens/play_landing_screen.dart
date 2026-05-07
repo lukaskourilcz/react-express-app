@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../api/client.dart';
 import '../api/play.dart';
 import '../auth/auth_service.dart';
+import '../responsive.dart';
 import '../theme.dart';
 import 'play_match_screen.dart';
 
@@ -81,10 +82,8 @@ class _PlayLandingScreenState extends State<PlayLandingScreen> {
     final auth = AuthService.instance;
     return Scaffold(
       appBar: AppBar(title: const Text('Play live')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
+      body: ResponsiveListView(
+        children: [
             Text(
               auth.isAuthenticated
                   ? 'Race friends in multiplayer, or host a classroom session.'
@@ -196,7 +195,6 @@ class _PlayLandingScreenState extends State<PlayLandingScreen> {
               ),
             ),
           ],
-        ),
       ),
     );
   }

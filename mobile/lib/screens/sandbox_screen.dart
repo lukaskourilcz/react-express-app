@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import '../responsive.dart';
 import '../theme.dart';
 
 enum _Lang { javascript, typescript, python }
@@ -130,7 +131,10 @@ class _SandboxScreenState extends State<SandboxScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Code playground')),
       body: SafeArea(
-        child: Column(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: contentMaxWidth(context)),
+            child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -224,6 +228,8 @@ class _SandboxScreenState extends State<SandboxScreen> {
               child: WebViewWidget(controller: _wv),
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

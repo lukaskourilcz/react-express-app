@@ -4,6 +4,7 @@ import '../api/quiz.dart';
 import '../api/user.dart';
 import '../auth/auth_service.dart';
 import '../models/quiz.dart';
+import '../responsive.dart';
 import '../theme.dart';
 import '../widgets/code_block.dart';
 import 'result_screen.dart';
@@ -130,7 +131,10 @@ class _QuizScreenState extends State<QuizScreen> {
         ),
       ),
       body: SafeArea(
-        child: Column(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: contentMaxWidth(context)),
+            child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -288,6 +292,8 @@ class _QuizScreenState extends State<QuizScreen> {
               ),
             ),
           ],
+        ),
+          ),
         ),
       ),
     );

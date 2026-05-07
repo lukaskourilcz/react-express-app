@@ -3,6 +3,7 @@ import '../api/client.dart';
 import '../api/leaderboard.dart';
 import '../models/leaderboard.dart';
 import '../models/quiz.dart';
+import '../responsive.dart';
 import '../theme.dart';
 
 enum _Tab { global, daily, category }
@@ -59,7 +60,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Leaderboard')),
       body: SafeArea(
-        child: Column(children: [
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: contentMaxWidth(context)),
+            child: Column(children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: SegmentedButton<_Tab>(
@@ -125,6 +129,8 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           ),
           ),
         ]),
+          ),
+        ),
       ),
     );
   }
