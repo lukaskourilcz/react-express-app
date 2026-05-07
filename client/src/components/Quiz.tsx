@@ -334,7 +334,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     } finally {
       setSubmitting(false);
     }
-  }, [answers, clearProgress, isAuthenticated, sessionId, submitting, user, settings.practiceMode]);
+  }, [answers, clearProgress, isAuthenticated, questions, sessionId, submitting, user, settings.practiceMode]);
 
   const handleRestart = () => {
     clearProgress();

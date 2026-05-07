@@ -46,6 +46,10 @@ function Leaderboard() {
   const [date] = useState<string>(today());
 
   useEffect(() => {
+    // Only re-fetch when the active dep for the current tab changes:
+    // - global: refetch only when tab toggles to global
+    // - daily: refetch when date changes
+    // - category: refetch when category changes
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -64,7 +68,10 @@ function Leaderboard() {
     return () => {
       cancelled = true;
     };
-  }, [tab, date, category]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally
+    // gate dependent fields by active tab so switching the category chip on
+    // the Global tab doesn't trigger a needless refetch.
+  }, [tab, tab === 'daily' ? date : null, tab === 'category' ? category : null]);
 
   return (
     <Box sx={{ maxWidth: 600, mx: 'auto' }}>

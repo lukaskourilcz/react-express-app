@@ -35,7 +35,6 @@ function Profile() {
     if (!isAuthenticated || !user) return;
 
     let cancelled = false;
-    const controller = new AbortController();
 
     async function loadStats() {
       if (!user?.sub) return;
@@ -61,7 +60,6 @@ function Profile() {
     loadStats();
     return () => {
       cancelled = true;
-      controller.abort();
     };
   }, [user, isAuthenticated, authLoading, navigate]);
 

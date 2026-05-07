@@ -6416,7 +6416,10 @@ export function decodeSession(
     const expected = createHmac('sha256', RESOLVED_SECRET).update(encoded).digest();
     const provided = fromB64url(signature);
     if (provided.length !== expected.length) return null;
-    if (!timingSafeEqual(provided, expected)) return null;
+    // Cast to Uint8Array: Buffer is a Uint8Array at runtime, but newer
+    // @types/node narrow Buffer to Uint8Array<ArrayBufferLike> which trips
+    // strict-mode tsc. timingSafeEqual accepts both shapes.
+    if (!timingSafeEqual(new Uint8Array(provided), new Uint8Array(expected))) return null;
 
     const payload = JSON.parse(fromB64url(encoded).toString('utf-8')) as SessionPayload;
     if (!payload || typeof payload !== 'object') return null;
