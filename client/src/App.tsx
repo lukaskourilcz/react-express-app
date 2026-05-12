@@ -181,7 +181,7 @@ function App() {
           outline: 'none',
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: 500 }}>
+        <Box sx={{ width: '100%', maxWidth: 800 }}>
           <Suspense fallback={<RouteLoader />}>
             <Routes>
               <Route path="/" element={<Quiz onActiveChange={setQuizActive} />} />

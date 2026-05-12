@@ -12,6 +12,24 @@ export class ApiError extends Error {
 
 type Options = RequestInit & { timeoutMs?: number; signal?: AbortSignal };
 
+// Module-scoped getter; populated once by AuthBridge at app startup so
+// non-component callers (helpers in lib/*) can attach the user's Auth0
+// access token without each one having to thread a hook through.
+let accessTokenGetter: (() => Promise<string | null>) | null = null;
+
+export function setAccessTokenGetter(fn: (() => Promise<string | null>) | null) {
+  accessTokenGetter = fn;
+}
+
+async function getAccessToken(): Promise<string | null> {
+  if (!accessTokenGetter) return null;
+  try {
+    return await accessTokenGetter();
+  } catch {
+    return null;
+  }
+}
+
 export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, signal, ...rest } = opts;
   const controller = new AbortController();
@@ -22,6 +40,8 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
     else signal.addEventListener('abort', () => controller.abort(signal.reason), { once: true });
   }
 
+  const token = await getAccessToken();
+
   try {
     const res = await fetch(url, {
       ...rest,
@@ -29,6 +49,7 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
       headers: {
         Accept: 'application/json',
         ...(rest.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...rest.headers,
       },
     });

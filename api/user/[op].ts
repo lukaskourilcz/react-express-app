@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { AuthError, requireAuth } from '../../lib/auth';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -32,10 +33,6 @@ function logEvent(op: string, event: Record<string, unknown>) {
   console.log(JSON.stringify({ ts: new Date().toISOString(), route: `user/${op}`, ...event }));
 }
 
-function isShortString(v: unknown, max = MAX_STR): v is string {
-  return typeof v === 'string' && v.length > 0 && v.length <= max;
-}
-
 function withTimeout<T>(p: PromiseLike<T>, ms = 5000): Promise<T> {
   return new Promise((resolve, reject) => {
     const t = setTimeout(() => reject(new Error('supabase_timeout')), ms);
@@ -64,11 +61,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 async function stats(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
   try {
+    let auth: Awaited<ReturnType<typeof requireAuth>>;
+    try {
+      auth = await requireAuth(req);
+    } catch (e) {
+      if (e instanceof AuthError) return jsonError(res, e.status, e.code, e.message);
+      throw e;
+    }
+    const auth0_id = auth.sub;
+
     if (req.method === 'GET') {
-      const { auth0_id } = req.query;
-      if (!isShortString(auth0_id, 256)) {
-        return jsonError(res, 400, 'bad_request', 'auth0_id is required');
-      }
       const { data, error } = await withTimeout(
         supabase!.from('user_stats').select(STATS_FIELDS).eq('auth0_id', auth0_id).maybeSingle(),
       );
@@ -82,16 +84,11 @@ async function stats(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === 'POST') {
       const body = (req.body || {}) as {
-        auth0_id?: unknown;
         email?: unknown;
         name?: unknown;
         picture?: unknown;
         quiz_result?: unknown;
       };
-
-      if (!isShortString(body.auth0_id, 256))
-        return jsonError(res, 400, 'bad_request', 'auth0_id is required');
-      const auth0_id = body.auth0_id;
 
       if (body.quiz_result !== undefined) {
         const qr = body.quiz_result as { correct?: unknown; total?: unknown };
@@ -131,12 +128,18 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         return res.json({ data });
       }
 
+      const picture =
+        typeof body.picture === 'string' && body.picture.length <= 2048 ? body.picture : null;
+      // Only allow https:// URLs for the avatar so a stored 'javascript:' or
+      // 'data:' URL cannot be rendered in an <img> as an XSS/exfil vector.
+      const safePicture =
+        picture && /^https:\/\//i.test(picture) ? picture : null;
+
       const profile = {
         auth0_id,
         email: typeof body.email === 'string' && body.email.length <= MAX_STR ? body.email : null,
         name: typeof body.name === 'string' && body.name.length <= MAX_STR ? body.name : null,
-        picture:
-          typeof body.picture === 'string' && body.picture.length <= 2048 ? body.picture : null,
+        picture: safePicture,
       };
 
       const { data, error } = await withTimeout(
@@ -170,10 +173,15 @@ async function categoryStats(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 
-  const body = (req.body || {}) as { auth0_id?: unknown; by_category?: unknown };
-  if (typeof body.auth0_id !== 'string' || body.auth0_id.length === 0 || body.auth0_id.length > 256) {
-    return jsonError(res, 400, 'bad_request', 'auth0_id required');
+  let auth: Awaited<ReturnType<typeof requireAuth>>;
+  try {
+    auth = await requireAuth(req);
+  } catch (e) {
+    if (e instanceof AuthError) return jsonError(res, e.status, e.code, e.message);
+    throw e;
   }
+
+  const body = (req.body || {}) as { by_category?: unknown };
   if (!body.by_category || typeof body.by_category !== 'object' || Array.isArray(body.by_category)) {
     return jsonError(res, 400, 'bad_request', 'by_category must be an object');
   }
@@ -202,10 +210,12 @@ async function categoryStats(req: VercelRequest, res: VercelResponse) {
     return res.json({ ok: true, applied: 0 });
   }
 
-  const { error } = await supabase!.rpc('record_category_stats', {
-    p_auth0_id: body.auth0_id,
-    p_breakdown: cleaned,
-  });
+  const { error } = await withTimeout(
+    supabase!.rpc('record_category_stats', {
+      p_auth0_id: auth.sub,
+      p_breakdown: cleaned,
+    }),
+  );
 
   if (error) {
     if (/function .* does not exist/i.test(error.message)) {

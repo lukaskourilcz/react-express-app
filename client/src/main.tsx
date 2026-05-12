@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import { ColorModeProvider } from './theme/ColorModeContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { AuthBridge } from './lib/AuthBridge';
 
 const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN;
 const auth0ClientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
@@ -28,6 +29,7 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
       cacheLocation="localstorage"
       useRefreshTokens
     >
+      <AuthBridge />
       {children}
     </Auth0Provider>
   );

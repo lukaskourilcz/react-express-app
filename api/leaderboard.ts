@@ -6,12 +6,41 @@ const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_A
 const supabase: SupabaseClient | null =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
+const VALID_CATEGORIES = new Set([
+  'html',
+  'css',
+  'javascript',
+  'typescript',
+  'react',
+  'nodejs',
+  'git',
+  'dev-world',
+  'custom',
+  'code-snippets',
+]);
+
 function jsonError(res: VercelResponse, status: number, code: string, message: string) {
   return res.status(status).json({ error: { code, message } });
 }
 
 function logEvent(event: Record<string, unknown>) {
   console.log(JSON.stringify({ ts: new Date().toISOString(), route: 'leaderboard', ...event }));
+}
+
+function withTimeout<T>(p: PromiseLike<T>, ms = 5000): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('supabase_timeout')), ms);
+    Promise.resolve(p).then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(t);
+        reject(e);
+      },
+    );
+  });
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -30,7 +59,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (period === 'global') {
-      const { data, error } = await supabase.rpc('global_leaderboard', { p_limit: limit });
+      const { data, error } = await withTimeout(
+        supabase.rpc('global_leaderboard', { p_limit: limit }),
+      );
       if (error) {
         if (/function .* does not exist/i.test(error.message)) {
           return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-004.sql to enable leaderboards');
@@ -45,18 +76,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (period === 'category') {
       const category = (req.query.category as string) || '';
-      if (!category || category.length > 50) {
-        return jsonError(res, 400, 'bad_request', 'category required');
+      if (!VALID_CATEGORIES.has(category)) {
+        return jsonError(res, 400, 'bad_request', 'Invalid category');
       }
       const minParam = parseInt(req.query.min_attempts as string, 10);
       const minAttempts = Number.isFinite(minParam)
         ? Math.min(Math.max(minParam, 1), 100)
         : 5;
-      const { data, error } = await supabase.rpc('category_leaderboard', {
-        p_category: category,
-        p_limit: limit,
-        p_min_attempts: minAttempts,
-      });
+      const { data, error } = await withTimeout(
+        supabase.rpc('category_leaderboard', {
+          p_category: category,
+          p_limit: limit,
+          p_min_attempts: minAttempts,
+        }),
+      );
       if (error) {
         if (/function .* does not exist/i.test(error.message)) {
           return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-005.sql');
@@ -72,10 +105,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
         return jsonError(res, 400, 'bad_request', 'date must be YYYY-MM-DD');
       }
-      const { data, error } = await supabase.rpc('daily_leaderboard', {
-        p_date: dateParam,
-        p_limit: limit,
-      });
+      const { data, error } = await withTimeout(
+        supabase.rpc('daily_leaderboard', {
+          p_date: dateParam,
+          p_limit: limit,
+        }),
+      );
       if (error) {
         if (/function .* does not exist/i.test(error.message)) {
           return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-004.sql to enable leaderboards');

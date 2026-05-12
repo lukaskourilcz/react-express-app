@@ -23,20 +23,24 @@ CREATE INDEX idx_user_stats_auth0_id ON user_stats(auth0_id);
 -- Enable Row Level Security (RLS)
 ALTER TABLE user_stats ENABLE ROW LEVEL SECURITY;
 
--- Policy: Allow authenticated users to read their own data
-CREATE POLICY "Users can read own stats"
-  ON user_stats
-  FOR SELECT
-  USING (true);
+-- Safe by default: no anon access. Mutations go through the server-side API
+-- (which uses SUPABASE_SERVICE_ROLE_KEY in production, bypassing RLS); reads
+-- by authenticated users are scoped to their own row via Auth0 JWT sub.
+--
+-- Supabase must be configured to accept Auth0 JWTs (Settings → Auth → JWT)
+-- so that `auth.jwt() ->> 'sub'` returns the user's Auth0 user_id. Until
+-- that integration is set up, leave the policies as-is — the server-side
+-- service-role key still works because RLS doesn't apply to it.
 
--- Policy: Allow insert for new users
-CREATE POLICY "Users can insert own stats"
-  ON user_stats
-  FOR INSERT
-  WITH CHECK (true);
+CREATE POLICY "stats_select_own"
+  ON user_stats FOR SELECT
+  USING (auth0_id = auth.jwt() ->> 'sub');
 
--- Policy: Allow users to update their own stats
-CREATE POLICY "Users can update own stats"
-  ON user_stats
-  FOR UPDATE
-  USING (true);
+CREATE POLICY "stats_insert_own"
+  ON user_stats FOR INSERT
+  WITH CHECK (auth0_id = auth.jwt() ->> 'sub');
+
+CREATE POLICY "stats_update_own"
+  ON user_stats FOR UPDATE
+  USING (auth0_id = auth.jwt() ->> 'sub')
+  WITH CHECK (auth0_id = auth.jwt() ->> 'sub');
