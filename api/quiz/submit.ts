@@ -3,6 +3,10 @@ import { decodeSession, questions } from '../../lib/quiz-data';
 
 const MAX_ANSWERS = 50;
 
+// Build an in-memory lookup once at cold-start. With 800+ questions, the
+// previous .find() inside the per-answer loop was O(n*m) per submission.
+const questionsById = new Map(questions.map((q) => [q.id, q]));
+
 function jsonError(res: VercelResponse, status: number, code: string, message: string) {
   return res.status(status).json({ error: { code, message } });
 }
@@ -55,10 +59,12 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'invalid_session', 'Quiz session expired or invalid');
   }
 
+  const sessionById = new Map(sessionData.map((q) => [q.questionId, q]));
+
   let correct = 0;
   const results = validated.map(({ questionId, selectedIndex }) => {
-    const sessionQ = sessionData.find((q) => q.questionId === questionId);
-    const q = questions.find((qq) => qq.id === questionId);
+    const sessionQ = sessionById.get(questionId);
+    const q = questionsById.get(questionId);
     const isCorrect = sessionQ?.correctAnswer === selectedIndex;
     if (isCorrect) correct++;
     return {

@@ -36,9 +36,19 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 
-  const dateParam = (req.query.date as string) || dateString();
+  const today = dateString();
+  const dateParam = (req.query.date as string) || today;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
     return jsonError(res, 400, 'bad_request', 'date must be YYYY-MM-DD');
+  }
+
+  // Restrict the ?date= override to a small window around today so an
+  // attacker can't enumerate every historical daily challenge in one pass.
+  const dayMs = 86_400_000;
+  const requestedTs = Date.parse(`${dateParam}T00:00:00Z`);
+  const todayTs = Date.parse(`${today}T00:00:00Z`);
+  if (!Number.isFinite(requestedTs) || Math.abs(requestedTs - todayTs) > 30 * dayMs) {
+    return jsonError(res, 400, 'bad_request', 'date out of range');
   }
 
   // Pick one question per difficulty bucket, deterministically per date.
@@ -70,9 +80,10 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 
   const sessionId = encodeSession(sessionData);
 
-  // Cacheable for 5 min so we can survive a hot day; daily-challenge content
-  // doesn't change within the UTC day.
-  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=86400');
+  // The response embeds a signed session token that is a usable answer-key
+  // proof. Anything cached by a shared CDN is then a replay token for every
+  // visitor. Use `private` so only the requesting browser caches.
+  res.setHeader('Cache-Control', 'private, max-age=300');
   res.json({
     date: dateParam,
     sessionId,

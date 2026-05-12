@@ -125,14 +125,19 @@ export function PlayLanding() {
           Host a game
         </Typography>
         <ToggleButtonGroup
+          aria-label="Game mode"
           value={mode}
           exclusive
           size="small"
           onChange={(_, v) => v && setMode(v)}
           sx={{ mb: 2 }}
         >
-          <ToggleButton value="multiplayer">Multiplayer (free-for-all)</ToggleButton>
-          <ToggleButton value="classroom">Classroom</ToggleButton>
+          <ToggleButton value="multiplayer" aria-label="Multiplayer (free-for-all)">
+            Multiplayer (free-for-all)
+          </ToggleButton>
+          <ToggleButton value="classroom" aria-label="Classroom">
+            Classroom
+          </ToggleButton>
         </ToggleButtonGroup>
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
           {[5, 10, 15, 20].map((n) => (
@@ -179,10 +184,15 @@ export function PlayLanding() {
         <Box sx={{ display: 'flex', gap: 1 }}>
           <TextField
             fullWidth
+            label="Match code"
             placeholder="ABC123"
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-            inputProps={{ maxLength: 8, style: { textTransform: 'uppercase', letterSpacing: '0.2em', fontFamily: 'monospace' } }}
+            inputProps={{
+              maxLength: 8,
+              style: { textTransform: 'uppercase', letterSpacing: '0.2em', fontFamily: 'monospace' },
+              'aria-label': 'Match code',
+            }}
             size="small"
           />
           <Button variant="contained" onClick={handleJoin} disabled={loading !== null}>
@@ -359,8 +369,21 @@ export function PlayMatch() {
 
   if (joining) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 6 }}>
-        <CircularProgress sx={{ color: BRAND.green }} />
+      <Box
+        role="status"
+        aria-live="polite"
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 1.5,
+          mt: 6,
+        }}
+      >
+        <CircularProgress sx={{ color: BRAND.green }} aria-hidden />
+        <Typography variant="body2" color="text.secondary">
+          Joining match…
+        </Typography>
       </Box>
     );
   }

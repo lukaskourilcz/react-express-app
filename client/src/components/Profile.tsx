@@ -26,6 +26,7 @@ function Profile() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -63,7 +64,7 @@ function Profile() {
       cancelled = true;
       controller.abort();
     };
-  }, [user, isAuthenticated, authLoading, navigate]);
+  }, [user, isAuthenticated, authLoading, navigate, reloadKey]);
 
   if (authLoading || loading) {
     return (
@@ -88,7 +89,7 @@ function Profile() {
         severity="error"
         role="alert"
         action={
-          <Button color="inherit" size="small" onClick={() => window.location.reload()}>
+          <Button color="inherit" size="small" onClick={() => setReloadKey((k) => k + 1)}>
             Retry
           </Button>
         }

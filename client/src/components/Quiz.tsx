@@ -299,33 +299,36 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       if (settings.practiceMode) {
         setSnack('Practice mode — stats not updated');
       } else if (isAuthenticated && user?.sub) {
-        try {
-          await createOrUpdateUserStats(user.sub, {
+        // Pre-build category breakdown once.
+        const resultsById = new Map(data.results.map((r) => [r.questionId, r]));
+        const byCategory: Record<string, { correct: number; total: number }> = {};
+        for (const q of questions) {
+          const r = resultsById.get(q.id);
+          if (!r) continue;
+          const bucket = byCategory[q.category] ?? { correct: 0, total: 0 };
+          bucket.total += 1;
+          if (r.isCorrect) bucket.correct += 1;
+          byCategory[q.category] = bucket;
+        }
+
+        // All three writes are independent rows; run them concurrently.
+        const writes: Promise<unknown>[] = [
+          createOrUpdateUserStats(user.sub, {
             email: user.email,
             name: user.name,
             picture: user.picture,
-          });
-          await recordQuizResult(user.sub, data.correctAnswers, data.totalQuestions);
-
-          // Per-category breakdown for category leaderboards.
-          const byCategory: Record<string, { correct: number; total: number }> = {};
-          for (const q of questions) {
-            const r = data.results.find((x) => x.questionId === q.id);
-            if (!r) continue;
-            const bucket = byCategory[q.category] ?? { correct: 0, total: 0 };
-            bucket.total += 1;
-            if (r.isCorrect) bucket.correct += 1;
-            byCategory[q.category] = bucket;
+          }),
+          recordQuizResult(user.sub, data.correctAnswers, data.totalQuestions),
+        ];
+        if (Object.keys(byCategory).length > 0) {
+          writes.push(recordCategoryStats(user.sub, byCategory));
+        }
+        const settled = await Promise.allSettled(writes);
+        const failures = settled.filter((r) => r.status === 'rejected');
+        if (failures.length > 0) {
+          for (const f of failures) {
+            console.error('Stat write failed:', (f as PromiseRejectedResult).reason);
           }
-          if (Object.keys(byCategory).length > 0) {
-            try {
-              await recordCategoryStats(user.sub, byCategory);
-            } catch (catErr) {
-              console.error('Category stats failed:', catErr);
-            }
-          }
-        } catch (statsErr) {
-          console.error('Failed to update user stats:', statsErr);
           setSnack('We saved your score but could not update your streak.');
         }
       }
@@ -606,14 +609,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           <Typography component="legend" variant="overline" color="text.secondary" sx={{ p: 0, mb: 1.5, display: 'block' }}>
             Questions
           </Typography>
-          <Box role="radiogroup" aria-label="Number of questions" sx={{ display: 'flex', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
             {QUESTION_COUNT_OPTIONS.map((count) => (
               <Button
                 key={count}
                 variant="outlined"
                 onClick={() => setQuestionCount(count)}
-                role="radio"
-                aria-checked={questionCount === count}
+                aria-pressed={questionCount === count}
+                aria-label={`${count} questions`}
                 sx={{
                   minWidth: 44,
                   minHeight: 44,
@@ -634,15 +637,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           <Typography component="legend" variant="overline" color="text.secondary" sx={{ p: 0, mb: 1.5, display: 'block' }}>
             Difficulty
           </Typography>
-          <Box role="radiogroup" aria-label="Difficulty" sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
             {DIFFICULTY_OPTIONS.map((option) => (
               <Tooltip key={option.value} title={option.tooltip} arrow placement="top">
                 <Button
                   variant="outlined"
                   onClick={() => setDifficultyMode(option.value)}
-                  role="radio"
-                  aria-checked={difficultyMode === option.value}
-                  aria-describedby={`difficulty-help-${option.value}`}
+                  aria-pressed={difficultyMode === option.value}
+                  aria-label={`Difficulty: ${option.label}`}
                   sx={{
                     fontWeight: 500,
                     fontSize: '0.85rem',
@@ -659,7 +661,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             ))}
           </Box>
           <Typography
-            id={`difficulty-help-${difficultyMode}`}
+            aria-live="polite"
             variant="caption"
             color="text.secondary"
             sx={{ mt: 1, display: 'block' }}
@@ -943,15 +945,30 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 height: 28,
               }}
             />
-            <IconButton
-              size="small"
-              aria-pressed={isBookmarked}
-              aria-label={isBookmarked ? 'Remove bookmark' : 'Bookmark this question'}
-              onClick={() => toggleBookmark(currentQuestion, 0, '')}
-              sx={{ color: isBookmarked ? BRAND.green : 'text.secondary' }}
+            <Tooltip
+              title={
+                isBookmarked
+                  ? 'Bookmarked — review after submitting'
+                  : 'You can bookmark this question once you see the answer'
+              }
+              arrow
             >
-              <BookmarkIcon filled={isBookmarked} />
-            </IconButton>
+              <span>
+                <IconButton
+                  size="small"
+                  disabled
+                  aria-pressed={isBookmarked}
+                  aria-label={
+                    isBookmarked
+                      ? 'Bookmarked (review after submitting)'
+                      : 'Bookmarking is available after submitting'
+                  }
+                  sx={{ color: isBookmarked ? BRAND.green : 'text.disabled' }}
+                >
+                  <BookmarkIcon filled={isBookmarked} />
+                </IconButton>
+              </span>
+            </Tooltip>
             {currentQuestion.tags && currentQuestion.tags.length > 0 && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', ml: 'auto' }}>
                 {currentQuestion.tags.map((tag) => (

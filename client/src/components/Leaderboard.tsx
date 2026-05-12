@@ -9,6 +9,7 @@ import {
   Skeleton,
   Alert,
   Chip,
+  Button,
 } from '@mui/material';
 import {
   fetchLeaderboard,
@@ -44,6 +45,7 @@ function Leaderboard() {
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [date] = useState<string>(today());
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -64,7 +66,7 @@ function Leaderboard() {
     return () => {
       cancelled = true;
     };
-  }, [tab, date, category]);
+  }, [tab, date, category, reloadKey]);
 
   return (
     <Box sx={{ maxWidth: 600, mx: 'auto' }}>
@@ -93,8 +95,8 @@ function Leaderboard() {
               label={c.label}
               clickable
               onClick={() => setCategory(c.value)}
-              role="radio"
-              aria-checked={category === c.value}
+              aria-pressed={category === c.value}
+              aria-label={`${c.label} leaderboard`}
               sx={{
                 borderLeft: `4px solid ${c.color}`,
                 fontWeight: category === c.value ? 600 : 500,
@@ -123,7 +125,16 @@ function Leaderboard() {
         )}
 
         {!loading && error && (
-          <Alert severity="error" sx={{ borderRadius: 0 }}>
+          <Alert
+            severity="error"
+            role="alert"
+            sx={{ borderRadius: 0 }}
+            action={
+              <Button color="inherit" size="small" onClick={() => setReloadKey((k) => k + 1)}>
+                Retry
+              </Button>
+            }
+          >
             {error}
           </Alert>
         )}

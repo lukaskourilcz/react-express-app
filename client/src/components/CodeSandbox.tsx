@@ -331,14 +331,15 @@ function CodeSandbox() {
 
       <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center', mb: 1.5 }}>
         <ToggleButtonGroup
+          aria-label="Programming language"
           value={language}
           exclusive
           size="small"
           onChange={(_, v) => v && handleLanguageChange(v)}
         >
-          <ToggleButton value="javascript">JavaScript</ToggleButton>
-          <ToggleButton value="typescript">TypeScript</ToggleButton>
-          <ToggleButton value="python">Python</ToggleButton>
+          <ToggleButton value="javascript" aria-label="JavaScript">JavaScript</ToggleButton>
+          <ToggleButton value="typescript" aria-label="TypeScript">TypeScript</ToggleButton>
+          <ToggleButton value="python" aria-label="Python">Python</ToggleButton>
         </ToggleButtonGroup>
         {language === 'python' && pyodideStatus === 'loading' && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
