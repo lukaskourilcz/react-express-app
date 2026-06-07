@@ -14,7 +14,11 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   isAuthenticated: false,
   isLoading: true,
-  signInWithGoogle: async () => {},
+  // Default throws so a tree missing <AuthProvider> surfaces an error instead
+  // of silently doing nothing (which is the bug this contract guards against).
+  signInWithGoogle: async () => {
+    throw new Error('useAuth must be used within an AuthProvider');
+  },
   signOut: async () => {},
 });
 
@@ -45,13 +49,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     if (!supabase) {
-      console.warn('Supabase not configured. Authentication disabled.');
-      return;
+      throw new Error(
+        'Sign-in is not available: Supabase is not configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).',
+      );
     }
-    await supabase.auth.signInWithOAuth({
+    // On success supabase-js redirects to Google; on failure (e.g. the Google
+    // provider isn't enabled, or the redirect URL isn't allow-listed) it
+    // returns an error instead of navigating — surface it so the click isn't
+    // a silent no-op.
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin },
     });
+    if (error) throw error;
   };
 
   const signOut = async () => {

@@ -19,9 +19,6 @@ export default defineConfig({
                     router: ['react-router', 'react-router-dom'],
                     mui: ['@mui/material', '@mui/material/styles', '@emotion/react', '@emotion/styled'],
                     supabase: ['@supabase/supabase-js'],
-                    // sucrase is only used by the CodeSandbox route. Splitting it
-                    // into its own chunk keeps ~48KB gzip out of the initial bundle.
-                    sucrase: ['sucrase'],
                 },
             },
         },

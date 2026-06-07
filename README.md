@@ -1,6 +1,6 @@
 # DevQuiz
 
-A web-development quiz application that tests your knowledge of React, JavaScript, TypeScript, Node.js, HTML, CSS, Git, and more. **800 hand-curated questions** spanning beginner to expert. Solo practice, daily challenges, live multiplayer matches, classroom mode, leaderboards, and a built-in code sandbox.
+A web-development quiz application that tests your knowledge of React, JavaScript, TypeScript, Node.js, HTML, CSS, Git, and more. **800 hand-curated questions** spanning beginner to expert. Solo practice, daily challenges, live multiplayer matches, classroom mode, and leaderboards.
 
 > Stack: React 18 + Vite + MUI on the client, Vercel serverless functions in TypeScript on the backend, Supabase Postgres for persistence, Auth0 for identity.
 
@@ -65,11 +65,6 @@ A web-development quiz application that tests your knowledge of React, JavaScrip
 - **Bookmarks** for questions you want to revisit (stored in `localStorage`).
 - **Achievements** for first quiz, 10/50 quizzes, 3/7/30-day streaks, 70%/90% accuracy, perfect quiz, 5 bookmarks.
 
-### Code sandbox
-- In-browser code playground supporting **JavaScript**, **TypeScript** (transpiled via sucrase in the browser), and **Python** (via Pyodide).
-- Captures `console.log`/`console.error`; runs the code in a fresh `new Function` scope to bound global pollution.
-- Syntax highlighting via lazy-loaded `react-syntax-highlighter`.
-
 ### App-wide
 - **Light / dark mode** toggle persisted to `localStorage`.
 - **Skip-to-content** link and proper `<main>` focus management on route change.
@@ -87,7 +82,7 @@ A web-development quiz application that tests your knowledge of React, JavaScrip
 - **React Router v7**.
 - **Auth0 React SDK** (`@auth0/auth0-react`) with localStorage cache + refresh tokens.
 - **Supabase client** (read-only, via API layer).
-- **react-syntax-highlighter** (lazy) for code blocks; **sucrase** (split into its own chunk) for TS-in-browser.
+- **react-syntax-highlighter** (lazy) for code blocks.
 
 ### Backend
 - **Vercel serverless functions** (`api/**/*.ts`) using `@vercel/node`.
@@ -160,7 +155,7 @@ react-express-app/
 │   ├── src/
 │   │   ├── App.tsx
 │   │   ├── main.tsx
-│   │   ├── components/           # Quiz, Play, Profile, Leaderboard, CodeSandbox,
+│   │   ├── components/           # Quiz, Play, Profile, Leaderboard,
 │   │   │                         # AuthButton, CodeBlock, ReportDialog, ErrorBoundary
 │   │   ├── lib/                  # api, supabase, play, achievements, bookmarks,
 │   │   │                         # settings, realtime, AuthBridge
@@ -342,7 +337,7 @@ All Supabase calls are wrapped in a 5-second timeout so a hung Postgres can't bu
 | **Quiz answer integrity** | Correct answers never leave the server before submit. Sessions are HMAC-SHA256-signed; the secret rejects tampered payloads in constant time (`timingSafeEqual`). |
 | **RLS** | `user_stats` policies require `auth0_id = auth.jwt() ->> 'sub'`. Write RPCs are revoked from `anon` (migration 007). |
 | **CORS** | Default Vercel same-origin; API is on the same domain as the SPA. |
-| **CSP** | Strict `default-src 'self'` with allowlisted `connect-src` (Supabase + Auth0). `unsafe-eval` is kept because the in-browser code sandbox uses `new Function`. |
+| **CSP** | Strict `default-src 'self'` with allowlisted `connect-src` (Supabase). No `unsafe-eval`/`wasm-unsafe-eval` needed. |
 | **Headers** | `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()`, HSTS with preload. |
 | **Input validation** | Every body field is type-checked and bounded. Categories are allowlisted. Picture URLs must be `https://`. |
 | **Rate limiting** | Not enabled at the app layer; relies on Vercel's platform limits. Adding Upstash + `@upstash/ratelimit` is the recommended next step. |
@@ -380,11 +375,10 @@ Build output snapshot (gzip):
 | `mui` | ~86 KB | MUI core + emotion |
 | `router` | ~56 KB | React Router v7 |
 | `auth0` | ~7 KB | Auth0 SDK |
-| `sucrase` | ~48 KB | **Lazy** — split out of initial bundle (CodeSandbox only) |
 | `prism` | ~229 KB | **Lazy** — only loads when a code-fenced question renders |
 
 Other optimizations in place:
-- **Route-level code splitting** via `React.lazy` for every page (Quiz, Profile, Leaderboard, CodeSandbox, Play).
+- **Route-level code splitting** via `React.lazy` for every page (Quiz, Profile, Leaderboard, Play).
 - **Per-vendor `manualChunks`** in `vite.config.ts`.
 - **Post-quiz stat writes parallelised** with `Promise.allSettled`.
 - **O(1) question lookup** in `/api/quiz/submit` via a precomputed `Map`.
@@ -434,7 +428,6 @@ These are flagged in the codebase from a production-readiness audit and are not 
 - **Rate limiting** — needs Upstash KV or Vercel Edge Middleware.
 - **Error aggregation** — drop in Sentry for the client and a structured logger that ships to Logtail/Datadog for the API.
 - **Lighter syntax highlighter** — swap `react-syntax-highlighter` for `shiki` or `prism-react-renderer` to save ~200 KB gzip lazy.
-- **CodeSandbox in iframe** — currently `new Function` requires `unsafe-eval` in CSP. Moving execution into a sandboxed iframe with its own CSP would let us drop the eval allowance.
 - **Strip explanations from live match payload** — `matches.questions` JSONB includes explanations, which inflates `state` polling egress. Strip them until the match is finished.
 
 ---

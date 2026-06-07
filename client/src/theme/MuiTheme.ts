@@ -163,9 +163,10 @@ export const quizStyles = {
     backgroundColor: BRAND.green,
     color: '#ffffff',
     '&:hover': { backgroundColor: BRAND.greenHover },
+    // Use theme-aware tokens so disabled text/background stay legible in dark mode.
     '&.Mui-disabled': {
-      backgroundColor: 'rgba(0,0,0,0.12)',
-      color: 'rgba(0,0,0,0.38)',
+      backgroundColor: 'action.disabledBackground',
+      color: 'text.disabled',
     },
   },
   submitButton: {
@@ -175,8 +176,8 @@ export const quizStyles = {
     color: '#ffffff',
     '&:hover': { backgroundColor: BRAND.greenHover },
     '&.Mui-disabled': {
-      backgroundColor: 'rgba(0,0,0,0.08)',
-      color: 'rgba(0,0,0,0.38)',
+      backgroundColor: 'action.disabledBackground',
+      color: 'text.disabled',
     },
   },
   nextButton: {

@@ -58,7 +58,17 @@ export function PlayLanding() {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           {t('play.signInBody')}
         </Typography>
-        <Button variant="contained" onClick={() => signInWithGoogle()} sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}>
+        <Button
+          variant="contained"
+          onClick={async () => {
+            try {
+              await signInWithGoogle();
+            } catch (err) {
+              setError(err instanceof Error ? err.message : friendlyError(err));
+            }
+          }}
+          sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+        >
           {t('auth.logIn')}
         </Button>
       </Paper>

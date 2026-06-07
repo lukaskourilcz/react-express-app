@@ -1,4 +1,4 @@
-import { Avatar, ButtonBase, Box, Menu, MenuItem, Typography, Button, Skeleton } from '@mui/material';
+import { Avatar, ButtonBase, Box, Menu, MenuItem, Typography, Button, Skeleton, Snackbar, Alert } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BRAND } from '../theme/MuiTheme';
@@ -11,7 +11,16 @@ function AuthButton() {
   const navigate = useNavigate();
   const t = useT();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [authError, setAuthError] = useState<string | null>(null);
   const open = Boolean(anchorEl);
+
+  const handleLogin = async () => {
+    try {
+      await signInWithGoogle();
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'Sign-in failed. Please try again.');
+    }
+  };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -37,19 +46,31 @@ function AuthButton() {
 
   if (!isAuthenticated) {
     return (
-      <Button
-        variant="outlined"
-        onClick={() => signInWithGoogle()}
-        sx={{
-          borderColor: BRAND.green,
-          color: BRAND.green,
-          fontWeight: 500,
-          textTransform: 'none',
-          '&:hover': { borderColor: BRAND.greenHover, backgroundColor: 'rgba(45,122,45,0.06)' },
-        }}
-      >
-        {t('auth.logIn')}
-      </Button>
+      <>
+        <Button
+          variant="outlined"
+          onClick={handleLogin}
+          sx={{
+            borderColor: BRAND.green,
+            color: BRAND.green,
+            fontWeight: 500,
+            textTransform: 'none',
+            '&:hover': { borderColor: BRAND.greenHover, backgroundColor: 'rgba(45,122,45,0.06)' },
+          }}
+        >
+          {t('auth.logIn')}
+        </Button>
+        <Snackbar
+          open={!!authError}
+          autoHideDuration={8000}
+          onClose={() => setAuthError(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert severity="error" variant="filled" onClose={() => setAuthError(null)}>
+            {authError}
+          </Alert>
+        </Snackbar>
+      </>
     );
   }
 

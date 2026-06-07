@@ -12,7 +12,6 @@ import { BRAND } from './theme/MuiTheme';
 const Quiz = lazy(() => import('./components/Quiz'));
 const Profile = lazy(() => import('./components/Profile'));
 const Leaderboard = lazy(() => import('./components/Leaderboard'));
-const CodeSandbox = lazy(() => import('./components/CodeSandbox'));
 const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayLanding })));
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 
@@ -20,7 +19,6 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/': 'title.home',
   '/profile': 'title.profile',
   '/leaderboard': 'title.leaderboard',
-  '/sandbox': 'title.sandbox',
   '/play': 'title.play',
 };
 
@@ -141,16 +139,6 @@ function App() {
               >
                 {t('nav.leaderboard')}
               </Button>
-              <Button
-                component={Link}
-                to="/sandbox"
-                sx={{
-                  ...navLinkSx(location.pathname === '/sandbox'),
-                  display: { xs: 'none', sm: 'inline-flex' },
-                }}
-              >
-                {t('nav.sandbox')}
-              </Button>
               {isAuthenticated && (
                 <Button component={Link} to="/profile" sx={navLinkSx(location.pathname === '/profile')}>
                   {t('nav.profile')}
@@ -192,7 +180,6 @@ function App() {
               <Route path="/" element={<Quiz onActiveChange={setQuizActive} />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
-              <Route path="/sandbox" element={<CodeSandbox />} />
               <Route path="/play" element={<PlayLanding />} />
               <Route path="/play/:code" element={<PlayMatch />} />
             </Routes>
