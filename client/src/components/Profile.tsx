@@ -1,4 +1,3 @@
-import { useAuth0 } from '@auth0/auth0-react';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -12,6 +11,7 @@ import {
   Alert,
 } from '@mui/material';
 import { getUserStats, createOrUpdateUserStats, type UserStats } from '../lib/supabase';
+import { useAuth, getUserProfile } from '../lib/auth';
 import { friendlyError } from '../lib/api';
 import { BRAND } from '../theme/MuiTheme';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
@@ -24,7 +24,8 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }
 
 function Profile() {
   const t = useT();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth0();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const profile = getUserProfile(user);
   const navigate = useNavigate();
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,16 +43,16 @@ function Profile() {
     const controller = new AbortController();
 
     async function loadStats() {
-      if (!user?.sub) return;
+      if (!user?.id) return;
       setLoading(true);
       setError(null);
       try {
-        let s = await getUserStats(user.sub);
+        let s = await getUserStats(user.id);
         if (!s) {
-          s = await createOrUpdateUserStats(user.sub, {
-            email: user.email,
-            name: user.name,
-            picture: user.picture,
+          s = await createOrUpdateUserStats(user.id, {
+            email: profile.email,
+            name: profile.name,
+            picture: profile.picture,
           });
         }
         if (!cancelled) setStats(s);
@@ -67,6 +68,7 @@ function Profile() {
       cancelled = true;
       controller.abort();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAuthenticated, authLoading, navigate, reloadKey]);
 
   if (authLoading || loading) {
@@ -112,7 +114,7 @@ function Profile() {
   const isFirstTime = totalQuizzes === 0;
   return (
     <ProfileBody
-      user={user}
+      user={profile}
       stats={stats}
       totalQuizzes={totalQuizzes}
       totalCorrect={totalCorrect}

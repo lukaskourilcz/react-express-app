@@ -8,7 +8,7 @@ const supabase: SupabaseClient | null =
   supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
 
 const STATS_FIELDS =
-  'id,auth0_id,email,name,picture,total_quizzes,total_correct,total_questions,current_streak,longest_streak,last_quiz_date,created_at,updated_at';
+  'id,user_id,email,name,picture,total_quizzes,total_correct,total_questions,current_streak,longest_streak,last_quiz_date,created_at,updated_at';
 
 const MAX_STR = 512;
 
@@ -68,11 +68,11 @@ async function stats(req: VercelRequest, res: VercelResponse) {
       if (e instanceof AuthError) return jsonError(res, e.status, e.code, e.message);
       throw e;
     }
-    const auth0_id = auth.sub;
+    const user_id = auth.sub;
 
     if (req.method === 'GET') {
       const { data, error } = await withTimeout(
-        supabase!.from('user_stats').select(STATS_FIELDS).eq('auth0_id', auth0_id).maybeSingle(),
+        supabase!.from('user_stats').select(STATS_FIELDS).eq('user_id', user_id).maybeSingle(),
       );
       if (error) {
         logEvent('stats', { status: 500, reason: 'select_failed', error: error.message });
@@ -109,7 +109,7 @@ async function stats(req: VercelRequest, res: VercelResponse) {
 
         const { data, error } = await withTimeout(
           supabase!.rpc('record_quiz_result', {
-            p_auth0_id: auth0_id,
+            p_user_id: user_id,
             p_correct: qr.correct,
             p_total: qr.total,
           }),
@@ -136,7 +136,7 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         picture && /^https:\/\//i.test(picture) ? picture : null;
 
       const profile = {
-        auth0_id,
+        user_id,
         email: typeof body.email === 'string' && body.email.length <= MAX_STR ? body.email : null,
         name: typeof body.name === 'string' && body.name.length <= MAX_STR ? body.name : null,
         picture: safePicture,
@@ -145,7 +145,7 @@ async function stats(req: VercelRequest, res: VercelResponse) {
       const { data, error } = await withTimeout(
         supabase!
           .from('user_stats')
-          .upsert(profile, { onConflict: 'auth0_id' })
+          .upsert(profile, { onConflict: 'user_id' })
           .select(STATS_FIELDS)
           .single(),
       );
@@ -212,7 +212,7 @@ async function categoryStats(req: VercelRequest, res: VercelResponse) {
 
   const { error } = await withTimeout(
     supabase!.rpc('record_category_stats', {
-      p_auth0_id: auth.sub,
+      p_user_id: auth.sub,
       p_breakdown: cleaned,
     }),
   );

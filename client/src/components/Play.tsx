@@ -16,7 +16,7 @@ import {
   FormControlLabel,
   Radio,
 } from '@mui/material';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useAuth, getUserProfile } from '../lib/auth';
 import {
   createMatch,
   joinMatch,
@@ -41,7 +41,8 @@ const POLL_FALLBACK_MS = 4000;
 export function PlayLanding() {
   const navigate = useNavigate();
   const t = useT();
-  const { user, isAuthenticated, loginWithRedirect } = useAuth0();
+  const { user, isAuthenticated, signInWithGoogle } = useAuth();
+  const profile = getUserProfile(user);
   const [mode, setMode] = useState<'multiplayer' | 'classroom'>('multiplayer');
   const [count, setCount] = useState(10);
   const [joinCode, setJoinCode] = useState('');
@@ -57,7 +58,7 @@ export function PlayLanding() {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           {t('play.signInBody')}
         </Typography>
-        <Button variant="contained" onClick={() => loginWithRedirect()} sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}>
+        <Button variant="contained" onClick={() => signInWithGoogle()} sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}>
           {t('auth.logIn')}
         </Button>
       </Paper>
@@ -65,13 +66,13 @@ export function PlayLanding() {
   }
 
   const handleCreate = async () => {
-    if (!user?.sub) return;
+    if (!user?.id) return;
     setError(null);
     setLoading('create');
     try {
       const m = await createMatch({
-        host_sub: user.sub,
-        host_name: user.name || user.email?.split('@')[0] || 'Host',
+        host_id: user.id,
+        host_name: profile.name || profile.email?.split('@')[0] || 'Host',
         mode,
         count,
         categories: [],
@@ -85,7 +86,7 @@ export function PlayLanding() {
   };
 
   const handleJoin = async () => {
-    if (!user?.sub) return;
+    if (!user?.id) return;
     const code = joinCode.trim().toUpperCase();
     if (code.length < 4) {
       setError(t('play.enterCode'));
@@ -96,8 +97,8 @@ export function PlayLanding() {
     try {
       await joinMatch({
         code,
-        auth0_sub: user.sub,
-        display_name: user.name || user.email?.split('@')[0] || 'Player',
+        user_id: user.id,
+        display_name: profile.name || profile.email?.split('@')[0] || 'Player',
       });
       navigate(`/play/${code}`);
     } catch (err) {
@@ -213,7 +214,8 @@ export function PlayMatch() {
   const code = (codeParam || '').toUpperCase();
   const navigate = useNavigate();
   const t = useT();
-  const { user, isAuthenticated } = useAuth0();
+  const { user, isAuthenticated } = useAuth();
+  const profile = getUserProfile(user);
 
   const [match, setMatch] = useState<Match | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -225,25 +227,25 @@ export function PlayMatch() {
   const [questionShownAt, setQuestionShownAt] = useState<number>(Date.now());
 
   const channelRef = useRef<RealtimeChannel | null>(null);
-  const isHost = !!(user?.sub && match?.host_sub === user.sub);
+  const isHost = !!(user?.id && match?.host_id === user.id);
   // Records when the local client first observed the current question_started_at,
   // so a slow broadcast doesn't unfairly penalise the speed bonus.
   const clientReceivedAtRef = useRef<string | null>(null);
 
   // Initial join + state load.
   useEffect(() => {
-    if (!isAuthenticated || !user?.sub || !code) return;
+    if (!isAuthenticated || !user?.id || !code) return;
     let cancelled = false;
     (async () => {
       try {
         const m = await joinMatch({
           code,
-          auth0_sub: user.sub!,
-          display_name: user.name || user.email?.split('@')[0] || 'Player',
+          user_id: user.id,
+          display_name: profile.name || profile.email?.split('@')[0] || 'Player',
         });
         if (cancelled) return;
         setMatch(m);
-        const state = await fetchMatchState(code, user.sub);
+        const state = await fetchMatchState(code, user.id);
         if (cancelled) return;
         setParticipants(state.participants);
         setScoreboard(state.scoreboard);
@@ -260,13 +262,13 @@ export function PlayMatch() {
 
   // Realtime broadcast wiring.
   useEffect(() => {
-    if (!code || !user?.sub) return;
+    if (!code || !user?.id) return;
     const channel = joinMatchChannel(code);
     channelRef.current = channel;
 
     const refresh = async () => {
       try {
-        const state = await fetchMatchState(code, user.sub);
+        const state = await fetchMatchState(code, user.id);
         setMatch(state.match);
         setParticipants(state.participants);
         setScoreboard(state.scoreboard);
@@ -279,7 +281,7 @@ export function PlayMatch() {
     channel.subscribe('match_updated', refresh);
 
     // Send our own presence event after we've registered.
-    channel.send('participant_joined', { sub: user.sub });
+    channel.send('participant_joined', { sub: user.id });
 
     // Polling fallback for environments without Supabase Realtime enabled.
     const interval = window.setInterval(refresh, POLL_FALLBACK_MS);
@@ -288,7 +290,7 @@ export function PlayMatch() {
       window.clearInterval(interval);
       channel.unsubscribe();
     };
-  }, [code, user?.sub]);
+  }, [code, user?.id]);
 
   // Reset per-question UI when the index changes.
   useEffect(() => {
@@ -302,11 +304,11 @@ export function PlayMatch() {
   // server's stale-match cleanup (5 min). Pinged every 30 s while the
   // host is actively viewing the page.
   useEffect(() => {
-    if (!isHost || !user?.sub || !code) return;
+    if (!isHost || !user?.id || !code) return;
     if (match?.status !== 'lobby' && match?.status !== 'running') return;
     let cancelled = false;
     const tick = () => {
-      sendHeartbeat(code, user.sub!).catch(() => {
+      sendHeartbeat(code, user.id!).catch(() => {
         /* ignore — UI keeps working, server will auto-finish if truly gone */
       });
     };
@@ -318,16 +320,16 @@ export function PlayMatch() {
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [isHost, user?.sub, code, match?.status]);
+  }, [isHost, user?.id, code, match?.status]);
 
   const broadcastUpdate = () => {
     channelRef.current?.send('match_updated', { at: Date.now() });
   };
 
   const startMatch = async () => {
-    if (!user?.sub || !match) return;
+    if (!user?.id || !match) return;
     try {
-      await controlMatch({ code, host_sub: user.sub, action: 'start' });
+      await controlMatch({ code, host_id: user.id, action: 'start' });
       broadcastUpdate();
     } catch (err) {
       setError(friendlyError(err));
@@ -335,9 +337,9 @@ export function PlayMatch() {
   };
 
   const advance = async () => {
-    if (!user?.sub) return;
+    if (!user?.id) return;
     try {
-      await controlMatch({ code, host_sub: user.sub, action: 'advance' });
+      await controlMatch({ code, host_id: user.id, action: 'advance' });
       broadcastUpdate();
     } catch (err) {
       setError(friendlyError(err));
@@ -345,9 +347,9 @@ export function PlayMatch() {
   };
 
   const finish = async () => {
-    if (!user?.sub) return;
+    if (!user?.id) return;
     try {
-      await controlMatch({ code, host_sub: user.sub, action: 'finish' });
+      await controlMatch({ code, host_id: user.id, action: 'finish' });
       broadcastUpdate();
     } catch (err) {
       setError(friendlyError(err));
@@ -355,11 +357,11 @@ export function PlayMatch() {
   };
 
   const submitAnswer = async () => {
-    if (selected === null || !match || !user?.sub) return;
+    if (selected === null || !match || !user?.id) return;
     try {
       await submitMatchAnswer({
         code,
-        auth0_sub: user.sub,
+        user_id: user.id,
         question_idx: match.current_index,
         selected_idx: selected,
         duration_ms: Date.now() - questionShownAt,
@@ -453,7 +455,7 @@ export function PlayMatch() {
           onFinish={finish}
           scoreboard={scoreboard}
           participants={participants}
-          hostSub={user?.sub}
+          hostSub={user?.id}
           code={code}
         />
       )}
@@ -518,7 +520,7 @@ function Lobby({
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 3 }}>
         {participants.map((p) => (
           <Box
-            key={p.auth0_sub}
+            key={p.user_id}
             sx={{
               display: 'flex',
               alignItems: 'center',
@@ -548,7 +550,7 @@ function Lobby({
             <Typography variant="body2" sx={{ fontWeight: 500, flex: 1 }}>
               {p.display_name}
             </Typography>
-            {p.auth0_sub === match.host_sub && <Chip size="small" label={t('play.host')} />}
+            {p.user_id === match.host_id && <Chip size="small" label={t('play.host')} />}
           </Box>
         ))}
         {participants.length === 0 && (
@@ -618,7 +620,7 @@ function RunningQuestion({
   const t = useT();
   const lastQuestion = questionIdx >= total - 1;
   const answeredCount = useMemo(
-    () => scoreboard.filter((s) => participants.some((p) => p.auth0_sub === s.auth0_sub)).length,
+    () => scoreboard.filter((s) => participants.some((p) => p.user_id === s.user_id)).length,
     [scoreboard, participants],
   );
 
@@ -771,7 +773,7 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
         {scoreboard.map((s, i) => (
           <Box
-            key={s.auth0_sub}
+            key={s.user_id}
             sx={{
               display: 'flex',
               alignItems: 'center',

@@ -1,12 +1,13 @@
-import { useAuth0 } from '@auth0/auth0-react';
 import { Avatar, ButtonBase, Box, Menu, MenuItem, Typography, Button, Skeleton } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
+import { useAuth, getUserProfile } from '../lib/auth';
 
 function AuthButton() {
-  const { isAuthenticated, isLoading, user, loginWithRedirect, logout } = useAuth0();
+  const { isAuthenticated, isLoading, user, signInWithGoogle, signOut } = useAuth();
+  const profile = getUserProfile(user);
   const navigate = useNavigate();
   const t = useT();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -22,7 +23,7 @@ function AuthButton() {
   };
   const handleLogout = () => {
     handleMenuClose();
-    logout({ logoutParams: { returnTo: window.location.origin } });
+    signOut();
   };
 
   if (isLoading) {
@@ -38,7 +39,7 @@ function AuthButton() {
     return (
       <Button
         variant="outlined"
-        onClick={() => loginWithRedirect()}
+        onClick={() => signInWithGoogle()}
         sx={{
           borderColor: BRAND.green,
           color: BRAND.green,
@@ -52,7 +53,7 @@ function AuthButton() {
     );
   }
 
-  const displayName = user?.name?.split(' ')[0] || user?.email?.split('@')[0] || t('auth.account');
+  const displayName = profile.name?.split(' ')[0] || profile.email?.split('@')[0] || t('auth.account');
 
   return (
     <>
@@ -73,7 +74,7 @@ function AuthButton() {
           '&:focus-visible': { outline: `2px solid ${BRAND.green}`, outlineOffset: 2 },
         }}
       >
-        <Avatar src={user?.picture} alt="" sx={{ width: 32, height: 32 }} />
+        <Avatar src={profile.picture} alt="" sx={{ width: 32, height: 32 }} />
         <Typography
           variant="body2"
           sx={{ fontWeight: 500, color: 'text.primary', display: { xs: 'none', sm: 'block' } }}

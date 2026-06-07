@@ -1,3 +1,5 @@
+import { supabase } from './supabaseClient';
+
 const DEFAULT_TIMEOUT_MS = 15_000;
 
 export class ApiError extends Error {
@@ -12,19 +14,14 @@ export class ApiError extends Error {
 
 type Options = RequestInit & { timeoutMs?: number; signal?: AbortSignal };
 
-// Module-scoped getter; populated once by AuthBridge at app startup so
-// non-component callers (helpers in lib/*) can attach the user's Auth0
-// access token without each one having to thread a hook through.
-let accessTokenGetter: (() => Promise<string | null>) | null = null;
-
-export function setAccessTokenGetter(fn: (() => Promise<string | null>) | null) {
-  accessTokenGetter = fn;
-}
-
+// Attach the current user's Supabase access token to API requests so the
+// server can verify identity. Read directly from the Supabase session, which
+// is refreshed and persisted by the supabase-js client.
 async function getAccessToken(): Promise<string | null> {
-  if (!accessTokenGetter) return null;
+  if (!supabase) return null;
   try {
-    return await accessTokenGetter();
+    const { data } = await supabase.auth.getSession();
+    return data.session?.access_token ?? null;
   } catch {
     return null;
   }

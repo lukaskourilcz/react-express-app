@@ -37,7 +37,7 @@ AS $$
               THEN ROUND(100.0 * c.total_correct / c.total_questions)::INT
               ELSE 0 END AS accuracy_pct
     FROM user_category_stats c
-    LEFT JOIN user_stats u ON u.auth0_id = c.auth0_id
+    LEFT JOIN user_stats u ON u.user_id = c.user_id
    WHERE c.category = p_category
      AND c.total_questions >= GREATEST(LEAST(p_min_attempts, 100), 1)
    ORDER BY c.total_correct DESC,

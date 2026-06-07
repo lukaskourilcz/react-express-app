@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Button, IconButton, CircularProgress, Tooltip } from '@mui/material';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useAuth } from './lib/auth';
 import AuthButton from './components/AuthButton';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import { useColorMode } from './theme/ColorModeContext';
@@ -64,13 +64,7 @@ function App() {
   const t = useT();
   const [quizActive, setQuizActive] = useState(false);
   const { mode, toggle } = useColorMode();
-  let isAuthenticated = false;
-
-  try {
-    isAuthenticated = useAuth0().isAuthenticated;
-  } catch {
-    // Auth0 not configured
-  }
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const titleKey = ROUTE_TITLE_KEYS[location.pathname];

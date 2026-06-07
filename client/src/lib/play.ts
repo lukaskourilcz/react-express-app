@@ -14,7 +14,7 @@ export interface Match {
   id: string;
   code: string;
   mode: 'multiplayer' | 'classroom';
-  host_sub: string;
+  host_id: string;
   host_name: string;
   status: 'lobby' | 'running' | 'finished';
   current_index: number;
@@ -25,13 +25,13 @@ export interface Match {
 }
 
 export interface Participant {
-  auth0_sub: string;
+  user_id: string;
   display_name: string;
   joined_at: string;
 }
 
 export interface ScoreboardEntry {
-  auth0_sub: string;
+  user_id: string;
   display_name: string;
   correct: number;
   score: number;
@@ -71,7 +71,7 @@ export interface LeaderboardDailyEntry {
 }
 
 export const createMatch = (input: {
-  host_sub: string;
+  host_id: string;
   host_name: string;
   mode: 'multiplayer' | 'classroom';
   count: number;
@@ -82,20 +82,20 @@ export const createMatch = (input: {
     body: JSON.stringify(input),
   });
 
-export const joinMatch = (input: { code: string; auth0_sub: string; display_name: string }) =>
+export const joinMatch = (input: { code: string; user_id: string; display_name: string }) =>
   apiFetch<Match>('/api/play/join', {
     method: 'POST',
     body: JSON.stringify(input),
   });
 
-export const fetchMatchState = (code: string, auth0_sub?: string) =>
+export const fetchMatchState = (code: string, user_id?: string) =>
   apiFetch<{ match: Match; participants: Participant[]; scoreboard: ScoreboardEntry[] }>(
-    `/api/play/state?code=${encodeURIComponent(code)}${auth0_sub ? `&auth0_sub=${encodeURIComponent(auth0_sub)}` : ''}`,
+    `/api/play/state?code=${encodeURIComponent(code)}${user_id ? `&user_id=${encodeURIComponent(user_id)}` : ''}`,
   );
 
 export const controlMatch = (input: {
   code: string;
-  host_sub: string;
+  host_id: string;
   action: 'start' | 'advance' | 'finish';
 }) =>
   apiFetch<{ ok: true; status?: string; current_index?: number }>('/api/play/control', {
@@ -105,7 +105,7 @@ export const controlMatch = (input: {
 
 export const submitMatchAnswer = (input: {
   code: string;
-  auth0_sub: string;
+  user_id: string;
   question_idx: number;
   selected_idx: number;
   duration_ms: number;
@@ -116,10 +116,10 @@ export const submitMatchAnswer = (input: {
     body: JSON.stringify(input),
   });
 
-export const sendHeartbeat = (code: string, host_sub: string) =>
+export const sendHeartbeat = (code: string, host_id: string) =>
   apiFetch<{ ok: true }>('/api/play/heartbeat', {
     method: 'POST',
-    body: JSON.stringify({ code, host_sub }),
+    body: JSON.stringify({ code, host_id }),
   });
 
 export const fetchLeaderboard = (
@@ -137,13 +137,13 @@ export const fetchLeaderboard = (
   }>(`/api/leaderboard?${qs}`);
 };
 
-export const fetchDistribution = (code: string, q: number, hostSub: string) =>
+export const fetchDistribution = (code: string, q: number, hostId: string) =>
   apiFetch<{ buckets: DistributionBucket[] }>(
-    `/api/play/distribution?code=${encodeURIComponent(code)}&q=${q}&auth0_sub=${encodeURIComponent(hostSub)}`,
+    `/api/play/distribution?code=${encodeURIComponent(code)}&q=${q}&user_id=${encodeURIComponent(hostId)}`,
   );
 
-export const recordCategoryStats = (auth0_id: string, by_category: Record<string, { correct: number; total: number }>) =>
+export const recordCategoryStats = (user_id: string, by_category: Record<string, { correct: number; total: number }>) =>
   apiFetch<{ ok: true; applied: number }>('/api/user/category-stats', {
     method: 'POST',
-    body: JSON.stringify({ auth0_id, by_category }),
+    body: JSON.stringify({ user_id, by_category }),
   });

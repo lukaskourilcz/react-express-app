@@ -18,7 +18,7 @@ import {
   Skeleton,
   Snackbar,
 } from '@mui/material';
-import { useAuth0 } from '@auth0/auth0-react';
+import { useAuth, getUserProfile } from '../lib/auth';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { quizStyles, BRAND, CATEGORY_GRADIENT } from '../theme/MuiTheme';
 import {
@@ -122,15 +122,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
 
-  let isAuthenticated = false;
-  let user: { sub?: string; email?: string; name?: string; picture?: string } | undefined;
-  try {
-    const auth0 = useAuth0();
-    isAuthenticated = auth0.isAuthenticated;
-    user = auth0.user;
-  } catch {
-    /* Auth0 not configured */
-  }
+  const { isAuthenticated, user } = useAuth();
+  const profile = getUserProfile(user);
 
   useEffect(() => {
     onActiveChange?.(state !== 'ready');
@@ -260,7 +253,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     async (reason: 'incorrect-answer' | 'unclear' | 'typo' | 'outdated' | 'duplicate' | 'other', detail?: string) => {
       if (!reportTarget) return;
       try {
-        await reportQuestion({ questionId: reportTarget, reason, detail, reporterSub: user?.sub });
+        await reportQuestion({ questionId: reportTarget, reason, detail, reporterSub: user?.id });
         setSnack(t('quiz.reportSent'));
       } catch {
         setSnack(t('quiz.reportFailed'));
@@ -297,7 +290,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       // Practice mode: don't write stats. Daily challenge: write stats.
       if (settings.practiceMode) {
         setSnack(t('quiz.practiceMode'));
-      } else if (isAuthenticated && user?.sub) {
+      } else if (isAuthenticated && user?.id) {
         // Pre-build category breakdown once.
         const resultsById = new Map(data.results.map((r) => [r.questionId, r]));
         const byCategory: Record<string, { correct: number; total: number }> = {};
@@ -312,15 +305,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
         // All three writes are independent rows; run them concurrently.
         const writes: Promise<unknown>[] = [
-          createOrUpdateUserStats(user.sub, {
-            email: user.email,
-            name: user.name,
-            picture: user.picture,
+          createOrUpdateUserStats(user.id, {
+            email: profile.email,
+            name: profile.name,
+            picture: profile.picture,
           }),
-          recordQuizResult(user.sub, data.correctAnswers, data.totalQuestions),
+          recordQuizResult(user.id, data.correctAnswers, data.totalQuestions),
         ];
         if (Object.keys(byCategory).length > 0) {
-          writes.push(recordCategoryStats(user.sub, byCategory));
+          writes.push(recordCategoryStats(user.id, byCategory));
         }
         const settled = await Promise.allSettled(writes);
         const failures = settled.filter((r) => r.status === 'rejected');

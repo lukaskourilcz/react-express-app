@@ -152,14 +152,14 @@ async function create(req: VercelRequest, res: VercelResponse) {
         .insert({
           code,
           mode,
-          host_sub: hostSub,
+          host_id: hostSub,
           host_name: hostName,
           status: 'lobby',
           questions: matchQuestions,
           current_index: 0,
           last_heartbeat_at: new Date().toISOString(),
         })
-        .select('id, code, mode, host_sub, host_name, status')
+        .select('id, code, mode, host_id, host_name, status')
         .single(),
     );
 
@@ -171,7 +171,7 @@ async function create(req: VercelRequest, res: VercelResponse) {
     await withTimeout(
       supabase!
         .from('match_participants')
-        .insert({ match_id: data.id, auth0_sub: hostSub, display_name: hostName }),
+        .insert({ match_id: data.id, user_id: hostSub, display_name: hostName }),
     );
 
     logEvent('play/create', { status: 200, code, mode, count });
@@ -179,7 +179,7 @@ async function create(req: VercelRequest, res: VercelResponse) {
       id: data.id,
       code: data.code,
       mode: data.mode,
-      host_sub: data.host_sub,
+      host_id: data.host_id,
       host_name: data.host_name,
       status: data.status,
     });
@@ -209,7 +209,7 @@ async function join(req: VercelRequest, res: VercelResponse) {
       supabase!
         .from('matches')
         .select(
-          'id, code, mode, host_sub, host_name, status, current_index, questions, question_started_at, question_duration_s',
+          'id, code, mode, host_id, host_name, status, current_index, questions, question_started_at, question_duration_s',
         )
         .eq('code', code)
         .maybeSingle(),
@@ -224,12 +224,12 @@ async function join(req: VercelRequest, res: VercelResponse) {
 
     await withTimeout(
       supabase!.from('match_participants').upsert(
-        { match_id: match.id, auth0_sub: sub, display_name: body.display_name },
-        { onConflict: 'match_id,auth0_sub' },
+        { match_id: match.id, user_id: sub, display_name: body.display_name },
+        { onConflict: 'match_id,user_id' },
       ),
     );
 
-    const isHost = match.host_sub === sub;
+    const isHost = match.host_id === sub;
     const sanitized = (match.questions as Array<Record<string, unknown>>).map((q) => {
       if (isHost) return q;
       const { correct_index: _ci, explanation: _e, ...rest } = q as Record<string, unknown> & {
@@ -245,7 +245,7 @@ async function join(req: VercelRequest, res: VercelResponse) {
       code: match.code,
       mode: match.mode,
       status: match.status,
-      host_sub: match.host_sub,
+      host_id: match.host_id,
       host_name: match.host_name,
       current_index: match.current_index,
       question_started_at: match.question_started_at,
@@ -276,7 +276,7 @@ async function state(req: VercelRequest, res: VercelResponse) {
       supabase!
         .from('matches')
         .select(
-          'id, code, mode, host_sub, host_name, status, current_index, questions, ended_at, question_started_at, question_duration_s, last_heartbeat_at, started_at',
+          'id, code, mode, host_id, host_name, status, current_index, questions, ended_at, question_started_at, question_duration_s, last_heartbeat_at, started_at',
         )
         .eq('code', code)
         .maybeSingle(),
@@ -294,7 +294,7 @@ async function state(req: VercelRequest, res: VercelResponse) {
             .update({ status: 'finished', ended_at: new Date().toISOString() })
             .eq('id', match.id)
             .select(
-              'id, code, mode, host_sub, host_name, status, current_index, questions, ended_at, question_started_at, question_duration_s, last_heartbeat_at, started_at',
+              'id, code, mode, host_id, host_name, status, current_index, questions, ended_at, question_started_at, question_duration_s, last_heartbeat_at, started_at',
             )
             .single(),
         );
@@ -307,14 +307,14 @@ async function state(req: VercelRequest, res: VercelResponse) {
       withTimeout(
         supabase!
           .from('match_participants')
-          .select('auth0_sub, display_name, joined_at')
+          .select('user_id, display_name, joined_at')
           .eq('match_id', match.id)
           .order('joined_at', { ascending: true }),
       ),
       withTimeout(supabase!.rpc('match_scoreboard', { p_match_id: match.id })),
     ]);
 
-    const isHost = sub !== null && sub === match.host_sub;
+    const isHost = sub !== null && sub === match.host_id;
     const sanitizedQuestions = (match.questions as Array<Record<string, unknown>>).map((q) => {
       if (isHost || match.status === 'finished') return q;
       const { correct_index: _ci, explanation: _e, ...rest } = q;
@@ -353,13 +353,13 @@ async function control(req: VercelRequest, res: VercelResponse) {
     const { data: match } = await withTimeout(
       supabase!
         .from('matches')
-        .select('id, host_sub, status, current_index, questions')
+        .select('id, host_id, status, current_index, questions')
         .eq('code', code)
         .maybeSingle(),
     );
 
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
-    if (match.host_sub !== sub)
+    if (match.host_id !== sub)
       return jsonError(res, 403, 'forbidden', 'Only the host can do this');
 
     const totalQuestions = Array.isArray(match.questions) ? match.questions.length : 0;
@@ -496,7 +496,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
       supabase!.from('match_answers').upsert(
         {
           match_id: match.id,
-          auth0_sub: sub,
+          user_id: sub,
           question_id: q.id,
           question_idx: body.question_idx,
           selected_idx: body.selected_idx,
@@ -504,7 +504,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
           duration_ms: serverElapsedMs,
           speed_bonus: speedBonus,
         },
-        { onConflict: 'match_id,auth0_sub,question_idx' },
+        { onConflict: 'match_id,user_id,question_idx' },
       ),
     );
 
@@ -544,11 +544,11 @@ async function distribution(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { data: match } = await withTimeout(
-      supabase!.from('matches').select('id, host_sub').eq('code', code).maybeSingle(),
+      supabase!.from('matches').select('id, host_id').eq('code', code).maybeSingle(),
     );
 
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
-    if (sub !== match.host_sub) {
+    if (sub !== match.host_id) {
       return jsonError(res, 403, 'forbidden', 'Only the host can view distribution');
     }
 
@@ -589,10 +589,10 @@ async function heartbeat(req: VercelRequest, res: VercelResponse) {
   const code = body.code.toUpperCase();
   try {
     const { data: match } = await withTimeout(
-      supabase!.from('matches').select('id, host_sub, status').eq('code', code).maybeSingle(),
+      supabase!.from('matches').select('id, host_id, status').eq('code', code).maybeSingle(),
     );
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
-    if (match.host_sub !== sub)
+    if (match.host_id !== sub)
       return jsonError(res, 403, 'forbidden', 'Only the host can send heartbeats');
     if (match.status !== 'running' && match.status !== 'lobby')
       return jsonError(res, 409, 'bad_state', 'Match is not active');
