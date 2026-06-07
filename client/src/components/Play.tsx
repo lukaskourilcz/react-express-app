@@ -34,11 +34,13 @@ import { joinMatchChannel, type RealtimeChannel } from '../lib/realtime';
 import { friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { BRAND } from '../theme/MuiTheme';
+import { useT } from '../i18n/LanguageContext';
 
 const POLL_FALLBACK_MS = 4000;
 
 export function PlayLanding() {
   const navigate = useNavigate();
+  const t = useT();
   const { user, isAuthenticated, loginWithRedirect } = useAuth0();
   const [mode, setMode] = useState<'multiplayer' | 'classroom'>('multiplayer');
   const [count, setCount] = useState(10);
@@ -50,13 +52,13 @@ export function PlayLanding() {
     return (
       <Paper elevation={0} sx={{ p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
         <Typography variant="h6" sx={{ mb: 1 }}>
-          Sign in to play live
+          {t('play.signInTitle')}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          Multiplayer and classroom games need an account so we can show your name on the scoreboard.
+          {t('play.signInBody')}
         </Typography>
         <Button variant="contained" onClick={() => loginWithRedirect()} sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}>
-          Log in
+          {t('auth.logIn')}
         </Button>
       </Paper>
     );
@@ -86,7 +88,7 @@ export function PlayLanding() {
     if (!user?.sub) return;
     const code = joinCode.trim().toUpperCase();
     if (code.length < 4) {
-      setError('Enter a match code');
+      setError(t('play.enterCode'));
       return;
     }
     setError(null);
@@ -108,10 +110,10 @@ export function PlayLanding() {
   return (
     <Box sx={{ maxWidth: 520, mx: 'auto' }}>
       <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mb: 0.5 }}>
-        Play live
+        {t('play.title')}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        Race friends in multiplayer, or run a classroom session.
+        {t('play.subtitle')}
       </Typography>
 
       {error && (
@@ -122,21 +124,21 @@ export function PlayLanding() {
 
       <Paper elevation={0} sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="overline" component="h2" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-          Host a game
+          {t('play.hostGame')}
         </Typography>
         <ToggleButtonGroup
-          aria-label="Game mode"
+          aria-label={t('play.gameMode')}
           value={mode}
           exclusive
           size="small"
           onChange={(_, v) => v && setMode(v)}
           sx={{ mb: 2 }}
         >
-          <ToggleButton value="multiplayer" aria-label="Multiplayer (free-for-all)">
-            Multiplayer (free-for-all)
+          <ToggleButton value="multiplayer" aria-label={t('play.multiplayerFfa')}>
+            {t('play.multiplayerFfa')}
           </ToggleButton>
-          <ToggleButton value="classroom" aria-label="Classroom">
-            Classroom
+          <ToggleButton value="classroom" aria-label={t('play.classroom')}>
+            {t('play.classroom')}
           </ToggleButton>
         </ToggleButtonGroup>
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
@@ -156,7 +158,7 @@ export function PlayLanding() {
             </Button>
           ))}
           <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', ml: 1 }}>
-            questions
+            {t('play.questions')}
           </Typography>
         </Box>
         <Button
@@ -166,37 +168,39 @@ export function PlayLanding() {
           disabled={loading !== null}
           sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
         >
-          {loading === 'create' ? 'Creating…' : `Create ${mode} match`}
+          {loading === 'create'
+            ? t('play.creating')
+            : mode === 'multiplayer'
+              ? t('play.createMultiplayer')
+              : t('play.createClassroom')}
         </Button>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-          {mode === 'multiplayer'
-            ? 'Anyone with the code can join. Score = correct + speed.'
-            : 'Students join with the code. You control when each question advances.'}
+          {mode === 'multiplayer' ? t('play.multiplayerHint') : t('play.classroomHint')}
         </Typography>
       </Paper>
 
-      <Divider sx={{ my: 2 }}>or</Divider>
+      <Divider sx={{ my: 2 }}>{t('play.or')}</Divider>
 
       <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="overline" component="h2" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-          Join with a code
+          {t('play.joinWithCode')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1 }}>
           <TextField
             fullWidth
-            label="Match code"
+            label={t('play.matchCode')}
             placeholder="ABC123"
             value={joinCode}
             onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
             inputProps={{
               maxLength: 8,
               style: { textTransform: 'uppercase', letterSpacing: '0.2em', fontFamily: 'monospace' },
-              'aria-label': 'Match code',
+              'aria-label': t('play.matchCode'),
             }}
             size="small"
           />
           <Button variant="contained" onClick={handleJoin} disabled={loading !== null}>
-            {loading === 'join' ? '…' : 'Join'}
+            {loading === 'join' ? '…' : t('play.join')}
           </Button>
         </Box>
       </Paper>
@@ -208,6 +212,7 @@ export function PlayMatch() {
   const { code: codeParam } = useParams<{ code: string }>();
   const code = (codeParam || '').toUpperCase();
   const navigate = useNavigate();
+  const t = useT();
   const { user, isAuthenticated } = useAuth0();
 
   const [match, setMatch] = useState<Match | null>(null);
@@ -382,7 +387,7 @@ export function PlayMatch() {
       >
         <CircularProgress sx={{ color: BRAND.green }} aria-hidden />
         <Typography variant="body2" color="text.secondary">
-          Joining match…
+          {t('play.joining')}
         </Typography>
       </Box>
     );
@@ -394,7 +399,7 @@ export function PlayMatch() {
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
-        <Button onClick={() => navigate('/play')}>Back</Button>
+        <Button onClick={() => navigate('/play')}>{t('common.back')}</Button>
       </Box>
     );
   }
@@ -408,10 +413,10 @@ export function PlayMatch() {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Box>
           <Typography variant="h6" component="h1" sx={{ fontWeight: 700 }}>
-            {match.mode === 'classroom' ? 'Classroom' : 'Multiplayer'}
+            {match.mode === 'classroom' ? t('play.classroom') : t('play.multiplayer')}
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            Hosted by {match.host_name}
+            {t('play.hostedBy', { name: match.host_name })}
           </Typography>
         </Box>
         <CodeBadge code={code} />
@@ -461,13 +466,14 @@ export function PlayMatch() {
 }
 
 const CodeBadge = ({ code }: { code: string }) => {
+  const t = useT();
   const [copied, setCopied] = useState(false);
   return (
     <Chip
       label={
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
           <span style={{ fontFamily: 'monospace', letterSpacing: '0.2em' }}>{code}</span>
-          <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>{copied ? 'copied' : 'copy'}</span>
+          <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>{copied ? t('play.copied') : t('play.copy')}</span>
         </Box>
       }
       onClick={() => {
@@ -495,15 +501,18 @@ function Lobby({
   isHost: boolean;
   onStart: () => void;
 }) {
+  const t = useT();
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/play/${match.code}` : '';
   return (
     <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
       <Typography variant="h6" sx={{ mb: 1 }}>
-        Lobby
+        {t('play.lobby')}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Share the code <strong>{match.code}</strong> with players, then{' '}
-        {isHost ? 'press start when everyone has joined.' : 'wait for the host to start.'}
+        {t('play.shareInstructions', {
+          code: match.code,
+          action: isHost ? t('play.actionHostStart') : t('play.actionGuestWait'),
+        })}
       </Typography>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 3 }}>
@@ -539,12 +548,12 @@ function Lobby({
             <Typography variant="body2" sx={{ fontWeight: 500, flex: 1 }}>
               {p.display_name}
             </Typography>
-            {p.auth0_sub === match.host_sub && <Chip size="small" label="Host" />}
+            {p.auth0_sub === match.host_sub && <Chip size="small" label={t('play.host')} />}
           </Box>
         ))}
         {participants.length === 0 && (
           <Typography variant="caption" color="text.secondary">
-            No players yet.
+            {t('play.noPlayers')}
           </Typography>
         )}
       </Box>
@@ -554,7 +563,7 @@ function Lobby({
           variant="outlined"
           onClick={() => navigator.clipboard.writeText(shareUrl)}
         >
-          Copy link
+          {t('play.copyLink')}
         </Button>
         {isHost && (
           <Button
@@ -563,7 +572,7 @@ function Lobby({
             disabled={participants.length < 1}
             sx={{ ml: 'auto', backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
           >
-            Start ({match.questions.length} questions)
+            {t('play.startWithCount', { count: match.questions.length })}
           </Button>
         )}
       </Box>
@@ -606,6 +615,7 @@ function RunningQuestion({
   hostSub?: string;
   code: string;
 }) {
+  const t = useT();
   const lastQuestion = questionIdx >= total - 1;
   const answeredCount = useMemo(
     () => scoreboard.filter((s) => participants.some((p) => p.auth0_sub === s.auth0_sub)).length,
@@ -635,7 +645,12 @@ function RunningQuestion({
     <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography variant="caption" color="text.secondary">
-          Question {questionIdx + 1} of {total} · {q.category} · difficulty {q.difficulty}
+          {t('play.questionMeta', {
+            idx: questionIdx + 1,
+            total,
+            category: q.category,
+            difficulty: q.difficulty,
+          })}
         </Typography>
         <Typography
           variant="caption"
@@ -703,19 +718,21 @@ function RunningQuestion({
           disabled={selected === null}
           sx={{ mt: 2, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
         >
-          Lock in answer
+          {t('play.lockIn')}
         </Button>
       )}
       {!isHost && submitted && (
         <Alert severity="success" sx={{ mt: 2 }}>
-          Answer locked. Waiting for {mode === 'classroom' ? 'the instructor' : 'the host'} to advance…
+          {t('play.answerLocked', {
+            who: mode === 'classroom' ? t('play.theInstructor') : t('play.theHost'),
+          })}
         </Alert>
       )}
 
       {isHost && (
         <Box sx={{ mt: 2 }}>
           <Typography variant="caption" color="text.secondary">
-            Live answers received: {answeredCount}/{participants.length}
+            {t('play.liveAnswers', { count: answeredCount, total: participants.length })}
           </Typography>
 
           {mode === 'classroom' && hostSub && (
@@ -724,14 +741,14 @@ function RunningQuestion({
 
           <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
             <Button variant="outlined" onClick={onFinish}>
-              End match
+              {t('play.endMatch')}
             </Button>
             <Button
               variant="contained"
               onClick={onAdvance}
               sx={{ ml: 'auto', backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
             >
-              {lastQuestion ? 'Show results' : 'Next question →'}
+              {lastQuestion ? t('play.showResults') : t('play.nextQuestion')}
             </Button>
           </Box>
         </Box>
@@ -744,11 +761,12 @@ function RunningQuestion({
 }
 
 function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
+  const t = useT();
   if (scoreboard.length === 0) return null;
   return (
     <Box>
       <Typography variant="overline" color="text.secondary" component="h3" sx={{ display: 'block', mb: 1 }}>
-        Live scoreboard
+        {t('play.liveScoreboard')}
       </Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
         {scoreboard.map((s, i) => (
@@ -795,6 +813,7 @@ function DistributionChart({
   options: string[];
   correctIndex?: number;
 }) {
+  const t = useT();
   const [buckets, setBuckets] = useState<DistributionBucket[]>([]);
 
   useEffect(() => {
@@ -821,7 +840,7 @@ function DistributionChart({
   return (
     <Box sx={{ mt: 2 }}>
       <Typography variant="overline" color="text.secondary" component="h3" sx={{ display: 'block', mb: 1 }}>
-        Class answers (live)
+        {t('play.classAnswers')}
       </Typography>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
         {options.map((opt, i) => {
@@ -893,22 +912,26 @@ function Finished({
   scoreboard: ScoreboardEntry[];
   onLeave: () => void;
 }) {
+  const t = useT();
   return (
     <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
       <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-        Match complete
+        {t('play.matchComplete')}
       </Typography>
       {scoreboard.length > 0 && (
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          🏆 Winner: <strong>{scoreboard[0].display_name}</strong> — {scoreboard[0].correct}/
-          {match.questions.length}
+          {t('play.winner', {
+            name: scoreboard[0].display_name,
+            correct: scoreboard[0].correct,
+            total: match.questions.length,
+          })}
         </Typography>
       )}
       <Box sx={{ textAlign: 'left' }}>
         <ScoreboardList scoreboard={scoreboard} />
       </Box>
       <Button onClick={onLeave} sx={{ mt: 3 }} variant="contained">
-        Back
+        {t('common.back')}
       </Button>
     </Paper>
   );

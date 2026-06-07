@@ -13,17 +13,11 @@ import {
   FormControl,
   Alert,
 } from '@mui/material';
+import { useT } from '../i18n/LanguageContext';
 
 type Reason = 'incorrect-answer' | 'unclear' | 'typo' | 'outdated' | 'duplicate' | 'other';
 
-const REASONS: { value: Reason; label: string }[] = [
-  { value: 'incorrect-answer', label: 'Wrong answer marked correct' },
-  { value: 'unclear', label: 'Question or options unclear' },
-  { value: 'typo', label: 'Typo or formatting issue' },
-  { value: 'outdated', label: 'Outdated information' },
-  { value: 'duplicate', label: 'Duplicate of another question' },
-  { value: 'other', label: 'Other' },
-];
+const REASON_VALUES: Reason[] = ['incorrect-answer', 'unclear', 'typo', 'outdated', 'duplicate', 'other'];
 
 interface Props {
   open: boolean;
@@ -32,6 +26,7 @@ interface Props {
 }
 
 export function ReportDialog({ open, onClose, onSubmit }: Props) {
+  const t = useT();
   const [reason, setReason] = useState<Reason>('incorrect-answer');
   const [detail, setDetail] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -45,7 +40,7 @@ export function ReportDialog({ open, onClose, onSubmit }: Props) {
       setDetail('');
       setReason('incorrect-answer');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not send report');
+      setError(err instanceof Error ? err.message : t('quiz.reportFailed'));
     } finally {
       setSubmitting(false);
     }
@@ -65,23 +60,23 @@ export function ReportDialog({ open, onClose, onSubmit }: Props) {
       fullWidth
       aria-labelledby="report-dialog-title"
     >
-      <DialogTitle id="report-dialog-title">Report this question</DialogTitle>
+      <DialogTitle id="report-dialog-title">{t('report.title')}</DialogTitle>
       <DialogContent>
         <FormControl component="fieldset" sx={{ width: '100%' }}>
           <FormLabel id="report-reason-label" sx={{ mb: 1, fontSize: '0.85rem' }}>
-            What's wrong with this question?
+            {t('report.reasonLabel')}
           </FormLabel>
           <RadioGroup
             aria-labelledby="report-reason-label"
             value={reason}
             onChange={(e) => setReason(e.target.value as Reason)}
           >
-            {REASONS.map((r) => (
+            {REASON_VALUES.map((value) => (
               <FormControlLabel
-                key={r.value}
-                value={r.value}
+                key={value}
+                value={value}
                 control={<Radio />}
-                label={r.label}
+                label={t(`report.reason.${value}` as const)}
                 sx={{
                   my: 0.25,
                   border: 0,
@@ -98,7 +93,7 @@ export function ReportDialog({ open, onClose, onSubmit }: Props) {
           multiline
           minRows={2}
           maxRows={5}
-          label="Additional details (optional)"
+          label={t('report.detailLabel')}
           value={detail}
           onChange={(e) => setDetail(e.target.value.slice(0, 1000))}
           sx={{ mt: 2 }}
@@ -111,10 +106,10 @@ export function ReportDialog({ open, onClose, onSubmit }: Props) {
       </DialogContent>
       <DialogActions>
         <Button onClick={handleClose} disabled={submitting}>
-          Cancel
+          {t('common.cancel')}
         </Button>
         <Button variant="contained" onClick={handleSubmit} disabled={submitting}>
-          {submitting ? 'Sending…' : 'Send report'}
+          {submitting ? t('report.sending') : t('report.send')}
         </Button>
       </DialogActions>
     </Dialog>

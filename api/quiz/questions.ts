@@ -3,6 +3,8 @@ import {
   questions,
   encodeSession,
   secureShuffle,
+  localizeQuestion,
+  normalizeLang,
   type DifficultyMode,
   type CategoryType,
 } from '../../lib/quiz-data';
@@ -18,6 +20,7 @@ const ALL_CATEGORIES: CategoryType[] = [
   'dev-world',
   'custom',
   'code-snippets',
+  'apt',
 ];
 const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
@@ -93,9 +96,14 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     selected = buckets.slice(0, count);
   }
 
+  const lang = normalizeLang(req.query.lang);
+
   const sessionData: { questionId: string; correctAnswer: number }[] = [];
-  const questionsWithShuffledOptions = selected.map((q) => {
-    const correctText = q.options[q.correctAnswer];
+  const questionsWithShuffledOptions = selected.map((base) => {
+    // Localize before shuffling: translated options are parallel to the
+    // English ones, so the correctAnswer index stays valid.
+    const q = localizeQuestion(base, lang);
+    const correctText = q.options[base.correctAnswer];
     const shuffled = secureShuffle(q.options);
     sessionData.push({ questionId: q.id, correctAnswer: shuffled.indexOf(correctText) });
     return {

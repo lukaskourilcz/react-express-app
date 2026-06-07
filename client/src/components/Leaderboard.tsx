@@ -19,6 +19,7 @@ import {
 } from '../lib/play';
 import { friendlyError } from '../lib/api';
 import { BRAND } from '../theme/MuiTheme';
+import { useT } from '../i18n/LanguageContext';
 
 type Tab = 'global' | 'daily' | 'category';
 
@@ -39,6 +40,7 @@ const CATEGORIES: { value: string; label: string; color: string }[] = [
 type Entry = LeaderboardGlobalEntry | LeaderboardDailyEntry | CategoryLeaderboardEntry;
 
 function Leaderboard() {
+  const t = useT();
   const [tab, setTab] = useState<Tab>('global');
   const [category, setCategory] = useState<string>('javascript');
   const [loading, setLoading] = useState(true);
@@ -71,7 +73,7 @@ function Leaderboard() {
   return (
     <Box sx={{ maxWidth: 600, mx: 'auto' }}>
       <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mb: 2 }}>
-        Leaderboard
+        {t('leaderboard.title')}
       </Typography>
 
       <ToggleButtonGroup
@@ -79,12 +81,12 @@ function Leaderboard() {
         exclusive
         size="small"
         onChange={(_, v) => v && setTab(v)}
-        aria-label="Leaderboard period"
+        aria-label={t('leaderboard.period')}
         sx={{ mb: 2 }}
       >
-        <ToggleButton value="global">All-time</ToggleButton>
-        <ToggleButton value="daily">Today</ToggleButton>
-        <ToggleButton value="category">By category</ToggleButton>
+        <ToggleButton value="global">{t('leaderboard.allTime')}</ToggleButton>
+        <ToggleButton value="daily">{t('leaderboard.today')}</ToggleButton>
+        <ToggleButton value="category">{t('leaderboard.byCategory')}</ToggleButton>
       </ToggleButtonGroup>
 
       {tab === 'category' && (
@@ -96,7 +98,7 @@ function Leaderboard() {
               clickable
               onClick={() => setCategory(c.value)}
               aria-pressed={category === c.value}
-              aria-label={`${c.label} leaderboard`}
+              aria-label={t('leaderboard.categoryAria', { label: c.label })}
               sx={{
                 borderLeft: `4px solid ${c.color}`,
                 fontWeight: category === c.value ? 600 : 500,
@@ -131,7 +133,7 @@ function Leaderboard() {
             sx={{ borderRadius: 0 }}
             action={
               <Button color="inherit" size="small" onClick={() => setReloadKey((k) => k + 1)}>
-                Retry
+                {t('quiz.retry')}
               </Button>
             }
           >
@@ -143,8 +145,10 @@ function Leaderboard() {
           <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
             <Typography variant="body2">
               {tab === 'category'
-                ? `No ${CATEGORIES.find((c) => c.value === category)?.label} attempts yet.`
-                : 'No entries yet — be the first.'}
+                ? t('leaderboard.noCategoryAttempts', {
+                    label: CATEGORIES.find((c) => c.value === category)?.label ?? '',
+                  })
+                : t('leaderboard.noEntries')}
             </Typography>
           </Box>
         )}
@@ -157,15 +161,14 @@ function Leaderboard() {
       </Paper>
 
       <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-        {tab === 'category'
-          ? 'Minimum 5 questions in this category to qualify. Updated every 60s.'
-          : 'Updated every 60s. Take a quiz to appear here.'}
+        {tab === 'category' ? t('leaderboard.footerCategory') : t('leaderboard.footerDefault')}
       </Typography>
     </Box>
   );
 }
 
 function Row({ rank, entry, tab }: { rank: number; entry: Entry; tab: Tab }) {
+  const t = useT();
   const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
 
   let primary = 0;
@@ -175,18 +178,18 @@ function Row({ rank, entry, tab }: { rank: number; entry: Entry; tab: Tab }) {
   if (tab === 'global') {
     const e = entry as LeaderboardGlobalEntry;
     primary = e.total_correct;
-    primaryLabel = 'correct';
-    secondary = `${e.total_quizzes} quizzes · 🔥 ${e.longest_streak}d longest`;
+    primaryLabel = t('leaderboard.correct');
+    secondary = t('leaderboard.globalSecondary', { quizzes: e.total_quizzes, streak: e.longest_streak });
   } else if (tab === 'daily') {
     const e = entry as LeaderboardDailyEntry;
     primary = e.correct;
-    primaryLabel = 'today';
+    primaryLabel = t('leaderboard.todayLabel');
     secondary = formatMs(e.duration_ms);
   } else {
     const e = entry as CategoryLeaderboardEntry;
     primary = e.total_correct;
-    primaryLabel = 'correct';
-    secondary = `${e.total_questions} attempts · ${e.accuracy_pct}% accuracy`;
+    primaryLabel = t('leaderboard.correct');
+    secondary = t('leaderboard.categorySecondary', { attempts: e.total_questions, accuracy: e.accuracy_pct });
   }
 
   return (

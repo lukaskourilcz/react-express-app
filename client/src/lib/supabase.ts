@@ -81,8 +81,8 @@ export interface DailyChallenge {
   }>;
 }
 
-export async function getDailyChallenge(): Promise<DailyChallenge> {
-  return apiFetch<DailyChallenge>('/api/quiz/daily');
+export async function getDailyChallenge(lang = 'en'): Promise<DailyChallenge> {
+  return apiFetch<DailyChallenge>(`/api/quiz/daily?lang=${encodeURIComponent(lang)}`);
 }
 
 export async function reportQuestion(input: {

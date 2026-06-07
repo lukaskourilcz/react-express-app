@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { questions, encodeSession } from '../../lib/quiz-data';
+import { questions, encodeSession, localizeQuestion, normalizeLang } from '../../lib/quiz-data';
 import { createHash } from 'node:crypto';
 
 // Daily challenge: deterministic 5-question selection per UTC date.
@@ -61,10 +61,13 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     if (selected.length >= DAILY_COUNT) break;
   }
 
+  const lang = normalizeLang(req.query.lang);
+
   // Shuffle option order per question (also deterministic).
   const sessionData: { questionId: string; correctAnswer: number }[] = [];
-  const dailyQuestions = selected.map((q, i) => {
-    const correctText = q.options[q.correctAnswer];
+  const dailyQuestions = selected.map((base, i) => {
+    const q = localizeQuestion(base, lang);
+    const correctText = q.options[base.correctAnswer];
     const optShuffled = seededShuffle(q.options, `${dateParam}::${q.id}::opts::${i}`);
     sessionData.push({ questionId: q.id, correctAnswer: optShuffled.indexOf(correctText) });
     return {

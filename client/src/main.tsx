@@ -6,6 +6,7 @@ import App from './App';
 import { ColorModeProvider } from './theme/ColorModeContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthBridge } from './lib/AuthBridge';
+import { LanguageProvider } from './i18n/LanguageContext';
 
 const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN;
 const auth0ClientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
@@ -40,9 +41,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ErrorBoundary>
       <AuthWrapper>
         <BrowserRouter>
-          <ColorModeProvider>
-            <App />
-          </ColorModeProvider>
+          <LanguageProvider>
+            <ColorModeProvider>
+              <App />
+            </ColorModeProvider>
+          </LanguageProvider>
         </BrowserRouter>
       </AuthWrapper>
     </ErrorBoundary>

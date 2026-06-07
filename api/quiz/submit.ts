@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { decodeSession, questions } from '../../lib/quiz-data';
+import { decodeSession, questions, localizeQuestion, normalizeLang } from '../../lib/quiz-data';
 
 const MAX_ANSWERS = 50;
 
@@ -23,7 +23,8 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 
-  const body = req.body as { sessionId?: unknown; answers?: unknown };
+  const body = req.body as { sessionId?: unknown; answers?: unknown; lang?: unknown };
+  const lang = normalizeLang((body as { lang?: unknown })?.lang);
   if (!body || typeof body !== 'object') {
     return jsonError(res, 400, 'bad_request', 'Body must be JSON');
   }
@@ -72,7 +73,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
       selectedIndex,
       correctAnswer: sessionQ?.correctAnswer ?? -1,
       isCorrect,
-      explanation: q?.explanation ?? '',
+      explanation: q ? localizeQuestion(q, lang).explanation : '',
     };
   });
 

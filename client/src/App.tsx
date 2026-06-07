@@ -3,7 +3,10 @@ import { Box, AppBar, Toolbar, Typography, Button, IconButton, CircularProgress,
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import AuthButton from './components/AuthButton';
+import LanguageSwitcher from './components/LanguageSwitcher';
 import { useColorMode } from './theme/ColorModeContext';
+import { useT } from './i18n/LanguageContext';
+import type { TranslationKey } from './i18n/translations';
 import { BRAND } from './theme/MuiTheme';
 
 const Quiz = lazy(() => import('./components/Quiz'));
@@ -13,12 +16,12 @@ const CodeSandbox = lazy(() => import('./components/CodeSandbox'));
 const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayLanding })));
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 
-const ROUTE_TITLES: Record<string, string> = {
-  '/': 'DevQuiz — Test your web dev skills',
-  '/profile': 'Profile · DevQuiz',
-  '/leaderboard': 'Leaderboard · DevQuiz',
-  '/sandbox': 'Code playground · DevQuiz',
-  '/play': 'Play live · DevQuiz',
+const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
+  '/': 'title.home',
+  '/profile': 'title.profile',
+  '/leaderboard': 'title.leaderboard',
+  '/sandbox': 'title.sandbox',
+  '/play': 'title.play',
 };
 
 const InstagramIcon = () => (
@@ -46,15 +49,19 @@ const MoonIcon = () => (
   </svg>
 );
 
-const RouteLoader = () => (
-  <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }} role="status" aria-live="polite">
-    <CircularProgress size={28} sx={{ color: BRAND.green }} />
-    <span style={{ position: 'absolute', left: -9999 }}>Loading…</span>
-  </Box>
-);
+const RouteLoader = () => {
+  const t = useT();
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }} role="status" aria-live="polite">
+      <CircularProgress size={28} sx={{ color: BRAND.green }} />
+      <span style={{ position: 'absolute', left: -9999 }}>{t('common.loading')}</span>
+    </Box>
+  );
+};
 
 function App() {
   const location = useLocation();
+  const t = useT();
   const [quizActive, setQuizActive] = useState(false);
   const { mode, toggle } = useColorMode();
   let isAuthenticated = false;
@@ -66,14 +73,17 @@ function App() {
   }
 
   useEffect(() => {
-    document.title =
-      ROUTE_TITLES[location.pathname] ??
-      (location.pathname.startsWith('/play/') ? 'Live match · DevQuiz' : 'DevQuiz');
+    const titleKey = ROUTE_TITLE_KEYS[location.pathname];
+    document.title = titleKey
+      ? t(titleKey)
+      : location.pathname.startsWith('/play/')
+        ? t('title.playMatch')
+        : t('title.default');
     const main = document.getElementById('main-content');
     if (main) {
       main.focus({ preventScroll: true });
     }
-  }, [location.pathname]);
+  }, [location.pathname, t]);
 
   const showChrome = !(quizActive && location.pathname === '/');
   const navLinkSx = (isActive: boolean) => ({
@@ -103,7 +113,7 @@ function App() {
           '&:focus': { left: 8 },
         }}
       >
-        Skip to content
+        {t('common.skipToContent')}
       </Box>
 
       {showChrome && (
@@ -113,7 +123,7 @@ function App() {
               variant="h6"
               component={Link}
               to="/"
-              aria-label="DevQuiz home"
+              aria-label={t('nav.home')}
               sx={{ flexGrow: 1, fontWeight: 700, color: 'text.primary', textDecoration: 'none', fontSize: '1.1rem' }}
             >
               DevQuiz
@@ -121,21 +131,21 @@ function App() {
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Button component={Link} to="/" sx={navLinkSx(location.pathname === '/')}>
-                Quiz
+                {t('nav.quiz')}
               </Button>
               <Button
                 component={Link}
                 to="/play"
                 sx={navLinkSx(location.pathname.startsWith('/play'))}
               >
-                Play
+                {t('nav.play')}
               </Button>
               <Button
                 component={Link}
                 to="/leaderboard"
                 sx={navLinkSx(location.pathname === '/leaderboard')}
               >
-                Leaderboard
+                {t('nav.leaderboard')}
               </Button>
               <Button
                 component={Link}
@@ -145,17 +155,18 @@ function App() {
                   display: { xs: 'none', sm: 'inline-flex' },
                 }}
               >
-                Sandbox
+                {t('nav.sandbox')}
               </Button>
               {isAuthenticated && (
                 <Button component={Link} to="/profile" sx={navLinkSx(location.pathname === '/profile')}>
-                  Profile
+                  {t('nav.profile')}
                 </Button>
               )}
-              <Tooltip title={mode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}>
+              <LanguageSwitcher />
+              <Tooltip title={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
                 <IconButton
                   onClick={toggle}
-                  aria-label={mode === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+                  aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
                   sx={{ color: 'text.secondary' }}
                 >
                   {mode === 'light' ? <MoonIcon /> : <SunIcon />}
