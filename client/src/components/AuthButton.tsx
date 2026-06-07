@@ -3,10 +3,12 @@ import { Avatar, ButtonBase, Box, Menu, MenuItem, Typography, Button, Skeleton }
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BRAND } from '../theme/MuiTheme';
+import { useT } from '../i18n/LanguageContext';
 
 function AuthButton() {
   const { isAuthenticated, isLoading, user, loginWithRedirect, logout } = useAuth0();
   const navigate = useNavigate();
+  const t = useT();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
 
@@ -25,7 +27,7 @@ function AuthButton() {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1 }} aria-label="Loading account">
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1 }} aria-label={t('auth.loadingAccount')}>
         <Skeleton variant="circular" width={32} height={32} />
         <Skeleton variant="text" width={56} sx={{ display: { xs: 'none', sm: 'block' } }} />
       </Box>
@@ -45,12 +47,12 @@ function AuthButton() {
           '&:hover': { borderColor: BRAND.greenHover, backgroundColor: 'rgba(45,122,45,0.06)' },
         }}
       >
-        Log in
+        {t('auth.logIn')}
       </Button>
     );
   }
 
-  const displayName = user?.name?.split(' ')[0] || user?.email?.split('@')[0] || 'Account';
+  const displayName = user?.name?.split(' ')[0] || user?.email?.split('@')[0] || t('auth.account');
 
   return (
     <>
@@ -59,7 +61,7 @@ function AuthButton() {
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={open ? 'account-menu' : undefined}
-        aria-label={`Account menu for ${displayName}`}
+        aria-label={t('auth.accountMenu', { name: displayName })}
         sx={{
           display: 'flex',
           alignItems: 'center',
@@ -88,8 +90,8 @@ function AuthButton() {
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
         slotProps={{ paper: { sx: { minWidth: 160, mt: 1 } } }}
       >
-        <MenuItem onClick={handleProfile}>Profile</MenuItem>
-        <MenuItem onClick={handleLogout}>Log out</MenuItem>
+        <MenuItem onClick={handleProfile}>{t('auth.profile')}</MenuItem>
+        <MenuItem onClick={handleLogout}>{t('auth.logOut')}</MenuItem>
       </Menu>
     </>
   );
