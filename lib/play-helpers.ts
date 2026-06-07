@@ -3,10 +3,20 @@ import { randomInt } from 'node:crypto';
 import type { VercelResponse } from '@vercel/node';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+// Prefer the service-role key so server-side match reads/writes bypass RLS.
+// Callers are verified via requireAuth() and scoped to their own id. Falls
+// back to the anon key for local dev.
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_ANON_KEY;
 
 export const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+  supabaseUrl && supabaseKey
+    ? createClient(supabaseUrl, supabaseKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+    : null;
 
 export function jsonError(res: VercelResponse, status: number, code: string, message: string) {
   return res.status(status).json({ error: { code, message } });

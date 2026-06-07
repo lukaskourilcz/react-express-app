@@ -3,9 +3,19 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { AuthError, requireAuth } from '../../lib/auth';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+// Prefer the service-role key so server-side reads/writes bypass RLS. Every
+// caller is verified via requireAuth() and scoped to their own user_id, so
+// bypassing RLS here is safe. Falls back to the anon key for local dev.
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  process.env.VITE_SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_ANON_KEY;
 const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+  supabaseUrl && supabaseKey
+    ? createClient(supabaseUrl, supabaseKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+    : null;
 
 const STATS_FIELDS =
   'id,user_id,email,name,picture,total_quizzes,total_correct,total_questions,current_streak,longest_streak,last_quiz_date,created_at,updated_at';
