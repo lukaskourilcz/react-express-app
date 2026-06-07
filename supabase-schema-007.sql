@@ -23,18 +23,15 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- 2. Revoke anon write access from RPCs ------------------------------------
--- Anonymous (anon) callers can still execute via PostgREST otherwise.
--- These mutations must only be reachable via the server-side API after JWT
--- verification — i.e. via the service-role key.
-
-REVOKE EXECUTE ON FUNCTION public.record_quiz_result(TEXT, INTEGER, INTEGER) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.record_category_stats(TEXT, JSONB) FROM anon;
-
--- Keep `authenticated` execute granted so authed clients can still call via
--- PostgREST using their Supabase access token.
-GRANT EXECUTE ON FUNCTION public.record_quiz_result(TEXT, INTEGER, INTEGER) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.record_category_stats(TEXT, JSONB) TO authenticated;
+-- 2. Lock write RPCs to the server (service-role) only --------------------
+-- These mutations take p_user_id as a parameter and run SECURITY DEFINER
+-- (bypassing RLS), so any caller could forge another user's stats. They must
+-- only be reachable via the server-side API, which uses the service-role key
+-- (the service-role bypasses these grants).
+-- NOTE: revoking FROM anon alone is ineffective — anon inherits EXECUTE from
+-- PUBLIC. Revoke from PUBLIC and authenticated too.
+REVOKE EXECUTE ON FUNCTION public.record_quiz_result(TEXT, INTEGER, INTEGER) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.record_category_stats(TEXT, JSONB) FROM PUBLIC, anon, authenticated;
 
 -- 3. Ensure match_answers idempotency key ----------------------------------
 -- The API uses upsert(..., onConflict: 'match_id,user_id,question_idx').

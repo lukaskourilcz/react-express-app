@@ -92,7 +92,7 @@ CREATE INDEX IF NOT EXISTS idx_user_stats_total_correct  ON user_stats(total_cor
 
 -- 5. updated_at auto-touch ---------------------------------------------
 CREATE OR REPLACE FUNCTION public.touch_updated_at()
-RETURNS TRIGGER LANGUAGE plpgsql AS $$
+RETURNS TRIGGER LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN NEW.updated_at = NOW(); RETURN NEW; END $$;
 
 DROP TRIGGER IF EXISTS user_stats_touch_updated_at ON user_stats;
