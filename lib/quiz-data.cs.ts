@@ -2008,4 +2008,288 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     options: ['`ax` je `number | string`; `bx` je `number`.', '`ax` je `number`; `bx` je `number | string`.', 'Jak `ax`, tak `bx` jsou `number | string`.', 'Jak `ax`, tak `bx` jsou `number`.'],
     explanation: 'Typová anotace rozšíří `a` na anotovaný typ, takže `a.x` je `number | string`. `satisfies` ověří literál proti typu, ale zachová jeho odvozený (užší) typ, takže `b.x` je literálně odvozený `number`.',
   },
+  '525': {
+    introduction: 'Typová koerce v JavaScriptu může při míchání různých typů ve výrazech dávat překvapivé výsledky.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconsole.log([] + []);\nconsole.log([] + {});\nconsole.log({} + []);\n```',
+    explanation: 'Když se pole/objekty použijí s +, převedou se na stringy. [] se stane "" a {} se stane "[object Object]". Uvnitř console.log(...) se každý výraz vyhodnocuje v kontextu výrazu, takže {} je objektový literál (ne blok). Proto [] + [] = "", [] + {} = "[object Object]" a {} + [] = "[object Object]" + "" = "[object Object]".',
+  },
+  '526': {
+    introduction: 'Closure zachytávají proměnné odkazem, ne hodnotou. To je častý zdroj chyb ve smyčkách.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nfor (var i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}\n```',
+    explanation: 'var má funkční rozsah, takže všechny tři callbacky sdílejí stejnou proměnnou i. Než se timeouty spustí, smyčka skončí a i je 3. Každý callback vypíše 3. Použití let místo var by to opravilo, protože let má blokový rozsah a vytvoří novou vazbu pro každou iteraci.',
+  },
+  '527': {
+    introduction: 'Pochopení pořadí vykonávání s Promises a microtasky vs macrotasky je zásadní pro asynchronní JavaScript.',
+    question: 'Jaké je pořadí výstupu?\n\n```javascript\nconsole.log("A");\nsetTimeout(() => console.log("B"), 0);\nPromise.resolve().then(() => console.log("C"));\nconsole.log("D");\n```',
+    explanation: 'Synchronní kód běží první: "A" pak "D". Microtasky (Promise.then) běží před macrotasky (setTimeout). Takže "C" se vypíše před "B". Výsledné pořadí: A, D, C, B.',
+  },
+  '528': {
+    introduction: 'Operátor volné rovnosti (==) provádí typovou koerci, což vede k některým neintuitivním výsledkům.',
+    question: 'Co vrátí tento kód?\n\n```javascript\nconst result = ([] == false);\nconsole.log(result);\n```',
+    explanation: 'Při == se obě strany převedou na čísla. [] se převede na 0 (přes "" → 0) a false se převede na 0. Protože 0 == 0 je true, výraz se vyhodnotí jako true. Klasický příklad, proč je === lepší než ==.',
+  },
+  '529': {
+    introduction: 'Temporal Dead Zone (TDZ) je období mezi vstupem do rozsahu a bodem, kde je proměnná let/const deklarována.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nlet x = 1;\nfunction foo() {\n  console.log(x);\n  let x = 2;\n}\nfoo();\n```',
+    explanation: 'I když je x deklarováno ve vnějším rozsahu, vnitřní let x = 2 vytvoří novou vazbu pro celý blok funkce. Přístup k x před jeho deklarací uvnitř bloku způsobí ReferenceError kvůli Temporal Dead Zone (TDZ).',
+  },
+  '530': {
+    introduction: 'Operátor typeof v JavaScriptu má známou zvláštnost, která sahá až k nejstarším verzím jazyka.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconsole.log(typeof null);\nconsole.log(typeof undefined);\nconsole.log(typeof NaN);\n```',
+    explanation: 'typeof null vrací "object" — historická chyba v JavaScriptu, která se kvůli zpětné kompatibilitě nikdy neopravila. typeof undefined vrací podle očekávání "undefined". typeof NaN vrací "number", protože NaN je technicky číselná hodnota (IEEE 754 Not-a-Number).',
+  },
+  '531': {
+    introduction: 'Výchozí hodnoty v destrukturalizaci reagují na undefined a null různě.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconst { a = 10, b = 20, c = 30 } = { a: undefined, b: null, c: 0 };\nconsole.log(a, b, c);\n```',
+    explanation: 'Výchozí hodnoty se uplatní jen když je hodnota undefined, ne null nebo jiné falsy hodnoty. a je undefined, takže se použije default 10. b je null (ne undefined), takže zůstane null. c je 0 (ne undefined), takže zůstane 0.',
+  },
+  '532': {
+    introduction: 'Metody polí jako map, filter a reduce se běžně řetězí. Pochopení jejich návratových hodnot je klíčové.',
+    question: 'Co vrátí tento kód?\n\n```javascript\nconst result = [1, 2, 3, 4, 5]\n  .filter(n => n % 2 !== 0)\n  .map(n => n * n)\n  .reduce((sum, n) => sum + n, 0);\nconsole.log(result);\n```',
+    explanation: 'Krok za krokem: filter ponechá lichá čísla → [1, 3, 5]. map je umocní → [1, 9, 25]. reduce je sečte → 1 + 9 + 25 = 35.',
+  },
+  '533': {
+    introduction: 'Spread operátor vytváří mělké kopie. Pochopení, co znamená „mělká“, je u zanořených struktur důležité.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconst original = { a: 1, b: { c: 2 } };\nconst copy = { ...original };\ncopy.a = 99;\ncopy.b.c = 99;\nconsole.log(original.a, original.b.c);\n```',
+    explanation: 'Spread operátor vytvoří mělkou kopii. Změna copy.a neovlivní original.a, protože a je primitiv (kopírováno hodnotou). Ale copy.b a original.b odkazují na stejný zanořený objekt, takže změna copy.b.c změní i original.b.c. Výstup: 1, 99.',
+  },
+  '534': {
+    introduction: 'Hodnota „this“ v JavaScriptu závisí na tom, jak je funkce volána, ne kde je definována.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconst obj = {\n  name: "Alice",\n  greet: function() {\n    return () => console.log(this.name);\n  },\n  farewell: () => {\n    console.log(this.name);\n  }\n};\nobj.greet()();\nobj.farewell();\n```',
+    explanation: 'obj.greet() je běžná funkce volaná na obj, takže this je obj. Vrácená arrow funkce dědí this z greet, takže vypíše "Alice". obj.farewell je arrow funkce definovaná při vytvoření objektu, takže this odkazuje na obklopující rozsah (modul/global), ne na obj. this.name je undefined.',
+  },
+  '535': {
+    introduction: 'Logické operátory v JavaScriptu používají zkrácené vyhodnocení a vracejí jednu z hodnot operandů, ne nutně boolean.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconsole.log(0 || "hello");\nconsole.log("" || 0 || null || "world");\nconsole.log(1 && 2 && 3);\nconsole.log(0 && 2 && 3);\n```',
+    explanation: '|| vrátí první truthy hodnotu (nebo poslední hodnotu). 0 je falsy, takže se vrátí "hello". "", 0, null jsou všechny falsy, takže se vrátí "world". && vrátí první falsy hodnotu (nebo poslední). 1, 2 jsou truthy, takže se vrátí 3 (poslední). 0 je falsy, takže se okamžitě vrátí 0.',
+  },
+  '536': {
+    introduction: 'Pochopení, jak async funkce interagují s běžným synchronním kódem, je klíč ke zvládnutí asynchronie v JavaScriptu.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nasync function foo() {\n  console.log("1");\n  const result = await Promise.resolve("2");\n  console.log(result);\n  console.log("3");\n}\nconsole.log("4");\nfoo();\nconsole.log("5");\n```',
+    explanation: '"4" se vypíše první (synchronně). Zavolá se foo(): "1" se vypíše (synchronní část async funkce). await pozastaví foo a vrátí řízení. Vypíše se "5". Pak se awaitnutá promise vyřeší: "2" pak "3". Výsledné pořadí: 4, 1, 5, 2, 3.',
+  },
+  '537': {
+    introduction: 'Porovnávací operátory v JavaScriptu se chovají různě podle typů operandů.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconsole.log(null == undefined);\nconsole.log(null === undefined);\nconsole.log(null == 0);\nconsole.log(null > 0);\nconsole.log(null >= 0);\n```',
+    explanation: 'null == undefined je podle specifikace true (jsou si volně rovny navzájem a ničemu jinému). null === undefined je false (různé typy). null == 0 je false (null se s == rovná jen undefined). null > 0 je false (null se převede na 0, 0 > 0 je false). null >= 0 je true (null se převede na 0, 0 >= 0 je true). Nesoulad mezi == a >= je známá zvláštnost JavaScriptu.',
+  },
+  '538': {
+    introduction: 'Stringové metody v JavaScriptu vždy vracejí nové stringy — stringy jsou neměnné primitivy.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconst str = "Hello, World!";\nconsole.log(str.slice(-6));\nconsole.log(str.indexOf("o"));\nconsole.log(str.split(", ").length);\n```',
+    explanation: 'str.slice(-6) začíná 6 znaků od konce "Hello, World!" (délka 13), což je index 7: "World!". str.indexOf("o") najde první "o" na indexu 4. str.split(", ") rozdělí na ["Hello", "World!"], takže délka je 2.',
+  },
+  '539': {
+    introduction: 'Object.keys(), Object.values() a Object.entries() jsou v moderním JavaScriptu zásadní pro práci s objekty.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconst obj = { x: 1, y: 2, z: 3 };\nconst result = Object.entries(obj)\n  .filter(([key, val]) => val > 1)\n  .map(([key, val]) => key);\nconsole.log(result);\n```',
+    explanation: 'Object.entries(obj) vrátí [["x", 1], ["y", 2], ["z", 3]]. filter ponechá záznamy, kde val > 1: [["y", 2], ["z", 3]]. map vytáhne jen klíče: ["y", "z"].',
+  },
+  '540': {
+    introduction: 'JavaScript hoistuje deklarace funkcí a var deklarace, ale během hoistingu se chovají různě.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconsole.log(foo());\nconsole.log(bar);\n\nfunction foo() {\n  return "hello";\n}\nvar bar = "world";\n```',
+    explanation: 'Deklarace funkcí se plně hoistují — foo() lze zavolat před deklarací a vrátí "hello". var deklarace se hoistují, ale ne jejich přiřazení — bar existuje, ale v okamžiku console.log je undefined. Přiřazení bar = "world" proběhne později za běhu.',
+  },
+  '541': {
+    introduction: 'Generátorové funkce mohou pozastavit a obnovit běh a postupně vydávat (yield) více hodnot.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nfunction* gen() {\n  yield 1;\n  yield 2;\n  return 3;\n}\nconst it = gen();\nconsole.log(it.next());\nconsole.log(it.next());\nconsole.log(it.next());\nconsole.log(it.next());\n```',
+    explanation: 'yield 1 a yield 2 vrátí {value, done: false}. return 3 vrátí {value: 3, done: true} — generátor je nyní hotový. Jakékoli další volání next() vrací {value: undefined, done: true}.',
+  },
+  '542': {
+    introduction: 'JavaScript používá prototypovou dědičnost. Pochopení prototypového řetězce je klíč k pochopení, jak objekty fungují.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nfunction Dog(name) {\n  this.name = name;\n}\nDog.prototype.speak = function() {\n  return this.name + " says woof";\n};\nconst d = new Dog("Rex");\nconsole.log(d.speak());\nconsole.log(d.hasOwnProperty("name"));\nconsole.log(d.hasOwnProperty("speak"));\n```',
+    explanation: 'd.speak() projde prototypový řetězec a najde speak na Dog.prototype, použije d jako this a vrátí "Rex says woof". name se v konstruktoru nastaví přímo na d, takže hasOwnProperty("name") je true. speak je na prototypu, ne na d samotném, takže hasOwnProperty("speak") je false.',
+  },
+  '543': {
+    introduction: 'Set je vestavěný objekt, který ukládá unikátní hodnoty. Často se používá pro odstranění duplicit.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconst arr = [1, 2, 2, 3, 3, 3, 4];\nconst unique = [...new Set(arr)];\nconsole.log(unique);\nconsole.log(new Set([1, "1", true]).size);\n```',
+    explanation: 'Set odstraní duplicity, takže [...new Set([1,2,2,3,3,3,4])] dá [1, 2, 3, 4]. Set používá pro porovnání striktní rovnost (===): 1 (number), "1" (string) a true (boolean) jsou všechny různé typy, takže velikost je 3.',
+  },
+  '544': {
+    introduction: 'Optional chaining (?.) a nullish coalescing (??) jsou moderní funkce JavaScriptu, které zjednodušují práci s potenciálně null/undefined hodnotami.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconst user = { profile: { name: "Alice" } };\nconsole.log(user.profile?.name);\nconsole.log(user.address?.street);\nconsole.log(user.address?.street ?? "N/A");\nconsole.log(null ?? "default");\nconsole.log(0 ?? "default");\nconsole.log("" ?? "default");\n```',
+    explanation: 'Optional chaining vrátí undefined, když se řetězec přeruší (user.address je undefined). ?? použije fallback jen pro null/undefined, ne pro jiné falsy hodnoty. Takže 0 ?? "default" vrátí 0 (0 není null/undefined) a "" ?? "default" vrátí "" (prázdný string není null/undefined). To se liší od ||, které bere všechny falsy hodnoty jako spouštěč fallbacku.',
+  },
+  '545': {
+    introduction: 'Utility typy TypeScriptu transformují existující typy. Pochopení toho, co produkují, je u pokročilého TypeScriptu zásadní.',
+    question: 'V tomto TypeScript kódu — které přiřazení by způsobilo typovou chybu?\n\n```typescript\ninterface User {\n  id: number;\n  name: string;\n  email: string;\n}\ntype PartialUser = Partial<User>;\ntype PickedUser = Pick<User, "id" | "name">;\n\nconst a: PartialUser = {};\nconst b: PartialUser = { id: 1 };\nconst c: PickedUser = { id: 1 };\nconst d: PickedUser = { id: 1, name: "Alice" };\n```',
+    options: ['const a (prázdný objekt)', 'const b (chybějící pole)', 'const c (chybí name)', 'const d (vše přítomno)'],
+    explanation: 'Partial<User> udělá všechny vlastnosti nepovinnými, takže a = {} i b = { id: 1 } jsou platné. Pick<User, "id" | "name"> vytvoří typ vyžadující jak id, tak name. const c = { id: 1 } postrádá name, což způsobí typovou chybu. const d má obě povinné vlastnosti.',
+  },
+  '546': {
+    introduction: 'Promise.all a Promise.allSettled se chovají velmi odlišně, když jedna z promisů selže (reject).',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconst p1 = Promise.resolve(1);\nconst p2 = Promise.reject("error");\nconst p3 = Promise.resolve(3);\n\nPromise.allSettled([p1, p2, p3]).then(results => {\n  console.log(results.map(r => r.status));\n});\n```',
+    explanation: 'Promise.allSettled počká na dokončení všech promisů bez ohledu na to, zda se vyřeší nebo selžou. Každý výsledek má vlastnost status: "fulfilled" pro vyřešené a "rejected" pro odmítnuté. Na rozdíl od Promise.all nikdy nezkratuje při rejectu.',
+  },
+  '547': {
+    introduction: 'Metody polí jako flat, flatMap a at jsou novější přírůstky do JavaScriptu, které zjednodušují běžné operace.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconst nested = [1, [2, 3], [4, [5, 6]]];\nconsole.log(nested.flat());\nconsole.log(nested.flat(Infinity));\nconsole.log([1, 2, 3].at(-1));\n```',
+    explanation: 'flat() bez argumentu má výchozí hloubku 1 a zploští jednu úroveň: [1, 2, 3, 4, [5, 6]]. flat(Infinity) zploští všechny úrovně: [1, 2, 3, 4, 5, 6]. at(-1) vrátí poslední prvek: 3.',
+  },
+  '548': {
+    introduction: 'Map je kolekce klíč–hodnota, která na rozdíl od běžných objektů zachovává pořadí vkládání a umožní jako klíče libovolný typ.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconst map = new Map();\nconst objKey = {};\nmap.set(objKey, "value1");\nmap.set({}, "value2");\nconsole.log(map.get(objKey));\nconsole.log(map.get({}));\nconsole.log(map.size);\n```',
+    explanation: 'Map používá pro objektové klíče rovnost odkazů. objKey je stejný odkaz použitý v set i get, takže map.get(objKey) vrátí "value1". {} v map.get({}) vytvoří nový objekt (jiný odkaz než ten v set), takže vrátí undefined. Map má 2 záznamy, protože ta dvě {} jsou různé objekty.',
+  },
+  '549': {
+    introduction: 'Operátor delete odebírá vlastnosti z objektů, ale má omezení a okrajové případy.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconst arr = [1, 2, 3, 4, 5];\ndelete arr[2];\nconsole.log(arr.length);\nconsole.log(arr[2]);\nconsole.log(arr);\n```',
+    explanation: 'delete odebere vlastnost, ale nezmění délku pole. Po delete arr[2] má pole stále délku 5, ale index 2 je nyní prázdný slot (undefined při čtení). Pole se stane [1, 2, <empty>, 4, 5]. Pro skutečné odebrání prvků a zkrácení pole použij splice().',
+  },
+  '550': {
+    introduction: 'Rest parametry sesbírají zbývající argumenty do pole. V kombinaci s destrukturalizací umožní flexibilní signatury funkcí.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nfunction sum(first, second, ...rest) {\n  console.log(first);\n  console.log(second);\n  console.log(rest);\n  console.log(arguments.length);\n}\nsum(1, 2, 3, 4, 5);\n```',
+    explanation: 'first dostane 1, second dostane 2 a ...rest sesbírá zbývající argumenty do [3, 4, 5]. arguments.length počítá všechny předané argumenty (5) bez ohledu na počet definovaných parametrů. Pozor: rest je skutečné pole, zatímco arguments je array-like objekt.',
+  },
+  '551': {
+    introduction: 'Pochopení rozsahu proměnných v kombinaci s okamžitě volanými výrazy odhalí, jak JavaScript řeší názvy.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nvar a = 1;\nfunction outer() {\n  var a = 2;\n  function inner() {\n    a++;\n    var a = 3;\n    console.log(a);\n  }\n  inner();\n  console.log(a);\n}\nouter();\nconsole.log(a);\n```',
+    explanation: 'inner() má vlastní var a (hoistnuté na začátek funkce). a++ inkrementuje hoistnuté-ale-undefined lokální a, čímž vznikne NaN, pak a = 3 ho přiřadí. console.log(a) uvnitř inner vypíše 3. Vnější a (2) je nedotčené, takže console.log v outer vypíše 2. Globální a (1) je nedotčené, takže poslední console.log vypíše 1.',
+  },
+  '552': {
+    introduction: 'Symboly jsou unikátní, neměnné identifikátory. Často se používají jako klíče vlastností objektů, aby se předešlo kolizím názvů.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconst s1 = Symbol("id");\nconst s2 = Symbol("id");\nconsole.log(s1 === s2);\nconsole.log(s1.toString());\nconsole.log(typeof s1);\n```',
+    explanation: 'Každé volání Symbol() vytvoří unikátní symbol, i se stejným popisem. s1 === s2 je false. toString() vrátí popis zabalený jako "Symbol(id)". typeof vrátí "symbol", což je vlastní primitivní typ.',
+  },
+  '553': {
+    introduction: 'Proxy objekty umožní zachytit a přizpůsobit základní operace nad objekty, jako přístup k vlastnostem a přiřazení.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nconst handler = {\n  get(target, prop) {\n    return prop in target ? target[prop] : 42;\n  }\n};\nconst obj = new Proxy({ a: 1, b: 2 }, handler);\nconsole.log(obj.a);\nconsole.log(obj.b);\nconsole.log(obj.c);\n```',
+    explanation: 'Proxy zachytí veškerý přístup k vlastnostem přes get trap. U existujících vlastností (a, b) vrátí skutečnou hodnotu. U jakékoli neexistující vlastnosti (c) vrátí výchozí hodnotu 42 místo undefined.',
+  },
+  '554': {
+    introduction: 'Návěští (labels) v JavaScriptu lze použít s break a continue pro řízení toku ve vnořených smyčkách, i když se v praxi používají zřídka.',
+    question: 'Co vypíše tento kód?\n\n```javascript\nlet count = 0;\nouter: for (let i = 0; i < 3; i++) {\n  for (let j = 0; j < 3; j++) {\n    if (j === 1) continue outer;\n    count++;\n  }\n}\nconsole.log(count);\n```',
+    explanation: 'Když j === 1, continue outer přeskočí zbytek vnitřní smyčky a přejde na další iteraci vnější smyčky. Takže pro každé i (0, 1, 2) inkrementuje count jen j = 0, než j = 1 spustí continue. count se inkrementuje 3×.',
+  },
+  '555': {
+    introduction: 'Řízení toku try-catch-finally má překvapivé chování, zvlášť když jsou ve hře příkazy return.',
+    question: 'Co vrátí tato funkce?\n\n```javascript\nfunction test() {\n  try {\n    return "try";\n  } catch (e) {\n    return "catch";\n  } finally {\n    return "finally";\n  }\n}\nconsole.log(test());\n```',
+    explanation: 'Blok finally se vykoná vždy, a pokud obsahuje return, přepíše jakýkoli předchozí return z try nebo catch. Funkce vrátí "finally". To se obecně považuje za špatnou praxi — vyhýbej se return v blocích finally.',
+  },
+  '756': {
+    introduction: 'Klasický chyták s closure ve smyčce a var.',
+    question: 'Co tohle vypíše?\n\n```js\nfor (var i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}\n```',
+    explanation: 'var má funkční rozsah, takže všechny tři callbacky sdílejí stejné i. Smyčka skončí (i se stane 3) dřív, než se spustí jakýkoli setTimeout callback, takže každý vypíše 3.',
+  },
+  '757': {
+    introduction: 'Stejná smyčka, ale let vytvoří novou vazbu pro každou iteraci.',
+    question: 'Co tohle vypíše?\n\n```js\nfor (let i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}\n```',
+    explanation: 'let má blokový rozsah, takže každá iterace dostane vlastní i. Každý closure zachytí odlišnou vazbu, takže callbacky vypíšou 0, 1, 2.',
+  },
+  '758': {
+    introduction: 'var deklarace se hoistují, ale jejich přiřazení ne.',
+    question: 'Co tohle vypíše?\n\n```js\nconsole.log(x);\nvar x = 5;\n```',
+    explanation: 'Deklarace var x se hoistne na začátek rozsahu a inicializuje na undefined. Přiřazení x = 5 proběhne na původním řádku, až po logu.',
+  },
+  '759': {
+    introduction: 'let se hoistuje, ale zůstává v Temporal Dead Zone.',
+    question: 'Co tohle vypíše?\n\n```js\nconsole.log(y);\nlet y = 5;\n```',
+    explanation: 'Na rozdíl od var jsou vazby let v Temporal Dead Zone, dokud se nevyhodnotí jejich deklarace. Přístup k y před deklarací vyhodí ReferenceError.',
+  },
+  '760': {
+    introduction: 'Microtasky (Promise.then) běží před macrotasky (setTimeout).',
+    question: 'Co tohle vypíše?\n\n```js\nconsole.log(\'A\');\nsetTimeout(() => console.log(\'B\'), 0);\nPromise.resolve().then(() => console.log(\'C\'));\nconsole.log(\'D\');\n```',
+    explanation: 'Synchronní kód první: A, D. Pak se vyprázdní fronta microtasků (Promise.then): C. Pak fronta macrotasků: B. Pořadí: A, D, C, B.',
+  },
+  '761': {
+    introduction: 'Všechny microtasky se vyprázdní před dalším macrotaskem.',
+    question: 'Co tohle vypíše?\n\n```js\nsetTimeout(() => console.log(1), 0);\nPromise.resolve()\n  .then(() => console.log(2))\n  .then(() => console.log(3));\nconsole.log(4);\n```',
+    explanation: 'Sync první: 4. Fronta microtasků běží: 2, což naplánuje další microtask 3, který také proběhne před jakýmkoli macrotaskem. Nakonec macrotask setTimeout: 1.',
+  },
+  '762': {
+    introduction: 'Slavný chyták abstraktní rovnosti.',
+    question: 'Co tohle vypíše?\n\n```js\nconsole.log([] == ![]);\n```',
+    explanation: '![] je false. Pak [] == false převede obě strany na čísla: [] se stane "" pak 0; false se stane 0. 0 == 0 je true.',
+  },
+  '763': {
+    introduction: 'map předává svému callbacku (value, index).',
+    question: 'Co tohle vypíše?\n\n```js\nconsole.log([1, 2, 3].map(parseInt));\n```',
+    options: ['[1, 2, 3]', '[1, NaN, NaN]', '[NaN, NaN, NaN]', '[1, 2, 3] jako stringy'],
+    explanation: 'parseInt dostane (value, index). parseInt("1", 0) bere radix 0 jako 10 → 1. parseInt("2", 1) je NaN (neplatný radix). parseInt("3", 2) je NaN ("3" nemá v základu 2 platnou číslici).',
+  },
+  '764': {
+    introduction: 'await pozastaví a nechá synchronní kód doběhnout první.',
+    question: 'Co tohle vypíše?\n\n```js\nasync function f() {\n  console.log(\'A\');\n  await Promise.resolve();\n  console.log(\'B\');\n}\nf();\nconsole.log(\'C\');\n```',
+    explanation: 'f() běží synchronně až k await a vypíše A. await funkci pozastaví (pokračování zařadí jako microtask). Pak se vypíše C. Nakonec se microtask obnoví a vypíše B.',
+  },
+  '765': {
+    introduction: 'Arrow funkce dědí this z obklopujícího lexikálního rozsahu.',
+    question: 'Co tohle vypíše?\n\n```js\nconst obj = {\n  name: \'X\',\n  greet: function() {\n    const inner = () => console.log(this.name);\n    inner();\n  }\n};\nobj.greet();\n```',
+    options: ['undefined', 'X', 'prázdný řetězec', 'TypeError'],
+    explanation: 'greet je volaná jako obj.greet(), takže this je obj. Arrow funkce inner dědí this z greet, takže this.name je obj.name → "X".',
+  },
+  '766': {
+    introduction: 'Odpojené volání metody ztratí své this.',
+    question: 'Co tohle vypíše (ve strict mode)?\n\n```js\n\'use strict\';\nconst obj = {\n  name: \'X\',\n  greet() { return this.name; }\n};\nconst g = obj.greet;\nconsole.log(g());\n```',
+    options: ['X', 'undefined', 'TypeError', 'prázdný řetězec'],
+    explanation: 'g() je prosté volání funkce. Ve strict mode je this undefined, takže undefined.name vyhodí TypeError.',
+  },
+  '767': {
+    introduction: 'Vlastní vlastnosti zastíní zděděné.',
+    question: 'Co tohle vypíše?\n\n```js\nfunction A() {}\nA.prototype.x = 1;\nconst a = new A();\na.x = 2;\ndelete a.x;\nconsole.log(a.x);\n```',
+    explanation: 'a.x = 2 nastaví vlastní vlastnost. delete a.x odebere jen vlastní vlastnost. Čtení a.x nyní projde prototypový řetězec a najde A.prototype.x = 1.',
+  },
+  '768': {
+    introduction: 'Výchozí hodnoty se spustí jen když je hodnota striktně undefined.',
+    question: 'Co tohle vypíše?\n\n```js\nconst { a = 10 } = { a: undefined };\nconst { b = 10 } = { b: null };\nconsole.log(a, b);\n```',
+    explanation: 'Výchozí hodnoty při destrukturalizaci se uplatní jen když je vlastnost striktně undefined. Takže a dostane default 10, ale b je null (ne undefined), takže b zůstane null.',
+  },
+  '769': {
+    introduction: 'Spread do objektu zkopíruje vlastní enumerable vlastnosti; pozdější klíče vyhrávají.',
+    question: 'Co tohle vypíše?\n\n```js\nconst a = { x: 1, y: 2 };\nconst b = { y: 3, z: 4 };\nconsole.log({ ...a, ...b });\n```',
+    explanation: 'Spread a pak b: x=1 z a, y=2 z a je přepsáno y=3 z b, z=4 z b. Výsledek: { x: 1, y: 3, z: 4 }.',
+  },
+  '770': {
+    introduction: 'Optional chaining zkratuje celý řetězec, když je levá strana nullish.',
+    question: 'Co tohle vypíše?\n\n```js\nconst obj = null;\nconsole.log(obj?.a.b.c);\n```',
+    explanation: 'Protože obj je null, obj?. zkratuje celý výraz a vrátí undefined, aniž by vyhodnotil .a.b.c.',
+  },
+  '771': {
+    introduction: 'Generátory yieldují líně; .next() vrací { value, done }.',
+    question: 'Co tohle vypíše?\n\n```js\nfunction* g() {\n  yield 1;\n  yield 2;\n  return 3;\n}\nconst it = g();\nconsole.log(it.next().value, it.next().value, it.next().value);\n```',
+    explanation: 'První next() yieldne 1; druhý yieldne 2; třetí dosáhne return a vyrobí { value: 3, done: true }. Takže .value těch tří volání je 1, 2, 3.',
+  },
+  '772': {
+    introduction: 'typeof má pár legendárních překvapení.',
+    question: 'Co tohle vypíše?\n\n```js\nconsole.log(typeof null, typeof NaN, typeof []);\n```',
+    explanation: 'typeof null je historická chyba "object". NaN je číselná hodnota, takže typeof NaN je "number". Pole jsou objekty, takže typeof [] je "object".',
+  },
+  '773': {
+    introduction: 'Každé await pozastaví a zařadí microtask; synchronní kód doběhne do konce první.',
+    question: 'Co tohle vypíše?\n\n```js\nasync function a() {\n  console.log(1);\n  await b();\n  console.log(2);\n}\nasync function b() {\n  console.log(3);\n}\na();\nconsole.log(4);\n```',
+    explanation: 'a() vypíše 1, pak zavolá b(), které synchronně vypíše 3 a vrátí vyřešenou promise. await pozastaví a. Sync pokračuje: 4. Microtask obnoví a: 2.',
+  },
+  '774': {
+    introduction: 'Metody polí často přeskakují prázdné (řídké) sloty.',
+    question: 'Co tohle vypíše?\n\n```js\nconst arr = [1, , 3];\nconsole.log(arr.length, arr.map(x => x * 2));\n```',
+    explanation: 'Řídké pole má délku 3. map prázdné sloty zcela přeskočí (callback pro ně nevolá), takže prázdný slot zůstane jako díra ve výsledku.',
+  },
+  '775': {
+    introduction: 'Klíče objektů se vždy převedou na stringy (nebo symboly).',
+    question: 'Co tohle vypíše?\n\n```js\nconst o = {};\no[1] = \'a\';\no[\'1\'] = \'b\';\nconsole.log(Object.keys(o).length, o[1]);\n```',
+    explanation: 'Číselné klíče na běžných objektech se převedou na stringy. o[1] a o["1"] zapisují do stejného klíče, takže druhé přiřazení přepíše první. Je tu 1 klíč a o[1] je "b".',
+  },
+  '776': {
+    introduction: 'Operátor + se smíšenými typy preferuje konkatenaci stringů, když je některá strana string.',
+    question: 'Co tohle vypíše?\n\n```js\nconsole.log(1 + \'2\' + 3);\nconsole.log(1 + 2 + \'3\');\n```',
+    explanation: 'Zleva doprava: 1 + "2" → "12", pak "12" + 3 → "123". Druhý: 1 + 2 → 3 (obě čísla), pak 3 + "3" → "33".',
+  },
+  '777': {
+    introduction: 'IIFE zachytí aktuální hodnotu proměnné smyčky.',
+    question: 'Co tohle vypíše?\n\n```js\nfor (var i = 0; i < 3; i++) {\n  (function(j) {\n    setTimeout(() => console.log(j), 0);\n  })(i);\n}\n```',
+    explanation: 'IIFE vytvoří nový rozsah pro každou iteraci a zachytí i hodnotou do parametru j. Každý setTimeout uzavírá své vlastní j, takže vypíšou 0, 1, 2.',
+  },
+  '778': {
+    introduction: 'Zúžení přes typeof v TS nemění chování za běhu.',
+    question: 'Co tohle vypíše za běhu?\n\n```ts\nfunction f(x: string | number) {\n  if (typeof x === \'string\') return x.length;\n  return x + 1;\n}\nconsole.log(f(\'hello\'), f(4));\n```',
+    explanation: 'TypeScript zúží x na string ve větvi if, takže "hello".length je 5. Ve větvi else je x number, takže 4 + 1 je 5. Výstup: 5 5.',
+  },
+  '779': {
+    introduction: 'queueMicrotask plánuje do fronty microtasků, jako Promise.then.',
+    question: 'Co tohle vypíše?\n\n```js\nconsole.log(1);\nsetTimeout(() => console.log(2), 0);\nqueueMicrotask(() => console.log(3));\nPromise.resolve().then(() => console.log(4));\nconsole.log(5);\n```',
+    explanation: 'Sync první: 1, 5. Microtasky v pořadí FIFO: queueMicrotask byl zařazen před Promise.then, takže 3 pak 4. Macrotask poslední: 2.',
+  },
+  '780': {
+    introduction: 'JSON.stringify zahodí z objektů funkce a hodnoty undefined.',
+    question: 'Co tohle vypíše?\n\n```js\nconst o = { a: 1, b: undefined, c: () => 1, d: \'x\' };\nconsole.log(JSON.stringify(o));\n```',
+    explanation: 'V objektech JSON.stringify vynechá vlastnosti, jejichž hodnoty jsou undefined, funkce nebo symboly. Takže b a c se zahodí a zůstane {"a":1,"d":"x"}.',
+  },
 };
