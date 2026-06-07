@@ -31,6 +31,7 @@ import { recordCategoryStats } from '../lib/play';
 import { apiFetch, friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
+import { addFlashcard, removeFlashcard } from '../lib/flashcards';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useSettings, playCorrect, playComplete } from '../lib/settings';
@@ -366,7 +367,20 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       correctIndex,
       explanation,
     });
-    setSnack(added ? 'Bookmarked' : 'Removed bookmark');
+    setSnack(added ? t('card.added') : t('card.removed'));
+    // Sync to the user's account so it appears in the Cards (flashcards) section.
+    if (isAuthenticated) {
+      const op = added
+        ? addFlashcard({
+            question_id: q.id,
+            question: q.question,
+            category: q.category,
+            correct_answer: q.options[correctIndex],
+            explanation,
+          })
+        : removeFlashcard(q.id);
+      op.catch(() => setSnack(t('card.syncFailed')));
+    }
   };
 
   const handleShare = async () => {

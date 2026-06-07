@@ -9,11 +9,13 @@ export const en = {
   'nav.quiz': 'Quiz',
   'nav.play': 'Play',
   'nav.leaderboard': 'Leaderboard',
+  'nav.cards': 'Cards',
   'nav.profile': 'Profile',
   'nav.home': 'DevQuiz home',
   'title.home': 'DevQuiz — Test your web dev skills',
   'title.profile': 'Profile · DevQuiz',
   'title.leaderboard': 'Leaderboard · DevQuiz',
+  'title.cards': 'Cards · DevQuiz',
   'title.play': 'Play live · DevQuiz',
   'title.playMatch': 'Live match · DevQuiz',
   'title.default': 'DevQuiz',
@@ -249,6 +251,26 @@ export const en = {
   // Generic errors
   'error.generic': 'Something went wrong. Please try again.',
   'error.network': 'Network error. Check your connection and try again.',
+
+  // Flashcards (Cards)
+  'card.heading': 'Cards',
+  'card.subtitle': 'Flashcards from questions you bookmarked. Reveal the answer when ready.',
+  'card.signInTitle': 'Sign in to use Cards',
+  'card.signInBody': 'Your flashcards are saved to your account so you can review them on any device.',
+  'card.emptyTitle': 'No cards yet',
+  'card.emptyHint': 'Bookmark a question (the bookmark icon) and it shows up here as a flashcard.',
+  'card.goToQuiz': 'Go to the quiz',
+  'card.loading': 'Loading your cards…',
+  'card.counter': '{current} / {total}',
+  'card.reveal': 'Reveal answer',
+  'card.answerLabel': 'Correct answer',
+  'card.prev': 'Previous',
+  'card.next': 'Next',
+  'card.remove': 'Remove card',
+  'card.removeFailed': 'Could not remove the card. Please try again.',
+  'card.added': 'Saved to Cards',
+  'card.removed': 'Removed from Cards',
+  'card.syncFailed': 'Saved on this device, but syncing to your Cards failed.',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -258,11 +280,13 @@ export const cs: Record<TranslationKey, string> = {
   'nav.quiz': 'Kvíz',
   'nav.play': 'Hrát',
   'nav.leaderboard': 'Žebříček',
+  'nav.cards': 'Kartičky',
   'nav.profile': 'Profil',
   'nav.home': 'Domů DevQuiz',
   'title.home': 'DevQuiz — Otestuj své znalosti webového vývoje',
   'title.profile': 'Profil · DevQuiz',
   'title.leaderboard': 'Žebříček · DevQuiz',
+  'title.cards': 'Kartičky · DevQuiz',
   'title.play': 'Hrát naživo · DevQuiz',
   'title.playMatch': 'Živá hra · DevQuiz',
   'title.default': 'DevQuiz',
@@ -498,6 +522,26 @@ export const cs: Record<TranslationKey, string> = {
   // Generic errors
   'error.generic': 'Něco se pokazilo. Zkus to prosím znovu.',
   'error.network': 'Chyba sítě. Zkontroluj připojení a zkus to znovu.',
+
+  // Flashcards (Cards)
+  'card.heading': 'Kartičky',
+  'card.subtitle': 'Kartičky z otázek, které sis uložil(a). Až budeš chtít, odhal odpověď.',
+  'card.signInTitle': 'Pro Kartičky se přihlas',
+  'card.signInBody': 'Tvoje kartičky se ukládají k účtu, takže je můžeš procházet na jakémkoliv zařízení.',
+  'card.emptyTitle': 'Zatím žádné kartičky',
+  'card.emptyHint': 'Ulož otázku (ikona záložky) a objeví se tu jako kartička.',
+  'card.goToQuiz': 'Přejít na kvíz',
+  'card.loading': 'Načítání kartiček…',
+  'card.counter': '{current} / {total}',
+  'card.reveal': 'Odhalit odpověď',
+  'card.answerLabel': 'Správná odpověď',
+  'card.prev': 'Předchozí',
+  'card.next': 'Další',
+  'card.remove': 'Odebrat kartičku',
+  'card.removeFailed': 'Kartičku se nepodařilo odebrat. Zkus to znovu.',
+  'card.added': 'Uloženo do Kartiček',
+  'card.removed': 'Odebráno z Kartiček',
+  'card.syncFailed': 'Uloženo na tomto zařízení, ale synchronizace do Kartiček selhala.',
 };
 
 export const dictionaries = { en, cs } as const;
