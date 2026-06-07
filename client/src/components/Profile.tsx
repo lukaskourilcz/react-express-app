@@ -17,10 +17,13 @@ import { BRAND } from '../theme/MuiTheme';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
 import { computeAchievements, readPerfectQuizCount } from '../lib/achievements';
 import { renderQuestion } from './CodeBlock';
+import { useT } from '../i18n/LanguageContext';
+import type { TranslationKey } from '../i18n/translations';
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
 
 function Profile() {
+  const t = useT();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth0();
   const navigate = useNavigate();
   const [stats, setStats] = useState<UserStats | null>(null);
@@ -70,7 +73,7 @@ function Profile() {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }} role="status" aria-live="polite">
         <CircularProgress sx={{ color: BRAND.green }} />
-        <span style={{ position: 'absolute', left: -9999 }}>Loading your profile…</span>
+        <span style={{ position: 'absolute', left: -9999 }}>{t('profile.loading')}</span>
       </Box>
     );
   }
@@ -78,7 +81,7 @@ function Profile() {
   if (!isAuthenticated || !user) {
     return (
       <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 6 }}>
-        Redirecting…
+        {t('profile.redirecting')}
       </Typography>
     );
   }
@@ -90,7 +93,7 @@ function Profile() {
         role="alert"
         action={
           <Button color="inherit" size="small" onClick={() => setReloadKey((k) => k + 1)}>
-            Retry
+            {t('quiz.retry')}
           </Button>
         }
       >
@@ -142,6 +145,7 @@ function ProfileBody({
   isFirstTime,
   navigate,
 }: ProfileBodyProps) {
+  const t = useT();
   const { questions: bookmarkedQuestions } = useBookmarks();
   const achievements = computeAchievements({
     stats,
@@ -175,17 +179,17 @@ function ProfileBody({
           sx={{ mb: 2 }}
           action={
             <Button color="inherit" size="small" onClick={() => navigate('/')}>
-              Take your first quiz
+              {t('profile.firstQuizCta')}
             </Button>
           }
         >
-          No quizzes yet — start your streak today.
+          {t('profile.noQuizzes')}
         </Alert>
       )}
 
       <Paper elevation={0} sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
-          Streaks
+          {t('profile.streaks')}
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 3 }}>
@@ -194,10 +198,10 @@ function ProfileBody({
               {stats?.current_streak || 0}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Current streak
+              {t('profile.currentStreak')}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              days
+              {t('profile.days')}
             </Typography>
           </Box>
 
@@ -208,30 +212,30 @@ function ProfileBody({
               {stats?.longest_streak || 0}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              Longest streak
+              {t('profile.longestStreak')}
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              days
+              {t('profile.days')}
             </Typography>
           </Box>
         </Box>
 
         {stats?.last_quiz_date && (
           <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 2 }}>
-            Last quiz: {dateFormatter.format(new Date(stats.last_quiz_date))}
+            {t('profile.lastQuiz', { date: dateFormatter.format(new Date(stats.last_quiz_date)) })}
           </Typography>
         )}
       </Paper>
 
       <Paper elevation={0} sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
-          Statistics
+          {t('profile.statistics')}
         </Typography>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <StatRow label="Quizzes completed" value={totalQuizzes} />
-          <StatRow label="Questions answered" value={totalQuestions} />
-          <StatRow label="Correct answers" value={totalCorrect} />
+          <StatRow label={t('profile.quizzesCompleted')} value={totalQuizzes} />
+          <StatRow label={t('profile.questionsAnswered')} value={totalQuestions} />
+          <StatRow label={t('profile.correctAnswers')} value={totalCorrect} />
           <Box
             sx={{
               display: 'flex',
@@ -243,7 +247,7 @@ function ProfileBody({
             }}
           >
             <Typography variant="body2" color="text.secondary">
-              Average score
+              {t('profile.averageScore')}
             </Typography>
             <Typography variant="body1" sx={{ fontWeight: 600, color: averageScore >= 70 ? 'success.dark' : 'text.primary' }}>
               {averageScore}%
@@ -254,14 +258,21 @@ function ProfileBody({
 
       <Paper elevation={0} sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
-          Achievements ({earned.length}/{achievements.length})
+          {t('profile.achievements', { earned: earned.length, total: achievements.length })}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          {achievements.map((a) => (
+          {achievements.map((a) => {
+            const label = t(`achievement.${a.id}.label` as TranslationKey);
+            const description = t(`achievement.${a.id}.description` as TranslationKey);
+            return (
             <Box
               key={a.id}
-              title={a.description}
-              aria-label={`${a.label}: ${a.earned ? 'earned' : 'locked'}. ${a.description}`}
+              title={description}
+              aria-label={t('profile.achievementAria', {
+                label,
+                state: a.earned ? t('profile.earned') : t('profile.locked'),
+                description,
+              })}
               sx={{
                 p: 1,
                 width: 88,
@@ -277,17 +288,18 @@ function ProfileBody({
                 {a.emoji}
               </div>
               <Typography variant="caption" sx={{ fontWeight: 600, display: 'block', mt: 0.5 }}>
-                {a.label}
+                {label}
               </Typography>
             </Box>
-          ))}
+            );
+          })}
         </Box>
       </Paper>
 
       {bookmarkedQuestions.length > 0 && (
         <Paper elevation={0} sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
           <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
-            Bookmarks ({bookmarkedQuestions.length})
+            {t('profile.bookmarks', { count: bookmarkedQuestions.length })}
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
             {bookmarkedQuestions.slice(0, 20).map((q) => (
@@ -305,7 +317,7 @@ function ProfileBody({
               >
                 <Box sx={{ fontSize: '0.9rem' }}>{renderQuestion(q.question)}</Box>
                 <Typography variant="caption" color="success.dark">
-                  Answer: {q.options[q.correctIndex] ?? '—'}
+                  {t('profile.answerLabel', { answer: q.options[q.correctIndex] ?? '—' })}
                 </Typography>
                 {q.explanation && (
                   <Typography variant="caption" color="text.secondary">
@@ -318,14 +330,14 @@ function ProfileBody({
                     onClick={() => removeBookmark(q.id)}
                     sx={{ textTransform: 'none', color: 'text.secondary' }}
                   >
-                    Remove
+                    {t('common.remove')}
                   </Button>
                 </Box>
               </Box>
             ))}
             {bookmarkedQuestions.length > 20 && (
               <Typography variant="caption" color="text.secondary">
-                Showing 20 of {bookmarkedQuestions.length}
+                {t('profile.showingOf', { total: bookmarkedQuestions.length })}
               </Typography>
             )}
           </Box>
@@ -346,7 +358,7 @@ function ProfileBody({
           '&:hover': { backgroundColor: BRAND.greenHover },
         }}
       >
-        {isFirstTime ? 'Start a quiz' : 'Back to quiz'}
+        {isFirstTime ? t('profile.startQuiz') : t('profile.backToQuiz')}
       </Button>
     </Box>
   );
