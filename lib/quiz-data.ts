@@ -2,6 +2,10 @@ import { questionTranslationsCs } from './quiz-data.cs';
 
 export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'html' | 'css' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
 
+// Categories that are private to the owner: never served to other users
+// (not via /api/quiz/questions for non-owners, and never in the daily mix).
+export const PRIVATE_CATEGORIES: CategoryType[] = ['custom', 'apt'];
+
 export interface Question {
   id: string;
   tags: string[];
@@ -278,7 +282,7 @@ export const questions: Question[] = [
     options: ['Value computed every render', 'Value computed once on mount', 'Value is undefined', 'Error is thrown'],
     correctAnswer: 1,
     category: 'react',
-    explanation: 'An empty dependency array means the value is computed only once during the initial render and never recomputed, similar to how useEffect with [] runs only on mount.',
+    explanation: 'An empty dependency array means React reuses the value computed on the first render and does not recompute it as long as the cache is retained. Note useMemo is an optimization hint, not a guarantee — React may discard the cache and recompute.',
     difficulty: 4,
   },
 
@@ -679,7 +683,7 @@ export const questions: Question[] = [
   {
     id: '56',
     tags: ["never Type","Type System"],
-    introduction: 'The never type represents values that never occur, used for functions that never return.',
+    introduction: 'The never type is the bottom type: it has no possible values, so it represents things that can never happen.',
     question: 'What is the "never" type used for?\n\n```ts\nfunction throwError(msg: string): never {\n  throw new Error(msg);\n}\n```',
     options: ['Variables never used', 'Functions that never return', 'Optional parameters', 'Nullable types'],
     correctAnswer: 1,
@@ -877,7 +881,7 @@ export const questions: Question[] = [
   {
     id: '74',
     tags: ["Generic Constraints","Generics"],
-    introduction: 'Generic constraints limit what types can be used with a generic, ensuring required properties exist.',
+    introduction: 'TypeScript ships built-in utility types that transform existing types. ReturnType<T> derives a type from a function type.',
     question: 'What is the ReturnType<T> utility type?\n\n```ts\nfunction getUser() {\n  return { id: 1, name: "John" };\n}\n\ntype User = ReturnType<typeof getUser>;\n// { id: number; name: string; }\n```',
     options: ['Returns function parameters', 'Returns the return type of a function', 'Returns void', 'Returns never'],
     correctAnswer: 1,
@@ -888,7 +892,7 @@ export const questions: Question[] = [
   {
     id: '75',
     tags: ["Discriminated Unions","Narrowing"],
-    introduction: 'A discriminated union uses a shared literal-type tag to let TypeScript narrow which variant of the union you are working with.',
+    introduction: 'Some union types let TypeScript figure out exactly which member you have based on a simple property check.',
     question: 'What is a discriminated union?\n\n```ts\ntype Shape =\n  | { kind: "circle"; radius: number }\n  | { kind: "square"; size: number };\n\nfunction area(shape: Shape) {\n  if (shape.kind === "circle") {\n    return Math.PI * shape.radius ** 2;\n  }\n}\n```',
     options: ['A union with no common properties', 'A union with a common literal property', 'An intersection type', 'A generic type'],
     correctAnswer: 1,
@@ -979,7 +983,7 @@ export const questions: Question[] = [
     id: '83',
     tags: ["Git Merge","Branching","Version Control"],
     introduction: 'Git merge combines the history of two branches, bringing changes from one branch into another.',
-    question: 'What does git merge do?\n\n```bash\n$ git checkout main\n$ git merge feature-branch\nMerge made by the \'recursive\' strategy.\n```',
+    question: 'What does git merge do?\n\n```bash\n$ git checkout main\n$ git merge feature-branch\nMerge made by the \'ort\' strategy.\n```',
     options: ['Splits a branch', 'Combines branches', 'Deletes a branch', 'Creates a branch'],
     correctAnswer: 1,
     category: 'git',
@@ -990,7 +994,7 @@ export const questions: Question[] = [
     id: '84',
     tags: ["Git Rebase","History","Version Control"],
     introduction: 'Git rebase rewrites commit history by moving your commits onto a new base, creating a linear history.',
-    question: 'What does git rebase do?\n\n```bash\n$ git checkout feature\n$ git rebase main\nFirst, rewinding head to replay your work...\nApplying: Add feature\n```',
+    question: 'What does git rebase do?\n\n```bash\n$ git checkout feature\n$ git rebase main\nSuccessfully rebased and updated refs/heads/feature.\n```',
     options: ['Deletes commits', 'Moves commits to a new base', 'Merges branches', 'Creates a branch'],
     correctAnswer: 1,
     category: 'git',
@@ -1180,7 +1184,7 @@ export const questions: Question[] = [
     tags: ["package-lock.json","Merge Conflicts"],
     introduction: 'Package-lock.json conflicts are common in team projects. Knowing how to resolve them properly ensures consistent dependencies.',
     question: 'How do you resolve package-lock.json conflicts?\n\n```bash\n$ git checkout --ours package-lock.json\n$ npm install\n$ git add package-lock.json\n```',
-    options: ['Manually edit the lock file', 'Delete and regenerate with npm install', 'Always use --theirs', 'Ignore the file'],
+    options: ['Manually edit the lock file', 'Accept one version (e.g. --ours), then run npm install', 'Always use --theirs', 'Ignore the file'],
     correctAnswer: 1,
     category: 'git',
     explanation: 'The safest way to resolve package-lock.json conflicts is to accept one version (usually --ours), then run npm install to regenerate a valid lock file based on package.json.',
@@ -1411,17 +1415,6 @@ export const questions: Question[] = [
     difficulty: 4,
   },
   {
-    id: '122',
-    tags: ["Props","Context"],
-    introduction: 'Prop drilling is a common pattern problem in React component hierarchies.',
-    question: 'What is prop drilling and how to avoid it?\n\n```jsx\n// Passing props through many levels\n<App user={user}>\n  <Layout user={user}>\n    <Sidebar user={user}>\n      <Profile user={user} />\n```',
-    options: ['It\'s recommended practice', 'Pass props through many components; use Context', 'Use global variables', 'Avoid child components'],
-    correctAnswer: 1,
-    category: 'react',
-    explanation: 'Prop drilling passes data through many component levels. Avoid it with React Context, state management libraries (Redux, Zustand), or component composition patterns.',
-    difficulty: 4,
-  },
-  {
     id: '123',
     tags: ["React.memo","Performance"],
     introduction: 'React.memo is a higher-order component for optimizing functional components.',
@@ -1497,17 +1490,6 @@ export const questions: Question[] = [
     category: 'react',
     explanation: 'useId generates stable, unique IDs that are consistent between server and client rendering. Perfect for accessibility attributes like htmlFor/id pairs. Don\'t use for list keys.',
     difficulty: 3,
-  },
-  {
-    id: '130',
-    tags: ["State","Props"],
-    introduction: 'State and props are both ways to manage data in React but serve different purposes.',
-    question: 'What is the difference between state and props?\n\n```jsx\n// Props: passed from parent, read-only\n<Child name="John" />\n\n// State: managed internally, can change\nconst [count, setCount] = useState(0);\n```',
-    options: ['No difference', 'Props are external/read-only, state is internal/mutable', 'State is faster', 'Props are newer'],
-    correctAnswer: 1,
-    category: 'react',
-    explanation: 'Props are passed from parent components and are read-only. State is managed within a component and can be updated. Props flow down, state changes trigger re-renders.',
-    difficulty: 4,
   },
 
   // MORE useState QUESTIONS
@@ -1706,7 +1688,7 @@ export const questions: Question[] = [
     id: '148',
     tags: ["useRef","TypeScript"],
     introduction: 'DOM refs start as null and require proper null handling in TypeScript.',
-    question: 'How to avoid null checks with useRef for DOM elements?\n\n```jsx\nfunction Form() {\n  const inputRef = useRef<HTMLInputElement>(null);\n  \n  const handleSubmit = () => {\n    // Option 1: Optional chaining\n    inputRef.current?.focus();\n    \n    // Option 2: Null check\n    if (inputRef.current) {\n      inputRef.current.focus();\n    }\n    \n    // Option 3: Non-null assertion (when certain)\n    inputRef.current!.focus();\n  };\n}\n```',
+    question: 'How do you safely handle the initial null value of a DOM useRef in TypeScript?\n\n```jsx\nfunction Form() {\n  const inputRef = useRef<HTMLInputElement>(null);\n  \n  const handleSubmit = () => {\n    // Option 1: Optional chaining\n    inputRef.current?.focus();\n    \n    // Option 2: Null check\n    if (inputRef.current) {\n      inputRef.current.focus();\n    }\n    \n    // Option 3: Non-null assertion (when certain)\n    inputRef.current!.focus();\n  };\n}\n```',
     options: ['Refs are never null', 'Use optional chaining, null checks, or assertion', 'Initialize with a fake element', 'Don\'t use TypeScript'],
     correctAnswer: 1,
     category: 'react',
@@ -1726,13 +1708,13 @@ export const questions: Question[] = [
   },
   {
     id: '150',
-    tags: ["useRef","forwardRef"],
-    introduction: 'forwardRef allows passing refs through custom components to child elements.',
-    question: 'How does useRef work with forwardRef?\n\n```jsx\nconst FancyInput = forwardRef((props, ref) => {\n  return <input ref={ref} className="fancy" />;\n});\n\nfunction Parent() {\n  const inputRef = useRef(null);\n  \n  return (\n    <>\n      <FancyInput ref={inputRef} />\n      <button onClick={() => inputRef.current.focus()}>\n        Focus\n      </button>\n    </>\n  );\n}\n```',
-    options: ['forwardRef is deprecated', 'forwardRef passes ref through to child component', 'You cannot ref custom components', 'Use a different prop name'],
+    tags: ["useRef","Refs","React 19"],
+    introduction: 'In React 19, a function component can receive ref as a regular prop, so forwardRef is no longer required.',
+    question: 'In React 19, how do you forward a ref to a child element?\n\n```jsx\nfunction FancyInput({ ref }) {\n  return <input ref={ref} className="fancy" />;\n}\n\nfunction Parent() {\n  const inputRef = useRef(null);\n  \n  return (\n    <>\n      <FancyInput ref={inputRef} />\n      <button onClick={() => inputRef.current.focus()}>\n        Focus\n      </button>\n    </>\n  );\n}\n```',
+    options: ['Refs can never reach custom components', 'Accept ref as a regular prop and pass it to the child element', 'You must wrap every component in forwardRef', 'Rename the prop to innerRef and read props.innerRef'],
     correctAnswer: 1,
     category: 'react',
-    explanation: 'By default, refs don\'t pass through to custom components. forwardRef lets a component receive a ref and forward it to a child DOM element, enabling parent components to access child DOM nodes.',
+    explanation: 'As of React 19, ref is passed to function components as an ordinary prop, so you can destructure { ref } and forward it to a child DOM element directly. forwardRef still works but is deprecated and no longer needed; a codemod can remove it.',
     difficulty: 5,
   },
 
@@ -1950,7 +1932,7 @@ export const questions: Question[] = [
     id: '170',
     tags: ["ESLint","Linting","Code Quality"],
     introduction: 'ESLint is a static analysis tool for JavaScript and TypeScript that flags problematic patterns and enforces style rules.',
-    question: 'What is ESLint?\n\n```js\n// .eslintrc.js\nmodule.exports = {\n  rules: {\n    "no-unused-vars": "error",\n    "semi": ["error", "always"]\n  }\n};\n\n// ESLint finds and reports:\n// - Unused variables\n// - Missing semicolons\n// - Code style issues\n```',
+    question: 'What is ESLint?\n\n```js\n// eslint.config.js\nimport js from "@eslint/js";\nexport default [\n  js.configs.recommended,\n  {\n    rules: {\n      "no-unused-vars": "error",\n      "semi": ["error", "always"]\n    }\n  }\n];\n\n// ESLint finds and reports:\n// - Unused variables\n// - Missing semicolons\n// - Code style issues\n```',
     options: ['A JavaScript compiler', 'Static code analysis tool that finds problems', 'A testing framework', 'A bundler'],
     correctAnswer: 1,
     category: 'javascript',
@@ -2064,7 +2046,7 @@ export const questions: Question[] = [
     options: ['They are the same', 'Different strategies for when/where HTML is generated', 'Database types', 'Testing methodologies'],
     correctAnswer: 1,
     category: 'javascript',
-    explanation: 'SSR renders on server per request (Next.js), CSR renders in browser (Create React App), SSG pre-builds HTML at build time (Gatsby). Each has trade-offs for performance, SEO, and complexity.',
+    explanation: 'SSR renders on server per request (Next.js), CSR renders in browser (Vite + React), SSG pre-builds HTML at build time (Astro / Next.js static export). Each has trade-offs for performance, SEO, and complexity.',
     difficulty: 4,
   },
 
@@ -2214,13 +2196,13 @@ export const questions: Question[] = [
   },
   {
     id: '194',
-    tags: ["useImperativeHandle","forwardRef","Refs"],
+    tags: ["useImperativeHandle","Refs"],
     introduction: 'useImperativeHandle customizes the ref value exposed to parent components.',
-    question: 'What is useImperativeHandle for?\n\n```jsx\nconst FancyInput = forwardRef((props, ref) => {\n  const inputRef = useRef();\n  \n  useImperativeHandle(ref, () => ({\n    // Expose only specific methods to parent\n    focus: () => inputRef.current.focus(),\n    clear: () => inputRef.current.value = ""\n  }));\n  \n  return <input ref={inputRef} />;\n});\n\n// Parent can only call focus() and clear()\nparentRef.current.focus();\n```',
+    question: 'What is useImperativeHandle for?\n\n```jsx\n// React 19: ref is received as a regular prop\nconst FancyInput = ({ ref }) => {\n  const inputRef = useRef();\n  \n  useImperativeHandle(ref, () => ({\n    // Expose only specific methods to parent\n    focus: () => inputRef.current.focus(),\n    clear: () => inputRef.current.value = ""\n  }));\n  \n  return <input ref={inputRef} />;\n};\n\n// Parent can only call focus() and clear()\nparentRef.current.focus();\n```',
     options: ['Handles keyboard input', 'Customizes what ref exposes to parent', 'Improves performance', 'Handles form submission'],
     correctAnswer: 1,
     category: 'react',
-    explanation: 'useImperativeHandle customizes the value exposed to parent components when using ref. Instead of exposing the entire DOM node, you can expose specific methods. Use sparingly—prefer declarative code.',
+    explanation: 'useImperativeHandle customizes the value exposed to parent components when using ref. Instead of exposing the entire DOM node, you can expose specific methods. In React 19 the component receives ref as a regular prop (forwardRef is no longer required). Use sparingly—prefer declarative code.',
     difficulty: 5,
   },
   {
@@ -2276,17 +2258,6 @@ export const questions: Question[] = [
     correctAnswer: 1,
     category: 'react',
     explanation: 'Infinite loops happen when an effect changes state that triggers itself. Fix by: adding proper dependencies, using functional updates (setCount(c => c + 1)), or rethinking the logic.',
-    difficulty: 1,
-  },
-  {
-    id: '200',
-    tags: ["Hooks Order","Best Practices"],
-    introduction: 'Following a consistent order when calling hooks improves code readability and follows conventions.',
-    question: 'What is the conventional order for organizing hooks in a component?\n\n```jsx\nfunction Component() {\n  // 1. All useState calls first\n  const [a, setA] = useState(0);\n  const [b, setB] = useState("");\n  \n  // 2. useRef\n  const ref = useRef(null);\n  \n  // 3. useMemo / useCallback\n  const memoized = useMemo(() => compute(a), [a]);\n  \n  // 4. useEffect last\n  useEffect(() => {\n    // side effects\n  }, []);\n  \n  return <div>...</div>;\n}\n```',
-    options: ['Hooks must be called in reverse alphabetical order', 'useState, useRef, useMemo/useCallback, useEffect', 'useEffect must be first', 'Only one hook allowed per component'],
-    correctAnswer: 1,
-    category: 'react',
-    explanation: 'React only requires that hooks be called in the same order across renders (Rules of Hooks). Beyond that, a common convention is: useState (state), useRef (refs), useMemo/useCallback (computed values), useEffect (side effects). This improves readability and follows data flow.',
     difficulty: 1,
   },
 
@@ -2857,11 +2828,11 @@ export const questions: Question[] = [
     id: '251',
     tags: ["Classes","Methods","Functions"],
     introduction: 'Methods defined inside a class are available on all instances of that class.',
-    question: 'How do you add a method to a class?\n\n```javascript\nclass Calculator {\n  add(a, b) {\n    return a + b;\n  }\n}\n```',
-    options: ['Define a function inside the class body', 'Use Calculator.prototype.add', 'Methods cannot be added', 'Use the method keyword'],
+    question: 'In the class below, how is the add method defined?\n\n```javascript\nclass Calculator {\n  add(a, b) {\n    return a + b;\n  }\n}\n```',
+    options: ['As a function inside the class body', 'With the method keyword before its name', 'Methods cannot be added to a class', 'By assigning it to this.add in a getter'],
     correctAnswer: 0,
     category: 'javascript',
-    explanation: 'Simply define functions inside the class body. Methods don\'t need the "function" keyword. They become available on all instances.',
+    explanation: 'Methods are simply defined as functions inside the class body, without the "function" keyword. They become available on all instances of the class.',
     difficulty: 1,
   },
   {
@@ -2911,31 +2882,9 @@ export const questions: Question[] = [
 
   // CHROME DEVTOOLS - Advanced
   {
-    id: '256',
-    tags: ["Chrome DevTools","Network Tab","Backend","Request Details"],
-    introduction: 'The Network tab is essential for debugging API calls and understanding data flow.',
-    question: 'What information can you see when clicking on a request in the Network tab?',
-    options: ['Only the URL', 'Headers, Preview, Response, Timing, and Cookies', 'Nothing, requests cannot be inspected', 'Only the status code'],
-    correctAnswer: 1,
-    category: 'javascript',
-    explanation: 'Clicking a request shows: Headers (request/response headers), Preview (formatted response), Response (raw data), Timing (how long each phase took), and Cookies sent with the request.',
-    difficulty: 2,
-  },
-  {
-    id: '257',
-    tags: ["Chrome DevTools","Network Tab","Backend","Filtering"],
-    introduction: 'Filtering network requests helps you focus on specific types of traffic.',
-    question: 'How can you filter requests in the Network tab?',
-    options: ['You cannot filter requests', 'By type (XHR, JS, CSS, Img), text search, or status code', 'Only by URL', 'Only by file size'],
-    correctAnswer: 1,
-    category: 'javascript',
-    explanation: 'The Network tab has filter buttons (All, XHR, JS, CSS, Img, etc.) and a search box. You can also filter by status (e.g., "status-code:404") or method (e.g., "method:POST").',
-    difficulty: 2,
-  },
-  {
     id: '258',
     tags: ["Chrome DevTools","Network Tab","Backend","XHR/Fetch"],
-    introduction: 'The XHR/Fetch filter shows only JavaScript-initiated API requests.',
+    introduction: 'The Network tab has filter buttons that narrow which kinds of requests are displayed.',
     question: 'What does the XHR/Fetch filter show in Network tab?',
     options: ['All requests', 'Only API calls made by JavaScript (AJAX requests)', 'Only images', 'Only HTML files'],
     correctAnswer: 1,
@@ -2946,7 +2895,7 @@ export const questions: Question[] = [
   {
     id: '259',
     tags: ["Chrome DevTools","Elements Tab","DOM Inspection"],
-    introduction: 'The Elements tab lets you inspect and modify the DOM and CSS in real-time.',
+    introduction: 'DevTools panels each focus on a different aspect of a page; the Elements tab is one of them.',
     question: 'What can you do in the Elements tab of DevTools?',
     options: ['Only view HTML', 'Inspect, edit HTML/CSS live, see computed styles, and debug layout', 'Only delete elements', 'Elements tab doesn\'t exist'],
     correctAnswer: 1,
@@ -3014,10 +2963,10 @@ export const questions: Question[] = [
     tags: ["Chrome DevTools","Lighthouse","Audits"],
     introduction: 'Lighthouse audits your page for performance, accessibility, and best practices.',
     question: 'What does the Lighthouse tab in DevTools analyze?',
-    options: ['Only load time', 'Performance, Accessibility, Best Practices, SEO, and PWA scores', 'Only SEO', 'Network speed'],
+    options: ['Only load time', 'Performance, Accessibility, Best Practices, and SEO scores', 'Only SEO', 'Network speed'],
     correctAnswer: 1,
     category: 'javascript',
-    explanation: 'Lighthouse audits your page for Performance, Accessibility, Best Practices, SEO, and Progressive Web App criteria. It provides scores and specific recommendations for improvement.',
+    explanation: 'Lighthouse audits your page for Performance, Accessibility, Best Practices, and SEO. It provides scores and specific recommendations for improvement. (The PWA category was removed in Lighthouse v12.)',
     difficulty: 2,
   },
 
@@ -3909,7 +3858,7 @@ export const questions: Question[] = [
   {
     id: '346',
     tags: ["Node.js","Backend","Error","uncaughtException"],
-    introduction: 'Unhandled errors can crash your Node.js application.',
+    introduction: 'Node.js has a default behavior for errors that propagate without being handled.',
     question: 'What happens when an error is not caught in Node.js?',
     options: ['It\'s ignored', 'The process crashes', 'It\'s logged automatically', 'It retries the operation'],
     correctAnswer: 1,
@@ -4428,7 +4377,7 @@ export const questions: Question[] = [
   {
     id: '393',
     tags: ["Code Output","Async/Await","JavaScript"],
-    introduction: 'Understanding async/await execution order is crucial.',
+    introduction: 'Synchronous code runs before queued microtasks (Promise callbacks).',
     question: 'What order are these logged?\n\n```javascript\nconsole.log(1);\nPromise.resolve().then(() => console.log(2));\nconsole.log(3);\n```',
     options: ['1, 2, 3', '1, 3, 2', '2, 1, 3', '3, 2, 1'],
     correctAnswer: 1,
@@ -5744,7 +5693,7 @@ export const questions: Question[] = [
   {
     id: '512',
     tags: ["React","TypeScript","Complex State","Discriminated Union"],
-    introduction: 'Complex UI states like async data loading can be modeled as discriminated unions to prevent impossible state combinations.',
+    introduction: 'Modeling async UI states with separate boolean flags versus a single discriminated union has tradeoffs in type safety and correctness.',
     question: 'Why is the discriminated union approach better than separate boolean flags?\n\n```tsx\n// Approach A: Booleans\nconst [isLoading, setIsLoading] = useState(false);\nconst [error, setError] = useState<Error | null>(null);\nconst [data, setData] = useState<Data | null>(null);\n\n// Approach B: Discriminated union\ntype State =\n  | { status: "idle" }\n  | { status: "loading" }\n  | { status: "error"; error: Error }\n  | { status: "success"; data: Data };\n\nconst [state, setState] = useState<State>({ status: "idle" });\n```',
     options: ['Approach B is faster at runtime', 'Approach B prevents impossible states like loading=true AND error being set simultaneously', 'Approach B uses less memory', 'Approach B is required by React 18+'],
     correctAnswer: 1,
@@ -5989,12 +5938,12 @@ export const questions: Question[] = [
   {
     id: '534',
     tags: ["Code Snippets","JavaScript","this"],
-    introduction: 'The value of "this" in JavaScript depends on how a function is called, not where it is defined.',
-    question: 'What does this code output?\n\n```javascript\nconst obj = {\n  name: "Alice",\n  greet: function() {\n    return () => console.log(this.name);\n  },\n  farewell: () => {\n    console.log(this.name);\n  }\n};\nobj.greet()();\nobj.farewell();\n```',
+    introduction: 'For regular functions, the value of "this" depends on how they are called; arrow functions instead capture "this" lexically from where they are defined.',
+    question: 'What does this code output?\n\n```javascript\n// running as a non-module browser script (top-level this is the global object)\nconst obj = {\n  name: "Alice",\n  greet: function() {\n    return () => console.log(this.name);\n  },\n  farewell: () => {\n    console.log(this.name);\n  }\n};\nobj.greet()();\nobj.farewell();\n```',
     options: ['"Alice", "Alice"', '"Alice", undefined', 'undefined, undefined', 'undefined, "Alice"'],
     correctAnswer: 1,
     category: 'code-snippets',
-    explanation: 'obj.greet() is a regular function called on obj, so this is obj. The returned arrow function inherits this from greet, so it prints "Alice". obj.farewell is an arrow function defined at object creation time, so this refers to the enclosing scope (module/global), not obj. this.name is undefined.',
+    explanation: 'obj.greet() is a regular function called on obj, so this is obj. The returned arrow function inherits this from greet, so it prints "Alice". obj.farewell is an arrow function defined at object creation time, so this is the enclosing scope—here the non-module global object, which has no name property—so this.name is undefined.',
     difficulty: 3,
   },
   {
@@ -6176,7 +6125,7 @@ export const questions: Question[] = [
   {
     id: '551',
     tags: ["Code Snippets","JavaScript","Scope"],
-    introduction: 'Understanding variable scoping combined with immediately invoked expressions can reveal how JavaScript resolves names.',
+    introduction: 'Understanding nested function scope combined with var hoisting reveals how JavaScript resolves names.',
     question: 'What does this code output?\n\n```javascript\nvar a = 1;\nfunction outer() {\n  var a = 2;\n  function inner() {\n    a++;\n    var a = 3;\n    console.log(a);\n  }\n  inner();\n  console.log(a);\n}\nouter();\nconsole.log(a);\n```',
     options: ['3, 2, 1', '3, 3, 1', '4, 2, 1', 'NaN, 2, 1'],
     correctAnswer: 0,
@@ -6658,7 +6607,7 @@ export const questions: Question[] = [
     introduction: 'In an app that supports server components, you must explicitly mark files that need client-side interactivity. The directive is placed at the very top of the file.',
     question: 'What does the `\'use client\'` directive do?',
     options: [
-      'Marks the module (and the components it exports) as a Client Component boundary; modules it imports remain client modules unless they are also marked.',
+      'Marks the module (and the components it exports) as a Client Component boundary; the modules it imports are automatically pulled into the client bundle too, without each needing its own directive.',
       'Forces the component to render only in the browser and skip SSR entirely.',
       'Disables React strict mode for that file.',
       'Tells the bundler to ship the file as a separate JavaScript chunk regardless of imports.',
@@ -7230,7 +7179,7 @@ export const questions: Question[] = [
     options: ['10 10', '10 undefined', 'undefined 10', 'undefined undefined'],
     correctAnswer: 1,
     category: 'javascript',
-    explanation: 'reg is a regular method, so this is obj and this.v is 10. arr is an arrow, so this is the enclosing scope\'s this (likely globalThis in a module, where this is undefined), so this?.v is undefined.',
+    explanation: 'reg is a regular method, so this is obj and this.v is 10. arr is an arrow function, so it captures the enclosing (module top-level) this, which is undefined; this?.v therefore short-circuits to undefined. (In a classic script, top-level this is globalThis, and globalThis.v is also undefined.) Result: 10 undefined.',
     difficulty: 3,
   },
   {
@@ -7593,7 +7542,7 @@ export const questions: Question[] = [
   {
     id: '636',
     tags: ["Declaration Merging"],
-    introduction: 'Interfaces with the same name in the same scope merge their members.',
+    introduction: 'Multiple interface declarations with the same name interact in a specific way. Consider what happens to their members.',
     question: 'What is the type of `p.name` and `p.age` after merging?\n\n```ts\ninterface Person { name: string }\ninterface Person { age: number }\nconst p: Person = { name: \'a\', age: 1 };\n```',
     options: [
       'Compile error: duplicate interface declaration.',
@@ -8142,7 +8091,7 @@ export const questions: Question[] = [
   {
     id: '673',
     tags: ["Test Runner"],
-    introduction: 'Node has a built-in test runner under node:test with TAP output.',
+    introduction: 'Node has a built-in test runner under node:test.',
     question: 'Which command runs tests using the built-in Node test runner in Node 20+?\n\n```bash\n# ?\n```',
     options: [
       'node --jest test/',
@@ -8152,7 +8101,7 @@ export const questions: Question[] = [
     ],
     correctAnswer: 1,
     category: 'nodejs',
-    explanation: 'Node 20 ships a stable test runner; `node --test` discovers test files (matching patterns like *.test.js) and executes them, emitting TAP output. Tests are written with the node:test and node:assert modules.',
+    explanation: 'Node 20 ships a stable test runner; `node --test` discovers test files (matching patterns like *.test.js) and executes them, emitting human-readable spec output in an interactive terminal (TAP when piped or in CI). Tests are written with the node:test and node:assert modules.',
     difficulty: 2,
   },
   {
@@ -9542,17 +9491,6 @@ export const questions: Question[] = [
     difficulty: 3,
   },
   {
-    id: '762',
-    tags: ['Code Snippets', 'Type Coercion'],
-    introduction: 'A famous abstract-equality trap.',
-    question: 'What does this output?\n\n```js\nconsole.log([] == ![]);\n```',
-    options: ['false', 'true', 'TypeError', 'undefined'],
-    correctAnswer: 1,
-    category: 'code-snippets',
-    explanation: '![] is false. Then [] == false coerces both sides to numbers: [] becomes "" then 0; false becomes 0. 0 == 0 is true.',
-    difficulty: 3,
-  },
-  {
     id: '763',
     tags: ['Code Snippets', 'Array Surprises'],
     introduction: 'map passes (value, index) to its callback.',
@@ -9819,7 +9757,7 @@ export const questions: Question[] = [
   {
     id: '785',
     tags: ['Web Security'],
-    introduction: 'A code review flags this Express route as potentially vulnerable to stored XSS.',
+    introduction: 'A code review flags this Express route as potentially vulnerable to an injection/XSS issue.',
     question: 'Which statement most accurately describes the vulnerability and its correct fix?\n\n```\napp.get(\'/profile/:id\', async (req, res) => {\n  const user = await db.users.find(req.params.id);\n  res.send(`<h1>Welcome ${user.displayName}</h1>`);\n});\n```',
     options: [
       'It is stored XSS because displayName came from the database and is interpolated into HTML without escaping; fix by HTML-escaping displayName (or using a templating engine that auto-escapes) before insertion',
@@ -10299,7 +10237,7 @@ export const questions: Question[] = [
   {
     id: '815',
     tags: ['Setting model', 'SQL'],
-    introduction: 'One model is the sole gatekeeper of SQL against the settings table.',
+    introduction: 'This model has an unusually narrow and centralized responsibility regarding the settings table.',
     question: 'What is unique about the Setting model regarding database access?',
     options: [
       'It is the only place in the entire codebase that runs SQL against the settings table',
@@ -10347,7 +10285,7 @@ export const questions: Question[] = [
   {
     id: '818',
     tags: ['Setting model', 'edge case'],
-    introduction: 'Both Setting methods short-circuit on empty input.',
+    introduction: 'Consider how getByKeys behaves when there is nothing to look up.',
     question: 'What happens when Setting.getByKeys is called with an empty array?',
     options: [
       'It returns an empty object {} without issuing any database query',
@@ -10779,7 +10717,7 @@ export const questions: Question[] = [
   {
     id: '845',
     tags: ['AuthConfig', 'sync'],
-    introduction: 'better-auth needs a value synchronously, without await.',
+    introduction: 'better-auth reads the password-reset expiry in a place that cannot use Promises.',
     question: 'Why does AuthConfig keep the password-reset expiry in a static in-memory variable?',
     options: [
       'because better-auth must read it synchronously (no await), so it cannot query the DB at call time',
@@ -10827,7 +10765,7 @@ export const questions: Question[] = [
   {
     id: '848',
     tags: ['LogsConfig', 'opt-out'],
-    introduction: 'Entity logging follows an opt-out model.',
+    introduction: 'Entity logging uses a dynamic key whose absence has a meaningful default.',
     question: 'How does LogsConfig.isEntityEnabled interpret the dynamic key log_entity_${entity}_enabled?',
     options: [
       'Opt-out: if unset (null) logging is ON; only an explicit "false" turns it off',
@@ -10891,7 +10829,7 @@ export const questions: Question[] = [
   {
     id: '852',
     tags: ['LocaleConfig', 'discovery'],
-    introduction: 'Supported languages are discovered at build time.',
+    introduction: 'The set of supported languages is fixed before the app runs.',
     question: 'Where does the list of supported languages come from in LocaleConfig?',
     options: [
       'From build-time env vars (DISCOVERED_ADMIN_LOCALES, DISCOVERED_FRONTEND_LOCALES), with default "cs"',
@@ -11435,7 +11373,7 @@ export const questions: Question[] = [
   {
     id: '886',
     tags: ['UI', 'ImageDropzone'],
-    introduction: 'Image fields do not upload to a server.',
+    introduction: 'Image inputs are produced by a dedicated dropzone component.',
     question: 'How does ImageDropzone produce the value for an "image" field?',
     options: [
       'It converts the selected file to a base64 data URL via FileReader and passes the string through onChange (no server upload), limited to 512 KB',

@@ -273,7 +273,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Sdílená tabulka settings je globální systémová konfigurace. reservation_settings a sales_settings jsou per-room EAV tabulky pro tyto moduly. Nepleť si je.',
   },
   '815': {
-    introduction: 'Jeden model je jediným strážcem SQL nad tabulkou settings.',
+    introduction: 'Tento model má neobvykle úzkou a centralizovanou odpovědnost ohledně tabulky settings.',
     question: 'Co je unikátní na modelu Setting ohledně přístupu k databázi?',
     options: [
       'Je to jediné místo v celém codebase, které spouští SQL nad tabulkou settings',
@@ -306,7 +306,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'setMany vloží všechny dvojice a použije onConflictDoUpdate na primárním klíči key, nastaví value na excluded.value a obnoví updatedAt. Je to upsert.',
   },
   '818': {
-    introduction: 'Obě metody Setting zkratují na prázdném vstupu.',
+    introduction: 'Zvaž, jak se getByKeys chová, když není co vyhledávat.',
     question: 'Co se stane, když je Setting.getByKeys zavoláno s prázdným polem?',
     options: [
       'Vrátí prázdný objekt {} bez jakéhokoli databázového dotazu',
@@ -603,7 +603,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Přestože konvence CLAUDE.md říká používat unstable_cache + revalidateTag, SystemConfig necachuje; každé čtení jde do DB přes Setting.getByKeys. Je to označeno jako budoucí optimalizace.',
   },
   '845': {
-    introduction: 'better-auth potřebuje hodnotu synchronně, bez await.',
+    introduction: 'better-auth čte expiraci reset hesla na místě, které nemůže používat Promises.',
     question: 'Proč AuthConfig drží expiraci reset hesla ve statické proměnné v paměti?',
     options: [
       'protože better-auth ji musí číst synchronně (bez await), takže nemůže v okamžiku volání dotazovat DB',
@@ -636,7 +636,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Default je 1800 sekund = 30 minut, což odpovídá výchozí hodnotě 30 ze schématu pro auth.passwordResetTokenExpiryMinutes.',
   },
   '848': {
-    introduction: 'Logování entit funguje na principu opt-out.',
+    introduction: 'Logování entit používá dynamický klíč, jehož absence má smysluplný výchozí stav.',
     question: 'Jak LogsConfig.isEntityEnabled interpretuje dynamický klíč log_entity_${entity}_enabled?',
     options: [
       'Opt-out: když není nastaveno (null), logování je ZAPNUTÉ; vypne ho jen explicitní "false"',
@@ -680,7 +680,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'getDefaultPageSize vrátí ui.defaultPageSize (default 20) jen pokud je mezi povolenými možnostmi; jinak vrátí první možnost.',
   },
   '852': {
-    introduction: 'Podporované jazyky se zjišťují při buildu.',
+    introduction: 'Množina podporovaných jazyků je pevně daná předtím, než se aplikace spustí.',
     question: 'Odkud v LocaleConfig pochází seznam podporovaných jazyků?',
     options: [
       'Z env proměnných při buildu (DISCOVERED_ADMIN_LOCALES, DISCOVERED_FRONTEND_LOCALES), s defaultem "cs"',
@@ -1027,7 +1027,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
       'ConfigUiHelper.buildStorageValues převede zanořený formulář zpět na plochý storage tvar, pak (volitelný potvrzovací dialog) onSubmit(saveValues)',
       'Pošle zanořený objekt přímo do server akce',
       'Nejdřív znovu načte hodnoty z databáze',
-      'Celý formulář JSON.stringifyne do jednoho pole',
+      'Celý formulář serializuje přes JSON.stringify do jednoho pole',
     ],
     explanation: 'Odeslání volá buildStorageValues pro zploštění a převod jednotek zpět, volitelně ukáže potvrzovací dialog, pak zavolá onSubmit(saveValues). Při úspěchu dělá form.reset(), router.refresh() a toast.',
   },
@@ -1054,7 +1054,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'SettingsField je switch podle field.type. multiselect vykreslí jeden Switch na každou možnost a hodnota je pole zachovávající pořadí možností.',
   },
   '886': {
-    introduction: 'Pole image nenahrávají na server.',
+    introduction: 'Vstupy pro obrázky vyrábí dedikovaná dropzone komponenta.',
     question: 'Jak ImageDropzone vyrobí hodnotu pro pole „image“?',
     options: [
       'Převede vybraný soubor na base64 data URL přes FileReader a předá string přes onChange (žádné nahrávání na server), limit 512 KB',
@@ -1152,13 +1152,13 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   },
   '83': {
     introduction: 'git merge spojí historii dvou větví a přenese změny z jedné větve do druhé.',
-    question: 'Co dělá git merge?\n\n```bash\n$ git checkout main\n$ git merge feature-branch\nMerge made by the \'recursive\' strategy.\n```',
+    question: 'Co dělá git merge?\n\n```bash\n$ git checkout main\n$ git merge feature-branch\nMerge made by the \'ort\' strategy.\n```',
     options: ['Rozdělí větev', 'Spojí větve', 'Smaže větev', 'Vytvoří větev'],
     explanation: 'git merge spojí historie dvou větví. Vytvoří merge commit (pokud nejde o fast-forward), který má dva rodičovské commity.',
   },
   '84': {
     introduction: 'git rebase přepisuje historii commitů tím, že přesune tvé commity na nový základ a vytvoří lineární historii.',
-    question: 'Co dělá git rebase?\n\n```bash\n$ git checkout feature\n$ git rebase main\nFirst, rewinding head to replay your work...\nApplying: Add feature\n```',
+    question: 'Co dělá git rebase?\n\n```bash\n$ git checkout feature\n$ git rebase main\nSuccessfully rebased and updated refs/heads/feature.\n```',
     options: ['Smaže commity', 'Přesune commity na nový základ', 'Sloučí větve', 'Vytvoří větev'],
     explanation: 'git rebase přesune nebo přehraje tvé commity na jiný základní commit. Přepíše historii a vytvoří lineární sled commitů.',
   },
@@ -1261,7 +1261,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '101': {
     introduction: 'Konflikty v package-lock.json jsou v týmových projektech běžné. Správné řešení zajistí konzistentní závislosti.',
     question: 'Jak vyřešíš konflikty v package-lock.json?\n\n```bash\n$ git checkout --ours package-lock.json\n$ npm install\n$ git add package-lock.json\n```',
-    options: ['Ručně upravit lock soubor', 'Smazat a znovu vygenerovat přes npm install', 'Vždy použít --theirs', 'Soubor ignorovat'],
+    options: ['Ručně upravit lock soubor', 'Přijmout jednu verzi (např. --ours) a spustit npm install', 'Vždy použít --theirs', 'Soubor ignorovat'],
     explanation: 'Nejbezpečnější způsob řešení konfliktů v package-lock.json je přijmout jednu verzi (obvykle --ours) a pak spustit npm install, který vygeneruje validní lock soubor podle package.json.',
   },
   '102': {
@@ -1517,7 +1517,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Union typ Permission znamená, že TypeScript nahlásí chybu, když předáš neplatný string oprávnění, např. "edit" místo "write". To zachytí překlepy v oprávněních při kompilaci místo tichého selhání za běhu.',
   },
   '512': {
-    introduction: 'Složité UI stavy jako asynchronní načítání dat lze modelovat jako diskriminované uniony, aby se zabránilo nemožným kombinacím stavů.',
+    introduction: 'Modelování asynchronních UI stavů přes samostatné boolean příznaky versus jediný diskriminovaný union má kompromisy v typové bezpečnosti a korektnosti.',
     question: 'Proč je přístup s diskriminovaným unionem lepší než samostatné boolean příznaky?\n\n```tsx\n// Approach A: Booleans\nconst [isLoading, setIsLoading] = useState(false);\nconst [error, setError] = useState<Error | null>(null);\nconst [data, setData] = useState<Data | null>(null);\n\n// Approach B: Discriminated union\ntype State =\n  | { status: "idle" }\n  | { status: "loading" }\n  | { status: "error"; error: Error }\n  | { status: "success"; data: Data };\n\nconst [state, setState] = useState<State>({ status: "idle" });\n```',
     options: ['Přístup B je za běhu rychlejší', 'Přístup B zabrání nemožným stavům, jako loading=true A zároveň nastavená chyba', 'Přístup B používá méně paměti', 'Přístup B vyžaduje React 18+'],
     explanation: 'Se samostatnými booleany můžeš omylem mít isLoading=true a zároveň nastavenou chybu, což je nemožný stav. Diskriminovaný union dělá každý stav výlučným — můžeš mít vždy jen jeden status a každý nese jen svá relevantní data.',
@@ -1613,13 +1613,13 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'INP měří latenci od interakce po další paint. Úzkým hrdlem je dlouhá synchronní úloha blokující hlavní vlákno. Přesun do Workeru nebo yield schedulera uvolní hlavní vlákno, takže paint může proběhnout rychle. useCallback nesníží CPU práci, CSS přechod naměřené INP nezmění a useRef by aktualizaci UI úplně přeskočil (změna chování).',
   },
   '784': {
-    introduction: 'Auditujš konfiguraci cookies pro bankovní SPA, která se autentizuje session cookie vydanou api.bank.example pro její first-party SPA na app.bank.example.',
+    introduction: 'Audituješ konfiguraci cookies pro bankovní SPA, která se autentizuje session cookie vydanou api.bank.example pro její first-party SPA na app.bank.example.',
     question: 'Která kombinace atributů cookie nejlépe chrání session cookie před XSS exfiltrací i většinou CSRF a zároveň umožní SPA na app.bank.example volat api.bank.example?',
     options: ['Secure; HttpOnly; SameSite=Lax; Domain=.bank.example; Path=/', 'Secure; SameSite=None; Domain=.bank.example (bez HttpOnly, aby JS mohl číst CSRF tokeny)', 'HttpOnly; SameSite=None (bez Secure, aby fungovala na localhostu v produkci)', 'Secure; HttpOnly; SameSite=None; bez atributu Domain'],
     explanation: 'HttpOnly zabrání JS (a tím XSS) číst cookie. Secure zajistí odeslání jen přes HTTPS. SameSite=Lax zabrání odeslání cookie u většiny cross-site requestů (zmírnění CSRF) a zároveň funguje pro same-site subdoménové requesty z app.bank.example na api.bank.example, když je atribut Domain nastaven na .bank.example. SameSite=None znovu zapne riziko CSRF a odebrání HttpOnly vystaví cookie XSS.',
   },
   '785': {
-    introduction: 'Code review označí tuto Express route jako potenciálně zranitelnou na stored XSS.',
+    introduction: 'Code review označí tuto Express route jako potenciálně zranitelnou na injection/XSS problém.',
     question: 'Které tvrzení nejpřesněji popisuje zranitelnost a její správnou opravu?\n\n```\napp.get(\'/profile/:id\', async (req, res) => {\n  const user = await db.users.find(req.params.id);\n  res.send(`<h1>Welcome ${user.displayName}</h1>`);\n});\n```',
     options: ['Je to stored XSS, protože displayName pochází z databáze a vkládá se do HTML bez escapování; oprav HTML-escapováním displayName (nebo šablonovacím enginem s auto-escapem) před vložením', 'Je to reflected XSS, protože req.params.id je v URL; oprav URL-encodováním req.params.id', 'Je to DOM-based XSS; oprav přidáním CSP hlavičky s default-src \'self\'', 'Není to vůbec XSS, protože hodnota pochází ze serveru, ne od klienta'],
     explanation: 'Stored XSS nastane, když data ovládaná útočníkem uložená v úložišti (zde displayName v DB) se později vykreslí do HTML bez escapování. Parametr id se nevykresluje, takže nejde o reflected XSS. CSP je obrana do hloubky, ne oprava chybějícího escapování. Data uložená dřívějším uživatelským vstupem jsou na výstupu stále nedůvěryhodná.',
@@ -1685,7 +1685,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Operátor pipe | vytvoří union typ: string | number znamená, že hodnota může být buď string, nebo number. Ampersand & vytvoří intersection typ.',
   },
   '56': {
-    introduction: 'Typ never reprezentuje hodnoty, které nikdy nenastanou, a používá se pro funkce, které se nikdy nevrátí.',
+    introduction: 'Typ never je „bottom“ typ: nemá žádné možné hodnoty, takže reprezentuje věci, které nikdy nemohou nastat.',
     question: 'K čemu se používá typ „never“?\n\n```ts\nfunction throwError(msg: string): never {\n  throw new Error(msg);\n}\n```',
     options: ['Nepoužité proměnné', 'Funkce, které se nikdy nevrátí', 'Nepovinné parametry', 'Nullable typy'],
     explanation: 'Typ never reprezentuje hodnoty, které nikdy nenastanou. Používá se pro funkce, které vždy vyhodí chybu nebo mají nekonečnou smyčku — nikdy se normálně nevrátí.',
@@ -1793,13 +1793,13 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Record<K, V> sestaví typ objektu s klíči typu K a hodnotami typu V. Record<string, number> znamená libovolný stringový klíč s hodnotami number.',
   },
   '74': {
-    introduction: 'Generická omezení limitují, jaké typy lze s generikou použít, a zajišťují existenci požadovaných vlastností.',
+    introduction: 'TypeScript nabízí vestavěné utility typy, které transformují existující typy. ReturnType<T> odvodí typ z funkčního typu.',
     question: 'Co je utility typ ReturnType<T>?\n\n```ts\nfunction getUser() {\n  return { id: 1, name: "John" };\n}\n\ntype User = ReturnType<typeof getUser>;\n// { id: number; name: string; }\n```',
     options: ['Vrací parametry funkce', 'Vrací návratový typ funkce', 'Vrací void', 'Vrací never'],
     explanation: 'ReturnType<T> extrahuje návratový typ funkčního typu T. ReturnType<() => string> vyrobí string. Hodí se pro odvození typů z existujících funkcí.',
   },
   '75': {
-    introduction: 'Diskriminovaný union používá sdílený tag s literálním typem, aby TypeScript poznal, s kterou variantou unionu pracuješ.',
+    introduction: 'Některé union typy umožní TypeScriptu zjistit, s kterým členem pracuješ, na základě jednoduché kontroly vlastnosti.',
     question: 'Co je diskriminovaný union?\n\n```ts\ntype Shape =\n  | { kind: "circle"; radius: number }\n  | { kind: "square"; size: number };\n\nfunction area(shape: Shape) {\n  if (shape.kind === "circle") {\n    return Math.PI * shape.radius ** 2;\n  }\n}\n```',
     options: ['Union bez společných vlastností', 'Union se společnou literální vlastností', 'Intersection typ', 'Generický typ'],
     explanation: 'Diskriminovaný union má společnou vlastnost s literálními typy, kterou TypeScript dokáže použít k zúžení typu. Jako diskriminant často slouží pole „type“ nebo „kind“.',
@@ -1919,7 +1919,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Rozlišení overloadů vybere první odpovídající signaturu, jejíž seznam parametrů je kompatibilní s místem volání. `wrap(\'hi\')` odpovídá `wrap(x: string): string[]`, takže `r` je `string[]`. Implementační signatura není volajícím viditelná.',
   },
   '636': {
-    introduction: 'Rozhraní se stejným názvem ve stejném rozsahu sloučí své členy.',
+    introduction: 'Více deklarací rozhraní se stejným názvem se chová specificky. Zvaž, co se stane s jejich členy.',
     question: 'Jaký je typ `p.name` a `p.age` po sloučení?\n\n```ts\ninterface Person { name: string }\ninterface Person { age: number }\nconst p: Person = { name: \'a\', age: 1 };\n```',
     options: ['Chyba kompilace: duplicitní deklarace rozhraní.', 'name: string, age: number (rozhraní se slučují).', 'Vyhraje jen druhá deklarace; name neexistuje.', 'Vyhraje jen první deklarace; age neexistuje.'],
     explanation: 'Více deklarací `interface` se stejným názvem ve stejném rozsahu se sloučí a zkombinuje jejich členy. `Person` má jak `name: string`, tak `age: number`. Pozn.: `type` aliasy takto sloučit nelze.',
@@ -2054,9 +2054,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Spread operátor vytvoří mělkou kopii. Změna copy.a neovlivní original.a, protože a je primitiv (kopírováno hodnotou). Ale copy.b a original.b odkazují na stejný zanořený objekt, takže změna copy.b.c změní i original.b.c. Výstup: 1, 99.',
   },
   '534': {
-    introduction: 'Hodnota „this“ v JavaScriptu závisí na tom, jak je funkce volána, ne kde je definována.',
-    question: 'Co vypíše tento kód?\n\n```javascript\nconst obj = {\n  name: "Alice",\n  greet: function() {\n    return () => console.log(this.name);\n  },\n  farewell: () => {\n    console.log(this.name);\n  }\n};\nobj.greet()();\nobj.farewell();\n```',
-    explanation: 'obj.greet() je běžná funkce volaná na obj, takže this je obj. Vrácená arrow funkce dědí this z greet, takže vypíše "Alice". obj.farewell je arrow funkce definovaná při vytvoření objektu, takže this odkazuje na obklopující rozsah (modul/global), ne na obj. this.name je undefined.',
+    introduction: 'U běžných funkcí závisí hodnota „this“ na tom, jak jsou volány; arrow funkce naopak zachytávají „this“ lexikálně z místa, kde jsou definovány.',
+    question: 'Co vypíše tento kód?\n\n```javascript\n// běží jako klasický (non-module) skript v prohlížeči (this na nejvyšší úrovni je globální objekt)\nconst obj = {\n  name: "Alice",\n  greet: function() {\n    return () => console.log(this.name);\n  },\n  farewell: () => {\n    console.log(this.name);\n  }\n};\nobj.greet()();\nobj.farewell();\n```',
+    explanation: 'obj.greet() je běžná funkce volaná na obj, takže this je obj. Vrácená arrow funkce dědí this z greet, takže vypíše "Alice". obj.farewell je arrow funkce definovaná při vytvoření objektu, takže this je obklopující rozsah — zde non-module globální objekt, který nemá vlastnost name — takže this.name je undefined.',
   },
   '535': {
     introduction: 'Logické operátory v JavaScriptu používají zkrácené vyhodnocení a vracejí jednu z hodnot operandů, ne nutně boolean.',
@@ -2140,7 +2140,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'first dostane 1, second dostane 2 a ...rest sesbírá zbývající argumenty do [3, 4, 5]. arguments.length počítá všechny předané argumenty (5) bez ohledu na počet definovaných parametrů. Pozor: rest je skutečné pole, zatímco arguments je array-like objekt.',
   },
   '551': {
-    introduction: 'Pochopení rozsahu proměnných v kombinaci s okamžitě volanými výrazy odhalí, jak JavaScript řeší názvy.',
+    introduction: 'Pochopení rozsahu vnořených funkcí v kombinaci s hoistingem var odhalí, jak JavaScript řeší názvy.',
     question: 'Co vypíše tento kód?\n\n```javascript\nvar a = 1;\nfunction outer() {\n  var a = 2;\n  function inner() {\n    a++;\n    var a = 3;\n    console.log(a);\n  }\n  inner();\n  console.log(a);\n}\nouter();\nconsole.log(a);\n```',
     explanation: 'inner() má vlastní var a (hoistnuté na začátek funkce). a++ inkrementuje hoistnuté-ale-undefined lokální a, čímž vznikne NaN, pak a = 3 ho přiřadí. console.log(a) uvnitř inner vypíše 3. Vnější a (2) je nedotčené, takže console.log v outer vypíše 2. Globální a (1) je nedotčené, takže poslední console.log vypíše 1.',
   },
@@ -2193,11 +2193,6 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     introduction: 'Všechny microtasky se vyprázdní před dalším macrotaskem.',
     question: 'Co tohle vypíše?\n\n```js\nsetTimeout(() => console.log(1), 0);\nPromise.resolve()\n  .then(() => console.log(2))\n  .then(() => console.log(3));\nconsole.log(4);\n```',
     explanation: 'Sync první: 4. Fronta microtasků běží: 2, což naplánuje další microtask 3, který také proběhne před jakýmkoli macrotaskem. Nakonec macrotask setTimeout: 1.',
-  },
-  '762': {
-    introduction: 'Slavný chyták abstraktní rovnosti.',
-    question: 'Co tohle vypíše?\n\n```js\nconsole.log([] == ![]);\n```',
-    explanation: '![] je false. Pak [] == false převede obě strany na čísla: [] se stane "" pak 0; false se stane 0. 0 == 0 je true.',
   },
   '763': {
     introduction: 'map předává svému callbacku (value, index).',
@@ -2564,6 +2559,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '452': {
     introduction: 'Element <code> reprezentuje počítačový kód.',
     question: 'Jak zobrazíš kód v HTML?\n\n```html\n<???>const x = 5;</???>\n```',
+    options: ['<script>', '<code>', '<program>', '<javascript>'],
     explanation: '<code> zobrazí inline kód monospace fontem. Pro bloky kódu zabal <code> do <pre>. <script> JavaScript vykoná, nezobrazí ho.',
   },
   '453': {
@@ -2863,16 +2859,19 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '328': {
     introduction: 'JSON je nejběžnější datový formát v Node.js aplikacích.',
     question: 'Jak v Node.js parsuješ JSON string?',
+    options: ['JSON.decode()', 'JSON.parse()', 'parseJSON()', 'json.read()'],
     explanation: 'JSON.parse() převede JSON string na JavaScriptový objekt. Vyhodí chybu, pokud string není validní JSON.',
   },
   '329': {
     introduction: 'Převod objektů na JSON stringy je často potřeba pro API a ukládání do souborů.',
     question: 'Jak převedeš objekt na JSON string?',
+    options: ['JSON.encode()', 'JSON.stringify()', 'toString()', 'object.toJSON()'],
     explanation: 'JSON.stringify() převede JavaScriptový objekt na JSON string. Můžeš předat další argumenty pro formátování.',
   },
   '330': {
     introduction: 'npm skripty automatizují běžné úlohy v Node.js projektech.',
     question: 'Jak spustíš skript definovaný v package.json?',
+    options: ['node script-name', 'npm run script-name', 'npm script-name', 'run script-name'],
     explanation: 'Použij npm run script-name pro spuštění skriptů definovaných v package.json. Některé skripty jako "start" a "test" mohou "run" vynechat.',
   },
   '331': {
@@ -2914,11 +2913,13 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '337': {
     introduction: 'Naslouchání událostem je v programování v Node.js zásadní.',
     question: 'Jak nasloucháš události na EventEmitteru?',
+    options: ['emitter.listen("event", handler)', 'emitter.on("event", handler)', 'emitter.watch("event", handler)', 'emitter.catch("event", handler)'],
     explanation: 'Použij emitter.on("eventName", callback) pro registraci listeneru událostí. Pro jednorázové listenery použij emitter.once().',
   },
   '338': {
     introduction: 'Někdy potřebuješ z Node.js spustit jiné programy nebo skripty.',
     question: 'Který modul se používá pro spouštění child procesů v Node.js?',
+    options: ['subprocess', 'child_process', 'spawn', 'exec'],
     explanation: 'Modul child_process poskytuje metody jako spawn(), exec() a fork() pro vytváření child procesů.',
   },
   '339': {
@@ -2948,20 +2949,23 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '343': {
     introduction: 'Express usnadňuje stavbu REST API.',
     question: 'Jak v Expressu přistupuješ k tělu requestu?',
+    options: ['req.data', 'req.body (s middlewarem)', 'req.content', 'req.payload'],
     explanation: 'K tělu requestu přistupuj přes req.body, ale nejdřív potřebuješ middleware jako express.json() pro parsování JSON těl.',
   },
   '344': {
     introduction: 'Express poskytuje pohodlné metody pro posílání odpovědí.',
     question: 'Jak v Expressu pošleš JSON odpověď?',
+    options: ['res.write(json)', 'res.json(object)', 'res.send(JSON.stringify(obj))', 'res.return(json)'],
     explanation: 'res.json() automaticky nastaví Content-Type na application/json a převede objekt na JSON.',
   },
   '345': {
     introduction: 'HTTP stavové kódy indikují výsledek requestu.',
     question: 'Jak v Expressu nastavíš HTTP stavový kód?',
+    options: ['res.code(404)', 'res.status(404)', 'res.setStatus(404)', 'res.httpStatus(404)'],
     explanation: 'Použij res.status(code) pro nastavení stavu. Zřetěz ho s dalšími metodami: res.status(404).json({ error: "Not found" }).',
   },
   '346': {
-    introduction: 'Neošetřené chyby mohou shodit tvou Node.js aplikaci.',
+    introduction: 'Node.js má výchozí chování pro chyby, které se propagují bez ošetření.',
     question: 'Co se stane, když chyba v Node.js není zachycena?',
     options: ['Ignoruje se', 'Proces spadne', 'Automaticky se zaloguje', 'Operace se opakuje'],
     explanation: 'Neošetřené chyby (výjimky nebo Promise rejecty) shodí Node.js proces. Pro ošetření použij try/catch a process.on("uncaughtException").',
@@ -2993,16 +2997,19 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '351': {
     introduction: 'Modul fs má Promise API pro čistší asynchronní kód.',
     question: 'Jak používáš Promise verzi fs API?',
+    options: ['Jen require("fs").promises', 'Jen require("fs/promises")', 'Buď require("fs").promises nebo require("fs/promises")', 'fs.usePromises()'],
     explanation: 'Jak require("fs").promises, tak require("fs/promises") vystavují Promise verzi fs API a lze je zaměnitelně používat s async/await.',
   },
   '352': {
     introduction: 'Node.js má vestavěnou kryptografickou funkcionalitu.',
     question: 'Který modul poskytuje kryptografickou funkcionalitu v Node.js?',
+    options: ['encrypt', 'crypto', 'security', 'hash'],
     explanation: 'Modul crypto poskytuje kryptografické funkce včetně hashování, šifrování, dešifrování a generování náhodných čísel.',
   },
   '353': {
     introduction: 'Node.js umí přistupovat k informacím o operačním systému.',
     question: 'Který modul poskytuje informace o operačním systému?',
+    options: ['system', 'os', 'platform', 'machine'],
     explanation: 'Modul os poskytuje metody pro získání info o operačním systému, včetně CPU, paměti, platformy a domovského adresáře.',
   },
   '354': {
@@ -3144,10 +3151,10 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'AbortSignal.timeout(ms) je statický pomocník (Node 17.3+), který vrátí signal abortující po daném počtu milisekund. Předání jako `signal` způsobí, že fetch selže s TimeoutError. Standardní fetch nemá žádnou volbu `timeout`.',
   },
   '673': {
-    introduction: 'Node má vestavěný test runner pod node:test s TAP výstupem.',
+    introduction: 'Node má vestavěný test runner pod node:test.',
     question: 'Který příkaz spustí testy pomocí vestavěného Node test runneru v Node 20+?\n\n```bash\n# ?\n```',
     options: ['node --jest test/', 'node --test', 'node run-tests', 'npm test musí být nakonfigurováno; Node nemá vestavěný runner'],
-    explanation: 'Node 20 přináší stabilní test runner; `node --test` najde testovací soubory (odpovídající vzorům jako *.test.js) a spustí je s TAP výstupem. Testy se píšou s moduly node:test a node:assert.',
+    explanation: 'Node 20 přináší stabilní test runner; `node --test` najde testovací soubory (odpovídající vzorům jako *.test.js) a spustí je s lidsky čitelným spec výstupem v interaktivním terminálu (TAP při přesměrování nebo v CI). Testy se píšou s moduly node:test a node:assert.',
   },
   '674': {
     introduction: 'Signal handlery umožní Node procesu reagovat na OS signály jako SIGINT a SIGTERM.',
@@ -3371,6 +3378,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '490': {
     introduction: 'CSS proměnné ukládají znovupoužitelné hodnoty.',
     question: 'Jak používáš CSS proměnné?\n\n```css\n:root {\n  --primary: #007bff;\n}\n.button {\n  background: ???;\n}\n```',
+    options: ['$primary', 'var(--primary)', '@primary', 'primary'],
     explanation: 'Definuj přes --name, použij přes var(--name). :root udělá proměnné globální. var() může mít fallback: var(--primary, blue).',
   },
   '491': {
@@ -3454,6 +3462,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '504': {
     introduction: 'Přetečení textu lze řídit pomocí CSS.',
     question: 'Jak zkrátíš text s tečkami (ellipsis)?\n\n```css\n.truncate {\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ???;\n}\n```',
+    options: ['truncate', 'ellipsis', 'clip', 'hidden'],
     explanation: 'text-overflow: ellipsis zobrazí ... když text přeteče. Vyžaduje: white-space: nowrap (jeden řádek), overflow: hidden a definovanou šířku.',
   },
   '1007': {
@@ -3495,6 +3504,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '706': {
     introduction: 'Pojmenované grid oblasti lze odkazovat přes grid-area.',
     question: 'Který selektor umístí element do oblasti pojmenované `main`?\n\n```css\n.layout {\n  display: grid;\n  grid-template-areas:\n    \'header header\'\n    \'sidebar main\'\n    \'footer footer\';\n}\n```',
+    options: ['.element { grid-area: main; }', '.element { grid-template-area: main; }', '.element { grid-name: main; }', '.element { area: \'main\'; }'],
     explanation: 'grid-area přijme buď pojmenovanou oblast (bez uvozovek), nebo zkratku row-start/column-start/row-end/column-end. Identifikátor odpovídá názvu deklarovanému v grid-template-areas.',
   },
   '707': {
@@ -3548,6 +3558,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '715': {
     introduction: 'CSS proměnné lze číst a zapisovat přes JS.',
     question: 'Který JS výraz správně přečte vypočtenou hodnotu `--accent` na kořenovém elementu?\n\n```css\n:root { --accent: #09f; }\n```',
+    options: ["getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()", "document.documentElement.style.var('--accent')", "document.documentElement.dataset.accent", "CSS.var('--accent')"],
     explanation: 'Použij getComputedStyle(el).getPropertyValue(\'--name\'). Vrácená hodnota má typicky úvodní bílé znaky, takže .trim() je konvenční. Pro nastavení použij el.style.setProperty(\'--name\', value).',
   },
   '716': {
@@ -3571,11 +3582,13 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '719': {
     introduction: ':has() je dlouho očekávaný rodičovský/relační selektor.',
     question: 'Které pravidlo vybere elementy `<figure>`, které obsahují `<figcaption>`?\n\n```html\n<figure><img><figcaption>Cap</figcaption></figure>\n<figure><img></figure>\n```',
+    options: ['figure:has(figcaption) { }', 'figure > figcaption ^ figure { }', 'figure:contains(figcaption) { }', 'figure:parent(figcaption) { }'],
     explanation: ':has() přijme relativní seznam selektorů a odpovídá subjektu, pokud nějaký potomek (nebo sourozenec, s kombinátory) odpovídá. figure:has(figcaption) je standardní syntaxe.',
   },
   '720': {
     introduction: 'Logické vlastnosti se přizpůsobují směru psaní.',
     question: 'V dokumentu zleva doprava (anglicky), čemu se rovná `margin-inline-start: 1rem`?\n\n```css\n.box { margin-inline-start: 1rem; }\n```',
+    options: ['margin-left: 1rem', 'margin-right: 1rem', 'margin-top: 1rem', 'margin-bottom: 1rem'],
     explanation: 'inline-start odpovídá začátku inline osy. Při horizontálním psaní LTR běží inline osa zleva doprava, takže inline-start = vlevo. V RTL by mapoval doprava. block-start/block-end mapují na nahoře/dole v horizontálních režimech psaní.',
   },
   '721': {
@@ -3653,6 +3666,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '3': {
     introduction: 'Aktualizace stavu v Reactu mohou být záludné, když nová hodnota závisí na předchozí, zvlášť s dávkovými aktualizacemi.',
     question: 'Jak aktualizuješ stav na základě předchozího stavu?\n\n```jsx\nconst [count, setCount] = useState(0);\n// Which approach is correct?\n```',
+    options: ['setState(state + 1)', 'setState(prev => prev + 1)', 'setState(this.state + 1)', 'state++'],
     explanation: 'Když nový stav závisí na předchozím, použij funkcionální formu aktualizace: setState(prev => prev + 1). To zajistí, že vždy pracuješ s nejnovější hodnotou stavu.',
   },
   '4': {
@@ -3724,6 +3738,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '15': {
     introduction: 'Kombinace useCallback s React.memo může výrazně optimalizovat výkon renderování ve složitých aplikacích.',
     question: 'useCallback(fn, deps) je ekvivalentní kterému volání useMemo?\n\n```jsx\n// These are equivalent:\nuseCallback(fn, deps)\n// vs\nuseMemo(???, deps)\n```',
+    options: ['useMemo(fn, deps)', 'useMemo(() => fn, deps)', 'useMemo(fn(), deps)', 'useMemo(() => fn(), deps)'],
     explanation: 'useCallback(fn, deps) je syntaktický cukr pro useMemo(() => fn, deps). Oba memoizují referenci funkce, ale useCallback je pro tento konkrétní účel čitelnější.',
   },
   '16': {
@@ -3754,7 +3769,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     introduction: 'Jako ostatní hooky useMemo přijímá pole závislostí. Pochopení okrajových případů jako prázdné pole je důležité.',
     question: 'Co se stane, když jsou závislosti useMemo prázdné []?\n\n```jsx\nconst config = useMemo(\n  () => parseConfig(data),\n  [] // empty array\n);\n```',
     options: ['Hodnota se počítá při každém renderu', 'Hodnota se počítá jednou při mountu', 'Hodnota je undefined', 'Vyhodí se chyba'],
-    explanation: 'Prázdné pole závislostí znamená, že se hodnota počítá jen jednou při počátečním renderu a nikdy se nepřepočítá, podobně jako useEffect s [] běží jen při mountu.',
+    explanation: 'Prázdné pole závislostí znamená, že React znovu použije hodnotu spočítanou při prvním renderu a nepřepočítá ji, dokud je cache zachována. Pozor, useMemo je optimalizační nápověda, ne záruka — React může cache zahodit a přepočítat.',
   },
   '21': {
     introduction: 'useRef je všestranný Hook s unikátními vlastnostmi. Pochopení toho, co vrací, je základ.',
@@ -3941,12 +3956,6 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     options: ['Použití useState', 'Vytváření nových objektů/funkcí v renderu', 'Použití useEffect', 'Mít dětské komponenty'],
     explanation: 'Vytváření nových objektů, polí nebo funkcí během renderu vytvoří pokaždé nové reference, což způsobí překreslení dětských komponent. Memoizuj je přes useMemo/useCallback.',
   },
-  '122': {
-    introduction: 'Prop drilling je běžný problémový vzor v hierarchiích React komponent.',
-    question: 'Co je prop drilling a jak se mu vyhnout?\n\n```jsx\n// Passing props through many levels\n<App user={user}>\n  <Layout user={user}>\n    <Sidebar user={user}>\n      <Profile user={user} />\n```',
-    options: ['Je to doporučená praxe', 'Předávání props skrz mnoho komponent; použij Context', 'Použij globální proměnné', 'Vyhni se dětským komponentám'],
-    explanation: 'Prop drilling předává data skrz mnoho úrovní komponent. Vyhni se mu pomocí React Contextu, knihoven pro správu stavu (Redux, Zustand) nebo vzorů kompozice komponent.',
-  },
   '123': {
     introduction: 'React.memo je higher-order komponenta pro optimalizaci funkčních komponent.',
     question: 'K čemu slouží React.memo()?\n\n```jsx\nconst MemoizedComponent = React.memo(function MyComponent({ name }) {\n  return <div>{name}</div>;\n});\n```',
@@ -3988,12 +3997,6 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     question: 'K čemu slouží hook useId?\n\n```jsx\nconst id = useId();\n<label htmlFor={id}>Name</label>\n<input id={id} />\n```',
     options: ['Generuje databázová ID', 'Generuje unikátní ID pro přístupnost', 'Vytváří uživatelská ID', 'Pro klíče seznamů'],
     explanation: 'useId generuje stabilní, unikátní ID konzistentní mezi server a client renderováním. Ideální pro atributy přístupnosti jako dvojice htmlFor/id. Nepoužívej pro klíče seznamů.',
-  },
-  '130': {
-    introduction: 'Stav a props jsou oba způsoby správy dat v Reactu, ale slouží různým účelům.',
-    question: 'Jaký je rozdíl mezi state a props?\n\n```jsx\n// Props: passed from parent, read-only\n<Child name="John" />\n\n// State: managed internally, can change\nconst [count, setCount] = useState(0);\n```',
-    options: ['Žádný rozdíl', 'Props jsou externí/jen pro čtení, state je interní/měnitelný', 'State je rychlejší', 'Props jsou novější'],
-    explanation: 'Props se předávají z rodičovských komponent a jsou jen pro čtení. State se spravuje uvnitř komponenty a lze ho aktualizovat. Props tečou dolů, změny stavu spustí překreslení.',
   },
   '131': {
     introduction: 'React dávkuje aktualizace stavu kvůli výkonu, což může způsobit neočekávané chování.',
@@ -4099,7 +4102,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   },
   '148': {
     introduction: 'DOM refy začínají jako null a v TypeScriptu vyžadují správné ošetření null.',
-    question: 'Jak se vyhnout null kontrolám u useRef pro DOM elementy?\n\n```jsx\nfunction Form() {\n  const inputRef = useRef<HTMLInputElement>(null);\n  \n  const handleSubmit = () => {\n    // Option 1: Optional chaining\n    inputRef.current?.focus();\n    \n    // Option 2: Null check\n    if (inputRef.current) {\n      inputRef.current.focus();\n    }\n    \n    // Option 3: Non-null assertion (when certain)\n    inputRef.current!.focus();\n  };\n}\n```',
+    question: 'Jak v TypeScriptu bezpečně ošetříš počáteční null hodnotu DOM useRef?\n\n```jsx\nfunction Form() {\n  const inputRef = useRef<HTMLInputElement>(null);\n  \n  const handleSubmit = () => {\n    // Option 1: Optional chaining\n    inputRef.current?.focus();\n    \n    // Option 2: Null check\n    if (inputRef.current) {\n      inputRef.current.focus();\n    }\n    \n    // Option 3: Non-null assertion (when certain)\n    inputRef.current!.focus();\n  };\n}\n```',
     options: ['Refy nejsou nikdy null', 'Použij optional chaining, null kontroly nebo assertion', 'Inicializuj falešným elementem', 'Nepoužívej TypeScript'],
     explanation: 'DOM refy jsou null, dokud se komponenta nemountne. Použij optional chaining (?.), null kontroly nebo non-null assertion (!), když jsi si jistý, že element existuje. TypeScript tuto bezpečnost vynucuje.',
   },
@@ -4110,10 +4113,10 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'useState použij pro hodnoty, které ovlivňují vykreslené (změna spustí překreslení). useRef použij pro hodnoty, které by neměly spouštět překreslení: přístup k DOM, ID časovačů, předchozí hodnoty, počty renderů.',
   },
   '150': {
-    introduction: 'forwardRef umožní předávat refy skrz vlastní komponenty k dětským elementům.',
-    question: 'Jak useRef funguje s forwardRef?\n\n```jsx\nconst FancyInput = forwardRef((props, ref) => {\n  return <input ref={ref} className="fancy" />;\n});\n\nfunction Parent() {\n  const inputRef = useRef(null);\n  \n  return (\n    <>\n      <FancyInput ref={inputRef} />\n      <button onClick={() => inputRef.current.focus()}>\n        Focus\n      </button>\n    </>\n  );\n}\n```',
-    options: ['forwardRef je zastaralý', 'forwardRef předá ref skrz do dětské komponenty', 'Vlastní komponenty nelze refovat', 'Použij jiný název prop'],
-    explanation: 'Ve výchozím stavu se refy nepředávají do vlastních komponent. forwardRef umožní komponentě přijmout ref a předat ho dětskému DOM elementu, čímž umožní rodičovským komponentám přistupovat k dětským DOM uzlům.',
+    introduction: 'V Reactu 19 může funkční komponenta přijímat ref jako běžný prop, takže forwardRef už není potřeba.',
+    question: 'Jak v Reactu 19 předáš ref dětskému elementu?\n\n```jsx\nfunction FancyInput({ ref }) {\n  return <input ref={ref} className="fancy" />;\n}\n\nfunction Parent() {\n  const inputRef = useRef(null);\n  \n  return (\n    <>\n      <FancyInput ref={inputRef} />\n      <button onClick={() => inputRef.current.focus()}>\n        Focus\n      </button>\n    </>\n  );\n}\n```',
+    options: ['Refy se nikdy nemůžou dostat do vlastních komponent', 'Přijmi ref jako běžný prop a předej ho dětskému elementu', 'Každou komponentu musíš obalit do forwardRef', 'Přejmenuj prop na innerRef a čti props.innerRef'],
+    explanation: 'Od Reactu 19 se ref předává funkčním komponentám jako běžný prop, takže můžeš destrukturovat { ref } a předat ho přímo dětskému DOM elementu. forwardRef stále funguje, ale je zastaralý a už není potřeba; codemod ho umí odstranit.',
   },
   '151': {
     introduction: 'React komponenty mají životní cyklus s odlišnými fázemi. Pochopení terminologie pomáhá při čtení dokumentace.',
@@ -4207,9 +4210,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   },
   '194': {
     introduction: 'useImperativeHandle přizpůsobí hodnotu refu vystavenou rodičovským komponentám.',
-    question: 'K čemu slouží useImperativeHandle?\n\n```jsx\nconst FancyInput = forwardRef((props, ref) => {\n  const inputRef = useRef();\n  \n  useImperativeHandle(ref, () => ({\n    // Expose only specific methods to parent\n    focus: () => inputRef.current.focus(),\n    clear: () => inputRef.current.value = ""\n  }));\n  \n  return <input ref={inputRef} />;\n});\n\n// Parent can only call focus() and clear()\nparentRef.current.focus();\n```',
+    question: 'K čemu slouží useImperativeHandle?\n\n```jsx\n// React 19: ref se přijímá jako běžný prop\nconst FancyInput = ({ ref }) => {\n  const inputRef = useRef();\n  \n  useImperativeHandle(ref, () => ({\n    // Expose only specific methods to parent\n    focus: () => inputRef.current.focus(),\n    clear: () => inputRef.current.value = ""\n  }));\n  \n  return <input ref={inputRef} />;\n};\n\n// Parent can only call focus() and clear()\nparentRef.current.focus();\n```',
     options: ['Zpracovává vstup z klávesnice', 'Přizpůsobí, co ref vystaví rodiči', 'Zlepšuje výkon', 'Zpracovává odeslání formuláře'],
-    explanation: 'useImperativeHandle přizpůsobí hodnotu vystavenou rodičovským komponentám při použití refu. Místo vystavení celého DOM uzlu můžeš vystavit konkrétní metody. Používej střídmě — preferuj deklarativní kód.',
+    explanation: 'useImperativeHandle přizpůsobí hodnotu vystavenou rodičovským komponentám při použití refu. Místo vystavení celého DOM uzlu můžeš vystavit konkrétní metody. V Reactu 19 komponenta přijímá ref jako běžný prop (forwardRef už není potřeba). Používej střídmě — preferuj deklarativní kód.',
   },
   '195': {
     introduction: 'useDebugValue přidává vlastním hookům popisky viditelné v React DevTools pro snazší ladění.',
@@ -4240,12 +4243,6 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     question: 'Jak se vyhnout nekonečným smyčkám v useEffect?\n\n```jsx\n// INFINITE LOOP - state change triggers effect, effect changes state\nuseEffect(() => {\n  setCount(count + 1); // Changes state, triggers re-render, runs effect again...\n});\n\n// FIXED - use functional update with empty deps\nuseEffect(() => {\n  setCount(c => c + 1);\n}, []); // Runs once on mount, no stale closure\n```',
     options: ['Nekonečné smyčky jsou nemožné', 'Přidej správné závislosti, použij funkcionální aktualizace', 'Vždy použij prázdné pole závislostí', 'Úplně odstraň useEffect'],
     explanation: 'Nekonečné smyčky nastanou, když efekt změní stav, který ho spustí. Oprav: přidáním správných závislostí, použitím funkcionálních aktualizací (setCount(c => c + 1)) nebo přehodnocením logiky.',
-  },
-  '200': {
-    introduction: 'Dodržování konzistentního pořadí při volání hooků zlepšuje čitelnost kódu a dodržuje konvence.',
-    question: 'Jaké je konvenční pořadí pro organizaci hooků v komponentě?\n\n```jsx\nfunction Component() {\n  // 1. All useState calls first\n  const [a, setA] = useState(0);\n  const [b, setB] = useState("");\n  \n  // 2. useRef\n  const ref = useRef(null);\n  \n  // 3. useMemo / useCallback\n  const memoized = useMemo(() => compute(a), [a]);\n  \n  // 4. useEffect last\n  useEffect(() => {\n    // side effects\n  }, []);\n  \n  return <div>...</div>;\n}\n```',
-    options: ['Hooky se musí volat v obráceném abecedním pořadí', 'useState, useRef, useMemo/useCallback, useEffect', 'useEffect musí být první', 'Jen jeden hook na komponentu'],
-    explanation: 'React vyžaduje jen to, aby se hooky volaly ve stejném pořadí napříč renderování (pravidla hooků). Nad rámec toho je běžná konvence: useState (stav), useRef (refy), useMemo/useCallback (vypočtené hodnoty), useEffect (vedlejší efekty). To zlepšuje čitelnost.',
   },
   '216': {
     introduction: 'React má specifickou terminologii pro své procesy. Pochopení těchto pojmů pomáhá v komunikaci s ostatními vývojáři.',
@@ -4464,7 +4461,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '572': {
     introduction: 'V appce, která podporuje server komponenty, musíš explicitně označit soubory, které potřebují client-side interaktivitu. Direktiva se umístí úplně nahoru souboru.',
     question: 'Co dělá direktiva `\'use client\'`?',
-    options: ['Označí modul (a komponenty, které exportuje) jako boundary Client Component; moduly, které importuje, zůstanou client moduly, jen pokud jsou taky označené.', 'Vynutí, aby se komponenta renderovala jen v prohlížeči a úplně přeskočila SSR.', 'Vypne pro ten soubor React strict mode.', 'Řekne bundleru, aby soubor poslal jako samostatný JavaScript chunk bez ohledu na importy.'],
+    options: ['Označí modul (a komponenty, které exportuje) jako boundary Client Component; moduly, které importuje, se automaticky stanou součástí client bundlu, aniž by každý potřeboval vlastní direktivu.', 'Vynutí, aby se komponenta renderovala jen v prohlížeči a úplně přeskočila SSR.', 'Vypne pro ten soubor React strict mode.', 'Řekne bundleru, aby soubor poslal jako samostatný JavaScript chunk bez ohledu na importy.'],
     explanation: '`\'use client\'` nahoře souboru deklaruje hranici mezi server a client moduly. Komponenty exportované z takového souboru (a moduly, které tranzitivně importují) běží na klientovi. Nevypíná SSR — client komponenty se stále SSR-renderují do HTML.',
   },
   '573': {
@@ -4733,7 +4730,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   },
   '170': {
     introduction: 'ESLint je nástroj statické analýzy pro JavaScript a TypeScript, který označuje problematické vzory a vynucuje stylová pravidla.',
-    question: 'Co je ESLint?\n\n```js\n// .eslintrc.js\nmodule.exports = {\n  rules: {\n    "no-unused-vars": "error",\n    "semi": ["error", "always"]\n  }\n};\n\n// ESLint finds and reports:\n// - Unused variables\n// - Missing semicolons\n// - Code style issues\n```',
+    question: 'Co je ESLint?\n\n```js\n// eslint.config.js\nimport js from "@eslint/js";\nexport default [\n  js.configs.recommended,\n  {\n    rules: {\n      "no-unused-vars": "error",\n      "semi": ["error", "always"]\n    }\n  }\n];\n\n// ESLint finds and reports:\n// - Unused variables\n// - Missing semicolons\n// - Code style issues\n```',
     options: ['JavaScriptový kompilátor', 'Nástroj statické analýzy kódu, který hledá problémy', 'Testovací framework', 'Bundler'],
     explanation: 'ESLint je linting nástroj, který analyzuje kód kvůli chybám, bugům a stylovým problémům. Je konfigurovatelný pravidly a pluginy. Pomáhá udržet kvalitu a konzistenci kódu napříč týmy.',
   },
@@ -4789,7 +4786,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     introduction: 'Moderní webové aplikace renderují HTML na různých místech a v různých časech — na serveru při requestu, v prohlížeči, nebo předem při buildu.',
     question: 'Jaký je rozdíl mezi SSR, CSR a SSG?\n\n```\nSSR (Server-Side Rendering):\n  Server renders HTML for each request\n\nCSR (Client-Side Rendering):\n  Browser renders with JavaScript\n\nSSG (Static Site Generation):\n  HTML generated at build time\n```',
     options: ['Jsou stejné', 'Různé strategie pro to, kdy/kde se HTML generuje', 'Typy databází', 'Testovací metodologie'],
-    explanation: 'SSR renderuje na serveru při requestu (Next.js), CSR renderuje v prohlížeči (Create React App), SSG předgeneruje HTML při buildu (Gatsby). Každé má kompromisy ohledně výkonu, SEO a složitosti.',
+    explanation: 'SSR renderuje na serveru při requestu (Next.js), CSR renderuje v prohlížeči (Vite + React), SSG předgeneruje HTML při buildu (Astro / Next.js static export). Každé má kompromisy ohledně výkonu, SEO a složitosti.',
   },
   '206': {
     introduction: 'JavaScript je jednovláknový, takže potřebuje speciální mechanismy pro zpracování operací, které trvají, bez blokování.',
@@ -4890,6 +4887,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '227': {
     introduction: 'JavaScript nabízí více způsobů, jak vytvořit pole, každý s vlastní syntaxí.',
     question: 'Jak vytvoříš pole v JavaScriptu?\n\n```javascript\n// Which is correct?\nconst a = [1, 2, 3];\nconst b = new Array(1, 2, 3);\n```',
+    options: ['Jen pomocí new Array()', 'Jen pomocí hranatých závorek []', 'Funguje jak [], tak new Array()', 'Pole nelze vytvořit'],
     explanation: 'Jak notace hranatých závorek [1, 2, 3], tak new Array(1, 2, 3) vytvoří pole. Hranaté závorky se preferují kvůli čitelnosti a jednoduchosti.',
   },
   '228': {
@@ -4900,16 +4898,19 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '229': {
     introduction: 'Vlastnost length ti řekne, kolik prvků je v poli.',
     question: 'Co vrací array.length?\n\n```javascript\nconst numbers = [10, 20, 30, 40];\nconsole.log(numbers.length); // ?\n```',
+    options: ['Poslední index (3)', 'Počet prvků (4)', 'Součet prvků', 'undefined'],
     explanation: 'Vlastnost length vrací počet prvků v poli. Pro [10, 20, 30, 40] je length 4 (ne 3, což je poslední index).',
   },
   '230': {
     introduction: 'Push přidá prvky na konec pole a modifikuje původní pole.',
     question: 'Co dělá array.push()?\n\n```javascript\nconst arr = [1, 2];\narr.push(3);\nconsole.log(arr); // ?\n```',
+    options: ['Odebere poslední prvek', 'Přidá prvek na konec', 'Přidá prvek na začátek', 'Seřadí pole'],
     explanation: 'push() přidá jeden nebo více prvků na konec pole a vrátí novou délku. Po push(3) se arr stane [1, 2, 3].',
   },
   '231': {
     introduction: 'Pop odebere a vrátí poslední prvek z pole.',
     question: 'Co dělá array.pop()?\n\n```javascript\nconst arr = [1, 2, 3];\nconst removed = arr.pop();\nconsole.log(removed); // ?\n```',
+    options: ['Vrátí 1', 'Vrátí 3', 'Vrátí pole', 'Vrátí undefined'],
     explanation: 'pop() odebere poslední prvek z pole a vrátí ho. Tady vrátí 3 a arr se stane [1, 2].',
   },
   '232': {
@@ -5018,8 +5019,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   },
   '251': {
     introduction: 'Metody definované uvnitř třídy jsou dostupné na všech instancích té třídy.',
-    question: 'Jak přidáš metodu do třídy?\n\n```javascript\nclass Calculator {\n  add(a, b) {\n    return a + b;\n  }\n}\n```',
-    explanation: 'Prostě definuj funkce uvnitř těla třídy. Metody nepotřebují klíčové slovo "function". Stanou se dostupnými na všech instancích.',
+    question: 'Jak je v následující třídě definovaná metoda add?\n\n```javascript\nclass Calculator {\n  add(a, b) {\n    return a + b;\n  }\n}\n```',
+    options: ['Jako funkce uvnitř těla třídy', 'Pomocí klíčového slova method před jejím názvem', 'Metody nelze do třídy přidat', 'Přiřazením k this.add v getteru'],
+    explanation: 'Metody se prostě definují jako funkce uvnitř těla třídy, bez klíčového slova "function". Stanou se dostupnými na všech instancích třídy.',
   },
   '252': {
     introduction: 'Dědičnost umožní třídám sdílet chování přes vztahy rodič-potomek.',
@@ -5044,26 +5046,14 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     question: 'Co je statická metoda?\n\n```javascript\nclass MathHelper {\n  static add(a, b) {\n    return a + b;\n  }\n}\n// How to call it?\n```',
     explanation: 'Statické metody patří samotné třídě, ne instancím. Volej je přímo na třídě: MathHelper.add(1, 2). "new" není potřeba.',
   },
-  '256': {
-    introduction: 'Záložka Network je zásadní pro ladění API volání a pochopení toku dat.',
-    question: 'Jaké informace vidíš po kliknutí na request v záložce Network?',
-    options: ['Jen URL', 'Headers, Preview, Response, Timing a Cookies', 'Nic, requesty nelze inspektovat', 'Jen stavový kód'],
-    explanation: 'Kliknutí na request ukáže: Headers (hlavičky requestu/odpovědi), Preview (naformátovaná odpověď), Response (syrová data), Timing (jak dlouho každá fáze trvala) a Cookies poslané s requestem.',
-  },
-  '257': {
-    introduction: 'Filtrování síťových requestů pomáhá soustředit se na konkrétní typy provozu.',
-    question: 'Jak můžeš filtrovat requesty v záložce Network?',
-    options: ['Requesty nelze filtrovat', 'Podle typu (XHR, JS, CSS, Img), textového vyhledávání nebo stavového kódu', 'Jen podle URL', 'Jen podle velikosti souboru'],
-    explanation: 'Záložka Network má filtrovací tlačítka (All, XHR, JS, CSS, Img atd.) a vyhledávací pole. Můžeš taky filtrovat podle stavu (např. "status-code:404") nebo metody (např. "method:POST").',
-  },
   '258': {
-    introduction: 'Filtr XHR/Fetch ukazuje jen JavaScriptem iniciované API requesty.',
+    introduction: 'Záložka Network má filtrovací tlačítka, která zužují, jaké druhy requestů se zobrazují.',
     question: 'Co ukazuje filtr XHR/Fetch v záložce Network?',
     options: ['Všechny requesty', 'Jen API volání dělaná JavaScriptem (AJAX requesty)', 'Jen obrázky', 'Jen HTML soubory'],
     explanation: 'Filtr XHR/Fetch ukazuje jen asynchronní JavaScriptové requesty — typicky API volání. To pomáhá soustředit se na datové requesty a ladit API problémy bez zobrazení obrázků, skriptů atd.',
   },
   '259': {
-    introduction: 'Záložka Elements umožní inspekci a úpravu DOM a CSS v reálném čase.',
+    introduction: 'Panely v DevTools se každý zaměřují na jiný aspekt stránky; záložka Elements je jedním z nich.',
     question: 'Co můžeš dělat v záložce Elements v DevTools?',
     options: ['Jen prohlížet HTML', 'Inspektovat, upravovat HTML/CSS naživo, vidět vypočtené styly a ladit layout', 'Jen mazat elementy', 'Záložka Elements neexistuje'],
     explanation: 'Záložka Elements umožní inspekci DOM, úpravu HTML/CSS v reálném čase, prohlížení vypočtených stylů, kontrolu rozměrů box modelu, ladění CSS Grid/Flexbox a zobrazení event listenerů na elementech.',
@@ -5101,8 +5091,8 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '265': {
     introduction: 'Lighthouse audituje tvou stránku ohledně výkonu, přístupnosti a osvědčených postupů.',
     question: 'Co analyzuje záložka Lighthouse v DevTools?',
-    options: ['Jen dobu načtení', 'Skóre Performance, Accessibility, Best Practices, SEO a PWA', 'Jen SEO', 'Rychlost sítě'],
-    explanation: 'Lighthouse audituje tvou stránku ohledně Performance, Accessibility, Best Practices, SEO a kritérií Progressive Web App. Poskytuje skóre a konkrétní doporučení pro zlepšení.',
+    options: ['Jen dobu načtení', 'Skóre Performance, Accessibility, Best Practices a SEO', 'Jen SEO', 'Rychlost sítě'],
+    explanation: 'Lighthouse audituje tvou stránku ohledně Performance, Accessibility, Best Practices a SEO. Poskytuje skóre a konkrétní doporučení pro zlepšení. (Kategorie PWA byla odstraněna v Lighthouse v12.)',
   },
   '277': {
     introduction: 'Než se kód dostane k uživatelům, často je potřeba ho transformovat a připravit pro efektivní doručení.',
@@ -5237,7 +5227,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'CI (Continuous Integration) automaticky testuje změny kódu. CD (Continuous Deployment) automaticky nasazuje kód, který projde. Společně automatizují proces vydávání.',
   },
   '299': {
-    introduction: 'Tajemství jako API klíče by neměly být v kódu a nastavení se často liší mezi vývojem a produkcí.',
+    introduction: 'Citlivé údaje jako API klíče by neměly být v kódu a nastavení se často liší mezi vývojem a produkcí.',
     question: 'Co jsou „environment proměnné“?',
     options: ['Proměnné o počasí', 'Konfigurační hodnoty uložené mimo kód, různé pro každé prostředí', 'Globální JavaScriptové proměnné', 'CSS custom properties'],
     explanation: 'Environment proměnné ukládají konfiguraci jako API klíče a databázové URL mimo kód. Různé hodnoty lze použít pro vývoj, staging a produkci.',
@@ -5443,7 +5433,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Nastavení length na 0 vyprázdní pole. To je běžný způsob, jak pole vymazat.',
   },
   '393': {
-    introduction: 'Pochopení pořadí vykonávání async/await je zásadní.',
+    introduction: 'Synchronní kód běží před zařazenými microtasky (Promise callbacky).',
     question: 'V jakém pořadí se tohle vypíše?\n\n```javascript\nconsole.log(1);\nPromise.resolve().then(() => console.log(2));\nconsole.log(3);\n```',
     explanation: 'Synchronní kód běží první (1, 3), pak běží microtasky (Promise callbacky) (2).',
   },
@@ -5657,7 +5647,7 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   '610': {
     introduction: 'Arrow funkce nemají vlastní navázání this; dědí ho z obklopujícího rozsahu.',
     question: 'Co tohle vypíše?\n\n```js\nconst obj = {\n  v: 10,\n  reg() { return this.v; },\n  arr: () => this?.v,\n};\nconsole.log(obj.reg(), obj.arr());\n```',
-    explanation: 'reg je běžná metoda, takže this je obj a this.v je 10. arr je arrow, takže this je this obklopujícího rozsahu (v modulu pravděpodobně globalThis, kde je this undefined), takže this?.v je undefined.',
+    explanation: 'reg je běžná metoda, takže this je obj a this.v je 10. arr je arrow funkce, takže zachytává this z obklopujícího rozsahu (na nejvyšší úrovni modulu), které je undefined; this?.v se proto zkrátí na undefined. (V klasickém skriptu je this na nejvyšší úrovni globalThis a globalThis.v je také undefined.) Výsledek: 10 undefined.',
   },
   '611': {
     introduction: 'Vyhledávání vlastností prochází prototypový řetězec přes [[Prototype]].',
