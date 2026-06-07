@@ -11,13 +11,15 @@ import {
   CircularProgress,
 } from '@mui/material';
 import { BRAND } from '../theme/MuiTheme';
+import { useT } from '../i18n/LanguageContext';
+import type { TranslationKey } from '../i18n/translations';
 
 type Language = 'javascript' | 'typescript' | 'python';
 
-const SAMPLES: Record<Language, { label: string; code: string }[]> = {
+const SAMPLES: Record<Language, { label: TranslationKey; code: string }[]> = {
   javascript: [
     {
-      label: 'Closure puzzle',
+      label: 'sandbox.sample.closure',
       code: `for (var i = 0; i < 3; i++) {
   setTimeout(() => console.log('var', i), 0);
 }
@@ -26,14 +28,14 @@ for (let i = 0; i < 3; i++) {
 }`,
     },
     {
-      label: 'Microtasks vs macrotasks',
+      label: 'sandbox.sample.microtasks',
       code: `console.log('A');
 setTimeout(() => console.log('B'), 0);
 Promise.resolve().then(() => console.log('C'));
 console.log('D');`,
     },
     {
-      label: 'Spread on objects',
+      label: 'sandbox.sample.spread',
       code: `const a = { x: 1, y: 2 };
 const b = { ...a, y: 3, z: 4 };
 console.log(b);`,
@@ -41,7 +43,7 @@ console.log(b);`,
   ],
   typescript: [
     {
-      label: 'Discriminated union',
+      label: 'sandbox.sample.discriminated',
       code: `type Result<T> =
   | { ok: true; value: T }
   | { ok: false; error: string };
@@ -57,14 +59,14 @@ try { unwrap({ ok: false, error: 'boom' }); } catch (e) {
 }`,
     },
     {
-      label: 'as const tuple',
+      label: 'sandbox.sample.asConst',
       code: `const arr = [1, 'two', true] as const;
 type Item = typeof arr[number];
 const x: Item = 'two';
 console.log(typeof arr[1], arr);`,
     },
     {
-      label: 'Generic constraint',
+      label: 'sandbox.sample.genericConstraint',
       code: `function pick<T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
   const out = {} as Pick<T, K>;
   for (const k of keys) out[k] = obj[k];
@@ -75,21 +77,21 @@ console.log(pick({ a: 1, b: 2, c: 3 }, ['a', 'c']));`,
   ],
   python: [
     {
-      label: 'List comprehension',
+      label: 'sandbox.sample.listComprehension',
       code: `xs = [1, 2, 3, 4, 5]
 squares = [x*x for x in xs if x > 2]
 print(squares)
 print(sum(squares))`,
     },
     {
-      label: 'Walrus operator',
+      label: 'sandbox.sample.walrus',
       code: `numbers = [10, 20, 30, 40, 50]
 if (n := len(numbers)) > 3:
     print(f"List has {n} items")
 print(numbers[-1])`,
     },
     {
-      label: 'Generator expression',
+      label: 'sandbox.sample.generator',
       code: `def fib():
     a, b = 0, 1
     while True:
@@ -214,6 +216,7 @@ async function loadSucrase() {
 }
 
 function CodeSandbox() {
+  const t = useT();
   const [language, setLanguage] = useState<Language>('javascript');
   const [code, setCode] = useState(SAMPLES.javascript[1].code);
   const [logs, setLogs] = useState<LogLine[]>([]);
@@ -256,7 +259,7 @@ function CodeSandbox() {
   const sendToIframe = (msg: { type: string; code: string }) => {
     const iframe = iframeRef.current;
     if (!iframe?.contentWindow) {
-      setLogs((prev) => [...prev, { level: 'error', line: 'Sandbox iframe not available' }]);
+      setLogs((prev) => [...prev, { level: 'error', line: t('sandbox.iframeUnavailable') }]);
       setRunning(false);
       return;
     }
@@ -269,7 +272,7 @@ function CodeSandbox() {
     sendToIframe({ type: 'run_js', code: jsCode });
     if (timerRef.current) window.clearTimeout(timerRef.current);
     timerRef.current = window.setTimeout(() => {
-      setLogs((prev) => [...prev, { level: 'error', line: 'Execution timed out (8s).' }]);
+      setLogs((prev) => [...prev, { level: 'error', line: t('sandbox.timeout8') }]);
       setRunning(false);
       // Reset the iframe to terminate runaway code; Pyodide must reload.
       const iframe = iframeRef.current;
@@ -289,7 +292,7 @@ function CodeSandbox() {
       const compiled = transform(code);
       runJS(compiled);
     } catch (err) {
-      setLogs([{ level: 'error', line: err instanceof Error ? err.message : 'Compile error' }]);
+      setLogs([{ level: 'error', line: err instanceof Error ? err.message : t('sandbox.compileError') }]);
       setRunning(false);
     }
   };
@@ -301,7 +304,7 @@ function CodeSandbox() {
     if (timerRef.current) window.clearTimeout(timerRef.current);
     // Python gets a longer window to allow cold-start Pyodide load.
     timerRef.current = window.setTimeout(() => {
-      setLogs((prev) => [...prev, { level: 'error', line: 'Execution timed out.' }]);
+      setLogs((prev) => [...prev, { level: 'error', line: t('sandbox.timeout') }]);
       setRunning(false);
       const iframe = iframeRef.current;
       if (iframe) {
@@ -322,16 +325,15 @@ function CodeSandbox() {
   return (
     <Box sx={{ maxWidth: 700, mx: 'auto' }}>
       <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mb: 1 }}>
-        Code playground
+        {t('sandbox.title')}
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        Run JavaScript, TypeScript, or Python in a sandboxed iframe. No network from your code, no
-        access to the parent page, hard timeout. Console output is captured below.
+        {t('sandbox.subtitle')}
       </Typography>
 
       <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center', mb: 1.5 }}>
         <ToggleButtonGroup
-          aria-label="Programming language"
+          aria-label={t('sandbox.language')}
           value={language}
           exclusive
           size="small"
@@ -344,11 +346,11 @@ function CodeSandbox() {
         {language === 'python' && pyodideStatus === 'loading' && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'text.secondary' }}>
             <CircularProgress size={14} />
-            <Typography variant="caption">Loading Python runtime (~10MB)…</Typography>
+            <Typography variant="caption">{t('sandbox.loadingPython')}</Typography>
           </Box>
         )}
         {language === 'python' && pyodideStatus === 'ready' && (
-          <Chip size="small" label="Python ready" color="success" variant="outlined" />
+          <Chip size="small" label={t('sandbox.pythonReady')} color="success" variant="outlined" />
         )}
       </Box>
 
@@ -356,7 +358,7 @@ function CodeSandbox() {
         {SAMPLES[language].map((s) => (
           <Chip
             key={s.label}
-            label={s.label}
+            label={t(s.label)}
             size="small"
             onClick={() => setCode(s.code)}
             clickable
@@ -366,8 +368,7 @@ function CodeSandbox() {
 
       {language === 'python' && pyodideStatus === 'idle' && (
         <Alert severity="info" sx={{ mb: 1.5 }}>
-          Python runs entirely inside the sandboxed iframe via Pyodide (WebAssembly). First run
-          downloads ~10MB from a CDN; subsequent runs reuse the loaded runtime.
+          {t('sandbox.pythonInfo')}
         </Alert>
       )}
 
@@ -377,7 +378,7 @@ function CodeSandbox() {
           value={code}
           onChange={(e) => setCode(e.target.value)}
           spellCheck={false}
-          aria-label={`${language} code`}
+          aria-label={t('sandbox.codeAria', { language })}
           sx={{
             display: 'block',
             width: '100%',
@@ -396,7 +397,7 @@ function CodeSandbox() {
         />
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, borderTop: '1px solid', borderColor: 'divider' }}>
           <Typography variant="caption" color="text.secondary">
-            {code.length} chars · iframe-sandboxed
+            {t('sandbox.charsInfo', { count: code.length })}
           </Typography>
           <Button
             variant="contained"
@@ -407,7 +408,7 @@ function CodeSandbox() {
               '&:hover': { backgroundColor: BRAND.greenHover },
             }}
           >
-            {!iframeReady ? 'Initialising…' : running ? 'Running…' : 'Run ▶'}
+            {!iframeReady ? t('sandbox.initialising') : running ? t('sandbox.running') : t('sandbox.run')}
           </Button>
         </Box>
       </Paper>
@@ -432,7 +433,7 @@ function CodeSandbox() {
       >
         {logs.length === 0 && (
           <Typography variant="caption" sx={{ color: '#888' }}>
-            Console output will appear here.
+            {t('sandbox.consolePlaceholder')}
           </Typography>
         )}
         {logs.map((l, i) => (
@@ -450,7 +451,7 @@ function CodeSandbox() {
       <iframe
         ref={iframeRef}
         sandbox="allow-scripts"
-        title="Code sandbox runner"
+        title={t('sandbox.runnerTitle')}
         srcDoc={RUNNER_HTML}
         style={{ display: 'none' }}
       />

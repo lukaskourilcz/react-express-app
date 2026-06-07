@@ -6,6 +6,7 @@ import AuthButton from './components/AuthButton';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import { useColorMode } from './theme/ColorModeContext';
 import { useT } from './i18n/LanguageContext';
+import type { TranslationKey } from './i18n/translations';
 import { BRAND } from './theme/MuiTheme';
 
 const Quiz = lazy(() => import('./components/Quiz'));
@@ -15,12 +16,12 @@ const CodeSandbox = lazy(() => import('./components/CodeSandbox'));
 const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayLanding })));
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 
-const ROUTE_TITLES: Record<string, string> = {
-  '/': 'DevQuiz — Test your web dev skills',
-  '/profile': 'Profile · DevQuiz',
-  '/leaderboard': 'Leaderboard · DevQuiz',
-  '/sandbox': 'Code playground · DevQuiz',
-  '/play': 'Play live · DevQuiz',
+const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
+  '/': 'title.home',
+  '/profile': 'title.profile',
+  '/leaderboard': 'title.leaderboard',
+  '/sandbox': 'title.sandbox',
+  '/play': 'title.play',
 };
 
 const InstagramIcon = () => (
@@ -72,14 +73,17 @@ function App() {
   }
 
   useEffect(() => {
-    document.title =
-      ROUTE_TITLES[location.pathname] ??
-      (location.pathname.startsWith('/play/') ? 'Live match · DevQuiz' : 'DevQuiz');
+    const titleKey = ROUTE_TITLE_KEYS[location.pathname];
+    document.title = titleKey
+      ? t(titleKey)
+      : location.pathname.startsWith('/play/')
+        ? t('title.playMatch')
+        : t('title.default');
     const main = document.getElementById('main-content');
     if (main) {
       main.focus({ preventScroll: true });
     }
-  }, [location.pathname]);
+  }, [location.pathname, t]);
 
   const showChrome = !(quizActive && location.pathname === '/');
   const navLinkSx = (isActive: boolean) => ({
