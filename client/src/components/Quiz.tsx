@@ -49,6 +49,7 @@ const CATEGORY_OPTIONS: { value: CategoryType; label: string; color: string }[] 
   { value: 'dev-world', label: 'Dev World', color: '#8b5cf6' },
   { value: 'custom', label: 'Custom', color: '#06b6d4' },
   { value: 'code-snippets', label: 'Code Snippets', color: '#ec4899' },
+  { value: 'apt', label: 'APT', color: '#10b981' },
 ];
 
 const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c]));

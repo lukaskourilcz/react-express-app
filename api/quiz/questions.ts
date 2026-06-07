@@ -18,6 +18,7 @@ const ALL_CATEGORIES: CategoryType[] = [
   'dev-world',
   'custom',
   'code-snippets',
+  'apt',
 ];
 const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
