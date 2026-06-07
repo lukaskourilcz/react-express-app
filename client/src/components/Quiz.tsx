@@ -501,7 +501,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       <Box
         sx={{
           mx: 'auto',
-          p: 3,
+          p: { xs: 2, sm: 3 },
           backgroundColor: 'background.paper',
           borderRadius: 2,
           border: '1px solid',
@@ -624,7 +624,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           <Typography component="legend" variant="overline" color="text.secondary" sx={{ p: 0, mb: 1.5, display: 'block' }}>
             {t('quiz.questionsLegend')}
           </Typography>
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
+          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
             {QUESTION_COUNT_OPTIONS.map((count) => (
               <Button
                 key={count}
@@ -771,7 +771,17 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 {t('quiz.dailyComplete')}
               </Typography>
             )}
-            <Box sx={{ mt: 3, display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Box
+              sx={{
+                mt: 3,
+                display: 'flex',
+                gap: 1.5,
+                justifyContent: 'center',
+                flexWrap: 'wrap',
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: { xs: 'stretch', sm: 'center' },
+              }}
+            >
               <Button
                 variant="contained"
                 onClick={handleRestart}

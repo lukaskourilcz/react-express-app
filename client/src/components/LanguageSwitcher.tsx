@@ -22,7 +22,7 @@ export default function LanguageSwitcher() {
         sx={{
           '& .MuiToggleButton-root': {
             px: 1,
-            py: 0.25,
+            py: { xs: 0.6, sm: 0.25 },
             fontSize: '0.72rem',
             fontWeight: 700,
             textTransform: 'none',

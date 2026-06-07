@@ -1,4 +1,4 @@
-import { createTheme, type ThemeOptions } from '@mui/material/styles';
+import { createTheme, responsiveFontSizes, type ThemeOptions } from '@mui/material/styles';
 import type { PaletteMode } from '@mui/material';
 
 export const BRAND = {
@@ -153,7 +153,10 @@ const baseOptions = (mode: PaletteMode): ThemeOptions => ({
   },
 });
 
-export const createAppTheme = (mode: PaletteMode) => createTheme(baseOptions(mode));
+// responsiveFontSizes makes all typography variants (h1–h6, body, caption, …)
+// scale down on smaller breakpoints, so headings/text are noticeably smaller on
+// phones and grow toward their full size on larger screens.
+export const createAppTheme = (mode: PaletteMode) => responsiveFontSizes(createTheme(baseOptions(mode)));
 
 export const theme = createAppTheme('light');
 

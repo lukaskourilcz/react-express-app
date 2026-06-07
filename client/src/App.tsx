@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Box, AppBar, Toolbar, Typography, Button, IconButton, CircularProgress, Tooltip } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography, Button, IconButton, CircularProgress, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider } from '@mui/material';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import AuthButton from './components/AuthButton';
 import LanguageSwitcher from './components/LanguageSwitcher';
@@ -48,6 +48,21 @@ const MoonIcon = () => (
   </svg>
 );
 
+const MenuIcon = () => (
+  <svg aria-hidden="true" focusable="false" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
+const NAV_ITEMS: { to: string; key: TranslationKey; isActive: (path: string) => boolean }[] = [
+  { to: '/', key: 'nav.quiz', isActive: (p) => p === '/' },
+  { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play') },
+  { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard' },
+  { to: '/cards', key: 'nav.cards', isActive: (p) => p === '/cards' },
+];
+
 const RouteLoader = () => {
   const t = useT();
   return (
@@ -62,6 +77,7 @@ function App() {
   const location = useLocation();
   const t = useT();
   const [quizActive, setQuizActive] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { mode, toggle } = useColorMode();
 
   useEffect(() => {
@@ -109,8 +125,18 @@ function App() {
       </Box>
 
       {showChrome && (
+        <>
         <AppBar position="static" elevation={0} sx={{ backgroundColor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
           <Toolbar sx={{ maxWidth: 1200, width: '100%', mx: 'auto', px: { xs: 2, sm: 3 } }}>
+            <IconButton
+              edge="start"
+              aria-label={t('nav.menu')}
+              onClick={() => setMobileNavOpen(true)}
+              sx={{ display: { xs: 'inline-flex', sm: 'none' }, mr: 0.5, color: 'text.secondary' }}
+            >
+              <MenuIcon />
+            </IconButton>
+
             <Typography
               variant="h6"
               component={Link}
@@ -121,27 +147,19 @@ function App() {
               DevQuiz
             </Typography>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Button component={Link} to="/" sx={navLinkSx(location.pathname === '/')}>
-                {t('nav.quiz')}
-              </Button>
-              <Button
-                component={Link}
-                to="/play"
-                sx={navLinkSx(location.pathname.startsWith('/play'))}
-              >
-                {t('nav.play')}
-              </Button>
-              <Button
-                component={Link}
-                to="/leaderboard"
-                sx={navLinkSx(location.pathname === '/leaderboard')}
-              >
-                {t('nav.leaderboard')}
-              </Button>
-              <Button component={Link} to="/cards" sx={navLinkSx(location.pathname === '/cards')}>
-                {t('nav.cards')}
-              </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
+              <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
+                {NAV_ITEMS.map((item) => (
+                  <Button
+                    key={item.to}
+                    component={Link}
+                    to={item.to}
+                    sx={navLinkSx(item.isActive(location.pathname))}
+                  >
+                    {t(item.key)}
+                  </Button>
+                ))}
+              </Box>
               <LanguageSwitcher />
               <Tooltip title={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
                 <IconButton
@@ -156,6 +174,32 @@ function App() {
             </Box>
           </Toolbar>
         </AppBar>
+        <Drawer
+          anchor="left"
+          open={mobileNavOpen}
+          onClose={() => setMobileNavOpen(false)}
+          sx={{ display: { xs: 'block', sm: 'none' } }}
+        >
+          <Box sx={{ width: 240 }} role="presentation" onClick={() => setMobileNavOpen(false)}>
+            <Typography variant="h6" sx={{ p: 2, fontWeight: 700, color: 'text.primary' }}>
+              DevQuiz
+            </Typography>
+            <Divider />
+            <List>
+              {NAV_ITEMS.map((item) => (
+                <ListItemButton
+                  key={item.to}
+                  component={Link}
+                  to={item.to}
+                  selected={item.isActive(location.pathname)}
+                >
+                  <ListItemText primary={t(item.key)} />
+                </ListItemButton>
+              ))}
+            </List>
+          </Box>
+        </Drawer>
+        </>
       )}
 
       <Box
@@ -167,7 +211,7 @@ function App() {
           display: 'flex',
           alignItems: 'flex-start',
           justifyContent: 'center',
-          padding: { xs: '2rem 1rem', sm: '3rem 1.5rem' },
+          padding: { xs: '1.25rem 1rem', sm: '3rem 1.5rem' },
           boxSizing: 'border-box',
           outline: 'none',
         }}

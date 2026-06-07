@@ -88,9 +88,9 @@ function AuthButton() {
           display: 'flex',
           alignItems: 'center',
           gap: 1,
-          padding: '4px 8px',
+          padding: '6px 8px',
           borderRadius: 1,
-          minHeight: 40,
+          minHeight: 44,
           '&:hover': { backgroundColor: 'action.hover' },
           '&:focus-visible': { outline: `2px solid ${BRAND.green}`, outlineOffset: 2 },
         }}

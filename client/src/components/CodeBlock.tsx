@@ -20,6 +20,8 @@ const Highlighter = lazy(async () => {
           borderRadius: 6,
           fontSize: '0.75rem',
           padding: '1rem',
+          maxWidth: '100%',
+          overflowX: 'auto',
         }}
         codeTagProps={{ style: { fontFamily: '"SF Mono", Consolas, Monaco, monospace' } }}
       >

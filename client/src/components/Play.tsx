@@ -133,7 +133,7 @@ export function PlayLanding() {
         </Alert>
       )}
 
-      <Paper elevation={0} sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="overline" component="h2" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
           {t('play.hostGame')}
         </Typography>
@@ -152,7 +152,7 @@ export function PlayLanding() {
             {t('play.classroom')}
           </ToggleButton>
         </ToggleButtonGroup>
-        <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
           {[5, 10, 15, 20].map((n) => (
             <Button
               key={n}
@@ -192,11 +192,11 @@ export function PlayLanding() {
 
       <Divider sx={{ my: 2 }}>{t('play.or')}</Divider>
 
-      <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="overline" component="h2" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
           {t('play.joinWithCode')}
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
           <TextField
             fullWidth
             label={t('play.matchCode')}
@@ -210,7 +210,12 @@ export function PlayLanding() {
             }}
             size="small"
           />
-          <Button variant="contained" onClick={handleJoin} disabled={loading !== null}>
+          <Button
+            variant="contained"
+            onClick={handleJoin}
+            disabled={loading !== null}
+            sx={{ flexShrink: 0, width: { xs: '100%', sm: 'auto' } }}
+          >
             {loading === 'join' ? '…' : t('play.join')}
           </Button>
         </Box>
@@ -516,7 +521,7 @@ function Lobby({
   const t = useT();
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/play/${match.code}` : '';
   return (
-    <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
       <Typography variant="h6" sx={{ mb: 1 }}>
         {t('play.lobby')}
       </Typography>
@@ -570,7 +575,7 @@ function Lobby({
         )}
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 1.5 }}>
+      <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' } }}>
         <Button
           variant="outlined"
           onClick={() => navigator.clipboard.writeText(shareUrl)}
@@ -654,7 +659,7 @@ function RunningQuestion({
   }, [remainingMs, isHost, submitted, selected, onSubmit]);
 
   return (
-    <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
         <Typography variant="caption" color="text.secondary">
           {t('play.questionMeta', {
@@ -796,13 +801,13 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
             <Typography variant="caption" sx={{ width: 24, fontWeight: 700, color: i === 0 ? BRAND.green : 'text.secondary' }}>
               {i + 1}
             </Typography>
-            <Typography variant="body2" sx={{ flex: 1, fontWeight: 500 }}>
+            <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {s.display_name}
             </Typography>
             <Typography variant="body2" sx={{ fontWeight: 700 }}>
               {s.score ?? s.correct}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
               {s.score != null ? `· ${s.correct}✓` : ''} · {(s.total_ms / 1000).toFixed(1)}s
             </Typography>
           </Box>
@@ -926,7 +931,7 @@ function Finished({
 }) {
   const t = useT();
   return (
-    <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
+    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
       <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
         {t('play.matchComplete')}
       </Typography>

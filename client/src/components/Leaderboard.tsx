@@ -82,7 +82,11 @@ function Leaderboard() {
         size="small"
         onChange={(_, v) => v && setTab(v)}
         aria-label={t('leaderboard.period')}
-        sx={{ mb: 2 }}
+        sx={{
+          mb: 2,
+          width: { xs: '100%', sm: 'auto' },
+          '& .MuiToggleButtonGroup-grouped': { flex: { xs: 1, sm: 'initial' } },
+        }}
       >
         <ToggleButton value="global">{t('leaderboard.allTime')}</ToggleButton>
         <ToggleButton value="daily">{t('leaderboard.today')}</ToggleButton>

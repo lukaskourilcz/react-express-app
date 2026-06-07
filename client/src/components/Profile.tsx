@@ -160,15 +160,15 @@ function ProfileBody({
     <Box sx={{ maxWidth: 500, mx: 'auto' }}>
       <Paper
         elevation={0}
-        sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderTop: `4px solid ${BRAND.green}`, borderRadius: 2 }}
+        sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderTop: `4px solid ${BRAND.green}`, borderRadius: 2 }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar src={user.picture} alt="" sx={{ width: 64, height: 64 }} />
-          <Box>
-            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+          <Avatar src={user.picture} alt="" sx={{ width: { xs: 52, sm: 64 }, height: { xs: 52, sm: 64 }, flexShrink: 0 }} />
+          <Box sx={{ minWidth: 0 }}>
+            <Typography variant="h6" sx={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user.name}
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="text.secondary" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user.email}
             </Typography>
           </Box>
@@ -189,14 +189,14 @@ function ProfileBody({
         </Alert>
       )}
 
-      <Paper elevation={0} sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
           {t('profile.streaks')}
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 3 }}>
           <Box sx={{ flex: 1, textAlign: 'center' }}>
-            <Typography variant="h3" sx={{ fontWeight: 700, color: 'warning.dark', lineHeight: 1 }}>
+            <Typography variant="h3" sx={{ fontWeight: 700, color: 'warning.dark', lineHeight: 1, fontSize: { xs: '2.25rem', sm: '3rem' } }}>
               {stats?.current_streak || 0}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -210,7 +210,7 @@ function ProfileBody({
           <Divider orientation="vertical" flexItem />
 
           <Box sx={{ flex: 1, textAlign: 'center' }}>
-            <Typography variant="h3" sx={{ fontWeight: 700, color: BRAND.green, lineHeight: 1 }}>
+            <Typography variant="h3" sx={{ fontWeight: 700, color: BRAND.green, lineHeight: 1, fontSize: { xs: '2.25rem', sm: '3rem' } }}>
               {stats?.longest_streak || 0}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -229,7 +229,7 @@ function ProfileBody({
         )}
       </Paper>
 
-      <Paper elevation={0} sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
           {t('profile.statistics')}
         </Typography>
@@ -258,7 +258,7 @@ function ProfileBody({
         </Box>
       </Paper>
 
-      <Paper elevation={0} sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
           {t('profile.achievements', { earned: earned.length, total: achievements.length })}
         </Typography>
@@ -277,7 +277,7 @@ function ProfileBody({
               })}
               sx={{
                 p: 1,
-                width: 88,
+                width: { xs: 80, sm: 88 },
                 textAlign: 'center',
                 border: '1px solid',
                 borderColor: a.earned ? BRAND.green : 'divider',
@@ -299,7 +299,7 @@ function ProfileBody({
       </Paper>
 
       {bookmarkedQuestions.length > 0 && (
-        <Paper elevation={0} sx={{ p: 3, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+        <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
           <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
             {t('profile.bookmarks', { count: bookmarkedQuestions.length })}
           </Typography>
