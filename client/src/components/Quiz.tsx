@@ -55,7 +55,11 @@ const CATEGORY_OPTIONS: { value: CategoryType; label: string; color: string }[] 
 ];
 
 const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c]));
-const ALL_CATEGORIES: CategoryType[] = CATEGORY_OPTIONS.map((c) => c.value);
+
+// Categories shown only to the owner. The server enforces this too; hiding the
+// chips here is UX only (not a security boundary).
+const OWNER_EMAIL = 'kouril.lukas@gmail.com';
+const PRIVATE_CATEGORIES: CategoryType[] = ['custom', 'apt'];
 
 const QUESTION_COUNT_OPTIONS = [10, 20, 30, 40, 50];
 
@@ -124,6 +128,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   const { isAuthenticated, user } = useAuth();
   const profile = getUserProfile(user);
+  const isOwner = (profile.email ?? '').toLowerCase() === OWNER_EMAIL;
+  const visibleCategoryOptions = isOwner
+    ? CATEGORY_OPTIONS
+    : CATEGORY_OPTIONS.filter((c) => !PRIVATE_CATEGORIES.includes(c.value));
+  const visibleCategories = visibleCategoryOptions.map((c) => c.value);
 
   useEffect(() => {
     onActiveChange?.(state !== 'ready');
@@ -236,10 +245,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   };
 
   const handleSelectAll = () => {
-    setSelectedCategories((prev) => (prev.length === ALL_CATEGORIES.length ? [] : ALL_CATEGORIES));
+    setSelectedCategories((prev) => (prev.length === visibleCategories.length ? [] : visibleCategories));
   };
 
-  const isAllSelected = selectedCategories.length === ALL_CATEGORIES.length;
+  const isAllSelected = selectedCategories.length === visibleCategories.length;
 
   const handleAnswer = (questionId: string, answerIndex: number) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answerIndex }));
@@ -530,7 +539,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </Button>
           </Box>
           <Box role="group" aria-label={t('quiz.categoriesAria')} sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: '6px', sm: '10px' }, justifyContent: 'center' }}>
-            {CATEGORY_OPTIONS.map((cat) => {
+            {visibleCategoryOptions.map((cat) => {
               const selected = selectedCategories.includes(cat.value);
               return (
                 <Chip
@@ -573,7 +582,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         {selectedCategories.length > 0 && (
           <Box sx={{ mb: 4, p: 1.5, backgroundColor: 'action.hover', borderRadius: 1 }}>
             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-              {t('quiz.selectedCount', { count: selectedCategories.length, total: ALL_CATEGORIES.length })}
+              {t('quiz.selectedCount', { count: selectedCategories.length, total: visibleCategories.length })}
             </Typography>
             <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
               {selectedCategories.map((cat) => {
@@ -812,32 +821,36 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <IconButton
-                    size="small"
-                    aria-pressed={isBookmarked}
-                    aria-label={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
-                    onClick={() =>
-                      toggleBookmark(
-                        question,
-                        questionResult?.correctAnswer ?? 0,
-                        questionResult?.explanation ?? '',
-                      )
-                    }
-                    sx={{ color: isBookmarked ? BRAND.green : 'text.secondary' }}
-                  >
-                    <BookmarkIcon filled={isBookmarked} />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    aria-label={t('quiz.reportAria')}
-                    onClick={() => setReportTarget(question.id)}
-                    sx={{ color: 'text.secondary' }}
-                  >
-                    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-                      <line x1="4" y1="22" x2="4" y2="15" />
-                    </svg>
-                  </IconButton>
+                  <Tooltip title={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')} arrow placement="top">
+                    <IconButton
+                      size="small"
+                      aria-pressed={isBookmarked}
+                      aria-label={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
+                      onClick={() =>
+                        toggleBookmark(
+                          question,
+                          questionResult?.correctAnswer ?? 0,
+                          questionResult?.explanation ?? '',
+                        )
+                      }
+                      sx={{ color: isBookmarked ? BRAND.green : 'text.secondary' }}
+                    >
+                      <BookmarkIcon filled={isBookmarked} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title={t('quiz.reportAria')} arrow placement="top">
+                    <IconButton
+                      size="small"
+                      aria-label={t('quiz.reportAria')}
+                      onClick={() => setReportTarget(question.id)}
+                      sx={{ color: 'text.secondary' }}
+                    >
+                      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                        <line x1="4" y1="22" x2="4" y2="15" />
+                      </svg>
+                    </IconButton>
+                  </Tooltip>
                   <Chip
                     label={getCategoryLabel(question.category)}
                     size="small"
@@ -884,6 +897,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           onClose={() => setSnack(null)}
           message={snack ?? ''}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        />
+        <ReportDialog
+          open={!!reportTarget}
+          onClose={() => setReportTarget(null)}
+          onSubmit={handleReport}
         />
       </>
     );

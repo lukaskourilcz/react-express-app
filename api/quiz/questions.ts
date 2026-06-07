@@ -5,9 +5,14 @@ import {
   secureShuffle,
   localizeQuestion,
   normalizeLang,
+  PRIVATE_CATEGORIES,
   type DifficultyMode,
   type CategoryType,
 } from '../../lib/quiz-data';
+import { tryAuth } from '../../lib/auth';
+
+// Owner whose private categories (custom, apt) are visible only to them.
+const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'kouril.lukas@gmail.com').toLowerCase();
 
 const ALL_CATEGORIES: CategoryType[] = [
   'html',
@@ -33,7 +38,7 @@ function logEvent(event: Record<string, unknown>) {
   console.log(JSON.stringify({ ts: new Date().toISOString(), route: 'quiz/questions', ...event }));
 }
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
 
   if (req.method !== 'GET') {
@@ -52,11 +57,25 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 
   const categoriesParam = (req.query.categories as string) || '';
   const requested = categoriesParam ? categoriesParam.split(',') : ALL_CATEGORIES;
-  const selectedCategories = requested.filter((c): c is CategoryType =>
+  let selectedCategories = requested.filter((c): c is CategoryType =>
     ALL_CATEGORIES.includes(c as CategoryType),
   );
   if (selectedCategories.length === 0) {
     return jsonError(res, 400, 'bad_request', 'Select at least one category');
+  }
+
+  // Private categories (custom, apt) are served only to the owner. Verifying
+  // the token costs a round-trip, so only do it when one is actually requested.
+  if (selectedCategories.some((c) => PRIVATE_CATEGORIES.includes(c))) {
+    const auth = await tryAuth(req);
+    const emailClaim = auth?.payload?.email;
+    const email = typeof emailClaim === 'string' ? emailClaim.toLowerCase() : null;
+    if (email !== OWNER_EMAIL) {
+      selectedCategories = selectedCategories.filter((c) => !PRIVATE_CATEGORIES.includes(c));
+      if (selectedCategories.length === 0) {
+        return jsonError(res, 403, 'forbidden', 'Those categories are private');
+      }
+    }
   }
 
   const categoryFiltered = questions.filter((q) => selectedCategories.includes(q.category));

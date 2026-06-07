@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { questions, encodeSession, localizeQuestion, normalizeLang } from '../../lib/quiz-data';
+import { questions, encodeSession, localizeQuestion, normalizeLang, PRIVATE_CATEGORIES } from '../../lib/quiz-data';
 import { createHash } from 'node:crypto';
 
 // Daily challenge: deterministic 5-question selection per UTC date.
@@ -54,7 +54,8 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   // Pick one question per difficulty bucket, deterministically per date.
   const selected: typeof questions = [];
   for (const diff of DAILY_DIFFICULTIES) {
-    const pool = questions.filter((q) => q.difficulty === diff);
+    // Never surface private (owner-only) categories in the shared daily mix.
+    const pool = questions.filter((q) => q.difficulty === diff && !PRIVATE_CATEGORIES.includes(q.category));
     if (pool.length === 0) continue;
     const shuffled = seededShuffle(pool, `${dateParam}::${diff}`);
     selected.push(shuffled[0]);
