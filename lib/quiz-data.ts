@@ -1,3 +1,5 @@
+import { questionTranslationsCs } from './quiz-data.cs';
+
 export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'html' | 'css' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
 
 export interface Question {
@@ -13,6 +15,43 @@ export interface Question {
 }
 
 export type DifficultyMode = 'basics' | 'easy' | 'zero-to-hero' | 'advanced' | 'mixed';
+
+// Supported question languages. English is the base/source language; other
+// languages are stored as per-question overrides and fall back to English.
+export type QuestionLang = 'en' | 'cs';
+
+export const SUPPORTED_LANGS: QuestionLang[] = ['en', 'cs'];
+
+export function normalizeLang(raw: unknown): QuestionLang {
+  return raw === 'cs' ? 'cs' : 'en';
+}
+
+// A translation only overrides the human-readable text fields. `options` must
+// be a parallel array (same length AND same order as the English options) so
+// that the stored correctAnswer index stays valid after localization.
+export interface QuestionTranslation {
+  introduction?: string;
+  question?: string;
+  options?: string[];
+  explanation?: string;
+}
+
+// Returns a copy of the question with translated text applied where available,
+// falling back to English for any missing field. `tags` and `correctAnswer`
+// are never translated. Option translations are only applied when the array
+// length matches, keeping answer grading correct.
+export function localizeQuestion<T extends Question>(q: T, lang: QuestionLang): T {
+  if (lang === 'en') return q;
+  const tr = questionTranslationsCs[q.id];
+  if (!tr) return q;
+  return {
+    ...q,
+    introduction: tr.introduction ?? q.introduction,
+    question: tr.question ?? q.question,
+    options: tr.options && tr.options.length === q.options.length ? tr.options : q.options,
+    explanation: tr.explanation ?? q.explanation,
+  };
+}
 
 export const questions: Question[] = [
   // REACT - useState
