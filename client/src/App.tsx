@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Button, IconButton, CircularProgress, Tooltip } from '@mui/material';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import { useAuth } from './lib/auth';
 import AuthButton from './components/AuthButton';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import { useColorMode } from './theme/ColorModeContext';
@@ -64,7 +63,6 @@ function App() {
   const t = useT();
   const [quizActive, setQuizActive] = useState(false);
   const { mode, toggle } = useColorMode();
-  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
     const titleKey = ROUTE_TITLE_KEYS[location.pathname];
@@ -144,11 +142,6 @@ function App() {
               <Button component={Link} to="/cards" sx={navLinkSx(location.pathname === '/cards')}>
                 {t('nav.cards')}
               </Button>
-              {isAuthenticated && (
-                <Button component={Link} to="/profile" sx={navLinkSx(location.pathname === '/profile')}>
-                  {t('nav.profile')}
-                </Button>
-              )}
               <LanguageSwitcher />
               <Tooltip title={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
                 <IconButton

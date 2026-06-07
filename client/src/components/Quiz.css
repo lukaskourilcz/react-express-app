@@ -1,6 +1,8 @@
 .quiz-card {
   margin-bottom: 0;
-  background: var(--mui-palette-background-paper, #ffffff);
+  /* Let the MUI Card/Paper theme paint the background so it stays correct in
+     both light and dark mode. (The --mui-palette-* vars are not emitted under
+     MUI v5's createTheme, so an explicit background here would force white.) */
 }
 
 .quiz-card-content {
@@ -44,8 +46,9 @@
   margin-bottom: 0.75rem;
   border-radius: 8px;
   border: 1px solid;
-  border-color: var(--mui-palette-divider, #eee);
-  background: var(--mui-palette-background-paper, #fff);
+  border-color: var(--mui-palette-divider, rgba(128, 128, 128, 0.25));
+  /* No explicit background: the .correct/.incorrect overlays below paint their
+     own tint, and the neutral case shows the themed card behind it. */
 }
 
 .quiz-result-item.correct {
@@ -64,5 +67,5 @@
   margin-bottom: 1rem;
   font-size: clamp(1rem, 4vw, 1.1rem);
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--mui-palette-divider, #eee);
+  border-bottom: 1px solid var(--mui-palette-divider, rgba(128, 128, 128, 0.25));
 }
