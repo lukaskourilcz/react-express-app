@@ -27,13 +27,13 @@ CREATE POLICY "report_insert_any"
 -- Daily challenge attempts ---------------------------------------------
 CREATE TABLE IF NOT EXISTS daily_attempts (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  auth0_id      TEXT NOT NULL,
+  user_id      TEXT NOT NULL,
   challenge_date DATE NOT NULL,
   correct       INTEGER NOT NULL,
   total         INTEGER NOT NULL,
   duration_ms   INTEGER,
   created_at    TIMESTAMPTZ DEFAULT NOW(),
-  UNIQUE (auth0_id, challenge_date)
+  UNIQUE (user_id, challenge_date)
 );
 
 CREATE INDEX IF NOT EXISTS idx_daily_attempts_date_score
@@ -43,8 +43,8 @@ ALTER TABLE daily_attempts ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "daily_select_self"
   ON daily_attempts FOR SELECT
-  USING (auth0_id = auth.jwt() ->> 'sub');
+  USING (user_id = auth.uid()::text);
 
 CREATE POLICY "daily_insert_self"
   ON daily_attempts FOR INSERT
-  WITH CHECK (auth0_id = auth.jwt() ->> 'sub');
+  WITH CHECK (user_id = auth.uid()::text);

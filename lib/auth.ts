@@ -1,21 +1,25 @@
 import type { VercelRequest } from '@vercel/node';
-import { createRemoteJWKSet, jwtVerify, type JWTPayload } from 'jose';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const AUTH0_DOMAIN = process.env.AUTH0_DOMAIN || process.env.VITE_AUTH0_DOMAIN;
-const AUTH0_AUDIENCE = process.env.AUTH0_AUDIENCE || process.env.VITE_AUTH0_AUDIENCE;
+const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
 const IS_PROD =
   process.env.NODE_ENV === 'production' ||
   process.env.VERCEL_ENV === 'production';
 
-// JWKS endpoint and remote key set; the JWKS is fetched lazily and cached
-// by `jose` across invocations within the same warm function instance.
-const issuer = AUTH0_DOMAIN ? `https://${AUTH0_DOMAIN}/` : undefined;
-const jwks =
-  AUTH0_DOMAIN ? createRemoteJWKSet(new URL(`https://${AUTH0_DOMAIN}/.well-known/jwks.json`)) : null;
+// A keyless client used only to validate access tokens via auth.getUser(jwt).
+// No session is persisted; each call verifies the token against Supabase Auth,
+// which works regardless of the project's JWT signing algorithm.
+const authClient: SupabaseClient | null =
+  supabaseUrl && supabaseAnonKey
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      })
+    : null;
 
 export interface AuthResult {
   sub: string;
-  payload: JWTPayload;
+  payload: Record<string, unknown>;
 }
 
 export class AuthError extends Error {
@@ -36,43 +40,36 @@ function getBearer(req: VercelRequest): string | null {
 }
 
 /**
- * Verify the caller's Auth0 access token and return the verified subject.
+ * Verify the caller's Supabase access token and return the verified subject
+ * (the Supabase user id / UUID).
  *
- * In production this is strictly required. Outside production, if Auth0 env
+ * In production this is strictly required. Outside production, if Supabase env
  * vars are missing the helper falls back to trusting a client-supplied
- * `auth0_id` (in body or query) so local dev continues to work — but it
- * logs a warning and never accepts that fallback when NODE_ENV=production.
+ * `user_id` (in body or query) so local dev continues to work — but it logs a
+ * warning and never accepts that fallback when NODE_ENV=production.
  */
 export async function requireAuth(req: VercelRequest): Promise<AuthResult> {
   const token = getBearer(req);
 
-  if (jwks && issuer) {
+  if (authClient) {
     if (!token) throw new AuthError(401, 'missing_token', 'Missing Bearer token');
-    try {
-      const { payload } = await jwtVerify(token, jwks, {
-        issuer,
-        audience: AUTH0_AUDIENCE,
-      });
-      if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
-        throw new AuthError(401, 'invalid_token', 'Token missing sub claim');
-      }
-      return { sub: payload.sub, payload };
-    } catch (err) {
-      if (err instanceof AuthError) throw err;
+    const { data, error } = await authClient.auth.getUser(token);
+    if (error || !data?.user?.id) {
       throw new AuthError(401, 'invalid_token', 'Token verification failed');
     }
+    return { sub: data.user.id, payload: data.user as unknown as Record<string, unknown> };
   }
 
   if (IS_PROD) {
     throw new AuthError(503, 'auth_not_configured', 'Authentication is not configured');
   }
 
-  const body = (req.body || {}) as { auth0_id?: unknown; auth0_sub?: unknown };
+  const body = (req.body || {}) as { user_id?: unknown; host_id?: unknown };
   const fallback =
-    (typeof body.auth0_id === 'string' && body.auth0_id) ||
-    (typeof body.auth0_sub === 'string' && body.auth0_sub) ||
-    (typeof req.query.auth0_id === 'string' && req.query.auth0_id) ||
-    (typeof req.query.auth0_sub === 'string' && req.query.auth0_sub);
+    (typeof body.user_id === 'string' && body.user_id) ||
+    (typeof body.host_id === 'string' && body.host_id) ||
+    (typeof req.query.user_id === 'string' && req.query.user_id) ||
+    (typeof req.query.host_id === 'string' && req.query.host_id);
   if (!fallback) throw new AuthError(401, 'missing_token', 'Missing Bearer token');
 
   console.warn(
@@ -80,7 +77,7 @@ export async function requireAuth(req: VercelRequest): Promise<AuthResult> {
       ts: new Date().toISOString(),
       level: 'warn',
       msg: 'requireAuth_dev_fallback',
-      note: 'Trusting client-supplied auth0_id because AUTH0_DOMAIN is not set. Configure Auth0 env vars in production.',
+      note: 'Trusting client-supplied user_id because Supabase env vars are not set. Configure Supabase env vars in production.',
     }),
   );
   return { sub: fallback, payload: { sub: fallback } };

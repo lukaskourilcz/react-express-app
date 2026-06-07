@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS matches (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   code          TEXT UNIQUE NOT NULL,
   mode          TEXT NOT NULL CHECK (mode IN ('multiplayer', 'classroom')),
-  host_sub      TEXT NOT NULL,
+  host_id      TEXT NOT NULL,
   host_name     TEXT,
   status        TEXT NOT NULL DEFAULT 'lobby' CHECK (status IN ('lobby', 'running', 'finished')),
   questions     JSONB NOT NULL,
@@ -17,30 +17,30 @@ CREATE TABLE IF NOT EXISTS matches (
 );
 
 CREATE INDEX IF NOT EXISTS idx_matches_code ON matches(code);
-CREATE INDEX IF NOT EXISTS idx_matches_host ON matches(host_sub, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_matches_host ON matches(host_id, created_at DESC);
 
 CREATE TABLE IF NOT EXISTS match_participants (
   match_id     UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-  auth0_sub    TEXT NOT NULL,
+  user_id    TEXT NOT NULL,
   display_name TEXT NOT NULL,
   joined_at    TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (match_id, auth0_sub)
+  PRIMARY KEY (match_id, user_id)
 );
 
 CREATE TABLE IF NOT EXISTS match_answers (
   match_id      UUID NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
-  auth0_sub     TEXT NOT NULL,
+  user_id     TEXT NOT NULL,
   question_id   TEXT NOT NULL,
   question_idx  INTEGER NOT NULL,
   selected_idx  INTEGER NOT NULL,
   is_correct    BOOLEAN NOT NULL,
   duration_ms   INTEGER NOT NULL DEFAULT 0,
   answered_at   TIMESTAMPTZ DEFAULT NOW(),
-  PRIMARY KEY (match_id, auth0_sub, question_idx)
+  PRIMARY KEY (match_id, user_id, question_idx)
 );
 
 CREATE INDEX IF NOT EXISTS idx_match_answers_summary
-  ON match_answers(match_id, auth0_sub, is_correct);
+  ON match_answers(match_id, user_id, is_correct);
 
 ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 ALTER TABLE match_participants ENABLE ROW LEVEL SECURITY;
@@ -55,12 +55,12 @@ CREATE POLICY "matches_read"
 -- Only the host can mutate their own match.
 CREATE POLICY "matches_write_host"
   ON matches FOR UPDATE
-  USING (host_sub = auth.jwt() ->> 'sub')
-  WITH CHECK (host_sub = auth.jwt() ->> 'sub');
+  USING (host_id = auth.uid()::text)
+  WITH CHECK (host_id = auth.uid()::text);
 
 CREATE POLICY "matches_insert_self"
   ON matches FOR INSERT
-  WITH CHECK (host_sub = auth.jwt() ->> 'sub');
+  WITH CHECK (host_id = auth.uid()::text);
 
 -- Participants: anyone in the match can read; insert your own row only.
 CREATE POLICY "participants_read"
@@ -68,34 +68,34 @@ CREATE POLICY "participants_read"
 
 CREATE POLICY "participants_insert_self"
   ON match_participants FOR INSERT
-  WITH CHECK (auth0_sub = auth.jwt() ->> 'sub');
+  WITH CHECK (user_id = auth.uid()::text);
 
 -- Answers: insert your own only; read your own only (final aggregates go
 -- through an RPC the host can call).
 CREATE POLICY "answers_read_self"
   ON match_answers FOR SELECT
-  USING (auth0_sub = auth.jwt() ->> 'sub');
+  USING (user_id = auth.uid()::text);
 
 CREATE POLICY "answers_insert_self"
   ON match_answers FOR INSERT
-  WITH CHECK (auth0_sub = auth.jwt() ->> 'sub');
+  WITH CHECK (user_id = auth.uid()::text);
 
 -- RPC: leaderboard for a match (callable by anyone in the match).
 CREATE OR REPLACE FUNCTION public.match_scoreboard(p_match_id UUID)
-RETURNS TABLE (auth0_sub TEXT, display_name TEXT, correct INTEGER, total_ms BIGINT)
+RETURNS TABLE (user_id TEXT, display_name TEXT, correct INTEGER, total_ms BIGINT)
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT p.auth0_sub,
+  SELECT p.user_id,
          p.display_name,
          COALESCE(SUM(CASE WHEN a.is_correct THEN 1 ELSE 0 END), 0)::INT AS correct,
          COALESCE(SUM(a.duration_ms), 0)::BIGINT AS total_ms
     FROM match_participants p
     LEFT JOIN match_answers a
-      ON a.match_id = p.match_id AND a.auth0_sub = p.auth0_sub
+      ON a.match_id = p.match_id AND a.user_id = p.user_id
    WHERE p.match_id = p_match_id
-   GROUP BY p.auth0_sub, p.display_name
+   GROUP BY p.user_id, p.display_name
    ORDER BY correct DESC, total_ms ASC;
 $$;
 
@@ -150,7 +150,7 @@ AS $$
          d.duration_ms,
          d.created_at AS attempted_at
     FROM daily_attempts d
-    LEFT JOIN user_stats u ON u.auth0_id = d.auth0_id
+    LEFT JOIN user_stats u ON u.user_id = d.user_id
    WHERE d.challenge_date = p_date
    ORDER BY d.correct DESC, d.duration_ms ASC
    LIMIT GREATEST(LEAST(p_limit, 200), 1);

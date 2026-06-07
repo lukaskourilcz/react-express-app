@@ -6,24 +6,23 @@ DROP POLICY IF EXISTS "Users can read own stats"   ON user_stats;
 DROP POLICY IF EXISTS "Users can insert own stats" ON user_stats;
 DROP POLICY IF EXISTS "Users can update own stats" ON user_stats;
 
--- 2. Re-create policies that filter by Auth0 sub ------------------------
--- Requires that Supabase be configured with Auth0 as a third-party JWT
--- provider so `auth.jwt() ->> 'sub'` returns the user's Auth0 user_id.
--- Until then, all writes should go through the server (api/user/stats.ts)
--- which uses the service role key (set SUPABASE_SERVICE_ROLE_KEY in Vercel).
+-- 2. Re-create policies that filter by the Supabase user id --------------
+-- `auth.uid()` is the authenticated Supabase user's id (auth.users.id).
+-- Writes also go through the server (api/user/[op].ts) which verifies the
+-- caller's Supabase access token before acting.
 
 CREATE POLICY "stats_select_own"
   ON user_stats FOR SELECT
-  USING (auth0_id = auth.jwt() ->> 'sub');
+  USING (user_id = auth.uid()::text);
 
 CREATE POLICY "stats_insert_own"
   ON user_stats FOR INSERT
-  WITH CHECK (auth0_id = auth.jwt() ->> 'sub');
+  WITH CHECK (user_id = auth.uid()::text);
 
 CREATE POLICY "stats_update_own"
   ON user_stats FOR UPDATE
-  USING (auth0_id = auth.jwt() ->> 'sub')
-  WITH CHECK (auth0_id = auth.jwt() ->> 'sub');
+  USING (user_id = auth.uid()::text)
+  WITH CHECK (user_id = auth.uid()::text);
 
 -- 3. Atomic counter + streak update -------------------------------------
 -- Replaces the read-modify-write pattern in api/user/stats.ts and the
@@ -31,7 +30,7 @@ CREATE POLICY "stats_update_own"
 -- in a single statement.
 
 CREATE OR REPLACE FUNCTION public.record_quiz_result(
-  p_auth0_id TEXT,
+  p_user_id TEXT,
   p_correct  INTEGER,
   p_total    INTEGER
 )
@@ -50,12 +49,12 @@ BEGIN
     RAISE EXCEPTION 'invalid_quiz_result';
   END IF;
 
-  SELECT * INTO v_existing FROM user_stats WHERE auth0_id = p_auth0_id FOR UPDATE;
+  SELECT * INTO v_existing FROM user_stats WHERE user_id = p_user_id FOR UPDATE;
 
   IF NOT FOUND THEN
-    INSERT INTO user_stats (auth0_id, total_quizzes, total_correct, total_questions,
+    INSERT INTO user_stats (user_id, total_quizzes, total_correct, total_questions,
                             current_streak, longest_streak, last_quiz_date)
-    VALUES (p_auth0_id, 1, p_correct, p_total, 1, 1, v_today)
+    VALUES (p_user_id, 1, p_correct, p_total, 1, 1, v_today)
     RETURNING * INTO v_result;
     RETURN v_result;
   END IF;
@@ -78,7 +77,7 @@ BEGIN
          longest_streak   = GREATEST(longest_streak, v_new_streak),
          last_quiz_date   = v_today,
          updated_at       = NOW()
-   WHERE auth0_id = p_auth0_id
+   WHERE user_id = p_user_id
    RETURNING * INTO v_result;
 
   RETURN v_result;

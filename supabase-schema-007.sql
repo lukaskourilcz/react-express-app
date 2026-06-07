@@ -10,16 +10,16 @@ DROP POLICY IF EXISTS "Users can update own stats" ON user_stats;
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_stats' AND policyname='stats_select_own') THEN
     CREATE POLICY "stats_select_own" ON user_stats FOR SELECT
-      USING (auth0_id = auth.jwt() ->> 'sub');
+      USING (user_id = auth.uid()::text);
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_stats' AND policyname='stats_insert_own') THEN
     CREATE POLICY "stats_insert_own" ON user_stats FOR INSERT
-      WITH CHECK (auth0_id = auth.jwt() ->> 'sub');
+      WITH CHECK (user_id = auth.uid()::text);
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname='public' AND tablename='user_stats' AND policyname='stats_update_own') THEN
     CREATE POLICY "stats_update_own" ON user_stats FOR UPDATE
-      USING (auth0_id = auth.jwt() ->> 'sub')
-      WITH CHECK (auth0_id = auth.jwt() ->> 'sub');
+      USING (user_id = auth.uid()::text)
+      WITH CHECK (user_id = auth.uid()::text);
   END IF;
 END $$;
 
@@ -32,12 +32,12 @@ REVOKE EXECUTE ON FUNCTION public.record_quiz_result(TEXT, INTEGER, INTEGER) FRO
 REVOKE EXECUTE ON FUNCTION public.record_category_stats(TEXT, JSONB) FROM anon;
 
 -- Keep `authenticated` execute granted so authed clients can still call via
--- PostgREST if/when Auth0 JWTs are forwarded to Supabase.
+-- PostgREST using their Supabase access token.
 GRANT EXECUTE ON FUNCTION public.record_quiz_result(TEXT, INTEGER, INTEGER) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.record_category_stats(TEXT, JSONB) TO authenticated;
 
 -- 3. Ensure match_answers idempotency key ----------------------------------
--- The API uses upsert(..., onConflict: 'match_id,auth0_sub,question_idx').
+-- The API uses upsert(..., onConflict: 'match_id,user_id,question_idx').
 -- Make sure that uniqueness constraint exists so retries replace rather
 -- than duplicate.
 
@@ -48,6 +48,6 @@ DO $$ BEGIN
   ) THEN
     EXECUTE 'ALTER TABLE match_answers
       ADD CONSTRAINT match_answers_match_sub_qidx_uniq
-      UNIQUE (match_id, auth0_sub, question_idx)';
+      UNIQUE (match_id, user_id, question_idx)';
   END IF;
 END $$;
