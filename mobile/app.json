@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "DevQuiz",
+    "slug": "devquiz",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "devquiz",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.yourcompany.devquiz"
+    },
+    "android": {
+      "package": "com.yourcompany.devquiz"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
