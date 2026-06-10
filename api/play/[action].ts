@@ -11,7 +11,11 @@ import { AuthError, requireAuth, tryAuth } from '../../lib/auth';
 
 const MAX_QUESTIONS = 20;
 const MIN_QUESTIONS = 3;
-const QUESTION_DURATION_S = 30;
+// Default per-question time limit. The host may override this at create time,
+// including 0 which means "no time limit".
+const QUESTION_DURATION_DEFAULT_S = 60;
+// Allowed per-question time limits in seconds (0 = no limit).
+const ALLOWED_DURATIONS_S = [0, 15, 30, 60, 120, 300];
 const MAX_BONUS = 50;
 const PING_GRACE_MS = 1000;
 const STALE_MATCH_MS = 5 * 60 * 1000;
@@ -28,6 +32,8 @@ interface MatchQuestion {
 }
 
 function computeSpeedBonus(elapsedMs: number, durationS: number): number {
+  // With no time limit there is no speed component — score the answer flat.
+  if (durationS <= 0) return 0;
   if (elapsedMs <= 0) return MAX_BONUS;
   const fraction = Math.max(0, 1 - elapsedMs / (durationS * 1000));
   return Math.round(fraction * MAX_BONUS);
@@ -104,12 +110,19 @@ async function create(req: VercelRequest, res: VercelResponse) {
     mode?: unknown;
     count?: unknown;
     categories?: unknown;
+    duration_s?: unknown;
   };
 
   const hostName = isShortString(body.host_name, 80) ? body.host_name : 'Host';
   const mode = body.mode === 'classroom' ? 'classroom' : 'multiplayer';
   const requestedCount = typeof body.count === 'number' ? body.count : 10;
   const count = Math.min(Math.max(Math.floor(requestedCount), MIN_QUESTIONS), MAX_QUESTIONS);
+  // Per-question time limit chosen by the host. Falls back to the default when
+  // omitted or not one of the allowed values; 0 means "no limit".
+  const durationS =
+    typeof body.duration_s === 'number' && ALLOWED_DURATIONS_S.includes(body.duration_s)
+      ? body.duration_s
+      : QUESTION_DURATION_DEFAULT_S;
   const categories = Array.isArray(body.categories)
     ? body.categories.filter((c): c is string => typeof c === 'string')
     : [];
@@ -157,6 +170,7 @@ async function create(req: VercelRequest, res: VercelResponse) {
           status: 'lobby',
           questions: matchQuestions,
           current_index: 0,
+          question_duration_s: durationS,
           last_heartbeat_at: new Date().toISOString(),
         })
         .select('id, code, mode, host_id, host_name, status')
@@ -373,7 +387,8 @@ async function control(req: VercelRequest, res: VercelResponse) {
       patch.current_index = 0;
       patch.started_at = now;
       patch.question_started_at = now;
-      patch.question_duration_s = QUESTION_DURATION_S;
+      // question_duration_s is set at create time (incl. 0 = no limit), so we
+      // intentionally leave it untouched here.
     } else if (ctrl === 'advance') {
       if (match.status !== 'running')
         return jsonError(res, 409, 'bad_state', 'Match is not running');
@@ -454,7 +469,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     const { data: match } = await withTimeout(
       supabase!
         .from('matches')
-        .select('id, status, current_index, questions, question_started_at, question_duration_s')
+        .select('id, mode, host_id, status, current_index, questions, question_started_at, question_duration_s')
         .eq('code', code)
         .maybeSingle(),
     );
@@ -487,7 +502,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     }
 
     const isCorrect = q.correct_index === body.selected_idx;
-    const durationS = match.question_duration_s ?? QUESTION_DURATION_S;
+    const durationS = match.question_duration_s ?? QUESTION_DURATION_DEFAULT_S;
     const speedBonus = isCorrect ? computeSpeedBonus(serverElapsedMs, durationS) : 0;
 
     // Use the natural per-player-per-question primary key so retries replace
@@ -513,14 +528,51 @@ async function answer(req: VercelRequest, res: VercelResponse) {
       return jsonError(res, 500, 'db_error', 'Could not record answer');
     }
 
+    // Auto-advance for a head-to-head multiplayer match (host + one player).
+    // The host runs the questions and does not answer; as soon as the single
+    // answering player locks in, move everyone to the next question (or finish)
+    // without waiting on anyone else. Larger lobbies keep host-driven advance.
+    let advanced = false;
+    if (match.mode === 'multiplayer' && sub !== match.host_id) {
+      const { count: participantCount } = await withTimeout(
+        supabase!
+          .from('match_participants')
+          .select('user_id', { count: 'exact', head: true })
+          .eq('match_id', match.id),
+      );
+      if (participantCount === 2) {
+        const total = Array.isArray(match.questions) ? match.questions.length : 0;
+        const nextIdx = (match.current_index ?? 0) + 1;
+        const now = new Date().toISOString();
+        const advancePatch: Record<string, unknown> =
+          nextIdx >= total
+            ? { status: 'finished', ended_at: now, last_heartbeat_at: now }
+            : { current_index: nextIdx, question_started_at: now, last_heartbeat_at: now };
+
+        // Conditional update guards against double-advance if the player's
+        // request is retried or two answers race in.
+        const { data: bumped } = await withTimeout(
+          supabase!
+            .from('matches')
+            .update(advancePatch)
+            .eq('id', match.id)
+            .eq('status', 'running')
+            .eq('current_index', match.current_index ?? 0)
+            .select('id'),
+        );
+        advanced = !!(bumped && bumped.length > 0);
+      }
+    }
+
     logEvent('play/answer', {
       status: 200,
       code,
       q: body.question_idx,
       ok: isCorrect,
       bonus: speedBonus,
+      advanced,
     });
-    return res.json({ ok: true, is_correct: isCorrect, speed_bonus: speedBonus });
+    return res.json({ ok: true, is_correct: isCorrect, speed_bonus: speedBonus, advanced });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
     logEvent('play/answer', { status: 504, error: message });

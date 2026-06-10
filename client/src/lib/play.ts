@@ -76,6 +76,8 @@ export const createMatch = (input: {
   mode: 'multiplayer' | 'classroom';
   count: number;
   categories: string[];
+  /** Per-question time limit in seconds. 0 = no limit. */
+  duration_s: number;
 }) =>
   apiFetch<{ id: string; code: string; mode: string; status: string }>('/api/play/create', {
     method: 'POST',
@@ -111,7 +113,7 @@ export const submitMatchAnswer = (input: {
   duration_ms: number;
   client_received_at?: string;
 }) =>
-  apiFetch<{ ok: true; is_correct: boolean; speed_bonus?: number }>('/api/play/answer', {
+  apiFetch<{ ok: true; is_correct: boolean; speed_bonus?: number; advanced?: boolean }>('/api/play/answer', {
     method: 'POST',
     body: JSON.stringify(input),
   });

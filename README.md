@@ -47,6 +47,8 @@ A web-development quiz application that tests your knowledge of React, JavaScrip
 
 ### Live multiplayer & classroom
 - **Multiplayer (free-for-all)** — every player races to answer. Score = correctness × speed bonus.
+- **Head-to-head (host + one player)** — the host runs the questions and does not score; only the player locks in and earns points. The moment that player answers, the match auto-advances to the next question for everyone (the host never has to click *Next*).
+- **Configurable per-question time limit** — the host picks 15s / 30s / **1 min (default)** / 2 min / 5 min, or **No limit** when creating the match.
 - **Classroom** — host advances each question manually, sees a live answer distribution histogram per question.
 - **6-character match codes** in Crockford base32 (no `I`/`L`/`O`/`U`) so they're easy to read aloud.
 - Real-time updates over **Supabase Realtime** with a 4-second polling fallback if the WebSocket fails.
@@ -64,6 +66,10 @@ A web-development quiz application that tests your knowledge of React, JavaScrip
 - **UTC-anchored streaks** computed atomically in Postgres (no client timezone drift).
 - **Bookmarks** for questions you want to revisit (stored in `localStorage`).
 - **Achievements** for first quiz, 10/50 quizzes, 3/7/30-day streaks, 70%/90% accuracy, perfect quiz, 5 bookmarks.
+
+### Abbreviations glossary
+- A searchable **reference of 90+ dev abbreviations** (`npx`, `cat`, `grep`, `gcl`, `psql`, `CORS`, `JWT`, `a11y`, …) grouped by topic: CLI commands & tools, Git aliases, web & networking, data & APIs, frontend & rendering, and general jargon.
+- Lives at `/abbreviations` (lazy-loaded) with a live filter across term, expansion, and description.
 
 ### App-wide
 - **Light / dark mode** toggle persisted to `localStorage`.
