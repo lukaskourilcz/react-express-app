@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -31,12 +31,22 @@ import {
   type DistributionBucket,
 } from '../lib/play';
 import { joinMatchChannel, type RealtimeChannel } from '../lib/realtime';
+import { visibleCategoryOptionsFor } from '../lib/categories';
+import type { CategoryType } from '../types/quiz';
 import { friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 
 const POLL_FALLBACK_MS = 4000;
+const DEFAULT_DURATION_S = 60;
+
+// Human-readable label for a per-question time limit (0 = no limit).
+function formatDuration(n: number, t: ReturnType<typeof useT>): string {
+  if (n <= 0) return t('play.timeLimitNone');
+  if (n < 60) return t('play.timeLimitSeconds', { n });
+  return t('play.timeLimitMinutes', { n: n / 60 });
+}
 
 export function PlayLanding() {
   const navigate = useNavigate();
@@ -45,7 +55,15 @@ export function PlayLanding() {
   const profile = getUserProfile(user);
   const [mode, setMode] = useState<'multiplayer' | 'classroom'>('multiplayer');
   const [count, setCount] = useState(10);
+  const [durationS, setDurationS] = useState(60);
+  const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
   const [joinCode, setJoinCode] = useState('');
+
+  const categoryOptions = visibleCategoryOptionsFor(profile.email);
+  const toggleCategory = (c: CategoryType) =>
+    setSelectedCategories((prev) =>
+      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
+    );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<'create' | 'join' | null>(null);
 
@@ -85,7 +103,8 @@ export function PlayLanding() {
         host_name: profile.name || profile.email?.split('@')[0] || 'Host',
         mode,
         count,
-        categories: [],
+        categories: selectedCategories,
+        duration_s: durationS,
       });
       navigate(`/play/${m.code}`);
     } catch (err) {
@@ -152,6 +171,64 @@ export function PlayLanding() {
             {t('play.classroom')}
           </ToggleButton>
         </ToggleButtonGroup>
+
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="overline" component="h3" color="text.secondary">
+            {t('play.categories')}
+          </Typography>
+          {selectedCategories.length > 0 && (
+            <Button
+              size="small"
+              onClick={() => setSelectedCategories([])}
+              sx={{ fontSize: '0.7rem', textTransform: 'none', color: 'text.secondary', minWidth: 'auto', p: '2px 8px' }}
+            >
+              {t('play.clear')}
+            </Button>
+          )}
+        </Box>
+        <Box
+          role="group"
+          aria-label={t('play.categories')}
+          sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1 }}
+        >
+          {categoryOptions.map((cat) => {
+            const selected = selectedCategories.includes(cat.value);
+            return (
+              <Chip
+                key={cat.value}
+                label={cat.label}
+                onClick={() => toggleCategory(cat.value)}
+                role="checkbox"
+                aria-checked={selected}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleCategory(cat.value);
+                  }
+                }}
+                size="small"
+                sx={{
+                  cursor: 'pointer',
+                  backgroundColor: 'background.paper',
+                  color: selected ? cat.color : 'text.secondary',
+                  border: selected ? `2px solid ${cat.color}` : '1px solid',
+                  borderColor: selected ? cat.color : 'divider',
+                  borderLeft: `4px solid ${cat.color}`,
+                  borderRadius: 1,
+                  fontWeight: selected ? 600 : 500,
+                  '&:hover': { backgroundColor: 'action.hover' },
+                }}
+              />
+            );
+          })}
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+          {selectedCategories.length === 0
+            ? t('play.allCategoriesHint')
+            : t('play.categoriesSelected', { count: selectedCategories.length })}
+        </Typography>
+
         <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
           {[5, 10, 15, 20].map((n) => (
             <Button
@@ -171,6 +248,26 @@ export function PlayLanding() {
           <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', ml: 1 }}>
             {t('play.questions')}
           </Typography>
+        </Box>
+        <Typography variant="overline" component="h3" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+          {t('play.timeLimit')}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          {[30, 60, 120, 300, 0].map((n) => (
+            <Button
+              key={n}
+              variant="outlined"
+              size="small"
+              onClick={() => setDurationS(n)}
+              sx={{
+                minWidth: 44,
+                borderColor: durationS === n ? BRAND.green : 'divider',
+                color: durationS === n ? BRAND.green : 'text.secondary',
+              }}
+            >
+              {formatDuration(n, t)}
+            </Button>
+          ))}
         </Box>
         <Button
           fullWidth
@@ -275,22 +372,25 @@ export function PlayMatch() {
     };
   }, [code, isAuthenticated, user]);
 
+  // Pull the latest match state. Shared by the realtime/poll loop and by
+  // submitAnswer so an auto-advance is reflected immediately for the answerer.
+  const refresh = useCallback(async () => {
+    if (!code || !user?.id) return;
+    try {
+      const state = await fetchMatchState(code, user.id);
+      setMatch(state.match);
+      setParticipants(state.participants);
+      setScoreboard(state.scoreboard);
+    } catch {
+      /* ignore — UI keeps last known state */
+    }
+  }, [code, user?.id]);
+
   // Realtime broadcast wiring.
   useEffect(() => {
     if (!code || !user?.id) return;
     const channel = joinMatchChannel(code);
     channelRef.current = channel;
-
-    const refresh = async () => {
-      try {
-        const state = await fetchMatchState(code, user.id);
-        setMatch(state.match);
-        setParticipants(state.participants);
-        setScoreboard(state.scoreboard);
-      } catch {
-        /* ignore — UI keeps last known state */
-      }
-    };
 
     channel.subscribe('participant_joined', refresh);
     channel.subscribe('match_updated', refresh);
@@ -305,7 +405,7 @@ export function PlayMatch() {
       window.clearInterval(interval);
       channel.unsubscribe();
     };
-  }, [code, user?.id]);
+  }, [code, user?.id, refresh]);
 
   // Reset per-question UI when the index changes.
   useEffect(() => {
@@ -374,7 +474,7 @@ export function PlayMatch() {
   const submitAnswer = async () => {
     if (selected === null || !match || !user?.id) return;
     try {
-      await submitMatchAnswer({
+      const result = await submitMatchAnswer({
         code,
         user_id: user.id,
         question_idx: match.current_index,
@@ -384,6 +484,10 @@ export function PlayMatch() {
       });
       setSubmitted(true);
       broadcastUpdate();
+      // In a head-to-head match the server advances as soon as we lock in.
+      // Pull fresh state right away so this client jumps to the next question
+      // (or the results screen) without waiting for the polling fallback.
+      if (result.advanced) await refresh();
     } catch (err) {
       setError(friendlyError(err));
     }
@@ -640,23 +744,30 @@ function RunningQuestion({
   );
 
   // Countdown derived from question_started_at + question_duration_s.
-  const durationS = match.question_duration_s ?? 30;
+  // A duration of 0 (or missing) means the host chose "no time limit".
+  const durationS = match.question_duration_s ?? DEFAULT_DURATION_S;
+  const noLimit = durationS <= 0;
   const startedMs = match.question_started_at ? new Date(match.question_started_at).getTime() : null;
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
+    if (noLimit) return;
     const id = window.setInterval(() => setNow(Date.now()), 250);
     return () => window.clearInterval(id);
-  }, []);
-  const remainingMs = startedMs ? Math.max(0, startedMs + durationS * 1000 - now) : durationS * 1000;
+  }, [noLimit]);
+  const remainingMs = noLimit
+    ? Infinity
+    : startedMs
+      ? Math.max(0, startedMs + durationS * 1000 - now)
+      : durationS * 1000;
   const remainingS = Math.ceil(remainingMs / 1000);
-  const pctLeft = startedMs ? (remainingMs / (durationS * 1000)) * 100 : 100;
+  const pctLeft = noLimit ? 100 : startedMs ? (remainingMs / (durationS * 1000)) * 100 : 100;
 
-  // Time-up auto-lock for non-host
+  // Time-up auto-lock for non-host (skipped when there is no time limit).
   useEffect(() => {
-    if (!isHost && !submitted && remainingMs === 0 && selected !== null) {
+    if (!noLimit && !isHost && !submitted && remainingMs === 0 && selected !== null) {
       onSubmit();
     }
-  }, [remainingMs, isHost, submitted, selected, onSubmit]);
+  }, [remainingMs, noLimit, isHost, submitted, selected, onSubmit]);
 
   return (
     <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
@@ -674,12 +785,18 @@ function RunningQuestion({
           sx={{
             fontFamily: 'monospace',
             fontWeight: 700,
-            color: remainingS <= 5 ? 'error.main' : remainingS <= 10 ? 'warning.dark' : 'text.secondary',
+            color: noLimit
+              ? 'text.secondary'
+              : remainingS <= 5
+                ? 'error.main'
+                : remainingS <= 10
+                  ? 'warning.dark'
+                  : 'text.secondary',
           }}
           aria-live="polite"
           aria-atomic="true"
         >
-          ⏱ {remainingS}s
+          ⏱ {noLimit ? '∞' : `${remainingS}s`}
         </Typography>
       </Box>
       <Box

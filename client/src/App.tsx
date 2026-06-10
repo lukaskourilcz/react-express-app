@@ -12,6 +12,7 @@ const Quiz = lazy(() => import('./components/Quiz'));
 const Profile = lazy(() => import('./components/Profile'));
 const Leaderboard = lazy(() => import('./components/Leaderboard'));
 const Flashcards = lazy(() => import('./components/Flashcards'));
+const Abbreviations = lazy(() => import('./components/Abbreviations'));
 const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayLanding })));
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 
@@ -20,6 +21,7 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/profile': 'title.profile',
   '/leaderboard': 'title.leaderboard',
   '/cards': 'title.cards',
+  '/abbreviations': 'title.abbr',
   '/play': 'title.play',
 };
 
@@ -61,6 +63,7 @@ const NAV_ITEMS: { to: string; key: TranslationKey; isActive: (path: string) => 
   { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play') },
   { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard' },
   { to: '/cards', key: 'nav.cards', isActive: (p) => p === '/cards' },
+  { to: '/abbreviations', key: 'nav.abbr', isActive: (p) => p === '/abbreviations' },
 ];
 
 const RouteLoader = () => {
@@ -223,6 +226,7 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/cards" element={<Flashcards />} />
+              <Route path="/abbreviations" element={<Abbreviations />} />
               <Route path="/play" element={<PlayLanding />} />
               <Route path="/play/:code" element={<PlayMatch />} />
             </Routes>
