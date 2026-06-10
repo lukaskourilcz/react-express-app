@@ -4,14 +4,15 @@
 import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config';
 
-const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = SUPABASE_URL;
+const supabaseAnonKey = SUPABASE_ANON_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   // eslint-disable-next-line no-console
   console.warn(
-    'Supabase env vars missing. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY in mobile/.env.',
+    'Supabase config missing. Set supabaseUrl / supabaseAnonKey in app.json (expo.extra) or EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY in mobile/.env.',
   );
 }
 

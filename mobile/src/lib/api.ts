@@ -2,11 +2,13 @@
 // apiFetch, except mobile must use an ABSOLUTE base URL (the deployed domain or
 // your LAN dev server) since there's no same-origin to fall back on.
 import { supabase } from './supabase';
+import { API_BASE_URL } from './config';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
-// e.g. https://your-app.vercel.app  — set in mobile/.env (EXPO_PUBLIC_*).
-export const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').replace(/\/$/, '');
+// e.g. https://your-app.vercel.app — set in app.json (expo.extra.apiBaseUrl)
+// or overridden via EXPO_PUBLIC_API_BASE_URL in mobile/.env.
+export { API_BASE_URL };
 
 export class ApiError extends Error {
   status: number;
