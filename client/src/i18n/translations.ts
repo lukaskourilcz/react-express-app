@@ -10,7 +10,6 @@ export const en = {
   'nav.play': 'Play',
   'nav.leaderboard': 'Leaderboard',
   'nav.cards': 'Cards',
-  'nav.abbr': 'Abbreviations',
   'nav.profile': 'Profile',
   'nav.home': 'DevQuiz home',
   'nav.menu': 'Open navigation menu',
@@ -18,7 +17,6 @@ export const en = {
   'title.profile': 'Profile · DevQuiz',
   'title.leaderboard': 'Leaderboard · DevQuiz',
   'title.cards': 'Cards · DevQuiz',
-  'title.abbr': 'Abbreviations · DevQuiz',
   'title.play': 'Play live · DevQuiz',
   'title.playMatch': 'Live match · DevQuiz',
   'title.default': 'DevQuiz',
@@ -283,13 +281,6 @@ export const en = {
   'card.added': 'Saved to Cards',
   'card.removed': 'Removed from Cards',
   'card.syncFailed': 'Saved on this device, but syncing to your Cards failed.',
-
-  // Abbreviations glossary
-  'abbr.heading': 'Abbreviations',
-  'abbr.subtitle': 'A cheat sheet of the commands, acronyms, and jargon that come up every day in web development.',
-  'abbr.count': '{count} terms',
-  'abbr.searchPlaceholder': 'Search abbreviations (npx, CORS, JWT…)',
-  'abbr.noResults': 'No abbreviations match “{query}”.',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -300,7 +291,6 @@ export const cs: Record<TranslationKey, string> = {
   'nav.play': 'Hrát',
   'nav.leaderboard': 'Žebříček',
   'nav.cards': 'Kartičky',
-  'nav.abbr': 'Zkratky',
   'nav.profile': 'Profil',
   'nav.home': 'Domů DevQuiz',
   'nav.menu': 'Otevřít navigační menu',
@@ -308,7 +298,6 @@ export const cs: Record<TranslationKey, string> = {
   'title.profile': 'Profil · DevQuiz',
   'title.leaderboard': 'Žebříček · DevQuiz',
   'title.cards': 'Kartičky · DevQuiz',
-  'title.abbr': 'Zkratky · DevQuiz',
   'title.play': 'Hrát naživo · DevQuiz',
   'title.playMatch': 'Živá hra · DevQuiz',
   'title.default': 'DevQuiz',
@@ -573,13 +562,6 @@ export const cs: Record<TranslationKey, string> = {
   'card.added': 'Uloženo do Kartiček',
   'card.removed': 'Odebráno z Kartiček',
   'card.syncFailed': 'Uloženo na tomto zařízení, ale synchronizace do Kartiček selhala.',
-
-  // Abbreviations glossary
-  'abbr.heading': 'Zkratky',
-  'abbr.subtitle': 'Tahák příkazů, zkratek a žargonu, na které ve webovém vývoji narazíš každý den.',
-  'abbr.count': '{count} pojmů',
-  'abbr.searchPlaceholder': 'Hledat zkratky (npx, CORS, JWT…)',
-  'abbr.noResults': 'Žádná zkratka neodpovídá „{query}“.',
 };
 
 export const dictionaries = { en, cs } as const;

@@ -22,10 +22,6 @@ export default function TabsLayout() {
         options={{ title: 'Ranks', tabBarIcon: ({ color, size }) => <Ionicons name="trophy-outline" color={color} size={size} /> }}
       />
       <Tabs.Screen
-        name="abbreviations"
-        options={{ title: 'Abbr', tabBarIcon: ({ color, size }) => <Ionicons name="book-outline" color={color} size={size} /> }}
-      />
-      <Tabs.Screen
         name="account"
         options={{ title: 'Account', tabBarIcon: ({ color, size }) => <Ionicons name="person-outline" color={color} size={size} /> }}
       />

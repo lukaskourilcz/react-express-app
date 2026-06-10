@@ -4982,4 +4982,470 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     options: ["Jen kdyz hodnota prechazi do \"nebezpecneho\" stavu (napr. auth.totp.required z false na true) a getWarning() vrati pocet vetsi nez 0", "Pri kazdem odeslani jako povinny krok pro vsechny sekce nastaveni", "Jen kdyz server vrati chybu validace a pozada uzivatele o opakovani", "Kdykoli se ve formulari zmeni jakekoli pole oproti vychozi hodnote"],
     explanation: "Potvrzovaci dialog je podmineny: spusti se jen tehdy, kdyz hodnota prechazi do nebezpecneho stavu, napriklad auth.totp.required z false na true, a getWarning() hlasi pocet ovlivnenych > 0. Jinak odeslani pokracuje rovnou na onSubmit, pote form.reset(), router.refresh() a toast.",
   },
+  // ABBREVIATIONS (moved from glossary into the quiz)
+  'abbr-1': {
+    introduction: "„npx\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „npx\"?",
+    explanation: "Zkratka „npx\" znamená „Node Package eXecute\".",
+  },
+  'abbr-2': {
+    introduction: "„pnpm\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „pnpm\"?",
+    explanation: "Zkratka „pnpm\" znamená „Performant npm\".",
+  },
+  'abbr-3': {
+    introduction: "„cat\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „cat\"?",
+    explanation: "Zkratka „cat\" znamená „concatenate\".",
+  },
+  'abbr-4': {
+    introduction: "„grep\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „grep\"?",
+    explanation: "Zkratka „grep\" znamená „Global Regular Expression Print\".",
+  },
+  'abbr-5': {
+    introduction: "„sed\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „sed\"?",
+    explanation: "Zkratka „sed\" znamená „Stream EDitor\".",
+  },
+  'abbr-6': {
+    introduction: "„awk\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „awk\"?",
+    explanation: "Zkratka „awk\" znamená „Aho, Weinberger & Kernighan\".",
+  },
+  'abbr-7': {
+    introduction: "„ls\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „ls\"?",
+    explanation: "Zkratka „ls\" znamená „list\".",
+  },
+  'abbr-8': {
+    introduction: "„cd\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „cd\"?",
+    explanation: "Zkratka „cd\" znamená „change directory\".",
+  },
+  'abbr-9': {
+    introduction: "„pwd\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „pwd\"?",
+    explanation: "Zkratka „pwd\" znamená „print working directory\".",
+  },
+  'abbr-10': {
+    introduction: "„rm\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „rm\"?",
+    explanation: "Zkratka „rm\" znamená „remove\".",
+  },
+  'abbr-11': {
+    introduction: "„mv\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „mv\"?",
+    explanation: "Zkratka „mv\" znamená „move\".",
+  },
+  'abbr-12': {
+    introduction: "„cp\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „cp\"?",
+    explanation: "Zkratka „cp\" znamená „copy\".",
+  },
+  'abbr-13': {
+    introduction: "„mkdir\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „mkdir\"?",
+    explanation: "Zkratka „mkdir\" znamená „make directory\".",
+  },
+  'abbr-14': {
+    introduction: "„chmod\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „chmod\"?",
+    explanation: "Zkratka „chmod\" znamená „change mode\".",
+  },
+  'abbr-15': {
+    introduction: "„chown\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „chown\"?",
+    explanation: "Zkratka „chown\" znamená „change owner\".",
+  },
+  'abbr-16': {
+    introduction: "„ssh\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „ssh\"?",
+    explanation: "Zkratka „ssh\" znamená „Secure Shell\".",
+  },
+  'abbr-17': {
+    introduction: "„scp\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „scp\"?",
+    explanation: "Zkratka „scp\" znamená „Secure Copy\".",
+  },
+  'abbr-18': {
+    introduction: "„curl\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „curl\"?",
+    explanation: "Zkratka „curl\" znamená „Client URL\".",
+  },
+  'abbr-19': {
+    introduction: "„wget\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „wget\"?",
+    explanation: "Zkratka „wget\" znamená „Web Get\".",
+  },
+  'abbr-20': {
+    introduction: "„ps\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „ps\"?",
+    explanation: "Zkratka „ps\" znamená „process status\".",
+  },
+  'abbr-21': {
+    introduction: "„df\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „df\"?",
+    explanation: "Zkratka „df\" znamená „disk free\".",
+  },
+  'abbr-22': {
+    introduction: "„du\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „du\"?",
+    explanation: "Zkratka „du\" znamená „disk usage\".",
+  },
+  'abbr-23': {
+    introduction: "„tar\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „tar\"?",
+    explanation: "Zkratka „tar\" znamená „tape archive\".",
+  },
+  'abbr-24': {
+    introduction: "„diff\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „diff\"?",
+    explanation: "Zkratka „diff\" znamená „difference\".",
+  },
+  'abbr-25': {
+    introduction: "„psql\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „psql\"?",
+    explanation: "Zkratka „psql\" znamená „PostgreSQL terminal\".",
+  },
+  'abbr-26': {
+    introduction: "„gcl\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „gcl\"?",
+    explanation: "Zkratka „gcl\" znamená „git clone\".",
+  },
+  'abbr-27': {
+    introduction: "„gst\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „gst\"?",
+    explanation: "Zkratka „gst\" znamená „git status\".",
+  },
+  'abbr-28': {
+    introduction: "„gco\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „gco\"?",
+    explanation: "Zkratka „gco\" znamená „git checkout\".",
+  },
+  'abbr-29': {
+    introduction: "„gcm\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „gcm\"?",
+    explanation: "Zkratka „gcm\" znamená „git commit -m\".",
+  },
+  'abbr-30': {
+    introduction: "„gp\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „gp\"?",
+    explanation: "Zkratka „gp\" znamená „git push\".",
+  },
+  'abbr-31': {
+    introduction: "„gpl\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „gpl\"?",
+    explanation: "Zkratka „gpl\" znamená „git pull\".",
+  },
+  'abbr-32': {
+    introduction: "„VCS\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „VCS\"?",
+    explanation: "Zkratka „VCS\" znamená „Version Control System\".",
+  },
+  'abbr-33': {
+    introduction: "„PR\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „PR\"?",
+    explanation: "Zkratka „PR\" znamená „Pull Request\".",
+  },
+  'abbr-34': {
+    introduction: "„MR\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „MR\"?",
+    explanation: "Zkratka „MR\" znamená „Merge Request\".",
+  },
+  'abbr-35': {
+    introduction: "„WIP\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „WIP\"?",
+    explanation: "Zkratka „WIP\" znamená „Work In Progress\".",
+  },
+  'abbr-36': {
+    introduction: "„LGTM\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „LGTM\"?",
+    explanation: "Zkratka „LGTM\" znamená „Looks Good To Me\".",
+  },
+  'abbr-37': {
+    introduction: "„SHA\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „SHA\"?",
+    explanation: "Zkratka „SHA\" znamená „Secure Hash Algorithm\".",
+  },
+  'abbr-38': {
+    introduction: "„HTTP\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „HTTP\"?",
+    explanation: "Zkratka „HTTP\" znamená „HyperText Transfer Protocol\".",
+  },
+  'abbr-39': {
+    introduction: "„HTTPS\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „HTTPS\"?",
+    explanation: "Zkratka „HTTPS\" znamená „HTTP Secure\".",
+  },
+  'abbr-40': {
+    introduction: "„URL\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „URL\"?",
+    explanation: "Zkratka „URL\" znamená „Uniform Resource Locator\".",
+  },
+  'abbr-41': {
+    introduction: "„URI\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „URI\"?",
+    explanation: "Zkratka „URI\" znamená „Uniform Resource Identifier\".",
+  },
+  'abbr-42': {
+    introduction: "„DNS\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „DNS\"?",
+    explanation: "Zkratka „DNS\" znamená „Domain Name System\".",
+  },
+  'abbr-43': {
+    introduction: "„CDN\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „CDN\"?",
+    explanation: "Zkratka „CDN\" znamená „Content Delivery Network\".",
+  },
+  'abbr-44': {
+    introduction: "„TCP\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „TCP\"?",
+    explanation: "Zkratka „TCP\" znamená „Transmission Control Protocol\".",
+  },
+  'abbr-45': {
+    introduction: "„IP\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „IP\"?",
+    explanation: "Zkratka „IP\" znamená „Internet Protocol\".",
+  },
+  'abbr-46': {
+    introduction: "„TLS\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „TLS\"?",
+    explanation: "Zkratka „TLS\" znamená „Transport Layer Security\".",
+  },
+  'abbr-47': {
+    introduction: "„SSL\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „SSL\"?",
+    explanation: "Zkratka „SSL\" znamená „Secure Sockets Layer\".",
+  },
+  'abbr-48': {
+    introduction: "„CORS\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „CORS\"?",
+    explanation: "Zkratka „CORS\" znamená „Cross-Origin Resource Sharing\".",
+  },
+  'abbr-49': {
+    introduction: "„CSP\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „CSP\"?",
+    explanation: "Zkratka „CSP\" znamená „Content Security Policy\".",
+  },
+  'abbr-50': {
+    introduction: "„XSS\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „XSS\"?",
+    explanation: "Zkratka „XSS\" znamená „Cross-Site Scripting\".",
+  },
+  'abbr-51': {
+    introduction: "„CSRF\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „CSRF\"?",
+    explanation: "Zkratka „CSRF\" znamená „Cross-Site Request Forgery\".",
+  },
+  'abbr-52': {
+    introduction: "„API\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „API\"?",
+    explanation: "Zkratka „API\" znamená „Application Programming Interface\".",
+  },
+  'abbr-53': {
+    introduction: "„REST\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „REST\"?",
+    explanation: "Zkratka „REST\" znamená „REpresentational State Transfer\".",
+  },
+  'abbr-54': {
+    introduction: "„CRUD\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „CRUD\"?",
+    explanation: "Zkratka „CRUD\" znamená „Create, Read, Update, Delete\".",
+  },
+  'abbr-55': {
+    introduction: "„JSON\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „JSON\"?",
+    explanation: "Zkratka „JSON\" znamená „JavaScript Object Notation\".",
+  },
+  'abbr-56': {
+    introduction: "„XML\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „XML\"?",
+    explanation: "Zkratka „XML\" znamená „eXtensible Markup Language\".",
+  },
+  'abbr-57': {
+    introduction: "„YAML\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „YAML\"?",
+    explanation: "Zkratka „YAML\" znamená „YAML Ain't Markup Language\".",
+  },
+  'abbr-58': {
+    introduction: "„SQL\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „SQL\"?",
+    explanation: "Zkratka „SQL\" znamená „Structured Query Language\".",
+  },
+  'abbr-59': {
+    introduction: "„ORM\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „ORM\"?",
+    explanation: "Zkratka „ORM\" znamená „Object-Relational Mapping\".",
+  },
+  'abbr-60': {
+    introduction: "„RLS\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „RLS\"?",
+    explanation: "Zkratka „RLS\" znamená „Row-Level Security\".",
+  },
+  'abbr-61': {
+    introduction: "„JWT\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „JWT\"?",
+    explanation: "Zkratka „JWT\" znamená „JSON Web Token\".",
+  },
+  'abbr-62': {
+    introduction: "„JWKS\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „JWKS\"?",
+    explanation: "Zkratka „JWKS\" znamená „JSON Web Key Set\".",
+  },
+  'abbr-63': {
+    introduction: "„HMAC\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „HMAC\"?",
+    explanation: "Zkratka „HMAC\" znamená „Hash-based Message Authentication Code\".",
+  },
+  'abbr-64': {
+    introduction: "„OAuth\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „OAuth\"?",
+    explanation: "Zkratka „OAuth\" znamená „Open Authorization\".",
+  },
+  'abbr-65': {
+    introduction: "„UUID\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „UUID\"?",
+    explanation: "Zkratka „UUID\" znamená „Universally Unique Identifier\".",
+  },
+  'abbr-66': {
+    introduction: "„TTL\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „TTL\"?",
+    explanation: "Zkratka „TTL\" znamená „Time To Live\".",
+  },
+  'abbr-67': {
+    introduction: "„DOM\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „DOM\"?",
+    explanation: "Zkratka „DOM\" znamená „Document Object Model\".",
+  },
+  'abbr-68': {
+    introduction: "„SPA\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „SPA\"?",
+    explanation: "Zkratka „SPA\" znamená „Single Page Application\".",
+  },
+  'abbr-69': {
+    introduction: "„SSR\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „SSR\"?",
+    explanation: "Zkratka „SSR\" znamená „Server-Side Rendering\".",
+  },
+  'abbr-70': {
+    introduction: "„CSR\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „CSR\"?",
+    explanation: "Zkratka „CSR\" znamená „Client-Side Rendering\".",
+  },
+  'abbr-71': {
+    introduction: "„SSG\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „SSG\"?",
+    explanation: "Zkratka „SSG\" znamená „Static Site Generation\".",
+  },
+  'abbr-72': {
+    introduction: "„PWA\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „PWA\"?",
+    explanation: "Zkratka „PWA\" znamená „Progressive Web App\".",
+  },
+  'abbr-73': {
+    introduction: "„HMR\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „HMR\"?",
+    explanation: "Zkratka „HMR\" znamená „Hot Module Replacement\".",
+  },
+  'abbr-74': {
+    introduction: "„LCP\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „LCP\"?",
+    explanation: "Zkratka „LCP\" znamená „Largest Contentful Paint\".",
+  },
+  'abbr-75': {
+    introduction: "„CLI\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „CLI\"?",
+    explanation: "Zkratka „CLI\" znamená „Command-Line Interface\".",
+  },
+  'abbr-76': {
+    introduction: "„GUI\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „GUI\"?",
+    explanation: "Zkratka „GUI\" znamená „Graphical User Interface\".",
+  },
+  'abbr-77': {
+    introduction: "„IDE\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „IDE\"?",
+    explanation: "Zkratka „IDE\" znamená „Integrated Development Environment\".",
+  },
+  'abbr-78': {
+    introduction: "„SDK\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „SDK\"?",
+    explanation: "Zkratka „SDK\" znamená „Software Development Kit\".",
+  },
+  'abbr-79': {
+    introduction: "„CI\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „CI\"?",
+    explanation: "Zkratka „CI\" znamená „Continuous Integration\".",
+  },
+  'abbr-80': {
+    introduction: "„CD\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „CD\"?",
+    explanation: "Zkratka „CD\" znamená „Continuous Delivery / Deployment\".",
+  },
+  'abbr-81': {
+    introduction: "„AOT\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „AOT\"?",
+    explanation: "Zkratka „AOT\" znamená „Ahead-Of-Time\".",
+  },
+  'abbr-82': {
+    introduction: "„JIT\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „JIT\"?",
+    explanation: "Zkratka „JIT\" znamená „Just-In-Time\".",
+  },
+  'abbr-83': {
+    introduction: "„GC\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „GC\"?",
+    explanation: "Zkratka „GC\" znamená „Garbage Collection\".",
+  },
+  'abbr-84': {
+    introduction: "„a11y\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „a11y\"?",
+    explanation: "Zkratka „a11y\" znamená „accessibility\".",
+  },
+  'abbr-85': {
+    introduction: "„i18n\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „i18n\"?",
+    explanation: "Zkratka „i18n\" znamená „internationalization\".",
+  },
+  'abbr-86': {
+    introduction: "„l10n\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „l10n\"?",
+    explanation: "Zkratka „l10n\" znamená „localization\".",
+  },
+  'abbr-87': {
+    introduction: "„regex\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „regex\"?",
+    explanation: "Zkratka „regex\" znamená „regular expression\".",
+  },
+  'abbr-88': {
+    introduction: "„env\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „env\"?",
+    explanation: "Zkratka „env\" znamená „environment\".",
+  },
+  'abbr-89': {
+    introduction: "„repo\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „repo\"?",
+    explanation: "Zkratka „repo\" znamená „repository\".",
+  },
+  'abbr-90': {
+    introduction: "„auth\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „auth\"?",
+    explanation: "Zkratka „auth\" znamená „authentication / authorization\".",
+  },
+  'abbr-91': {
+    introduction: "„async\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „async\"?",
+    explanation: "Zkratka „async\" znamená „asynchronous\".",
+  },
+  'abbr-92': {
+    introduction: "„TS\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „TS\"?",
+    explanation: "Zkratka „TS\" znamená „TypeScript\".",
+  },
+  'abbr-93': {
+    introduction: "„JS\" je běžná zkratka, na kterou ve vývoji narazíš.",
+    question: "Co znamená zkratka „JS\"?",
+    explanation: "Zkratka „JS\" znamená „JavaScript\".",
+  },
 };
