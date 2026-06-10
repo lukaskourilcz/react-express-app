@@ -22,6 +22,16 @@ import { useAuth, getUserProfile } from '../lib/auth';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { quizStyles, BRAND, CATEGORY_GRADIENT } from '../theme/MuiTheme';
 import {
+  CATEGORY_OPTIONS,
+  CATEGORY_LOOKUP,
+  OWNER_EMAIL,
+  PRIVATE_CATEGORIES,
+  onCategoryColorText,
+  getCategoryHexColor,
+  getCategoryLabel,
+  categoryProgressBackground,
+} from '../lib/categories';
+import {
   recordQuizResult,
   createOrUpdateUserStats,
   getDailyChallenge,
@@ -41,50 +51,9 @@ import './Quiz.css';
 
 type QuizMode = 'standard' | 'daily';
 
-const CATEGORY_OPTIONS: { value: CategoryType; label: string; color: string }[] = [
-  { value: 'html', label: 'HTML', color: '#e34c26' },
-  { value: 'css', label: 'CSS', color: '#264de4' },
-  { value: 'javascript', label: 'JavaScript', color: '#f7df1e' },
-  { value: 'typescript', label: 'TypeScript', color: '#3178c6' },
-  { value: 'react', label: 'React', color: '#61dafb' },
-  { value: 'nodejs', label: 'Node.js', color: '#339933' },
-  { value: 'git', label: 'Git', color: '#f05032' },
-  { value: 'dev-world', label: 'Dev World', color: '#8b5cf6' },
-  { value: 'custom', label: 'Custom', color: '#06b6d4' },
-  { value: 'code-snippets', label: 'Code Snippets', color: '#ec4899' },
-  { value: 'apt', label: 'APT', color: '#10b981' },
-];
-
-const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c]));
-
-// Categories shown only to the owner. The server enforces this too; hiding the
-// chips here is UX only (not a security boundary).
-const OWNER_EMAIL = 'kouril.lukas@gmail.com';
-const PRIVATE_CATEGORIES: CategoryType[] = ['custom', 'apt'];
-
 const QUESTION_COUNT_OPTIONS = [10, 20, 30, 40, 50];
 
 const DIFFICULTY_VALUES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
-
-const DARK_TEXT_CATEGORIES = new Set(['javascript', 'react']);
-const onCategoryColorText = (cat: string) => (DARK_TEXT_CATEGORIES.has(cat) ? '#1a1a1a' : '#fff');
-const getCategoryHexColor = (category: string) => CATEGORY_LOOKUP.get(category as CategoryType)?.color || '#666';
-const getCategoryLabel = (category: string) => CATEGORY_LOOKUP.get(category as CategoryType)?.label || category;
-
-// Build the progress-bar fill from the categories actually present in a quiz.
-// One category → its solid logo color (e.g. React → #61dafb); several → a
-// gradient blending those categories' logo colors, ordered to match the picker.
-const CATEGORY_ORDER = CATEGORY_OPTIONS.map((c) => c.value);
-function categoryProgressBackground(categories: string[]): string {
-  const unique = Array.from(new Set(categories)).sort(
-    (a, b) =>
-      CATEGORY_ORDER.indexOf(a as CategoryType) - CATEGORY_ORDER.indexOf(b as CategoryType),
-  );
-  const colors = unique.map(getCategoryHexColor);
-  if (colors.length === 0) return BRAND.green;
-  if (colors.length === 1) return colors[0];
-  return `linear-gradient(90deg, ${colors.join(', ')})`;
-}
 
 const PROGRESS_KEY = 'devquiz:in-progress';
 

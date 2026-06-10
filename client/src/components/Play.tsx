@@ -31,6 +31,8 @@ import {
   type DistributionBucket,
 } from '../lib/play';
 import { joinMatchChannel, type RealtimeChannel } from '../lib/realtime';
+import { visibleCategoryOptionsFor } from '../lib/categories';
+import type { CategoryType } from '../types/quiz';
 import { friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { BRAND } from '../theme/MuiTheme';
@@ -54,7 +56,14 @@ export function PlayLanding() {
   const [mode, setMode] = useState<'multiplayer' | 'classroom'>('multiplayer');
   const [count, setCount] = useState(10);
   const [durationS, setDurationS] = useState(60);
+  const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
   const [joinCode, setJoinCode] = useState('');
+
+  const categoryOptions = visibleCategoryOptionsFor(profile.email);
+  const toggleCategory = (c: CategoryType) =>
+    setSelectedCategories((prev) =>
+      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
+    );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<'create' | 'join' | null>(null);
 
@@ -94,7 +103,7 @@ export function PlayLanding() {
         host_name: profile.name || profile.email?.split('@')[0] || 'Host',
         mode,
         count,
-        categories: [],
+        categories: selectedCategories,
         duration_s: durationS,
       });
       navigate(`/play/${m.code}`);
@@ -162,6 +171,64 @@ export function PlayLanding() {
             {t('play.classroom')}
           </ToggleButton>
         </ToggleButtonGroup>
+
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="overline" component="h3" color="text.secondary">
+            {t('play.categories')}
+          </Typography>
+          {selectedCategories.length > 0 && (
+            <Button
+              size="small"
+              onClick={() => setSelectedCategories([])}
+              sx={{ fontSize: '0.7rem', textTransform: 'none', color: 'text.secondary', minWidth: 'auto', p: '2px 8px' }}
+            >
+              {t('play.clear')}
+            </Button>
+          )}
+        </Box>
+        <Box
+          role="group"
+          aria-label={t('play.categories')}
+          sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1 }}
+        >
+          {categoryOptions.map((cat) => {
+            const selected = selectedCategories.includes(cat.value);
+            return (
+              <Chip
+                key={cat.value}
+                label={cat.label}
+                onClick={() => toggleCategory(cat.value)}
+                role="checkbox"
+                aria-checked={selected}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleCategory(cat.value);
+                  }
+                }}
+                size="small"
+                sx={{
+                  cursor: 'pointer',
+                  backgroundColor: 'background.paper',
+                  color: selected ? cat.color : 'text.secondary',
+                  border: selected ? `2px solid ${cat.color}` : '1px solid',
+                  borderColor: selected ? cat.color : 'divider',
+                  borderLeft: `4px solid ${cat.color}`,
+                  borderRadius: 1,
+                  fontWeight: selected ? 600 : 500,
+                  '&:hover': { backgroundColor: 'action.hover' },
+                }}
+              />
+            );
+          })}
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+          {selectedCategories.length === 0
+            ? t('play.allCategoriesHint')
+            : t('play.categoriesSelected', { count: selectedCategories.length })}
+        </Typography>
+
         <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
           {[5, 10, 15, 20].map((n) => (
             <Button
