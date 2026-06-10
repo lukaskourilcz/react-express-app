@@ -71,6 +71,21 @@ const onCategoryColorText = (cat: string) => (DARK_TEXT_CATEGORIES.has(cat) ? '#
 const getCategoryHexColor = (category: string) => CATEGORY_LOOKUP.get(category as CategoryType)?.color || '#666';
 const getCategoryLabel = (category: string) => CATEGORY_LOOKUP.get(category as CategoryType)?.label || category;
 
+// Build the progress-bar fill from the categories actually present in a quiz.
+// One category → its solid logo color (e.g. React → #61dafb); several → a
+// gradient blending those categories' logo colors, ordered to match the picker.
+const CATEGORY_ORDER = CATEGORY_OPTIONS.map((c) => c.value);
+function categoryProgressBackground(categories: string[]): string {
+  const unique = Array.from(new Set(categories)).sort(
+    (a, b) =>
+      CATEGORY_ORDER.indexOf(a as CategoryType) - CATEGORY_ORDER.indexOf(b as CategoryType),
+  );
+  const colors = unique.map(getCategoryHexColor);
+  if (colors.length === 0) return BRAND.green;
+  if (colors.length === 1) return colors[0];
+  return `linear-gradient(90deg, ${colors.join(', ')})`;
+}
+
 const PROGRESS_KEY = 'devquiz:in-progress';
 
 interface PersistedProgress {
@@ -935,6 +950,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   if (!currentQuestion) return null;
 
   const progress = ((currentIndex + 1) / questions.length) * 100;
+  const progressBackground = categoryProgressBackground(questions.map((q) => q.category));
   const answered = Object.keys(answers).length;
   const allAnswered = questions.every((q) => answers[q.id] !== undefined);
   const remaining = questions.length - answered;
@@ -963,7 +979,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 height: 6,
                 borderRadius: 3,
                 backgroundColor: 'action.hover',
-                '& .MuiLinearProgress-bar': { borderRadius: 3, background: CATEGORY_GRADIENT },
+                '& .MuiLinearProgress-bar': { borderRadius: 3, background: progressBackground },
               }}
             />
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
