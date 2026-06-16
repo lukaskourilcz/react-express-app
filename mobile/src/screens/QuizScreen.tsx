@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColors } from '../lib/useColors';
 import { CATEGORY_OPTIONS, getCategoryColor, getCategoryLabel } from '../lib/categories';
 import { fetchQuestions, submitQuiz } from '../lib/quizApi';
 import { friendlyError } from '../lib/api';
 import type { CategoryType, DifficultyMode, Question, QuizResult } from '../types';
-import { PrimaryButton, Card } from '../components/ui';
+import { PrimaryButton, Card, LoadingScreen } from '../components/ui';
 
 type Phase = 'settings' | 'loading' | 'in-progress' | 'submitted' | 'error';
 
@@ -78,11 +78,7 @@ export default function QuizScreen() {
 
   // ---- Loading ----
   if (phase === 'loading') {
-    return (
-      <SafeAreaView style={[styles.flex, styles.center, { backgroundColor: c.background }]}>
-        <ActivityIndicator size="large" color={c.brand} />
-      </SafeAreaView>
-    );
+    return <LoadingScreen />;
   }
 
   // ---- Error ----

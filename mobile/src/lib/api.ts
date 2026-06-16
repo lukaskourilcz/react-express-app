@@ -3,22 +3,13 @@
 // your LAN dev server) since there's no same-origin to fall back on.
 import { supabase } from './supabase';
 import { API_BASE_URL } from './config';
+import { ApiError, friendlyError } from '@shared/api-error';
+
+// ApiError / friendlyError are shared with the web client — see
+// ../../shared/api-error.ts. Re-export so importers keep getting them here.
+export { ApiError, friendlyError };
 
 const DEFAULT_TIMEOUT_MS = 15_000;
-
-// e.g. https://your-app.vercel.app — set in app.json (expo.extra.apiBaseUrl)
-// or overridden via EXPO_PUBLIC_API_BASE_URL in mobile/.env.
-export { API_BASE_URL };
-
-export class ApiError extends Error {
-  status: number;
-  code?: string;
-  constructor(message: string, status: number, code?: string) {
-    super(message);
-    this.status = status;
-    this.code = code;
-  }
-}
 
 type Options = RequestInit & { timeoutMs?: number };
 
@@ -75,14 +66,4 @@ export async function apiFetch<T>(path: string, opts: Options = {}): Promise<T> 
   } finally {
     clearTimeout(timeoutId);
   }
-}
-
-export function friendlyError(err: unknown): string {
-  if (err instanceof ApiError) {
-    if (err.status === 0) return err.message || 'Network error. Check your connection.';
-    if (err.status >= 500) return 'Server error. Please try again in a moment.';
-    if (err.status === 401 || err.status === 403) return 'You need to sign in to do that.';
-    return err.message;
-  }
-  return 'Something went wrong. Please try again.';
 }

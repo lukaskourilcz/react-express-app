@@ -1,6 +1,17 @@
 // Small themed UI primitives shared across screens.
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColors } from '../lib/useColors';
+
+// Full-screen centered spinner. Shared by the Quiz and Leaderboard screens.
+export function LoadingScreen() {
+  const c = useColors();
+  return (
+    <SafeAreaView style={[styles.loadingScreen, { backgroundColor: c.background }]}>
+      <ActivityIndicator size="large" color={c.brand} />
+    </SafeAreaView>
+  );
+}
 
 export function PrimaryButton({
   label,
@@ -52,4 +63,5 @@ const styles = StyleSheet.create({
   btnText: { color: '#fff', fontWeight: '700', fontSize: 16 },
   card: { borderWidth: 1, borderRadius: 12, padding: 16 },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
+  loadingScreen: { flex: 1, alignItems: 'center', justifyContent: 'center' },
 });

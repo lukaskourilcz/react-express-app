@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useColors } from '../lib/useColors';
 import { fetchGlobalLeaderboard } from '../lib/quizApi';
 import { friendlyError } from '../lib/api';
+import { LoadingScreen } from '../components/ui';
 import type { LeaderboardGlobalEntry } from '../types';
 
 export default function LeaderboardScreen() {
@@ -33,11 +34,7 @@ export default function LeaderboardScreen() {
   }, [load]);
 
   if (loading) {
-    return (
-      <SafeAreaView style={[styles.flex, styles.center, { backgroundColor: c.background }]}>
-        <ActivityIndicator size="large" color={c.brand} />
-      </SafeAreaView>
-    );
+    return <LoadingScreen />;
   }
 
   return (
@@ -69,7 +66,6 @@ export default function LeaderboardScreen() {
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  center: { alignItems: 'center', justifyContent: 'center' },
   h1: { fontSize: 24, fontWeight: '800', padding: 20, paddingBottom: 8 },
   row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, gap: 12 },
   rank: { width: 28, fontWeight: '800', fontSize: 15 },

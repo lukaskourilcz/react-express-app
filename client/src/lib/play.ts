@@ -1,4 +1,8 @@
 import { apiFetch } from './api';
+import type { LeaderboardGlobalEntry } from '@shared/types';
+
+// Shared with the mobile app; web-only leaderboard shapes stay below.
+export type { LeaderboardGlobalEntry };
 
 export interface MatchQuestion {
   id: string;
@@ -50,15 +54,6 @@ export interface CategoryLeaderboardEntry {
   total_correct: number;
   total_questions: number;
   accuracy_pct: number;
-}
-
-export interface LeaderboardGlobalEntry {
-  display_name: string;
-  picture: string | null;
-  total_correct: number;
-  total_quizzes: number;
-  longest_streak: number;
-  current_streak: number;
 }
 
 export interface LeaderboardDailyEntry {

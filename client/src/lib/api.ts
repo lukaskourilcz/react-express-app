@@ -1,16 +1,10 @@
 import { supabase } from './supabaseClient';
+import { ApiError, friendlyError } from '@shared/api-error';
+
+// Re-export so existing importers keep getting these from '../lib/api'.
+export { ApiError, friendlyError };
 
 const DEFAULT_TIMEOUT_MS = 15_000;
-
-export class ApiError extends Error {
-  status: number;
-  code?: string;
-  constructor(message: string, status: number, code?: string) {
-    super(message);
-    this.status = status;
-    this.code = code;
-  }
-}
 
 type Options = RequestInit & { timeoutMs?: number; signal?: AbortSignal };
 
@@ -84,15 +78,4 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
   } finally {
     clearTimeout(timeoutId);
   }
-}
-
-export function friendlyError(err: unknown): string {
-  if (err instanceof ApiError) {
-    if (err.code === 'aborted') return err.message;
-    if (err.status === 0) return 'Network error. Check your connection and try again.';
-    if (err.status >= 500) return 'Server error. Please try again in a moment.';
-    if (err.status === 401 || err.status === 403) return 'You need to sign in to do that.';
-    return err.message;
-  }
-  return 'Something went wrong. Please try again.';
 }

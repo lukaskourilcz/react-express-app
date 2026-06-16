@@ -1,11 +1,8 @@
 import { createTheme, responsiveFontSizes, type ThemeOptions } from '@mui/material/styles';
 import type { PaletteMode } from '@mui/material';
+import { BRAND } from '@shared/brand';
 
-export const BRAND = {
-  green: '#2d7a2d',
-  greenHover: '#246124',
-  greenSoft: 'rgba(45, 122, 45, 0.08)',
-};
+export { BRAND };
 
 // Reusable "brand green" contained-button styling. Theme-aware disabled tokens
 // keep the label legible in dark mode. Use via the <BrandButton> component or

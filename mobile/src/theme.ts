@@ -1,11 +1,8 @@
-// Brand palette + light/dark colors for the mobile app, mirroring the web
-// theme's green-on-paper identity (client/src/theme/MuiTheme.ts).
+// Light/dark colors for the mobile app. The brand palette is shared with the
+// web client — see ../../shared/brand.ts.
+import { BRAND } from '@shared/brand';
 
-export const BRAND = {
-  green: '#2d7a2d',
-  greenHover: '#246124',
-  greenSoft: 'rgba(45, 122, 45, 0.10)',
-};
+export { BRAND };
 
 export interface ThemeColors {
   background: string;
