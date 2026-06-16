@@ -5,7 +5,19 @@ export const BRAND = {
   green: '#2d7a2d',
   greenHover: '#246124',
   greenSoft: 'rgba(45, 122, 45, 0.08)',
-  textTertiary: '#6b6b6b',
+};
+
+// Reusable "brand green" contained-button styling. Theme-aware disabled tokens
+// keep the label legible in dark mode. Use via the <BrandButton> component or
+// by spreading into an sx prop.
+export const brandButtonSx = {
+  backgroundColor: BRAND.green,
+  color: '#ffffff',
+  '&:hover': { backgroundColor: BRAND.greenHover },
+  '&.Mui-disabled': {
+    backgroundColor: 'action.disabledBackground',
+    color: 'text.disabled',
+  },
 };
 
 export const CATEGORY_GRADIENT =
@@ -158,38 +170,11 @@ const baseOptions = (mode: PaletteMode): ThemeOptions => ({
 // phones and grow toward their full size on larger screens.
 export const createAppTheme = (mode: PaletteMode) => responsiveFontSizes(createTheme(baseOptions(mode)));
 
-export const theme = createAppTheme('light');
-
 export const quizStyles = {
   startButton: { px: 4, py: 1.25, fontSize: '1rem' },
-  brandButton: {
-    backgroundColor: BRAND.green,
-    color: '#ffffff',
-    '&:hover': { backgroundColor: BRAND.greenHover },
-    // Use theme-aware tokens so disabled text/background stay legible in dark mode.
-    '&.Mui-disabled': {
-      backgroundColor: 'action.disabledBackground',
-      color: 'text.disabled',
-    },
-  },
-  submitButton: {
-    px: 3,
-    py: 1,
-    backgroundColor: BRAND.green,
-    color: '#ffffff',
-    '&:hover': { backgroundColor: BRAND.greenHover },
-    '&.Mui-disabled': {
-      backgroundColor: 'action.disabledBackground',
-      color: 'text.disabled',
-    },
-  },
-  nextButton: {
-    px: 3,
-    py: 1,
-    backgroundColor: BRAND.green,
-    color: '#ffffff',
-    '&:hover': { backgroundColor: BRAND.greenHover },
-  },
+  brandButton: brandButtonSx,
+  submitButton: { px: 3, py: 1, ...brandButtonSx },
+  nextButton: { px: 3, py: 1, ...brandButtonSx },
   previousButton: {
     px: 3,
     py: 1,

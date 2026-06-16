@@ -1,38 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { AuthError, requireAuth } from '../lib/auth';
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-// Prefer the service-role key (bypasses RLS); every query is scoped to the
-// verified token subject. Falls back to the anon key for local dev.
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.VITE_SUPABASE_ANON_KEY ||
-  process.env.SUPABASE_ANON_KEY;
-const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseKey
-    ? createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false, autoRefreshToken: false } })
-    : null;
+import { supabase, jsonError, withTimeout, str } from '../lib/http';
 
 const FIELDS = 'question_id,question,category,correct_answer,explanation,created_at';
 const MAX = { id: 64, short: 128, text: 4000, answer: 2000 };
-
-function jsonError(res: VercelResponse, status: number, code: string, message: string) {
-  return res.status(status).json({ error: { code, message } });
-}
-
-function withTimeout<T>(p: PromiseLike<T>, ms = 5000): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('supabase_timeout')), ms);
-    Promise.resolve(p).then(
-      (v) => { clearTimeout(t); resolve(v); },
-      (e) => { clearTimeout(t); reject(e); },
-    );
-  });
-}
-
-const str = (v: unknown, max: number): string | null =>
-  typeof v === 'string' && v.length > 0 && v.length <= max ? v : null;
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');

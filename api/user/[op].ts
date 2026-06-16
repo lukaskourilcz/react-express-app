@@ -1,63 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { AuthError, requireAuth } from '../../lib/auth';
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-// Prefer the service-role key so server-side reads/writes bypass RLS. Every
-// caller is verified via requireAuth() and scoped to their own user_id, so
-// bypassing RLS here is safe. Falls back to the anon key for local dev.
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.VITE_SUPABASE_ANON_KEY ||
-  process.env.SUPABASE_ANON_KEY;
-const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseKey
-    ? createClient(supabaseUrl, supabaseKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-      })
-    : null;
+import { STAT_CATEGORIES } from '../../lib/quiz-data';
+import { supabase, jsonError, logEvent, withTimeout } from '../../lib/http';
 
 const STATS_FIELDS =
   'id,user_id,email,name,picture,total_quizzes,total_correct,total_questions,current_streak,longest_streak,last_quiz_date,created_at,updated_at';
 
 const MAX_STR = 512;
 
-const VALID_CATEGORIES = new Set([
-  'html',
-  'css',
-  'javascript',
-  'typescript',
-  'react',
-  'nodejs',
-  'git',
-  'dev-world',
-  'custom',
-  'code-snippets',
-]);
-
-function jsonError(res: VercelResponse, status: number, code: string, message: string) {
-  return res.status(status).json({ error: { code, message } });
-}
-
-function logEvent(op: string, event: Record<string, unknown>) {
-  console.log(JSON.stringify({ ts: new Date().toISOString(), route: `user/${op}`, ...event }));
-}
-
-function withTimeout<T>(p: PromiseLike<T>, ms = 5000): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('supabase_timeout')), ms);
-    Promise.resolve(p).then(
-      (v) => {
-        clearTimeout(t);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(t);
-        reject(e);
-      },
-    );
-  });
-}
+const VALID_CATEGORIES = new Set<string>(STAT_CATEGORIES);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
@@ -85,10 +36,10 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         supabase!.from('user_stats').select(STATS_FIELDS).eq('user_id', user_id).maybeSingle(),
       );
       if (error) {
-        logEvent('stats', { status: 500, reason: 'select_failed', error: error.message });
+        logEvent('user/stats', { status: 500, reason: 'select_failed', error: error.message });
         return jsonError(res, 500, 'db_error', 'Could not load stats');
       }
-      logEvent('stats', { status: 200, op: 'get', latency_ms: Date.now() - started });
+      logEvent('user/stats', { status: 200, op: 'get', latency_ms: Date.now() - started });
       return res.json({ data });
     }
 
@@ -127,14 +78,14 @@ async function stats(req: VercelRequest, res: VercelResponse) {
 
         if (error) {
           if (/function .* does not exist/i.test(error.message)) {
-            logEvent('stats', { status: 200, op: 'submit_fallback', warn: 'rpc_missing' });
+            logEvent('user/stats', { status: 200, op: 'submit_fallback', warn: 'rpc_missing' });
             return res.json({ data: null, warning: 'rpc_missing' });
           }
-          logEvent('stats', { status: 500, reason: 'rpc_failed', error: error.message });
+          logEvent('user/stats', { status: 500, reason: 'rpc_failed', error: error.message });
           return jsonError(res, 500, 'db_error', 'Could not record quiz result');
         }
 
-        logEvent('stats', { status: 200, op: 'submit', latency_ms: Date.now() - started });
+        logEvent('user/stats', { status: 200, op: 'submit', latency_ms: Date.now() - started });
         return res.json({ data });
       }
 
@@ -161,10 +112,10 @@ async function stats(req: VercelRequest, res: VercelResponse) {
       );
 
       if (error) {
-        logEvent('stats', { status: 500, reason: 'upsert_failed', error: error.message });
+        logEvent('user/stats', { status: 500, reason: 'upsert_failed', error: error.message });
         return jsonError(res, 500, 'db_error', 'Could not save profile');
       }
-      logEvent('stats', { status: 200, op: 'upsert', latency_ms: Date.now() - started });
+      logEvent('user/stats', { status: 200, op: 'upsert', latency_ms: Date.now() - started });
       return res.json({ data });
     }
 
@@ -172,7 +123,7 @@ async function stats(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
-    logEvent('stats', { status: 500, reason: 'exception', error: message });
+    logEvent('user/stats', { status: 500, reason: 'exception', error: message });
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
 }

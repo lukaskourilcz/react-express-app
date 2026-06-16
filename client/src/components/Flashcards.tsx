@@ -1,20 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Paper, Typography, Button, CircularProgress, Alert, Chip, IconButton, Tooltip } from '@mui/material';
+import { Box, Paper, Typography, Button, Chip, IconButton, Tooltip } from '@mui/material';
 import { useAuth } from '../lib/auth';
 import { useT } from '../i18n/LanguageContext';
 import { listFlashcards, removeFlashcard, type Flashcard } from '../lib/flashcards';
 import { friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { BRAND } from '../theme/MuiTheme';
-
-const TrashIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-    <line x1="10" y1="11" x2="10" y2="17" />
-    <line x1="14" y1="11" x2="14" y2="17" />
-  </svg>
-);
+import { TrashIcon } from './icons';
+import LoadingState from './LoadingState';
+import RetryAlert from './RetryAlert';
+import BrandButton from './BrandButton';
 
 function Flashcards() {
   const t = useT();
@@ -56,12 +52,7 @@ function Flashcards() {
   }, [index]);
 
   if (authLoading || loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }} role="status" aria-live="polite">
-        <CircularProgress sx={{ color: BRAND.green }} />
-        <span style={{ position: 'absolute', left: -9999 }}>{t('card.loading')}</span>
-      </Box>
-    );
+    return <LoadingState label={t('card.loading')} minHeight="50vh" />;
   }
 
   if (!isAuthenticated) {
@@ -69,19 +60,15 @@ function Flashcards() {
       <Paper elevation={0} sx={{ p: 4, maxWidth: 520, mx: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
         <Typography variant="h6" sx={{ mb: 1 }}>{t('card.signInTitle')}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>{t('card.signInBody')}</Typography>
-        <Button variant="contained" onClick={() => signInWithGoogle().catch(() => {})} sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}>
+        <BrandButton onClick={() => signInWithGoogle().catch(() => {})}>
           {t('auth.logIn')}
-        </Button>
+        </BrandButton>
       </Paper>
     );
   }
 
   if (error) {
-    return (
-      <Alert severity="error" role="alert" sx={{ maxWidth: 520, mx: 'auto' }} action={<Button color="inherit" size="small" onClick={() => setReloadKey((k) => k + 1)}>{t('quiz.retry')}</Button>}>
-        {error}
-      </Alert>
-    );
+    return <RetryAlert message={error} onRetry={() => setReloadKey((k) => k + 1)} sx={{ maxWidth: 520, mx: 'auto' }} />;
   }
 
   if (cards.length === 0) {
@@ -89,9 +76,9 @@ function Flashcards() {
       <Paper elevation={0} sx={{ p: 4, maxWidth: 520, mx: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
         <Typography variant="h6" sx={{ mb: 1 }}>{t('card.emptyTitle')}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>{t('card.emptyHint')}</Typography>
-        <Button variant="contained" onClick={() => navigate('/')} sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}>
+        <BrandButton onClick={() => navigate('/')}>
           {t('card.goToQuiz')}
-        </Button>
+        </BrandButton>
       </Paper>
     );
   }
@@ -140,14 +127,9 @@ function Flashcards() {
 
         <Box sx={{ mt: 'auto' }}>
           {!revealed ? (
-            <Button
-              fullWidth
-              variant="contained"
-              onClick={() => setRevealed(true)}
-              sx={{ py: 1.25, fontWeight: 600, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
-            >
+            <BrandButton fullWidth onClick={() => setRevealed(true)} sx={{ py: 1.25, fontWeight: 600 }}>
               {t('card.reveal')}
-            </Button>
+            </BrandButton>
           ) : (
             <Box>
               <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>{t('card.answerLabel')}</Typography>

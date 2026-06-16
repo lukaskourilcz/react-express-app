@@ -153,9 +153,10 @@ react-express-app/
 │   └── user/[op].ts              #   GET/POST profile + stats; POST category-stats
 │
 ├── lib/                          # Shared server-side helpers (importable from api/*)
-│   ├── auth.ts                   #   Auth0 JWT verifier (jose)
-│   ├── play-helpers.ts           #   Supabase client + match-code generator
-│   └── quiz-data.ts              #   800 questions + HMAC session encode/decode
+│   ├── auth.ts                   #   Access-token verifier + requireAuth/tryAuth
+│   ├── http.ts                   #   Supabase clients, jsonError, logEvent, withTimeout, validators
+│   ├── play-helpers.ts           #   Match-code generator
+│   └── quiz-data.ts              #   800 questions + HMAC session encode/decode + category constants
 │
 ├── client/                       # Vite + React SPA
 │   ├── src/

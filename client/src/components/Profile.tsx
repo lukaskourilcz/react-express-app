@@ -5,7 +5,6 @@ import {
   Typography,
   Avatar,
   Paper,
-  CircularProgress,
   Button,
   Divider,
   Alert,
@@ -17,6 +16,9 @@ import { BRAND } from '../theme/MuiTheme';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
 import { computeAchievements, readPerfectQuizCount } from '../lib/achievements';
 import { renderQuestion } from './CodeBlock';
+import LoadingState from './LoadingState';
+import RetryAlert from './RetryAlert';
+import BrandButton from './BrandButton';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 
@@ -40,7 +42,6 @@ function Profile() {
     if (!isAuthenticated || !user) return;
 
     let cancelled = false;
-    const controller = new AbortController();
 
     async function loadStats() {
       if (!user?.id) return;
@@ -66,18 +67,12 @@ function Profile() {
     loadStats();
     return () => {
       cancelled = true;
-      controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, isAuthenticated, authLoading, navigate, reloadKey]);
 
   if (authLoading || loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }} role="status" aria-live="polite">
-        <CircularProgress sx={{ color: BRAND.green }} />
-        <span style={{ position: 'absolute', left: -9999 }}>{t('profile.loading')}</span>
-      </Box>
-    );
+    return <LoadingState label={t('profile.loading')} minHeight="50vh" />;
   }
 
   if (!isAuthenticated || !user) {
@@ -89,19 +84,7 @@ function Profile() {
   }
 
   if (error) {
-    return (
-      <Alert
-        severity="error"
-        role="alert"
-        action={
-          <Button color="inherit" size="small" onClick={() => setReloadKey((k) => k + 1)}>
-            {t('quiz.retry')}
-          </Button>
-        }
-      >
-        {error}
-      </Alert>
-    );
+    return <RetryAlert message={error} onRetry={() => setReloadKey((k) => k + 1)} />;
   }
 
   const totalQuizzes = stats?.total_quizzes ?? 0;
@@ -346,22 +329,13 @@ function ProfileBody({
         </Paper>
       )}
 
-      <Button
-        variant="contained"
+      <BrandButton
         fullWidth
         onClick={() => navigate('/')}
-        sx={{
-          py: 1.5,
-          fontSize: '0.95rem',
-          fontWeight: 600,
-          textTransform: 'none',
-          borderRadius: 1,
-          backgroundColor: BRAND.green,
-          '&:hover': { backgroundColor: BRAND.greenHover },
-        }}
+        sx={{ py: 1.5, fontSize: '0.95rem', fontWeight: 600, textTransform: 'none', borderRadius: 1 }}
       >
         {isFirstTime ? t('profile.startQuiz') : t('profile.backToQuiz')}
-      </Button>
+      </BrandButton>
     </Box>
   );
 }

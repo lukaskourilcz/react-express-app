@@ -16,19 +16,15 @@ import {
   ClickAwayListener,
   IconButton,
   Skeleton,
-  Snackbar,
 } from '@mui/material';
 import { useAuth, getUserProfile } from '../lib/auth';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { quizStyles, BRAND, CATEGORY_GRADIENT } from '../theme/MuiTheme';
 import {
   CATEGORY_OPTIONS,
-  CATEGORY_LOOKUP,
   OWNER_EMAIL,
   PRIVATE_CATEGORIES,
-  onCategoryColorText,
   getCategoryHexColor,
-  getCategoryLabel,
   categoryProgressBackground,
 } from '../lib/categories';
 import {
@@ -40,6 +36,10 @@ import {
 import { recordCategoryStats } from '../lib/play';
 import { apiFetch, friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
+import { CategoryChip, CategoryToggleChip } from './CategoryChip';
+import AppSnackbar from './AppSnackbar';
+import RetryAlert from './RetryAlert';
+import { HintIcon, BookmarkIcon, ShareIcon, ReportFlagIcon } from './icons';
 import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
 import { addFlashcard, removeFlashcard } from '../lib/flashcards';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -64,28 +64,6 @@ interface PersistedProgress {
   currentIndex: number;
   mode: QuizMode;
 }
-
-const HintIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-  </svg>
-);
-
-const BookmarkIcon = ({ filled }: { filled: boolean }) => (
-  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-  </svg>
-);
-
-const ShareIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="18" cy="5" r="3" />
-    <circle cx="6" cy="12" r="3" />
-    <circle cx="18" cy="19" r="3" />
-    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
-    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-  </svg>
-);
 
 function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }) {
   const { lang, t } = useLanguage();
@@ -460,18 +438,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     return (
       <Card className="quiz-card">
         <CardContent sx={{ p: 3 }}>
-          <Alert
-            severity="error"
-            role="alert"
+          <RetryAlert
+            message={error || t('error.somethingWrong')}
+            onRetry={() => fetchQuestions(questionCount, difficultyMode, selectedCategories)}
             sx={{ mb: 2 }}
-            action={
-              <Button onClick={() => fetchQuestions(questionCount, difficultyMode, selectedCategories)} color="inherit" size="small">
-                {t('quiz.retry')}
-              </Button>
-            }
-          >
-            {error || t('error.somethingWrong')}
-          </Alert>
+          />
           <Button onClick={handleRestart} variant="outlined" fullWidth>
             {t('quiz.backToSettings')}
           </Button>
@@ -537,38 +508,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </Button>
           </Box>
           <Box role="group" aria-label={t('quiz.categoriesAria')} sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: '6px', sm: '10px' }, justifyContent: 'center' }}>
-            {visibleCategoryOptions.map((cat) => {
-              const selected = selectedCategories.includes(cat.value);
-              return (
-                <Chip
-                  key={cat.value}
-                  label={cat.label}
-                  onClick={() => handleCategoryToggle(cat.value)}
-                  role="checkbox"
-                  aria-checked={selected}
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleCategoryToggle(cat.value);
-                    }
-                  }}
-                  sx={{
-                    cursor: 'pointer',
-                    backgroundColor: 'background.paper',
-                    color: selected ? cat.color : 'text.secondary',
-                    border: selected ? `2px solid ${cat.color}` : '1px solid',
-                    borderColor: selected ? cat.color : 'divider',
-                    borderLeft: `4px solid ${cat.color}`,
-                    borderRadius: 1,
-                    fontWeight: selected ? 600 : 500,
-                    fontSize: '0.85rem',
-                    height: 36,
-                    '&:hover': { backgroundColor: 'action.hover' },
-                  }}
-                />
-              );
-            })}
+            {visibleCategoryOptions.map((cat) => (
+              <CategoryToggleChip
+                key={cat.value}
+                option={cat}
+                selected={selectedCategories.includes(cat.value)}
+                onToggle={handleCategoryToggle}
+                sx={{ fontSize: '0.85rem', height: 36 }}
+              />
+            ))}
           </Box>
           {attemptedStart && selectedCategories.length === 0 && (
             <Typography variant="caption" color="error" id="categories-error" role="alert" sx={{ mt: 1, display: 'block' }}>
@@ -583,23 +531,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               {t('quiz.selectedCount', { count: selectedCategories.length, total: visibleCategories.length })}
             </Typography>
             <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-              {selectedCategories.map((cat) => {
-                const category = CATEGORY_LOOKUP.get(cat);
-                return (
-                  <Chip
-                    key={cat}
-                    label={category?.label}
-                    size="small"
-                    sx={{
-                      height: 24,
-                      fontSize: '0.7rem',
-                      fontWeight: 500,
-                      backgroundColor: category?.color,
-                      color: onCategoryColorText(cat),
-                    }}
-                  />
-                );
-              })}
+              {selectedCategories.map((cat) => (
+                <CategoryChip key={cat} category={cat} sx={{ height: 24, fontSize: '0.7rem', fontWeight: 500 }} />
+              ))}
             </Box>
           </Box>
         )}
@@ -707,13 +641,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           />
         </Box>
 
-        <Snackbar
-          open={!!snack}
-          autoHideDuration={2500}
-          onClose={() => setSnack(null)}
-          message={snack ?? ''}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        />
+        <AppSnackbar message={snack} onClose={() => setSnack(null)} />
       </Box>
     );
   }
@@ -853,22 +781,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       onClick={() => setReportTarget(question.id)}
                       sx={{ color: 'text.secondary' }}
                     >
-                      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-                        <line x1="4" y1="22" x2="4" y2="15" />
-                      </svg>
+                      <ReportFlagIcon />
                     </IconButton>
                   </Tooltip>
-                  <Chip
-                    label={getCategoryLabel(question.category)}
-                    size="small"
-                    sx={{
-                      backgroundColor: getCategoryHexColor(question.category),
-                      color: onCategoryColorText(question.category),
-                      fontWeight: 600,
-                      fontSize: { xs: '0.7rem', sm: '0.8rem' },
-                      height: { xs: '24px', sm: '28px' },
-                    }}
+                  <CategoryChip
+                    category={question.category}
+                    sx={{ fontSize: { xs: '0.7rem', sm: '0.8rem' }, height: { xs: '24px', sm: '28px' } }}
                   />
                 </Box>
               </Box>
@@ -899,13 +817,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           );
         })}
 
-        <Snackbar
-          open={!!snack}
-          autoHideDuration={2500}
-          onClose={() => setSnack(null)}
-          message={snack ?? ''}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        />
+        <AppSnackbar message={snack} onClose={() => setSnack(null)} />
         <ReportDialog
           open={!!reportTarget}
           onClose={() => setReportTarget(null)}
@@ -957,17 +869,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, gap: 1, flexWrap: 'wrap' }}>
-            <Chip
-              label={getCategoryLabel(currentQuestion.category)}
-              size="small"
-              sx={{
-                backgroundColor: getCategoryHexColor(currentQuestion.category),
-                color: onCategoryColorText(currentQuestion.category),
-                fontWeight: 600,
-                fontSize: '0.8rem',
-                height: 28,
-              }}
-            />
+            <CategoryChip category={currentQuestion.category} sx={{ fontSize: '0.8rem', height: 28 }} />
             <Tooltip
               title={isBookmarked ? t('quiz.bookmarkedReviewTip') : t('quiz.bookmarkAfterTip')}
               arrow
@@ -1108,13 +1010,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         )}
       </div>
 
-      <Snackbar
-        open={!!snack}
-        autoHideDuration={2500}
-        onClose={() => setSnack(null)}
-        message={snack ?? ''}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      />
+      <AppSnackbar message={snack} onClose={() => setSnack(null)} />
       <ReportDialog
         open={!!reportTarget}
         onClose={() => setReportTarget(null)}

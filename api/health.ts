@@ -1,26 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-
-function withTimeout<T>(p: PromiseLike<T>, ms: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('timeout')), ms);
-    Promise.resolve(p).then(
-      (v) => {
-        clearTimeout(t);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(t);
-        reject(e);
-      },
-    );
-  });
-}
+import { supabaseAnon as supabase, withTimeout } from '../lib/http';
 
 /**
  * GET /api/health

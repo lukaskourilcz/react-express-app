@@ -6,6 +6,26 @@ export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'node
 // (not via /api/quiz/questions for non-owners, and never in the daily mix).
 export const PRIVATE_CATEGORIES: CategoryType[] = ['custom', 'apt'];
 
+// Every selectable quiz category. Single source of truth for the API routes
+// that validate a requested category.
+export const ALL_CATEGORIES: CategoryType[] = [
+  'html',
+  'css',
+  'javascript',
+  'typescript',
+  'react',
+  'nodejs',
+  'git',
+  'dev-world',
+  'custom',
+  'code-snippets',
+  'apt',
+];
+
+// Categories eligible for per-category stats and leaderboards. Excludes the
+// owner-only 'apt' pseudo-category, which isn't tracked competitively.
+export const STAT_CATEGORIES: CategoryType[] = ALL_CATEGORIES.filter((c) => c !== 'apt');
+
 export interface Question {
   id: string;
   tags: string[];

@@ -84,10 +84,6 @@ export const playCorrect = () => {
   setTimeout(() => tone(880, 0.12), 60);
 };
 
-export const playIncorrect = () => {
-  tone(220, 0.18, 'square', 0.05);
-};
-
 export const playComplete = () => {
   [523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.18), i * 80));
 };

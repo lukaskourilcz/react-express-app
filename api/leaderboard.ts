@@ -1,47 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { STAT_CATEGORIES } from '../lib/quiz-data';
+import { supabaseAnon as supabase, jsonError, logEvent, withTimeout } from '../lib/http';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
-
-const VALID_CATEGORIES = new Set([
-  'html',
-  'css',
-  'javascript',
-  'typescript',
-  'react',
-  'nodejs',
-  'git',
-  'dev-world',
-  'custom',
-  'code-snippets',
-]);
-
-function jsonError(res: VercelResponse, status: number, code: string, message: string) {
-  return res.status(status).json({ error: { code, message } });
-}
-
-function logEvent(event: Record<string, unknown>) {
-  console.log(JSON.stringify({ ts: new Date().toISOString(), route: 'leaderboard', ...event }));
-}
-
-function withTimeout<T>(p: PromiseLike<T>, ms = 5000): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('supabase_timeout')), ms);
-    Promise.resolve(p).then(
-      (v) => {
-        clearTimeout(t);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(t);
-        reject(e);
-      },
-    );
-  });
-}
+const VALID_CATEGORIES = new Set<string>(STAT_CATEGORIES);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -66,7 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (/function .* does not exist/i.test(error.message)) {
           return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-004.sql to enable leaderboards');
         }
-        logEvent({ status: 500, error: error.message });
+        logEvent('leaderboard', { status: 500, error: error.message });
         return jsonError(res, 500, 'db_error', 'Could not load leaderboard');
       }
       // 60s SWR — leaderboards are eventually-consistent.
@@ -94,7 +55,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (/function .* does not exist/i.test(error.message)) {
           return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-005.sql');
         }
-        logEvent({ status: 500, error: error.message });
+        logEvent('leaderboard', { status: 500, error: error.message });
         return jsonError(res, 500, 'db_error', 'Could not load category leaderboard');
       }
       res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
@@ -115,7 +76,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (/function .* does not exist/i.test(error.message)) {
           return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-004.sql to enable leaderboards');
         }
-        logEvent({ status: 500, error: error.message });
+        logEvent('leaderboard', { status: 500, error: error.message });
         return jsonError(res, 500, 'db_error', 'Could not load daily leaderboard');
       }
       res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
@@ -125,7 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'bad_request', 'period must be "global", "daily", or "category"');
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
-    logEvent({ status: 500, error: message });
+    logEvent('leaderboard', { status: 500, error: message });
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
 }

@@ -1,19 +1,12 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { decodeSession, questions, localizeQuestion, normalizeLang } from '../../lib/quiz-data';
+import { jsonError, logEvent } from '../../lib/http';
 
 const MAX_ANSWERS = 50;
 
 // Build an in-memory lookup once at cold-start. With 800+ questions, the
 // previous .find() inside the per-answer loop was O(n*m) per submission.
 const questionsById = new Map(questions.map((q) => [q.id, q]));
-
-function jsonError(res: VercelResponse, status: number, code: string, message: string) {
-  return res.status(status).json({ error: { code, message } });
-}
-
-function logEvent(event: Record<string, unknown>) {
-  console.log(JSON.stringify({ ts: new Date().toISOString(), route: 'quiz/submit', ...event }));
-}
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
@@ -56,7 +49,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 
   const sessionData = decodeSession(body.sessionId);
   if (!sessionData) {
-    logEvent({ status: 400, reason: 'invalid_session', latency_ms: Date.now() - started });
+    logEvent('quiz/submit', { status: 400, reason: 'invalid_session', latency_ms: Date.now() - started });
     return jsonError(res, 400, 'invalid_session', 'Quiz session expired or invalid');
   }
 
@@ -80,7 +73,7 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   const total = validated.length;
   const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
 
-  logEvent({ status: 200, total, correct, percentage, latency_ms: Date.now() - started });
+  logEvent('quiz/submit', { status: 200, total, correct, percentage, latency_ms: Date.now() - started });
 
   res.json({
     totalQuestions: total,

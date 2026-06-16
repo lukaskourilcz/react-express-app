@@ -1,12 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { questions, secureShuffle } from '../../lib/quiz-data';
-import {
-  supabase,
-  jsonError,
-  isShortString,
-  logEvent,
-  generateMatchCode,
-} from '../../lib/play-helpers';
+import { supabase, jsonError, isShortString, logEvent, withTimeout } from '../../lib/http';
+import { generateMatchCode } from '../../lib/play-helpers';
 import { AuthError, requireAuth, tryAuth } from '../../lib/auth';
 
 const MAX_QUESTIONS = 20;
@@ -19,7 +14,6 @@ const ALLOWED_DURATIONS_S = [0, 15, 30, 60, 120, 300];
 const MAX_BONUS = 50;
 const PING_GRACE_MS = 1000;
 const STALE_MATCH_MS = 5 * 60 * 1000;
-const DB_TIMEOUT_MS = 5000;
 
 interface MatchQuestion {
   id: string;
@@ -37,22 +31,6 @@ function computeSpeedBonus(elapsedMs: number, durationS: number): number {
   if (elapsedMs <= 0) return MAX_BONUS;
   const fraction = Math.max(0, 1 - elapsedMs / (durationS * 1000));
   return Math.round(fraction * MAX_BONUS);
-}
-
-function withTimeout<T>(p: PromiseLike<T>, ms = DB_TIMEOUT_MS): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('supabase_timeout')), ms);
-    Promise.resolve(p).then(
-      (v) => {
-        clearTimeout(t);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(t);
-        reject(e);
-      },
-    );
-  });
 }
 
 async function withAuth(

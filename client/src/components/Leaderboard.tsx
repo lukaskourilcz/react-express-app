@@ -7,9 +7,7 @@ import {
   ToggleButtonGroup,
   Avatar,
   Skeleton,
-  Alert,
   Chip,
-  Button,
 } from '@mui/material';
 import {
   fetchLeaderboard,
@@ -19,23 +17,17 @@ import {
 } from '../lib/play';
 import { friendlyError } from '../lib/api';
 import { BRAND } from '../theme/MuiTheme';
+import { CATEGORY_OPTIONS, PRIVATE_CATEGORIES } from '../lib/categories';
+import RetryAlert from './RetryAlert';
 import { useT } from '../i18n/LanguageContext';
 
 type Tab = 'global' | 'daily' | 'category';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-const CATEGORIES: { value: string; label: string; color: string }[] = [
-  { value: 'javascript', label: 'JavaScript', color: '#f7df1e' },
-  { value: 'typescript', label: 'TypeScript', color: '#3178c6' },
-  { value: 'react', label: 'React', color: '#61dafb' },
-  { value: 'html', label: 'HTML', color: '#e34c26' },
-  { value: 'css', label: 'CSS', color: '#264de4' },
-  { value: 'nodejs', label: 'Node.js', color: '#339933' },
-  { value: 'git', label: 'Git', color: '#f05032' },
-  { value: 'dev-world', label: 'Dev World', color: '#8b5cf6' },
-  { value: 'code-snippets', label: 'Code Snippets', color: '#ec4899' },
-];
+// Public categories only (no owner-private ones), sourced from the shared
+// category metadata so labels and brand colors stay in sync app-wide.
+const CATEGORIES = CATEGORY_OPTIONS.filter((c) => !PRIVATE_CATEGORIES.includes(c.value));
 
 type Entry = LeaderboardGlobalEntry | LeaderboardDailyEntry | CategoryLeaderboardEntry;
 
@@ -131,18 +123,7 @@ function Leaderboard() {
         )}
 
         {!loading && error && (
-          <Alert
-            severity="error"
-            role="alert"
-            sx={{ borderRadius: 0 }}
-            action={
-              <Button color="inherit" size="small" onClick={() => setReloadKey((k) => k + 1)}>
-                {t('quiz.retry')}
-              </Button>
-            }
-          >
-            {error}
-          </Alert>
+          <RetryAlert message={error} onRetry={() => setReloadKey((k) => k + 1)} sx={{ borderRadius: 0 }} />
         )}
 
         {!loading && !error && entries.length === 0 && (

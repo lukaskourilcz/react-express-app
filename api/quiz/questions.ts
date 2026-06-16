@@ -6,37 +6,17 @@ import {
   localizeQuestion,
   normalizeLang,
   PRIVATE_CATEGORIES,
+  ALL_CATEGORIES,
   type DifficultyMode,
   type CategoryType,
 } from '../../lib/quiz-data';
+import { jsonError, logEvent } from '../../lib/http';
 import { tryAuth } from '../../lib/auth';
 
 // Owner whose private categories (custom, apt) are visible only to them.
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'kouril.lukas@gmail.com').toLowerCase();
 
-const ALL_CATEGORIES: CategoryType[] = [
-  'html',
-  'css',
-  'javascript',
-  'typescript',
-  'react',
-  'git',
-  'nodejs',
-  'dev-world',
-  'custom',
-  'code-snippets',
-  'apt',
-];
 const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
-
-function jsonError(res: VercelResponse, status: number, code: string, message: string) {
-  return res.status(status).json({ error: { code, message } });
-}
-
-function logEvent(event: Record<string, unknown>) {
-  // Structured single-line JSON; Vercel ingests this natively.
-  console.log(JSON.stringify({ ts: new Date().toISOString(), route: 'quiz/questions', ...event }));
-}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
@@ -140,7 +120,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Per-request shuffle differs, so don't CDN-cache the response itself.
   res.setHeader('Cache-Control', 'private, no-store');
-  logEvent({ status: 200, count: selected.length, difficulty: difficultyMode, latency_ms: Date.now() - started });
+  logEvent('quiz/questions', { status: 200, count: selected.length, difficulty: difficultyMode, latency_ms: Date.now() - started });
 
   res.json({ sessionId, questions: questionsWithShuffledOptions });
 }

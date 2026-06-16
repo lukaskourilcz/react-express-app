@@ -9,7 +9,6 @@ import {
   Alert,
   Chip,
   Divider,
-  CircularProgress,
   ToggleButton,
   ToggleButtonGroup,
   RadioGroup,
@@ -35,6 +34,9 @@ import { visibleCategoryOptionsFor } from '../lib/categories';
 import type { CategoryType } from '../types/quiz';
 import { friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
+import { CategoryToggleChip } from './CategoryChip';
+import BrandButton from './BrandButton';
+import LoadingState from './LoadingState';
 import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 
@@ -76,8 +78,7 @@ export function PlayLanding() {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
           {t('play.signInBody')}
         </Typography>
-        <Button
-          variant="contained"
+        <BrandButton
           onClick={async () => {
             try {
               await signInWithGoogle();
@@ -85,10 +86,9 @@ export function PlayLanding() {
               setError(err instanceof Error ? err.message : friendlyError(err));
             }
           }}
-          sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
         >
           {t('auth.logIn')}
-        </Button>
+        </BrandButton>
       </Paper>
     );
   }
@@ -191,37 +191,15 @@ export function PlayLanding() {
           aria-label={t('play.categories')}
           sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1 }}
         >
-          {categoryOptions.map((cat) => {
-            const selected = selectedCategories.includes(cat.value);
-            return (
-              <Chip
-                key={cat.value}
-                label={cat.label}
-                onClick={() => toggleCategory(cat.value)}
-                role="checkbox"
-                aria-checked={selected}
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    toggleCategory(cat.value);
-                  }
-                }}
-                size="small"
-                sx={{
-                  cursor: 'pointer',
-                  backgroundColor: 'background.paper',
-                  color: selected ? cat.color : 'text.secondary',
-                  border: selected ? `2px solid ${cat.color}` : '1px solid',
-                  borderColor: selected ? cat.color : 'divider',
-                  borderLeft: `4px solid ${cat.color}`,
-                  borderRadius: 1,
-                  fontWeight: selected ? 600 : 500,
-                  '&:hover': { backgroundColor: 'action.hover' },
-                }}
-              />
-            );
-          })}
+          {categoryOptions.map((cat) => (
+            <CategoryToggleChip
+              key={cat.value}
+              option={cat}
+              selected={selectedCategories.includes(cat.value)}
+              onToggle={toggleCategory}
+              size="small"
+            />
+          ))}
         </Box>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
           {selectedCategories.length === 0
@@ -269,19 +247,13 @@ export function PlayLanding() {
             </Button>
           ))}
         </Box>
-        <Button
-          fullWidth
-          variant="contained"
-          onClick={handleCreate}
-          disabled={loading !== null}
-          sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
-        >
+        <BrandButton fullWidth onClick={handleCreate} disabled={loading !== null}>
           {loading === 'create'
             ? t('play.creating')
             : mode === 'multiplayer'
               ? t('play.createMultiplayer')
               : t('play.createClassroom')}
-        </Button>
+        </BrandButton>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
           {mode === 'multiplayer' ? t('play.multiplayerHint') : t('play.classroomHint')}
         </Typography>
@@ -494,24 +466,7 @@ export function PlayMatch() {
   };
 
   if (joining) {
-    return (
-      <Box
-        role="status"
-        aria-live="polite"
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 1.5,
-          mt: 6,
-        }}
-      >
-        <CircularProgress sx={{ color: BRAND.green }} aria-hidden />
-        <Typography variant="body2" color="text.secondary">
-          {t('play.joining')}
-        </Typography>
-      </Box>
-    );
+    return <LoadingState label={t('play.joining')} subtitle={t('play.joining')} py={6} />;
   }
 
   if (error && !match) {
@@ -687,14 +642,9 @@ function Lobby({
           {t('play.copyLink')}
         </Button>
         {isHost && (
-          <Button
-            variant="contained"
-            onClick={onStart}
-            disabled={participants.length < 1}
-            sx={{ ml: 'auto', backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
-          >
+          <BrandButton onClick={onStart} disabled={participants.length < 1} sx={{ ml: 'auto' }}>
             {t('play.startWithCount', { count: match.questions.length })}
-          </Button>
+          </BrandButton>
         )}
       </Box>
     </Paper>
@@ -846,14 +796,9 @@ function RunningQuestion({
       </RadioGroup>
 
       {!isHost && !submitted && (
-        <Button
-          variant="contained"
-          onClick={onSubmit}
-          disabled={selected === null}
-          sx={{ mt: 2, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
-        >
+        <BrandButton onClick={onSubmit} disabled={selected === null} sx={{ mt: 2 }}>
           {t('play.lockIn')}
-        </Button>
+        </BrandButton>
       )}
       {!isHost && submitted && (
         <Alert severity="success" sx={{ mt: 2 }}>
@@ -877,13 +822,9 @@ function RunningQuestion({
             <Button variant="outlined" onClick={onFinish}>
               {t('play.endMatch')}
             </Button>
-            <Button
-              variant="contained"
-              onClick={onAdvance}
-              sx={{ ml: 'auto', backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
-            >
+            <BrandButton onClick={onAdvance} sx={{ ml: 'auto' }}>
               {lastQuestion ? t('play.showResults') : t('play.nextQuestion')}
-            </Button>
+            </BrandButton>
           </Box>
         </Box>
       )}
