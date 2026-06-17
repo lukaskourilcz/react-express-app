@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { type PaletteMode } from '@mui/material';
 import { createAppTheme } from './MuiTheme';
+import { readString, writeString } from '../lib/storage';
 
 interface ColorModeContextValue {
   mode: PaletteMode;
@@ -17,7 +18,7 @@ const STORAGE_KEY = 'devquiz:color-mode';
 
 const resolveInitial = (): PaletteMode => {
   if (typeof window === 'undefined') return 'light';
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  const stored = readString(STORAGE_KEY);
   if (stored === 'light' || stored === 'dark') return stored;
   if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) return 'dark';
   return 'light';
@@ -27,11 +28,7 @@ export function ColorModeProvider({ children }: { children: ReactNode }) {
   const [mode, setMode] = useState<PaletteMode>(resolveInitial);
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(STORAGE_KEY, mode);
-    } catch {
-      // ignore quota / private mode failures
-    }
+    writeString(STORAGE_KEY, mode);
     document.documentElement.dataset.colorMode = mode;
   }, [mode]);
 

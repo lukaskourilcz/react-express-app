@@ -16,7 +16,7 @@ import {
   FormControlLabel,
   Radio,
 } from '@mui/material';
-import { useAuth, getUserProfile } from '../lib/auth';
+import { useAuth, getUserProfile, displayNameFromProfile } from '../lib/auth';
 import {
   createMatch,
   joinMatch,
@@ -35,8 +35,9 @@ import { visibleCategoryOptionsFor } from '../lib/categories';
 import type { CategoryType } from '../types/quiz';
 import { friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
-import { BRAND } from '../theme/MuiTheme';
+import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
+import { useGameConfig } from '../lib/gameConfig';
 
 const POLL_FALLBACK_MS = 4000;
 const DEFAULT_DURATION_S = 60;
@@ -51,6 +52,7 @@ function formatDuration(n: number, t: ReturnType<typeof useT>): string {
 export function PlayLanding() {
   const navigate = useNavigate();
   const t = useT();
+  const config = useGameConfig();
   const { user, isAuthenticated, signInWithGoogle } = useAuth();
   const profile = getUserProfile(user);
   const [mode, setMode] = useState<'multiplayer' | 'classroom'>('multiplayer');
@@ -85,7 +87,7 @@ export function PlayLanding() {
               setError(err instanceof Error ? err.message : friendlyError(err));
             }
           }}
-          sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+          sx={brandButtonSx}
         >
           {t('auth.logIn')}
         </Button>
@@ -100,7 +102,7 @@ export function PlayLanding() {
     try {
       const m = await createMatch({
         host_id: user.id,
-        host_name: profile.name || profile.email?.split('@')[0] || 'Host',
+        host_name: displayNameFromProfile(profile, 'Host'),
         mode,
         count,
         categories: selectedCategories,
@@ -127,7 +129,7 @@ export function PlayLanding() {
       await joinMatch({
         code,
         user_id: user.id,
-        display_name: profile.name || profile.email?.split('@')[0] || 'Player',
+        display_name: displayNameFromProfile(profile, 'Player'),
       });
       navigate(`/play/${code}`);
     } catch (err) {
@@ -230,7 +232,7 @@ export function PlayLanding() {
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          {[5, 10, 15, 20].map((n) => (
+          {config.play.countOptions.map((n) => (
             <Button
               key={n}
               variant="outlined"
@@ -253,7 +255,7 @@ export function PlayLanding() {
           {t('play.timeLimit')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          {[30, 60, 120, 300, 0].map((n) => (
+          {config.play.durationOptionsS.map((n) => (
             <Button
               key={n}
               variant="outlined"
@@ -274,7 +276,7 @@ export function PlayLanding() {
           variant="contained"
           onClick={handleCreate}
           disabled={loading !== null}
-          sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+          sx={brandButtonSx}
         >
           {loading === 'create'
             ? t('play.creating')
@@ -353,7 +355,7 @@ export function PlayMatch() {
         const m = await joinMatch({
           code,
           user_id: user.id,
-          display_name: profile.name || profile.email?.split('@')[0] || 'Player',
+          display_name: displayNameFromProfile(profile, 'Player'),
         });
         if (cancelled) return;
         setMatch(m);
@@ -691,7 +693,7 @@ function Lobby({
             variant="contained"
             onClick={onStart}
             disabled={participants.length < 1}
-            sx={{ ml: 'auto', backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+            sx={{ ml: 'auto', ...brandButtonSx }}
           >
             {t('play.startWithCount', { count: match.questions.length })}
           </Button>
@@ -850,7 +852,7 @@ function RunningQuestion({
           variant="contained"
           onClick={onSubmit}
           disabled={selected === null}
-          sx={{ mt: 2, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+          sx={{ mt: 2, ...brandButtonSx }}
         >
           {t('play.lockIn')}
         </Button>
@@ -870,7 +872,7 @@ function RunningQuestion({
           </Typography>
 
           {mode === 'classroom' && hostSub && (
-            <DistributionChart code={code} q={questionIdx} hostSub={hostSub} options={q.options} correctIndex={q.correct_index} />
+            <DistributionChart code={code} questionIdx={questionIdx} hostSub={hostSub} options={q.options} correctIndex={q.correct_index} />
           )}
 
           <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
@@ -880,7 +882,7 @@ function RunningQuestion({
             <Button
               variant="contained"
               onClick={onAdvance}
-              sx={{ ml: 'auto', backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+              sx={{ ml: 'auto', ...brandButtonSx }}
             >
               {lastQuestion ? t('play.showResults') : t('play.nextQuestion')}
             </Button>
@@ -936,13 +938,13 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
 
 function DistributionChart({
   code,
-  q,
+  questionIdx,
   hostSub,
   options,
   correctIndex,
 }: {
   code: string;
-  q: number;
+  questionIdx: number;
   hostSub: string;
   options: string[];
   correctIndex?: number;
@@ -953,7 +955,7 @@ function DistributionChart({
   useEffect(() => {
     let cancelled = false;
     const load = () => {
-      fetchDistribution(code, q, hostSub)
+      fetchDistribution(code, questionIdx, hostSub)
         .then((r) => {
           if (!cancelled) setBuckets(r.buckets);
         })
@@ -967,7 +969,7 @@ function DistributionChart({
       cancelled = true;
       window.clearInterval(id);
     };
-  }, [code, q, hostSub]);
+  }, [code, questionIdx, hostSub]);
 
   const total = buckets.reduce((sum, b) => sum + b.count, 0) || 1;
 

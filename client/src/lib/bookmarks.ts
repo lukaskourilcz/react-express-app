@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react';
+import { readJSON, writeJSON } from './storage';
+import { createStore, useStore } from './store';
 
 const KEY = 'devquiz:bookmarks';
 const QUESTIONS_KEY = 'devquiz:bookmarked-questions';
+const MAX_STORED = 200;
 
 export interface BookmarkedQuestion {
   id: string;
@@ -13,84 +15,37 @@ export interface BookmarkedQuestion {
   bookmarkedAt: string;
 }
 
-const readIds = (): Record<string, true> => {
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-};
+const readIds = (): Record<string, true> => readJSON<Record<string, true>>(KEY, {});
+const readQuestions = (): BookmarkedQuestion[] => readJSON<BookmarkedQuestion[]>(QUESTIONS_KEY, []);
 
-const readQuestions = (): BookmarkedQuestion[] => {
-  try {
-    const raw = localStorage.getItem(QUESTIONS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-};
+const store = createStore(() => ({ ids: readIds(), questions: readQuestions() }));
 
-const persistIds = (b: Record<string, true>) => {
-  try {
-    localStorage.setItem(KEY, JSON.stringify(b));
-  } catch {
-    // ignore
-  }
-};
-
-const persistQuestions = (qs: BookmarkedQuestion[]) => {
-  try {
-    localStorage.setItem(QUESTIONS_KEY, JSON.stringify(qs));
-  } catch {
-    // ignore
-  }
-};
-
-const listeners = new Set<() => void>();
-
-export const getBookmarks = () => readIds();
-export const getBookmarkedQuestions = () => readQuestions();
-
-export const toggleBookmark = (q: Omit<BookmarkedQuestion, 'bookmarkedAt'>) => {
+export const toggleBookmark = (q: Omit<BookmarkedQuestion, 'bookmarkedAt'>): boolean => {
   const ids = readIds();
-  const stored = readQuestions();
-  let added: boolean;
-  if (ids[q.id]) {
-    delete ids[q.id];
-    persistIds(ids);
-    persistQuestions(stored.filter((s) => s.id !== q.id));
-    added = false;
-  } else {
+  const stored = readQuestions().filter((s) => s.id !== q.id);
+  const added = !ids[q.id];
+
+  if (added) {
     ids[q.id] = true;
-    persistIds(ids);
-    persistQuestions([{ ...q, bookmarkedAt: new Date().toISOString() }, ...stored.filter((s) => s.id !== q.id)].slice(0, 200));
-    added = true;
+    writeJSON(QUESTIONS_KEY, [{ ...q, bookmarkedAt: new Date().toISOString() }, ...stored].slice(0, MAX_STORED));
+  } else {
+    delete ids[q.id];
+    writeJSON(QUESTIONS_KEY, stored);
   }
-  listeners.forEach((fn) => fn());
+  writeJSON(KEY, ids);
+  store.emit();
   return added;
 };
 
 export const removeBookmark = (id: string) => {
   const ids = readIds();
   delete ids[id];
-  persistIds(ids);
-  persistQuestions(readQuestions().filter((q) => q.id !== id));
-  listeners.forEach((fn) => fn());
+  writeJSON(KEY, ids);
+  writeJSON(QUESTIONS_KEY, readQuestions().filter((q) => q.id !== id));
+  store.emit();
 };
 
+/** Live view of bookmarks: `ids` for quick membership checks, `questions` for the full list. */
 export function useBookmarks() {
-  const [version, setVersion] = useState(0);
-  useEffect(() => {
-    const handler = () => setVersion((v) => v + 1);
-    listeners.add(handler);
-    return () => {
-      listeners.delete(handler);
-    };
-  }, []);
-  return {
-    ids: getBookmarks(),
-    questions: getBookmarkedQuestions(),
-    _v: version,
-  };
+  return useStore(store);
 }

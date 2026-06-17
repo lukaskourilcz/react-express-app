@@ -1,47 +1,16 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import {
+  createAnonClient,
+  jsonError,
+  createLogger,
+  withTimeout,
+  isRpcMissing,
+  STATS_CATEGORIES,
+} from '../lib/http';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
-const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseKey ? createClient(supabaseUrl, supabaseKey) : null;
+const supabase = createAnonClient();
 
-const VALID_CATEGORIES = new Set([
-  'html',
-  'css',
-  'javascript',
-  'typescript',
-  'react',
-  'nodejs',
-  'git',
-  'dev-world',
-  'custom',
-  'code-snippets',
-]);
-
-function jsonError(res: VercelResponse, status: number, code: string, message: string) {
-  return res.status(status).json({ error: { code, message } });
-}
-
-function logEvent(event: Record<string, unknown>) {
-  console.log(JSON.stringify({ ts: new Date().toISOString(), route: 'leaderboard', ...event }));
-}
-
-function withTimeout<T>(p: PromiseLike<T>, ms = 5000): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('supabase_timeout')), ms);
-    Promise.resolve(p).then(
-      (v) => {
-        clearTimeout(t);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(t);
-        reject(e);
-      },
-    );
-  });
-}
+const logEvent = createLogger('leaderboard');
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -63,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         supabase.rpc('global_leaderboard', { p_limit: limit }),
       );
       if (error) {
-        if (/function .* does not exist/i.test(error.message)) {
+        if (isRpcMissing(error)) {
           return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-004.sql to enable leaderboards');
         }
         logEvent({ status: 500, error: error.message });
@@ -76,7 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (period === 'category') {
       const category = (req.query.category as string) || '';
-      if (!VALID_CATEGORIES.has(category)) {
+      if (!STATS_CATEGORIES.has(category)) {
         return jsonError(res, 400, 'bad_request', 'Invalid category');
       }
       const minParam = parseInt(req.query.min_attempts as string, 10);
@@ -91,7 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }),
       );
       if (error) {
-        if (/function .* does not exist/i.test(error.message)) {
+        if (isRpcMissing(error)) {
           return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-005.sql');
         }
         logEvent({ status: 500, error: error.message });
@@ -112,7 +81,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }),
       );
       if (error) {
-        if (/function .* does not exist/i.test(error.message)) {
+        if (isRpcMissing(error)) {
           return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-004.sql to enable leaderboards');
         }
         logEvent({ status: 500, error: error.message });

@@ -1,12 +1,14 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Box, AppBar, Toolbar, Typography, Button, IconButton, CircularProgress, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider } from '@mui/material';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import AuthButton from './components/AuthButton';
 import LanguageSwitcher from './components/LanguageSwitcher';
+import LoadingScreen from './components/LoadingScreen';
 import { useColorMode } from './theme/ColorModeContext';
 import { useT } from './i18n/LanguageContext';
 import type { TranslationKey } from './i18n/translations';
 import { BRAND } from './theme/MuiTheme';
+import { useGameConfig, type GameConfig } from './lib/gameConfig';
 
 const Quiz = lazy(() => import('./components/Quiz'));
 const Profile = lazy(() => import('./components/Profile'));
@@ -14,6 +16,7 @@ const Leaderboard = lazy(() => import('./components/Leaderboard'));
 const Flashcards = lazy(() => import('./components/Flashcards'));
 const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayLanding })));
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
+const DevPage = lazy(() => import('./components/dev/DevPage'));
 
 const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/': 'title.home',
@@ -56,29 +59,35 @@ const MenuIcon = () => (
   </svg>
 );
 
-const NAV_ITEMS: { to: string; key: TranslationKey; isActive: (path: string) => boolean }[] = [
+// `feature` ties a nav item to a toggle in /dev → Settings; when that feature is
+// off, the item is hidden from the nav (quiz is always available).
+const NAV_ITEMS: {
+  to: string;
+  key: TranslationKey;
+  isActive: (path: string) => boolean;
+  feature?: keyof GameConfig['features'];
+}[] = [
   { to: '/', key: 'nav.quiz', isActive: (p) => p === '/' },
-  { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play') },
-  { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard' },
-  { to: '/cards', key: 'nav.cards', isActive: (p) => p === '/cards' },
+  { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play'), feature: 'multiplayer' },
+  { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard' },
+  { to: '/cards', key: 'nav.cards', isActive: (p) => p === '/cards', feature: 'flashcards' },
 ];
 
 const RouteLoader = () => {
   const t = useT();
-  return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }} role="status" aria-live="polite">
-      <CircularProgress size={28} sx={{ color: BRAND.green }} />
-      <span style={{ position: 'absolute', left: -9999 }}>{t('common.loading')}</span>
-    </Box>
-  );
+  return <LoadingScreen label={t('common.loading')} size={28} sx={{ minHeight: 'auto', py: 6 }} />;
 };
 
 function App() {
   const location = useLocation();
   const t = useT();
+  const config = useGameConfig();
   const [quizActive, setQuizActive] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { mode, toggle } = useColorMode();
+
+  // Nav items for features that are currently enabled in /dev → Settings.
+  const navItems = NAV_ITEMS.filter((item) => !item.feature || config.features[item.feature]);
 
   useEffect(() => {
     const titleKey = ROUTE_TITLE_KEYS[location.pathname];
@@ -93,7 +102,8 @@ function App() {
     }
   }, [location.pathname, t]);
 
-  const showChrome = !(quizActive && location.pathname === '/');
+  // The /dev console is a standalone admin surface — no app chrome.
+  const showChrome = !location.pathname.startsWith('/dev') && !(quizActive && location.pathname === '/');
   const navLinkSx = (isActive: boolean) => ({
     color: isActive ? BRAND.green : 'text.secondary',
     fontWeight: isActive ? 700 : 500,
@@ -149,7 +159,7 @@ function App() {
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
               <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
-                {NAV_ITEMS.map((item) => (
+                {navItems.map((item) => (
                   <Button
                     key={item.to}
                     component={Link}
@@ -186,7 +196,7 @@ function App() {
             </Typography>
             <Divider />
             <List>
-              {NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <ListItemButton
                   key={item.to}
                   component={Link}
@@ -225,6 +235,7 @@ function App() {
               <Route path="/cards" element={<Flashcards />} />
               <Route path="/play" element={<PlayLanding />} />
               <Route path="/play/:code" element={<PlayMatch />} />
+              <Route path="/dev" element={<DevPage />} />
             </Routes>
           </Suspense>
         </Box>

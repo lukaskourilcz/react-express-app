@@ -1,63 +1,23 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { AuthError, requireAuth } from '../../lib/auth';
+import {
+  createServiceClient,
+  jsonError,
+  withTimeout,
+  isRpcMissing,
+  requireAuthSub,
+  logEvent as emit,
+  STATS_CATEGORIES,
+} from '../../lib/http';
 
-const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-// Prefer the service-role key so server-side reads/writes bypass RLS. Every
-// caller is verified via requireAuth() and scoped to their own user_id, so
-// bypassing RLS here is safe. Falls back to the anon key for local dev.
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  process.env.VITE_SUPABASE_ANON_KEY ||
-  process.env.SUPABASE_ANON_KEY;
-const supabase: SupabaseClient | null =
-  supabaseUrl && supabaseKey
-    ? createClient(supabaseUrl, supabaseKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-      })
-    : null;
+const supabase = createServiceClient();
 
 const STATS_FIELDS =
   'id,user_id,email,name,picture,total_quizzes,total_correct,total_questions,current_streak,longest_streak,last_quiz_date,created_at,updated_at';
 
 const MAX_STR = 512;
 
-const VALID_CATEGORIES = new Set([
-  'html',
-  'css',
-  'javascript',
-  'typescript',
-  'react',
-  'nodejs',
-  'git',
-  'dev-world',
-  'custom',
-  'code-snippets',
-]);
-
-function jsonError(res: VercelResponse, status: number, code: string, message: string) {
-  return res.status(status).json({ error: { code, message } });
-}
-
-function logEvent(op: string, event: Record<string, unknown>) {
-  console.log(JSON.stringify({ ts: new Date().toISOString(), route: `user/${op}`, ...event }));
-}
-
-function withTimeout<T>(p: PromiseLike<T>, ms = 5000): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('supabase_timeout')), ms);
-    Promise.resolve(p).then(
-      (v) => {
-        clearTimeout(t);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(t);
-        reject(e);
-      },
-    );
-  });
-}
+// Log under a `user/<op>` route so stats and category-stats are distinguishable.
+const logEvent = (op: string, event: Record<string, unknown>) => emit(`user/${op}`, event);
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
@@ -71,14 +31,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 async function stats(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
   try {
-    let auth: Awaited<ReturnType<typeof requireAuth>>;
-    try {
-      auth = await requireAuth(req);
-    } catch (e) {
-      if (e instanceof AuthError) return jsonError(res, e.status, e.code, e.message);
-      throw e;
-    }
-    const user_id = auth.sub;
+    const user_id = await requireAuthSub(req, res);
+    if (!user_id) return;
 
     if (req.method === 'GET') {
       const { data, error } = await withTimeout(
@@ -126,7 +80,7 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         );
 
         if (error) {
-          if (/function .* does not exist/i.test(error.message)) {
+          if (isRpcMissing(error)) {
             logEvent('stats', { status: 200, op: 'submit_fallback', warn: 'rpc_missing' });
             return res.json({ data: null, warning: 'rpc_missing' });
           }
@@ -183,13 +137,8 @@ async function categoryStats(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 
-  let auth: Awaited<ReturnType<typeof requireAuth>>;
-  try {
-    auth = await requireAuth(req);
-  } catch (e) {
-    if (e instanceof AuthError) return jsonError(res, e.status, e.code, e.message);
-    throw e;
-  }
+  const userId = await requireAuthSub(req, res);
+  if (!userId) return;
 
   const body = (req.body || {}) as { by_category?: unknown };
   if (!body.by_category || typeof body.by_category !== 'object' || Array.isArray(body.by_category)) {
@@ -198,7 +147,7 @@ async function categoryStats(req: VercelRequest, res: VercelResponse) {
 
   const cleaned: Record<string, { correct: number; total: number }> = {};
   for (const [cat, raw] of Object.entries(body.by_category as Record<string, unknown>)) {
-    if (!VALID_CATEGORIES.has(cat)) continue;
+    if (!STATS_CATEGORIES.has(cat)) continue;
     if (!raw || typeof raw !== 'object') continue;
     const r = raw as { correct?: unknown; total?: unknown };
     if (
@@ -222,13 +171,13 @@ async function categoryStats(req: VercelRequest, res: VercelResponse) {
 
   const { error } = await withTimeout(
     supabase!.rpc('record_category_stats', {
-      p_user_id: auth.sub,
+      p_user_id: userId,
       p_breakdown: cleaned,
     }),
   );
 
   if (error) {
-    if (/function .* does not exist/i.test(error.message)) {
+    if (isRpcMissing(error)) {
       return res.json({ ok: true, applied: 0, warning: 'rpc_missing' });
     }
     return jsonError(res, 500, 'db_error', 'Could not record category stats');

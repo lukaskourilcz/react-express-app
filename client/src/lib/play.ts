@@ -139,9 +139,9 @@ export const fetchLeaderboard = (
   }>(`/api/leaderboard?${qs}`);
 };
 
-export const fetchDistribution = (code: string, q: number, hostId: string) =>
+export const fetchDistribution = (code: string, questionIdx: number, hostId: string) =>
   apiFetch<{ buckets: DistributionBucket[] }>(
-    `/api/play/distribution?code=${encodeURIComponent(code)}&q=${q}&user_id=${encodeURIComponent(hostId)}`,
+    `/api/play/distribution?code=${encodeURIComponent(code)}&q=${questionIdx}&user_id=${encodeURIComponent(hostId)}`,
   );
 
 export const recordCategoryStats = (user_id: string, by_category: Record<string, { correct: number; total: number }>) =>

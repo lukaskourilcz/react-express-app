@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Box, Paper, Typography, Button, CircularProgress, Alert, Chip, IconButton, Tooltip } from '@mui/material';
+import { Box, Paper, Typography, Button, Chip, IconButton, Tooltip } from '@mui/material';
 import { useAuth } from '../lib/auth';
 import { useT } from '../i18n/LanguageContext';
 import { listFlashcards, removeFlashcard, type Flashcard } from '../lib/flashcards';
 import { friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
-import { BRAND } from '../theme/MuiTheme';
+import { BRAND, brandButtonSx } from '../theme/MuiTheme';
+import { useReloadKey, useCancellableEffect } from '../lib/hooks';
+import LoadingScreen from './LoadingScreen';
+import ErrorRetry from './ErrorRetry';
 
 const TrashIcon = () => (
   <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -25,30 +28,31 @@ function Flashcards() {
   const [error, setError] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const [reloadKey, setReloadKey] = useState(0);
+  const [reloadKey, reload] = useReloadKey();
 
-  useEffect(() => {
-    if (authLoading) return;
-    if (!isAuthenticated) {
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    listFlashcards()
-      .then((c) => {
-        if (cancelled) return;
-        setCards(c);
+  useCancellableEffect(
+    async (isCancelled) => {
+      if (authLoading) return;
+      if (!isAuthenticated) {
+        setLoading(false);
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      try {
+        const loaded = await listFlashcards();
+        if (isCancelled()) return;
+        setCards(loaded);
         setIndex(0);
         setRevealed(false);
-      })
-      .catch((e) => !cancelled && setError(friendlyError(e)))
-      .finally(() => !cancelled && setLoading(false));
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated, authLoading, reloadKey]);
+      } catch (err) {
+        if (!isCancelled()) setError(friendlyError(err));
+      } finally {
+        if (!isCancelled()) setLoading(false);
+      }
+    },
+    [isAuthenticated, authLoading, reloadKey],
+  );
 
   // Reset the reveal whenever the visible card changes.
   useEffect(() => {
@@ -56,12 +60,7 @@ function Flashcards() {
   }, [index]);
 
   if (authLoading || loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }} role="status" aria-live="polite">
-        <CircularProgress sx={{ color: BRAND.green }} />
-        <span style={{ position: 'absolute', left: -9999 }}>{t('card.loading')}</span>
-      </Box>
-    );
+    return <LoadingScreen label={t('card.loading')} />;
   }
 
   if (!isAuthenticated) {
@@ -69,7 +68,7 @@ function Flashcards() {
       <Paper elevation={0} sx={{ p: 4, maxWidth: 520, mx: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
         <Typography variant="h6" sx={{ mb: 1 }}>{t('card.signInTitle')}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>{t('card.signInBody')}</Typography>
-        <Button variant="contained" onClick={() => signInWithGoogle().catch(() => {})} sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}>
+        <Button variant="contained" onClick={() => signInWithGoogle().catch(() => {})} sx={brandButtonSx}>
           {t('auth.logIn')}
         </Button>
       </Paper>
@@ -77,11 +76,7 @@ function Flashcards() {
   }
 
   if (error) {
-    return (
-      <Alert severity="error" role="alert" sx={{ maxWidth: 520, mx: 'auto' }} action={<Button color="inherit" size="small" onClick={() => setReloadKey((k) => k + 1)}>{t('quiz.retry')}</Button>}>
-        {error}
-      </Alert>
-    );
+    return <ErrorRetry message={error} onRetry={reload} sx={{ maxWidth: 520, mx: 'auto' }} />;
   }
 
   if (cards.length === 0) {
@@ -89,7 +84,7 @@ function Flashcards() {
       <Paper elevation={0} sx={{ p: 4, maxWidth: 520, mx: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
         <Typography variant="h6" sx={{ mb: 1 }}>{t('card.emptyTitle')}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>{t('card.emptyHint')}</Typography>
-        <Button variant="contained" onClick={() => navigate('/')} sx={{ backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}>
+        <Button variant="contained" onClick={() => navigate('/')} sx={brandButtonSx}>
           {t('card.goToQuiz')}
         </Button>
       </Paper>
@@ -144,7 +139,7 @@ function Flashcards() {
               fullWidth
               variant="contained"
               onClick={() => setRevealed(true)}
-              sx={{ py: 1.25, fontWeight: 600, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+              sx={{ py: 1.25, fontWeight: 600, ...brandButtonSx }}
             >
               {t('card.reveal')}
             </Button>

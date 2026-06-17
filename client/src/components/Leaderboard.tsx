@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   Box,
   Paper,
@@ -7,9 +7,7 @@ import {
   ToggleButtonGroup,
   Avatar,
   Skeleton,
-  Alert,
   Chip,
-  Button,
 } from '@mui/material';
 import {
   fetchLeaderboard,
@@ -20,22 +18,16 @@ import {
 import { friendlyError } from '../lib/api';
 import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
+import { visibleCategoryOptionsFor, getCategoryLabel } from '../lib/categories';
+import { useReloadKey, useCancellableEffect } from '../lib/hooks';
+import ErrorRetry from './ErrorRetry';
 
 type Tab = 'global' | 'daily' | 'category';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-const CATEGORIES: { value: string; label: string; color: string }[] = [
-  { value: 'javascript', label: 'JavaScript', color: '#f7df1e' },
-  { value: 'typescript', label: 'TypeScript', color: '#3178c6' },
-  { value: 'react', label: 'React', color: '#61dafb' },
-  { value: 'html', label: 'HTML', color: '#e34c26' },
-  { value: 'css', label: 'CSS', color: '#264de4' },
-  { value: 'nodejs', label: 'Node.js', color: '#339933' },
-  { value: 'git', label: 'Git', color: '#f05032' },
-  { value: 'dev-world', label: 'Dev World', color: '#8b5cf6' },
-  { value: 'code-snippets', label: 'Code Snippets', color: '#ec4899' },
-];
+// The public (non-owner) categories that have their own leaderboard.
+const CATEGORIES = visibleCategoryOptionsFor();
 
 type Entry = LeaderboardGlobalEntry | LeaderboardDailyEntry | CategoryLeaderboardEntry;
 
@@ -47,28 +39,23 @@ function Leaderboard() {
   const [error, setError] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [date] = useState<string>(today());
-  const [reloadKey, setReloadKey] = useState(0);
+  const [reloadKey, reload] = useReloadKey();
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    fetchLeaderboard(tab, { date, category })
-      .then((res) => {
-        if (cancelled) return;
-        setEntries(res.entries as Entry[]);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(friendlyError(err));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [tab, date, category, reloadKey]);
+  useCancellableEffect(
+    async (isCancelled) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetchLeaderboard(tab, { date, category });
+        if (!isCancelled()) setEntries(res.entries as Entry[]);
+      } catch (err) {
+        if (!isCancelled()) setError(friendlyError(err));
+      } finally {
+        if (!isCancelled()) setLoading(false);
+      }
+    },
+    [tab, date, category, reloadKey],
+  );
 
   return (
     <Box sx={{ maxWidth: 600, mx: 'auto' }}>
@@ -131,27 +118,14 @@ function Leaderboard() {
         )}
 
         {!loading && error && (
-          <Alert
-            severity="error"
-            role="alert"
-            sx={{ borderRadius: 0 }}
-            action={
-              <Button color="inherit" size="small" onClick={() => setReloadKey((k) => k + 1)}>
-                {t('quiz.retry')}
-              </Button>
-            }
-          >
-            {error}
-          </Alert>
+          <ErrorRetry message={error} onRetry={reload} sx={{ borderRadius: 0 }} />
         )}
 
         {!loading && !error && entries.length === 0 && (
           <Box sx={{ p: 4, textAlign: 'center', color: 'text.secondary' }}>
             <Typography variant="body2">
               {tab === 'category'
-                ? t('leaderboard.noCategoryAttempts', {
-                    label: CATEGORIES.find((c) => c.value === category)?.label ?? '',
-                  })
+                ? t('leaderboard.noCategoryAttempts', { label: getCategoryLabel(category) })
                 : t('leaderboard.noEntries')}
             </Typography>
           </Box>

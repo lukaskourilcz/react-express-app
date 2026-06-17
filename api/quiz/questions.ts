@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {
-  questions,
   encodeSession,
   secureShuffle,
   localizeQuestion,
@@ -8,11 +7,12 @@ import {
   PRIVATE_CATEGORIES,
   type DifficultyMode,
   type CategoryType,
+  type Question,
 } from '../../lib/quiz-data';
 import { tryAuth } from '../../lib/auth';
-
-// Owner whose private categories (custom, apt) are visible only to them.
-const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'kouril.lukas@gmail.com').toLowerCase();
+import { jsonError, createLogger } from '../../lib/http';
+import { getEffectiveQuestions } from '../../lib/questions-store';
+import { getGameSettings } from '../../lib/settings-store';
 
 const ALL_CATEGORIES: CategoryType[] = [
   'html',
@@ -29,14 +29,7 @@ const ALL_CATEGORIES: CategoryType[] = [
 ];
 const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
-function jsonError(res: VercelResponse, status: number, code: string, message: string) {
-  return res.status(status).json({ error: { code, message } });
-}
-
-function logEvent(event: Record<string, unknown>) {
-  // Structured single-line JSON; Vercel ingests this natively.
-  console.log(JSON.stringify({ ts: new Date().toISOString(), route: 'quiz/questions', ...event }));
-}
+const logEvent = createLogger('quiz/questions');
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
@@ -46,10 +39,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 
-  const countParam = parseInt(req.query.count as string, 10);
-  const count = Number.isFinite(countParam) ? Math.min(Math.max(countParam, 1), 50) : 10;
+  const settings = await getGameSettings();
+  const ownerEmail = settings.ownerEmail;
 
-  const difficultyRaw = (req.query.difficulty as string) || 'zero-to-hero';
+  const countParam = parseInt(req.query.count as string, 10);
+  const count = Number.isFinite(countParam)
+    ? Math.min(Math.max(countParam, 1), settings.quiz.maxCount)
+    : settings.quiz.defaultCount;
+
+  const difficultyRaw = (req.query.difficulty as string) || settings.quiz.defaultDifficulty;
   if (!ALL_DIFFICULTIES.includes(difficultyRaw as DifficultyMode)) {
     return jsonError(res, 400, 'bad_request', 'Invalid difficulty');
   }
@@ -70,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const auth = await tryAuth(req);
     const emailClaim = auth?.payload?.email;
     const email = typeof emailClaim === 'string' ? emailClaim.toLowerCase() : null;
-    if (email !== OWNER_EMAIL) {
+    if (email !== ownerEmail) {
       selectedCategories = selectedCategories.filter((c) => !PRIVATE_CATEGORIES.includes(c));
       if (selectedCategories.length === 0) {
         return jsonError(res, 403, 'forbidden', 'Those categories are private');
@@ -78,12 +76,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  const categoryFiltered = questions.filter((q) => selectedCategories.includes(q.category));
+  const allQuestions = await getEffectiveQuestions();
+  const categoryFiltered = allQuestions.filter((q) => selectedCategories.includes(q.category));
   if (categoryFiltered.length === 0) {
     return jsonError(res, 404, 'no_questions', 'No questions match those filters');
   }
 
-  let selected: typeof questions;
+  let selected: Question[];
 
   if (difficultyMode === 'easy') {
     selected = secureShuffle(categoryFiltered.filter((q) => q.difficulty <= 2)).slice(0, count);
@@ -102,7 +101,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     selected = secureShuffle(categoryFiltered).slice(0, count);
   } else {
     const perBucket = Math.ceil(count / 5);
-    const buckets: typeof questions = [];
+    const buckets: Question[] = [];
     for (let d = 1; d <= 5; d++) {
       buckets.push(...secureShuffle(categoryFiltered.filter((q) => q.difficulty === d)).slice(0, perBucket));
     }

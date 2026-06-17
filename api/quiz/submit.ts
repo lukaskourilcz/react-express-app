@@ -1,21 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { decodeSession, questions, localizeQuestion, normalizeLang } from '../../lib/quiz-data';
+import { decodeSession, localizeQuestion, normalizeLang } from '../../lib/quiz-data';
+import { jsonError, createLogger } from '../../lib/http';
+import { getEffectiveQuestionsById } from '../../lib/questions-store';
 
 const MAX_ANSWERS = 50;
 
-// Build an in-memory lookup once at cold-start. With 800+ questions, the
-// previous .find() inside the per-answer loop was O(n*m) per submission.
-const questionsById = new Map(questions.map((q) => [q.id, q]));
+const logEvent = createLogger('quiz/submit');
 
-function jsonError(res: VercelResponse, status: number, code: string, message: string) {
-  return res.status(status).json({ error: { code, message } });
-}
-
-function logEvent(event: Record<string, unknown>) {
-  console.log(JSON.stringify({ ts: new Date().toISOString(), route: 'quiz/submit', ...event }));
-}
-
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
 
   if (req.method !== 'POST') {
@@ -61,6 +53,8 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const sessionById = new Map(sessionData.map((q) => [q.questionId, q]));
+  // Effective question set (base + /dev overrides) for localized explanations.
+  const questionsById = await getEffectiveQuestionsById();
 
   let correct = 0;
   const results = validated.map(({ questionId, selectedIndex }) => {
