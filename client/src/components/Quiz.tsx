@@ -44,12 +44,11 @@ import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useSettings, playCorrect, playComplete } from '../lib/settings';
 import { recordPerfectQuiz } from '../lib/achievements';
+import { useGameConfig } from '../lib/gameConfig';
 import { ReportDialog } from './ReportDialog';
 import './Quiz.css';
 
 type QuizMode = 'standard' | 'daily';
-
-const QUESTION_COUNT_OPTIONS = [10, 20, 30, 40, 50];
 
 const DIFFICULTY_VALUES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
@@ -94,6 +93,7 @@ const ReportFlagIcon = () => (
 
 function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }) {
   const { lang, t } = useLanguage();
+  const config = useGameConfig();
   const [state, setState] = useState<QuizState>('ready');
   const [sessionId, setSessionId] = useState<string>('');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -611,7 +611,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             {t('quiz.questionsLegend')}
           </Typography>
           <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-            {QUESTION_COUNT_OPTIONS.map((count) => (
+            {config.quiz.countOptions.map((count) => (
               <Button
                 key={count}
                 variant="outlined"

@@ -37,6 +37,7 @@ import { friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
+import { useGameConfig } from '../lib/gameConfig';
 
 const POLL_FALLBACK_MS = 4000;
 const DEFAULT_DURATION_S = 60;
@@ -51,6 +52,7 @@ function formatDuration(n: number, t: ReturnType<typeof useT>): string {
 export function PlayLanding() {
   const navigate = useNavigate();
   const t = useT();
+  const config = useGameConfig();
   const { user, isAuthenticated, signInWithGoogle } = useAuth();
   const profile = getUserProfile(user);
   const [mode, setMode] = useState<'multiplayer' | 'classroom'>('multiplayer');
@@ -230,7 +232,7 @@ export function PlayLanding() {
         </Typography>
 
         <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          {[5, 10, 15, 20].map((n) => (
+          {config.play.countOptions.map((n) => (
             <Button
               key={n}
               variant="outlined"
@@ -253,7 +255,7 @@ export function PlayLanding() {
           {t('play.timeLimit')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          {[30, 60, 120, 300, 0].map((n) => (
+          {config.play.durationOptionsS.map((n) => (
             <Button
               key={n}
               variant="outlined"
