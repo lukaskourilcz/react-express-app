@@ -100,6 +100,20 @@ async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
   const introduction = typeof b.introduction === 'string' ? b.introduction.slice(0, MAX_TEXT) : '';
   const id = boundedString(b.id, 64) ?? undefined;
 
+  // Optional Czech translation. Empty fields become null (fall back to English);
+  // cs options must stay parallel to the English options or they are ignored.
+  const csRaw = (b.cs && typeof b.cs === 'object' ? b.cs : {}) as Record<string, unknown>;
+  const csText = (v: unknown) => (typeof v === 'string' && v.trim() ? v.slice(0, MAX_TEXT) : null);
+  const csOptions = Array.isArray(csRaw.options)
+    ? csRaw.options.map((o) => (typeof o === 'string' ? o.slice(0, MAX_OPTION) : ''))
+    : null;
+  const cs = {
+    question: csText(csRaw.question),
+    options: csOptions && csOptions.some((o) => o.trim()) ? csOptions : null,
+    introduction: csText(csRaw.introduction),
+    explanation: csText(csRaw.explanation),
+  };
+
   const saved = await saveQuestion({
     id,
     question,
@@ -110,6 +124,7 @@ async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
     category,
     tags,
     difficulty,
+    cs,
   });
   log({ op: 'save', status: 200, id: saved.id });
   return res.json({ ok: true, id: saved.id });

@@ -37,6 +37,10 @@ const SOURCE_COLOR: Record<AdminQuestion['source'], 'default' | 'warning' | 'suc
   custom: 'success',
 };
 
+// Whether a question currently has any Czech text (override or static bank).
+const hasCsTranslation = (q: AdminQuestion): boolean =>
+  !!(q.cs.question || q.cs.introduction || q.cs.explanation || q.cs.options.some(Boolean));
+
 export default function DevQuestions() {
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -242,6 +246,7 @@ function QuestionRow({
             {q.source !== 'base' && (
               <Chip label={q.source} size="small" color={SOURCE_COLOR[q.source]} variant="outlined" />
             )}
+            {hasCsTranslation(q) && <Chip label="cs" size="small" variant="outlined" color="info" />}
             {q.deleted && <Chip label="hidden" size="small" />}
             {q.tags.map((t) => (
               <Chip key={t} label={`#${t}`} size="small" variant="outlined" sx={{ color: 'text.secondary' }} />

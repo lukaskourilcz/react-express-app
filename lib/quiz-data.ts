@@ -16,10 +16,12 @@ export interface Question {
   category: CategoryType;
   explanation: string;
   difficulty: 1 | 2 | 3 | 4 | 5;
-  // Set on questions edited/created via the /dev console: their text is the
-  // canonical (admin-entered) copy, so skip the cs translation fallback which
-  // would otherwise re-apply stale auto-translations over the new wording.
-  noTranslate?: boolean;
+  // Resolved Czech translation for /dev-managed questions, set by the question
+  // overrides layer:
+  //   undefined → not resolved; fall back to the static cs bank (default)
+  //   null      → explicitly no translation (show English)
+  //   object    → use this translation (a /dev cs override)
+  csTranslation?: QuestionTranslation | null;
 }
 
 export type DifficultyMode = 'basics' | 'easy' | 'zero-to-hero' | 'advanced' | 'mixed';
@@ -49,8 +51,10 @@ export interface QuestionTranslation {
 // are never translated. Option translations are only applied when the array
 // length matches, keeping answer grading correct.
 export function localizeQuestion<T extends Question>(q: T, lang: QuestionLang): T {
-  if (lang === 'en' || q.noTranslate) return q;
-  const tr = questionTranslationsCs[q.id];
+  if (lang === 'en') return q;
+  // A /dev override resolves the translation explicitly (object = use it,
+  // null = no translation); otherwise fall back to the static cs bank.
+  const tr = q.csTranslation !== undefined ? q.csTranslation : questionTranslationsCs[q.id];
   if (!tr) return q;
   return {
     ...q,

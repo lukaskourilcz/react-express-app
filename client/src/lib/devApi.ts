@@ -41,6 +41,14 @@ function adminFetch<T>(
   });
 }
 
+/** The four translatable Czech fields edited in the console. */
+export interface CsFields {
+  question: string;
+  options: string[];
+  introduction: string;
+  explanation: string;
+}
+
 export interface AdminQuestion {
   id: string;
   tags: string[];
@@ -53,6 +61,8 @@ export interface AdminQuestion {
   difficulty: number;
   source: 'base' | 'edited' | 'custom';
   deleted: boolean;
+  /** Current Czech translation (db override, else static bank), for editing. */
+  cs: CsFields;
 }
 
 export interface QuestionPayload {
@@ -65,6 +75,7 @@ export interface QuestionPayload {
   category: string;
   tags: string[];
   difficulty: number;
+  cs?: Partial<CsFields>;
 }
 
 export interface GameSettings {

@@ -6,7 +6,8 @@
 // overrides onto the static base so the live quiz reflects admin edits, while
 // always falling back to the unmodified base set if the DB is unavailable.
 
-import { questions as baseQuestions, type Question, type CategoryType } from './quiz-data';
+import { questions as baseQuestions, type Question, type CategoryType, type QuestionTranslation } from './quiz-data';
+import { questionTranslationsCs } from './quiz-data.cs';
 import { createServiceClient, withTimeout } from './http';
 
 const supabase = createServiceClient();
@@ -34,13 +35,27 @@ export interface QuestionEditRow {
   category: string | null;
   tags: string[] | null;
   difficulty: number | null;
+  cs_question: string | null;
+  cs_options: string[] | null;
+  cs_introduction: string | null;
+  cs_explanation: string | null;
   updated_at?: string;
 }
 
-/** A question as shown in the admin console: full content plus its origin. */
+/** The four translatable Czech fields, as edited in the /dev console. */
+export interface CsFields {
+  question: string;
+  options: string[];
+  introduction: string;
+  explanation: string;
+}
+
+/** A question as shown in the admin console: full content, origin, and cs text. */
 export interface AdminQuestion extends Question {
   source: 'base' | 'edited' | 'custom';
   deleted: boolean;
+  /** Current Czech translation (db override, else static bank), for editing. */
+  cs: CsFields;
 }
 
 /** Validated input accepted by saveQuestion(). */
@@ -54,6 +69,12 @@ export interface QuestionInput {
   category: string;
   tags: string[];
   difficulty: number;
+  cs?: {
+    question?: string | null;
+    options?: string[] | null;
+    introduction?: string | null;
+    explanation?: string | null;
+  };
 }
 
 const clampDifficulty = (n: number): Question['difficulty'] => {
@@ -61,10 +82,44 @@ const clampDifficulty = (n: number): Question['difficulty'] => {
   return (d < 1 ? 1 : d > 5 ? 5 : d) as Question['difficulty'];
 };
 
+// True if the row overrides any English field (vs. only cs / soft-delete).
+function hasEnglishEdit(row: QuestionEditRow): boolean {
+  return (
+    row.is_custom ||
+    row.question != null ||
+    row.options != null ||
+    row.correct_index != null ||
+    row.explanation != null ||
+    row.introduction != null ||
+    row.category != null ||
+    row.tags != null ||
+    row.difficulty != null
+  );
+}
+
+// The cs override stored on a row, or null if it carries no Czech fields.
+function csOverrideFromRow(row: QuestionEditRow): QuestionTranslation | null {
+  const tr: QuestionTranslation = {};
+  if (row.cs_question) tr.question = row.cs_question;
+  if (row.cs_options) tr.options = row.cs_options;
+  if (row.cs_introduction) tr.introduction = row.cs_introduction;
+  if (row.cs_explanation) tr.explanation = row.cs_explanation;
+  return Object.keys(tr).length > 0 ? tr : null;
+}
+
 // Merge an override row onto its base question (or build a custom question when
-// there is no base). Edited/custom content is flagged noTranslate so the cs
-// localizer doesn't paste stale auto-translations over the new wording.
+// there is no base), resolving which Czech translation the localizer should use:
+//   - a cs override on the row wins;
+//   - otherwise an English-edited/custom question gets no translation (English);
+//   - a base question with only a... (handled by caller via undefined) — here a
+//     plain override row with neither falls back to the static cs bank.
 function mergeRow(row: QuestionEditRow, base?: Question): Question {
+  const csOverride = csOverrideFromRow(row);
+  const csTranslation: QuestionTranslation | null | undefined = csOverride
+    ? csOverride
+    : hasEnglishEdit(row)
+      ? null
+      : undefined;
   return {
     id: row.question_id,
     tags: row.tags ?? base?.tags ?? [],
@@ -75,7 +130,7 @@ function mergeRow(row: QuestionEditRow, base?: Question): Question {
     category: (row.category ?? base?.category ?? 'custom') as CategoryType,
     explanation: row.explanation ?? base?.explanation ?? '',
     difficulty: clampDifficulty(row.difficulty ?? base?.difficulty ?? 1),
-    noTranslate: true,
+    csTranslation,
   };
 }
 
@@ -135,21 +190,46 @@ export function invalidateQuestionsCache() {
  * applied and flagged) plus custom questions, including soft-deleted ones so
  * the admin can restore them. Always reads fresh (no serving cache).
  */
+// The Czech text to pre-fill the editor with: the db override if present, else
+// the static cs bank, with options aligned to the current English option count.
+function csFieldsFor(q: Question, row?: QuestionEditRow): CsFields {
+  const tr = (row && csOverrideFromRow(row)) ?? questionTranslationsCs[q.id] ?? {};
+  return {
+    question: tr.question ?? '',
+    options: q.options.map((_, i) => tr.options?.[i] ?? ''),
+    introduction: tr.introduction ?? '',
+    explanation: tr.explanation ?? '',
+  };
+}
+
 export async function listAdminQuestions(): Promise<AdminQuestion[]> {
   const overrides = (await loadOverrides()) ?? new Map<string, QuestionEditRow>();
   const out: AdminQuestion[] = [];
   for (const base of baseQuestions) {
     const ov = overrides.get(base.id);
     if (ov) {
-      out.push({ ...mergeRow(ov, base), source: 'edited', deleted: ov.deleted });
+      const merged = mergeRow(ov, base);
+      out.push({ ...merged, source: 'edited', deleted: ov.deleted, cs: csFieldsFor(merged, ov) });
     } else {
-      out.push({ ...base, noTranslate: undefined, source: 'base', deleted: false });
+      out.push({ ...base, source: 'base', deleted: false, cs: csFieldsFor(base) });
     }
   }
   for (const ov of overrides.values()) {
-    if (ov.is_custom) out.push({ ...mergeRow(ov), source: 'custom', deleted: ov.deleted });
+    if (ov.is_custom) {
+      const merged = mergeRow(ov);
+      out.push({ ...merged, source: 'custom', deleted: ov.deleted, cs: csFieldsFor(merged, ov) });
+    }
   }
   return out;
+}
+
+// A non-empty cs options array must stay parallel to the English options, else
+// it is dropped (the localizer keeps the English options when lengths differ).
+function normalizeCsOptions(cs: QuestionInput['cs'], optionCount: number): string[] | null {
+  const opts = cs?.options;
+  if (!opts || opts.length === 0) return null;
+  if (opts.length !== optionCount) return null;
+  return opts.map((o) => o ?? '');
 }
 
 function rowFromInput(input: QuestionInput, id: string, isCustom: boolean): QuestionEditRow {
@@ -165,6 +245,10 @@ function rowFromInput(input: QuestionInput, id: string, isCustom: boolean): Ques
     category: input.category,
     tags: input.tags,
     difficulty: clampDifficulty(input.difficulty),
+    cs_question: input.cs?.question || null,
+    cs_options: normalizeCsOptions(input.cs, input.options.length),
+    cs_introduction: input.cs?.introduction || null,
+    cs_explanation: input.cs?.explanation || null,
   };
 }
 

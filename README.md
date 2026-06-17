@@ -74,6 +74,7 @@ A web-development quiz application that tests your knowledge of React, JavaScrip
 ### Admin console (`/dev`)
 - A password-gated console at **`/dev`** (password from `DEV_PASSWORD`, default `react123`) with no app chrome.
 - **Questions** — every question grouped by category, searchable by text / tag / id, with **edit**, **hide** (restorable soft-delete), **revert**, and **create**. Edits are stored as *overrides* in Supabase (`question_edits`) and merged onto the static bank at serve time, so the live quiz reflects changes within seconds. If the DB is unavailable the app falls back to the static bank unchanged.
+- **Bilingual editing** — the question editor has **English** and **Čeština** tabs, so each question's Czech translation (question, options, intro, explanation) can be edited per-question. cs options stay parallel to the English options so answer grading remains correct; blank cs fields fall back to English.
 - **Settings** — edit quiz/daily/play counts, time limits, option lists, feature toggles (daily / multiplayer / leaderboard / flashcards), and owner email. Stored in `app_settings`; the backend reads them when serving questions and the client hides disabled features via the public `/api/settings` endpoint.
 - **Security note:** the gate is a single shared password and the admin API exposes answer keys — set a strong `DEV_PASSWORD` in production.
 
@@ -262,6 +263,7 @@ supabase-schema-006.sql    # heartbeat column + adjustable thresholds
 supabase-schema-007.sql    # revoke anon EXECUTE on write RPCs, hardened RLS
 supabase-schema-008.sql    # per-user flashcards
 supabase-schema-009.sql    # /dev admin: question_edits overrides + app_settings
+supabase-schema-010.sql    # /dev admin: per-question Czech (cs) translation columns
 ```
 
 > Migration 009 is optional for the public app — the quiz falls back to the
