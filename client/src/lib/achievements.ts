@@ -1,4 +1,5 @@
 import type { UserStats } from './supabase';
+import { readJSON, writeJSON } from './storage';
 
 export interface Achievement {
   id: string;
@@ -106,18 +107,10 @@ export function computeAchievements(ctx: AchievementContext): Achievement[] {
 const PERFECT_KEY = 'devquiz:perfect-quiz-count';
 
 export function recordPerfectQuiz() {
-  try {
-    const n = parseInt(localStorage.getItem(PERFECT_KEY) || '0', 10) + 1;
-    localStorage.setItem(PERFECT_KEY, String(n));
-  } catch {
-    // ignore
-  }
+  writeJSON(PERFECT_KEY, readPerfectQuizCount() + 1);
 }
 
 export function readPerfectQuizCount(): number {
-  try {
-    return parseInt(localStorage.getItem(PERFECT_KEY) || '0', 10) || 0;
-  } catch {
-    return 0;
-  }
+  const count = readJSON<number>(PERFECT_KEY, 0);
+  return Number.isFinite(count) ? count : 0;
 }

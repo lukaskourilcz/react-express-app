@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { dictionaries, en, type TranslationKey } from './translations';
+import { readString, writeString } from '../lib/storage';
 
 export type Lang = 'en' | 'cs';
 
@@ -8,7 +9,7 @@ const STORAGE_KEY = 'devquiz.lang';
 
 function detectInitialLang(): Lang {
   if (typeof window === 'undefined') return 'en';
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  const stored = readString(STORAGE_KEY);
   if (stored === 'cs' || stored === 'en') return stored;
   return navigator.language?.toLowerCase().startsWith('cs') ? 'cs' : 'en';
 }
@@ -39,11 +40,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const setLang = useCallback((next: Lang) => {
     setLangState(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // ignore storage failures (private mode, etc.)
-    }
+    writeString(STORAGE_KEY, next);
   }, []);
 
   const t = useCallback(

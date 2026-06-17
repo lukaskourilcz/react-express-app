@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { readJSON, writeJSON } from './storage';
+import { createStore, useStore } from './store';
 
 export interface AppSettings {
   practiceMode: boolean;
@@ -12,41 +13,19 @@ const defaults: AppSettings = {
   soundEffects: false,
 };
 
-const read = (): AppSettings => {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return defaults;
-    const parsed = JSON.parse(raw);
-    return { ...defaults, ...parsed };
-  } catch {
-    return defaults;
-  }
-};
+const read = (): AppSettings => ({ ...defaults, ...readJSON<Partial<AppSettings>>(KEY, {}) });
 
-const listeners = new Set<(s: AppSettings) => void>();
+const store = createStore(read);
 
-export const getSettings = (): AppSettings => read();
+export const getSettings = store.get;
 
 export const updateSettings = (patch: Partial<AppSettings>) => {
-  const next = { ...read(), ...patch };
-  try {
-    localStorage.setItem(KEY, JSON.stringify(next));
-  } catch {
-    // ignore
-  }
-  listeners.forEach((fn) => fn(next));
+  writeJSON(KEY, { ...read(), ...patch });
+  store.emit();
 };
 
 export function useSettings(): [AppSettings, (patch: Partial<AppSettings>) => void] {
-  const [settings, setSettings] = useState<AppSettings>(read);
-  useEffect(() => {
-    const handler = (s: AppSettings) => setSettings(s);
-    listeners.add(handler);
-    return () => {
-      listeners.delete(handler);
-    };
-  }, []);
-  return [settings, updateSettings];
+  return [useStore(store), updateSettings];
 }
 
 // Tiny WebAudio sound helper - no external assets, no extra bytes.
@@ -82,10 +61,6 @@ const tone = (freq: number, duration: number, type: OscillatorType = 'sine', gai
 export const playCorrect = () => {
   tone(660, 0.08);
   setTimeout(() => tone(880, 0.12), 60);
-};
-
-export const playIncorrect = () => {
-  tone(220, 0.18, 'square', 0.05);
 };
 
 export const playComplete = () => {
