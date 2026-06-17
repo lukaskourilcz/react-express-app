@@ -71,6 +71,12 @@ A web-development quiz application that tests your knowledge of React, JavaScrip
 - A searchable **reference of 90+ dev abbreviations** (`npx`, `cat`, `grep`, `gcl`, `psql`, `CORS`, `JWT`, `a11y`, …) grouped by topic: CLI commands & tools, Git aliases, web & networking, data & APIs, frontend & rendering, and general jargon.
 - Lives at `/abbreviations` (lazy-loaded) with a live filter across term, expansion, and description.
 
+### Admin console (`/dev`)
+- A password-gated console at **`/dev`** (password from `DEV_PASSWORD`, default `react123`) with no app chrome.
+- **Questions** — every question grouped by category, searchable by text / tag / id, with **edit**, **hide** (restorable soft-delete), **revert**, and **create**. Edits are stored as *overrides* in Supabase (`question_edits`) and merged onto the static bank at serve time, so the live quiz reflects changes within seconds. If the DB is unavailable the app falls back to the static bank unchanged.
+- **Settings** — edit quiz/daily/play counts, time limits, option lists, feature toggles (daily / multiplayer / leaderboard / flashcards), and owner email. Stored in `app_settings`; the backend reads them when serving questions and the client hides disabled features via the public `/api/settings` endpoint.
+- **Security note:** the gate is a single shared password and the admin API exposes answer keys — set a strong `DEV_PASSWORD` in production.
+
 ### App-wide
 - **Light / dark mode** toggle persisted to `localStorage`.
 - **Skip-to-content** link and proper `<main>` focus management on route change.
@@ -235,6 +241,8 @@ All env vars are read by Vercel functions at request time and by Vite at build t
 | `SUPABASE_ANON_KEY` | alt | server | Non-`VITE_` server-side fallback |
 | `SUPABASE_SERVICE_ROLE_KEY` | recommended | server | Used by API routes to bypass RLS for trusted writes (optional but recommended) |
 | `SESSION_SECRET` | **required in prod** | server | HMAC key for quiz-session tokens; the server refuses to start in prod if unset |
+| `DEV_PASSWORD` | recommended | server | Password gating the `/dev` admin console and `/api/admin`. Defaults to `react123` — **set a strong value in production**, since the admin API exposes question answer keys. |
+| `OWNER_EMAIL` | optional | server | Default email allowed to see private categories (also editable from `/dev` → Settings). |
 
 In dev, if `AUTH0_DOMAIN` is unset, the server logs a warning and falls back to trusting client-supplied `auth0_id` so local development isn't blocked. In production this fallback is disabled and unauthenticated requests get a `401 missing_token`.
 
@@ -252,7 +260,13 @@ supabase-schema-004.sql    # matches + leaderboards
 supabase-schema-005.sql    # category leaderboards + match distribution
 supabase-schema-006.sql    # heartbeat column + adjustable thresholds
 supabase-schema-007.sql    # revoke anon EXECUTE on write RPCs, hardened RLS
+supabase-schema-008.sql    # per-user flashcards
+supabase-schema-009.sql    # /dev admin: question_edits overrides + app_settings
 ```
+
+> Migration 009 is optional for the public app — the quiz falls back to the
+> static question bank and built-in defaults without it — but it is **required
+> for `/dev` edits and settings to persist.**
 
 Each migration is idempotent (`CREATE … IF NOT EXISTS`, `DROP POLICY IF EXISTS`, guarded `DO $$` blocks), so re-running is safe.
 
@@ -320,6 +334,14 @@ Protected endpoints require `Authorization: Bearer <auth0_access_token>`.
 | `POST` | `/api/play/answer` | required | Body: `{ code, question_idx, selected_idx, duration_ms, client_received_at }`. Server computes speed bonus. Upsert on `(match_id, auth0_sub, question_idx)` so retries replace. |
 | `POST` | `/api/play/heartbeat` | required (host only) | Body: `{ code }`. Keeps the match from auto-finishing as stale. |
 | `GET` | `/api/play/distribution?code=&q=` | required (host only) | Per-option vote count for question `q`. |
+| `GET` | `/api/settings` | none | Public, read-only game config (count/time options, feature flags). 15s edge cache. |
+| `GET` | `/api/admin/questions` | dev password | All questions (with answer keys) + their override source. |
+| `POST` | `/api/admin/save` | dev password | Create or edit a question (override). |
+| `POST` | `/api/admin/delete` | dev password | Body: `{ id, deleted }` — hide/restore a base question or delete a custom one. |
+| `POST` | `/api/admin/reset` | dev password | Drop a question's override, reverting it to the static original. |
+| `GET` / `POST` | `/api/admin/settings` | dev password | Read / save the full game settings. |
+
+Admin endpoints are gated by the `x-dev-password` header (checked against `DEV_PASSWORD`), not the Auth0 token.
 
 All Supabase calls are wrapped in a 5-second timeout so a hung Postgres can't burn the full 10-second Vercel function slot.
 
