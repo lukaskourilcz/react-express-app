@@ -20,12 +20,10 @@ import {
 } from '@mui/material';
 import { useAuth, getUserProfile } from '../lib/auth';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
-import { quizStyles, BRAND, CATEGORY_GRADIENT } from '../theme/MuiTheme';
+import { quizStyles, BRAND, CATEGORY_GRADIENT, visuallyHidden } from '../theme/MuiTheme';
 import {
-  CATEGORY_OPTIONS,
   CATEGORY_LOOKUP,
-  OWNER_EMAIL,
-  PRIVATE_CATEGORIES,
+  visibleCategoryOptionsFor,
   onCategoryColorText,
   getCategoryHexColor,
   getCategoryLabel,
@@ -87,6 +85,13 @@ const ShareIcon = () => (
   </svg>
 );
 
+const ReportFlagIcon = () => (
+  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+    <line x1="4" y1="22" x2="4" y2="15" />
+  </svg>
+);
+
 function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }) {
   const { lang, t } = useLanguage();
   const [state, setState] = useState<QuizState>('ready');
@@ -113,10 +118,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   const { isAuthenticated, user } = useAuth();
   const profile = getUserProfile(user);
-  const isOwner = (profile.email ?? '').toLowerCase() === OWNER_EMAIL;
-  const visibleCategoryOptions = isOwner
-    ? CATEGORY_OPTIONS
-    : CATEGORY_OPTIONS.filter((c) => !PRIVATE_CATEGORIES.includes(c.value));
+  const visibleCategoryOptions = visibleCategoryOptionsFor(profile.email);
   const visibleCategories = visibleCategoryOptions.map((c) => c.value);
 
   useEffect(() => {
@@ -853,10 +855,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       onClick={() => setReportTarget(question.id)}
                       sx={{ color: 'text.secondary' }}
                     >
-                      <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-                        <line x1="4" y1="22" x2="4" y2="15" />
-                      </svg>
+                      <ReportFlagIcon />
                     </IconButton>
                   </Tooltip>
                   <Chip
@@ -1004,7 +1003,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             sx={{ p: 0, border: 0, m: 0 }}
             aria-describedby={`question-text-${currentQuestion.id}`}
           >
-            <Typography component="legend" sx={{ position: 'absolute', left: -9999 }}>
+            <Typography component="legend" sx={visuallyHidden}>
               {t('quiz.questionOf', { current: currentIndex + 1, total: questions.length })}
             </Typography>
 

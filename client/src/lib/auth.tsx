@@ -91,3 +91,15 @@ export function getUserProfile(user: User | null) {
     picture: (meta.avatar_url || meta.picture) as string | undefined,
   };
 }
+
+export interface UserProfile {
+  name?: string;
+  email?: string;
+  picture?: string;
+}
+
+// Best display name for a profile: full name, else the local part of the email,
+// else the given fallback (e.g. 'Host' / 'Player').
+export function displayNameFromProfile(profile: UserProfile, fallback: string): string {
+  return profile.name || profile.email?.split('@')[0] || fallback;
+}

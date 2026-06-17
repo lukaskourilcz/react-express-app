@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
   Avatar,
   Paper,
-  CircularProgress,
   Button,
   Divider,
   Alert,
@@ -13,12 +12,15 @@ import {
 import { getUserStats, createOrUpdateUserStats, type UserStats } from '../lib/supabase';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { friendlyError } from '../lib/api';
-import { BRAND } from '../theme/MuiTheme';
+import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
 import { computeAchievements, readPerfectQuizCount } from '../lib/achievements';
 import { renderQuestion } from './CodeBlock';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
+import { useReloadKey, useCancellableEffect } from '../lib/hooks';
+import LoadingScreen from './LoadingScreen';
+import ErrorRetry from './ErrorRetry';
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
 
@@ -30,54 +32,39 @@ function Profile() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
+  const [reloadKey, reload] = useReloadKey();
 
-  useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate('/');
-      return;
-    }
-    if (!isAuthenticated || !user) return;
+  useCancellableEffect(
+    async (isCancelled) => {
+      if (!authLoading && !isAuthenticated) {
+        navigate('/');
+        return;
+      }
+      if (!isAuthenticated || !user?.id) return;
 
-    let cancelled = false;
-    const controller = new AbortController();
-
-    async function loadStats() {
-      if (!user?.id) return;
       setLoading(true);
       setError(null);
       try {
-        let s = await getUserStats(user.id);
-        if (!s) {
-          s = await createOrUpdateUserStats(user.id, {
+        let loaded = await getUserStats(user.id);
+        if (!loaded) {
+          loaded = await createOrUpdateUserStats(user.id, {
             email: profile.email,
             name: profile.name,
             picture: profile.picture,
           });
         }
-        if (!cancelled) setStats(s);
+        if (!isCancelled()) setStats(loaded);
       } catch (err) {
-        if (!cancelled) setError(friendlyError(err));
+        if (!isCancelled()) setError(friendlyError(err));
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!isCancelled()) setLoading(false);
       }
-    }
-
-    loadStats();
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, isAuthenticated, authLoading, navigate, reloadKey]);
+    },
+    [user, isAuthenticated, authLoading, navigate, reloadKey],
+  );
 
   if (authLoading || loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }} role="status" aria-live="polite">
-        <CircularProgress sx={{ color: BRAND.green }} />
-        <span style={{ position: 'absolute', left: -9999 }}>{t('profile.loading')}</span>
-      </Box>
-    );
+    return <LoadingScreen label={t('profile.loading')} />;
   }
 
   if (!isAuthenticated || !user) {
@@ -89,19 +76,7 @@ function Profile() {
   }
 
   if (error) {
-    return (
-      <Alert
-        severity="error"
-        role="alert"
-        action={
-          <Button color="inherit" size="small" onClick={() => setReloadKey((k) => k + 1)}>
-            {t('quiz.retry')}
-          </Button>
-        }
-      >
-        {error}
-      </Alert>
-    );
+    return <ErrorRetry message={error} onRetry={reload} />;
   }
 
   const totalQuizzes = stats?.total_quizzes ?? 0;
@@ -356,8 +331,7 @@ function ProfileBody({
           fontWeight: 600,
           textTransform: 'none',
           borderRadius: 1,
-          backgroundColor: BRAND.green,
-          '&:hover': { backgroundColor: BRAND.greenHover },
+          ...brandButtonSx,
         }}
       >
         {isFirstTime ? t('profile.startQuiz') : t('profile.backToQuiz')}

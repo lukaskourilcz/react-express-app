@@ -8,6 +8,17 @@ export const BRAND = {
   textTertiary: '#6b6b6b',
 };
 
+// The brand-green filled-button look (background + hover). Spread into a
+// component's `sx` so the colour pair isn't repeated at every call site.
+export const brandButtonSx = {
+  backgroundColor: BRAND.green,
+  '&:hover': { backgroundColor: BRAND.greenHover },
+};
+
+// Visually hide an element while keeping it available to screen readers.
+// Used for status text and off-screen labels.
+export const visuallyHidden = { position: 'absolute', left: -9999 } as const;
+
 export const CATEGORY_GRADIENT =
   'linear-gradient(90deg, #e34c26, #264de4, #f7df1e, #3178c6, #61dafb, #339933, #f05032, #8b5cf6, #06b6d4, #ec4899)';
 
@@ -163,9 +174,8 @@ export const theme = createAppTheme('light');
 export const quizStyles = {
   startButton: { px: 4, py: 1.25, fontSize: '1rem' },
   brandButton: {
-    backgroundColor: BRAND.green,
     color: '#ffffff',
-    '&:hover': { backgroundColor: BRAND.greenHover },
+    ...brandButtonSx,
     // Use theme-aware tokens so disabled text/background stay legible in dark mode.
     '&.Mui-disabled': {
       backgroundColor: 'action.disabledBackground',
@@ -175,9 +185,8 @@ export const quizStyles = {
   submitButton: {
     px: 3,
     py: 1,
-    backgroundColor: BRAND.green,
     color: '#ffffff',
-    '&:hover': { backgroundColor: BRAND.greenHover },
+    ...brandButtonSx,
     '&.Mui-disabled': {
       backgroundColor: 'action.disabledBackground',
       color: 'text.disabled',
@@ -186,9 +195,8 @@ export const quizStyles = {
   nextButton: {
     px: 3,
     py: 1,
-    backgroundColor: BRAND.green,
     color: '#ffffff',
-    '&:hover': { backgroundColor: BRAND.greenHover },
+    ...brandButtonSx,
   },
   previousButton: {
     px: 3,

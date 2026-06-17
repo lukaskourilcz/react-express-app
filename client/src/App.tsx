@@ -1,8 +1,9 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Box, AppBar, Toolbar, Typography, Button, IconButton, CircularProgress, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider } from '@mui/material';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import AuthButton from './components/AuthButton';
 import LanguageSwitcher from './components/LanguageSwitcher';
+import LoadingScreen from './components/LoadingScreen';
 import { useColorMode } from './theme/ColorModeContext';
 import { useT } from './i18n/LanguageContext';
 import type { TranslationKey } from './i18n/translations';
@@ -65,12 +66,7 @@ const NAV_ITEMS: { to: string; key: TranslationKey; isActive: (path: string) => 
 
 const RouteLoader = () => {
   const t = useT();
-  return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', py: 6 }} role="status" aria-live="polite">
-      <CircularProgress size={28} sx={{ color: BRAND.green }} />
-      <span style={{ position: 'absolute', left: -9999 }}>{t('common.loading')}</span>
-    </Box>
-  );
+  return <LoadingScreen label={t('common.loading')} size={28} sx={{ minHeight: 'auto', py: 6 }} />;
 };
 
 function App() {
