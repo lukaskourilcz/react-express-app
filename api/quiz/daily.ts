@@ -1,13 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { questions, encodeSession, localizeQuestion, normalizeLang, PRIVATE_CATEGORIES } from '../../lib/quiz-data';
+import { encodeSession, localizeQuestion, normalizeLang, PRIVATE_CATEGORIES, type Question } from '../../lib/quiz-data';
 import { createHash } from 'node:crypto';
 import { jsonError } from '../../lib/http';
+import { getEffectiveQuestions } from '../../lib/questions-store';
+import { getGameSettings } from '../../lib/settings-store';
 
-// Daily challenge: deterministic 5-question selection per UTC date.
-// Same set for every user on the same day, so leaderboards are comparable
-// once we add them. Date can be overridden via ?date=YYYY-MM-DD for testing.
+// Daily challenge: deterministic per-UTC-date selection (one question per
+// difficulty bucket). Same set for every user on the same day, so leaderboards
+// are comparable. Date can be overridden via ?date=YYYY-MM-DD for testing.
 
-const DAILY_COUNT = 5;
 const DAILY_DIFFICULTIES = [1, 2, 3, 4, 5];
 
 function dateString(): string {
@@ -27,12 +28,13 @@ function seededShuffle<T>(arr: T[], seed: string): T[] {
   return out;
 }
 
-export default function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 
+  const dailyCount = (await getGameSettings()).daily.count;
   const today = dateString();
   const dateParam = (req.query.date as string) || today;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
@@ -49,14 +51,15 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Pick one question per difficulty bucket, deterministically per date.
-  const selected: typeof questions = [];
+  const allQuestions = await getEffectiveQuestions();
+  const selected: Question[] = [];
   for (const diff of DAILY_DIFFICULTIES) {
     // Never surface private (owner-only) categories in the shared daily mix.
-    const pool = questions.filter((q) => q.difficulty === diff && !PRIVATE_CATEGORIES.includes(q.category));
+    const pool = allQuestions.filter((q) => q.difficulty === diff && !PRIVATE_CATEGORIES.includes(q.category));
     if (pool.length === 0) continue;
     const shuffled = seededShuffle(pool, `${dateParam}::${diff}`);
     selected.push(shuffled[0]);
-    if (selected.length >= DAILY_COUNT) break;
+    if (selected.length >= dailyCount) break;
   }
 
   const lang = normalizeLang(req.query.lang);

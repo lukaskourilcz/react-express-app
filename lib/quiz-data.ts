@@ -16,6 +16,10 @@ export interface Question {
   category: CategoryType;
   explanation: string;
   difficulty: 1 | 2 | 3 | 4 | 5;
+  // Set on questions edited/created via the /dev console: their text is the
+  // canonical (admin-entered) copy, so skip the cs translation fallback which
+  // would otherwise re-apply stale auto-translations over the new wording.
+  noTranslate?: boolean;
 }
 
 export type DifficultyMode = 'basics' | 'easy' | 'zero-to-hero' | 'advanced' | 'mixed';
@@ -45,7 +49,7 @@ export interface QuestionTranslation {
 // are never translated. Option translations are only applied when the array
 // length matches, keeping answer grading correct.
 export function localizeQuestion<T extends Question>(q: T, lang: QuestionLang): T {
-  if (lang === 'en') return q;
+  if (lang === 'en' || q.noTranslate) return q;
   const tr = questionTranslationsCs[q.id];
   if (!tr) return q;
   return {

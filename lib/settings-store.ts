@@ -1,0 +1,169 @@
+// Game-wide settings, managed from /dev → Settings and consumed by the quiz,
+// daily-challenge and play endpoints. Stored as one JSON row in `app_settings`,
+// cached briefly, and always falling back to DEFAULT_SETTINGS so the app keeps
+// working if the DB (or a given field) is unavailable.
+
+import { createServiceClient, withTimeout } from './http';
+import type { DifficultyMode } from './quiz-data';
+
+const supabase = createServiceClient();
+const TABLE = 'app_settings';
+const KEY = 'game';
+const CACHE_TTL_MS = 15_000;
+
+export interface GameSettings {
+  quiz: {
+    /** Pre-selected question count. */
+    defaultCount: number;
+    /** Count choices shown as buttons. */
+    countOptions: number[];
+    /** Hard upper bound the server clamps requests to. */
+    maxCount: number;
+    /** Pre-selected difficulty mode. */
+    defaultDifficulty: DifficultyMode;
+  };
+  daily: {
+    /** Number of questions in the daily challenge. */
+    count: number;
+  };
+  play: {
+    /** Pre-selected per-question time limit (seconds; 0 = no limit). */
+    defaultDurationS: number;
+    /** Time-limit choices shown as buttons (seconds; 0 = no limit). */
+    durationOptionsS: number[];
+    /** Question-count choices for a hosted match. */
+    countOptions: number[];
+    minQuestions: number;
+    maxQuestions: number;
+    /** Max speed-bonus points awarded for the fastest correct answer. */
+    maxSpeedBonus: number;
+  };
+  features: {
+    dailyChallenge: boolean;
+    multiplayer: boolean;
+    leaderboard: boolean;
+    flashcards: boolean;
+  };
+  /** Email whose private categories (custom, apt) are visible. */
+  ownerEmail: string;
+}
+
+export const DEFAULT_SETTINGS: GameSettings = {
+  quiz: {
+    defaultCount: 10,
+    countOptions: [10, 20, 30, 40, 50],
+    maxCount: 50,
+    defaultDifficulty: 'zero-to-hero',
+  },
+  daily: { count: 5 },
+  play: {
+    defaultDurationS: 60,
+    durationOptionsS: [30, 60, 120, 300, 0],
+    countOptions: [5, 10, 15, 20],
+    minQuestions: 3,
+    maxQuestions: 20,
+    maxSpeedBonus: 50,
+  },
+  features: {
+    dailyChallenge: true,
+    multiplayer: true,
+    leaderboard: true,
+    flashcards: true,
+  },
+  ownerEmail: (process.env.OWNER_EMAIL || 'kouril.lukas@gmail.com').toLowerCase(),
+};
+
+const DIFFICULTY_MODES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
+
+const clampInt = (v: unknown, min: number, max: number, fallback: number): number => {
+  const n = typeof v === 'number' && Number.isFinite(v) ? Math.round(v) : fallback;
+  return n < min ? min : n > max ? max : n;
+};
+
+// Whole-number choices, de-duplicated, in range. Falls back if nothing valid.
+const cleanIntList = (v: unknown, min: number, max: number, fallback: number[]): number[] => {
+  if (!Array.isArray(v)) return fallback;
+  const out = Array.from(
+    new Set(v.filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= min && n <= max)),
+  );
+  return out.length > 0 ? out : fallback;
+};
+
+const bool = (v: unknown, fallback: boolean): boolean => (typeof v === 'boolean' ? v : fallback);
+
+// Coerce arbitrary stored/posted JSON into a valid GameSettings, clamping every
+// field so a bad value can never break the endpoints that consume it.
+export function normalizeSettings(raw: unknown): GameSettings {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const quiz = (r.quiz ?? {}) as Record<string, unknown>;
+  const daily = (r.daily ?? {}) as Record<string, unknown>;
+  const play = (r.play ?? {}) as Record<string, unknown>;
+  const features = (r.features ?? {}) as Record<string, unknown>;
+  const d = DEFAULT_SETTINGS;
+
+  return {
+    quiz: {
+      defaultCount: clampInt(quiz.defaultCount, 1, 50, d.quiz.defaultCount),
+      countOptions: cleanIntList(quiz.countOptions, 1, 50, d.quiz.countOptions),
+      maxCount: clampInt(quiz.maxCount, 1, 50, d.quiz.maxCount),
+      defaultDifficulty: DIFFICULTY_MODES.includes(quiz.defaultDifficulty as DifficultyMode)
+        ? (quiz.defaultDifficulty as DifficultyMode)
+        : d.quiz.defaultDifficulty,
+    },
+    daily: { count: clampInt(daily.count, 1, 20, d.daily.count) },
+    play: {
+      defaultDurationS: clampInt(play.defaultDurationS, 0, 600, d.play.defaultDurationS),
+      durationOptionsS: cleanIntList(play.durationOptionsS, 0, 600, d.play.durationOptionsS),
+      countOptions: cleanIntList(play.countOptions, 1, 50, d.play.countOptions),
+      minQuestions: clampInt(play.minQuestions, 1, 50, d.play.minQuestions),
+      maxQuestions: clampInt(play.maxQuestions, 1, 50, d.play.maxQuestions),
+      maxSpeedBonus: clampInt(play.maxSpeedBonus, 0, 1000, d.play.maxSpeedBonus),
+    },
+    features: {
+      dailyChallenge: bool(features.dailyChallenge, d.features.dailyChallenge),
+      multiplayer: bool(features.multiplayer, d.features.multiplayer),
+      leaderboard: bool(features.leaderboard, d.features.leaderboard),
+      flashcards: bool(features.flashcards, d.features.flashcards),
+    },
+    ownerEmail:
+      typeof r.ownerEmail === 'string' && r.ownerEmail.includes('@')
+        ? r.ownerEmail.toLowerCase()
+        : d.ownerEmail,
+  };
+}
+
+let cache: { at: number; value: GameSettings } | null = null;
+
+export async function getGameSettings(): Promise<GameSettings> {
+  if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.value;
+  let value = DEFAULT_SETTINGS;
+  if (supabase) {
+    try {
+      const { data } = await withTimeout(
+        supabase.from(TABLE).select('value').eq('key', KEY).maybeSingle(),
+        4000,
+      );
+      if (data?.value) value = normalizeSettings(data.value);
+    } catch {
+      // missing table / timeout — fall back to defaults
+    }
+  }
+  cache = { at: Date.now(), value };
+  return value;
+}
+
+/** Persist a full settings object (already validated by normalizeSettings). */
+export async function saveGameSettings(raw: unknown): Promise<GameSettings> {
+  if (!supabase) throw new Error('not_configured');
+  const value = normalizeSettings(raw);
+  const { error } = await withTimeout(
+    supabase.from(TABLE).upsert(
+      { key: KEY, value, updated_at: new Date().toISOString() },
+      { onConflict: 'key' },
+    ),
+    5000,
+  );
+  if (error) throw new Error(error.message);
+  cache = { at: Date.now(), value };
+  return value;
+}

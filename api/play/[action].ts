@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { questions, secureShuffle } from '../../lib/quiz-data';
+import { secureShuffle } from '../../lib/quiz-data';
 import {
   supabase,
   jsonError,
@@ -10,15 +10,9 @@ import {
 } from '../../lib/play-helpers';
 import { requireAuthSub, isRpcMissing } from '../../lib/http';
 import { tryAuth } from '../../lib/auth';
+import { getEffectiveQuestions } from '../../lib/questions-store';
+import { getGameSettings } from '../../lib/settings-store';
 
-const MAX_QUESTIONS = 20;
-const MIN_QUESTIONS = 3;
-// Default per-question time limit. The host may override this at create time,
-// including 0 which means "no time limit".
-const QUESTION_DURATION_DEFAULT_S = 60;
-// Allowed per-question time limits in seconds (0 = no limit).
-const ALLOWED_DURATIONS_S = [0, 15, 30, 60, 120, 300];
-const MAX_BONUS = 50;
 const PING_GRACE_MS = 1000;
 const STALE_MATCH_MS = 5 * 60 * 1000;
 
@@ -32,12 +26,12 @@ interface MatchQuestion {
   difficulty: number;
 }
 
-function computeSpeedBonus(elapsedMs: number, durationS: number): number {
+function computeSpeedBonus(elapsedMs: number, durationS: number, maxBonus: number): number {
   // With no time limit there is no speed component — score the answer flat.
   if (durationS <= 0) return 0;
-  if (elapsedMs <= 0) return MAX_BONUS;
+  if (elapsedMs <= 0) return maxBonus;
   const fraction = Math.max(0, 1 - elapsedMs / (durationS * 1000));
-  return Math.round(fraction * MAX_BONUS);
+  return Math.round(fraction * maxBonus);
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -81,24 +75,29 @@ async function create(req: VercelRequest, res: VercelResponse) {
     duration_s?: unknown;
   };
 
+  const { play: playSettings } = await getGameSettings();
   const hostName = isShortString(body.host_name, 80) ? body.host_name : 'Host';
   const mode = body.mode === 'classroom' ? 'classroom' : 'multiplayer';
   const requestedCount = typeof body.count === 'number' ? body.count : 10;
-  const count = Math.min(Math.max(Math.floor(requestedCount), MIN_QUESTIONS), MAX_QUESTIONS);
+  const count = Math.min(
+    Math.max(Math.floor(requestedCount), playSettings.minQuestions),
+    playSettings.maxQuestions,
+  );
   // Per-question time limit chosen by the host. Falls back to the default when
   // omitted or not one of the allowed values; 0 means "no limit".
   const durationS =
-    typeof body.duration_s === 'number' && ALLOWED_DURATIONS_S.includes(body.duration_s)
+    typeof body.duration_s === 'number' && playSettings.durationOptionsS.includes(body.duration_s)
       ? body.duration_s
-      : QUESTION_DURATION_DEFAULT_S;
+      : playSettings.defaultDurationS;
   const categories = Array.isArray(body.categories)
     ? body.categories.filter((c): c is string => typeof c === 'string')
     : [];
 
+  const allQuestions = await getEffectiveQuestions();
   const pool = categories.length
-    ? questions.filter((q) => categories.includes(q.category))
-    : questions;
-  if (pool.length < MIN_QUESTIONS) {
+    ? allQuestions.filter((q) => categories.includes(q.category))
+    : allQuestions;
+  if (pool.length < playSettings.minQuestions) {
     return jsonError(res, 400, 'too_few_questions', 'Not enough questions for these filters');
   }
 
@@ -469,9 +468,12 @@ async function answer(req: VercelRequest, res: VercelResponse) {
       serverElapsedMs = clientDuration;
     }
 
+    const { play: playSettings } = await getGameSettings();
     const isCorrect = q.correct_index === body.selected_idx;
-    const durationS = match.question_duration_s ?? QUESTION_DURATION_DEFAULT_S;
-    const speedBonus = isCorrect ? computeSpeedBonus(serverElapsedMs, durationS) : 0;
+    const durationS = match.question_duration_s ?? playSettings.defaultDurationS;
+    const speedBonus = isCorrect
+      ? computeSpeedBonus(serverElapsedMs, durationS, playSettings.maxSpeedBonus)
+      : 0;
 
     // Use the natural per-player-per-question primary key so retries replace
     // the existing answer rather than inserting a duplicate.
