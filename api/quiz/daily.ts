@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { questions, encodeSession, localizeQuestion, normalizeLang, PRIVATE_CATEGORIES } from '../../lib/quiz-data';
 import { createHash } from 'node:crypto';
+import { jsonError } from '../../lib/http';
 
 // Daily challenge: deterministic 5-question selection per UTC date.
 // Same set for every user on the same day, so leaderboards are comparable
@@ -11,10 +12,6 @@ const DAILY_DIFFICULTIES = [1, 2, 3, 4, 5];
 
 function dateString(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-function jsonError(res: VercelResponse, status: number, code: string, message: string) {
-  return res.status(status).json({ error: { code, message } });
 }
 
 // Deterministic seeded shuffle so the same date always yields the same order.

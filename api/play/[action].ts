@@ -6,8 +6,10 @@ import {
   isShortString,
   logEvent,
   generateMatchCode,
+  withTimeout,
 } from '../../lib/play-helpers';
-import { AuthError, requireAuth, tryAuth } from '../../lib/auth';
+import { requireAuthSub, isRpcMissing } from '../../lib/http';
+import { tryAuth } from '../../lib/auth';
 
 const MAX_QUESTIONS = 20;
 const MIN_QUESTIONS = 3;
@@ -19,7 +21,6 @@ const ALLOWED_DURATIONS_S = [0, 15, 30, 60, 120, 300];
 const MAX_BONUS = 50;
 const PING_GRACE_MS = 1000;
 const STALE_MATCH_MS = 5 * 60 * 1000;
-const DB_TIMEOUT_MS = 5000;
 
 interface MatchQuestion {
   id: string;
@@ -37,39 +38,6 @@ function computeSpeedBonus(elapsedMs: number, durationS: number): number {
   if (elapsedMs <= 0) return MAX_BONUS;
   const fraction = Math.max(0, 1 - elapsedMs / (durationS * 1000));
   return Math.round(fraction * MAX_BONUS);
-}
-
-function withTimeout<T>(p: PromiseLike<T>, ms = DB_TIMEOUT_MS): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error('supabase_timeout')), ms);
-    Promise.resolve(p).then(
-      (v) => {
-        clearTimeout(t);
-        resolve(v);
-      },
-      (e) => {
-        clearTimeout(t);
-        reject(e);
-      },
-    );
-  });
-}
-
-async function withAuth(
-  req: VercelRequest,
-  res: VercelResponse,
-): Promise<string | null> {
-  try {
-    const auth = await requireAuth(req);
-    return auth.sub;
-  } catch (e) {
-    if (e instanceof AuthError) {
-      jsonError(res, e.status, e.code, e.message);
-      return null;
-    }
-    jsonError(res, 500, 'internal_error', 'Auth failed');
-    return null;
-  }
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -102,7 +70,7 @@ async function create(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  const hostSub = await withAuth(req, res);
+  const hostSub = await requireAuthSub(req, res);
   if (!hostSub) return;
 
   const body = (req.body || {}) as {
@@ -209,7 +177,7 @@ async function join(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  const sub = await withAuth(req, res);
+  const sub = await requireAuthSub(req, res);
   if (!sub) return;
 
   const body = (req.body || {}) as { code?: unknown; display_name?: unknown };
@@ -352,7 +320,7 @@ async function control(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  const sub = await withAuth(req, res);
+  const sub = await requireAuthSub(req, res);
   if (!sub) return;
 
   const body = (req.body || {}) as { code?: unknown; action?: unknown };
@@ -439,7 +407,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  const sub = await withAuth(req, res);
+  const sub = await requireAuthSub(req, res);
   if (!sub) return;
 
   const body = (req.body || {}) as {
@@ -585,7 +553,7 @@ async function distribution(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  const sub = await withAuth(req, res);
+  const sub = await requireAuthSub(req, res);
   if (!sub) return;
 
   const code = (req.query.code as string)?.toUpperCase();
@@ -612,7 +580,7 @@ async function distribution(req: VercelRequest, res: VercelResponse) {
     );
 
     if (error) {
-      if (/function .* does not exist/i.test(error.message)) {
+      if (isRpcMissing(error)) {
         return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-005.sql');
       }
       return jsonError(res, 500, 'db_error', 'Could not load distribution');
@@ -632,7 +600,7 @@ async function heartbeat(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  const sub = await withAuth(req, res);
+  const sub = await requireAuthSub(req, res);
   if (!sub) return;
 
   const body = (req.body || {}) as { code?: unknown };

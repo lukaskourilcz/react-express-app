@@ -10,6 +10,7 @@ import {
   type CategoryType,
 } from '../../lib/quiz-data';
 import { tryAuth } from '../../lib/auth';
+import { jsonError, createLogger } from '../../lib/http';
 
 // Owner whose private categories (custom, apt) are visible only to them.
 const OWNER_EMAIL = (process.env.OWNER_EMAIL || 'kouril.lukas@gmail.com').toLowerCase();
@@ -29,14 +30,7 @@ const ALL_CATEGORIES: CategoryType[] = [
 ];
 const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
-function jsonError(res: VercelResponse, status: number, code: string, message: string) {
-  return res.status(status).json({ error: { code, message } });
-}
-
-function logEvent(event: Record<string, unknown>) {
-  // Structured single-line JSON; Vercel ingests this natively.
-  console.log(JSON.stringify({ ts: new Date().toISOString(), route: 'quiz/questions', ...event }));
-}
+const logEvent = createLogger('quiz/questions');
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();

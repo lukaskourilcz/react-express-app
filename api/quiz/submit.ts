@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { decodeSession, questions, localizeQuestion, normalizeLang } from '../../lib/quiz-data';
+import { jsonError, createLogger } from '../../lib/http';
 
 const MAX_ANSWERS = 50;
 
@@ -7,13 +8,7 @@ const MAX_ANSWERS = 50;
 // previous .find() inside the per-answer loop was O(n*m) per submission.
 const questionsById = new Map(questions.map((q) => [q.id, q]));
 
-function jsonError(res: VercelResponse, status: number, code: string, message: string) {
-  return res.status(status).json({ error: { code, message } });
-}
-
-function logEvent(event: Record<string, unknown>) {
-  console.log(JSON.stringify({ ts: new Date().toISOString(), route: 'quiz/submit', ...event }));
-}
+const logEvent = createLogger('quiz/submit');
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
