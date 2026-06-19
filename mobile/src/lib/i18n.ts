@@ -9,7 +9,7 @@ export type Lang = 'en' | 'cs';
 const KEY = 'devquiz:lang';
 
 const en = {
-  'tab.learn': 'Learn', 'tab.streak': 'Streak', 'tab.quiz': 'Quiz', 'tab.ranks': 'Ranks', 'tab.account': 'Account',
+  'tab.learn': 'Learn', 'tab.streak': 'Streak', 'tab.quiz': 'Quiz', 'tab.play': 'Play', 'tab.ranks': 'Ranks', 'tab.account': 'Account',
   'common.retry': 'Retry', 'common.back': 'Back',
   'learn.title': 'Learn', 'learn.levels': '{done}/{total} levels',
   'streak.title': 'Streak', 'streak.days': 'day streak',
@@ -38,7 +38,7 @@ const en = {
 };
 
 const cs: Record<keyof typeof en, string> = {
-  'tab.learn': 'Učení', 'tab.streak': 'Série', 'tab.quiz': 'Kvíz', 'tab.ranks': 'Žebříček', 'tab.account': 'Účet',
+  'tab.learn': 'Učení', 'tab.streak': 'Série', 'tab.quiz': 'Kvíz', 'tab.play': 'Hra', 'tab.ranks': 'Žebříček', 'tab.account': 'Účet',
   'common.retry': 'Zkusit znovu', 'common.back': 'Zpět',
   'learn.title': 'Učení', 'learn.levels': '{done}/{total} úrovní',
   'streak.title': 'Série', 'streak.days': 'denní série',

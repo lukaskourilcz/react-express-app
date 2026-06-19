@@ -28,6 +28,10 @@ export default function TabsLayout() {
         options={{ title: t('tab.quiz'), tabBarIcon: ({ color, size }) => <Ionicons name="help-circle-outline" color={color} size={size} /> }}
       />
       <Tabs.Screen
+        name="play"
+        options={{ title: t('tab.play'), tabBarIcon: ({ color, size }) => <Ionicons name="game-controller-outline" color={color} size={size} /> }}
+      />
+      <Tabs.Screen
         name="leaderboard"
         options={{ title: t('tab.ranks'), tabBarIcon: ({ color, size }) => <Ionicons name="trophy-outline" color={color} size={size} /> }}
       />
