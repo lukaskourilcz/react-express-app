@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useColors } from '../lib/useColors';
 import { getCategoryColor, getCategoryLabel } from '../lib/categories';
 import { friendlyError } from '../lib/api';
@@ -13,6 +14,7 @@ import { RoadmapPath } from '../components/RoadmapPath';
 import { PrimaryButton } from '../components/ui';
 
 const TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'html', 'css', 'git'];
+const TOPIC_KEY = 'devquiz:roadmap:topic';
 
 export default function LearnScreen() {
   const c = useColors();
@@ -35,7 +37,15 @@ export default function LearnScreen() {
   useEffect(load, []);
   useEffect(() => {
     void syncProgressWithServer();
+    void AsyncStorage.getItem(TOPIC_KEY).then((saved) => {
+      if (saved && (TOPICS as string[]).includes(saved)) setTopic(saved as RoadmapTopic);
+    });
   }, []);
+
+  const selectTopic = (next: RoadmapTopic) => {
+    setTopic(next);
+    void AsyncStorage.setItem(TOPIC_KEY, next);
+  };
 
   const topicData = structure?.structure[topic];
   const levels = topicData?.levels ?? [];
@@ -59,7 +69,7 @@ export default function LearnScreen() {
           return (
             <Pressable
               key={value}
-              onPress={() => setTopic(value)}
+              onPress={() => selectTopic(value)}
               style={[
                 styles.pill,
                 { borderColor: selected ? color : c.border, backgroundColor: selected ? color : c.card },
@@ -93,10 +103,16 @@ export default function LearnScreen() {
             checkpoints={checkpoints}
             progress={progress}
             onOpenLevel={(level) =>
-              router.push({ pathname: '/lesson', params: { topic, kind: 'level', ref: String(level) } })
+              router.push({
+                pathname: '/lesson',
+                params: { topic, kind: 'level', ref: String(level), lc: String(levels.length), cc: String(checkpoints.length) },
+              })
             }
             onOpenCheckpoint={(cp) =>
-              router.push({ pathname: '/lesson', params: { topic, kind: 'checkpoint', ref: String(cp) } })
+              router.push({
+                pathname: '/lesson',
+                params: { topic, kind: 'checkpoint', ref: String(cp), lc: String(levels.length), cc: String(checkpoints.length) },
+              })
             }
           />
         </ScrollView>

@@ -113,6 +113,23 @@ export function passedLevelCount(p: RoadmapProgress, topic: RoadmapTopic): numbe
   return Object.values(p[topic]?.levels ?? {}).filter((e) => e.passed).length;
 }
 
+// What to play after finishing a level/checkpoint, given the topic's counts
+// (JS/TS/React have 25 levels / 5 checkpoints; Git/HTML/CSS have 15 / 3).
+export function nextAfter(
+  kind: 'level' | 'checkpoint',
+  ref: number,
+  levelCount: number,
+  checkpointCount: number,
+): { kind: 'level' | 'checkpoint'; ref: number } | null {
+  if (kind === 'level') {
+    if (ref % LEVELS_PER_CHECKPOINT === 0) return { kind: 'checkpoint', ref: ref / LEVELS_PER_CHECKPOINT };
+    if (ref < levelCount) return { kind: 'level', ref: ref + 1 };
+    return null;
+  }
+  if (ref < checkpointCount) return { kind: 'level', ref: ref * LEVELS_PER_CHECKPOINT + 1 };
+  return null;
+}
+
 /* ──── account sync ─────────────────────────────────────────────────────── */
 
 function mergeMaps(a: Record<string, Entry> = {}, b: Record<string, Entry> = {}): Record<string, Entry> {
