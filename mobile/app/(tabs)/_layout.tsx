@@ -15,6 +15,14 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
+        options={{ title: 'Learn', tabBarIcon: ({ color, size }) => <Ionicons name="map-outline" color={color} size={size} /> }}
+      />
+      <Tabs.Screen
+        name="streak"
+        options={{ title: 'Streak', tabBarIcon: ({ color, size }) => <Ionicons name="flame-outline" color={color} size={size} /> }}
+      />
+      <Tabs.Screen
+        name="quiz"
         options={{ title: 'Quiz', tabBarIcon: ({ color, size }) => <Ionicons name="help-circle-outline" color={color} size={size} /> }}
       />
       <Tabs.Screen

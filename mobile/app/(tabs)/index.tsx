@@ -1,1 +1,1 @@
-export { default } from '../../src/screens/QuizScreen';
+export { default } from '../../src/screens/LearnScreen';
