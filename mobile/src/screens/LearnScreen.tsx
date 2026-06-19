@@ -9,7 +9,7 @@ import { getCategoryColor, getCategoryLabel } from '../lib/categories';
 import { friendlyError } from '../lib/api';
 import { fetchRoadmapStructure, type RoadmapStructure, type RoadmapTopic } from '../lib/roadmapApi';
 import { useRoadmapProgress, passedLevelCount, syncProgressWithServer } from '../lib/roadmapProgress';
-import { useStreak } from '../lib/streak';
+import { useStreak, syncStreakWithServer } from '../lib/streak';
 import { RoadmapPath } from '../components/RoadmapPath';
 import { PrimaryButton } from '../components/ui';
 
@@ -37,6 +37,7 @@ export default function LearnScreen() {
   useEffect(load, []);
   useEffect(() => {
     void syncProgressWithServer();
+    void syncStreakWithServer();
     void AsyncStorage.getItem(TOPIC_KEY).then((saved) => {
       if (saved && (TOPICS as string[]).includes(saved)) setTopic(saved as RoadmapTopic);
     });
