@@ -7,6 +7,7 @@
 export const en = {
   // App shell / navigation
   'nav.quiz': 'Quiz',
+  'nav.learn': 'Learn',
   'nav.play': 'Play',
   'nav.leaderboard': 'Leaderboard',
   'nav.cards': 'Cards',
@@ -14,6 +15,7 @@ export const en = {
   'nav.home': 'DevQuiz home',
   'nav.menu': 'Open navigation menu',
   'title.home': 'DevQuiz — Test your web dev skills',
+  'title.learn': 'Learn · DevQuiz',
   'title.profile': 'Profile · DevQuiz',
   'title.leaderboard': 'Leaderboard · DevQuiz',
   'title.cards': 'Cards · DevQuiz',
@@ -40,7 +42,7 @@ export const en = {
 
   // Quiz — setup screen
   'quiz.title': 'Web Development Quiz',
-  'quiz.subtitle': '900+ questions · keyboard shortcuts supported',
+  'quiz.subtitle': '1500+ questions · keyboard shortcuts supported',
   'quiz.todaysChallenge': 'Today’s challenge',
   'quiz.dailyMeta': '5 questions · same for everyone',
   'quiz.categories': 'Categories',
@@ -281,6 +283,41 @@ export const en = {
   'card.added': 'Saved to Cards',
   'card.removed': 'Removed from Cards',
   'card.syncFailed': 'Saved on this device, but syncing to your Cards failed.',
+
+  // Roadmap ("Learn") mode
+  'roadmap.title': 'Learn',
+  'roadmap.subtitle': 'Climb from the basics to the tricky stuff. Clear each level, then pass the checkpoint exam every 5 levels.',
+  'roadmap.topicsAria': 'Choose a topic',
+  'roadmap.progress': '{done} / {total} levels',
+  'roadmap.levelLabel': 'Level {n}',
+  'roadmap.locked': 'Locked',
+  'roadmap.start': 'Start',
+  'roadmap.passed': 'Passed',
+  'roadmap.allDone': 'You’ve mastered every level here. Nice work!',
+  'roadmap.retry': 'Try again',
+  'roadmap.error': 'Couldn’t load the roadmap. Please try again.',
+  'roadmap.question': 'Question {current} of {total}',
+  'roadmap.keyboardTip': 'Tip: press 1–{max} to answer',
+  'roadmap.correct': 'Correct!',
+  'roadmap.incorrect': 'Not quite',
+  'roadmap.continue': 'Continue',
+  'roadmap.finish': 'Finish',
+  'roadmap.exit': 'Exit lesson',
+  'roadmap.levelComplete': 'Level complete!',
+  'roadmap.levelFailed': 'Almost there!',
+  'roadmap.scoreLine': '{correct} / {total} correct',
+  'roadmap.passNeeded': 'Score {pct}% or more to pass.',
+  'roadmap.nextLevel': 'Next level',
+  'roadmap.retryLevel': 'Try again',
+  'roadmap.backToPath': 'Back to path',
+  'roadmap.lockedHint': 'Pass the previous level to unlock this one.',
+  'roadmap.lockedByCheckpoint': 'Pass the checkpoint exam to unlock this.',
+  'roadmap.checkpoint': 'Checkpoint',
+  'roadmap.checkpointMeta': '{count} questions · {pct}% to pass',
+  'roadmap.checkpointLocked': 'Finish levels {from}–{to} first.',
+  'roadmap.checkpointComplete': 'Checkpoint cleared!',
+  'roadmap.checkpointFailed': 'Not passed yet',
+  'roadmap.toCheckpoint': 'Checkpoint exam',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -288,6 +325,7 @@ export type TranslationKey = keyof typeof en;
 export const cs: Record<TranslationKey, string> = {
   // App shell / navigation
   'nav.quiz': 'Kvíz',
+  'nav.learn': 'Učení',
   'nav.play': 'Hrát',
   'nav.leaderboard': 'Žebříček',
   'nav.cards': 'Kartičky',
@@ -295,6 +333,7 @@ export const cs: Record<TranslationKey, string> = {
   'nav.home': 'Domů DevQuiz',
   'nav.menu': 'Otevřít navigační menu',
   'title.home': 'DevQuiz — Otestuj své znalosti webového vývoje',
+  'title.learn': 'Učení · DevQuiz',
   'title.profile': 'Profil · DevQuiz',
   'title.leaderboard': 'Žebříček · DevQuiz',
   'title.cards': 'Kartičky · DevQuiz',
@@ -321,7 +360,7 @@ export const cs: Record<TranslationKey, string> = {
 
   // Quiz — setup screen
   'quiz.title': 'Kvíz webového vývoje',
-  'quiz.subtitle': '900+ otázek · podporovány klávesové zkratky',
+  'quiz.subtitle': '1500+ otázek · podporovány klávesové zkratky',
   'quiz.todaysChallenge': 'Dnešní výzva',
   'quiz.dailyMeta': '5 otázek · stejné pro všechny',
   'quiz.categories': 'Kategorie',
@@ -562,6 +601,41 @@ export const cs: Record<TranslationKey, string> = {
   'card.added': 'Uloženo do Kartiček',
   'card.removed': 'Odebráno z Kartiček',
   'card.syncFailed': 'Uloženo na tomto zařízení, ale synchronizace do Kartiček selhala.',
+
+  // Roadmap ("Learn") mode
+  'roadmap.title': 'Učení',
+  'roadmap.subtitle': 'Postupuj od základů až po záludnosti. Splň každou úroveň a po každých 5 úrovních slož kontrolní test.',
+  'roadmap.topicsAria': 'Vyber téma',
+  'roadmap.progress': '{done} / {total} úrovní',
+  'roadmap.levelLabel': 'Úroveň {n}',
+  'roadmap.locked': 'Zamčeno',
+  'roadmap.start': 'Začít',
+  'roadmap.passed': 'Splněno',
+  'roadmap.allDone': 'Zvládl(a) jsi všechny úrovně. Skvělá práce!',
+  'roadmap.retry': 'Zkusit znovu',
+  'roadmap.error': 'Nepodařilo se načíst roadmapu. Zkus to prosím znovu.',
+  'roadmap.question': 'Otázka {current} z {total}',
+  'roadmap.keyboardTip': 'Tip: odpovídej klávesami 1–{max}',
+  'roadmap.correct': 'Správně!',
+  'roadmap.incorrect': 'Skoro',
+  'roadmap.continue': 'Pokračovat',
+  'roadmap.finish': 'Dokončit',
+  'roadmap.exit': 'Ukončit lekci',
+  'roadmap.levelComplete': 'Úroveň splněna!',
+  'roadmap.levelFailed': 'Málem!',
+  'roadmap.scoreLine': '{correct} / {total} správně',
+  'roadmap.passNeeded': 'Pro splnění potřebuješ {pct} % a více.',
+  'roadmap.nextLevel': 'Další úroveň',
+  'roadmap.retryLevel': 'Zkusit znovu',
+  'roadmap.backToPath': 'Zpět na cestu',
+  'roadmap.lockedHint': 'Nejprve splň předchozí úroveň.',
+  'roadmap.lockedByCheckpoint': 'Odemkni složením kontrolního testu.',
+  'roadmap.checkpoint': 'Kontrolní test',
+  'roadmap.checkpointMeta': '{count} otázek · {pct} % k splnění',
+  'roadmap.checkpointLocked': 'Nejprve dokonči úrovně {from}–{to}.',
+  'roadmap.checkpointComplete': 'Kontrolní test splněn!',
+  'roadmap.checkpointFailed': 'Zatím nesplněno',
+  'roadmap.toCheckpoint': 'Kontrolní test',
 };
 
 export const dictionaries = { en, cs } as const;

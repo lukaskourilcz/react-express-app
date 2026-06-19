@@ -11,6 +11,7 @@ import { BRAND } from './theme/MuiTheme';
 import { useGameConfig, type GameConfig } from './lib/gameConfig';
 
 const Quiz = lazy(() => import('./components/Quiz'));
+const Roadmap = lazy(() => import('./components/Roadmap'));
 const Profile = lazy(() => import('./components/Profile'));
 const Leaderboard = lazy(() => import('./components/Leaderboard'));
 const Flashcards = lazy(() => import('./components/Flashcards'));
@@ -20,6 +21,7 @@ const DevPage = lazy(() => import('./components/dev/DevPage'));
 
 const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/': 'title.home',
+  '/learn': 'title.learn',
   '/profile': 'title.profile',
   '/leaderboard': 'title.leaderboard',
   '/cards': 'title.cards',
@@ -68,6 +70,7 @@ const NAV_ITEMS: {
   feature?: keyof GameConfig['features'];
 }[] = [
   { to: '/', key: 'nav.quiz', isActive: (p) => p === '/' },
+  { to: '/learn', key: 'nav.learn', isActive: (p) => p.startsWith('/learn') },
   { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play'), feature: 'multiplayer' },
   { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard' },
   { to: '/cards', key: 'nav.cards', isActive: (p) => p === '/cards', feature: 'flashcards' },
@@ -230,6 +233,7 @@ function App() {
           <Suspense fallback={<RouteLoader />}>
             <Routes>
               <Route path="/" element={<Quiz onActiveChange={setQuizActive} />} />
+              <Route path="/learn" element={<Roadmap />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/cards" element={<Flashcards />} />
