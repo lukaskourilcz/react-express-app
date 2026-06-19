@@ -59,6 +59,11 @@ export function useRoadmapProgress(): RoadmapProgress {
   return useStore(store);
 }
 
+/** Imperative snapshot of the current roadmap progress (for XP computations). */
+export function getRoadmapProgress(): RoadmapProgress {
+  return readProgress();
+}
+
 function writeProgress(p: RoadmapProgress): void {
   writeJSON(PROGRESS_KEY, p);
   store.emit();

@@ -15,9 +15,9 @@
 
 import { QUESTIONS_PER_LEVEL, ROADMAP_LEVELS, difficultyForLevel } from './roadmap-build';
 
-export type RoadmapTopic = 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs' | 'html' | 'css' | 'git';
+export type RoadmapTopic = 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs' | 'html' | 'css' | 'git' | 'dsa' | 'algorithms';
 
-export const ROADMAP_TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git'];
+export const ROADMAP_TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git', 'dsa', 'algorithms'];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
 export const LEVEL_PASS = 75;
@@ -39,6 +39,8 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   html: 'rm-html',
   css: 'rm-css',
   git: 'rm-git',
+  dsa: 'rm-dsa',
+  algorithms: 'rm-algorithms',
 };
 
 // Level titles per topic, in increasing difficulty. Index 0 is level 1. The
@@ -91,6 +93,16 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'CSS Basics', 'Selectors', 'Combinators & Specificity', 'Colors & Units', 'Box Model',
     'Text & Fonts', 'Backgrounds & Borders', 'Display & Visibility', 'Positioning', 'Flexbox',
     'Grid', 'Pseudo-classes', 'Transitions & Transforms', 'Responsive Design', 'Advanced CSS',
+  ],
+  dsa: [
+    'Complexity Basics', 'Big-O Notation', 'Arrays', 'Strings', 'Hash Tables',
+    'Stacks', 'Queues', 'Linked Lists', 'Recursion', 'Sorting Algorithms',
+    'Searching Algorithms', 'Trees', 'Binary Search Trees', 'Heaps & Priority Queues', 'Graphs',
+  ],
+  algorithms: [
+    'Logical Reasoning', 'Number Sequences', 'Arithmetic & Patterns', 'Sets & Venn Diagrams', 'Boolean Logic',
+    'Ratios & Proportions', 'Modular Arithmetic', 'Combinatorics', 'Probability', 'Prime Numbers & Divisibility',
+    'Algebraic Thinking', 'Bitwise Logic', 'Logic Puzzles', 'Recurrences & Growth', 'Problem Solving',
   ],
 };
 

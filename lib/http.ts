@@ -110,6 +110,8 @@ export const STATS_CATEGORIES = new Set([
   'nodejs',
   'nextjs',
   'git',
+  'dsa',
+  'algorithms',
   'dev-world',
   'custom',
   'code-snippets',

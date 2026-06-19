@@ -47,6 +47,15 @@ const check = (cond: boolean, msg: string) => {
   check(structure.body?.structure?.nextjs?.checkpoints?.length === 3, 'nextjs has 3 checkpoints');
   check(structure.body?.structure?.nodejs?.levels?.length === 25, 'nodejs has 25 levels');
   check(structure.body?.structure?.nodejs?.checkpoints?.length === 5, 'nodejs has 5 checkpoints');
+  check(topics.includes('dsa'), 'topics include dsa');
+  check(structure.body?.structure?.dsa?.levels?.length === 15, 'dsa has 15 levels');
+  check(structure.body?.structure?.dsa?.checkpoints?.length === 3, 'dsa has 3 checkpoints');
+
+  // DSA level + checkpoint resolve to real questions.
+  const dsaLvl = await call({ topic: 'dsa', level: '15' });
+  check(dsaLvl.body?.questions?.length === 8, 'dsa level 15 returns 8 questions');
+  const dsaCp = await call({ topic: 'dsa', checkpoint: '3' });
+  check(dsaCp.body?.questions?.length === 40 && dsaCp.body?.passPct === 85, 'dsa checkpoint 3 → 40 questions @ 85%');
 
   // 2) A Next.js level returns 8 fully-formed, answerable questions.
   console.log('\nNext.js level 15:');

@@ -9,6 +9,8 @@ import { useT } from './i18n/LanguageContext';
 import type { TranslationKey } from './i18n/translations';
 import { BRAND } from './theme/MuiTheme';
 import { useGameConfig, type GameConfig } from './lib/gameConfig';
+import { primeRankMarker } from './lib/xp';
+import XpToaster from './components/XpToaster';
 
 const Quiz = lazy(() => import('./components/Quiz'));
 const Roadmap = lazy(() => import('./components/Roadmap'));
@@ -88,6 +90,10 @@ function App() {
   const [quizActive, setQuizActive] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { mode, toggle } = useColorMode();
+
+  // Remember the learner's current rank on load so we don't re-celebrate a
+  // rank-up earned in a previous session.
+  useEffect(() => primeRankMarker(), []);
 
   // Nav items for features that are currently enabled in /dev → Settings.
   const navItems = NAV_ITEMS.filter((item) => !item.feature || config.features[item.feature]);
@@ -274,6 +280,8 @@ function App() {
           </Box>
         </Box>
       )}
+
+      <XpToaster />
     </Box>
   );
 }

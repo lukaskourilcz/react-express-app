@@ -1,5 +1,8 @@
-// Typed calls against the existing quiz + leaderboard endpoints.
-import { apiFetch } from './api';
+// Typed calls against the existing quiz + leaderboard endpoints. The solo quiz
+// falls back to local selection + grading from the bundled dataset when there's
+// no connection, so it works fully offline (the leaderboard stays online-only).
+import { apiFetch, isOfflineError } from './api';
+import { offlineQuizSelect, offlineGrade, isOfflineSession } from '../data/offline';
 import type { CategoryType, DifficultyMode, Question, QuizResult, LeaderboardGlobalEntry } from '../types';
 
 export interface FetchQuestionsArgs {
@@ -9,17 +12,26 @@ export interface FetchQuestionsArgs {
   lang?: string;
 }
 
-export function fetchQuestions(args: FetchQuestionsArgs) {
+export async function fetchQuestions(args: FetchQuestionsArgs) {
   const params = new URLSearchParams({
     count: String(args.count),
     difficulty: args.difficulty,
     categories: args.categories.join(','),
     lang: args.lang ?? 'en',
   });
-  return apiFetch<{ sessionId: string; questions: Question[] }>(`/api/quiz/questions?${params}`);
+  try {
+    return await apiFetch<{ sessionId: string; questions: Question[] }>(`/api/quiz/questions?${params}`);
+  } catch (err) {
+    if (isOfflineError(err)) {
+      return offlineQuizSelect({ count: args.count, difficulty: args.difficulty, categories: args.categories });
+    }
+    throw err;
+  }
 }
 
 export function submitQuiz(sessionId: string, answers: Record<string, number>, lang = 'en') {
+  // An offline session was selected locally, so grade it locally too.
+  if (isOfflineSession(sessionId)) return Promise.resolve(offlineGrade(sessionId, answers));
   return apiFetch<QuizResult>('/api/quiz/submit', {
     method: 'POST',
     body: JSON.stringify({ sessionId, answers, lang }),
