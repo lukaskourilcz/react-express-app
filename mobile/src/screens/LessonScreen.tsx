@@ -3,6 +3,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { useColors } from '../lib/useColors';
 import { friendlyError } from '../lib/api';
 import {
@@ -11,8 +12,18 @@ import {
   type RoadmapPlayable,
   type RoadmapTopic,
 } from '../lib/roadmapApi';
-import { recordLevelResult, recordCheckpointResult, pushProgressToServer } from '../lib/roadmapProgress';
+import { recordLevelResult, recordCheckpointResult, pushProgressToServer, nextAfter } from '../lib/roadmapProgress';
 import { recordActivityToday } from '../lib/streak';
+
+function haptic(kind: 'select' | 'success' | 'warning'): void {
+  try {
+    if (kind === 'select') void Haptics.selectionAsync();
+    else if (kind === 'success') void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    else void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+  } catch {
+    // haptics unavailable (web/simulator) — ignore
+  }
+}
 import { QuestionText } from '../components/QuestionText';
 import { Hearts } from '../components/Hearts';
 import { PrimaryButton } from '../components/ui';
@@ -25,10 +36,18 @@ const GOLD = '#ffb300';
 export default function LessonScreen() {
   const c = useColors();
   const router = useRouter();
-  const params = useLocalSearchParams<{ topic: RoadmapTopic; kind: 'level' | 'checkpoint'; ref: string }>();
+  const params = useLocalSearchParams<{
+    topic: RoadmapTopic;
+    kind: 'level' | 'checkpoint';
+    ref: string;
+    lc?: string;
+    cc?: string;
+  }>();
   const topic = params.topic;
   const kind = params.kind;
   const ref = parseInt(params.ref ?? '1', 10);
+  const levelCount = parseInt(params.lc ?? '0', 10);
+  const checkpointCount = parseInt(params.cc ?? '0', 10);
 
   const [playable, setPlayable] = useState<RoadmapPlayable | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -41,12 +60,24 @@ export default function LessonScreen() {
   const [finished, setFinished] = useState(false);
   const [dead, setDead] = useState(false);
 
+  const resetPlayer = () => {
+    setQIndex(0);
+    setSelected(null);
+    setRevealed(false);
+    setCorrectCount(0);
+    setMistakes(0);
+    setFinished(false);
+    setDead(false);
+  };
+
   const load = () => {
     setError(null);
     setPlayable(null);
+    resetPlayer();
     const req = kind === 'checkpoint' ? fetchRoadmapCheckpoint(topic, ref) : fetchRoadmapLevel(topic, ref);
     req.then(setPlayable).catch((e) => setError(friendlyError(e)));
   };
+  // Re-runs when params change too, so "Next level" (router.replace) starts fresh.
   useEffect(load, [topic, kind, ref]);
 
   if (error) {
@@ -79,45 +110,49 @@ export default function LessonScreen() {
     if (revealed) return;
     setSelected(i);
     setRevealed(true);
-    if (i === question.correctAnswer) setCorrectCount((n) => n + 1);
-    else if (!isCheckpoint) setMistakes((m) => m + 1);
+    if (i === question.correctAnswer) {
+      setCorrectCount((n) => n + 1);
+      haptic('success');
+    } else {
+      if (!isCheckpoint) setMistakes((m) => m + 1);
+      haptic('warning');
+    }
   };
 
-  const finish = () => {
+  const finish = (deadByHearts: boolean) => {
     const pct = Math.round((correctCount / total) * 100);
     if (isCheckpoint) recordCheckpointResult(topic, ref, pct, playable.passPct);
     else recordLevelResult(topic, ref, pct, playable.passPct);
     void recordActivityToday();
     void pushProgressToServer();
+    if (!deadByHearts && pct >= playable.passPct) haptic('success');
+    setDead(deadByHearts);
     setFinished(true);
   };
 
   const advance = () => {
     if (outOfHearts) {
-      setDead(true);
-      finish();
+      finish(true);
     } else if (qIndex < total - 1) {
       setQIndex((n) => n + 1);
       setSelected(null);
       setRevealed(false);
     } else {
-      finish();
+      finish(false);
     }
-  };
-
-  const replay = () => {
-    setFinished(false);
-    setDead(false);
-    setMistakes(0);
-    setQIndex(0);
-    setSelected(null);
-    setRevealed(false);
-    setCorrectCount(0);
   };
 
   if (finished) {
     const pct = Math.round((correctCount / total) * 100);
     const passed = !dead && pct >= playable.passPct;
+    const next = passed && levelCount > 0 ? nextAfter(kind, ref, levelCount, checkpointCount) : null;
+    const goNext = () => {
+      if (!next) return;
+      router.replace({
+        pathname: '/lesson',
+        params: { topic, kind: next.kind, ref: String(next.ref), lc: String(levelCount), cc: String(checkpointCount) },
+      });
+    };
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: c.background }]}>
         <Centered c={c}>
@@ -141,7 +176,16 @@ export default function LessonScreen() {
             </>
           )}
           <View style={{ width: '100%', maxWidth: 320, marginTop: 24, gap: 12 }}>
-            <PrimaryButton label="Try again" onPress={replay} style={{ backgroundColor: accent }} />
+            {next && (
+              <PrimaryButton
+                label={next.kind === 'checkpoint' ? 'Checkpoint exam' : 'Next level'}
+                onPress={goNext}
+                style={{ backgroundColor: accent }}
+              />
+            )}
+            <Pressable onPress={resetPlayer} style={[styles.secondaryBtn, { borderColor: accent }]}>
+              <Text style={{ color: accent, fontWeight: '700' }}>Try again</Text>
+            </Pressable>
             <Pressable onPress={() => router.back()} style={styles.linkBtn}>
               <Text style={{ color: c.textSecondary, fontWeight: '600' }}>Back to path</Text>
             </Pressable>
@@ -249,5 +293,6 @@ const styles = StyleSheet.create({
   resultTitle: { fontSize: 24, fontWeight: '800', marginBottom: 8, textAlign: 'center' },
   pct: { fontSize: 40, fontWeight: '800' },
   resultBody: { fontSize: 15, marginTop: 4, textAlign: 'center' },
+  secondaryBtn: { alignItems: 'center', paddingVertical: 13, borderRadius: 10, borderWidth: 2 },
   linkBtn: { alignItems: 'center', paddingVertical: 10 },
 });

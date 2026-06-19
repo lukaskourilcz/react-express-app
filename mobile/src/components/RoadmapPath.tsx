@@ -1,10 +1,31 @@
 // The serpentine "snake" learning path, restructured for phone widths (2–3
 // columns measured from the layout). Connectors are drawn with react-native-svg
 // through the node centres; nodes are tappable raised "bubbles".
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import Svg, { Line } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+
+// A gentle infinite bob for the current ("play me") node.
+function useBob(active: boolean) {
+  const v = useSharedValue(0);
+  useEffect(() => {
+    if (active) {
+      v.value = withRepeat(
+        withSequence(
+          withTiming(-6, { duration: 700, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0, { duration: 700, easing: Easing.inOut(Easing.quad) }),
+        ),
+        -1,
+        false,
+      );
+    } else {
+      v.value = 0;
+    }
+  }, [active]);
+  return useAnimatedStyle(() => ({ transform: [{ translateY: v.value }] }));
+}
 import { useColors } from '../lib/useColors';
 import type { RoadmapLevelMeta, RoadmapCheckpointMeta, RoadmapTopic } from '../lib/roadmapApi';
 import {
@@ -150,8 +171,10 @@ function LevelBubble({
   const [light, dark] = bandFor(meta.difficulty);
   const isCurrent = unlocked && !passed;
   const stars = passed ? (best >= 100 ? 3 : best >= 75 ? 2 : 1) : 0;
+  const bobStyle = useBob(isCurrent);
   return (
     <View style={[styles.nodeWrap, { left: cx - cellW / 2, top: cy - NODE / 2, width: cellW }]}>
+      <Animated.View style={bobStyle}>
       <Pressable
         onPress={unlocked ? onPress : undefined}
         disabled={!unlocked}
@@ -177,6 +200,7 @@ function LevelBubble({
           <Ionicons name="lock-closed" size={20} color={c.textSecondary} />
         )}
       </Pressable>
+      </Animated.View>
       {passed && (
         <View style={styles.stars}>
           {[0, 1, 2].map((s) => (
@@ -199,8 +223,10 @@ function CheckpointBubble({
 }) {
   const c = useColors();
   const isCurrent = unlocked && !passed;
+  const bobStyle = useBob(isCurrent);
   return (
     <View style={[styles.nodeWrap, { left: cx - cellW / 2, top: cy - CP / 2, width: cellW }]}>
+      <Animated.View style={bobStyle}>
       <Pressable
         onPress={unlocked ? onPress : undefined}
         disabled={!unlocked}
@@ -226,6 +252,7 @@ function CheckpointBubble({
           <Ionicons name="lock-closed" size={22} color={c.textSecondary} />
         )}
       </Pressable>
+      </Animated.View>
       <Text numberOfLines={1} style={[styles.label, { color: unlocked ? c.text : c.textSecondary, fontWeight: '700' }]}>
         {cp.title}
       </Text>
