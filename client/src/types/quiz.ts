@@ -26,3 +26,41 @@ export interface QuizResult {
 }
 
 export type QuizState = 'loading' | 'ready' | 'in-progress' | 'submitted' | 'error';
+
+/* ──── Roadmap ("Learn") mode ──────────────────────────────────────────── */
+
+export type RoadmapTopic = 'javascript' | 'typescript' | 'react';
+
+export interface RoadmapLevelMeta {
+  level: number;
+  title: string;
+  difficulty: 1 | 2 | 3 | 4 | 5;
+  questionCount: number;
+}
+
+export interface RoadmapStructure {
+  topics: RoadmapTopic[];
+  structure: Record<RoadmapTopic, RoadmapLevelMeta[]>;
+}
+
+// A playable roadmap question. Unlike the competitive quiz, the learning path
+// ships the correct answer + explanation so the client can grade instantly.
+export interface RoadmapQuestion {
+  id: string;
+  tags: string[];
+  introduction: string;
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+  category: CategoryType;
+  difficulty: 1 | 2 | 3 | 4 | 5;
+}
+
+export interface RoadmapLevel {
+  topic: RoadmapTopic;
+  level: number;
+  title: string;
+  difficulty: 1 | 2 | 3 | 4 | 5;
+  questions: RoadmapQuestion[];
+}

@@ -1,4 +1,7 @@
 import { questionTranslationsCs } from './quiz-data.cs';
+import { roadmapJsQuestions } from './roadmap-questions-js';
+import { roadmapTsQuestions } from './roadmap-questions-ts';
+import { roadmapReactQuestions } from './roadmap-questions-react';
 
 export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'html' | 'css' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
 
@@ -65,7 +68,7 @@ export function localizeQuestion<T extends Question>(q: T, lang: QuestionLang): 
   };
 }
 
-export const questions: Question[] = [
+const coreQuestions: Question[] = [
   // REACT - useState
   {
     id: '1',
@@ -11576,6 +11579,17 @@ export const questions: Question[] = [
     explanation: "JS stands for JavaScript. The programming language of the web.",
     difficulty: 1,
   },
+];
+
+// The full question bank: the core set plus the roadmap ("Learn") questions for
+// JavaScript, TypeScript, and React. The roadmap sets carry the same Question
+// shape, so they flow through the quiz/play endpoints, /dev overrides, and
+// grading exactly like the core questions.
+export const questions: Question[] = [
+  ...coreQuestions,
+  ...roadmapJsQuestions,
+  ...roadmapTsQuestions,
+  ...roadmapReactQuestions,
 ];
 
 // Fisher-Yates shuffle algorithm
