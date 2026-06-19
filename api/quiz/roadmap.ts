@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { localizeQuestion, normalizeLang, secureShuffle } from '../../lib/quiz-data';
-import { jsonError, createLogger } from '../../lib/http';
+import { jsonError, createLogger, createServiceClient, withTimeout, requireAuthSub } from '../../lib/http';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
 import {
   roadmapStructure,
@@ -12,11 +12,22 @@ import {
   isValidLevel,
   isValidCheckpoint,
   ROADMAP_TOPICS,
+  ROADMAP_LEVELS,
+  CHECKPOINT_COUNT,
   LEVEL_PASS,
   type RoadmapTopic,
 } from '../../lib/roadmap';
 
+// One function for the whole roadmap to stay within the Vercel Hobby
+// 12-function limit. It serves three things off the same route:
+//   GET  /api/quiz/roadmap                         → the level/checkpoint map
+//   GET  /api/quiz/roadmap?topic=&level=           → an 8-question level lesson
+//   GET  /api/quiz/roadmap?topic=&checkpoint=      → a 40-question checkpoint exam
+//   GET  /api/quiz/roadmap?resource=progress       → the signed-in user's progress
+//   PUT  /api/quiz/roadmap                         → save the user's progress
 const logEvent = createLogger('quiz/roadmap');
+const supabase = createServiceClient();
+const PROGRESS_TABLE = 'roadmap_progress';
 
 // Build the playable, instant-feedback question payload for a set of ids. Unlike
 // the competitive quiz, the roadmap is an unscored learning mode, so each
@@ -45,11 +56,103 @@ async function buildQuestions(ids: string[], lang: ReturnType<typeof normalizeLa
     });
 }
 
+/* ──── per-user progress (GET ?resource=progress, PUT) ──────────────────── */
+
+interface Entry {
+  passed: boolean;
+  bestPct: number;
+}
+type TopicProgress = { levels: Record<string, Entry>; checkpoints: Record<string, Entry> };
+type ProgressBlob = Record<string, TopicProgress>;
+
+const clampPct = (n: unknown): number => {
+  const v = typeof n === 'number' && Number.isFinite(n) ? Math.round(n) : 0;
+  return v < 0 ? 0 : v > 100 ? 100 : v;
+};
+
+// Rebuild a clean blob from untrusted input: only known topics, valid level /
+// checkpoint numbers, and bounded values are kept. This bounds the stored size
+// and shape regardless of what the client sends. Exported for tests.
+export function sanitize(input: unknown): ProgressBlob {
+  const out: ProgressBlob = {};
+  if (!input || typeof input !== 'object') return out;
+  const root = input as Record<string, unknown>;
+
+  for (const topic of ROADMAP_TOPICS) {
+    const t = root[topic];
+    if (!t || typeof t !== 'object') continue;
+    const levelsIn = (t as Record<string, unknown>).levels;
+    const checkpointsIn = (t as Record<string, unknown>).checkpoints;
+    const levels: Record<string, Entry> = {};
+    const checkpoints: Record<string, Entry> = {};
+
+    if (levelsIn && typeof levelsIn === 'object') {
+      for (const [k, v] of Object.entries(levelsIn as Record<string, unknown>)) {
+        const n = parseInt(k, 10);
+        if (!Number.isInteger(n) || n < 1 || n > ROADMAP_LEVELS) continue;
+        if (!v || typeof v !== 'object') continue;
+        const e = v as Record<string, unknown>;
+        levels[String(n)] = { passed: e.passed === true, bestPct: clampPct(e.bestPct) };
+      }
+    }
+    if (checkpointsIn && typeof checkpointsIn === 'object') {
+      for (const [k, v] of Object.entries(checkpointsIn as Record<string, unknown>)) {
+        const n = parseInt(k, 10);
+        if (!Number.isInteger(n) || n < 1 || n > CHECKPOINT_COUNT) continue;
+        if (!v || typeof v !== 'object') continue;
+        const e = v as Record<string, unknown>;
+        checkpoints[String(n)] = { passed: e.passed === true, bestPct: clampPct(e.bestPct) };
+      }
+    }
+    if (Object.keys(levels).length > 0 || Object.keys(checkpoints).length > 0) {
+      out[topic] = { levels, checkpoints };
+    }
+  }
+  return out;
+}
+
+async function handleProgress(req: VercelRequest, res: VercelResponse) {
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
+
+  const userId = await requireAuthSub(req, res);
+  if (!userId) return;
+
+  if (req.method === 'GET') {
+    const { data, error } = await withTimeout(
+      supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle(),
+    );
+    if (error) return jsonError(res, 500, 'db_error', 'Could not load progress');
+    return res.json({ data: (data?.data as ProgressBlob) ?? {} });
+  }
+
+  // PUT
+  const body = (req.body || {}) as Record<string, unknown>;
+  const clean = sanitize(body.data);
+  const { error } = await withTimeout(
+    supabase
+      .from(PROGRESS_TABLE)
+      .upsert({ user_id: userId, data: clean, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }),
+  );
+  if (error) return jsonError(res, 500, 'db_error', 'Could not save progress');
+  return res.json({ ok: true, data: clean });
+}
+
+/* ──── handler ──────────────────────────────────────────────────────────── */
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
 
+  // Per-user progress sub-resource (auth-gated): GET ?resource=progress, or PUT.
+  if (req.method === 'PUT' || (req.method === 'GET' && req.query.resource === 'progress')) {
+    try {
+      return await handleProgress(req, res);
+    } catch {
+      return jsonError(res, 500, 'internal_error', 'Internal error');
+    }
+  }
+
   if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
+    res.setHeader('Allow', 'GET, PUT');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 

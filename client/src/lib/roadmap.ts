@@ -15,7 +15,10 @@ export const ROADMAP_LEVELS = 25;
 export const CHECKPOINT_COUNT = ROADMAP_LEVELS / LEVELS_PER_CHECKPOINT;
 
 const PROGRESS_KEY = 'devquiz:roadmap:v2';
-const PROGRESS_API = '/api/quiz/roadmap-progress';
+// Progress lives on the same function as the rest of the roadmap (to stay within
+// Vercel's Hobby 12-function limit): GET ?resource=progress to read, PUT to save.
+const PROGRESS_GET = '/api/quiz/roadmap?resource=progress';
+const PROGRESS_PUT = '/api/quiz/roadmap';
 
 export interface Entry {
   /** Latches true once passed. */
@@ -148,7 +151,7 @@ export function mergeProgress(a: RoadmapProgress, b: RoadmapProgress): RoadmapPr
 
 /** PUT the current (or given) local progress to the user's account. */
 export async function pushProgressToServer(progress: RoadmapProgress = readProgress()): Promise<void> {
-  await apiFetch(PROGRESS_API, { method: 'PUT', body: JSON.stringify({ data: progress }) });
+  await apiFetch(PROGRESS_PUT, { method: 'PUT', body: JSON.stringify({ data: progress }) });
 }
 
 // On sign-in: pull the account's progress, merge it with whatever is on this
@@ -156,7 +159,7 @@ export async function pushProgressToServer(progress: RoadmapProgress = readProgr
 export async function syncProgressWithServer(): Promise<void> {
   let server: RoadmapProgress = {};
   try {
-    const { data } = await apiFetch<{ data: RoadmapProgress }>(PROGRESS_API);
+    const { data } = await apiFetch<{ data: RoadmapProgress }>(PROGRESS_GET);
     server = data ?? {};
   } catch {
     return; // not signed in or offline — keep local only
