@@ -1,10 +1,10 @@
-// JavaScript roadmap questions (100): "predict the output / what does this do".
-// 25 levels × 4 questions, ordered easiest → hardest. See lib/roadmap.ts for the
-// per-level titles. Ids are rm-js-1 … rm-js-100.
+// JavaScript roadmap questions — set A (100): "predict the output / what does
+// this do". 25 levels × 4. Combined with set B (lib/roadmap-questions.ts) this
+// gives 8 questions per level. See lib/roadmap.ts for the per-level titles.
 
-import { buildRoadmap, type Seed } from './roadmap-build';
+import type { Seed } from './roadmap-build';
 
-const seeds: Seed[] = [
+export const jsSeedsA: Seed[] = [
   // ── Level 1 — Values & Math ────────────────────────────────────────────
   { q: 'What does this return?\n\n```js\n2 ** 3;\n```', opts: ['6', '8', '9', '5'], a: 1, e: 'The ** operator is exponentiation: 2 to the power of 3 is 8.', tags: ['Numbers', 'Operators'] },
   { q: 'What is the result?\n\n```js\n10 % 3;\n```', opts: ['0', '1', '3', '3.33'], a: 1, e: 'The % (modulo) operator returns the remainder of 10 / 3, which is 1.', tags: ['Numbers', 'Operators'] },
@@ -155,5 +155,3 @@ const seeds: Seed[] = [
   { q: 'What does this return?\n\n```js\nconst arr = [1, 2, 3];\nconst doubled = arr.map(x => x * 2);\narr === doubled;\n```', opts: ['true', 'false', '[2, 4, 6]', 'undefined'], a: 1, e: 'map returns a brand-new array, so it is not the same reference as arr.', tags: ['Arrays', 'Immutability'] },
   { q: 'What does this return?\n\n```js\n"hello world"\n  .split(" ")\n  .map(w => w[0].toUpperCase() + w.slice(1))\n  .join(" ");\n```', opts: ['"Hello World"', '"HELLO WORLD"', '"hello world"', '"Hello world"'], a: 0, e: 'It splits into words, capitalizes each first letter, and rejoins: "Hello World".', tags: ['Strings', 'Chaining'] },
 ];
-
-export const roadmapJsQuestions = buildRoadmap('rm-js', 'javascript', seeds);

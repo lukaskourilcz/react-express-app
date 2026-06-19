@@ -1,7 +1,9 @@
 import { questionTranslationsCs } from './quiz-data.cs';
-import { roadmapJsQuestions } from './roadmap-questions-js';
-import { roadmapTsQuestions } from './roadmap-questions-ts';
-import { roadmapReactQuestions } from './roadmap-questions-react';
+import {
+  roadmapJsQuestions,
+  roadmapTsQuestions,
+  roadmapReactQuestions,
+} from './roadmap-questions';
 
 export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'html' | 'css' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
 

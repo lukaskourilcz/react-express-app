@@ -1,10 +1,10 @@
-// TypeScript roadmap questions (100): "what is the type / does this compile /
-// what does it return". 25 levels × 4 questions, easiest → hardest. See
-// lib/roadmap.ts for the per-level titles. Ids are rm-ts-1 … rm-ts-100.
+// TypeScript roadmap questions — set A (100): "what is the type / does this
+// compile / what does it return". 25 levels × 4. Combined with set B
+// (lib/roadmap-questions.ts) this gives 8 per level. See lib/roadmap.ts.
 
-import { buildRoadmap, type Seed } from './roadmap-build';
+import type { Seed } from './roadmap-build';
 
-const seeds: Seed[] = [
+export const tsSeedsA: Seed[] = [
   // ── Level 1 — Basic Types ──────────────────────────────────────────────
   { q: 'What is the type of x?\n\n```ts\nlet x: number = 5;\n```', opts: ['number', 'string', 'any', '5'], a: 0, e: 'The annotation : number declares x as the number type.', tags: ['Types'] },
   { q: 'What type is name.length?\n\n```ts\nconst name: string = "Ada";\nname.length;\n```', opts: ['string', 'number', 'any', '3'], a: 1, e: 'String length is always a number, even though its value here is 3.', tags: ['Types', 'Strings'] },
@@ -155,5 +155,3 @@ const seeds: Seed[] = [
   { q: 'What is T?\n\n```ts\ntype T = ReturnType<() => { a: number }>;\n```', opts: ['{ a: number }', 'number', 'void', 'never'], a: 0, e: 'ReturnType extracts the function’s return type, { a: number }.', tags: ['Utility', 'Mastery'] },
   { q: 'What is T?\n\n```ts\nconst tuple = [1, "two", true] as const;\ntype T = typeof tuple;\n```', opts: ['(number | string | boolean)[]', 'readonly [1, "two", true]', 'any[]', '[1, "two", true]'], a: 1, e: 'as const infers a readonly tuple of the exact literal types.', tags: ['as const', 'Mastery'] },
 ];
-
-export const roadmapTsQuestions = buildRoadmap('rm-ts', 'typescript', seeds);

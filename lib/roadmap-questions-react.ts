@@ -1,10 +1,10 @@
-// React roadmap questions (100): "what renders / what does this hook do / what
-// is the value". 25 levels × 4 questions, easiest → hardest. See lib/roadmap.ts
-// for the per-level titles. Ids are rm-react-1 … rm-react-100.
+// React roadmap questions — set A (100): "what renders / what does this hook do
+// / what is the value". 25 levels × 4. Combined with set B
+// (lib/roadmap-questions.ts) this gives 8 per level. See lib/roadmap.ts.
 
-import { buildRoadmap, type Seed } from './roadmap-build';
+import type { Seed } from './roadmap-build';
 
-const seeds: Seed[] = [
+export const reactSeedsA: Seed[] = [
   // ── Level 1 — JSX Basics ───────────────────────────────────────────────
   { q: 'What does App render?\n\n```jsx\nfunction App() {\n  return <h1>Hello</h1>;\n}\n```', opts: ['An h1 with text "Hello"', 'The string "Hello"', 'Nothing', 'An error'], a: 0, e: 'JSX <h1>Hello</h1> renders a real h1 element containing the text "Hello".', tags: ['JSX'] },
   { q: 'What does the paragraph show?\n\n```jsx\nconst x = 5;\n<p>{x + 1}</p>;\n```', opts: ['6', '5', 'x + 1', '{x + 1}'], a: 0, e: 'Braces embed a JS expression; x + 1 evaluates to 6.', tags: ['JSX', 'Expressions'] },
@@ -155,5 +155,3 @@ const seeds: Seed[] = [
   { q: 'When does doubled recompute?\n\n```jsx\nconst doubled = useMemo(() => items.map(x => x * 2), [items]);\n```', opts: ['Every render', 'Only when items changes', 'Never', 'On unmount'], a: 1, e: 'useMemo recomputes the mapped array only when items changes.', tags: ['Mastery'] },
   { q: 'What does clicking the button do?\n\n```jsx\nfunction Toggle() {\n  const [on, setOn] = useState(false);\n  return <button onClick={() => setOn(o => !o)}>{on ? "ON" : "OFF"}</button>;\n}\n```', opts: ['Always shows ON', 'Toggles the label between ON and OFF', 'Always shows OFF', 'Does nothing'], a: 1, e: 'Each click flips on, switching the label between ON and OFF.', tags: ['Mastery'] },
 ];
-
-export const roadmapReactQuestions = buildRoadmap('rm-react', 'react', seeds);

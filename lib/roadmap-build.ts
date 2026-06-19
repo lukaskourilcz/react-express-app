@@ -6,14 +6,17 @@
 // helper expands it into real Question objects with deterministic ids
 // (`<prefix>-<n>`), a level-derived difficulty, and a default hint.
 //
-// Level/difficulty mapping (4 questions per level, 25 levels):
-//   question index i (0-based) → level = floor(i/4)+1 → difficulty = ceil(level/5)
-// so levels 1-5 are difficulty 1, 6-10 are 2, … 21-25 are 5.
+// Level/difficulty mapping (8 questions per level, 25 levels):
+//   question index i (0-based) → level = floor(i/8)+1 → difficulty = ceil(level/5)
+// so levels 1-5 are difficulty 1, 6-10 are 2, … 21-25 are 5. With 8 per level,
+// every 5-level checkpoint covers exactly 40 questions.
 
 import type { Question, CategoryType } from './quiz-data';
 
-export const QUESTIONS_PER_LEVEL = 4;
+export const QUESTIONS_PER_LEVEL = 8;
 export const ROADMAP_LEVELS = 25;
+// Each level is authored as two sets of 4 (A + B); the combiner interleaves them.
+export const HALF_LEVEL = 4;
 
 export interface Seed {
   /** Question text; may embed a fenced code block (```js … ```). */

@@ -42,7 +42,7 @@ export const en = {
 
   // Quiz — setup screen
   'quiz.title': 'Web Development Quiz',
-  'quiz.subtitle': '1200+ questions · keyboard shortcuts supported',
+  'quiz.subtitle': '1500+ questions · keyboard shortcuts supported',
   'quiz.todaysChallenge': 'Today’s challenge',
   'quiz.dailyMeta': '5 questions · same for everyone',
   'quiz.categories': 'Categories',
@@ -286,7 +286,7 @@ export const en = {
 
   // Roadmap ("Learn") mode
   'roadmap.title': 'Learn',
-  'roadmap.subtitle': 'Follow the path from the basics to the tricky stuff. Clear a level to unlock the next.',
+  'roadmap.subtitle': 'Climb from the basics to the tricky stuff. Clear each level, then pass the checkpoint exam every 5 levels.',
   'roadmap.topicsAria': 'Choose a topic',
   'roadmap.progress': '{done} / {total} levels',
   'roadmap.levelLabel': 'Level {n}',
@@ -310,6 +310,14 @@ export const en = {
   'roadmap.nextLevel': 'Next level',
   'roadmap.retryLevel': 'Try again',
   'roadmap.backToPath': 'Back to path',
+  'roadmap.lockedHint': 'Pass the previous level to unlock this one.',
+  'roadmap.lockedByCheckpoint': 'Pass the checkpoint exam to unlock this.',
+  'roadmap.checkpoint': 'Checkpoint',
+  'roadmap.checkpointMeta': '{count} questions · {pct}% to pass',
+  'roadmap.checkpointLocked': 'Finish levels {from}–{to} first.',
+  'roadmap.checkpointComplete': 'Checkpoint cleared!',
+  'roadmap.checkpointFailed': 'Not passed yet',
+  'roadmap.toCheckpoint': 'Checkpoint exam',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -352,7 +360,7 @@ export const cs: Record<TranslationKey, string> = {
 
   // Quiz — setup screen
   'quiz.title': 'Kvíz webového vývoje',
-  'quiz.subtitle': '1200+ otázek · podporovány klávesové zkratky',
+  'quiz.subtitle': '1500+ otázek · podporovány klávesové zkratky',
   'quiz.todaysChallenge': 'Dnešní výzva',
   'quiz.dailyMeta': '5 otázek · stejné pro všechny',
   'quiz.categories': 'Kategorie',
@@ -596,7 +604,7 @@ export const cs: Record<TranslationKey, string> = {
 
   // Roadmap ("Learn") mode
   'roadmap.title': 'Učení',
-  'roadmap.subtitle': 'Postupuj po cestě od základů až po záludnosti. Splň úroveň a odemkni další.',
+  'roadmap.subtitle': 'Postupuj od základů až po záludnosti. Splň každou úroveň a po každých 5 úrovních slož kontrolní test.',
   'roadmap.topicsAria': 'Vyber téma',
   'roadmap.progress': '{done} / {total} úrovní',
   'roadmap.levelLabel': 'Úroveň {n}',
@@ -620,6 +628,14 @@ export const cs: Record<TranslationKey, string> = {
   'roadmap.nextLevel': 'Další úroveň',
   'roadmap.retryLevel': 'Zkusit znovu',
   'roadmap.backToPath': 'Zpět na cestu',
+  'roadmap.lockedHint': 'Nejprve splň předchozí úroveň.',
+  'roadmap.lockedByCheckpoint': 'Odemkni složením kontrolního testu.',
+  'roadmap.checkpoint': 'Kontrolní test',
+  'roadmap.checkpointMeta': '{count} otázek · {pct} % k splnění',
+  'roadmap.checkpointLocked': 'Nejprve dokonči úrovně {from}–{to}.',
+  'roadmap.checkpointComplete': 'Kontrolní test splněn!',
+  'roadmap.checkpointFailed': 'Zatím nesplněno',
+  'roadmap.toCheckpoint': 'Kontrolní test',
 };
 
 export const dictionaries = { en, cs } as const;

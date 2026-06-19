@@ -1,0 +1,85 @@
+/* Animations and motion for the Learn roadmap. Kept in CSS (like Quiz.css) so the
+   keyframes are cheap and respect prefers-reduced-motion. */
+
+@keyframes rmPop {
+  from { opacity: 0; transform: translateY(12px) scale(0.9); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes rmPulseScale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.07); }
+}
+@keyframes rmShake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-5px); }
+  40%, 60% { transform: translateX(5px); }
+}
+@keyframes rmCorrectPop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.04); }
+  100% { transform: scale(1); }
+}
+@keyframes rmSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes rmCelebrate {
+  0% { transform: scale(0) rotate(-18deg); }
+  60% { transform: scale(1.25) rotate(8deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+@keyframes rmCountFade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes rmConfettiFall {
+  0% { transform: translateY(-10px) rotate(0); opacity: 1; }
+  100% { transform: translateY(240px) rotate(540deg); opacity: 0; }
+}
+
+/* Staggered pop-in for path nodes (delay set inline per node). */
+.rm-node { animation: rmPop 0.4s ease both; }
+
+/* The current playable node gently pulses to draw the eye. */
+.rm-pulse { animation: rmPulseScale 1.7s ease-in-out infinite; }
+
+/* Answer feedback on the lesson options. */
+.rm-shake { animation: rmShake 0.4s ease both; }
+.rm-correct-pop { animation: rmCorrectPop 0.4s ease both; }
+
+/* Feedback panel + continue button slide up. */
+.rm-feedback { animation: rmSlideUp 0.25s ease both; }
+
+/* Finish screen flourishes. */
+.rm-celebrate { animation: rmCelebrate 0.55s cubic-bezier(0.2, 0.7, 0.3, 1.4) both; }
+.rm-count { animation: rmCountFade 0.4s ease both; }
+
+/* Lightweight confetti burst (rendered only on a pass). */
+.rm-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.rm-confetti i {
+  position: absolute;
+  top: -12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  animation: rmConfettiFall 1.4s ease-in forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rm-node,
+  .rm-pulse,
+  .rm-shake,
+  .rm-correct-pop,
+  .rm-feedback,
+  .rm-celebrate,
+  .rm-count,
+  .rm-confetti i {
+    animation: none !important;
+  }
+}

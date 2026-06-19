@@ -38,9 +38,23 @@ export interface RoadmapLevelMeta {
   questionCount: number;
 }
 
+export interface RoadmapCheckpointMeta {
+  checkpoint: number;
+  title: string;
+  /** The level this checkpoint sits after (5, 10, 15, 20, 25). */
+  afterLevel: number;
+  questionCount: number;
+  passPct: number;
+}
+
+export interface RoadmapTopicStructure {
+  levels: RoadmapLevelMeta[];
+  checkpoints: RoadmapCheckpointMeta[];
+}
+
 export interface RoadmapStructure {
   topics: RoadmapTopic[];
-  structure: Record<RoadmapTopic, RoadmapLevelMeta[]>;
+  structure: Record<RoadmapTopic, RoadmapTopicStructure>;
 }
 
 // A playable roadmap question. Unlike the competitive quiz, the learning path
@@ -57,10 +71,14 @@ export interface RoadmapQuestion {
   difficulty: 1 | 2 | 3 | 4 | 5;
 }
 
-export interface RoadmapLevel {
+// A playable lesson (a level) or exam (a checkpoint). `ref` is the level or
+// checkpoint number; `passPct` is the score needed to clear it.
+export interface RoadmapPlayable {
+  kind: 'level' | 'checkpoint';
   topic: RoadmapTopic;
-  level: number;
+  ref: number;
   title: string;
-  difficulty: 1 | 2 | 3 | 4 | 5;
+  difficulty?: 1 | 2 | 3 | 4 | 5;
+  passPct: number;
   questions: RoadmapQuestion[];
 }
