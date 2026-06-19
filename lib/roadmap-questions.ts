@@ -11,6 +11,9 @@ import { tsSeedsA } from './roadmap-questions-ts';
 import { tsSeedsB } from './roadmap-questions-ts-b';
 import { reactSeedsA } from './roadmap-questions-react';
 import { reactSeedsB } from './roadmap-questions-react-b';
+import { gitSeeds } from './roadmap-questions-git';
+import { htmlSeeds } from './roadmap-questions-html';
+import { cssSeeds } from './roadmap-questions-css';
 
 // Interleave two equal-length seed lists in blocks of HALF_LEVEL, so each level
 // ends up with its 4 A-questions followed by its 4 B-questions.
@@ -27,3 +30,8 @@ function interleaveByLevel(a: Seed[], b: Seed[]): Seed[] {
 export const roadmapJsQuestions = buildRoadmap('rm-js', 'javascript', interleaveByLevel(jsSeedsA, jsSeedsB));
 export const roadmapTsQuestions = buildRoadmap('rm-ts', 'typescript', interleaveByLevel(tsSeedsA, tsSeedsB));
 export const roadmapReactQuestions = buildRoadmap('rm-react', 'react', interleaveByLevel(reactSeedsA, reactSeedsB));
+// Git, HTML and CSS are each authored as a single 8-per-level list (15 levels),
+// so they build directly without interleaving.
+export const roadmapGitQuestions = buildRoadmap('rm-git', 'git', gitSeeds);
+export const roadmapHtmlQuestions = buildRoadmap('rm-html', 'html', htmlSeeds);
+export const roadmapCssQuestions = buildRoadmap('rm-css', 'css', cssSeeds);

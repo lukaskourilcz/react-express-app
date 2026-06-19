@@ -3,6 +3,9 @@ import {
   roadmapJsQuestions,
   roadmapTsQuestions,
   roadmapReactQuestions,
+  roadmapGitQuestions,
+  roadmapHtmlQuestions,
+  roadmapCssQuestions,
 } from './roadmap-questions';
 
 export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'html' | 'css' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
@@ -11584,14 +11587,17 @@ const coreQuestions: Question[] = [
 ];
 
 // The full question bank: the core set plus the roadmap ("Learn") questions for
-// JavaScript, TypeScript, and React. The roadmap sets carry the same Question
-// shape, so they flow through the quiz/play endpoints, /dev overrides, and
-// grading exactly like the core questions.
+// JavaScript, TypeScript, React, Git, HTML and CSS. The roadmap sets carry the
+// same Question shape, so they flow through the quiz/play endpoints, /dev
+// overrides, and grading exactly like the core questions.
 export const questions: Question[] = [
   ...coreQuestions,
   ...roadmapJsQuestions,
   ...roadmapTsQuestions,
   ...roadmapReactQuestions,
+  ...roadmapGitQuestions,
+  ...roadmapHtmlQuestions,
+  ...roadmapCssQuestions,
 ];
 
 // Fisher-Yates shuffle algorithm
