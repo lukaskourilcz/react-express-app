@@ -11,6 +11,8 @@ import { tsSeedsA } from './roadmap-questions-ts';
 import { tsSeedsB } from './roadmap-questions-ts-b';
 import { reactSeedsA } from './roadmap-questions-react';
 import { reactSeedsB } from './roadmap-questions-react-b';
+import { nextSeeds } from './roadmap-questions-next';
+import { nodeSeeds } from './roadmap-questions-node';
 import { gitSeeds } from './roadmap-questions-git';
 import { htmlSeeds } from './roadmap-questions-html';
 import { cssSeeds } from './roadmap-questions-css';
@@ -30,8 +32,11 @@ function interleaveByLevel(a: Seed[], b: Seed[]): Seed[] {
 export const roadmapJsQuestions = buildRoadmap('rm-js', 'javascript', interleaveByLevel(jsSeedsA, jsSeedsB));
 export const roadmapTsQuestions = buildRoadmap('rm-ts', 'typescript', interleaveByLevel(tsSeedsA, tsSeedsB));
 export const roadmapReactQuestions = buildRoadmap('rm-react', 'react', interleaveByLevel(reactSeedsA, reactSeedsB));
-// Git, HTML and CSS are each authored as a single 8-per-level list (15 levels),
-// so they build directly without interleaving.
+// Next.js, Node.js, Git, HTML and CSS are each authored as a single 8-per-level
+// list (Node runs 25 levels, the rest 15), so they build directly without
+// interleaving.
+export const roadmapNextQuestions = buildRoadmap('rm-next', 'nextjs', nextSeeds);
+export const roadmapNodeQuestions = buildRoadmap('rm-node', 'nodejs', nodeSeeds);
 export const roadmapGitQuestions = buildRoadmap('rm-git', 'git', gitSeeds);
 export const roadmapHtmlQuestions = buildRoadmap('rm-html', 'html', htmlSeeds);
 export const roadmapCssQuestions = buildRoadmap('rm-css', 'css', cssSeeds);

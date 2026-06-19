@@ -7,6 +7,7 @@ export type CategoryType =
   | 'git'
   | 'javascript'
   | 'nodejs'
+  | 'nextjs'
   | 'html'
   | 'css'
   | 'dev-world'

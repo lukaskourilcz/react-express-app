@@ -15,9 +15,9 @@
 
 import { QUESTIONS_PER_LEVEL, ROADMAP_LEVELS, difficultyForLevel } from './roadmap-build';
 
-export type RoadmapTopic = 'javascript' | 'typescript' | 'react' | 'html' | 'css' | 'git';
+export type RoadmapTopic = 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs' | 'html' | 'css' | 'git';
 
-export const ROADMAP_TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'html', 'css', 'git'];
+export const ROADMAP_TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git'];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
 export const LEVEL_PASS = 75;
@@ -34,6 +34,8 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   javascript: 'rm-js',
   typescript: 'rm-ts',
   react: 'rm-react',
+  nextjs: 'rm-next',
+  nodejs: 'rm-node',
   html: 'rm-html',
   css: 'rm-css',
   git: 'rm-git',
@@ -62,6 +64,18 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'useEffect: Basics', 'Effect Dependencies', 'Cleanup Functions', 'useRef', 'Forms & Inputs',
     'Lifting State Up', 'useMemo', 'useCallback', 'useReducer', 'useContext',
     'Custom Hooks', 'Keys & Reconciliation', 'Performance Patterns', 'Common Pitfalls', 'Mixed Mastery',
+  ],
+  nextjs: [
+    'Next.js Basics', 'Routing (App Router)', 'Pages & Layouts', 'Navigation & Links', 'Server & Client Components',
+    'Data Fetching', 'Dynamic Routes', 'Rendering Strategies', 'Route Handlers', 'Server Actions',
+    'Metadata & SEO', 'Styling', 'Images & Fonts', 'Loading & Errors', 'Middleware & Config',
+  ],
+  nodejs: [
+    'Node Basics', 'Modules (CommonJS)', 'ES Modules', 'Globals & process', 'The Event Loop',
+    'Path', 'File System', 'OS & Util', 'Events', 'Streams',
+    'Buffers', 'HTTP Server', 'Callbacks & Promisify', 'Async / Await', 'Environment & CLI',
+    'npm & package.json', 'Error Handling', 'Timers & Scheduling', 'Child Processes', 'Crypto',
+    'Express: Basics', 'Express: Req & Res', 'Concurrency', 'Testing & Debugging', 'Mixed Mastery',
   ],
   git: [
     'Version Control Basics', 'Repositories', 'Staging & Status', 'Committing', 'History & Diffs',

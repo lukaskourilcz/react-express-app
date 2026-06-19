@@ -108,6 +108,7 @@ export const STATS_CATEGORIES = new Set([
   'typescript',
   'react',
   'nodejs',
+  'nextjs',
   'git',
   'dev-world',
   'custom',
