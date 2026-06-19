@@ -517,7 +517,7 @@ export const roadmapTranslationsCs: Record<string, QuestionTranslation> = {
   },
   "rm-js-86": {
     introduction: "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-    question: "Co vrací f()?\n\n```js\nfunction f(a) {\n  a = 5;\n}\nlet x = 1;\nf(x);\n// what is x?\n```",
+    question: "Jaké je x?\n\n```js\nfunction f(a) {\n  a = 5;\n}\nlet x = 1;\nf(x);\n// what is x?\n```",
     options: ["1","5","undefined","Chyba"],
     explanation: "Primitivy se předávají hodnotou, takže přiřazení a uvnitř f nezmění x. x zůstane 1.",
   },

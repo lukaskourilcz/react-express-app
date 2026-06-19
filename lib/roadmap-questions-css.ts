@@ -40,7 +40,7 @@ export const cssSeeds: Seed[] = [
   { q: 'What kind of unit is `px`?', opts: ['Relative to font', 'An absolute pixel unit', 'A percentage', 'Viewport-based'], a: 1, e: 'px is an absolute length (CSS pixels).', tags: ['CSS', 'Units'] },
   { q: '`em` is relative to:', opts: ['The viewport', 'The element’s (inherited) font-size', 'The root only', 'Pixels'], a: 1, e: '1em equals the current font-size of the element.', tags: ['CSS', 'Units'] },
   { q: '`rem` is relative to:', opts: ['The parent', 'The root element’s font-size', 'The viewport width', 'The element itself'], a: 1, e: 'rem is relative to the root (<html>) font-size, so it’s consistent.', tags: ['CSS', 'Units'] },
-  { q: 'What does a `width: 50%` mean?', opts: ['50px', 'Half the viewport', '50% of the containing block’s width', '50% opacity'], a: 1, e: 'Percentage widths are relative to the containing block.', tags: ['CSS', 'Units'] },
+  { q: 'What does a `width: 50%` mean?', opts: ['50px', 'Half the viewport', '50% of the containing block’s width', '50% opacity'], a: 2, e: 'Percentage widths are relative to the containing block.', tags: ['CSS', 'Units'] },
   { q: 'What is `rgba(0, 0, 0, 0.5)`?', opts: ['Gray', 'Black at 50% opacity (alpha)', 'Transparent', 'Invalid'], a: 1, e: 'The 4th value is alpha; 0.5 is half-transparent black.', tags: ['CSS', 'Units'] },
   { q: 'What is the `vw` unit?', opts: ['Viewport height', '1% of the viewport width', 'Pixels', 'Parent width'], a: 1, e: '1vw equals 1% of the viewport’s width.', tags: ['CSS', 'Units'] },
 
