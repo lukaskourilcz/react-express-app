@@ -512,8 +512,6 @@ function LevelNode({
           <Box
             component="button"
             type="button"
-            className={isCurrent ? 'rm-ring' : undefined}
-            style={isCurrent ? ({ ['--rm-accent']: accent } as CSSProperties) : undefined}
             onClick={unlocked ? onClick : undefined}
             disabled={!unlocked}
             aria-label={label}
@@ -524,10 +522,15 @@ function LevelNode({
               color: passed ? '#fff' : unlocked ? accent : 'text.disabled',
               cursor: unlocked ? 'pointer' : 'not-allowed',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.25rem',
-              boxShadow: passed ? `0 6px 16px ${accent}59` : 'none',
+              // Duolingo-style raised "bubble": a solid darker lip beneath the node.
+              boxShadow: passed
+                ? `0 5px 0 ${grad[1]}, 0 9px 16px ${accent}55`
+                : unlocked
+                  ? `0 5px 0 ${accent}, 0 9px 16px ${accent}33`
+                  : 'none',
               transition: 'transform 0.14s ease, box-shadow 0.2s ease',
-              '&:hover': unlocked ? { transform: 'scale(1.12) rotate(-3deg)' } : undefined,
-              '&:active': unlocked ? { transform: 'scale(0.95)' } : undefined,
+              '&:hover': unlocked ? { transform: 'scale(1.1) translateY(-1px)' } : undefined,
+              '&:active': unlocked ? { transform: 'translateY(3px) scale(0.98)' } : undefined,
             }}
           >
             {passed ? <CheckIcon /> : unlocked ? meta.level : <LockIcon />}
@@ -570,8 +573,7 @@ function CheckpointNode({
           <Box
             component="button"
             type="button"
-            className={isCurrent ? 'rm-ring rm-shimmer' : undefined}
-            style={isCurrent ? ({ ['--rm-accent']: accent } as CSSProperties) : undefined}
+            className={isCurrent ? 'rm-shimmer' : undefined}
             onClick={unlocked ? onClick : undefined}
             disabled={!unlocked}
             aria-label={label}
@@ -586,10 +588,15 @@ function CheckpointNode({
               color: passed ? '#3a2c00' : unlocked ? accent : 'text.disabled',
               cursor: unlocked ? 'pointer' : 'not-allowed',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: passed ? `0 8px 20px ${accent}66` : 'none',
+              // Raised "bubble" lip beneath the boss node.
+              boxShadow: passed
+                ? `0 6px 0 ${grad[1]}, 0 10px 20px ${accent}55`
+                : unlocked
+                  ? `0 6px 0 ${accent}, 0 10px 20px ${accent}44`
+                  : 'none',
               transition: 'transform 0.14s ease, box-shadow 0.2s ease',
-              '&:hover': unlocked ? { transform: 'scale(1.08) rotate(2deg)' } : undefined,
-              '&:active': unlocked ? { transform: 'scale(0.97)' } : undefined,
+              '&:hover': unlocked ? { transform: 'scale(1.06) translateY(-1px)' } : undefined,
+              '&:active': unlocked ? { transform: 'translateY(3px) scale(0.98)' } : undefined,
             }}
           >
             {passed ? <CheckIcon size={30} /> : unlocked ? <TrophyIcon /> : <LockIcon size={22} />}
