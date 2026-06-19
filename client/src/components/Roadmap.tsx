@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Box, Typography, Button, LinearProgress, Chip, Skeleton, Tooltip } from '@mui/material';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Box, Typography, Button, LinearProgress, Chip, Skeleton, Tooltip, useTheme } from '@mui/material';
 import type {
   RoadmapTopic,
   RoadmapLevelMeta,
@@ -42,7 +42,54 @@ type Active = { kind: 'level' | 'checkpoint'; ref: number };
 
 const TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react'];
 const TOPIC_KEY = 'devquiz:roadmap:topic';
-const CHECKPOINT_GOLD = '#f5a623';
+const CHECKPOINT_GOLD = '#ffb300';
+const CHECKPOINT_GRAD: [string, string] = ['#ffd54f', '#f5a623'];
+
+// Vibrant rainbow palette by difficulty tier (1→5): the path warms up from a
+// fresh green through blue/purple to a hot orange-red as levels get harder, so
+// the whole map reads as a colorful ribbon. `solid` drives borders/glows/
+// connectors; `grad` is the [light, dark] fill gradient for completed nodes.
+const BANDS: { solid: string; grad: [string, string] }[] = [
+  { solid: '#58cc02', grad: ['#7be24a', '#46a302'] }, // green
+  { solid: '#15b3f0', grad: ['#56c8ff', '#0a8fd6'] }, // blue
+  { solid: '#a560f0', grad: ['#c08bff', '#8a3ff0'] }, // purple
+  { solid: '#ff9600', grad: ['#ffb84d', '#e67e00'] }, // orange
+  { solid: '#ff4b4b', grad: ['#ff7a7a', '#e23b3b'] }, // red
+];
+const bandFor = (difficulty: number) => BANDS[Math.min(BANDS.length, Math.max(1, difficulty)) - 1];
+
+interface PlacedNode {
+  i: number;
+  kind: 'level' | 'checkpoint';
+  key: string;
+  cx: number;
+  cy: number;
+  half: number;
+  accent: string;
+  grad: [string, string];
+  unlocked: boolean;
+  passed: boolean;
+  isCurrent: boolean;
+  best: number;
+  level?: RoadmapLevelMeta;
+  cp?: RoadmapCheckpointMeta;
+}
+
+// Track an element's width so the path can lay itself out responsively.
+function useElementWidth<T extends HTMLElement>() {
+  const ref = useRef<T | null>(null);
+  const [width, setWidth] = useState(0);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setWidth(el.getBoundingClientRect().width);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, width] as const;
+}
 
 const CheckIcon = ({ size = 22 }: { size?: number }) => (
   <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
@@ -105,6 +152,8 @@ function Roadmap() {
   const { lang, t } = useLanguage();
   const { isAuthenticated } = useAuth();
   const progress = useRoadmapProgress();
+  const theme = useTheme();
+  const [pathRef, pathWidth] = useElementWidth<HTMLDivElement>();
 
   const [structure, setStructure] = useState<RoadmapStructure | null>(null);
   const [loadingStructure, setLoadingStructure] = useState(true);
@@ -193,6 +242,61 @@ function Roadmap() {
   const checkpoints: RoadmapCheckpointMeta[] = structure?.structure[topic]?.checkpoints ?? [];
   const topicColor = getCategoryHexColor(topic);
 
+  // Lay the path out as a serpentine: nodes flow left→right and gently down,
+  // then wrap and flow back the other way — using the full available width.
+  // Positions are computed analytically so the SVG connectors can be drawn
+  // exactly through the node centres without measuring each node.
+  const layout = useMemo(() => {
+    if (!pathWidth || levels.length === 0) return null;
+    const nodes = buildPath(levels, checkpoints);
+    const cols = Math.max(2, Math.min(5, Math.floor(pathWidth / 150)));
+    const cellW = pathWidth / cols;
+    // ROW_H must clear the accumulated within-row slope so the lowest node of a
+    // row doesn't collide with the next row's start node (same column at a turn) —
+    // including a taller checkpoint node and its two-line label.
+    const ROW_H = 178;
+    const SLOPE = 12;
+    const BASE = 50;
+    const LABEL_H = 60;
+    const placed: PlacedNode[] = nodes.map((node, i): PlacedNode => {
+      const row = Math.floor(i / cols);
+      const p = i % cols;
+      const colVisual = row % 2 === 0 ? p : cols - 1 - p; // reverse odd rows
+      const cx = colVisual * cellW + cellW / 2;
+      const cy = BASE + row * ROW_H + p * SLOPE;
+      if (node.type === 'checkpoint') {
+        const cp = node.meta;
+        const passed = isCheckpointPassed(progress, topic, cp.checkpoint);
+        const unlocked = isCheckpointUnlocked(progress, topic, cp.checkpoint);
+        return {
+          i, kind: 'checkpoint', key: `cp-${cp.checkpoint}`, cx, cy, half: 42,
+          accent: CHECKPOINT_GOLD, grad: CHECKPOINT_GRAD, cp,
+          unlocked, passed, isCurrent: unlocked && !passed,
+          best: checkpointBestPct(progress, topic, cp.checkpoint),
+        };
+      }
+      const meta = node.meta;
+      const band = bandFor(meta.difficulty);
+      const passed = isLevelPassed(progress, topic, meta.level);
+      const unlocked = isLevelUnlocked(progress, topic, meta.level);
+      return {
+        i, kind: 'level', key: `lvl-${meta.level}`, cx, cy, half: 32,
+        accent: band.solid, grad: band.grad, level: meta,
+        unlocked, passed, isCurrent: unlocked && !passed,
+        best: levelBestPct(progress, topic, meta.level),
+      };
+    });
+    const rows = Math.ceil(nodes.length / cols);
+    const height = BASE + (rows - 1) * ROW_H + (cols - 1) * SLOPE + 40 + LABEL_H;
+    const segments = placed.slice(0, -1).map((a, i) => {
+      const b = placed[i + 1];
+      const done = a.passed && b.passed;
+      const active = a.passed && b.isCurrent;
+      return { x1: a.cx, y1: a.cy, x2: b.cx, y2: b.cy, color: done || active ? b.accent : null, active };
+    });
+    return { width: pathWidth, height, cellW, nodes: placed, segments };
+  }, [pathWidth, levels, checkpoints, progress, topic]);
+
   /* ──── lesson view ──────────────────────────────────────────────────── */
   if (active !== null) {
     if (loadingLesson) {
@@ -228,10 +332,9 @@ function Roadmap() {
 
   /* ──── map view ─────────────────────────────────────────────────────── */
   const done = passedLevelCount(progress, topic);
-  const pathNodes = buildPath(levels, checkpoints);
 
   return (
-    <Box sx={{ maxWidth: 720, mx: 'auto' }}>
+    <Box sx={{ maxWidth: 900, mx: 'auto' }}>
       <Typography variant="h5" component="h1" sx={{ fontWeight: 800, textAlign: 'center', mb: 0.5 }}>
         {t('roadmap.title')}
       </Typography>
@@ -271,8 +374,8 @@ function Roadmap() {
       </Box>
 
       {loadingStructure ? (
-        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, mt: 2 }}>
-          {[0, 1, 2, 3, 4, 5].map((i) => (
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 3, mt: 2 }}>
+          {Array.from({ length: 10 }).map((_, i) => (
             <Skeleton key={i} variant="circular" width={64} height={64} />
           ))}
         </Box>
@@ -301,35 +404,72 @@ function Roadmap() {
             />
           </Box>
 
-          {/* The path */}
-          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            {pathNodes.map((node, i) => {
-              const isLast = i === pathNodes.length - 1;
-              if (node.type === 'checkpoint') {
-                const cp = node.meta;
-                const unlocked = isCheckpointUnlocked(progress, topic, cp.checkpoint);
-                const passed = isCheckpointPassed(progress, topic, cp.checkpoint);
-                const best = checkpointBestPct(progress, topic, cp.checkpoint);
-                return (
-                  <Box key={`cp-${cp.checkpoint}`} className="rm-node" style={{ animationDelay: `${i * 0.03}s` }} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 1 }}>
-                    <CheckpointNode cp={cp} unlocked={unlocked} passed={passed} best={best} onClick={() => open({ kind: 'checkpoint', ref: cp.checkpoint })} t={t} />
-                    {!isLast && <Box aria-hidden sx={{ width: 4, height: 28, borderRadius: 2, backgroundColor: passed ? CHECKPOINT_GOLD : 'divider' }} />}
-                  </Box>
-                );
-              }
-              const meta = node.meta;
-              const unlocked = isLevelUnlocked(progress, topic, meta.level);
-              const passed = isLevelPassed(progress, topic, meta.level);
-              const best = levelBestPct(progress, topic, meta.level);
-              const offset = Math.round(Math.sin(i * 0.6) * 84);
-              const isCurrent = unlocked && !passed;
-              return (
-                <Box key={`lvl-${meta.level}`} className="rm-node" style={{ animationDelay: `${i * 0.03}s` }} sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', transform: `translateX(${offset}px)`, mb: 1 }}>
-                  <LevelNode meta={meta} topic={topic} topicColor={topicColor} unlocked={unlocked} passed={passed} best={best} isCurrent={isCurrent} onClick={() => open({ kind: 'level', ref: meta.level })} t={t} />
-                  {!isLast && <Box aria-hidden sx={{ width: 4, height: 24, borderRadius: 2, backgroundColor: passed ? topicColor : 'divider', opacity: passed ? 0.6 : 1 }} />}
+          {/* The path — a serpentine ribbon flowing left→right and gently down,
+              then wrapping back, drawn through node centres with an SVG. */}
+          <Box ref={pathRef} sx={{ position: 'relative', width: '100%' }} style={layout ? { height: layout.height } : { minHeight: 220 }}>
+            {layout && (
+              <>
+                <Box
+                  component="svg"
+                  aria-hidden
+                  width={layout.width}
+                  height={layout.height}
+                  sx={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }}
+                >
+                  {layout.segments.map((s, i) => (
+                    <line
+                      key={i}
+                      x1={s.x1}
+                      y1={s.y1}
+                      x2={s.x2}
+                      y2={s.y2}
+                      stroke={s.color ?? theme.palette.divider}
+                      strokeWidth={7}
+                      strokeLinecap="round"
+                      className={s.active ? 'rm-flow' : undefined}
+                      strokeDasharray={s.active ? '0.1 14' : undefined}
+                    />
+                  ))}
                 </Box>
-              );
-            })}
+                {layout.nodes.map((n) => (
+                  <Box
+                    key={n.key}
+                    style={{ left: n.cx, top: n.cy - n.half }}
+                    sx={{ position: 'absolute', transform: 'translateX(-50%)' }}
+                  >
+                    <Box className="rm-node" style={{ animationDelay: `${n.i * 0.025}s` }}>
+                      {n.kind === 'checkpoint' ? (
+                        <CheckpointNode
+                          cp={n.cp!}
+                          accent={n.accent}
+                          grad={n.grad}
+                          unlocked={n.unlocked}
+                          passed={n.passed}
+                          best={n.best}
+                          isCurrent={n.isCurrent}
+                          cellW={layout.cellW}
+                          onClick={() => open({ kind: 'checkpoint', ref: n.cp!.checkpoint })}
+                          t={t}
+                        />
+                      ) : (
+                        <LevelNode
+                          meta={n.level!}
+                          accent={n.accent}
+                          grad={n.grad}
+                          unlocked={n.unlocked}
+                          passed={n.passed}
+                          best={n.best}
+                          isCurrent={n.isCurrent}
+                          cellW={layout.cellW}
+                          onClick={() => open({ kind: 'level', ref: n.level!.level })}
+                          t={t}
+                        />
+                      )}
+                    </Box>
+                  </Box>
+                ))}
+              </>
+            )}
           </Box>
 
           {done === levels.length && levels.length > 0 && (
@@ -346,14 +486,13 @@ function Roadmap() {
 /* ──── level node ───────────────────────────────────────────────────────── */
 
 function LevelNode({
-  meta, topic, topicColor, unlocked, passed, best, isCurrent, onClick, t,
+  meta, accent, grad, unlocked, passed, best, isCurrent, onClick, t, cellW,
 }: {
-  meta: RoadmapLevelMeta; topic: RoadmapTopic; topicColor: string;
+  meta: RoadmapLevelMeta; accent: string; grad: [string, string];
   unlocked: boolean; passed: boolean; best: number; isCurrent: boolean;
-  onClick: () => void; t: TFn;
+  onClick: () => void; t: TFn; cellW: number;
 }) {
   const stars = passed ? starsFor(best, 75) : 0;
-  const onColorText = onCategoryColorText(topic);
   // Segment-start levels (6, 11, …) are gated by the preceding checkpoint, not
   // the previous level, so the locked hint differs.
   const gatedByCheckpoint = meta.level % LEVELS_PER_CHECKPOINT === 1 && meta.level > 1;
@@ -361,42 +500,47 @@ function LevelNode({
   const label = unlocked
     ? `${t('roadmap.levelLabel', { n: meta.level })}: ${meta.title}${passed ? ` — ${t('roadmap.passed')} ${best}%` : ''}`
     : `${t('roadmap.levelLabel', { n: meta.level })}: ${t('roadmap.locked')}`;
+  const labelWidth = Math.max(72, Math.min(150, cellW - 10));
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
-      <Tooltip title={unlocked ? '' : lockedHint} arrow placement="right">
-        <Box
-          component="button"
-          type="button"
-          className={isCurrent ? 'rm-pulse' : undefined}
-          onClick={unlocked ? onClick : undefined}
-          disabled={!unlocked}
-          aria-label={label}
-          sx={{
-            position: 'relative', width: 64, height: 64, borderRadius: '50%', border: '3px solid',
-            borderColor: passed || isCurrent ? topicColor : 'divider',
-            backgroundColor: passed ? topicColor : 'background.paper',
-            color: passed ? onColorText : unlocked ? topicColor : 'text.disabled',
-            cursor: unlocked ? 'pointer' : 'not-allowed',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.25rem',
-            boxShadow: isCurrent ? `0 4px 14px ${topicColor}66` : 'none',
-            transition: 'transform 0.12s ease, box-shadow 0.2s ease',
-            '&:hover': unlocked ? { transform: 'scale(1.08)' } : undefined,
-          }}
-        >
-          {passed ? <CheckIcon /> : unlocked ? meta.level : <LockIcon />}
-          {passed && (
-            <Box sx={{ position: 'absolute', bottom: -8, display: 'flex', color: '#f5b301', backgroundColor: 'background.paper', borderRadius: 999, px: 0.25 }}>
-              {[0, 1, 2].map((s) => <StarIcon key={s} filled={s < stars} />)}
-            </Box>
-          )}
-        </Box>
-      </Tooltip>
-      <Typography variant="caption" sx={{ fontWeight: isCurrent ? 700 : 500, color: unlocked ? 'text.primary' : 'text.disabled', maxWidth: 150, textAlign: 'center', lineHeight: 1.2 }}>
+      <Box className={isCurrent ? 'rm-bob' : undefined}>
+        <Tooltip title={unlocked ? '' : lockedHint} arrow placement="top">
+          <Box
+            component="button"
+            type="button"
+            className={isCurrent ? 'rm-ring' : undefined}
+            style={isCurrent ? ({ ['--rm-accent']: accent } as CSSProperties) : undefined}
+            onClick={unlocked ? onClick : undefined}
+            disabled={!unlocked}
+            aria-label={label}
+            sx={{
+              position: 'relative', width: 64, height: 64, borderRadius: '50%', border: '3px solid',
+              borderColor: passed || isCurrent ? accent : 'divider',
+              background: passed ? `linear-gradient(160deg, ${grad[0]}, ${grad[1]})` : 'background.paper',
+              color: passed ? '#fff' : unlocked ? accent : 'text.disabled',
+              cursor: unlocked ? 'pointer' : 'not-allowed',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.25rem',
+              boxShadow: passed ? `0 6px 16px ${accent}59` : 'none',
+              transition: 'transform 0.14s ease, box-shadow 0.2s ease',
+              '&:hover': unlocked ? { transform: 'scale(1.12) rotate(-3deg)' } : undefined,
+              '&:active': unlocked ? { transform: 'scale(0.95)' } : undefined,
+            }}
+          >
+            {passed ? <CheckIcon /> : unlocked ? meta.level : <LockIcon />}
+            {passed && (
+              <Box sx={{ position: 'absolute', bottom: -9, display: 'flex', color: '#ffc400', filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))', backgroundColor: 'background.paper', borderRadius: 999, px: 0.25 }}>
+                {[0, 1, 2].map((s) => <StarIcon key={s} filled={s < stars} />)}
+              </Box>
+            )}
+          </Box>
+        </Tooltip>
+      </Box>
+      <Typography variant="caption" sx={{ fontWeight: isCurrent ? 700 : 500, color: unlocked ? 'text.primary' : 'text.disabled', maxWidth: labelWidth, textAlign: 'center', lineHeight: 1.15 }}>
         {meta.title}
       </Typography>
       {isCurrent && (
-        <Chip label={t('roadmap.start')} size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800, backgroundColor: topicColor, color: onColorText }} />
+        <Chip label={t('roadmap.start')} size="small" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800, color: '#fff', background: `linear-gradient(160deg, ${grad[0]}, ${grad[1]})` }} />
       )}
     </Box>
   );
@@ -405,49 +549,54 @@ function LevelNode({
 /* ──── checkpoint (boss) node ───────────────────────────────────────────── */
 
 function CheckpointNode({
-  cp, unlocked, passed, best, onClick, t,
+  cp, accent, grad, unlocked, passed, best, isCurrent, onClick, t, cellW,
 }: {
-  cp: RoadmapCheckpointMeta; unlocked: boolean; passed: boolean; best: number; onClick: () => void; t: TFn;
+  cp: RoadmapCheckpointMeta; accent: string; grad: [string, string];
+  unlocked: boolean; passed: boolean; best: number; isCurrent: boolean;
+  onClick: () => void; t: TFn; cellW: number;
 }) {
-  const isCurrent = unlocked && !passed;
   const from = cp.afterLevel - LEVELS_PER_CHECKPOINT + 1;
   const label = unlocked
     ? `${t('roadmap.checkpoint')}: ${cp.title}${passed ? ` — ${t('roadmap.passed')} ${best}%` : ''}`
     : `${t('roadmap.checkpoint')}: ${t('roadmap.locked')}`;
+  const labelWidth = Math.max(84, Math.min(160, cellW - 8));
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5, my: 0.5 }}>
-      <Tooltip title={unlocked ? '' : t('roadmap.checkpointLocked', { from, to: cp.afterLevel })} arrow placement="right">
-        <Box
-          component="button"
-          type="button"
-          className={isCurrent ? 'rm-pulse' : undefined}
-          onClick={unlocked ? onClick : undefined}
-          disabled={!unlocked}
-          aria-label={label}
-          sx={{
-            position: 'relative', width: 84, height: 84, borderRadius: '24px',
-            border: '3px solid',
-            borderColor: passed || isCurrent ? CHECKPOINT_GOLD : 'divider',
-            background: passed
-              ? `linear-gradient(135deg, ${CHECKPOINT_GOLD}, #f7c948)`
-              : unlocked
-                ? `linear-gradient(135deg, ${CHECKPOINT_GOLD}22, ${CHECKPOINT_GOLD}11)`
-                : 'background.paper',
-            color: passed ? '#1a1a1a' : unlocked ? CHECKPOINT_GOLD : 'text.disabled',
-            cursor: unlocked ? 'pointer' : 'not-allowed',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: isCurrent ? `0 6px 18px ${CHECKPOINT_GOLD}66` : 'none',
-            transition: 'transform 0.12s ease, box-shadow 0.2s ease',
-            '&:hover': unlocked ? { transform: 'scale(1.06)' } : undefined,
-          }}
-        >
-          {passed ? <CheckIcon size={30} /> : unlocked ? <TrophyIcon /> : <LockIcon size={22} />}
-        </Box>
-      </Tooltip>
-      <Typography variant="caption" sx={{ fontWeight: 700, color: unlocked ? 'text.primary' : 'text.disabled', textAlign: 'center', lineHeight: 1.2 }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
+      <Box className={isCurrent ? 'rm-bob' : undefined}>
+        <Tooltip title={unlocked ? '' : t('roadmap.checkpointLocked', { from, to: cp.afterLevel })} arrow placement="top">
+          <Box
+            component="button"
+            type="button"
+            className={isCurrent ? 'rm-ring rm-shimmer' : undefined}
+            style={isCurrent ? ({ ['--rm-accent']: accent } as CSSProperties) : undefined}
+            onClick={unlocked ? onClick : undefined}
+            disabled={!unlocked}
+            aria-label={label}
+            sx={{
+              position: 'relative', width: 84, height: 84, borderRadius: '24px', border: '3px solid',
+              borderColor: passed || isCurrent ? accent : 'divider',
+              background: passed
+                ? `linear-gradient(150deg, ${grad[0]}, ${grad[1]})`
+                : unlocked
+                  ? `linear-gradient(150deg, ${grad[0]}38, ${grad[1]}24)`
+                  : 'background.paper',
+              color: passed ? '#3a2c00' : unlocked ? accent : 'text.disabled',
+              cursor: unlocked ? 'pointer' : 'not-allowed',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: passed ? `0 8px 20px ${accent}66` : 'none',
+              transition: 'transform 0.14s ease, box-shadow 0.2s ease',
+              '&:hover': unlocked ? { transform: 'scale(1.08) rotate(2deg)' } : undefined,
+              '&:active': unlocked ? { transform: 'scale(0.97)' } : undefined,
+            }}
+          >
+            {passed ? <CheckIcon size={30} /> : unlocked ? <TrophyIcon /> : <LockIcon size={22} />}
+          </Box>
+        </Tooltip>
+      </Box>
+      <Typography variant="caption" sx={{ fontWeight: 700, color: unlocked ? 'text.primary' : 'text.disabled', textAlign: 'center', lineHeight: 1.15, maxWidth: labelWidth }}>
         {cp.title}
       </Typography>
-      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.68rem' }}>
+      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem' }}>
         {t('roadmap.checkpointMeta', { count: cp.questionCount, pct: cp.passPct })}
       </Typography>
     </Box>
