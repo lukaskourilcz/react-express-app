@@ -14,6 +14,7 @@ import {
 } from '../lib/roadmapApi';
 import { recordLevelResult, recordCheckpointResult, pushProgressToServer, nextAfter } from '../lib/roadmapProgress';
 import { recordActivityToday } from '../lib/streak';
+import { useT, getLang } from '../lib/i18n';
 
 function haptic(kind: 'select' | 'success' | 'warning'): void {
   try {
@@ -36,6 +37,7 @@ const GOLD = '#ffb300';
 export default function LessonScreen() {
   const c = useColors();
   const router = useRouter();
+  const { t } = useT();
   const params = useLocalSearchParams<{
     topic: RoadmapTopic;
     kind: 'level' | 'checkpoint';
@@ -74,7 +76,8 @@ export default function LessonScreen() {
     setError(null);
     setPlayable(null);
     resetPlayer();
-    const req = kind === 'checkpoint' ? fetchRoadmapCheckpoint(topic, ref) : fetchRoadmapLevel(topic, ref);
+    const req =
+      kind === 'checkpoint' ? fetchRoadmapCheckpoint(topic, ref, getLang()) : fetchRoadmapLevel(topic, ref, getLang());
     req.then(setPlayable).catch((e) => setError(friendlyError(e)));
   };
   // Re-runs when params change too, so "Next level" (router.replace) starts fresh.
@@ -84,9 +87,9 @@ export default function LessonScreen() {
     return (
       <Centered c={c}>
         <Text style={{ color: c.error, marginBottom: 16, textAlign: 'center' }}>{error}</Text>
-        <PrimaryButton label="Retry" onPress={load} />
+        <PrimaryButton label={t('common.retry')} onPress={load} />
         <Pressable onPress={() => router.back()} style={{ marginTop: 12 }}>
-          <Text style={{ color: c.textSecondary }}>Back</Text>
+          <Text style={{ color: c.textSecondary }}>{t('common.back')}</Text>
         </Pressable>
       </Centered>
     );
@@ -158,36 +161,40 @@ export default function LessonScreen() {
         <Centered c={c}>
           <Text style={styles.emoji}>{dead ? '💔' : passed ? (isCheckpoint ? '🏆' : '🎉') : '💪'}</Text>
           <Text style={[styles.resultTitle, { color: c.text }]}>
-            {dead ? 'Out of hearts!' : passed ? (isCheckpoint ? 'Checkpoint cleared!' : 'Level complete!') : 'Not passed yet'}
+            {dead
+              ? t('lesson.outOfHearts')
+              : passed
+                ? isCheckpoint ? t('lesson.checkpointComplete') : t('lesson.levelComplete')
+                : t('lesson.notPassed')}
           </Text>
           {dead ? (
             <Text style={[styles.resultBody, { color: c.textSecondary }]}>
-              You used all {MAX_HEARTS} hearts. Restart the level to try again.
+              {t('lesson.outOfHeartsBody', { max: MAX_HEARTS })}
             </Text>
           ) : (
             <>
               <Text style={[styles.pct, { color: passed ? accent : c.textSecondary }]}>{pct}%</Text>
               <Text style={[styles.resultBody, { color: c.textSecondary }]}>
-                {correctCount} of {total} correct
+                {t('lesson.scoreLine', { correct: correctCount, total })}
               </Text>
               {!passed && (
-                <Text style={[styles.resultBody, { color: c.textSecondary }]}>Score {playable.passPct}% to pass.</Text>
+                <Text style={[styles.resultBody, { color: c.textSecondary }]}>{t('lesson.passNeeded', { pct: playable.passPct })}</Text>
               )}
             </>
           )}
           <View style={{ width: '100%', maxWidth: 320, marginTop: 24, gap: 12 }}>
             {next && (
               <PrimaryButton
-                label={next.kind === 'checkpoint' ? 'Checkpoint exam' : 'Next level'}
+                label={next.kind === 'checkpoint' ? t('lesson.checkpointExam') : t('lesson.nextLevel')}
                 onPress={goNext}
                 style={{ backgroundColor: accent }}
               />
             )}
             <Pressable onPress={resetPlayer} style={[styles.secondaryBtn, { borderColor: accent }]}>
-              <Text style={{ color: accent, fontWeight: '700' }}>Try again</Text>
+              <Text style={{ color: accent, fontWeight: '700' }}>{t('lesson.tryAgain')}</Text>
             </Pressable>
             <Pressable onPress={() => router.back()} style={styles.linkBtn}>
-              <Text style={{ color: c.textSecondary, fontWeight: '600' }}>Back to path</Text>
+              <Text style={{ color: c.textSecondary, fontWeight: '600' }}>{t('lesson.backToPath')}</Text>
             </Pressable>
           </View>
         </Centered>
@@ -216,7 +223,7 @@ export default function LessonScreen() {
       <ScrollView contentContainerStyle={styles.lessonBody}>
         <View style={[styles.chip, { backgroundColor: c.brandSoft }]}>
           <Text style={{ color: c.text, fontWeight: '700', fontSize: 12 }}>
-            {isCheckpoint ? 'Checkpoint' : `Level ${playable.ref}`} · {playable.title}
+            {isCheckpoint ? t('lesson.checkpoint') : t('lesson.level', { n: playable.ref })} · {playable.title}
           </Text>
         </View>
 
@@ -255,7 +262,7 @@ export default function LessonScreen() {
         {revealed && (
           <View style={[styles.feedback, { borderLeftColor: isRight ? GREEN : RED, backgroundColor: isRight ? 'rgba(46,125,50,0.08)' : 'rgba(198,40,40,0.08)' }]}>
             <Text style={{ fontWeight: '800', color: isRight ? GREEN : RED, marginBottom: 4 }}>
-              {isRight ? 'Correct' : 'Not quite'}
+              {isRight ? t('lesson.correct') : t('lesson.incorrect')}
             </Text>
             <Text style={{ color: c.textSecondary, lineHeight: 20 }}>{question.explanation}</Text>
           </View>
@@ -265,7 +272,7 @@ export default function LessonScreen() {
       {revealed && (
         <View style={[styles.footer, { backgroundColor: c.background, borderTopColor: c.border }]}>
           <PrimaryButton
-            label={outOfHearts ? 'See result' : qIndex < total - 1 ? 'Continue' : 'Finish'}
+            label={outOfHearts ? t('lesson.seeResult') : qIndex < total - 1 ? t('lesson.continue') : t('lesson.finish')}
             onPress={advance}
             style={{ backgroundColor: accent }}
           />
