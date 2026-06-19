@@ -176,7 +176,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // ── Checkpoint exam (40 questions over 5 levels) ─────────────────────────
   if (checkpointRaw !== undefined) {
     const checkpoint = parseInt(checkpointRaw, 10);
-    if (!isValidCheckpoint(checkpoint)) {
+    if (!isValidCheckpoint(topic, checkpoint)) {
       return jsonError(res, 400, 'bad_request', 'Invalid checkpoint');
     }
     const meta = topicCheckpoints(topic).find((c) => c.checkpoint === checkpoint);
@@ -200,7 +200,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // ── Level lesson (8 questions) ───────────────────────────────────────────
   const level = parseInt(levelRaw ?? '', 10);
-  if (!isValidLevel(level)) {
+  if (!isValidLevel(topic, level)) {
     return jsonError(res, 400, 'bad_request', 'Invalid level');
   }
   const meta = topicLevels(topic).find((l) => l.level === level);

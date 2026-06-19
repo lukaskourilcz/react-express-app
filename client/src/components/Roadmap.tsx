@@ -24,8 +24,6 @@ import {
   checkpointBestPct,
   passedLevelCount,
   LEVELS_PER_CHECKPOINT,
-  ROADMAP_LEVELS,
-  CHECKPOINT_COUNT,
 } from '../lib/roadmap';
 import { getCategoryHexColor, getCategoryLabel, onCategoryColorText } from '../lib/categories';
 import { BRAND } from '../theme/MuiTheme';
@@ -40,7 +38,7 @@ import './Roadmap.css';
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 type Active = { kind: 'level' | 'checkpoint'; ref: number };
 
-const TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react'];
+const TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'html', 'css', 'git'];
 const TOPIC_KEY = 'devquiz:roadmap:topic';
 const CHECKPOINT_GOLD = '#ffb300';
 const CHECKPOINT_GRAD: [string, string] = ['#ffd54f', '#f5a623'];
@@ -138,13 +136,15 @@ function buildPath(levels: RoadmapLevelMeta[], checkpoints: RoadmapCheckpointMet
   return out;
 }
 
-function nextAfter(a: Active): Active | null {
+// What to play after finishing `a`, given the active topic's level/checkpoint
+// counts (topics differ: JS/TS/React have 25 levels, Git/HTML/CSS have 15).
+function nextAfter(a: Active, levelCount: number, checkpointCount: number): Active | null {
   if (a.kind === 'level') {
     if (a.ref % LEVELS_PER_CHECKPOINT === 0) return { kind: 'checkpoint', ref: a.ref / LEVELS_PER_CHECKPOINT };
-    if (a.ref < ROADMAP_LEVELS) return { kind: 'level', ref: a.ref + 1 };
+    if (a.ref < levelCount) return { kind: 'level', ref: a.ref + 1 };
     return null;
   }
-  if (a.ref < CHECKPOINT_COUNT) return { kind: 'level', ref: a.ref * LEVELS_PER_CHECKPOINT + 1 };
+  if (a.ref < checkpointCount) return { kind: 'level', ref: a.ref * LEVELS_PER_CHECKPOINT + 1 };
   return null;
 }
 
@@ -314,7 +314,7 @@ function Roadmap() {
     if (lessonError || !playable) {
       return <LessonError message={lessonError ?? t('roadmap.error')} onRetry={() => open(active)} onExit={exitLesson} t={t} />;
     }
-    const next = nextAfter(active);
+    const next = nextAfter(active, levels.length, checkpoints.length);
     return (
       <LessonRunner
         key={`${topic}-${active.kind}-${active.ref}`}

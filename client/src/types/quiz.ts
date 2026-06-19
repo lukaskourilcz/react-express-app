@@ -29,7 +29,7 @@ export type QuizState = 'loading' | 'ready' | 'in-progress' | 'submitted' | 'err
 
 /* ──── Roadmap ("Learn") mode ──────────────────────────────────────────── */
 
-export type RoadmapTopic = 'javascript' | 'typescript' | 'react';
+export type RoadmapTopic = 'javascript' | 'typescript' | 'react' | 'html' | 'css' | 'git';
 
 export interface RoadmapLevelMeta {
   level: number;
