@@ -26,7 +26,55 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (op === 'stats') return stats(req, res);
   if (op === 'category-stats') return categoryStats(req, res);
   if (op === 'streak') return streak(req, res);
+  if (op === 'xp') return xp(req, res);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
+}
+
+// Per-user "quest" XP (career leveling). Learning XP is derived from roadmap
+// progress on the client; only the quiz/practice accumulator is persisted here.
+// Kept on the existing user function so we don't add a Vercel Hobby function.
+const MAX_XP = 100_000_000;
+
+const clampXp = (n: unknown): number => {
+  if (typeof n !== 'number' || !Number.isFinite(n)) return 0;
+  const v = Math.round(n);
+  return v < 0 ? 0 : v > MAX_XP ? MAX_XP : v;
+};
+
+async function xp(req: VercelRequest, res: VercelResponse) {
+  const userId = await requireAuthSub(req, res);
+  if (!userId) return;
+  try {
+    if (req.method === 'GET') {
+      const { data, error } = await withTimeout(
+        supabase!.from('user_xp').select('quest_xp').eq('user_id', userId).maybeSingle(),
+      );
+      if (error) return jsonError(res, 500, 'db_error', 'Could not load XP');
+      return res.json({ data: { quest_xp: Number(data?.quest_xp ?? 0) } });
+    }
+
+    if (req.method === 'PUT') {
+      const body = (req.body || {}) as { quest_xp?: unknown };
+      const incoming = clampXp(body.quest_xp);
+      // XP only grows: never let a stale device lower the stored value.
+      const { data: existing } = await withTimeout(
+        supabase!.from('user_xp').select('quest_xp').eq('user_id', userId).maybeSingle(),
+      );
+      const merged = Math.max(Number(existing?.quest_xp ?? 0), incoming);
+      const { error } = await withTimeout(
+        supabase!
+          .from('user_xp')
+          .upsert({ user_id: userId, quest_xp: merged, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }),
+      );
+      if (error) return jsonError(res, 500, 'db_error', 'Could not save XP');
+      return res.json({ ok: true, data: { quest_xp: merged } });
+    }
+
+    res.setHeader('Allow', 'GET, PUT');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  } catch {
+    return jsonError(res, 500, 'internal_error', 'Internal error');
+  }
 }
 
 // Daily activity map (date → lessons completed) backing the mobile streak garden.

@@ -44,6 +44,8 @@ import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useSettings, playCorrect, playComplete } from '../lib/settings';
 import { recordPerfectQuiz } from '../lib/achievements';
+import { awardQuestXp } from '../lib/xp';
+import { computeQuizXp } from '../lib/leveling';
 import { useGameConfig } from '../lib/gameConfig';
 import { ReportDialog } from './ReportDialog';
 import './Quiz.css';
@@ -282,6 +284,17 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       clearProgress();
       playComplete();
       if (data.percentage === 100) recordPerfectQuiz();
+
+      // Award quest XP for the quiz, scaled by each correct answer's difficulty
+      // (practice mode is unscored, so it earns nothing). Local-first: XP accrues
+      // even when signed out and syncs to the account on sign-in.
+      if (!settings.practiceMode) {
+        const diffById = new Map(questions.map((q) => [q.id, q.difficulty]));
+        const gained = computeQuizXp(
+          data.results.map((r) => ({ difficulty: diffById.get(r.questionId) ?? 1, correct: r.isCorrect })),
+        );
+        if (gained > 0) awardQuestXp(gained, 'quiz');
+      }
 
       // Practice mode: don't write stats. Daily challenge: write stats.
       if (settings.practiceMode) {

@@ -1,4 +1,4 @@
-export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
 
 export interface Question {
   id: string;
@@ -29,7 +29,7 @@ export type QuizState = 'loading' | 'ready' | 'in-progress' | 'submitted' | 'err
 
 /* ──── Roadmap ("Learn") mode ──────────────────────────────────────────── */
 
-export type RoadmapTopic = 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs' | 'html' | 'css' | 'git';
+export type RoadmapTopic = 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs' | 'html' | 'css' | 'git' | 'dsa';
 
 export interface RoadmapLevelMeta {
   level: number;

@@ -168,6 +168,19 @@ export const en = {
   'profile.backToQuiz': 'Back to quiz',
   'common.remove': 'Remove',
 
+  // Career level (XP)
+  'profile.career': 'Career level',
+  'profile.careerLevelOf': 'Level {level} of {max}',
+  'profile.xpUnit': 'XP',
+  'profile.xpToNext': '{xp} XP to {title}',
+  'profile.maxRank': 'Top rank reached',
+  'profile.xpBreakdown': '{learn} learning · {quest} quizzes',
+  'xp.gainLearn': '+{xp} XP earned',
+  'xp.gainQuiz': '+{xp} XP earned',
+  'xp.gainPractice': '+{xp} XP · practice',
+  'xp.rankUpKicker': 'Level up',
+  'xp.rankUp': 'You’re now {title}',
+
   // Achievements
   'achievement.first-quiz.label': 'First steps',
   'achievement.first-quiz.description': 'Complete your first quiz',
@@ -489,6 +502,19 @@ export const cs: Record<TranslationKey, string> = {
   'profile.startQuiz': 'Spustit kvíz',
   'profile.backToQuiz': 'Zpět na kvíz',
   'common.remove': 'Odebrat',
+
+  // Career level (XP)
+  'profile.career': 'Kariérní úroveň',
+  'profile.careerLevelOf': 'Úroveň {level} z {max}',
+  'profile.xpUnit': 'XP',
+  'profile.xpToNext': '{xp} XP do úrovně {title}',
+  'profile.maxRank': 'Nejvyšší úroveň dosažena',
+  'profile.xpBreakdown': '{learn} z učení · {quest} z kvízů',
+  'xp.gainLearn': '+{xp} XP získáno',
+  'xp.gainQuiz': '+{xp} XP získáno',
+  'xp.gainPractice': '+{xp} XP · procvičování',
+  'xp.rankUpKicker': 'Postup',
+  'xp.rankUp': 'Nyní jste {title}',
 
   // Achievements
   'achievement.first-quiz.label': 'První kroky',

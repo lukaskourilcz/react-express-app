@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -8,8 +8,13 @@ import {
   Button,
   Divider,
   Alert,
+  LinearProgress,
+  Chip,
 } from '@mui/material';
 import { getUserStats, createOrUpdateUserStats, type UserStats } from '../lib/supabase';
+import { useRoadmapProgress, syncProgressWithServer } from '../lib/roadmap';
+import { useQuestXp, syncXpWithServer } from '../lib/xp';
+import { computeLearningXp, levelForXp, specializationFor, displayTitle, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { friendlyError } from '../lib/api';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
@@ -149,6 +154,8 @@ function ProfileBody({
           </Box>
         </Box>
       </Paper>
+
+      <CareerCard />
 
       {isFirstTime && (
         <Alert
@@ -337,6 +344,84 @@ function ProfileBody({
         {isFirstTime ? t('profile.startQuiz') : t('profile.backToQuiz')}
       </Button>
     </Box>
+  );
+}
+
+// Career level card: the learner's rank (derived from total XP = learning XP +
+// quest XP), with a progress bar toward the next rank. Pulls account XP on mount
+// so it stays in sync even if the user hasn't visited the learning path.
+function CareerCard() {
+  const t = useT();
+  const progress = useRoadmapProgress();
+  const questXp = useQuestXp();
+
+  // Sync progress then XP so the card is accurate even if Profile is the first
+  // screen opened on a fresh device (learning XP derives from synced progress).
+  useEffect(() => {
+    syncProgressWithServer().then(() => syncXpWithServer()).catch(() => {});
+  }, []);
+
+  const learningXp = computeLearningXp(progress);
+  const totalXp = learningXp + questXp;
+  const info = levelForXp(totalXp);
+  const spec = specializationFor(progress);
+  const title = displayTitle(info.rank.title, spec);
+  // The specialization reads inline for "…Developer" ranks; for senior ranks
+  // (Engineer/Architect) surface it as a chip instead.
+  const showSpecChip = spec && !info.rank.title.includes('Developer');
+  const nextTitle = info.next ? displayTitle(info.next.title, spec) : null;
+  const nf = (n: number) => n.toLocaleString();
+
+  return (
+    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+      <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
+        {t('profile.career')}
+      </Typography>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <Box sx={{ fontSize: { xs: 36, sm: 44 }, lineHeight: 1, flexShrink: 0 }} aria-hidden>
+          {info.rank.emoji}
+        </Box>
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+              {title}
+            </Typography>
+            {showSpecChip && (
+              <Chip label={spec} size="small" sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, backgroundColor: `${BRAND.green}22`, color: 'text.primary' }} />
+            )}
+          </Box>
+          <Typography variant="caption" color="text.secondary">
+            {t('profile.careerLevelOf', { level: info.level, max: MAX_RANK })}
+          </Typography>
+        </Box>
+        <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: BRAND.green, lineHeight: 1 }}>
+            {nf(totalXp)}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {t('profile.xpUnit')}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Box sx={{ mt: 2.5 }}>
+        <LinearProgress
+          variant="determinate"
+          value={info.progressPct}
+          aria-label={info.isMax ? t('profile.maxRank') : t('profile.xpToNext', { xp: info.xpToNext, title: nextTitle ?? '' })}
+          sx={{ height: 10, borderRadius: 5, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: BRAND.green, transition: 'transform 0.5s ease' } }}
+        />
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mt: 0.75, gap: 1 }}>
+          <Typography variant="caption" color="text.secondary">
+            {t('profile.xpBreakdown', { learn: nf(learningXp), quest: nf(questXp) })}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
+            {info.isMax ? t('profile.maxRank') : t('profile.xpToNext', { xp: nf(info.xpToNext), title: nextTitle ?? '' })}
+          </Typography>
+        </Box>
+      </Box>
+    </Paper>
   );
 }
 

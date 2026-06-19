@@ -23,8 +23,11 @@ import {
   levelBestPct,
   checkpointBestPct,
   passedLevelCount,
+  getRoadmapProgress,
   LEVELS_PER_CHECKPOINT,
 } from '../lib/roadmap';
+import { awardLearningOutcome, syncXpWithServer } from '../lib/xp';
+import { computeLearningXp } from '../lib/leveling';
 import { getCategoryHexColor, getCategoryLabel, onCategoryColorText } from '../lib/categories';
 import { BRAND } from '../theme/MuiTheme';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -38,7 +41,7 @@ import './Roadmap.css';
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 type Active = { kind: 'level' | 'checkpoint'; ref: number };
 
-const TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git'];
+const TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git', 'dsa'];
 const TOPIC_KEY = 'devquiz:roadmap:topic';
 const CHECKPOINT_GOLD = '#ffb300';
 // Lives for a level lesson: one heart that drains a third per wrong answer.
@@ -197,9 +200,11 @@ function Roadmap() {
 
   useEffect(loadStructure, []);
 
-  // Pull account progress on sign-in and merge with this device.
+  // Pull account progress + XP on sign-in and merge with this device (progress
+  // first, so the merged learning XP is reflected before the XP reconcile).
   useEffect(() => {
-    if (isAuthenticated) syncProgressWithServer();
+    if (!isAuthenticated) return;
+    syncProgressWithServer().then(() => syncXpWithServer()).catch(() => {});
   }, [isAuthenticated]);
 
   const selectTopic = (next: RoadmapTopic) => {
@@ -242,8 +247,12 @@ function Roadmap() {
 
   const handleFinished = (pct: number) => {
     if (!active || !playable) return;
+    // Learning XP is derived from progress, so measure it across the record to
+    // reward only a NEW pass; replays/fails fall back to a small practice grant.
+    const before = computeLearningXp(getRoadmapProgress());
     if (active.kind === 'level') recordLevelResult(topic, active.ref, pct, playable.passPct);
     else recordCheckpointResult(topic, active.ref, pct, playable.passPct);
+    awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before);
     if (isAuthenticated) pushProgressToServer().catch(() => {});
   };
 

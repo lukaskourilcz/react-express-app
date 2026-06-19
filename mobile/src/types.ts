@@ -10,6 +10,7 @@ export type CategoryType =
   | 'nextjs'
   | 'html'
   | 'css'
+  | 'dsa'
   | 'dev-world'
   | 'custom'
   | 'code-snippets'

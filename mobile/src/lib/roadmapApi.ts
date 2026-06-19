@@ -3,7 +3,7 @@
 import { apiFetch } from './api';
 import type { CategoryType } from '../types';
 
-export type RoadmapTopic = 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs' | 'html' | 'css' | 'git';
+export type RoadmapTopic = 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs' | 'html' | 'css' | 'git' | 'dsa';
 
 export interface RoadmapLevelMeta {
   level: number;
