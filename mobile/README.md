@@ -4,10 +4,15 @@ A native iOS + Android client for DevQuiz, built with **Expo (managed)** and
 **Expo Router**. It reuses the existing backend unchanged — the same Vercel API
 and Supabase project that power the web app.
 
-This is the **core starter**: Supabase auth, the solo Quiz flow
-(fetch → answer → submit → results), the global Leaderboard, and the
-Abbreviations glossary. It's structured so Play, Profile, and Flashcards can be
-added as more screens later.
+It includes the **Learn** experience ported from the web: the Duolingo-style
+learning paths (6 topics — JavaScript, TypeScript, React, HTML, CSS, Git) shown
+as a serpentine "snake" of levels and checkpoints, a level player with the
+3-hearts lives system, a daily **streak** with a GitHub-style practice
+**garden**, plus the solo Quiz, Leaderboard, and Account. Progress is stored
+locally and synced to the same account record the web app uses.
+
+It also ships a native **iOS Home Screen widget** (WidgetKit/SwiftUI) that shows
+the streak + garden, fed by the app through a shared App Group.
 
 ## What's reused vs. rewritten
 
@@ -24,18 +29,23 @@ added as more screens later.
 mobile/
 ├── app/                      # Expo Router (file-based routes)
 │   ├── _layout.tsx           #   providers + root stack
+│   ├── lesson.tsx            #   → Lesson player (level/checkpoint, hearts)
 │   └── (tabs)/               #   bottom tab navigator
 │       ├── _layout.tsx
-│       ├── index.tsx         #   → Quiz
+│       ├── index.tsx         #   → Learn (the learning paths)
+│       ├── streak.tsx        #   → Streak + garden
+│       ├── quiz.tsx          #   → Quiz
 │       ├── leaderboard.tsx   #   → Leaderboard
-│       ├── abbreviations.tsx #   → Abbreviations
 │       └── account.tsx       #   → Account (sign in/out)
-└── src/
-    ├── lib/                  # supabase, api, auth, quizApi, categories, …
-    ├── screens/             # the actual screen UIs
-    ├── components/          # shared UI primitives
-    ├── theme.ts             # brand palette (light/dark)
-    └── types.ts             # domain types mirroring the API
+├── src/
+│   ├── lib/                  # supabase, api, auth, quizApi, roadmapApi,
+│   │                         #   roadmapProgress, streak, widget, categories
+│   ├── screens/              # Learn / Lesson / Streak / Quiz / …
+│   ├── components/           # RoadmapPath, Hearts, Garden, QuestionText, ui
+│   ├── theme.ts              # brand palette (light/dark)
+│   └── types.ts              # domain types mirroring the API
+├── modules/devquiz-widget/   # local Expo module: App Group bridge (Swift)
+└── targets/widget/           # WidgetKit extension (SwiftUI) via @bacons/apple-targets
 ```
 
 ## Setup
@@ -71,31 +81,65 @@ npm start          # then press i / a, or scan the QR with Expo Go
 > (`npx expo run:ios`). The quiz, leaderboard, and abbreviations all work
 > without signing in.
 
+## Home Screen widget (streak garden)
+
+The widget is a native **WidgetKit/SwiftUI** extension (`targets/widget`), wired
+up by [`@bacons/apple-targets`](https://github.com/EvanBacon/expo-apple-targets)
+during prebuild. The app writes a streak/garden snapshot to a shared **App
+Group** via the local module in `modules/devquiz-widget`, and the widget reads
+the same key.
+
+> Widgets need native code, so they only run in a **dev build / EAS build** —
+> not Expo Go.
+
+**Before building, set your own identifiers in four places (they must match):**
+
+1. `app.json` → `ios.bundleIdentifier` and `ios.entitlements["com.apple.security.application-groups"]`
+2. `targets/widget/expo-target.config.js` → `entitlements` App Group
+3. `targets/widget/index.swift` → `APP_GROUP`
+4. `modules/devquiz-widget/ios/DevquizWidgetModule.swift` → `appGroup`
+
+Use `com.<you>.devquiz` for the bundle id and `group.com.<you>.devquiz` for the
+App Group. Then:
+
+```bash
+cd mobile
+npm install
+npx expo prebuild --clean      # generates ios/ incl. the widget target + App Group
+# add the DevQuiz widget to your simulator/device Home Screen to see it
+```
+
+The app refreshes the widget after every completed lesson (and on launch).
+
 ## Ship to the App Store (EAS)
 
-You need an **Apple Developer Program** membership ($99/yr). No Mac required —
-EAS builds in the cloud.
+You need an **Apple Developer Program** membership ($99/yr) and a free **Expo**
+account. No Mac required — EAS builds in the cloud.
 
 ```bash
 npm i -g eas-cli
 eas login
-eas build:configure
-eas build --platform ios          # produces an .ipa in the cloud
-eas submit --platform ios         # uploads to App Store Connect / TestFlight
+eas build --platform ios --profile production   # builds .ipa (incl. the widget)
+eas submit --platform ios --profile production   # uploads to App Store Connect
 ```
 
-Then in **App Store Connect**: add screenshots, description, privacy details,
-and submit for review. (Android is symmetric: `eas build/submit -p android`.)
+Fill in the placeholders in `eas.json` (`appleId`, `ascAppId`, `appleTeamId`)
+and set the same `EXPO_PUBLIC_*` values as **EAS environment variables** so the
+production build points at your live API. Then in **App Store Connect** add
+screenshots, description, and privacy details, and submit for review.
 
-Set the same `EXPO_PUBLIC_*` values as **EAS environment variables** (or an
-`eas.json` env block) so production builds point at your live API.
+## Status / what's verified
 
-## Not in this starter (easy to add next)
+- **Verified here:** TypeScript/React-Native code for the Learn paths, lesson
+  player with hearts, streak, garden, and progress sync (JS typechecks).
+- **Needs a native build to verify:** the WidgetKit extension and the App Group
+  bridge (Swift) — they're code-complete and conventional, but can only be
+  compiled/tested via `expo prebuild` + Xcode/EAS, which needs your Apple
+  account. Expect to tweak signing and the App Group id for your team.
 
-- **Play** (multiplayer/classroom) — needs the `/api/play/*` calls + Supabase
-  Realtime (`supabase.channel(...)` works in RN).
-- **Profile** stats and **Flashcards**.
-- Writing quiz results to stats after submit (the web app calls
-  `record_quiz_result`); wire the same `/api/user/*` endpoints here.
-- Markdown/code-fence rendering for questions (currently shown as plain text).
-- Internationalization (the web app's `cs`/`en` strings can be ported).
+## Not yet ported (easy to add next)
+
+- Account sync of the streak/garden (currently local + widget; the roadmap
+  *progress* already syncs).
+- **Play** (multiplayer) and **Flashcards** screens.
+- Czech (`cs`) strings for the mobile UI.

@@ -9,7 +9,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.devquiz"
+      "bundleIdentifier": "com.yourcompany.devquiz",
+      "entitlements": {
+        "com.apple.security.application-groups": ["group.com.yourcompany.devquiz"]
+      }
     },
     "android": {
       "package": "com.yourcompany.devquiz"
@@ -18,7 +21,7 @@
       "bundler": "metro",
       "output": "single"
     },
-    "plugins": ["expo-router"],
+    "plugins": ["expo-router", "@bacons/apple-targets"],
     "experiments": {
       "typedRoutes": true
     },
