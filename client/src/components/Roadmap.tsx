@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Box, Typography, Button, LinearProgress, Chip, Skeleton, Tooltip, useTheme } from '@mui/material';
 import type {
   RoadmapTopic,
@@ -38,7 +38,7 @@ import './Roadmap.css';
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 type Active = { kind: 'level' | 'checkpoint'; ref: number };
 
-const TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'html', 'css', 'git'];
+const TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git'];
 const TOPIC_KEY = 'devquiz:roadmap:topic';
 const CHECKPOINT_GOLD = '#ffb300';
 // Lives for a level lesson: one heart that drains a third per wrong answer.
@@ -76,18 +76,24 @@ interface PlacedNode {
   cp?: RoadmapCheckpointMeta;
 }
 
-// Track an element's width so the path can lay itself out responsively.
+// Track an element's width so the path can lay itself out responsively. Uses a
+// callback ref (not a mount effect) so measurement starts the moment the node
+// actually attaches: the path container only mounts AFTER the structure finishes
+// loading, so a one-shot mount effect would run while only the loading skeleton
+// is on screen, see a null ref, and never re-measure — leaving width at 0 and
+// the path empty. A callback ref re-runs whenever the element mounts/unmounts.
 function useElementWidth<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null);
   const [width, setWidth] = useState(0);
-  useLayoutEffect(() => {
-    const el = ref.current;
+  const observerRef = useRef<ResizeObserver | null>(null);
+  const ref = useCallback((el: T | null) => {
+    observerRef.current?.disconnect();
+    observerRef.current = null;
     if (!el) return;
     const update = () => setWidth(el.getBoundingClientRect().width);
     update();
     const ro = new ResizeObserver(update);
     ro.observe(el);
-    return () => ro.disconnect();
+    observerRef.current = ro;
   }, []);
   return [ref, width] as const;
 }

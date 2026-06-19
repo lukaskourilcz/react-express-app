@@ -3,12 +3,14 @@ import {
   roadmapJsQuestions,
   roadmapTsQuestions,
   roadmapReactQuestions,
+  roadmapNextQuestions,
+  roadmapNodeQuestions,
   roadmapGitQuestions,
   roadmapHtmlQuestions,
   roadmapCssQuestions,
 } from './roadmap-questions';
 
-export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'html' | 'css' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
 
 // Categories that are private to the owner: never served to other users
 // (not via /api/quiz/questions for non-owners, and never in the daily mix).
@@ -11587,7 +11589,7 @@ const coreQuestions: Question[] = [
 ];
 
 // The full question bank: the core set plus the roadmap ("Learn") questions for
-// JavaScript, TypeScript, React, Git, HTML and CSS. The roadmap sets carry the
+// JavaScript, TypeScript, React, Next.js, Node.js, Git, HTML and CSS. The roadmap sets carry the
 // same Question shape, so they flow through the quiz/play endpoints, /dev
 // overrides, and grading exactly like the core questions.
 export const questions: Question[] = [
@@ -11595,6 +11597,8 @@ export const questions: Question[] = [
   ...roadmapJsQuestions,
   ...roadmapTsQuestions,
   ...roadmapReactQuestions,
+  ...roadmapNextQuestions,
+  ...roadmapNodeQuestions,
   ...roadmapGitQuestions,
   ...roadmapHtmlQuestions,
   ...roadmapCssQuestions,

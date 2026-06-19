@@ -19,6 +19,7 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'javascript', label: 'JavaScript', color: '#f7df1e' },
   { value: 'typescript', label: 'TypeScript', color: '#3178c6' },
   { value: 'react', label: 'React', color: '#61dafb' },
+  { value: 'nextjs', label: 'Next.js', color: '#0b7285' },
   { value: 'nodejs', label: 'Node.js', color: '#339933' },
   { value: 'git', label: 'Git', color: '#f05032' },
   { value: 'dev-world', label: 'Dev World', color: '#8b5cf6' },

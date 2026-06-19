@@ -14,7 +14,7 @@ import { useT } from '../lib/i18n';
 import { RoadmapPath } from '../components/RoadmapPath';
 import { PrimaryButton } from '../components/ui';
 
-const TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'html', 'css', 'git'];
+const TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git'];
 const TOPIC_KEY = 'devquiz:roadmap:topic';
 
 export default function LearnScreen() {
