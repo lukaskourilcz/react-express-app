@@ -66,19 +66,27 @@ export default function LearnScreen() {
         {TOPICS.map((value) => {
           const selected = topic === value;
           const color = getCategoryColor(value);
+          const tLevels = structure?.structure[value]?.levels.length ?? 0;
+          const tPct = tLevels ? passedLevelCount(progress, value) / tLevels : 0;
           return (
-            <Pressable
-              key={value}
-              onPress={() => selectTopic(value)}
-              style={[
-                styles.pill,
-                { borderColor: selected ? color : c.border, backgroundColor: selected ? color : c.card },
-              ]}
-            >
-              <Text style={{ color: selected ? '#fff' : c.textSecondary, fontWeight: '700' }}>
-                {getCategoryLabel(value)}
-              </Text>
-            </Pressable>
+            <View key={value}>
+              <Pressable
+                onPress={() => selectTopic(value)}
+                style={[
+                  styles.pill,
+                  { borderColor: selected ? color : c.border, backgroundColor: selected ? color : c.card },
+                ]}
+              >
+                <Text style={{ color: selected ? '#fff' : c.textSecondary, fontWeight: '700' }}>
+                  {getCategoryLabel(value)}
+                </Text>
+              </Pressable>
+              {tLevels > 0 && (
+                <View style={[styles.pillTrack, { backgroundColor: c.border }]}>
+                  <View style={{ width: `${tPct * 100}%`, height: '100%', backgroundColor: color, borderRadius: 2 }} />
+                </View>
+              )}
+            </View>
           );
         })}
       </ScrollView>
@@ -129,6 +137,7 @@ const styles = StyleSheet.create({
   streakText: { fontWeight: '800', fontSize: 16 },
   pills: { paddingHorizontal: 16, paddingVertical: 12, gap: 8 },
   pill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 999, borderWidth: 2 },
+  pillTrack: { height: 3, borderRadius: 2, marginTop: 4, overflow: 'hidden' },
   centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
   pathWrap: { paddingHorizontal: 16, paddingBottom: 48 },
   progress: { textAlign: 'center', fontWeight: '700', marginBottom: 8 },
