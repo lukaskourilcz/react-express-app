@@ -41,6 +41,9 @@ type Active = { kind: 'level' | 'checkpoint'; ref: number };
 const TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'html', 'css', 'git'];
 const TOPIC_KEY = 'devquiz:roadmap:topic';
 const CHECKPOINT_GOLD = '#ffb300';
+// Lives for a level lesson: one heart that drains a third per wrong answer.
+const MAX_HEARTS = 3;
+const HEART_COLOR = '#ff4b6e';
 const CHECKPOINT_GRAD: [string, string] = ['#ffd54f', '#f5a623'];
 
 // Vibrant rainbow palette by difficulty tier (1→5): the path warms up from a
@@ -605,6 +608,35 @@ function CheckpointNode({
 
 /* ──── lesson runner (instant feedback) ─────────────────────────────────── */
 
+const HEART_PATH =
+  'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z';
+
+const HeartShape = ({ color, style }: { color: string; style?: CSSProperties }) => (
+  <svg width="30" height="30" viewBox="0 0 24 24" style={style} aria-hidden>
+    <path fill={color} d={HEART_PATH} />
+  </svg>
+);
+
+// A single heart that drains a third per mistake. The red fill is anchored to the
+// bottom and clipped to the remaining fraction, so it empties from the top down.
+function HeartMeter({ mistakes, max, hit, t }: { mistakes: number; max: number; hit: boolean; t: TFn }) {
+  const remaining = Math.max(0, max - mistakes);
+  const frac = remaining / max;
+  return (
+    <Box
+      className={hit ? 'rm-shake' : undefined}
+      role="img"
+      aria-label={t('roadmap.heartsLeft', { n: remaining, max })}
+      sx={{ position: 'relative', width: 30, height: 30, flexShrink: 0 }}
+    >
+      <HeartShape color={`${HEART_COLOR}2e`} style={{ position: 'absolute', inset: 0 }} />
+      <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: `${frac * 100}%`, overflow: 'hidden', transition: 'height 0.45s cubic-bezier(0.34, 1.3, 0.5, 1)' }}>
+        <HeartShape color={HEART_COLOR} style={{ position: 'absolute', bottom: 0, left: 0 }} />
+      </Box>
+    </Box>
+  );
+}
+
 function LessonRunner({
   playable, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, t,
 }: {
@@ -619,29 +651,48 @@ function LessonRunner({
   const [revealed, setRevealed] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
   const [finished, setFinished] = useState(false);
+  // Hearts apply to levels only; checkpoints keep the percent-based pass rule.
+  const [mistakes, setMistakes] = useState(0);
+  const [dead, setDead] = useState(false);
+  const [heartHit, setHeartHit] = useState(false);
 
   const question = playable.questions[qIndex];
+  // Out of hearts once this answer is revealed and it pushed mistakes to the max.
+  const outOfHearts = !isCheckpoint && mistakes >= MAX_HEARTS;
 
   const choose = (index: number) => {
     if (revealed) return;
     setSelected(index);
     setRevealed(true);
-    if (index === question.correctAnswer) setCorrectCount((c) => c + 1);
+    if (index === question.correctAnswer) {
+      setCorrectCount((c) => c + 1);
+    } else if (!isCheckpoint) {
+      setMistakes((m) => m + 1);
+      setHeartHit(true);
+      window.setTimeout(() => setHeartHit(false), 500);
+    }
   };
 
   const advance = () => {
-    if (qIndex < total - 1) {
+    const pct = Math.round((correctCount / total) * 100);
+    if (outOfHearts) {
+      onFinished(pct);
+      setDead(true);
+      setFinished(true);
+    } else if (qIndex < total - 1) {
       setQIndex((i) => i + 1);
       setSelected(null);
       setRevealed(false);
     } else {
-      onFinished(Math.round((correctCount / total) * 100));
+      onFinished(pct);
       setFinished(true);
     }
   };
 
   const replay = () => {
     setFinished(false);
+    setDead(false);
+    setMistakes(0);
     setQIndex(0);
     setSelected(null);
     setRevealed(false);
@@ -670,28 +721,40 @@ function LessonRunner({
 
   if (finished) {
     const pct = Math.round((correctCount / total) * 100);
-    const passed = pct >= playable.passPct;
+    const passed = !dead && pct >= playable.passPct;
+    const emoji = dead ? '💔' : passed ? (isCheckpoint ? '🏆' : '🎉') : '💪';
+    const title = dead
+      ? t('roadmap.outOfHeartsTitle')
+      : passed
+        ? isCheckpoint ? t('roadmap.checkpointComplete') : t('roadmap.levelComplete')
+        : isCheckpoint ? t('roadmap.checkpointFailed') : t('roadmap.levelFailed');
     return (
       <Box sx={{ maxWidth: 520, mx: 'auto', textAlign: 'center', mt: 2, position: 'relative' }}>
         {passed && <Confetti color={accent} />}
         <Box className="rm-celebrate" sx={{ fontSize: '3.5rem', lineHeight: 1, mb: 1 }} aria-hidden>
-          {passed ? (isCheckpoint ? '🏆' : '🎉') : '💪'}
+          {emoji}
         </Box>
         <Typography variant="h5" component="h2" sx={{ fontWeight: 800, mb: 1 }}>
-          {passed
-            ? isCheckpoint ? t('roadmap.checkpointComplete') : t('roadmap.levelComplete')
-            : isCheckpoint ? t('roadmap.checkpointFailed') : t('roadmap.levelFailed')}
+          {title}
         </Typography>
-        <Typography className="rm-count" variant="h3" sx={{ fontWeight: 800, color: passed ? accent : 'text.secondary', mb: 0.5 }}>
-          {pct}%
-        </Typography>
-        <Typography color="text.secondary" sx={{ mb: 1 }}>
-          {t('roadmap.scoreLine', { correct: correctCount, total })}
-        </Typography>
-        {!passed && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-            {t('roadmap.passNeeded', { pct: playable.passPct })}
+        {dead ? (
+          <Typography color="text.secondary" sx={{ mb: 2 }}>
+            {t('roadmap.outOfHeartsBody', { max: MAX_HEARTS })}
           </Typography>
+        ) : (
+          <>
+            <Typography className="rm-count" variant="h3" sx={{ fontWeight: 800, color: passed ? accent : 'text.secondary', mb: 0.5 }}>
+              {pct}%
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 1 }}>
+              {t('roadmap.scoreLine', { correct: correctCount, total })}
+            </Typography>
+            {!passed && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                {t('roadmap.passNeeded', { pct: playable.passPct })}
+              </Typography>
+            )}
+          </>
         )}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, mt: 2 }}>
           {passed && hasNext && (
@@ -715,20 +778,31 @@ function LessonRunner({
 
   return (
     <Box sx={{ maxWidth: 640, mx: 'auto' }}>
-      {/* Header: exit + progress + running score */}
+      {/* Header: exit + (hearts for a level, progress bar for a checkpoint) */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
         <Button onClick={onExit} variant="text" size="small" sx={{ minWidth: 'auto', color: 'text.secondary', fontSize: '1.1rem', lineHeight: 1 }} aria-label={t('roadmap.exit')}>
           ✕
         </Button>
-        <LinearProgress
-          variant="determinate"
-          value={progressPct}
-          aria-label={t('roadmap.question', { current: qIndex + 1, total })}
-          sx={{ flex: 1, height: 12, borderRadius: 6, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 6, backgroundColor: accent, transition: 'transform 0.35s ease' } }}
-        />
-        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}>
-          {correctCount}/{total}
-        </Typography>
+        {isCheckpoint ? (
+          <>
+            <LinearProgress
+              variant="determinate"
+              value={progressPct}
+              aria-label={t('roadmap.question', { current: qIndex + 1, total })}
+              sx={{ flex: 1, height: 12, borderRadius: 6, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 6, backgroundColor: accent, transition: 'transform 0.35s ease' } }}
+            />
+            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}>
+              {correctCount}/{total}
+            </Typography>
+          </>
+        ) : (
+          <>
+            <HeartMeter mistakes={mistakes} max={MAX_HEARTS} hit={heartHit} t={t} />
+            <Typography variant="caption" sx={{ ml: 'auto', fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}>
+              {t('roadmap.question', { current: qIndex + 1, total })}
+            </Typography>
+          </>
+        )}
       </Box>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
@@ -802,7 +876,7 @@ function LessonRunner({
           </Typography>
           <Typography variant="body2" color="text.secondary">{question.explanation}</Typography>
           <Button fullWidth variant="contained" onClick={advance} sx={{ mt: 2, textTransform: 'none', fontWeight: 700, backgroundColor: accent, '&:hover': { backgroundColor: accent, filter: 'brightness(0.92)' } }}>
-            {qIndex < total - 1 ? t('roadmap.continue') : t('roadmap.finish')}
+            {outOfHearts ? t('roadmap.seeResult') : qIndex < total - 1 ? t('roadmap.continue') : t('roadmap.finish')}
           </Button>
         </Box>
       )}

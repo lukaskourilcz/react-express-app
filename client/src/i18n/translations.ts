@@ -318,6 +318,10 @@ export const en = {
   'roadmap.checkpointComplete': 'Checkpoint cleared!',
   'roadmap.checkpointFailed': 'Not passed yet',
   'roadmap.toCheckpoint': 'Checkpoint exam',
+  'roadmap.heartsLeft': '{n} of {max} hearts left',
+  'roadmap.outOfHeartsTitle': 'Out of hearts!',
+  'roadmap.outOfHeartsBody': 'You used all {max} hearts. Restart the level to try again.',
+  'roadmap.seeResult': 'See result',
 } as const;
 
 export type TranslationKey = keyof typeof en;
@@ -636,6 +640,10 @@ export const cs: Record<TranslationKey, string> = {
   'roadmap.checkpointComplete': 'Kontrolní test splněn!',
   'roadmap.checkpointFailed': 'Zatím nesplněno',
   'roadmap.toCheckpoint': 'Kontrolní test',
+  'roadmap.heartsLeft': 'Zbývá {n} z {max} životů',
+  'roadmap.outOfHeartsTitle': 'Došly životy!',
+  'roadmap.outOfHeartsBody': 'Vyčerpal jsi všechny {max} životy. Zkus úroveň znovu.',
+  'roadmap.seeResult': 'Zobrazit výsledek',
 };
 
 export const dictionaries = { en, cs } as const;
