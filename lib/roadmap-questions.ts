@@ -17,6 +17,7 @@ import { gitSeeds } from './roadmap-questions-git';
 import { htmlSeeds } from './roadmap-questions-html';
 import { cssSeeds } from './roadmap-questions-css';
 import { dsaSeeds } from './roadmap-questions-dsa';
+import { algorithmsSeeds } from './roadmap-questions-algorithms';
 
 // Interleave two equal-length seed lists in blocks of HALF_LEVEL, so each level
 // ends up with its 4 A-questions followed by its 4 B-questions.
@@ -42,3 +43,4 @@ export const roadmapGitQuestions = buildRoadmap('rm-git', 'git', gitSeeds);
 export const roadmapHtmlQuestions = buildRoadmap('rm-html', 'html', htmlSeeds);
 export const roadmapCssQuestions = buildRoadmap('rm-css', 'css', cssSeeds);
 export const roadmapDsaQuestions = buildRoadmap('rm-dsa', 'dsa', dsaSeeds);
+export const roadmapAlgorithmsQuestions = buildRoadmap('rm-algorithms', 'algorithms', algorithmsSeeds);

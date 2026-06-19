@@ -19,6 +19,7 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'nodejs', label: 'Node.js', color: '#339933' },
   { value: 'git', label: 'Git', color: '#f05032' },
   { value: 'dsa', label: 'DSA', color: '#6741d9' },
+  { value: 'algorithms', label: 'Algorithms', color: '#ae3ec9' },
   { value: 'dev-world', label: 'Dev World', color: '#8b5cf6' },
   { value: 'code-snippets', label: 'Code Snippets', color: '#ec4899' },
 ];

@@ -1,9 +1,16 @@
 // Typed calls against the roadmap ("Learn") endpoint. The same Vercel API powers
 // web and mobile, so the learning paths, levels and checkpoints are identical.
-import { apiFetch } from './api';
+// Each call falls back to the bundled offline dataset on a connectivity error,
+// so the learning path is fully usable with no network.
+import { apiFetch, isOfflineError } from './api';
+import {
+  offlineRoadmapStructure,
+  offlineRoadmapLevel,
+  offlineRoadmapCheckpoint,
+} from '../data/offline';
 import type { CategoryType } from '../types';
 
-export type RoadmapTopic = 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs' | 'html' | 'css' | 'git' | 'dsa';
+export type RoadmapTopic = 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs' | 'html' | 'css' | 'git' | 'dsa' | 'algorithms';
 
 export interface RoadmapLevelMeta {
   level: number;
@@ -54,16 +61,31 @@ export interface RoadmapPlayable {
   questions: RoadmapQuestion[];
 }
 
-export function fetchRoadmapStructure() {
-  return apiFetch<RoadmapStructure>('/api/quiz/roadmap');
+export async function fetchRoadmapStructure() {
+  try {
+    return await apiFetch<RoadmapStructure>('/api/quiz/roadmap');
+  } catch (err) {
+    if (isOfflineError(err)) return offlineRoadmapStructure();
+    throw err;
+  }
 }
 
-export function fetchRoadmapLevel(topic: RoadmapTopic, level: number, lang = 'en') {
+export async function fetchRoadmapLevel(topic: RoadmapTopic, level: number, lang = 'en') {
   const params = new URLSearchParams({ topic, level: String(level), lang });
-  return apiFetch<RoadmapPlayable>(`/api/quiz/roadmap?${params}`);
+  try {
+    return await apiFetch<RoadmapPlayable>(`/api/quiz/roadmap?${params}`);
+  } catch (err) {
+    if (isOfflineError(err)) return offlineRoadmapLevel(topic, level);
+    throw err;
+  }
 }
 
-export function fetchRoadmapCheckpoint(topic: RoadmapTopic, checkpoint: number, lang = 'en') {
+export async function fetchRoadmapCheckpoint(topic: RoadmapTopic, checkpoint: number, lang = 'en') {
   const params = new URLSearchParams({ topic, checkpoint: String(checkpoint), lang });
-  return apiFetch<RoadmapPlayable>(`/api/quiz/roadmap?${params}`);
+  try {
+    return await apiFetch<RoadmapPlayable>(`/api/quiz/roadmap?${params}`);
+  } catch (err) {
+    if (isOfflineError(err)) return offlineRoadmapCheckpoint(topic, checkpoint);
+    throw err;
+  }
 }

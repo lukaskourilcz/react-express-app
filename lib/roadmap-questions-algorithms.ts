@@ -1,0 +1,158 @@
+// "Algorithms" roadmap questions (120): 15 levels × 8, easiest → hardest. The
+// content is mathematical & logical reasoning (sequences, logic, probability,
+// combinatorics, modular/bitwise arithmetic). Authored as a single 8-per-level
+// list and built directly (like the other 15-level topics). See lib/roadmap.ts.
+
+import type { Seed } from './roadmap-build';
+
+export const algorithmsSeeds: Seed[] = [
+  // ── Level 1 — Logical Reasoning ────────────────────────────────────────
+  { q: 'If all Bloops are Razzies and all Razzies are Lazzies, then all Bloops are definitely:', opts: ['Lazzies', 'not Lazzies', 'Razzies only', 'none of these'], a: 0, e: 'Transitivity: Bloops → Razzies → Lazzies, so every Bloop is a Lazzie.', tags: ['Algorithms', 'Logic'] },
+  { q: 'All cats are animals. Some animals are pets. Which statement must be true?', opts: ['All cats are pets', 'All cats are animals', 'All animals are cats', 'Some cats are not animals'], a: 1, e: 'Only the given premise that every cat is an animal is guaranteed; the rest do not follow.', tags: ['Algorithms', 'Logic'] },
+  { q: 'Which word is the odd one out?', opts: ['Rose', 'Tulip', 'Oak', 'Daisy'], a: 2, e: 'Rose, tulip and daisy are flowers; an oak is a tree, so it’s the odd one out.', tags: ['Algorithms', 'Logic'] },
+  { q: 'If it is raining then the ground is wet. The ground is NOT wet. What can you conclude?', opts: ['It is raining', 'The ground is dry forever', 'Nothing', 'It is not raining'], a: 3, e: 'By contrapositive (modus tollens), not-wet implies not-raining.', tags: ['Algorithms', 'Logic'] },
+  { q: 'Tom is taller than Sam. Sam is taller than Ben. Who is the shortest?', opts: ['Ben', 'Tom', 'Sam', 'Cannot tell'], a: 0, e: 'Ordering Tom > Sam > Ben makes Ben the shortest.', tags: ['Algorithms', 'Logic'] },
+  { q: 'Which does NOT belong with the others?', opts: ['Square', 'Circle', 'Triangle', 'Rectangle'], a: 1, e: 'A circle has no straight sides or corners; the others are polygons.', tags: ['Algorithms', 'Logic'] },
+  { q: 'No fish can fly. A salmon is a fish. Therefore a salmon:', opts: ['can fly', 'might fly', 'cannot fly', 'is a bird'], a: 2, e: 'From “no fish can fly” and “salmon is a fish”, a salmon cannot fly.', tags: ['Algorithms', 'Logic'] },
+  { q: 'Pencil is to write as scissors is to:', opts: ['paper', 'sharp', 'draw', 'cut'], a: 3, e: 'A pencil’s purpose is to write; scissors’ purpose is to cut.', tags: ['Algorithms', 'Logic'] },
+
+  // ── Level 2 — Number Sequences ─────────────────────────────────────────
+  { q: 'What comes next? 2, 4, 6, 8, ?', opts: ['9', '10', '12', '11'], a: 1, e: 'Add 2 each time (arithmetic, common difference 2): 8 + 2 = 10.', tags: ['Algorithms', 'Sequences'] },
+  { q: 'What comes next? 3, 6, 12, 24, ?', opts: ['36', '30', '48', '60'], a: 2, e: 'Each term doubles (geometric, ratio 2): 24 × 2 = 48.', tags: ['Algorithms', 'Sequences'] },
+  { q: 'What comes next? 1, 4, 9, 16, ?', opts: ['20', '24', '21', '25'], a: 3, e: 'These are perfect squares 1²,2²,3²,4²; the next is 5² = 25.', tags: ['Algorithms', 'Sequences'] },
+  { q: 'What comes next? 2, 3, 5, 8, 13, ?', opts: ['21', '18', '20', '19'], a: 0, e: 'Each term is the sum of the previous two (Fibonacci-like): 8 + 13 = 21.', tags: ['Algorithms', 'Sequences'] },
+  { q: 'What comes next? 100, 90, 80, 70, ?', opts: ['65', '60', '50', '55'], a: 1, e: 'Subtract 10 each time: 70 − 10 = 60.', tags: ['Algorithms', 'Sequences'] },
+  { q: 'What comes next? 1, 3, 6, 10, 15, ?', opts: ['20', '18', '21', '22'], a: 2, e: 'Triangular numbers; the gaps grow 2,3,4,5,6, so 15 + 6 = 21.', tags: ['Algorithms', 'Sequences'] },
+  { q: 'What comes next? 5, 10, 20, 40, ?', opts: ['60', '70', '50', '80'], a: 3, e: 'Each term doubles (geometric, ratio 2): 40 × 2 = 80.', tags: ['Algorithms', 'Sequences'] },
+  { q: 'What comes next? 81, 27, 9, 3, ?', opts: ['1', '0', '2', '3'], a: 0, e: 'Each term is divided by 3 (geometric, ratio 1/3): 3 ÷ 3 = 1.', tags: ['Algorithms', 'Sequences'] },
+
+  // ── Level 3 — Arithmetic & Patterns ────────────────────────────────────
+  { q: 'Compute: 2 + 3 × 4', opts: ['20', '24', '14', '9'], a: 2, e: 'Multiplication before addition: 3 × 4 = 12, then 2 + 12 = 14.', tags: ['Algorithms', 'Arithmetic'] },
+  { q: 'Compute: (8 − 3) × 2', opts: ['13', '6', '16', '10'], a: 3, e: 'Parentheses first: 8 − 3 = 5, then 5 × 2 = 10.', tags: ['Algorithms', 'Arithmetic'] },
+  { q: 'Compute: 20 ÷ 4 + 1', opts: ['6', '4', '5', '3'], a: 0, e: 'Division before addition: 20 ÷ 4 = 5, then 5 + 1 = 6.', tags: ['Algorithms', 'Arithmetic'] },
+  { q: 'Compute: 10 − 2 × 3 + 1', opts: ['25', '5', '23', '7'], a: 1, e: 'Multiply first: 2 × 3 = 6, then 10 − 6 + 1 = 5.', tags: ['Algorithms', 'Arithmetic'] },
+  { q: 'If □ + □ + □ = 12, what is □?', opts: ['3', '6', '4', '9'], a: 2, e: 'Three equal values sum to 12, so each □ = 12 ÷ 3 = 4.', tags: ['Algorithms', 'Patterns'] },
+  { q: 'Compute: 3² + 4²', opts: ['49', '14', '12', '25'], a: 3, e: '3² = 9 and 4² = 16, so 9 + 16 = 25.', tags: ['Algorithms', 'Arithmetic'] },
+  { q: 'Compute: 6 + 6 ÷ 6 × 6 − 6', opts: ['6', '0', '36', '12'], a: 0, e: '÷ and × left to right: 6÷6=1, 1×6=6, then 6+6−6 = 6.', tags: ['Algorithms', 'Arithmetic'] },
+  { q: 'A pattern starts at 7 and adds 5 each step. What is the 4th term?', opts: ['20', '22', '17', '27'], a: 1, e: 'Terms: 7, 12, 17, 22 — the 4th term is 22.', tags: ['Algorithms', 'Patterns'] },
+
+  // ── Level 4 — Sets & Venn Diagrams ─────────────────────────────────────
+  { q: 'A = {1,2,3} and B = {3,4,5}. What is A ∪ B (union)?', opts: ['{3}', '{1,2,4,5}', '{ }', '{1,2,3,4,5}'], a: 3, e: 'The union contains every element in either set: {1,2,3,4,5}.', tags: ['Algorithms', 'Sets'] },
+  { q: 'A = {1,2,3} and B = {3,4,5}. What is A ∩ B (intersection)?', opts: ['{3}', '{1,2,3,4,5}', '{ }', '{1,2}'], a: 0, e: 'The intersection contains only elements in both sets: just {3}.', tags: ['Algorithms', 'Sets'] },
+  { q: 'In a class of 30, 18 like tea and 12 like coffee, with 5 liking both. How many like at least one?', opts: ['30', '25', '35', '20'], a: 1, e: 'Inclusion–exclusion: 18 + 12 − 5 = 25 like at least one drink.', tags: ['Algorithms', 'Sets'] },
+  { q: '40 students study French or Spanish. 25 study French, 20 study Spanish. How many study both?', opts: ['10', '15', '5', '45'], a: 2, e: 'Both = 25 + 20 − 40 = 5 by inclusion–exclusion.', tags: ['Algorithms', 'Sets'] },
+  { q: 'The universal set has 50 items; set A has 30. How many are NOT in A (complement)?', opts: ['30', '50', '80', '20'], a: 3, e: 'The complement size is 50 − 30 = 20.', tags: ['Algorithms', 'Sets'] },
+  { q: 'In a group of 100, 60 own a dog, 40 own a cat, 25 own both. How many own neither?', opts: ['25', '15', '35', '20'], a: 0, e: 'At least one = 60 + 40 − 25 = 75, so neither = 100 − 75 = 25.', tags: ['Algorithms', 'Sets'] },
+  { q: 'A = {2,4,6,8}, B = {1,2,3,4}. How many elements are in A but NOT in B?', opts: ['1', '2', '3', '4'], a: 1, e: 'A − B = {6,8}, which has 2 elements (2 and 4 are removed).', tags: ['Algorithms', 'Sets'] },
+  { q: 'If |A| = 7, |B| = 5 and |A ∩ B| = 3, what is |A ∪ B|?', opts: ['12', '15', '9', '10'], a: 2, e: '|A ∪ B| = 7 + 5 − 3 = 9.', tags: ['Algorithms', 'Sets'] },
+
+  // ── Level 5 — Boolean Logic ────────────────────────────────────────────
+  { q: 'What is the value of TRUE AND FALSE?', opts: ['FALSE', 'TRUE', 'Both', 'Neither'], a: 0, e: 'AND is true only when both operands are true; here one is false, so the result is FALSE.', tags: ['Algorithms', 'Boolean'] },
+  { q: 'What is the value of TRUE OR FALSE?', opts: ['FALSE', 'TRUE', 'Both', 'Neither'], a: 1, e: 'OR is true when at least one operand is true, so the result is TRUE.', tags: ['Algorithms', 'Boolean'] },
+  { q: 'What is NOT(TRUE)?', opts: ['TRUE', '1', 'FALSE', 'Maybe'], a: 2, e: 'NOT inverts the value, so NOT TRUE is FALSE.', tags: ['Algorithms', 'Boolean'] },
+  { q: 'What is TRUE XOR TRUE?', opts: ['TRUE', '1', 'Error', 'FALSE'], a: 3, e: 'XOR is true only when the operands differ; two equal trues give FALSE.', tags: ['Algorithms', 'Boolean'] },
+  { q: 'By De Morgan’s law, NOT(A AND B) equals:', opts: ['NOT A OR NOT B', 'NOT A AND NOT B', 'A OR B', 'NOT A XOR NOT B'], a: 0, e: 'De Morgan: the negation of an AND is the OR of the negations.', tags: ['Algorithms', 'Boolean'] },
+  { q: 'For how many of the 4 input rows is (A OR B) TRUE?', opts: ['1', '3', '2', '4'], a: 1, e: 'OR is false only for (F,F); the other 3 of 4 rows are true.', tags: ['Algorithms', 'Boolean'] },
+  { q: 'What is FALSE OR (TRUE AND FALSE)?', opts: ['TRUE', '1', 'FALSE', 'Undefined'], a: 2, e: 'Inner AND is FALSE; FALSE OR FALSE is FALSE.', tags: ['Algorithms', 'Boolean'] },
+  { q: 'If A is TRUE, what is A OR (anything)?', opts: ['Depends on the other value', 'Always FALSE', 'Equal to the other value', 'Always TRUE'], a: 3, e: 'OR short-circuits: if one side is TRUE the whole expression is TRUE.', tags: ['Algorithms', 'Boolean'] },
+
+  // ── Level 6 — Ratios & Proportions ─────────────────────────────────────
+  { q: 'What is 20% of 150?', opts: ['15', '30', '20', '45'], a: 1, e: '20% = 0.20, and 0.20 × 150 = 30.', tags: ['Algorithms', 'Ratios'] },
+  { q: 'If 3 apples cost $6, how much do 5 apples cost at the same rate?', opts: ['$8', '$9', '$10', '$12'], a: 2, e: 'Unit price is $6 ÷ 3 = $2 each, so 5 × $2 = $10.', tags: ['Algorithms', 'Ratios'] },
+  { q: 'A car travels 60 miles in 1.5 hours. What is its average speed?', opts: ['30 mph', '45 mph', '90 mph', '40 mph'], a: 3, e: 'Speed = distance ÷ time = 60 ÷ 1.5 = 40 mph.', tags: ['Algorithms', 'Ratios'] },
+  { q: 'Two numbers are in the ratio 2:3. If the smaller is 8, what is the larger?', opts: ['12', '10', '16', '6'], a: 0, e: 'Scale factor is 8 ÷ 2 = 4, so the larger is 3 × 4 = 12.', tags: ['Algorithms', 'Ratios'] },
+  { q: 'A recipe for 4 people needs 200 g of flour. How much for 6 people?', opts: ['250 g', '300 g', '350 g', '400 g'], a: 1, e: 'Per person = 200 ÷ 4 = 50 g, so 6 × 50 = 300 g.', tags: ['Algorithms', 'Ratios'] },
+  { q: 'A shirt costs $40 and is discounted by 25%. What is the sale price?', opts: ['$35', '$25', '$30', '$15'], a: 2, e: 'Discount = 0.25 × 40 = $10, so the price is 40 − 10 = $30.', tags: ['Algorithms', 'Ratios'] },
+  { q: 'If 5 workers build a wall in 12 days, how long for 10 workers (same rate)?', opts: ['24 days', '10 days', '12 days', '6 days'], a: 3, e: 'Twice the workers means half the time: 12 ÷ 2 = 6 days.', tags: ['Algorithms', 'Ratios'] },
+  { q: 'What percentage is 18 out of 24?', opts: ['75%', '60%', '72%', '80%'], a: 0, e: '18 ÷ 24 = 0.75 = 75%.', tags: ['Algorithms', 'Ratios'] },
+
+  // ── Level 7 — Modular Arithmetic ───────────────────────────────────────
+  { q: 'What is 17 mod 5?', opts: ['3', '1', '2', '4'], a: 2, e: '17 = 3×5 + 2, so the remainder is 2.', tags: ['Algorithms', 'Modular'] },
+  { q: 'What is 100 mod 7?', opts: ['1', '3', '4', '2'], a: 3, e: '100 = 14×7 + 2, so 100 mod 7 = 2.', tags: ['Algorithms', 'Modular'] },
+  { q: 'It is 10 o’clock. What hour is it 5 hours later (12-hour clock)?', opts: ['3', '2', '4', '15'], a: 0, e: '(10 + 5) mod 12 = 15 mod 12 = 3 o’clock.', tags: ['Algorithms', 'Modular'] },
+  { q: 'Today is Monday. What day is it 100 days from now?', opts: ['Monday', 'Wednesday', 'Tuesday', 'Thursday'], a: 1, e: '100 mod 7 = 2, so two days after Monday is Wednesday.', tags: ['Algorithms', 'Modular'] },
+  { q: 'What is (23 + 19) mod 24?', opts: ['42', '6', '18', '0'], a: 2, e: '23 + 19 = 42, and 42 mod 24 = 42 − 24 = 18.', tags: ['Algorithms', 'Modular'] },
+  { q: 'What is 3⁴ mod 5?', opts: ['0', '2', '4', '1'], a: 3, e: '3⁴ = 81, and 81 = 16×5 + 1, so the remainder is 1.', tags: ['Algorithms', 'Modular'] },
+  { q: 'What is 2¹⁰ mod 7?', opts: ['2', '1', '4', '0'], a: 0, e: '2¹⁰ = 1024 = 146×7 + 2, so 1024 mod 7 = 2.', tags: ['Algorithms', 'Modular'] },
+  { q: 'What is the last digit of 7⁷ (i.e. 7⁷ mod 10)?', opts: ['1', '3', '7', '9'], a: 1, e: 'Powers of 7 cycle 7,9,3,1; 7 mod 4 = 3, so the 3rd in the cycle is 3.', tags: ['Algorithms', 'Modular'] },
+
+  // ── Level 8 — Combinatorics ────────────────────────────────────────────
+  { q: 'What is 5! (5 factorial)?', opts: ['25', '60', '720', '120'], a: 3, e: '5! = 5×4×3×2×1 = 120.', tags: ['Algorithms', 'Combinatorics'] },
+  { q: 'How many ways can you arrange 3 distinct books on a shelf?', opts: ['6', '3', '9', '12'], a: 0, e: '3! = 3×2×1 = 6 orderings.', tags: ['Algorithms', 'Combinatorics'] },
+  { q: 'How many ways to pick 2 people from 5 to form a committee (order does not matter)?', opts: ['20', '10', '25', '15'], a: 1, e: 'C(5,2) = 5!/(2!·3!) = 10.', tags: ['Algorithms', 'Combinatorics'] },
+  { q: 'How many ways to choose a president then a vice-president from 5 people (order matters)?', opts: ['10', '25', '20', '15'], a: 2, e: 'P(5,2) = 5 × 4 = 20 ordered choices.', tags: ['Algorithms', 'Combinatorics'] },
+  { q: 'A pizza has 3 toppings to choose freely (each on or off). How many topping combinations?', opts: ['6', '9', '3', '8'], a: 3, e: 'Each topping is independently on/off: 2³ = 8 combinations.', tags: ['Algorithms', 'Combinatorics'] },
+  { q: 'How many ways to choose 3 items from 10 (order does not matter)?', opts: ['120', '30', '720', '100'], a: 0, e: 'C(10,3) = 10×9×8 / (3×2×1) = 120.', tags: ['Algorithms', 'Combinatorics'] },
+  { q: 'At a party of 6 people everyone shakes hands once with each other. How many handshakes?', opts: ['12', '15', '30', '36'], a: 1, e: 'C(6,2) = 15 distinct pairs, so 15 handshakes.', tags: ['Algorithms', 'Combinatorics'] },
+  { q: 'How many distinct 4-digit PINs are possible using digits 0–9 (repeats allowed)?', opts: ['5040', '4096', '10000', '40320'], a: 2, e: 'Each of 4 positions has 10 choices: 10⁴ = 10000.', tags: ['Algorithms', 'Combinatorics'] },
+
+  // ── Level 9 — Probability ──────────────────────────────────────────────
+  { q: 'What is the probability of getting heads on a fair coin?', opts: ['1/2', '1/3', '1/4', '1'], a: 0, e: 'A fair coin has two equally likely outcomes, so P(heads) = 1/2.', tags: ['Algorithms', 'Probability'] },
+  { q: 'A fair die is rolled. What is the probability of rolling an even number?', opts: ['1/6', '1/2', '1/3', '2/3'], a: 1, e: 'Even results {2,4,6} are 3 of 6 outcomes: 3/6 = 1/2.', tags: ['Algorithms', 'Probability'] },
+  { q: 'Two fair coins are flipped. What is the probability of two heads?', opts: ['1/2', '1/3', '1/4', '3/4'], a: 2, e: 'P(HH) = 1/2 × 1/2 = 1/4.', tags: ['Algorithms', 'Probability'] },
+  { q: 'A fair die is rolled. What is the probability of NOT rolling a 6?', opts: ['1/6', '1/2', '2/3', '5/6'], a: 3, e: 'Complement rule: 1 − 1/6 = 5/6.', tags: ['Algorithms', 'Probability'] },
+  { q: 'A bag has 3 red and 2 blue balls. What is the probability of drawing red?', opts: ['3/5', '2/5', '1/2', '3/2'], a: 0, e: '3 red out of 5 total balls: 3/5.', tags: ['Algorithms', 'Probability'] },
+  { q: 'What is the probability of drawing a King from a standard 52-card deck?', opts: ['1/52', '1/13', '1/4', '4/13'], a: 1, e: 'There are 4 Kings: 4/52 = 1/13.', tags: ['Algorithms', 'Probability'] },
+  { q: 'Two fair dice are rolled. What is the probability the sum is 7?', opts: ['1/12', '5/36', '1/6', '7/36'], a: 2, e: '6 of 36 pairs sum to 7, so 6/36 = 1/6.', tags: ['Algorithms', 'Probability'] },
+  { q: 'Two fair coins are flipped. What is the probability of at least one head?', opts: ['1/4', '1/2', '1', '3/4'], a: 3, e: 'P(at least one) = 1 − P(no heads) = 1 − 1/4 = 3/4.', tags: ['Algorithms', 'Probability'] },
+
+  // ── Level 10 — Prime Numbers & Divisibility ────────────────────────────
+  { q: 'Which of these is a prime number?', opts: ['9', '17', '15', '21'], a: 1, e: '17 has no divisors other than 1 and itself; 9=3×3, 15=3×5, 21=3×7.', tags: ['Algorithms', 'Primes'] },
+  { q: 'How many prime numbers are there below 20?', opts: ['7', '9', '8', '10'], a: 2, e: 'They are 2,3,5,7,11,13,17,19 — eight primes.', tags: ['Algorithms', 'Primes'] },
+  { q: 'What is the greatest common divisor (GCD) of 12 and 18?', opts: ['2', '3', '9', '6'], a: 3, e: 'Common divisors of 12 and 18 are 1,2,3,6; the greatest is 6.', tags: ['Algorithms', 'Divisibility'] },
+  { q: 'What is the least common multiple (LCM) of 4 and 6?', opts: ['12', '10', '24', '2'], a: 0, e: 'Multiples of 4 and 6 first meet at 12, so LCM = 12.', tags: ['Algorithms', 'Divisibility'] },
+  { q: 'A number is divisible by 3 if:', opts: ['it is even', 'the sum of its digits is divisible by 3', 'its last digit is 0 or 5', 'it ends in 3'], a: 1, e: 'The classic rule: 3 divides a number exactly when 3 divides its digit sum.', tags: ['Algorithms', 'Divisibility'] },
+  { q: 'Is 91 a prime number?', opts: ['Yes', 'No, it is 3 × 31', 'No, it is 7 × 13', 'No, it is even'], a: 2, e: '91 = 7 × 13, so it is composite, not prime.', tags: ['Algorithms', 'Primes'] },
+  { q: 'What is the GCD of 48 and 36?', opts: ['6', '18', '24', '12'], a: 3, e: '48 = 2⁴×3 and 36 = 2²×3²; shared factors give 2²×3 = 12.', tags: ['Algorithms', 'Divisibility'] },
+  { q: 'What is the LCM of 12 and 15?', opts: ['60', '30', '45', '180'], a: 0, e: 'LCM = 12×15 / GCD(12,15) = 180 / 3 = 60.', tags: ['Algorithms', 'Divisibility'] },
+
+  // ── Level 11 — Algebraic Thinking ──────────────────────────────────────
+  { q: 'Solve for x: x + 7 = 12', opts: ['4', '6', '5', '19'], a: 2, e: 'Subtract 7 from both sides: x = 12 − 7 = 5.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'Solve for x: 3x = 21', opts: ['6', '8', '18', '7'], a: 3, e: 'Divide both sides by 3: x = 21 ÷ 3 = 7.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'Solve for x: 3x + 7 = 22', opts: ['5', '3', '4', '6'], a: 0, e: '3x = 22 − 7 = 15, so x = 15 ÷ 3 = 5.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'Solve for x: 2(x + 3) = 14', opts: ['2', '4', '5', '7'], a: 1, e: 'Divide by 2: x + 3 = 7, so x = 4.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'Solve for x: 5x − 3 = 2x + 9', opts: ['3', '5', '4', '6'], a: 2, e: '5x − 2x = 9 + 3, so 3x = 12 and x = 4.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'The sum of three consecutive integers is 72. What is the middle one?', opts: ['23', '25', '36', '24'], a: 3, e: 'The middle integer is the average: 72 ÷ 3 = 24.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'A number doubled and then increased by 5 gives 17. What is the number?', opts: ['6', '5', '7', '11'], a: 0, e: '2n + 5 = 17 → 2n = 12 → n = 6.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'If 4x + 1 = 3x + 6, what is x?', opts: ['3', '5', '7', '1'], a: 1, e: '4x − 3x = 6 − 1, so x = 5.', tags: ['Algorithms', 'Algebra'] },
+
+  // ── Level 12 — Bitwise Logic ───────────────────────────────────────────
+  { q: 'What is the binary number 1011 in decimal?', opts: ['9', '13', '7', '11'], a: 3, e: '8 + 0 + 2 + 1 = 11.', tags: ['Algorithms', 'Bitwise'] },
+  { q: 'What is decimal 13 in binary?', opts: ['1101', '1011', '1110', '1001'], a: 0, e: '13 = 8 + 4 + 1 = 1101 in binary.', tags: ['Algorithms', 'Bitwise'] },
+  { q: 'What is 5 AND 3 (bitwise)?', opts: ['7', '1', '6', '2'], a: 1, e: '101 AND 011 = 001 = 1.', tags: ['Algorithms', 'Bitwise'] },
+  { q: 'What is 5 OR 3 (bitwise)?', opts: ['1', '6', '7', '8'], a: 2, e: '101 OR 011 = 111 = 7.', tags: ['Algorithms', 'Bitwise'] },
+  { q: 'What is 5 XOR 3 (bitwise)?', opts: ['1', '7', '2', '6'], a: 3, e: '101 XOR 011 = 110 = 6.', tags: ['Algorithms', 'Bitwise'] },
+  { q: 'What is 6 << 1 (left shift by 1)?', opts: ['12', '3', '7', '16'], a: 0, e: 'Left-shifting by 1 doubles the value: 6 × 2 = 12.', tags: ['Algorithms', 'Bitwise'] },
+  { q: 'What is 20 >> 2 (right shift by 2)?', opts: ['4', '5', '10', '80'], a: 1, e: 'Right-shifting by 2 divides by 4: 20 ÷ 4 = 5.', tags: ['Algorithms', 'Bitwise'] },
+  { q: 'What is 12 XOR 10 (bitwise)?', opts: ['8', '14', '6', '2'], a: 2, e: '1100 XOR 1010 = 0110 = 6.', tags: ['Algorithms', 'Bitwise'] },
+
+  // ── Level 13 — Logic Puzzles ───────────────────────────────────────────
+  { q: 'On an island, knights always tell the truth and knaves always lie. A says “I am a knave.” What is A?', opts: ['Impossible — no one can say this', 'A knight', 'A knave', 'Either'], a: 0, e: 'A knight cannot truthfully call itself a knave, and a knave cannot lie by calling itself a knave; the statement is impossible.', tags: ['Algorithms', 'Puzzles'] },
+  { q: 'A father is 3 times as old as his son. In 12 years he will be twice as old. How old is the son now?', opts: ['10', '12', '14', '16'], a: 1, e: 'Let son = s: 3s + 12 = 2(s + 12) gives s = 12.', tags: ['Algorithms', 'Puzzles'] },
+  { q: 'Anna, Ben and Cara finished a race. Anna beat Ben. Cara finished before Anna. Who came last?', opts: ['Anna', 'Cara', 'Ben', 'Tie'], a: 2, e: 'Order is Cara, Anna, Ben — so Ben came last.', tags: ['Algorithms', 'Puzzles'] },
+  { q: 'Two people, one always lies and one always tells the truth, but you do not know who. To find a door, ask either: “Which door would the OTHER guard point to?” Then:', opts: ['take that door', 'ask again', 'you cannot decide', 'take the other door'], a: 3, e: 'Both routes describe the wrong door, so you take the opposite door.', tags: ['Algorithms', 'Puzzles'] },
+  { q: 'In a row of 5 seats, Sam is in the middle. Tom is immediately right of Sam. Who is in seat 5 (far right)?', opts: ['someone other than Sam or Tom', 'Sam', 'Tom', 'Nobody'], a: 0, e: 'Sam is in seat 3 and Tom in seat 4, so seat 5 holds one of the other people — not Sam or Tom.', tags: ['Algorithms', 'Puzzles'] },
+  { q: 'A says “B is a knave.” B says “A and I are the same type.” On the knight/knave island, what is A?', opts: ['Knave', 'Knight', 'Cannot tell', 'Both lie'], a: 1, e: 'If A is a knave, B is a knight, but then B’s claim of sameness would be a true statement contradicting B being opposite — consistency forces A to be a knight (B a knave).', tags: ['Algorithms', 'Puzzles'] },
+  { q: 'Three boxes are labeled Apples, Oranges, Mixed — all labels are wrong. You pick ONE fruit from one box to fix every label. Which box do you pick from?', opts: ['Apples', 'Oranges', 'Mixed', 'Any box works'], a: 2, e: 'The box labeled Mixed must be all one kind; that single fruit reveals it, and since all labels are wrong the rest follow.', tags: ['Algorithms', 'Puzzles'] },
+  { q: 'Five people sit in a row. Alice is not at either end. Bob is at the left end. Alice is immediately right of Bob. Which seat is Alice in (1=left)?', opts: ['1', '3', '5', '2'], a: 3, e: 'Bob is seat 1, and Alice is immediately to his right, so Alice is in seat 2.', tags: ['Algorithms', 'Puzzles'] },
+
+  // ── Level 14 — Recurrences & Growth ────────────────────────────────────
+  { q: 'Fibonacci is F(n) = F(n-1) + F(n-2) with F(1)=F(2)=1. What is F(7)?', opts: ['8', '13', '21', '11'], a: 1, e: 'Sequence: 1,1,2,3,5,8,13 — the 7th term is 13.', tags: ['Algorithms', 'Recurrences'] },
+  { q: 'A bacteria colony doubles every hour. Starting with 1, how many after 10 hours?', opts: ['100', '512', '1024', '20'], a: 2, e: 'Doubling 10 times gives 2¹⁰ = 1024.', tags: ['Algorithms', 'Growth'] },
+  { q: 'A lily pad doubles its area daily and covers the pond on day 48. On which day is the pond half covered?', opts: ['24', '36', '46', '47'], a: 3, e: 'If it doubles each day, the day before full (day 47) it is exactly half.', tags: ['Algorithms', 'Growth'] },
+  { q: 'Tower of Hanoi needs 2^n − 1 moves for n disks. How many moves for 5 disks?', opts: ['31', '25', '32', '63'], a: 0, e: '2⁵ − 1 = 32 − 1 = 31 moves.', tags: ['Algorithms', 'Recurrences'] },
+  { q: 'A sequence is a(n) = 2·a(n-1) + 1 with a(0) = 0. What is a(4)?', opts: ['7', '15', '16', '31'], a: 1, e: 'Terms: 0,1,3,7,15 — so a(4) = 15.', tags: ['Algorithms', 'Recurrences'] },
+  { q: 'Linear growth adds 3 per step from 0; exponential doubles from 1. After 6 steps, which is larger and by how much?', opts: ['Linear, by 46', 'They are equal', 'Exponential, by 46', 'Exponential, by 18'], a: 2, e: 'Linear: 18. Exponential: 2⁶ = 64. Exponential leads by 64 − 18 = 46.', tags: ['Algorithms', 'Growth'] },
+  { q: '$100 grows at 10% compounded annually. What is the value after 2 years?', opts: ['$120', '$110', '$200', '$121'], a: 3, e: '100 × 1.10² = 100 × 1.21 = $121.', tags: ['Algorithms', 'Growth'] },
+  { q: 'The recurrence a(n) = a(n-1) + a(n-2) with a(1)=2, a(2)=2 gives what for a(5)?', opts: ['10', '8', '12', '16'], a: 0, e: 'Terms: 2,2,4,6,10 — so a(5) = 10.', tags: ['Algorithms', 'Recurrences'] },
+
+  // ── Level 15 — Problem Solving ─────────────────────────────────────────
+  { q: 'A bat and a ball cost $1.10 together. The bat costs $1.00 more than the ball. How much is the ball?', opts: ['$0.10', '$1.00', '$0.05', '$0.01'], a: 2, e: 'If ball = b, then b + (b + 1.00) = 1.10 gives b = $0.05.', tags: ['Algorithms', 'ProblemSolving'] },
+  { q: 'If 5 machines make 5 widgets in 5 minutes, how long do 100 machines take to make 100 widgets?', opts: ['100 minutes', '20 minutes', '1 minute', '5 minutes'], a: 3, e: 'Each machine makes 1 widget in 5 minutes, so 100 machines make 100 widgets in 5 minutes.', tags: ['Algorithms', 'ProblemSolving'] },
+  { q: 'A snail climbs 3 ft up by day and slips 2 ft back each night in a 10 ft well. On which day does it escape?', opts: ['Day 8', 'Day 7', 'Day 10', 'Day 9'], a: 0, e: 'Net +1 ft/day to 7 ft after 7 days; on day 8 it climbs 3 ft to 10 ft and escapes before slipping.', tags: ['Algorithms', 'ProblemSolving'] },
+  { q: 'What is the sum of all integers from 1 to 100?', opts: ['5000', '5050', '10000', '2550'], a: 1, e: 'Gauss’s formula n(n+1)/2 = 100×101/2 = 5050.', tags: ['Algorithms', 'ProblemSolving'] },
+  { q: 'You drive somewhere at 60 mph and return the same route at 40 mph. What is the average speed?', opts: ['50 mph', '45 mph', '48 mph', '52 mph'], a: 2, e: 'Use the harmonic mean: 2×60×40 / (60+40) = 4800/100 = 48 mph.', tags: ['Algorithms', 'ProblemSolving'] },
+  { q: 'A price rises 20% then falls 20%. Compared to the start, the final price is:', opts: ['the same', '4% higher', '20% lower', '4% lower'], a: 3, e: '1.20 × 0.80 = 0.96, a 4% net decrease.', tags: ['Algorithms', 'ProblemSolving'] },
+  { q: 'A clock takes 5 seconds to strike 6 o’clock. How long to strike 12 o’clock?', opts: ['11 s', '10 s', '12 s', '6 s'], a: 0, e: '6 strikes have 5 gaps = 5 s, so 1 s/gap; 12 strikes have 11 gaps = 11 s.', tags: ['Algorithms', 'ProblemSolving'] },
+  { q: 'How many total squares (of all sizes) are on a standard 8×8 chessboard?', opts: ['64', '204', '128', '256'], a: 1, e: 'Sum of k² for k=1..8 = 1+4+9+16+25+36+49+64 = 204.', tags: ['Algorithms', 'ProblemSolving'] },
+];

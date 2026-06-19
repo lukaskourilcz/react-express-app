@@ -24,7 +24,7 @@ const fail = (msg: string) => {
 // Expected level counts per topic.
 const EXPECTED_LEVELS: Record<string, number> = {
   javascript: 25, typescript: 25, react: 25, nodejs: 25,
-  nextjs: 15, git: 15, html: 15, css: 15, dsa: 15,
+  nextjs: 15, git: 15, html: 15, css: 15, dsa: 15, algorithms: 15,
 };
 
 for (const topic of ROADMAP_TOPICS) {
@@ -81,12 +81,15 @@ if (dupes.length) fail(`duplicate question ids: ${[...new Set(dupes)].slice(0, 1
 const nextCount = questions.filter((q) => q.id.startsWith('rm-next-')).length;
 const nodeCount = questions.filter((q) => q.id.startsWith('rm-node-')).length;
 const dsaCount = questions.filter((q) => q.id.startsWith('rm-dsa-')).length;
+const algoCount = questions.filter((q) => q.id.startsWith('rm-algorithms-')).length;
 console.log(`\nNext.js roadmap questions: ${nextCount} (want 120)`);
 console.log(`Node.js roadmap questions: ${nodeCount} (want 200)`);
 console.log(`DSA roadmap questions: ${dsaCount} (want 120)`);
+console.log(`Algorithms roadmap questions: ${algoCount} (want 120)`);
 if (nextCount !== 120) fail(`Next.js roadmap has ${nextCount} questions, want 120`);
 if (nodeCount !== 200) fail(`Node.js roadmap has ${nodeCount} questions, want 200`);
 if (dsaCount !== 120) fail(`DSA roadmap has ${dsaCount} questions, want 120`);
+if (algoCount !== 120) fail(`Algorithms roadmap has ${algoCount} questions, want 120`);
 
 console.log(`\nTotal questions in bank: ${questions.length}`);
 if (failures > 0) {

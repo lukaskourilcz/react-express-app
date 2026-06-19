@@ -41,7 +41,7 @@ import './Roadmap.css';
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 type Active = { kind: 'level' | 'checkpoint'; ref: number };
 
-const TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git', 'dsa'];
+const TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git', 'dsa', 'algorithms'];
 const TOPIC_KEY = 'devquiz:roadmap:topic';
 const CHECKPOINT_GOLD = '#ffb300';
 // Lives for a level lesson: one heart that drains a third per wrong answer.

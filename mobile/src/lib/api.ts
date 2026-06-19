@@ -86,3 +86,10 @@ export function friendlyError(err: unknown): string {
   }
   return 'Something went wrong. Please try again.';
 }
+
+// Whether a failed request should fall back to bundled offline data: a network
+// failure / timeout / missing base URL (status 0) or a server error (5xx). A
+// 4xx (bad request, auth) is a real error and is NOT masked by the offline path.
+export function isOfflineError(err: unknown): boolean {
+  return err instanceof ApiError && (err.status === 0 || err.status >= 500);
+}

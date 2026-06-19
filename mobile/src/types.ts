@@ -11,6 +11,7 @@ export type CategoryType =
   | 'html'
   | 'css'
   | 'dsa'
+  | 'algorithms'
   | 'dev-world'
   | 'custom'
   | 'code-snippets'

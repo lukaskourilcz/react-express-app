@@ -111,6 +111,7 @@ export const STATS_CATEGORIES = new Set([
   'nextjs',
   'git',
   'dsa',
+  'algorithms',
   'dev-world',
   'custom',
   'code-snippets',
