@@ -25,7 +25,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const op = String(req.query.op || '').toLowerCase();
   if (op === 'stats') return stats(req, res);
   if (op === 'category-stats') return categoryStats(req, res);
+  if (op === 'streak') return streak(req, res);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
+}
+
+// Daily activity map (date → lessons completed) backing the mobile streak garden.
+// Kept on the existing user function so we don't add a Vercel Hobby function.
+function sanitizeDays(input: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!input || typeof input !== 'object') return out;
+  let n = 0;
+  for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+    if (n >= 500) break; // bound stored size (~16 months of dates)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
+    const num = typeof v === 'number' && Number.isFinite(v) ? Math.min(50, Math.max(0, Math.round(v))) : 0;
+    if (num > 0) {
+      out[k] = num;
+      n++;
+    }
+  }
+  return out;
+}
+
+async function streak(req: VercelRequest, res: VercelResponse) {
+  const userId = await requireAuthSub(req, res);
+  if (!userId) return;
+  try {
+    if (req.method === 'GET') {
+      const { data, error } = await withTimeout(
+        supabase!.from('user_streak').select('days').eq('user_id', userId).maybeSingle(),
+      );
+      if (error) return jsonError(res, 500, 'db_error', 'Could not load streak');
+      return res.json({ data: { days: (data?.days as Record<string, number>) ?? {} } });
+    }
+
+    if (req.method === 'PUT') {
+      const body = (req.body || {}) as { days?: unknown };
+      const days = sanitizeDays(body.days);
+      const { error } = await withTimeout(
+        supabase!
+          .from('user_streak')
+          .upsert({ user_id: userId, days, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }),
+      );
+      if (error) return jsonError(res, 500, 'db_error', 'Could not save streak');
+      return res.json({ ok: true });
+    }
+
+    res.setHeader('Allow', 'GET, PUT');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  } catch {
+    return jsonError(res, 500, 'internal_error', 'Internal error');
+  }
 }
 
 async function stats(req: VercelRequest, res: VercelResponse) {

@@ -5,9 +5,11 @@
 import { useEffect } from 'react';
 import { useSyncExternalStore } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiFetch } from './api';
 import { updateWidget } from './widget';
 
 const KEY = 'devquiz:streak:v1';
+const STREAK_API = '/api/user/streak';
 export const GARDEN_DAYS = 119; // 17 weeks × 7 for the widget/garden grid
 
 export interface StreakState {
@@ -114,6 +116,35 @@ export async function recordActivityToday(): Promise<void> {
   await persist();
   emit();
   pushToWidget();
+  void pushStreak();
+}
+
+/* ──── account sync (cross-device, via /api/user/streak) ────────────────── */
+
+export async function pushStreak(): Promise<void> {
+  try {
+    await apiFetch(STREAK_API, { method: 'PUT', body: JSON.stringify({ days: cache.days }) });
+  } catch {
+    // not signed in / offline — local + widget stay the source of truth
+  }
+}
+
+/** On sign-in: pull the account's activity, merge (max per day), store + push. */
+export async function syncStreakWithServer(): Promise<void> {
+  let serverDays: Record<string, number> = {};
+  try {
+    const { data } = await apiFetch<{ data: { days: Record<string, number> } }>(STREAK_API);
+    serverDays = data?.days ?? {};
+  } catch {
+    return;
+  }
+  const merged = { ...cache.days };
+  for (const [k, v] of Object.entries(serverDays)) merged[k] = Math.max(merged[k] ?? 0, v);
+  cache = { days: merged };
+  await persist();
+  emit();
+  pushToWidget();
+  await pushStreak();
 }
 
 function subscribe(l: () => void) {

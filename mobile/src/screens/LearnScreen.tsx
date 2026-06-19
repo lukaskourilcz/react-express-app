@@ -9,7 +9,8 @@ import { getCategoryColor, getCategoryLabel } from '../lib/categories';
 import { friendlyError } from '../lib/api';
 import { fetchRoadmapStructure, type RoadmapStructure, type RoadmapTopic } from '../lib/roadmapApi';
 import { useRoadmapProgress, passedLevelCount, syncProgressWithServer } from '../lib/roadmapProgress';
-import { useStreak } from '../lib/streak';
+import { useStreak, syncStreakWithServer } from '../lib/streak';
+import { useT } from '../lib/i18n';
 import { RoadmapPath } from '../components/RoadmapPath';
 import { PrimaryButton } from '../components/ui';
 
@@ -21,6 +22,7 @@ export default function LearnScreen() {
   const router = useRouter();
   const progress = useRoadmapProgress();
   const streak = useStreak();
+  const { t } = useT();
 
   const [structure, setStructure] = useState<RoadmapStructure | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +39,7 @@ export default function LearnScreen() {
   useEffect(load, []);
   useEffect(() => {
     void syncProgressWithServer();
+    void syncStreakWithServer();
     void AsyncStorage.getItem(TOPIC_KEY).then((saved) => {
       if (saved && (TOPICS as string[]).includes(saved)) setTopic(saved as RoadmapTopic);
     });
@@ -55,7 +58,7 @@ export default function LearnScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: c.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: c.text }]}>Learn</Text>
+        <Text style={[styles.title, { color: c.text }]}>{t('learn.title')}</Text>
         <Pressable style={styles.streakChip} onPress={() => router.push('/streak')} accessibilityLabel="Streak">
           <Ionicons name="flame" size={18} color={streak.current > 0 ? '#ff6d00' : c.textSecondary} />
           <Text style={[styles.streakText, { color: c.text }]}>{streak.current}</Text>
@@ -94,7 +97,7 @@ export default function LearnScreen() {
       {error ? (
         <View style={styles.centered}>
           <Text style={{ color: c.error, marginBottom: 16, textAlign: 'center' }}>{error}</Text>
-          <PrimaryButton label="Retry" onPress={load} />
+          <PrimaryButton label={t('common.retry')} onPress={load} />
         </View>
       ) : !structure ? (
         <View style={styles.centered}>
@@ -103,7 +106,7 @@ export default function LearnScreen() {
       ) : (
         <ScrollView contentContainerStyle={styles.pathWrap}>
           <Text style={[styles.progress, { color: c.textSecondary }]}>
-            {getCategoryLabel(topic)} · {done}/{levels.length} levels
+            {getCategoryLabel(topic)} · {t('learn.levels', { done, total: levels.length })}
           </Text>
           <RoadmapPath
             topic={topic}
