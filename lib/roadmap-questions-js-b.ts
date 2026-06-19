@@ -68,7 +68,7 @@ export const jsSeedsB: Seed[] = [
 
   // ── Level 11 — Functions & Scope ───────────────────────────────────────
   { q: 'What does this return?\n\n```js\n(function () {\n  return 42;\n})();\n```', opts: ['42', 'undefined', 'function', 'Error'], a: 0, e: 'This is an IIFE — it defines and immediately calls the function, returning 42.', tags: ['Functions', 'IIFE'] },
-  { q: 'What does f() return?\n\n```js\nfunction f(a) {\n  a = 5;\n}\nlet x = 1;\nf(x);\n// what is x?\n```', opts: ['1', '5', 'undefined', 'Error'], a: 0, e: 'Primitives are passed by value, so reassigning a inside f does not change x. x stays 1.', tags: ['Functions', 'Scope'] },
+  { q: 'What is x?\n\n```js\nfunction f(a) {\n  a = 5;\n}\nlet x = 1;\nf(x);\n// what is x?\n```', opts: ['1', '5', 'undefined', 'Error'], a: 0, e: 'Primitives are passed by value, so reassigning a inside f does not change x. x stays 1.', tags: ['Functions', 'Scope'] },
   { q: 'What does add(2)(3) return?\n\n```js\nconst add = a => b => a + b;\nadd(2)(3);\n```', opts: ['5', '23', 'undefined', '6'], a: 0, e: 'Curried functions: add(2) returns b => 2 + b, then called with 3 gives 5.', tags: ['Functions', 'Currying'] },
   { q: 'What is the result?\n\n```js\nconst f = function g() {\n  return typeof g;\n};\nf();\n```', opts: ['"function"', '"undefined"', 'Error', '"g"'], a: 0, e: 'A named function expression can reference its own name internally; typeof g is "function".', tags: ['Functions', 'Scope'] },
 
