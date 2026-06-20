@@ -172,7 +172,7 @@ function App() {
               edge="start"
               aria-label={t('nav.menu')}
               onClick={() => setMobileNavOpen(true)}
-              sx={{ display: { xs: 'inline-flex', sm: 'none' }, mr: 0.5, color: 'text.secondary' }}
+              sx={{ display: { xs: 'inline-flex', md: 'none' }, mr: 0.5, color: 'text.secondary' }}
             >
               <MenuIcon />
             </IconButton>
@@ -188,7 +188,7 @@ function App() {
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
-              <Box sx={{ display: { xs: 'none', sm: 'flex' }, alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1 }}>
                 {navItems.map((item) => (
                   <Button
                     key={item.to}
@@ -218,7 +218,7 @@ function App() {
           anchor="left"
           open={mobileNavOpen}
           onClose={() => setMobileNavOpen(false)}
-          sx={{ display: { xs: 'block', sm: 'none' } }}
+          sx={{ display: { xs: 'block', md: 'none' } }}
         >
           <Box sx={{ width: 240 }} role="presentation" onClick={() => setMobileNavOpen(false)}>
             <Typography variant="h6" sx={{ p: 2, fontWeight: 700, color: 'text.primary' }}>

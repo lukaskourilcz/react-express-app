@@ -53,18 +53,36 @@ const MAX_HEARTS = 3;
 const HEART_COLOR = '#ff4b6e';
 const CHECKPOINT_GRAD: [string, string] = ['#ffd54f', '#f5a623'];
 
-// Vibrant rainbow palette by difficulty tier (1→5): the path warms up from a
-// fresh green through blue/purple to a hot orange-red as levels get harder, so
-// the whole map reads as a colorful ribbon. `solid` drives borders/glows/
+// Per-topic path colour. The path takes its base hue from the chosen category
+// (JavaScript → yellow, React → cyan, …) so each topic feels distinct, and
+// each difficulty tier (1→5) shades the base slightly darker so the easy→hard
+// progression is still readable inside one topic. `solid` drives borders/glows/
 // connectors; `grad` is the [light, dark] fill gradient for completed nodes.
-const BANDS: { solid: string; grad: [string, string] }[] = [
-  { solid: '#58cc02', grad: ['#7be24a', '#46a302'] }, // green
-  { solid: '#15b3f0', grad: ['#56c8ff', '#0a8fd6'] }, // blue
-  { solid: '#a560f0', grad: ['#c08bff', '#8a3ff0'] }, // purple
-  { solid: '#ff9600', grad: ['#ffb84d', '#e67e00'] }, // orange
-  { solid: '#ff4b4b', grad: ['#ff7a7a', '#e23b3b'] }, // red
-];
-const bandFor = (difficulty: number) => BANDS[Math.min(BANDS.length, Math.max(1, difficulty)) - 1];
+function hexToRgb(hex: string): [number, number, number] {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+function rgbToHex(r: number, g: number, b: number): string {
+  const c = (n: number) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+  return `#${c(r)}${c(g)}${c(b)}`;
+}
+function mix(hex: string, target: [number, number, number], ratio: number): string {
+  const [r, g, b] = hexToRgb(hex);
+  return rgbToHex(
+    r * (1 - ratio) + target[0] * ratio,
+    g * (1 - ratio) + target[1] * ratio,
+    b * (1 - ratio) + target[2] * ratio,
+  );
+}
+const lighten = (hex: string, ratio = 0.25) => mix(hex, [255, 255, 255], ratio);
+const darken = (hex: string, ratio = 0.25) => mix(hex, [0, 0, 0], ratio);
+function bandForCategory(topic: RoadmapTopic, difficulty: number) {
+  const base = getCategoryHexColor(topic);
+  // Difficulty tiers 1..5 → shade the base 0%/10%/20%/30%/40% darker.
+  const tier = Math.min(5, Math.max(1, difficulty));
+  const solid = tier === 1 ? base : darken(base, 0.10 * (tier - 1));
+  return { solid, grad: [lighten(solid, 0.25), darken(solid, 0.20)] as [string, string] };
+}
 
 interface PlacedNode {
   i: number;
@@ -298,7 +316,7 @@ function Roadmap() {
         };
       }
       const meta = node.meta;
-      const band = bandFor(meta.difficulty);
+      const band = bandForCategory(topic, meta.difficulty);
       const passed = isLevelPassed(progress, topic, meta.level);
       const unlocked = isLevelUnlocked(progress, topic, meta.level);
       return {
