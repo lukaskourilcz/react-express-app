@@ -112,6 +112,8 @@ export const STATS_CATEGORIES = new Set([
   'git',
   'dsa',
   'algorithms',
+  'abbreviations',
+  'general',
   'dev-world',
   'custom',
   'code-snippets',

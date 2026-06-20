@@ -15,9 +15,16 @@
 
 import { QUESTIONS_PER_LEVEL, ROADMAP_LEVELS, difficultyForLevel } from './roadmap-build';
 
-export type RoadmapTopic = 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs' | 'html' | 'css' | 'git' | 'dsa' | 'algorithms';
+export type RoadmapTopic =
+  | 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs'
+  | 'html' | 'css' | 'git' | 'dsa' | 'algorithms'
+  | 'abbreviations' | 'general';
 
-export const ROADMAP_TOPICS: RoadmapTopic[] = ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git', 'dsa', 'algorithms'];
+export const ROADMAP_TOPICS: RoadmapTopic[] = [
+  'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
+  'html', 'css', 'git', 'dsa', 'algorithms',
+  'abbreviations', 'general',
+];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
 export const LEVEL_PASS = 75;
@@ -41,6 +48,8 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   git: 'rm-git',
   dsa: 'rm-dsa',
   algorithms: 'rm-algorithms',
+  abbreviations: 'rm-abbr',
+  general: 'rm-general',
 };
 
 // Level titles per topic, in increasing difficulty. Index 0 is level 1. The
@@ -103,6 +112,16 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'Logical Reasoning', 'Number Sequences', 'Arithmetic & Patterns', 'Sets & Venn Diagrams', 'Boolean Logic',
     'Ratios & Proportions', 'Modular Arithmetic', 'Combinatorics', 'Probability', 'Prime Numbers & Divisibility',
     'Algebraic Thinking', 'Bitwise Logic', 'Logic Puzzles', 'Recurrences & Growth', 'Problem Solving',
+  ],
+  abbreviations: [
+    'Languages & Runtimes', 'Web Standards', 'APIs & Data Formats', 'Frontend Rendering', 'Build & Tooling',
+    'Version Control & Workflow', 'Auth & Security', 'Networking', 'Databases & Storage', 'Cloud & Infra',
+    'Architecture Patterns', 'Performance Metrics', 'Testing & Quality', 'DevOps & Containers', 'Acronym Mastery',
+  ],
+  general: [
+    'How the Web Works', 'Clients & Servers', 'HTTP Methods', 'HTTP Status Codes', 'URLs & Routing',
+    'How Browsers Render', 'How Code Runs', 'How Frameworks Work', 'Frontend vs Backend', 'APIs & Communication',
+    'Caching & CDNs', 'Authentication Basics', 'Databases Overview', 'Deployment & Hosting', 'Performance & Optimization',
   ],
 };
 

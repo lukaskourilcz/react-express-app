@@ -10,9 +10,11 @@ import {
   roadmapCssQuestions,
   roadmapDsaQuestions,
   roadmapAlgorithmsQuestions,
+  roadmapAbbreviationsQuestions,
+  roadmapGeneralQuestions,
 } from './roadmap-questions';
 
-export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
 
 // Categories that are private to the owner: never served to other users
 // (not via /api/quiz/questions for non-owners, and never in the daily mix).
@@ -11606,6 +11608,8 @@ export const questions: Question[] = [
   ...roadmapCssQuestions,
   ...roadmapDsaQuestions,
   ...roadmapAlgorithmsQuestions,
+  ...roadmapAbbreviationsQuestions,
+  ...roadmapGeneralQuestions,
 ];
 
 // Fisher-Yates shuffle algorithm

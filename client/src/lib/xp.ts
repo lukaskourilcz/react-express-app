@@ -18,6 +18,7 @@ import {
   PRACTICE_XP,
   type LevelInfo,
 } from './leveling';
+import { awardTokens, tokensFromXp } from './tokens';
 
 const QUEST_KEY = 'devquiz:xp:quest:v1';
 // The highest rank the learner has been shown reaching, so we only celebrate a
@@ -104,6 +105,7 @@ export function awardQuestXp(amount: number, source: 'quiz' | 'practice'): void 
   const add = clampXp(amount);
   if (add <= 0) return;
   writeQuest(readQuest() + add);
+  awardTokens(tokensFromXp(add));
   emitToast({ kind: 'gain', amount: add, source });
   reconcileRank(true);
   scheduleSync();
@@ -117,7 +119,11 @@ export function awardQuestXp(amount: number, source: 'quiz' | 'practice'): void 
  */
 export function awardLearningOutcome(deltaLearningXp: number): void {
   if (deltaLearningXp > 0) {
-    emitToast({ kind: 'gain', amount: Math.round(deltaLearningXp), source: 'learn' });
+    const rounded = Math.round(deltaLearningXp);
+    // Learning XP isn't stored — it's derived from progress — but tokens are a
+    // separate accumulator, so credit 10% of the learning gain here.
+    awardTokens(tokensFromXp(rounded));
+    emitToast({ kind: 'gain', amount: rounded, source: 'learn' });
     reconcileRank(true);
   } else {
     awardQuestXp(PRACTICE_XP, 'practice');

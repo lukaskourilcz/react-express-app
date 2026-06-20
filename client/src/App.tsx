@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider, Snackbar, Alert } from '@mui/material';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import AuthButton from './components/AuthButton';
 import LanguageSwitcher from './components/LanguageSwitcher';
@@ -11,12 +11,16 @@ import { BRAND } from './theme/MuiTheme';
 import { useGameConfig, type GameConfig } from './lib/gameConfig';
 import { primeRankMarker } from './lib/xp';
 import XpToaster from './components/XpToaster';
+import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
+import { useAuth } from './lib/auth';
+import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
 
 const Quiz = lazy(() => import('./components/Quiz'));
 const Roadmap = lazy(() => import('./components/Roadmap'));
 const Profile = lazy(() => import('./components/Profile'));
 const Leaderboard = lazy(() => import('./components/Leaderboard'));
 const Flashcards = lazy(() => import('./components/Flashcards'));
+const Shop = lazy(() => import('./components/Shop'));
 const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayLanding })));
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 const DevPage = lazy(() => import('./components/dev/DevPage'));
@@ -27,6 +31,7 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/profile': 'title.profile',
   '/leaderboard': 'title.leaderboard',
   '/cards': 'title.cards',
+  '/shop': 'title.shop',
   '/play': 'title.play',
 };
 
@@ -76,6 +81,7 @@ const NAV_ITEMS: {
   { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play'), feature: 'multiplayer' },
   { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard' },
   { to: '/cards', key: 'nav.cards', isActive: (p) => p === '/cards', feature: 'flashcards' },
+  { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop' },
 ];
 
 const RouteLoader = () => {
@@ -90,10 +96,25 @@ function App() {
   const [quizActive, setQuizActive] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { mode, toggle } = useColorMode();
+  const { user } = useAuth();
+  const [signupBonusOpen, setSignupBonusOpen] = useState(false);
 
   // Remember the learner's current rank on load so we don't re-celebrate a
   // rank-up earned in a previous session.
   useEffect(() => primeRankMarker(), []);
+
+  // One-time 200-token welcome bonus on first sign-in. Idempotent across
+  // devices via a user_metadata flag inside grantRegistrationBonusIfNew.
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    void grantRegistrationBonusIfNew(user).then((granted) => {
+      if (granted && !cancelled) setSignupBonusOpen(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   // Nav items for features that are currently enabled in /dev → Settings.
   const navItems = NAV_ITEMS.filter((item) => !item.feature || config.features[item.feature]);
@@ -243,6 +264,7 @@ function App() {
               <Route path="/profile" element={<Profile />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/cards" element={<Flashcards />} />
+              <Route path="/shop" element={<Shop />} />
               <Route path="/play" element={<PlayLanding />} />
               <Route path="/play/:code" element={<PlayMatch />} />
               <Route path="/dev" element={<DevPage />} />
@@ -282,6 +304,22 @@ function App() {
       )}
 
       <XpToaster />
+      <RegisterPromptSnackbar />
+      <Snackbar
+        open={signupBonusOpen}
+        autoHideDuration={6000}
+        onClose={() => setSignupBonusOpen(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          severity="success"
+          variant="filled"
+          onClose={() => setSignupBonusOpen(false)}
+          sx={{ backgroundColor: BRAND.green }}
+        >
+          +{SIGNUP_BONUS_TOKENS} tokens · welcome to DevQuiz
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

@@ -20,7 +20,9 @@ const CACHE_TTL_MS = 15_000;
 
 export const KNOWN_CATEGORIES: CategoryType[] = [
   'html', 'css', 'javascript', 'typescript', 'react',
-  'nextjs', 'nodejs', 'git', 'dsa', 'algorithms', 'dev-world', 'custom', 'code-snippets', 'apt',
+  'nextjs', 'nodejs', 'git', 'dsa', 'algorithms',
+  'abbreviations', 'general',
+  'dev-world', 'custom', 'code-snippets', 'apt',
 ];
 
 export interface QuestionEditRow {
