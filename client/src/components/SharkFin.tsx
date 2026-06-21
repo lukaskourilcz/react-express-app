@@ -48,6 +48,27 @@ export function SwimmingFin({ size = 22, color = BRAND.green }: FinProps) {
   );
 }
 
+/** A short wavy "ocean surface" line in brand green. Decorative. */
+export function Waterline({ width = 72, color = BRAND.green }: { width?: number; color?: string }) {
+  return (
+    <Box
+      component="svg"
+      aria-hidden="true"
+      viewBox="0 0 72 8"
+      sx={{ width, height: width / 9, display: 'block', overflow: 'visible' }}
+    >
+      <path
+        d="M0 4 Q 9 0 18 4 T 36 4 T 54 4 T 72 4"
+        fill="none"
+        stroke={color}
+        strokeWidth="2"
+        strokeLinecap="round"
+        opacity="0.65"
+      />
+    </Box>
+  );
+}
+
 /**
  * A larger fin surfacing and swimming side-to-side over a rippling water line —
  * the branded loading indicator.

@@ -3,7 +3,7 @@ import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, 
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import AuthButton from './components/AuthButton';
 import LoadingScreen from './components/LoadingScreen';
-import { SwimmingFin } from './components/SharkFin';
+import { SwimmingFin, Waterline } from './components/SharkFin';
 import { useColorMode } from './theme/ColorModeContext';
 import { useT, useLanguage } from './i18n/LanguageContext';
 import { preferredLanguageOf } from './lib/languagePref';
@@ -18,6 +18,7 @@ import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
 
 const Quiz = lazy(() => import('./components/Quiz'));
 const Roadmap = lazy(() => import('./components/Roadmap'));
+const CareerRoadmap = lazy(() => import('./components/CareerRoadmap'));
 const Profile = lazy(() => import('./components/Profile'));
 const Leaderboard = lazy(() => import('./components/Leaderboard'));
 const Flashcards = lazy(() => import('./components/Flashcards'));
@@ -29,6 +30,7 @@ const DevPage = lazy(() => import('./components/dev/DevPage'));
 const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/': 'title.home',
   '/learn': 'title.learn',
+  '/roadmap': 'title.roadmap',
   '/profile': 'title.profile',
   '/leaderboard': 'title.leaderboard',
   '/cards': 'title.cards',
@@ -79,6 +81,7 @@ const NAV_ITEMS: {
 }[] = [
   { to: '/', key: 'nav.quiz', isActive: (p) => p === '/' },
   { to: '/learn', key: 'nav.learn', isActive: (p) => p.startsWith('/learn') },
+  { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap' },
   { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play'), feature: 'multiplayer' },
   { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard' },
   { to: '/cards', key: 'nav.cards', isActive: (p) => p === '/cards', feature: 'flashcards' },
@@ -271,6 +274,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Quiz onActiveChange={setQuizActive} />} />
               <Route path="/learn" element={<Roadmap />} />
+              <Route path="/roadmap" element={<CareerRoadmap />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
               <Route path="/cards" element={<Flashcards />} />
@@ -288,12 +292,14 @@ function App() {
           component="footer"
           sx={{ position: 'relative', py: 2, textAlign: 'center', borderTop: '1px solid', borderColor: 'divider', backgroundColor: 'background.paper' }}
         >
-          {/* devShark flourish: a green "water line" along the top-left of the
-              footer with a dorsal fin breaking the surface. Purely decorative. */}
-          <Box aria-hidden sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 0, pointerEvents: 'none' }}>
-            <Box sx={{ position: 'absolute', top: 0, left: 0, width: { xs: 130, sm: 190 }, height: 2, backgroundColor: BRAND.green, opacity: 0.55, borderRadius: 2 }} />
-            <Box sx={{ position: 'absolute', top: 0, left: 28, transform: 'translateY(-100%)' }}>
-              <SwimmingFin size={22} />
+          {/* devShark flourish: a short wavy "ocean surface" near the top-left of
+              the footer with a dorsal fin breaking through it. Purely decorative. */}
+          <Box aria-hidden sx={{ position: 'absolute', top: 0, left: 24, pointerEvents: 'none' }}>
+            <Box sx={{ position: 'absolute', left: 8, bottom: 0, transform: 'translateY(-1px)' }}>
+              <SwimmingFin size={20} />
+            </Box>
+            <Box sx={{ position: 'absolute', top: -4, left: 0 }}>
+              <Waterline width={76} />
             </Box>
           </Box>
 
