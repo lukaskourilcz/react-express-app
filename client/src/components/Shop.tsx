@@ -1,13 +1,30 @@
 // Token shop. Currency = tokens (separate from XP), earned passively as 10% of
 // every XP gain plus a one-time 200-token sign-up bonus. Spend them on a small
-// catalogue: a stackable Double-XP booster, avatar rings, and title flairs.
+// catalogue: a stackable Double-XP booster, avatar rings, title flairs, and
+// instant unlocks for individual Learn paths.
 
 import { useState } from 'react';
 import { Box, Button, Card, CardContent, Chip, Snackbar, Alert, Stack, Typography } from '@mui/material';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useTokens } from '../lib/tokens';
-import { CATALOGUE, purchase, equip, useInventory, type Product, type ProductKind } from '../lib/shop';
+import {
+  CATALOGUE,
+  PATH_UNLOCK_PRICE,
+  purchase,
+  equip,
+  useInventory,
+  isPathAlreadyUnlocked,
+  type Product,
+  type ProductKind,
+} from '../lib/shop';
+import {
+  pushProgressToServer,
+  useExtraUnlocks,
+  useRoadmapProgress,
+} from '../lib/roadmap';
+import { getCategoryLabel } from '../lib/categories';
+import { useAuth } from '../lib/auth';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 
 const TokenIcon = () => (
@@ -28,9 +45,10 @@ const TokenIcon = () => (
   </svg>
 );
 
-const SECTION_ORDER: ProductKind[] = ['booster', 'ring', 'flair'];
+const SECTION_ORDER: ProductKind[] = ['booster', 'path', 'ring', 'flair'];
 const SECTION_KEY: Record<ProductKind, TranslationKey> = {
   booster: 'shop.section.boosters',
+  path: 'shop.section.paths',
   ring: 'shop.section.rings',
   flair: 'shop.section.flairs',
 };
@@ -39,14 +57,25 @@ function Shop() {
   const t = useT();
   const tokens = useTokens();
   const inv = useInventory();
+  const { isAuthenticated } = useAuth();
+  // Subscribe so the "Unlocked" badge updates the moment a buy lands.
+  useRoadmapProgress();
+  useExtraUnlocks();
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   const handleBuy = (p: Product) => {
     const res = purchase(p.id);
+    const displayName =
+      p.kind === 'path' && p.topic ? getCategoryLabel(p.topic) : t(`shop.item.${p.id}.name` as TranslationKey);
     if (res === 'ok') {
-      setToast({ msg: t('shop.purchased', { name: t(`shop.item.${p.id}.name` as TranslationKey) }), ok: true });
+      setToast({ msg: t('shop.purchased', { name: displayName }), ok: true });
+      // Path purchases live in the synced roadmap blob — push immediately so
+      // the unlock follows the learner across devices.
+      if (p.kind === 'path' && isAuthenticated) {
+        pushProgressToServer().catch(() => {});
+      }
     } else if (res === 'owned') {
-      setToast({ msg: t('shop.alreadyOwned'), ok: false });
+      setToast({ msg: p.kind === 'path' ? t('shop.pathAlreadyUnlocked') : t('shop.alreadyOwned'), ok: false });
     } else {
       setToast({ msg: t('shop.insufficient'), ok: false });
     }
@@ -94,19 +123,27 @@ function Shop() {
           <Typography variant="overline" sx={{ color: 'text.secondary', letterSpacing: '0.6px' }}>
             {t(SECTION_KEY[kind])}
           </Typography>
+          {kind === 'path' && (
+            <Typography variant="caption" color="text.secondary">
+              {t('shop.section.pathsHint', { price: PATH_UNLOCK_PRICE })}
+            </Typography>
+          )}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-            {CATALOGUE.filter((p) => p.kind === kind).map((p) => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                owned={inv.owned.includes(p.id)}
-                equipped={inv.ring === p.id || inv.flair === p.id}
-                charges={p.kind === 'booster' ? inv.doubleXp : 0}
-                canAfford={tokens >= p.price}
-                onBuy={() => handleBuy(p)}
-                onEquip={() => equip(p.id)}
-              />
-            ))}
+            {CATALOGUE.filter((p) => p.kind === kind).map((p) => {
+              const ownedPath = p.kind === 'path' && p.topic ? isPathAlreadyUnlocked(p.topic) : false;
+              return (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  owned={p.kind === 'path' ? ownedPath : inv.owned.includes(p.id)}
+                  equipped={inv.ring === p.id || inv.flair === p.id}
+                  charges={p.kind === 'booster' ? inv.doubleXp : 0}
+                  canAfford={tokens >= p.price}
+                  onBuy={() => handleBuy(p)}
+                  onEquip={() => equip(p.id)}
+                />
+              );
+            })}
           </Box>
         </Stack>
       ))}
@@ -144,9 +181,14 @@ interface ProductCardProps {
 
 function ProductCard({ product, owned, equipped, charges, canAfford, onBuy, onEquip }: ProductCardProps) {
   const t = useT();
-  const name = t(`shop.item.${product.id}.name` as TranslationKey);
-  const desc = t(`shop.item.${product.id}.desc` as TranslationKey);
   const isBooster = product.kind === 'booster';
+  const isPath = product.kind === 'path';
+  const name = isPath && product.topic
+    ? t('shop.path.name', { topic: getCategoryLabel(product.topic) })
+    : t(`shop.item.${product.id}.name` as TranslationKey);
+  const desc = isPath
+    ? t('shop.path.desc')
+    : t(`shop.item.${product.id}.desc` as TranslationKey);
 
   return (
     <Card sx={{ display: 'flex', flexDirection: 'column' }}>
@@ -181,6 +223,14 @@ function ProductCard({ product, owned, equipped, charges, canAfford, onBuy, onEq
                 {t('shop.buy')}
               </Button>
             </Stack>
+          ) : isPath ? (
+            owned ? (
+              <Chip size="small" label={t('shop.pathUnlocked')} sx={{ backgroundColor: BRAND.greenSoft, color: BRAND.green, fontWeight: 700 }} />
+            ) : (
+              <Button size="small" variant="contained" disabled={!canAfford} onClick={onBuy} sx={brandButtonSx}>
+                {t('shop.unlockPath')}
+              </Button>
+            )
           ) : owned ? (
             <Button
               size="small"

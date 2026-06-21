@@ -1,14 +1,22 @@
-// In-app token shop. A small catalogue of consumable boosters and permanent
-// cosmetics, paid for with tokens (see tokens.ts). Like the rest of the token
-// economy this is localStorage-backed for the MVP — no DB migration. Cosmetics
-// are owned forever and can be equipped/unequipped; the Double-XP booster
-// stacks "charges" that are consumed one per quiz.
+// In-app token shop. A small catalogue of consumable boosters, permanent
+// cosmetics, and Learn-path unlocks, paid for with tokens (see tokens.ts).
+// Cosmetics + boosters are localStorage-backed; path unlocks route through
+// the roadmap store so they participate in the cross-device account sync.
 
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import { spendTokens, getTokens } from './tokens';
+import type { RoadmapTopic } from '../types/quiz';
+import {
+  STARTER_TOPICS,
+  getExtraUnlocks,
+  getRoadmapProgress,
+  isTopicUnlocked,
+  unlockExtraTopics,
+} from './roadmap';
+import { getCategoryHexColor } from './categories';
 
-export type ProductKind = 'booster' | 'ring' | 'flair';
+export type ProductKind = 'booster' | 'ring' | 'flair' | 'path';
 
 export interface Product {
   id: string;
@@ -16,13 +24,13 @@ export interface Product {
   price: number;
   /** Emoji shown on the product card (and, for flairs, the equipped flair). */
   emoji: string;
-  /** Ring colour (rings only). */
+  /** Ring colour (rings only), or the topic accent (paths). */
   color?: string;
+  /** For `path` products: the roadmap topic this unlocks. */
+  topic?: RoadmapTopic;
 }
 
-// Each product resolves its display copy from i18n keys derived from the id:
-// `shop.item.<id>.name` and `shop.item.<id>.desc`.
-export const CATALOGUE: readonly Product[] = [
+const STATIC_CATALOGUE: Product[] = [
   { id: 'double-xp', kind: 'booster', price: 150, emoji: '⚡' },
 
   { id: 'ring-emerald', kind: 'ring', price: 400, emoji: '⬤', color: '#10b981' },
@@ -34,8 +42,41 @@ export const CATALOGUE: readonly Product[] = [
   { id: 'flair-crown', kind: 'flair', price: 1000, emoji: '👑' },
 ];
 
+/** Tokens to instantly unlock one learning path that the user hasn't earned. */
+export const PATH_UNLOCK_PRICE = 400;
+
+// All non-starter topics are buyable. Starters are always free / always open.
+// Ordered the same way the Learn-page topic strip is, so the shop list mirrors
+// the map visually.
+const PATH_TOPICS: RoadmapTopic[] = [
+  'typescript', 'react', 'nextjs', 'nodejs',
+  'git', 'dsa', 'algorithms',
+  'abbreviations', 'general', 'ai', 'rhf-zod', 'cool-stuff',
+  'databases', 'system-design', 'testing', 'devops', 'security',
+];
+
+const PATH_PRODUCTS: Product[] = PATH_TOPICS.map<Product>((topic) => ({
+  id: `path-${topic}`,
+  kind: 'path',
+  price: PATH_UNLOCK_PRICE,
+  emoji: '🗺️',
+  color: getCategoryHexColor(topic),
+  topic,
+}));
+
+// Each product resolves its display copy from i18n keys derived from the id:
+// `shop.item.<id>.name` and `shop.item.<id>.desc` (paths use a shared template
+// with the topic label interpolated in).
+export const CATALOGUE: readonly Product[] = [...STATIC_CATALOGUE, ...PATH_PRODUCTS];
+
 const byId = new Map(CATALOGUE.map((p) => [p.id, p]));
 export const productById = (id: string): Product | undefined => byId.get(id);
+
+/** True if the path's topic is already accessible (starter / prereq met / bought). */
+export function isPathAlreadyUnlocked(topic: RoadmapTopic): boolean {
+  if (STARTER_TOPICS.includes(topic)) return true;
+  return isTopicUnlocked(getRoadmapProgress(), topic, new Set(getExtraUnlocks()));
+}
 
 interface Inventory {
   /** Cosmetic product ids the learner owns permanently. */
@@ -78,12 +119,23 @@ export type PurchaseResult = 'ok' | 'insufficient' | 'owned' | 'unknown';
 
 /**
  * Buy a product: spend its price in tokens, then grant it. Cosmetics are a
- * one-time purchase; the Double-XP booster adds a stackable charge. Returns a
- * status the caller can surface to the learner.
+ * one-time purchase; the Double-XP booster adds a stackable charge; a Learn
+ * path routes through the roadmap-unlock store. Returns a status the caller
+ * can surface to the learner.
  */
 export function purchase(id: string): PurchaseResult {
   const product = byId.get(id);
   if (!product) return 'unknown';
+
+  if (product.kind === 'path') {
+    if (!product.topic) return 'unknown';
+    if (isPathAlreadyUnlocked(product.topic)) return 'owned';
+    if (getTokens() < product.price) return 'insufficient';
+    if (!spendTokens(product.price)) return 'insufficient';
+    unlockExtraTopics([product.topic]);
+    return 'ok';
+  }
+
   const inv = readInventory();
   if (product.kind !== 'booster' && inv.owned.includes(id)) return 'owned';
   if (getTokens() < product.price) return 'insufficient';

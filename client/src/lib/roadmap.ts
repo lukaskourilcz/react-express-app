@@ -308,25 +308,48 @@ export function mergeProgress(a: RoadmapProgress, b: RoadmapProgress): RoadmapPr
   return out;
 }
 
-/** PUT the current (or given) local progress to the user's account. */
-export async function pushProgressToServer(progress: RoadmapProgress = readProgress()): Promise<void> {
-  await apiFetch(PROGRESS_PUT, { method: 'PUT', body: JSON.stringify({ data: progress }) });
+/** PUT the current (or given) local progress + unlocks to the user's account. */
+export async function pushProgressToServer(
+  progress: RoadmapProgress = readProgress(),
+  extraUnlocks: RoadmapTopic[] = readExtraUnlocks(),
+): Promise<void> {
+  await apiFetch(PROGRESS_PUT, {
+    method: 'PUT',
+    body: JSON.stringify({
+      data: progress,
+      extra: { unlocked: extraUnlocks },
+    }),
+  });
 }
 
 // On sign-in: pull the account's progress, merge it with whatever is on this
 // device, store the union locally, and push it back so both sides agree.
+// `extra.unlocked` (skill-check grants) sync the same way — union of both.
 export async function syncProgressWithServer(): Promise<void> {
-  let server: RoadmapProgress = {};
+  let serverProgress: RoadmapProgress = {};
+  let serverExtra: RoadmapTopic[] = [];
   try {
-    const { data } = await apiFetch<{ data: RoadmapProgress }>(PROGRESS_GET);
-    server = data ?? {};
+    const res = await apiFetch<{
+      data: RoadmapProgress;
+      extra?: { unlocked?: string[] };
+    }>(PROGRESS_GET);
+    serverProgress = res.data ?? {};
+    serverExtra = (res.extra?.unlocked ?? []).filter((id): id is RoadmapTopic =>
+      (Object.keys(TOPIC_PREREQS) as string[]).includes(id),
+    ) as RoadmapTopic[];
   } catch {
     return; // not signed in or offline — keep local only
   }
-  const merged = mergeProgress(readProgress(), server);
-  writeProgress(merged);
+  const mergedProgress = mergeProgress(readProgress(), serverProgress);
+  writeProgress(mergedProgress);
+
+  // Union local + server unlocks so skill-check grants never get revoked by sync.
+  const local = readExtraUnlocks();
+  const union = Array.from(new Set<RoadmapTopic>([...local, ...serverExtra]));
+  if (union.length !== local.length) writeExtraUnlocks(union);
+
   try {
-    await pushProgressToServer(merged);
+    await pushProgressToServer(mergedProgress, union);
   } catch {
     // best-effort; local is already updated
   }

@@ -303,8 +303,10 @@ function Roadmap() {
         const labels = added.map(getCategoryLabel).join(', ');
         setUnlockSnack(t('roadmap.skillCheckUnlocked', { topics: labels }));
       }
+      // Persist to the user's account so unlocks follow them across devices.
+      if (isAuthenticated && added.length > 0) pushProgressToServer().catch(() => {});
     },
-    [t],
+    [t, isAuthenticated],
   );
 
   const open = (a: Active) => {

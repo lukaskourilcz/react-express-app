@@ -60,10 +60,37 @@ interface Entry {
 type TopicProgress = { levels: Record<string, Entry>; checkpoints: Record<string, Entry> };
 type ProgressBlob = Record<string, TopicProgress>;
 
+// Skill-check unlocks live alongside roadmap progress so both sync in one round
+// trip. Shape: { unlocked: RoadmapTopic[] }. Empty when the user hasn't taken
+// the skill check or earned nothing from it.
+interface ExtraBlob {
+  unlocked: string[];
+}
+
 const clampPct = (n: unknown): number => {
   const v = typeof n === 'number' && Number.isFinite(n) ? Math.round(n) : 0;
   return v < 0 ? 0 : v > 100 ? 100 : v;
 };
+
+// Rebuild a clean extras blob from untrusted input: only known topic ids,
+// de-duplicated and bounded. Exported for tests.
+export function sanitizeExtra(input: unknown): ExtraBlob {
+  const out: ExtraBlob = { unlocked: [] };
+  if (!input || typeof input !== 'object') return out;
+  const raw = (input as Record<string, unknown>).unlocked;
+  if (!Array.isArray(raw)) return out;
+  const seen = new Set<string>();
+  const known = new Set<string>(ROADMAP_TOPICS);
+  for (const v of raw) {
+    if (typeof v !== 'string') continue;
+    const id = v.toLowerCase();
+    if (!known.has(id) || seen.has(id)) continue;
+    seen.add(id);
+    out.unlocked.push(id);
+    if (out.unlocked.length >= ROADMAP_TOPICS.length) break;
+  }
+  return out;
+}
 
 // Rebuild a clean blob from untrusted input: only known topics, valid level /
 // checkpoint numbers, and bounded values are kept. This bounds the stored size
@@ -114,22 +141,34 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
 
   if (req.method === 'GET') {
     const { data, error } = await withTimeout(
-      supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle(),
+      supabase.from(PROGRESS_TABLE).select('data, extra').eq('user_id', userId).maybeSingle(),
     );
     if (error) return jsonError(res, 500, 'db_error', 'Could not load progress');
-    return res.json({ data: (data?.data as ProgressBlob) ?? {} });
+    return res.json({
+      data: (data?.data as ProgressBlob) ?? {},
+      extra: sanitizeExtra(data?.extra),
+    });
   }
 
-  // PUT
+  // PUT — accept either { data, extra } or a bare progress blob for back-compat.
   const body = (req.body || {}) as Record<string, unknown>;
   const clean = sanitize(body.data);
+  const cleanExtra = sanitizeExtra(body.extra);
   const { error } = await withTimeout(
     supabase
       .from(PROGRESS_TABLE)
-      .upsert({ user_id: userId, data: clean, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }),
+      .upsert(
+        {
+          user_id: userId,
+          data: clean,
+          extra: cleanExtra,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' },
+      ),
   );
   if (error) return jsonError(res, 500, 'db_error', 'Could not save progress');
-  return res.json({ ok: true, data: clean });
+  return res.json({ ok: true, data: clean, extra: cleanExtra });
 }
 
 /* ──── handler ──────────────────────────────────────────────────────────── */
