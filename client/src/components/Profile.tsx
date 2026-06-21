@@ -10,6 +10,8 @@ import {
   Alert,
   LinearProgress,
   Chip,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import { getUserStats, createOrUpdateUserStats, type UserStats } from '../lib/supabase';
 import { useRoadmapProgress, syncProgressWithServer } from '../lib/roadmap';
@@ -21,8 +23,11 @@ import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
 import { computeAchievements, readPerfectQuizCount } from '../lib/achievements';
 import { renderQuestion } from './CodeBlock';
-import { useT } from '../i18n/LanguageContext';
+import { useT, useLanguage } from '../i18n/LanguageContext';
+import type { Lang } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
+import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
+import { savePreferredLanguage } from '../lib/languagePref';
 import { useReloadKey, useCancellableEffect } from '../lib/hooks';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
@@ -128,6 +133,8 @@ function ProfileBody({
   navigate,
 }: ProfileBodyProps) {
   const t = useT();
+  const ringColor = useEquippedRingColor();
+  const flair = useEquippedFlair();
   const { questions: bookmarkedQuestions } = useBookmarks();
   const achievements = computeAchievements({
     stats,
@@ -143,10 +150,19 @@ function ProfileBody({
         sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderTop: `4px solid ${BRAND.green}`, borderRadius: 2 }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar src={user.picture} alt="" sx={{ width: { xs: 52, sm: 64 }, height: { xs: 52, sm: 64 }, flexShrink: 0 }} />
+          <Avatar
+            src={user.picture}
+            alt=""
+            sx={{
+              width: { xs: 52, sm: 64 },
+              height: { xs: 52, sm: 64 },
+              flexShrink: 0,
+              ...(ringColor ? { border: `3px solid ${ringColor}`, boxShadow: `0 0 0 2px ${ringColor}33` } : null),
+            }}
+          />
           <Box sx={{ minWidth: 0 }}>
             <Typography variant="h6" sx={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user.name}
+              {flair ? `${flair} ` : ''}{user.name}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {user.email}
@@ -328,6 +344,8 @@ function ProfileBody({
         </Paper>
       )}
 
+      <PreferencesCard />
+
       <Button
         variant="contained"
         fullWidth
@@ -420,6 +438,47 @@ function CareerCard() {
             {info.isMax ? t('profile.maxRank') : t('profile.xpToNext', { xp: nf(info.xpToNext), title: nextTitle ?? '' })}
           </Typography>
         </Box>
+      </Box>
+    </Paper>
+  );
+}
+
+// Account preferences. The language choice is applied live and persisted to the
+// account (Supabase user_metadata) so it loads automatically on the next sign-in.
+function PreferencesCard() {
+  const { t, lang, setLang } = useLanguage();
+
+  const handleLang = (_: React.MouseEvent<HTMLElement>, next: Lang | null) => {
+    if (!next || next === lang) return;
+    setLang(next);
+    void savePreferredLanguage(next);
+  };
+
+  return (
+    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+      <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
+        {t('profile.preferences')}
+      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {t('profile.language')}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {t('profile.languageHelp')}
+          </Typography>
+        </Box>
+        <ToggleButtonGroup
+          value={lang}
+          exclusive
+          size="small"
+          onChange={handleLang}
+          aria-label={t('profile.language')}
+          sx={{ '& .MuiToggleButton-root': { px: 1.5, py: 0.4, fontSize: '0.75rem', fontWeight: 700, textTransform: 'none' } }}
+        >
+          <ToggleButton value="en">EN</ToggleButton>
+          <ToggleButton value="cs">CS</ToggleButton>
+        </ToggleButtonGroup>
       </Box>
     </Paper>
   );

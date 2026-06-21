@@ -19,6 +19,7 @@ import {
   type LevelInfo,
 } from './leveling';
 import { awardTokens, tokensFromXp } from './tokens';
+import { consumeDoubleXpCharge } from './shop';
 
 const QUEST_KEY = 'devquiz:xp:quest:v1';
 // The highest rank the learner has been shown reaching, so we only celebrate a
@@ -102,8 +103,12 @@ function reconcileRank(announce: boolean): LevelInfo {
 
 /** Award quest XP (quiz or practice), toast it, and check for a rank-up. */
 export function awardQuestXp(amount: number, source: 'quiz' | 'practice'): void {
-  const add = clampXp(amount);
+  let add = clampXp(amount);
   if (add <= 0) return;
+  // A Double-XP booster bought in the Shop doubles the next quiz's reward.
+  if (source === 'quiz' && consumeDoubleXpCharge()) {
+    add = clampXp(add * 2);
+  }
   writeQuest(readQuest() + add);
   awardTokens(tokensFromXp(add));
   emitToast({ kind: 'gain', amount: add, source });

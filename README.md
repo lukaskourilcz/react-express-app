@@ -446,9 +446,6 @@ The repo is a Vercel project out of the box.
 5. Apply the SQL migrations in Supabase (see [Database setup](#database-setup)).
 6. Verify `/api/health` returns 200 and `{ supabase: 'ok' }`.
 
-### Custom domain
-Add your domain in Vercel; the existing `vercel.json` security headers (HSTS preload, CSP, etc.) apply automatically.
-
 ---
 
 ## Roadmap / known gaps
