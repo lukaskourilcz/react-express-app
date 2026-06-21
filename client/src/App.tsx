@@ -292,14 +292,14 @@ function App() {
           component="footer"
           sx={{ position: 'relative', py: 2, textAlign: 'center', borderTop: '1px solid', borderColor: 'divider', backgroundColor: 'background.paper' }}
         >
-          {/* devShark flourish: a short wavy "ocean surface" near the top-left of
-              the footer with a dorsal fin breaking through it. Purely decorative. */}
-          <Box aria-hidden sx={{ position: 'absolute', top: 0, left: 24, pointerEvents: 'none' }}>
-            <Box sx={{ position: 'absolute', left: 8, bottom: 0, transform: 'translateY(-1px)' }}>
-              <SwimmingFin size={20} />
+          {/* devShark flourish: a wavy "ocean surface" running in from the left
+              edge with a dorsal fin breaking through it ~40% across. Decorative. */}
+          <Box aria-hidden sx={{ position: 'absolute', top: 0, left: 0, right: 0, pointerEvents: 'none' }}>
+            <Box sx={{ position: 'absolute', top: -3, left: 0, width: '46%' }}>
+              <Waterline />
             </Box>
-            <Box sx={{ position: 'absolute', top: -4, left: 0 }}>
-              <Waterline width={76} />
+            <Box sx={{ position: 'absolute', top: 0, left: '40%', transform: 'translate(-50%, -100%)' }}>
+              <SwimmingFin size={20} />
             </Box>
           </Box>
 
