@@ -286,8 +286,17 @@ function App() {
       {showChrome && (
         <Box
           component="footer"
-          sx={{ py: 2, textAlign: 'center', borderTop: '1px solid', borderColor: 'divider', backgroundColor: 'background.paper' }}
+          sx={{ position: 'relative', py: 2, textAlign: 'center', borderTop: '1px solid', borderColor: 'divider', backgroundColor: 'background.paper' }}
         >
+          {/* devShark flourish: a green "water line" along the top-left of the
+              footer with a dorsal fin breaking the surface. Purely decorative. */}
+          <Box aria-hidden sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 0, pointerEvents: 'none' }}>
+            <Box sx={{ position: 'absolute', top: 0, left: 0, width: { xs: 130, sm: 190 }, height: 2, backgroundColor: BRAND.green, opacity: 0.55, borderRadius: 2 }} />
+            <Box sx={{ position: 'absolute', top: 0, left: 28, transform: 'translateY(-100%)' }}>
+              <SwimmingFin size={22} />
+            </Box>
+          </Box>
+
           <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
             <IconButton
               component="a"
