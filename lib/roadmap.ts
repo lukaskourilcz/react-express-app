@@ -112,7 +112,6 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'Searching Algorithms', 'Trees', 'Binary Search Trees', 'Heaps & Priority Queues', 'Graphs',
   ],
   algorithms: [
-    'Logical Reasoning', 'Number Sequences', 'Arithmetic & Patterns', 'Sets & Venn Diagrams', 'Boolean Logic',
     'Ratios & Proportions', 'Modular Arithmetic', 'Combinatorics', 'Probability', 'Prime Numbers & Divisibility',
     'Algebraic Thinking', 'Bitwise Logic', 'Logic Puzzles', 'Recurrences & Growth', 'Problem Solving',
   ],

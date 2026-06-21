@@ -24,7 +24,7 @@ const fail = (msg: string) => {
 // Expected level counts per topic.
 const EXPECTED_LEVELS: Record<string, number> = {
   javascript: 25, typescript: 25, react: 25, nodejs: 25,
-  nextjs: 15, git: 15, html: 15, css: 15, dsa: 15, algorithms: 15,
+  nextjs: 15, git: 15, html: 15, css: 15, dsa: 15, algorithms: 10,
   abbreviations: 15, general: 15, ai: 20, 'rhf-zod': 15, 'cool-stuff': 15,
 };
 
@@ -90,13 +90,13 @@ const coolCount = questions.filter((q) => q.id.startsWith('rm-cool-')).length;
 console.log(`\nNext.js roadmap questions: ${nextCount} (want 120)`);
 console.log(`Node.js roadmap questions: ${nodeCount} (want 200)`);
 console.log(`DSA roadmap questions: ${dsaCount} (want 120)`);
-console.log(`Algorithms roadmap questions: ${algoCount} (want 120)`);
+console.log(`Algorithms roadmap questions: ${algoCount} (want 80)`);
 console.log(`Abbreviations roadmap questions: ${abbrCount} (want 120)`);
 console.log(`General roadmap questions: ${generalCount} (want 120)`);
 if (nextCount !== 120) fail(`Next.js roadmap has ${nextCount} questions, want 120`);
 if (nodeCount !== 200) fail(`Node.js roadmap has ${nodeCount} questions, want 200`);
 if (dsaCount !== 120) fail(`DSA roadmap has ${dsaCount} questions, want 120`);
-if (algoCount !== 120) fail(`Algorithms roadmap has ${algoCount} questions, want 120`);
+if (algoCount !== 80) fail(`Algorithms roadmap has ${algoCount} questions, want 80`);
 if (abbrCount !== 120) fail(`Abbreviations roadmap has ${abbrCount} questions, want 120`);
 if (generalCount !== 120) fail(`General roadmap has ${generalCount} questions, want 120`);
 console.log(`React Hook Form + Zod roadmap questions: ${rhfCount} (want 120)`);

@@ -1,0 +1,255 @@
+// "Roadmap" — an honest, market-grounded picture of what it takes to become a
+// senior full-stack engineer, wired to the learner's actual progress on the
+// devShark learning path. It deliberately separates "what devShark can teach
+// you" (the four knowledge pillars, with live completion %) from "what only the
+// real world can" (the Beyond list) so the page never over-promises.
+
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Box, Paper, Typography, LinearProgress, Chip, Button, Divider, Alert } from '@mui/material';
+import { BRAND, brandButtonSx } from '../theme/MuiTheme';
+import { useT } from '../i18n/LanguageContext';
+import {
+  useRoadmapProgress,
+  passedLevelCount,
+  fetchRoadmapStructure,
+  syncProgressWithServer,
+} from '../lib/roadmap';
+import type { RoadmapStructure, RoadmapTopic } from '../types/quiz';
+import { useTotalXp } from '../lib/xp';
+import { levelForXp, specializationFor, displayTitle, CAREER_RANKS } from '../lib/leveling';
+
+interface Area {
+  topic: RoadmapTopic;
+  label: string;
+  blurb: string;
+}
+interface Pillar {
+  title: string;
+  intro: string;
+  areas: Area[];
+}
+
+// The knowledge devShark actually covers, grouped the way the market thinks
+// about a full-stack engineer. Each area maps to a learning-path topic.
+const PILLARS: Pillar[] = [
+  {
+    title: 'Frontend foundations',
+    intro: 'The bedrock. You cannot fake these — every interview and every codebase assumes them.',
+    areas: [
+      { topic: 'html', label: 'HTML', blurb: 'Semantics, forms, accessibility.' },
+      { topic: 'css', label: 'CSS', blurb: 'Layout, flexbox/grid, responsive design.' },
+      { topic: 'javascript', label: 'JavaScript', blurb: 'The language of the web — closures, async, the event loop.' },
+      { topic: 'typescript', label: 'TypeScript', blurb: 'Non-negotiable in modern teams.' },
+    ],
+  },
+  {
+    title: 'Frontend frameworks',
+    intro: 'Where most product work happens. React + a meta-framework is the default stack.',
+    areas: [
+      { topic: 'react', label: 'React', blurb: 'Components, hooks, state, rendering.' },
+      { topic: 'nextjs', label: 'Next.js', blurb: 'Routing, server components, data fetching.' },
+      { topic: 'rhf-zod', label: 'Forms & validation', blurb: 'React Hook Form + Zod — real apps are full of forms.' },
+    ],
+  },
+  {
+    title: 'Backend & the web',
+    intro: 'The "stack" half. You need to build and reason about the server, not just call it.',
+    areas: [
+      { topic: 'nodejs', label: 'Node.js', blurb: 'Modules, async, HTTP, Express, streams.' },
+      { topic: 'general', label: 'How the web works', blurb: 'HTTP, clients/servers, caching, auth basics.' },
+    ],
+  },
+  {
+    title: 'Computer science',
+    intro: 'What separates someone who copies code from someone who can solve new problems.',
+    areas: [
+      { topic: 'dsa', label: 'Data structures & algorithms', blurb: 'Complexity, arrays, trees, graphs, sorting.' },
+      { topic: 'algorithms', label: 'Problem solving & math', blurb: 'Combinatorics, probability, bitwise, recurrences.' },
+    ],
+  },
+];
+
+// The honest part: things a quiz app genuinely cannot give you. Seniority is
+// mostly this list plus years of shipping.
+const BEYOND: { label: string; detail: string }[] = [
+  { label: 'Databases & data modeling', detail: 'SQL, schema design, indexing, transactions, N+1s.' },
+  { label: 'System design at scale', detail: 'Caching, queues, sharding, trade-offs, failure modes.' },
+  { label: 'Automated testing', detail: 'Unit, integration and end-to-end — and knowing what to test.' },
+  { label: 'DevOps & cloud', detail: 'CI/CD, containers, observability, deploying on AWS/GCP/Vercel.' },
+  { label: 'Security', detail: 'AuthN/Z, OWASP top 10, secrets, secure defaults.' },
+  { label: 'Real production experience', detail: 'Shipping, on-call, incidents, reading large unfamiliar codebases.' },
+  { label: 'Communication & judgement', detail: 'Code review, mentoring, scoping, saying no, product sense.' },
+];
+
+const SENIOR_RANK_TITLE = 'Senior Developer';
+
+function pct(passed: number, total: number): number {
+  return total > 0 ? Math.round((passed / total) * 100) : 0;
+}
+
+export default function CareerRoadmap() {
+  const t = useT();
+  const progress = useRoadmapProgress();
+  const totalXp = useTotalXp();
+  const [structure, setStructure] = useState<RoadmapStructure | null>(null);
+
+  // Pull the live structure (level counts per topic) and sync account progress
+  // so the percentages are accurate even on a fresh device.
+  useEffect(() => {
+    const controller = new AbortController();
+    syncProgressWithServer().catch(() => {});
+    fetchRoadmapStructure(controller.signal)
+      .then(setStructure)
+      .catch(() => {});
+    return () => controller.abort();
+  }, []);
+
+  const levelsFor = (topic: RoadmapTopic): number => structure?.structure?.[topic]?.levels.length ?? 0;
+
+  // Aggregate completion across every devShark-taught area.
+  const overall = useMemo(() => {
+    let passed = 0;
+    let total = 0;
+    for (const pillar of PILLARS) {
+      for (const area of pillar.areas) {
+        total += levelsFor(area.topic);
+        passed += Math.min(passedLevelCount(progress, area.topic), levelsFor(area.topic));
+      }
+    }
+    return { passed, total, pct: pct(passed, total) };
+  }, [progress, structure]);
+
+  const info = levelForXp(totalXp);
+  const spec = specializationFor(progress);
+  const rankTitle = displayTitle(info.rank.title, spec);
+  const seniorRank = CAREER_RANKS.find((r) => r.title === SENIOR_RANK_TITLE);
+  const reachedSenior = seniorRank ? totalXp >= seniorRank.minXp : false;
+  const xpToSenior = seniorRank ? Math.max(0, seniorRank.minXp - totalXp) : 0;
+
+  return (
+    <Box sx={{ maxWidth: 760, mx: 'auto' }}>
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="overline" sx={{ color: BRAND.green, letterSpacing: '0.8px' }}>
+          {t('roadmapPage.kicker')}
+        </Typography>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 800, mb: 1 }}>
+          {t('roadmapPage.title')}
+        </Typography>
+        <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+          A straight-talking map of what it takes to make it as a senior full-stack engineer — and exactly how
+          far devShark can carry you. No hype: the path below is the knowledge base, not the finish line.
+        </Typography>
+      </Box>
+
+      {/* Honesty banner */}
+      <Alert severity="info" icon={false} sx={{ mb: 3, border: '1px solid', borderColor: 'divider' }}>
+        <Typography variant="body2">
+          <strong>The honest version:</strong> senior full-stack is typically <strong>5–8+ years</strong> of
+          shipping real software. Knowledge is necessary but not sufficient — you also need the “Beyond devShark”
+          list below, which no quiz app can hand you. devShark gets your <strong>fundamentals</strong> genuinely
+          solid; the rest is reps in the real world.
+        </Typography>
+      </Alert>
+
+      {/* Where you are now */}
+      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 3, border: '1px solid', borderColor: 'divider', borderTop: `4px solid ${BRAND.green}`, borderRadius: 2 }}>
+        <Typography variant="overline" color="text.secondary" component="h2">
+          Your fundamentals progress
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, mt: 1, mb: 1.5, flexWrap: 'wrap' }}>
+          <Typography variant="h3" sx={{ fontWeight: 800, color: BRAND.green, lineHeight: 1 }}>
+            {overall.pct}%
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {overall.passed} / {overall.total || '…'} learning-path levels passed across the four pillars
+          </Typography>
+        </Box>
+        <LinearProgress
+          variant="determinate"
+          value={overall.pct}
+          sx={{ height: 10, borderRadius: 5, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: BRAND.green } }}
+        />
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
+          <Chip size="small" label={`${info.rank.emoji} ${rankTitle}`} sx={{ fontWeight: 700, backgroundColor: BRAND.greenSoft, color: 'text.primary' }} />
+          <Typography variant="caption" color="text.secondary">
+            {reachedSenior
+              ? 'You’ve crossed this app’s Senior threshold — keep it sharp and go build real things.'
+              : `${xpToSenior.toLocaleString()} XP to devShark’s “Senior Developer” rank (a knowledge proxy, not a job title).`}
+          </Typography>
+        </Box>
+      </Paper>
+
+      {/* The four pillars */}
+      {PILLARS.map((pillar) => {
+        let pPassed = 0;
+        let pTotal = 0;
+        for (const area of pillar.areas) {
+          pTotal += levelsFor(area.topic);
+          pPassed += Math.min(passedLevelCount(progress, area.topic), levelsFor(area.topic));
+        }
+        const pPct = pct(pPassed, pTotal);
+        return (
+          <Paper key={pillar.title} elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>{pillar.title}</Typography>
+              <Chip size="small" label={`${pPct}%`} sx={{ fontWeight: 700, backgroundColor: pPct === 100 ? BRAND.green : BRAND.greenSoft, color: pPct === 100 ? '#fff' : BRAND.green }} />
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{pillar.intro}</Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+              {pillar.areas.map((area) => {
+                const total = levelsFor(area.topic);
+                const passed = Math.min(passedLevelCount(progress, area.topic), total);
+                const aPct = pct(passed, total);
+                return (
+                  <Box key={area.topic}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{area.label}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {total ? `${passed}/${total} levels` : '—'}
+                      </Typography>
+                    </Box>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>{area.blurb}</Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={aPct}
+                      sx={{ height: 6, borderRadius: 3, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 3, backgroundColor: aPct === 100 ? BRAND.green : '#7cb342' } }}
+                    />
+                  </Box>
+                );
+              })}
+            </Box>
+            <Button component={Link} to="/learn" size="small" sx={{ mt: 1.5, ...brandButtonSx, color: '#fff' }} variant="contained">
+              Continue in the learning path →
+            </Button>
+          </Paper>
+        );
+      })}
+
+      {/* The honest gap */}
+      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mt: 3, border: '1px dashed', borderColor: 'warning.main', borderRadius: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>Beyond devShark — what you still have to earn</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+          devShark doesn’t teach these, and honestly most of them can’t be taught by any quiz — they’re learned by
+          building, breaking and shipping. This is the bulk of the gap to “senior”.
+        </Typography>
+        <Divider sx={{ mb: 1.5 }} />
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {BEYOND.map((b) => (
+            <Box key={b.label} sx={{ display: 'flex', gap: 1 }}>
+              <Box aria-hidden sx={{ color: 'warning.dark', fontWeight: 700 }}>○</Box>
+              <Box>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{b.label}</Typography>
+                <Typography variant="caption" color="text.secondary">{b.detail}</Typography>
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      </Paper>
+
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 3 }}>
+        Master the four pillars here, then go get the reps. That combination is what actually makes it in this market.
+      </Typography>
+    </Box>
+  );
+}

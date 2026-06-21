@@ -121,6 +121,8 @@ export default function DevQuestions() {
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return questions.filter((q) => {
+      // Deleted questions are gone for good — never list them.
+      if (q.deleted) return false;
       if (categoryFilter !== 'all' && q.category !== categoryFilter) return false;
       if (importanceFilter === 'filler' && q.importance > 3) return false;
       if (typeof importanceFilter === 'number' && q.importance !== importanceFilter) return false;
@@ -187,13 +189,10 @@ export default function DevQuestions() {
   };
 
   const handleDelete = (q: AdminQuestion) => {
-    const msg =
-      q.source === 'custom'
-        ? 'Delete this custom question permanently?'
-        : 'Hide this question from the quiz and learning paths? Levels re-sync automatically. You can restore it later.';
-    if (window.confirm(msg)) runAction('Question removed', () => setQuestionDeleted(q.id, true));
+    if (window.confirm('Delete this question permanently? This cannot be undone.')) {
+      runAction('Question deleted', () => setQuestionDeleted(q.id, true));
+    }
   };
-  const handleRestore = (q: AdminQuestion) => runAction('Question restored', () => setQuestionDeleted(q.id, false));
   const handleReset = (q: AdminQuestion) => {
     if (window.confirm('Discard edits and revert to the original question?')) {
       runAction('Reverted to original', () => resetQuestion(q.id));
@@ -212,14 +211,14 @@ export default function DevQuestions() {
     }
     if (
       !window.confirm(
-        `Hide all ${bulkHideCount} questions scoring ≤ ${bulkThreshold}? The learning paths re-level automatically and you can restore them later.`,
+        `Delete all ${bulkHideCount} questions scoring ≤ ${bulkThreshold} permanently? This cannot be undone. The learning paths re-level automatically.`,
       )
     ) {
       return;
     }
     try {
       const r = await bulkHideByImportance(bulkThreshold);
-      setSnack(`Hid ${r.hidden} question${r.hidden === 1 ? '' : 's'}`);
+      setSnack(`Deleted ${r.hidden} question${r.hidden === 1 ? '' : 's'}`);
       reload();
     } catch (err) {
       setSnack(friendlyError(err));
@@ -253,7 +252,7 @@ export default function DevQuestions() {
     if (ids.length === 0) return;
     if (
       !window.confirm(
-        `Remove ${ids.length} selected question${ids.length === 1 ? '' : 's'}? Hidden questions can be restored later; custom ones are deleted permanently.`,
+        `Delete ${ids.length} selected question${ids.length === 1 ? '' : 's'} permanently? This cannot be undone.`,
       )
     ) {
       return;
@@ -335,7 +334,6 @@ export default function DevQuestions() {
         <Chip label={`${stats.total} total`} size="small" />
         <Chip label={`${stats.edited} edited`} size="small" color="warning" variant="outlined" />
         <Chip label={`${stats.custom} custom`} size="small" color="success" variant="outlined" />
-        <Chip label={`${stats.deleted} hidden`} size="small" variant="outlined" />
         <Chip label={`${stats.filler} filler (≤3)`} size="small" color="error" variant="outlined" />
         <Chip label={`${filtered.length} shown`} size="small" variant="outlined" />
       </Box>
@@ -371,10 +369,10 @@ export default function DevQuestions() {
           ))}
         </TextField>
         <Button size="small" color="error" variant="outlined" onClick={handleBulkHide}>
-          Hide {bulkHideCount} filler{bulkHideCount === 1 ? '' : 's'}
+          Delete {bulkHideCount} filler{bulkHideCount === 1 ? '' : 's'}
         </Button>
         <Typography variant="caption" color="text.secondary">
-          Soft-hide (restorable); learning paths re-level automatically.
+          Permanently removes them; learning paths re-level automatically.
         </Typography>
       </Box>
 
@@ -498,7 +496,6 @@ export default function DevQuestions() {
                     {q.source !== 'base' && (
                       <Chip label={q.source} size="small" color={SOURCE_COLOR[q.source]} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
                     )}
-                    {q.deleted && <Chip label="hidden" size="small" sx={{ height: 18, fontSize: '0.65rem' }} />}
                     {q.tags.slice(0, 4).map((tag) => (
                       <Chip key={tag} label={tag} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
                     ))}
@@ -549,15 +546,9 @@ export default function DevQuestions() {
                     <Button size="small" onClick={() => openEdit(q)} sx={{ minWidth: 'auto' }}>
                       Edit
                     </Button>
-                    {q.deleted ? (
-                      <Button size="small" color="success" onClick={() => handleRestore(q)} sx={{ minWidth: 'auto' }}>
-                        Restore
-                      </Button>
-                    ) : (
-                      <Button size="small" color="error" onClick={() => handleDelete(q)} sx={{ minWidth: 'auto' }}>
-                        {q.source === 'custom' ? 'Delete' : 'Hide'}
-                      </Button>
-                    )}
+                    <Button size="small" color="error" onClick={() => handleDelete(q)} sx={{ minWidth: 'auto' }}>
+                      Delete
+                    </Button>
                     {q.source === 'edited' && (
                       <Button size="small" onClick={() => handleReset(q)} sx={{ minWidth: 'auto' }}>
                         Revert
