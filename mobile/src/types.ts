@@ -18,9 +18,7 @@ export type CategoryType =
   | 'rhf-zod'
   | 'cool-stuff'
   | 'dev-world'
-  | 'custom'
-  | 'code-snippets'
-  | 'apt';
+  | 'code-snippets';
 
 export type DifficultyMode = 'basics' | 'easy' | 'zero-to-hero' | 'advanced' | 'mixed';
 
