@@ -10,6 +10,7 @@ import {
   KNOWN_CATEGORIES,
 } from '../../lib/questions-store';
 import { listReports, dismissReport, reportCounts } from '../../lib/reports-store';
+import { listAuthEvents } from '../../lib/auth-events-store';
 import { getGameSettings, saveGameSettings } from '../../lib/settings-store';
 
 const log = createLogger('admin');
@@ -43,6 +44,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return await resetQuestionOp(req, res);
       case 'reports':
         return await reportsOp(req, res);
+      case 'logs':
+        return await logsOp(req, res);
       case 'settings':
         return await settingsOp(req, res);
       default:
@@ -203,6 +206,17 @@ async function reportsOp(req: VercelRequest, res: VercelResponse) {
   }
   res.setHeader('Allow', 'GET, POST');
   return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+}
+
+// Auth events log (registrations + logins) for the Logs tab.
+async function logsOp(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  }
+  const events = await listAuthEvents(200);
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json({ events });
 }
 
 async function settingsOp(req: VercelRequest, res: VercelResponse) {

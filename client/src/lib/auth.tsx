@@ -1,6 +1,29 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
+import { apiFetch } from './api';
+
+// Report a real sign-in to the server (powers the /dev "Logs" tab) at most once
+// per browser tab session, so page refreshes (which re-emit SIGNED_IN) don't log
+// repeatedly. The server verifies the token and classifies register vs login.
+const AUTH_REPORTED_KEY = 'devquiz:auth-reported';
+function reportSignIn(): void {
+  try {
+    if (sessionStorage.getItem(AUTH_REPORTED_KEY)) return;
+    sessionStorage.setItem(AUTH_REPORTED_KEY, '1');
+  } catch {
+    // sessionStorage unavailable — fall through and still report once
+  }
+  // Fire-and-forget: never let logging affect the sign-in UX.
+  void apiFetch('/api/user/authevent', { method: 'POST', body: '{}' }).catch(() => {});
+}
+function clearSignInReport(): void {
+  try {
+    sessionStorage.removeItem(AUTH_REPORTED_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 interface AuthContextValue {
   user: User | null;
@@ -39,9 +62,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       setIsLoading(false);
+      // Only a genuine sign-in emits SIGNED_IN; INITIAL_SESSION (restored on page
+      // load) and TOKEN_REFRESHED are ignored so the log records real logins.
+      if (event === 'SIGNED_IN' && session?.user) reportSignIn();
+      if (event === 'SIGNED_OUT') clearSignInReport();
     });
 
     return () => subscription.unsubscribe();
