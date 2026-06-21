@@ -6,20 +6,10 @@
   70% { opacity: 1; transform: translateY(-3px) scale(1.08); }
   100% { opacity: 1; transform: none; }
 }
-@keyframes rmPulseScale {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.07); }
-}
 /* Gentle bob for the current node (Duolingo-style "play me"). */
 @keyframes rmBob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-7px); }
-}
-/* Expanding accent ring radiating from the current node. */
-@keyframes rmRing {
-  0% { box-shadow: 0 0 0 0 var(--rm-accent, #58cc02); }
-  70% { box-shadow: 0 0 0 13px transparent; }
-  100% { box-shadow: 0 0 0 0 transparent; }
 }
 /* Marching dashes on the connector that leads to the current node. */
 @keyframes rmFlow {
@@ -62,10 +52,8 @@
 /* Staggered, springy pop-in for path nodes (delay set inline per node). */
 .rm-node { animation: rmPop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
 
-/* The current node draws the eye: a gentle bob plus a radiating accent ring. */
-.rm-pulse { animation: rmPulseScale 1.7s ease-in-out infinite; }
+/* The current node draws the eye: a gentle bob on the unlocked-current node. */
 .rm-bob { animation: rmBob 1.8s ease-in-out infinite; }
-.rm-ring { animation: rmRing 1.9s ease-out infinite; }
 
 /* Energy flowing along the connector toward the current node. */
 .rm-flow { animation: rmFlow 0.9s linear infinite; }
@@ -111,9 +99,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .rm-node,
-  .rm-pulse,
   .rm-bob,
-  .rm-ring,
   .rm-flow,
   .rm-shimmer::after,
   .rm-shake,

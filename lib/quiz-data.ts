@@ -55,8 +55,6 @@ export type DifficultyMode = 'basics' | 'easy' | 'zero-to-hero' | 'advanced' | '
 // languages are stored as per-question overrides and fall back to English.
 export type QuestionLang = 'en' | 'cs';
 
-export const SUPPORTED_LANGS: QuestionLang[] = ['en', 'cs'];
-
 export function normalizeLang(raw: unknown): QuestionLang {
   return raw === 'cs' ? 'cs' : 'en';
 }
@@ -10557,17 +10555,6 @@ export const questions: Question[] = [
   ...roadmapSecurityQuestions,
 ];
 
-// Fisher-Yates shuffle algorithm
-export function shuffleArray<T>(array: T[]): T[] {
-  // Re-exported via secureShuffle below; Math.random remained too predictable
-  // for an answer-key shuffle that influences scoring.
-  const out = [...array];
-  for (let i = out.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
 
 // HMAC-signed session token. SESSION_SECRET MUST be set in production
 // (Vercel project env). In development we allow a fallback so local dev runs.

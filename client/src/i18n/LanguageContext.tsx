@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { dictionaries, en, type TranslationKey } from './translations';
+import { en, type TranslationKey } from './translations';
 import { readString, writeString } from '../lib/storage';
 
 export type Lang = 'en' | 'cs';
@@ -31,11 +31,39 @@ function interpolate(template: string, vars?: Vars): string {
   );
 }
 
+// Czech is loaded on demand so EN-only sessions (the majority) don't pay the
+// ~15-20 KB gzip cost of the cs dictionary on first paint. Cached once fetched.
+let csCache: Record<TranslationKey, string> | null = null;
+let csInflight: Promise<Record<TranslationKey, string>> | null = null;
+
+function loadCs(): Promise<Record<TranslationKey, string>> {
+  if (csCache) return Promise.resolve(csCache);
+  if (csInflight) return csInflight;
+  csInflight = import('./translations.cs').then((mod) => {
+    csCache = mod.cs;
+    csInflight = null;
+    return csCache;
+  });
+  return csInflight;
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(detectInitialLang);
+  // Track whether the cs dictionary has finished loading so a re-render
+  // happens once translations become available (otherwise the first paint
+  // after switching shows English fallbacks).
+  const [csReady, setCsReady] = useState(() => csCache !== null || detectInitialLang() === 'en');
 
   useEffect(() => {
     document.documentElement.lang = lang;
+  }, [lang]);
+
+  useEffect(() => {
+    if (lang === 'cs' && !csCache) {
+      void loadCs().then(() => setCsReady(true));
+    } else if (lang === 'en') {
+      setCsReady(true);
+    }
   }, [lang]);
 
   const setLang = useCallback((next: Lang) => {
@@ -45,11 +73,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   const t = useCallback(
     (key: TranslationKey, vars?: Vars): string => {
-      const table = dictionaries[lang] ?? en;
+      const table = lang === 'cs' && csCache ? csCache : en;
       const value = table[key] ?? en[key] ?? key;
       return interpolate(value, vars);
     },
-    [lang],
+    // Re-bind t when cs finishes loading so consumers re-render with localized strings.
+    [lang, csReady],
   );
 
   const value = useMemo<LanguageContextValue>(() => ({ lang, setLang, t }), [lang, setLang, t]);

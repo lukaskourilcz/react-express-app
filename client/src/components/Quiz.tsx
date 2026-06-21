@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Card,
@@ -128,14 +128,33 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   // first sight; the rest unlock when the learner clicks "Show all". Empty
   // list (or no overlap with what this user can see) means show everything.
   const defaultCategoryIds = config.quiz.defaultCategoryIds ?? [];
-  const defaultVisibleSet = new Set(defaultCategoryIds);
-  const collapsedOptions =
-    defaultVisibleSet.size > 0
-      ? visibleCategoryOptions.filter((c) => defaultVisibleSet.has(c.value))
-      : visibleCategoryOptions;
+  const defaultVisibleSet = useMemo(() => new Set(defaultCategoryIds), [defaultCategoryIds]);
+  const collapsedOptions = useMemo(
+    () =>
+      defaultVisibleSet.size > 0
+        ? visibleCategoryOptions.filter((c) => defaultVisibleSet.has(c.value))
+        : visibleCategoryOptions,
+    [defaultVisibleSet, visibleCategoryOptions],
+  );
   const hasCollapsedSubset =
     collapsedOptions.length > 0 && collapsedOptions.length < visibleCategoryOptions.length;
   const [showAllCategories, setShowAllCategories] = useState(false);
+  // The progress-bar gradient blends the colours of every category present in
+  // the current quiz. `categoryProgressBackground` allocates a Set + sort +
+  // gradient string; memo on the questions array keeps it from running on
+  // every answer keystroke.
+  const progressBackground = useMemo(
+    () => categoryProgressBackground(questions.map((q) => q.category)),
+    [questions],
+  );
+
+  // Lookup table for the review-mode result rows. Replaces an O(n) array.find()
+  // per question with an O(1) Map.get() — important when the snackbar/report
+  // dialog opens and re-renders the whole list of 20–50 questions.
+  const resultsById = useMemo(
+    () => new Map((result?.results ?? []).map((r) => [r.questionId, r])),
+    [result],
+  );
   const displayedCategoryOptions = hasCollapsedSubset && !showAllCategories
     ? collapsedOptions
     : visibleCategoryOptions;
@@ -845,7 +864,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           {t('quiz.reviewYourAnswers', { count: questions.length })}
         </Typography>
         {questions.map((question, index) => {
-          const questionResult = result.results.find((r) => r.questionId === question.id);
+          const questionResult = resultsById.get(question.id);
           const isCorrect = questionResult?.isCorrect;
           const isBookmarked = !!bookmarks[question.id];
 
@@ -963,7 +982,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   if (!currentQuestion) return null;
 
   const progress = ((currentIndex + 1) / questions.length) * 100;
-  const progressBackground = categoryProgressBackground(questions.map((q) => q.category));
   const answered = Object.keys(answers).length;
   const allAnswered = questions.every((q) => answers[q.id] !== undefined);
   const remaining = questions.length - answered;

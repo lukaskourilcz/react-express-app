@@ -195,7 +195,11 @@ export default function Challenge() {
         return;
       }
       setCurrent(next);
-      setSeenIds((prev) => [...prev, next!.id]);
+      // Cap the seen-ids list so a long run doesn't grow the `exclude`
+      // query string without bound. The server caps at 500 already; we keep
+      // the most recent 300 client-side to keep `advance` and the request
+      // payload light.
+      setSeenIds((prev) => [...prev, next!.id].slice(-300));
       setSelected(null);
       setLastResult(null);
     },

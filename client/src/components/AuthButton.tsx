@@ -4,9 +4,9 @@ import { useNavigate, Link } from 'react-router-dom';
 import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
-import { useTotalXp } from '../lib/xp';
+import { useQuestXp } from '../lib/xp';
 import { useRoadmapProgress } from '../lib/roadmap';
-import { levelForXp, specializationFor, displayTitle } from '../lib/leveling';
+import { computeLearningXp, levelForXp, specializationFor, displayTitle } from '../lib/leveling';
 import { useEquippedRingColor } from '../lib/shop';
 
 const secondaryLinkSx = {
@@ -22,8 +22,11 @@ const secondaryLinkSx = {
 function AuthButton() {
   const { isAuthenticated, isLoading, user, signInWithGoogle, signOut } = useAuth();
   const profile = getUserProfile(user);
-  const totalXp = useTotalXp();
+  // Subscribe to roadmap progress once; derive total XP locally rather than
+  // calling useTotalXp() (which would set up a second subscription).
   const progress = useRoadmapProgress();
+  const questXp = useQuestXp();
+  const totalXp = computeLearningXp(progress) + questXp;
   const ringColor = useEquippedRingColor();
   const rankTitle = displayTitle(levelForXp(totalXp).rank.title, specializationFor(progress));
   const navigate = useNavigate();

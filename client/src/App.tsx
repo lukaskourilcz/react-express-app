@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider, Snackbar, Alert } from '@mui/material';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
-import AuthButton from './components/AuthButton';
 import LoadingScreen from './components/LoadingScreen';
 import { SwimmingFin, Waterline } from './components/SharkFin';
 import { useColorMode } from './theme/ColorModeContext';
@@ -17,6 +16,11 @@ import { useAuth } from './lib/auth';
 import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
 import { useSettings } from './lib/settings';
 
+// AuthButton subscribes to multiple stores and pulls in the leveling/shop
+// modules — heavy for the initial bundle. Lazy-load it so the app shell
+// (logo, nav, theme/sound toggles) paints first.
+const AuthButton = lazy(() => import('./components/AuthButton'));
+
 const Quiz = lazy(() => import('./components/Quiz'));
 const Roadmap = lazy(() => import('./components/Roadmap'));
 const CareerRoadmap = lazy(() => import('./components/CareerRoadmap'));
@@ -28,6 +32,17 @@ const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ defaul
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 const Challenge = lazy(() => import('./components/Challenge'));
 const DevPage = lazy(() => import('./components/dev/DevPage'));
+
+// Pure module-level styler for the top-nav links — hoisting it out of the
+// component avoids a fresh object literal on every App render.
+const navLinkSx = (isActive: boolean) => ({
+  color: isActive ? BRAND.green : 'text.secondary',
+  fontWeight: isActive ? 700 : 500,
+  textTransform: 'none' as const,
+  textDecoration: isActive ? 'underline' : 'none',
+  textUnderlineOffset: '4px',
+  '&:hover': { backgroundColor: 'action.hover' },
+});
 
 const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/': 'title.home',
@@ -176,14 +191,6 @@ function App() {
     return out;
   }, []);
   const showChrome = !isDev && !(quizActive && location.pathname === '/');
-  const navLinkSx = (isActive: boolean) => ({
-    color: isActive ? BRAND.green : 'text.secondary',
-    fontWeight: isActive ? 700 : 500,
-    textTransform: 'none' as const,
-    textDecoration: isActive ? 'underline' : 'none',
-    textUnderlineOffset: '4px',
-    '&:hover': { backgroundColor: 'action.hover' },
-  });
 
   return (
     <Box sx={{ minHeight: '100vh', maxWidth: '100vw', overflowX: 'hidden', backgroundColor: 'background.default', display: 'flex', flexDirection: 'column' }}>
@@ -286,7 +293,9 @@ function App() {
             {/* Right slot: auth widget only. Sound + theme moved to the
                 top-right utility row above. */}
             <Box sx={{ flex: '1 1 0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: { xs: 0.5, sm: 1 }, minWidth: 0 }}>
-              <AuthButton />
+              <Suspense fallback={null}>
+                <AuthButton />
+              </Suspense>
             </Box>
           </Toolbar>
         </AppBar>

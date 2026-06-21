@@ -257,7 +257,10 @@ function Roadmap() {
     (tpc: RoadmapTopic) => isTopicUnlocked(progress, tpc, extraUnlocksSet),
     [progress, extraUnlocksSet],
   );
-  const lockedCount = TOPICS.filter((tpc) => !isUnlocked(tpc)).length;
+  const lockedCount = useMemo(
+    () => TOPICS.filter((tpc) => !isUnlocked(tpc)).length,
+    [isUnlocked],
+  );
 
   const loadStructure = () => {
     const controller = new AbortController();
