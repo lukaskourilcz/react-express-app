@@ -59,6 +59,8 @@ export interface AdminQuestion {
   category: string;
   explanation: string;
   difficulty: number;
+  /** Resolved importance (1–10): DB override → hand-judged score → heuristic. */
+  importance: number;
   source: 'base' | 'edited' | 'custom';
   deleted: boolean;
   /** Current Czech translation (db override, else static bank), for editing. */
@@ -75,11 +77,13 @@ export interface QuestionPayload {
   category: string;
   tags: string[];
   difficulty: number;
+  /** Optional importance override (1–10). */
+  importance?: number;
   cs?: Partial<CsFields>;
 }
 
 export interface GameSettings {
-  quiz: { defaultCount: number; countOptions: number[]; maxCount: number; defaultDifficulty: string };
+  quiz: { defaultCount: number; countOptions: number[]; maxCount: number; defaultDifficulty: string; minImportance: number };
   daily: { count: number };
   play: {
     defaultDurationS: number;
@@ -105,13 +109,17 @@ export async function verifyPassword(pw: string): Promise<boolean> {
 }
 
 export const listQuestions = () =>
-  adminFetch<{ questions: AdminQuestion[]; categories: string[] }>('questions');
+  adminFetch<{ questions: AdminQuestion[]; categories: string[]; reportCounts: Record<string, number> }>('questions');
 
 export const saveQuestion = (payload: QuestionPayload) =>
   adminFetch<{ ok: true; id: string }>('save', { method: 'POST', body: payload });
 
 export const setQuestionDeleted = (id: string, deleted: boolean) =>
   adminFetch<{ ok: true }>('delete', { method: 'POST', body: { id, deleted } });
+
+/** Soft-hide all (non-custom) questions scoring ≤ maxImportance. Returns count. */
+export const bulkHideByImportance = (maxImportance: number) =>
+  adminFetch<{ ok: true; hidden: number }>('bulkhide', { method: 'POST', body: { maxImportance } });
 
 export const resetQuestion = (id: string) =>
   adminFetch<{ ok: true }>('reset', { method: 'POST', body: { id } });

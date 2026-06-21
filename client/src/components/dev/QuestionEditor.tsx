@@ -24,6 +24,7 @@ import { saveQuestion, type AdminQuestion, type QuestionPayload } from '../../li
 const MAX_OPTIONS = 8;
 const MIN_OPTIONS = 2;
 const DIFFICULTIES = [1, 2, 3, 4, 5];
+const IMPORTANCE_LEVELS = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
 
 interface Props {
   open: boolean;
@@ -42,6 +43,7 @@ interface FormState {
   introduction: string;
   category: string;
   difficulty: number;
+  importance: number;
   tags: string;
   csQuestion: string;
   csOptions: string[];
@@ -57,6 +59,7 @@ const blankForm = (categories: string[]): FormState => ({
   introduction: '',
   category: categories[0] ?? 'javascript',
   difficulty: 1,
+  importance: 5,
   tags: '',
   csQuestion: '',
   csOptions: ['', ''],
@@ -74,6 +77,7 @@ const seedForm = (q: AdminQuestion): FormState => {
     introduction: q.introduction,
     category: q.category,
     difficulty: q.difficulty,
+    importance: q.importance,
     tags: q.tags.join(', '),
     csQuestion: q.cs.question,
     // Keep cs options aligned 1:1 with the English options.
@@ -151,6 +155,7 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
         .map((t) => t.trim())
         .filter(Boolean),
       difficulty: form.difficulty,
+      importance: form.importance,
       cs: {
         question: form.csQuestion.trim(),
         // Server drops these unless they line up with the English options.
@@ -254,11 +259,25 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
                 label="Difficulty"
                 value={form.difficulty}
                 onChange={(e) => setForm((f) => ({ ...f, difficulty: Number(e.target.value) }))}
-                sx={{ minWidth: 140 }}
+                sx={{ minWidth: 120 }}
               >
                 {DIFFICULTIES.map((d) => (
                   <MenuItem key={d} value={d}>
                     {d}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                label="Importance"
+                helperText="How essential for a learner (1–10)"
+                value={form.importance}
+                onChange={(e) => setForm((f) => ({ ...f, importance: Number(e.target.value) }))}
+                sx={{ minWidth: 140 }}
+              >
+                {IMPORTANCE_LEVELS.map((n) => (
+                  <MenuItem key={n} value={n}>
+                    {n}
                   </MenuItem>
                 ))}
               </TextField>

@@ -57,7 +57,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Never surface private (owner-only) categories in the shared daily mix.
     const pool = allQuestions.filter((q) => q.difficulty === diff && !PRIVATE_CATEGORIES.includes(q.category));
     if (pool.length === 0) continue;
-    const shuffled = seededShuffle(pool, `${dateParam}::${diff}`);
+    // Keep the daily out of "filler" territory: prefer importance ≥ 4 when there
+    // are still enough to vary day to day, otherwise fall back to the full pool.
+    const worthy = pool.filter((q) => (q.importance ?? 5) >= 4);
+    const usePool = worthy.length >= 3 ? worthy : pool;
+    const shuffled = seededShuffle(usePool, `${dateParam}::${diff}`);
     selected.push(shuffled[0]);
     if (selected.length >= dailyCount) break;
   }

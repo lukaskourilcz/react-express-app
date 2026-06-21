@@ -24,11 +24,12 @@ import { useReloadKey, useCancellableEffect } from '../../lib/hooks';
 import { getCategoryLabel } from '../../lib/categories';
 import { brandButtonSx } from '../../theme/MuiTheme';
 import { friendlyError } from '../../lib/api';
-import { computeImportance, importanceBand, IMPORTANCE_BAND_LABEL, type ImportanceBand } from '../../lib/importance';
+import { importanceBand, IMPORTANCE_BAND_LABEL, type ImportanceBand } from '../../lib/importance';
 import {
   listQuestions,
   setQuestionDeleted,
   resetQuestion,
+  bulkHideByImportance,
   type AdminQuestion,
 } from '../../lib/devApi';
 import QuestionEditor from './QuestionEditor';
@@ -54,11 +55,6 @@ const SCORE_COLOR: Record<ImportanceBand, string> = {
   essential: '#1b5e20',
 };
 
-// A question enriched with its computed importance, for the table.
-interface ScoredQuestion extends AdminQuestion {
-  importance: number;
-}
-
 type SortKey = 'importance' | 'difficulty' | 'category' | 'question';
 type SortDir = 'asc' | 'desc';
 // 'all' | exact score | 'filler' (the ≤3 band the owner cares about most).
@@ -69,6 +65,7 @@ const ROWS_PER_PAGE_OPTIONS = [25, 50, 100];
 export default function DevQuestions() {
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [reportCounts, setReportCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, reload] = useReloadKey();
@@ -80,6 +77,7 @@ export default function DevQuestions() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(25);
+  const [bulkThreshold, setBulkThreshold] = useState(3);
 
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<AdminQuestion | null>(null);
@@ -94,6 +92,7 @@ export default function DevQuestions() {
         if (isCancelled()) return;
         setQuestions(data.questions);
         setCategories(data.categories);
+        setReportCounts(data.reportCounts ?? {});
       } catch (err) {
         if (!isCancelled()) setError(friendlyError(err));
       } finally {
@@ -103,29 +102,23 @@ export default function DevQuestions() {
     [reloadKey],
   );
 
-  // Attach the computed importance score once per load.
-  const scored = useMemo<ScoredQuestion[]>(
-    () => questions.map((q) => ({ ...q, importance: computeImportance(q) })),
-    [questions],
-  );
-
   const stats = useMemo(() => {
     let edited = 0;
     let custom = 0;
     let deleted = 0;
     let filler = 0;
-    for (const q of scored) {
+    for (const q of questions) {
       if (q.deleted) deleted += 1;
       if (q.source === 'edited') edited += 1;
       if (q.source === 'custom') custom += 1;
       if (q.importance <= 3) filler += 1;
     }
-    return { total: scored.length, edited, custom, deleted, filler };
-  }, [scored]);
+    return { total: questions.length, edited, custom, deleted, filler };
+  }, [questions]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return scored.filter((q) => {
+    return questions.filter((q) => {
       if (categoryFilter !== 'all' && q.category !== categoryFilter) return false;
       if (importanceFilter === 'filler' && q.importance > 3) return false;
       if (typeof importanceFilter === 'number' && q.importance !== importanceFilter) return false;
@@ -138,11 +131,11 @@ export default function DevQuestions() {
       }
       return true;
     });
-  }, [scored, search, categoryFilter, importanceFilter]);
+  }, [questions, search, categoryFilter, importanceFilter]);
 
   const sorted = useMemo(() => {
     const dir = sortDir === 'asc' ? 1 : -1;
-    const cmp = (a: ScoredQuestion, b: ScoredQuestion): number => {
+    const cmp = (a: AdminQuestion, b: AdminQuestion): number => {
       switch (sortBy) {
         case 'importance':
           return (a.importance - b.importance) || (a.difficulty - b.difficulty);
@@ -202,6 +195,32 @@ export default function DevQuestions() {
   const handleReset = (q: AdminQuestion) => {
     if (window.confirm('Discard edits and revert to the original question?')) {
       runAction('Reverted to original', () => resetQuestion(q.id));
+    }
+  };
+
+  // How many currently-visible, non-custom questions the bulk action would hide.
+  const bulkHideCount = useMemo(
+    () => questions.filter((q) => !q.deleted && q.source !== 'custom' && q.importance <= bulkThreshold).length,
+    [questions, bulkThreshold],
+  );
+  const handleBulkHide = async () => {
+    if (bulkHideCount === 0) {
+      setSnack(`No visible questions score ≤ ${bulkThreshold}`);
+      return;
+    }
+    if (
+      !window.confirm(
+        `Hide all ${bulkHideCount} questions scoring ≤ ${bulkThreshold}? The learning paths re-level automatically and you can restore them later.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      const r = await bulkHideByImportance(bulkThreshold);
+      setSnack(`Hid ${r.hidden} question${r.hidden === 1 ? '' : 's'}`);
+      reload();
+    } catch (err) {
+      setSnack(friendlyError(err));
     }
   };
 
@@ -273,6 +292,44 @@ export default function DevQuestions() {
         <Chip label={`${filtered.length} shown`} size="small" variant="outlined" />
       </Box>
 
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 1,
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          mb: 2,
+          p: 1,
+          border: '1px dashed',
+          borderColor: 'divider',
+          borderRadius: 1,
+        }}
+      >
+        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+          Bulk cleanup:
+        </Typography>
+        <TextField
+          select
+          size="small"
+          label="Hide score ≤"
+          value={bulkThreshold}
+          onChange={(e) => setBulkThreshold(Number(e.target.value))}
+          sx={{ minWidth: 110 }}
+        >
+          {[1, 2, 3, 4, 5].map((n) => (
+            <MenuItem key={n} value={n}>
+              {n}
+            </MenuItem>
+          ))}
+        </TextField>
+        <Button size="small" color="error" variant="outlined" onClick={handleBulkHide}>
+          Hide {bulkHideCount} filler{bulkHideCount === 1 ? '' : 's'}
+        </Button>
+        <Typography variant="caption" color="text.secondary">
+          Soft-hide (restorable); learning paths re-level automatically.
+        </Typography>
+      </Box>
+
       <TableContainer component={Paper} variant="outlined">
         <Table size="small" stickyHeader>
           <TableHead>
@@ -293,12 +350,13 @@ export default function DevQuestions() {
                 </TableSortLabel>
               </TableCell>
               <TableCell align="center">
-                <Tooltip title="Importance in modern web dev (1–10, computed from category, difficulty and tags)">
+                <Tooltip title="Importance for a learner (1–10) — hand-judged per question, editable in the editor">
                   <TableSortLabel active={sortBy === 'importance'} direction={sortBy === 'importance' ? sortDir : 'desc'} onClick={() => toggleSort('importance')}>
                     Score
                   </TableSortLabel>
                 </Tooltip>
               </TableCell>
+              <TableCell align="center">Flags</TableCell>
               <TableCell align="right">Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -345,6 +403,17 @@ export default function DevQuestions() {
                     </Box>
                   </Tooltip>
                 </TableCell>
+                <TableCell align="center">
+                  {reportCounts[q.id] ? (
+                    <Tooltip title={`${reportCounts[q.id]} report(s) — see the Flags tab`}>
+                      <Chip label={`🚩 ${reportCounts[q.id]}`} size="small" color="error" variant="outlined" sx={{ height: 20 }} />
+                    </Tooltip>
+                  ) : (
+                    <Typography variant="caption" color="text.disabled">
+                      —
+                    </Typography>
+                  )}
+                </TableCell>
                 <TableCell align="right">
                   <Box sx={{ display: 'inline-flex', gap: 0.25 }}>
                     <Button size="small" onClick={() => openEdit(q)} sx={{ minWidth: 'auto' }}>
@@ -370,7 +439,7 @@ export default function DevQuestions() {
             ))}
             {pageRows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5}>
+                <TableCell colSpan={6}>
                   <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
                     No questions match these filters.
                   </Typography>

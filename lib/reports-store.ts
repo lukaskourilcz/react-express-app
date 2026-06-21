@@ -74,6 +74,25 @@ export async function listReports(limit = 300): Promise<AdminReport[]> {
   }));
 }
 
+/** Count of reports per question id, for badging the dev questions table. */
+export async function reportCounts(): Promise<Record<string, number>> {
+  if (!supabase) return {};
+  try {
+    const { data, error } = await withTimeout(
+      supabase.from(TABLE).select('question_id').limit(5000),
+      5000,
+    );
+    if (error || !data) return {};
+    const counts: Record<string, number> = {};
+    for (const r of data as { question_id: string }[]) {
+      counts[r.question_id] = (counts[r.question_id] ?? 0) + 1;
+    }
+    return counts;
+  } catch {
+    return {};
+  }
+}
+
 /** Permanently remove a handled report row (the owner has dealt with it). */
 export async function dismissReport(id: string): Promise<void> {
   if (!supabase) throw new Error('not_configured');

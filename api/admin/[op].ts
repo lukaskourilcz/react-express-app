@@ -6,9 +6,10 @@ import {
   saveQuestion,
   setQuestionDeleted,
   resetQuestion,
+  bulkHideByImportance,
   KNOWN_CATEGORIES,
 } from '../../lib/questions-store';
-import { listReports, dismissReport } from '../../lib/reports-store';
+import { listReports, dismissReport, reportCounts } from '../../lib/reports-store';
 import { getGameSettings, saveGameSettings } from '../../lib/settings-store';
 
 const log = createLogger('admin');
@@ -36,6 +37,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return await saveQuestionOp(req, res);
       case 'delete':
         return await deleteQuestionOp(req, res);
+      case 'bulkhide':
+        return await bulkHideOp(req, res);
       case 'reset':
         return await resetQuestionOp(req, res);
       case 'reports':
@@ -60,9 +63,9 @@ async function listQuestions(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  const questions = await listAdminQuestions();
+  const [questions, counts] = await Promise.all([listAdminQuestions(), reportCounts()]);
   res.setHeader('Cache-Control', 'no-store');
-  return res.json({ questions, categories: KNOWN_CATEGORIES });
+  return res.json({ questions, categories: KNOWN_CATEGORIES, reportCounts: counts });
 }
 
 async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
@@ -94,6 +97,12 @@ async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
   if (!category) return jsonError(res, 400, 'bad_request', 'invalid category');
 
   const difficulty = typeof b.difficulty === 'number' ? b.difficulty : 1;
+
+  // Optional per-question importance override (1–10); omit to keep the score.
+  const importance =
+    typeof b.importance === 'number' && Number.isInteger(b.importance) && b.importance >= 1 && b.importance <= 10
+      ? b.importance
+      : undefined;
 
   const tags = Array.isArray(b.tags)
     ? b.tags.filter((t): t is string => typeof t === 'string' && t.length > 0 && t.length <= MAX_TAG).slice(0, MAX_TAGS)
@@ -127,6 +136,7 @@ async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
     category,
     tags,
     difficulty,
+    importance,
     cs,
   });
   log({ op: 'save', status: 200, id: saved.id });
@@ -146,6 +156,22 @@ async function deleteQuestionOp(req: VercelRequest, res: VercelResponse) {
   await setQuestionDeleted(id, deleted);
   log({ op: 'delete', status: 200, id, deleted });
   return res.json({ ok: true });
+}
+
+async function bulkHideOp(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  }
+  const b = (req.body || {}) as { maxImportance?: unknown };
+  const max =
+    typeof b.maxImportance === 'number' && Number.isInteger(b.maxImportance) && b.maxImportance >= 1 && b.maxImportance <= 10
+      ? b.maxImportance
+      : null;
+  if (max === null) return jsonError(res, 400, 'bad_request', 'maxImportance must be an integer 1–10');
+  const hidden = await bulkHideByImportance(max);
+  log({ op: 'bulkhide', status: 200, max, hidden });
+  return res.json({ ok: true, hidden });
 }
 
 async function resetQuestionOp(req: VercelRequest, res: VercelResponse) {
