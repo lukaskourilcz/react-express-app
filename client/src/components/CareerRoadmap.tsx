@@ -68,18 +68,25 @@ const PILLARS: Pillar[] = [
       { topic: 'algorithms', label: 'Problem solving & math', blurb: 'Combinatorics, probability, bitwise, recurrences.' },
     ],
   },
+  {
+    title: 'Engineering for production',
+    intro: 'What turns a coder into an engineer who can design, ship, and run real systems — the senior half of the job.',
+    areas: [
+      { topic: 'databases', label: 'Databases & data modeling', blurb: 'SQL, schema design, indexing, transactions, N+1s.' },
+      { topic: 'system-design', label: 'System design at scale', blurb: 'Caching, queues, sharding, trade-offs, failure modes.' },
+      { topic: 'testing', label: 'Automated testing', blurb: 'Unit, integration and end-to-end — and what to test.' },
+      { topic: 'devops', label: 'DevOps & cloud', blurb: 'CI/CD, containers, observability, deploying to the cloud.' },
+      { topic: 'security', label: 'Security', blurb: 'AuthN/Z, OWASP Top 10, secrets, secure defaults.' },
+    ],
+  },
 ];
 
 // The honest part: things a quiz app genuinely cannot give you. Seniority is
 // mostly this list plus years of shipping.
 const BEYOND: { label: string; detail: string }[] = [
-  { label: 'Databases & data modeling', detail: 'SQL, schema design, indexing, transactions, N+1s.' },
-  { label: 'System design at scale', detail: 'Caching, queues, sharding, trade-offs, failure modes.' },
-  { label: 'Automated testing', detail: 'Unit, integration and end-to-end — and knowing what to test.' },
-  { label: 'DevOps & cloud', detail: 'CI/CD, containers, observability, deploying on AWS/GCP/Vercel.' },
-  { label: 'Security', detail: 'AuthN/Z, OWASP top 10, secrets, secure defaults.' },
   { label: 'Real production experience', detail: 'Shipping, on-call, incidents, reading large unfamiliar codebases.' },
   { label: 'Communication & judgement', detail: 'Code review, mentoring, scoping, saying no, product sense.' },
+  { label: 'Leadership & ownership', detail: 'Driving projects, mentoring others, and being accountable for outcomes.' },
 ];
 
 const SENIOR_RANK_TITLE = 'Senior Developer';
@@ -173,9 +180,14 @@ export default function CareerRoadmap() {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
           <Chip size="small" label={`${info.rank.emoji} ${rankTitle}`} sx={{ fontWeight: 700, backgroundColor: BRAND.greenSoft, color: 'text.primary' }} />
           <Typography variant="caption" color="text.secondary">
-            {reachedSenior
-              ? 'You’ve crossed this app’s Senior threshold — keep it sharp and go build real things.'
-              : `${xpToSenior.toLocaleString()} XP to devShark’s “Senior Developer” rank (a knowledge proxy, not a job title).`}
+            {reachedSenior ? (
+              'You’ve crossed this app’s Senior threshold — keep it sharp and go build real things.'
+            ) : (
+              <>
+                {xpToSenior.toLocaleString()} XP to devShark’s “Senior Developer” rank (a knowledge proxy, not a job
+                title. <strong>Yet</strong>.)
+              </>
+            )}
           </Typography>
         </Box>
       </Paper>

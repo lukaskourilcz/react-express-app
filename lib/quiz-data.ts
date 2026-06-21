@@ -15,9 +15,14 @@ import {
   roadmapAiQuestions,
   roadmapRhfZodQuestions,
   roadmapCoolStuffQuestions,
+  roadmapDatabasesQuestions,
+  roadmapSystemDesignQuestions,
+  roadmapTestingQuestions,
+  roadmapDevopsQuestions,
+  roadmapSecurityQuestions,
 } from './roadmap-questions';
 
-export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'rhf-zod' | 'cool-stuff' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'rhf-zod' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
 
 // Categories that are private to the owner: never served to other users
 // (not via /api/quiz/questions for non-owners, and never in the daily mix).
@@ -11619,6 +11624,11 @@ export const questions: Question[] = [
   ...roadmapAiQuestions,
   ...roadmapRhfZodQuestions,
   ...roadmapCoolStuffQuestions,
+  ...roadmapDatabasesQuestions,
+  ...roadmapSystemDesignQuestions,
+  ...roadmapTestingQuestions,
+  ...roadmapDevopsQuestions,
+  ...roadmapSecurityQuestions,
 ];
 
 // Fisher-Yates shuffle algorithm

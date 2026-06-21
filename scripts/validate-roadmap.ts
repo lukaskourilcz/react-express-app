@@ -26,6 +26,7 @@ const EXPECTED_LEVELS: Record<string, number> = {
   javascript: 25, typescript: 25, react: 25, nodejs: 25,
   nextjs: 15, git: 15, html: 15, css: 15, dsa: 15, algorithms: 10,
   abbreviations: 15, general: 15, ai: 20, 'rhf-zod': 15, 'cool-stuff': 15,
+  databases: 15, 'system-design': 15, testing: 15, devops: 15, security: 15,
 };
 
 for (const topic of ROADMAP_TOPICS) {
@@ -103,6 +104,19 @@ console.log(`React Hook Form + Zod roadmap questions: ${rhfCount} (want 120)`);
 if (rhfCount !== 120) fail(`RHF+Zod roadmap has ${rhfCount} questions, want 120`);
 console.log(`Cool Stuff roadmap questions: ${coolCount} (want 120)`);
 if (coolCount !== 120) fail(`Cool Stuff roadmap has ${coolCount} questions, want 120`);
+
+const dbCount = questions.filter((q) => q.id.startsWith('rm-db-')).length;
+const sysCount = questions.filter((q) => q.id.startsWith('rm-sysdesign-')).length;
+const testCount = questions.filter((q) => q.id.startsWith('rm-testing-')).length;
+const devopsCount = questions.filter((q) => q.id.startsWith('rm-devops-')).length;
+const secCount = questions.filter((q) => q.id.startsWith('rm-security-')).length;
+for (const [name, count] of [
+  ['Databases', dbCount], ['System Design', sysCount], ['Testing', testCount],
+  ['DevOps', devopsCount], ['Security', secCount],
+] as const) {
+  console.log(`${name} roadmap questions: ${count} (want 120)`);
+  if (count !== 120) fail(`${name} roadmap has ${count} questions, want 120`);
+}
 
 console.log(`\nTotal questions in bank: ${questions.length}`);
 if (failures > 0) {
