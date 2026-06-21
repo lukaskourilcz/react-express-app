@@ -1,10 +1,12 @@
 import { apiFetch } from './api';
 import type { Question } from '../types/quiz';
 
-// Biggest Shark Challenge client. Wraps the two endpoints:
-//   GET  /api/quiz/challenge — fetch a fresh batch of mixed questions
-//   GET  /api/challenge      — top-10 leaderboard + current champion
-//   POST /api/challenge      — submit a finished run's score
+// Biggest Shark Challenge client. All resources live on one Vercel function
+// (to stay within the 12-function Hobby limit), differentiated by method +
+// `?resource=`:
+//   GET  /api/quiz/challenge                       → fresh batch of mixed questions
+//   GET  /api/quiz/challenge?resource=leaderboard  → top-10 + current champion
+//   POST /api/quiz/challenge                       → submit a finished run's score
 
 export interface ChallengeBatch {
   sessionId: string;
@@ -36,11 +38,11 @@ export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string } 
 }
 
 export function getChallengeLeaderboard(): Promise<ChallengeLeaderboard> {
-  return apiFetch<ChallengeLeaderboard>('/api/challenge');
+  return apiFetch<ChallengeLeaderboard>('/api/quiz/challenge?resource=leaderboard');
 }
 
 export function submitChallengeScore(input: { name: string; score: number }): Promise<{ ok: true; record: ChallengeScore | null }> {
-  return apiFetch<{ ok: true; record: ChallengeScore | null }>('/api/challenge', {
+  return apiFetch<{ ok: true; record: ChallengeScore | null }>('/api/quiz/challenge', {
     method: 'POST',
     body: JSON.stringify(input),
   });

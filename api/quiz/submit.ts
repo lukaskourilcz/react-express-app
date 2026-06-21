@@ -1,14 +1,30 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { decodeSession, localizeQuestion, normalizeLang } from '../../lib/quiz-data';
-import { jsonError, createLogger } from '../../lib/http';
+import { AuthError, tryAuth } from '../../lib/auth';
+import { createAnonClient, jsonError, createLogger, withTimeout } from '../../lib/http';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
 
 const MAX_ANSWERS = 50;
 
 const logEvent = createLogger('quiz/submit');
+const reportLogger = createLogger('quiz/report');
+const supabase = createAnonClient();
+
+// Question-report reasons. 'needs-review' is the lightweight red-flag from the
+// learning path; the rest come from the full report dialog in the solo quiz.
+const REPORT_REASONS = [
+  'incorrect-answer', 'unclear', 'typo', 'outdated', 'duplicate', 'other', 'needs-review',
+] as const;
+type ReportReason = (typeof REPORT_REASONS)[number];
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
+
+  // Question-report sub-resource shares this function so we stay within the
+  // 12-function Hobby limit: POST /api/quiz/submit?resource=report
+  if (req.method === 'POST' && req.query.resource === 'report') {
+    return handleReport(req, res);
+  }
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -82,4 +98,59 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     percentage,
     results,
   });
+}
+
+// POST /api/quiz/submit?resource=report — log a learner's question report.
+// Anonymous posts are allowed; when a token is present the verified sub is
+// recorded so reporter_sub can't be forged.
+async function handleReport(req: VercelRequest, res: VercelResponse) {
+  if (!supabase) {
+    return jsonError(res, 503, 'not_configured', 'Reporting backend is not configured');
+  }
+
+  let reporter_sub: string | null = null;
+  try {
+    const auth = await tryAuth(req);
+    if (auth) reporter_sub = auth.sub;
+  } catch (e) {
+    if (e instanceof AuthError) return jsonError(res, e.status, e.code, e.message);
+  }
+
+  const body = req.body as { question_id?: unknown; reason?: unknown; detail?: unknown };
+  if (!body || typeof body !== 'object') {
+    return jsonError(res, 400, 'bad_request', 'Body must be JSON');
+  }
+  if (
+    typeof body.question_id !== 'string' ||
+    body.question_id.length === 0 ||
+    body.question_id.length > 64
+  ) {
+    return jsonError(res, 400, 'bad_request', 'question_id required');
+  }
+  if (typeof body.reason !== 'string' || !REPORT_REASONS.includes(body.reason as ReportReason)) {
+    return jsonError(res, 400, 'bad_request', `reason must be one of: ${REPORT_REASONS.join(', ')}`);
+  }
+  const detail =
+    typeof body.detail === 'string' && body.detail.length <= 1000 ? body.detail : null;
+
+  try {
+    const { error } = await withTimeout(
+      supabase.from('question_reports').insert({
+        question_id: body.question_id,
+        reason: body.reason,
+        detail,
+        reporter_sub,
+      }),
+    );
+    if (error) {
+      reportLogger({ status: 500, reason: 'insert_failed', error: error.message });
+      return jsonError(res, 500, 'db_error', 'Could not save report');
+    }
+    reportLogger({ status: 200, question_id: body.question_id, reason: body.reason });
+    return res.json({ ok: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'unknown';
+    reportLogger({ status: 504, error: message });
+    return jsonError(res, 504, 'upstream_timeout', 'Backend timed out');
+  }
 }

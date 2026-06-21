@@ -82,7 +82,7 @@ export async function reportQuestion(input: {
   detail?: string;
   reporterSub?: string;
 }) {
-  await apiFetch('/api/quiz/report', {
+  await apiFetch('/api/quiz/submit?resource=report', {
     method: 'POST',
     body: JSON.stringify({
       question_id: input.questionId,
