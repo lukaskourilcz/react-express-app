@@ -332,7 +332,7 @@ function App() {
             <Waterline />
           </Box>
           {finPositions.map((leftPct, i) => (
-            <Box key={i} sx={{ position: 'absolute', bottom: 8, left: `${leftPct}%`, transform: 'translate(-50%, -100%)' }}>
+            <Box key={i} sx={{ position: 'absolute', bottom: 7, left: `${leftPct}%`, transform: 'translateX(-50%)', lineHeight: 0 }}>
               <SwimmingFin size={20} />
             </Box>
           ))}

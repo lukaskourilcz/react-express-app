@@ -17,7 +17,7 @@ import {
 } from '../lib/roadmap';
 import type { RoadmapStructure, RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
-import { levelForXp, specializationFor, displayTitle, CAREER_RANKS } from '../lib/leveling';
+import { levelForXp, specializationFor, displayTitle, getCareerRanks } from '../lib/leveling';
 
 interface Area {
   topic: RoadmapTopic;
@@ -130,7 +130,7 @@ export default function CareerRoadmap() {
   const info = levelForXp(totalXp);
   const spec = specializationFor(progress);
   const rankTitle = displayTitle(info.rank.title, spec);
-  const seniorRank = CAREER_RANKS.find((r) => r.title === SENIOR_RANK_TITLE);
+  const seniorRank = getCareerRanks().find((r) => r.title === SENIOR_RANK_TITLE);
   const reachedSenior = seniorRank ? totalXp >= seniorRank.minXp : false;
   const xpToSenior = seniorRank ? Math.max(0, seniorRank.minXp - totalXp) : 0;
 

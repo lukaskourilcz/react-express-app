@@ -77,23 +77,57 @@ export interface CareerRank {
   emoji: string;
 }
 
-// 10 ranks, Superjunior → Software Architect. Thresholds are tuned so that
-// completing a full learning path (~3k–8k XP) lifts you several ranks, while
-// reaching Architect means mastering most paths.
-export const CAREER_RANKS: CareerRank[] = [
-  { title: 'Superjunior Developer', minXp: 0, emoji: '🌱' },
-  { title: 'Junior Developer', minXp: 500, emoji: '🧑‍💻' },
-  { title: 'Associate Developer', minXp: 1500, emoji: '💻' },
-  { title: 'Developer', minXp: 3500, emoji: '⚙️' },
-  { title: 'Mid-Level Developer', minXp: 6500, emoji: '🛠️' },
-  { title: 'Senior Developer', minXp: 11000, emoji: '🚀' },
-  { title: 'Staff Engineer', minXp: 17000, emoji: '⭐' },
-  { title: 'Principal Engineer', minXp: 25000, emoji: '🎖️' },
-  { title: 'Distinguished Engineer', minXp: 36000, emoji: '🏅' },
-  { title: 'Software Architect', minXp: 50000, emoji: '🏛️' },
+// 10 ranks, Superjunior → Software Architect. Titles/emojis are fixed; the XP
+// thresholds are configurable from /dev → Settings (defaults below).
+const RANK_META: ReadonlyArray<{ title: string; emoji: string }> = [
+  { title: 'Superjunior Developer', emoji: '🌱' },
+  { title: 'Junior Developer', emoji: '🧑‍💻' },
+  { title: 'Associate Developer', emoji: '💻' },
+  { title: 'Developer', emoji: '⚙️' },
+  { title: 'Mid-Level Developer', emoji: '🛠️' },
+  { title: 'Senior Developer', emoji: '🚀' },
+  { title: 'Staff Engineer', emoji: '⭐' },
+  { title: 'Principal Engineer', emoji: '🎖️' },
+  { title: 'Distinguished Engineer', emoji: '🏅' },
+  { title: 'Software Architect', emoji: '🏛️' },
 ];
 
-export const MAX_RANK = CAREER_RANKS.length;
+/** Rank titles in order — used to label the dev configuration UI. */
+export const RANK_TITLES: string[] = RANK_META.map((r) => r.title);
+
+export const MAX_RANK = RANK_META.length;
+
+// Total XP required to reach each rank (ascending; first is 0). Tuned so that
+// completing a full learning path lifts you several ranks, while reaching
+// Architect means mastering most paths.
+export const DEFAULT_RANK_THRESHOLDS: number[] = [
+  0, 2000, 6000, 14000, 26000, 44000, 68000, 100000, 144000, 200000,
+];
+
+let activeThresholds: number[] = [...DEFAULT_RANK_THRESHOLDS];
+
+/**
+ * Override the XP thresholds from the dev-configured game settings. Invalid
+ * input (wrong length, non-ascending, first ≠ 0) is ignored so a bad config can
+ * never break leveling.
+ */
+export function setRankThresholds(values: number[] | null | undefined): void {
+  if (!Array.isArray(values) || values.length !== RANK_META.length) return;
+  const cleaned: number[] = [];
+  for (let i = 0; i < values.length; i++) {
+    const n = Math.round(Number(values[i]));
+    if (!Number.isFinite(n) || n < 0) return;
+    if (i === 0 && n !== 0) return;
+    if (i > 0 && n <= cleaned[i - 1]) return;
+    cleaned.push(n);
+  }
+  activeThresholds = cleaned;
+}
+
+/** The active career ladder: fixed titles/emojis with the current thresholds. */
+export function getCareerRanks(): CareerRank[] {
+  return RANK_META.map((m, i) => ({ title: m.title, emoji: m.emoji, minXp: activeThresholds[i] }));
+}
 
 export interface LevelInfo {
   /** 1-based rank number (1…10). */
@@ -115,13 +149,14 @@ export interface LevelInfo {
 
 /** Resolve a total XP value to its career rank + progress toward the next. */
 export function levelForXp(totalXp: number): LevelInfo {
+  const ranks = getCareerRanks();
   const xp = Math.max(0, Math.floor(totalXp));
   let idx = 0;
-  for (let i = 0; i < CAREER_RANKS.length; i++) {
-    if (xp >= CAREER_RANKS[i].minXp) idx = i;
+  for (let i = 0; i < ranks.length; i++) {
+    if (xp >= ranks[i].minXp) idx = i;
   }
-  const rank = CAREER_RANKS[idx];
-  const next = CAREER_RANKS[idx + 1] ?? null;
+  const rank = ranks[idx];
+  const next = ranks[idx + 1] ?? null;
   const xpSpan = next ? next.minXp - rank.minXp : 0;
   const xpIntoRank = xp - rank.minXp;
   const xpToNext = next ? Math.max(0, next.minXp - xp) : 0;

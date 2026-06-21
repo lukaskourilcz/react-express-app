@@ -94,6 +94,7 @@ export interface GameSettings {
     maxSpeedBonus: number;
   };
   features: { dailyChallenge: boolean; multiplayer: boolean; leaderboard: boolean; flashcards: boolean };
+  leveling: { rankThresholds: number[] };
   ownerEmail: string;
 }
 

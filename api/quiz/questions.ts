@@ -25,9 +25,7 @@ const ALL_CATEGORIES: CategoryType[] = [
   'nodejs',
   'ai',
   'dev-world',
-  'custom',
   'code-snippets',
-  'apt',
 ];
 const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
