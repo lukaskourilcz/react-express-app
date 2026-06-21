@@ -3,6 +3,7 @@ import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, 
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import AuthButton from './components/AuthButton';
 import LoadingScreen from './components/LoadingScreen';
+import { SwimmingFin } from './components/SharkFin';
 import { useColorMode } from './theme/ColorModeContext';
 import { useT, useLanguage } from './i18n/LanguageContext';
 import { preferredLanguageOf } from './lib/languagePref';
@@ -190,8 +191,9 @@ function App() {
               component={Link}
               to="/"
               aria-label={t('nav.home')}
-              sx={{ flexGrow: 1, fontWeight: 700, color: 'text.primary', textDecoration: 'none', fontSize: '1.1rem' }}
+              sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: 'text.primary', textDecoration: 'none', fontSize: '1.1rem' }}
             >
+              <SwimmingFin size={22} />
               devShark
             </Typography>
 
@@ -228,7 +230,8 @@ function App() {
           sx={{ display: { xs: 'block', md: 'none' } }}
         >
           <Box sx={{ width: 240 }} role="presentation" onClick={() => setMobileNavOpen(false)}>
-            <Typography variant="h6" sx={{ p: 2, fontWeight: 700, color: 'text.primary' }}>
+            <Typography variant="h6" sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: 'text.primary' }}>
+              <SwimmingFin size={22} />
               devShark
             </Typography>
             <Divider />
