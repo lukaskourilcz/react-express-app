@@ -139,8 +139,9 @@ function App() {
     }
   }, [location.pathname, t]);
 
-  // The /dev console is a standalone admin surface — no app chrome.
-  const showChrome = !location.pathname.startsWith('/dev') && !(quizActive && location.pathname === '/');
+  // The /dev console is a standalone admin surface — no app chrome, full width.
+  const isDev = location.pathname.startsWith('/dev');
+  const showChrome = !isDev && !(quizActive && location.pathname === '/');
   const navLinkSx = (isActive: boolean) => ({
     color: isActive ? BRAND.green : 'text.secondary',
     fontWeight: isActive ? 700 : 500,
@@ -257,12 +258,12 @@ function App() {
           display: 'flex',
           alignItems: 'flex-start',
           justifyContent: 'center',
-          padding: { xs: '1.25rem 1rem', sm: '3rem 1.5rem' },
+          padding: isDev ? { xs: '0.5rem', sm: '0.5rem 1rem' } : { xs: '1.25rem 1rem', sm: '3rem 1.5rem' },
           boxSizing: 'border-box',
           outline: 'none',
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: 800 }}>
+        <Box sx={{ width: '100%', maxWidth: isDev ? 'none' : 800 }}>
           <Suspense fallback={<RouteLoader />}>
             <Routes>
               <Route path="/" element={<Quiz onActiveChange={setQuizActive} />} />

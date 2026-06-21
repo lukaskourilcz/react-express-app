@@ -10,7 +10,7 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
   const [tab, setTab] = useState(0);
 
   return (
-    <Box sx={{ width: '90%', maxWidth: 1700, mx: 'auto', px: { xs: 1.5, sm: 2 }, py: 2 }}>
+    <Box sx={{ width: '100%', mx: 'auto', px: { xs: 1.5, sm: 2 }, py: 2 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
         <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
           Dev console
