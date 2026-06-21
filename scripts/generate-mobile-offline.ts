@@ -12,6 +12,7 @@
 import { writeFileSync } from 'fs';
 import { resolve } from 'path';
 import { questions, PRIVATE_CATEGORIES } from '../lib/quiz-data';
+import { computeImportance } from '../lib/importance';
 import { roadmapStructure, ROADMAP_TOPICS, ROADMAP_TOPICS as TOPICS, levelQuestionIds, checkpointQuestionIds, topicLevelCount, topicCheckpointCount, QUESTIONS_PER_LEVEL } from '../lib/roadmap';
 
 interface OfflineQuestion {
@@ -24,6 +25,9 @@ interface OfflineQuestion {
   explanation: string;
   category: string;
   difficulty: number;
+  // Resolved importance (1–10) so the offline quiz can weight selection like the
+  // server does (the hand-judged score, or the heuristic for un-scored items).
+  importance: number;
 }
 
 const nonPrivate = questions.filter((q) => !PRIVATE_CATEGORIES.includes(q.category));
@@ -39,6 +43,7 @@ const slim = (q: (typeof questions)[number]): OfflineQuestion => ({
   explanation: q.explanation,
   category: q.category,
   difficulty: q.difficulty,
+  importance: computeImportance(q),
 });
 
 // Integrity: every roadmap level/checkpoint must resolve to its full question set

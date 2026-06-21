@@ -121,6 +121,18 @@ export const setQuestionDeleted = (id: string, deleted: boolean) =>
 export const bulkHideByImportance = (maxImportance: number) =>
   adminFetch<{ ok: true; hidden: number }>('bulkhide', { method: 'POST', body: { maxImportance } });
 
+/** A single auth action (registration or login) for the Logs tab. */
+export interface AuthEvent {
+  id: string;
+  user_id: string;
+  email: string | null;
+  provider: string | null;
+  event_type: 'register' | 'login';
+  created_at: string;
+}
+
+export const listAuthEvents = () => adminFetch<{ events: AuthEvent[] }>('logs');
+
 export const resetQuestion = (id: string) =>
   adminFetch<{ ok: true }>('reset', { method: 'POST', body: { id } });
 

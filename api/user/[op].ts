@@ -8,6 +8,8 @@ import {
   logEvent as emit,
   STATS_CATEGORIES,
 } from '../../lib/http';
+import { requireAuth } from '../../lib/auth';
+import { recordAuthEvent } from '../../lib/auth-events-store';
 
 const supabase = createServiceClient();
 
@@ -27,7 +29,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (op === 'category-stats') return categoryStats(req, res);
   if (op === 'streak') return streak(req, res);
   if (op === 'xp') return xp(req, res);
+  if (op === 'authevent') return authEvent(req, res);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
+}
+
+// Record a sign-in for the /dev "Logs" tab. The client calls this once per
+// browser session after Supabase confirms a real sign-in; the server derives the
+// (verified) user id, email and provider from the token — never trusting the
+// client for identity. Best-effort: a failure here must not break sign-in.
+async function authEvent(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  }
+  let auth;
+  try {
+    auth = await requireAuth(req);
+  } catch {
+    return jsonError(res, 401, 'unauthorized', 'Sign in required');
+  }
+  const email = typeof auth.payload.email === 'string' ? auth.payload.email : null;
+  const meta = (auth.payload.app_metadata ?? {}) as { provider?: unknown };
+  const provider = typeof meta.provider === 'string' ? meta.provider : null;
+  const kind = await recordAuthEvent({ userId: auth.sub, email, provider });
+  logEvent('authevent', { status: 200, kind });
+  return res.json({ ok: true, kind });
 }
 
 // Per-user "quest" XP (career leveling). Learning XP is derived from roadmap

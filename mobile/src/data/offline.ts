@@ -28,6 +28,8 @@ interface OfflineQuestion {
   explanation: string;
   category: CategoryType;
   difficulty: 1 | 2 | 3 | 4 | 5;
+  // Optional: present in newer bundles so selection can weight by importance.
+  importance?: number;
 }
 interface OfflineData {
   generatedAt: string;
@@ -51,6 +53,11 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   git: 'rm-git',
   dsa: 'rm-dsa',
   algorithms: 'rm-algorithms',
+  abbreviations: 'rm-abbr',
+  general: 'rm-general',
+  ai: 'rm-ai',
+  'rhf-zod': 'rm-rhf',
+  'cool-stuff': 'rm-cool',
 };
 const PER_LEVEL = DATA.questionsPerLevel || 8;
 
@@ -136,25 +143,40 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-// Mirrors the server's /api/quiz/questions difficulty selection.
+// Importance-weighted sample without replacement (Efraimidis–Spirakis), mirroring
+// the server's quiz selection so low-importance "fillers" surface less often.
+// Returns the chosen items in random order. Falls back to a plain shuffle when
+// the bundle predates importance scores.
+function weightedSample(items: OfflineQuestion[], count: number): OfflineQuestion[] {
+  if (count >= items.length) return shuffle(items);
+  const keyed = items.map((item) => {
+    const w = Math.max(0.0001, item.importance ?? 5);
+    const u = Math.random() || 1e-9; // (0,1]
+    return { item, key: Math.log(u) / w }; // larger key (closer to 0) = higher priority
+  });
+  keyed.sort((a, b) => b.key - a.key);
+  return shuffle(keyed.slice(0, count).map((k) => k.item));
+}
+
+// Mirrors the server's /api/quiz/questions difficulty selection (importance-weighted).
 function selectByDifficulty(pool: OfflineQuestion[], mode: DifficultyMode, count: number): OfflineQuestion[] {
-  if (mode === 'easy') return shuffle(pool.filter((q) => q.difficulty <= 2)).slice(0, count);
-  if (mode === 'advanced') return shuffle(pool.filter((q) => q.difficulty >= 3)).slice(0, count);
+  if (mode === 'easy') return weightedSample(pool.filter((q) => q.difficulty <= 2), count);
+  if (mode === 'advanced') return weightedSample(pool.filter((q) => q.difficulty >= 3), count);
   if (mode === 'basics') {
     const basics = pool.filter((q) => q.tags.includes('Terminology'));
-    if (basics.length > 0) return shuffle(basics).slice(0, count);
+    if (basics.length > 0) return weightedSample(basics, count);
     const sorted = [...pool].sort((a, b) => a.difficulty - b.difficulty);
     const easiest = sorted[0]?.difficulty ?? 1;
-    return shuffle(sorted.filter((q) => q.difficulty === easiest)).slice(0, count);
+    return weightedSample(sorted.filter((q) => q.difficulty === easiest), count);
   }
-  if (mode === 'mixed') return shuffle(pool).slice(0, count);
+  if (mode === 'mixed') return weightedSample(pool, count);
   // zero-to-hero: progressive — fill across difficulty buckets, then top up.
   const perBucket = Math.ceil(count / 5);
   const buckets: OfflineQuestion[] = [];
-  for (let d = 1; d <= 5; d++) buckets.push(...shuffle(pool.filter((q) => q.difficulty === d)).slice(0, perBucket));
+  for (let d = 1; d <= 5; d++) buckets.push(...weightedSample(pool.filter((q) => q.difficulty === d), perBucket));
   if (buckets.length < count) {
     const ids = new Set(buckets.map((q) => q.id));
-    buckets.push(...shuffle(pool.filter((q) => !ids.has(q.id))).slice(0, count - buckets.length));
+    buckets.push(...weightedSample(pool.filter((q) => !ids.has(q.id)), count - buckets.length));
   }
   return buckets.slice(0, count);
 }

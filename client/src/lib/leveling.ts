@@ -134,7 +134,7 @@ export function levelForXp(totalXp: number): LevelInfo {
 export type Specialization = 'Frontend' | 'Backend' | 'Full-Stack';
 
 // Core languages count toward both tracks; the rest are track-specific.
-const FRONTEND_TOPICS: RoadmapTopic[] = ['html', 'css', 'react', 'nextjs', 'javascript', 'typescript'];
+const FRONTEND_TOPICS: RoadmapTopic[] = ['html', 'css', 'react', 'nextjs', 'javascript', 'typescript', 'rhf-zod'];
 const BACKEND_TOPICS: RoadmapTopic[] = ['nodejs', 'javascript', 'typescript'];
 
 const passedLevels = (progress: RoadmapProgress, topic: RoadmapTopic): number =>
