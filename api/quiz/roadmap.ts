@@ -1,19 +1,15 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { localizeQuestion, normalizeLang, secureShuffle } from '../../lib/quiz-data';
+import { localizeQuestion, normalizeLang, secureShuffle, type Question } from '../../lib/quiz-data';
 import { jsonError, createLogger, createServiceClient, withTimeout, requireAuthSub } from '../../lib/http';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
 import {
-  roadmapStructure,
-  topicLevels,
-  topicCheckpoints,
-  levelQuestionIds,
-  checkpointQuestionIds,
+  buildLiveTopic,
+  liveRoadmapStructure,
   isRoadmapTopic,
-  isValidLevel,
-  isValidCheckpoint,
   ROADMAP_TOPICS,
   ROADMAP_LEVELS,
   CHECKPOINT_COUNT,
+  LEVELS_PER_CHECKPOINT,
   LEVEL_PASS,
   type RoadmapTopic,
 } from '../../lib/roadmap';
@@ -33,8 +29,7 @@ const PROGRESS_TABLE = 'roadmap_progress';
 // the competitive quiz, the roadmap is an unscored learning mode, so each
 // question is returned WITH its correct answer and explanation (the client
 // grades locally). Options are shuffled per request so the answer slot varies.
-async function buildQuestions(ids: string[], lang: ReturnType<typeof normalizeLang>) {
-  const byId = await getEffectiveQuestionsById();
+function buildQuestions(ids: string[], lang: ReturnType<typeof normalizeLang>, byId: Map<string, Question>) {
   return ids
     .map((id) => byId.get(id))
     .filter((q): q is NonNullable<typeof q> => Boolean(q))
@@ -160,11 +155,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const levelRaw = req.query.level as string | undefined;
   const checkpointRaw = req.query.checkpoint as string | undefined;
 
+  // The live question set drives both the structure and a level's questions, so
+  // hiding a question in /dev re-syncs the path automatically (fewer/relevelled
+  // levels). One read per request; the underlying set is cached in the store.
+  const byId = await getEffectiveQuestionsById();
+  const exists = (id: string) => byId.has(id);
+
   // No topic → return the whole map so the client can render the path.
   if (!topicRaw && levelRaw === undefined && checkpointRaw === undefined) {
-    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.setHeader('Cache-Control', 'public, max-age=60');
     logEvent({ status: 200, kind: 'structure', latency_ms: Date.now() - started });
-    return res.json({ topics: ROADMAP_TOPICS, structure: roadmapStructure() });
+    return res.json({ topics: ROADMAP_TOPICS, structure: liveRoadmapStructure(exists) });
   }
 
   if (!isRoadmapTopic(topicRaw)) {
@@ -172,17 +173,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
   const topic: RoadmapTopic = topicRaw;
   const lang = normalizeLang(req.query.lang);
+  const live = buildLiveTopic(topic, exists);
 
-  // ── Checkpoint exam (40 questions over 5 levels) ─────────────────────────
+  // ── Checkpoint exam (the surviving questions over its 5 levels) ───────────
   if (checkpointRaw !== undefined) {
     const checkpoint = parseInt(checkpointRaw, 10);
-    if (!isValidCheckpoint(topic, checkpoint)) {
-      return jsonError(res, 400, 'bad_request', 'Invalid checkpoint');
-    }
-    const meta = topicCheckpoints(topic).find((c) => c.checkpoint === checkpoint);
-    if (!meta) return jsonError(res, 404, 'not_found', 'Checkpoint not found');
+    const meta = live.checkpoints.find((c) => c.checkpoint === checkpoint);
+    if (!meta) return jsonError(res, 400, 'bad_request', 'Invalid checkpoint');
 
-    const questions = await buildQuestions(checkpointQuestionIds(topic, checkpoint), lang);
+    const firstLevel = (checkpoint - 1) * LEVELS_PER_CHECKPOINT + 1;
+    const ids: string[] = [];
+    for (let l = firstLevel; l < firstLevel + LEVELS_PER_CHECKPOINT; l++) {
+      ids.push(...(live.levelIds[l - 1] ?? []));
+    }
+    const questions = buildQuestions(ids, lang, byId);
     if (questions.length === 0) {
       return jsonError(res, 404, 'no_questions', 'No questions for this checkpoint');
     }
@@ -198,15 +202,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  // ── Level lesson (8 questions) ───────────────────────────────────────────
+  // ── Level lesson (the surviving questions for that level) ─────────────────
   const level = parseInt(levelRaw ?? '', 10);
-  if (!isValidLevel(topic, level)) {
-    return jsonError(res, 400, 'bad_request', 'Invalid level');
-  }
-  const meta = topicLevels(topic).find((l) => l.level === level);
-  if (!meta) return jsonError(res, 404, 'not_found', 'Level not found');
+  const meta = live.levels.find((l) => l.level === level);
+  if (!meta) return jsonError(res, 400, 'bad_request', 'Invalid level');
 
-  const questions = await buildQuestions(levelQuestionIds(topic, level), lang);
+  const questions = buildQuestions(live.levelIds[level - 1] ?? [], lang, byId);
   if (questions.length === 0) {
     return jsonError(res, 404, 'no_questions', 'No questions for this level');
   }

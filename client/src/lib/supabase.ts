@@ -78,7 +78,7 @@ export async function getDailyChallenge(lang = 'en'): Promise<DailyChallenge> {
 
 export async function reportQuestion(input: {
   questionId: string;
-  reason: 'incorrect-answer' | 'unclear' | 'typo' | 'outdated' | 'duplicate' | 'other';
+  reason: 'incorrect-answer' | 'unclear' | 'typo' | 'outdated' | 'duplicate' | 'other' | 'needs-review';
   detail?: string;
   reporterSub?: string;
 }) {

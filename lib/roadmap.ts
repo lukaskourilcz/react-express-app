@@ -213,6 +213,85 @@ export function roadmapStructure(): Record<RoadmapTopic, RoadmapTopicStructure> 
   return out;
 }
 
+/* ──── dynamic ("live") structure ───────────────────────────────────────────
+ * The functions above describe the *authored* path (a fixed N levels × 8). The
+ * live quiz, however, lets the owner hide questions from /dev, and the path must
+ * re-sync: with fewer surviving questions a topic has fewer levels, and those
+ * levels get repacked and re-graded by position. The builders below take a
+ * predicate for which question ids still exist (i.e. aren't soft-deleted) and
+ * recompute everything from the surviving set, so deleting a question in /dev
+ * automatically shrinks/relevels the learning path. The static functions are
+ * kept for the build scripts (mobile offline snapshot, integrity checks), which
+ * always want the full authored set.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+/** All authored question ids for a topic, in canonical order (ignoring deletes). */
+export function topicAllQuestionIds(topic: RoadmapTopic): string[] {
+  const max = topicLevelCount(topic) * QUESTIONS_PER_LEVEL;
+  const prefix = ID_PREFIX[topic];
+  return Array.from({ length: max }, (_, i) => `${prefix}-${i + 1}`);
+}
+
+export interface LiveTopic {
+  levels: RoadmapLevelMeta[];
+  checkpoints: RoadmapCheckpointMeta[];
+  /** levelIds[level - 1] = the surviving question ids packed into that level. */
+  levelIds: string[][];
+}
+
+/** Recompute a topic's levels/checkpoints from the questions that still exist. */
+export function buildLiveTopic(topic: RoadmapTopic, exists: (id: string) => boolean): LiveTopic {
+  const surviving = topicAllQuestionIds(topic).filter(exists);
+  const levelCount = Math.min(
+    topicLevelCount(topic),
+    Math.ceil(surviving.length / QUESTIONS_PER_LEVEL),
+  );
+  const titles = LEVEL_TITLES[topic];
+
+  const levels: RoadmapLevelMeta[] = [];
+  const levelIds: string[][] = [];
+  for (let l = 1; l <= levelCount; l++) {
+    const chunk = surviving.slice((l - 1) * QUESTIONS_PER_LEVEL, l * QUESTIONS_PER_LEVEL);
+    levelIds.push(chunk);
+    levels.push({
+      level: l,
+      title: titles[l - 1],
+      difficulty: difficultyForLevel(l),
+      questionCount: chunk.length,
+    });
+  }
+
+  const checkpointCount = Math.floor(levelCount / LEVELS_PER_CHECKPOINT);
+  const checkpoints: RoadmapCheckpointMeta[] = [];
+  for (let n = 1; n <= checkpointCount; n++) {
+    const afterLevel = n * LEVELS_PER_CHECKPOINT;
+    let questionCount = 0;
+    for (let l = afterLevel - LEVELS_PER_CHECKPOINT + 1; l <= afterLevel; l++) {
+      questionCount += levelIds[l - 1].length;
+    }
+    checkpoints.push({
+      checkpoint: n,
+      title: n === checkpointCount ? FINAL_CHECKPOINT_TITLE : CHECKPOINT_TITLES[n - 1] ?? `Checkpoint ${n}`,
+      afterLevel,
+      questionCount,
+      passPct: CHECKPOINT_PASS,
+    });
+  }
+  return { levels, checkpoints, levelIds };
+}
+
+/** The full live structure for every topic, given the surviving-id predicate. */
+export function liveRoadmapStructure(
+  exists: (id: string) => boolean,
+): Record<RoadmapTopic, RoadmapTopicStructure> {
+  const out = {} as Record<RoadmapTopic, RoadmapTopicStructure>;
+  for (const topic of ROADMAP_TOPICS) {
+    const live = buildLiveTopic(topic, exists);
+    out[topic] = { levels: live.levels, checkpoints: live.checkpoints };
+  }
+  return out;
+}
+
 export function isRoadmapTopic(value: unknown): value is RoadmapTopic {
   return typeof value === 'string' && (ROADMAP_TOPICS as string[]).includes(value);
 }

@@ -1,15 +1,22 @@
 import { useMemo, useState } from 'react';
 import {
   Box,
-  Paper,
   Typography,
   TextField,
   Button,
   Chip,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Snackbar,
+  MenuItem,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TableSortLabel,
+  TablePagination,
+  Paper,
+  Tooltip,
 } from '@mui/material';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
@@ -17,6 +24,7 @@ import { useReloadKey, useCancellableEffect } from '../../lib/hooks';
 import { getCategoryLabel } from '../../lib/categories';
 import { brandButtonSx } from '../../theme/MuiTheme';
 import { friendlyError } from '../../lib/api';
+import { computeImportance, importanceBand, IMPORTANCE_BAND_LABEL, type ImportanceBand } from '../../lib/importance';
 import {
   listQuestions,
   setQuestionDeleted,
@@ -37,9 +45,26 @@ const SOURCE_COLOR: Record<AdminQuestion['source'], 'default' | 'warning' | 'suc
   custom: 'success',
 };
 
-// Whether a question currently has any Czech text (override or static bank).
-const hasCsTranslation = (q: AdminQuestion): boolean =>
-  !!(q.cs.question || q.cs.introduction || q.cs.explanation || q.cs.options.some(Boolean));
+// Color for the importance score chip, by band.
+const SCORE_COLOR: Record<ImportanceBand, string> = {
+  filler: '#c62828',
+  low: '#ef6c00',
+  medium: '#f9a825',
+  high: '#2e7d32',
+  essential: '#1b5e20',
+};
+
+// A question enriched with its computed importance, for the table.
+interface ScoredQuestion extends AdminQuestion {
+  importance: number;
+}
+
+type SortKey = 'importance' | 'difficulty' | 'category' | 'question';
+type SortDir = 'asc' | 'desc';
+// 'all' | exact score | 'filler' (the ≤3 band the owner cares about most).
+type ImportanceFilter = 'all' | 'filler' | number;
+
+const ROWS_PER_PAGE_OPTIONS = [25, 50, 100];
 
 export default function DevQuestions() {
   const [questions, setQuestions] = useState<AdminQuestion[]>([]);
@@ -49,6 +74,13 @@ export default function DevQuestions() {
   const [reloadKey, reload] = useReloadKey();
 
   const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [importanceFilter, setImportanceFilter] = useState<ImportanceFilter>('all');
+  const [sortBy, setSortBy] = useState<SortKey>('importance');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(25);
+
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<AdminQuestion | null>(null);
   const [snack, setSnack] = useState<string | null>(null);
@@ -71,39 +103,74 @@ export default function DevQuestions() {
     [reloadKey],
   );
 
+  // Attach the computed importance score once per load.
+  const scored = useMemo<ScoredQuestion[]>(
+    () => questions.map((q) => ({ ...q, importance: computeImportance(q) })),
+    [questions],
+  );
+
   const stats = useMemo(() => {
     let edited = 0;
     let custom = 0;
     let deleted = 0;
-    for (const q of questions) {
+    let filler = 0;
+    for (const q of scored) {
       if (q.deleted) deleted += 1;
       if (q.source === 'edited') edited += 1;
       if (q.source === 'custom') custom += 1;
+      if (q.importance <= 3) filler += 1;
     }
-    return { total: questions.length, edited, custom, deleted };
-  }, [questions]);
+    return { total: scored.length, edited, custom, deleted, filler };
+  }, [scored]);
 
-  const grouped = useMemo(() => {
+  const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
-    const filtered = term
-      ? questions.filter(
-          (q) =>
-            q.question.toLowerCase().includes(term) ||
-            q.id.toLowerCase().includes(term) ||
-            q.tags.some((t) => t.toLowerCase().includes(term)),
-        )
-      : questions;
+    return scored.filter((q) => {
+      if (categoryFilter !== 'all' && q.category !== categoryFilter) return false;
+      if (importanceFilter === 'filler' && q.importance > 3) return false;
+      if (typeof importanceFilter === 'number' && q.importance !== importanceFilter) return false;
+      if (term) {
+        const hit =
+          q.question.toLowerCase().includes(term) ||
+          q.id.toLowerCase().includes(term) ||
+          q.tags.some((t) => t.toLowerCase().includes(term));
+        if (!hit) return false;
+      }
+      return true;
+    });
+  }, [scored, search, categoryFilter, importanceFilter]);
 
-    const map = new Map<string, AdminQuestion[]>();
-    for (const q of filtered) {
-      const arr = map.get(q.category);
-      if (arr) arr.push(q);
-      else map.set(q.category, [q]);
+  const sorted = useMemo(() => {
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const cmp = (a: ScoredQuestion, b: ScoredQuestion): number => {
+      switch (sortBy) {
+        case 'importance':
+          return (a.importance - b.importance) || (a.difficulty - b.difficulty);
+        case 'difficulty':
+          return (a.difficulty - b.difficulty) || (a.importance - b.importance);
+        case 'category':
+          return a.category.localeCompare(b.category);
+        case 'question':
+          return summarize(a.question).localeCompare(summarize(b.question));
+      }
+    };
+    return [...filtered].sort((a, b) => cmp(a, b) * dir);
+  }, [filtered, sortBy, sortDir]);
+
+  // Keep the current page in range as filters change.
+  const pageStart = Math.min(page * rowsPerPage, Math.max(0, (Math.ceil(sorted.length / rowsPerPage) - 1) * rowsPerPage));
+  const pageRows = sorted.slice(pageStart, pageStart + rowsPerPage);
+
+  const toggleSort = (key: SortKey) => {
+    if (sortBy === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(key);
+      // Scores default to high→low; text columns to A→Z.
+      setSortDir(key === 'importance' || key === 'difficulty' ? 'desc' : 'asc');
     }
-    // Known categories first (in server order), then any others.
-    const order = [...categories, ...[...map.keys()].filter((c) => !categories.includes(c))];
-    return order.filter((c) => map.has(c)).map((c) => [c, map.get(c)!] as const);
-  }, [questions, categories, search]);
+    setPage(0);
+  };
 
   const openNew = () => {
     setEditing(null);
@@ -128,7 +195,7 @@ export default function DevQuestions() {
     const msg =
       q.source === 'custom'
         ? 'Delete this custom question permanently?'
-        : 'Hide this question from the quiz? You can restore it later.';
+        : 'Hide this question from the quiz and learning paths? Levels re-sync automatically. You can restore it later.';
     if (window.confirm(msg)) runAction('Question removed', () => setQuestionDeleted(q.id, true));
   };
   const handleRestore = (q: AdminQuestion) => runAction('Question restored', () => setQuestionDeleted(q.id, false));
@@ -148,9 +215,50 @@ export default function DevQuestions() {
           size="small"
           placeholder="Search question, tag or id…"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          sx={{ flex: 1, minWidth: 220 }}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(0);
+          }}
+          sx={{ flex: 1, minWidth: 200 }}
         />
+        <TextField
+          select
+          size="small"
+          label="Category"
+          value={categoryFilter}
+          onChange={(e) => {
+            setCategoryFilter(e.target.value);
+            setPage(0);
+          }}
+          sx={{ minWidth: 150 }}
+        >
+          <MenuItem value="all">All categories</MenuItem>
+          {categories.map((c) => (
+            <MenuItem key={c} value={c}>
+              {getCategoryLabel(c)}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          size="small"
+          label="Score"
+          value={String(importanceFilter)}
+          onChange={(e) => {
+            const v = e.target.value;
+            setImportanceFilter(v === 'all' || v === 'filler' ? v : Number(v));
+            setPage(0);
+          }}
+          sx={{ minWidth: 150 }}
+        >
+          <MenuItem value="all">All scores</MenuItem>
+          <MenuItem value="filler">Fillers (1–3)</MenuItem>
+          {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((n) => (
+            <MenuItem key={n} value={String(n)}>
+              Score = {n}
+            </MenuItem>
+          ))}
+        </TextField>
         <Button variant="contained" onClick={openNew} sx={brandButtonSx}>
           + New question
         </Button>
@@ -161,34 +269,129 @@ export default function DevQuestions() {
         <Chip label={`${stats.edited} edited`} size="small" color="warning" variant="outlined" />
         <Chip label={`${stats.custom} custom`} size="small" color="success" variant="outlined" />
         <Chip label={`${stats.deleted} hidden`} size="small" variant="outlined" />
+        <Chip label={`${stats.filler} filler (≤3)`} size="small" color="error" variant="outlined" />
+        <Chip label={`${filtered.length} shown`} size="small" variant="outlined" />
       </Box>
 
-      {grouped.length === 0 && (
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-          No questions match “{search}”.
-        </Typography>
-      )}
-
-      {grouped.map(([category, items]) => (
-        <Accordion key={category} disableGutters TransitionProps={{ unmountOnExit: true }}>
-          <AccordionSummary expandIcon={<span aria-hidden>▾</span>}>
-            <Typography sx={{ fontWeight: 600 }}>{getCategoryLabel(category)}</Typography>
-            <Chip label={items.length} size="small" sx={{ ml: 1.5 }} />
-          </AccordionSummary>
-          <AccordionDetails sx={{ p: 0 }}>
-            {items.map((q) => (
-              <QuestionRow
-                key={q.id}
-                q={q}
-                onEdit={() => openEdit(q)}
-                onDelete={() => handleDelete(q)}
-                onRestore={() => handleRestore(q)}
-                onReset={() => handleReset(q)}
-              />
+      <TableContainer component={Paper} variant="outlined">
+        <Table size="small" stickyHeader>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ minWidth: 240 }}>
+                <TableSortLabel active={sortBy === 'question'} direction={sortBy === 'question' ? sortDir : 'asc'} onClick={() => toggleSort('question')}>
+                  Question
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel active={sortBy === 'category'} direction={sortBy === 'category' ? sortDir : 'asc'} onClick={() => toggleSort('category')}>
+                  Category
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="center">
+                <TableSortLabel active={sortBy === 'difficulty'} direction={sortBy === 'difficulty' ? sortDir : 'asc'} onClick={() => toggleSort('difficulty')}>
+                  Diff
+                </TableSortLabel>
+              </TableCell>
+              <TableCell align="center">
+                <Tooltip title="Importance in modern web dev (1–10, computed from category, difficulty and tags)">
+                  <TableSortLabel active={sortBy === 'importance'} direction={sortBy === 'importance' ? sortDir : 'desc'} onClick={() => toggleSort('importance')}>
+                    Score
+                  </TableSortLabel>
+                </Tooltip>
+              </TableCell>
+              <TableCell align="right">Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {pageRows.map((q) => (
+              <TableRow key={q.id} hover sx={{ opacity: q.deleted ? 0.5 : 1 }}>
+                <TableCell sx={{ maxWidth: 420 }}>
+                  <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap title={summarize(q.question)}>
+                    {summarize(q.question)}
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.25, alignItems: 'center' }}>
+                    {q.source !== 'base' && (
+                      <Chip label={q.source} size="small" color={SOURCE_COLOR[q.source]} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                    )}
+                    {q.deleted && <Chip label="hidden" size="small" sx={{ height: 18, fontSize: '0.65rem' }} />}
+                    <Typography variant="caption" color="text.secondary">
+                      {q.id}
+                    </Typography>
+                  </Box>
+                </TableCell>
+                <TableCell>
+                  <Typography variant="caption">{getCategoryLabel(q.category)}</Typography>
+                </TableCell>
+                <TableCell align="center">{q.difficulty}</TableCell>
+                <TableCell align="center">
+                  <Tooltip title={IMPORTANCE_BAND_LABEL[importanceBand(q.importance)]}>
+                    <Box
+                      component="span"
+                      sx={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: 26,
+                        height: 22,
+                        px: 0.5,
+                        borderRadius: 1,
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        color: '#fff',
+                        backgroundColor: SCORE_COLOR[importanceBand(q.importance)],
+                      }}
+                    >
+                      {q.importance}
+                    </Box>
+                  </Tooltip>
+                </TableCell>
+                <TableCell align="right">
+                  <Box sx={{ display: 'inline-flex', gap: 0.25 }}>
+                    <Button size="small" onClick={() => openEdit(q)} sx={{ minWidth: 'auto' }}>
+                      Edit
+                    </Button>
+                    {q.deleted ? (
+                      <Button size="small" color="success" onClick={() => handleRestore(q)} sx={{ minWidth: 'auto' }}>
+                        Restore
+                      </Button>
+                    ) : (
+                      <Button size="small" color="error" onClick={() => handleDelete(q)} sx={{ minWidth: 'auto' }}>
+                        {q.source === 'custom' ? 'Delete' : 'Hide'}
+                      </Button>
+                    )}
+                    {q.source === 'edited' && (
+                      <Button size="small" onClick={() => handleReset(q)} sx={{ minWidth: 'auto' }}>
+                        Revert
+                      </Button>
+                    )}
+                  </Box>
+                </TableCell>
+              </TableRow>
             ))}
-          </AccordionDetails>
-        </Accordion>
-      ))}
+            {pageRows.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={5}>
+                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                    No questions match these filters.
+                  </Typography>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+      <TablePagination
+        component="div"
+        count={sorted.length}
+        page={pageStart / rowsPerPage}
+        onPageChange={(_, p) => setPage(p)}
+        rowsPerPage={rowsPerPage}
+        onRowsPerPageChange={(e) => {
+          setRowsPerPage(parseInt(e.target.value, 10));
+          setPage(0);
+        }}
+        rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
+      />
 
       <QuestionEditor
         open={editorOpen}
@@ -209,73 +412,5 @@ export default function DevQuestions() {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Box>
-  );
-}
-
-function QuestionRow({
-  q,
-  onEdit,
-  onDelete,
-  onRestore,
-  onReset,
-}: {
-  q: AdminQuestion;
-  onEdit: () => void;
-  onDelete: () => void;
-  onRestore: () => void;
-  onReset: () => void;
-}) {
-  return (
-    <Paper
-      elevation={0}
-      sx={{
-        p: 1.5,
-        borderTop: '1px solid',
-        borderColor: 'divider',
-        borderRadius: 0,
-        opacity: q.deleted ? 0.55 : 1,
-      }}
-    >
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="body2" sx={{ fontWeight: 500 }}>
-            {summarize(q.question)}
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.75, alignItems: 'center' }}>
-            <Chip label={`D${q.difficulty}`} size="small" variant="outlined" />
-            {q.source !== 'base' && (
-              <Chip label={q.source} size="small" color={SOURCE_COLOR[q.source]} variant="outlined" />
-            )}
-            {hasCsTranslation(q) && <Chip label="cs" size="small" variant="outlined" color="info" />}
-            {q.deleted && <Chip label="hidden" size="small" />}
-            {q.tags.map((t) => (
-              <Chip key={t} label={`#${t}`} size="small" variant="outlined" sx={{ color: 'text.secondary' }} />
-            ))}
-            <Typography variant="caption" color="text.secondary" sx={{ ml: 0.5 }}>
-              id: {q.id}
-            </Typography>
-          </Box>
-        </Box>
-        <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
-          <Button size="small" onClick={onEdit}>
-            Edit
-          </Button>
-          {q.deleted ? (
-            <Button size="small" color="success" onClick={onRestore}>
-              Restore
-            </Button>
-          ) : (
-            <Button size="small" color="error" onClick={onDelete}>
-              {q.source === 'custom' ? 'Delete' : 'Hide'}
-            </Button>
-          )}
-          {q.source === 'edited' && (
-            <Button size="small" onClick={onReset}>
-              Revert
-            </Button>
-          )}
-        </Box>
-      </Box>
-    </Paper>
   );
 }

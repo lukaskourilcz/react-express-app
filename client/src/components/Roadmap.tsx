@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { Box, Typography, Button, LinearProgress, Chip, Skeleton, Tooltip, useTheme } from '@mui/material';
+import { Box, Typography, Button, LinearProgress, Chip, Skeleton, Tooltip, IconButton, Snackbar, useTheme } from '@mui/material';
 import type {
   RoadmapTopic,
   RoadmapLevelMeta,
   RoadmapCheckpointMeta,
   RoadmapPlayable,
+  RoadmapQuestion,
   RoadmapStructure,
 } from '../types/quiz';
 import {
@@ -34,8 +35,11 @@ import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { friendlyError } from '../lib/api';
+import { reportQuestion } from '../lib/supabase';
+import { shuffleDifferentFrom } from '../lib/shuffle';
 import { readString, writeString } from '../lib/storage';
 import { renderQuestion } from './CodeBlock';
+import { RedFlagDialog } from './RedFlagDialog';
 import './Roadmap.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
@@ -168,6 +172,27 @@ function buildPath(levels: RoadmapLevelMeta[], checkpoints: RoadmapCheckpointMet
     }
   }
   return out;
+}
+
+// Build the order a lesson is shown in: both the question sequence and each
+// question's answer options are shuffled so nothing is memorisable by position.
+// `prev` (the previous presentation, on replay) is avoided so every run differs
+// from the one before — answers never stay in the same slot two plays running.
+function presentQuestions(questions: RoadmapQuestion[], prev?: RoadmapQuestion[]): RoadmapQuestion[] {
+  // Reorder questions, avoiding the previous sequence (or the source order on the
+  // first play). The reference must be the same objects in the order to avoid.
+  const byId = new Map(questions.map((q) => [q.id, q]));
+  const reference = (prev ?? questions).map((q) => byId.get(q.id)).filter((q): q is RoadmapQuestion => !!q);
+  const ordered = reference.length === questions.length ? shuffleDifferentFrom(questions, reference) : shuffleDifferentFrom(questions, questions);
+
+  const prevOptionsById = new Map((prev ?? []).map((q) => [q.id, q.options]));
+  return ordered.map((q) => {
+    const correctText = q.options[q.correctAnswer];
+    const avoid = prevOptionsById.get(q.id) ?? q.options;
+    const options = shuffleDifferentFrom(q.options, avoid);
+    const correctAnswer = options.indexOf(correctText);
+    return { ...q, options, correctAnswer: correctAnswer >= 0 ? correctAnswer : q.correctAnswer };
+  });
 }
 
 // What to play after finishing `a`, given the active topic's level/checkpoint
@@ -687,9 +712,13 @@ function LessonRunner({
   playable: RoadmapPlayable; topicColor: string; hasNext: boolean; nextLabel: string;
   onExit: () => void; onFinished: (pct: number) => void; onNext: () => void; t: TFn;
 }) {
+  const { user } = useAuth();
   const isCheckpoint = playable.kind === 'checkpoint';
   const accent = isCheckpoint ? CHECKPOINT_GOLD : topicColor;
-  const total = playable.questions.length;
+  // Question sequence + answer order are shuffled on every play (and re-shuffled
+  // on replay, avoiding the previous layout) so positions stay unmemorisable.
+  const [presented, setPresented] = useState<RoadmapQuestion[]>(() => presentQuestions(playable.questions));
+  const total = presented.length;
   const [qIndex, setQIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
@@ -699,8 +728,10 @@ function LessonRunner({
   const [mistakes, setMistakes] = useState(0);
   const [dead, setDead] = useState(false);
   const [heartHit, setHeartHit] = useState(false);
+  const [flagOpen, setFlagOpen] = useState(false);
+  const [flagSnack, setFlagSnack] = useState(false);
 
-  const question = playable.questions[qIndex];
+  const question = presented[qIndex];
   // Out of hearts once this answer is revealed and it pushed mistakes to the max.
   const outOfHearts = !isCheckpoint && mistakes >= MAX_HEARTS;
 
@@ -734,6 +765,8 @@ function LessonRunner({
   };
 
   const replay = () => {
+    // Re-shuffle, avoiding the layout just played, so the retry isn't identical.
+    setPresented((prev) => presentQuestions(playable.questions, prev));
     setFinished(false);
     setDead(false);
     setMistakes(0);
@@ -741,6 +774,12 @@ function LessonRunner({
     setSelected(null);
     setRevealed(false);
     setCorrectCount(0);
+  };
+
+  const submitFlag = async (detail?: string) => {
+    await reportQuestion({ questionId: question.id, reason: 'needs-review', detail, reporterSub: user?.id });
+    setFlagOpen(false);
+    setFlagSnack(true);
   };
 
   useEffect(() => {
@@ -842,11 +881,19 @@ function LessonRunner({
         ) : (
           <>
             <HeartMeter mistakes={mistakes} max={MAX_HEARTS} hit={heartHit} t={t} />
-            <Typography variant="caption" sx={{ ml: 'auto', fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}>
-              {t('roadmap.question', { current: qIndex + 1, total })}
-            </Typography>
+            <Box sx={{ flex: 1 }} />
           </>
         )}
+        <Tooltip title={t('flag.ariaLabel')} arrow>
+          <IconButton
+            onClick={() => setFlagOpen(true)}
+            aria-label={t('flag.ariaLabel')}
+            size="small"
+            sx={{ color: 'text.secondary', fontSize: '1.05rem', lineHeight: 1 }}
+          >
+            🚩
+          </IconButton>
+        </Tooltip>
       </Box>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
@@ -924,6 +971,15 @@ function LessonRunner({
           </Button>
         </Box>
       )}
+
+      <RedFlagDialog open={flagOpen} onClose={() => setFlagOpen(false)} onSubmit={submitFlag} />
+      <Snackbar
+        open={flagSnack}
+        autoHideDuration={3000}
+        onClose={() => setFlagSnack(false)}
+        message={t('flag.sent')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Box>
   );
 }
