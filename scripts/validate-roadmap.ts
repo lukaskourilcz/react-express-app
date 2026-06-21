@@ -25,7 +25,7 @@ const fail = (msg: string) => {
 const EXPECTED_LEVELS: Record<string, number> = {
   javascript: 25, typescript: 25, react: 25, nodejs: 25,
   nextjs: 15, git: 15, html: 15, css: 15, dsa: 15, algorithms: 15,
-  abbreviations: 15, general: 15, ai: 20, 'rhf-zod': 15,
+  abbreviations: 15, general: 15, ai: 20, 'rhf-zod': 15, 'cool-stuff': 15,
 };
 
 for (const topic of ROADMAP_TOPICS) {
@@ -86,6 +86,7 @@ const algoCount = questions.filter((q) => q.id.startsWith('rm-algorithms-')).len
 const abbrCount = questions.filter((q) => q.id.startsWith('rm-abbr-')).length;
 const generalCount = questions.filter((q) => q.id.startsWith('rm-general-')).length;
 const rhfCount = questions.filter((q) => q.id.startsWith('rm-rhf-')).length;
+const coolCount = questions.filter((q) => q.id.startsWith('rm-cool-')).length;
 console.log(`\nNext.js roadmap questions: ${nextCount} (want 120)`);
 console.log(`Node.js roadmap questions: ${nodeCount} (want 200)`);
 console.log(`DSA roadmap questions: ${dsaCount} (want 120)`);
@@ -100,6 +101,8 @@ if (abbrCount !== 120) fail(`Abbreviations roadmap has ${abbrCount} questions, w
 if (generalCount !== 120) fail(`General roadmap has ${generalCount} questions, want 120`);
 console.log(`React Hook Form + Zod roadmap questions: ${rhfCount} (want 120)`);
 if (rhfCount !== 120) fail(`RHF+Zod roadmap has ${rhfCount} questions, want 120`);
+console.log(`Cool Stuff roadmap questions: ${coolCount} (want 120)`);
+if (coolCount !== 120) fail(`Cool Stuff roadmap has ${coolCount} questions, want 120`);
 
 console.log(`\nTotal questions in bank: ${questions.length}`);
 if (failures > 0) {

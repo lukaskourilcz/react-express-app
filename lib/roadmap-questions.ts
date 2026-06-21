@@ -22,6 +22,7 @@ import { abbreviationsSeeds } from './roadmap-questions-abbreviations';
 import { generalSeeds } from './roadmap-questions-general';
 import { aiSeeds } from './roadmap-questions-ai';
 import { rhfZodSeeds } from './roadmap-questions-rhf-zod';
+import { coolStuffSeeds } from './roadmap-questions-cool-stuff';
 
 // Interleave two equal-length seed lists in blocks of HALF_LEVEL, so each level
 // ends up with its 4 A-questions followed by its 4 B-questions.
@@ -54,3 +55,5 @@ export const roadmapGeneralQuestions = buildRoadmap('rm-general', 'general', gen
 export const roadmapAiQuestions = buildRoadmap('rm-ai', 'ai', aiSeeds);
 // React Hook Form + Zod runs 15 levels (120 questions), single 8-per-level list.
 export const roadmapRhfZodQuestions = buildRoadmap('rm-rhf', 'rhf-zod', rhfZodSeeds);
+// Cool Stuff (dev-world fun facts) runs 15 levels (120 questions).
+export const roadmapCoolStuffQuestions = buildRoadmap('rm-cool', 'cool-stuff', coolStuffSeeds);

@@ -18,12 +18,12 @@ import { QUESTIONS_PER_LEVEL, ROADMAP_LEVELS, difficultyForLevel } from './roadm
 export type RoadmapTopic =
   | 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs'
   | 'html' | 'css' | 'git' | 'dsa' | 'algorithms'
-  | 'abbreviations' | 'general' | 'ai' | 'rhf-zod';
+  | 'abbreviations' | 'general' | 'ai' | 'rhf-zod' | 'cool-stuff';
 
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
   'html', 'css', 'git', 'dsa', 'algorithms',
-  'abbreviations', 'general', 'ai', 'rhf-zod',
+  'abbreviations', 'general', 'ai', 'rhf-zod', 'cool-stuff',
 ];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
@@ -52,6 +52,7 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   general: 'rm-general',
   ai: 'rm-ai',
   'rhf-zod': 'rm-rhf',
+  'cool-stuff': 'rm-cool',
 };
 
 // Level titles per topic, in increasing difficulty. Index 0 is level 1. The
@@ -135,6 +136,11 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'Forms in React', 'useForm & register', 'handleSubmit & onSubmit', 'formState & Errors', 'Built-in Validation Rules',
     'Zod: Primitives & parse', 'Zod: Objects & infer', 'Zod: safeParse & Errors', 'Zod: Refinements & Coercion', 'Connecting Zod (zodResolver)',
     'Controller & Controlled Inputs', 'watch, setValue & reset', 'useFieldArray', 'Zod: Refine, Unions & Transform', 'Integration & Mastery',
+  ],
+  'cool-stuff': [
+    'JavaScript: Birth & Names', 'JavaScript: Weird Parts', 'Birth of the Web', 'Internet Firsts', 'Famous Software Disasters',
+    'The Original Bug', 'Worms, Viruses & Spam', 'Programming Pioneers', 'Language Naming & Lore', 'Esoteric Languages',
+    'Mascots, Logos & Symbols', 'Hardware Marvels & Oddities', 'Gaming & Easter Eggs', 'Bizarre Tech Tales', 'Tech Trivia Mastery',
   ],
 };
 
