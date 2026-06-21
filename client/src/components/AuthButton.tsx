@@ -4,10 +4,18 @@ import { useNavigate } from 'react-router-dom';
 import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
+import { useTotalXp } from '../lib/xp';
+import { useRoadmapProgress } from '../lib/roadmap';
+import { levelForXp, specializationFor, displayTitle } from '../lib/leveling';
+import { useEquippedRingColor } from '../lib/shop';
 
 function AuthButton() {
   const { isAuthenticated, isLoading, user, signInWithGoogle, signOut } = useAuth();
   const profile = getUserProfile(user);
+  const totalXp = useTotalXp();
+  const progress = useRoadmapProgress();
+  const ringColor = useEquippedRingColor();
+  const rankTitle = displayTitle(levelForXp(totalXp).rank.title, specializationFor(progress));
   const navigate = useNavigate();
   const t = useT();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -95,13 +103,29 @@ function AuthButton() {
           '&:focus-visible': { outline: `2px solid ${BRAND.green}`, outlineOffset: 2 },
         }}
       >
-        <Avatar src={profile.picture} alt="" sx={{ width: 32, height: 32 }} />
-        <Typography
-          variant="body2"
-          sx={{ fontWeight: 500, color: 'text.primary', display: { xs: 'none', sm: 'block' } }}
-        >
-          {displayName}
-        </Typography>
+        <Avatar
+          src={profile.picture}
+          alt=""
+          sx={{
+            width: 32,
+            height: 32,
+            ...(ringColor ? { border: `2px solid ${ringColor}`, boxShadow: `0 0 0 1.5px ${ringColor}33` } : null),
+          }}
+        />
+        <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
+          <Typography
+            variant="body2"
+            sx={{ fontWeight: 500, color: 'text.primary', lineHeight: 1.2, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          >
+            {displayName}
+          </Typography>
+          <Typography
+            variant="caption"
+            sx={{ color: BRAND.green, fontWeight: 600, lineHeight: 1.2, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+          >
+            {rankTitle}
+          </Typography>
+        </Box>
       </ButtonBase>
       <Menu
         id="account-menu"

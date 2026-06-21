@@ -2,10 +2,10 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider, Snackbar, Alert } from '@mui/material';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import AuthButton from './components/AuthButton';
-import LanguageSwitcher from './components/LanguageSwitcher';
 import LoadingScreen from './components/LoadingScreen';
 import { useColorMode } from './theme/ColorModeContext';
-import { useT } from './i18n/LanguageContext';
+import { useT, useLanguage } from './i18n/LanguageContext';
+import { preferredLanguageOf } from './lib/languagePref';
 import type { TranslationKey } from './i18n/translations';
 import { BRAND } from './theme/MuiTheme';
 import { useGameConfig, type GameConfig } from './lib/gameConfig';
@@ -91,7 +91,7 @@ const RouteLoader = () => {
 
 function App() {
   const location = useLocation();
-  const t = useT();
+  const { t, setLang } = useLanguage();
   const config = useGameConfig();
   const [quizActive, setQuizActive] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -102,6 +102,13 @@ function App() {
   // Remember the learner's current rank on load so we don't re-celebrate a
   // rank-up earned in a previous session.
   useEffect(() => primeRankMarker(), []);
+
+  // Apply the account's saved language preference on sign-in, so the learner's
+  // chosen default loads automatically across devices.
+  useEffect(() => {
+    const pref = preferredLanguageOf(user);
+    if (pref) setLang(pref);
+  }, [user, setLang]);
 
   // One-time 200-token welcome bonus on first sign-in. Idempotent across
   // devices via a user_metadata flag inside grantRegistrationBonusIfNew.
@@ -184,7 +191,7 @@ function App() {
               aria-label={t('nav.home')}
               sx={{ flexGrow: 1, fontWeight: 700, color: 'text.primary', textDecoration: 'none', fontSize: '1.1rem' }}
             >
-              DevQuiz
+              devShark
             </Typography>
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
@@ -200,7 +207,6 @@ function App() {
                   </Button>
                 ))}
               </Box>
-              <LanguageSwitcher />
               <Tooltip title={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
                 <IconButton
                   onClick={toggle}
@@ -222,7 +228,7 @@ function App() {
         >
           <Box sx={{ width: 240 }} role="presentation" onClick={() => setMobileNavOpen(false)}>
             <Typography variant="h6" sx={{ p: 2, fontWeight: 700, color: 'text.primary' }}>
-              DevQuiz
+              devShark
             </Typography>
             <Divider />
             <List>
@@ -317,7 +323,7 @@ function App() {
           onClose={() => setSignupBonusOpen(false)}
           sx={{ backgroundColor: BRAND.green }}
         >
-          +{SIGNUP_BONUS_TOKENS} tokens · welcome to DevQuiz
+          +{SIGNUP_BONUS_TOKENS} tokens · welcome to devShark
         </Alert>
       </Snackbar>
     </Box>

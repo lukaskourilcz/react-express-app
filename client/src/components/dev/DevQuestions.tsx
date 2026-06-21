@@ -4,6 +4,7 @@ import {
   Typography,
   TextField,
   Button,
+  Checkbox,
   Chip,
   Snackbar,
   MenuItem,
@@ -82,6 +83,7 @@ export default function DevQuestions() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<AdminQuestion | null>(null);
   const [snack, setSnack] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useCancellableEffect(
     async (isCancelled) => {
@@ -224,6 +226,52 @@ export default function DevQuestions() {
     }
   };
 
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  // Select-all targets the rows currently visible on this page.
+  const pageIds = pageRows.map((q) => q.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+  const somePageSelected = pageIds.some((id) => selected.has(id));
+  const toggleSelectAllOnPage = () =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
+
+  // Mass-delete: hide (or, for custom questions, permanently delete) every
+  // selected question. There's no bulk-by-id endpoint, so fan out one call each.
+  const handleDeleteSelected = async () => {
+    const ids = [...selected];
+    if (ids.length === 0) return;
+    if (
+      !window.confirm(
+        `Remove ${ids.length} selected question${ids.length === 1 ? '' : 's'}? Hidden questions can be restored later; custom ones are deleted permanently.`,
+      )
+    ) {
+      return;
+    }
+    try {
+      let n = 0;
+      for (const id of ids) {
+        await setQuestionDeleted(id, true);
+        n += 1;
+      }
+      setSnack(`Removed ${n} question${n === 1 ? '' : 's'}`);
+      setSelected(new Set());
+      reload();
+    } catch (err) {
+      setSnack(friendlyError(err));
+    }
+  };
+
   if (loading) return <LoadingScreen label="Loading questions…" />;
   if (error) return <ErrorRetry message={error} onRetry={reload} />;
 
@@ -330,13 +378,49 @@ export default function DevQuestions() {
         </Typography>
       </Box>
 
-      <TableContainer component={Paper} variant="outlined">
-        <Table size="small" stickyHeader>
+      {selected.size > 0 && (
+        <Box
+          sx={{
+            display: 'flex',
+            gap: 1.5,
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            mb: 2,
+            p: 1,
+            borderRadius: 1,
+            backgroundColor: 'rgba(198,40,40,0.06)',
+            border: '1px solid',
+            borderColor: 'error.light',
+          }}
+        >
+          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+            {selected.size} selected
+          </Typography>
+          <Button size="small" color="error" variant="contained" onClick={handleDeleteSelected}>
+            Delete selected ({selected.size})
+          </Button>
+          <Button size="small" onClick={() => setSelected(new Set())}>
+            Clear
+          </Button>
+        </Box>
+      )}
+
+      <TableContainer component={Paper} variant="outlined" sx={{ width: '100%' }}>
+        <Table size="small" stickyHeader sx={{ width: '100%' }}>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ minWidth: 240 }}>
+              <TableCell padding="checkbox">
+                <Checkbox
+                  size="small"
+                  checked={allPageSelected}
+                  indeterminate={!allPageSelected && somePageSelected}
+                  onChange={toggleSelectAllOnPage}
+                  inputProps={{ 'aria-label': 'Select all questions on this page' }}
+                />
+              </TableCell>
+              <TableCell sx={{ width: '55%' }}>
                 <TableSortLabel active={sortBy === 'question'} direction={sortBy === 'question' ? sortDir : 'asc'} onClick={() => toggleSort('question')}>
-                  Question
+                  Question, answers &amp; info
                 </TableSortLabel>
               </TableCell>
               <TableCell>
@@ -362,16 +446,62 @@ export default function DevQuestions() {
           </TableHead>
           <TableBody>
             {pageRows.map((q) => (
-              <TableRow key={q.id} hover sx={{ opacity: q.deleted ? 0.5 : 1 }}>
-                <TableCell sx={{ maxWidth: 420 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap title={summarize(q.question)}>
-                    {summarize(q.question)}
+              <TableRow key={q.id} hover selected={selected.has(q.id)} sx={{ opacity: q.deleted ? 0.5 : 1, verticalAlign: 'top' }}>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    size="small"
+                    checked={selected.has(q.id)}
+                    onChange={() => toggleSelected(q.id)}
+                    inputProps={{ 'aria-label': `Select question ${q.id}` }}
+                  />
+                </TableCell>
+                <TableCell sx={{ py: 1.25 }}>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 600, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
+                  >
+                    {q.question}
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.25, alignItems: 'center' }}>
+
+                  <Box sx={{ mt: 0.75, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                    {q.options.map((opt, i) => {
+                      const correct = i === q.correctAnswer;
+                      return (
+                        <Typography
+                          key={i}
+                          variant="caption"
+                          sx={{
+                            color: correct ? 'success.dark' : 'text.secondary',
+                            fontWeight: correct ? 700 : 400,
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                          }}
+                        >
+                          {correct ? '✓' : '○'} {opt}
+                        </Typography>
+                      );
+                    })}
+                  </Box>
+
+                  {q.introduction && (
+                    <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: 'text.secondary', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                      <strong>Info:</strong> {q.introduction}
+                    </Typography>
+                  )}
+                  {q.explanation && (
+                    <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'text.secondary', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                      <strong>Hint / explanation:</strong> {q.explanation}
+                    </Typography>
+                  )}
+
+                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.75, alignItems: 'center' }}>
                     {q.source !== 'base' && (
                       <Chip label={q.source} size="small" color={SOURCE_COLOR[q.source]} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
                     )}
                     {q.deleted && <Chip label="hidden" size="small" sx={{ height: 18, fontSize: '0.65rem' }} />}
+                    {q.tags.slice(0, 4).map((tag) => (
+                      <Chip key={tag} label={tag} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                    ))}
                     <Typography variant="caption" color="text.secondary">
                       {q.id}
                     </Typography>
@@ -439,7 +569,7 @@ export default function DevQuestions() {
             ))}
             {pageRows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6}>
+                <TableCell colSpan={7}>
                   <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
                     No questions match these filters.
                   </Typography>
