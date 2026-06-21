@@ -268,12 +268,94 @@ checklist is in `LAUNCH.md` §C — the essentials:
 
 ---
 
-## 6. Suggested "next 1–2 days" order
+## 6. Compliance & legal (App Store + website)
 
-1. Set a strong `DEV_PASSWORD`; confirm all prod env vars (§1).
-2. Prism light build + immutable asset caching (§4.1.1, §4.1.5) — biggest, safest
+> General engineering guidance, **not legal advice** — confirm specifics for your
+> jurisdiction(s). DevQuiz collects: account **email** + display name/avatar (via
+> Google), **quiz results/progress**, and a Supabase **user id**. It runs **no
+> ads and no cross-site tracking** today.
+
+### 6.1 Apple App Store — required controls
+
+| Requirement | Needed | Notes / action |
+|---|---|---|
+| Apple Developer Program | ✅ | $99/yr; provides the Team ID for signing & submission. |
+| **Privacy policy URL** | ✅ (Guideline 5.1.1) | Public URL set in App Store Connect **and** linked in-app. Describe what you collect, why, retention, and how to delete. |
+| **App Privacy "nutrition label"** | ✅ | In App Store Connect declare: Contact info → email; User content → quiz data; Identifiers → user id. **"Used to track you" = No.** |
+| **In-app account deletion** | ✅ (5.1.1(v)) | Apps with sign-up **must** let users delete their account *inside the app* (not "email us"). **Missing today → build it** (see 6.3). Common rejection. |
+| **Sign in with Apple (or equivalent)** | ✅ (Guideline 4.8) | Because you offer Google login, you must also offer an *equivalent private* login: data limited to name+email, option to hide email, no tracking. Google doesn't qualify → add **Sign in with Apple**; revoke its token via Apple's REST API on account deletion. |
+| **Privacy Manifest** `PrivacyInfo.xcprivacy` | ✅ (since May 2024) | Declare "required-reason" APIs (AsyncStorage→UserDefaults, file timestamp, disk space, boot time) + `NSPrivacyTracking=false`. Bundled Expo/RN SDKs ship their own; your app needs the top-level manifest. Missing → rejection. |
+| **Export compliance (encryption)** | ✅ (1 line) | Set `ITSAppUsesNonExemptEncryption=false` in `app.json` infoPlist (standard HTTPS only) to skip the questionnaire every submit. |
+| Age rating | ✅ | Complete the questionnaire; category Education. |
+| Reviewer sign-in access | ✅ | Reviewers must be able to log in — ship Sign in with Apple and/or put a demo account in the review notes, or review fails. |
+| App Tracking Transparency (ATT) | ❌ today | Only if you add cross-app/-site tracking or ad SDKs. |
+| 3rd-party AI data-sharing disclosure | ❌ today | New 2025 rule: disclose + consent if you ever send personal data to a third-party AI. N/A now. |
+
+### 6.2 Website — privacy, cookies, terms
+
+- **Privacy policy — required, do it first.** GDPR, CCPA, *and* Google's OAuth
+  terms each require one. It's the single artifact Apple, Google and EU/UK law all
+  demand.
+- **Cookie consent banner — how important, honestly?** For **DevQuiz as built
+  today, a consent banner is _not legally required_.** The only browser storage is
+  the **Supabase auth session in `localStorage`**, which is *strictly necessary*
+  for login and therefore **exempt** from prior-consent rules (GDPR/ePrivacy). You
+  must still **describe** that storage in the privacy/cookie policy.
+  - ⚠️ **It becomes mandatory the moment you add anything non-essential** —
+    analytics (Vercel Analytics, PostHog, GA), cookie-setting error trackers,
+    embeds, ad pixels. Several §4 recommendations (Sentry/analytics) cross that
+    line. For EU/UK users you'd then have to **block those scripts until opt-in**
+    (true consent management), not just display a banner, and keep an auditable
+    consent record (localStorage-only isn't enough). Enforcement is real — CNIL
+    issued €325M and €150M cookie fines in a single day in 2025.
+  - **Bottom line:** ship a **privacy policy now**; add a real **consent banner
+    only when you introduce non-essential tracking.**
+- **Terms of Service — recommended.** You have accounts, public display names and
+  leaderboards (user content); ToS sets acceptable-use and limits liability.
+- **Data-subject rights (GDPR/CCPA).** Offer account **deletion** (and ideally
+  data **export**). Build deletion once → it satisfies *both* Apple 5.1.1(v) and
+  GDPR/CCPA erasure (6.3).
+- **Google OAuth consent screen.** Configure in Google Cloud (app name, logo,
+  **privacy-policy + terms URLs**, authorized domains) and **publish** it (out of
+  "Testing"). Basic `email`/`profile` scopes are non-sensitive, so you avoid
+  Google's heavyweight security assessment.
+- **Children (COPPA / UK Age-Appropriate Design).** An education app can attract
+  minors: don't knowingly collect from under-13s, set an honest age rating, say so
+  in the policy. Note some **US app-store age-verification laws land in 2026.**
+
+### 6.3 The one code gap this reveals: in-app account deletion
+
+Required by **Apple and GDPR/CCPA**, currently missing. Build once, expose on web
+(Profile) and iOS (Account):
+
+1. An authed delete op on `api/user/[op].ts` (no new Vercel function) that, for the
+   verified user, removes their rows (`user_stats`, `user_category_stats`,
+   `flashcards`, `roadmap_progress`, `user_streak`, `user_xp`, `daily_attempts`,
+   `match_*`, `auth_events`) then deletes the auth user via
+   `supabase.auth.admin.deleteUser(sub)`.
+2. A confirm dialog in the web Profile and the mobile Account screen.
+3. If Sign in with Apple is enabled, revoke its token via Apple's REST API.
+
+> Tip: generate a privacy policy + ToS with a reputable tool (Termly / iubenda /
+> TermsFeed), host them as two static routes, and make sure they list Supabase,
+> Google sign-in, and exactly what you store.
+
+**Sources:** Apple [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/),
+[account-deletion requirement](https://developer.apple.com/news/?id=mdkbobfo),
+[Sign in with Apple / 4.8](https://developer.apple.com/news/?id=j9zukcr6),
+[Privacy manifests](https://developer.apple.com/documentation/bundleresources/privacy-manifest-files);
+[GDPR.eu cookies](https://gdpr.eu/cookies/).
+
+---
+
+## 7. Suggested "next 1–2 days" order
+
+1. **Privacy policy + ToS live, and in-app account deletion** — required by Apple
+   5.1.1(v) + GDPR/CCPA (§6). Highest-leverage compliance item.
+2. Set a strong `DEV_PASSWORD`; confirm all prod env vars (§1).
+3. Prism light build + immutable asset caching (§4.1.1, §4.1.5) — biggest, safest
    perf win.
-3. Rate-limit the report + mutating endpoints (§4.2.2).
-4. `reportCounts` + XP atomic RPCs (§4.2.3–4).
-5. `play/state` resilience + per-route error boundaries + health 503 (§4.3).
-6. iOS: bundle ID, assets, Sign in with Apple, EAS creds (§5).
+4. Rate-limit the report + mutating endpoints (§4.2.2).
+5. `reportCounts` + XP atomic RPCs (§4.2.3–4).
+6. `play/state` resilience + per-route error boundaries + health 503 (§4.3).
+7. iOS: bundle ID, assets, Sign in with Apple, Privacy Manifest, EAS creds (§5, §6.1).
