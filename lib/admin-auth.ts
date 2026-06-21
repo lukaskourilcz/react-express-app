@@ -2,14 +2,14 @@
 //
 // Intentionally lightweight (per request): a single shared password, supplied
 // in the `x-dev-password` header (or request body). The expected value comes
-// from the DEV_PASSWORD env var, defaulting to 'react123'. Set a strong
+// from the DEV_PASSWORD env var, defaulting to 'autobus'. Set a strong
 // DEV_PASSWORD in production — this gate exposes question answer keys.
 
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { timingSafeEqual } from 'node:crypto';
 import { jsonError } from './http';
 
-const DEV_PASSWORD = process.env.DEV_PASSWORD || 'react123';
+const DEV_PASSWORD = process.env.DEV_PASSWORD || 'autobus';
 
 function constantTimeEquals(a: string, b: string): boolean {
   const ab = new Uint8Array(Buffer.from(a, 'utf8'));

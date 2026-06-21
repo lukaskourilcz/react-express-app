@@ -25,7 +25,7 @@ const fail = (msg: string) => {
 const EXPECTED_LEVELS: Record<string, number> = {
   javascript: 25, typescript: 25, react: 25, nodejs: 25,
   nextjs: 15, git: 15, html: 15, css: 15, dsa: 15, algorithms: 15,
-  abbreviations: 15, general: 15,
+  abbreviations: 15, general: 15, ai: 20,
 };
 
 for (const topic of ROADMAP_TOPICS) {

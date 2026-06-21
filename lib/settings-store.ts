@@ -21,6 +21,8 @@ export interface GameSettings {
     maxCount: number;
     /** Pre-selected difficulty mode. */
     defaultDifficulty: DifficultyMode;
+    /** Minimum importance (1–10) a question needs to appear in the quiz. 1 = no floor. */
+    minImportance: number;
   };
   daily: {
     /** Number of questions in the daily challenge. */
@@ -54,6 +56,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
     countOptions: [10, 20, 30, 40, 50],
     maxCount: 50,
     defaultDifficulty: 'zero-to-hero',
+    minImportance: 1,
   },
   daily: { count: 5 },
   play: {
@@ -109,6 +112,7 @@ export function normalizeSettings(raw: unknown): GameSettings {
       defaultDifficulty: DIFFICULTY_MODES.includes(quiz.defaultDifficulty as DifficultyMode)
         ? (quiz.defaultDifficulty as DifficultyMode)
         : d.quiz.defaultDifficulty,
+      minImportance: clampInt(quiz.minImportance, 1, 10, d.quiz.minImportance),
     },
     daily: { count: clampInt(daily.count, 1, 20, d.daily.count) },
     play: {

@@ -38,6 +38,7 @@ interface FormState {
   quizMaxCount: string;
   quizCountOptions: string;
   quizDefaultDifficulty: string;
+  quizMinImportance: string;
   dailyCount: string;
   playDefaultDurationS: string;
   playDurationOptionsS: string;
@@ -57,6 +58,7 @@ const toForm = (s: GameSettings): FormState => ({
   quizMaxCount: String(s.quiz.maxCount),
   quizCountOptions: s.quiz.countOptions.join(', '),
   quizDefaultDifficulty: s.quiz.defaultDifficulty,
+  quizMinImportance: String(s.quiz.minImportance),
   dailyCount: String(s.daily.count),
   playDefaultDurationS: String(s.play.defaultDurationS),
   playDurationOptionsS: s.play.durationOptionsS.join(', '),
@@ -77,6 +79,7 @@ const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
     maxCount: parseNum(f.quizMaxCount, base.quiz.maxCount),
     countOptions: parseList(f.quizCountOptions),
     defaultDifficulty: f.quizDefaultDifficulty,
+    minImportance: parseNum(f.quizMinImportance, base.quiz.minImportance),
   },
   daily: { count: parseNum(f.dailyCount, base.daily.count) },
   play: {
@@ -176,6 +179,21 @@ export default function DevSettings() {
           {DIFFICULTY_MODES.map((d) => (
             <MenuItem key={d} value={d}>
               {d}
+            </MenuItem>
+          ))}
+        </TextField>
+        <TextField
+          select
+          size="small"
+          label="Min importance"
+          helperText="Hide questions below this score from the quiz (1 = no floor)"
+          value={form.quizMinImportance}
+          onChange={(e) => set('quizMinImportance', e.target.value)}
+          sx={{ width: 200 }}
+        >
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+            <MenuItem key={n} value={String(n)}>
+              {n}
             </MenuItem>
           ))}
         </TextField>

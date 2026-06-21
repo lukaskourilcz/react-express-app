@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import {
   encodeSession,
   secureShuffle,
+  weightedSample,
   localizeQuestion,
   normalizeLang,
   PRIVATE_CATEGORIES,
@@ -22,6 +23,7 @@ const ALL_CATEGORIES: CategoryType[] = [
   'react',
   'git',
   'nodejs',
+  'ai',
   'dev-world',
   'custom',
   'code-snippets',
@@ -82,34 +84,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 404, 'no_questions', 'No questions match those filters');
   }
 
+  // Optionally drop low-importance questions entirely (owner-tunable floor), but
+  // only when enough remain to still fill the quiz.
+  const minImportance = settings.quiz.minImportance ?? 1;
+  let pool = categoryFiltered;
+  if (minImportance > 1) {
+    const aboveFloor = categoryFiltered.filter((q) => (q.importance ?? 5) >= minImportance);
+    if (aboveFloor.length >= count) pool = aboveFloor;
+  }
+
+  // Selection is importance-weighted so low-scoring "filler" questions surface
+  // far less often than the essentials.
+  const weight = (q: Question) => q.importance ?? 5;
   let selected: Question[];
 
   if (difficultyMode === 'easy') {
-    selected = secureShuffle(categoryFiltered.filter((q) => q.difficulty <= 2)).slice(0, count);
+    selected = weightedSample(pool.filter((q) => q.difficulty <= 2), count, weight);
   } else if (difficultyMode === 'advanced') {
-    selected = secureShuffle(categoryFiltered.filter((q) => q.difficulty >= 3)).slice(0, count);
+    selected = weightedSample(pool.filter((q) => q.difficulty >= 3), count, weight);
   } else if (difficultyMode === 'basics') {
-    const basics = categoryFiltered.filter((q) => q.tags.includes('Terminology'));
+    const basics = pool.filter((q) => q.tags.includes('Terminology'));
     if (basics.length > 0) {
-      selected = secureShuffle(basics).slice(0, count);
+      selected = weightedSample(basics, count, weight);
     } else {
-      const sorted = [...categoryFiltered].sort((a, b) => a.difficulty - b.difficulty);
+      const sorted = [...pool].sort((a, b) => a.difficulty - b.difficulty);
       const easiest = sorted[0]?.difficulty ?? 1;
-      selected = secureShuffle(sorted.filter((q) => q.difficulty === easiest)).slice(0, count);
+      selected = weightedSample(sorted.filter((q) => q.difficulty === easiest), count, weight);
     }
   } else if (difficultyMode === 'mixed') {
-    selected = secureShuffle(categoryFiltered).slice(0, count);
+    selected = weightedSample(pool, count, weight);
   } else {
     const perBucket = Math.ceil(count / 5);
     const buckets: Question[] = [];
     for (let d = 1; d <= 5; d++) {
-      buckets.push(...secureShuffle(categoryFiltered.filter((q) => q.difficulty === d)).slice(0, perBucket));
+      buckets.push(...weightedSample(pool.filter((q) => q.difficulty === d), perBucket, weight));
     }
     if (buckets.length < count) {
       const ids = new Set(buckets.map((q) => q.id));
-      buckets.push(
-        ...secureShuffle(categoryFiltered.filter((q) => !ids.has(q.id))).slice(0, count - buckets.length),
-      );
+      buckets.push(...weightedSample(pool.filter((q) => !ids.has(q.id)), count - buckets.length, weight));
     }
     selected = buckets.slice(0, count);
   }

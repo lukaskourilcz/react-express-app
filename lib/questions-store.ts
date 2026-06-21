@@ -9,6 +9,7 @@
 import { questions as baseQuestions, type Question, type CategoryType, type QuestionTranslation } from './quiz-data';
 import { questionTranslationsCs } from './quiz-data.cs';
 import { createServiceClient, withTimeout } from './http';
+import { computeImportance, clampImportance } from './importance';
 
 const supabase = createServiceClient();
 
@@ -21,7 +22,7 @@ const CACHE_TTL_MS = 15_000;
 export const KNOWN_CATEGORIES: CategoryType[] = [
   'html', 'css', 'javascript', 'typescript', 'react',
   'nextjs', 'nodejs', 'git', 'dsa', 'algorithms',
-  'abbreviations', 'general',
+  'abbreviations', 'general', 'ai',
   'dev-world', 'custom', 'code-snippets', 'apt',
 ];
 
@@ -37,6 +38,8 @@ export interface QuestionEditRow {
   category: string | null;
   tags: string[] | null;
   difficulty: number | null;
+  /** Per-question importance override (1–10); null = use the hand-judged score. */
+  importance?: number | null;
   cs_question: string | null;
   cs_options: string[] | null;
   cs_introduction: string | null;
@@ -71,6 +74,8 @@ export interface QuestionInput {
   category: string;
   tags: string[];
   difficulty: number;
+  /** Optional importance override (1–10). Omit to keep the hand-judged score. */
+  importance?: number;
   cs?: {
     question?: string | null;
     options?: string[] | null;
@@ -122,7 +127,7 @@ function mergeRow(row: QuestionEditRow, base?: Question): Question {
     : hasEnglishEdit(row)
       ? null
       : undefined;
-  return {
+  const merged: Question = {
     id: row.question_id,
     tags: row.tags ?? base?.tags ?? [],
     introduction: row.introduction ?? base?.introduction ?? '',
@@ -134,6 +139,14 @@ function mergeRow(row: QuestionEditRow, base?: Question): Question {
     difficulty: clampDifficulty(row.difficulty ?? base?.difficulty ?? 1),
     csTranslation,
   };
+  // A DB importance override wins; otherwise resolve from the hand-judged map.
+  merged.importance = row.importance ?? computeImportance(merged);
+  return merged;
+}
+
+/** Attach a resolved importance to a base question that has no override row. */
+function withImportance(q: Question): Question {
+  return q.importance != null ? q : { ...q, importance: computeImportance(q) };
 }
 
 async function loadOverrides(): Promise<Map<string, QuestionEditRow> | null> {
@@ -153,7 +166,7 @@ function buildEffective(overrides: Map<string, QuestionEditRow>): Question[] {
   for (const base of baseQuestions) {
     const ov = overrides.get(base.id);
     if (ov?.deleted) continue;
-    list.push(ov ? mergeRow(ov, base) : base);
+    list.push(ov ? mergeRow(ov, base) : withImportance(base));
   }
   for (const ov of overrides.values()) {
     if (ov.is_custom && !ov.deleted) list.push(mergeRow(ov));
@@ -166,7 +179,8 @@ let cache: { at: number; list: Question[]; byId: Map<string, Question> } | null 
 async function effective(): Promise<{ list: Question[]; byId: Map<string, Question> }> {
   if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache;
   const overrides = await loadOverrides();
-  const list = overrides ? buildEffective(overrides) : baseQuestions;
+  // No DB / overrides: still attach a resolved importance to every base question.
+  const list = overrides ? buildEffective(overrides) : baseQuestions.map(withImportance);
   const byId = new Map(list.map((q) => [q.id, q]));
   cache = { at: Date.now(), list, byId };
   return cache;
@@ -213,7 +227,7 @@ export async function listAdminQuestions(): Promise<AdminQuestion[]> {
       const merged = mergeRow(ov, base);
       out.push({ ...merged, source: 'edited', deleted: ov.deleted, cs: csFieldsFor(merged, ov) });
     } else {
-      out.push({ ...base, source: 'base', deleted: false, cs: csFieldsFor(base) });
+      out.push({ ...withImportance(base), source: 'base', deleted: false, cs: csFieldsFor(base) });
     }
   }
   for (const ov of overrides.values()) {
@@ -263,8 +277,30 @@ export async function saveQuestion(input: QuestionInput): Promise<{ id: string }
   const row = rowFromInput(input, id, isCustom);
   const { error } = await withTimeout(supabase.from(TABLE).upsert(row, { onConflict: 'question_id' }), 5000);
   if (error) throw new Error(error.message);
+
+  // Persist the importance override separately and best-effort: the column was
+  // added in schema-014, so if a deployment hasn't run that migration yet this
+  // simply no-ops instead of breaking the whole save.
+  if (typeof input.importance === 'number') {
+    try {
+      const { error: impErr } = await withTimeout(
+        supabase.from(TABLE).update({ importance: clampImportance(input.importance) }).eq('question_id', id),
+        5000,
+      );
+      if (impErr) log_importance_skip(impErr.message);
+    } catch {
+      /* timeout — ignore, importance is non-critical */
+    }
+  }
+
   invalidateQuestionsCache();
   return { id };
+}
+
+// Importance persistence is optional (pre-migration deployments lack the column).
+// Keep a tiny breadcrumb without failing the save.
+function log_importance_skip(_message: string): void {
+  /* intentionally silent: best-effort column write */
 }
 
 /**
@@ -294,6 +330,35 @@ export async function setQuestionDeleted(id: string, deleted: boolean): Promise<
     }
   }
   invalidateQuestionsCache();
+}
+
+/**
+ * Soft-hide every (non-custom, currently visible) question whose resolved
+ * importance is ≤ maxImportance — a one-click "remove the fillers" for the /dev
+ * console. Returns how many were hidden. Hidden questions are restorable, and
+ * the learning paths re-level automatically (they read the live set).
+ */
+export async function bulkHideByImportance(maxImportance: number): Promise<number> {
+  if (!supabase) throw new Error('not_configured');
+  const max = clampImportance(maxImportance);
+  // getEffectiveQuestions already excludes hidden ones and carries importance.
+  const visible = await getEffectiveQuestions();
+  const targets = visible.filter((q) => !q.id.startsWith('dev-') && (q.importance ?? 10) <= max);
+  if (targets.length === 0) return 0;
+
+  // Upsert minimal soft-delete markers in chunks; onConflict leaves any existing
+  // edit/translation content intact and just flips `deleted` to true.
+  const rows = targets.map((q) => ({ question_id: q.id, is_custom: false, deleted: true }));
+  const CHUNK = 500;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const { error } = await withTimeout(
+      supabase.from(TABLE).upsert(rows.slice(i, i + CHUNK), { onConflict: 'question_id' }),
+      8000,
+    );
+    if (error) throw new Error(error.message);
+  }
+  invalidateQuestionsCache();
+  return targets.length;
 }
 
 /** Drop the override row entirely, reverting a base question to its original. */

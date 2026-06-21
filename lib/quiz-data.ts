@@ -12,9 +12,10 @@ import {
   roadmapAlgorithmsQuestions,
   roadmapAbbreviationsQuestions,
   roadmapGeneralQuestions,
+  roadmapAiQuestions,
 } from './roadmap-questions';
 
-export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'dev-world' | 'custom' | 'code-snippets' | 'apt';
 
 // Categories that are private to the owner: never served to other users
 // (not via /api/quiz/questions for non-owners, and never in the daily mix).
@@ -30,6 +31,9 @@ export interface Question {
   category: CategoryType;
   explanation: string;
   difficulty: 1 | 2 | 3 | 4 | 5;
+  // Resolved importance (1–10): how essential this question is for a learner.
+  // Attached by the questions store (DB override → hand-judged score → heuristic).
+  importance?: number;
   // Resolved Czech translation for /dev-managed questions, set by the question
   // overrides layer:
   //   undefined → not resolved; fall back to the static cs bank (default)
@@ -11610,6 +11614,7 @@ export const questions: Question[] = [
   ...roadmapAlgorithmsQuestions,
   ...roadmapAbbreviationsQuestions,
   ...roadmapGeneralQuestions,
+  ...roadmapAiQuestions,
 ];
 
 // Fisher-Yates shuffle algorithm
@@ -11697,4 +11702,21 @@ export function secureShuffle<T>(array: T[]): T[] {
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
+}
+
+// Weighted sampling without replacement (Efraimidis–Spirakis): each item gets a
+// key u^(1/weight) and the top `count` keys win, so higher-weight items are more
+// likely to be picked. Used to bias quiz selection toward important questions so
+// low-scoring "fillers" surface far less often. The chosen subset is returned in
+// random order. Falls back to a plain shuffle when picking the whole pool.
+export function weightedSample<T>(items: T[], count: number, weight: (item: T) => number): T[] {
+  if (count >= items.length) return secureShuffle(items);
+  const RES = 1 << 30;
+  const keyed = items.map((item) => {
+    const w = Math.max(0.0001, weight(item));
+    const u = (randomInt(1, RES) + 1) / (RES + 2); // in (0,1)
+    return { item, key: Math.log(u) / w }; // larger key (closer to 0) = higher priority
+  });
+  keyed.sort((a, b) => b.key - a.key);
+  return secureShuffle(keyed.slice(0, count).map((k) => k.item));
 }

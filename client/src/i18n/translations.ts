@@ -143,6 +143,18 @@ export const en = {
   'report.detailLabel': 'Additional details (optional)',
   'report.send': 'Send report',
   'report.sending': 'Sending…',
+
+  // Red-flag a question ("this looks wrong / misleading")
+  'flag.ariaLabel': 'Flag this question as wrong or misleading',
+  'flag.title': 'Flag this question',
+  'flag.intro': 'Something wrong or misleading? Let us know and we’ll take a look.',
+  'flag.detailLabel': 'What’s wrong? (optional)',
+  'flag.reviewLabel': 'This question should be reviewed',
+  'flag.send': 'Send flag',
+  'flag.sending': 'Sending…',
+  'flag.sent': 'Thanks — this question has been flagged for review.',
+  'flag.failed': 'Could not send flag',
+
   'common.cancel': 'Cancel',
 
   // Leaderboard
@@ -497,6 +509,18 @@ export const cs: Record<TranslationKey, string> = {
   'report.detailLabel': 'Další podrobnosti (nepovinné)',
   'report.send': 'Odeslat hlášení',
   'report.sending': 'Odesílání…',
+
+  // Red-flag a question ("this looks wrong / misleading")
+  'flag.ariaLabel': 'Označit otázku jako špatnou nebo zavádějící',
+  'flag.title': 'Nahlásit tuto otázku',
+  'flag.intro': 'Něco je špatně nebo zavádějící? Dejte nám vědět a podíváme se na to.',
+  'flag.detailLabel': 'Co je špatně? (nepovinné)',
+  'flag.reviewLabel': 'Tato otázka by měla být zkontrolována',
+  'flag.send': 'Odeslat',
+  'flag.sending': 'Odesílání…',
+  'flag.sent': 'Děkujeme — otázka byla označena ke kontrole.',
+  'flag.failed': 'Označení se nepodařilo odeslat',
+
   'common.cancel': 'Zrušit',
 
   // Leaderboard

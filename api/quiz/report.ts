@@ -4,7 +4,10 @@ import { createAnonClient, jsonError, createLogger, withTimeout } from '../../li
 
 const supabase = createAnonClient();
 
-const REASONS = ['incorrect-answer', 'unclear', 'typo', 'outdated', 'duplicate', 'other'] as const;
+// 'needs-review' is the lightweight red-flag from the learning path (a learner
+// ticked "this question should be reviewed"); the rest come from the full report
+// dialog in the solo quiz.
+const REASONS = ['incorrect-answer', 'unclear', 'typo', 'outdated', 'duplicate', 'other', 'needs-review'] as const;
 type Reason = (typeof REASONS)[number];
 
 const logEvent = createLogger('quiz/report');
