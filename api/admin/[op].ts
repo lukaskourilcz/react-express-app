@@ -8,6 +8,7 @@ import {
   resetQuestion,
   KNOWN_CATEGORIES,
 } from '../../lib/questions-store';
+import { listReports, dismissReport } from '../../lib/reports-store';
 import { getGameSettings, saveGameSettings } from '../../lib/settings-store';
 
 const log = createLogger('admin');
@@ -37,6 +38,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return await deleteQuestionOp(req, res);
       case 'reset':
         return await resetQuestionOp(req, res);
+      case 'reports':
+        return await reportsOp(req, res);
       case 'settings':
         return await settingsOp(req, res);
       default:
@@ -156,6 +159,24 @@ async function resetQuestionOp(req: VercelRequest, res: VercelResponse) {
   await resetQuestion(id);
   log({ op: 'reset', status: 200, id });
   return res.json({ ok: true });
+}
+
+async function reportsOp(req: VercelRequest, res: VercelResponse) {
+  if (req.method === 'GET') {
+    const reports = await listReports();
+    res.setHeader('Cache-Control', 'no-store');
+    return res.json({ reports });
+  }
+  if (req.method === 'POST') {
+    const b = (req.body || {}) as { id?: unknown };
+    const id = boundedString(b.id, 64);
+    if (!id) return jsonError(res, 400, 'bad_request', 'id is required');
+    await dismissReport(id);
+    log({ op: 'reports', status: 200, dismissed: id });
+    return res.json({ ok: true });
+  }
+  res.setHeader('Allow', 'GET, POST');
+  return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
 }
 
 async function settingsOp(req: VercelRequest, res: VercelResponse) {

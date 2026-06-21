@@ -120,3 +120,19 @@ export const getAdminSettings = () => adminFetch<{ settings: GameSettings }>('se
 
 export const saveAdminSettings = (settings: GameSettings) =>
   adminFetch<{ settings: GameSettings }>('settings', { method: 'POST', body: { settings } });
+
+/** A learner-submitted report or red-flag, as shown in the /dev Flags tab. */
+export interface AdminReport {
+  id: string;
+  questionId: string;
+  reason: string;
+  detail: string | null;
+  reporterSub: string | null;
+  createdAt: string | null;
+  questionSummary: string | null;
+}
+
+export const listReports = () => adminFetch<{ reports: AdminReport[] }>('reports');
+
+export const dismissReport = (id: string) =>
+  adminFetch<{ ok: true }>('reports', { method: 'POST', body: { id } });
