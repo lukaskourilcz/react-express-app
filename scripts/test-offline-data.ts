@@ -17,7 +17,7 @@ const DATA = offlineData as Data;
 const ID_PREFIX: Record<string, string> = {
   javascript: 'rm-js', typescript: 'rm-ts', react: 'rm-react', nextjs: 'rm-next', nodejs: 'rm-node',
   html: 'rm-html', css: 'rm-css', git: 'rm-git', dsa: 'rm-dsa', algorithms: 'rm-algorithms',
-  abbreviations: 'rm-abbr', general: 'rm-general',
+  abbreviations: 'rm-abbr', general: 'rm-general', ai: 'rm-ai', 'rhf-zod': 'rm-rhf',
 };
 const PER_LEVEL = DATA.questionsPerLevel;
 const byId = new Map(DATA.questions.map((q) => [q.id, q]));

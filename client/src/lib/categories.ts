@@ -27,6 +27,7 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'abbreviations', label: 'Abbreviations', color: '#0ea5e9' },
   { value: 'general', label: 'General', color: '#14b8a6' },
   { value: 'ai', label: 'AI & LLMs', color: '#7c3aed' },
+  { value: 'rhf-zod', label: 'React Hook Form + Zod', color: '#ec5990' },
   { value: 'dev-world', label: 'Dev World', color: '#8b5cf6' },
   { value: 'custom', label: 'Custom', color: '#06b6d4' },
   { value: 'code-snippets', label: 'Code Snippets', color: '#ec4899' },
