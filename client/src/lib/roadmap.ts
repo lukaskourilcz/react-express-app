@@ -14,7 +14,86 @@ export const LEVELS_PER_CHECKPOINT = 5;
 export const ROADMAP_LEVELS = 25;
 export const CHECKPOINT_COUNT = ROADMAP_LEVELS / LEVELS_PER_CHECKPOINT;
 
+/* ──── Topic gating ────────────────────────────────────────────────────────
+ * Brand-new learners shouldn't be confronted with 20 paths at once. Only the
+ * three "starter" paths are available out of the box; the rest unlock as the
+ * learner progresses, or all at once via the skill-check assessment.
+ *
+ * A topic unlocks when:
+ *   (a) it is a starter, or
+ *   (b) every prereq topic has cleared its first checkpoint (5 levels passed), or
+ *   (c) the skill-check assessment has explicitly unlocked it.
+ *
+ * Prereqs are intentionally a shallow graph so the path from zero → hero stays
+ * obvious: master JS basics, then HTML+CSS for React, then specialise.
+ */
+export const STARTER_TOPICS: RoadmapTopic[] = ['html', 'css', 'javascript'];
+
+// Levels of each prereq topic that must be passed before a topic unlocks.
+// 5 = "first checkpoint cleared" — the natural milestone in each path.
+export const LEVELS_TO_UNLOCK_NEXT = LEVELS_PER_CHECKPOINT;
+
+export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
+  // Starters: no prereqs, always open.
+  html: [],
+  css: [],
+  javascript: [],
+  // Tier 2 — anything that builds directly on JS fundamentals.
+  typescript: ['javascript'],
+  abbreviations: ['javascript'],
+  general: ['javascript'],
+  git: ['javascript'],
+  dsa: ['javascript'],
+  algorithms: ['javascript'],
+  nodejs: ['javascript'],
+  testing: ['javascript'],
+  ai: ['javascript'],
+  'cool-stuff': ['javascript'],
+  security: ['javascript'],
+  // React needs the page-building trio (HTML + CSS + JS).
+  react: ['javascript', 'html', 'css'],
+  // Topics that build on React or Node.
+  nextjs: ['react'],
+  'rhf-zod': ['react'],
+  databases: ['nodejs'],
+  'system-design': ['nodejs'],
+  devops: ['nodejs'],
+};
+
+// Unlock tiers granted by the skill-check assessment. Each correct-answer band
+// merges the listed topics into `extraUnlocked` so the learner can skip prereqs.
+export const ASSESSMENT_QUESTION_COUNT = 20;
+const ASSESSMENT_TIERS: { minCorrect: number; unlocks: RoadmapTopic[] }[] = [
+  {
+    minCorrect: 18,
+    unlocks: [
+      'typescript', 'abbreviations', 'general', 'git', 'dsa', 'algorithms',
+      'nodejs', 'testing', 'ai', 'cool-stuff', 'security',
+      'react', 'nextjs', 'rhf-zod',
+      'databases', 'system-design', 'devops',
+    ],
+  },
+  {
+    minCorrect: 14,
+    unlocks: [
+      'typescript', 'abbreviations', 'general', 'git', 'dsa', 'algorithms',
+      'nodejs', 'testing', 'ai', 'cool-stuff', 'react',
+    ],
+  },
+  {
+    minCorrect: 10,
+    unlocks: ['typescript', 'abbreviations', 'general', 'git'],
+  },
+];
+
+/** Topics granted by an assessment scoring `correct` out of `total`. */
+export function topicsFromAssessment(correct: number): RoadmapTopic[] {
+  const tier = ASSESSMENT_TIERS.find((t) => correct >= t.minCorrect);
+  return tier ? tier.unlocks : [];
+}
+
 const PROGRESS_KEY = 'devquiz:roadmap:v2';
+const UNLOCKS_KEY = 'devquiz:roadmap:unlocks:v1';
 // Progress lives on the same function as the rest of the roadmap (to stay within
 // Vercel's Hobby 12-function limit): GET ?resource=progress to read, PUT to save.
 const PROGRESS_GET = '/api/quiz/roadmap?resource=progress';
@@ -126,6 +205,81 @@ export function isCheckpointUnlocked(p: RoadmapProgress, topic: RoadmapTopic, ch
 
 export function passedLevelCount(p: RoadmapProgress, topic: RoadmapTopic): number {
   return Object.values(p[topic]?.levels ?? {}).filter((e) => e.passed).length;
+}
+
+/* ──── Topic unlock state ───────────────────────────────────────────────── */
+
+// Extra-unlocked topics live in their own localStorage entry so resetting
+// roadmap progress doesn't accidentally relock skill-check rewards.
+const readExtraUnlocks = (): RoadmapTopic[] =>
+  readJSON<RoadmapTopic[]>(UNLOCKS_KEY, []);
+
+const writeExtraUnlocks = (next: RoadmapTopic[]): void => {
+  writeJSON(UNLOCKS_KEY, next);
+  unlocksStore.emit();
+};
+
+const unlocksStore = createStore<RoadmapTopic[]>(readExtraUnlocks);
+
+/** Live view of the topics unlocked by the skill-check assessment. */
+export function useExtraUnlocks(): RoadmapTopic[] {
+  return useStore(unlocksStore);
+}
+
+/** Imperative snapshot of skill-check-unlocked topics. */
+export function getExtraUnlocks(): RoadmapTopic[] {
+  return readExtraUnlocks();
+}
+
+/** Merge `topics` into the extra-unlocks set. Returns the topics that were new. */
+export function unlockExtraTopics(topics: RoadmapTopic[]): RoadmapTopic[] {
+  const current = new Set(readExtraUnlocks());
+  const added: RoadmapTopic[] = [];
+  for (const t of topics) {
+    if (!current.has(t)) {
+      current.add(t);
+      added.push(t);
+    }
+  }
+  if (added.length > 0) writeExtraUnlocks(Array.from(current));
+  return added;
+}
+
+/** True if every prereq of `topic` has cleared its first checkpoint. */
+function prereqsMet(p: RoadmapProgress, topic: RoadmapTopic): boolean {
+  const reqs = TOPIC_PREREQS[topic] ?? [];
+  if (reqs.length === 0) return true;
+  return reqs.every((req) => passedLevelCount(p, req) >= LEVELS_TO_UNLOCK_NEXT);
+}
+
+/**
+ * Whether the learner can open `topic`'s path. Starters are always unlocked;
+ * other topics unlock once their prereqs are cleared OR they were granted by
+ * the skill-check assessment.
+ */
+export function isTopicUnlocked(
+  p: RoadmapProgress,
+  topic: RoadmapTopic,
+  extra: RoadmapTopic[] | Set<RoadmapTopic> = [],
+): boolean {
+  if (STARTER_TOPICS.includes(topic)) return true;
+  const set = extra instanceof Set ? extra : new Set(extra);
+  if (set.has(topic)) return true;
+  return prereqsMet(p, topic);
+}
+
+/** Human-readable reason a topic is locked (e.g. "Pass JavaScript level 5"). */
+export function topicUnlockHint(
+  p: RoadmapProgress,
+  topic: RoadmapTopic,
+  topicLabel: (t: RoadmapTopic) => string,
+): string {
+  const reqs = TOPIC_PREREQS[topic] ?? [];
+  const unmet = reqs.filter((req) => passedLevelCount(p, req) < LEVELS_TO_UNLOCK_NEXT);
+  if (unmet.length === 0) return '';
+  return unmet
+    .map((req) => `${topicLabel(req)} · ${passedLevelCount(p, req)}/${LEVELS_TO_UNLOCK_NEXT}`)
+    .join(' · ');
 }
 
 /* ──── Account sync ─────────────────────────────────────────────────────── */

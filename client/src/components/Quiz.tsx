@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Card,
   CardContent,
@@ -123,6 +124,22 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const visibleCategoryOptions = visibleCategoryOptionsFor(profile.email);
   const visibleCategories = visibleCategoryOptions.map((c) => c.value);
 
+  // The /dev "default visible categories" setting picks which chips appear on
+  // first sight; the rest unlock when the learner clicks "Show all". Empty
+  // list (or no overlap with what this user can see) means show everything.
+  const defaultCategoryIds = config.quiz.defaultCategoryIds ?? [];
+  const defaultVisibleSet = new Set(defaultCategoryIds);
+  const collapsedOptions =
+    defaultVisibleSet.size > 0
+      ? visibleCategoryOptions.filter((c) => defaultVisibleSet.has(c.value))
+      : visibleCategoryOptions;
+  const hasCollapsedSubset =
+    collapsedOptions.length > 0 && collapsedOptions.length < visibleCategoryOptions.length;
+  const [showAllCategories, setShowAllCategories] = useState(false);
+  const displayedCategoryOptions = hasCollapsedSubset && !showAllCategories
+    ? collapsedOptions
+    : visibleCategoryOptions;
+
   useEffect(() => {
     onActiveChange?.(state !== 'ready');
   }, [state, onActiveChange]);
@@ -234,10 +251,16 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   };
 
   const handleSelectAll = () => {
-    setSelectedCategories((prev) => (prev.length === visibleCategories.length ? [] : visibleCategories));
+    const pool = displayedCategoryOptions.map((c) => c.value);
+    setSelectedCategories((prev) =>
+      pool.every((c) => prev.includes(c)) ? prev.filter((c) => !pool.includes(c)) : pool,
+    );
   };
 
-  const isAllSelected = selectedCategories.length === visibleCategories.length;
+  const displayedCategoryIds = displayedCategoryOptions.map((c) => c.value);
+  const isAllSelected =
+    displayedCategoryIds.length > 0 &&
+    displayedCategoryIds.every((c) => selectedCategories.includes(c));
 
   const handleAnswer = (questionId: string, answerIndex: number) => {
     setAnswers((prev) => ({ ...prev, [questionId]: answerIndex }));
@@ -532,6 +555,29 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>{t('quiz.dailyMeta')}</span>
         </Button>
 
+        <Button
+          fullWidth
+          component={Link}
+          to="/challenge"
+          variant="outlined"
+          sx={{
+            mb: 2,
+            py: 1,
+            textTransform: 'none',
+            borderColor: BRAND.green,
+            color: BRAND.green,
+            display: 'flex',
+            justifyContent: 'space-between',
+            '&:hover': { borderColor: BRAND.greenHover, backgroundColor: 'rgba(45,122,45,0.06)' },
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span aria-hidden>🦈</span>
+            <span>{t('challenge.cta')}</span>
+          </span>
+          <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>{t('challenge.ctaSubtitle')}</span>
+        </Button>
+
         <Box component="fieldset" sx={{ mb: 2.5, p: 0, border: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
             <Typography component="legend" variant="overline" color="text.secondary" sx={{ p: 0 }}>
@@ -546,7 +592,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </Button>
           </Box>
           <Box role="group" aria-label={t('quiz.categoriesAria')} sx={{ display: 'flex', flexWrap: 'wrap', gap: '5px', justifyContent: 'center' }}>
-            {visibleCategoryOptions.map((cat) => {
+            {displayedCategoryOptions.map((cat) => {
               const selected = selectedCategories.includes(cat.value);
               return (
                 <Chip
@@ -581,6 +627,17 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               );
             })}
           </Box>
+          {hasCollapsedSubset && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+              <Button
+                size="small"
+                onClick={() => setShowAllCategories((v) => !v)}
+                sx={{ fontSize: '0.72rem', textTransform: 'none', color: 'text.secondary', minWidth: 'auto', px: 1 }}
+              >
+                {showAllCategories ? t('quiz.showFewer') : t('quiz.showAllCategories')}
+              </Button>
+            </Box>
+          )}
           {attemptedStart && selectedCategories.length === 0 && (
             <Typography variant="caption" color="error" id="categories-error" role="alert" sx={{ mt: 1, display: 'block' }}>
               {t('quiz.selectAtLeastOne')}

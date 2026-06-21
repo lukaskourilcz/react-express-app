@@ -90,8 +90,11 @@ export function Waterline({ color = BRAND.green }: { color?: string }) {
  * the branded loading indicator.
  */
 export function SwimmingShark({ size = 56 }: { size?: number }) {
+  // Container is sized 1.3× the fin tall so the dorsal tip isn't clipped when
+  // the fin bobs + rotates. `overflow: hidden` clips the horizontal cruise
+  // outside the box but doesn't crop the top of the fin anymore.
   return (
-    <Box sx={{ position: 'relative', width: size * 1.8, height: size, overflow: 'hidden' }} aria-hidden="true">
+    <Box sx={{ position: 'relative', width: size * 1.8, height: size * 1.3, overflow: 'hidden' }} aria-hidden="true">
       <Box
         component="span"
         sx={{

@@ -10,6 +10,7 @@ import {
   Button,
   Snackbar,
   Divider,
+  Chip,
 } from '@mui/material';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
@@ -18,6 +19,7 @@ import { brandButtonSx } from '../../theme/MuiTheme';
 import { friendlyError } from '../../lib/api';
 import { getAdminSettings, saveAdminSettings, type GameSettings } from '../../lib/devApi';
 import { RANK_TITLES, setRankThresholds } from '../../lib/leveling';
+import { CATEGORY_OPTIONS, onCategoryColorText } from '../../lib/categories';
 
 const DIFFICULTY_MODES = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
@@ -40,6 +42,8 @@ interface FormState {
   quizCountOptions: string;
   quizDefaultDifficulty: string;
   quizMinImportance: string;
+  /** Category ids the quiz home shows by default (rest hidden behind "Show all"). */
+  quizDefaultCategoryIds: string[];
   dailyCount: string;
   playDefaultDurationS: string;
   playDurationOptionsS: string;
@@ -62,6 +66,7 @@ const toForm = (s: GameSettings): FormState => ({
   quizCountOptions: s.quiz.countOptions.join(', '),
   quizDefaultDifficulty: s.quiz.defaultDifficulty,
   quizMinImportance: String(s.quiz.minImportance),
+  quizDefaultCategoryIds: [...s.quiz.defaultCategoryIds],
   dailyCount: String(s.daily.count),
   playDefaultDurationS: String(s.play.defaultDurationS),
   playDurationOptionsS: s.play.durationOptionsS.join(', '),
@@ -84,6 +89,7 @@ const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
     countOptions: parseList(f.quizCountOptions),
     defaultDifficulty: f.quizDefaultDifficulty,
     minImportance: parseNum(f.quizMinImportance, base.quiz.minImportance),
+    defaultCategoryIds: f.quizDefaultCategoryIds,
   },
   daily: { count: parseNum(f.dailyCount, base.daily.count) },
   play: {
@@ -146,6 +152,15 @@ export default function DevSettings() {
       const next = [...f.levelThresholds];
       next[i] = value;
       return { ...f, levelThresholds: next };
+    });
+
+  const toggleDefaultCategory = (id: string) =>
+    setForm((f) => {
+      if (!f) return f;
+      const next = f.quizDefaultCategoryIds.includes(id)
+        ? f.quizDefaultCategoryIds.filter((c) => c !== id)
+        : [...f.quizDefaultCategoryIds, id];
+      return { ...f, quizDefaultCategoryIds: next };
     });
 
   const handleSave = async () => {
@@ -222,6 +237,40 @@ export default function DevSettings() {
           onChange={(e) => set('quizCountOptions', e.target.value)}
           sx={{ flex: 1, minWidth: 200 }}
         />
+      </Section>
+
+      <Section title="Quiz — default visible categories">
+        <Typography variant="caption" color="text.secondary" sx={{ width: '100%', mb: 0.5 }}>
+          Shown on the quiz home by default; the rest appear when the learner clicks "Show all".
+          Select none to show every category by default.
+        </Typography>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, width: '100%' }}>
+          {CATEGORY_OPTIONS.map((cat) => {
+            const selected = form.quizDefaultCategoryIds.includes(cat.value);
+            return (
+              <Chip
+                key={cat.value}
+                label={cat.label}
+                size="small"
+                onClick={() => toggleDefaultCategory(cat.value)}
+                sx={{
+                  cursor: 'pointer',
+                  backgroundColor: selected ? cat.color : 'background.paper',
+                  color: selected ? onCategoryColorText(cat.value) : 'text.secondary',
+                  border: '1px solid',
+                  borderColor: selected ? cat.color : 'divider',
+                  borderLeft: `3px solid ${cat.color}`,
+                  fontWeight: selected ? 600 : 500,
+                }}
+              />
+            );
+          })}
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ width: '100%', mt: 0.5 }}>
+          {form.quizDefaultCategoryIds.length === 0
+            ? 'All categories visible by default'
+            : `${form.quizDefaultCategoryIds.length} category(ies) visible by default`}
+        </Typography>
       </Section>
 
       <Section title="Daily challenge">{num('dailyCount', 'Question count')}</Section>

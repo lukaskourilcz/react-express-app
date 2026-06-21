@@ -23,6 +23,12 @@ export interface GameSettings {
     defaultDifficulty: DifficultyMode;
     /** Minimum importance (1–10) a question needs to appear in the quiz. 1 = no floor. */
     minImportance: number;
+    /**
+     * Category ids shown by default on the quiz home page. The remaining
+     * categories are hidden behind a "Show all" toggle in the UI. Empty array
+     * means show all categories by default (no filtering).
+     */
+    defaultCategoryIds: string[];
   };
   daily: {
     /** Number of questions in the daily challenge. */
@@ -58,6 +64,23 @@ export interface GameSettings {
 // sync with client/src/lib/leveling.ts DEFAULT_RANK_THRESHOLDS.
 const DEFAULT_RANK_THRESHOLDS = [0, 2000, 6000, 14000, 26000, 44000, 68000, 100000, 144000, 200000];
 
+// The 12 most "dev-focused" categories — shown on the quiz home page by
+// default. The remaining categories are reachable via the "Show all" toggle.
+const DEFAULT_QUIZ_CATEGORY_IDS = [
+  'javascript',
+  'typescript',
+  'react',
+  'nodejs',
+  'nextjs',
+  'html',
+  'css',
+  'git',
+  'dsa',
+  'databases',
+  'system-design',
+  'devops',
+];
+
 export const DEFAULT_SETTINGS: GameSettings = {
   quiz: {
     defaultCount: 10,
@@ -65,6 +88,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
     maxCount: 50,
     defaultDifficulty: 'zero-to-hero',
     minImportance: 1,
+    defaultCategoryIds: DEFAULT_QUIZ_CATEGORY_IDS,
   },
   daily: { count: 5 },
   play: {
@@ -103,6 +127,24 @@ const cleanIntList = (v: unknown, min: number, max: number, fallback: number[]):
 
 const bool = (v: unknown, fallback: boolean): boolean => (typeof v === 'boolean' ? v : fallback);
 
+// Category-id list: strings only, de-duplicated, capped at 40 entries. We don't
+// hard-validate ids here so a renamed category in the bank doesn't lock out the
+// list — bad ids just don't match anything in the UI.
+const cleanCategoryIds = (v: unknown, fallback: string[]): string[] => {
+  if (!Array.isArray(v)) return fallback;
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of v) {
+    if (typeof item !== 'string') continue;
+    const trimmed = item.trim().toLowerCase();
+    if (!trimmed || trimmed.length > 60 || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    out.push(trimmed);
+    if (out.length >= 40) break;
+  }
+  return out;
+};
+
 // Career-rank XP thresholds: must be the same length as the default, all
 // non-negative integers, strictly ascending, and start at 0. Otherwise fall back.
 const cleanThresholds = (v: unknown, fallback: number[]): number[] => {
@@ -137,6 +179,7 @@ export function normalizeSettings(raw: unknown): GameSettings {
         ? (quiz.defaultDifficulty as DifficultyMode)
         : d.quiz.defaultDifficulty,
       minImportance: clampInt(quiz.minImportance, 1, 10, d.quiz.minImportance),
+      defaultCategoryIds: cleanCategoryIds(quiz.defaultCategoryIds, d.quiz.defaultCategoryIds),
     },
     daily: { count: clampInt(daily.count, 1, 20, d.daily.count) },
     play: {

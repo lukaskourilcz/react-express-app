@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { Box, Typography, Button, LinearProgress, Chip, Skeleton, Tooltip, IconButton, Snackbar, useTheme } from '@mui/material';
+import { Box, Typography, Button, LinearProgress, Chip, Skeleton, Tooltip, IconButton, Snackbar, useTheme, CircularProgress } from '@mui/material';
 import type {
   RoadmapTopic,
   RoadmapLevelMeta,
@@ -7,6 +7,7 @@ import type {
   RoadmapPlayable,
   RoadmapQuestion,
   RoadmapStructure,
+  Question,
 } from '../types/quiz';
 import {
   fetchRoadmapStructure,
@@ -25,8 +26,17 @@ import {
   checkpointBestPct,
   passedLevelCount,
   getRoadmapProgress,
+  isTopicUnlocked,
+  topicUnlockHint,
+  unlockExtraTopics,
+  useExtraUnlocks,
+  getExtraUnlocks,
+  topicsFromAssessment,
+  ASSESSMENT_QUESTION_COUNT,
   LEVELS_PER_CHECKPOINT,
 } from '../lib/roadmap';
+import { fetchChallengeBatch } from '../lib/challengeApi';
+import { apiFetch } from '../lib/api';
 import { awardLearningOutcome, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp } from '../lib/leveling';
 import { getCategoryHexColor, getCategoryLabel, onCategoryColorText } from '../lib/categories';
@@ -212,6 +222,7 @@ function Roadmap() {
   const { lang, t } = useLanguage();
   const { isAuthenticated } = useAuth();
   const progress = useRoadmapProgress();
+  const extraUnlocks = useExtraUnlocks();
   const theme = useTheme();
   const [pathRef, pathWidth] = useElementWidth<HTMLDivElement>();
 
@@ -220,7 +231,14 @@ function Roadmap() {
   const [structureError, setStructureError] = useState<string | null>(null);
   const [topic, setTopic] = useState<RoadmapTopic>(() => {
     const saved = readString(TOPIC_KEY);
-    return saved && (TOPICS as string[]).includes(saved) ? (saved as RoadmapTopic) : 'javascript';
+    const candidate =
+      saved && (TOPICS as string[]).includes(saved) ? (saved as RoadmapTopic) : 'javascript';
+    // If the saved topic is locked (fresh user, reset progress, etc.) fall back
+    // to the always-open starter so the page lands somewhere actionable.
+    if (!isTopicUnlocked(getRoadmapProgress(), candidate, new Set(getExtraUnlocks()))) {
+      return 'javascript';
+    }
+    return candidate;
   });
 
   const [active, setActive] = useState<Active | null>(null);
@@ -228,6 +246,18 @@ function Roadmap() {
   const [loadingLesson, setLoadingLesson] = useState(false);
   const [lessonError, setLessonError] = useState<string | null>(null);
   const lessonAbortRef = useRef<AbortController | null>(null);
+
+  // Skill check (assessment) state. `open` controls the modal; the runner
+  // owns its own in-progress state until the result screen reports back.
+  const [skillCheckOpen, setSkillCheckOpen] = useState(false);
+  const [unlockSnack, setUnlockSnack] = useState<string | null>(null);
+
+  const extraUnlocksSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
+  const isUnlocked = useCallback(
+    (tpc: RoadmapTopic) => isTopicUnlocked(progress, tpc, extraUnlocksSet),
+    [progress, extraUnlocksSet],
+  );
+  const lockedCount = TOPICS.filter((tpc) => !isUnlocked(tpc)).length;
 
   const loadStructure = () => {
     const controller = new AbortController();
@@ -256,9 +286,26 @@ function Roadmap() {
   }, [isAuthenticated]);
 
   const selectTopic = (next: RoadmapTopic) => {
+    // Locked topics aren't tabbable; ignore if somehow invoked.
+    if (!isUnlocked(next)) return;
     setTopic(next);
     writeString(TOPIC_KEY, next);
   };
+
+  const onSkillCheckFinished = useCallback(
+    (correct: number) => {
+      const granted = topicsFromAssessment(correct);
+      const added = unlockExtraTopics(granted);
+      setSkillCheckOpen(false);
+      if (added.length === 0) {
+        setUnlockSnack(t('roadmap.skillCheckNoneAdded'));
+      } else {
+        const labels = added.map(getCategoryLabel).join(', ');
+        setUnlockSnack(t('roadmap.skillCheckUnlocked', { topics: labels }));
+      }
+    },
+    [t],
+  );
 
   const open = (a: Active) => {
     lessonAbortRef.current?.abort();
@@ -363,6 +410,18 @@ function Roadmap() {
     return { width: pathWidth, height, cellW, nodes: placed, segments };
   }, [pathWidth, levels, checkpoints, progress, topic]);
 
+  /* ──── skill check view ─────────────────────────────────────────────── */
+  if (skillCheckOpen) {
+    return (
+      <SkillCheckRunner
+        lang={lang}
+        onCancel={() => setSkillCheckOpen(false)}
+        onFinished={onSkillCheckFinished}
+        t={t}
+      />
+    );
+  }
+
   /* ──── lesson view ──────────────────────────────────────────────────── */
   if (active !== null) {
     if (loadingLesson) {
@@ -404,43 +463,106 @@ function Roadmap() {
       <Typography variant="h5" component="h1" sx={{ fontWeight: 800, textAlign: 'center', mb: 0.5 }}>
         {t('roadmap.title')}
       </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 3 }}>
+      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 2 }}>
         {t('roadmap.subtitle')}
       </Typography>
 
-      {/* Topic selector */}
+      {/* Skill check entry point — quick exit ramp for experienced learners. */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2.5 }}>
+        <Button
+          onClick={() => setSkillCheckOpen(true)}
+          variant="outlined"
+          size="small"
+          sx={{
+            textTransform: 'none',
+            fontWeight: 700,
+            borderColor: BRAND.green,
+            color: BRAND.green,
+            borderRadius: 999,
+            px: 2,
+            py: 0.6,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 0.15,
+            lineHeight: 1.15,
+            '&:hover': { borderColor: BRAND.greenHover, backgroundColor: 'rgba(45,122,45,0.06)' },
+          }}
+        >
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span aria-hidden>⚡️</span>
+            <span>{t('roadmap.skillCheckCta')}</span>
+          </span>
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500 }}>
+            {t('roadmap.skillCheckSubtitle')}
+          </Typography>
+        </Button>
+      </Box>
+
+      {/* Topic selector — locked topics stay visible (dimmed + lock icon) so the
+          path from starter → expert is legible without overwhelming. */}
       <Box role="tablist" aria-label={t('roadmap.topicsAria')} sx={{ display: 'flex', gap: 0.75, justifyContent: 'center', mb: 2.5, flexWrap: 'wrap' }}>
         {TOPICS.map((value) => {
           const selected = topic === value;
+          const unlocked = isUnlocked(value);
           const color = getCategoryHexColor(value);
+          const lockedHint = !unlocked
+            ? t('roadmap.topicLockedHint', {
+                prereqs: topicUnlockHint(progress, value, getCategoryLabel),
+              })
+            : '';
           return (
-            <Button
-              key={value}
-              role="tab"
-              aria-selected={selected}
-              onClick={() => selectTopic(value)}
-              sx={{
-                textTransform: 'none',
-                fontWeight: 600,
-                fontSize: '0.78rem',
-                minWidth: 'auto',
-                px: 1.4,
-                py: 0.4,
-                borderRadius: 999,
-                lineHeight: 1.3,
-                transition: 'all 0.15s ease',
-                color: selected ? onCategoryColorText(value) : 'text.secondary',
-                backgroundColor: selected ? color : 'background.paper',
-                border: '2px solid',
-                borderColor: selected ? color : 'divider',
-                '&:hover': { backgroundColor: selected ? color : 'action.hover', borderColor: color },
-              }}
-            >
-              {getCategoryLabel(value)}
-            </Button>
+            <Tooltip key={value} title={lockedHint} arrow placement="top" disableHoverListener={unlocked}>
+              <Box component="span" sx={{ display: 'inline-flex' }}>
+                <Button
+                  role="tab"
+                  aria-selected={selected}
+                  aria-disabled={!unlocked}
+                  disabled={!unlocked}
+                  onClick={() => selectTopic(value)}
+                  startIcon={!unlocked ? <LockIcon size={12} /> : undefined}
+                  sx={{
+                    textTransform: 'none',
+                    fontWeight: 600,
+                    fontSize: '0.78rem',
+                    minWidth: 'auto',
+                    px: 1.4,
+                    py: 0.4,
+                    borderRadius: 999,
+                    lineHeight: 1.3,
+                    transition: 'all 0.15s ease',
+                    color: !unlocked
+                      ? 'text.disabled'
+                      : selected
+                        ? onCategoryColorText(value)
+                        : 'text.secondary',
+                    backgroundColor: !unlocked
+                      ? 'action.hover'
+                      : selected
+                        ? color
+                        : 'background.paper',
+                    border: '2px solid',
+                    borderColor: !unlocked ? 'divider' : selected ? color : 'divider',
+                    opacity: unlocked ? 1 : 0.55,
+                    '&:hover': unlocked
+                      ? { backgroundColor: selected ? color : 'action.hover', borderColor: color }
+                      : undefined,
+                    '&.Mui-disabled': { color: 'text.disabled' },
+                    '& .MuiButton-startIcon': { mr: 0.5 },
+                  }}
+                >
+                  {getCategoryLabel(value)}
+                </Button>
+              </Box>
+            </Tooltip>
           );
         })}
       </Box>
+
+      {lockedCount > 0 && (
+        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mb: 2 }}>
+          {t('roadmap.lockedCountFooter', { count: lockedCount })}
+        </Typography>
+      )}
 
       {loadingStructure ? (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 3, mt: 2 }}>
@@ -548,6 +670,14 @@ function Roadmap() {
           )}
         </>
       )}
+
+      <Snackbar
+        open={!!unlockSnack}
+        autoHideDuration={4500}
+        onClose={() => setUnlockSnack(null)}
+        message={unlockSnack ?? ''}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Box>
   );
 }
@@ -1016,6 +1146,295 @@ function LessonError({ message, onRetry, onExit, t }: { message: string; onRetry
         <Button variant="outlined" onClick={onExit} sx={{ textTransform: 'none' }}>
           {t('roadmap.backToPath')}
         </Button>
+      </Box>
+    </Box>
+  );
+}
+
+/* ──── skill-check runner ───────────────────────────────────────────────── */
+
+type SkillPhase = 'intro' | 'loading' | 'playing' | 'submitting' | 'result' | 'error';
+
+function SkillCheckRunner({
+  lang,
+  onCancel,
+  onFinished,
+  t,
+}: {
+  lang: string;
+  onCancel: () => void;
+  onFinished: (correct: number) => void;
+  t: TFn;
+}) {
+  const [phase, setPhase] = useState<SkillPhase>('intro');
+  const [error, setError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [qIndex, setQIndex] = useState(0);
+  const [answers, setAnswers] = useState<Record<string, number>>({});
+  const [correct, setCorrect] = useState(0);
+
+  const start = useCallback(async () => {
+    setPhase('loading');
+    setError(null);
+    try {
+      const batch = await fetchChallengeBatch({ lang });
+      const trimmed = batch.questions.slice(0, ASSESSMENT_QUESTION_COUNT);
+      if (trimmed.length === 0) throw new Error('No questions available');
+      setSessionId(batch.sessionId);
+      setQuestions(trimmed);
+      setAnswers({});
+      setQIndex(0);
+      setPhase('playing');
+    } catch (err) {
+      setError(friendlyError(err));
+      setPhase('error');
+    }
+  }, [lang]);
+
+  const total = questions.length;
+  const current = questions[qIndex];
+
+  const handlePick = (idx: number) => {
+    if (!current) return;
+    setAnswers((prev) => ({ ...prev, [current.id]: idx }));
+  };
+
+  const goNext = () => {
+    if (qIndex < total - 1) setQIndex((i) => i + 1);
+  };
+
+  const finish = useCallback(async () => {
+    if (!sessionId) return;
+    setPhase('submitting');
+    setError(null);
+    try {
+      const res = await apiFetch<{ correctAnswers: number }>('/api/quiz/submit', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId, answers, lang }),
+      });
+      setCorrect(res.correctAnswers);
+      setPhase('result');
+    } catch (err) {
+      setError(friendlyError(err));
+      setPhase('error');
+    }
+  }, [sessionId, answers, lang]);
+
+  const answered = current ? answers[current.id] != null : false;
+  const allAnswered = total > 0 && questions.every((q) => answers[q.id] != null);
+
+  if (phase === 'intro') {
+    return (
+      <Box sx={{ maxWidth: 560, mx: 'auto', textAlign: 'center', mt: 2 }}>
+        <Typography variant="h5" component="h2" sx={{ fontWeight: 800, mb: 1 }}>
+          {t('roadmap.skillCheckTitle')}
+        </Typography>
+        <Typography color="text.secondary" sx={{ mb: 1.5 }}>
+          {t('roadmap.skillCheckIntro')}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          {t('roadmap.skillCheckBands')}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center' }}>
+          <Button
+            variant="contained"
+            onClick={() => void start()}
+            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+          >
+            {t('roadmap.skillCheckStart')}
+          </Button>
+          <Button variant="outlined" onClick={onCancel} sx={{ textTransform: 'none' }}>
+            {t('roadmap.skillCheckCancel')}
+          </Button>
+        </Box>
+      </Box>
+    );
+  }
+
+  if (phase === 'loading' || phase === 'submitting') {
+    return (
+      <Box sx={{ maxWidth: 480, mx: 'auto', textAlign: 'center', mt: 6 }}>
+        <CircularProgress sx={{ color: BRAND.green, mb: 2 }} />
+        <Typography color="text.secondary">{t('roadmap.skillCheckLoading')}</Typography>
+      </Box>
+    );
+  }
+
+  if (phase === 'error') {
+    return (
+      <LessonError
+        message={error ?? t('roadmap.error')}
+        onRetry={() => void start()}
+        onExit={onCancel}
+        t={t}
+      />
+    );
+  }
+
+  if (phase === 'result') {
+    const tier =
+      correct >= 18
+        ? 'roadmap.skillCheckPerfect'
+        : correct >= 14
+          ? 'roadmap.skillCheckSolid'
+          : correct >= 10
+            ? 'roadmap.skillCheckSome'
+            : 'roadmap.skillCheckLow';
+    return (
+      <Box sx={{ maxWidth: 520, mx: 'auto', textAlign: 'center', mt: 2 }}>
+        <Box sx={{ fontSize: '3.5rem', lineHeight: 1, mb: 1 }} aria-hidden>
+          ⚡️
+        </Box>
+        <Typography variant="h5" component="h2" sx={{ fontWeight: 800, mb: 1 }}>
+          {t('roadmap.skillCheckResult', { correct, total })}
+        </Typography>
+        <Typography color="text.secondary" sx={{ mb: 3 }}>
+          {t(tier as TranslationKey)}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <Button
+            variant="contained"
+            onClick={() => onFinished(correct)}
+            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+          >
+            {t('roadmap.skillCheckBack')}
+          </Button>
+          <Button variant="outlined" onClick={() => void start()} sx={{ textTransform: 'none' }}>
+            {t('roadmap.skillCheckRetry')}
+          </Button>
+        </Box>
+      </Box>
+    );
+  }
+
+  /* ── playing ── */
+  if (!current) return null;
+  const progressPct = ((qIndex + (answered ? 1 : 0)) / total) * 100;
+  return (
+    <Box sx={{ maxWidth: 640, mx: 'auto' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+        <Button
+          onClick={onCancel}
+          variant="text"
+          size="small"
+          sx={{ minWidth: 'auto', color: 'text.secondary', fontSize: '1.1rem', lineHeight: 1 }}
+          aria-label={t('roadmap.skillCheckCancel')}
+        >
+          ✕
+        </Button>
+        <LinearProgress
+          variant="determinate"
+          value={progressPct}
+          aria-label={t('roadmap.skillCheckQuestion', { current: qIndex + 1, total })}
+          sx={{
+            flex: 1,
+            height: 10,
+            borderRadius: 5,
+            backgroundColor: 'action.hover',
+            '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: BRAND.green, transition: 'transform 0.35s ease' },
+          }}
+        />
+        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}>
+          {qIndex + 1}/{total}
+        </Typography>
+      </Box>
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
+        <Chip
+          size="small"
+          label={getCategoryLabel(current.category)}
+          sx={{
+            backgroundColor: getCategoryHexColor(current.category),
+            color: onCategoryColorText(current.category),
+            fontWeight: 600,
+          }}
+        />
+        <Chip size="small" variant="outlined" label={`Lvl ${current.difficulty}`} />
+        <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+          {t('roadmap.skillCheckQuestion', { current: qIndex + 1, total })}
+        </Typography>
+      </Box>
+
+      <Box sx={{ fontWeight: 500, mb: 2 }}>{renderQuestion(current.question)}</Box>
+
+      <Box role="group" sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+        {current.options.map((option, idx) => {
+          const picked = answers[current.id] === idx;
+          return (
+            <Box
+              key={idx}
+              component="button"
+              type="button"
+              onClick={() => handlePick(idx)}
+              aria-pressed={picked}
+              sx={{
+                textAlign: 'left',
+                px: 2,
+                py: 1.5,
+                borderRadius: 2,
+                border: '2px solid',
+                borderColor: picked ? BRAND.green : 'divider',
+                backgroundColor: picked ? 'rgba(45,122,45,0.07)' : 'background.paper',
+                color: 'text.primary',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                fontFamily: 'inherit',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.5,
+                transition: 'border-color 0.12s ease, background-color 0.12s ease',
+                '&:hover': { borderColor: BRAND.green, backgroundColor: 'action.hover' },
+              }}
+            >
+              <Box
+                component="span"
+                sx={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 24,
+                  height: 24,
+                  borderRadius: 1,
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  backgroundColor: 'action.hover',
+                  color: 'text.secondary',
+                  flexShrink: 0,
+                }}
+              >
+                {idx + 1}
+              </Box>
+              <Box component="span" sx={{ flex: 1 }}>{option}</Box>
+            </Box>
+          );
+        })}
+      </Box>
+
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
+        <Button variant="text" onClick={onCancel} sx={{ textTransform: 'none', color: 'text.secondary' }}>
+          {t('roadmap.skillCheckCancel')}
+        </Button>
+        {qIndex < total - 1 ? (
+          <Button
+            variant="contained"
+            onClick={goNext}
+            disabled={!answered}
+            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+          >
+            {t('roadmap.skillCheckNext')}
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            onClick={() => void finish()}
+            disabled={!allAnswered}
+            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+          >
+            {t('roadmap.skillCheckFinish')}
+          </Button>
+        )}
       </Box>
     </Box>
   );

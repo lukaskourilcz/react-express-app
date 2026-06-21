@@ -83,7 +83,14 @@ export interface QuestionPayload {
 }
 
 export interface GameSettings {
-  quiz: { defaultCount: number; countOptions: number[]; maxCount: number; defaultDifficulty: string; minImportance: number };
+  quiz: {
+    defaultCount: number;
+    countOptions: number[];
+    maxCount: number;
+    defaultDifficulty: string;
+    minImportance: number;
+    defaultCategoryIds: string[];
+  };
   daily: { count: number };
   play: {
     defaultDurationS: number;

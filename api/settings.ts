@@ -19,6 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       countOptions: s.quiz.countOptions,
       maxCount: s.quiz.maxCount,
       defaultDifficulty: s.quiz.defaultDifficulty,
+      defaultCategoryIds: s.quiz.defaultCategoryIds,
     },
     daily: { count: s.daily.count },
     play: {

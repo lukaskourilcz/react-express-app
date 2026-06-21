@@ -26,6 +26,7 @@ const Flashcards = lazy(() => import('./components/Flashcards'));
 const Shop = lazy(() => import('./components/Shop'));
 const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayLanding })));
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
+const Challenge = lazy(() => import('./components/Challenge'));
 const DevPage = lazy(() => import('./components/dev/DevPage'));
 
 const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
@@ -37,6 +38,7 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/cards': 'title.cards',
   '/shop': 'title.shop',
   '/play': 'title.play',
+  '/challenge': 'title.challenge',
 };
 
 const SunIcon = () => (
@@ -86,6 +88,7 @@ const NAV_ITEMS: {
   { to: '/', key: 'nav.quiz', isActive: (p) => p === '/' },
   { to: '/learn', key: 'nav.learn', isActive: (p) => p.startsWith('/learn') },
   { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap' },
+  { to: '/challenge', key: 'nav.challenge', isActive: (p) => p.startsWith('/challenge') },
   { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play'), feature: 'multiplayer' },
   { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard' },
   { to: '/cards', key: 'nav.cards', isActive: (p) => p === '/cards', feature: 'flashcards' },
@@ -157,12 +160,20 @@ function App() {
   // The home screen (quiz setup) gets tighter padding so it fits one viewport.
   const isHome = location.pathname === '/';
 
-  // Two shark fins on the footer ocean line, at random (distinct) spots each
-  // page load — one in the left half, one in the right, order shuffled.
+  // 1–4 shark fins on the footer ocean line, at random (non-overlapping) spots
+  // each page load. Positions are sampled across 6–94%, keeping a minimum gap
+  // so dorsals don't visually collide.
   const finPositions = useMemo<number[]>(() => {
-    const left = 8 + Math.random() * 34; // 8–42%
-    const right = 56 + Math.random() * 36; // 56–92%
-    return Math.random() < 0.5 ? [left, right] : [right, left];
+    const count = 1 + Math.floor(Math.random() * 4); // 1..4 inclusive
+    const minGap = 12;
+    const out: number[] = [];
+    let tries = 0;
+    while (out.length < count && tries < 200) {
+      tries += 1;
+      const pos = 6 + Math.random() * 88;
+      if (out.every((p) => Math.abs(p - pos) >= minGap)) out.push(pos);
+    }
+    return out;
   }, []);
   const showChrome = !isDev && !(quizActive && location.pathname === '/');
   const navLinkSx = (isActive: boolean) => ({
@@ -197,60 +208,84 @@ function App() {
 
       {showChrome && (
         <>
-        <AppBar position="static" elevation={0} sx={{ backgroundColor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Toolbar sx={{ maxWidth: 1200, width: '100%', mx: 'auto', px: { xs: 2, sm: 3 } }}>
+        {/* Tiny utility row pinned to the very top-right: sound + theme toggles,
+            so they don't take up nav-bar real estate. */}
+        <Box
+          sx={{
+            position: 'absolute',
+            top: 4,
+            right: 8,
+            zIndex: (theme) => theme.zIndex.appBar + 1,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.25,
+          }}
+        >
+          <Tooltip title={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}>
             <IconButton
-              edge="start"
-              aria-label={t('nav.menu')}
-              onClick={() => setMobileNavOpen(true)}
-              sx={{ display: { xs: 'inline-flex', md: 'none' }, mr: 0.5, color: 'text.secondary' }}
+              size="small"
+              onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
+              aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
+              aria-pressed={settings.soundEffects}
+              sx={{ p: 0.25, color: settings.soundEffects ? BRAND.green : 'text.secondary', '& svg': { width: 14, height: 14 } }}
             >
-              <MenuIcon />
+              {settings.soundEffects ? <SoundOnIcon /> : <SoundOffIcon />}
             </IconButton>
-
-            <Typography
-              variant="h6"
-              component={Link}
-              to="/"
-              aria-label={t('nav.home')}
-              sx={{ flexGrow: 1, display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: 'text.primary', textDecoration: 'none', fontSize: '1.1rem' }}
+          </Tooltip>
+          <Tooltip title={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
+            <IconButton
+              size="small"
+              onClick={toggle}
+              aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
+              sx={{ p: 0.25, color: 'text.secondary', '& svg': { width: 14, height: 14 } }}
             >
-              <SwimmingFin size={22} />
-              devShark
-            </Typography>
+              {mode === 'light' ? <MoonIcon /> : <SunIcon />}
+            </IconButton>
+          </Tooltip>
+        </Box>
+        <AppBar position="static" elevation={0} sx={{ backgroundColor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
+          <Toolbar sx={{ maxWidth: 1200, width: '100%', mx: 'auto', px: { xs: 2, sm: 3 }, gap: 1 }}>
+            {/* Left slot: mobile menu + logo. Flex-basis 0 so all three slots
+                share width equally, keeping the centre slot truly centred. */}
+            <Box sx={{ flex: '1 1 0', display: 'flex', alignItems: 'center', minWidth: 0 }}>
+              <IconButton
+                edge="start"
+                aria-label={t('nav.menu')}
+                onClick={() => setMobileNavOpen(true)}
+                sx={{ display: { xs: 'inline-flex', md: 'none' }, mr: 0.5, color: 'text.secondary' }}
+              >
+                <MenuIcon />
+              </IconButton>
+              <Typography
+                variant="h6"
+                component={Link}
+                to="/"
+                aria-label={t('nav.home')}
+                sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: 'text.primary', textDecoration: 'none', fontSize: '1.1rem' }}
+              >
+                <SwimmingFin size={22} />
+                devShark
+              </Typography>
+            </Box>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
-              <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1 }}>
-                {primaryNavItems.map((item) => (
-                  <Button
-                    key={item.to}
-                    component={Link}
-                    to={item.to}
-                    sx={navLinkSx(item.isActive(location.pathname))}
-                  >
-                    {t(item.key)}
-                  </Button>
-                ))}
-              </Box>
-              <Tooltip title={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}>
-                <IconButton
-                  onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
-                  aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
-                  aria-pressed={settings.soundEffects}
-                  sx={{ color: settings.soundEffects ? BRAND.green : 'text.secondary' }}
+            {/* Centre slot: primary nav links, perfectly centred between logo
+                and auth widget on md+. Hidden on small screens (drawer). */}
+            <Box sx={{ flex: '1 1 0', display: { xs: 'none', md: 'flex' }, justifyContent: 'center', alignItems: 'center', gap: 1, minWidth: 0 }}>
+              {primaryNavItems.map((item) => (
+                <Button
+                  key={item.to}
+                  component={Link}
+                  to={item.to}
+                  sx={navLinkSx(item.isActive(location.pathname))}
                 >
-                  {settings.soundEffects ? <SoundOnIcon /> : <SoundOffIcon />}
-                </IconButton>
-              </Tooltip>
-              <Tooltip title={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
-                <IconButton
-                  onClick={toggle}
-                  aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
-                  sx={{ color: 'text.secondary' }}
-                >
-                  {mode === 'light' ? <MoonIcon /> : <SunIcon />}
-                </IconButton>
-              </Tooltip>
+                  {t(item.key)}
+                </Button>
+              ))}
+            </Box>
+
+            {/* Right slot: auth widget only. Sound + theme moved to the
+                top-right utility row above. */}
+            <Box sx={{ flex: '1 1 0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: { xs: 0.5, sm: 1 }, minWidth: 0 }}>
               <AuthButton />
             </Box>
           </Toolbar>
@@ -291,7 +326,9 @@ function App() {
         sx={{
           flex: 1,
           display: 'flex',
-          alignItems: 'flex-start',
+          // Vertically centre the quiz card on the homepage; everywhere else
+          // keep content top-aligned so long pages don't bounce when growing.
+          alignItems: isHome ? 'center' : 'flex-start',
           justifyContent: 'center',
           padding: isDev
             ? { xs: '0.5rem', sm: '0.5rem 1rem' }
@@ -314,6 +351,7 @@ function App() {
               <Route path="/shop" element={<Shop />} />
               <Route path="/play" element={<PlayLanding />} />
               <Route path="/play/:code" element={<PlayMatch />} />
+              <Route path="/challenge" element={<Challenge />} />
               <Route path="/dev" element={<DevPage />} />
             </Routes>
           </Suspense>
