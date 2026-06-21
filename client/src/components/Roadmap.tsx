@@ -668,9 +668,6 @@ function CheckpointNode({
       <Typography variant="caption" sx={{ fontWeight: 700, color: unlocked ? 'text.primary' : 'text.disabled', textAlign: 'center', lineHeight: 1.15, maxWidth: labelWidth }}>
         {cp.title}
       </Typography>
-      <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.66rem' }}>
-        {t('roadmap.checkpointMeta', { count: cp.questionCount, pct: cp.passPct })}
-      </Typography>
     </Box>
   );
 }
