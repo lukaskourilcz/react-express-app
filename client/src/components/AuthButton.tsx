@@ -1,6 +1,6 @@
 import { Avatar, ButtonBase, Box, Menu, MenuItem, Typography, Button, Skeleton, Snackbar, Alert } from '@mui/material';
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
@@ -8,6 +8,16 @@ import { useTotalXp } from '../lib/xp';
 import { useRoadmapProgress } from '../lib/roadmap';
 import { levelForXp, specializationFor, displayTitle } from '../lib/leveling';
 import { useEquippedRingColor } from '../lib/shop';
+
+const secondaryLinkSx = {
+  fontSize: '0.62rem',
+  fontWeight: 600,
+  textTransform: 'uppercase' as const,
+  letterSpacing: '0.3px',
+  color: 'text.secondary',
+  textDecoration: 'none',
+  '&:hover': { color: BRAND.green, textDecoration: 'underline' },
+};
 
 function AuthButton() {
   const { isAuthenticated, isLoading, user, signInWithGoogle, signOut } = useAuth();
@@ -86,47 +96,53 @@ function AuthButton() {
 
   return (
     <>
-      <ButtonBase
-        onClick={handleMenuOpen}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? 'account-menu' : undefined}
-        aria-label={t('auth.accountMenu', { name: displayName })}
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1,
-          padding: '6px 8px',
-          borderRadius: 1,
-          minHeight: 44,
-          '&:hover': { backgroundColor: 'action.hover' },
-          '&:focus-visible': { outline: `2px solid ${BRAND.green}`, outlineOffset: 2 },
-        }}
-      >
-        <Avatar
-          src={profile.picture}
-          alt=""
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <ButtonBase
+          onClick={handleMenuOpen}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={open ? 'account-menu' : undefined}
+          aria-label={t('auth.accountMenu', { name: displayName })}
           sx={{
-            width: 32,
-            height: 32,
-            ...(ringColor ? { border: `2px solid ${ringColor}`, boxShadow: `0 0 0 1.5px ${ringColor}33` } : null),
+            borderRadius: '50%',
+            '&:focus-visible': { outline: `2px solid ${BRAND.green}`, outlineOffset: 2 },
           }}
-        />
+        >
+          <Avatar
+            src={profile.picture}
+            alt=""
+            sx={{
+              width: 34,
+              height: 34,
+              ...(ringColor ? { border: `2px solid ${ringColor}`, boxShadow: `0 0 0 1.5px ${ringColor}33` } : null),
+            }}
+          />
+        </ButtonBase>
         <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
           <Typography
+            onClick={handleMenuOpen}
             variant="body2"
-            sx={{ fontWeight: 500, color: 'text.primary', lineHeight: 1.2, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            sx={{ cursor: 'pointer', fontWeight: 500, color: 'text.primary', lineHeight: 1.2, maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             {displayName}
           </Typography>
           <Typography
             variant="caption"
-            sx={{ color: BRAND.green, fontWeight: 600, lineHeight: 1.2, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            sx={{ color: BRAND.green, fontWeight: 600, lineHeight: 1.2, maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             {rankTitle}
           </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mt: 0.25 }}>
+            <Box component={Link} to="/leaderboard" sx={secondaryLinkSx}>
+              {t('nav.leaderboard')}
+            </Box>
+            <Box component="span" aria-hidden sx={{ color: 'text.disabled', fontSize: '0.6rem' }}>•</Box>
+            <Box component={Link} to="/shop" sx={secondaryLinkSx}>
+              {t('nav.shop')}
+            </Box>
+          </Box>
         </Box>
-      </ButtonBase>
+      </Box>
       <Menu
         id="account-menu"
         anchorEl={anchorEl}

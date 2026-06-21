@@ -113,7 +113,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [snack, setSnack] = useState<string | null>(null);
   const [mode, setMode] = useState<QuizMode>('standard');
   const [reportTarget, setReportTarget] = useState<string | null>(null);
-  const [settings, updateSettings] = useSettings();
+  const [settings] = useSettings();
 
   const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
@@ -285,21 +285,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       playComplete();
       if (data.percentage === 100) recordPerfectQuiz();
 
-      // Award quest XP for the quiz, scaled by each correct answer's difficulty
-      // (practice mode is unscored, so it earns nothing). Local-first: XP accrues
-      // even when signed out and syncs to the account on sign-in.
-      if (!settings.practiceMode) {
-        const diffById = new Map(questions.map((q) => [q.id, q.difficulty]));
-        const gained = computeQuizXp(
-          data.results.map((r) => ({ difficulty: diffById.get(r.questionId) ?? 1, correct: r.isCorrect })),
-        );
-        if (gained > 0) awardQuestXp(gained, 'quiz');
-      }
+      // Award quest XP for the quiz, scaled by each correct answer's difficulty.
+      // Local-first: XP accrues even when signed out and syncs on sign-in.
+      const diffById = new Map(questions.map((q) => [q.id, q.difficulty]));
+      const gained = computeQuizXp(
+        data.results.map((r) => ({ difficulty: diffById.get(r.questionId) ?? 1, correct: r.isCorrect })),
+      );
+      if (gained > 0) awardQuestXp(gained, 'quiz');
 
-      // Practice mode: don't write stats. Daily challenge: write stats.
-      if (settings.practiceMode) {
-        setSnack(t('quiz.practiceMode'));
-      } else if (isAuthenticated && user?.id) {
+      if (isAuthenticated && user?.id) {
         // Pre-build category breakdown once.
         const resultsById = new Map(data.results.map((r) => [r.questionId, r]));
         const byCategory: Record<string, { correct: number; total: number }> = {};
@@ -338,7 +332,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     } finally {
       setSubmitting(false);
     }
-  }, [answers, clearProgress, isAuthenticated, sessionId, submitting, user, settings.practiceMode, lang, t, questions]);
+  }, [answers, clearProgress, isAuthenticated, sessionId, submitting, user, lang, t, questions]);
 
   const handleRestart = () => {
     clearProgress();
@@ -512,7 +506,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         <Typography variant="h5" component="h1" sx={{ mb: 0.5, fontWeight: 600, textAlign: 'center' }}>
           {t('quiz.title')}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3, fontSize: '0.85rem', textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.85rem', textAlign: 'center' }}>
           {t('quiz.subtitle')}
         </Typography>
 
@@ -521,8 +515,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           onClick={startDailyChallenge}
           variant="outlined"
           sx={{
-            mb: 3,
-            py: 1.25,
+            mb: 2,
+            py: 1,
             textTransform: 'none',
             borderColor: BRAND.green,
             color: BRAND.green,
@@ -538,7 +532,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>{t('quiz.dailyMeta')}</span>
         </Button>
 
-        <Box component="fieldset" sx={{ mb: 4, p: 0, border: 0 }}>
+        <Box component="fieldset" sx={{ mb: 2.5, p: 0, border: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
             <Typography component="legend" variant="overline" color="text.secondary" sx={{ p: 0 }}>
               {t('quiz.categories')}
@@ -551,13 +545,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               {isAllSelected ? t('quiz.deselectAll') : t('quiz.selectAll')}
             </Button>
           </Box>
-          <Box role="group" aria-label={t('quiz.categoriesAria')} sx={{ display: 'flex', flexWrap: 'wrap', gap: { xs: '6px', sm: '10px' }, justifyContent: 'center' }}>
+          <Box role="group" aria-label={t('quiz.categoriesAria')} sx={{ display: 'flex', flexWrap: 'wrap', gap: '5px', justifyContent: 'center' }}>
             {visibleCategoryOptions.map((cat) => {
               const selected = selectedCategories.includes(cat.value);
               return (
                 <Chip
                   key={cat.value}
                   label={cat.label}
+                  size="small"
                   onClick={() => handleCategoryToggle(cat.value)}
                   role="checkbox"
                   aria-checked={selected}
@@ -574,11 +569,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                     color: selected ? cat.color : 'text.secondary',
                     border: selected ? `2px solid ${cat.color}` : '1px solid',
                     borderColor: selected ? cat.color : 'divider',
-                    borderLeft: `4px solid ${cat.color}`,
+                    borderLeft: `3px solid ${cat.color}`,
                     borderRadius: 1,
                     fontWeight: selected ? 600 : 500,
-                    fontSize: '0.85rem',
-                    height: 36,
+                    fontSize: '0.72rem',
+                    height: 26,
+                    '& .MuiChip-label': { px: 0.9 },
                     '&:hover': { backgroundColor: 'action.hover' },
                   }}
                 />
@@ -593,8 +589,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         </Box>
 
         {selectedCategories.length > 0 && (
-          <Box sx={{ mb: 4, p: 1.5, backgroundColor: 'action.hover', borderRadius: 1 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+          <Box sx={{ mb: 2.5, p: 1, backgroundColor: 'action.hover', borderRadius: 1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
               {t('quiz.selectedCount', { count: selectedCategories.length, total: visibleCategories.length })}
             </Typography>
             <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
@@ -619,73 +615,67 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           </Box>
         )}
 
-        <Box component="fieldset" sx={{ mb: 4, p: 0, border: 0 }}>
-          <Typography component="legend" variant="overline" color="text.secondary" sx={{ p: 0, mb: 1.5, display: 'block' }}>
-            {t('quiz.questionsLegend')}
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-            {config.quiz.countOptions.map((count) => (
-              <Button
-                key={count}
-                variant="outlined"
-                onClick={() => setQuestionCount(count)}
-                aria-pressed={questionCount === count}
-                aria-label={t('quiz.countQuestionsAria', { count })}
-                sx={{
-                  minWidth: 44,
-                  minHeight: 44,
-                  fontWeight: 600,
-                  fontSize: '0.9rem',
-                  color: questionCount === count ? BRAND.green : 'text.secondary',
-                  border: questionCount === count ? `2px solid ${BRAND.green}` : '1px solid',
-                  borderColor: questionCount === count ? BRAND.green : 'divider',
-                }}
-              >
-                {count}
-              </Button>
-            ))}
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2.5, sm: 3 }, mb: 2.5 }}>
+          <Box component="fieldset" sx={{ p: 0, m: 0, border: 0 }}>
+            <Typography component="legend" variant="overline" color="text.secondary" sx={{ p: 0, mb: 1, display: 'block' }}>
+              {t('quiz.questionsLegend')}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+              {config.quiz.countOptions.map((count) => (
+                <Button
+                  key={count}
+                  variant="outlined"
+                  onClick={() => setQuestionCount(count)}
+                  aria-pressed={questionCount === count}
+                  aria-label={t('quiz.countQuestionsAria', { count })}
+                  sx={{
+                    minWidth: 42,
+                    minHeight: 40,
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    color: questionCount === count ? BRAND.green : 'text.secondary',
+                    border: questionCount === count ? `2px solid ${BRAND.green}` : '1px solid',
+                    borderColor: questionCount === count ? BRAND.green : 'divider',
+                  }}
+                >
+                  {count}
+                </Button>
+              ))}
+            </Box>
           </Box>
-        </Box>
 
-        <Box component="fieldset" sx={{ mb: 4, p: 0, border: 0 }}>
-          <Typography component="legend" variant="overline" color="text.secondary" sx={{ p: 0, mb: 1.5, display: 'block' }}>
-            {t('quiz.difficulty')}
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-            {DIFFICULTY_VALUES.map((value) => {
-              const label = t(`difficulty.${value}` as TranslationKey);
-              const tip = t(`difficulty.${value}.tip` as TranslationKey);
-              return (
-                <Tooltip key={value} title={tip} arrow placement="top">
-                  <Button
-                    variant="outlined"
-                    onClick={() => setDifficultyMode(value)}
-                    aria-pressed={difficultyMode === value}
-                    aria-label={t('quiz.difficultyAria', { label })}
-                    sx={{
-                      fontWeight: 500,
-                      fontSize: '0.85rem',
-                      minHeight: 44,
-                      textTransform: 'none',
-                      color: difficultyMode === value ? BRAND.green : 'text.secondary',
-                      border: difficultyMode === value ? `2px solid ${BRAND.green}` : '1px solid',
-                      borderColor: difficultyMode === value ? BRAND.green : 'divider',
-                    }}
-                  >
-                    {label}
-                  </Button>
-                </Tooltip>
-              );
-            })}
+          <Box component="fieldset" sx={{ p: 0, m: 0, border: 0, flex: 1 }}>
+            <Typography component="legend" variant="overline" color="text.secondary" sx={{ p: 0, mb: 1, display: 'block' }}>
+              {t('quiz.difficulty')}
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+              {DIFFICULTY_VALUES.map((value) => {
+                const label = t(`difficulty.${value}` as TranslationKey);
+                const tip = t(`difficulty.${value}.tip` as TranslationKey);
+                return (
+                  <Tooltip key={value} title={tip} arrow placement="top">
+                    <Button
+                      variant="outlined"
+                      onClick={() => setDifficultyMode(value)}
+                      aria-pressed={difficultyMode === value}
+                      aria-label={t('quiz.difficultyAria', { label })}
+                      sx={{
+                        fontWeight: 500,
+                        fontSize: '0.85rem',
+                        minHeight: 40,
+                        textTransform: 'none',
+                        color: difficultyMode === value ? BRAND.green : 'text.secondary',
+                        border: difficultyMode === value ? `2px solid ${BRAND.green}` : '1px solid',
+                        borderColor: difficultyMode === value ? BRAND.green : 'divider',
+                      }}
+                    >
+                      {label}
+                    </Button>
+                  </Tooltip>
+                );
+              })}
+            </Box>
           </Box>
-          <Typography
-            aria-live="polite"
-            variant="caption"
-            color="text.secondary"
-            sx={{ mt: 1, display: 'block' }}
-          >
-            {t(`difficulty.${difficultyMode}.tip` as TranslationKey)}
-          </Typography>
         </Box>
 
         <Button
@@ -706,21 +696,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         >
           {t('quiz.startQuiz')}
         </Button>
-
-        <Box sx={{ mt: 3, display: 'flex', gap: 2, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-          <ToggleRow
-            label={t('quiz.practiceLabel')}
-            description={t('quiz.practiceDesc')}
-            checked={settings.practiceMode}
-            onChange={(v) => updateSettings({ practiceMode: v })}
-          />
-          <ToggleRow
-            label={t('quiz.soundLabel')}
-            description={t('quiz.soundDesc')}
-            checked={settings.soundEffects}
-            onChange={(v) => updateSettings({ soundEffects: v })}
-          />
-        </Box>
 
         <Snackbar
           open={!!snack}
@@ -1135,48 +1110,5 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     </>
   );
 }
-
-const ToggleRow = ({
-  label,
-  description,
-  checked,
-  onChange,
-}: {
-  label: string;
-  description: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) => (
-  <Box
-    component="label"
-    sx={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 1.5,
-      p: 1.25,
-      flex: '1 1 200px',
-      border: '1px solid',
-      borderColor: checked ? BRAND.green : 'divider',
-      borderRadius: 1,
-      cursor: 'pointer',
-      backgroundColor: checked ? 'rgba(45,122,45,0.04)' : 'transparent',
-    }}
-  >
-    <input
-      type="checkbox"
-      checked={checked}
-      onChange={(e) => onChange(e.target.checked)}
-      style={{ accentColor: BRAND.green }}
-    />
-    <Box>
-      <Typography variant="body2" sx={{ fontWeight: 600 }}>
-        {label}
-      </Typography>
-      <Typography variant="caption" color="text.secondary">
-        {description}
-      </Typography>
-    </Box>
-  </Box>
-);
 
 export default Quiz;

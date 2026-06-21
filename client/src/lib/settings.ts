@@ -2,14 +2,12 @@ import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 
 export interface AppSettings {
-  practiceMode: boolean;
   soundEffects: boolean;
 }
 
 const KEY = 'devquiz:settings';
 
 const defaults: AppSettings = {
-  practiceMode: false,
   soundEffects: false,
 };
 

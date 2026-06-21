@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider, Snackbar, Alert } from '@mui/material';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import AuthButton from './components/AuthButton';
@@ -15,6 +15,7 @@ import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import { useAuth } from './lib/auth';
 import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
+import { useSettings } from './lib/settings';
 
 const Quiz = lazy(() => import('./components/Quiz'));
 const Roadmap = lazy(() => import('./components/Roadmap'));
@@ -38,18 +39,6 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/play': 'title.play',
 };
 
-const InstagramIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
-  </svg>
-);
-
-const GitHubIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-  </svg>
-);
-
 const SunIcon = () => (
   <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="4" />
@@ -60,6 +49,21 @@ const SunIcon = () => (
 const MoonIcon = () => (
   <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+  </svg>
+);
+
+const SoundOnIcon = () => (
+  <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 5 6 9H2v6h4l5 4V5z" />
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" />
+  </svg>
+);
+
+const SoundOffIcon = () => (
+  <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 5 6 9H2v6h4l5 4V5z" />
+    <line x1="23" y1="9" x2="17" y2="15" />
+    <line x1="17" y1="9" x2="23" y2="15" />
   </svg>
 );
 
@@ -100,6 +104,7 @@ function App() {
   const [quizActive, setQuizActive] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { mode, toggle } = useColorMode();
+  const [settings, updateSettings] = useSettings();
   const { user } = useAuth();
   const [signupBonusOpen, setSignupBonusOpen] = useState(false);
 
@@ -129,6 +134,10 @@ function App() {
 
   // Nav items for features that are currently enabled in /dev → Settings.
   const navItems = NAV_ITEMS.filter((item) => !item.feature || config.features[item.feature]);
+  // Leaderboard & Shop aren't learning surfaces — they live as small links under
+  // the profile in the account widget, so keep them out of the desktop top nav.
+  const SECONDARY_ROUTES = ['/leaderboard', '/shop'];
+  const primaryNavItems = navItems.filter((item) => !SECONDARY_ROUTES.includes(item.to));
 
   useEffect(() => {
     const titleKey = ROUTE_TITLE_KEYS[location.pathname];
@@ -145,6 +154,16 @@ function App() {
 
   // The /dev console is a standalone admin surface — no app chrome, full width.
   const isDev = location.pathname.startsWith('/dev');
+  // The home screen (quiz setup) gets tighter padding so it fits one viewport.
+  const isHome = location.pathname === '/';
+
+  // Two shark fins on the footer ocean line, at random (distinct) spots each
+  // page load — one in the left half, one in the right, order shuffled.
+  const finPositions = useMemo<number[]>(() => {
+    const left = 8 + Math.random() * 34; // 8–42%
+    const right = 56 + Math.random() * 36; // 56–92%
+    return Math.random() < 0.5 ? [left, right] : [right, left];
+  }, []);
   const showChrome = !isDev && !(quizActive && location.pathname === '/');
   const navLinkSx = (isActive: boolean) => ({
     color: isActive ? BRAND.green : 'text.secondary',
@@ -202,7 +221,7 @@ function App() {
 
             <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
               <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', gap: 1 }}>
-                {navItems.map((item) => (
+                {primaryNavItems.map((item) => (
                   <Button
                     key={item.to}
                     component={Link}
@@ -213,6 +232,16 @@ function App() {
                   </Button>
                 ))}
               </Box>
+              <Tooltip title={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}>
+                <IconButton
+                  onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
+                  aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
+                  aria-pressed={settings.soundEffects}
+                  sx={{ color: settings.soundEffects ? BRAND.green : 'text.secondary' }}
+                >
+                  {settings.soundEffects ? <SoundOnIcon /> : <SoundOffIcon />}
+                </IconButton>
+              </Tooltip>
               <Tooltip title={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
                 <IconButton
                   onClick={toggle}
@@ -264,7 +293,11 @@ function App() {
           display: 'flex',
           alignItems: 'flex-start',
           justifyContent: 'center',
-          padding: isDev ? { xs: '0.5rem', sm: '0.5rem 1rem' } : { xs: '1.25rem 1rem', sm: '3rem 1.5rem' },
+          padding: isDev
+            ? { xs: '0.5rem', sm: '0.5rem 1rem' }
+            : isHome
+              ? { xs: '1rem', sm: '1.25rem 1.5rem' }
+              : { xs: '1.25rem 1rem', sm: '3rem 1.5rem' },
           boxSizing: 'border-box',
           outline: 'none',
         }}
@@ -290,43 +323,19 @@ function App() {
       {showChrome && (
         <Box
           component="footer"
-          sx={{ position: 'relative', py: 0.75, textAlign: 'center', borderTop: '1px solid', borderColor: 'divider', backgroundColor: 'background.paper' }}
+          aria-hidden
+          sx={{ position: 'relative', width: '100%', height: 30, mt: 'auto', pointerEvents: 'none' }}
         >
-          {/* devShark flourish: a wavy "ocean surface" running in from the left
-              edge with a dorsal fin breaking through it ~40% across. Decorative. */}
-          <Box aria-hidden sx={{ position: 'absolute', top: 0, left: 0, right: 0, pointerEvents: 'none' }}>
-            <Box sx={{ position: 'absolute', top: -3, left: 0, width: '46%' }}>
-              <Waterline />
-            </Box>
-            <Box sx={{ position: 'absolute', top: 0, left: '40%', transform: 'translate(-50%, -100%)' }}>
+          {/* devShark ocean: a full-width wavy surface pinned to the very bottom,
+              with two dorsal fins surfacing at random spots each page load. */}
+          <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 8 }}>
+            <Waterline />
+          </Box>
+          {finPositions.map((leftPct, i) => (
+            <Box key={i} sx={{ position: 'absolute', bottom: 8, left: `${leftPct}%`, transform: 'translate(-50%, -100%)' }}>
               <SwimmingFin size={20} />
             </Box>
-          </Box>
-
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.5 }}>
-            <IconButton
-              component="a"
-              size="small"
-              href="https://instagram.com/lukasbarsinbars"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Instagram (opens in new tab)"
-              sx={{ p: 0.5, color: 'text.secondary', '&:hover': { color: '#E4405F' } }}
-            >
-              <InstagramIcon />
-            </IconButton>
-            <IconButton
-              component="a"
-              size="small"
-              href="https://github.com/lukaskourilcz"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="GitHub (opens in new tab)"
-              sx={{ p: 0.5, color: 'text.secondary', '&:hover': { color: 'text.primary' } }}
-            >
-              <GitHubIcon />
-            </IconButton>
-          </Box>
+          ))}
         </Box>
       )}
 
