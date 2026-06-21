@@ -18,12 +18,14 @@ import { QUESTIONS_PER_LEVEL, ROADMAP_LEVELS, difficultyForLevel } from './roadm
 export type RoadmapTopic =
   | 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs'
   | 'html' | 'css' | 'git' | 'dsa' | 'algorithms'
-  | 'abbreviations' | 'general' | 'ai' | 'rhf-zod' | 'cool-stuff';
+  | 'abbreviations' | 'general' | 'ai' | 'rhf-zod' | 'cool-stuff'
+  | 'databases' | 'system-design' | 'testing' | 'devops' | 'security';
 
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
   'html', 'css', 'git', 'dsa', 'algorithms',
   'abbreviations', 'general', 'ai', 'rhf-zod', 'cool-stuff',
+  'databases', 'system-design', 'testing', 'devops', 'security',
 ];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
@@ -53,6 +55,11 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   ai: 'rm-ai',
   'rhf-zod': 'rm-rhf',
   'cool-stuff': 'rm-cool',
+  databases: 'rm-db',
+  'system-design': 'rm-sysdesign',
+  testing: 'rm-testing',
+  devops: 'rm-devops',
+  security: 'rm-security',
 };
 
 // Level titles per topic, in increasing difficulty. Index 0 is level 1. The
@@ -140,6 +147,31 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'JavaScript: Birth & Names', 'JavaScript: Weird Parts', 'Birth of the Web', 'Internet Firsts', 'Famous Software Disasters',
     'The Original Bug', 'Worms, Viruses & Spam', 'Programming Pioneers', 'Language Naming & Lore', 'Esoteric Languages',
     'Mascots, Logos & Symbols', 'Hardware Marvels & Oddities', 'Gaming & Easter Eggs', 'Bizarre Tech Tales', 'Tech Trivia Mastery',
+  ],
+  databases: [
+    'What is a Database?', 'Relational Basics', 'SQL SELECT Basics', 'Filtering & Sorting', 'Aggregations & GROUP BY',
+    'Joins', 'Schema Design & Normalization', 'Keys & Constraints', 'Data Types & NULL', 'Indexing',
+    'Transactions & ACID', 'Isolation & Locking', 'The N+1 Problem', 'NoSQL & When to Use It', 'Performance & Scaling',
+  ],
+  'system-design': [
+    'System Design Basics', 'Client–Server & APIs', 'Scaling: Vertical vs Horizontal', 'Load Balancing', 'Caching',
+    'Databases at Scale', 'Sharding & Partitioning', 'Message Queues & Async', 'Consistency & CAP', 'Rate Limiting',
+    'CDNs & Edge', 'Failure Modes & Resilience', 'Observability & Monitoring', 'Trade-offs & Estimation', 'Designing Real Systems',
+  ],
+  testing: [
+    'Why Test?', 'The Testing Pyramid', 'Unit Tests', 'Assertions & Matchers', 'Test Structure (AAA)',
+    'Mocks, Stubs & Spies', 'Integration Tests', 'End-to-End Tests', 'Testing Async Code', 'Test Doubles & Fakes',
+    'Coverage & What to Test', 'TDD', 'Flaky Tests & Isolation', 'Testing in CI', 'Testing Best Practices',
+  ],
+  devops: [
+    'What is DevOps?', 'Version Control & Git Flow', 'CI Basics', 'CD & Deployment', 'Build Pipelines',
+    'Containers & Docker', 'Container Orchestration', 'Infrastructure as Code', 'Cloud Fundamentals', 'Deploying to the Cloud',
+    'Environments & Config', 'Observability & Logging', 'Monitoring & Alerting', 'Secrets & Security in CI', 'Reliability & SRE',
+  ],
+  security: [
+    'Security Fundamentals', 'Authentication', 'Authorization', 'Passwords & Hashing', 'Sessions & Tokens (JWT)',
+    'HTTPS & TLS', 'Injection (SQLi)', 'XSS', 'CSRF', 'OWASP Top 10',
+    'Secrets Management', 'Secure Defaults & Headers', 'Dependency & Supply Chain', 'Data Protection & Privacy', 'Secure Design & Threat Modeling',
   ],
 };
 

@@ -49,6 +49,7 @@ const TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
   'html', 'css', 'git', 'dsa', 'algorithms',
   'abbreviations', 'general', 'ai', 'rhf-zod', 'cool-stuff',
+  'databases', 'system-design', 'testing', 'devops', 'security',
 ];
 const TOPIC_KEY = 'devquiz:roadmap:topic';
 const CHECKPOINT_GOLD = '#ffb300';

@@ -23,6 +23,11 @@ import { generalSeeds } from './roadmap-questions-general';
 import { aiSeeds } from './roadmap-questions-ai';
 import { rhfZodSeeds } from './roadmap-questions-rhf-zod';
 import { coolStuffSeeds } from './roadmap-questions-cool-stuff';
+import { databasesSeeds } from './roadmap-questions-databases';
+import { systemDesignSeeds } from './roadmap-questions-system-design';
+import { testingSeeds } from './roadmap-questions-testing';
+import { devopsSeeds } from './roadmap-questions-devops';
+import { securitySeeds } from './roadmap-questions-security';
 
 // Interleave two equal-length seed lists in blocks of HALF_LEVEL, so each level
 // ends up with its 4 A-questions followed by its 4 B-questions.
@@ -57,3 +62,10 @@ export const roadmapAiQuestions = buildRoadmap('rm-ai', 'ai', aiSeeds);
 export const roadmapRhfZodQuestions = buildRoadmap('rm-rhf', 'rhf-zod', rhfZodSeeds);
 // Cool Stuff (dev-world fun facts) runs 15 levels (120 questions).
 export const roadmapCoolStuffQuestions = buildRoadmap('rm-cool', 'cool-stuff', coolStuffSeeds);
+// "Beyond the basics" career topics, each 15 levels (120 questions), single
+// 8-per-level lists built directly.
+export const roadmapDatabasesQuestions = buildRoadmap('rm-db', 'databases', databasesSeeds);
+export const roadmapSystemDesignQuestions = buildRoadmap('rm-sysdesign', 'system-design', systemDesignSeeds);
+export const roadmapTestingQuestions = buildRoadmap('rm-testing', 'testing', testingSeeds);
+export const roadmapDevopsQuestions = buildRoadmap('rm-devops', 'devops', devopsSeeds);
+export const roadmapSecurityQuestions = buildRoadmap('rm-security', 'security', securitySeeds);

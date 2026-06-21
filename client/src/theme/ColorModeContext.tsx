@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ThemeProvider, CssBaseline } from '@mui/material';
+import { ThemeProvider, CssBaseline, GlobalStyles } from '@mui/material';
 import { type PaletteMode } from '@mui/material';
 import { createAppTheme } from './MuiTheme';
 import { readString, writeString } from '../lib/storage';
@@ -43,6 +43,13 @@ export function ColorModeProvider({ children }: { children: ReactNode }) {
     <ColorModeContext.Provider value={value}>
       <ThemeProvider theme={theme}>
         <CssBaseline />
+        {/* Never allow the page to exceed the viewport width (no horizontal scroll). */}
+        <GlobalStyles
+          styles={{
+            'html, body, #root': { maxWidth: '100vw', overflowX: 'hidden' },
+            '*, *::before, *::after': { boxSizing: 'border-box' },
+          }}
+        />
         {children}
       </ThemeProvider>
     </ColorModeContext.Provider>

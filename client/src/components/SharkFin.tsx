@@ -48,22 +48,38 @@ export function SwimmingFin({ size = 22, color = BRAND.green }: FinProps) {
   );
 }
 
-/** A short wavy "ocean surface" line in brand green. Decorative. */
-export function Waterline({ width = 72, color = BRAND.green }: { width?: number; color?: string }) {
+/**
+ * A wavy "ocean surface" line in brand green that stretches to fill its parent's
+ * width (set the width on the wrapping Box). Decorative. The stroke stays a
+ * constant thickness regardless of how far it's stretched.
+ */
+export function Waterline({ color = BRAND.green }: { color?: string }) {
+  // Generate a continuous wave across the viewBox: an initial quadratic hump,
+  // then smooth reflections (T) that alternate up/down.
+  const span = 600;
+  const count = 30;
+  const step = span / count;
+  const mid = 5;
+  const amp = 3;
+  let d = `M0 ${mid} Q ${step / 2} ${mid - amp} ${step} ${mid}`;
+  for (let k = 2; k <= count; k++) d += ` T ${k * step} ${mid}`;
+
   return (
     <Box
       component="svg"
       aria-hidden="true"
-      viewBox="0 0 72 8"
-      sx={{ width, height: width / 9, display: 'block', overflow: 'visible' }}
+      viewBox={`0 0 ${span} 10`}
+      preserveAspectRatio="none"
+      sx={{ width: '100%', height: 10, display: 'block' }}
     >
       <path
-        d="M0 4 Q 9 0 18 4 T 36 4 T 54 4 T 72 4"
+        d={d}
         fill="none"
         stroke={color}
-        strokeWidth="2"
+        strokeWidth={2}
         strokeLinecap="round"
-        opacity="0.65"
+        opacity={0.65}
+        vectorEffect="non-scaling-stroke"
       />
     </Box>
   );
