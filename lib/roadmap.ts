@@ -18,12 +18,12 @@ import { QUESTIONS_PER_LEVEL, ROADMAP_LEVELS, difficultyForLevel } from './roadm
 export type RoadmapTopic =
   | 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs'
   | 'html' | 'css' | 'git' | 'dsa' | 'algorithms'
-  | 'abbreviations' | 'general';
+  | 'abbreviations' | 'general' | 'ai';
 
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
   'html', 'css', 'git', 'dsa', 'algorithms',
-  'abbreviations', 'general',
+  'abbreviations', 'general', 'ai',
 ];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
@@ -50,6 +50,7 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   algorithms: 'rm-algorithms',
   abbreviations: 'rm-abbr',
   general: 'rm-general',
+  ai: 'rm-ai',
 };
 
 // Level titles per topic, in increasing difficulty. Index 0 is level 1. The
@@ -122,6 +123,12 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'How the Web Works', 'Clients & Servers', 'HTTP Methods', 'HTTP Status Codes', 'URLs & Routing',
     'How Browsers Render', 'How Code Runs', 'How Frameworks Work', 'Frontend vs Backend', 'APIs & Communication',
     'Caching & CDNs', 'Authentication Basics', 'Databases Overview', 'Deployment & Hosting', 'Performance & Optimization',
+  ],
+  ai: [
+    'What is AI?', 'Machine Learning Basics', 'Neural Networks', 'What is an LLM?', 'Tokens & Tokenization',
+    'Training Data & Datasets', 'Transformers & Attention', 'Prompting Basics', 'Context Windows', 'Embeddings & Vectors',
+    'Sampling & Temperature', 'Hallucinations & Limitations', 'Fine-tuning & RAG', 'Using AI APIs', 'Chat Assistants & System Prompts',
+    'Multimodal Models', 'AI Safety & Alignment', 'Bias & Ethics', 'AI Agents & Tool Use', 'The Modern AI Landscape',
   ],
 };
 

@@ -20,6 +20,7 @@ import { dsaSeeds } from './roadmap-questions-dsa';
 import { algorithmsSeeds } from './roadmap-questions-algorithms';
 import { abbreviationsSeeds } from './roadmap-questions-abbreviations';
 import { generalSeeds } from './roadmap-questions-general';
+import { aiSeeds } from './roadmap-questions-ai';
 
 // Interleave two equal-length seed lists in blocks of HALF_LEVEL, so each level
 // ends up with its 4 A-questions followed by its 4 B-questions.
@@ -48,3 +49,5 @@ export const roadmapDsaQuestions = buildRoadmap('rm-dsa', 'dsa', dsaSeeds);
 export const roadmapAlgorithmsQuestions = buildRoadmap('rm-algorithms', 'algorithms', algorithmsSeeds);
 export const roadmapAbbreviationsQuestions = buildRoadmap('rm-abbr', 'abbreviations', abbreviationsSeeds);
 export const roadmapGeneralQuestions = buildRoadmap('rm-general', 'general', generalSeeds);
+// AI & LLMs runs 20 levels (160 questions), authored as a single 8-per-level list.
+export const roadmapAiQuestions = buildRoadmap('rm-ai', 'ai', aiSeeds);

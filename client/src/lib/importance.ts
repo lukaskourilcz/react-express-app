@@ -1,13 +1,16 @@
-// Importance scoring — "how relevant is this question to modern web development?"
+// Importance scoring — "how important is this question for a student to know?"
 //
-// Every question gets a deterministic 1–10 score derived from transparent
-// signals (category, difficulty, topic tags) rather than a hand-maintained
-// number per question, so the ~2,800-question bank stays in sync automatically
-// and the heuristic is easy to tune in one place. Higher = more essential to
-// day-to-day web work; low scores surface "filler" trivia (obscure acronyms,
-// brain-teaser puzzles, deprecated/edge-case gotchas).
+// The source of truth is a per-question score (1–10) hand-judged for every
+// question in the bank, stored in question-importance.ts. computeImportance()
+// looks a question up by id; the category/difficulty/tag heuristic below is only
+// a fallback for questions with no hand-assigned score (e.g. brand-new custom
+// questions created in /dev). Higher = more essential to day-to-day web work;
+// low scores are "filler" trivia (obscure acronyms, puzzles, contrived gotchas).
+
+import { QUESTION_IMPORTANCE } from './question-importance';
 
 export interface ScorableQuestion {
+  id?: string;
   category: string;
   difficulty: number;
   tags: string[];
@@ -56,12 +59,22 @@ function tagAdjustment(tags: string[]): number {
   return adj;
 }
 
-/** Deterministic importance score in the 1–10 range. */
-export function computeImportance(q: ScorableQuestion): number {
+/** Heuristic fallback for questions with no hand-assigned score. */
+function heuristicImportance(q: ScorableQuestion): number {
   const base = CATEGORY_WEIGHT[q.category] ?? DEFAULT_CATEGORY_WEIGHT;
   const diff = DIFFICULTY_ADJUST[Math.round(q.difficulty)] ?? 0;
   const score = base + diff + tagAdjustment(q.tags);
   return clamp(Math.round(score), 1, 10);
+}
+
+/**
+ * Importance score (1–10) for a question. Uses the hand-judged per-question
+ * score when available (the common case for the built-in bank), falling back to
+ * the heuristic for questions not in the map (e.g. newly created custom ones).
+ */
+export function computeImportance(q: ScorableQuestion): number {
+  if (q.id && QUESTION_IMPORTANCE[q.id] != null) return QUESTION_IMPORTANCE[q.id];
+  return heuristicImportance(q);
 }
 
 /** Coarse band used for filtering/labelling in the dev console. */

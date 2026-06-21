@@ -21,7 +21,7 @@ const CACHE_TTL_MS = 15_000;
 export const KNOWN_CATEGORIES: CategoryType[] = [
   'html', 'css', 'javascript', 'typescript', 'react',
   'nextjs', 'nodejs', 'git', 'dsa', 'algorithms',
-  'abbreviations', 'general',
+  'abbreviations', 'general', 'ai',
   'dev-world', 'custom', 'code-snippets', 'apt',
 ];
 
