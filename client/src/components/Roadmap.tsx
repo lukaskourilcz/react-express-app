@@ -409,7 +409,7 @@ function Roadmap() {
       </Typography>
 
       {/* Topic selector */}
-      <Box role="tablist" aria-label={t('roadmap.topicsAria')} sx={{ display: 'flex', gap: 1, justifyContent: 'center', mb: 3, flexWrap: 'wrap' }}>
+      <Box role="tablist" aria-label={t('roadmap.topicsAria')} sx={{ display: 'flex', gap: 0.75, justifyContent: 'center', mb: 2.5, flexWrap: 'wrap' }}>
         {TOPICS.map((value) => {
           const selected = topic === value;
           const color = getCategoryHexColor(value);
@@ -421,10 +421,13 @@ function Roadmap() {
               onClick={() => selectTopic(value)}
               sx={{
                 textTransform: 'none',
-                fontWeight: 700,
-                px: 2.5,
-                py: 1,
+                fontWeight: 600,
+                fontSize: '0.78rem',
+                minWidth: 'auto',
+                px: 1.4,
+                py: 0.4,
                 borderRadius: 999,
+                lineHeight: 1.3,
                 transition: 'all 0.15s ease',
                 color: selected ? onCategoryColorText(value) : 'text.secondary',
                 backgroundColor: selected ? color : 'background.paper',
