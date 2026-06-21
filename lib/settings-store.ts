@@ -46,9 +46,17 @@ export interface GameSettings {
     leaderboard: boolean;
     flashcards: boolean;
   };
+  leveling: {
+    /** Total XP required to reach each career rank (ascending; first is 0). */
+    rankThresholds: number[];
+  };
   /** Email whose private categories (custom, apt) are visible. */
   ownerEmail: string;
 }
+
+// Default career-rank XP thresholds (10 ranks, Superjunior → Architect). Kept in
+// sync with client/src/lib/leveling.ts DEFAULT_RANK_THRESHOLDS.
+const DEFAULT_RANK_THRESHOLDS = [0, 2000, 6000, 14000, 26000, 44000, 68000, 100000, 144000, 200000];
 
 export const DEFAULT_SETTINGS: GameSettings = {
   quiz: {
@@ -73,6 +81,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
     leaderboard: true,
     flashcards: true,
   },
+  leveling: { rankThresholds: DEFAULT_RANK_THRESHOLDS },
   ownerEmail: (process.env.OWNER_EMAIL || 'kouril.lukas@gmail.com').toLowerCase(),
 };
 
@@ -93,6 +102,21 @@ const cleanIntList = (v: unknown, min: number, max: number, fallback: number[]):
 };
 
 const bool = (v: unknown, fallback: boolean): boolean => (typeof v === 'boolean' ? v : fallback);
+
+// Career-rank XP thresholds: must be the same length as the default, all
+// non-negative integers, strictly ascending, and start at 0. Otherwise fall back.
+const cleanThresholds = (v: unknown, fallback: number[]): number[] => {
+  if (!Array.isArray(v) || v.length !== fallback.length) return fallback;
+  const out: number[] = [];
+  for (let i = 0; i < v.length; i++) {
+    const n = typeof v[i] === 'number' && Number.isFinite(v[i]) ? Math.round(v[i] as number) : NaN;
+    if (Number.isNaN(n) || n < 0) return fallback;
+    if (i === 0 && n !== 0) return fallback;
+    if (i > 0 && n <= out[i - 1]) return fallback;
+    out.push(n);
+  }
+  return out;
+};
 
 // Coerce arbitrary stored/posted JSON into a valid GameSettings, clamping every
 // field so a bad value can never break the endpoints that consume it.
@@ -128,6 +152,12 @@ export function normalizeSettings(raw: unknown): GameSettings {
       multiplayer: bool(features.multiplayer, d.features.multiplayer),
       leaderboard: bool(features.leaderboard, d.features.leaderboard),
       flashcards: bool(features.flashcards, d.features.flashcards),
+    },
+    leveling: {
+      rankThresholds: cleanThresholds(
+        (r.leveling as Record<string, unknown> | undefined)?.rankThresholds,
+        d.leveling.rankThresholds,
+      ),
     },
     ownerEmail:
       typeof r.ownerEmail === 'string' && r.ownerEmail.includes('@')

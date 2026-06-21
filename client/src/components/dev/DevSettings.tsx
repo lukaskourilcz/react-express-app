@@ -17,6 +17,7 @@ import { useReloadKey, useCancellableEffect } from '../../lib/hooks';
 import { brandButtonSx } from '../../theme/MuiTheme';
 import { friendlyError } from '../../lib/api';
 import { getAdminSettings, saveAdminSettings, type GameSettings } from '../../lib/devApi';
+import { RANK_TITLES, setRankThresholds } from '../../lib/leveling';
 
 const DIFFICULTY_MODES = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
@@ -50,6 +51,8 @@ interface FormState {
   featMulti: boolean;
   featLeader: boolean;
   featFlash: boolean;
+  /** XP threshold per career rank, kept as raw strings while editing. */
+  levelThresholds: string[];
   ownerEmail: string;
 }
 
@@ -70,6 +73,7 @@ const toForm = (s: GameSettings): FormState => ({
   featMulti: s.features.multiplayer,
   featLeader: s.features.leaderboard,
   featFlash: s.features.flashcards,
+  levelThresholds: s.leveling.rankThresholds.map(String),
   ownerEmail: s.ownerEmail,
 });
 
@@ -95,6 +99,9 @@ const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
     multiplayer: f.featMulti,
     leaderboard: f.featLeader,
     flashcards: f.featFlash,
+  },
+  leveling: {
+    rankThresholds: f.levelThresholds.map((v, i) => parseNum(v, base.leveling.rankThresholds[i] ?? 0)),
   },
   ownerEmail: f.ownerEmail.trim(),
 });
@@ -133,12 +140,23 @@ export default function DevSettings() {
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => (f ? { ...f, [key]: value } : f));
 
+  const setThreshold = (i: number, value: string) =>
+    setForm((f) => {
+      if (!f) return f;
+      const next = [...f.levelThresholds];
+      next[i] = value;
+      return { ...f, levelThresholds: next };
+    });
+
   const handleSave = async () => {
     setSaving(true);
     try {
       const { settings } = await saveAdminSettings(toSettings(form, base));
       setBase(settings);
       setForm(toForm(settings)); // reflect server-side clamping
+      // Apply the (validated) thresholds to the live leveling module so ranks
+      // update across the app without a reload.
+      setRankThresholds(settings.leveling.rankThresholds);
       setSnack('Settings saved');
     } catch (err) {
       setSnack(friendlyError(err));
@@ -246,6 +264,25 @@ export default function DevSettings() {
           control={<Switch checked={form.featFlash} onChange={(e) => set('featFlash', e.target.checked)} />}
           label="Flashcards"
         />
+      </Section>
+
+      <Section title="Career levels — total XP to reach each rank">
+        <Typography variant="caption" color="text.secondary" sx={{ width: '100%', mb: 0.5 }}>
+          Must be strictly increasing and start at 0; invalid values revert to the defaults on save.
+        </Typography>
+        {RANK_TITLES.map((title, i) => (
+          <TextField
+            key={title}
+            type="number"
+            size="small"
+            label={`${i + 1}. ${title}`}
+            value={form.levelThresholds[i] ?? ''}
+            onChange={(e) => setThreshold(i, e.target.value)}
+            disabled={i === 0}
+            helperText={i === 0 ? 'Always 0' : undefined}
+            sx={{ width: 190 }}
+          />
+        ))}
       </Section>
 
       <Section title="Owner">

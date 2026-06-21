@@ -23,7 +23,7 @@ export const KNOWN_CATEGORIES: CategoryType[] = [
   'html', 'css', 'javascript', 'typescript', 'react',
   'nextjs', 'nodejs', 'git', 'dsa', 'algorithms',
   'abbreviations', 'general', 'ai',
-  'dev-world', 'custom', 'code-snippets', 'apt',
+  'dev-world', 'code-snippets',
 ];
 
 export interface QuestionEditRow {
@@ -134,7 +134,7 @@ function mergeRow(row: QuestionEditRow, base?: Question): Question {
     question: row.question ?? base?.question ?? '',
     options: row.options ?? base?.options ?? [],
     correctAnswer: row.correct_index ?? base?.correctAnswer ?? 0,
-    category: (row.category ?? base?.category ?? 'custom') as CategoryType,
+    category: (row.category ?? base?.category ?? 'general') as CategoryType,
     explanation: row.explanation ?? base?.explanation ?? '',
     difficulty: clampDifficulty(row.difficulty ?? base?.difficulty ?? 1),
     csTranslation,

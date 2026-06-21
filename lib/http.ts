@@ -99,8 +99,7 @@ export async function requireAuthSub(
   }
 }
 
-// Categories that count toward stats and leaderboards. This is every category
-// except the owner-only "apt" set, which never appears on public boards.
+// Categories that count toward stats and leaderboards.
 export const STATS_CATEGORIES = new Set([
   'html',
   'css',
@@ -115,6 +114,5 @@ export const STATS_CATEGORIES = new Set([
   'abbreviations',
   'general',
   'dev-world',
-  'custom',
   'code-snippets',
 ]);

@@ -35,9 +35,7 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'devops', label: 'DevOps & Cloud', color: '#2496ed' },
   { value: 'security', label: 'Security', color: '#b02a37' },
   { value: 'dev-world', label: 'Dev World', color: '#8b5cf6' },
-  { value: 'custom', label: 'Custom', color: '#06b6d4' },
   { value: 'code-snippets', label: 'Code Snippets', color: '#ec4899' },
-  { value: 'apt', label: 'APT', color: '#10b981' },
 ];
 
 export const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c]));
@@ -45,7 +43,7 @@ export const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c])
 // Categories shown only to the owner. The server enforces this too; hiding the
 // chips here is UX only (not a security boundary).
 export const OWNER_EMAIL = 'kouril.lukas@gmail.com';
-export const PRIVATE_CATEGORIES: CategoryType[] = ['custom', 'apt'];
+export const PRIVATE_CATEGORIES: CategoryType[] = [];
 
 // Categories whose logo color is light, so they need dark text for contrast.
 const DARK_TEXT_CATEGORIES = new Set(['javascript', 'react']);
