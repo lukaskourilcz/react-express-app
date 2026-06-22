@@ -89,6 +89,25 @@ const check = (cond: boolean, msg: string) => {
   const badNodeCp = await call({ topic: 'nodejs', checkpoint: '6' });
   check(badNodeCp.statusCode === 400, 'nodejs checkpoint 6 → 400 (only 5 checkpoints)');
 
+  // 6) Part tests — each topic splits into 3 parts, each ending with one test
+  //    sampled (≤ PART_TEST_SIZE = 20) from that part's levels, graded at 85%.
+  console.log('\nPart tests:');
+  for (const part of ['1', '2', '3']) {
+    const r = await call({ topic: 'javascript', test: part });
+    check(r.statusCode === 200, `javascript part ${part} test → 200`);
+    check(r.body?.kind === 'checkpoint' && r.body?.ref === Number(part), `part ${part} → kind=checkpoint ref=${part}`);
+    check(r.body?.passPct === 85, `part ${part} pass threshold 85%`);
+    check(Array.isArray(r.body?.questions) && r.body.questions.length === 20, `part ${part} returns 20 sampled questions`);
+  }
+  // A 15-level topic also splits cleanly into 3 part tests.
+  const gitTest = await call({ topic: 'git', test: '1' });
+  check(gitTest.statusCode === 200 && gitTest.body?.questions?.length === 20, 'git part 1 test → 200 with 20 questions');
+  // Out-of-range parts are rejected.
+  const badPartHi = await call({ topic: 'javascript', test: '4' });
+  check(badPartHi.statusCode === 400, 'javascript part 4 → 400 (only 3 parts)');
+  const badPartLo = await call({ topic: 'javascript', test: '0' });
+  check(badPartLo.statusCode === 400, 'javascript part 0 → 400');
+
   if (failures > 0) {
     console.error(`\n❌ ${failures} endpoint check(s) failed`);
     process.exit(1);

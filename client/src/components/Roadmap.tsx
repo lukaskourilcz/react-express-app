@@ -3,7 +3,6 @@ import { Box, Typography, Button, LinearProgress, Chip, Skeleton, Tooltip, IconB
 import type {
   RoadmapTopic,
   RoadmapLevelMeta,
-  RoadmapCheckpointMeta,
   RoadmapPlayable,
   RoadmapQuestion,
   RoadmapStructure,
@@ -12,19 +11,24 @@ import type {
 import {
   fetchRoadmapStructure,
   fetchRoadmapLevel,
-  fetchRoadmapCheckpoint,
+  fetchRoadmapPartTest,
   recordLevelResult,
-  recordCheckpointResult,
+  recordPartTestResult,
   pushProgressToServer,
   syncProgressWithServer,
   useRoadmapProgress,
-  isLevelUnlocked,
   isLevelPassed,
-  isCheckpointUnlocked,
-  isCheckpointPassed,
+  isPartLevelUnlocked,
+  isPartTestUnlocked,
+  isPartTestPassed,
   levelBestPct,
-  checkpointBestPct,
-  passedLevelCount,
+  partTestBestPct,
+  partPassedLevels,
+  partRanges,
+  currentPart,
+  isPathUnlocked,
+  pathStatus,
+  PARTS_PER_TOPIC,
   getRoadmapProgress,
   isTopicUnlocked,
   topicUnlockHint,
@@ -33,7 +37,7 @@ import {
   getExtraUnlocks,
   topicsFromAssessment,
   ASSESSMENT_QUESTION_COUNT,
-  LEVELS_PER_CHECKPOINT,
+  type PartRange,
 } from '../lib/roadmap';
 import { fetchChallengeBatch } from '../lib/challengeApi';
 import { apiFetch } from '../lib/api';
@@ -53,7 +57,8 @@ import { RedFlagDialog } from './RedFlagDialog';
 import './Roadmap.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
-type Active = { kind: 'level' | 'checkpoint'; ref: number };
+// `ref` is the GLOBAL level number for a level, or the part number for a test.
+type Active = { kind: 'level' | 'test'; ref: number };
 
 const TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
@@ -62,6 +67,7 @@ const TOPICS: RoadmapTopic[] = [
   'databases', 'system-design', 'testing', 'devops', 'security',
 ];
 const TOPIC_KEY = 'devquiz:roadmap:topic';
+const PART_KEY = 'devquiz:roadmap:part';
 const CHECKPOINT_GOLD = '#ffb300';
 // Lives for a level lesson: one heart that drains a third per wrong answer.
 const MAX_HEARTS = 3;
@@ -101,7 +107,7 @@ function bandForCategory(topic: RoadmapTopic, difficulty: number) {
 
 interface PlacedNode {
   i: number;
-  kind: 'level' | 'checkpoint';
+  kind: 'level' | 'test';
   key: string;
   cx: number;
   cy: number;
@@ -113,7 +119,11 @@ interface PlacedNode {
   isCurrent: boolean;
   best: number;
   level?: RoadmapLevelMeta;
-  cp?: RoadmapCheckpointMeta;
+  /** Local 1-based number within the part (what the node displays). */
+  displayNum?: number;
+  /** For a test node: the part it ends and that part's global level range. */
+  part?: number;
+  range?: PartRange;
 }
 
 // Track an element's width so the path can lay itself out responsively. Uses a
@@ -168,20 +178,14 @@ function starsFor(pct: number, passPct: number): number {
   return 0;
 }
 
-// Build the ordered path: each level, with a checkpoint node after every 5th.
+// Build one part's ordered path: its levels, then a single end-of-part test.
 type PathNode =
   | { type: 'level'; meta: RoadmapLevelMeta }
-  | { type: 'checkpoint'; meta: RoadmapCheckpointMeta };
+  | { type: 'test'; part: number; range: PartRange };
 
-function buildPath(levels: RoadmapLevelMeta[], checkpoints: RoadmapCheckpointMeta[]): PathNode[] {
-  const out: PathNode[] = [];
-  for (const meta of levels) {
-    out.push({ type: 'level', meta });
-    if (meta.level % LEVELS_PER_CHECKPOINT === 0) {
-      const cp = checkpoints.find((c) => c.afterLevel === meta.level);
-      if (cp) out.push({ type: 'checkpoint', meta: cp });
-    }
-  }
+function buildPath(partLevels: RoadmapLevelMeta[], range: PartRange): PathNode[] {
+  const out: PathNode[] = partLevels.map((meta) => ({ type: 'level', meta }));
+  if (range.size > 0) out.push({ type: 'test', part: range.part, range });
   return out;
 }
 
@@ -206,15 +210,19 @@ function presentQuestions(questions: RoadmapQuestion[], prev?: RoadmapQuestion[]
   });
 }
 
-// What to play after finishing `a`, given the active topic's level/checkpoint
-// counts (topics differ: JS/TS/React have 25 levels, Git/HTML/CSS have 15).
-function nextAfter(a: Active, levelCount: number, checkpointCount: number): Active | null {
+// What to play after finishing `a`, within the active topic's part ranges: the
+// next level in the part, then the part test, then the first level of the next
+// part (which the just-passed test unlocks).
+function nextAfter(a: Active, ranges: PartRange[]): Active | null {
   if (a.kind === 'level') {
-    if (a.ref % LEVELS_PER_CHECKPOINT === 0) return { kind: 'checkpoint', ref: a.ref / LEVELS_PER_CHECKPOINT };
-    if (a.ref < levelCount) return { kind: 'level', ref: a.ref + 1 };
-    return null;
+    const r = ranges.find((x) => a.ref >= x.startLevel && a.ref <= x.endLevel);
+    if (!r) return null;
+    if (a.ref < r.endLevel) return { kind: 'level', ref: a.ref + 1 };
+    return { kind: 'test', ref: r.part };
   }
-  if (a.ref < checkpointCount) return { kind: 'level', ref: a.ref * LEVELS_PER_CHECKPOINT + 1 };
+  // Finished a part test → jump into the next part if there is one.
+  const next = ranges[a.ref]; // ranges is 0-indexed; part a.ref's successor sits at index a.ref
+  if (next && next.size > 0) return { kind: 'level', ref: next.startLevel };
   return null;
 }
 
@@ -230,7 +238,10 @@ function Roadmap() {
   const [loadingStructure, setLoadingStructure] = useState(true);
   const [structureError, setStructureError] = useState<string | null>(null);
   const [topic, setTopic] = useState<RoadmapTopic>(() => {
-    const saved = readString(TOPIC_KEY);
+    // A deep link from the roadmap tree (/learn?topic=…&part=…) wins over the
+    // last-opened topic so clicking a part on the tree lands on that path.
+    const fromUrl = new URLSearchParams(window.location.search).get('topic');
+    const saved = fromUrl && (TOPICS as string[]).includes(fromUrl) ? fromUrl : readString(TOPIC_KEY);
     const candidate =
       saved && (TOPICS as string[]).includes(saved) ? (saved as RoadmapTopic) : 'javascript';
     // If the saved topic is locked (fresh user, reset progress, etc.) fall back
@@ -239,6 +250,13 @@ function Roadmap() {
       return 'javascript';
     }
     return candidate;
+  });
+  // Which of the topic's PARTS_PER_TOPIC parts is open in the path view.
+  const [part, setPart] = useState<number>(() => {
+    const fromUrl = parseInt(new URLSearchParams(window.location.search).get('part') ?? '', 10);
+    if (Number.isInteger(fromUrl) && fromUrl >= 1 && fromUrl <= PARTS_PER_TOPIC) return fromUrl;
+    const saved = parseInt(readString(PART_KEY) ?? '', 10);
+    return Number.isInteger(saved) && saved >= 1 && saved <= PARTS_PER_TOPIC ? saved : 1;
   });
 
   const [active, setActive] = useState<Active | null>(null);
@@ -261,6 +279,28 @@ function Roadmap() {
     () => TOPICS.filter((tpc) => !isUnlocked(tpc)).length,
     [isUnlocked],
   );
+
+  // The topic's full (global) level list, split into PARTS_PER_TOPIC parts. Only
+  // the selected part's slice is rendered as a path, so it stays short.
+  const levels: RoadmapLevelMeta[] = structure?.structure[topic]?.levels ?? [];
+  const ranges = useMemo(() => partRanges(levels.length), [levels.length]);
+  const safePart = Math.min(Math.max(part, 1), Math.max(1, ranges.length));
+  const range: PartRange | undefined = ranges[safePart - 1];
+  const partLevels = useMemo(
+    () => (range ? levels.slice(range.startLevel - 1, range.endLevel) : []),
+    [levels, range],
+  );
+  const topicColor = getCategoryHexColor(topic);
+
+  // Keep the selected part on something the learner can actually open: if it's
+  // locked (reset progress, switched topic, stale deep link) snap to the first
+  // unlocked, incomplete part.
+  useEffect(() => {
+    if (ranges.length === 0) return;
+    if (!isPathUnlocked(progress, topic, part, extraUnlocksSet)) {
+      setPart(currentPart(progress, topic, ranges, extraUnlocksSet));
+    }
+  }, [topic, ranges, progress, extraUnlocksSet, part]);
 
   const loadStructure = () => {
     const controller = new AbortController();
@@ -293,6 +333,17 @@ function Roadmap() {
     if (!isUnlocked(next)) return;
     setTopic(next);
     writeString(TOPIC_KEY, next);
+    // Land on the first unlocked, incomplete part of the newly chosen topic.
+    const nextRanges = partRanges(structure?.structure[next]?.levels.length ?? 0);
+    const p = currentPart(progress, next, nextRanges, extraUnlocksSet);
+    setPart(p);
+    writeString(PART_KEY, String(p));
+  };
+
+  const selectPart = (p: number) => {
+    if (!isPathUnlocked(progress, topic, p, extraUnlocksSet)) return;
+    setPart(p);
+    writeString(PART_KEY, String(p));
   };
 
   const onSkillCheckFinished = useCallback(
@@ -323,11 +374,12 @@ function Roadmap() {
     const req =
       a.kind === 'level'
         ? fetchRoadmapLevel(topic, a.ref, lang, controller.signal)
-        : fetchRoadmapCheckpoint(topic, a.ref, lang, controller.signal);
+        : fetchRoadmapPartTest(topic, a.ref, lang, controller.signal);
     req
       .then((data) => {
         if (controller.signal.aborted) return;
-        setPlayable(data);
+        // A part test comes back as a generic exam; give it a localized title.
+        setPlayable(a.kind === 'test' ? { ...data, title: t('roadmap.partLabel', { n: a.ref }) } : data);
         setLoadingLesson(false);
       })
       .catch((err) => {
@@ -335,6 +387,18 @@ function Roadmap() {
         setLessonError(friendlyError(err));
         setLoadingLesson(false);
       });
+  };
+
+  // Open the next item; when it lives in the next part, switch parts too.
+  const openNext = (a: Active) => {
+    if (a.kind === 'level') {
+      const r = ranges.find((x) => a.ref >= x.startLevel && a.ref <= x.endLevel);
+      if (r && r.part !== part) {
+        setPart(r.part);
+        writeString(PART_KEY, String(r.part));
+      }
+    }
+    open(a);
   };
 
   const exitLesson = () => {
@@ -351,27 +415,22 @@ function Roadmap() {
     // reward only a NEW pass; replays/fails fall back to a small practice grant.
     const before = computeLearningXp(getRoadmapProgress());
     if (active.kind === 'level') recordLevelResult(topic, active.ref, pct, playable.passPct);
-    else recordCheckpointResult(topic, active.ref, pct, playable.passPct);
+    else recordPartTestResult(topic, active.ref, pct, playable.passPct);
     awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before);
     if (isAuthenticated) pushProgressToServer().catch(() => {});
   };
 
-  const levels: RoadmapLevelMeta[] = structure?.structure[topic]?.levels ?? [];
-  const checkpoints: RoadmapCheckpointMeta[] = structure?.structure[topic]?.checkpoints ?? [];
-  const topicColor = getCategoryHexColor(topic);
-
-  // Lay the path out as a serpentine: nodes flow left→right and gently down,
-  // then wrap and flow back the other way — using the full available width.
-  // Positions are computed analytically so the SVG connectors can be drawn
-  // exactly through the node centres without measuring each node.
+  // Lay the SELECTED PART out as a serpentine: nodes flow left→right and gently
+  // down, then wrap and flow back the other way. Positions are computed
+  // analytically so the SVG connectors hit each node centre without measuring.
   const layout = useMemo(() => {
-    if (!pathWidth || levels.length === 0) return null;
-    const nodes = buildPath(levels, checkpoints);
+    if (!pathWidth || !range || partLevels.length === 0) return null;
+    const nodes = buildPath(partLevels, range);
     const cols = Math.max(2, Math.min(5, Math.floor(pathWidth / 150)));
     const cellW = pathWidth / cols;
     // ROW_H must clear the accumulated within-row slope so the lowest node of a
     // row doesn't collide with the next row's start node (same column at a turn) —
-    // including a taller checkpoint node and its two-line label.
+    // including a taller test node and its two-line label.
     const ROW_H = 178;
     const SLOPE = 12;
     const BASE = 50;
@@ -382,24 +441,24 @@ function Roadmap() {
       const colVisual = row % 2 === 0 ? p : cols - 1 - p; // reverse odd rows
       const cx = colVisual * cellW + cellW / 2;
       const cy = BASE + row * ROW_H + p * SLOPE;
-      if (node.type === 'checkpoint') {
-        const cp = node.meta;
-        const passed = isCheckpointPassed(progress, topic, cp.checkpoint);
-        const unlocked = isCheckpointUnlocked(progress, topic, cp.checkpoint);
+      if (node.type === 'test') {
+        const passed = isPartTestPassed(progress, topic, node.part);
+        const unlocked = isPartTestUnlocked(progress, topic, node.range);
         return {
-          i, kind: 'checkpoint', key: `cp-${cp.checkpoint}`, cx, cy, half: 42,
-          accent: CHECKPOINT_GOLD, grad: CHECKPOINT_GRAD, cp,
+          i, kind: 'test', key: `test-${node.part}`, cx, cy, half: 42,
+          accent: CHECKPOINT_GOLD, grad: CHECKPOINT_GRAD, part: node.part, range: node.range,
           unlocked, passed, isCurrent: unlocked && !passed,
-          best: checkpointBestPct(progress, topic, cp.checkpoint),
+          best: partTestBestPct(progress, topic, node.part),
         };
       }
       const meta = node.meta;
       const band = bandForCategory(topic, meta.difficulty);
       const passed = isLevelPassed(progress, topic, meta.level);
-      const unlocked = isLevelUnlocked(progress, topic, meta.level);
+      const unlocked = isPartLevelUnlocked(progress, topic, range, meta.level);
       return {
         i, kind: 'level', key: `lvl-${meta.level}`, cx, cy, half: 32,
         accent: band.solid, grad: band.grad, level: meta,
+        displayNum: meta.level - range.startLevel + 1,
         unlocked, passed, isCurrent: unlocked && !passed,
         best: levelBestPct(progress, topic, meta.level),
       };
@@ -413,7 +472,7 @@ function Roadmap() {
       return { x1: a.cx, y1: a.cy, x2: b.cx, y2: b.cy, color: done || active ? b.accent : null, active };
     });
     return { width: pathWidth, height, cellW, nodes: placed, segments };
-  }, [pathWidth, levels, checkpoints, progress, topic]);
+  }, [pathWidth, partLevels, range, progress, topic]);
 
   /* ──── skill check view ─────────────────────────────────────────────── */
   if (skillCheckOpen) {
@@ -444,24 +503,32 @@ function Roadmap() {
     if (lessonError || !playable) {
       return <LessonError message={lessonError ?? t('roadmap.error')} onRetry={() => open(active)} onExit={exitLesson} t={t} />;
     }
-    const next = nextAfter(active, levels.length, checkpoints.length);
+    const next = nextAfter(active, ranges);
+    const nextLabel = !next
+      ? ''
+      : next.kind === 'test'
+        ? t('roadmap.toCheckpoint')
+        : active.kind === 'test'
+          ? t('roadmap.nextPart')
+          : t('roadmap.nextLevel');
     return (
       <LessonRunner
         key={`${topic}-${active.kind}-${active.ref}`}
         playable={playable}
         topicColor={topicColor}
         hasNext={!!next}
-        nextLabel={next?.kind === 'checkpoint' ? t('roadmap.toCheckpoint') : t('roadmap.nextLevel')}
+        nextLabel={nextLabel}
         onExit={exitLesson}
         onFinished={handleFinished}
-        onNext={() => next && open(next)}
+        onNext={() => next && openNext(next)}
         t={t}
       />
     );
   }
 
   /* ──── map view ─────────────────────────────────────────────────────── */
-  const done = passedLevelCount(progress, topic);
+  const partDone = range ? partPassedLevels(progress, topic, range) : 0;
+  const topicComplete = ranges.length > 0 && ranges.every((r) => isPartTestPassed(progress, topic, r.part));
 
   return (
     <Box sx={{ maxWidth: 900, mx: 'auto' }}>
@@ -582,20 +649,57 @@ function Roadmap() {
         </Box>
       ) : (
         <>
-          {/* Topic progress */}
+          {/* Part selector — the topic is split into PARTS_PER_TOPIC shorter
+              paths, each ending with a test; only one part shows at a time. */}
+          <Box role="tablist" aria-label={t('roadmap.partsAria')} sx={{ display: 'flex', gap: 1, justifyContent: 'center', mb: 2, flexWrap: 'wrap' }}>
+            {ranges.map((r) => {
+              const status = pathStatus(progress, topic, ranges, r.part, extraUnlocksSet);
+              const locked = status === 'locked';
+              const selected = r.part === safePart;
+              return (
+                <Tooltip key={r.part} title={locked ? t('roadmap.partLockedHint', { n: r.part - 1 }) : ''} arrow placement="top" disableHoverListener={!locked}>
+                  <Box component="span" sx={{ display: 'inline-flex' }}>
+                    <Button
+                      role="tab"
+                      aria-selected={selected}
+                      disabled={locked}
+                      onClick={() => selectPart(r.part)}
+                      startIcon={locked ? <LockIcon size={12} /> : status === 'complete' ? <CheckIcon size={14} /> : undefined}
+                      sx={{
+                        textTransform: 'none', fontWeight: 700, fontSize: '0.8rem', minWidth: 'auto',
+                        px: 1.8, py: 0.5, borderRadius: 999, lineHeight: 1.3,
+                        color: locked ? 'text.disabled' : selected ? onCategoryColorText(topic) : 'text.secondary',
+                        backgroundColor: locked ? 'action.hover' : selected ? topicColor : 'background.paper',
+                        border: '2px solid',
+                        borderColor: locked ? 'divider' : selected || status === 'complete' ? topicColor : 'divider',
+                        opacity: locked ? 0.55 : 1,
+                        '&:hover': locked ? undefined : { backgroundColor: selected ? topicColor : 'action.hover', borderColor: topicColor },
+                        '&.Mui-disabled': { color: 'text.disabled' },
+                        '& .MuiButton-startIcon': { mr: 0.5 },
+                      }}
+                    >
+                      {t('roadmap.partLabel', { n: r.part })}
+                    </Button>
+                  </Box>
+                </Tooltip>
+              );
+            })}
+          </Box>
+
+          {/* Current-part progress */}
           <Box sx={{ mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
               <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
-                {getCategoryLabel(topic)}
+                {getCategoryLabel(topic)} · {t('roadmap.partLabel', { n: safePart })}
               </Typography>
               <Typography variant="caption" color="text.secondary">
-                {t('roadmap.progress', { done, total: levels.length })}
+                {t('roadmap.progress', { done: partDone, total: range?.size ?? 0 })}
               </Typography>
             </Box>
             <LinearProgress
               variant="determinate"
-              value={levels.length ? (done / levels.length) * 100 : 0}
-              aria-label={t('roadmap.progress', { done, total: levels.length })}
+              value={range && range.size ? (partDone / range.size) * 100 : 0}
+              aria-label={t('roadmap.progress', { done: partDone, total: range?.size ?? 0 })}
               sx={{ height: 8, borderRadius: 4, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 4, backgroundColor: topicColor, transition: 'transform 0.5s ease' } }}
             />
           </Box>
@@ -634,9 +738,10 @@ function Roadmap() {
                     sx={{ position: 'absolute', transform: 'translateX(-50%)' }}
                   >
                     <Box className="rm-node" style={{ animationDelay: `${n.i * 0.025}s` }}>
-                      {n.kind === 'checkpoint' ? (
-                        <CheckpointNode
-                          cp={n.cp!}
+                      {n.kind === 'test' ? (
+                        <PartTestNode
+                          part={n.part!}
+                          range={n.range!}
                           accent={n.accent}
                           grad={n.grad}
                           unlocked={n.unlocked}
@@ -644,12 +749,13 @@ function Roadmap() {
                           best={n.best}
                           isCurrent={n.isCurrent}
                           cellW={layout.cellW}
-                          onClick={() => open({ kind: 'checkpoint', ref: n.cp!.checkpoint })}
+                          onClick={() => open({ kind: 'test', ref: n.part! })}
                           t={t}
                         />
                       ) : (
                         <LevelNode
                           meta={n.level!}
+                          displayNum={n.displayNum!}
                           accent={n.accent}
                           grad={n.grad}
                           unlocked={n.unlocked}
@@ -668,7 +774,7 @@ function Roadmap() {
             )}
           </Box>
 
-          {done === levels.length && levels.length > 0 && (
+          {topicComplete && (
             <Typography sx={{ textAlign: 'center', mt: 3, fontWeight: 800, color: topicColor }}>
               {t('roadmap.allDone')}
             </Typography>
@@ -690,20 +796,19 @@ function Roadmap() {
 /* ──── level node ───────────────────────────────────────────────────────── */
 
 function LevelNode({
-  meta, accent, grad, unlocked, passed, best, isCurrent, onClick, t, cellW,
+  meta, displayNum, accent, grad, unlocked, passed, best, isCurrent, onClick, t, cellW,
 }: {
-  meta: RoadmapLevelMeta; accent: string; grad: [string, string];
+  meta: RoadmapLevelMeta; displayNum: number; accent: string; grad: [string, string];
   unlocked: boolean; passed: boolean; best: number; isCurrent: boolean;
   onClick: () => void; t: TFn; cellW: number;
 }) {
   const stars = passed ? starsFor(best, 75) : 0;
-  // Segment-start levels (6, 11, …) are gated by the preceding checkpoint, not
-  // the previous level, so the locked hint differs.
-  const gatedByCheckpoint = meta.level % LEVELS_PER_CHECKPOINT === 1 && meta.level > 1;
-  const lockedHint = gatedByCheckpoint ? t('roadmap.lockedByCheckpoint') : t('roadmap.lockedHint');
+  // Within a shown part levels gate sequentially; the first level of a part is
+  // gated by the previous part's test at the part selector, never here.
+  const lockedHint = t('roadmap.lockedHint');
   const label = unlocked
-    ? `${t('roadmap.levelLabel', { n: meta.level })}: ${meta.title}${passed ? ` — ${t('roadmap.passed')} ${best}%` : ''}`
-    : `${t('roadmap.levelLabel', { n: meta.level })}: ${t('roadmap.locked')}`;
+    ? `${t('roadmap.levelLabel', { n: displayNum })}: ${meta.title}${passed ? ` — ${t('roadmap.passed')} ${best}%` : ''}`
+    : `${t('roadmap.levelLabel', { n: displayNum })}: ${t('roadmap.locked')}`;
   const labelWidth = Math.max(72, Math.min(150, cellW - 10));
 
   return (
@@ -734,7 +839,7 @@ function LevelNode({
               '&:active': unlocked ? { transform: 'translateY(3px) scale(0.98)' } : undefined,
             }}
           >
-            {passed ? <CheckIcon /> : unlocked ? meta.level : <LockIcon />}
+            {passed ? <CheckIcon /> : unlocked ? displayNum : <LockIcon />}
             {passed && (
               <Box sx={{ position: 'absolute', bottom: -9, display: 'flex', color: '#ffc400', filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))', backgroundColor: 'background.paper', borderRadius: 999, px: 0.25 }}>
                 {[0, 1, 2].map((s) => <StarIcon key={s} filled={s < stars} />)}
@@ -753,24 +858,24 @@ function LevelNode({
   );
 }
 
-/* ──── checkpoint (boss) node ───────────────────────────────────────────── */
+/* ──── part-test (boss) node ────────────────────────────────────────────── */
 
-function CheckpointNode({
-  cp, accent, grad, unlocked, passed, best, isCurrent, onClick, t, cellW,
+function PartTestNode({
+  part, range, accent, grad, unlocked, passed, best, isCurrent, onClick, t, cellW,
 }: {
-  cp: RoadmapCheckpointMeta; accent: string; grad: [string, string];
+  part: number; range: PartRange; accent: string; grad: [string, string];
   unlocked: boolean; passed: boolean; best: number; isCurrent: boolean;
   onClick: () => void; t: TFn; cellW: number;
 }) {
-  const from = cp.afterLevel - LEVELS_PER_CHECKPOINT + 1;
+  const title = t('roadmap.partTestTitle', { n: part });
   const label = unlocked
-    ? `${t('roadmap.checkpoint')}: ${cp.title}${passed ? ` — ${t('roadmap.passed')} ${best}%` : ''}`
-    : `${t('roadmap.checkpoint')}: ${t('roadmap.locked')}`;
+    ? `${title}${passed ? ` — ${t('roadmap.passed')} ${best}%` : ''}`
+    : `${title}: ${t('roadmap.locked')}`;
   const labelWidth = Math.max(84, Math.min(160, cellW - 8));
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.5 }}>
       <Box className={isCurrent ? 'rm-bob' : undefined}>
-        <Tooltip title={unlocked ? '' : t('roadmap.checkpointLocked', { from, to: cp.afterLevel })} arrow placement="top">
+        <Tooltip title={unlocked ? '' : t('roadmap.checkpointLocked', { from: range.startLevel, to: range.endLevel })} arrow placement="top">
           <Box
             component="button"
             type="button"
@@ -805,7 +910,7 @@ function CheckpointNode({
         </Tooltip>
       </Box>
       <Typography variant="caption" sx={{ fontWeight: 700, color: unlocked ? 'text.primary' : 'text.disabled', textAlign: 'center', lineHeight: 1.15, maxWidth: labelWidth }}>
-        {cp.title}
+        {title}
       </Typography>
     </Box>
   );
