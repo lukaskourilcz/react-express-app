@@ -1,15 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useMutation } from '@tanstack/react-query';
 import { Box, Paper, Typography, Button, Chip, IconButton, Tooltip } from '@mui/material';
 import { useAuth } from '../lib/auth';
 import { useT } from '../i18n/LanguageContext';
-import { listFlashcards, removeFlashcard, type Flashcard } from '../lib/flashcards';
+import { removeFlashcard, type Flashcard } from '../lib/flashcards';
 import { friendlyError } from '../lib/api';
+import { useFlashcards } from '../lib/queries';
+import { queryClient } from '../lib/queryClient';
 import { renderQuestion } from './CodeBlock';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
-import { useReloadKey, useCancellableEffect } from '../lib/hooks';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
+
+const FLASHCARDS_KEY = ['flashcards'] as const;
 
 const TrashIcon = () => (
   <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -23,38 +27,42 @@ function Flashcards() {
   const t = useT();
   const navigate = useNavigate();
   const { isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
-  const [cards, setCards] = useState<Flashcard[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
-  const [reloadKey, reload] = useReloadKey();
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  useCancellableEffect(
-    async (isCancelled) => {
-      if (authLoading) return;
-      if (!isAuthenticated) {
-        setLoading(false);
-        return;
-      }
-      setLoading(true);
-      setError(null);
-      try {
-        const loaded = await listFlashcards();
-        if (isCancelled()) return;
-        setCards(loaded);
-        setIndex(0);
-        setRevealed(false);
-      } catch (err) {
-        if (!isCancelled()) setError(friendlyError(err));
-      } finally {
-        if (!isCancelled()) setLoading(false);
-      }
+  const enabled = !authLoading && isAuthenticated;
+  const cardsQuery = useFlashcards(enabled);
+  const cards = cardsQuery.data ?? [];
+  const loading = authLoading || (enabled && cardsQuery.isPending);
+  const error = actionError ?? (cardsQuery.error ? friendlyError(cardsQuery.error) : null);
+  const reload = () => {
+    setActionError(null);
+    void cardsQuery.refetch();
+  };
+
+  // Remove a card with an optimistic cache update, rolling back on failure.
+  const removeMut = useMutation({
+    mutationFn: removeFlashcard,
+    onMutate: async (qid: string) => {
+      await queryClient.cancelQueries({ queryKey: FLASHCARDS_KEY });
+      const prev = queryClient.getQueryData<Flashcard[]>(FLASHCARDS_KEY);
+      queryClient.setQueryData<Flashcard[]>(FLASHCARDS_KEY, (old) =>
+        (old ?? []).filter((c) => c.question_id !== qid),
+      );
+      return { prev };
     },
-    [isAuthenticated, authLoading, reloadKey],
-  );
+    onError: (_err, _qid, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(FLASHCARDS_KEY, ctx.prev);
+      setActionError(t('card.removeFailed'));
+    },
+  });
 
-  // Reset the reveal whenever the visible card changes.
+  // Keep the visible index in range as the deck shrinks, and reset the reveal
+  // whenever the visible card changes.
+  useEffect(() => {
+    setIndex((i) => Math.min(i, Math.max(0, cards.length - 1)));
+  }, [cards.length]);
   useEffect(() => {
     setRevealed(false);
   }, [index]);
@@ -93,18 +101,9 @@ function Flashcards() {
 
   const card = cards[index];
 
-  const handleRemove = async () => {
-    const qid = card.question_id;
-    const prev = cards;
-    const next = cards.filter((c) => c.question_id !== qid);
-    setCards(next);
-    setIndex((i) => Math.max(0, Math.min(i, next.length - 1)));
-    try {
-      await removeFlashcard(qid);
-    } catch {
-      setCards(prev); // rollback on failure
-      setError(t('card.removeFailed'));
-    }
+  const handleRemove = () => {
+    setActionError(null);
+    removeMut.mutate(card.question_id);
   };
 
   const go = (delta: number) => setIndex((i) => (i + delta + cards.length) % cards.length);

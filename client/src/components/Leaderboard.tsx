@@ -10,16 +10,15 @@ import {
   Chip,
 } from '@mui/material';
 import {
-  fetchLeaderboard,
   type LeaderboardGlobalEntry,
   type LeaderboardDailyEntry,
   type CategoryLeaderboardEntry,
 } from '../lib/play';
 import { friendlyError } from '../lib/api';
+import { useLeaderboard } from '../lib/queries';
 import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import { visibleCategoryOptionsFor, getCategoryLabel } from '../lib/categories';
-import { useReloadKey, useCancellableEffect } from '../lib/hooks';
 import ErrorRetry from './ErrorRetry';
 
 type Tab = 'global' | 'daily' | 'category';
@@ -35,27 +34,12 @@ function Leaderboard() {
   const t = useT();
   const [tab, setTab] = useState<Tab>('global');
   const [category, setCategory] = useState<string>('javascript');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [entries, setEntries] = useState<Entry[]>([]);
   const [date] = useState<string>(today());
-  const [reloadKey, reload] = useReloadKey();
 
-  useCancellableEffect(
-    async (isCancelled) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetchLeaderboard(tab, { date, category });
-        if (!isCancelled()) setEntries(res.entries as Entry[]);
-      } catch (err) {
-        if (!isCancelled()) setError(friendlyError(err));
-      } finally {
-        if (!isCancelled()) setLoading(false);
-      }
-    },
-    [tab, date, category, reloadKey],
-  );
+  const { data, isLoading: loading, error: queryError, refetch } = useLeaderboard(tab, date, category);
+  const entries = (data?.entries ?? []) as Entry[];
+  const error = queryError ? friendlyError(queryError) : null;
+  const reload = () => void refetch();
 
   return (
     <Box sx={{ maxWidth: 600, mx: 'auto' }}>

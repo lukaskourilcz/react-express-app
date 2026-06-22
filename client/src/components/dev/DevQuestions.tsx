@@ -19,9 +19,9 @@ import {
   Paper,
   Tooltip,
 } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
-import { useReloadKey, useCancellableEffect } from '../../lib/hooks';
 import { getCategoryLabel } from '../../lib/categories';
 import { brandButtonSx } from '../../theme/MuiTheme';
 import { friendlyError } from '../../lib/api';
@@ -64,12 +64,15 @@ type ImportanceFilter = 'all' | 'filler' | number;
 const ROWS_PER_PAGE_OPTIONS = [25, 50, 100];
 
 export default function DevQuestions() {
-  const [questions, setQuestions] = useState<AdminQuestion[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
-  const [reportCounts, setReportCounts] = useState<Record<string, number>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, reload] = useReloadKey();
+  const { data, isPending: loading, error: queryError, refetch } = useQuery({
+    queryKey: ['admin', 'questions'],
+    queryFn: listQuestions,
+  });
+  const questions = data?.questions ?? [];
+  const categories = data?.categories ?? [];
+  const reportCounts = data?.reportCounts ?? {};
+  const error = queryError ? friendlyError(queryError) : null;
+  const reload = () => void refetch();
 
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
@@ -84,25 +87,6 @@ export default function DevQuestions() {
   const [editing, setEditing] = useState<AdminQuestion | null>(null);
   const [snack, setSnack] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-
-  useCancellableEffect(
-    async (isCancelled) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await listQuestions();
-        if (isCancelled()) return;
-        setQuestions(data.questions);
-        setCategories(data.categories);
-        setReportCounts(data.reportCounts ?? {});
-      } catch (err) {
-        if (!isCancelled()) setError(friendlyError(err));
-      } finally {
-        if (!isCancelled()) setLoading(false);
-      }
-    },
-    [reloadKey],
-  );
 
   const stats = useMemo(() => {
     let edited = 0;

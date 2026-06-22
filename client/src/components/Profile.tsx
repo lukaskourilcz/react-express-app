@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -13,7 +13,8 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
-import { getUserStats, createOrUpdateUserStats, type UserStats } from '../lib/supabase';
+import type { UserStats } from '../lib/supabase';
+import { useProfileStats } from '../lib/queries';
 import { useRoadmapProgress, syncProgressWithServer } from '../lib/roadmap';
 import { useQuestXp, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp, levelForXp, specializationFor, displayTitle, MAX_RANK } from '../lib/leveling';
@@ -28,7 +29,6 @@ import type { Lang } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
 import { savePreferredLanguage } from '../lib/languagePref';
-import { useReloadKey, useCancellableEffect } from '../lib/hooks';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 
@@ -39,39 +39,21 @@ function Profile() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const profile = getUserProfile(user);
   const navigate = useNavigate();
-  const [stats, setStats] = useState<UserStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, reload] = useReloadKey();
 
-  useCancellableEffect(
-    async (isCancelled) => {
-      if (!authLoading && !isAuthenticated) {
-        navigate('/');
-        return;
-      }
-      if (!isAuthenticated || !user?.id) return;
+  // Redirect signed-out visitors home once auth has resolved.
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) navigate('/');
+  }, [authLoading, isAuthenticated, navigate]);
 
-      setLoading(true);
-      setError(null);
-      try {
-        let loaded = await getUserStats(user.id);
-        if (!loaded) {
-          loaded = await createOrUpdateUserStats(user.id, {
-            email: profile.email,
-            name: profile.name,
-            picture: profile.picture,
-          });
-        }
-        if (!isCancelled()) setStats(loaded);
-      } catch (err) {
-        if (!isCancelled()) setError(friendlyError(err));
-      } finally {
-        if (!isCancelled()) setLoading(false);
-      }
-    },
-    [user, isAuthenticated, authLoading, navigate, reloadKey],
+  const enabled = isAuthenticated && !!user?.id;
+  const statsQuery = useProfileStats(
+    user?.id,
+    { email: profile.email, name: profile.name, picture: profile.picture },
+    enabled,
   );
+  const stats: UserStats | null = statsQuery.data ?? null;
+  const loading = authLoading || (enabled && statsQuery.isPending);
+  const error = statsQuery.error ? friendlyError(statsQuery.error) : null;
 
   if (authLoading || loading) {
     return <LoadingScreen label={t('profile.loading')} />;
@@ -86,7 +68,7 @@ function Profile() {
   }
 
   if (error) {
-    return <ErrorRetry message={error} onRetry={reload} />;
+    return <ErrorRetry message={error} onRetry={() => statsQuery.refetch()} />;
   }
 
   const totalQuizzes = stats?.total_quizzes ?? 0;

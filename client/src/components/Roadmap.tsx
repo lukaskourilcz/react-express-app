@@ -9,7 +9,6 @@ import type {
   Question,
 } from '../types/quiz';
 import {
-  fetchRoadmapStructure,
   fetchRoadmapLevel,
   fetchRoadmapPartTest,
   recordLevelResult,
@@ -39,6 +38,7 @@ import {
   ASSESSMENT_QUESTION_COUNT,
   type PartRange,
 } from '../lib/roadmap';
+import { useRoadmapStructure } from '../lib/queries';
 import { fetchChallengeBatch } from '../lib/challengeApi';
 import { apiFetch } from '../lib/api';
 import { awardLearningOutcome, syncXpWithServer } from '../lib/xp';
@@ -234,9 +234,12 @@ function Roadmap() {
   const theme = useTheme();
   const [pathRef, pathWidth] = useElementWidth<HTMLDivElement>();
 
-  const [structure, setStructure] = useState<RoadmapStructure | null>(null);
-  const [loadingStructure, setLoadingStructure] = useState(true);
-  const [structureError, setStructureError] = useState<string | null>(null);
+  // Roadmap structure via TanStack Query — cached + de-duped with the /roadmap
+  // tree, cancellable, with built-in loading/error state and retry.
+  const structureQuery = useRoadmapStructure();
+  const structure: RoadmapStructure | null = structureQuery.data ?? null;
+  const loadingStructure = structureQuery.isPending;
+  const structureError = structureQuery.error ? friendlyError(structureQuery.error) : null;
   const [topic, setTopic] = useState<RoadmapTopic>(() => {
     // A deep link from the roadmap tree (/learn?topic=…&part=…) wins over the
     // last-opened topic so clicking a part on the tree lands on that path.
@@ -301,25 +304,6 @@ function Roadmap() {
       setPart(currentPart(progress, topic, ranges, extraUnlocksSet));
     }
   }, [topic, ranges, progress, extraUnlocksSet, part]);
-
-  const loadStructure = () => {
-    const controller = new AbortController();
-    setLoadingStructure(true);
-    setStructureError(null);
-    fetchRoadmapStructure(controller.signal)
-      .then((data) => {
-        setStructure(data);
-        setLoadingStructure(false);
-      })
-      .catch((err) => {
-        if (controller.signal.aborted) return;
-        setStructureError(friendlyError(err));
-        setLoadingStructure(false);
-      });
-    return () => controller.abort();
-  };
-
-  useEffect(loadStructure, []);
 
   // Pull account progress + XP on sign-in and merge with this device (progress
   // first, so the merged learning XP is reflected before the XP reconcile).
@@ -645,7 +629,7 @@ function Roadmap() {
       ) : structureError ? (
         <Box sx={{ textAlign: 'center', mt: 4 }}>
           <Typography color="error" sx={{ mb: 2 }} role="alert">{structureError}</Typography>
-          <Button variant="outlined" onClick={loadStructure}>{t('roadmap.retry')}</Button>
+          <Button variant="outlined" onClick={() => structureQuery.refetch()}>{t('roadmap.retry')}</Button>
         </Box>
       ) : (
         <>

@@ -1,7 +1,28 @@
+var __spreadArray = (this && this.__spreadArray) || function (to, from, pack) {
+    if (pack || arguments.length === 2) for (var i = 0, l = from.length, ar; i < l; i++) {
+        if (ar || !(i in from)) {
+            if (!ar) ar = Array.prototype.slice.call(from, 0, i);
+            ar[i] = from[i];
+        }
+    }
+    return to.concat(ar || Array.prototype.slice.call(from));
+};
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { visualizer } from 'rollup-plugin-visualizer';
+// `ANALYZE=true npm run build` emits a treemap of the bundle to
+// dist/bundle-stats.html (open it to inspect the MUI/router/app split) plus a
+// machine-readable dist/bundle-stats.json. No effect on a normal build.
+var analyze = process.env.ANALYZE === 'true';
 export default defineConfig({
-    plugins: [react()],
+    plugins: __spreadArray([
+        react()
+    ], (analyze
+        ? [
+            visualizer({ filename: 'dist/bundle-stats.html', template: 'treemap', gzipSize: true, brotliSize: true }),
+            visualizer({ filename: 'dist/bundle-stats.json', template: 'raw-data', gzipSize: true }),
+        ]
+        : []), true),
     server: {
         port: 3000,
         // For local dev, run `vercel dev` from the repo root which serves the

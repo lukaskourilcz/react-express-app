@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Box,
   Paper,
@@ -14,10 +15,12 @@ import {
 } from '@mui/material';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
-import { useReloadKey, useCancellableEffect } from '../../lib/hooks';
 import { brandButtonSx } from '../../theme/MuiTheme';
 import { friendlyError } from '../../lib/api';
+import { queryClient } from '../../lib/queryClient';
 import { getAdminSettings, saveAdminSettings, type GameSettings } from '../../lib/devApi';
+
+const SETTINGS_KEY = ['admin', 'settings'] as const;
 import { RANK_TITLES, setRankThresholds } from '../../lib/leveling';
 import { CATEGORY_OPTIONS, onCategoryColorText } from '../../lib/categories';
 
@@ -136,34 +139,22 @@ const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
 });
 
 export default function DevSettings() {
-  const [base, setBase] = useState<GameSettings | null>(null);
+  const settingsQuery = useQuery({ queryKey: SETTINGS_KEY, queryFn: getAdminSettings });
+  const base = settingsQuery.data?.settings ?? null;
   const [form, setForm] = useState<FormState | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [snack, setSnack] = useState<string | null>(null);
-  const [reloadKey, reload] = useReloadKey();
 
-  useCancellableEffect(
-    async (isCancelled) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const { settings } = await getAdminSettings();
-        if (isCancelled()) return;
-        setBase(settings);
-        setForm(toForm(settings));
-      } catch (err) {
-        if (!isCancelled()) setError(friendlyError(err));
-      } finally {
-        if (!isCancelled()) setLoading(false);
-      }
-    },
-    [reloadKey],
-  );
+  // Hydrate (and re-hydrate after a save/refetch) the editable form from the
+  // server settings. Edits live in `form`; `base` stays the server truth.
+  useEffect(() => {
+    if (settingsQuery.data) setForm(toForm(settingsQuery.data.settings));
+  }, [settingsQuery.data]);
 
-  if (loading) return <LoadingScreen label="Loading settings…" />;
-  if (error) return <ErrorRetry message={error} onRetry={reload} />;
+  if (settingsQuery.isPending) return <LoadingScreen label="Loading settings…" />;
+  if (settingsQuery.error) {
+    return <ErrorRetry message={friendlyError(settingsQuery.error)} onRetry={() => settingsQuery.refetch()} />;
+  }
   if (!form || !base) return null;
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
@@ -193,8 +184,9 @@ export default function DevSettings() {
     setSaving(true);
     try {
       const { settings } = await saveAdminSettings(toSettings(form, base));
-      setBase(settings);
-      setForm(toForm(settings)); // reflect server-side clamping
+      // Update the cache (the hydrate effect re-fills the form, reflecting any
+      // server-side clamping).
+      queryClient.setQueryData(SETTINGS_KEY, { settings });
       // Apply the (validated) thresholds to the live leveling module so ranks
       // update across the app without a reload.
       setRankThresholds(settings.leveling.rankThresholds);
@@ -399,7 +391,7 @@ export default function DevSettings() {
         <Button variant="contained" onClick={handleSave} disabled={saving} sx={brandButtonSx}>
           {saving ? 'Saving…' : 'Save settings'}
         </Button>
-        <Button variant="outlined" onClick={reload} disabled={saving}>
+        <Button variant="outlined" onClick={() => setForm(toForm(base))} disabled={saving}>
           Revert
         </Button>
       </Box>

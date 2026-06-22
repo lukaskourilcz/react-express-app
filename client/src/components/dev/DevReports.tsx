@@ -15,11 +15,14 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
-import { useReloadKey, useCancellableEffect } from '../../lib/hooks';
 import { friendlyError } from '../../lib/api';
+import { queryClient } from '../../lib/queryClient';
 import { listReports, dismissReport, type AdminReport } from '../../lib/devApi';
+
+const REPORTS_KEY = ['admin', 'reports'] as const;
 
 // Friendly label + chip color per report reason. 'needs-review' is the learner
 // red-flag from the learning path; the rest come from the full report dialog.
@@ -43,30 +46,16 @@ const formatWhen = (iso: string | null): string => {
 };
 
 export default function DevReports() {
-  const [reports, setReports] = useState<AdminReport[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, reload] = useReloadKey();
+  const { data, isPending: loading, error: queryError, refetch } = useQuery({
+    queryKey: REPORTS_KEY,
+    queryFn: listReports,
+  });
+  const reports = data?.reports ?? [];
+  const error = queryError ? friendlyError(queryError) : null;
+  const reload = () => void refetch();
   const [filter, setFilter] = useState<'all' | 'flags'>('all');
   const [snack, setSnack] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-
-  useCancellableEffect(
-    async (isCancelled) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await listReports();
-        if (isCancelled()) return;
-        setReports(data.reports);
-      } catch (err) {
-        if (!isCancelled()) setError(friendlyError(err));
-      } finally {
-        if (!isCancelled()) setLoading(false);
-      }
-    },
-    [reloadKey],
-  );
 
   const flagCount = useMemo(() => reports.filter((r) => r.reason === 'needs-review').length, [reports]);
   const shown = useMemo(
@@ -78,7 +67,9 @@ export default function DevReports() {
     setBusy(r.id);
     try {
       await dismissReport(r.id);
-      setReports((prev) => prev.filter((x) => x.id !== r.id));
+      queryClient.setQueryData<{ reports: AdminReport[] }>(REPORTS_KEY, (old) =>
+        old ? { ...old, reports: old.reports.filter((x) => x.id !== r.id) } : old,
+      );
       setSnack('Report dismissed');
     } catch (err) {
       setSnack(friendlyError(err));

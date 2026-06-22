@@ -4,7 +4,7 @@
 // you" (the four knowledge pillars, with live completion %) from "what only the
 // real world can" (the Beyond list) so the page never over-promises.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Paper, Typography, LinearProgress, Chip, Button, Divider, Alert } from '@mui/material';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
@@ -12,10 +12,10 @@ import { useT } from '../i18n/LanguageContext';
 import {
   useRoadmapProgress,
   passedLevelCount,
-  fetchRoadmapStructure,
   syncProgressWithServer,
 } from '../lib/roadmap';
-import type { RoadmapStructure, RoadmapTopic } from '../types/quiz';
+import { useRoadmapStructure } from '../lib/queries';
+import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
 import { levelForXp, specializationFor, displayTitle, getCareerRanks } from '../lib/leveling';
 import RoadmapTree from './RoadmapTree';
@@ -100,17 +100,12 @@ export default function CareerRoadmap() {
   const t = useT();
   const progress = useRoadmapProgress();
   const totalXp = useTotalXp();
-  const [structure, setStructure] = useState<RoadmapStructure | null>(null);
+  // Shared (cached, de-duped with /learn) roadmap structure for level counts.
+  const structure = useRoadmapStructure().data ?? null;
 
-  // Pull the live structure (level counts per topic) and sync account progress
-  // so the percentages are accurate even on a fresh device.
+  // Sync account progress so the percentages are accurate even on a fresh device.
   useEffect(() => {
-    const controller = new AbortController();
     syncProgressWithServer().catch(() => {});
-    fetchRoadmapStructure(controller.signal)
-      .then(setStructure)
-      .catch(() => {});
-    return () => controller.abort();
   }, []);
 
   const levelsFor = (topic: RoadmapTopic): number => structure?.structure?.[topic]?.levels.length ?? 0;

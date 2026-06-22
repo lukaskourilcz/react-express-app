@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from 'react';
 import { Box, Button, Typography, Paper } from '@mui/material';
+import { reportError } from '../lib/sentry';
 
 interface Props {
   children: ReactNode;
@@ -19,6 +20,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: { componentStack?: string | null }) {
     console.error('ErrorBoundary caught:', error, info.componentStack);
+    reportError(error, { componentStack: info.componentStack });
   }
 
   handleReset = () => {
