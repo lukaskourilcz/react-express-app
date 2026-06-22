@@ -15,6 +15,7 @@ import {
   unlockExtraTopics,
 } from './roadmap';
 import { getCategoryHexColor } from './categories';
+import { getGameConfig, type GameConfig } from './gameConfig';
 
 export type ProductKind = 'booster' | 'ring' | 'flair' | 'path';
 
@@ -30,20 +31,23 @@ export interface Product {
   topic?: RoadmapTopic;
 }
 
+// Default token prices (the configurable defaults live in lib/settings-store.ts
+// and client/src/lib/gameConfig.ts; these are the static fallbacks). The live
+// price is resolved per purchase/display via priceOf() from the game config.
 const STATIC_CATALOGUE: Product[] = [
-  { id: 'double-xp', kind: 'booster', price: 150, emoji: '⚡' },
+  { id: 'double-xp', kind: 'booster', price: 75, emoji: '⚡' },
 
-  { id: 'ring-emerald', kind: 'ring', price: 400, emoji: '⬤', color: '#10b981' },
-  { id: 'ring-gold', kind: 'ring', price: 500, emoji: '⬤', color: '#d4af37' },
-  { id: 'ring-violet', kind: 'ring', price: 750, emoji: '⬤', color: '#8b5cf6' },
+  { id: 'ring-emerald', kind: 'ring', price: 200, emoji: '⬤', color: '#10b981' },
+  { id: 'ring-gold', kind: 'ring', price: 250, emoji: '⬤', color: '#d4af37' },
+  { id: 'ring-violet', kind: 'ring', price: 375, emoji: '⬤', color: '#8b5cf6' },
 
-  { id: 'flair-rocket', kind: 'flair', price: 300, emoji: '🚀' },
-  { id: 'flair-flame', kind: 'flair', price: 600, emoji: '🔥' },
-  { id: 'flair-crown', kind: 'flair', price: 1000, emoji: '👑' },
+  { id: 'flair-rocket', kind: 'flair', price: 150, emoji: '🚀' },
+  { id: 'flair-flame', kind: 'flair', price: 300, emoji: '🔥' },
+  { id: 'flair-crown', kind: 'flair', price: 500, emoji: '👑' },
 ];
 
-/** Tokens to instantly unlock one learning path that the user hasn't earned. */
-export const PATH_UNLOCK_PRICE = 400;
+/** Default tokens to instantly unlock one learning path the user hasn't earned. */
+export const PATH_UNLOCK_PRICE = 200;
 
 // All non-starter topics are buyable. Starters are always free / always open.
 // Ordered the same way the Learn-page topic strip is, so the shop list mirrors
@@ -71,6 +75,14 @@ export const CATALOGUE: readonly Product[] = [...STATIC_CATALOGUE, ...PATH_PRODU
 
 const byId = new Map(CATALOGUE.map((p) => [p.id, p]));
 export const productById = (id: string): Product | undefined => byId.get(id);
+
+/** The live token price of a product, resolved from the game config (per-product
+ *  override for catalogue items, the shared path-unlock price for paths), falling
+ *  back to the product's static base price. */
+export function priceOf(product: Product, config: GameConfig = getGameConfig()): number {
+  if (product.kind === 'path') return config.shop.pathUnlockPrice;
+  return config.shop.prices[product.id] ?? product.price;
+}
 
 /** True if the path's topic is already accessible (starter / prereq met / bought). */
 export function isPathAlreadyUnlocked(topic: RoadmapTopic): boolean {
@@ -126,20 +138,21 @@ export type PurchaseResult = 'ok' | 'insufficient' | 'owned' | 'unknown';
 export function purchase(id: string): PurchaseResult {
   const product = byId.get(id);
   if (!product) return 'unknown';
+  const price = priceOf(product);
 
   if (product.kind === 'path') {
     if (!product.topic) return 'unknown';
     if (isPathAlreadyUnlocked(product.topic)) return 'owned';
-    if (getTokens() < product.price) return 'insufficient';
-    if (!spendTokens(product.price)) return 'insufficient';
+    if (getTokens() < price) return 'insufficient';
+    if (!spendTokens(price)) return 'insufficient';
     unlockExtraTopics([product.topic]);
     return 'ok';
   }
 
   const inv = readInventory();
   if (product.kind !== 'booster' && inv.owned.includes(id)) return 'owned';
-  if (getTokens() < product.price) return 'insufficient';
-  if (!spendTokens(product.price)) return 'insufficient';
+  if (getTokens() < price) return 'insufficient';
+  if (!spendTokens(price)) return 'insufficient';
 
   if (product.kind === 'booster') {
     writeInventory({ ...inv, doubleXp: inv.doubleXp + 1 });

@@ -57,8 +57,23 @@ interface FormState {
   featFlash: boolean;
   /** XP threshold per career rank, kept as raw strings while editing. */
   levelThresholds: string[];
+  /** Token price per shop product id, kept as raw strings while editing. */
+  shopPrices: Record<string, string>;
+  /** Token price to unlock any one learning path. */
+  shopPathUnlock: string;
   ownerEmail: string;
 }
+
+// Friendly labels for the configurable shop products (ids match the catalogue).
+const SHOP_PRICE_LABELS: Record<string, string> = {
+  'double-xp': 'Double-XP booster',
+  'ring-emerald': 'Ring · Emerald',
+  'ring-gold': 'Ring · Gold',
+  'ring-violet': 'Ring · Violet',
+  'flair-rocket': 'Flair · Rocket',
+  'flair-flame': 'Flair · Flame',
+  'flair-crown': 'Flair · Crown',
+};
 
 const toForm = (s: GameSettings): FormState => ({
   quizDefaultCount: String(s.quiz.defaultCount),
@@ -79,6 +94,8 @@ const toForm = (s: GameSettings): FormState => ({
   featLeader: s.features.leaderboard,
   featFlash: s.features.flashcards,
   levelThresholds: s.leveling.rankThresholds.map(String),
+  shopPrices: Object.fromEntries(Object.entries(s.shop.prices).map(([k, v]) => [k, String(v)])),
+  shopPathUnlock: String(s.shop.pathUnlockPrice),
   ownerEmail: s.ownerEmail,
 });
 
@@ -108,6 +125,12 @@ const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
   },
   leveling: {
     rankThresholds: f.levelThresholds.map((v, i) => parseNum(v, base.leveling.rankThresholds[i] ?? 0)),
+  },
+  shop: {
+    prices: Object.fromEntries(
+      Object.keys(base.shop.prices).map((k) => [k, parseNum(f.shopPrices[k] ?? '', base.shop.prices[k])]),
+    ),
+    pathUnlockPrice: parseNum(f.shopPathUnlock, base.shop.pathUnlockPrice),
   },
   ownerEmail: f.ownerEmail.trim(),
 });
@@ -153,6 +176,9 @@ export default function DevSettings() {
       next[i] = value;
       return { ...f, levelThresholds: next };
     });
+
+  const setShopPrice = (id: string, value: string) =>
+    setForm((f) => (f ? { ...f, shopPrices: { ...f.shopPrices, [id]: value } } : f));
 
   const toggleDefaultCategory = (id: string) =>
     setForm((f) => {
@@ -332,6 +358,31 @@ export default function DevSettings() {
             sx={{ width: 190 }}
           />
         ))}
+      </Section>
+
+      <Section title="Shop — token prices">
+        <Typography variant="caption" color="text.secondary" sx={{ width: '100%', mb: 0.5 }}>
+          Token cost of each shop item. The path-unlock price applies to every learning-path unlock. 0 makes an item free.
+        </Typography>
+        {Object.keys(base.shop.prices).map((id) => (
+          <TextField
+            key={id}
+            type="number"
+            size="small"
+            label={SHOP_PRICE_LABELS[id] ?? id}
+            value={form.shopPrices[id] ?? ''}
+            onChange={(e) => setShopPrice(id, e.target.value)}
+            sx={{ width: 190 }}
+          />
+        ))}
+        <TextField
+          type="number"
+          size="small"
+          label="Path unlock (each)"
+          value={form.shopPathUnlock}
+          onChange={(e) => set('shopPathUnlock', e.target.value)}
+          sx={{ width: 190 }}
+        />
       </Section>
 
       <Section title="Owner">

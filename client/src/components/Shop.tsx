@@ -10,14 +10,15 @@ import type { TranslationKey } from '../i18n/translations';
 import { useTokens } from '../lib/tokens';
 import {
   CATALOGUE,
-  PATH_UNLOCK_PRICE,
   purchase,
+  priceOf,
   equip,
   useInventory,
   isPathAlreadyUnlocked,
   type Product,
   type ProductKind,
 } from '../lib/shop';
+import { useGameConfig } from '../lib/gameConfig';
 import {
   pushProgressToServer,
   useExtraUnlocks,
@@ -57,6 +58,7 @@ function Shop() {
   const t = useT();
   const tokens = useTokens();
   const inv = useInventory();
+  const config = useGameConfig();
   const { isAuthenticated } = useAuth();
   // Subscribe so the "Unlocked" badge updates the moment a buy lands.
   useRoadmapProgress();
@@ -125,20 +127,22 @@ function Shop() {
           </Typography>
           {kind === 'path' && (
             <Typography variant="caption" color="text.secondary">
-              {t('shop.section.pathsHint', { price: PATH_UNLOCK_PRICE })}
+              {t('shop.section.pathsHint', { price: config.shop.pathUnlockPrice })}
             </Typography>
           )}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
             {CATALOGUE.filter((p) => p.kind === kind).map((p) => {
               const ownedPath = p.kind === 'path' && p.topic ? isPathAlreadyUnlocked(p.topic) : false;
+              const price = priceOf(p, config);
               return (
                 <ProductCard
                   key={p.id}
                   product={p}
+                  price={price}
                   owned={p.kind === 'path' ? ownedPath : inv.owned.includes(p.id)}
                   equipped={inv.ring === p.id || inv.flair === p.id}
                   charges={p.kind === 'booster' ? inv.doubleXp : 0}
-                  canAfford={tokens >= p.price}
+                  canAfford={tokens >= price}
                   onBuy={() => handleBuy(p)}
                   onEquip={() => equip(p.id)}
                 />
@@ -171,6 +175,7 @@ function Shop() {
 
 interface ProductCardProps {
   product: Product;
+  price: number;
   owned: boolean;
   equipped: boolean;
   charges: number;
@@ -179,7 +184,7 @@ interface ProductCardProps {
   onEquip: () => void;
 }
 
-function ProductCard({ product, owned, equipped, charges, canAfford, onBuy, onEquip }: ProductCardProps) {
+function ProductCard({ product, price, owned, equipped, charges, canAfford, onBuy, onEquip }: ProductCardProps) {
   const t = useT();
   const isBooster = product.kind === 'booster';
   const isPath = product.kind === 'path';
@@ -209,7 +214,7 @@ function ProductCard({ product, owned, equipped, charges, canAfford, onBuy, onEq
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mt: 'auto', pt: 1 }}>
           <Chip
             size="small"
-            label={`${product.price.toLocaleString()} ${t('shop.tokensUnit')}`}
+            label={`${price.toLocaleString()} ${t('shop.tokensUnit')}`}
             sx={{ backgroundColor: BRAND.greenSoft, color: BRAND.green, fontWeight: 700 }}
           />
           {isBooster ? (

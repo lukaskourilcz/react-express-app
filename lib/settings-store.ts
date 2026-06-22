@@ -56,6 +56,12 @@ export interface GameSettings {
     /** Total XP required to reach each career rank (ascending; first is 0). */
     rankThresholds: number[];
   };
+  shop: {
+    /** Per-product token price, keyed by shop product id. */
+    prices: Record<string, number>;
+    /** Token price to instantly unlock any one learning path. */
+    pathUnlockPrice: number;
+  };
   /** Email whose private categories (custom, apt) are visible. */
   ownerEmail: string;
 }
@@ -80,6 +86,19 @@ const DEFAULT_QUIZ_CATEGORY_IDS = [
   'system-design',
   'devops',
 ];
+
+// Default token prices for the shop (kept in sync with the client catalogue in
+// client/src/lib/shop.ts). Configurable from /dev → Settings.
+const DEFAULT_SHOP_PRICES: Record<string, number> = {
+  'double-xp': 75,
+  'ring-emerald': 200,
+  'ring-gold': 250,
+  'ring-violet': 375,
+  'flair-rocket': 150,
+  'flair-flame': 300,
+  'flair-crown': 500,
+};
+const DEFAULT_PATH_UNLOCK_PRICE = 200;
 
 export const DEFAULT_SETTINGS: GameSettings = {
   quiz: {
@@ -106,6 +125,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
     flashcards: true,
   },
   leveling: { rankThresholds: DEFAULT_RANK_THRESHOLDS },
+  shop: { prices: { ...DEFAULT_SHOP_PRICES }, pathUnlockPrice: DEFAULT_PATH_UNLOCK_PRICE },
   ownerEmail: (process.env.OWNER_EMAIL || 'kouril.lukas@gmail.com').toLowerCase(),
 };
 
@@ -160,6 +180,18 @@ const cleanThresholds = (v: unknown, fallback: number[]): number[] => {
   return out;
 };
 
+// Shop prices: for each KNOWN product id, take a clamped non-negative integer
+// override or fall back to the default. Unknown keys are dropped so the stored
+// shape can’t balloon. Prices may be 0 (a free item).
+const cleanShopPrices = (v: unknown, fallback: Record<string, number>): Record<string, number> => {
+  const src = v && typeof v === 'object' ? (v as Record<string, unknown>) : {};
+  const out: Record<string, number> = {};
+  for (const key of Object.keys(fallback)) {
+    out[key] = clampInt(src[key], 0, 1_000_000, fallback[key]);
+  }
+  return out;
+};
+
 // Coerce arbitrary stored/posted JSON into a valid GameSettings, clamping every
 // field so a bad value can never break the endpoints that consume it.
 export function normalizeSettings(raw: unknown): GameSettings {
@@ -200,6 +232,15 @@ export function normalizeSettings(raw: unknown): GameSettings {
       rankThresholds: cleanThresholds(
         (r.leveling as Record<string, unknown> | undefined)?.rankThresholds,
         d.leveling.rankThresholds,
+      ),
+    },
+    shop: {
+      prices: cleanShopPrices((r.shop as Record<string, unknown> | undefined)?.prices, d.shop.prices),
+      pathUnlockPrice: clampInt(
+        (r.shop as Record<string, unknown> | undefined)?.pathUnlockPrice,
+        0,
+        1_000_000,
+        d.shop.pathUnlockPrice,
       ),
     },
     ownerEmail:

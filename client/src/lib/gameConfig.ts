@@ -20,12 +20,26 @@ export interface GameConfig {
   play: { defaultDurationS: number; durationOptionsS: number[]; countOptions: number[] };
   features: { dailyChallenge: boolean; multiplayer: boolean; leaderboard: boolean; flashcards: boolean };
   leveling: { rankThresholds: number[] };
+  /** Token prices for the shop — per-product overrides + the path-unlock price. */
+  shop: { prices: Record<string, number>; pathUnlockPrice: number };
 }
 
 const DEFAULT_QUIZ_CATEGORY_IDS = [
   'javascript', 'typescript', 'react', 'nodejs', 'nextjs', 'html',
   'css', 'git', 'dsa', 'databases', 'system-design', 'devops',
 ];
+
+// Default shop token prices (mirrors lib/settings-store.ts and the shop catalogue).
+const DEFAULT_SHOP_PRICES: Record<string, number> = {
+  'double-xp': 75,
+  'ring-emerald': 200,
+  'ring-gold': 250,
+  'ring-violet': 375,
+  'flair-rocket': 150,
+  'flair-flame': 300,
+  'flair-crown': 500,
+};
+const DEFAULT_PATH_UNLOCK_PRICE = 200;
 
 export const DEFAULT_CONFIG: GameConfig = {
   quiz: {
@@ -39,6 +53,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   play: { defaultDurationS: 60, durationOptionsS: [30, 60, 120, 300, 0], countOptions: [5, 10, 15, 20] },
   features: { dailyChallenge: true, multiplayer: true, leaderboard: true, flashcards: true },
   leveling: { rankThresholds: DEFAULT_RANK_THRESHOLDS },
+  shop: { prices: { ...DEFAULT_SHOP_PRICES }, pathUnlockPrice: DEFAULT_PATH_UNLOCK_PRICE },
 };
 
 // Module-level cache so the config is fetched once and shared by every consumer.
@@ -50,10 +65,17 @@ async function fetchConfig(): Promise<GameConfig> {
     const c = await apiFetch<GameConfig>('/api/settings');
     // Apply the configured career-rank thresholds to the leveling module.
     setRankThresholds(c.leveling?.rankThresholds);
-    return c;
+    // Defensively fill in any section an older server might omit (e.g. shop) so
+    // consumers never read undefined.
+    return { ...DEFAULT_CONFIG, ...c, shop: c.shop ?? DEFAULT_CONFIG.shop };
   } catch {
     return DEFAULT_CONFIG;
   }
+}
+
+/** Imperative snapshot of the game config (DEFAULT_CONFIG until the fetch lands). */
+export function getGameConfig(): GameConfig {
+  return cached ?? DEFAULT_CONFIG;
 }
 
 export function useGameConfig(): GameConfig {
