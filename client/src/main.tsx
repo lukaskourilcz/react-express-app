@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -13,6 +13,14 @@ import { initSentry } from './lib/sentry';
 // Start error/performance reporting before anything renders (no-op without a DSN).
 initSentry();
 
+// React Query devtools, dev-only: the dynamic import lives in a DEV-gated branch
+// so it (and the dependency) is dropped from the production bundle entirely.
+const ReactQueryDevtools = import.meta.env.DEV
+  ? lazy(() =>
+      import('@tanstack/react-query-devtools').then((m) => ({ default: m.ReactQueryDevtools })),
+    )
+  : null;
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
@@ -26,6 +34,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             </LanguageProvider>
           </BrowserRouter>
         </AuthProvider>
+        {ReactQueryDevtools && (
+          <Suspense fallback={null}>
+            <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-left" />
+          </Suspense>
+        )}
       </QueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>,
