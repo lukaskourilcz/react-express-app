@@ -102,6 +102,19 @@ const check = (cond: boolean, msg: string) => {
   // A 15-level topic also splits cleanly into 3 part tests.
   const gitTest = await call({ topic: 'git', test: '1' });
   check(gitTest.statusCode === 200 && gitTest.body?.questions?.length === 20, 'git part 1 test → 200 with 20 questions');
+
+  // The trimmed CSS path (9 levels: foundations + Tailwind + CSS-in-JS) splits
+  // into 3 parts of 3 levels each.
+  console.log('\nCSS (9 levels → 3 parts):');
+  check(structure.body?.structure?.css?.levels?.length === 9, 'css has 9 levels');
+  for (const part of ['1', '2', '3']) {
+    const r = await call({ topic: 'css', test: part });
+    check(r.statusCode === 200 && r.body?.questions?.length === 20, `css part ${part} test → 200 with 20 questions`);
+  }
+  const cssL9 = await call({ topic: 'css', level: '9' });
+  check(cssL9.statusCode === 200 && cssL9.body?.questions?.length === 8, 'css level 9 → 8 questions');
+  const cssL10 = await call({ topic: 'css', level: '10' });
+  check(cssL10.statusCode === 400, 'css level 10 → 400 (only 9 levels)');
   // Out-of-range parts are rejected.
   const badPartHi = await call({ topic: 'javascript', test: '4' });
   check(badPartHi.statusCode === 400, 'javascript part 4 → 400 (only 3 parts)');

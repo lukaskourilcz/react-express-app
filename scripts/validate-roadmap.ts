@@ -24,7 +24,7 @@ const fail = (msg: string) => {
 // Expected level counts per topic.
 const EXPECTED_LEVELS: Record<string, number> = {
   javascript: 25, typescript: 25, react: 25, nodejs: 25,
-  nextjs: 15, git: 15, html: 15, css: 15, dsa: 15, algorithms: 10,
+  nextjs: 15, git: 15, html: 15, css: 9, dsa: 15, algorithms: 10,
   abbreviations: 15, general: 15, ai: 20, 'rhf-zod': 15, 'cool-stuff': 15,
   databases: 15, 'system-design': 15, testing: 15, devops: 15, security: 15,
 };

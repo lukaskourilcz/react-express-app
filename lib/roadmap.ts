@@ -109,9 +109,9 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'Media', 'Metadata & Head', 'Accessibility', 'Entities & Special', 'Advanced HTML',
   ],
   css: [
-    'CSS Basics', 'Selectors', 'Combinators & Specificity', 'Colors & Units', 'Box Model',
-    'Text & Fonts', 'Backgrounds & Borders', 'Display & Visibility', 'Positioning', 'Flexbox',
-    'Grid', 'Pseudo-classes', 'Transitions & Transforms', 'Responsive Design', 'Advanced CSS',
+    'How CSS Works', 'Selectors & Classes', 'The Box Model',
+    'Layout: Flexbox', 'Layout: Grid & Responsive', 'Custom Properties (--var)',
+    'Tailwind: Utility-First', 'Tailwind: Responsive & Custom', 'Tailwind vs CSS-in-JS',
   ],
   dsa: [
     'Complexity Basics', 'Big-O Notation', 'Arrays', 'Strings', 'Hash Tables',
