@@ -1,8 +1,22 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { visualizer } from 'rollup-plugin-visualizer';
+
+// `ANALYZE=true npm run build` emits a treemap of the bundle to
+// dist/bundle-stats.html (open it to inspect the MUI/router/app split) plus a
+// machine-readable dist/bundle-stats.json. No effect on a normal build.
+const analyze = process.env.ANALYZE === 'true';
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    ...(analyze
+      ? [
+          visualizer({ filename: 'dist/bundle-stats.html', template: 'treemap', gzipSize: true, brotliSize: true }),
+          visualizer({ filename: 'dist/bundle-stats.json', template: 'raw-data', gzipSize: true }),
+        ]
+      : []),
+  ],
   server: {
     port: 3000,
     // For local dev, run `vercel dev` from the repo root which serves the
