@@ -1,11 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from './api';
 import { setRankThresholds, DEFAULT_RANK_THRESHOLDS } from './leveling';
+import { queryClient } from './queryClient';
 
 // Public, read-only game configuration (from /api/settings) that the UI uses to
-// render the configured count/time options and hide disabled features. Mirrors
-// the server defaults so the app renders correctly before the fetch resolves or
-// if it fails.
+// render the configured count/time options and hide disabled features. Backed by
+// TanStack Query so it's fetched once and shared by every consumer (replacing a
+// hand-rolled module cache + in-flight de-dup), while DEFAULT_CONFIG renders the
+// app correctly before the fetch resolves or if it fails.
 
 export interface GameConfig {
   quiz: {
@@ -56,41 +58,29 @@ export const DEFAULT_CONFIG: GameConfig = {
   shop: { prices: { ...DEFAULT_SHOP_PRICES }, pathUnlockPrice: DEFAULT_PATH_UNLOCK_PRICE },
 };
 
-// Module-level cache so the config is fetched once and shared by every consumer.
-let cached: GameConfig | null = null;
-let inflight: Promise<GameConfig> | null = null;
+export const GAME_CONFIG_KEY = ['game-config'] as const;
 
 async function fetchConfig(): Promise<GameConfig> {
-  try {
-    const c = await apiFetch<GameConfig>('/api/settings');
-    // Apply the configured career-rank thresholds to the leveling module.
-    setRankThresholds(c.leveling?.rankThresholds);
-    // Defensively fill in any section an older server might omit (e.g. shop) so
-    // consumers never read undefined.
-    return { ...DEFAULT_CONFIG, ...c, shop: c.shop ?? DEFAULT_CONFIG.shop };
-  } catch {
-    return DEFAULT_CONFIG;
-  }
-}
-
-/** Imperative snapshot of the game config (DEFAULT_CONFIG until the fetch lands). */
-export function getGameConfig(): GameConfig {
-  return cached ?? DEFAULT_CONFIG;
+  const c = await apiFetch<GameConfig>('/api/settings');
+  // Apply the configured career-rank thresholds to the leveling module.
+  setRankThresholds(c.leveling?.rankThresholds);
+  // Defensively fill in any section an older server might omit (e.g. shop).
+  return { ...DEFAULT_CONFIG, ...c, shop: c.shop ?? DEFAULT_CONFIG.shop };
 }
 
 export function useGameConfig(): GameConfig {
-  const [config, setConfig] = useState<GameConfig>(cached ?? DEFAULT_CONFIG);
-  useEffect(() => {
-    if (cached) return;
-    let active = true;
-    inflight ??= fetchConfig();
-    inflight.then((c) => {
-      cached = c;
-      if (active) setConfig(c);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-  return config;
+  const { data } = useQuery({
+    queryKey: GAME_CONFIG_KEY,
+    queryFn: fetchConfig,
+    // The config rarely changes within a session; fetch once and keep it.
+    staleTime: Infinity,
+    gcTime: Infinity,
+    placeholderData: DEFAULT_CONFIG,
+  });
+  return data ?? DEFAULT_CONFIG;
+}
+
+/** Imperative snapshot for non-React callers (e.g. shop purchase). */
+export function getGameConfig(): GameConfig {
+  return queryClient.getQueryData<GameConfig>(GAME_CONFIG_KEY) ?? DEFAULT_CONFIG;
 }

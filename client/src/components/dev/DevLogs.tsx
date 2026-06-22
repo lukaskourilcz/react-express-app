@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Box,
   Typography,
@@ -14,9 +15,8 @@ import {
 } from '@mui/material';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
-import { useReloadKey, useCancellableEffect } from '../../lib/hooks';
 import { friendlyError } from '../../lib/api';
-import { listAuthEvents, type AuthEvent } from '../../lib/devApi';
+import { listAuthEvents } from '../../lib/devApi';
 
 const formatWhen = (iso: string): string => {
   const d = new Date(iso);
@@ -30,27 +30,13 @@ const formatWhen = (iso: string): string => {
 };
 
 export default function DevLogs() {
-  const [events, setEvents] = useState<AuthEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [reloadKey, reload] = useReloadKey();
-
-  useCancellableEffect(
-    async (isCancelled) => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await listAuthEvents();
-        if (isCancelled()) return;
-        setEvents(data.events);
-      } catch (err) {
-        if (!isCancelled()) setError(friendlyError(err));
-      } finally {
-        if (!isCancelled()) setLoading(false);
-      }
-    },
-    [reloadKey],
-  );
+  const { data, isPending: loading, error: queryError, refetch } = useQuery({
+    queryKey: ['admin', 'logs'],
+    queryFn: listAuthEvents,
+  });
+  const events = data?.events ?? [];
+  const error = queryError ? friendlyError(queryError) : null;
+  const reload = () => void refetch();
 
   const stats = useMemo(() => {
     let registers = 0;

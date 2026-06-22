@@ -19,10 +19,10 @@ import {
 import { apiFetch, friendlyError } from '../lib/api';
 import {
   fetchChallengeBatch,
-  getChallengeLeaderboard,
   submitChallengeScore,
   type ChallengeLeaderboard,
 } from '../lib/challengeApi';
+import { useChallengeLeaderboard } from '../lib/queries';
 import type { Question, QuizResult } from '../types/quiz';
 import {
   getCategoryHexColor,
@@ -66,9 +66,10 @@ export default function Challenge() {
   const [phase, setPhase] = useState<Phase>('intro');
   const [error, setError] = useState<string | null>(null);
 
-  // Leaderboard preview (intro screen + game-over).
-  const [board, setBoard] = useState<ChallengeLeaderboard | null>(null);
-  const [boardLoading, setBoardLoading] = useState(false);
+  // Leaderboard preview (intro screen + game-over) via TanStack Query.
+  const boardQuery = useChallengeLeaderboard();
+  const board: ChallengeLeaderboard | null = boardQuery.data ?? null;
+  const boardLoading = boardQuery.isPending;
 
   // Active run state.
   const [score, setScore] = useState(0);
@@ -91,22 +92,9 @@ export default function Challenge() {
 
   /* ─── leaderboard ───────────────────────────────────────────── */
 
-  const refreshLeaderboard = useCallback(async () => {
-    setBoardLoading(true);
-    try {
-      const b = await getChallengeLeaderboard();
-      setBoard(b);
-    } catch {
-      // Leaderboard is best-effort; the challenge still plays without it.
-      setBoard({ top: [], champion: null });
-    } finally {
-      setBoardLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshLeaderboard();
-  }, [refreshLeaderboard]);
+  // Leaderboard is best-effort (the query never surfaces errors to the UI);
+  // refetch it after a score is submitted.
+  const refreshLeaderboard = boardQuery.refetch;
 
   useEffect(() => {
     if (profile.name && !name) setName(profile.name);

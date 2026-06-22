@@ -7,6 +7,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchRoadmapStructure } from './roadmap';
 import { fetchLeaderboard } from './play';
+import { getUserStats, createOrUpdateUserStats, type UserStats } from './supabase';
+import { listFlashcards } from './flashcards';
+import { getChallengeLeaderboard } from './challengeApi';
 
 type LeaderboardPeriod = 'global' | 'daily' | 'category';
 
@@ -30,6 +33,40 @@ export function useLeaderboard(period: LeaderboardPeriod, date: string, category
       period === 'category' ? category : null,
     ],
     queryFn: () => fetchLeaderboard(period, { date, category }),
+    staleTime: 30_000,
+  });
+}
+
+/** The signed-in user's profile stats, creating the row on first visit. */
+export function useProfileStats(
+  userId: string | undefined,
+  createWith: { email?: string; name?: string; picture?: string },
+  enabled: boolean,
+) {
+  return useQuery({
+    queryKey: ['profile-stats', userId],
+    enabled: enabled && !!userId,
+    queryFn: async (): Promise<UserStats | null> => {
+      const loaded = await getUserStats(userId!);
+      return loaded ?? (await createOrUpdateUserStats(userId!, createWith));
+    },
+  });
+}
+
+/** The signed-in user's saved flashcards. */
+export function useFlashcards(enabled: boolean) {
+  return useQuery({
+    queryKey: ['flashcards'],
+    enabled,
+    queryFn: listFlashcards,
+  });
+}
+
+/** The Biggest Shark Challenge leaderboard (best-effort; never throws to the UI). */
+export function useChallengeLeaderboard() {
+  return useQuery({
+    queryKey: ['challenge', 'leaderboard'],
+    queryFn: getChallengeLeaderboard,
     staleTime: 30_000,
   });
 }
