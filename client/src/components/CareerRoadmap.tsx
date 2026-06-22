@@ -18,6 +18,7 @@ import {
 import type { RoadmapStructure, RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
 import { levelForXp, specializationFor, displayTitle, getCareerRanks } from '../lib/leveling';
+import RoadmapTree from './RoadmapTree';
 
 interface Area {
   topic: RoadmapTopic;
@@ -190,6 +191,18 @@ export default function CareerRoadmap() {
             )}
           </Typography>
         </Box>
+      </Paper>
+
+      {/* The full roadmap as a dependency tree, each topic branched into its 3
+          parts, coloured by the learner's live progress. */}
+      <Paper elevation={0} sx={{ p: { xs: 1.5, sm: 2.5 }, mb: 3, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+        <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+          {t('roadmapPage.treeTitle')}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {t('roadmapPage.treeIntro')}
+        </Typography>
+        <RoadmapTree structure={structure} />
       </Paper>
 
       {/* The four pillars */}

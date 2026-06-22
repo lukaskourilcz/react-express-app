@@ -11,6 +11,10 @@ import {
   CHECKPOINT_COUNT,
   LEVELS_PER_CHECKPOINT,
   LEVEL_PASS,
+  partRanges,
+  isValidPart,
+  PART_TEST_PASS,
+  PART_TEST_SIZE,
   type RoadmapTopic,
 } from '../../lib/roadmap';
 
@@ -193,6 +197,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const topicRaw = (req.query.topic as string) || '';
   const levelRaw = req.query.level as string | undefined;
   const checkpointRaw = req.query.checkpoint as string | undefined;
+  const testRaw = req.query.test as string | undefined;
 
   // The live question set drives both the structure and a level's questions, so
   // hiding a question in /dev re-syncs the path automatically (fewer/relevelled
@@ -201,7 +206,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const exists = (id: string) => byId.has(id);
 
   // No topic → return the whole map so the client can render the path.
-  if (!topicRaw && levelRaw === undefined && checkpointRaw === undefined) {
+  if (!topicRaw && levelRaw === undefined && checkpointRaw === undefined && testRaw === undefined) {
     res.setHeader('Cache-Control', 'public, max-age=60');
     logEvent({ status: 200, kind: 'structure', latency_ms: Date.now() - started });
     return res.json({ topics: ROADMAP_TOPICS, structure: liveRoadmapStructure(exists) });
@@ -213,6 +218,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const topic: RoadmapTopic = topicRaw;
   const lang = normalizeLang(req.query.lang);
   const live = buildLiveTopic(topic, exists);
+
+  // ── Part test (a focused exam over one of the topic's 3 parts) ────────────
+  // A part is a contiguous slice of the topic's (live) levels; the test samples
+  // up to PART_TEST_SIZE questions from across that slice and grades at 85%.
+  if (testRaw !== undefined) {
+    const part = parseInt(testRaw, 10);
+    if (!isValidPart(part)) return jsonError(res, 400, 'bad_request', 'Invalid test');
+    const range = partRanges(live.levels.length).find((r) => r.part === part);
+    if (!range || range.size <= 0) return jsonError(res, 400, 'bad_request', 'Invalid test');
+
+    const pool: string[] = [];
+    for (let l = range.startLevel; l <= range.endLevel; l++) {
+      pool.push(...(live.levelIds[l - 1] ?? []));
+    }
+    const ids = secureShuffle(pool).slice(0, PART_TEST_SIZE);
+    const questions = buildQuestions(ids, lang, byId);
+    if (questions.length === 0) return jsonError(res, 404, 'no_questions', 'No questions for this test');
+
+    res.setHeader('Cache-Control', 'private, no-store');
+    logEvent({ status: 200, kind: 'test', topic, part, count: questions.length, latency_ms: Date.now() - started });
+    return res.json({
+      // Reuse the client's exam (progress-bar, no-hearts) runner.
+      kind: 'checkpoint',
+      topic,
+      ref: part,
+      title: `Part ${part}`,
+      passPct: PART_TEST_PASS,
+      questions,
+    });
+  }
 
   // ── Checkpoint exam (the surviving questions over its 5 levels) ───────────
   if (checkpointRaw !== undefined) {

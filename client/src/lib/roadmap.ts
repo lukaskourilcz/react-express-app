@@ -282,6 +282,141 @@ export function topicUnlockHint(
     .join(' · ');
 }
 
+/* ──── Parts ("learning paths" split) ───────────────────────────────────────
+ * Each topic is shown as PARTS_PER_TOPIC shorter, sequential paths instead of
+ * one long ladder — every part ends with its own test. A part is a contiguous
+ * slice of the topic's GLOBAL levels, derived from the (live) level count so the
+ * split stays in sync with the server. Per-part progress reuses the existing
+ * per-topic maps: level passes stay keyed by their global level number, and a
+ * part test is stored in the topic's `checkpoints` map keyed by the part number
+ * (1..PARTS_PER_TOPIC). For the common 15-level topics the part ranges line up
+ * exactly with the old 5-level checkpoints, so existing progress carries over.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+export const PARTS_PER_TOPIC = 3;
+export const PART_TEST_PASS = CHECKPOINT_PASS;
+
+/** Split a level count into PARTS_PER_TOPIC contiguous sizes (extra → earlier parts). */
+export function partSizes(levelCount: number): number[] {
+  const n = Math.max(0, Math.floor(levelCount));
+  const base = Math.floor(n / PARTS_PER_TOPIC);
+  const rem = n % PARTS_PER_TOPIC;
+  return Array.from({ length: PARTS_PER_TOPIC }, (_, i) => base + (i < rem ? 1 : 0));
+}
+
+export interface PartRange {
+  /** 1-based part number (1..PARTS_PER_TOPIC). */
+  part: number;
+  /** First / last GLOBAL level (1-based, inclusive) covered by this part. */
+  startLevel: number;
+  endLevel: number;
+  size: number;
+}
+
+/** Contiguous global-level ranges for each part of a topic with `levelCount` levels. */
+export function partRanges(levelCount: number): PartRange[] {
+  const sizes = partSizes(levelCount);
+  const ranges: PartRange[] = [];
+  let start = 1;
+  for (let i = 0; i < sizes.length; i++) {
+    const size = sizes[i];
+    ranges.push({ part: i + 1, startLevel: start, endLevel: start + size - 1, size });
+    start += size;
+  }
+  return ranges;
+}
+
+/** Build a path id ("javascript-2") and parse it back, family ids may contain '-'. */
+export const makePathId = (family: RoadmapTopic, part: number): string => `${family}-${part}`;
+export function parsePathId(id: string): { family: RoadmapTopic; part: number } | null {
+  const idx = id.lastIndexOf('-');
+  if (idx <= 0) return null;
+  const family = id.slice(0, idx) as RoadmapTopic;
+  const part = parseInt(id.slice(idx + 1), 10);
+  if (!Number.isInteger(part) || part < 1 || part > PARTS_PER_TOPIC) return null;
+  if (!(Object.keys(TOPIC_PREREQS) as string[]).includes(family)) return null;
+  return { family, part };
+}
+
+export const fetchRoadmapPartTest = (family: RoadmapTopic, part: number, lang: string, signal?: AbortSignal): Promise<RoadmapPlayable> => {
+  const params = new URLSearchParams({ topic: family, test: String(part), lang });
+  return apiFetch<RoadmapPlayable>(`/api/quiz/roadmap?${params}`, { signal });
+};
+
+/* part-test results live in the topic's checkpoints map, keyed by part number */
+export const recordPartTestResult = (family: RoadmapTopic, part: number, pct: number, passPct = PART_TEST_PASS) =>
+  record('checkpoints', family, part, pct, passPct);
+export const isPartTestPassed = (p: RoadmapProgress, family: RoadmapTopic, part: number): boolean =>
+  p[family]?.checkpoints?.[String(part)]?.passed ?? false;
+export const partTestBestPct = (p: RoadmapProgress, family: RoadmapTopic, part: number): number =>
+  p[family]?.checkpoints?.[String(part)]?.bestPct ?? 0;
+
+/** Levels passed within a part's global range. */
+export function partPassedLevels(p: RoadmapProgress, family: RoadmapTopic, range: PartRange): number {
+  let n = 0;
+  for (let l = range.startLevel; l <= range.endLevel; l++) if (isLevelPassed(p, family, l)) n++;
+  return n;
+}
+
+/** A global level is unlocked if it's the first of an (already unlocked) part, else the previous passed. */
+export function isPartLevelUnlocked(p: RoadmapProgress, family: RoadmapTopic, range: PartRange, globalLevel: number): boolean {
+  if (globalLevel <= range.startLevel) return true;
+  return isLevelPassed(p, family, globalLevel - 1);
+}
+
+/** A part's test unlocks once every level in the part is passed. */
+export function isPartTestUnlocked(p: RoadmapProgress, family: RoadmapTopic, range: PartRange): boolean {
+  if (range.size <= 0) return false;
+  return partPassedLevels(p, family, range) >= range.size;
+}
+
+/**
+ * Whether a path (part) is open: its family must be unlocked, and either it's
+ * the first part or the previous part's test has been passed.
+ */
+export function isPathUnlocked(
+  p: RoadmapProgress,
+  family: RoadmapTopic,
+  part: number,
+  extra: RoadmapTopic[] | Set<RoadmapTopic> = [],
+): boolean {
+  if (!isTopicUnlocked(p, family, extra)) return false;
+  if (part <= 1) return true;
+  return isPartTestPassed(p, family, part - 1);
+}
+
+export type PathStatus = 'locked' | 'available' | 'in-progress' | 'complete';
+
+/** Coarse state of a single path (part) for the tree + part selector. */
+export function pathStatus(
+  p: RoadmapProgress,
+  family: RoadmapTopic,
+  ranges: PartRange[],
+  part: number,
+  extra: RoadmapTopic[] | Set<RoadmapTopic> = [],
+): PathStatus {
+  const range = ranges[part - 1];
+  if (!range || !isPathUnlocked(p, family, part, extra)) return 'locked';
+  if (isPartTestPassed(p, family, part)) return 'complete';
+  return partPassedLevels(p, family, range) > 0 ? 'in-progress' : 'available';
+}
+
+/** The part a learner should land on: the first unlocked, not-yet-complete part. */
+export function currentPart(
+  p: RoadmapProgress,
+  family: RoadmapTopic,
+  ranges: PartRange[],
+  extra: RoadmapTopic[] | Set<RoadmapTopic> = [],
+): number {
+  let lastUnlocked = 1;
+  for (let part = 1; part <= ranges.length; part++) {
+    if (!isPathUnlocked(p, family, part, extra)) break;
+    lastUnlocked = part;
+    if (!isPartTestPassed(p, family, part)) return part;
+  }
+  return lastUnlocked;
+}
+
 /* ──── Account sync ─────────────────────────────────────────────────────── */
 
 function mergeMaps(a: Record<string, Entry> = {}, b: Record<string, Entry> = {}): Record<string, Entry> {

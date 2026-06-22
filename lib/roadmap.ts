@@ -109,9 +109,9 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'Media', 'Metadata & Head', 'Accessibility', 'Entities & Special', 'Advanced HTML',
   ],
   css: [
-    'CSS Basics', 'Selectors', 'Combinators & Specificity', 'Colors & Units', 'Box Model',
-    'Text & Fonts', 'Backgrounds & Borders', 'Display & Visibility', 'Positioning', 'Flexbox',
-    'Grid', 'Pseudo-classes', 'Transitions & Transforms', 'Responsive Design', 'Advanced CSS',
+    'How CSS Works', 'Selectors & Classes', 'The Box Model',
+    'Layout: Flexbox', 'Layout: Grid & Responsive', 'Custom Properties (--var)',
+    'Tailwind: Utility-First', 'Tailwind: Responsive & Custom', 'Tailwind vs CSS-in-JS',
   ],
   dsa: [
     'Complexity Basics', 'Big-O Notation', 'Arrays', 'Strings', 'Hash Tables',
@@ -352,6 +352,56 @@ export function isValidLevel(topic: RoadmapTopic, level: number): boolean {
 
 export function isValidCheckpoint(topic: RoadmapTopic, checkpoint: number): boolean {
   return Number.isInteger(checkpoint) && checkpoint >= 1 && checkpoint <= topicCheckpointCount(topic);
+}
+
+/* ──── parts ("learning paths" split) ──────────────────────────────────────
+ * Each topic is presented to the learner as PARTS_PER_TOPIC shorter, sequential
+ * "parts" instead of one long path — every part ends with its own test. A part
+ * is a contiguous slice of the topic's levels; boundaries are derived from the
+ * (live) level count so a topic re-splits gracefully if questions are hidden in
+ * /dev. The level + question banks are unchanged: parts are a pure split layer,
+ * and per-part progress reuses the existing global level / checkpoint maps.
+ * ─────────────────────────────────────────────────────────────────────────── */
+
+export const PARTS_PER_TOPIC = 3;
+// A part's end-of-part test uses the same gate the old checkpoints did.
+export const PART_TEST_PASS = CHECKPOINT_PASS;
+// Max questions sampled into a part test. A part spans 3–9 levels (× 8), so the
+// test is a focused exam over the part rather than its whole question pool.
+export const PART_TEST_SIZE = 20;
+
+/** Split a level count into PARTS_PER_TOPIC contiguous sizes (extra → earlier parts). */
+export function partSizes(levelCount: number): number[] {
+  const n = Math.max(0, Math.floor(levelCount));
+  const base = Math.floor(n / PARTS_PER_TOPIC);
+  const rem = n % PARTS_PER_TOPIC;
+  return Array.from({ length: PARTS_PER_TOPIC }, (_, i) => base + (i < rem ? 1 : 0));
+}
+
+export interface PartRange {
+  /** 1-based part number (1..PARTS_PER_TOPIC). */
+  part: number;
+  /** First / last GLOBAL level (1-based, inclusive) covered by this part. */
+  startLevel: number;
+  endLevel: number;
+  size: number;
+}
+
+/** Contiguous global-level ranges for each part of a topic with `levelCount` levels. */
+export function partRanges(levelCount: number): PartRange[] {
+  const sizes = partSizes(levelCount);
+  const ranges: PartRange[] = [];
+  let start = 1;
+  for (let i = 0; i < sizes.length; i++) {
+    const size = sizes[i];
+    ranges.push({ part: i + 1, startLevel: start, endLevel: start + size - 1, size });
+    start += size;
+  }
+  return ranges;
+}
+
+export function isValidPart(part: number): boolean {
+  return Number.isInteger(part) && part >= 1 && part <= PARTS_PER_TOPIC;
 }
 
 export { ROADMAP_LEVELS, QUESTIONS_PER_LEVEL };
