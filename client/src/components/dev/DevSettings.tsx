@@ -64,6 +64,8 @@ interface FormState {
   shopPrices: Record<string, string>;
   /** Token price to unlock any one learning path. */
   shopPathUnlock: string;
+  /** One-liner loading-screen dev tips, one per line while editing. */
+  devTips: string;
   ownerEmail: string;
 }
 
@@ -99,8 +101,16 @@ const toForm = (s: GameSettings): FormState => ({
   levelThresholds: s.leveling.rankThresholds.map(String),
   shopPrices: Object.fromEntries(Object.entries(s.shop.prices).map(([k, v]) => [k, String(v)])),
   shopPathUnlock: String(s.shop.pathUnlockPrice),
+  devTips: s.devTips.join('\n'),
   ownerEmail: s.ownerEmail,
 });
+
+// Split the multiline tips editor into a clean list: trim each line, drop blanks.
+const parseTips = (s: string): string[] =>
+  s
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
 
 const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
   quiz: {
@@ -135,6 +145,7 @@ const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
     ),
     pathUnlockPrice: parseNum(f.shopPathUnlock, base.shop.pathUnlockPrice),
   },
+  devTips: parseTips(f.devTips),
   ownerEmail: f.ownerEmail.trim(),
 });
 
@@ -375,6 +386,26 @@ export default function DevSettings() {
           onChange={(e) => set('shopPathUnlock', e.target.value)}
           sx={{ width: 190 }}
         />
+      </Section>
+
+      <Section title="Loading-screen dev tips">
+        <Typography variant="caption" color="text.secondary" sx={{ width: '100%', mb: 0.5 }}>
+          One tip per line. A random tip fades in under the shark after ~2.5s on longer, full-page loads. Keep them short
+          one-liners so they're readable at a glance. Leave empty to show no tip.
+        </Typography>
+        <TextField
+          multiline
+          minRows={4}
+          maxRows={14}
+          size="small"
+          label="Dev tips (one per line)"
+          value={form.devTips}
+          onChange={(e) => set('devTips', e.target.value)}
+          sx={{ width: '100%' }}
+        />
+        <Typography variant="caption" color="text.secondary" sx={{ width: '100%', mt: 0.5 }}>
+          {parseTips(form.devTips).length} tip(s)
+        </Typography>
       </Section>
 
       <Section title="Owner">

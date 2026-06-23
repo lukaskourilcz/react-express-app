@@ -62,6 +62,12 @@ export interface GameSettings {
     /** Token price to instantly unlock any one learning path. */
     pathUnlockPrice: number;
   };
+  /**
+   * One-liner "dev tips" surfaced on the full-page loading screen (under the
+   * swimming shark) on longer loads. Editable from /dev → Settings. An empty
+   * list simply shows no tip.
+   */
+  devTips: string[];
   /** Email whose private categories (custom, apt) are visible. */
   ownerEmail: string;
 }
@@ -100,6 +106,22 @@ const DEFAULT_SHOP_PRICES: Record<string, number> = {
 };
 const DEFAULT_PATH_UNLOCK_PRICE = 200;
 
+// Default one-liner dev tips shown on the loading screen. Short and punchy so a
+// learner can read one in the moment a slow load surfaces it. Kept in sync with
+// client/src/lib/gameConfig.ts DEFAULT_DEV_TIPS.
+const DEFAULT_DEV_TIPS = [
+  'Remember to code.',
+  'Building projects beats talent.',
+  'Read the error message — then read it again.',
+  'Ship small, ship often.',
+  'Name things like the next dev is you.',
+  'Done is better than perfect.',
+  'Commit early, commit often.',
+  'The best debugger is a good night of sleep.',
+  'Write the test you wish you had.',
+  'Consistency compounds.',
+];
+
 export const DEFAULT_SETTINGS: GameSettings = {
   quiz: {
     defaultCount: 10,
@@ -126,6 +148,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   },
   leveling: { rankThresholds: DEFAULT_RANK_THRESHOLDS },
   shop: { prices: { ...DEFAULT_SHOP_PRICES }, pathUnlockPrice: DEFAULT_PATH_UNLOCK_PRICE },
+  devTips: [...DEFAULT_DEV_TIPS],
   ownerEmail: (process.env.OWNER_EMAIL || 'kouril.lukas@gmail.com').toLowerCase(),
 };
 
@@ -176,6 +199,26 @@ const cleanThresholds = (v: unknown, fallback: number[]): number[] => {
     if (i === 0 && n !== 0) return fallback;
     if (i > 0 && n <= out[i - 1]) return fallback;
     out.push(n);
+  }
+  return out;
+};
+
+// Dev tips: trimmed, non-empty strings, de-duplicated, each length-capped and the
+// list count-capped. A missing field (older stored row) falls back to defaults;
+// an explicit empty array is kept as-is so a dev can switch the tips off.
+const MAX_TIP_LENGTH = 200;
+const MAX_TIPS = 40;
+const cleanTips = (v: unknown, fallback: string[]): string[] => {
+  if (!Array.isArray(v)) return fallback;
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const item of v) {
+    if (typeof item !== 'string') continue;
+    const trimmed = item.trim();
+    if (!trimmed || trimmed.length > MAX_TIP_LENGTH || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    out.push(trimmed);
+    if (out.length >= MAX_TIPS) break;
   }
   return out;
 };
@@ -243,6 +286,7 @@ export function normalizeSettings(raw: unknown): GameSettings {
         d.shop.pathUnlockPrice,
       ),
     },
+    devTips: cleanTips(r.devTips, d.devTips),
     ownerEmail:
       typeof r.ownerEmail === 'string' && r.ownerEmail.includes('@')
         ? r.ownerEmail.toLowerCase()

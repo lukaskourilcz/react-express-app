@@ -112,7 +112,10 @@ const NAV_ITEMS: {
 
 const RouteLoader = () => {
   const t = useT();
-  return <LoadingScreen label={t('common.loading')} size={28} sx={{ minHeight: 'auto', py: 6 }} />;
+  const config = useGameConfig();
+  // Full-page route load: hand the configured dev tips to the loader so one
+  // surfaces under the shark if the load runs long.
+  return <LoadingScreen label={t('common.loading')} size={28} tips={config.devTips} sx={{ minHeight: 'auto', py: 6 }} />;
 };
 
 function App() {

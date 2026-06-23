@@ -24,6 +24,8 @@ export interface GameConfig {
   leveling: { rankThresholds: number[] };
   /** Token prices for the shop — per-product overrides + the path-unlock price. */
   shop: { prices: Record<string, number>; pathUnlockPrice: number };
+  /** One-liner dev tips shown on the full-page loading screen; empty = none. */
+  devTips: string[];
 }
 
 const DEFAULT_QUIZ_CATEGORY_IDS = [
@@ -43,6 +45,22 @@ const DEFAULT_SHOP_PRICES: Record<string, number> = {
 };
 const DEFAULT_PATH_UNLOCK_PRICE = 200;
 
+// Default loading-screen dev tips (mirrors lib/settings-store.ts DEFAULT_DEV_TIPS).
+// Baked into DEFAULT_CONFIG so a tip is available the instant a load is slow,
+// before /api/settings resolves; the dev's saved list replaces these once fetched.
+const DEFAULT_DEV_TIPS = [
+  'Remember to code.',
+  'Building projects beats talent.',
+  'Read the error message — then read it again.',
+  'Ship small, ship often.',
+  'Name things like the next dev is you.',
+  'Done is better than perfect.',
+  'Commit early, commit often.',
+  'The best debugger is a good night of sleep.',
+  'Write the test you wish you had.',
+  'Consistency compounds.',
+];
+
 export const DEFAULT_CONFIG: GameConfig = {
   quiz: {
     defaultCount: 10,
@@ -56,6 +74,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   features: { dailyChallenge: true, multiplayer: true, leaderboard: true, flashcards: true },
   leveling: { rankThresholds: DEFAULT_RANK_THRESHOLDS },
   shop: { prices: { ...DEFAULT_SHOP_PRICES }, pathUnlockPrice: DEFAULT_PATH_UNLOCK_PRICE },
+  devTips: [...DEFAULT_DEV_TIPS],
 };
 
 export const GAME_CONFIG_KEY = ['game-config'] as const;

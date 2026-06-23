@@ -103,6 +103,8 @@ export interface GameSettings {
   features: { dailyChallenge: boolean; multiplayer: boolean; leaderboard: boolean; flashcards: boolean };
   leveling: { rankThresholds: number[] };
   shop: { prices: Record<string, number>; pathUnlockPrice: number };
+  /** One-liner dev tips shown on the loading screen (empty = none). */
+  devTips: string[];
   ownerEmail: string;
 }
 

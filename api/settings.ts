@@ -30,5 +30,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     features: s.features,
     leveling: s.leveling,
     shop: s.shop,
+    devTips: s.devTips,
   });
 }
