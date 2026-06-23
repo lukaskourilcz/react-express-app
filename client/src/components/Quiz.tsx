@@ -985,7 +985,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const answered = Object.keys(answers).length;
   const allAnswered = questions.every((q) => answers[q.id] !== undefined);
   const remaining = questions.length - answered;
-  const isBookmarked = !!bookmarks[currentQuestion.id];
 
   return (
     <>
@@ -1030,22 +1029,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 height: 28,
               }}
             />
-            <Tooltip
-              title={isBookmarked ? t('quiz.bookmarkedReviewTip') : t('quiz.bookmarkAfterTip')}
-              arrow
-            >
-              <span>
-                <IconButton
-                  size="small"
-                  disabled
-                  aria-pressed={isBookmarked}
-                  aria-label={isBookmarked ? t('quiz.bookmarkedReviewAria') : t('quiz.bookmarkAfterAria')}
-                  sx={{ color: isBookmarked ? BRAND.green : 'text.disabled' }}
-                >
-                  <BookmarkIcon filled={isBookmarked} />
-                </IconButton>
-              </span>
-            </Tooltip>
             {currentQuestion.tags && currentQuestion.tags.length > 0 && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', ml: 'auto' }}>
                 {currentQuestion.tags.map((tag) => (

@@ -146,10 +146,6 @@ export const cs: Record<TranslationKey, string> = {
   'quiz.reportAria': 'Nahlásit tuto otázku',
   'quiz.addBookmark': 'Přidat do záložek',
   'quiz.removeBookmark': 'Odebrat ze záložek',
-  'quiz.bookmarkAfterTip': 'Tuto otázku můžeš uložit do záložek, až uvidíš odpověď',
-  'quiz.bookmarkedReviewTip': 'V záložkách — projdeš po odeslání',
-  'quiz.bookmarkAfterAria': 'Záložky jsou dostupné po odeslání',
-  'quiz.bookmarkedReviewAria': 'V záložkách (projdeš po odeslání)',
 
   // Quiz — results
   'quiz.complete': 'Kvíz dokončen!',

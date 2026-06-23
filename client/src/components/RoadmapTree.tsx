@@ -109,10 +109,8 @@ function StageConnector() {
       <Box sx={{ width: 2, height: 16, backgroundColor: 'divider' }} />
       <Box
         component="svg"
-        width="12"
-        height="8"
         viewBox="0 0 12 8"
-        sx={{ color: 'divider', display: 'block', mt: '-2px' }}
+        sx={{ width: 12, height: 8, color: 'divider', display: 'block', mt: '-2px' }}
       >
         <path d="M1 1l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </Box>
@@ -161,7 +159,7 @@ function TopicCard({
           {getCategoryLabel(family)}
         </Typography>
         {complete && (
-          <Box component="svg" aria-hidden width="16" height="16" viewBox="0 0 24 24" sx={{ ml: 'auto', color }}>
+          <Box component="svg" aria-hidden viewBox="0 0 24 24" sx={{ width: 16, height: 16, ml: 'auto', color }}>
             <path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
           </Box>
         )}

@@ -145,10 +145,6 @@ export const en = {
   'quiz.reportAria': 'Report this question',
   'quiz.addBookmark': 'Bookmark this question',
   'quiz.removeBookmark': 'Remove bookmark',
-  'quiz.bookmarkAfterTip': 'You can bookmark this question once you see the answer',
-  'quiz.bookmarkedReviewTip': 'Bookmarked — review after submitting',
-  'quiz.bookmarkAfterAria': 'Bookmarking is available after submitting',
-  'quiz.bookmarkedReviewAria': 'Bookmarked (review after submitting)',
 
   // Quiz — results
   'quiz.complete': 'Quiz complete!',
