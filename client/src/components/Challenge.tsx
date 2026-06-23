@@ -34,6 +34,8 @@ import { useAuth, getUserProfile } from '../lib/auth';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 import { SharkFin } from './SharkFin';
 import { renderQuestion } from './CodeBlock';
+import { awardQuestXp } from '../lib/xp';
+import { challengeRunXp } from '../lib/leveling';
 
 // Biggest Shark Challenge: answer as many questions as you can within a fixed
 // time limit, or until you collect three strikes — whichever comes first.
@@ -98,6 +100,8 @@ export default function Challenge() {
   // the next question appears instantly after each grade.
   const buffer = useRef<BufferState | null>(null);
   const topupInFlight = useRef<Promise<void> | null>(null);
+  // Guards the once-per-run XP/token payout on game over.
+  const awardedRef = useRef(false);
 
   const livesLeft = MAX_LIVES - livesLost;
 
@@ -157,6 +161,7 @@ export default function Challenge() {
     setLastResult(null);
     setSubmittedScore(false);
     setTimeLeft(TIME_LIMIT_S);
+    awardedRef.current = false;
     buffer.current = null;
     await ensureBufferTopUp([]);
     if (!buffer.current) return; // ensureBufferTopUp already set the error phase
@@ -277,6 +282,18 @@ export default function Challenge() {
     const id = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
     return () => clearTimeout(id);
   }, [phase, timeLeft]);
+
+  /* ─── reward on game over ───────────────────────────────────── */
+
+  // Every finished run pays out XP (and tokens, which follow from XP) — a base
+  // for finishing plus a bonus per correct answer — so a challenge is never
+  // empty-handed. Guarded so it credits exactly once per run.
+  useEffect(() => {
+    if (phase === 'gameover' && !awardedRef.current) {
+      awardedRef.current = true;
+      awardQuestXp(challengeRunXp(score), 'quiz');
+    }
+  }, [phase, score]);
 
   /* ─── keyboard during play ──────────────────────────────────── */
 

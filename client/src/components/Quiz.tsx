@@ -46,7 +46,7 @@ import type { TranslationKey } from '../i18n/translations';
 import { useSettings, playCorrect, playComplete } from '../lib/settings';
 import { recordPerfectQuiz } from '../lib/achievements';
 import { awardQuestXp } from '../lib/xp';
-import { computeQuizXp } from '../lib/leveling';
+import { computeQuizXp, CHALLENGE_MIN_XP } from '../lib/leveling';
 import { useGameConfig } from '../lib/gameConfig';
 import { ReportDialog } from './ReportDialog';
 import './Quiz.css';
@@ -159,8 +159,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     ? collapsedOptions
     : visibleCategoryOptions;
 
+  // Hide the app chrome only while actively taking the quiz (and the brief load
+  // before it). On the results/review screen ('submitted') the nav + footer come
+  // back so the learner can navigate away easily.
   useEffect(() => {
-    onActiveChange?.(state !== 'ready');
+    onActiveChange?.(state === 'in-progress' || state === 'loading');
   }, [state, onActiveChange]);
 
   // Restore in-progress quiz on mount
@@ -333,7 +336,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       const gained = computeQuizXp(
         data.results.map((r) => ({ difficulty: diffById.get(r.questionId) ?? 1, correct: r.isCorrect })),
       );
-      if (gained > 0) awardQuestXp(gained, 'quiz');
+      // The daily challenge always pays out at least a floor (XP + tokens) so
+      // finishing it is never empty-handed; a normal quiz rewards only what was
+      // earned from correct answers.
+      const award = mode === 'daily' ? Math.max(gained, CHALLENGE_MIN_XP) : gained;
+      if (award > 0) awardQuestXp(award, 'quiz');
 
       if (isAuthenticated && user?.id) {
         // Pre-build category breakdown once.
@@ -374,7 +381,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     } finally {
       setSubmitting(false);
     }
-  }, [answers, clearProgress, isAuthenticated, sessionId, submitting, user, lang, t, questions]);
+  }, [answers, clearProgress, isAuthenticated, sessionId, submitting, user, lang, t, questions, mode]);
 
   const handleRestart = () => {
     clearProgress();
@@ -855,6 +862,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 sx={{ textTransform: 'none' }}
               >
                 {t('quiz.reviewAnswersArrow')}
+              </Button>
+              <Button variant="text" component={Link} to="/" sx={{ textTransform: 'none' }}>
+                {t('quiz.backHome')}
               </Button>
             </Box>
           </CardContent>

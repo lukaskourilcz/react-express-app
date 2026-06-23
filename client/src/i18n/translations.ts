@@ -178,6 +178,7 @@ export const en = {
   'quiz.dailyComplete': 'Today’s challenge complete — see you tomorrow.',
   'quiz.newQuiz': 'New quiz',
   'quiz.shareResult': 'Share result',
+  'quiz.backHome': 'Back to home',
   'quiz.reviewAnswersArrow': 'Review answers ↓',
   'quiz.reviewYourAnswers': 'Review your answers ({count})',
   'quiz.questionN': 'Question {n}',

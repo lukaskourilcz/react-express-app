@@ -66,6 +66,20 @@ export function computeQuizXp(items: ReadonlyArray<{ difficulty: number; correct
   return Math.round(xp);
 }
 
+// A challenge (the daily quiz, a Biggest-Shark run) always pays out at least this
+// much XP, so finishing one is never empty-handed. Tokens follow automatically
+// from XP (10%), and ≥10 XP guarantees at least 1 token.
+export const CHALLENGE_MIN_XP = 20;
+
+// Extra XP per correct answer in a Biggest-Shark run, on top of the floor.
+const CHALLENGE_XP_PER_CORRECT = 5;
+
+/** XP for a Biggest-Shark run: a base for finishing plus a bonus per correct answer. */
+export function challengeRunXp(score: number): number {
+  const s = Math.max(0, Math.round(score) || 0);
+  return CHALLENGE_MIN_XP + s * CHALLENGE_XP_PER_CORRECT;
+}
+
 /* ──── Career ladder ────────────────────────────────────────────────────── */
 
 export interface CareerRank {

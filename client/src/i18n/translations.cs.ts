@@ -179,6 +179,7 @@ export const cs: Record<TranslationKey, string> = {
   'quiz.dailyComplete': 'Dnešní výzva splněna — uvidíme se zítra.',
   'quiz.newQuiz': 'Nový kvíz',
   'quiz.shareResult': 'Sdílet výsledek',
+  'quiz.backHome': 'Zpět domů',
   'quiz.reviewAnswersArrow': 'Projít odpovědi ↓',
   'quiz.reviewYourAnswers': 'Projdi své odpovědi ({count})',
   'quiz.questionN': 'Otázka {n}',
