@@ -200,6 +200,35 @@ function App() {
   }, []);
   const showChrome = !isDev && !(quizActive && isQuiz);
 
+  // Sound + theme toggles. Rendered floating in the top-right corner on desktop,
+  // but inline in the toolbar on mobile (where the account avatar sits in that
+  // corner) so the two never overlap.
+  const utilityToggles = (
+    <>
+      <Tooltip title={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}>
+        <IconButton
+          size="small"
+          onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
+          aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
+          aria-pressed={settings.soundEffects}
+          sx={{ p: 0.25, color: settings.soundEffects ? BRAND.green : 'text.secondary', '& svg': { width: 14, height: 14 } }}
+        >
+          {settings.soundEffects ? <SoundOnIcon /> : <SoundOffIcon />}
+        </IconButton>
+      </Tooltip>
+      <Tooltip title={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
+        <IconButton
+          size="small"
+          onClick={toggle}
+          aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
+          sx={{ p: 0.25, color: 'text.secondary', '& svg': { width: 14, height: 14 } }}
+        >
+          {mode === 'light' ? <MoonIcon /> : <SunIcon />}
+        </IconButton>
+      </Tooltip>
+    </>
+  );
+
   return (
     <Box sx={{ minHeight: '100vh', maxWidth: '100vw', overflowX: 'hidden', backgroundColor: 'background.default', display: 'flex', flexDirection: 'column' }}>
       <Box
@@ -223,40 +252,21 @@ function App() {
 
       {showChrome && (
         <>
-        {/* Tiny utility row pinned to the very top-right: sound + theme toggles,
-            so they don't take up nav-bar real estate. */}
+        {/* Sound + theme toggles, floating in the top-right corner on desktop.
+            On mobile they move into the toolbar (see the right slot) to avoid
+            overlapping the account avatar. */}
         <Box
           sx={{
             position: 'absolute',
             top: 4,
             right: 8,
             zIndex: (theme) => theme.zIndex.appBar + 1,
-            display: 'flex',
+            display: { xs: 'none', sm: 'flex' },
             alignItems: 'center',
             gap: 0.25,
           }}
         >
-          <Tooltip title={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}>
-            <IconButton
-              size="small"
-              onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
-              aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
-              aria-pressed={settings.soundEffects}
-              sx={{ p: 0.25, color: settings.soundEffects ? BRAND.green : 'text.secondary', '& svg': { width: 14, height: 14 } }}
-            >
-              {settings.soundEffects ? <SoundOnIcon /> : <SoundOffIcon />}
-            </IconButton>
-          </Tooltip>
-          <Tooltip title={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
-            <IconButton
-              size="small"
-              onClick={toggle}
-              aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
-              sx={{ p: 0.25, color: 'text.secondary', '& svg': { width: 14, height: 14 } }}
-            >
-              {mode === 'light' ? <MoonIcon /> : <SunIcon />}
-            </IconButton>
-          </Tooltip>
+          {utilityToggles}
         </Box>
         <AppBar position="static" elevation={0} sx={{ backgroundColor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
           <Toolbar sx={{ maxWidth: 1200, width: '100%', mx: 'auto', px: { xs: 2, sm: 3 }, gap: 1 }}>
@@ -298,9 +308,12 @@ function App() {
               ))}
             </Box>
 
-            {/* Right slot: auth widget only. Sound + theme moved to the
-                top-right utility row above. */}
+            {/* Right slot: sound/theme toggles (mobile only — on desktop they
+                float in the top-right corner) + the auth widget. */}
             <Box sx={{ flex: '1 1 0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: { xs: 0.5, sm: 1 }, minWidth: 0 }}>
+              <Box sx={{ display: { xs: 'inline-flex', sm: 'none' }, alignItems: 'center', gap: 0.25 }}>
+                {utilityToggles}
+              </Box>
               <Suspense fallback={null}>
                 <AuthButton />
               </Suspense>
