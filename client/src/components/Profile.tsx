@@ -24,10 +24,10 @@ import {
   unlockExtraTopics,
   pushProgressToServer,
 } from '../lib/roadmap';
-import { useTrack, trackStarterTopics, TRACKS, TRACK_ORDER, type Track } from '../lib/tracks';
+import { useTrack, trackStarterTopics, specializationForTrack, TRACKS, TRACK_ORDER, type Track } from '../lib/tracks';
 import { getCategoryHexColor, getCategoryLabel, onCategoryColorText } from '../lib/categories';
 import { useQuestXp, syncXpWithServer } from '../lib/xp';
-import { computeLearningXp, levelForXp, specializationFor, displayTitle, MAX_RANK } from '../lib/leveling';
+import { computeLearningXp, levelForXp, displayTitle, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { friendlyError } from '../lib/api';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
@@ -373,14 +373,12 @@ function CareerCard() {
     syncProgressWithServer().then(() => syncXpWithServer()).catch(() => {});
   }, []);
 
+  const [track] = useTrack();
   const learningXp = computeLearningXp(progress);
   const totalXp = learningXp + questXp;
   const info = levelForXp(totalXp);
-  const spec = specializationFor(progress);
+  const spec = specializationForTrack(track);
   const title = displayTitle(info.rank.title, spec);
-  // The specialization reads inline for "…Developer" ranks; for senior ranks
-  // (Engineer/Architect) surface it as a chip instead.
-  const showSpecChip = spec && !info.rank.title.includes('Developer');
   const nextTitle = info.next ? displayTitle(info.next.title, spec) : null;
   const nf = (n: number) => n.toLocaleString();
 
@@ -395,14 +393,9 @@ function CareerCard() {
           {info.rank.emoji}
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
-            <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-              {title}
-            </Typography>
-            {showSpecChip && (
-              <Chip label={spec} size="small" sx={{ height: 20, fontSize: '0.68rem', fontWeight: 700, backgroundColor: `${BRAND.green}22`, color: 'text.primary' }} />
-            )}
-          </Box>
+          <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+            {title}
+          </Typography>
           <Typography variant="caption" color="text.secondary">
             {t('profile.careerLevelOf', { level: info.level, max: MAX_RANK })}
           </Typography>

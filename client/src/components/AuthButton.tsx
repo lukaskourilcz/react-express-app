@@ -6,7 +6,8 @@ import { useT } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useQuestXp } from '../lib/xp';
 import { useRoadmapProgress } from '../lib/roadmap';
-import { computeLearningXp, levelForXp, specializationFor, displayTitle } from '../lib/leveling';
+import { computeLearningXp, levelForXp, displayTitle } from '../lib/leveling';
+import { useTrack, specializationForTrack } from '../lib/tracks';
 import { useEquippedRingColor } from '../lib/shop';
 
 const secondaryLinkSx = {
@@ -28,7 +29,8 @@ function AuthButton() {
   const questXp = useQuestXp();
   const totalXp = computeLearningXp(progress) + questXp;
   const ringColor = useEquippedRingColor();
-  const rankTitle = displayTitle(levelForXp(totalXp).rank.title, specializationFor(progress));
+  const [track] = useTrack();
+  const rankTitle = displayTitle(levelForXp(totalXp).rank.title, specializationForTrack(track));
   const navigate = useNavigate();
   const t = useT();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);

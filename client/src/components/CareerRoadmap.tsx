@@ -15,11 +15,11 @@ import {
   syncProgressWithServer,
 } from '../lib/roadmap';
 import { useRoadmapStructure } from '../lib/queries';
-import { useTrack, isTopicInTrack, TRACKS, TRACK_ORDER } from '../lib/tracks';
+import { useTrack, isTopicInTrack, specializationForTrack, TRACKS, TRACK_ORDER } from '../lib/tracks';
 import { getCategoryHexColor } from '../lib/categories';
 import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
-import { levelForXp, specializationFor, displayTitle, getCareerRanks } from '../lib/leveling';
+import { levelForXp, displayTitle, getCareerRanks } from '../lib/leveling';
 import RoadmapTree from './RoadmapTree';
 
 interface Area {
@@ -130,7 +130,7 @@ export default function CareerRoadmap() {
   }, [progress, structure, track]);
 
   const info = levelForXp(totalXp);
-  const spec = specializationFor(progress);
+  const spec = specializationForTrack(track);
   const rankTitle = displayTitle(info.rank.title, spec);
   const seniorRank = getCareerRanks().find((r) => r.title === SENIOR_RANK_TITLE);
   const reachedSenior = seniorRank ? totalXp >= seniorRank.minXp : false;

@@ -10,10 +10,9 @@
 //     rewards for replaying already-passed lessons), synced to the account.
 //
 // The learner climbs a 10-rank ladder from Superjunior Developer to Software
-// Architect, gated by total XP, with a Frontend/Backend/Full-Stack flavor
-// derived from which tracks they've progressed in.
+// Architect, gated by total XP, with a Frontend/Backend/Full-Stack flavor taken
+// from the learner's chosen track (set in their profile).
 
-import type { RoadmapTopic } from '../types/quiz';
 import type { RoadmapProgress } from './roadmap';
 
 /* ──── XP economy ───────────────────────────────────────────────────────── */
@@ -168,36 +167,16 @@ export function levelForXp(totalXp: number): LevelInfo {
 
 export type Specialization = 'Frontend' | 'Backend' | 'Full-Stack';
 
-// Core languages count toward both tracks; the rest are track-specific.
-const FRONTEND_TOPICS: RoadmapTopic[] = ['html', 'css', 'react', 'nextjs', 'javascript', 'typescript', 'rhf-zod'];
-const BACKEND_TOPICS: RoadmapTopic[] = ['nodejs', 'javascript', 'typescript'];
-
-const passedLevels = (progress: RoadmapProgress, topic: RoadmapTopic): number =>
-  Object.values(progress[topic]?.levels ?? {}).filter((e) => e.passed).length;
-
 /**
- * Derive the learner's specialization from where they've made progress.
- * Returns null until they've passed at least one front/back-end level.
- */
-export function specializationFor(progress: RoadmapProgress): Specialization | null {
-  let fe = 0;
-  let be = 0;
-  for (const topic of FRONTEND_TOPICS) fe += passedLevels(progress, topic);
-  for (const topic of BACKEND_TOPICS) be += passedLevels(progress, topic);
-  if (fe === 0 && be === 0) return null;
-  if (fe >= be * 2) return 'Frontend';
-  if (be >= fe * 2) return 'Backend';
-  return 'Full-Stack';
-}
-
-/**
- * Compose the displayed title. For "…Developer" ranks the specialization reads
- * naturally inline ("Junior Frontend Developer"); senior ("Engineer"/"Architect")
- * ranks keep their title and surface the specialization separately as a chip.
+ * Compose the displayed title from a rank and the learner's chosen track. The
+ * track is woven in front of the role noun, preserving the ladder's
+ * Developer → Engineer → Architect progression ("Junior Frontend Developer",
+ * "Staff Backend Engineer"). The top "Architect" rank, which has no junior/senior
+ * role noun, takes the track as a prefix ("Full-Stack Software Architect").
  */
 export function displayTitle(rankTitle: string, specialization: Specialization | null): string {
-  if (specialization && rankTitle.includes('Developer')) {
-    return rankTitle.replace('Developer', `${specialization} Developer`);
-  }
-  return rankTitle;
+  if (!specialization) return rankTitle;
+  if (rankTitle.includes('Developer')) return rankTitle.replace('Developer', `${specialization} Developer`);
+  if (rankTitle.includes('Engineer')) return rankTitle.replace('Engineer', `${specialization} Engineer`);
+  return `${specialization} ${rankTitle}`;
 }

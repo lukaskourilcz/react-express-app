@@ -5,6 +5,7 @@
 // exposed through a tiny observable store so both surfaces re-render together.
 
 import type { RoadmapTopic } from '../types/quiz';
+import type { Specialization } from './leveling';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 
@@ -106,6 +107,17 @@ export function trackStarterTopics(track: Track): RoadmapTopic[] {
   return Array.from(new Set(stages.flatMap((s) => s.topics)));
 }
 
+// The career-title flavor each track maps to (drives "Junior Frontend
+// Developer", "Senior Backend Engineer", etc.).
+const TRACK_SPECIALIZATION: Record<Track, Specialization> = {
+  frontend: 'Frontend',
+  backend: 'Backend',
+  fullstack: 'Full-Stack',
+};
+
+/** The career-rank specialization label for a track. */
+export const specializationForTrack = (track: Track): Specialization => TRACK_SPECIALIZATION[track];
+
 /* ──── Persisted, shared selection ──────────────────────────────────────── */
 
 const TRACK_KEY = 'devquiz:roadmap:track';
@@ -118,6 +130,9 @@ const readTrack = (): Track => {
 };
 
 const trackStore = createStore<Track>(readTrack);
+
+/** Imperative snapshot of the current track (for non-React callers, e.g. the toaster). */
+export const getTrack = (): Track => trackStore.get();
 
 /** Live, persisted roadmap track plus a setter. Shared across the page. */
 export function useTrack(): [Track, (next: Track) => void] {
