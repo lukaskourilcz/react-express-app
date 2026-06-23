@@ -1,13 +1,16 @@
-// Whole-roadmap tree graph for the /roadmap page. Every topic ("family") is a
-// node, laid out in dependency tiers (foundations → builds-on-JS → specialise),
-// with edges drawn from each prerequisite to the topics that need it. Each node
-// branches into its 3 parts (the shorter learning paths), and every part pill
-// reflects the signed-in learner's live progress (locked / available /
-// in-progress / complete) and deep-links into that path on /learn.
+// The /roadmap "map": a curated, top-to-bottom path through the topics that
+// actually matter for a Frontend, Backend or Fullstack engineer. The learner
+// picks a track and the map re-renders to just that track's stages, flowing
+// from foundations at the top down to production concerns at the bottom. Every
+// topic node is coloured by its brand/logo colour (matching the quiz + learn
+// surfaces), carries a one-line "what you'll learn" detail, and branches into
+// its 3 parts — each part pill reflects live progress and deep-links into
+// /learn. Non-essential topics (Cool Stuff, AI, Abbreviations) are intentionally
+// left off the map to keep it focused on the important stuff.
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, Typography, Tooltip, useTheme } from '@mui/material';
+import { Box, Typography, Tooltip, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import type { RoadmapStructure, RoadmapTopic } from '../types/quiz';
 import {
   useRoadmapProgress,
@@ -16,153 +19,291 @@ import {
   partRanges,
   pathStatus,
   PARTS_PER_TOPIC,
-  TOPIC_PREREQS,
   type PathStatus,
+  type RoadmapProgress,
 } from '../lib/roadmap';
 import { getCategoryLabel, getCategoryHexColor, onCategoryColorText } from '../lib/categories';
+import { readJSON, writeJSON } from '../lib/storage';
+import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
-const FAMILIES = Object.keys(TOPIC_PREREQS) as RoadmapTopic[];
+type Track = 'frontend' | 'backend' | 'fullstack';
 
-// Dependency tier = longest prerequisite chain to a root. Memoised per call.
-function computeTiers(): Record<RoadmapTopic, number> {
-  const memo = {} as Record<RoadmapTopic, number>;
-  const tierOf = (f: RoadmapTopic): number => {
-    if (memo[f] !== undefined) return memo[f];
-    const reqs = TOPIC_PREREQS[f] ?? [];
-    memo[f] = reqs.length === 0 ? 0 : 1 + Math.max(...reqs.map(tierOf));
-    return memo[f];
-  };
-  for (const f of FAMILIES) tierOf(f);
-  return memo;
+// A one-line "what you'll learn" detail shown on each topic node.
+const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
+  html: 'Semantic markup, forms, accessibility.',
+  css: 'Layout, flexbox & grid, responsive design.',
+  javascript: 'Closures, async, and the event loop.',
+  typescript: 'Types, generics, and safer refactors.',
+  git: 'Branches, merges, pull requests, history.',
+  react: 'Components, hooks, state, rendering.',
+  nextjs: 'Routing, server components, data fetching.',
+  'rhf-zod': 'Forms & validation with React Hook Form + Zod.',
+  nodejs: 'Modules, async, HTTP, Express, streams.',
+  general: 'How the web works: HTTP, caching, auth.',
+  databases: 'SQL, schema design, indexing, transactions.',
+  dsa: 'Complexity, arrays, trees, graphs, sorting.',
+  algorithms: 'Problem-solving: recursion, combinatorics, math.',
+  testing: 'Unit, integration, and end-to-end testing.',
+  'system-design': 'Caching, queues, sharding, trade-offs.',
+  devops: 'CI/CD, containers, observability, the cloud.',
+  security: 'Auth, the OWASP Top 10, secure defaults.',
+};
+
+interface Stage {
+  title: string;
+  topics: RoadmapTopic[];
+}
+interface TrackDef {
+  label: string;
+  blurb: string;
+  stages: Stage[];
 }
 
-// Node + grid geometry (px). The canvas is sized to the tiers and the tallest
-// tier; it scrolls horizontally on narrow screens.
-const NODE_W = 158;
-const NODE_H = 62;
-const COL_GAP = 60;
-const ROW_GAP = 12;
-const COL_W = NODE_W + COL_GAP;
-const ROW_H = NODE_H + ROW_GAP;
-const PAD = 8;
+// Curated tracks. Each is a top-to-bottom story: foundations → specialise →
+// production. Fullstack is the union; Frontend and Backend share the core
+// (JS/TS/Git/Testing) and branch into their own concerns.
+const TRACKS: Record<Track, TrackDef> = {
+  frontend: {
+    label: 'Frontend',
+    blurb: 'Build the interfaces people actually touch — markup, styling, and the React stack.',
+    stages: [
+      { title: 'Foundations', topics: ['html', 'css', 'javascript'] },
+      { title: 'Level up the language', topics: ['typescript', 'git'] },
+      { title: 'The React stack', topics: ['react', 'nextjs', 'rhf-zod'] },
+      { title: 'Ship with confidence', topics: ['testing', 'dsa'] },
+    ],
+  },
+  backend: {
+    label: 'Backend',
+    blurb: 'Build and run the server — APIs, data, and systems that hold up under load.',
+    stages: [
+      { title: 'Foundations', topics: ['javascript', 'typescript', 'git'] },
+      { title: 'The server & the web', topics: ['nodejs', 'general'] },
+      { title: 'Data & computer science', topics: ['databases', 'dsa', 'algorithms'] },
+      { title: 'Production & scale', topics: ['testing', 'system-design', 'devops', 'security'] },
+    ],
+  },
+  fullstack: {
+    label: 'Fullstack',
+    blurb: 'The whole picture — frontend, backend, and everything that ties them together.',
+    stages: [
+      { title: 'Foundations', topics: ['html', 'css', 'javascript'] },
+      { title: 'Level up the language', topics: ['typescript', 'git'] },
+      { title: 'Frontend', topics: ['react', 'nextjs', 'rhf-zod'] },
+      { title: 'Backend', topics: ['nodejs', 'general', 'databases'] },
+      { title: 'Computer science', topics: ['dsa', 'algorithms'] },
+      { title: 'Production & scale', topics: ['testing', 'system-design', 'devops', 'security'] },
+    ],
+  },
+};
 
-interface PlacedFamily {
-  family: RoadmapTopic;
-  x: number;
-  y: number;
-}
+const TRACK_ORDER: Track[] = ['frontend', 'backend', 'fullstack'];
+const TRACK_KEY = 'devquiz:roadmap:track';
+const isTrack = (v: unknown): v is Track => v === 'frontend' || v === 'backend' || v === 'fullstack';
 
 export default function RoadmapTree({ structure }: { structure: RoadmapStructure | null }) {
   const t = useT();
-  const theme = useTheme();
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
   const extraSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
 
-  // Place every family by tier (column) and its index within the tier (row),
-  // vertically centring shorter tiers so the graph reads as a balanced tree.
-  const { placed, width, height } = useMemo(() => {
-    const tiers = computeTiers();
-    const byTier = new Map<number, RoadmapTopic[]>();
-    for (const f of FAMILIES) {
-      const tr = tiers[f];
-      if (!byTier.has(tr)) byTier.set(tr, []);
-      byTier.get(tr)!.push(f);
-    }
-    const tierKeys = Array.from(byTier.keys()).sort((a, b) => a - b);
-    const maxRows = Math.max(...tierKeys.map((k) => byTier.get(k)!.length));
-    const canvasH = maxRows * ROW_H - ROW_GAP + PAD * 2;
-    const canvasW = tierKeys.length * COL_W - COL_GAP + PAD * 2;
+  // Remember the learner's chosen track across visits.
+  const [track, setTrack] = useState<Track>(() => {
+    const saved = readJSON<string>(TRACK_KEY, 'fullstack');
+    return isTrack(saved) ? saved : 'fullstack';
+  });
+  const selectTrack = (next: Track | null) => {
+    if (!next) return; // ignore deselect — a track is always active
+    setTrack(next);
+    writeJSON(TRACK_KEY, next);
+  };
 
-    const pos = new Map<RoadmapTopic, PlacedFamily>();
-    tierKeys.forEach((k, col) => {
-      const fams = byTier.get(k)!;
-      const tierH = fams.length * ROW_H - ROW_GAP;
-      const top = PAD + (canvasH - PAD * 2 - tierH) / 2;
-      fams.forEach((family, row) => {
-        pos.set(family, { family, x: PAD + col * COL_W, y: top + row * ROW_H });
-      });
-    });
-    return { placed: pos, width: canvasW, height: canvasH };
-  }, []);
-
-  // Edges: prerequisite (right edge) → dependent (left edge), as soft curves.
-  const edges = useMemo(() => {
-    const out: { d: string; key: string }[] = [];
-    for (const f of FAMILIES) {
-      const to = placed.get(f);
-      if (!to) continue;
-      for (const req of TOPIC_PREREQS[f] ?? []) {
-        const from = placed.get(req);
-        if (!from) continue;
-        const x1 = from.x + NODE_W;
-        const y1 = from.y + NODE_H / 2;
-        const x2 = to.x;
-        const y2 = to.y + NODE_H / 2;
-        const mx = (x1 + x2) / 2;
-        out.push({ key: `${req}->${f}`, d: `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}` });
-      }
-    }
-    return out;
-  }, [placed]);
-
+  const def = TRACKS[track];
   const levelCountOf = (family: RoadmapTopic): number =>
     structure?.structure?.[family]?.levels.length ?? 0;
 
   return (
-    <Box sx={{ width: '100%', overflowX: 'auto', pb: 1 }}>
-      <Box sx={{ position: 'relative', width, height, mx: 'auto' }}>
-        {/* edges */}
-        <Box component="svg" aria-hidden width={width} height={height} sx={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-          {edges.map((e) => (
-            <path key={e.key} d={e.d} fill="none" stroke={theme.palette.divider} strokeWidth={2} />
-          ))}
-        </Box>
-
-        {/* nodes */}
-        {FAMILIES.map((family) => {
-          const p = placed.get(family);
-          if (!p) return null;
-          const familyUnlocked = isTopicUnlocked(progress, family, extraSet);
-          const color = getCategoryHexColor(family);
-          const ranges = partRanges(levelCountOf(family));
-          const complete = ranges.length > 0 && ranges.every((r) => pathStatus(progress, family, ranges, r.part, extraSet) === 'complete');
-          return (
-            <Box
-              key={family}
-              style={{ left: p.x, top: p.y, width: NODE_W, height: NODE_H }}
+    <Box sx={{ width: '100%' }}>
+      {/* Track chooser — the answer to "Frontend, Backend or Fullstack?" */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, mb: 2.5 }}>
+        <ToggleButtonGroup
+          value={track}
+          exclusive
+          onChange={(_, v: Track | null) => selectTrack(v)}
+          size="small"
+          aria-label="Choose your track"
+          sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+        >
+          {TRACK_ORDER.map((tk) => (
+            <ToggleButton
+              key={tk}
+              value={tk}
               sx={{
-                position: 'absolute',
-                borderRadius: 2,
-                border: '2px solid',
-                borderColor: complete ? color : familyUnlocked ? 'divider' : 'transparent',
-                backgroundColor: 'background.paper',
-                opacity: familyUnlocked ? 1 : 0.55,
-                boxShadow: familyUnlocked ? `0 1px 4px ${color}22` : 'none',
-                p: 0.75,
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
+                px: 2.25,
+                py: 0.6,
+                textTransform: 'none',
+                fontWeight: 700,
+                '&.Mui-selected': {
+                  backgroundColor: BRAND.green,
+                  color: '#fff',
+                  '&:hover': { backgroundColor: BRAND.greenHover },
+                },
               }}
             >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, minWidth: 0 }}>
-                <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
-                <Typography variant="caption" noWrap sx={{ fontWeight: 700, color: familyUnlocked ? 'text.primary' : 'text.disabled' }}>
-                  {getCategoryLabel(family)}
-                </Typography>
+              {TRACKS[tk].label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', maxWidth: 520 }}>
+          {def.blurb}
+        </Typography>
+      </Box>
+
+      {/* The map: stages flow top → bottom. Keyed by track so switching tracks
+          remounts and gently re-animates the new path into place. */}
+      <Box
+        key={track}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          width: '100%',
+          '@keyframes rmTrackIn': {
+            from: { opacity: 0, transform: 'translateY(8px)' },
+            to: { opacity: 1, transform: 'none' },
+          },
+          animation: 'rmTrackIn 320ms ease-out',
+          '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+        }}
+      >
+        {def.stages.map((stage, i) => (
+          <Box key={stage.title} sx={{ width: '100%' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1.25 }}>
+              <Box
+                aria-hidden
+                sx={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: '50%',
+                  backgroundColor: BRAND.green,
+                  color: '#fff',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  display: 'grid',
+                  placeItems: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                {i + 1}
               </Box>
-              <Box sx={{ display: 'flex', gap: 0.5 }}>
-                {(ranges.length > 0 ? ranges.map((r) => r.part) : Array.from({ length: PARTS_PER_TOPIC }, (_, i) => i + 1)).map((part) => {
-                  const status: PathStatus = ranges.length > 0 ? pathStatus(progress, family, ranges, part, extraSet) : 'locked';
-                  return <PartPill key={part} family={family} part={part} status={status} color={color} t={t} />;
-                })}
-              </Box>
+              <Typography variant="subtitle2" sx={{ fontWeight: 800, letterSpacing: '0.3px' }}>
+                {stage.title}
+              </Typography>
             </Box>
-          );
+
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, justifyContent: 'center' }}>
+              {stage.topics.map((family) => (
+                <TopicCard
+                  key={family}
+                  family={family}
+                  levelCount={levelCountOf(family)}
+                  progress={progress}
+                  extraSet={extraSet}
+                  t={t}
+                />
+              ))}
+            </Box>
+
+            {i < def.stages.length - 1 && <StageConnector />}
+          </Box>
+        ))}
+      </Box>
+    </Box>
+  );
+}
+
+/** A short vertical line + downward chevron linking one stage to the next. */
+function StageConnector() {
+  return (
+    <Box
+      aria-hidden
+      sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 1 }}
+    >
+      <Box sx={{ width: 2, height: 16, backgroundColor: 'divider' }} />
+      <Box
+        component="svg"
+        width="12"
+        height="8"
+        viewBox="0 0 12 8"
+        sx={{ color: 'divider', display: 'block', mt: '-2px' }}
+      >
+        <path d="M1 1l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      </Box>
+    </Box>
+  );
+}
+
+/** One topic node: colour-matched header, a detail line, and its 3 part pills. */
+function TopicCard({
+  family, levelCount, progress, extraSet, t,
+}: {
+  family: RoadmapTopic;
+  levelCount: number;
+  progress: RoadmapProgress;
+  extraSet: Set<RoadmapTopic>;
+  t: TFn;
+}) {
+  const color = getCategoryHexColor(family);
+  const unlocked = isTopicUnlocked(progress, family, extraSet);
+  const ranges = partRanges(levelCount);
+  const complete =
+    ranges.length > 0 &&
+    ranges.every((r) => pathStatus(progress, family, ranges, r.part, extraSet) === 'complete');
+  const detail = TOPIC_DETAIL[family];
+
+  return (
+    <Box
+      sx={{
+        width: { xs: '100%', sm: 232 },
+        borderRadius: 2,
+        border: '1px solid',
+        borderColor: complete ? color : unlocked ? 'divider' : 'transparent',
+        borderTop: `3px solid ${color}`,
+        backgroundColor: 'background.paper',
+        opacity: unlocked ? 1 : 0.6,
+        boxShadow: unlocked ? `0 1px 6px ${color}22` : 'none',
+        p: 1.25,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 0.6,
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+        <Box aria-hidden sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
+        <Typography variant="body2" sx={{ fontWeight: 700, color: unlocked ? 'text.primary' : 'text.disabled', lineHeight: 1.2 }}>
+          {getCategoryLabel(family)}
+        </Typography>
+        {complete && (
+          <Box component="svg" aria-hidden width="16" height="16" viewBox="0 0 24 24" sx={{ ml: 'auto', color }}>
+            <path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+          </Box>
+        )}
+      </Box>
+
+      {detail && (
+        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4, minHeight: 32 }}>
+          {detail}
+        </Typography>
+      )}
+
+      <Box sx={{ display: 'flex', gap: 0.5, mt: 'auto', pt: 0.25 }}>
+        {(ranges.length > 0 ? ranges.map((r) => r.part) : Array.from({ length: PARTS_PER_TOPIC }, (_, i) => i + 1)).map((part) => {
+          const status: PathStatus = ranges.length > 0 ? pathStatus(progress, family, ranges, part, extraSet) : 'locked';
+          return <PartPill key={part} family={family} part={part} status={status} color={color} t={t} />;
         })}
       </Box>
     </Box>

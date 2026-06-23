@@ -35,7 +35,8 @@ import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 import { SharkFin } from './SharkFin';
 import { renderQuestion } from './CodeBlock';
 
-// Biggest Shark Challenge: answer questions until you collect three strikes.
+// Biggest Shark Challenge: answer as many questions as you can within a fixed
+// time limit, or until you collect three strikes — whichever comes first.
 // Score = correct answers. Mix of all categories and difficulties. The page
 // keeps its own state machine separate from the regular Quiz component.
 
@@ -43,6 +44,14 @@ type Phase = 'intro' | 'loading' | 'playing' | 'gameover' | 'error';
 
 const MAX_LIVES = 3;
 const LOW_BATCH_THRESHOLD = 4; // top up the buffer when this few remain
+const TIME_LIMIT_S = 90; // a run lasts at most 90 seconds
+const LOW_TIME_S = 15; // highlight + pulse the clock under this many seconds
+
+/** Seconds → "m:ss" (e.g. 90 → "1:30"). Clamps negatives to 0. */
+const fmtClock = (s: number): string => {
+  const safe = Math.max(0, s);
+  return `${Math.floor(safe / 60)}:${String(safe % 60).padStart(2, '0')}`;
+};
 
 interface AnsweredQ {
   questionId: string;
@@ -82,6 +91,8 @@ export default function Challenge() {
   const [name, setName] = useState<string>(profile.name ?? '');
   const [submittedScore, setSubmittedScore] = useState(false);
   const [snack, setSnack] = useState<string | null>(null);
+  // Seconds remaining in the current run; the countdown effect drives it down.
+  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_S);
 
   // Buffered question batches: we always keep one round of questions ready so
   // the next question appears instantly after each grade.
@@ -145,6 +156,7 @@ export default function Challenge() {
     setSelected(null);
     setLastResult(null);
     setSubmittedScore(false);
+    setTimeLeft(TIME_LIMIT_S);
     buffer.current = null;
     await ensureBufferTopUp([]);
     if (!buffer.current) return; // ensureBufferTopUp already set the error phase
@@ -250,6 +262,21 @@ export default function Challenge() {
       setSnack(friendlyError(err));
     }
   }, [name, score, refreshLeaderboard, t]);
+
+  /* ─── countdown clock ───────────────────────────────────────── */
+
+  // A run is capped at TIME_LIMIT_S. While playing, tick once per second and
+  // end the run the moment the clock hits zero (independent of the strikes
+  // rule — whichever ends the run first wins).
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    if (timeLeft <= 0) {
+      setPhase('gameover');
+      return;
+    }
+    const id = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
+    return () => clearTimeout(id);
+  }, [phase, timeLeft]);
 
   /* ─── keyboard during play ──────────────────────────────────── */
 
@@ -371,8 +398,11 @@ export default function Challenge() {
   if (phase === 'gameover') {
     return (
       <Box sx={introWrapperSx}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 1, textAlign: 'center' }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 0.5, textAlign: 'center' }}>
           {t('challenge.gameOver')}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 1.5 }}>
+          {timeLeft <= 0 ? t('challenge.endedByTime') : t('challenge.endedByStrikes')}
         </Typography>
         <Typography variant="h2" sx={{ textAlign: 'center', mb: 1, color: BRAND.green, fontWeight: 800 }}>
           {score}
@@ -445,7 +475,32 @@ export default function Challenge() {
             {score}
           </Typography>
         </Box>
-        {livesIndicator}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Box
+            role="timer"
+            aria-label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
+            sx={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 0.5,
+              px: 1,
+              py: 0.25,
+              borderRadius: 1,
+              border: '1.5px solid',
+              borderColor: timeLeft <= LOW_TIME_S ? 'error.main' : 'divider',
+              color: timeLeft <= LOW_TIME_S ? 'error.main' : 'text.primary',
+              fontWeight: 700,
+              fontVariantNumeric: 'tabular-nums',
+              '@keyframes chalTimePulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.5 } },
+              animation: timeLeft <= LOW_TIME_S ? 'chalTimePulse 1s ease-in-out infinite' : 'none',
+              '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+            }}
+          >
+            <ClockIcon />
+            <Box component="span">{fmtClock(timeLeft)}</Box>
+          </Box>
+          {livesIndicator}
+        </Box>
       </Box>
 
       <Card sx={{ borderTop: `4px solid ${BRAND.green}` }}>
@@ -532,6 +587,28 @@ export default function Challenge() {
       </Box>
 
       <Snackbar open={!!snack} autoHideDuration={2500} onClose={() => setSnack(null)} message={snack ?? ''} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} />
+    </Box>
+  );
+}
+
+/** A small outline clock glyph for the countdown chip. Decorative. */
+function ClockIcon() {
+  return (
+    <Box
+      component="svg"
+      aria-hidden
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      sx={{ display: 'block' }}
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
     </Box>
   );
 }
