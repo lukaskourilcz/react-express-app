@@ -172,7 +172,7 @@ function ProfileBody({
           severity="info"
           sx={{ mb: 2 }}
           action={
-            <Button color="inherit" size="small" onClick={() => navigate('/')}>
+            <Button color="inherit" size="small" onClick={() => navigate('/quiz')}>
               {t('profile.firstQuizCta')}
             </Button>
           }
@@ -343,7 +343,7 @@ function ProfileBody({
       <Button
         variant="contained"
         fullWidth
-        onClick={() => navigate('/')}
+        onClick={() => navigate('/quiz')}
         sx={{
           py: 1.5,
           fontSize: '0.95rem',

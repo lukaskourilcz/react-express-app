@@ -92,7 +92,7 @@ function Flashcards() {
       <Paper elevation={0} sx={{ p: 4, maxWidth: 520, mx: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
         <Typography variant="h6" sx={{ mb: 1 }}>{t('card.emptyTitle')}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>{t('card.emptyHint')}</Typography>
-        <Button variant="contained" onClick={() => navigate('/')} sx={brandButtonSx}>
+        <Button variant="contained" onClick={() => navigate('/quiz')} sx={brandButtonSx}>
           {t('card.goToQuiz')}
         </Button>
       </Paper>

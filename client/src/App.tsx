@@ -21,6 +21,7 @@ import { useSettings } from './lib/settings';
 // (logo, nav, theme/sound toggles) paints first.
 const AuthButton = lazy(() => import('./components/AuthButton'));
 
+const Home = lazy(() => import('./components/Home'));
 const Quiz = lazy(() => import('./components/Quiz'));
 const Roadmap = lazy(() => import('./components/Roadmap'));
 const CareerRoadmap = lazy(() => import('./components/CareerRoadmap'));
@@ -46,6 +47,7 @@ const navLinkSx = (isActive: boolean) => ({
 
 const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/': 'title.home',
+  '/quiz': 'title.quiz',
   '/learn': 'title.learn',
   '/roadmap': 'title.roadmap',
   '/profile': 'title.profile',
@@ -100,7 +102,7 @@ const NAV_ITEMS: {
   isActive: (path: string) => boolean;
   feature?: keyof GameConfig['features'];
 }[] = [
-  { to: '/', key: 'nav.quiz', isActive: (p) => p === '/' },
+  { to: '/quiz', key: 'nav.quiz', isActive: (p) => p === '/quiz' },
   { to: '/learn', key: 'nav.learn', isActive: (p) => p.startsWith('/learn') },
   { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap' },
   { to: '/challenge', key: 'nav.challenge', isActive: (p) => p.startsWith('/challenge') },
@@ -175,8 +177,11 @@ function App() {
 
   // The /dev console is a standalone admin surface — no app chrome, full width.
   const isDev = location.pathname.startsWith('/dev');
-  // The home screen (quiz setup) gets tighter padding so it fits one viewport.
+  // The landing page gets a little more width for its hero + cards.
   const isHome = location.pathname === '/';
+  // The quiz setup screen gets tighter padding and vertical centering so it fits
+  // one viewport.
+  const isQuiz = location.pathname === '/quiz';
 
   // 1–4 shark fins on the footer ocean line, at random (non-overlapping) spots
   // each page load. Positions are sampled across 6–94%, keeping a minimum gap
@@ -193,7 +198,7 @@ function App() {
     }
     return out;
   }, []);
-  const showChrome = !isDev && !(quizActive && location.pathname === '/');
+  const showChrome = !isDev && !(quizActive && isQuiz);
 
   return (
     <Box sx={{ minHeight: '100vh', maxWidth: '100vw', overflowX: 'hidden', backgroundColor: 'background.default', display: 'flex', flexDirection: 'column' }}>
@@ -338,23 +343,24 @@ function App() {
         sx={{
           flex: 1,
           display: 'flex',
-          // Vertically centre the quiz card on the homepage; everywhere else
+          // Vertically centre the quiz card on the quiz screen; everywhere else
           // keep content top-aligned so long pages don't bounce when growing.
-          alignItems: isHome ? 'center' : 'flex-start',
+          alignItems: isQuiz ? 'center' : 'flex-start',
           justifyContent: 'center',
           padding: isDev
             ? { xs: '0.5rem', sm: '0.5rem 1rem' }
-            : isHome
+            : isQuiz
               ? { xs: '1rem', sm: '1.25rem 1.5rem' }
               : { xs: '1.25rem 1rem', sm: '3rem 1.5rem' },
           boxSizing: 'border-box',
           outline: 'none',
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: isDev ? 'none' : 800 }}>
+        <Box sx={{ width: '100%', maxWidth: isDev ? 'none' : isHome ? 1000 : 800 }}>
           <Suspense fallback={<RouteLoader />}>
             <Routes>
-              <Route path="/" element={<Quiz onActiveChange={setQuizActive} />} />
+              <Route path="/" element={<Home />} />
+              <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
               <Route path="/learn" element={<Roadmap />} />
               <Route path="/roadmap" element={<CareerRoadmap />} />
               <Route path="/profile" element={<Profile />} />
