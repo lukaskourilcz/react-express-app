@@ -228,6 +228,13 @@ export const en = {
   'profile.backToQuiz': 'Back to quiz',
   'common.remove': 'Remove',
 
+  // Learning track
+  'profile.trackTitle': 'Learning track',
+  'profile.trackHelp': "Pick your path and we'll unlock its first lessons so you can dive straight in.",
+  'profile.trackSectionsLabel': 'Your starting sections',
+  'profile.trackSet': '{label} track set — starting sections unlocked',
+  'profile.trackGoLearn': 'Go to learning path →',
+
   // Career level (XP)
   'profile.career': 'Career level',
   'profile.careerLevelOf': 'Level {level} of {max}',

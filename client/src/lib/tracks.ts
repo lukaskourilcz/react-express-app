@@ -95,6 +95,17 @@ export const TRACK_TOPICS: Record<Track, Set<RoadmapTopic>> = {
 export const isTopicInTrack = (track: Track, topic: RoadmapTopic): boolean =>
   TRACK_TOPICS[track].has(topic);
 
+/**
+ * The learning sections unlocked when a learner commits to a track in their
+ * profile: the track's first two stages (its foundations plus the first
+ * specialise tier). Enough to dive straight in on the chosen path; the rest of
+ * the path keeps unlocking through the normal prerequisite progression.
+ */
+export function trackStarterTopics(track: Track): RoadmapTopic[] {
+  const stages = TRACKS[track].stages.slice(0, 2);
+  return Array.from(new Set(stages.flatMap((s) => s.topics)));
+}
+
 /* ──── Persisted, shared selection ──────────────────────────────────────── */
 
 const TRACK_KEY = 'devquiz:roadmap:track';

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -10,12 +10,22 @@ import {
   Alert,
   LinearProgress,
   Chip,
+  Snackbar,
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
 import type { UserStats } from '../lib/supabase';
 import { useProfileStats } from '../lib/queries';
-import { useRoadmapProgress, syncProgressWithServer } from '../lib/roadmap';
+import {
+  useRoadmapProgress,
+  syncProgressWithServer,
+  useExtraUnlocks,
+  isTopicUnlocked,
+  unlockExtraTopics,
+  pushProgressToServer,
+} from '../lib/roadmap';
+import { useTrack, trackStarterTopics, TRACKS, TRACK_ORDER, type Track } from '../lib/tracks';
+import { getCategoryHexColor, getCategoryLabel, onCategoryColorText } from '../lib/categories';
 import { useQuestXp, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp, levelForXp, specializationFor, displayTitle, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
@@ -154,6 +164,8 @@ function ProfileBody({
       </Paper>
 
       <CareerCard />
+
+      <LearningTrackCard />
 
       {isFirstTime && (
         <Alert
@@ -421,6 +433,110 @@ function CareerCard() {
           </Typography>
         </Box>
       </Box>
+    </Paper>
+  );
+}
+
+// Learning track: the learner picks Frontend / Backend / Fullstack and we unlock
+// that path's first learning sections (its first two stages) so they can dive
+// straight in. The choice is shared (via useTrack) with the /roadmap page, and
+// unlocks are additive — switching tracks never re-locks anything.
+function LearningTrackCard() {
+  const t = useT();
+  const navigate = useNavigate();
+  const [track, setTrack] = useTrack();
+  const progress = useRoadmapProgress();
+  const extraUnlocks = useExtraUnlocks();
+  const extraSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
+  const [snack, setSnack] = useState<string | null>(null);
+
+  const sections = trackStarterTopics(track);
+
+  const applyTrack = (_: React.MouseEvent<HTMLElement>, next: Track | null) => {
+    // Clicking the already-selected track re-applies (re-unlocks) it rather than
+    // deselecting, so the starting sections are always ensured.
+    const target = next ?? track;
+    if (target !== track) setTrack(target);
+    unlockExtraTopics(trackStarterTopics(target));
+    // Best-effort: persist the new unlocks to the account.
+    pushProgressToServer().catch(() => {});
+    setSnack(t('profile.trackSet', { label: TRACKS[target].label }));
+  };
+
+  return (
+    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+      <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 1 }}>
+        {t('profile.trackTitle')}
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        {t('profile.trackHelp')}
+      </Typography>
+
+      <ToggleButtonGroup
+        value={track}
+        exclusive
+        onChange={applyTrack}
+        aria-label={t('profile.trackTitle')}
+        sx={{
+          flexWrap: 'wrap',
+          mb: 2.5,
+          '& .MuiToggleButton-root': {
+            px: 2,
+            py: 0.6,
+            fontWeight: 700,
+            textTransform: 'none',
+            '&.Mui-selected': {
+              backgroundColor: BRAND.green,
+              color: '#fff',
+              '&:hover': { backgroundColor: BRAND.greenHover },
+            },
+          },
+        }}
+      >
+        {TRACK_ORDER.map((tk) => (
+          <ToggleButton key={tk} value={tk}>
+            {TRACKS[tk].label}
+          </ToggleButton>
+        ))}
+      </ToggleButtonGroup>
+
+      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
+        {t('profile.trackSectionsLabel')}
+      </Typography>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 2 }}>
+        {sections.map((topic) => {
+          const unlocked = isTopicUnlocked(progress, topic, extraSet);
+          const color = getCategoryHexColor(topic);
+          return (
+            <Chip
+              key={topic}
+              label={getCategoryLabel(topic)}
+              size="small"
+              onClick={() => navigate(`/learn?topic=${topic}`)}
+              sx={{
+                cursor: 'pointer',
+                fontWeight: 600,
+                border: '1px solid',
+                borderColor: color,
+                backgroundColor: unlocked ? color : 'transparent',
+                color: unlocked ? onCategoryColorText(topic) : 'text.secondary',
+              }}
+            />
+          );
+        })}
+      </Box>
+
+      <Button variant="outlined" size="small" onClick={() => navigate('/learn')} sx={{ textTransform: 'none' }}>
+        {t('profile.trackGoLearn')}
+      </Button>
+
+      <Snackbar
+        open={!!snack}
+        autoHideDuration={3000}
+        onClose={() => setSnack(null)}
+        message={snack ?? ''}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
     </Paper>
   );
 }

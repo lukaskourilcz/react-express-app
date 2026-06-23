@@ -229,6 +229,13 @@ export const cs: Record<TranslationKey, string> = {
   'profile.backToQuiz': 'Zpět na kvíz',
   'common.remove': 'Odebrat',
 
+  // Learning track
+  'profile.trackTitle': 'Studijní zaměření',
+  'profile.trackHelp': 'Vyber si směr a my ti odemkneme jeho první lekce, abys mohl rovnou začít.',
+  'profile.trackSectionsLabel': 'Tvé úvodní sekce',
+  'profile.trackSet': 'Zaměření {label} nastaveno — úvodní sekce odemčeny',
+  'profile.trackGoLearn': 'Přejít na studijní cestu →',
+
   // Career level (XP)
   'profile.career': 'Kariérní úroveň',
   'profile.careerLevelOf': 'Úroveň {level} z {max}',
