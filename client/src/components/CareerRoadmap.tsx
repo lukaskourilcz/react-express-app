@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, Paper, Typography, LinearProgress, Chip, Button, Divider, Alert } from '@mui/material';
+import { Box, Paper, Typography, LinearProgress, Chip, Button, Divider, Alert, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import {
@@ -15,6 +15,8 @@ import {
   syncProgressWithServer,
 } from '../lib/roadmap';
 import { useRoadmapStructure } from '../lib/queries';
+import { useTrack, isTopicInTrack, TRACKS, TRACK_ORDER } from '../lib/tracks';
+import { getCategoryHexColor } from '../lib/categories';
 import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
 import { levelForXp, specializationFor, displayTitle, getCareerRanks } from '../lib/leveling';
@@ -102,6 +104,8 @@ export default function CareerRoadmap() {
   const totalXp = useTotalXp();
   // Shared (cached, de-duped with /learn) roadmap structure for level counts.
   const structure = useRoadmapStructure().data ?? null;
+  // The chosen track drives this whole page — map, pillars and headline %.
+  const [track, setTrack] = useTrack();
 
   // Sync account progress so the percentages are accurate even on a fresh device.
   useEffect(() => {
@@ -109,19 +113,21 @@ export default function CareerRoadmap() {
   }, []);
 
   const levelsFor = (topic: RoadmapTopic): number => structure?.structure?.[topic]?.levels.length ?? 0;
+  const inTrack = (topic: RoadmapTopic): boolean => isTopicInTrack(track, topic);
 
-  // Aggregate completion across every devShark-taught area.
+  // Aggregate completion across the areas that belong to the chosen track.
   const overall = useMemo(() => {
     let passed = 0;
     let total = 0;
     for (const pillar of PILLARS) {
       for (const area of pillar.areas) {
+        if (!isTopicInTrack(track, area.topic)) continue;
         total += levelsFor(area.topic);
         passed += Math.min(passedLevelCount(progress, area.topic), levelsFor(area.topic));
       }
     }
     return { passed, total, pct: pct(passed, total) };
-  }, [progress, structure]);
+  }, [progress, structure, track]);
 
   const info = levelForXp(totalXp);
   const spec = specializationFor(progress);
@@ -155,17 +161,58 @@ export default function CareerRoadmap() {
         </Typography>
       </Alert>
 
+      {/* Track chooser — drives the headline %, the map and the pillars below. */}
+      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, mb: 3 }}>
+        <Typography variant="overline" color="text.secondary">
+          Choose your track
+        </Typography>
+        <ToggleButtonGroup
+          value={track}
+          exclusive
+          onChange={(_, v: typeof track | null) => v && setTrack(v)}
+          size="small"
+          aria-label="Choose your track"
+          sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
+        >
+          {TRACK_ORDER.map((tk) => (
+            <ToggleButton
+              key={tk}
+              value={tk}
+              sx={{
+                px: 2.25,
+                py: 0.6,
+                textTransform: 'none',
+                fontWeight: 700,
+                '&.Mui-selected': {
+                  backgroundColor: BRAND.green,
+                  color: '#fff',
+                  '&:hover': { backgroundColor: BRAND.greenHover },
+                },
+              }}
+            >
+              {TRACKS[tk].label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', maxWidth: 520 }}>
+          {TRACKS[track].blurb}
+        </Typography>
+      </Box>
+
       {/* Where you are now */}
       <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 3, border: '1px solid', borderColor: 'divider', borderTop: `4px solid ${BRAND.green}`, borderRadius: 2 }}>
-        <Typography variant="overline" color="text.secondary" component="h2">
-          Your fundamentals progress
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
+          <Typography variant="overline" color="text.secondary" component="h2">
+            Your fundamentals progress
+          </Typography>
+          <Chip size="small" label={TRACKS[track].label} sx={{ fontWeight: 700, backgroundColor: BRAND.greenSoft, color: BRAND.green }} />
+        </Box>
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, mt: 1, mb: 1.5, flexWrap: 'wrap' }}>
           <Typography variant="h3" sx={{ fontWeight: 800, color: BRAND.green, lineHeight: 1 }}>
             {overall.pct}%
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {overall.passed} / {overall.total || '…'} learning-path levels passed across the four pillars
+            {overall.passed} / {overall.total || '…'} learning-path levels passed on the {TRACKS[track].label} track
           </Typography>
         </Box>
         <LinearProgress
@@ -197,14 +244,16 @@ export default function CareerRoadmap() {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           {t('roadmapPage.treeIntro')}
         </Typography>
-        <RoadmapTree structure={structure} />
+        <RoadmapTree structure={structure} track={track} />
       </Paper>
 
-      {/* The four pillars */}
+      {/* The pillars, filtered to the chosen track (empty pillars are hidden). */}
       {PILLARS.map((pillar) => {
+        const areas = pillar.areas.filter((area) => inTrack(area.topic));
+        if (areas.length === 0) return null;
         let pPassed = 0;
         let pTotal = 0;
-        for (const area of pillar.areas) {
+        for (const area of areas) {
           pTotal += levelsFor(area.topic);
           pPassed += Math.min(passedLevelCount(progress, area.topic), levelsFor(area.topic));
         }
@@ -217,23 +266,27 @@ export default function CareerRoadmap() {
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{pillar.intro}</Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-              {pillar.areas.map((area) => {
+              {areas.map((area) => {
                 const total = levelsFor(area.topic);
                 const passed = Math.min(passedLevelCount(progress, area.topic), total);
                 const aPct = pct(passed, total);
+                const color = getCategoryHexColor(area.topic);
                 return (
                   <Box key={area.topic}>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1 }}>
-                      <Typography variant="body2" sx={{ fontWeight: 600 }}>{area.label}</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
+                        <Box aria-hidden sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{area.label}</Typography>
+                      </Box>
                       <Typography variant="caption" color="text.secondary">
                         {total ? `${passed}/${total} levels` : '—'}
                       </Typography>
                     </Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>{area.blurb}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, pl: 1.75 }}>{area.blurb}</Typography>
                     <LinearProgress
                       variant="determinate"
                       value={aPct}
-                      sx={{ height: 6, borderRadius: 3, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 3, backgroundColor: aPct === 100 ? BRAND.green : '#7cb342' } }}
+                      sx={{ height: 6, borderRadius: 3, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 3, backgroundColor: color } }}
                     />
                   </Box>
                 );
@@ -268,7 +321,7 @@ export default function CareerRoadmap() {
       </Paper>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 3 }}>
-        Master the four pillars here, then go get the reps. That combination is what actually makes it in this market.
+        Master these fundamentals here, then go get the reps. That combination is what actually makes it in this market.
       </Typography>
     </Box>
   );

@@ -1,16 +1,15 @@
 // The /roadmap "map": a curated, top-to-bottom path through the topics that
-// actually matter for a Frontend, Backend or Fullstack engineer. The learner
-// picks a track and the map re-renders to just that track's stages, flowing
-// from foundations at the top down to production concerns at the bottom. Every
-// topic node is coloured by its brand/logo colour (matching the quiz + learn
+// actually matter for the chosen track (Frontend / Backend / Fullstack). The
+// track is chosen on the page (CareerRoadmap) and passed in; the map flows from
+// foundations at the top down to production concerns at the bottom. Every topic
+// node is coloured by its brand/logo colour (matching the quiz + learn
 // surfaces), carries a one-line "what you'll learn" detail, and branches into
 // its 3 parts — each part pill reflects live progress and deep-links into
-// /learn. Non-essential topics (Cool Stuff, AI, Abbreviations) are intentionally
-// left off the map to keep it focused on the important stuff.
+// /learn.
 
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, Typography, Tooltip, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Box, Typography, Tooltip } from '@mui/material';
 import type { RoadmapStructure, RoadmapTopic } from '../types/quiz';
 import {
   useRoadmapProgress,
@@ -22,206 +21,83 @@ import {
   type PathStatus,
   type RoadmapProgress,
 } from '../lib/roadmap';
+import { TRACKS, TOPIC_DETAIL, type Track } from '../lib/tracks';
 import { getCategoryLabel, getCategoryHexColor, onCategoryColorText } from '../lib/categories';
-import { readJSON, writeJSON } from '../lib/storage';
 import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
-type Track = 'frontend' | 'backend' | 'fullstack';
-
-// A one-line "what you'll learn" detail shown on each topic node.
-const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
-  html: 'Semantic markup, forms, accessibility.',
-  css: 'Layout, flexbox & grid, responsive design.',
-  javascript: 'Closures, async, and the event loop.',
-  typescript: 'Types, generics, and safer refactors.',
-  git: 'Branches, merges, pull requests, history.',
-  react: 'Components, hooks, state, rendering.',
-  nextjs: 'Routing, server components, data fetching.',
-  'rhf-zod': 'Forms & validation with React Hook Form + Zod.',
-  nodejs: 'Modules, async, HTTP, Express, streams.',
-  general: 'How the web works: HTTP, caching, auth.',
-  databases: 'SQL, schema design, indexing, transactions.',
-  dsa: 'Complexity, arrays, trees, graphs, sorting.',
-  algorithms: 'Problem-solving: recursion, combinatorics, math.',
-  testing: 'Unit, integration, and end-to-end testing.',
-  'system-design': 'Caching, queues, sharding, trade-offs.',
-  devops: 'CI/CD, containers, observability, the cloud.',
-  security: 'Auth, the OWASP Top 10, secure defaults.',
-};
-
-interface Stage {
-  title: string;
-  topics: RoadmapTopic[];
-}
-interface TrackDef {
-  label: string;
-  blurb: string;
-  stages: Stage[];
-}
-
-// Curated tracks. Each is a top-to-bottom story: foundations → specialise →
-// production. Fullstack is the union; Frontend and Backend share the core
-// (JS/TS/Git/Testing) and branch into their own concerns.
-const TRACKS: Record<Track, TrackDef> = {
-  frontend: {
-    label: 'Frontend',
-    blurb: 'Build the interfaces people actually touch — markup, styling, and the React stack.',
-    stages: [
-      { title: 'Foundations', topics: ['html', 'css', 'javascript'] },
-      { title: 'Level up the language', topics: ['typescript', 'git'] },
-      { title: 'The React stack', topics: ['react', 'nextjs', 'rhf-zod'] },
-      { title: 'Ship with confidence', topics: ['testing', 'dsa'] },
-    ],
-  },
-  backend: {
-    label: 'Backend',
-    blurb: 'Build and run the server — APIs, data, and systems that hold up under load.',
-    stages: [
-      { title: 'Foundations', topics: ['javascript', 'typescript', 'git'] },
-      { title: 'The server & the web', topics: ['nodejs', 'general'] },
-      { title: 'Data & computer science', topics: ['databases', 'dsa', 'algorithms'] },
-      { title: 'Production & scale', topics: ['testing', 'system-design', 'devops', 'security'] },
-    ],
-  },
-  fullstack: {
-    label: 'Fullstack',
-    blurb: 'The whole picture — frontend, backend, and everything that ties them together.',
-    stages: [
-      { title: 'Foundations', topics: ['html', 'css', 'javascript'] },
-      { title: 'Level up the language', topics: ['typescript', 'git'] },
-      { title: 'Frontend', topics: ['react', 'nextjs', 'rhf-zod'] },
-      { title: 'Backend', topics: ['nodejs', 'general', 'databases'] },
-      { title: 'Computer science', topics: ['dsa', 'algorithms'] },
-      { title: 'Production & scale', topics: ['testing', 'system-design', 'devops', 'security'] },
-    ],
-  },
-};
-
-const TRACK_ORDER: Track[] = ['frontend', 'backend', 'fullstack'];
-const TRACK_KEY = 'devquiz:roadmap:track';
-const isTrack = (v: unknown): v is Track => v === 'frontend' || v === 'backend' || v === 'fullstack';
-
-export default function RoadmapTree({ structure }: { structure: RoadmapStructure | null }) {
+export default function RoadmapTree({ structure, track }: { structure: RoadmapStructure | null; track: Track }) {
   const t = useT();
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
   const extraSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
-
-  // Remember the learner's chosen track across visits.
-  const [track, setTrack] = useState<Track>(() => {
-    const saved = readJSON<string>(TRACK_KEY, 'fullstack');
-    return isTrack(saved) ? saved : 'fullstack';
-  });
-  const selectTrack = (next: Track | null) => {
-    if (!next) return; // ignore deselect — a track is always active
-    setTrack(next);
-    writeJSON(TRACK_KEY, next);
-  };
 
   const def = TRACKS[track];
   const levelCountOf = (family: RoadmapTopic): number =>
     structure?.structure?.[family]?.levels.length ?? 0;
 
   return (
-    <Box sx={{ width: '100%' }}>
-      {/* Track chooser — the answer to "Frontend, Backend or Fullstack?" */}
-      <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, mb: 2.5 }}>
-        <ToggleButtonGroup
-          value={track}
-          exclusive
-          onChange={(_, v: Track | null) => selectTrack(v)}
-          size="small"
-          aria-label="Choose your track"
-          sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
-        >
-          {TRACK_ORDER.map((tk) => (
-            <ToggleButton
-              key={tk}
-              value={tk}
+    // The map: stages flow top → bottom. Keyed by track so switching tracks
+    // remounts and gently re-animates the new path into place.
+    <Box
+      key={track}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+        '@keyframes rmTrackIn': {
+          from: { opacity: 0, transform: 'translateY(8px)' },
+          to: { opacity: 1, transform: 'none' },
+        },
+        animation: 'rmTrackIn 320ms ease-out',
+        '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+      }}
+    >
+      {def.stages.map((stage, i) => (
+        <Box key={stage.title} sx={{ width: '100%' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1.25 }}>
+            <Box
+              aria-hidden
               sx={{
-                px: 2.25,
-                py: 0.6,
-                textTransform: 'none',
-                fontWeight: 700,
-                '&.Mui-selected': {
-                  backgroundColor: BRAND.green,
-                  color: '#fff',
-                  '&:hover': { backgroundColor: BRAND.greenHover },
-                },
+                width: 22,
+                height: 22,
+                borderRadius: '50%',
+                backgroundColor: BRAND.green,
+                color: '#fff',
+                fontSize: '0.72rem',
+                fontWeight: 800,
+                display: 'grid',
+                placeItems: 'center',
+                flexShrink: 0,
               }}
             >
-              {TRACKS[tk].label}
-            </ToggleButton>
-          ))}
-        </ToggleButtonGroup>
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', maxWidth: 520 }}>
-          {def.blurb}
-        </Typography>
-      </Box>
-
-      {/* The map: stages flow top → bottom. Keyed by track so switching tracks
-          remounts and gently re-animates the new path into place. */}
-      <Box
-        key={track}
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          width: '100%',
-          '@keyframes rmTrackIn': {
-            from: { opacity: 0, transform: 'translateY(8px)' },
-            to: { opacity: 1, transform: 'none' },
-          },
-          animation: 'rmTrackIn 320ms ease-out',
-          '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-        }}
-      >
-        {def.stages.map((stage, i) => (
-          <Box key={stage.title} sx={{ width: '100%' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1.25 }}>
-              <Box
-                aria-hidden
-                sx={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: '50%',
-                  backgroundColor: BRAND.green,
-                  color: '#fff',
-                  fontSize: '0.72rem',
-                  fontWeight: 800,
-                  display: 'grid',
-                  placeItems: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                {i + 1}
-              </Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 800, letterSpacing: '0.3px' }}>
-                {stage.title}
-              </Typography>
+              {i + 1}
             </Box>
-
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, justifyContent: 'center' }}>
-              {stage.topics.map((family) => (
-                <TopicCard
-                  key={family}
-                  family={family}
-                  levelCount={levelCountOf(family)}
-                  progress={progress}
-                  extraSet={extraSet}
-                  t={t}
-                />
-              ))}
-            </Box>
-
-            {i < def.stages.length - 1 && <StageConnector />}
+            <Typography variant="subtitle2" sx={{ fontWeight: 800, letterSpacing: '0.3px' }}>
+              {stage.title}
+            </Typography>
           </Box>
-        ))}
-      </Box>
+
+          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, justifyContent: 'center' }}>
+            {stage.topics.map((family) => (
+              <TopicCard
+                key={family}
+                family={family}
+                levelCount={levelCountOf(family)}
+                progress={progress}
+                extraSet={extraSet}
+                t={t}
+              />
+            ))}
+          </Box>
+
+          {i < def.stages.length - 1 && <StageConnector />}
+        </Box>
+      ))}
     </Box>
   );
 }
@@ -229,10 +105,7 @@ export default function RoadmapTree({ structure }: { structure: RoadmapStructure
 /** A short vertical line + downward chevron linking one stage to the next. */
 function StageConnector() {
   return (
-    <Box
-      aria-hidden
-      sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 1 }}
-    >
+    <Box aria-hidden sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 1 }}>
       <Box sx={{ width: 2, height: 16, backgroundColor: 'divider' }} />
       <Box
         component="svg"
