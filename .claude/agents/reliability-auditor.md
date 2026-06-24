@@ -11,7 +11,7 @@ Process:
 
 1. **Failure-mode walk.** For each of these scenarios, trace what the user sees:
    - Supabase is down / 5xx
-   - Auth0 is down or token expired mid-session
+   - Supabase Auth is down or token expired mid-session
    - A Vercel function cold-starts past its timeout
    - Network drops between question N and N+1 of a quiz
    - User refreshes mid-quiz (state preserved? lost?)

@@ -7,7 +7,7 @@ model: sonnet
 
 You plan features for a quiz app with this stack:
 
-- **Client:** React 18 + TypeScript + Vite + MUI 5 + Auth0 + react-router-dom v7
+- **Client:** React 18 + TypeScript + Vite + MUI 5 + Supabase Auth (Google OAuth) + react-router-dom v7
 - **API (prod):** Vercel serverless functions in `api/*.ts`
 - **Server (dev):** Express in `server/src/*` (mirrors `api/` for local dev)
 - **DB:** Supabase (Postgres) — schema in `supabase-schema.sql`

@@ -17,8 +17,8 @@ Goal: produce one prioritized punch-list covering UX, a11y, performance, scalabi
    - `accessibility-auditor` — "Audit WCAG 2.1 AA across all components and routes. Cover semantic HTML, ARIA, keyboard, focus, contrast, SPA route changes."
    - `performance-optimizer` — "Audit frontend perf — bundle, code splitting (Quiz/Profile lazy), `react-syntax-highlighter` weight, Vite manualChunks, render perf in Quiz.tsx."
    - `scalability-auditor` — "Audit `api/`, `server/`, `supabase-schema.sql`. Cover cold starts, indexes, RLS-as-scan-risk, counter races, caching, rate limits, two-stack drift."
-   - `security-auditor` — "Audit Auth0/Supabase auth flow, RLS policies (currently `USING (true)`), API input validation, client-supplied trust, secrets, CORS, headers, deps."
-   - `reliability-auditor` — "Audit failure modes — Supabase/Auth0 down, mid-quiz network drop, refresh, concurrent tabs, error boundaries, observability, idempotency."
+   - `security-auditor` — "Audit the Supabase Auth (Google OAuth) flow, RLS policies, API input validation, client-supplied trust, secrets, CORS, headers, deps."
+   - `reliability-auditor` — "Audit failure modes — Supabase / Supabase Auth down, mid-quiz network drop, refresh, concurrent tabs, error boundaries, observability, idempotency."
 
 3. **Consolidate the six reports** into one document. Deduplicate findings that show up in multiple lenses (e.g. RLS `USING (true)` is both security and scalability — list once under security, cross-ref scalability).
 

@@ -21,7 +21,7 @@ Developer-knowledge quiz & learning app: 15 topic paths, importance-weighted qui
 ### Database, Auth & Realtime — Supabase
 - **What / used for:** The backend-as-a-service for everything stateful.
   - **Postgres** — ~16 tables (`user_stats`, `user_category_stats`, `daily_attempts`, `question_reports`, `matches` / `match_participants` / `match_answers`, `flashcards`, `question_edits`, `app_settings`, `roadmap_progress`, `user_streak`, `user_xp`, `auth_events`, `challenge_scores`) plus ~8 RPCs (`record_quiz_result`, `record_category_stats`, `global_leaderboard`, `category_leaderboard`, `daily_leaderboard`, `match_scoreboard`, `match_question_distribution`, …) and RLS. Schema = base + migrations `002`–`019`.
-  - **Supabase Auth** — Google OAuth (confirmed in `client/.env.example` and `lib/auth.ts`; there is **no Auth0** despite stale README mentions). API verifies caller JWTs with the anon key and uses the service-role key to bypass RLS after verifying the subject.
+  - **Supabase Auth** — Google OAuth (confirmed in `client/.env.example` and `lib/auth.ts`; there is **no Auth0**). API verifies caller JWTs with the anon key and uses the service-role key to bypass RLS after verifying the subject.
   - **Realtime** — broadcast channels for live multiplayer (`client/src/lib/realtime.ts`); table replication enabled for the `match*` tables.
 - **Plan/tier:** **Supabase Free**.
 - **Current monthly cost:** **$0**.

@@ -11,7 +11,7 @@ Goal: surface every way the app can be exploited or fail in production, ranked b
 
 1. **Spawn two auditors in parallel** (single message, two `Agent` tool calls):
 
-   - `security-auditor` — "Full security audit. Pay special attention to: RLS policies in `supabase-schema.sql` currently use `USING (true)`; whether `api/` handlers verify Auth0 JWTs server-side or trust client-supplied `auth0_id`; client-trusted score/streak in `api/quiz/submit.ts`; secret leakage; npm audit."
+   - `security-auditor` — "Full security audit. Pay special attention to: RLS policies in `supabase-schema.sql` currently use `USING (true)`; whether `api/` handlers verify Supabase JWTs server-side or trust a client-supplied `user_id`; client-trusted score/streak in `api/quiz/submit.ts`; secret leakage; npm audit."
    - `reliability-auditor` — "Full reliability audit. Pay special attention to: counter races on `total_quizzes`/`current_streak`; mid-quiz refresh/network drop UX; absence of React error boundaries; idempotency of submit; observability gaps; two-stack drift between `server/` and `api/`."
 
 2. **Merge into one report:**

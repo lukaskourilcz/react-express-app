@@ -16,7 +16,7 @@ Investigation:
    - No request validation → wasted compute on garbage input
    - Response size — full payloads when partial would do
 2. **Database schema** (`supabase-schema.sql`):
-   - Indexes: which queries run, are they indexed? `auth0_id` is indexed — good. Flag missing indexes on common filter/sort columns
+   - Indexes: which queries run, are they indexed? `user_id` is indexed — good. Flag missing indexes on common filter/sort columns
    - Wide rows / TEXT columns that should be normalized
    - No `updated_at` trigger
    - Counter columns (`total_quizzes`, `current_streak`) — check for race conditions on concurrent updates (need atomic UPDATE or RPC)

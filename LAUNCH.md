@@ -155,7 +155,7 @@ Severity legend: **P0** = blocks launch · **P1** = ship-but-fix-soon · **P2** 
 
 ### Repo Hygiene — P0
 
-1. **README is severely stale** — `README.md` still mentions Auth0 in 31 places (e.g. line 346: "Admin endpoints are gated by the `x-dev-password` header, not the Auth0 token"), claims "800 questions" (actual: 2377), and doesn't document the mobile app, the `dsa` / `algorithms` / `nextjs` categories, `lib/quiz-data.cs.ts` (Czech), or 13 SQL files (only mentions 7). Worst: lines 75/79/245 publish the `react123` default. → Rewrite Tech stack / Auth / Repository layout / Database setup / API reference sections; add a Mobile section.
+1. **README — refreshed ✅** — `README.md` has been rewritten to match the current stack: Supabase Auth (not Auth0), ~3,100 questions across 15 learning paths, the mobile app, the full category set (incl. `dsa` / `algorithms` / `nextjs`), `lib/quiz-data.cs.ts` (Czech), and all SQL migrations through 019. Set a strong `DEV_PASSWORD` in production — the admin gate exposes answer keys.
 
 ### Repo Hygiene — P1
 
