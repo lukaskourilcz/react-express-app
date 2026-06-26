@@ -507,6 +507,7 @@ function Roadmap() {
         onFinished={handleFinished}
         onNext={() => next && openNext(next)}
         t={t}
+        lang={lang}
       />
     );
   }
@@ -933,10 +934,10 @@ function HeartMeter({ mistakes, max, hit, t }: { mistakes: number; max: number; 
 }
 
 function LessonRunner({
-  playable, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, t,
+  playable, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, t, lang,
 }: {
   playable: RoadmapPlayable; topicColor: string; hasNext: boolean; nextLabel: string;
-  onExit: () => void; onFinished: (pct: number) => void; onNext: () => void; t: TFn;
+  onExit: () => void; onFinished: (pct: number) => void; onNext: () => void; t: TFn; lang: string;
 }) {
   const { user } = useAuth();
   const isCheckpoint = playable.kind === 'checkpoint';
@@ -944,7 +945,7 @@ function LessonRunner({
   // A level opens with a short info panel (what this section is about + a core
   // principle) before the first question. Checkpoints/part-tests skip it, as do
   // levels with no authored intro.
-  const intro = playable.kind === 'level' ? levelIntro(playable.topic, playable.ref) : null;
+  const intro = playable.kind === 'level' ? levelIntro(playable.topic, playable.ref, lang) : null;
   const [showIntro, setShowIntro] = useState<boolean>(() => !!intro);
   // Question sequence + answer order are shuffled on every play (and re-shuffled
   // on replay, avoiding the previous layout) so positions stay unmemorisable.
@@ -1056,7 +1057,6 @@ function LessonRunner({
           }}
         >
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
-            <Box aria-hidden sx={{ fontSize: '1.4rem', lineHeight: 1 }}>💡</Box>
             <Chip
               label={`${t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
               size="small"

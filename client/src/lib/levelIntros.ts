@@ -9,6 +9,7 @@
 // missing intro as "start immediately").
 
 import type { RoadmapTopic } from '../types/quiz';
+import { LEVEL_INTROS_CS } from './levelIntros.cs';
 
 export const LEVEL_INTROS: Partial<Record<RoadmapTopic, string[]>> = {
   javascript: [
@@ -399,8 +400,11 @@ export const LEVEL_INTROS: Partial<Record<RoadmapTopic, string[]>> = {
   ],
 };
 
-/** The intro blurb for a topic + GLOBAL level number, or null if none exists. */
-export function levelIntro(topic: RoadmapTopic, level: number): string | null {
+/** The intro blurb for a topic + GLOBAL level number, in the given language
+ *  (falling back to English), or null if none exists. */
+export function levelIntro(topic: RoadmapTopic, level: number, lang = 'en'): string | null {
+  const cs = lang === 'cs' ? LEVEL_INTROS_CS[topic]?.[level - 1] : undefined;
+  if (cs) return cs;
   const list = LEVEL_INTROS[topic];
   if (!list) return null;
   return list[level - 1] ?? null;
