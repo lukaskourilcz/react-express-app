@@ -1,0 +1,702 @@
+{
+ "method": "char-5-gram cosine, category-blocked",
+ "threshold": 0.82,
+ "pairCount": 30,
+ "clusterCount": 23,
+ "redundantCount": 28,
+ "clusters": [
+  [
+   {
+    "id": "rm-ts-138",
+    "category": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Partial<{ a: number }>;\nconst x: T = {};\n```"
+   },
+   {
+    "id": "rm-ts-143",
+    "category": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Partial<{ a: number; b: string }>;\nconst x: T = { b: \"hi\" };\n```"
+   },
+   {
+    "id": "rm-ts-148",
+    "category": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Omit<{ a: number; b: number }, \"a\">;\nconst x: T = { b: 5 };\n```"
+   }
+  ],
+  [
+   {
+    "id": "rm-ts-139",
+    "category": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Required<{ a?: number; b?: string }>;\nconst x: T = { a: 1 };\n```"
+   },
+   {
+    "id": "rm-ts-144",
+    "category": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Required<{ a?: number }>;\nconst x: T = {};\n```"
+   },
+   {
+    "id": "rm-ts-154",
+    "category": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Record<\"a\" | \"b\", number>;\nconst x: T = { a: 1 };\n```"
+   }
+  ],
+  [
+   {
+    "id": "378",
+    "category": "javascript",
+    "stem": "What does this code return?\n\n```javascript\nObject.keys({ a: 1, b: 2 })\n```"
+   },
+   {
+    "id": "379",
+    "category": "javascript",
+    "stem": "What does this code return?\n\n```javascript\nObject.values({ a: 1, b: 2 })\n```"
+   },
+   {
+    "id": "rm-js-36",
+    "category": "javascript",
+    "stem": "What does this return?\n\n```js\nObject.values({ a: 1, b: 2 });\n```"
+   }
+  ],
+  [
+   {
+    "id": "rm-js-17",
+    "category": "javascript",
+    "stem": "What does this return?\n\n```js\n1 === \"1\";\n```"
+   },
+   {
+    "id": "rm-js-18",
+    "category": "javascript",
+    "stem": "What does this return?\n\n```js\n1 == \"1\";\n```"
+   },
+   {
+    "id": "rm-js-21",
+    "category": "javascript",
+    "stem": "What does this return?\n\n```js\n2 != \"2\";\n```"
+   }
+  ],
+  [
+   {
+    "id": "756",
+    "category": "code-snippets",
+    "stem": "What does this output?\n\n```js\nfor (var i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}\n```"
+   },
+   {
+    "id": "757",
+    "category": "code-snippets",
+    "stem": "What does this output?\n\n```js\nfor (let i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}\n```"
+   },
+   {
+    "id": "777",
+    "category": "code-snippets",
+    "stem": "What does this output?\n\n```js\nfor (var i = 0; i < 3; i++) {\n  (function(j) {\n    setTimeout(() => console.log(j), 0);\n  })(i);\n}\n```"
+   }
+  ],
+  [
+   {
+    "id": "621",
+    "category": "typescript",
+    "stem": "What is the resulting type of `Result`?\n\n```ts\ntype ToArray<T> = T extends any ? T[] : never;\ntype Result = ToArray<string | number>;\n```"
+   },
+   {
+    "id": "622",
+    "category": "typescript",
+    "stem": "What is the resulting type of `Result`?\n\n```ts\ntype ToArray<T> = [T] extends [any] ? T[] : never;\ntype Result = ToArray<string | number>;\n```"
+   }
+  ],
+  [
+   {
+    "id": "rm-ts-36",
+    "category": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = { a: number };\nconst x: T = { a: 1, b: 2 };\n```"
+   },
+   {
+    "id": "rm-ts-147",
+    "category": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Pick<{ a: 1; b: 2 }, \"a\">;\nconst x: T = { a: 1, b: 2 };\n```"
+   }
+  ],
+  [
+   {
+    "id": "rm-ts-37",
+    "category": "typescript",
+    "stem": "What happens?\n\n```ts\nconst o: { a: number } = { a: 1 };\no.b;\n```"
+   },
+   {
+    "id": "rm-ts-39",
+    "category": "typescript",
+    "stem": "What happens?\n\n```ts\nconst o: { readonly a: number } = { a: 1 };\no.a = 5;\n```"
+   }
+  ],
+  [
+   {
+    "id": "rm-ts-38",
+    "category": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = { [key: string]: number };\nconst x: T = { a: 1, b: 2 };\n```"
+   },
+   {
+    "id": "rm-ts-153",
+    "category": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Record<string, number>;\nconst x: T = { a: 1, b: 2 };\n```"
+   }
+  ],
+  [
+   {
+    "id": "rm-ts-145",
+    "category": "typescript",
+    "stem": "What is T?\n\n```ts\ntype User = { id: number; name: string; age: number };\ntype T = Pick<User, \"id\" | \"name\">;\n```"
+   },
+   {
+    "id": "rm-ts-146",
+    "category": "typescript",
+    "stem": "What is T?\n\n```ts\ntype User = { id: number; name: string; age: number };\ntype T = Omit<User, \"age\">;\n```"
+   }
+  ],
+  [
+   {
+    "id": "rm-ts-169",
+    "category": "typescript",
+    "stem": "What is R?\n\n```ts\ntype IsString<T> = T extends string ? \"yes\" : \"no\";\ntype R = IsString<string>;\n```"
+   },
+   {
+    "id": "rm-ts-170",
+    "category": "typescript",
+    "stem": "What is R?\n\n```ts\ntype IsString<T> = T extends string ? \"yes\" : \"no\";\ntype R = IsString<number>;\n```"
+   }
+  ],
+  [
+   {
+    "id": "355",
+    "category": "javascript",
+    "stem": "What does this code return?\n\n```javascript\n[1, 2, 3].map(x => x * 2)\n```"
+   },
+   {
+    "id": "rm-js-41",
+    "category": "javascript",
+    "stem": "What does this return?\n\n```js\n[1, 2, 3].map(x => x * 2);\n```"
+   }
+  ],
+  [
+   {
+    "id": "387",
+    "category": "javascript",
+    "stem": "What does this code return?\n\n```javascript\n[...new Set([1, 1, 2, 2, 3])]\n```"
+   },
+   {
+    "id": "rm-js-178",
+    "category": "javascript",
+    "stem": "What does this return?\n\n```js\n[...new Set([1, 2, 2, 3])];\n```"
+   }
+  ],
+  [
+   {
+    "id": "rm-js-116",
+    "category": "javascript",
+    "stem": "What does this return?\n\n```js\n[3, 1, 2].sort((a, b) => a - b);\n```"
+   },
+   {
+    "id": "rm-js-120",
+    "category": "javascript",
+    "stem": "What does this return?\n\n```js\n[3, 1, 2].sort();\n```"
+   }
+  ],
+  [
+   {
+    "id": "319",
+    "category": "nodejs",
+    "stem": "What is Express.js?"
+   },
+   {
+    "id": "rm-node-161",
+    "category": "nodejs",
+    "stem": "What is Express?"
+   }
+  ],
+  [
+   {
+    "id": "405",
+    "category": "html",
+    "stem": "What does HTML stand for?"
+   },
+   {
+    "id": "rm-html-1",
+    "category": "html",
+    "stem": "What does HTML stand for?"
+   }
+  ],
+  [
+   {
+    "id": "423",
+    "category": "html",
+    "stem": "How do you write a comment in HTML?"
+   },
+   {
+    "id": "rm-html-4",
+    "category": "html",
+    "stem": "Which is a valid HTML comment?"
+   }
+  ],
+  [
+   {
+    "id": "rm-html-15",
+    "category": "html",
+    "stem": "What does `<meta charset=\"UTF-8\">` set?"
+   },
+   {
+    "id": "rm-html-91",
+    "category": "html",
+    "stem": "What does `<meta charset=\"UTF-8\">` declare?"
+   }
+  ],
+  [
+   {
+    "id": "470",
+    "category": "css",
+    "stem": "What does position: relative do?\n\n```css\n.box {\n  position: relative;\n  top: 10px;\n  left: 20px;\n}\n```"
+   },
+   {
+    "id": "471",
+    "category": "css",
+    "stem": "What does position: absolute do?\n\n```css\n.box {\n  position: absolute;\n  top: 0;\n  right: 0;\n}\n```"
+   }
+  ],
+  [
+   {
+    "id": "rm-next-6",
+    "category": "nextjs",
+    "stem": "By default, components in the App Router are:"
+   },
+   {
+    "id": "rm-next-23",
+    "category": "nextjs",
+    "stem": "Layouts in the App Router are by default:"
+   }
+  ],
+  [
+   {
+    "id": "rm-dsa-10",
+    "category": "dsa",
+    "stem": "Which Big-O describes constant time?"
+   },
+   {
+    "id": "rm-dsa-11",
+    "category": "dsa",
+    "stem": "Which Big-O describes linear time?"
+   }
+  ],
+  [
+   {
+    "id": "rm-dsa-41",
+    "category": "dsa",
+    "stem": "A stack follows which ordering principle?"
+   },
+   {
+    "id": "rm-dsa-49",
+    "category": "dsa",
+    "stem": "A queue follows which ordering principle?"
+   }
+  ],
+  [
+   {
+    "id": "rm-dsa-73",
+    "category": "dsa",
+    "stem": "What is the worst-case time complexity of bubble sort?"
+   },
+   {
+    "id": "rm-dsa-75",
+    "category": "dsa",
+    "stem": "What is the worst-case time complexity of quicksort?"
+   }
+  ]
+ ],
+ "pairs": [
+  {
+   "sim": 0.9599,
+   "a": {
+    "id": "rm-ts-145",
+    "cat": "typescript",
+    "stem": "What is T?\n\n```ts\ntype User = { id: number; name: string; age: number };\ntype T = Pick<User, \"id\" | \"name\">;\n```"
+   },
+   "b": {
+    "id": "rm-ts-146",
+    "cat": "typescript",
+    "stem": "What is T?\n\n```ts\ntype User = { id: number; name: string; age: number };\ntype T = Omit<User, \"age\">;\n```"
+   }
+  },
+  {
+   "sim": 0.9236,
+   "a": {
+    "id": "rm-dsa-41",
+    "cat": "dsa",
+    "stem": "A stack follows which ordering principle?"
+   },
+   "b": {
+    "id": "rm-dsa-49",
+    "cat": "dsa",
+    "stem": "A queue follows which ordering principle?"
+   }
+  },
+  {
+   "sim": 0.9224,
+   "a": {
+    "id": "rm-ts-169",
+    "cat": "typescript",
+    "stem": "What is R?\n\n```ts\ntype IsString<T> = T extends string ? \"yes\" : \"no\";\ntype R = IsString<string>;\n```"
+   },
+   "b": {
+    "id": "rm-ts-170",
+    "cat": "typescript",
+    "stem": "What is R?\n\n```ts\ntype IsString<T> = T extends string ? \"yes\" : \"no\";\ntype R = IsString<number>;\n```"
+   }
+  },
+  {
+   "sim": 0.9142,
+   "a": {
+    "id": "rm-js-116",
+    "cat": "javascript",
+    "stem": "What does this return?\n\n```js\n[3, 1, 2].sort((a, b) => a - b);\n```"
+   },
+   "b": {
+    "id": "rm-js-120",
+    "cat": "javascript",
+    "stem": "What does this return?\n\n```js\n[3, 1, 2].sort();\n```"
+   }
+  },
+  {
+   "sim": 0.9082,
+   "a": {
+    "id": "rm-js-17",
+    "cat": "javascript",
+    "stem": "What does this return?\n\n```js\n1 === \"1\";\n```"
+   },
+   "b": {
+    "id": "rm-js-18",
+    "cat": "javascript",
+    "stem": "What does this return?\n\n```js\n1 == \"1\";\n```"
+   }
+  },
+  {
+   "sim": 0.907,
+   "a": {
+    "id": "rm-dsa-73",
+    "cat": "dsa",
+    "stem": "What is the worst-case time complexity of bubble sort?"
+   },
+   "b": {
+    "id": "rm-dsa-75",
+    "cat": "dsa",
+    "stem": "What is the worst-case time complexity of quicksort?"
+   }
+  },
+  {
+   "sim": 0.9024,
+   "a": {
+    "id": "423",
+    "cat": "html",
+    "stem": "How do you write a comment in HTML?"
+   },
+   "b": {
+    "id": "rm-html-4",
+    "cat": "html",
+    "stem": "Which is a valid HTML comment?"
+   }
+  },
+  {
+   "sim": 0.8927,
+   "a": {
+    "id": "rm-html-15",
+    "cat": "html",
+    "stem": "What does `<meta charset=\"UTF-8\">` set?"
+   },
+   "b": {
+    "id": "rm-html-91",
+    "cat": "html",
+    "stem": "What does `<meta charset=\"UTF-8\">` declare?"
+   }
+  },
+  {
+   "sim": 0.8919,
+   "a": {
+    "id": "378",
+    "cat": "javascript",
+    "stem": "What does this code return?\n\n```javascript\nObject.keys({ a: 1, b: 2 })\n```"
+   },
+   "b": {
+    "id": "379",
+    "cat": "javascript",
+    "stem": "What does this code return?\n\n```javascript\nObject.values({ a: 1, b: 2 })\n```"
+   }
+  },
+  {
+   "sim": 0.8906,
+   "a": {
+    "id": "rm-ts-138",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Partial<{ a: number }>;\nconst x: T = {};\n```"
+   },
+   "b": {
+    "id": "rm-ts-143",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Partial<{ a: number; b: string }>;\nconst x: T = { b: \"hi\" };\n```"
+   }
+  },
+  {
+   "sim": 0.8856,
+   "a": {
+    "id": "379",
+    "cat": "javascript",
+    "stem": "What does this code return?\n\n```javascript\nObject.values({ a: 1, b: 2 })\n```"
+   },
+   "b": {
+    "id": "rm-js-36",
+    "cat": "javascript",
+    "stem": "What does this return?\n\n```js\nObject.values({ a: 1, b: 2 });\n```"
+   }
+  },
+  {
+   "sim": 0.884,
+   "a": {
+    "id": "756",
+    "cat": "code-snippets",
+    "stem": "What does this output?\n\n```js\nfor (var i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}\n```"
+   },
+   "b": {
+    "id": "777",
+    "cat": "code-snippets",
+    "stem": "What does this output?\n\n```js\nfor (var i = 0; i < 3; i++) {\n  (function(j) {\n    setTimeout(() => console.log(j), 0);\n  })(i);\n}\n```"
+   }
+  },
+  {
+   "sim": 0.8822,
+   "a": {
+    "id": "rm-ts-36",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = { a: number };\nconst x: T = { a: 1, b: 2 };\n```"
+   },
+   "b": {
+    "id": "rm-ts-147",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Pick<{ a: 1; b: 2 }, \"a\">;\nconst x: T = { a: 1, b: 2 };\n```"
+   }
+  },
+  {
+   "sim": 0.8788,
+   "a": {
+    "id": "621",
+    "cat": "typescript",
+    "stem": "What is the resulting type of `Result`?\n\n```ts\ntype ToArray<T> = T extends any ? T[] : never;\ntype Result = ToArray<string | number>;\n```"
+   },
+   "b": {
+    "id": "622",
+    "cat": "typescript",
+    "stem": "What is the resulting type of `Result`?\n\n```ts\ntype ToArray<T> = [T] extends [any] ? T[] : never;\ntype Result = ToArray<string | number>;\n```"
+   }
+  },
+  {
+   "sim": 0.8782,
+   "a": {
+    "id": "rm-ts-139",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Required<{ a?: number; b?: string }>;\nconst x: T = { a: 1 };\n```"
+   },
+   "b": {
+    "id": "rm-ts-144",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Required<{ a?: number }>;\nconst x: T = {};\n```"
+   }
+  },
+  {
+   "sim": 0.8572,
+   "a": {
+    "id": "756",
+    "cat": "code-snippets",
+    "stem": "What does this output?\n\n```js\nfor (var i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}\n```"
+   },
+   "b": {
+    "id": "757",
+    "cat": "code-snippets",
+    "stem": "What does this output?\n\n```js\nfor (let i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}\n```"
+   }
+  },
+  {
+   "sim": 0.8572,
+   "a": {
+    "id": "rm-dsa-10",
+    "cat": "dsa",
+    "stem": "Which Big-O describes constant time?"
+   },
+   "b": {
+    "id": "rm-dsa-11",
+    "cat": "dsa",
+    "stem": "Which Big-O describes linear time?"
+   }
+  },
+  {
+   "sim": 0.8537,
+   "a": {
+    "id": "405",
+    "cat": "html",
+    "stem": "What does HTML stand for?"
+   },
+   "b": {
+    "id": "rm-html-1",
+    "cat": "html",
+    "stem": "What does HTML stand for?"
+   }
+  },
+  {
+   "sim": 0.8516,
+   "a": {
+    "id": "rm-js-17",
+    "cat": "javascript",
+    "stem": "What does this return?\n\n```js\n1 === \"1\";\n```"
+   },
+   "b": {
+    "id": "rm-js-21",
+    "cat": "javascript",
+    "stem": "What does this return?\n\n```js\n2 != \"2\";\n```"
+   }
+  },
+  {
+   "sim": 0.8473,
+   "a": {
+    "id": "470",
+    "cat": "css",
+    "stem": "What does position: relative do?\n\n```css\n.box {\n  position: relative;\n  top: 10px;\n  left: 20px;\n}\n```"
+   },
+   "b": {
+    "id": "471",
+    "cat": "css",
+    "stem": "What does position: absolute do?\n\n```css\n.box {\n  position: absolute;\n  top: 0;\n  right: 0;\n}\n```"
+   }
+  },
+  {
+   "sim": 0.8442,
+   "a": {
+    "id": "rm-ts-139",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Required<{ a?: number; b?: string }>;\nconst x: T = { a: 1 };\n```"
+   },
+   "b": {
+    "id": "rm-ts-154",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Record<\"a\" | \"b\", number>;\nconst x: T = { a: 1 };\n```"
+   }
+  },
+  {
+   "sim": 0.8422,
+   "a": {
+    "id": "387",
+    "cat": "javascript",
+    "stem": "What does this code return?\n\n```javascript\n[...new Set([1, 1, 2, 2, 3])]\n```"
+   },
+   "b": {
+    "id": "rm-js-178",
+    "cat": "javascript",
+    "stem": "What does this return?\n\n```js\n[...new Set([1, 2, 2, 3])];\n```"
+   }
+  },
+  {
+   "sim": 0.8412,
+   "a": {
+    "id": "319",
+    "cat": "nodejs",
+    "stem": "What is Express.js?"
+   },
+   "b": {
+    "id": "rm-node-161",
+    "cat": "nodejs",
+    "stem": "What is Express?"
+   }
+  },
+  {
+   "sim": 0.8336,
+   "a": {
+    "id": "757",
+    "cat": "code-snippets",
+    "stem": "What does this output?\n\n```js\nfor (let i = 0; i < 3; i++) {\n  setTimeout(() => console.log(i), 0);\n}\n```"
+   },
+   "b": {
+    "id": "777",
+    "cat": "code-snippets",
+    "stem": "What does this output?\n\n```js\nfor (var i = 0; i < 3; i++) {\n  (function(j) {\n    setTimeout(() => console.log(j), 0);\n  })(i);\n}\n```"
+   }
+  },
+  {
+   "sim": 0.8306,
+   "a": {
+    "id": "rm-ts-138",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Partial<{ a: number }>;\nconst x: T = {};\n```"
+   },
+   "b": {
+    "id": "rm-ts-148",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Omit<{ a: number; b: number }, \"a\">;\nconst x: T = { b: 5 };\n```"
+   }
+  },
+  {
+   "sim": 0.8287,
+   "a": {
+    "id": "rm-next-6",
+    "cat": "nextjs",
+    "stem": "By default, components in the App Router are:"
+   },
+   "b": {
+    "id": "rm-next-23",
+    "cat": "nextjs",
+    "stem": "Layouts in the App Router are by default:"
+   }
+  },
+  {
+   "sim": 0.8282,
+   "a": {
+    "id": "rm-ts-38",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = { [key: string]: number };\nconst x: T = { a: 1, b: 2 };\n```"
+   },
+   "b": {
+    "id": "rm-ts-153",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Record<string, number>;\nconst x: T = { a: 1, b: 2 };\n```"
+   }
+  },
+  {
+   "sim": 0.828,
+   "a": {
+    "id": "rm-ts-37",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\nconst o: { a: number } = { a: 1 };\no.b;\n```"
+   },
+   "b": {
+    "id": "rm-ts-39",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\nconst o: { readonly a: number } = { a: 1 };\no.a = 5;\n```"
+   }
+  },
+  {
+   "sim": 0.8264,
+   "a": {
+    "id": "rm-ts-143",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Partial<{ a: number; b: string }>;\nconst x: T = { b: \"hi\" };\n```"
+   },
+   "b": {
+    "id": "rm-ts-148",
+    "cat": "typescript",
+    "stem": "What happens?\n\n```ts\ntype T = Omit<{ a: number; b: number }, \"a\">;\nconst x: T = { b: 5 };\n```"
+   }
+  },
+  {
+   "sim": 0.8233,
+   "a": {
+    "id": "355",
+    "cat": "javascript",
+    "stem": "What does this code return?\n\n```javascript\n[1, 2, 3].map(x => x * 2)\n```"
+   },
+   "b": {
+    "id": "rm-js-41",
+    "cat": "javascript",
+    "stem": "What does this return?\n\n```js\n[1, 2, 3].map(x => x * 2);\n```"
+   }
+  }
+ ]
+}
