@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Box, Tabs, Tab, Button, Typography } from '@mui/material';
 import DevQuestions from './DevQuestions';
+import DevTriage from './DevTriage';
 import DevReports from './DevReports';
 import DevLogs from './DevLogs';
 import DevSettings from './DevSettings';
@@ -22,6 +23,7 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
         <Tab label="Questions" />
+        <Tab label="Triage" />
         <Tab label="Flags" />
         <Tab label="Logs" />
         <Tab label="Settings" />
@@ -30,8 +32,10 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
       {tab === 0 ? (
         <DevQuestions />
       ) : tab === 1 ? (
-        <DevReports />
+        <DevTriage />
       ) : tab === 2 ? (
+        <DevReports />
+      ) : tab === 3 ? (
         <DevLogs />
       ) : (
         <DevSettings />
