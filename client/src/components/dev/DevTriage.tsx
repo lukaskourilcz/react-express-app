@@ -50,6 +50,9 @@ export default function DevTriage() {
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [snack, setSnack] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Ids removed this session — filtered out immediately so the row vanishes on
+  // click (the server soft-delete also makes them gone on any later reload).
+  const [removed, setRemoved] = useState<Set<string>>(new Set());
 
   const loading = questionsQuery.isPending || triageQuery.isPending;
   const error = questionsQuery.error
@@ -77,6 +80,8 @@ export default function DevTriage() {
     const term = search.trim().toLowerCase();
     return rows
       .filter(({ q, v }) => {
+        // Gone the moment it's removed (and on reload, via q.deleted).
+        if (q.deleted || removed.has(q.id)) return false;
         if (decision !== 'all' && v.dec !== decision) return false;
         if (categoryFilter !== 'all' && q.category !== categoryFilter) return false;
         if (gateFilter !== 'all') {
@@ -90,55 +95,54 @@ export default function DevTriage() {
       })
       // worst first
       .sort((a, b) => a.v.mean - b.v.mean);
-  }, [rows, decision, categoryFilter, gateFilter, search]);
+  }, [rows, decision, categoryFilter, gateFilter, search, removed]);
 
   const stats = useMemo(() => {
-    let keep = 0, cut = 0, removed = 0;
+    let keep = 0, cut = 0, gone = 0;
     for (const { q, v } of rows) {
       if (v.dec === 'keep') keep++; else cut++;
-      if (q.deleted) removed++;
+      if (q.deleted || removed.has(q.id)) gone++;
     }
-    return { total: rows.length, keep, cut, removed };
-  }, [rows]);
+    return { total: rows.length, keep, cut, gone };
+  }, [rows, removed]);
 
   const pageStart = Math.min(page * rowsPerPage, Math.max(0, (Math.ceil(filtered.length / rowsPerPage) - 1) * rowsPerPage));
   const pageRows = filtered.slice(pageStart, pageStart + rowsPerPage);
 
-  const runAction = async (label: string, fn: () => Promise<unknown>) => {
-    setBusy(true);
-    try {
-      await fn();
-      setSnack(label);
-      await questionsQuery.refetch();
-    } catch (err) {
-      setSnack(friendlyError(err));
-    } finally {
-      setBusy(false);
-    }
+  // One click = gone. The row is filtered out instantly (optimistic) and the
+  // question is deleted on the server so it's gone everywhere on reload too.
+  // No confirm, no restore. On a server error the row is put back.
+  const remove = (r: Row) => {
+    setRemoved((prev) => new Set(prev).add(r.q.id));
+    setQuestionDeleted(r.q.id, true)
+      .then(() => setSnack(`Deleted ${r.q.id}`))
+      .catch((err) => {
+        setRemoved((prev) => {
+          const next = new Set(prev);
+          next.delete(r.q.id);
+          return next;
+        });
+        setSnack(friendlyError(err));
+      });
   };
 
-  // No confirm — removal is a one-click soft-delete (restorable via the Restore
-  // button), so the action fires immediately.
-  const remove = (r: Row) => runAction(`Removed ${r.q.id}`, () => setQuestionDeleted(r.q.id, true));
-  const restore = (r: Row) => runAction(`Restored ${r.q.id}`, () => setQuestionDeleted(r.q.id, false));
-
-  // Bulk-remove every still-present row matching the current filters.
-  const removableShown = filtered.filter((r) => !r.q.deleted);
+  // Bulk-delete every row matching the current filters (kept behind a confirm
+  // since it can be hundreds at once). Each is gone permanently.
   const removeAllShown = async () => {
-    if (removableShown.length === 0) return;
-    if (!window.confirm(`Remove all ${removableShown.length} shown question(s) from the bank? Soft-deletes each; you can restore them individually. Continue?`)) return;
+    if (filtered.length === 0) return;
+    if (!window.confirm(`Delete all ${filtered.length} shown question(s) from the bank for good? This cannot be undone.`)) return;
     setBusy(true);
+    const ids = filtered.map((r) => r.q.id);
+    setRemoved((prev) => { const next = new Set(prev); ids.forEach((id) => next.add(id)); return next; });
     let n = 0;
     try {
-      for (const r of removableShown) {
-        await setQuestionDeleted(r.q.id, true);
+      for (const id of ids) {
+        await setQuestionDeleted(id, true);
         n++;
       }
-      setSnack(`Removed ${n} question${n === 1 ? '' : 's'}`);
-      await questionsQuery.refetch();
+      setSnack(`Deleted ${n} question${n === 1 ? '' : 's'}`);
     } catch (err) {
-      setSnack(`${friendlyError(err)} (removed ${n} before stopping)`);
-      await questionsQuery.refetch();
+      setSnack(`${friendlyError(err)} (deleted ${n} before stopping)`);
     } finally {
       setBusy(false);
     }
@@ -152,7 +156,7 @@ export default function DevTriage() {
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
         Pre-computed triage of the question bank — gates (binary cut) kept separate from the 1–5 scores
         (R relevance · D discrimination · F difficulty-fit · C clarity). Default rule:{' '}
-        <code>{triageQuery.data?.meta.keepRule}</code>. Removing soft-deletes via the same mechanism as the Questions tab.
+        <code>{triageQuery.data?.meta.keepRule}</code>. Delete removes a question from the bank for good — one click, no undo.
       </Typography>
 
       {/* Summary */}
@@ -160,7 +164,7 @@ export default function DevTriage() {
         <Chip label={`${stats.total} scored`} size="small" />
         <Chip label={`${stats.keep} keep`} size="small" color="success" variant="outlined" />
         <Chip label={`${stats.cut} cut`} size="small" color="error" variant="outlined" />
-        <Chip label={`${stats.removed} removed`} size="small" color="error" />
+        <Chip label={`${stats.gone} deleted`} size="small" color="error" />
         <Chip label={`${filtered.length} shown`} size="small" variant="outlined" />
       </Box>
 
@@ -197,11 +201,11 @@ export default function DevTriage() {
       {/* Bulk action */}
       <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mb: 2, p: 1, border: '1px dashed', borderColor: 'divider', borderRadius: 1 }}>
         <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Bulk:</Typography>
-        <Button size="small" color="error" variant="outlined" disabled={busy || removableShown.length === 0} onClick={removeAllShown}>
-          Remove all {removableShown.length} shown
+        <Button size="small" color="error" variant="outlined" disabled={busy || filtered.length === 0} onClick={removeAllShown}>
+          Delete all {filtered.length} shown
         </Button>
         <Typography variant="caption" color="text.secondary">
-          Applies to the current filter. Each is soft-deleted and restorable.
+          Applies to the current filter. Permanent — confirmed once.
         </Typography>
       </Box>
 
@@ -218,7 +222,7 @@ export default function DevTriage() {
           </TableHead>
           <TableBody>
             {pageRows.map(({ q, v }) => (
-              <TableRow key={q.id} hover sx={{ opacity: q.deleted ? 0.45 : 1, verticalAlign: 'top' }}>
+              <TableRow key={q.id} hover sx={{ verticalAlign: 'top' }}>
                 <TableCell sx={{ py: 1.25 }}>
                   <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                     {q.question}
@@ -273,20 +277,13 @@ export default function DevTriage() {
                         color={v.greasons.includes(r) ? 'error' : 'default'}
                         sx={{ height: 18, fontSize: '0.65rem' }} />
                     ))}
-                    {q.deleted && <Chip label="removed" size="small" color="error" sx={{ height: 18, fontSize: '0.65rem' }} />}
                   </Box>
                 </TableCell>
 
                 <TableCell align="right">
-                  {q.deleted ? (
-                    <Button size="small" disabled={busy} onClick={() => restore({ q, v })} sx={{ minWidth: 'auto' }}>
-                      Restore
-                    </Button>
-                  ) : (
-                    <Button size="small" color="error" variant="outlined" disabled={busy} onClick={() => remove({ q, v })} sx={{ minWidth: 'auto' }}>
-                      Remove
-                    </Button>
-                  )}
+                  <Button size="small" color="error" variant="contained" disabled={busy} onClick={() => remove({ q, v })} sx={{ minWidth: 'auto' }}>
+                    Delete
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
