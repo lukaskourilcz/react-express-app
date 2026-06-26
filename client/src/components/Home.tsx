@@ -5,7 +5,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Box, Paper, Typography, Button, Chip, Snackbar, Alert } from '@mui/material';
+import { Box, Paper, Typography, Button, Snackbar, Alert } from '@mui/material';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 import { SwimmingFin } from './SharkFin';
 import { useT } from '../i18n/LanguageContext';
@@ -43,11 +43,6 @@ export default function Home() {
         <Typography variant="h6" component="p" sx={{ color: 'text.secondary', fontWeight: 400, maxWidth: 680, mx: 'auto', mb: 2.5 }}>
           {t('home.subtitle')}
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap', mb: 3 }}>
-          <Chip label={t('home.freeBadge')} sx={{ fontWeight: 800, backgroundColor: BRAND.green, color: '#fff', borderRadius: 0 }} />
-          <Chip label="Frontend · Backend · Fullstack" variant="outlined" sx={{ fontWeight: 600, borderRadius: 0 }} />
-        </Box>
-
         <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
           {isAuthenticated ? (
             <>
@@ -109,7 +104,6 @@ export default function Home() {
           FREE
         </Box>
         <Box>
-          <Typography sx={{ fontWeight: 800 }}>{t('home.freeTitle')}</Typography>
           <Typography variant="body2" color="text.secondary">
             {t('home.freeText')}
           </Typography>
@@ -117,23 +111,17 @@ export default function Home() {
       </Paper>
 
       {/* How to get started */}
-      <Typography variant="h5" component="h2" sx={{ fontWeight: 800, mb: 2, textAlign: 'center' }}>
-        {t('home.stepsTitle')}
-      </Typography>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: { xs: 4, sm: 5 } }}>
-        <StepCard n={1} done={isAuthenticated} title={t('home.step1Title')} text={t('home.step1Text')} />
-        <StepCard n={2} title={t('home.step2Title')} text={t('home.step2Text')} />
-        <StepCard n={3} title={t('home.step3Title')} text={t('home.step3Text')} />
+        <StepCard text={t('home.step1Text')} />
+        <StepCard text={t('home.step2Text')} />
+        <StepCard text={t('home.step3Text')} />
       </Box>
 
       {/* What's inside */}
-      <Typography variant="h5" component="h2" sx={{ fontWeight: 800, mb: 2, textAlign: 'center' }}>
-        {t('home.featuresTitle')}
-      </Typography>
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <FeatureCard emoji="📚" title={t('home.featureLearnTitle')} text={t('home.featureLearnText')} />
-        <FeatureCard emoji="⚡" title={t('home.featureQuizTitle')} text={t('home.featureQuizText')} />
-        <FeatureCard emoji="🗺️" title={t('home.featureRoadmapTitle')} text={t('home.featureRoadmapText')} />
+        <FeatureCard title={t('home.featureLearnTitle')} text={t('home.featureLearnText')} />
+        <FeatureCard title={t('home.featureQuizTitle')} text={t('home.featureQuizText')} />
+        <FeatureCard title={t('home.featureRoadmapTitle')} text={t('home.featureRoadmapText')} />
       </Box>
 
       <Snackbar
@@ -194,32 +182,9 @@ function ChalkHeading({ children }: { children: ReactNode }) {
   );
 }
 
-function StepCard({ n, title, text, done }: { n: number; title: string; text: string; done?: boolean }) {
+function StepCard({ text }: { text: string }) {
   return (
     <Paper elevation={0} sx={chalkboardSx}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.25 }}>
-        <Box
-          aria-hidden
-          sx={{
-            width: 32,
-            height: 32,
-            borderRadius: '50%',
-            display: 'grid',
-            placeItems: 'center',
-            fontWeight: 800,
-            fontSize: '0.9rem',
-            color: done ? '#bff0bf' : CHALK,
-            border: '2px solid',
-            borderColor: done ? '#7fd17f' : 'rgba(241,245,238,0.6)',
-            backgroundColor: 'transparent',
-            textShadow: '0 0 1px rgba(255,255,255,0.35)',
-            flexShrink: 0,
-          }}
-        >
-          {done ? '✓' : n}
-        </Box>
-        <ChalkHeading>{title}</ChalkHeading>
-      </Box>
       <Typography variant="body2" sx={{ color: CHALK_DIM }}>
         {text}
       </Typography>
@@ -227,12 +192,9 @@ function StepCard({ n, title, text, done }: { n: number; title: string; text: st
   );
 }
 
-function FeatureCard({ emoji, title, text }: { emoji: string; title: string; text: string }) {
+function FeatureCard({ title, text }: { title: string; text: string }) {
   return (
     <Paper elevation={0} sx={chalkboardSx}>
-      <Box sx={{ fontSize: 28, lineHeight: 1, mb: 1.25, filter: 'grayscale(0.25) brightness(1.08)' }} aria-hidden>
-        {emoji}
-      </Box>
       <Box sx={{ mb: 0.75 }}>
         <ChalkHeading>{title}</ChalkHeading>
       </Box>
