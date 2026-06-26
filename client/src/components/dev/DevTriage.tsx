@@ -117,11 +117,9 @@ export default function DevTriage() {
     }
   };
 
-  const remove = (r: Row) => {
-    if (window.confirm(`Remove ${r.q.id} from the bank? It is soft-deleted and learning paths re-level automatically. You can restore it here.`)) {
-      runAction(`Removed ${r.q.id}`, () => setQuestionDeleted(r.q.id, true));
-    }
-  };
+  // No confirm — removal is a one-click soft-delete (restorable via the Restore
+  // button), so the action fires immediately.
+  const remove = (r: Row) => runAction(`Removed ${r.q.id}`, () => setQuestionDeleted(r.q.id, true));
   const restore = (r: Row) => runAction(`Restored ${r.q.id}`, () => setQuestionDeleted(r.q.id, false));
 
   // Bulk-remove every still-present row matching the current filters.
