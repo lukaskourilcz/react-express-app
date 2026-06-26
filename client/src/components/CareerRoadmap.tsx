@@ -61,6 +61,7 @@ const PILLARS: Pillar[] = [
     areas: [
       { topic: 'nodejs', label: 'Node.js', blurb: 'Modules, async, HTTP, Express, streams.' },
       { topic: 'general', label: 'How the web works', blurb: 'HTTP, clients/servers, caching, auth basics.' },
+      { topic: 'internet', label: 'How the internet works', blurb: 'IP, DNS, packets, TCP/IP, HTTPS.' },
     ],
   },
   {

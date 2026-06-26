@@ -12,6 +12,7 @@ import {
   roadmapAlgorithmsQuestions,
   roadmapAbbreviationsQuestions,
   roadmapGeneralQuestions,
+  roadmapInternetQuestions,
   roadmapAiQuestions,
   roadmapRhfZodQuestions,
   roadmapCoolStuffQuestions,
@@ -22,7 +23,7 @@ import {
   roadmapSecurityQuestions,
 } from './roadmap-questions';
 
-export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'rhf-zod' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets';
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'internet' | 'ai' | 'rhf-zod' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets';
 
 // Categories that are private to the owner: never served to other users
 // (not via /api/quiz/questions for non-owners, and never in the daily mix).
@@ -10545,6 +10546,7 @@ export const questions: Question[] = [
   ...roadmapAlgorithmsQuestions,
   ...roadmapAbbreviationsQuestions,
   ...roadmapGeneralQuestions,
+  ...roadmapInternetQuestions,
   ...roadmapAiQuestions,
   ...roadmapRhfZodQuestions,
   ...roadmapCoolStuffQuestions,

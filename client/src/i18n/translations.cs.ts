@@ -401,6 +401,8 @@ export const cs: Record<TranslationKey, string> = {
   'roadmap.levelLabel': 'Úroveň {n}',
   'roadmap.locked': 'Zamčeno',
   'roadmap.start': 'Začít',
+  'roadmap.introKicker': 'Než začneš',
+  'roadmap.introStart': 'Spustit úroveň',
   'roadmap.passed': 'Splněno',
   'roadmap.allDone': 'Zvládl(a) jsi všechny úrovně. Skvělá práce!',
   'roadmap.retry': 'Zkusit znovu',

@@ -20,6 +20,7 @@ import { dsaSeeds } from './roadmap-questions-dsa';
 import { algorithmsSeeds } from './roadmap-questions-algorithms';
 import { abbreviationsSeeds } from './roadmap-questions-abbreviations';
 import { generalSeeds } from './roadmap-questions-general';
+import { internetSeeds } from './roadmap-questions-internet';
 import { aiSeeds } from './roadmap-questions-ai';
 import { rhfZodSeeds } from './roadmap-questions-rhf-zod';
 import { coolStuffSeeds } from './roadmap-questions-cool-stuff';
@@ -56,6 +57,8 @@ export const roadmapDsaQuestions = buildRoadmap('rm-dsa', 'dsa', dsaSeeds);
 export const roadmapAlgorithmsQuestions = buildRoadmap('rm-algorithms', 'algorithms', algorithmsSeeds);
 export const roadmapAbbreviationsQuestions = buildRoadmap('rm-abbr', 'abbreviations', abbreviationsSeeds);
 export const roadmapGeneralQuestions = buildRoadmap('rm-general', 'general', generalSeeds);
+// The Internet runs 10 levels (80 questions): how the internet works under the hood.
+export const roadmapInternetQuestions = buildRoadmap('rm-internet', 'internet', internetSeeds);
 // AI & LLMs runs 20 levels (160 questions), authored as a single 8-per-level list.
 export const roadmapAiQuestions = buildRoadmap('rm-ai', 'ai', aiSeeds);
 // React Hook Form + Zod runs 15 levels (120 questions), single 8-per-level list.

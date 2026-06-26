@@ -18,13 +18,13 @@ import { QUESTIONS_PER_LEVEL, ROADMAP_LEVELS, difficultyForLevel } from './roadm
 export type RoadmapTopic =
   | 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs'
   | 'html' | 'css' | 'git' | 'dsa' | 'algorithms'
-  | 'abbreviations' | 'general' | 'ai' | 'rhf-zod' | 'cool-stuff'
+  | 'abbreviations' | 'general' | 'internet' | 'ai' | 'rhf-zod' | 'cool-stuff'
   | 'databases' | 'system-design' | 'testing' | 'devops' | 'security';
 
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
   'html', 'css', 'git', 'dsa', 'algorithms',
-  'abbreviations', 'general', 'ai', 'rhf-zod', 'cool-stuff',
+  'abbreviations', 'general', 'internet', 'ai', 'rhf-zod', 'cool-stuff',
   'databases', 'system-design', 'testing', 'devops', 'security',
 ];
 
@@ -52,6 +52,7 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   algorithms: 'rm-algorithms',
   abbreviations: 'rm-abbr',
   general: 'rm-general',
+  internet: 'rm-internet',
   ai: 'rm-ai',
   'rhf-zod': 'rm-rhf',
   'cool-stuff': 'rm-cool',
@@ -131,6 +132,10 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'How the Web Works', 'Clients & Servers', 'HTTP Methods', 'HTTP Status Codes', 'URLs & Routing',
     'How Browsers Render', 'How Code Runs', 'How Frameworks Work', 'Frontend vs Backend', 'APIs & Communication',
     'Caching & CDNs', 'Authentication Basics', 'Databases Overview', 'Deployment & Hosting', 'Performance & Optimization',
+  ],
+  internet: [
+    'What Is the Internet?', 'IP Addresses', 'DNS — The Internet’s Phonebook', 'Packets & Routing', 'TCP & UDP',
+    'The Protocol Stack (TCP/IP)', 'The Web over HTTP', 'Ports, NAT & Firewalls', 'ISPs & Physical Connections', 'Security, HTTPS & Encryption',
   ],
   ai: [
     'What is AI?', 'Machine Learning Basics', 'Neural Networks', 'What is an LLM?', 'Tokens & Tokenization',

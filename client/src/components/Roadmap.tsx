@@ -38,6 +38,7 @@ import {
   ASSESSMENT_QUESTION_COUNT,
   type PartRange,
 } from '../lib/roadmap';
+import { levelIntro } from '../lib/levelIntros';
 import { useRoadmapStructure } from '../lib/queries';
 import { fetchChallengeBatch } from '../lib/challengeApi';
 import { apiFetch } from '../lib/api';
@@ -63,7 +64,7 @@ type Active = { kind: 'level' | 'test'; ref: number };
 const TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
   'html', 'css', 'git', 'dsa', 'algorithms',
-  'abbreviations', 'general', 'ai', 'rhf-zod', 'cool-stuff',
+  'abbreviations', 'general', 'internet', 'ai', 'rhf-zod', 'cool-stuff',
   'databases', 'system-design', 'testing', 'devops', 'security',
 ];
 const TOPIC_KEY = 'devquiz:roadmap:topic';
@@ -940,6 +941,11 @@ function LessonRunner({
   const { user } = useAuth();
   const isCheckpoint = playable.kind === 'checkpoint';
   const accent = isCheckpoint ? CHECKPOINT_GOLD : topicColor;
+  // A level opens with a short info panel (what this section is about + a core
+  // principle) before the first question. Checkpoints/part-tests skip it, as do
+  // levels with no authored intro.
+  const intro = playable.kind === 'level' ? levelIntro(playable.topic, playable.ref) : null;
+  const [showIntro, setShowIntro] = useState<boolean>(() => !!intro);
   // Question sequence + answer order are shuffled on every play (and re-shuffled
   // on replay, avoiding the previous layout) so positions stay unmemorisable.
   const [presented, setPresented] = useState<RoadmapQuestion[]>(() => presentQuestions(playable.questions));
@@ -1008,7 +1014,7 @@ function LessonRunner({
   };
 
   useEffect(() => {
-    if (finished) return;
+    if (finished || showIntro) return;
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
@@ -1026,6 +1032,55 @@ function LessonRunner({
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   });
+
+  if (showIntro && intro) {
+    return (
+      <Box sx={{ maxWidth: 640, mx: 'auto' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <Button onClick={onExit} variant="text" size="small" sx={{ minWidth: 'auto', color: 'text.secondary', fontSize: '1.1rem', lineHeight: 1 }} aria-label={t('roadmap.exit')}>
+            ✕
+          </Button>
+          <Box sx={{ flex: 1 }} />
+        </Box>
+        <Box
+          className="rm-feedback"
+          sx={{
+            mt: 1,
+            p: { xs: 2.5, sm: 3 },
+            borderRadius: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderLeft: '4px solid',
+            borderLeftColor: accent,
+            backgroundColor: `${accent}0d`,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
+            <Box aria-hidden sx={{ fontSize: '1.4rem', lineHeight: 1 }}>💡</Box>
+            <Chip
+              label={`${t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
+              size="small"
+              sx={{ fontWeight: 700, backgroundColor: `${accent}22`, color: 'text.primary' }}
+            />
+          </Box>
+          <Typography variant="overline" sx={{ color: 'text.secondary', fontWeight: 800, letterSpacing: 1 }}>
+            {t('roadmap.introKicker')}
+          </Typography>
+          <Typography sx={{ fontSize: '1.02rem', lineHeight: 1.6, mt: 0.5, mb: 0.5 }}>
+            {intro}
+          </Typography>
+        </Box>
+        <Button
+          fullWidth
+          variant="contained"
+          onClick={() => setShowIntro(false)}
+          sx={{ mt: 2.5, textTransform: 'none', fontWeight: 700, backgroundColor: accent, '&:hover': { backgroundColor: accent, filter: 'brightness(0.92)' } }}
+        >
+          {t('roadmap.introStart')}
+        </Button>
+      </Box>
+    );
+  }
 
   if (finished) {
     const pct = Math.round((correctCount / total) * 100);

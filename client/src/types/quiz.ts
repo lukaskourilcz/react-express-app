@@ -1,4 +1,4 @@
-export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'rhf-zod' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets';
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'internet' | 'ai' | 'rhf-zod' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets';
 
 export interface Question {
   id: string;
@@ -32,7 +32,7 @@ export type QuizState = 'loading' | 'ready' | 'in-progress' | 'submitted' | 'err
 export type RoadmapTopic =
   | 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs'
   | 'html' | 'css' | 'git' | 'dsa' | 'algorithms'
-  | 'abbreviations' | 'general' | 'ai' | 'rhf-zod' | 'cool-stuff'
+  | 'abbreviations' | 'general' | 'internet' | 'ai' | 'rhf-zod' | 'cool-stuff'
   | 'databases' | 'system-design' | 'testing' | 'devops' | 'security';
 
 export interface RoadmapLevelMeta {

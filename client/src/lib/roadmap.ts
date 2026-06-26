@@ -38,6 +38,8 @@ export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
   html: [],
   css: [],
   javascript: [],
+  // Foundational concept paths anyone can start cold — no prereqs.
+  internet: [],
   // Tier 2 — anything that builds directly on JS fundamentals.
   typescript: ['javascript'],
   abbreviations: ['javascript'],

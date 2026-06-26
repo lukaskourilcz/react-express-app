@@ -3,7 +3,7 @@
 // progress is remembered), pick a dev path (Frontend / Backend / Fullstack),
 // then start learning. It also makes clear the whole app is free.
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Box, Paper, Typography, Button, Chip, Snackbar, Alert } from '@mui/material';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
@@ -44,8 +44,8 @@ export default function Home() {
           {t('home.subtitle')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap', mb: 3 }}>
-          <Chip label={t('home.freeBadge')} sx={{ fontWeight: 800, backgroundColor: BRAND.green, color: '#fff' }} />
-          <Chip label="Frontend · Backend · Fullstack" variant="outlined" sx={{ fontWeight: 600 }} />
+          <Chip label={t('home.freeBadge')} sx={{ fontWeight: 800, backgroundColor: BRAND.green, color: '#fff', borderRadius: 0 }} />
+          <Chip label="Frontend · Backend · Fullstack" variant="outlined" sx={{ fontWeight: 600, borderRadius: 0 }} />
         </Box>
 
         <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -71,23 +71,42 @@ export default function Home() {
         </Box>
       </Box>
 
-      {/* Free banner */}
+      {/* Free banner — sharp-cornered, with a solid brand bar and a square
+          "FREE" tag, so it reads as a deliberate part of the design rather than
+          a generic rounded pastel callout. */}
       <Paper
         elevation={0}
         sx={{
-          p: 2.5,
+          p: { xs: 2, sm: 2.5 },
           mb: { xs: 4, sm: 5 },
           border: '1px solid',
-          borderColor: BRAND.green,
-          borderRadius: 2,
-          backgroundColor: BRAND.greenSoft,
+          borderColor: 'divider',
+          borderLeft: '5px solid',
+          borderLeftColor: BRAND.green,
+          borderRadius: 0,
+          backgroundColor: 'background.paper',
           display: 'flex',
           alignItems: 'center',
           gap: 2,
         }}
       >
-        <Box sx={{ fontSize: 30, lineHeight: 1 }} aria-hidden>
-          🆓
+        <Box
+          aria-hidden
+          sx={{
+            px: 1.25,
+            py: 0.75,
+            backgroundColor: BRAND.green,
+            color: '#fff',
+            fontWeight: 900,
+            fontSize: '0.8rem',
+            letterSpacing: '0.12em',
+            lineHeight: 1,
+            borderRadius: 0,
+            alignSelf: 'flex-start',
+            flexShrink: 0,
+          }}
+        >
+          FREE
         </Box>
         <Box>
           <Typography sx={{ fontWeight: 800 }}>{t('home.freeTitle')}</Typography>
@@ -131,30 +150,77 @@ export default function Home() {
   );
 }
 
+/* ──── Chalkboard cards ─────────────────────────────────────────────────────
+ * The "how to get started" and "what's inside" cards are styled as little slate
+ * chalkboards: a dark green slate inside a wooden frame, chalk-white text with a
+ * faint chalk glow, and a hand-drawn underline beneath each heading. Sharp
+ * corners (the wood frame) keep them in step with the rest of the redesign. The
+ * dark surface is the same in light and dark mode by design — a chalkboard is a
+ * chalkboard. */
+const CHALK = '#f1f5ee';
+const CHALK_DIM = 'rgba(241, 245, 238, 0.74)';
+
+const chalkboardSx = {
+  flex: '1 1 220px',
+  minWidth: 220,
+  p: 2.75,
+  borderRadius: 0,
+  color: CHALK,
+  backgroundColor: '#21302a',
+  // Faint, uneven chalk dust so the slate isn't a flat fill.
+  backgroundImage:
+    'radial-gradient(circle at 18% 12%, rgba(255,255,255,0.05), transparent 42%), radial-gradient(circle at 85% 88%, rgba(255,255,255,0.04), transparent 38%)',
+  border: '6px solid #3b2c1e', // wooden frame
+  boxShadow:
+    'inset 0 0 0 2px rgba(255,255,255,0.06), inset 0 0 34px rgba(0,0,0,0.5), 0 4px 14px rgba(0,0,0,0.22)',
+} as const;
+
+// A chalky heading with a hand-drawn underline.
+function ChalkHeading({ children }: { children: ReactNode }) {
+  return (
+    <Typography
+      sx={{
+        fontWeight: 800,
+        color: CHALK,
+        textShadow: '0 0 1px rgba(255,255,255,0.35)',
+        display: 'inline-block',
+        pb: 0.4,
+        borderBottom: '2px solid rgba(241,245,238,0.4)',
+        lineHeight: 1.3,
+      }}
+    >
+      {children}
+    </Typography>
+  );
+}
+
 function StepCard({ n, title, text, done }: { n: number; title: string; text: string; done?: boolean }) {
   return (
-    <Paper elevation={0} sx={{ flex: '1 1 220px', minWidth: 200, p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+    <Paper elevation={0} sx={chalkboardSx}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1.25 }}>
         <Box
           aria-hidden
           sx={{
-            width: 30,
-            height: 30,
+            width: 32,
+            height: 32,
             borderRadius: '50%',
             display: 'grid',
             placeItems: 'center',
             fontWeight: 800,
-            fontSize: '0.85rem',
-            color: '#fff',
-            backgroundColor: done ? BRAND.green : 'text.secondary',
+            fontSize: '0.9rem',
+            color: done ? '#bff0bf' : CHALK,
+            border: '2px solid',
+            borderColor: done ? '#7fd17f' : 'rgba(241,245,238,0.6)',
+            backgroundColor: 'transparent',
+            textShadow: '0 0 1px rgba(255,255,255,0.35)',
             flexShrink: 0,
           }}
         >
           {done ? '✓' : n}
         </Box>
-        <Typography sx={{ fontWeight: 800 }}>{title}</Typography>
+        <ChalkHeading>{title}</ChalkHeading>
       </Box>
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" sx={{ color: CHALK_DIM }}>
         {text}
       </Typography>
     </Paper>
@@ -163,12 +229,14 @@ function StepCard({ n, title, text, done }: { n: number; title: string; text: st
 
 function FeatureCard({ emoji, title, text }: { emoji: string; title: string; text: string }) {
   return (
-    <Paper elevation={0} sx={{ flex: '1 1 220px', minWidth: 220, p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <Box sx={{ fontSize: 28, lineHeight: 1, mb: 1 }} aria-hidden>
+    <Paper elevation={0} sx={chalkboardSx}>
+      <Box sx={{ fontSize: 28, lineHeight: 1, mb: 1.25, filter: 'grayscale(0.25) brightness(1.08)' }} aria-hidden>
         {emoji}
       </Box>
-      <Typography sx={{ fontWeight: 800, mb: 0.5 }}>{title}</Typography>
-      <Typography variant="body2" color="text.secondary">
+      <Box sx={{ mb: 0.75 }}>
+        <ChalkHeading>{title}</ChalkHeading>
+      </Box>
+      <Typography variant="body2" sx={{ color: CHALK_DIM }}>
         {text}
       </Typography>
     </Paper>

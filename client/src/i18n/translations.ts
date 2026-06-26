@@ -400,6 +400,8 @@ export const en = {
   'roadmap.levelLabel': 'Level {n}',
   'roadmap.locked': 'Locked',
   'roadmap.start': 'Start',
+  'roadmap.introKicker': 'Before you start',
+  'roadmap.introStart': 'Start the level',
   'roadmap.passed': 'Passed',
   'roadmap.allDone': 'You’ve mastered every level here. Nice work!',
   'roadmap.retry': 'Try again',
