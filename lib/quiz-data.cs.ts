@@ -1,6 +1,7 @@
 import type { QuestionTranslation } from './quiz-data';
 import { roadmapTranslationsCs } from './roadmap-questions.cs';
 import { internetTranslationsCs } from './roadmap-questions-internet.cs';
+import { roadmapExtraTranslationsCs } from './roadmap-questions-extra.cs';
 
 // Czech (cs) translations of quiz questions, keyed by question id.
 //
@@ -9,9 +10,11 @@ import { internetTranslationsCs } from './roadmap-questions-internet.cs';
 // Questions without an entry here fall back to English automatically.
 //
 // Batches are filled in incrementally. Current coverage: APT (791-890) plus the
-// roadmap ("Learn") bank (rm-js-*, rm-ts-*, rm-react-*) and the Internet path
-// (rm-internet-*), spread in below.
+// FULL roadmap ("Learn") bank — JS/TS/React (roadmapTranslationsCs), the Internet
+// path (internetTranslationsCs), and every remaining topic such as Node, HTML,
+// CSS, Git, DSA, DB, security, … (roadmapExtraTranslationsCs) — spread in below.
 export const questionTranslationsCs: Record<string, QuestionTranslation> = {
+  ...roadmapExtraTranslationsCs,
   ...roadmapTranslationsCs,
   ...internetTranslationsCs,
   '76': {
