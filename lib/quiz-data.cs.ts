@@ -1,5 +1,6 @@
 import type { QuestionTranslation } from './quiz-data';
 import { roadmapTranslationsCs } from './roadmap-questions.cs';
+import { internetTranslationsCs } from './roadmap-questions-internet.cs';
 
 // Czech (cs) translations of quiz questions, keyed by question id.
 //
@@ -8,9 +9,11 @@ import { roadmapTranslationsCs } from './roadmap-questions.cs';
 // Questions without an entry here fall back to English automatically.
 //
 // Batches are filled in incrementally. Current coverage: APT (791-890) plus the
-// full roadmap ("Learn") bank (rm-js-*, rm-ts-*, rm-react-*), spread in below.
+// roadmap ("Learn") bank (rm-js-*, rm-ts-*, rm-react-*) and the Internet path
+// (rm-internet-*), spread in below.
 export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   ...roadmapTranslationsCs,
+  ...internetTranslationsCs,
   '76': {
     introduction: 'Git příkazy jsou základ verzování. Pochopení toho, co každý příkaz dělá, je klíčové pro práci s Gitem.',
     question: 'Co dělá git init?\n\n```bash\n$ git init\nInitialized empty Git repository in /project/.git/\n```',
