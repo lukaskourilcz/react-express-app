@@ -42,7 +42,7 @@ function Leaderboard() {
   const reload = () => void refetch();
 
   return (
-    <Box sx={{ maxWidth: 600, mx: 'auto' }}>
+    <Box sx={{ maxWidth: { xs: 600, md: 880 }, mx: 'auto' }}>
       <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mb: 2 }}>
         {t('leaderboard.title')}
       </Typography>

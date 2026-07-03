@@ -217,6 +217,19 @@ function App() {
   // one viewport.
   const isQuiz = location.pathname === '/quiz';
 
+  // Content-light pages read better wide on desktop (cards laid out side by side)
+  // than in a narrow 800px column, and it keeps them closer to one viewport tall.
+  // The Roadmap surfaces (/learn, /roadmap) manage their own width and are left
+  // out on purpose.
+  // Focused single-task screens (quiz, challenge, flashcards) stay in the narrow
+  // 800px column on purpose; only content-light overview pages go wide.
+  const isWide =
+    location.pathname === '/profile' ||
+    location.pathname === '/leaderboard' ||
+    location.pathname === '/shop' ||
+    location.pathname.startsWith('/play');
+  const contentMaxWidth = isDev ? 'none' : isHome ? 1000 : isWide ? 1200 : 800;
+
   // 1–4 shark fins on the footer ocean line, at random (non-overlapping) spots
   // each page load. Positions are sampled across 6–94%, keeping a minimum gap
   // so dorsals don't visually collide.
@@ -403,7 +416,7 @@ function App() {
           outline: 'none',
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: isDev ? 'none' : isHome ? 1000 : 800 }}>
+        <Box sx={{ width: '100%', maxWidth: contentMaxWidth }}>
           {/* Route transition: each navigation fades/slides the new view in.
               `mode="wait"` lets the old view fade out first; `initial={false}`
               skips the animation on the very first load. Reduced-motion users

@@ -135,7 +135,7 @@ function ProfileBody({
   });
 
   return (
-    <Box sx={{ maxWidth: 500, mx: 'auto' }}>
+    <Box sx={{ maxWidth: { xs: 500, md: 1160 }, mx: 'auto' }}>
       <Paper
         elevation={0}
         sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderTop: `4px solid ${BRAND.green}`, borderRadius: 2 }}
@@ -162,10 +162,6 @@ function ProfileBody({
         </Box>
       </Paper>
 
-      <CareerCard />
-
-      <LearningTrackCard />
-
       {isFirstTime && (
         <Alert
           severity="info"
@@ -180,126 +176,138 @@ function ProfileBody({
         </Alert>
       )}
 
-      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-        <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
-          {t('profile.streaks')}
-        </Typography>
+      {/* On desktop the cards split into two columns so the profile lands close
+          to one viewport instead of one long scroll. On mobile they stack. */}
+      <Box sx={{ display: { md: 'grid' }, gridTemplateColumns: { md: '1fr 1fr' }, columnGap: { md: 2.5 }, alignItems: 'start' }}>
+        <Box>
+          <CareerCard />
 
-        <Box sx={{ display: 'flex', gap: 3 }}>
-          <Box sx={{ flex: 1, textAlign: 'center' }}>
-            <Typography variant="h3" sx={{ fontWeight: 700, color: 'warning.dark', lineHeight: 1, fontSize: { xs: '2.25rem', sm: '3rem' } }}>
-              {stats?.current_streak || 0}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {t('profile.currentStreak')}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {t('profile.days')}
-            </Typography>
-          </Box>
+          <LearningTrackCard />
 
-          <Divider orientation="vertical" flexItem />
-
-          <Box sx={{ flex: 1, textAlign: 'center' }}>
-            <Typography variant="h3" sx={{ fontWeight: 700, color: BRAND.green, lineHeight: 1, fontSize: { xs: '2.25rem', sm: '3rem' } }}>
-              {stats?.longest_streak || 0}
+          <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+            <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
+              {t('profile.streaks')}
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              {t('profile.longestStreak')}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {t('profile.days')}
-            </Typography>
-          </Box>
-        </Box>
 
-        {stats?.last_quiz_date && (
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 2 }}>
-            {t('profile.lastQuiz', { date: dateFormatter.format(new Date(stats.last_quiz_date)) })}
-          </Typography>
-        )}
-      </Paper>
-
-      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-        <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
-          {t('profile.statistics')}
-        </Typography>
-
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <StatRow label={t('profile.quizzesCompleted')} value={totalQuizzes} />
-          <StatRow label={t('profile.questionsAnswered')} value={totalQuestions} />
-          <StatRow label={t('profile.correctAnswers')} value={totalCorrect} />
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              p: 1.5,
-              backgroundColor: averageScore >= 70 ? 'rgba(22,163,74,0.1)' : 'action.hover',
-              borderRadius: 1,
-            }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              {t('profile.averageScore')}
-            </Typography>
-            <Typography variant="body1" sx={{ fontWeight: 600, color: averageScore >= 70 ? 'success.dark' : 'text.primary' }}>
-              {averageScore}%
-            </Typography>
-          </Box>
-        </Box>
-      </Paper>
-
-      <AchievementsCard achievements={achievements} />
-
-      {bookmarkedQuestions.length > 0 && (
-        <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-          <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
-            {t('profile.bookmarks', { count: bookmarkedQuestions.length })}
-          </Typography>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-            {bookmarkedQuestions.slice(0, 20).map((q) => (
-              <Box
-                key={q.id}
-                sx={{
-                  p: 1.5,
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  borderRadius: 1,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 1,
-                }}
-              >
-                <Box sx={{ fontSize: '0.9rem' }}>{renderQuestion(q.question)}</Box>
-                <Typography variant="caption" color="success.dark">
-                  {t('profile.answerLabel', { answer: q.options[q.correctIndex] ?? '—' })}
+            <Box sx={{ display: 'flex', gap: 3 }}>
+              <Box sx={{ flex: 1, textAlign: 'center' }}>
+                <Typography variant="h3" sx={{ fontWeight: 700, color: 'warning.dark', lineHeight: 1, fontSize: { xs: '2.25rem', sm: '3rem' } }}>
+                  {stats?.current_streak || 0}
                 </Typography>
-                {q.explanation && (
-                  <Typography variant="caption" color="text.secondary">
-                    {q.explanation}
-                  </Typography>
-                )}
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <Button
-                    size="small"
-                    onClick={() => removeBookmark(q.id)}
-                    sx={{ textTransform: 'none', color: 'text.secondary' }}
-                  >
-                    {t('common.remove')}
-                  </Button>
-                </Box>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {t('profile.currentStreak')}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {t('profile.days')}
+                </Typography>
               </Box>
-            ))}
-            {bookmarkedQuestions.length > 20 && (
-              <Typography variant="caption" color="text.secondary">
-                {t('profile.showingOf', { total: bookmarkedQuestions.length })}
+
+              <Divider orientation="vertical" flexItem />
+
+              <Box sx={{ flex: 1, textAlign: 'center' }}>
+                <Typography variant="h3" sx={{ fontWeight: 700, color: BRAND.green, lineHeight: 1, fontSize: { xs: '2.25rem', sm: '3rem' } }}>
+                  {stats?.longest_streak || 0}
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {t('profile.longestStreak')}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {t('profile.days')}
+                </Typography>
+              </Box>
+            </Box>
+
+            {stats?.last_quiz_date && (
+              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 2 }}>
+                {t('profile.lastQuiz', { date: dateFormatter.format(new Date(stats.last_quiz_date)) })}
               </Typography>
             )}
-          </Box>
-        </Paper>
-      )}
+          </Paper>
+        </Box>
 
-      <PreferencesCard />
+        <Box>
+          <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+            <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
+              {t('profile.statistics')}
+            </Typography>
+
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <StatRow label={t('profile.quizzesCompleted')} value={totalQuizzes} />
+              <StatRow label={t('profile.questionsAnswered')} value={totalQuestions} />
+              <StatRow label={t('profile.correctAnswers')} value={totalCorrect} />
+              <Box
+                sx={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  p: 1.5,
+                  backgroundColor: averageScore >= 70 ? 'rgba(22,163,74,0.1)' : 'action.hover',
+                  borderRadius: 1,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  {t('profile.averageScore')}
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 600, color: averageScore >= 70 ? 'success.dark' : 'text.primary' }}>
+                  {averageScore}%
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+
+          <AchievementsCard achievements={achievements} />
+
+          {bookmarkedQuestions.length > 0 && (
+            <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+              <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
+                {t('profile.bookmarks', { count: bookmarkedQuestions.length })}
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+                {bookmarkedQuestions.slice(0, 20).map((q) => (
+                  <Box
+                    key={q.id}
+                    sx={{
+                      p: 1.5,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: 1,
+                    }}
+                  >
+                    <Box sx={{ fontSize: '0.9rem' }}>{renderQuestion(q.question)}</Box>
+                    <Typography variant="caption" color="success.dark">
+                      {t('profile.answerLabel', { answer: q.options[q.correctIndex] ?? '-' })}
+                    </Typography>
+                    {q.explanation && (
+                      <Typography variant="caption" color="text.secondary">
+                        {q.explanation}
+                      </Typography>
+                    )}
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <Button
+                        size="small"
+                        onClick={() => removeBookmark(q.id)}
+                        sx={{ textTransform: 'none', color: 'text.secondary' }}
+                      >
+                        {t('common.remove')}
+                      </Button>
+                    </Box>
+                  </Box>
+                ))}
+                {bookmarkedQuestions.length > 20 && (
+                  <Typography variant="caption" color="text.secondary">
+                    {t('profile.showingOf', { total: bookmarkedQuestions.length })}
+                  </Typography>
+                )}
+              </Box>
+            </Paper>
+          )}
+
+          <PreferencesCard />
+        </Box>
+      </Box>
 
       <Button
         variant="contained"
