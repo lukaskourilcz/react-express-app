@@ -1,0 +1,17 @@
+meta {
+  name: Admin Reports no-auth
+  type: http
+  seq: 5
+}
+
+# api/admin/[op].ts is dev-password gated (x-dev-password header). With no
+# password the constant-time check fails → 401 'unauthorized'.
+get {
+  url: {{baseUrl}}/api/admin/reports
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 401
+}

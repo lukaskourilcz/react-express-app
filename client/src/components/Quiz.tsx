@@ -49,6 +49,8 @@ import { awardQuestXp } from '../lib/xp';
 import { computeQuizXp, CHALLENGE_MIN_XP } from '../lib/leveling';
 import { useGameConfig } from '../lib/gameConfig';
 import { ReportDialog } from './ReportDialog';
+import { capture } from '../lib/analytics';
+import { MotionPop, MotionItem } from '../lib/motion';
 import './Quiz.css';
 
 type QuizMode = 'standard' | 'daily';
@@ -241,6 +243,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const startDailyChallenge = useCallback(async () => {
     setState('loading');
     setError(null);
+    capture('quiz_started', { mode: 'daily' });
     try {
       const data = await getDailyChallenge(lang);
       setSessionId(data.sessionId);
@@ -263,6 +266,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     }
     setError(null);
     setResult(null);
+    // Top of the quiz funnel — no-op unless PostHog is configured.
+    capture('quiz_started', {
+      mode: 'standard',
+      question_count: questionCount,
+      difficulty: difficultyMode,
+      category_count: selectedCategories.length,
+    });
     fetchQuestions(questionCount, difficultyMode, selectedCategories);
   };
 
@@ -328,6 +338,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setState('submitted');
       clearProgress();
       playComplete();
+      // Bottom of the quiz funnel — pairs with 'quiz_started' for conversion +
+      // score-distribution analysis. No-op unless PostHog is configured.
+      capture('quiz_submitted', {
+        mode,
+        percentage: data.percentage,
+        correct: data.correctAnswers,
+        total: data.totalQuestions,
+      });
       if (data.percentage === 100) recordPerfectQuiz();
 
       // Award quest XP for the quiz, scaled by each correct answer's difficulty.
@@ -806,19 +824,21 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             >
               {t('quiz.complete')}
             </Typography>
-            <Typography
-              role="status"
-              aria-live="polite"
-              className="quiz-score-text"
-              sx={{
-                background: CATEGORY_GRADIENT,
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-              }}
-            >
-              {result.percentage}%
-            </Typography>
+            <MotionPop>
+              <Typography
+                role="status"
+                aria-live="polite"
+                className="quiz-score-text"
+                sx={{
+                  background: CATEGORY_GRADIENT,
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                {result.percentage}%
+              </Typography>
+            </MotionPop>
             <Typography variant="h6" sx={{ mt: 1 }}>
               {t('quiz.scoreOutOf', { correct: result.correctAnswers, total: result.totalQuestions })}
             </Typography>
@@ -879,8 +899,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           const isBookmarked = !!bookmarks[question.id];
 
           return (
+            <MotionItem key={question.id} index={index}>
             <Paper
-              key={question.id}
               elevation={0}
               className={`quiz-result-item ${isCorrect ? 'correct' : 'incorrect'}`}
             >
@@ -969,6 +989,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 </Typography>
               )}
             </Paper>
+            </MotionItem>
           );
         })}
 

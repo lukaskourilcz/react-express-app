@@ -7,14 +7,22 @@ import { useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Box, Paper, Typography, Button, Snackbar, Alert } from '@mui/material';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
+import { heroMeshFor } from '../theme/meshGradient';
+import { useColorMode } from '../theme/ColorModeContext';
 import { SwimmingFin } from './SharkFin';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
+import { MotionItem } from '../lib/motion';
+
+// The motion wrapper becomes the flex item, so it carries the card's flex
+// sizing and lays the (flex) Paper out to fill it.
+const CARD_MOTION_STYLE = { display: 'flex', flex: '1 1 220px', minWidth: 220 } as const;
 
 export default function Home() {
   const t = useT();
   const navigate = useNavigate();
   const { isAuthenticated, signInWithGoogle } = useAuth();
+  const { mode } = useColorMode();
   const [authError, setAuthError] = useState<string | null>(null);
 
   const handleSignIn = async () => {
@@ -29,8 +37,20 @@ export default function Home() {
 
   return (
     <Box sx={{ width: '100%' }}>
-      {/* Hero */}
-      <Box sx={{ textAlign: 'center', mb: { xs: 4, sm: 6 } }}>
+      {/* Hero — Colorflow-style OKLCH mesh gradient behind the pitch. It's a
+          pure CSS background-image (zero runtime, no dependency) and degrades to
+          the flat theme background where oklch() isn't supported. */}
+      <Box
+        sx={{
+          textAlign: 'center',
+          mb: { xs: 4, sm: 6 },
+          backgroundImage: heroMeshFor(mode),
+          borderRadius: 3,
+          px: { xs: 2, sm: 4 },
+          py: { xs: 4, sm: 6 },
+          mx: { xs: -0.5, sm: 0 },
+        }}
+      >
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mb: 2 }}>
           <SwimmingFin size={34} />
           <Typography variant="overline" sx={{ color: BRAND.green, fontWeight: 800, letterSpacing: 1.5 }}>
@@ -110,18 +130,26 @@ export default function Home() {
         </Box>
       </Paper>
 
-      {/* How to get started */}
+      {/* How to get started — cards stagger in on mount (reduced-motion safe). */}
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: { xs: 4, sm: 5 } }}>
-        <StepCard text={t('home.step1Text')} />
-        <StepCard text={t('home.step2Text')} />
-        <StepCard text={t('home.step3Text')} />
+        {[t('home.step1Text'), t('home.step2Text'), t('home.step3Text')].map((text, i) => (
+          <MotionItem key={i} index={i} style={CARD_MOTION_STYLE}>
+            <StepCard text={text} />
+          </MotionItem>
+        ))}
       </Box>
 
       {/* What's inside */}
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-        <FeatureCard title={t('home.featureLearnTitle')} text={t('home.featureLearnText')} />
-        <FeatureCard title={t('home.featureQuizTitle')} text={t('home.featureQuizText')} />
-        <FeatureCard title={t('home.featureRoadmapTitle')} text={t('home.featureRoadmapText')} />
+        {[
+          { title: t('home.featureLearnTitle'), text: t('home.featureLearnText') },
+          { title: t('home.featureQuizTitle'), text: t('home.featureQuizText') },
+          { title: t('home.featureRoadmapTitle'), text: t('home.featureRoadmapText') },
+        ].map((f, i) => (
+          <MotionItem key={i} index={i} style={CARD_MOTION_STYLE}>
+            <FeatureCard title={f.title} text={f.text} />
+          </MotionItem>
+        ))}
       </Box>
 
       <Snackbar

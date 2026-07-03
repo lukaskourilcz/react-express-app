@@ -3,6 +3,7 @@ import { Snackbar, Box, Typography } from '@mui/material';
 import { onXpToast, type XpToast } from '../lib/xp';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
+import { MotionPop } from '../lib/motion';
 
 // A global, self-contained listener for XP events. Mounted once at the app root
 // so XP gains and rank-ups toast from anywhere (quiz results, the learning path,
@@ -59,6 +60,10 @@ export default function XpToaster() {
       TransitionProps={{ onExited: handleExited }}
       sx={{ mb: { xs: 1, sm: 2 } }}
     >
+      {/* Plain wrapper takes the Snackbar's Grow transition; MotionPop springs
+          the content on a separate node so the two never fight over transform. */}
+      <div>
+      <MotionPop>
       {isRankUp ? (
         <Box
           role="status"
@@ -96,6 +101,8 @@ export default function XpToaster() {
           </Typography>
         </Box>
       )}
+      </MotionPop>
+      </div>
     </Snackbar>
   );
 }

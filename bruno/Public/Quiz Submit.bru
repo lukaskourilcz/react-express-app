@@ -1,0 +1,26 @@
+meta {
+  name: Quiz Submit
+  type: http
+  seq: 8
+}
+
+# Grading is public (no auth), but needs a real sessionId from
+# GET /api/quiz/questions. With a bogus session this returns 400 — the point of
+# the assertion is that it is NOT rejected as unauthenticated (401).
+post {
+  url: {{baseUrl}}/api/quiz/submit
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "sessionId": "replace-with-a-real-session-id",
+    "answers": {},
+    "lang": "en"
+  }
+}
+
+assert {
+  res.status: neq 401
+}

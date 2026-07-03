@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider, Snackbar, Alert } from '@mui/material';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import LoadingScreen from './components/LoadingScreen';
@@ -15,6 +15,8 @@ import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import { useAuth } from './lib/auth';
 import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
 import { useSettings } from './lib/settings';
+import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
+import { m, AnimatePresence, useReducedMotion } from './lib/motion';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
 // modules — heavy for the initial bundle. Lazy-load it so the app shell
@@ -130,10 +132,24 @@ function App() {
   const [settings, updateSettings] = useSettings();
   const { user } = useAuth();
   const [signupBonusOpen, setSignupBonusOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const analyticsIdentified = useRef(false);
 
   // Remember the learner's current rank on load so we don't re-celebrate a
   // rank-up earned in a previous session.
   useEffect(() => primeRankMarker(), []);
+
+  // Tie analytics events to the signed-in learner (and drop the identity on
+  // sign-out). No-op unless PostHog is configured.
+  useEffect(() => {
+    if (user?.id) {
+      identifyUser(user.id, { email: user.email ?? undefined });
+      analyticsIdentified.current = true;
+    } else if (analyticsIdentified.current) {
+      resetAnalytics();
+      analyticsIdentified.current = false;
+    }
+  }, [user]);
 
   // Apply the account's saved language preference on sign-in, so the learner's
   // chosen default loads automatically across devices.
@@ -173,6 +189,9 @@ function App() {
     if (main) {
       main.focus({ preventScroll: true });
     }
+    // Manual SPA pageview (capture_pageview is off in the SDK) — no-op unless
+    // PostHog is configured.
+    capturePageview(location.pathname);
   }, [location.pathname, t]);
 
   // The /dev console is a standalone admin surface — no app chrome, full width.
@@ -370,22 +389,37 @@ function App() {
         }}
       >
         <Box sx={{ width: '100%', maxWidth: isDev ? 'none' : isHome ? 1000 : 800 }}>
-          <Suspense fallback={<RouteLoader />}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
-              <Route path="/learn" element={<Roadmap />} />
-              <Route path="/roadmap" element={<CareerRoadmap />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/leaderboard" element={<Leaderboard />} />
-              <Route path="/cards" element={<Flashcards />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/play" element={<PlayLanding />} />
-              <Route path="/play/:code" element={<PlayMatch />} />
-              <Route path="/challenge" element={<Challenge />} />
-              <Route path="/dev" element={<DevPage />} />
-            </Routes>
-          </Suspense>
+          {/* Route transition: each navigation fades/slides the new view in.
+              `mode="wait"` lets the old view fade out first; `initial={false}`
+              skips the animation on the very first load. Reduced-motion users
+              get a plain opacity fade with no movement. Routes is handed the
+              current location so the exiting view keeps rendering its own tree. */}
+          <AnimatePresence mode="wait" initial={false}>
+            <m.div
+              key={location.pathname}
+              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+              animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+            >
+              <Suspense fallback={<RouteLoader />}>
+                <Routes location={location}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
+                  <Route path="/learn" element={<Roadmap />} />
+                  <Route path="/roadmap" element={<CareerRoadmap />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/leaderboard" element={<Leaderboard />} />
+                  <Route path="/cards" element={<Flashcards />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/play" element={<PlayLanding />} />
+                  <Route path="/play/:code" element={<PlayMatch />} />
+                  <Route path="/challenge" element={<Challenge />} />
+                  <Route path="/dev" element={<DevPage />} />
+                </Routes>
+              </Suspense>
+            </m.div>
+          </AnimatePresence>
         </Box>
       </Box>
 

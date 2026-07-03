@@ -1,0 +1,17 @@
+meta {
+  name: Roadmap Progress no-auth
+  type: http
+  seq: 3
+}
+
+# The roadmap *structure* is public, but ?resource=progress is per-user and
+# auth-gated (requireAuthSub) → 401 without a token.
+get {
+  url: {{baseUrl}}/api/quiz/roadmap?resource=progress
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 401
+}

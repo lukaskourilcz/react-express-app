@@ -1,0 +1,16 @@
+meta {
+  name: User Stats no-auth
+  type: http
+  seq: 2
+}
+
+# api/user/[op].ts → stats handler requires a verified Supabase token → 401.
+get {
+  url: {{baseUrl}}/api/user/stats
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 401
+}

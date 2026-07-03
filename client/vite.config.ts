@@ -43,6 +43,11 @@ export default defineConfig({
           ],
           router: ['react-router-dom'],
           supabase: ['@supabase/supabase-js'],
+          // Note: `motion` and `posthog-js` are intentionally NOT pinned to a
+          // manual chunk. Motion's heavy DOM-animation features are loaded via a
+          // dynamic import (lib/motion) and posthog-js via another (lib/analytics);
+          // forcing either into a manualChunk would pull the whole package into
+          // the initial graph and defeat that lazy code-splitting.
         },
       },
     },

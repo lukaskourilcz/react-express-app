@@ -1,0 +1,15 @@
+meta {
+  name: Quiz Challenge Leaderboard
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/quiz/challenge?resource=leaderboard
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
