@@ -4,7 +4,7 @@
 // then start learning. It also makes clear the whole app is free.
 
 import { useState, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Box, Paper, Typography, Button, Snackbar, Alert } from '@mui/material';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 import { heroMeshFor } from '../theme/meshGradient';
@@ -12,7 +12,11 @@ import { useColorMode } from '../theme/ColorModeContext';
 import { SwimmingFin } from './SharkFin';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
-import { MotionItem } from '../lib/motion';
+import { MotionItem, MotionPulse } from '../lib/motion';
+import { useTrack, useHasChosenTrack, trackStarterTopics, TRACKS, type Track } from '../lib/tracks';
+import { unlockExtraTopics, pushProgressToServer } from '../lib/roadmap';
+import { savePreferredTrack } from '../lib/trackPref';
+import PathPickerDialog from './PathPickerDialog';
 
 // The motion wrapper becomes the flex item, so it carries the card's flex
 // sizing and lays the (flex) Paper out to fill it.
@@ -20,10 +24,13 @@ const CARD_MOTION_STYLE = { display: 'flex', flex: '1 1 220px', minWidth: 220 } 
 
 export default function Home() {
   const t = useT();
-  const navigate = useNavigate();
   const { isAuthenticated, signInWithGoogle } = useAuth();
   const { mode } = useColorMode();
+  const [track, setTrack] = useTrack();
+  const hasChosenPath = useHasChosenTrack();
+  const [pathOpen, setPathOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [savedSnack, setSavedSnack] = useState<string | null>(null);
 
   const handleSignIn = async () => {
     try {
@@ -33,11 +40,23 @@ export default function Home() {
     }
   };
 
+  // Commit to a learning path from the hero: set it as the shared track, unlock
+  // its starting sections, and autosave the choice to the account so it follows
+  // the learner across devices. Mirrors the profile path picker's side effects.
+  const handleChoosePath = (next: Track) => {
+    setTrack(next);
+    unlockExtraTopics(trackStarterTopics(next));
+    pushProgressToServer().catch(() => {});
+    void savePreferredTrack(next);
+    setSavedSnack(t('home.trackSavedSnack', { label: TRACKS[next].label }));
+    setPathOpen(false);
+  };
+
   const ctaSx = { px: 3, py: 1.25, fontWeight: 700, textTransform: 'none' as const };
 
   return (
     <Box sx={{ width: '100%' }}>
-      {/* Hero — Colorflow-style OKLCH mesh gradient behind the pitch. It's a
+      {/* Hero: Colorflow-style OKLCH mesh gradient behind the pitch. It's a
           pure CSS background-image (zero runtime, no dependency) and degrades to
           the flat theme background where oklch() isn't supported. */}
       <Box
@@ -66,12 +85,16 @@ export default function Home() {
         <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
           {isAuthenticated ? (
             <>
-              <Button variant="contained" size="large" onClick={() => navigate('/profile')} sx={{ ...brandButtonSx, ...ctaSx }}>
-                {t('home.ctaChoosePath')}
+              <Button variant="contained" size="large" onClick={() => setPathOpen(true)} sx={{ ...brandButtonSx, ...ctaSx }}>
+                {hasChosenPath ? t('home.pathChosenCta', { label: TRACKS[track].label }) : t('home.ctaChoosePath')}
               </Button>
-              <Button variant="outlined" size="large" component={Link} to="/learn" sx={ctaSx}>
-                {t('home.ctaLearn')}
-              </Button>
+              {/* Once a path is chosen, gently pulse the "start" CTA to pull the
+                  learner in. No-op under prefers-reduced-motion. */}
+              <MotionPulse active={hasChosenPath}>
+                <Button variant="outlined" size="large" component={Link} to="/learn" sx={ctaSx}>
+                  {t('home.ctaLearn')}
+                </Button>
+              </MotionPulse>
             </>
           ) : (
             <>
@@ -84,6 +107,11 @@ export default function Home() {
             </>
           )}
         </Box>
+        {isAuthenticated && hasChosenPath && (
+          <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
+            {t('home.pathChosenHint', { label: TRACKS[track].label })}
+          </Typography>
+        )}
       </Box>
 
       {/* Free banner — sharp-cornered, with a solid brand bar and a square
@@ -130,7 +158,7 @@ export default function Home() {
         </Box>
       </Paper>
 
-      {/* How to get started — cards stagger in on mount (reduced-motion safe). */}
+      {/* How to get started: cards stagger in on mount (reduced-motion safe). */}
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: { xs: 4, sm: 5 } }}>
         {[t('home.step1Text'), t('home.step2Text'), t('home.step3Text')].map((text, i) => (
           <MotionItem key={i} index={i} style={CARD_MOTION_STYLE}>
@@ -160,6 +188,23 @@ export default function Home() {
       >
         <Alert severity="error" variant="filled" onClose={() => setAuthError(null)}>
           {authError}
+        </Alert>
+      </Snackbar>
+
+      <PathPickerDialog
+        open={pathOpen}
+        onClose={() => setPathOpen(false)}
+        current={track}
+        onChoose={handleChoosePath}
+      />
+      <Snackbar
+        open={!!savedSnack}
+        autoHideDuration={3000}
+        onClose={() => setSavedSnack(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" variant="filled" onClose={() => setSavedSnack(null)} sx={{ backgroundColor: BRAND.green }}>
+          {savedSnack}
         </Alert>
       </Snackbar>
     </Box>

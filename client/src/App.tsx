@@ -6,6 +6,8 @@ import { SwimmingFin, Waterline } from './components/SharkFin';
 import { useColorMode } from './theme/ColorModeContext';
 import { useT, useLanguage } from './i18n/LanguageContext';
 import { preferredLanguageOf } from './lib/languagePref';
+import { preferredTrackOf } from './lib/trackPref';
+import { setTrackValue } from './lib/tracks';
 import type { TranslationKey } from './i18n/translations';
 import { BRAND } from './theme/MuiTheme';
 import { useGameConfig, type GameConfig } from './lib/gameConfig';
@@ -44,6 +46,11 @@ const navLinkSx = (isActive: boolean) => ({
   textTransform: 'none' as const,
   textDecoration: isActive ? 'underline' : 'none',
   textUnderlineOffset: '4px',
+  // Hug the label instead of MUI's 64px min-width, so short links ("Quiz")
+  // don't get extra padding that makes the row look unevenly spaced. The flex
+  // `gap` on the container then provides uniform spacing between every link.
+  minWidth: 'auto',
+  px: 1.25,
   '&:hover': { backgroundColor: 'action.hover' },
 });
 
@@ -106,12 +113,13 @@ const NAV_ITEMS: {
 }[] = [
   { to: '/quiz', key: 'nav.quiz', isActive: (p) => p === '/quiz' },
   { to: '/learn', key: 'nav.learn', isActive: (p) => p.startsWith('/learn') },
-  { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap' },
   { to: '/challenge', key: 'nav.challenge', isActive: (p) => p.startsWith('/challenge') },
   { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play'), feature: 'multiplayer' },
   { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard' },
   { to: '/cards', key: 'nav.cards', isActive: (p) => p === '/cards', feature: 'flashcards' },
   { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop' },
+  // Roadmap sits last in the nav, after the day-to-day learning links.
+  { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap' },
 ];
 
 const RouteLoader = () => {
@@ -158,6 +166,13 @@ function App() {
     if (pref) setLang(pref);
   }, [user, setLang]);
 
+  // Apply the account's saved learning track on sign-in, so the chosen path
+  // follows the learner across devices.
+  useEffect(() => {
+    const pref = preferredTrackOf(user);
+    if (pref) setTrackValue(pref);
+  }, [user]);
+
   // One-time 200-token welcome bonus on first sign-in. Idempotent across
   // devices via a user_metadata flag inside grantRegistrationBonusIfNew.
   useEffect(() => {
@@ -189,7 +204,7 @@ function App() {
     if (main) {
       main.focus({ preventScroll: true });
     }
-    // Manual SPA pageview (capture_pageview is off in the SDK) — no-op unless
+    // Manual SPA pageview (capture_pageview is off in the SDK). No-op unless
     // PostHog is configured.
     capturePageview(location.pathname);
   }, [location.pathname, t]);
@@ -314,7 +329,7 @@ function App() {
 
             {/* Centre slot: primary nav links, perfectly centred between logo
                 and auth widget on md+. Hidden on small screens (drawer). */}
-            <Box sx={{ flex: '1 1 0', display: { xs: 'none', md: 'flex' }, justifyContent: 'center', alignItems: 'center', gap: 1, minWidth: 0 }}>
+            <Box sx={{ flex: '1 1 0', display: { xs: 'none', md: 'flex' }, justifyContent: 'center', alignItems: 'center', gap: 2, minWidth: 0 }}>
               {primaryNavItems.map((item) => (
                 <Button
                   key={item.to}

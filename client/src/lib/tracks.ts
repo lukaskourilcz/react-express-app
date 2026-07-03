@@ -51,7 +51,7 @@ export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
 export const TRACKS: Record<Track, TrackDef> = {
   frontend: {
     label: 'Frontend',
-    blurb: 'Build the interfaces people actually touch — markup, styling, and the React stack.',
+    blurb: 'Build the interfaces people actually touch: markup, styling, and the React stack.',
     stages: [
       { title: 'Foundations', topics: ['html', 'css', 'javascript'] },
       { title: 'Level up the language', topics: ['typescript', 'git'] },
@@ -61,7 +61,7 @@ export const TRACKS: Record<Track, TrackDef> = {
   },
   backend: {
     label: 'Backend',
-    blurb: 'Build and run the server — APIs, data, and systems that hold up under load.',
+    blurb: 'Build and run the server: APIs, data, and systems that hold up under load.',
     stages: [
       { title: 'Foundations', topics: ['javascript', 'typescript', 'git'] },
       { title: 'The server & the web', topics: ['nodejs', 'general', 'internet'] },
@@ -71,7 +71,7 @@ export const TRACKS: Record<Track, TrackDef> = {
   },
   fullstack: {
     label: 'Fullstack',
-    blurb: 'The whole picture — frontend, backend, and everything that ties them together.',
+    blurb: 'The whole picture: frontend, backend, and everything that ties them together.',
     stages: [
       { title: 'Foundations', topics: ['html', 'css', 'javascript'] },
       { title: 'Level up the language', topics: ['typescript', 'git'] },
@@ -122,6 +122,10 @@ export const specializationForTrack = (track: Track): Specialization => TRACK_SP
 /* ──── Persisted, shared selection ──────────────────────────────────────── */
 
 const TRACK_KEY = 'devquiz:roadmap:track';
+// Whether the learner has explicitly committed to a track, as opposed to just
+// getting the 'fullstack' default. Drives the landing page: show the picker
+// until a path is chosen, then reflect it and nudge the learner to start.
+const TRACK_CHOSEN_KEY = 'devquiz:roadmap:track:chosen';
 const isTrack = (v: unknown): v is Track =>
   v === 'frontend' || v === 'backend' || v === 'fullstack';
 
@@ -129,18 +133,38 @@ const readTrack = (): Track => {
   const saved = readJSON<string>(TRACK_KEY, 'fullstack');
   return isTrack(saved) ? saved : 'fullstack';
 };
+const readChosen = (): boolean => readJSON<boolean>(TRACK_CHOSEN_KEY, false) === true;
 
 const trackStore = createStore<Track>(readTrack);
+const chosenStore = createStore<boolean>(readChosen);
 
 /** Imperative snapshot of the current track (for non-React callers, e.g. the toaster). */
 export const getTrack = (): Track => trackStore.get();
 
+/** Imperative snapshot of whether a track has been explicitly chosen. */
+export const getHasChosenTrack = (): boolean => chosenStore.get();
+
+/**
+ * Set the roadmap track and (by default) mark it as explicitly chosen. Shared
+ * by the hook, the profile/roadmap pickers, and cross-device sign-in sync.
+ * Writes localStorage and notifies both stores so every surface re-renders.
+ */
+export function setTrackValue(next: Track, opts?: { markChosen?: boolean }): void {
+  writeJSON(TRACK_KEY, next);
+  trackStore.emit();
+  if (opts?.markChosen !== false) {
+    writeJSON(TRACK_CHOSEN_KEY, true);
+    chosenStore.emit();
+  }
+}
+
 /** Live, persisted roadmap track plus a setter. Shared across the page. */
 export function useTrack(): [Track, (next: Track) => void] {
   const track = useStore(trackStore);
-  const setTrack = (next: Track) => {
-    writeJSON(TRACK_KEY, next);
-    trackStore.emit();
-  };
-  return [track, setTrack];
+  return [track, (next: Track) => setTrackValue(next)];
+}
+
+/** Live flag: has the learner explicitly picked a track yet? */
+export function useHasChosenTrack(): boolean {
+  return useStore(chosenStore);
 }

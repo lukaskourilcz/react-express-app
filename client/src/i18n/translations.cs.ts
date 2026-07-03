@@ -18,14 +18,14 @@ export const cs: Record<TranslationKey, string> = {
   'nav.profile': 'Profil',
   'nav.home': 'Domů devShark',
   'nav.menu': 'Otevřít navigační menu',
-  'title.home': 'devShark — Otestuj své znalosti webového vývoje',
+  'title.home': 'devShark, Otestuj své znalosti webového vývoje',
   'title.quiz': 'Kvíz · devShark',
   'title.learn': 'Učení · devShark',
   'title.roadmap': 'Plán · devShark',
   'roadmapPage.kicker': 'Kariérní plán',
   'roadmapPage.title': 'Co je potřeba, aby ses prosadil',
   'roadmapPage.treeTitle': 'Tvoje roadmapa',
-  'roadmapPage.treeIntro': 'Vyber si Frontend, Backend nebo Fullstack a postupuj odshora dolů — nejdřív základy, nakonec produkce. Každé téma je rozdělené na 3 krátké části, které se vyplňují, jak je plníš.',
+  'roadmapPage.treeIntro': 'Vyber si Frontend, Backend nebo Fullstack a postupuj odshora dolů, nejdřív základy, nakonec produkce. Každé téma je rozdělené na 3 krátké části, které se vyplňují, jak je plníš.',
   'title.profile': 'Profil · devShark',
   'title.leaderboard': 'Žebříček · devShark',
   'title.cards': 'Kartičky · devShark',
@@ -37,19 +37,25 @@ export const cs: Record<TranslationKey, string> = {
 
   // Home / landing page
   'home.title': 'Staň se vývojářem, úroveň po úrovni.',
-  'home.subtitle': 'Strukturované studijní cesty, opravdové kvízy a poctivý kariérní plán pro Frontend, Backend i Fullstack — všechno na jednom místě.',
+  'home.subtitle': 'Strukturované studijní cesty, opravdové kvízy a poctivý kariérní plán pro Frontend, Backend i Fullstack, všechno na jednom místě.',
   'home.freeBadge': '100% zdarma',
-  'home.freeTitle': 'Úplně zdarma — navždy',
+  'home.freeTitle': 'Úplně zdarma, navždy',
   'home.freeText': 'Každá lekce, kvíz i studijní cesta je zdarma. Žádné placené zdi, žádné zkušební verze, žádná platební karta.',
   'home.ctaSignIn': 'Přihlas se a začni',
   'home.ctaChoosePath': 'Vyber si směr',
   'home.ctaQuiz': 'Zkusit rychlý kvíz',
   'home.ctaLearn': 'Přejít na studijní cestu',
+  'home.pathDialogTitle': 'Vyber si svou studijní cestu',
+  'home.pathDialogSubtitle': 'Vyber si směr, na který se chceš zaměřit. Můžeš ho kdykoli změnit a přepnutí nikdy nezamkne nic, co už máš odemčené.',
+  'home.pathCurrent': 'Aktuální',
+  'home.pathChosenCta': 'Tvá cesta: {label}',
+  'home.pathChosenHint': 'Máš nastavenou cestu {label}. Pusť se do toho, až budeš chtít.',
+  'home.trackSavedSnack': 'Uloženo. Máš nastavenou cestu {label}.',
   'home.stepsTitle': 'Jak začít',
   'home.step1Title': 'Přihlas se',
   'home.step1Text': 'Vytvoř si účet zdarma, ať si pamatujeme tvůj postup, XP a série na všech zařízeních. Bez něj se postup neukládá.',
   'home.step2Title': 'Vyber si směr',
-  'home.step2Text': 'Zvol si v profilu Frontend, Backend nebo Fullstack — odemkneme ti první lekce daného směru, ať můžeš rovnou začít.',
+  'home.step2Text': 'Zvol si v profilu Frontend, Backend nebo Fullstack, odemkneme ti první lekce daného směru, ať můžeš rovnou začít.',
   'home.step3Title': 'Začni se učit',
   'home.step3Text': 'Stoupej po roadmapě, plň kvízy a zvyšuj svou kariérní úroveň od Superjuniora až po Architekta.',
   'home.featuresTitle': 'Co tě uvnitř čeká',
@@ -58,7 +64,7 @@ export const cs: Record<TranslationKey, string> = {
   'home.featureQuizTitle': 'Kvízy a výzvy',
   'home.featureQuizText': 'Vypiluj se smíšenými kvízy a časovanou Výzvou největšího žraloka.',
   'home.featureRoadmapTitle': 'Kariérní plán',
-  'home.featureRoadmapText': 'Uvidíš přesně, co obnáší dostat se na seniora — a jak daleko už jsi.',
+  'home.featureRoadmapText': 'Uvidíš přesně, co obnáší dostat se na seniora, a jak daleko už jsi.',
 
   // Register prompt (guest snackbar)
   'register.title': 'Ulož si svůj pokrok',
@@ -70,13 +76,13 @@ export const cs: Record<TranslationKey, string> = {
   // Shop (tokens)
   'shop.kicker': 'Tokeny',
   'shop.title': 'Obchod',
-  'shop.subtitle': 'Utrať tokeny za bonusy a vychytávky. Tokeny získáváš pasivně — 10 % z každého zisku XP.',
+  'shop.subtitle': 'Utrať tokeny za bonusy a vychytávky. Tokeny získáváš pasivně, 10 % z každého zisku XP.',
   'shop.balanceLabel': 'Tvůj zůstatek',
   'shop.tokensUnit': 'tokenů',
   'shop.earnRate': '+10 % z každého zisku XP',
   'shop.section.boosters': 'Vylepšení',
   'shop.section.paths': 'Učební cesty',
-  'shop.section.pathsHint': 'Přeskoč podmínky — otevři libovolnou cestu za {price} tokenů.',
+  'shop.section.pathsHint': 'Přeskoč podmínky, otevři libovolnou cestu za {price} tokenů.',
   'shop.section.rings': 'Prstence avataru',
   'shop.section.flairs': 'Ozdoby jména',
   'shop.buy': 'Koupit',
@@ -126,7 +132,7 @@ export const cs: Record<TranslationKey, string> = {
   'auth.loadingAccount': 'Načítání účtu',
   'auth.accountMenu': 'Menu účtu pro {name}',
 
-  // Quiz — setup screen
+  // Quiz, setup screen
   'quiz.title': 'Kvíz webového vývoje',
   'quiz.subtitle': '1500+ otázek · podporovány klávesové zkratky',
   'quiz.todaysChallenge': 'Dnešní výzva',
@@ -158,7 +164,7 @@ export const cs: Record<TranslationKey, string> = {
   'difficulty.advanced.tip': 'Obtížnost 3–5. Pro zkušené vývojáře.',
   'difficulty.mixed.tip': 'Náhodný mix napříč obtížnostmi.',
 
-  // Quiz — in progress
+  // Quiz, in progress
   'quiz.questionOf': 'Otázka {current} z {total}',
   'quiz.progressAria': 'Průběh kvízu',
   'quiz.showHint': 'Zobrazit nápovědu',
@@ -173,10 +179,10 @@ export const cs: Record<TranslationKey, string> = {
   'quiz.addBookmark': 'Přidat do záložek',
   'quiz.removeBookmark': 'Odebrat ze záložek',
 
-  // Quiz — results
+  // Quiz, results
   'quiz.complete': 'Kvíz dokončen!',
   'quiz.scoreOutOf': '{correct} z {total} správně',
-  'quiz.dailyComplete': 'Dnešní výzva splněna — uvidíme se zítra.',
+  'quiz.dailyComplete': 'Dnešní výzva splněna, uvidíme se zítra.',
   'quiz.newQuiz': 'Nový kvíz',
   'quiz.shareResult': 'Sdílet výsledek',
   'quiz.backHome': 'Zpět domů',
@@ -209,7 +215,7 @@ export const cs: Record<TranslationKey, string> = {
   'flag.reviewLabel': 'Tato otázka by měla být zkontrolována',
   'flag.send': 'Odeslat',
   'flag.sending': 'Odesílání…',
-  'flag.sent': 'Děkujeme — otázka byla označena ke kontrole.',
+  'flag.sent': 'Děkujeme, otázka byla označena ke kontrole.',
   'flag.failed': 'Označení se nepodařilo odeslat',
 
   'common.cancel': 'Zrušit',
@@ -222,7 +228,7 @@ export const cs: Record<TranslationKey, string> = {
   'leaderboard.byCategory': 'Podle kategorie',
   'leaderboard.categoryAria': 'Žebříček {label}',
   'leaderboard.noCategoryAttempts': 'Zatím žádné pokusy v kategorii {label}.',
-  'leaderboard.noEntries': 'Zatím žádné záznamy — buď první.',
+  'leaderboard.noEntries': 'Zatím žádné záznamy, buď první.',
   'leaderboard.footerCategory': 'Pro zařazení je potřeba alespoň 5 otázek v této kategorii. Aktualizace každých 60 s.',
   'leaderboard.footerDefault': 'Aktualizace každých 60 s. Zahraj si kvíz a objevíš se tady.',
   'leaderboard.correct': 'správně',
@@ -234,7 +240,7 @@ export const cs: Record<TranslationKey, string> = {
   'profile.loading': 'Načítání profilu…',
   'profile.redirecting': 'Přesměrování…',
   'profile.firstQuizCta': 'Zkus svůj první kvíz',
-  'profile.noQuizzes': 'Zatím žádné kvízy — začni svou sérii ještě dnes.',
+  'profile.noQuizzes': 'Zatím žádné kvízy, začni svou sérii ještě dnes.',
   'profile.streaks': 'Série',
   'profile.currentStreak': 'Aktuální série',
   'profile.longestStreak': 'Nejdelší série',
@@ -260,7 +266,7 @@ export const cs: Record<TranslationKey, string> = {
   'profile.trackTitle': 'Studijní zaměření',
   'profile.trackHelp': 'Vyber si směr a my ti odemkneme jeho první lekce, abys mohl rovnou začít.',
   'profile.trackSectionsLabel': 'Tvé úvodní sekce',
-  'profile.trackSet': 'Zaměření {label} nastaveno — úvodní sekce odemčeny',
+  'profile.trackSet': 'Zaměření {label} nastaveno, úvodní sekce odemčeny',
   'profile.trackGoLearn': 'Přejít na studijní cestu →',
 
   // Career level (XP)
@@ -351,7 +357,7 @@ export const cs: Record<TranslationKey, string> = {
   'play.liveScoreboard': 'Živá výsledková tabule',
   'play.classAnswers': 'Odpovědi třídy (naživo)',
   'play.matchComplete': 'Hra dokončena',
-  'play.winner': '🏆 Vítěz: {name} — {correct}/{total}',
+  'play.winner': '🏆 Vítěz: {name}, {correct}/{total}',
   'common.back': 'Zpět',
 
   // Loading / error states
@@ -360,7 +366,7 @@ export const cs: Record<TranslationKey, string> = {
   'error.somethingWrong': 'Něco se pokazilo',
 
   // Practice / stats toasts
-  'quiz.reportSent': 'Díky — hlášení odesláno',
+  'quiz.reportSent': 'Díky, hlášení odesláno',
   'quiz.reportFailed': 'Hlášení se nepodařilo odeslat',
   'quiz.streakWarning': 'Skóre jsme uložili, ale nepodařilo se aktualizovat sérii.',
   'quiz.shareCopied': 'Výsledek zkopírován do schránky',
@@ -390,7 +396,7 @@ export const cs: Record<TranslationKey, string> = {
 
   // Roadmap ("Learn") mode
   'roadmap.title': 'Učení',
-  'roadmap.subtitle': 'Postupuj od základů až po záludnosti. Každé téma je rozdělené na 3 krátké části — splň úrovně a pak slož test části.',
+  'roadmap.subtitle': 'Postupuj od základů až po záludnosti. Každé téma je rozdělené na 3 krátké části, splň úrovně a pak slož test části.',
   'roadmap.topicsAria': 'Vyber téma',
   'roadmap.partsAria': 'Vyber část',
   'roadmap.partLabel': 'Část {n}',
@@ -436,7 +442,7 @@ export const cs: Record<TranslationKey, string> = {
   'roadmap.skillCheckCta': 'Už máš zkušenosti? Skill check',
   'roadmap.skillCheckSubtitle': '20 smíšených otázek · neomezené životy · odemkne další cesty',
   'roadmap.skillCheckTitle': 'Skill check',
-  'roadmap.skillCheckIntro': 'Dvacet smíšených otázek napříč tématy. Žádná ztráta životů — jen odpovídej, jak nejlépe umíš. Čím vyšší skóre, tím víc cest odemkneš.',
+  'roadmap.skillCheckIntro': 'Dvacet smíšených otázek napříč tématy. Žádná ztráta životů, jen odpovídej, jak nejlépe umíš. Čím vyšší skóre, tím víc cest odemkneš.',
   'roadmap.skillCheckBands': 'Hranice skóre: 10 = pár dalších cest · 14 = většina cest · 18 = celá mapa.',
   'roadmap.skillCheckStart': 'Spustit skill check',
   'roadmap.skillCheckCancel': 'Zrušit',
@@ -445,15 +451,15 @@ export const cs: Record<TranslationKey, string> = {
   'roadmap.skillCheckNext': 'Další',
   'roadmap.skillCheckFinish': 'Dokončit',
   'roadmap.skillCheckResult': 'Skóre {correct} / {total}',
-  'roadmap.skillCheckPerfect': 'Vrchol potravního řetězce — odemkl jsi všechny cesty.',
-  'roadmap.skillCheckSolid': 'Skvělá práce — odemkly se další cesty.',
+  'roadmap.skillCheckPerfect': 'Vrchol potravního řetězce, odemkl jsi všechny cesty.',
+  'roadmap.skillCheckSolid': 'Skvělá práce, odemkly se další cesty.',
   'roadmap.skillCheckSome': 'Dobrý start. Pár dalších cest je nyní otevřených.',
   'roadmap.skillCheckLow': 'Začni zatím se startovními cestami. Skill check si můžeš dát znovu kdykoli.',
   'roadmap.skillCheckUnlocked': 'Odemčeno: {topics}',
-  'roadmap.skillCheckNoneAdded': 'Zatím nebyly odemčeny žádné nové cesty — zkus nejdřív startovní.',
+  'roadmap.skillCheckNoneAdded': 'Zatím nebyly odemčeny žádné nové cesty, zkus nejdřív startovní.',
   'roadmap.skillCheckRetry': 'Skill check znovu',
   'roadmap.skillCheckBack': 'Zpět na cesty',
-  'roadmap.lockedCountFooter': 'Zamčených cest: {count} — splň dřívější části nebo si dej skill check, abys je otevřel.',
+  'roadmap.lockedCountFooter': 'Zamčených cest: {count}, splň dřívější části nebo si dej skill check, abys je otevřel.',
 
   // Roadmap tree (graf na stránce /roadmap)
   'roadmapTree.partPill': 'Část {n}',
@@ -464,11 +470,11 @@ export const cs: Record<TranslationKey, string> = {
 
   // Biggest Shark Challenge
   'challenge.title': 'Výzva největšího žraloka',
-  'challenge.description': 'Odpověz na co nejvíc otázek za 90 sekund — tři chybné odpovědi ale hru ukončí dřív. Smíšené kategorie i obtížnost: čím déle vydržíš, tím větším žralokem se stáváš.',
+  'challenge.description': 'Odpověz na co nejvíc otázek za 90 sekund, tři chybné odpovědi ale hru ukončí dřív. Smíšené kategorie i obtížnost: čím déle vydržíš, tím větším žralokem se stáváš.',
   'challenge.howItWorks': 'Jak to funguje',
   'challenge.rule1': 'Náhodné otázky ze všech kategorií a obtížností.',
-  'challenge.rule2': 'Začínáš se třemi žraločími ploutvemi — každá chyba bere jednu.',
-  'challenge.rule3': 'Závodíš taky s 90sekundovým časem — hru ukončí to, co dojde dřív.',
+  'challenge.rule2': 'Začínáš se třemi žraločími ploutvemi, každá chyba bere jednu.',
+  'challenge.rule3': 'Závodíš taky s 90sekundovým časem, hru ukončí to, co dojde dřív.',
   'challenge.rule4': 'Skóre = počet správných odpovědí. Překonej nejvyšší skóre a získej titul šampiona.',
   'challenge.currentChampion': 'Aktuální šampion',
   'challenge.noChampion': 'Skóre ještě nikdo nemá. Buď první!',
@@ -478,7 +484,7 @@ export const cs: Record<TranslationKey, string> = {
   'challenge.livesAria': 'Zbývá {left} žraločích ploutví',
   'challenge.timeAria': 'Zbývá {seconds} sekund',
   'challenge.endedByTime': 'Čas vypršel!',
-  'challenge.endedByStrikes': 'Tři chyby — končíš!',
+  'challenge.endedByStrikes': 'Tři chyby, končíš!',
   'challenge.difficultyLevel': 'Obtížnost {level}',
   'challenge.correct': 'Správně!',
   'challenge.wrong': 'Chyba!',

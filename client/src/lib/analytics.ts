@@ -1,9 +1,9 @@
-// PostHog product analytics — funnels, session replay, and event capture.
+// PostHog product analytics - funnels, session replay, and event capture.
 //
 // Mirrors the Sentry wiring (lib/sentry.ts): everything here is a no-op until
 // VITE_PUBLIC_POSTHOG_KEY is set, so local/preview builds and forks with no key
 // pay nothing. Unlike Sentry, the SDK is pulled in with a *dynamic* import so
-// posthog-js lands in its own lazy chunk and never touches the initial bundle —
+// posthog-js lands in its own lazy chunk and never touches the initial bundle;
 // it's fetched in the background after first paint.
 //
 // Privacy / GDPR: we point at PostHog EU Cloud and reverse-proxy every request

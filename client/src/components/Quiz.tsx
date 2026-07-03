@@ -266,7 +266,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     }
     setError(null);
     setResult(null);
-    // Top of the quiz funnel — no-op unless PostHog is configured.
+    // Top of the quiz funnel. No-op unless PostHog is configured.
     capture('quiz_started', {
       mode: 'standard',
       question_count: questionCount,
@@ -338,7 +338,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setState('submitted');
       clearProgress();
       playComplete();
-      // Bottom of the quiz funnel — pairs with 'quiz_started' for conversion +
+      // Bottom of the quiz funnel. Pairs with 'quiz_started' for conversion and
       // score-distribution analysis. No-op unless PostHog is configured.
       capture('quiz_submitted', {
         mode,

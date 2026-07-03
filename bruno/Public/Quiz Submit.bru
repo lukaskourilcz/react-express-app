@@ -5,7 +5,7 @@ meta {
 }
 
 # Grading is public (no auth), but needs a real sessionId from
-# GET /api/quiz/questions. With a bogus session this returns 400 — the point of
+# GET /api/quiz/questions. With a bogus session this returns 400 - the point of
 # the assertion is that it is NOT rejected as unauthenticated (401).
 post {
   url: {{baseUrl}}/api/quiz/submit
