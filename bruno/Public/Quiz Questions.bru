@@ -1,0 +1,15 @@
+meta {
+  name: Quiz Questions
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/quiz/questions?count=5&difficulty=zero-to-hero&categories=javascript
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}

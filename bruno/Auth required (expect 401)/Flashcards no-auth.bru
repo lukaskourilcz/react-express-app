@@ -1,0 +1,16 @@
+meta {
+  name: Flashcards no-auth
+  type: http
+  seq: 1
+}
+
+# api/flashcards.ts calls requireAuthSub before any method branch → 401.
+get {
+  url: {{baseUrl}}/api/flashcards
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 401
+}

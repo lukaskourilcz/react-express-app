@@ -1,0 +1,20 @@
+meta {
+  name: Play Create no-auth
+  type: http
+  seq: 4
+}
+
+# api/play/[action].ts → requireAuthSub gates match actions → 401 without a token.
+post {
+  url: {{baseUrl}}/api/play/create
+  body: json
+  auth: none
+}
+
+body:json {
+  {}
+}
+
+assert {
+  res.status: eq 401
+}

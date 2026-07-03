@@ -130,7 +130,7 @@ function Shop() {
               {t('shop.section.pathsHint', { price: config.shop.pathUnlockPrice })}
             </Typography>
           )}
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 1.5 }}>
             {CATALOGUE.filter((p) => p.kind === kind).map((p) => {
               const ownedPath = p.kind === 'path' && p.topic ? isPathAlreadyUnlocked(p.topic) : false;
               const price = priceOf(p, config);

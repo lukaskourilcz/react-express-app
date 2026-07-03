@@ -140,7 +140,7 @@ export function PlayLanding() {
   };
 
   return (
-    <Box sx={{ maxWidth: 520, mx: 'auto' }}>
+    <Box sx={{ maxWidth: { xs: 520, md: 900 }, mx: 'auto' }}>
       <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mb: 0.5 }}>
         {t('play.title')}
       </Typography>
@@ -154,6 +154,9 @@ export function PlayLanding() {
         </Alert>
       )}
 
+      {/* Host + Join sit side by side on desktop (2:1) so the short "join" card
+          no longer stacks below the tall host card. They stack on mobile. */}
+      <Box sx={{ display: { md: 'grid' }, gridTemplateColumns: { md: '2fr 1fr' }, columnGap: { md: 2.5 }, alignItems: 'start' }}>
       <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="overline" component="h2" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
           {t('play.hostGame')}
@@ -289,9 +292,10 @@ export function PlayLanding() {
         </Typography>
       </Paper>
 
-      <Divider sx={{ my: 2 }}>{t('play.or')}</Divider>
+      <Box>
+        <Divider sx={{ my: 2, display: { xs: 'block', md: 'none' } }}>{t('play.or')}</Divider>
 
-      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+        <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
         <Typography variant="overline" component="h2" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
           {t('play.joinWithCode')}
         </Typography>
@@ -318,7 +322,9 @@ export function PlayLanding() {
             {loading === 'join' ? '…' : t('play.join')}
           </Button>
         </Box>
-      </Paper>
+        </Paper>
+      </Box>
+      </Box>
     </Box>
   );
 }
@@ -532,7 +538,7 @@ export function PlayMatch() {
   const currentQuestion = match.questions[match.current_index];
 
   return (
-    <Box sx={{ maxWidth: 600, mx: 'auto' }}>
+    <Box sx={{ maxWidth: { xs: 600, md: 820 }, mx: 'auto' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Box>
           <Typography variant="h6" component="h1" sx={{ fontWeight: 700 }}>

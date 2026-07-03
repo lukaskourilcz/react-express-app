@@ -17,14 +17,14 @@ export const en = {
   'nav.profile': 'Profile',
   'nav.home': 'devShark home',
   'nav.menu': 'Open navigation menu',
-  'title.home': 'devShark — Test your web dev skills',
+  'title.home': 'devShark, Test your web dev skills',
   'title.quiz': 'Quiz · devShark',
   'title.learn': 'Learn · devShark',
   'title.roadmap': 'Roadmap · devShark',
   'roadmapPage.kicker': 'Career roadmap',
   'roadmapPage.title': 'What it takes to make it',
   'roadmapPage.treeTitle': 'Your roadmap',
-  'roadmapPage.treeIntro': 'Choose Frontend, Backend or Fullstack, then follow it top to bottom — foundations first, production last. Each topic splits into 3 short parts and fills in as you clear them.',
+  'roadmapPage.treeIntro': 'Choose Frontend, Backend or Fullstack, then follow it top to bottom, foundations first, production last. Each topic splits into 3 short parts and fills in as you clear them.',
   'title.profile': 'Profile · devShark',
   'title.leaderboard': 'Leaderboard · devShark',
   'title.cards': 'Cards · devShark',
@@ -36,19 +36,25 @@ export const en = {
 
   // Home / landing page
   'home.title': 'Become a developer, one level at a time.',
-  'home.subtitle': 'Structured learning paths, real quizzes, and an honest career roadmap for Frontend, Backend and Fullstack — all in one place.',
+  'home.subtitle': 'Structured learning paths, real quizzes, and an honest career roadmap for Frontend, Backend and Fullstack, all in one place.',
   'home.freeBadge': '100% free',
-  'home.freeTitle': 'Completely free — forever',
+  'home.freeTitle': 'Completely free, forever',
   'home.freeText': 'Every lesson, quiz and learning path is free. No paywalls, no trials, no credit card.',
   'home.ctaSignIn': 'Sign in to start',
   'home.ctaChoosePath': 'Choose your path',
   'home.ctaQuiz': 'Try a quick quiz',
   'home.ctaLearn': 'Go to learning path',
+  'home.pathDialogTitle': 'Choose your learning path',
+  'home.pathDialogSubtitle': 'Pick the track to focus on. You can change it anytime, and switching never locks anything you have already unlocked.',
+  'home.pathCurrent': 'Current',
+  'home.pathChosenCta': 'Your path: {label}',
+  'home.pathChosenHint': 'You are set on the {label} path. Jump in whenever you are ready.',
+  'home.trackSavedSnack': 'Saved. You are on the {label} path.',
   'home.stepsTitle': 'How to get started',
   'home.step1Title': 'Sign in',
   'home.step1Text': 'Create a free account so we can remember your progress, XP and streaks across every device. Without it, your progress is not saved.',
   'home.step2Title': 'Choose your path',
-  'home.step2Text': 'Pick Frontend, Backend or Fullstack in your profile — we unlock that path’s first lessons so you can dive straight in.',
+  'home.step2Text': 'Pick Frontend, Backend or Fullstack in your profile, we unlock that path’s first lessons so you can dive straight in.',
   'home.step3Title': 'Start learning',
   'home.step3Text': 'Climb the roadmap, take quizzes, and level up your developer career rank from Superjunior to Architect.',
   'home.featuresTitle': 'What’s inside',
@@ -57,7 +63,7 @@ export const en = {
   'home.featureQuizTitle': 'Quizzes & challenges',
   'home.featureQuizText': 'Sharpen up with mixed-topic quizzes and the timed Biggest Shark Challenge.',
   'home.featureRoadmapTitle': 'Career roadmap',
-  'home.featureRoadmapText': 'See exactly what it takes to reach senior — and track how far you’ve come.',
+  'home.featureRoadmapText': 'See exactly what it takes to reach senior, and track how far you’ve come.',
 
   // Register prompt (guest snackbar)
   'register.title': 'Save your progress',
@@ -69,13 +75,13 @@ export const en = {
   // Shop (tokens)
   'shop.kicker': 'Tokens',
   'shop.title': 'Shop',
-  'shop.subtitle': 'Spend tokens on perks and cosmetics. Earn tokens passively — every XP gain credits 10% as tokens.',
+  'shop.subtitle': 'Spend tokens on perks and cosmetics. Earn tokens passively, every XP gain credits 10% as tokens.',
   'shop.balanceLabel': 'Your balance',
   'shop.tokensUnit': 'tokens',
   'shop.earnRate': '+10% of every XP gain',
   'shop.section.boosters': 'Boosters',
   'shop.section.paths': 'Learn paths',
-  'shop.section.pathsHint': 'Skip the prereqs — instantly unlock any learning path for {price} tokens.',
+  'shop.section.pathsHint': 'Skip the prereqs, instantly unlock any learning path for {price} tokens.',
   'shop.section.rings': 'Avatar rings',
   'shop.section.flairs': 'Title flairs',
   'shop.buy': 'Buy',
@@ -125,7 +131,7 @@ export const en = {
   'auth.loadingAccount': 'Loading account',
   'auth.accountMenu': 'Account menu for {name}',
 
-  // Quiz — setup screen
+  // Quiz, setup screen
   'quiz.title': 'Web Development Quiz',
   'quiz.subtitle': '1500+ questions · keyboard shortcuts supported',
   'quiz.todaysChallenge': 'Today’s challenge',
@@ -157,7 +163,7 @@ export const en = {
   'difficulty.advanced.tip': 'Difficulty 3–5. Experienced devs.',
   'difficulty.mixed.tip': 'Random mix across difficulties.',
 
-  // Quiz — in progress
+  // Quiz, in progress
   'quiz.questionOf': 'Question {current} of {total}',
   'quiz.progressAria': 'Quiz progress',
   'quiz.showHint': 'Show hint',
@@ -172,10 +178,10 @@ export const en = {
   'quiz.addBookmark': 'Bookmark this question',
   'quiz.removeBookmark': 'Remove bookmark',
 
-  // Quiz — results
+  // Quiz, results
   'quiz.complete': 'Quiz complete!',
   'quiz.scoreOutOf': '{correct} out of {total} correct',
-  'quiz.dailyComplete': 'Today’s challenge complete — see you tomorrow.',
+  'quiz.dailyComplete': 'Today’s challenge complete, see you tomorrow.',
   'quiz.newQuiz': 'New quiz',
   'quiz.shareResult': 'Share result',
   'quiz.backHome': 'Back to home',
@@ -208,7 +214,7 @@ export const en = {
   'flag.reviewLabel': 'This question should be reviewed',
   'flag.send': 'Send flag',
   'flag.sending': 'Sending…',
-  'flag.sent': 'Thanks — this question has been flagged for review.',
+  'flag.sent': 'Thanks, this question has been flagged for review.',
   'flag.failed': 'Could not send flag',
 
   'common.cancel': 'Cancel',
@@ -221,7 +227,7 @@ export const en = {
   'leaderboard.byCategory': 'By category',
   'leaderboard.categoryAria': '{label} leaderboard',
   'leaderboard.noCategoryAttempts': 'No {label} attempts yet.',
-  'leaderboard.noEntries': 'No entries yet — be the first.',
+  'leaderboard.noEntries': 'No entries yet, be the first.',
   'leaderboard.footerCategory': 'Minimum 5 questions in this category to qualify. Updated every 60s.',
   'leaderboard.footerDefault': 'Updated every 60s. Take a quiz to appear here.',
   'leaderboard.correct': 'correct',
@@ -233,7 +239,7 @@ export const en = {
   'profile.loading': 'Loading your profile…',
   'profile.redirecting': 'Redirecting…',
   'profile.firstQuizCta': 'Take your first quiz',
-  'profile.noQuizzes': 'No quizzes yet — start your streak today.',
+  'profile.noQuizzes': 'No quizzes yet, start your streak today.',
   'profile.streaks': 'Streaks',
   'profile.currentStreak': 'Current streak',
   'profile.longestStreak': 'Longest streak',
@@ -259,7 +265,7 @@ export const en = {
   'profile.trackTitle': 'Learning track',
   'profile.trackHelp': "Pick your path and we'll unlock its first lessons so you can dive straight in.",
   'profile.trackSectionsLabel': 'Your starting sections',
-  'profile.trackSet': '{label} track set — starting sections unlocked',
+  'profile.trackSet': '{label} track set, starting sections unlocked',
   'profile.trackGoLearn': 'Go to learning path →',
 
   // Career level (XP)
@@ -350,7 +356,7 @@ export const en = {
   'play.liveScoreboard': 'Live scoreboard',
   'play.classAnswers': 'Class answers (live)',
   'play.matchComplete': 'Match complete',
-  'play.winner': '🏆 Winner: {name} — {correct}/{total}',
+  'play.winner': '🏆 Winner: {name}, {correct}/{total}',
   'common.back': 'Back',
 
   // Loading / error states
@@ -359,7 +365,7 @@ export const en = {
   'error.somethingWrong': 'Something went wrong',
 
   // Practice / stats toasts
-  'quiz.reportSent': 'Thanks — report sent',
+  'quiz.reportSent': 'Thanks, report sent',
   'quiz.reportFailed': 'Could not send report',
   'quiz.streakWarning': 'We saved your score but could not update your streak.',
   'quiz.shareCopied': 'Result copied to clipboard',
@@ -389,7 +395,7 @@ export const en = {
 
   // Roadmap ("Learn") mode
   'roadmap.title': 'Learn',
-  'roadmap.subtitle': 'Climb from the basics to the tricky stuff. Each topic is split into 3 short parts — clear the levels, then pass the part test.',
+  'roadmap.subtitle': 'Climb from the basics to the tricky stuff. Each topic is split into 3 short parts, clear the levels, then pass the part test.',
   'roadmap.topicsAria': 'Choose a topic',
   'roadmap.partsAria': 'Choose a part',
   'roadmap.partLabel': 'Part {n}',
@@ -435,7 +441,7 @@ export const en = {
   'roadmap.skillCheckCta': 'Already experienced? Skill check',
   'roadmap.skillCheckSubtitle': '20 mixed questions · unlimited hearts · unlocks more paths',
   'roadmap.skillCheckTitle': 'Skill check',
-  'roadmap.skillCheckIntro': 'Twenty mixed questions across every topic. No hearts to lose — just answer your best. The higher you score, the more paths you unlock.',
+  'roadmap.skillCheckIntro': 'Twenty mixed questions across every topic. No hearts to lose, just answer your best. The higher you score, the more paths you unlock.',
   'roadmap.skillCheckBands': 'Score bands: 10 = a few more paths · 14 = most paths · 18 = the full map.',
   'roadmap.skillCheckStart': 'Start skill check',
   'roadmap.skillCheckCancel': 'Cancel',
@@ -444,15 +450,15 @@ export const en = {
   'roadmap.skillCheckNext': 'Next',
   'roadmap.skillCheckFinish': 'Finish',
   'roadmap.skillCheckResult': 'You scored {correct} / {total}',
-  'roadmap.skillCheckPerfect': 'Top of the food chain — you unlocked every path.',
-  'roadmap.skillCheckSolid': 'Nice work — extra paths just unlocked.',
+  'roadmap.skillCheckPerfect': 'Top of the food chain, you unlocked every path.',
+  'roadmap.skillCheckSolid': 'Nice work, extra paths just unlocked.',
   'roadmap.skillCheckSome': 'Good start. A few more paths are now open.',
   'roadmap.skillCheckLow': 'Stay with the starter paths for now. You can retake the skill check anytime.',
   'roadmap.skillCheckUnlocked': 'Unlocked: {topics}',
-  'roadmap.skillCheckNoneAdded': 'No new paths unlocked yet — try the starters first.',
+  'roadmap.skillCheckNoneAdded': 'No new paths unlocked yet, try the starters first.',
   'roadmap.skillCheckRetry': 'Retake skill check',
   'roadmap.skillCheckBack': 'Back to paths',
-  'roadmap.lockedCountFooter': '{count} paths still locked — clear earlier parts or take the skill check to open them.',
+  'roadmap.lockedCountFooter': '{count} paths still locked, clear earlier parts or take the skill check to open them.',
 
   // Roadmap tree (the /roadmap page graph)
   'roadmapTree.partPill': 'Part {n}',
@@ -463,11 +469,11 @@ export const en = {
 
   // Biggest Shark Challenge
   'challenge.title': 'The Biggest Shark Challenge',
-  'challenge.description': 'Answer as many questions as you can in 90 seconds — but three wrong answers ends the run early. Mixed categories, mixed difficulty: the longer you survive, the bigger the shark you become.',
+  'challenge.description': 'Answer as many questions as you can in 90 seconds, but three wrong answers ends the run early. Mixed categories, mixed difficulty: the longer you survive, the bigger the shark you become.',
   'challenge.howItWorks': 'How it works',
   'challenge.rule1': 'Random questions across every category and difficulty.',
-  'challenge.rule2': 'You start with three shark fins — each wrong answer costs one.',
-  'challenge.rule3': 'You also race a 90-second clock — whichever runs out first ends the run.',
+  'challenge.rule2': 'You start with three shark fins, each wrong answer costs one.',
+  'challenge.rule3': 'You also race a 90-second clock, whichever runs out first ends the run.',
   'challenge.rule4': 'Score = correct answers. Beat the top score to claim the championship.',
   'challenge.currentChampion': 'Current champion',
   'challenge.noChampion': 'No one has set a score yet. Be the first!',
@@ -477,7 +483,7 @@ export const en = {
   'challenge.livesAria': '{left} shark fins left',
   'challenge.timeAria': '{seconds} seconds left',
   'challenge.endedByTime': "Time's up!",
-  'challenge.endedByStrikes': "Three strikes — you're out!",
+  'challenge.endedByStrikes': "Three strikes, you're out!",
   'challenge.difficultyLevel': 'Difficulty {level}',
   'challenge.correct': 'Correct!',
   'challenge.wrong': 'Strike!',

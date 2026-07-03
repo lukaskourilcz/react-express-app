@@ -9,9 +9,14 @@ import { LanguageProvider } from './i18n/LanguageContext';
 import { AuthProvider } from './lib/auth';
 import { queryClient } from './lib/queryClient';
 import { initSentry } from './lib/sentry';
+import { initAnalytics } from './lib/analytics';
+import { MotionProvider } from './lib/motion';
 
 // Start error/performance reporting before anything renders (no-op without a DSN).
 initSentry();
+// Load PostHog product analytics in the background (no-op without a key; the
+// SDK is dynamically imported so it never lands in the initial bundle).
+initAnalytics();
 
 // React Query devtools, dev-only: the dynamic import lives in a DEV-gated branch
 // so it (and the dependency) is dropped from the production bundle entirely.
@@ -29,7 +34,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           <BrowserRouter>
             <LanguageProvider>
               <ColorModeProvider>
-                <App />
+                <MotionProvider>
+                  <App />
+                </MotionProvider>
               </ColorModeProvider>
             </LanguageProvider>
           </BrowserRouter>

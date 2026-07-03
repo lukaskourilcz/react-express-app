@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider, Snackbar, Alert } from '@mui/material';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import LoadingScreen from './components/LoadingScreen';
@@ -6,6 +6,8 @@ import { SwimmingFin, Waterline } from './components/SharkFin';
 import { useColorMode } from './theme/ColorModeContext';
 import { useT, useLanguage } from './i18n/LanguageContext';
 import { preferredLanguageOf } from './lib/languagePref';
+import { preferredTrackOf } from './lib/trackPref';
+import { setTrackValue } from './lib/tracks';
 import type { TranslationKey } from './i18n/translations';
 import { BRAND } from './theme/MuiTheme';
 import { useGameConfig, type GameConfig } from './lib/gameConfig';
@@ -15,6 +17,8 @@ import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import { useAuth } from './lib/auth';
 import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
 import { useSettings } from './lib/settings';
+import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
+import { m, AnimatePresence, useReducedMotion } from './lib/motion';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
 // modules — heavy for the initial bundle. Lazy-load it so the app shell
@@ -42,6 +46,11 @@ const navLinkSx = (isActive: boolean) => ({
   textTransform: 'none' as const,
   textDecoration: isActive ? 'underline' : 'none',
   textUnderlineOffset: '4px',
+  // Hug the label instead of MUI's 64px min-width, so short links ("Quiz")
+  // don't get extra padding that makes the row look unevenly spaced. The flex
+  // `gap` on the container then provides uniform spacing between every link.
+  minWidth: 'auto',
+  px: 1.25,
   '&:hover': { backgroundColor: 'action.hover' },
 });
 
@@ -104,12 +113,13 @@ const NAV_ITEMS: {
 }[] = [
   { to: '/quiz', key: 'nav.quiz', isActive: (p) => p === '/quiz' },
   { to: '/learn', key: 'nav.learn', isActive: (p) => p.startsWith('/learn') },
-  { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap' },
   { to: '/challenge', key: 'nav.challenge', isActive: (p) => p.startsWith('/challenge') },
   { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play'), feature: 'multiplayer' },
   { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard' },
   { to: '/cards', key: 'nav.cards', isActive: (p) => p === '/cards', feature: 'flashcards' },
   { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop' },
+  // Roadmap sits last in the nav, after the day-to-day learning links.
+  { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap' },
 ];
 
 const RouteLoader = () => {
@@ -130,10 +140,24 @@ function App() {
   const [settings, updateSettings] = useSettings();
   const { user } = useAuth();
   const [signupBonusOpen, setSignupBonusOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
+  const analyticsIdentified = useRef(false);
 
   // Remember the learner's current rank on load so we don't re-celebrate a
   // rank-up earned in a previous session.
   useEffect(() => primeRankMarker(), []);
+
+  // Tie analytics events to the signed-in learner (and drop the identity on
+  // sign-out). No-op unless PostHog is configured.
+  useEffect(() => {
+    if (user?.id) {
+      identifyUser(user.id, { email: user.email ?? undefined });
+      analyticsIdentified.current = true;
+    } else if (analyticsIdentified.current) {
+      resetAnalytics();
+      analyticsIdentified.current = false;
+    }
+  }, [user]);
 
   // Apply the account's saved language preference on sign-in, so the learner's
   // chosen default loads automatically across devices.
@@ -141,6 +165,13 @@ function App() {
     const pref = preferredLanguageOf(user);
     if (pref) setLang(pref);
   }, [user, setLang]);
+
+  // Apply the account's saved learning track on sign-in, so the chosen path
+  // follows the learner across devices.
+  useEffect(() => {
+    const pref = preferredTrackOf(user);
+    if (pref) setTrackValue(pref);
+  }, [user]);
 
   // One-time 200-token welcome bonus on first sign-in. Idempotent across
   // devices via a user_metadata flag inside grantRegistrationBonusIfNew.
@@ -173,6 +204,9 @@ function App() {
     if (main) {
       main.focus({ preventScroll: true });
     }
+    // Manual SPA pageview (capture_pageview is off in the SDK). No-op unless
+    // PostHog is configured.
+    capturePageview(location.pathname);
   }, [location.pathname, t]);
 
   // The /dev console is a standalone admin surface — no app chrome, full width.
@@ -182,6 +216,19 @@ function App() {
   // The quiz setup screen gets tighter padding and vertical centering so it fits
   // one viewport.
   const isQuiz = location.pathname === '/quiz';
+
+  // Content-light pages read better wide on desktop (cards laid out side by side)
+  // than in a narrow 800px column, and it keeps them closer to one viewport tall.
+  // The Roadmap surfaces (/learn, /roadmap) manage their own width and are left
+  // out on purpose.
+  // Focused single-task screens (quiz, challenge, flashcards) stay in the narrow
+  // 800px column on purpose; only content-light overview pages go wide.
+  const isWide =
+    location.pathname === '/profile' ||
+    location.pathname === '/leaderboard' ||
+    location.pathname === '/shop' ||
+    location.pathname.startsWith('/play');
+  const contentMaxWidth = isDev ? 'none' : isHome ? 1000 : isWide ? 1200 : 800;
 
   // 1–4 shark fins on the footer ocean line, at random (non-overlapping) spots
   // each page load. Positions are sampled across 6–94%, keeping a minimum gap
@@ -295,7 +342,7 @@ function App() {
 
             {/* Centre slot: primary nav links, perfectly centred between logo
                 and auth widget on md+. Hidden on small screens (drawer). */}
-            <Box sx={{ flex: '1 1 0', display: { xs: 'none', md: 'flex' }, justifyContent: 'center', alignItems: 'center', gap: 1, minWidth: 0 }}>
+            <Box sx={{ flex: '1 1 0', display: { xs: 'none', md: 'flex' }, justifyContent: 'center', alignItems: 'center', gap: 2, minWidth: 0 }}>
               {primaryNavItems.map((item) => (
                 <Button
                   key={item.to}
@@ -369,23 +416,38 @@ function App() {
           outline: 'none',
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: isDev ? 'none' : isHome ? 1000 : 800 }}>
-          <Suspense fallback={<RouteLoader />}>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
-              <Route path="/learn" element={<Roadmap />} />
-              <Route path="/roadmap" element={<CareerRoadmap />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/leaderboard" element={<Leaderboard />} />
-              <Route path="/cards" element={<Flashcards />} />
-              <Route path="/shop" element={<Shop />} />
-              <Route path="/play" element={<PlayLanding />} />
-              <Route path="/play/:code" element={<PlayMatch />} />
-              <Route path="/challenge" element={<Challenge />} />
-              <Route path="/dev" element={<DevPage />} />
-            </Routes>
-          </Suspense>
+        <Box sx={{ width: '100%', maxWidth: contentMaxWidth }}>
+          {/* Route transition: each navigation fades/slides the new view in.
+              `mode="wait"` lets the old view fade out first; `initial={false}`
+              skips the animation on the very first load. Reduced-motion users
+              get a plain opacity fade with no movement. Routes is handed the
+              current location so the exiting view keeps rendering its own tree. */}
+          <AnimatePresence mode="wait" initial={false}>
+            <m.div
+              key={location.pathname}
+              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+              animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+            >
+              <Suspense fallback={<RouteLoader />}>
+                <Routes location={location}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
+                  <Route path="/learn" element={<Roadmap />} />
+                  <Route path="/roadmap" element={<CareerRoadmap />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/leaderboard" element={<Leaderboard />} />
+                  <Route path="/cards" element={<Flashcards />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/play" element={<PlayLanding />} />
+                  <Route path="/play/:code" element={<PlayMatch />} />
+                  <Route path="/challenge" element={<Challenge />} />
+                  <Route path="/dev" element={<DevPage />} />
+                </Routes>
+              </Suspense>
+            </m.div>
+          </AnimatePresence>
         </Box>
       </Box>
 

@@ -1,0 +1,15 @@
+meta {
+  name: Leaderboard
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/leaderboard?period=global&limit=10
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
