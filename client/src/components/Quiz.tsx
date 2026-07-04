@@ -1052,17 +1052,18 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const remaining = questions.length - answered;
 
   return (
-    // One-viewport question layout: the card fills the remaining shell height,
-    // the question text scrolls internally if long, and the answers + nav stay
-    // anchored at a stable position (bottom region) on every question.
-    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 680, mx: 'auto' }}>
+    // One-viewport question layout: the question text scrolls internally if
+    // long, and the answers + nav stay anchored at a stable position on every
+    // question. On phones the card uses the full height; on larger screens it
+    // is capped (~80% tall, 560px wide) and centred so it doesn't balloon.
+    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', width: '100%', maxWidth: { xs: 680, sm: 560 }, mx: 'auto' }}>
       {error && (
         <Alert severity="error" role="alert" onClose={() => setError(null)} sx={{ mb: 1.5, flexShrink: 0 }}>
           {error}
         </Alert>
       )}
 
-      <Card className="quiz-card" sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <Card className="quiz-card" sx={{ flex: '1 1 auto', minHeight: 0, maxHeight: { sm: '80%' }, display: 'flex', flexDirection: 'column' }}>
         <CardContent className="quiz-card-content" sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexShrink: 0 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
