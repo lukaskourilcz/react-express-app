@@ -263,15 +263,16 @@ function App() {
     location.pathname.startsWith('/play');
   const contentMaxWidth = isDev ? 'none' : isHome ? 1000 : isWide ? 1200 : 800;
 
-  // 1–4 shark fins on the footer ocean line, at random (non-overlapping) spots
-  // each page load. Positions are sampled across 6–94%, keeping a minimum gap
-  // so dorsals don't visually collide.
+  // 1–7 shark fins on the footer ocean line, at random (non-overlapping) spots
+  // each page load. Positions are sampled across 6–94%; the 10% minimum gap
+  // still fits the full school of 7 (6 gaps × 10% ≤ the 88% span) while keeping
+  // dorsals from visually colliding.
   const finPositions = useMemo<number[]>(() => {
-    const count = 1 + Math.floor(Math.random() * 4); // 1..4 inclusive
-    const minGap = 12;
+    const count = 1 + Math.floor(Math.random() * 7); // 1..7 inclusive
+    const minGap = 10;
     const out: number[] = [];
     let tries = 0;
-    while (out.length < count && tries < 200) {
+    while (out.length < count && tries < 400) {
       tries += 1;
       const pos = 6 + Math.random() * 88;
       if (out.every((p) => Math.abs(p - pos) >= minGap)) out.push(pos);
