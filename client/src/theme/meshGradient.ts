@@ -11,11 +11,13 @@
 
 import type { PaletteMode } from '@mui/material';
 
+// Light mode runs noticeably richer chroma + alpha than dark: pastel washes on
+// a near-white page need the extra saturation to register at all.
 const HERO_MESH_LIGHT = [
-  'radial-gradient(at 16% 20%, oklch(0.92 0.10 145 / 0.55) 0px, transparent 55%)',
-  'radial-gradient(at 84% 10%, oklch(0.90 0.08 195 / 0.42) 0px, transparent 50%)',
-  'radial-gradient(at 72% 84%, oklch(0.94 0.09 128 / 0.40) 0px, transparent 55%)',
-  'radial-gradient(at 26% 80%, oklch(0.91 0.07 162 / 0.34) 0px, transparent 50%)',
+  'radial-gradient(at 16% 20%, oklch(0.87 0.15 145 / 0.85) 0px, transparent 55%)',
+  'radial-gradient(at 84% 10%, oklch(0.85 0.12 195 / 0.70) 0px, transparent 50%)',
+  'radial-gradient(at 72% 84%, oklch(0.90 0.14 128 / 0.65) 0px, transparent 55%)',
+  'radial-gradient(at 26% 80%, oklch(0.86 0.11 162 / 0.58) 0px, transparent 50%)',
 ].join(', ');
 
 const HERO_MESH_DARK = [

@@ -265,17 +265,24 @@ function App() {
 
   // 1–5 shark fins on the footer ocean line, at random (non-overlapping) spots
   // each page load, each independently facing left or right so the school
-  // isn't all swimming the same way.
-  const fins = useMemo<{ left: number; flip: boolean }[]>(() => {
+  // isn't all swimming the same way. Each fin also drifts sideways extremely
+  // slowly (a whole crossing takes 1–2 minutes), with a random duration and
+  // phase so no two fins ever move in sync.
+  const fins = useMemo<{ left: number; flip: boolean; driftS: number; delayS: number }[]>(() => {
     const count = 1 + Math.floor(Math.random() * 5); // 1..5 inclusive
     const minGap = 10;
-    const out: { left: number; flip: boolean }[] = [];
+    const out: { left: number; flip: boolean; driftS: number; delayS: number }[] = [];
     let tries = 0;
     while (out.length < count && tries < 400) {
       tries += 1;
       const pos = 6 + Math.random() * 88;
       if (out.every((f) => Math.abs(f.left - pos) >= minGap)) {
-        out.push({ left: pos, flip: Math.random() < 0.5 });
+        out.push({
+          left: pos,
+          flip: Math.random() < 0.5,
+          driftS: 70 + Math.random() * 50, // 70–120s per crossing
+          delayS: -Math.random() * 60, // negative = start mid-swim
+        });
       }
     }
     return out;
@@ -556,10 +563,26 @@ function App() {
           {fins.map((fin, i) => (
             <Box
               key={i}
-              // scaleX(-1) mirrors the fin so it swims the other way.
-              sx={{ position: 'absolute', bottom: 7, left: `${fin.left}%`, transform: `translateX(-50%)${fin.flip ? ' scaleX(-1)' : ''}`, lineHeight: 0 }}
+              sx={{ position: 'absolute', bottom: 7, left: `${fin.left}%`, transform: 'translateX(-50%)', lineHeight: 0 }}
             >
-              <SwimmingFin size={20} />
+              {/* Slow sideways drift — ±22px over 70–120s, so the motion sits
+                  right at the edge of perception. */}
+              <Box
+                sx={{
+                  '@keyframes devsharkDrift': {
+                    '0%': { transform: 'translateX(-22px)' },
+                    '100%': { transform: 'translateX(22px)' },
+                  },
+                  animation: `devsharkDrift ${fin.driftS}s ease-in-out ${fin.delayS}s infinite alternate`,
+                  '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+                  lineHeight: 0,
+                }}
+              >
+                {/* scaleX(-1) mirrors the fin so it swims the other way. */}
+                <Box sx={{ transform: fin.flip ? 'scaleX(-1)' : 'none', lineHeight: 0 }}>
+                  <SwimmingFin size={20} />
+                </Box>
+              </Box>
             </Box>
           ))}
         </Box>
