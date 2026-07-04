@@ -1202,32 +1202,41 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         </CardContent>
       </Card>
 
-      <div className="quiz-button-container">
-        <Button variant="outlined" onClick={handlePrevious} disabled={currentIndex === 0} sx={quizStyles.previousButton}>
-          {t('quiz.previous')}
-        </Button>
-        <Button variant="text" onClick={handleAbandon} sx={{ color: 'text.secondary', textTransform: 'none' }}>
-          {t('quiz.exitQuiz')}
-        </Button>
-        {currentIndex === questions.length - 1 ? (
-          <Tooltip title={!allAnswered ? t('quiz.answerMore', { count: remaining }) : ''} placement="top" arrow>
-            <span>
-              <Button
-                variant="contained"
-                onClick={handleSubmit}
-                disabled={!allAnswered || submitting}
-                sx={quizStyles.submitButton}
-              >
-                {submitting ? t('quiz.submitting') : t('quiz.submitQuiz')}
-              </Button>
-            </span>
-          </Tooltip>
-        ) : (
-          <Button variant="contained" onClick={handleNext} sx={quizStyles.nextButton}>
-            {t('quiz.next')}
+      {/* Nav row shares the card's column and edges: Previous hugs the card's
+          left edge, Next its right, Exit sits on the exact centreline — so the
+          row always reads as centred with the card, whatever the button widths. */}
+      <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, flexShrink: 0, gap: 1 }}>
+        <Box sx={{ flex: '1 1 0', display: 'flex', justifyContent: 'flex-start' }}>
+          <Button variant="outlined" onClick={handlePrevious} disabled={currentIndex === 0} sx={quizStyles.previousButton}>
+            {t('quiz.previous')}
           </Button>
-        )}
-      </div>
+        </Box>
+        <Box sx={{ flex: '0 0 auto' }}>
+          <Button variant="text" onClick={handleAbandon} sx={{ color: 'text.secondary', textTransform: 'none' }}>
+            {t('quiz.exitQuiz')}
+          </Button>
+        </Box>
+        <Box sx={{ flex: '1 1 0', display: 'flex', justifyContent: 'flex-end' }}>
+          {currentIndex === questions.length - 1 ? (
+            <Tooltip title={!allAnswered ? t('quiz.answerMore', { count: remaining }) : ''} placement="top" arrow>
+              <span>
+                <Button
+                  variant="contained"
+                  onClick={handleSubmit}
+                  disabled={!allAnswered || submitting}
+                  sx={quizStyles.submitButton}
+                >
+                  {submitting ? t('quiz.submitting') : t('quiz.submitQuiz')}
+                </Button>
+              </span>
+            </Tooltip>
+          ) : (
+            <Button variant="contained" onClick={handleNext} sx={quizStyles.nextButton}>
+              {t('quiz.next')}
+            </Button>
+          )}
+        </Box>
+      </Box>
 
       <Snackbar
         open={!!snack}
