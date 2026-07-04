@@ -1,6 +1,6 @@
 import { Avatar, ButtonBase, Box, Menu, MenuItem, Typography, Button, Skeleton, Snackbar, Alert } from '@mui/material';
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
@@ -9,16 +9,6 @@ import { useRoadmapProgress } from '../lib/roadmap';
 import { computeLearningXp, levelForXp, displayTitle } from '../lib/leveling';
 import { useTrack, specializationForTrack } from '../lib/tracks';
 import { useEquippedRingColor } from '../lib/shop';
-
-const secondaryLinkSx = {
-  fontSize: '0.62rem',
-  fontWeight: 600,
-  textTransform: 'uppercase' as const,
-  letterSpacing: '0.3px',
-  color: 'text.secondary',
-  textDecoration: 'none',
-  '&:hover': { color: BRAND.green, textDecoration: 'underline' },
-};
 
 function AuthButton() {
   const { isAuthenticated, isLoading, user, signInWithGoogle, signOut } = useAuth();
@@ -125,27 +115,25 @@ function AuthButton() {
         </ButtonBase>
         <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
           <Typography
-            onClick={handleMenuOpen}
             variant="body2"
-            sx={{ cursor: 'pointer', fontWeight: 500, color: 'text.primary', lineHeight: 1.2, maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            sx={{ fontWeight: 500, color: 'text.primary', lineHeight: 1.2, maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             {displayName}
           </Typography>
           <Typography
             variant="caption"
-            sx={{ color: BRAND.green, fontWeight: 600, lineHeight: 1.2, maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            sx={{
+              color: (theme) => (theme.palette.mode === 'dark' ? '#4caf50' : BRAND.green),
+              fontWeight: 600,
+              lineHeight: 1.2,
+              maxWidth: 170,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
           >
             {rankTitle}
           </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.6, mt: 0.25 }}>
-            <Box component={Link} to="/leaderboard" sx={secondaryLinkSx}>
-              {t('nav.leaderboard')}
-            </Box>
-            <Box component="span" aria-hidden sx={{ color: 'text.disabled', fontSize: '0.6rem' }}>•</Box>
-            <Box component={Link} to="/shop" sx={secondaryLinkSx}>
-              {t('nav.shop')}
-            </Box>
-          </Box>
         </Box>
       </Box>
       <Menu

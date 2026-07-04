@@ -5,14 +5,14 @@
 
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, Paper, Typography, Button, Snackbar, Alert } from '@mui/material';
+import { Box, Paper, Typography, Button, Snackbar, Alert, CircularProgress } from '@mui/material';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 import { heroMeshFor } from '../theme/meshGradient';
 import { useColorMode } from '../theme/ColorModeContext';
 import { SwimmingFin } from './SharkFin';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
-import { MotionItem, MotionPulse } from '../lib/motion';
+import { MotionItem } from '../lib/motion';
 import { useTrack, useHasChosenTrack, trackStarterTopics, TRACKS, type Track } from '../lib/tracks';
 import { unlockExtraTopics, pushProgressToServer } from '../lib/roadmap';
 import { savePreferredTrack } from '../lib/trackPref';
@@ -31,12 +31,15 @@ export default function Home() {
   const [pathOpen, setPathOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [savedSnack, setSavedSnack] = useState<string | null>(null);
+  const [signingIn, setSigningIn] = useState(false);
 
   const handleSignIn = async () => {
+    setSigningIn(true);
     try {
       await signInWithGoogle();
     } catch (err) {
       setAuthError(err instanceof Error ? err.message : 'Sign-in failed. Please try again.');
+      setSigningIn(false);
     }
   };
 
@@ -84,21 +87,30 @@ export default function Home() {
         </Typography>
         <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
           {isAuthenticated ? (
-            <>
-              <Button variant="contained" size="large" onClick={() => setPathOpen(true)} sx={{ ...brandButtonSx, ...ctaSx }}>
-                {hasChosenPath ? t('home.pathChosenCta', { label: TRACKS[track].label }) : t('home.ctaChoosePath')}
+            hasChosenPath ? (
+              <Button variant="contained" size="large" component={Link} to="/learn" sx={{ ...brandButtonSx, ...ctaSx }}>
+                {t('home.continueTrack', { track: TRACKS[track].label })}
               </Button>
-              {/* Once a path is chosen, gently pulse the "start" CTA to pull the
-                  learner in. No-op under prefers-reduced-motion. */}
-              <MotionPulse active={hasChosenPath}>
+            ) : (
+              <>
+                <Button variant="contained" size="large" onClick={() => setPathOpen(true)} sx={{ ...brandButtonSx, ...ctaSx }}>
+                  {t('home.ctaChoosePath')}
+                </Button>
                 <Button variant="outlined" size="large" component={Link} to="/learn" sx={ctaSx}>
                   {t('home.ctaLearn')}
                 </Button>
-              </MotionPulse>
-            </>
+              </>
+            )
           ) : (
             <>
-              <Button variant="contained" size="large" onClick={handleSignIn} sx={{ ...brandButtonSx, ...ctaSx }}>
+              <Button
+                variant="contained"
+                size="large"
+                onClick={handleSignIn}
+                disabled={signingIn}
+                startIcon={signingIn ? <CircularProgress size={18} color="inherit" /> : undefined}
+                sx={{ ...brandButtonSx, ...ctaSx }}
+              >
                 {t('home.ctaSignIn')}
               </Button>
               <Button variant="outlined" size="large" component={Link} to="/quiz" sx={ctaSx}>
@@ -107,44 +119,34 @@ export default function Home() {
             </>
           )}
         </Box>
-        {isAuthenticated && hasChosenPath && (
-          <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-            {t('home.pathChosenHint', { label: TRACKS[track].label })}
-          </Typography>
-        )}
       </Box>
 
-      {/* Free banner — sharp-cornered, with a solid brand bar and a square
-          "FREE" tag, so it reads as a deliberate part of the design rather than
-          a generic rounded pastel callout. */}
+      {/* Free banner — a quiet, low-key note rather than a loud callout. */}
       <Paper
         elevation={0}
         sx={{
-          p: { xs: 2, sm: 2.5 },
-          mb: { xs: 4, sm: 5 },
-          border: '1px solid',
-          borderColor: 'divider',
-          borderLeft: '5px solid',
-          borderLeftColor: BRAND.green,
-          borderRadius: 0,
-          backgroundColor: 'background.paper',
+          p: { xs: 1.5, sm: 2 },
+          mb: { xs: 3, sm: 3.5 },
+          border: 'none',
+          borderRadius: 1,
+          backgroundColor: 'action.hover',
           display: 'flex',
           alignItems: 'center',
-          gap: 2,
+          gap: 1.5,
         }}
       >
         <Box
           aria-hidden
           sx={{
-            px: 1.25,
-            py: 0.75,
+            px: 1,
+            py: 0.5,
             backgroundColor: BRAND.green,
             color: '#fff',
-            fontWeight: 900,
-            fontSize: '0.8rem',
+            fontWeight: 800,
+            fontSize: '0.7rem',
             letterSpacing: '0.12em',
             lineHeight: 1,
-            borderRadius: 0,
+            borderRadius: 0.5,
             alignSelf: 'flex-start',
             flexShrink: 0,
           }}
@@ -160,9 +162,13 @@ export default function Home() {
 
       {/* How to get started: cards stagger in on mount (reduced-motion safe). */}
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: { xs: 4, sm: 5 } }}>
-        {[t('home.step1Text'), t('home.step2Text'), t('home.step3Text')].map((text, i) => (
-          <MotionItem key={i} index={i} style={CARD_MOTION_STYLE}>
-            <StepCard text={text} />
+        {[
+          { title: t('home.step1Title'), text: t('home.step1Text') },
+          { title: t('home.step2Title'), text: t('home.step2Text') },
+          { title: t('home.step3Title'), text: t('home.step3Text') },
+        ].map((s, i) => (
+          <MotionItem key={s.title} index={i} style={CARD_MOTION_STYLE}>
+            <StepCard title={s.title} text={s.text} />
           </MotionItem>
         ))}
       </Box>
@@ -174,7 +180,7 @@ export default function Home() {
           { title: t('home.featureQuizTitle'), text: t('home.featureQuizText') },
           { title: t('home.featureRoadmapTitle'), text: t('home.featureRoadmapText') },
         ].map((f, i) => (
-          <MotionItem key={i} index={i} style={CARD_MOTION_STYLE}>
+          <MotionItem key={f.title} index={i} style={CARD_MOTION_STYLE}>
             <FeatureCard title={f.title} text={f.text} />
           </MotionItem>
         ))}
@@ -240,6 +246,7 @@ const chalkboardSx = {
 function ChalkHeading({ children }: { children: ReactNode }) {
   return (
     <Typography
+      component="h3"
       sx={{
         fontWeight: 800,
         color: CHALK,
@@ -255,9 +262,12 @@ function ChalkHeading({ children }: { children: ReactNode }) {
   );
 }
 
-function StepCard({ text }: { text: string }) {
+function StepCard({ title, text }: { title: string; text: string }) {
   return (
     <Paper elevation={0} sx={chalkboardSx}>
+      <Box sx={{ mb: 0.75 }}>
+        <ChalkHeading>{title}</ChalkHeading>
+      </Box>
       <Typography variant="body2" sx={{ color: CHALK_DIM }}>
         {text}
       </Typography>

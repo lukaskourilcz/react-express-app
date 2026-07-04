@@ -31,7 +31,7 @@ import {
 } from '../lib/categories';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
-import { BRAND, brandButtonSx } from '../theme/MuiTheme';
+import { BRAND, brandButtonSx, visuallyHidden } from '../theme/MuiTheme';
 import { SharkFin } from './SharkFin';
 import { renderQuestion } from './CodeBlock';
 import { awardQuestXp } from '../lib/xp';
@@ -102,6 +102,9 @@ export default function Challenge() {
   const topupInFlight = useRef<Promise<void> | null>(null);
   // Guards the once-per-run XP/token payout on game over.
   const awardedRef = useRef(false);
+  // Focus target when the run ends, so AT users hear the transition.
+  const gameOverHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const [scoreSubmitting, setScoreSubmitting] = useState(false);
 
   const livesLeft = MAX_LIVES - livesLost;
 
@@ -253,11 +256,13 @@ export default function Challenge() {
   /* ─── leaderboard submit on game over ───────────────────────── */
 
   const onSubmitScore = useCallback(async () => {
+    if (scoreSubmitting) return;
     const cleaned = name.trim();
     if (!cleaned) {
       setSnack(t('challenge.nameRequired'));
       return;
     }
+    setScoreSubmitting(true);
     try {
       await submitChallengeScore({ name: cleaned, score });
       setSubmittedScore(true);
@@ -265,8 +270,10 @@ export default function Challenge() {
       void refreshLeaderboard();
     } catch (err) {
       setSnack(friendlyError(err));
+    } finally {
+      setScoreSubmitting(false);
     }
-  }, [name, score, refreshLeaderboard, t]);
+  }, [name, score, refreshLeaderboard, t, scoreSubmitting]);
 
   /* ─── countdown clock ───────────────────────────────────────── */
 
@@ -292,6 +299,10 @@ export default function Challenge() {
     if (phase === 'gameover' && !awardedRef.current) {
       awardedRef.current = true;
       awardQuestXp(challengeRunXp(score), 'quiz');
+    }
+    // Announce the run's end to AT by moving focus to the game-over heading.
+    if (phase === 'gameover') {
+      requestAnimationFrame(() => gameOverHeadingRef.current?.focus());
     }
   }, [phase, score]);
 
@@ -344,13 +355,11 @@ export default function Challenge() {
   if (phase === 'intro') {
     return (
       <Box sx={introWrapperSx}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 1, textAlign: 'center' }}>
+        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 2, textAlign: 'center' }}>
           {t('challenge.title')}
         </Typography>
-        <Typography variant="body1" color="text.secondary" sx={{ mb: 2, textAlign: 'center' }}>
-          {t('challenge.description')}
-        </Typography>
 
+        {/* The rules list is the single explanation — no duplicate prose above. */}
         <Paper variant="outlined" sx={{ p: 2, mb: 2, borderColor: BRAND.green }}>
           <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
             {t('challenge.howItWorks')}
@@ -415,17 +424,21 @@ export default function Challenge() {
   if (phase === 'gameover') {
     return (
       <Box sx={introWrapperSx}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 0.5, textAlign: 'center' }}>
+        <Typography
+          ref={gameOverHeadingRef}
+          tabIndex={-1}
+          variant="h4"
+          component="h1"
+          sx={{ fontWeight: 700, mb: 0.5, textAlign: 'center', outline: 'none' }}
+        >
           {t('challenge.gameOver')}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 1.5 }}>
+        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 1.5 }} role="status">
           {timeLeft <= 0 ? t('challenge.endedByTime') : t('challenge.endedByStrikes')}
         </Typography>
-        <Typography variant="h2" sx={{ textAlign: 'center', mb: 1, color: BRAND.green, fontWeight: 800 }}>
+        {/* The big number IS the score — no repeated caption underneath. */}
+        <Typography variant="h2" sx={{ textAlign: 'center', mb: 3, color: BRAND.green, fontWeight: 800 }}>
           {score}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 3 }}>
-          {t('challenge.finalScoreLabel', { count: score })}
         </Typography>
 
         <ChampionBadge champion={champion} loading={boardLoading} dim={!!champion && score > champion.score} />
@@ -438,14 +451,19 @@ export default function Challenge() {
             <Box sx={{ display: 'flex', gap: 1, flexDirection: { xs: 'column', sm: 'row' } }}>
               <TextField
                 size="small"
-                fullWidth
+                sx={{ flex: '1 1 auto' }}
                 label={t('challenge.nameLabel')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 inputProps={{ maxLength: 40 }}
               />
-              <Button variant="contained" onClick={() => void onSubmitScore()} sx={brandButtonSx}>
-                {t('challenge.submitScore')}
+              <Button
+                variant="contained"
+                onClick={() => void onSubmitScore()}
+                disabled={scoreSubmitting}
+                sx={{ ...brandButtonSx, flexShrink: 0, whiteSpace: 'nowrap' }}
+              >
+                {scoreSubmitting ? <CircularProgress size={18} sx={{ color: 'inherit' }} /> : t('challenge.submitScore')}
               </Button>
             </Box>
           </Paper>
@@ -482,9 +500,16 @@ export default function Challenge() {
   if (!current) return null;
 
   return (
-    <Box sx={{ maxWidth: 760, mx: 'auto', width: '100%', p: { xs: 1, sm: 2 } }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, gap: 1, flexWrap: 'wrap' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+    // One-viewport layout: fills the shell height; question text scrolls
+    // internally, answers + lock-in stay anchored near the bottom.
+    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', maxWidth: 760, mx: 'auto', width: '100%', p: { xs: 0.5, sm: 1 } }}>
+      {/* One-shot low-time announcement for screen readers (the visual cue is
+          colour + pulse, which AT users can't perceive). */}
+      <Box component="span" sx={visuallyHidden} aria-live="polite">
+        {timeLeft === LOW_TIME_S ? t('challenge.lowTime') : ''}
+      </Box>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, gap: 1, flexShrink: 0 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '1 1 auto', minWidth: 0 }}>
           <Typography variant="overline" color="text.secondary">
             {t('challenge.score')}
           </Typography>
@@ -492,7 +517,7 @@ export default function Challenge() {
             {score}
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
           <Box
             role="timer"
             aria-label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
@@ -520,9 +545,9 @@ export default function Challenge() {
         </Box>
       </Box>
 
-      <Card sx={{ borderTop: `4px solid ${BRAND.green}` }}>
-        <CardContent>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
+      <Card sx={{ borderTop: `4px solid ${BRAND.green}`, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <CardContent sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap', flexShrink: 0 }}>
             <Chip
               size="small"
               label={getCategoryLabel(current.category)}
@@ -539,18 +564,24 @@ export default function Challenge() {
             />
           </Box>
 
-          <Box sx={{ mb: 2 }}>{renderQuestion(current.question)}</Box>
+          {/* Scrollable question region — answers below keep their position. */}
+          <Box id="challenge-question" sx={{ mb: 2, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
+            {renderQuestion(current.question)}
+          </Box>
 
           <RadioGroup
             value={selected ?? ''}
             onChange={(e) => !lastResult && setSelected(parseInt(e.target.value, 10))}
+            aria-labelledby="challenge-question"
+            sx={{ flexShrink: 0, mt: 'auto' }}
           >
             {current.options.map((opt, idx) => {
               let bg: string | undefined;
               if (lastResult) {
-                if (idx === lastResult.correctAnswer) bg = 'rgba(46, 160, 67, 0.15)';
+                // Theme-derived tints so dark mode inherits the adjustment.
+                if (idx === lastResult.correctAnswer) bg = 'rgba(22, 163, 74, 0.15)';
                 else if (idx === lastResult.selectedIndex && !lastResult.isCorrect)
-                  bg = 'rgba(248, 81, 73, 0.15)';
+                  bg = 'rgba(220, 38, 38, 0.15)';
               }
               return (
                 <FormControlLabel
@@ -571,22 +602,27 @@ export default function Challenge() {
             })}
           </RadioGroup>
 
-          {lastResult && (
-            <Alert severity={lastResult.isCorrect ? 'success' : 'error'} sx={{ mt: 2 }}>
-              <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                {lastResult.isCorrect ? t('challenge.correct') : t('challenge.wrong')}
-              </Typography>
-              {lastResult.explanation && (
-                <Typography variant="body2" sx={{ mt: 0.5 }}>
-                  {lastResult.explanation}
+          {/* Live region: announces correct/strike + explanation to AT the
+              moment the grade lands. Capped height so a long explanation
+              scrolls instead of pushing the anchored answers around. */}
+          <Box aria-live="assertive" sx={{ flexShrink: 0 }}>
+            {lastResult && (
+              <Alert severity={lastResult.isCorrect ? 'success' : 'error'} sx={{ mt: 1.5, maxHeight: '28vh', overflowY: 'auto' }}>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                  {lastResult.isCorrect ? t('challenge.correct') : t('challenge.wrong')}
                 </Typography>
-              )}
-            </Alert>
-          )}
+                {lastResult.explanation && (
+                  <Typography variant="body2" sx={{ mt: 0.5 }}>
+                    {lastResult.explanation}
+                  </Typography>
+                )}
+              </Alert>
+            )}
+          </Box>
         </CardContent>
       </Card>
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5, gap: 1 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5, gap: 1, flexShrink: 0 }}>
         {!lastResult ? (
           <Button
             variant="contained"
@@ -684,8 +720,10 @@ function ChampionBadge({
 }
 
 function LeaderboardList({ board }: { board: ChallengeLeaderboard }) {
+  // role="list" restores list semantics that Safari/VoiceOver drop when
+  // list-style is none.
   return (
-    <Box component="ol" sx={{ m: 0, mt: 0.5, p: 0, listStyle: 'none' }}>
+    <Box component="ol" role="list" sx={{ m: 0, mt: 0.5, p: 0, listStyle: 'none' }}>
       {board.top.map((row, i) => (
         <Box
           key={row.id}

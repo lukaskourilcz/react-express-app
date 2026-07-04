@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { Box, Paper, Typography, LinearProgress, Chip, Button, Divider, Alert, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
+import type { TranslationKey } from '../i18n/translations';
 import {
   useRoadmapProgress,
   passedLevelCount,
@@ -24,73 +25,67 @@ import RoadmapTree from './RoadmapTree';
 
 interface Area {
   topic: RoadmapTopic;
-  label: string;
-  blurb: string;
+  labelKey: TranslationKey;
+  blurbKey: TranslationKey;
 }
 interface Pillar {
-  title: string;
-  intro: string;
+  id: string;
+  titleKey: TranslationKey;
+  introKey: TranslationKey;
   areas: Area[];
 }
 
+// Helper: each area maps 1:1 to a learning-path topic, and its label/blurb
+// live in the translation dictionaries under careerRoadmap.area.<topic>.*.
+function area(topic: RoadmapTopic): Area {
+  return {
+    topic,
+    labelKey: `careerRoadmap.area.${topic}.label` as TranslationKey,
+    blurbKey: `careerRoadmap.area.${topic}.blurb` as TranslationKey,
+  };
+}
+
 // The knowledge devShark actually covers, grouped the way the market thinks
-// about a full-stack engineer. Each area maps to a learning-path topic.
+// about a full-stack engineer. All copy comes from the careerRoadmap.* keys.
 const PILLARS: Pillar[] = [
   {
-    title: 'Frontend foundations',
-    intro: 'The bedrock. You cannot fake these — every interview and every codebase assumes them.',
-    areas: [
-      { topic: 'html', label: 'HTML', blurb: 'Semantics, forms, accessibility.' },
-      { topic: 'css', label: 'CSS', blurb: 'Layout, flexbox/grid, responsive design.' },
-      { topic: 'javascript', label: 'JavaScript', blurb: 'The language of the web — closures, async, the event loop.' },
-      { topic: 'typescript', label: 'TypeScript', blurb: 'Non-negotiable in modern teams.' },
-    ],
+    id: 'foundations',
+    titleKey: 'careerRoadmap.pillar.foundations.title',
+    introKey: 'careerRoadmap.pillar.foundations.intro',
+    areas: [area('html'), area('css'), area('javascript'), area('typescript')],
   },
   {
-    title: 'Frontend frameworks',
-    intro: 'Where most product work happens. React + a meta-framework is the default stack.',
-    areas: [
-      { topic: 'react', label: 'React', blurb: 'Components, hooks, state, rendering.' },
-      { topic: 'nextjs', label: 'Next.js', blurb: 'Routing, server components, data fetching.' },
-      { topic: 'rhf-zod', label: 'Forms & validation', blurb: 'React Hook Form + Zod — real apps are full of forms.' },
-    ],
+    id: 'frameworks',
+    titleKey: 'careerRoadmap.pillar.frameworks.title',
+    introKey: 'careerRoadmap.pillar.frameworks.intro',
+    areas: [area('react'), area('nextjs'), area('rhf-zod')],
   },
   {
-    title: 'Backend & the web',
-    intro: 'The "stack" half. You need to build and reason about the server, not just call it.',
-    areas: [
-      { topic: 'nodejs', label: 'Node.js', blurb: 'Modules, async, HTTP, Express, streams.' },
-      { topic: 'general', label: 'How the web works', blurb: 'HTTP, clients/servers, caching, auth basics.' },
-      { topic: 'internet', label: 'How the internet works', blurb: 'IP, DNS, packets, TCP/IP, HTTPS.' },
-    ],
+    id: 'backend',
+    titleKey: 'careerRoadmap.pillar.backend.title',
+    introKey: 'careerRoadmap.pillar.backend.intro',
+    areas: [area('nodejs'), area('general'), area('internet')],
   },
   {
-    title: 'Computer science',
-    intro: 'What separates someone who copies code from someone who can solve new problems.',
-    areas: [
-      { topic: 'dsa', label: 'Data structures & algorithms', blurb: 'Complexity, arrays, trees, graphs, sorting.' },
-      { topic: 'algorithms', label: 'Problem solving & math', blurb: 'Combinatorics, probability, bitwise, recurrences.' },
-    ],
+    id: 'cs',
+    titleKey: 'careerRoadmap.pillar.cs.title',
+    introKey: 'careerRoadmap.pillar.cs.intro',
+    areas: [area('dsa'), area('algorithms')],
   },
   {
-    title: 'Engineering for production',
-    intro: 'What turns a coder into an engineer who can design, ship, and run real systems — the senior half of the job.',
-    areas: [
-      { topic: 'databases', label: 'Databases & data modeling', blurb: 'SQL, schema design, indexing, transactions, N+1s.' },
-      { topic: 'system-design', label: 'System design at scale', blurb: 'Caching, queues, sharding, trade-offs, failure modes.' },
-      { topic: 'testing', label: 'Automated testing', blurb: 'Unit, integration and end-to-end — and what to test.' },
-      { topic: 'devops', label: 'DevOps & cloud', blurb: 'CI/CD, containers, observability, deploying to the cloud.' },
-      { topic: 'security', label: 'Security', blurb: 'AuthN/Z, OWASP Top 10, secrets, secure defaults.' },
-    ],
+    id: 'production',
+    titleKey: 'careerRoadmap.pillar.production.title',
+    introKey: 'careerRoadmap.pillar.production.intro',
+    areas: [area('databases'), area('system-design'), area('testing'), area('devops'), area('security')],
   },
 ];
 
 // The honest part: things a quiz app genuinely cannot give you. Seniority is
 // mostly this list plus years of shipping.
-const BEYOND: { label: string; detail: string }[] = [
-  { label: 'Real production experience', detail: 'Shipping, on-call, incidents, reading large unfamiliar codebases.' },
-  { label: 'Communication & judgement', detail: 'Code review, mentoring, scoping, saying no, product sense.' },
-  { label: 'Leadership & ownership', detail: 'Driving projects, mentoring others, and being accountable for outcomes.' },
+const BEYOND: { id: string; labelKey: TranslationKey; detailKey: TranslationKey }[] = [
+  { id: 'production', labelKey: 'careerRoadmap.beyond.production.label', detailKey: 'careerRoadmap.beyond.production.detail' },
+  { id: 'communication', labelKey: 'careerRoadmap.beyond.communication.label', detailKey: 'careerRoadmap.beyond.communication.detail' },
+  { id: 'leadership', labelKey: 'careerRoadmap.beyond.leadership.label', detailKey: 'careerRoadmap.beyond.leadership.detail' },
 ];
 
 const SENIOR_RANK_TITLE = 'Senior Developer';
@@ -147,32 +142,28 @@ export default function CareerRoadmap() {
           {t('roadmapPage.title')}
         </Typography>
         <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-          A straight-talking map of what it takes to make it as a senior full-stack engineer — and exactly how
-          far devShark can carry you. No hype: the path below is the knowledge base, not the finish line.
+          {t('careerRoadmap.headerBody')}
         </Typography>
       </Box>
 
       {/* Honesty banner */}
       <Alert severity="info" icon={false} sx={{ mb: 3, border: '1px solid', borderColor: 'divider' }}>
         <Typography variant="body2">
-          <strong>The honest version:</strong> senior full-stack is typically <strong>5–8+ years</strong> of
-          shipping real software. Knowledge is necessary but not sufficient — you also need the “Beyond devShark”
-          list below, which no quiz app can hand you. devShark gets your <strong>fundamentals</strong> genuinely
-          solid; the rest is reps in the real world.
+          <strong>{t('careerRoadmap.honestyLead')}</strong> {t('careerRoadmap.honestyBody')}
         </Typography>
       </Alert>
 
       {/* Track chooser — drives the headline %, the map and the pillars below. */}
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, mb: 3 }}>
         <Typography variant="overline" color="text.secondary">
-          Choose your track
+          {t('careerRoadmap.chooseTrack')}
         </Typography>
         <ToggleButtonGroup
           value={track}
           exclusive
           onChange={(_, v: typeof track | null) => v && setTrack(v)}
           size="small"
-          aria-label="Choose your track"
+          aria-label={t('careerRoadmap.chooseTrack')}
           sx={{ flexWrap: 'wrap', justifyContent: 'center' }}
         >
           {TRACK_ORDER.map((tk) => (
@@ -204,7 +195,7 @@ export default function CareerRoadmap() {
       <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 3, border: '1px solid', borderColor: 'divider', borderTop: `4px solid ${BRAND.green}`, borderRadius: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
           <Typography variant="overline" color="text.secondary" component="h2">
-            Your fundamentals progress
+            {t('careerRoadmap.progressTitle')}
           </Typography>
           <Chip size="small" label={TRACKS[track].label} sx={{ fontWeight: 700, backgroundColor: BRAND.greenSoft, color: BRAND.green }} />
         </Box>
@@ -213,7 +204,11 @@ export default function CareerRoadmap() {
             {overall.pct}%
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            {overall.passed} / {overall.total || '…'} learning-path levels passed on the {TRACKS[track].label} track
+            {t('careerRoadmap.progressCaption', {
+              passed: overall.passed,
+              total: overall.total || '…',
+              track: TRACKS[track].label,
+            })}
           </Typography>
         </Box>
         <LinearProgress
@@ -224,14 +219,9 @@ export default function CareerRoadmap() {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
           <Chip size="small" label={`${info.rank.emoji} ${rankTitle}`} sx={{ fontWeight: 700, backgroundColor: BRAND.greenSoft, color: 'text.primary' }} />
           <Typography variant="caption" color="text.secondary">
-            {reachedSenior ? (
-              'You’ve crossed this app’s Senior threshold — keep it sharp and go build real things.'
-            ) : (
-              <>
-                {xpToSenior.toLocaleString()} XP to devShark’s “Senior Developer” rank (a knowledge proxy, not a job
-                title. <strong>Yet</strong>.)
-              </>
-            )}
+            {reachedSenior
+              ? t('careerRoadmap.seniorReached')
+              : t('careerRoadmap.xpToSenior', { xp: xpToSenior.toLocaleString() })}
           </Typography>
         </Box>
       </Paper>
@@ -248,7 +238,13 @@ export default function CareerRoadmap() {
         <RoadmapTree structure={structure} track={track} />
       </Paper>
 
-      {/* The pillars, filtered to the chosen track (empty pillars are hidden). */}
+      {/* The pillars, filtered to the chosen track (empty pillars are hidden).
+          One shared CTA up top instead of repeating it under every pillar. */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+        <Button component={Link} to="/learn" size="small" sx={{ ...brandButtonSx, color: '#fff' }} variant="contained">
+          {t('careerRoadmap.continueCta')}
+        </Button>
+      </Box>
       {PILLARS.map((pillar) => {
         const areas = pillar.areas.filter((area) => inTrack(area.topic));
         if (areas.length === 0) return null;
@@ -260,12 +256,12 @@ export default function CareerRoadmap() {
         }
         const pPct = pct(pPassed, pTotal);
         return (
-          <Paper key={pillar.title} elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+          <Paper key={pillar.id} elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>{pillar.title}</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>{t(pillar.titleKey)}</Typography>
               <Chip size="small" label={`${pPct}%`} sx={{ fontWeight: 700, backgroundColor: pPct === 100 ? BRAND.green : BRAND.greenSoft, color: pPct === 100 ? '#fff' : BRAND.green }} />
             </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{pillar.intro}</Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{t(pillar.introKey)}</Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
               {areas.map((area) => {
                 const total = levelsFor(area.topic);
@@ -277,13 +273,13 @@ export default function CareerRoadmap() {
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
                         <Box aria-hidden sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{area.label}</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{t(area.labelKey)}</Typography>
                       </Box>
                       <Typography variant="caption" color="text.secondary">
-                        {total ? `${passed}/${total} levels` : '—'}
+                        {total ? t('careerRoadmap.areaLevels', { passed, total }) : '—'}
                       </Typography>
                     </Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, pl: 1.75 }}>{area.blurb}</Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, pl: 1.75 }}>{t(area.blurbKey)}</Typography>
                     <LinearProgress
                       variant="determinate"
                       value={aPct}
@@ -293,28 +289,24 @@ export default function CareerRoadmap() {
                 );
               })}
             </Box>
-            <Button component={Link} to="/learn" size="small" sx={{ mt: 1.5, ...brandButtonSx, color: '#fff' }} variant="contained">
-              Continue in the learning path →
-            </Button>
           </Paper>
         );
       })}
 
       {/* The honest gap */}
       <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mt: 3, border: '1px dashed', borderColor: 'warning.main', borderRadius: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>Beyond devShark — what you still have to earn</Typography>
+        <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('careerRoadmap.beyondTitle')}</Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-          devShark doesn’t teach these, and honestly most of them can’t be taught by any quiz — they’re learned by
-          building, breaking and shipping. This is the bulk of the gap to “senior”.
+          {t('careerRoadmap.beyondIntro')}
         </Typography>
         <Divider sx={{ mb: 1.5 }} />
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
           {BEYOND.map((b) => (
-            <Box key={b.label} sx={{ display: 'flex', gap: 1 }}>
+            <Box key={b.id} sx={{ display: 'flex', gap: 1 }}>
               <Box aria-hidden sx={{ color: 'warning.dark', fontWeight: 700 }}>○</Box>
               <Box>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>{b.label}</Typography>
-                <Typography variant="caption" color="text.secondary">{b.detail}</Typography>
+                <Typography variant="body2" sx={{ fontWeight: 600 }}>{t(b.labelKey)}</Typography>
+                <Typography variant="caption" color="text.secondary">{t(b.detailKey)}</Typography>
               </Box>
             </Box>
           ))}
@@ -322,7 +314,7 @@ export default function CareerRoadmap() {
       </Paper>
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 3 }}>
-        Master these fundamentals here, then go get the reps. That combination is what actually makes it in this market.
+        {t('careerRoadmap.footer')}
       </Typography>
     </Box>
   );

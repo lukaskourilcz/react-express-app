@@ -91,8 +91,8 @@ export default function XpToaster() {
           sx={{
             display: 'flex', alignItems: 'center', gap: 1, px: 2.25, py: 1.25, borderRadius: 999,
             color: '#fff', fontWeight: 800,
-            background: 'linear-gradient(150deg, #7be24a, #46a302)',
-            boxShadow: '0 6px 18px rgba(70,163,2,0.45)',
+            background: 'linear-gradient(150deg, #2e841d, #2d7a2d)',
+            boxShadow: '0 6px 18px rgba(46,132,29,0.45)',
           }}
         >
           <Box component="span" sx={{ fontSize: '1.15rem', lineHeight: 1 }} aria-hidden>⚡</Box>

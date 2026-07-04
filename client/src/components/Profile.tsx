@@ -30,7 +30,7 @@ import { useQuestXp, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp, levelForXp, displayTitle, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { friendlyError } from '../lib/api';
-import { BRAND, brandButtonSx } from '../theme/MuiTheme';
+import { BRAND } from '../theme/MuiTheme';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
 import { computeAchievements, readPerfectQuizCount, type Achievement } from '../lib/achievements';
 import { renderQuestion } from './CodeBlock';
@@ -309,21 +309,16 @@ function ProfileBody({
         </Box>
       </Box>
 
-      <Button
-        variant="contained"
-        fullWidth
-        onClick={() => navigate('/quiz')}
-        sx={{
-          py: 1.5,
-          fontSize: '0.95rem',
-          fontWeight: 600,
-          textTransform: 'none',
-          borderRadius: 1,
-          ...brandButtonSx,
-        }}
-      >
-        {isFirstTime ? t('profile.startQuiz') : t('profile.backToQuiz')}
-      </Button>
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
+        <Button
+          variant="text"
+          size="small"
+          onClick={() => navigate('/quiz')}
+          sx={{ textTransform: 'none', fontWeight: 600 }}
+        >
+          {isFirstTime ? t('profile.startQuiz') : t('profile.backToQuiz')}
+        </Button>
+      </Box>
     </Box>
   );
 }

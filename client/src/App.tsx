@@ -38,6 +38,20 @@ const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default:
 const Challenge = lazy(() => import('./components/Challenge'));
 const DevPage = lazy(() => import('./components/dev/DevPage'));
 
+// Route-transition variants, hoisted so the m.div props keep a stable identity
+// across App re-renders (App re-renders on every navigation — hottest path).
+const ROUTE_ANIM = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
+} as const;
+const ROUTE_ANIM_REDUCED = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+} as const;
+const ROUTE_TRANSITION = { duration: 0.2, ease: 'easeOut' } as const;
+
 // Pure module-level styler for the top-nav links — hoisting it out of the
 // component avoids a fresh object literal on every App render.
 const navLinkSx = (isActive: boolean) => ({
@@ -200,13 +214,15 @@ function App() {
       : location.pathname.startsWith('/play/')
         ? t('title.playMatch')
         : t('title.default');
-    const main = document.getElementById('main-content');
-    if (main) {
-      main.focus({ preventScroll: true });
-    }
+    // Move focus after the AnimatePresence enter transition (200ms) settles,
+    // so AT reads the new route's content rather than the exiting tree.
+    const timer = window.setTimeout(() => {
+      document.getElementById('main-content')?.focus({ preventScroll: true });
+    }, 230);
     // Manual SPA pageview (capture_pageview is off in the SDK). No-op unless
     // PostHog is configured.
     capturePageview(location.pathname);
+    return () => window.clearTimeout(timer);
   }, [location.pathname, t]);
 
   // The /dev console is a standalone admin surface — no app chrome, full width.
@@ -258,7 +274,8 @@ function App() {
           onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
           aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
           aria-pressed={settings.soundEffects}
-          sx={{ p: 0.25, color: settings.soundEffects ? BRAND.green : 'text.secondary', '& svg': { width: 14, height: 14 } }}
+          // ≥24×24px hit area (WCAG 2.5.8): 8px padding + 16px icon = 32px.
+          sx={{ p: 1, color: settings.soundEffects ? BRAND.green : 'text.secondary', '& svg': { width: 16, height: 16 } }}
         >
           {settings.soundEffects ? <SoundOnIcon /> : <SoundOffIcon />}
         </IconButton>
@@ -268,7 +285,7 @@ function App() {
           size="small"
           onClick={toggle}
           aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
-          sx={{ p: 0.25, color: 'text.secondary', '& svg': { width: 14, height: 14 } }}
+          sx={{ p: 1, color: 'text.secondary', '& svg': { width: 16, height: 16 } }}
         >
           {mode === 'light' ? <MoonIcon /> : <SunIcon />}
         </IconButton>
@@ -277,7 +294,20 @@ function App() {
   );
 
   return (
-    <Box sx={{ minHeight: '100vh', maxWidth: '100vw', overflowX: 'hidden', backgroundColor: 'background.default', display: 'flex', flexDirection: 'column' }}>
+    // One-screen shell: the app is exactly one viewport tall. Pages scroll
+    // INSIDE <main>, so the header and the ocean footer (waterline + fins) are
+    // always visible. `dvh` tracks the collapsing mobile URL bar.
+    <Box
+      sx={{
+        height: '100vh',
+        '@supports (height: 100dvh)': { height: '100dvh' },
+        maxWidth: '100vw',
+        overflow: 'hidden',
+        backgroundColor: 'background.default',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <Box
         component="a"
         href="#main-content"
@@ -286,7 +316,7 @@ function App() {
           left: -9999,
           top: 8,
           zIndex: 9999,
-          background: 'background.paper',
+          backgroundColor: 'background.paper',
           color: 'text.primary',
           px: 2,
           py: 1,
@@ -324,7 +354,9 @@ function App() {
                 edge="start"
                 aria-label={t('nav.menu')}
                 onClick={() => setMobileNavOpen(true)}
-                sx={{ display: { xs: 'inline-flex', md: 'none' }, mr: 0.5, color: 'text.secondary' }}
+                // Nav links appear from 760px (tablets), not MUI's 900px `md`,
+                // so a 768px iPad doesn't get a mostly-empty toolbar.
+                sx={{ display: 'inline-flex', '@media (min-width:760px)': { display: 'none' }, mr: 0.5, color: 'text.secondary' }}
               >
                 <MenuIcon />
               </IconButton>
@@ -341,8 +373,8 @@ function App() {
             </Box>
 
             {/* Centre slot: primary nav links, perfectly centred between logo
-                and auth widget on md+. Hidden on small screens (drawer). */}
-            <Box sx={{ flex: '1 1 0', display: { xs: 'none', md: 'flex' }, justifyContent: 'center', alignItems: 'center', gap: 2, minWidth: 0 }}>
+                and auth widget from 760px up. Below that, the drawer. */}
+            <Box sx={{ flex: '1 1 0', display: 'none', '@media (min-width:760px)': { display: 'flex' }, justifyContent: 'center', alignItems: 'center', gap: 2, minWidth: 0 }}>
               {primaryNavItems.map((item) => (
                 <Button
                   key={item.to}
@@ -371,7 +403,7 @@ function App() {
           anchor="left"
           open={mobileNavOpen}
           onClose={() => setMobileNavOpen(false)}
-          sx={{ display: { xs: 'block', md: 'none' } }}
+          sx={{ display: 'block', '@media (min-width:760px)': { display: 'none' } }}
         >
           <Box sx={{ width: 240 }} role="presentation" onClick={() => setMobileNavOpen(false)}>
             <Typography variant="h6" sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: 'text.primary' }}>
@@ -401,22 +433,28 @@ function App() {
         id="main-content"
         tabIndex={-1}
         sx={{
+          // The ONLY scroll container in the app: pages taller than the
+          // viewport scroll here, keeping the chrome + ocean footer in place.
           flex: 1,
+          minHeight: 0,
+          overflowY: 'auto',
+          overflowX: 'hidden',
           display: 'flex',
-          // Vertically centre the quiz card on the quiz screen; everywhere else
-          // keep content top-aligned so long pages don't bounce when growing.
-          alignItems: isQuiz ? 'center' : 'flex-start',
           justifyContent: 'center',
           padding: isDev
             ? { xs: '0.5rem', sm: '0.5rem 1rem' }
             : isQuiz
-              ? { xs: '1rem', sm: '1.25rem 1.5rem' }
-              : { xs: '1.25rem 1rem', sm: '3rem 1.5rem' },
+              ? { xs: '0.75rem', sm: '1rem 1.5rem' }
+              : { xs: '1rem', sm: '1.5rem' },
           boxSizing: 'border-box',
           outline: 'none',
         }}
       >
-        <Box sx={{ width: '100%', maxWidth: contentMaxWidth }}>
+        {/* minHeight 100% + flex column: normal pages take their natural height
+            (and scroll within <main>); question screens (quiz/challenge/lesson)
+            set flex:1 on their root to fill EXACTLY one viewport, keeping the
+            answers anchored in a stable position with no page scroll. */}
+        <Box sx={{ width: '100%', maxWidth: contentMaxWidth, minWidth: 0, minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
           {/* Route transition: each navigation fades/slides the new view in.
               `mode="wait"` lets the old view fade out first; `initial={false}`
               skips the animation on the very first load. Reduced-motion users
@@ -425,10 +463,9 @@ function App() {
           <AnimatePresence mode="wait" initial={false}>
             <m.div
               key={location.pathname}
-              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
-              animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
+              style={{ flex: 1, minHeight: 0, minWidth: 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' }}
+              {...(reduceMotion ? ROUTE_ANIM_REDUCED : ROUTE_ANIM)}
+              transition={ROUTE_TRANSITION}
             >
               <Suspense fallback={<RouteLoader />}>
                 <Routes location={location}>
@@ -451,14 +488,15 @@ function App() {
         </Box>
       </Box>
 
-      {showChrome && (
+      {/* devShark ocean: pinned to the bottom of the fixed-height shell, so the
+          waterline + surfacing fins are visible on every page, always. Hidden
+          only in the /dev admin console. */}
+      {!isDev && (
         <Box
           component="footer"
           aria-hidden
-          sx={{ position: 'relative', width: '100%', height: 30, mt: 'auto', pointerEvents: 'none' }}
+          sx={{ position: 'relative', width: '100%', height: 30, flexShrink: 0, overflow: 'hidden', pointerEvents: 'none' }}
         >
-          {/* devShark ocean: a full-width wavy surface pinned to the very bottom,
-              with two dorsal fins surfacing at random spots each page load. */}
           <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 8 }}>
             <Waterline />
           </Box>

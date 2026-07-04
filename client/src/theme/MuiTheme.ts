@@ -1,10 +1,28 @@
 import { createTheme, responsiveFontSizes, type ThemeOptions } from '@mui/material/styles';
 import type { PaletteMode } from '@mui/material';
 
+/**
+ * devShark palette — one source of truth for every accent in the app.
+ *
+ *   green   #2d7a2d  brand / primary actions / success moments ("shark green")
+ *   ocean   #0e7490  informational accents, links, water flourishes
+ *   gold    #f5a623  checkpoints, trophies, celebration
+ *   coral   #e4506e  hearts / lives (decorative danger — distinct from error red)
+ *
+ * Use these tokens (or the MUI palette they feed) instead of raw hexes so
+ * light/dark tuning happens in exactly one place.
+ */
 export const BRAND = {
   green: '#2d7a2d',
   greenHover: '#246124',
   greenSoft: 'rgba(45, 122, 45, 0.08)',
+  /** Legible green for small text on dark surfaces (4.5:1 on #181a20). */
+  greenBright: '#4caf50',
+  ocean: '#0e7490',
+  oceanSoft: 'rgba(14, 116, 144, 0.08)',
+  gold: '#f5a623',
+  goldDark: '#c77f00',
+  coral: '#e4506e',
   textTertiary: '#6b6b6b',
 };
 
@@ -25,15 +43,20 @@ export const CATEGORY_GRADIENT =
 const baseOptions = (mode: PaletteMode): ThemeOptions => ({
   palette: {
     mode,
+    // Brand green is the primary so every default MUI control (focus rings,
+    // progress bars, contained buttons, switches) inherits it without a
+    // per-call-site override.
     primary: {
-      main: mode === 'light' ? '#1a1a1a' : '#ffffff',
-      light: mode === 'light' ? '#333333' : '#e5e5e5',
-      dark: mode === 'light' ? '#000000' : '#bdbdbd',
+      main: mode === 'light' ? BRAND.green : BRAND.greenBright,
+      light: BRAND.greenBright,
+      dark: BRAND.greenHover,
+      contrastText: '#ffffff',
     },
     secondary: {
-      main: '#6b6b6b',
-      light: '#8a8a8a',
-      dark: '#444444',
+      main: BRAND.ocean,
+      light: '#22a3c4',
+      dark: '#0a5566',
+      contrastText: '#ffffff',
     },
     success: {
       main: '#16a34a',
@@ -46,14 +69,14 @@ const baseOptions = (mode: PaletteMode): ThemeOptions => ({
       dark: '#b91c1c',
     },
     warning: {
-      main: '#d97706',
+      main: BRAND.gold,
       light: '#fbbf24',
-      dark: '#b45309',
+      dark: BRAND.goldDark,
     },
     info: {
-      main: '#2563eb',
-      light: '#60a5fa',
-      dark: '#1d4ed8',
+      main: BRAND.ocean,
+      light: '#22a3c4',
+      dark: '#0a5566',
     },
     background: {
       default: mode === 'light' ? '#f8f9fa' : '#0f1115',

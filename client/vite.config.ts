@@ -42,6 +42,7 @@ export default defineConfig({
             '@emotion/react', '@emotion/styled',
           ],
           router: ['react-router-dom'],
+          tanstack: ['@tanstack/react-query', '@tanstack/query-core'],
           supabase: ['@supabase/supabase-js'],
           // Note: `motion` and `posthog-js` are intentionally NOT pinned to a
           // manual chunk. Motion's heavy DOM-animation features are loaded via a

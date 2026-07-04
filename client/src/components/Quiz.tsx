@@ -18,6 +18,11 @@ import {
   IconButton,
   Skeleton,
   Snackbar,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import { useAuth, getUserProfile } from '../lib/auth';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
@@ -116,6 +121,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [snack, setSnack] = useState<string | null>(null);
   const [mode, setMode] = useState<QuizMode>('standard');
   const [reportTarget, setReportTarget] = useState<string | null>(null);
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [settings] = useSettings();
 
   const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
@@ -412,10 +418,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     setError(null);
   };
 
-  const handleAbandon = () => {
-    if (window.confirm('Leave this quiz? Your progress will be lost.')) {
-      handleRestart();
-    }
+  // In-app confirm dialog (window.confirm is blocked in many mobile WebViews
+  // and bypasses i18n).
+  const handleAbandon = () => setLeaveConfirmOpen(true);
+  const confirmAbandon = () => {
+    setLeaveConfirmOpen(false);
+    handleRestart();
   };
 
   const toggleBookmark = (q: Question, correctIndex: number, explanation: string) => {
@@ -560,7 +568,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     return (
       <Box
         sx={{
+          my: 'auto',
           mx: 'auto',
+          width: '100%',
           p: { xs: 2, sm: 3 },
           backgroundColor: 'background.paper',
           borderRadius: 2,
@@ -573,54 +583,32 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         <Typography variant="h5" component="h1" sx={{ mb: 0.5, fontWeight: 600, textAlign: 'center' }}>
           {t('quiz.title')}
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2, fontSize: '0.85rem', textAlign: 'center' }}>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontSize: '0.85rem', textAlign: 'center' }}>
           {t('quiz.subtitle')}
         </Typography>
 
-        <Button
-          fullWidth
-          onClick={startDailyChallenge}
-          variant="outlined"
-          sx={{
-            mb: 2,
-            py: 1,
-            textTransform: 'none',
-            borderColor: BRAND.green,
-            color: BRAND.green,
-            display: 'flex',
-            justifyContent: 'space-between',
-            '&:hover': { borderColor: BRAND.greenHover, backgroundColor: 'rgba(45,122,45,0.06)' },
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span aria-hidden>🗓️</span>
-            <span>{t('quiz.todaysChallenge')}</span>
-          </span>
-          <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>{t('quiz.dailyMeta')}</span>
-        </Button>
-
-        <Button
-          fullWidth
-          component={Link}
-          to="/challenge"
-          variant="outlined"
-          sx={{
-            mb: 2,
-            py: 1,
-            textTransform: 'none',
-            borderColor: BRAND.green,
-            color: BRAND.green,
-            display: 'flex',
-            justifyContent: 'space-between',
-            '&:hover': { borderColor: BRAND.greenHover, backgroundColor: 'rgba(45,122,45,0.06)' },
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span aria-hidden>🦈</span>
-            <span>{t('challenge.cta')}</span>
-          </span>
-          <span style={{ opacity: 0.7, fontSize: '0.8rem' }}>{t('challenge.ctaSubtitle')}</span>
-        </Button>
+        {/* Secondary modes as quiet links — the single primary CTA on this
+            screen is "Start quiz" below. */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+          <Button
+            onClick={startDailyChallenge}
+            variant="text"
+            size="small"
+            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { color: BRAND.green } }}
+          >
+            {t('quiz.todaysChallenge')}
+          </Button>
+          <Box component="span" aria-hidden sx={{ color: 'text.disabled', alignSelf: 'center', fontSize: '0.7rem', display: { xs: 'none', sm: 'inline' } }}>•</Box>
+          <Button
+            component={Link}
+            to="/challenge"
+            variant="text"
+            size="small"
+            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { color: BRAND.green } }}
+          >
+            {t('challenge.cta')}
+          </Button>
+        </Box>
 
         <Box component="fieldset" sx={{ mb: 2.5, p: 0, border: 0 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
@@ -635,7 +623,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               {isAllSelected ? t('quiz.deselectAll') : t('quiz.selectAll')}
             </Button>
           </Box>
-          <Box role="group" aria-label={t('quiz.categoriesAria')} sx={{ display: 'flex', flexWrap: 'wrap', gap: '5px', justifyContent: 'center' }}>
+          <Box role="group" aria-label={t('quiz.categoriesAria')} sx={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
             {displayedCategoryOptions.map((cat) => {
               const selected = selectedCategories.includes(cat.value);
               return (
@@ -663,8 +651,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                     borderRadius: 1,
                     fontWeight: selected ? 600 : 500,
                     fontSize: '0.72rem',
-                    height: 26,
-                    '& .MuiChip-label': { px: 0.9 },
+                    // 32px tall + the row's 6px gap keeps taps comfortably
+                    // above the 24px WCAG minimum without ballooning the grid.
+                    height: 32,
+                    '& .MuiChip-label': { px: 1.1 },
                     '&:hover': { backgroundColor: 'action.hover' },
                   }}
                 />
@@ -682,11 +672,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               </Button>
             </Box>
           )}
-          {attemptedStart && selectedCategories.length === 0 && (
-            <Typography variant="caption" color="error" id="categories-error" role="alert" sx={{ mt: 1, display: 'block' }}>
-              {t('quiz.selectAtLeastOne')}
-            </Typography>
-          )}
+          {/* Always in the DOM so the Start button's aria-describedby target
+              exists whenever it is referenced. */}
+          <Typography variant="caption" color="error" id="categories-error" role="alert" sx={{ mt: 1, display: 'block' }}>
+            {attemptedStart && selectedCategories.length === 0 ? t('quiz.selectAtLeastOne') : ''}
+          </Typography>
         </Box>
 
         {selectedCategories.length > 0 && (
@@ -1018,16 +1008,19 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const remaining = questions.length - answered;
 
   return (
-    <>
+    // One-viewport question layout: the card fills the remaining shell height,
+    // the question text scrolls internally if long, and the answers + nav stay
+    // anchored at a stable position (bottom region) on every question.
+    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 680, mx: 'auto' }}>
       {error && (
-        <Alert severity="error" role="alert" onClose={() => setError(null)} sx={{ mb: 2 }}>
+        <Alert severity="error" role="alert" onClose={() => setError(null)} sx={{ mb: 1.5, flexShrink: 0 }}>
           {error}
         </Alert>
       )}
 
-      <Card className="quiz-card">
-        <CardContent className="quiz-card-content">
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+      <Card className="quiz-card" sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+        <CardContent className="quiz-card-content" sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexShrink: 0 }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
               {currentIndex + 1}/{questions.length}
             </Typography>
@@ -1048,7 +1041,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, gap: 1, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, gap: 1, flexWrap: 'wrap', flexShrink: 0 }}>
             <Chip
               label={getCategoryLabel(currentQuestion.category)}
               size="small"
@@ -1077,14 +1070,20 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
           <Box
             component="fieldset"
-            sx={{ p: 0, border: 0, m: 0 }}
+            sx={{ p: 0, border: 0, m: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
             aria-describedby={`question-text-${currentQuestion.id}`}
           >
             <Typography component="legend" sx={visuallyHidden}>
               {t('quiz.questionOf', { current: currentIndex + 1, total: questions.length })}
             </Typography>
 
-            <Box id={`question-text-${currentQuestion.id}`} className="quiz-question-text" sx={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+            {/* Only the question text scrolls when long — the answers below
+                keep their anchored position. */}
+            <Box
+              id={`question-text-${currentQuestion.id}`}
+              className="quiz-question-text"
+              sx={{ display: 'flex', alignItems: 'flex-start', gap: '4px', flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}
+            >
               <Box sx={{ flex: 1 }}>{renderQuestion(currentQuestion.question)}</Box>
               {currentQuestion.introduction && (
                 <ClickAwayListener onClickAway={() => setRevealedHints((prev) => ({ ...prev, [currentQuestion.id]: false }))}>
@@ -1099,14 +1098,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       slotProps={{
                         tooltip: {
                           sx: {
-                            backgroundColor: '#333',
+                            backgroundColor: 'grey.800',
                             fontSize: '0.82rem',
                             lineHeight: 1.6,
                             p: 1.5,
                             maxWidth: 320,
                           },
                         },
-                        arrow: { sx: { color: '#333' } },
+                        arrow: { sx: { color: 'grey.800' } },
                       }}
                     >
                       <IconButton
@@ -1134,6 +1133,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               value={answers[currentQuestion.id] ?? ''}
               onChange={(e) => handleAnswer(currentQuestion.id, parseInt(e.target.value, 10))}
               aria-labelledby={`question-text-${currentQuestion.id}`}
+              sx={{ flexShrink: 0, mt: 'auto' }}
             >
               <div className="quiz-options-container">
                 {currentQuestion.options.map((option, index) => {
@@ -1150,7 +1150,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 })}
               </div>
             </RadioGroup>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' }, mt: 1, flexShrink: 0 }}>
               {t('quiz.keyboardTip', { max: currentQuestion.options.length })}
             </Typography>
           </Box>
@@ -1196,7 +1196,21 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         onClose={() => setReportTarget(null)}
         onSubmit={handleReport}
       />
-    </>
+      <Dialog open={leaveConfirmOpen} onClose={() => setLeaveConfirmOpen(false)} aria-labelledby="leave-quiz-title">
+        <DialogTitle id="leave-quiz-title">{t('quiz.leaveTitle')}</DialogTitle>
+        <DialogContent>
+          <DialogContentText>{t('quiz.leaveBody')}</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLeaveConfirmOpen(false)} autoFocus sx={{ textTransform: 'none' }}>
+            {t('quiz.leaveCancel')}
+          </Button>
+          <Button onClick={confirmAbandon} color="error" sx={{ textTransform: 'none' }}>
+            {t('quiz.leaveConfirm')}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 }
 

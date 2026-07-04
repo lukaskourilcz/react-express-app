@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Box,
   Paper,
@@ -8,6 +9,7 @@ import {
   Avatar,
   Skeleton,
   Chip,
+  Button,
 } from '@mui/material';
 import {
   type LeaderboardGlobalEntry,
@@ -56,12 +58,18 @@ function Leaderboard() {
         sx={{
           mb: 2,
           width: { xs: '100%', sm: 'auto' },
-          '& .MuiToggleButtonGroup-grouped': { flex: { xs: 1, sm: 'initial' } },
+          '& .MuiToggleButtonGroup-grouped': { flex: { xs: 1, sm: 'initial' }, minWidth: 0 },
         }}
       >
-        <ToggleButton value="global">{t('leaderboard.allTime')}</ToggleButton>
-        <ToggleButton value="daily">{t('leaderboard.today')}</ToggleButton>
-        <ToggleButton value="category">{t('leaderboard.byCategory')}</ToggleButton>
+        <ToggleButton value="global">
+          <EllipsisLabel>{t('leaderboard.allTime')}</EllipsisLabel>
+        </ToggleButton>
+        <ToggleButton value="daily">
+          <EllipsisLabel>{t('leaderboard.today')}</EllipsisLabel>
+        </ToggleButton>
+        <ToggleButton value="category">
+          <EllipsisLabel>{t('leaderboard.byCategory')}</EllipsisLabel>
+        </ToggleButton>
       </ToggleButtonGroup>
 
       {tab === 'category' && (
@@ -112,6 +120,14 @@ function Leaderboard() {
                 ? t('leaderboard.noCategoryAttempts', { label: getCategoryLabel(category) })
                 : t('leaderboard.noEntries')}
             </Typography>
+            <Button
+              component={Link}
+              to="/quiz"
+              size="small"
+              sx={{ mt: 1.5, textTransform: 'none', fontWeight: 600 }}
+            >
+              {t('leaderboard.emptyCta')}
+            </Button>
           </Box>
         )}
 
@@ -192,6 +208,19 @@ function Row({ rank, entry, tab }: { rank: number; entry: Entry; tab: Tab }) {
           {primaryLabel}
         </Typography>
       </Box>
+    </Box>
+  );
+}
+
+// Toggle labels come from i18n and can run long (especially in Czech); clip
+// with an ellipsis instead of letting the button row overflow on narrow screens.
+function EllipsisLabel({ children }: { children: ReactNode }) {
+  return (
+    <Box
+      component="span"
+      sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+    >
+      {children}
     </Box>
   );
 }

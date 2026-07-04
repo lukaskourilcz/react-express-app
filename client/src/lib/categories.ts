@@ -47,7 +47,7 @@ export const OWNER_EMAIL = 'kouril.lukas@gmail.com';
 export const PRIVATE_CATEGORIES: CategoryType[] = [];
 
 // Categories whose logo color is light, so they need dark text for contrast.
-const DARK_TEXT_CATEGORIES = new Set(['javascript', 'react']);
+const DARK_TEXT_CATEGORIES = new Set(['javascript', 'react', 'abbreviations', 'general', 'cool-stuff']);
 export const onCategoryColorText = (cat: string) =>
   DARK_TEXT_CATEGORIES.has(cat) ? '#1a1a1a' : '#fff';
 export const getCategoryHexColor = (category: string) =>

@@ -139,7 +139,8 @@ function TopicCard({
   return (
     <Box
       sx={{
-        width: { xs: '100%', sm: 232 },
+        flex: '1 1 200px',
+        maxWidth: { xs: '100%', sm: 260 },
         borderRadius: 2,
         border: '1px solid',
         borderColor: complete ? color : unlocked ? 'divider' : 'transparent',
@@ -212,7 +213,7 @@ function PartPill({
   if (locked) {
     return (
       <Tooltip title={title} arrow>
-        <Box sx={sx} aria-label={title}>{part}</Box>
+        <Box role="img" tabIndex={0} sx={sx} aria-label={title}>{part}</Box>
       </Tooltip>
     );
   }
