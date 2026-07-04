@@ -9213,9 +9213,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
   },
   "rm-db-63": {
     introduction: "Soustřeďte se na hlavní myšlenku, která se ověřuje, a vyřaďte možnosti, které zjevně nesedí. Zaměřte se na omezení (constraints).",
-    question: "Porušení omezení DEFERRABLE / cizího klíče typicky:",
-    options: ["Bude tiše ignorováno", "Způsobí selhání problematického příkazu (nebo transakce)", "Zruší tabulku", "Automaticky převede hodnotu na NULL"],
-    explanation: "Porušení omezení vyvolá chybu a přeruší příkaz (nebo transakci), čímž chrání integritu dat.",
+    question: "Vložíš (INSERT) řádek, jehož cizí klíč ukazuje na neexistujícího rodiče. Co databáze udělá?",
+    options: ["Špatný odkaz tiše ignoruje", "Odmítne příkaz s chybou porušení omezení", "Zruší tabulku", "Automaticky převede hodnotu na NULL"],
+    explanation: "Porušení cizího klíče způsobí, že problematický příkaz selže s chybou (a neošetřená chyba přeruší transakci), čímž se chrání referenční integrita.",
   },
   "rm-db-64": {
     introduction: "Soustřeďte se na hlavní myšlenku, která se ověřuje, a vyřaďte možnosti, které zjevně nesedí. Zaměřte se na souběžnost.",

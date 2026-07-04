@@ -1,0 +1,3479 @@
+{
+ "appliedAt": "2026-07-04",
+ "mechanism": "question_edits soft-delete (deleted=true) via Supabase \u2014 restorable in /dev -> Questions",
+ "policy": {
+  "standard categories": "full triage cut list, except pure trivial_recall items with relevance >= 4 (kept as intended beginner drills)",
+  "recall-by-design categories (abbreviations, cool-stuff, dev-world)": "trivial_recall gate exempted; cut only ambiguous, duplicate, or mean < 2.5",
+  "extra": "rm-react-120 dropped as a judge-flagged near-duplicate of rm-react-116"
+ },
+ "count": 431,
+ "dropped": [
+  {
+   "id": "abbr-26",
+   "category": "dev-world",
+   "mean": 1.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-27",
+   "category": "dev-world",
+   "mean": 1.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-28",
+   "category": "dev-world",
+   "mean": 1.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-29",
+   "category": "dev-world",
+   "mean": 1.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-30",
+   "category": "dev-world",
+   "mean": 1.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-31",
+   "category": "dev-world",
+   "mean": 1.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-82",
+   "category": "cool-stuff",
+   "mean": 1.25,
+   "reasons": [
+    "ambiguous",
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-39",
+   "category": "javascript",
+   "mean": 1.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-6",
+   "category": "dev-world",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-6",
+   "category": "javascript",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-13",
+   "category": "javascript",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-24",
+   "category": "javascript",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-33",
+   "category": "javascript",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-html-5",
+   "category": "html",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-algorithms-42",
+   "category": "algorithms",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-algorithms-43",
+   "category": "algorithms",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-algorithms-44",
+   "category": "algorithms",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-algorithms-45",
+   "category": "algorithms",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-algorithms-47",
+   "category": "algorithms",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-algorithms-48",
+   "category": "algorithms",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-27",
+   "category": "cool-stuff",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-115",
+   "category": "cool-stuff",
+   "mean": 1.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "274",
+   "category": "react",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "310",
+   "category": "nodejs",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "405",
+   "category": "html",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "455",
+   "category": "css",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-2",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-3",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-4",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-5",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-7",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-8",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-9",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-10",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-11",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-12",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-13",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-14",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-15",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-17",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-20",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-21",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-22",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-23",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-24",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-25",
+   "category": "dev-world",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-1",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-2",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-4",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-5",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-7",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-9",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-10",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-14",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-15",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-16",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-23",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-25",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-26",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-27",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-28",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-29",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-30",
+   "category": "javascript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-ts-17",
+   "category": "typescript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-ts-18",
+   "category": "typescript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-ts-22",
+   "category": "typescript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-ts-33",
+   "category": "typescript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-ts-41",
+   "category": "typescript",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-next-3",
+   "category": "nextjs",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-node-5",
+   "category": "nodejs",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-node-46",
+   "category": "nodejs",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-git-6",
+   "category": "git",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-html-19",
+   "category": "html",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-dsa-25",
+   "category": "dsa",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-algorithms-41",
+   "category": "algorithms",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-algorithms-46",
+   "category": "algorithms",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-1",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-7",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-11",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-13",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-14",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-23",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-34",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-36",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-47",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-53",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-61",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-62",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-64",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-75",
+   "category": "abbreviations",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-2",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-3",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-4",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-8",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-17",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-18",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-19",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-21",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-22",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-23",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-25",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-26",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-28",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-29",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-30",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-31",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-32",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-41",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-42",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-44",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-45",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-49",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-50",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-51",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-52",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-54",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-58",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-61",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-63",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-65",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-69",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-70",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-72",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-73",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-76",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-77",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-78",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-80",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-81",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-84",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-85",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "ambiguous"
+   ]
+  },
+  {
+   "id": "rm-cool-86",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-87",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-91",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-94",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-97",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-99",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-101",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-102",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-103",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-109",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-113",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-114",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-117",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-118",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-119",
+   "category": "cool-stuff",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-db-2",
+   "category": "databases",
+   "mean": 2,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "162",
+   "category": "javascript",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "195",
+   "category": "react",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "488",
+   "category": "css",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "495",
+   "category": "css",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-1",
+   "category": "dev-world",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-16",
+   "category": "dev-world",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-18",
+   "category": "dev-world",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-19",
+   "category": "dev-world",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-32",
+   "category": "dev-world",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-34",
+   "category": "dev-world",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-35",
+   "category": "dev-world",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-36",
+   "category": "dev-world",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-37",
+   "category": "dev-world",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "abbr-41",
+   "category": "dev-world",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-12",
+   "category": "javascript",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-js-20",
+   "category": "javascript",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-ts-6",
+   "category": "typescript",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-react-21",
+   "category": "react",
+   "mean": 2.25,
+   "reasons": [
+    "ambiguous"
+   ]
+  },
+  {
+   "id": "rm-next-120",
+   "category": "nextjs",
+   "mean": 2.25,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-node-31",
+   "category": "nodejs",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-node-62",
+   "category": "nodejs",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-node-64",
+   "category": "nodejs",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-node-72",
+   "category": "nodejs",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-node-87",
+   "category": "nodejs",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-git-103",
+   "category": "git",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-html-1",
+   "category": "html",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall",
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-html-16",
+   "category": "html",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-2",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-3",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-4",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-6",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-8",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-9",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-10",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-12",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-20",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-21",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-26",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-31",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-35",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-37",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-41",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-42",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-43",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-46",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-51",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-52",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-57",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-58",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-59",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-60",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-63",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-65",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-66",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-68",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-73",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-74",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-79",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-81",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-82",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-85",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-86",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-87",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-96",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-98",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-99",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-100",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-102",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-103",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-104",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-112",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-113",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-115",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-abbr-116",
+   "category": "abbreviations",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-1",
+   "category": "cool-stuff",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-24",
+   "category": "cool-stuff",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-cool-75",
+   "category": "cool-stuff",
+   "mean": 2.25,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-cool-79",
+   "category": "cool-stuff",
+   "mean": 2.25,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-cool-112",
+   "category": "cool-stuff",
+   "mean": 2.25,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "14",
+   "category": "react",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "353",
+   "category": "nodejs",
+   "mean": 2.5,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "413",
+   "category": "html",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "415",
+   "category": "html",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "423",
+   "category": "html",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "439",
+   "category": "html",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "441",
+   "category": "html",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "475",
+   "category": "css",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "481",
+   "category": "css",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "486",
+   "category": "css",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-42",
+   "category": "javascript",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-ts-1",
+   "category": "typescript",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-next-57",
+   "category": "nextjs",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-next-58",
+   "category": "nextjs",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-next-59",
+   "category": "nextjs",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-next-62",
+   "category": "nextjs",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-node-57",
+   "category": "nodejs",
+   "mean": 2.5,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-node-58",
+   "category": "nodejs",
+   "mean": 2.5,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-node-59",
+   "category": "nodejs",
+   "mean": 2.5,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-node-60",
+   "category": "nodejs",
+   "mean": 2.5,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-git-47",
+   "category": "git",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-git-63",
+   "category": "git",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-html-83",
+   "category": "html",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-html-110",
+   "category": "html",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-html-112",
+   "category": "html",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-dsa-29",
+   "category": "dsa",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-dsa-30",
+   "category": "dsa",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-dsa-32",
+   "category": "dsa",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-dsa-42",
+   "category": "dsa",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-dsa-47",
+   "category": "dsa",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-dsa-50",
+   "category": "dsa",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-dsa-89",
+   "category": "dsa",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-dsa-90",
+   "category": "dsa",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-algorithms-1",
+   "category": "algorithms",
+   "mean": 2.5,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-2",
+   "category": "algorithms",
+   "mean": 2.5,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-3",
+   "category": "algorithms",
+   "mean": 2.5,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-6",
+   "category": "algorithms",
+   "mean": 2.5,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-8",
+   "category": "algorithms",
+   "mean": 2.5,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-25",
+   "category": "algorithms",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-ai-27",
+   "category": "ai",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-rhf-5",
+   "category": "rhf-zod",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-rhf-7",
+   "category": "rhf-zod",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-rhf-30",
+   "category": "rhf-zod",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-rhf-40",
+   "category": "rhf-zod",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-sysdesign-41",
+   "category": "system-design",
+   "mean": 2.5,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-devops-100",
+   "category": "devops",
+   "mean": 2.5,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "157",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "158",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "176",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "215",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "227",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "238",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "247",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "260",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "261",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "267",
+   "category": "react",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "272",
+   "category": "react",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "273",
+   "category": "react",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "275",
+   "category": "react",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "301",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "302",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "304",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "352",
+   "category": "nodejs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "416",
+   "category": "html",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "417",
+   "category": "html",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "427",
+   "category": "html",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "434",
+   "category": "html",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "435",
+   "category": "html",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "438",
+   "category": "html",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "456",
+   "category": "css",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "457",
+   "category": "css",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "480",
+   "category": "css",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "485",
+   "category": "css",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "656",
+   "category": "nodejs",
+   "mean": 2.75,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "778",
+   "category": "code-snippets",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-3",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-11",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-31",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-35",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-38",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-46",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-48",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-52",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-81",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-84",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-103",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-104",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-121",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-152",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-168",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-173",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-js-189",
+   "category": "javascript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-ts-27",
+   "category": "typescript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-ts-30",
+   "category": "typescript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-ts-63",
+   "category": "typescript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-ts-73",
+   "category": "typescript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-ts-77",
+   "category": "typescript",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-next-8",
+   "category": "nextjs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-next-72",
+   "category": "nextjs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-next-77",
+   "category": "nextjs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-next-80",
+   "category": "nextjs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-next-84",
+   "category": "nextjs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-next-85",
+   "category": "nextjs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-next-87",
+   "category": "nextjs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-next-88",
+   "category": "nextjs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-next-93",
+   "category": "nextjs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-next-102",
+   "category": "nextjs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-node-8",
+   "category": "nodejs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-node-28",
+   "category": "nodejs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-node-56",
+   "category": "nodejs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-node-71",
+   "category": "nodejs",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-git-28",
+   "category": "git",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-git-29",
+   "category": "git",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-git-110",
+   "category": "git",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-html-7",
+   "category": "html",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-dsa-18",
+   "category": "dsa",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-dsa-19",
+   "category": "dsa",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-dsa-22",
+   "category": "dsa",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-dsa-26",
+   "category": "dsa",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-dsa-27",
+   "category": "dsa",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-4",
+   "category": "algorithms",
+   "mean": 2.75,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-5",
+   "category": "algorithms",
+   "mean": 2.75,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-26",
+   "category": "algorithms",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-28",
+   "category": "algorithms",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-59",
+   "category": "algorithms",
+   "mean": 2.75,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-61",
+   "category": "algorithms",
+   "mean": 2.75,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-64",
+   "category": "algorithms",
+   "mean": 2.75,
+   "reasons": [
+    "relevance<3",
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-internet-18",
+   "category": "internet",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-internet-58",
+   "category": "internet",
+   "mean": 2.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-ai-22",
+   "category": "ai",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-ai-25",
+   "category": "ai",
+   "mean": 2.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-ai-28",
+   "category": "ai",
+   "mean": 2.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-ai-29",
+   "category": "ai",
+   "mean": 2.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-ai-56",
+   "category": "ai",
+   "mean": 2.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-rhf-41",
+   "category": "rhf-zod",
+   "mean": 2.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-rhf-45",
+   "category": "rhf-zod",
+   "mean": 2.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-rhf-49",
+   "category": "rhf-zod",
+   "mean": 2.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-rhf-73",
+   "category": "rhf-zod",
+   "mean": 2.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-rhf-78",
+   "category": "rhf-zod",
+   "mean": 2.75,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-db-30",
+   "category": "databases",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-sysdesign-23",
+   "category": "system-design",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-sysdesign-25",
+   "category": "system-design",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-sysdesign-26",
+   "category": "system-design",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-sysdesign-33",
+   "category": "system-design",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-sysdesign-81",
+   "category": "system-design",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-testing-1",
+   "category": "testing",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-testing-25",
+   "category": "testing",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-testing-112",
+   "category": "testing",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-security-112",
+   "category": "security",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-security-113",
+   "category": "security",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-security-115",
+   "category": "security",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-security-116",
+   "category": "security",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-security-117",
+   "category": "security",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-security-118",
+   "category": "security",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-security-119",
+   "category": "security",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "rm-security-120",
+   "category": "security",
+   "mean": 2.75,
+   "reasons": [
+    "mean<3"
+   ]
+  },
+  {
+   "id": "37",
+   "category": "react",
+   "mean": 3,
+   "reasons": [
+    "ambiguous"
+   ]
+  },
+  {
+   "id": "354",
+   "category": "nodejs",
+   "mean": 3,
+   "reasons": [
+    "ambiguous"
+   ]
+  },
+  {
+   "id": "534",
+   "category": "code-snippets",
+   "mean": 3,
+   "reasons": [
+    "ambiguous"
+   ]
+  },
+  {
+   "id": "rm-js-36",
+   "category": "javascript",
+   "mean": 3,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-node-180",
+   "category": "nodejs",
+   "mean": 3,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-node-181",
+   "category": "nodejs",
+   "mean": 3,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "rm-algorithms-7",
+   "category": "algorithms",
+   "mean": 3,
+   "reasons": [
+    "relevance<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-58",
+   "category": "algorithms",
+   "mean": 3,
+   "reasons": [
+    "relevance<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-60",
+   "category": "algorithms",
+   "mean": 3,
+   "reasons": [
+    "relevance<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-71",
+   "category": "algorithms",
+   "mean": 3,
+   "reasons": [
+    "relevance<3"
+   ]
+  },
+  {
+   "id": "rm-ai-50",
+   "category": "ai",
+   "mean": 3,
+   "reasons": [
+    "trivial_recall"
+   ]
+  },
+  {
+   "id": "327",
+   "category": "nodejs",
+   "mean": 3.25,
+   "reasons": [
+    "ambiguous"
+   ]
+  },
+  {
+   "id": "335",
+   "category": "nodejs",
+   "mean": 3.25,
+   "reasons": [
+    "ambiguous"
+   ]
+  },
+  {
+   "id": "rm-js-21",
+   "category": "javascript",
+   "mean": 3.25,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-js-41",
+   "category": "javascript",
+   "mean": 3.25,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-js-120",
+   "category": "javascript",
+   "mean": 3.25,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-dsa-49",
+   "category": "dsa",
+   "mean": 3.25,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-algorithms-62",
+   "category": "algorithms",
+   "mean": 3.25,
+   "reasons": [
+    "relevance<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-63",
+   "category": "algorithms",
+   "mean": 3.25,
+   "reasons": [
+    "relevance<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-73",
+   "category": "algorithms",
+   "mean": 3.25,
+   "reasons": [
+    "relevance<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-74",
+   "category": "algorithms",
+   "mean": 3.25,
+   "reasons": [
+    "relevance<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-75",
+   "category": "algorithms",
+   "mean": 3.25,
+   "reasons": [
+    "relevance<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-77",
+   "category": "algorithms",
+   "mean": 3.25,
+   "reasons": [
+    "relevance<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-78",
+   "category": "algorithms",
+   "mean": 3.25,
+   "reasons": [
+    "relevance<3"
+   ]
+  },
+  {
+   "id": "rm-algorithms-79",
+   "category": "algorithms",
+   "mean": 3.25,
+   "reasons": [
+    "relevance<3"
+   ]
+  },
+  {
+   "id": "757",
+   "category": "code-snippets",
+   "mean": 3.5,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-ts-39",
+   "category": "typescript",
+   "mean": 3.5,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-ts-143",
+   "category": "typescript",
+   "mean": 3.5,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-next-23",
+   "category": "nextjs",
+   "mean": 3.5,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-node-161",
+   "category": "nodejs",
+   "mean": 3.5,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-html-4",
+   "category": "html",
+   "mean": 3.5,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-algorithms-80",
+   "category": "algorithms",
+   "mean": 3.5,
+   "reasons": [
+    "relevance<3"
+   ]
+  },
+  {
+   "id": "rm-js-18",
+   "category": "javascript",
+   "mean": 3.75,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-js-178",
+   "category": "javascript",
+   "mean": 3.75,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-ts-146",
+   "category": "typescript",
+   "mean": 3.75,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-ts-148",
+   "category": "typescript",
+   "mean": 3.75,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-ts-153",
+   "category": "typescript",
+   "mean": 3.75,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-ts-170",
+   "category": "typescript",
+   "mean": 3.75,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-html-91",
+   "category": "html",
+   "mean": 3.75,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-dsa-11",
+   "category": "dsa",
+   "mean": 3.75,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "379",
+   "category": "javascript",
+   "mean": 4,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "471",
+   "category": "css",
+   "mean": 4,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "777",
+   "category": "code-snippets",
+   "mean": 4,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "622",
+   "category": "typescript",
+   "mean": 4.25,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-ts-144",
+   "category": "typescript",
+   "mean": 4.25,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-ts-147",
+   "category": "typescript",
+   "mean": 4.25,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-ts-154",
+   "category": "typescript",
+   "mean": 4.25,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-dsa-75",
+   "category": "dsa",
+   "mean": 4.5,
+   "reasons": [
+    "duplicate"
+   ]
+  },
+  {
+   "id": "rm-react-120",
+   "category": "react",
+   "mean": 3.25,
+   "reasons": []
+  }
+ ]
+}

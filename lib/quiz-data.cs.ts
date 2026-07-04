@@ -1163,8 +1163,14 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   },
   '774': {
     introduction: 'Metody polí často přeskakují prázdné (řídké) sloty.',
-    question: 'Co tohle vypíše?\n\n```js\nconst arr = [1, , 3];\nconsole.log(arr.length, arr.map(x => x * 2));\n```',
-    explanation: 'Řídké pole má délku 3. map prázdné sloty zcela přeskočí (callback pro ně nevolá), takže prázdný slot zůstane jako díra ve výsledku.',
+    question: 'Jak `map` zachází s dírou v tomto řídkém poli?\n\n```js\nconst arr = [1, , 3]; // arr.length je 3\nconst doubled = arr.map(x => x * 2);\n```',
+    options: [
+      'Callback se zavolá s undefined a na indexu 1 vznikne NaN',
+      'Callback se pro díru vůbec nezavolá — ve výsledku zůstane díra',
+      'Díra se odstraní, takže doubled má délku 2',
+      'map na řídkém poli vyhodí TypeError',
+    ],
+    explanation: 'map prázdné sloty zcela přeskočí: callback se pro ně nevolá a díra zůstane i ve výsledku. Pole má stále délku 3 — díry se do length počítají.',
   },
   '775': {
     introduction: 'Klíče objektů se vždy převedou na stringy (nebo symboly).',
@@ -1791,9 +1797,14 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   },
   '332': {
     introduction: 'Node.js poskytuje globální objekt s informacemi o aktuálním procesu.',
-    question: 'Jaké informace poskytuje objekt `process`?',
-    options: ['Jen environment proměnné', 'Informace o aktuálním Node.js procesu', 'Jen využití CPU', 'Stav sítě'],
-    explanation: 'Objekt process poskytuje info o aktuálním Node.js procesu včetně env proměnných, argumentů příkazové řádky, využití paměti a dalších.',
+    question: 'Co z tohohle můžeš přečíst z globálního objektu `process` v Node?',
+    options: [
+      'Environment proměnné (process.env) a argumenty příkazové řádky (process.argv)',
+      'HTML aktuální stránky',
+      'Seznam otevřených záložek prohlížeče',
+      'Běžící procesy ostatních uživatelů na stroji',
+    ],
+    explanation: 'process zpřístupňuje běžící Node.js proces: process.env (environment proměnné), process.argv (argumenty CLI) a dále třeba PID, pracovní adresář nebo využití paměti.',
   },
   '333': {
     introduction: 'Argumenty příkazové řádky umožní uživatelům předat tvým Node.js skriptům volby.',
