@@ -46,6 +46,10 @@ export const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c])
 export const OWNER_EMAIL = 'kouril.lukas@gmail.com';
 export const PRIVATE_CATEGORIES: CategoryType[] = [];
 
+// Casual/fun categories that belong in the social Play mode only — they are
+// hidden from the solo Quiz picker and have no Learn path.
+export const PLAY_ONLY_CATEGORIES: CategoryType[] = ['cool-stuff'];
+
 // Categories whose logo color is light, so they need dark text for contrast.
 const DARK_TEXT_CATEGORIES = new Set(['javascript', 'react', 'abbreviations', 'general', 'cool-stuff']);
 export const onCategoryColorText = (cat: string) =>
@@ -55,11 +59,19 @@ export const getCategoryHexColor = (category: string) =>
 export const getCategoryLabel = (category: string) =>
   CATEGORY_LOOKUP.get(category as CategoryType)?.label || category;
 
-// The categories the current user is allowed to see/pick.
-export const visibleCategoryOptionsFor = (email?: string | null): CategoryOption[] =>
-  (email ?? '').toLowerCase() === OWNER_EMAIL
-    ? CATEGORY_OPTIONS
-    : CATEGORY_OPTIONS.filter((c) => !PRIVATE_CATEGORIES.includes(c.value));
+// The categories the current user is allowed to see/pick. Play-only categories
+// (Cool Stuff) appear only when the caller opts in — the Play landing does,
+// the solo Quiz picker doesn't.
+export const visibleCategoryOptionsFor = (
+  email?: string | null,
+  opts: { includePlayOnly?: boolean } = {},
+): CategoryOption[] => {
+  const base =
+    (email ?? '').toLowerCase() === OWNER_EMAIL
+      ? CATEGORY_OPTIONS
+      : CATEGORY_OPTIONS.filter((c) => !PRIVATE_CATEGORIES.includes(c.value));
+  return opts.includePlayOnly ? base : base.filter((c) => !PLAY_ONLY_CATEGORIES.includes(c.value));
+};
 
 // Build a progress-bar fill from the categories actually present in a quiz.
 // One category → its solid logo color (e.g. React → #61dafb); several → a

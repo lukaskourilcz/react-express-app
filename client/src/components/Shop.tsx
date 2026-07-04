@@ -4,7 +4,7 @@
 // instant unlocks for individual Learn paths.
 
 import { useState } from 'react';
-import { Box, Button, Card, CardContent, Chip, Snackbar, Alert, Stack, Typography } from '@mui/material';
+import { Avatar, Box, Button, Card, CardContent, Chip, Snackbar, Alert, Stack, Typography } from '@mui/material';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useTokens } from '../lib/tokens';
@@ -15,6 +15,8 @@ import {
   equip,
   useInventory,
   isPathAlreadyUnlocked,
+  useEquippedRingColor,
+  useEquippedFlair,
   type Product,
   type ProductKind,
 } from '../lib/shop';
@@ -25,7 +27,7 @@ import {
   useRoadmapProgress,
 } from '../lib/roadmap';
 import { getCategoryLabel } from '../lib/categories';
-import { useAuth } from '../lib/auth';
+import { useAuth, getUserProfile } from '../lib/auth';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 
 const TokenIcon = () => (
@@ -46,13 +48,14 @@ const TokenIcon = () => (
   </svg>
 );
 
-const SECTION_ORDER: ProductKind[] = ['booster', 'path', 'ring', 'flair'];
-const SECTION_KEY: Record<ProductKind, TranslationKey> = {
-  booster: 'shop.section.boosters',
-  path: 'shop.section.paths',
-  ring: 'shop.section.rings',
-  flair: 'shop.section.flairs',
-};
+// Sections ordered by value to the learner: functional unlocks first (paths),
+// then boosters, then cosmetics — with rings + flairs merged into one "Style"
+// section so the shop reads as three clear ideas instead of four lists.
+const SECTIONS: { key: TranslationKey; kinds: ProductKind[] }[] = [
+  { key: 'shop.section.paths', kinds: ['path'] },
+  { key: 'shop.section.boosters', kinds: ['booster'] },
+  { key: 'shop.section.style', kinds: ['ring', 'flair'] },
+];
 
 function Shop() {
   const t = useT();
@@ -120,18 +123,22 @@ function Shop() {
         </CardContent>
       </Card>
 
-      {SECTION_ORDER.map((kind) => (
-        <Stack key={kind} spacing={1.5}>
+      {SECTIONS.map(({ key, kinds }) => (
+        <Stack key={key} spacing={1.5}>
           <Typography variant="overline" sx={{ color: 'text.secondary', letterSpacing: '0.6px' }}>
-            {t(SECTION_KEY[kind])}
+            {t(key)}
           </Typography>
-          {kind === 'path' && (
+          {kinds.includes('path') && (
             <Typography variant="caption" color="text.secondary">
               {t('shop.section.pathsHint', { price: config.shop.pathUnlockPrice })}
             </Typography>
           )}
+          {/* Style section: a live preview of YOUR avatar + name with the
+              currently equipped ring/flair, so cosmetics are tangible before
+              (and after) buying. */}
+          {kinds.includes('ring') && <StylePreview />}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 1.5 }}>
-            {CATALOGUE.filter((p) => p.kind === kind).map((p) => {
+            {CATALOGUE.filter((p) => kinds.includes(p.kind)).map((p) => {
               const ownedPath = p.kind === 'path' && p.topic ? isPathAlreadyUnlocked(p.topic) : false;
               const price = priceOf(p, config);
               return (
@@ -196,7 +203,9 @@ function ProductCard({ product, price, owned, equipped, charges, canAfford, onBu
     : t(`shop.item.${product.id}.desc` as TranslationKey);
 
   return (
-    <Card sx={{ display: 'flex', flexDirection: 'column' }}>
+    // Path cards carry their topic's accent colour so the grid mirrors the
+    // Learn page's colour language.
+    <Card sx={{ display: 'flex', flexDirection: 'column', ...(isPath && product.color ? { borderLeft: `3px solid ${product.color}` } : null) }}>
       <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 1 }}>
         <Stack direction="row" spacing={1.5} alignItems="center">
           <Box
@@ -251,6 +260,52 @@ function ProductCard({ product, price, owned, equipped, charges, canAfford, onBu
             </Button>
           )}
         </Box>
+      </CardContent>
+    </Card>
+  );
+}
+
+/**
+ * Live "this is you" preview for the Style section: the learner's own avatar
+ * and name rendered with whatever ring/flair is currently equipped, updating
+ * the moment they equip something. Makes cosmetics tangible without any
+ * marketing copy.
+ */
+function StylePreview() {
+  const t = useT();
+  const { user } = useAuth();
+  const profile = getUserProfile(user);
+  const ringColor = useEquippedRingColor();
+  const flair = useEquippedFlair();
+  const displayName = profile.name?.split(' ')[0] || profile.email?.split('@')[0] || t('auth.account');
+
+  return (
+    <Card variant="outlined" sx={{ alignSelf: 'flex-start' }}>
+      <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Avatar
+            src={profile.picture}
+            alt=""
+            sx={{
+              width: 40,
+              height: 40,
+              ...(ringColor ? { border: `2px solid ${ringColor}`, boxShadow: `0 0 0 1.5px ${ringColor}33` } : null),
+            }}
+          />
+          <Box>
+            <Typography variant="caption" sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block' }}>
+              {t('shop.stylePreview')}
+            </Typography>
+            <Typography sx={{ fontWeight: 600, lineHeight: 1.3 }}>
+              {displayName}
+              {flair && (
+                <Box component="span" aria-hidden sx={{ ml: 0.5 }}>
+                  {flair}
+                </Box>
+              )}
+            </Typography>
+          </Box>
+        </Stack>
       </CardContent>
     </Card>
   );

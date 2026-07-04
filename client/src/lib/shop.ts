@@ -52,10 +52,11 @@ export const PATH_UNLOCK_PRICE = 200;
 // All non-starter topics are buyable. Starters are always free / always open.
 // Ordered the same way the Learn-page topic strip is, so the shop list mirrors
 // the map visually.
+// 'cool-stuff' is Play-mode-only (no learning path), so it isn't buyable.
 const PATH_TOPICS: RoadmapTopic[] = [
   'typescript', 'react', 'nextjs', 'nodejs',
   'git', 'dsa', 'algorithms',
-  'abbreviations', 'general', 'ai', 'rhf-zod', 'cool-stuff',
+  'abbreviations', 'general', 'ai', 'rhf-zod',
   'databases', 'system-design', 'testing', 'devops', 'security',
 ];
 

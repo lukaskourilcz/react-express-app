@@ -61,7 +61,7 @@ export function PlayLanding() {
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
   const [joinCode, setJoinCode] = useState('');
 
-  const categoryOptions = visibleCategoryOptionsFor(profile.email);
+  const categoryOptions = visibleCategoryOptionsFor(profile.email, { includePlayOnly: true });
   const toggleCategory = (c: CategoryType) =>
     setSelectedCategories((prev) =>
       prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],

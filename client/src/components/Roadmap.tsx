@@ -61,10 +61,12 @@ type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => stri
 // `ref` is the GLOBAL level number for a level, or the part number for a test.
 type Active = { kind: 'level' | 'test'; ref: number };
 
+// 'cool-stuff' is deliberately absent: it's a Play-mode-only category with no
+// learning path.
 const TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
   'html', 'css', 'git', 'dsa', 'algorithms',
-  'abbreviations', 'general', 'internet', 'ai', 'rhf-zod', 'cool-stuff',
+  'abbreviations', 'general', 'internet', 'ai', 'rhf-zod',
   'databases', 'system-design', 'testing', 'devops', 'security',
 ];
 const TOPIC_KEY = 'devquiz:roadmap:topic';

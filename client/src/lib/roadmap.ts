@@ -70,7 +70,7 @@ const ASSESSMENT_TIERS: { minCorrect: number; unlocks: RoadmapTopic[] }[] = [
     minCorrect: 18,
     unlocks: [
       'typescript', 'abbreviations', 'general', 'git', 'dsa', 'algorithms',
-      'nodejs', 'testing', 'ai', 'cool-stuff', 'security',
+      'nodejs', 'testing', 'ai', 'security',
       'react', 'nextjs', 'rhf-zod',
       'databases', 'system-design', 'devops',
     ],
@@ -79,7 +79,7 @@ const ASSESSMENT_TIERS: { minCorrect: number; unlocks: RoadmapTopic[] }[] = [
     minCorrect: 14,
     unlocks: [
       'typescript', 'abbreviations', 'general', 'git', 'dsa', 'algorithms',
-      'nodejs', 'testing', 'ai', 'cool-stuff', 'react',
+      'nodejs', 'testing', 'ai', 'react',
     ],
   },
   {

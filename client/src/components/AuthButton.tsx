@@ -20,7 +20,8 @@ function AuthButton() {
   const totalXp = computeLearningXp(progress) + questXp;
   const ringColor = useEquippedRingColor();
   const [track] = useTrack();
-  const rankTitle = displayTitle(levelForXp(totalXp).rank.title, specializationForTrack(track));
+  const levelInfo = levelForXp(totalXp);
+  const rankTitle = displayTitle(levelInfo.rank.title, specializationForTrack(track));
   const navigate = useNavigate();
   const t = useT();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
@@ -113,27 +114,44 @@ function AuthButton() {
             }}
           />
         </ButtonBase>
-        <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
+        <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', alignItems: 'flex-start', minWidth: 0, maxWidth: 190 }}>
           <Typography
             variant="body2"
-            sx={{ fontWeight: 500, color: 'text.primary', lineHeight: 1.2, maxWidth: 170, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            sx={{ fontWeight: 500, color: 'text.primary', lineHeight: 1.2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             {displayName}
           </Typography>
+          {/* The full rank ("Superjunior Frontend Developer") must always be
+              readable — wrap to two lines instead of truncating. */}
           <Typography
             variant="caption"
             sx={{
-              color: (theme) => (theme.palette.mode === 'dark' ? '#4caf50' : BRAND.green),
+              color: (theme) => (theme.palette.mode === 'dark' ? BRAND.greenBright : BRAND.green),
               fontWeight: 600,
               lineHeight: 1.2,
-              maxWidth: 170,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
+              maxWidth: '100%',
             }}
           >
             {rankTitle}
           </Typography>
+          {/* Thin progress bar toward the next rank — ambient goal feedback
+              with zero extra copy. Hidden at the ladder cap. */}
+          {!levelInfo.isMax && (
+            <Box
+              aria-hidden
+              sx={{ mt: 0.4, width: '100%', height: 3, borderRadius: 2, backgroundColor: 'action.hover', overflow: 'hidden' }}
+            >
+              <Box
+                sx={{
+                  width: `${levelInfo.progressPct}%`,
+                  height: '100%',
+                  borderRadius: 2,
+                  backgroundColor: (theme) => (theme.palette.mode === 'dark' ? BRAND.greenBright : BRAND.green),
+                  transition: 'width 0.4s ease',
+                }}
+              />
+            </Box>
+          )}
         </Box>
       </Box>
       <Menu

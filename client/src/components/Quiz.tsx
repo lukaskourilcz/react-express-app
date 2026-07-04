@@ -29,12 +29,14 @@ import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } fr
 import { quizStyles, BRAND, CATEGORY_GRADIENT, visuallyHidden } from '../theme/MuiTheme';
 import {
   CATEGORY_LOOKUP,
+  CATEGORY_OPTIONS,
   visibleCategoryOptionsFor,
   onCategoryColorText,
   getCategoryHexColor,
   getCategoryLabel,
   categoryProgressBackground,
 } from '../lib/categories';
+import { readJSON, writeJSON } from '../lib/storage';
 import {
   recordQuizResult,
   createOrUpdateUserStats,
@@ -63,6 +65,13 @@ type QuizMode = 'standard' | 'daily';
 const DIFFICULTY_VALUES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
 const PROGRESS_KEY = 'devquiz:in-progress';
+const SETUP_KEY = 'devquiz:quiz-setup:v1';
+
+interface SavedSetup {
+  count?: number;
+  difficulty?: DifficultyMode;
+  categories?: string[];
+}
 
 interface PersistedProgress {
   sessionId: string;
@@ -112,9 +121,22 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [result, setResult] = useState<QuizResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [questionCount, setQuestionCount] = useState<number>(10);
-  const [difficultyMode, setDifficultyMode] = useState<DifficultyMode>('zero-to-hero');
-  const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
+  // Setup preferences persist across visits, so a returning learner's
+  // categories/count/difficulty are one tap from "Start quiz".
+  const [questionCount, setQuestionCount] = useState<number>(() => {
+    const saved = readJSON<SavedSetup>(SETUP_KEY, {});
+    return typeof saved.count === 'number' && saved.count >= 1 && saved.count <= 50 ? saved.count : 10;
+  });
+  const [difficultyMode, setDifficultyMode] = useState<DifficultyMode>(() => {
+    const saved = readJSON<SavedSetup>(SETUP_KEY, {});
+    return saved.difficulty && DIFFICULTY_VALUES.includes(saved.difficulty) ? saved.difficulty : 'zero-to-hero';
+  });
+  const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>(() => {
+    const saved = readJSON<SavedSetup>(SETUP_KEY, {});
+    if (!Array.isArray(saved.categories)) return [];
+    const known = new Set(CATEGORY_OPTIONS.map((c) => c.value));
+    return saved.categories.filter((c): c is CategoryType => known.has(c as CategoryType));
+  });
   const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
   const [attemptedStart, setAttemptedStart] = useState(false);
   const { ids: bookmarks } = useBookmarks();
@@ -202,6 +224,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       // quota or private mode — ignore
     }
   }, [state, sessionId, questions, answers, currentIndex, mode]);
+
+  // Persist the setup preferences so the next visit starts pre-configured.
+  useEffect(() => {
+    writeJSON(SETUP_KEY, {
+      count: questionCount,
+      difficulty: difficultyMode,
+      categories: selectedCategories,
+    } satisfies SavedSetup);
+  }, [questionCount, difficultyMode, selectedCategories]);
 
   const clearProgress = useCallback(() => {
     try {
