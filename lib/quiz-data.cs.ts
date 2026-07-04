@@ -690,10 +690,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'NonNullable<T> odstraní z T null a undefined. Operátor ! (non-null assertion) řekne TypeScriptu, že hodnota není null, ale nevytvoří nový typ.',
   },
   '72': {
-    introduction: 'Operátor „typeof“ v TypeScriptu umí extrahovat typ z existující hodnoty nebo proměnné.',
-    question: 'K čemu se v TypeScriptu používá operátor typeof?\n\n```ts\nconst user = { name: "John", age: 30 };\n\n// Create type from variable\ntype User = typeof user;\n// { name: string; age: number; }\n```',
-    options: ['Jen runtime kontrola typu', 'Jen získání typu proměnné', 'Jen vytváření nových typů', 'Jak získání typů, tak vytváření nových typů'],
-    explanation: 'V TypeScriptu typeof funguje jak za běhu (chování JavaScriptu), tak na úrovni typů pro extrakci typu z proměnné. type T = typeof myVariable vytvoří typ.',
+    question: 'Co dělá `typeof` v TypeScriptu, když se použije v typové pozici?\n\n```ts\nconst user = { name: "John", age: 30 };\ntype User = typeof user;\n```',
+    options: ['Extrahuje typ proměnné: { name: string; age: number }', 'Vrátí runtime řetězec "object", takže User je string', 'Provede runtime kontrolu typu proměnné user', 'Zachytí literálové hodnoty: { name: "John"; age: 30 }'],
+    explanation: 'V typové pozici typeof extrahuje statický typ hodnoty. Protože vlastnosti user jsou měnitelné, rozšíří se na string a number. (typeof existuje i za běhu v JavaScriptu a vrací řetězce jako "object".) S as const bys místo toho dostal literálové typy.',
   },
   '73': {
     introduction: 'Generiky umožní psát znovupoužitelný kód, který funguje s více typy při zachování typové bezpečnosti.',
@@ -1604,16 +1603,14 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Modulové skripty se chovají, jako by měly `defer`, takže parsování NEblokují. Ostatní tři tvrzení jsou pravdivá: strict mode je implicitní a top-level scope je modul, ne globální objekt.',
   },
   '695': {
-    introduction: 'Atributy data-* vystavují hodnoty přes DOM vlastnost dataset.',
-    question: 'Pro `<div data-user-id="42" data-isAdmin="true">`, co vrátí element.dataset?\n\n```html\n<div id="x" data-user-id="42" data-isAdmin="true"></div>\n<script>\n  const ds = document.getElementById(\'x\').dataset;\n</script>\n```',
-    options: ['ds.userId === "42" a ds.isadmin === "true" — pomlčky se stanou camelCase a HTML převede názvy atributů na malá písmena, takže data-isAdmin se uloží jako data-isadmin', 'ds["user-id"] === "42" a ds.isAdmin === "true" — klíče se zachovají přesně jak jsou napsané', 'ds.userId === 42 (number) a ds.isAdmin === true (boolean) — typy se odvodí', 'ds.user_id === "42" — pomlčky se stanou podtržítky'],
-    explanation: 'Názvy HTML atributů jsou case-insensitive a ukládají se malými písmeny, takže data-isAdmin se stane data-isadmin -> ds.isadmin. Pomlčka-pak-písmeno se v datasetu stane camelCase, takže data-user-id -> ds.userId. Hodnoty jsou vždy stringy.',
+    question: 'Co obsahuje element.dataset u tohoto elementu?\n\n```html\n<div id="x" data-user-id="42" data-isAdmin="true"></div>\n<script>\n  const ds = document.getElementById(\'x\').dataset;\n</script>\n```',
+    options: ['ds.userId === "42" a ds.isadmin === "true"', 'ds["user-id"] === "42" a ds.isAdmin === "true"', 'ds.userId === 42 a ds.isAdmin === true', 'ds.user_id === "42" a ds.isadmin === "true"'],
+    explanation: 'Názvy HTML atributů nerozlišují velikost písmen a ukládají se malými písmeny, takže data-isAdmin se stane data-isadmin, dostupné jako ds.isadmin. Názvy s pomlčkami se převádějí na camelCase: data-user-id se stane ds.userId. Hodnoty datasetu jsou vždy řetězce.',
   },
   '696': {
-    introduction: 'contenteditable změní libovolný element na editovatelnou oblast.',
     question: 'Které tvrzení o contenteditable je správné?\n\n```html\n<div contenteditable="true">Edit me</div>\n```',
-    options: ['Je to enumerated atribut (hodnoty "true", "false", "plaintext-only", "" ), element je zfokusovatelný a editace NEvyvolají submit formuláře ani se neobjeví ve FormData', 'Je to booleovský atribut — hodnota se ignoruje', 'contenteditable element je automaticky labelovatelný formulářový prvek a serializuje se přes FormData', 'contenteditable elementy nemohou bez tabindex získat fokus klávesnicí'],
-    explanation: 'contenteditable je enumerated, ne booleovský. Element se automaticky stane zfokusovatelným a vyvolává události `input`/`beforeinput`. NENÍ to formulářový prvek, takže jeho obsah není součástí FormData a nemá vestavěné spojení s labelem.',
+    options: ['Úpravy vyvolávají input události, ale obsah se neodesílá s formuláři ani nepřidává do FormData', 'Je to boolean atribut, takže contenteditable="false" editaci stejně zapne', 'Obsah elementu se automaticky serializuje do FormData jako formulářový prvek', 'Element nemůže dostat fokus z klávesnice, pokud nepřidáš i tabindex'],
+    explanation: 'Element s contenteditable se stane fokusovatelným a vyvolává události beforeinput/input, ale není to formulářový prvek: nic se neodesílá ani nepřidává do FormData, dokud obsah sám nezkopíruješ. Atribut je výčtový ("true", "false", "plaintext-only"), takže "false" editaci vypne — na rozdíl od skutečného boolean atributu.',
   },
   '697': {
     introduction: 'HTML drag-and-drop API vyžaduje na cíli drop konkrétní události.',
@@ -1628,10 +1625,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'JSON-LD používá <script type="application/ld+json"> a JSON objekt potřebuje @context (obvykle https://schema.org) a @type. Atributy itemscope/itemprop/itemtype jsou microdata, jiná syntaxe (a itemtype musí být plná URL).',
   },
   '699': {
-    introduction: 'HTML zachází s void elementy jinak než XHTML.',
-    question: 'Které tvrzení o void elementech a self-closing syntaxi v HTML5 je správné?\n\n```html\n<img src="a.jpg">\n<img src="a.jpg" />\n<div />\n```',
-    options: ['Void elementy jako <img>, <br>, <input>, <meta> nikdy nemají koncové tagy; koncové lomítko je povolené, ale ignoruje se. Non-void elementy jako <div> nelze self-closovat — `<div />` se parsuje jako otevřený <div>', 'Všechny HTML5 elementy lze self-closovat pomocí /> jako v XHTML', '<img /> je v HTML5 syntaktická chyba a nevykreslí se', '<div /> div okamžitě uzavře; následující obsah je sourozenec'],
-    explanation: 'V HTML (ne XHTML) jsou void elementy self-closing už z definice a /> je povolené, ale nemá efekt. Non-void elementy lomítko zcela ignorují — `<div />` je identický s `<div>`, takže následující obsah se stane potomkem až do odpovídajícího </div>.',
+    question: 'Jak se v HTML5 dokumentu (ne v JSX ani XHTML) parsuje `<div />`?\n\n```html\n<div />\n<p>Hello</p>\n```',
+    options: ['Jako otevírací tag <div> — lomítko se ignoruje, takže <p> se stane jeho potomkem', 'Jako samouzavřený prázdný div, takže <p> je jeho sourozenec', 'Jako syntaktická chyba — div se z DOM odstraní', 'Jako uzavírací tag nejbližšího otevřeného divu'],
+    explanation: 'Samouzavírací jsou v HTML jen void elementy (img, br, input, meta atd.), a i u nich je koncové lomítko volitelné a ignoruje se. U ne-void elementů lomítko nemá žádný efekt: <div /> se bere jako <div>, takže následující obsah se parsuje jako jeho potomek, dokud se neobjeví skutečný </div>.',
   },
   '700': {
     introduction: 'HTML specifikace kdysi popisovala algoritmus osnovy dokumentu založený na sekcovacích elementech.',
@@ -1796,15 +1792,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'nodemon sleduje tvé soubory a automaticky restartuje Node.js aplikaci, když zaznamená změny. Je to vývojový nástroj.',
   },
   '332': {
-    introduction: 'Node.js poskytuje globální objekt s informacemi o aktuálním procesu.',
-    question: 'Co z tohohle můžeš přečíst z globálního objektu `process` v Node?',
-    options: [
-      'Environment proměnné (process.env) a argumenty příkazové řádky (process.argv)',
-      'HTML aktuální stránky',
-      'Seznam otevřených záložek prohlížeče',
-      'Běžící procesy ostatních uživatelů na stroji',
-    ],
-    explanation: 'process zpřístupňuje běžící Node.js proces: process.env (environment proměnné), process.argv (argumenty CLI) a dále třeba PID, pracovní adresář nebo využití paměti.',
+    question: 'Který globální objekt v Node.js zpřístupňuje environment proměnné a argumenty příkazové řádky?',
+    options: ['process', 'global', 'console', 'module'],
+    explanation: 'Globální objekt process reprezentuje běžící Node.js proces: process.env drží environment proměnné, process.argv argumenty příkazové řádky, k tomu PID, aktuální pracovní adresář a metody jako process.exit().',
   },
   '333': {
     introduction: 'Argumenty příkazové řádky umožní uživatelům předat tvým Node.js skriptům volby.',
@@ -1915,10 +1905,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'util.promisify() vezme funkci dodržující Node.js callback vzor (err, result) a vrátí její Promise verzi.',
   },
   '351': {
-    introduction: 'Modul fs má Promise API pro čistší asynchronní kód.',
-    question: 'Jak používáš Promise verzi fs API?',
-    options: ['Jen require("fs").promises', 'Jen require("fs/promises")', 'Buď require("fs").promises nebo require("fs/promises")', 'fs.usePromises()'],
-    explanation: 'Jak require("fs").promises, tak require("fs/promises") vystavují Promise verzi fs API a lze je zaměnitelně používat s async/await.',
+    question: 'Který import ti dá Promise-based metody souborového systému použitelné s await?\n\n```js\nconst fs = ???;\nawait fs.readFile("data.txt", "utf8");\n```',
+    options: ['require("fs/promises")', 'require("fs").async', 'require("promise-fs")', 'require("fs", { promises: true })'],
+    explanation: 'Node dodává Promise-based fs API v fs/promises (dostupné i jako require("fs").promises). Jeho metody vracejí Promises, takže fungují přímo s async/await místo error-first callbacků.',
   },
   '352': {
     introduction: 'Node.js má vestavěnou kryptografickou funkcionalitu.',
@@ -1963,10 +1952,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Návratová hodnota false z write() signalizuje, že interní buffer je na nebo nad highWaterMark. Chunk je stále zařazený, ale producent by měl pozastavit a počkat na událost drain, aby se vyhnul nafouknutí paměti.',
   },
   '655': {
-    introduction: 'Transform streamy zároveň čtou i zapisují a transformují data při průchodu.',
-    question: 'Kterou třídu streamu bys měl rozšířit pro implementaci streamu, který zároveň konzumuje vstup a produkuje transformovaný výstup?\n\n```js\nimport { Transform } from \'node:stream\';\n```',
+    question: 'Implementuješ Node.js stream, který konzumuje vstup a produkuje upravený výstup (např. kompresi). Kterou stream třídu bys měl rozšířit?',
     options: ['Readable', 'Writable', 'Duplex', 'Transform'],
-    explanation: 'Transform je podtřída Duplex, kde se výstup počítá ze vstupu (např. komprese, šifrování). Prostý Duplex má nezávislé čtecí/zápisové strany; Transform je správná volba, když výstup závisí na vstupu.',
+    explanation: 'Transform je podtřída Duplexu, kde se výstup počítá ze vstupu — ideální pro kompresi, šifrování nebo parsování. Obyčejný Duplex má nezávislou čtecí a zápisovou stranu; Readable data jen produkuje a Writable jen konzumuje.',
   },
   '656': {
     introduction: 'EventEmitter varuje, když je k jedné události přidáno příliš mnoho listenerů, což indikuje možný únik paměti.',
@@ -3159,10 +3147,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'useDeferredValue přijme hodnotu a vrátí odloženou verzi, která „zaostává“. React ji aktualizuje s nižší prioritou, čímž udrží UI responzivní během nákladných překreslení.',
   },
   '199': {
-    introduction: 'useEffect může způsobit nekonečné smyčky, pokud se používá neopatrně. To je častá past pro React vývojáře.',
-    question: 'Jak se vyhnout nekonečným smyčkám v useEffect?\n\n```jsx\n// INFINITE LOOP - state change triggers effect, effect changes state\nuseEffect(() => {\n  setCount(count + 1); // Changes state, triggers re-render, runs effect again...\n});\n\n// FIXED - use functional update with empty deps\nuseEffect(() => {\n  setCount(c => c + 1);\n}, []); // Runs once on mount, no stale closure\n```',
-    options: ['Nekonečné smyčky jsou nemožné', 'Přidej správné závislosti, použij funkcionální aktualizace', 'Vždy použij prázdné pole závislostí', 'Úplně odstraň useEffect'],
-    explanation: 'Nekonečné smyčky nastanou, když efekt změní stav, který ho spustí. Oprav: přidáním správných závislostí, použitím funkcionálních aktualizací (setCount(c => c + 1)) nebo přehodnocením logiky.',
+    question: 'Tenhle efekt způsobuje nekonečnou smyčku renderování. Jaká je správná oprava?\n\n```jsx\nconst [count, setCount] = useState(0);\nuseEffect(() => {\n  setCount(count + 1); // state change re-runs the effect...\n});\n```',
+    options: ['Přidat správné pole závislostí a použít funkční update jako setCount(c => c + 1)', 'Zabalit volání setCount do setTimeout, aby proběhlo až po renderu', 'Přesunout volání setCount do cleanup funkce efektu', 'Zabalit komponentu do React.memo, aby se překreslování zablokovalo'],
+    explanation: 'Bez pole závislostí efekt běží po každém renderu a každé setCount vyvolá další render. Přidání závislostí (např. []) omezí, kdy se efekt spustí, a funkční update odstraní závislost na count. setTimeout smyčku jen zpomalí, cleanup běží ve špatnou chvíli a React.memo překreslení vyvolaná stavem nezastaví.',
   },
   '216': {
     introduction: 'React má specifickou terminologii pro své procesy. Pochopení těchto pojmů pomáhá v komunikaci s ostatními vývojáři.',
@@ -3207,10 +3194,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'React DevTools přidává dvě záložky: „Components“ pro inspekci stromu komponent, props a stavu; a „Profiler“ pro měření výkonu renderování.',
   },
   '268': {
-    introduction: 'Záložka Components ukazuje hierarchii tvých React komponent a jejich data.',
-    question: 'Co vidíš v záložce Components v React DevTools?',
-    options: ['Jen názvy komponent', 'Strom komponent, props, stav, hooky a umístění ve zdroji', 'Jen HTML', 'Nic'],
-    explanation: 'Záložka Components ukazuje celou hierarchii komponent, props každé komponenty, stav, hodnoty hooků, kontext a umožní skočit do zdrojového kódu komponenty.',
+    question: 'Co ukazuje záložka Components v React DevTools pro vybranou komponentu?',
+    options: ['Její aktuální props, stav, hooky a umístění ve stromu komponent', 'Její zkompilovaný a minifikovaný JavaScriptový výstup', 'HTTP requesty, které komponenta udělala', 'Její Lighthouse skóre výkonu'],
+    explanation: 'Záložka Components ukazuje hierarchii komponent a pro vybranou komponentu živé props, stav, hodnoty hooků a kontext — můžeš je dokonce upravit a otestovat chování. Síťové requesty a výkonnostní audity najdeš místo toho v nástrojích Network a Lighthouse prohlížeče.',
   },
   '269': {
     introduction: 'React DevTools umožní interaktivní úpravu props a stavu komponent.',
@@ -3595,10 +3581,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'DOM (Document Object Model) je stromová struktura reprezentující HTML dokument. JavaScript používá DOM API ke čtení, úpravě a reakci na strukturu a obsah stránky.',
   },
   '161': {
-    introduction: 'Záložka Network v Chrome DevTools umožní inspekci všech HTTP requestů a odpovědí, které tvá aplikace dělá.',
-    question: 'Co můžeš inspektovat v záložce Network v Chrome DevTools?',
-    options: ['Jen HTML soubory', 'Všechny HTTP requesty, odpovědi, hlavičky, timing a payload data', 'Jen obrázky', 'Záložka Network neexistuje'],
-    explanation: 'Záložka Network ukazuje všechny HTTP requesty (API volání, obrázky, skripty atd.), jejich stavové kódy, data odpovědi, hlavičky, timing a velikost. Zásadní pro ladění API problémů.',
+    question: 'Máš podezření, že API request selhává. Který panel DevTools ukazuje každý HTTP request se stavovým kódem, hlavičkami, časováním a tělem odpovědi?',
+    options: ['Network', 'Elements', 'Application', 'Performance'],
+    explanation: 'Panel Network vypisuje každý HTTP request, který stránka udělá (API volání, skripty, obrázky), včetně stavu, hlaviček, payloadu, odpovědi a časování — nezbytné pro ladění API problémů. Elements slouží k inspekci DOM, Application ukazuje úložiště a Performance nahrává výkonnostní profily.',
   },
   '162': {
     introduction: 'Chrome DevTools má více panelů, každý slouží jiným účelům ladění a inspekce.',
@@ -3613,10 +3598,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Breakpointy nastav kliknutím na čísla řádků v panelu Sources, nebo přidej "debugger;" do kódu. Při zásahu se běh pozastaví a můžeš inspektovat proměnné, krokovat kód a další.',
   },
   '164': {
-    introduction: 'Objekt console poskytuje různé metody pro logování a ladění JavaScript kódu.',
-    question: 'Co dělá console.log() a jaké další console metody existují?\n\n```js\nconsole.log("Info");          // General output\nconsole.error("Error!");       // Red error message\nconsole.warn("Warning");       // Yellow warning\nconsole.table([{a:1}, {a:2}]); // Table format\nconsole.time("timer");         // Start timer\nconsole.timeEnd("timer");      // End timer\n```',
-    options: ['Existuje jen console.log', 'Vypisuje do konzole, plus metody error, warn, table, time', 'Ukládá do souboru', 'Zobrazí alert'],
-    explanation: 'console.log() vypisuje do konzole prohlížeče. Další metody: error() pro chyby, warn() pro varování, table() pro tabulková data, time()/timeEnd() pro měření doby běhu.',
+    question: 'Ladíš pole objektů. Která metoda konzole ho v DevTools zobrazí jako formátovanou tabulku?\n\n```js\nconst users = [{ name: "Ann", age: 30 }, { name: "Bob", age: 25 }];\n```',
+    options: ['console.dir(users)', 'console.table(users)', 'console.group(users)', 'console.info(users)'],
+    explanation: 'console.table vykreslí pole a objekty jako řaditelnou tabulku. console.dir ukáže interaktivní strom objektu, console.group odsadí následující logy pod sbalitelný popisek a console.info se chová jako console.log. Další užitečné metody: warn, error a time/timeEnd pro měření času.',
   },
   '165': {
     introduction: 'JSON (JavaScript Object Notation) je lehký formát pro ukládání a výměnu dat.',
@@ -3973,10 +3957,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Filtr XHR/Fetch ukazuje jen asynchronní JavaScriptové requesty — typicky API volání. To pomáhá soustředit se na datové requesty a ladit API problémy bez zobrazení obrázků, skriptů atd.',
   },
   '259': {
-    introduction: 'Panely v DevTools se každý zaměřují na jiný aspekt stránky; záložka Elements je jedním z nich.',
-    question: 'Co můžeš dělat v záložce Elements v DevTools?',
-    options: ['Jen prohlížet HTML', 'Inspektovat, upravovat HTML/CSS naživo, vidět vypočtené styly a ladit layout', 'Jen mazat elementy', 'Záložka Elements neexistuje'],
-    explanation: 'Záložka Elements umožní inspekci DOM, úpravu HTML/CSS v reálném čase, prohlížení vypočtených stylů, kontrolu rozměrů box modelu, ladění CSS Grid/Flexbox a zobrazení event listenerů na elementech.',
+    question: 'Který panel v Chrome DevTools umožní inspektovat DOM, živě upravovat HTML a CSS a zobrazit box model elementu?',
+    options: ['Elements', 'Sources', 'Network', 'Console'],
+    explanation: 'Panel Elements ukazuje živý strom DOM; můžeš přímo upravovat markup a styly, vidět vypočtené styly a box model a ladit flex/grid layouty. Sources slouží pro JavaScriptové soubory a breakpointy, Network pro HTTP requesty a Console pro logy a spouštění kódu.',
   },
   '260': {
     introduction: 'Záložka Application poskytuje přístup ke všem mechanismům úložiště prohlížeče.',
@@ -3997,10 +3980,9 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: 'Preserve log udrží všechny síťové requesty viditelné, i když se stránka obnoví nebo naviguje. Bez něj se síťový log při každé navigaci vymaže — užitečné pro ladění přesměrování.',
   },
   '263': {
-    introduction: 'Kopírování requestů jako cURL příkazů je užitečné pro testování API v terminálu.',
-    question: 'Jak můžeš zkopírovat request jako cURL z DevTools?',
-    options: ['Nelze to', 'Pravý klik na request > Copy > Copy as cURL', 'Jen export jako HAR', 'Použij klávesovou zkratku'],
-    explanation: 'Pravý klik na jakýkoli request > Copy > Copy as cURL. To ti dá kompletní cURL příkaz se všemi hlavičkami a daty, ideální pro testování v terminálu nebo sdílení s backendovými vývojáři.',
+    question: 'Co ti v záložce Network v DevTools dá kliknutí pravým tlačítkem na request a volba „Copy as cURL“?',
+    options: ['Příkaz do terminálu, který request zopakuje se stejnou metodou, hlavičkami a tělem', 'Jen URL requestu jako prostý text', 'Tělo odpovědi naformátované jako JSON', 'HAR archiv celé relace prohlížení'],
+    explanation: 'Copy as cURL vytvoří kompletní curl příkaz včetně metody, hlaviček, cookies a těla — ideální pro reprodukci API volání v terminálu nebo pro sdílení repra s backend vývojářem. Copy URL dá jen adresu; export HAR zachytí celou relaci zvlášť.',
   },
   '264': {
     introduction: 'Proměnná $0 v konzoli poskytuje rychlý přístup k vybranému elementu.',

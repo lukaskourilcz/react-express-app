@@ -188,10 +188,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Vrací pouze ke čtení určený pohled na parametry ?query.",
   },
   "rm-next-31": {
-    introduction: "Zaměřte se na hlavní myšlenku, která se testuje, a vylučte možnosti, které zjevně nesedí. Zamyslete se nad navigací.",
-    question: "<Link> provádí prefetch odkazovaných rout:",
-    options: ["nikdy", "automaticky v produkci (když jsou ve viewportu)", "pouze při kliknutí", "pouze ručně"],
-    explanation: "V produkci jsou viditelné odkazy prefetchovány pro okamžitou navigaci.",
+    question: "Kdy ve výchozím nastavení v produkci <Link> přednačítá (prefetch) odkazovanou route?",
+    options: ["Nikdy — prefetch se musí zapnout u každého odkazu zvlášť", "Když se odkaz dostane do viewportu", "Až poté, co na něj uživatel klikne", "Jen když ručně zavoláš router.prefetch()"],
+    explanation: "V produkci Next.js automaticky přednačítá routes pro <Link>y, jakmile se doscrollují do viewportu, takže navigace působí okamžitě.",
   },
   "rm-next-32": {
     introduction: "Připomeňte si, k čemu daný koncept slouží, a pak vyberte možnost, která odpovídá jeho účelu. Zamyslete se nad navigací.",
@@ -278,10 +277,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Volba next.revalidate zapíná časově založenou (ISR) revalidaci.",
   },
   "rm-next-46": {
-    introduction: "Zaměřte se na hlavní myšlenku, která se testuje, a vylučte možnosti, které zjevně nesedí. Zamyslete se nad daty.",
-    question: "Kterou funkci používala statická generace ve starém Pages Routeru?",
-    options: ["getServerData", "getStaticProps", "useData", "loadStatic"],
-    explanation: "getStaticProps načítala data při buildu pro SSG v Pages Routeru.",
+    question: "Která funkce ve starém Pages Routeru načítala data v době buildu pro statické generování (SSG)?",
+    options: ["getServerSideProps", "getStaticProps", "getInitialProps", "getStaticPaths"],
+    explanation: "getStaticProps běží v době buildu pro SSG. getServerSideProps běží při každém požadavku, getInitialProps je legacy API a getStaticPaths jen vyjmenovává, které dynamické cesty se mají předgenerovat.",
   },
   "rm-next-47": {
     introduction: "Zaměřte se na hlavní myšlenku, která se testuje, a vylučte možnosti, které zjevně nesedí. Zamyslete se nad daty.",
@@ -4028,10 +4026,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Objekty a Map v JavaScriptu fungují jako hašovací tabulky a poskytují přístup klíč–hodnota v průměru O(1).",
   },
   "rm-dsa-39": {
-    introduction: "Soustřeď se na hlavní myšlenku, která se testuje, a vyluč možnosti, které zjevně nesedí. Mysli na hašovací tabulky.",
-    question: "Klíče hašovací tabulky musí být obecně:",
-    options: ["Seřazené", "Pouze čísla", "Hašovatelné (schopné vytvořit konzistentní haš)", "Jedinečné napříč všemi programy"],
-    explanation: "Klíče musí být hašovatelné, aby je hašovací funkce mohla konzistentně mapovat na přihrádky.",
+    question: "Jakou vlastnost musí mít hodnota, aby fungovala jako klíč hash tabulky?",
+    options: ["Musí být udržovaná v seřazeném pořadí", "Musí se mapovat na konzistentní hash hodnotu", "Musí to být celé číslo", "Musí být unikátní napříč všemi programy"],
+    explanation: "Hash funkce musí pro stejný klíč pokaždé vyprodukovat stejný hash, aby vyhledávání skončilo ve správném bucketu.",
   },
   "rm-dsa-40": {
     introduction: "Soustřeď se na hlavní myšlenku, která se testuje, a vyluč možnosti, které zjevně nesedí. Mysli na hašovací tabulky.",
@@ -5786,10 +5783,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Klient je ten, kdo žádá. Nejběžnější je prohlížeč, ale kvalifikuje se jakýkoli program mluvící HTTP.",
   },
   "rm-general-12": {
-    introduction: "Soustřeď se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na vztah klient/server.",
-    question: "Jak server pozná, na který požadavek odpovídá?",
-    options: ["Hádáním", "Podle TCP spojení / kontextu požadavku, který právě obsluhuje", "Pouze podle IP adresy", "Podle jména uživatele"],
-    explanation: "Každý požadavek je svázán se spojením; odpověď serveru se posílá zpět po stejném socketu.",
+    question: "Když má HTTP server připravenou odpověď, jak ví, kam ji poslat?",
+    options: ["Pošle odpověď zpátky přes stejné TCP spojení, kterým přišel požadavek", "Vyhledá hostname klienta v DNS", "Rozešle odpověď broadcastem všem připojeným klientům", "Použije uživatelské jméno účtu uložené v cookie"],
+    explanation: "Každý HTTP požadavek přichází přes spojení; server zapíše odpověď zpátky na stejný socket, takže odpovědi jsou přirozeně spárované s požadavky.",
   },
   "rm-general-13": {
     introduction: "Nejprve vyluč možnosti, které lze vyloučit — odpověď je často to, co zbude. Mysli na vztah klient/server.",
@@ -7946,10 +7942,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "setValue aktualizuje pole; předejte { shouldValidate: true } pro opětovné spuštění validace (a shouldDirty k označení jako dirty).",
   },
   "rm-rhf-92": {
-    introduction: "Připomeňte si, k čemu daný koncept slouží, a pak vyberte odpovídající možnost. Zaměřte se na reset.",
-    question: "Co dělá reset(values)?",
-    options: ["Smaže formulář", "Resetuje pole, chyby a stav dirty, volitelně na poskytnuté hodnoty", "Odešle formulář", "Přepne tmavý režim"],
-    explanation: "reset obnoví formulář do čistého stavu (volitelně na nové hodnoty) a aktualizuje výchozí stav používaný pro isDirty.",
+    question: "Co dělá reset(values) v React Hook Form?",
+    options: ["Vymaže hodnoty polí, ale chyby a dirty stav nechá beze změny", "Resetuje pole, chyby i dirty stav, volitelně na zadané hodnoty", "Změní jen defaultValues, aniž by sáhl na aktuální hodnoty polí", "Znovu spustí validaci všech polí bez změny hodnot"],
+    explanation: "reset vrátí formulář do čistého stavu (volitelně na nové hodnoty) a aktualizuje výchozí bod, ze kterého se počítá isDirty.",
   },
   "rm-rhf-93": {
     introduction: "Připomeňte si, k čemu daný koncept slouží, a pak vyberte odpovídající možnost. Zaměřte se na trigger.",
@@ -9716,16 +9711,14 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Round-robin rozděluje požadavky rotací; je jednoduchý a účinný, když jsou servery zhruba rovnocenné.",
   },
   "rm-sysdesign-27": {
-    introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na zdraví.",
-    question: "Health checky umožňují load balanceru:",
-    options: ["Šifrovat provoz", "Přestat směrovat na instance, které selhávají/neodpovídají", "Přidávat indexy", "Cachovat odpovědi"],
-    explanation: "Pravidelné health checky odeberou nezdravé instance z rotace, takže uživatelé nejsou posíláni na rozbité servery.",
+    question: "Health checky umožní load balanceru:",
+    options: ["Přestat směrovat provoz na instance, které selhávají nebo neodpovídají", "Automaticky restartovat instance, které spadly", "Rozdělovat provoz rovnoměrně bez ohledu na stav instancí", "Šifrovat provoz mezi klienty a servery"],
+    explanation: "Pravidelné health checky vyřadí nezdravé instance z rotace, takže uživatelé nejsou posíláni na rozbité servery; jejich restartování je práce orchestrátoru nebo supervisoru.",
   },
   "rm-sysdesign-28": {
-    introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na Load Balancing.",
-    question: "Vyvažování „least connections“ směruje na:",
-    options: ["Náhodný server", "Server, který právě obsluhuje nejméně aktivních spojení", "Pouze první server", "Nejnovější server"],
-    explanation: "Least-connections upřednostňuje nejméně vytíženou instanci, což je užitečné, když se doba trvání požadavků liší.",
+    question: "Load balancing „least connections“ směruje každý nový požadavek na:",
+    options: ["Další server v pevné rotaci (round-robin)", "Server, který právě obsluhuje nejméně aktivních spojení", "Server vybraný hashem IP adresy klienta", "Naposledy přidaný server v poolu"],
+    explanation: "Least-connections upřednostní nejméně vytíženou instanci, což pomáhá, když se doba trvání požadavků liší; round-robin a IP-hash jsou jiné strategie balancování.",
   },
   "rm-sysdesign-29": {
     introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na L7.",
@@ -9734,10 +9727,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Load balancery na vrstvě 7 rozumí HTTP, což umožňuje směrování podle cesty/hostitele, ukončení TLS a další.",
   },
   "rm-sysdesign-30": {
-    introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na dostupnost.",
     question: "Load balancery zlepšují dostupnost, protože:",
-    options: ["Nikdy neselžou", "Obcházejí selhané instance, čímž zabraňují jedinému bodu selhání mezi aplikačními servery", "Ukládají zálohy", "Zmenšují velikost kódu"],
-    explanation: "Rozkládáním provozu mezi redundantní instance a přeskakováním selhaných load balancer odstraňuje SPOF aplikačního serveru.",
+    options: ["Směrují provoz mimo selhané instance, takže žádný aplikační server není single point of failure", "Samy o sobě garantují nulový výpadek", "Udržují kompletní záložní kopii aplikačních dat", "Způsobí, že jednotlivé servery padají méně často"],
+    explanation: "Rozložením provozu mezi redundantní instance a přeskočením těch selhaných balancer odstraní single point of failure na úrovni aplikačních serverů — sám ale musí být také redundantní.",
   },
   "rm-sysdesign-31": {
     introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na redundanci.",
@@ -9758,16 +9750,14 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Cache obsluhuje horká data z rychlé paměti, čímž snižuje latenci a zátěž pomalejších backendů/databází.",
   },
   "rm-sysdesign-34": {
-    introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na hit-miss.",
     question: "Cache „hit“ znamená:",
-    options: ["Data nebyla v cache", "Požadovaná data byla nalezena v cache", "Cache spadla", "Data vypršela"],
-    explanation: "Hit je, když cache už drží požadovaná data; miss znamená, že je nutné je načíst ze zdroje.",
+    options: ["Požadovaná data byla nalezena v cache", "Data se musela stáhnout ze zdroje a pak se nacachovala", "Záznam v cache existoval, ale už expiroval", "Zápis úspěšně aktualizoval existující záznam v cache"],
+    explanation: "Hit znamená, že cache už drží platná požadovaná data; pokud chybí nebo expirovala, jde o miss a je nutné se dotázat zdroje.",
   },
   "rm-sysdesign-35": {
-    introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na ttl.",
-    question: "TTL (time to live) u cachované položky řídí:",
-    options: ["Její barvu", "Jak dlouho zůstává platná, než vyprší", "Její velikost", "Jejího vlastníka"],
-    explanation: "TTL omezuje zastaralost tím, že položky po nastavené době vyprší, čímž vynutí obnovu ze zdroje.",
+    question: "TTL (time to live) u položky v cache řídí:",
+    options: ["Jak dlouho zůstává platná, než expiruje", "Kolikrát se dá přečíst, než bude vyhozena", "Maximální velikost, jaké smí cachovaná hodnota dosáhnout", "Který server ji smí aktualizovat"],
+    explanation: "TTL omezuje zastaralost tím, že záznamy po nastavené době expirují a vynutí si obnovení ze zdroje.",
   },
   "rm-sysdesign-36": {
     introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na invalidaci.",
@@ -9812,10 +9802,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Zápisy směřují na primary a šíří se na repliky; repliky typicky obsluhují čtení.",
   },
   "rm-sysdesign-43": {
-    introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na čtení.",
-    question: "Read repliky škálují především:",
-    options: ["Propustnost zápisů", "Propustnost čtení", "Šifrování úložiště", "Vytváření indexů"],
-    explanation: "Repliky odlehčují čtení z primary; zápisy zůstávají úzkým hrdlem na jediném primary.",
+    question: "Read repliky škálují hlavně:",
+    options: ["Propustnost zápisů", "Propustnost čtení", "Čtení i zápisy stejnou měrou", "Úložnou kapacitu primárního serveru"],
+    explanation: "Repliky odlehčí primárnímu serveru od čtení; všechny zápisy ale pořád jdou přes jediný primární server, takže propustnost zápisů se nezlepší.",
   },
   "rm-sysdesign-44": {
     introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na zpoždění.",
@@ -9824,10 +9813,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Asynchronní replikace znamená, že repliky mohou krátce zaostávat za primary, takže právě zapsaná hodnota se ještě nemusí objevit.",
   },
   "rm-sysdesign-45": {
-    introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na failover.",
-    question: "Failover označuje:",
-    options: ["Smazání primary", "Povýšení repliky na primary, když primary selže", "Vypnutí replikace", "Šifrování záloh"],
-    explanation: "Failover povýší zdravou repliku na primary, aby po selhání primary obnovil dostupnost zápisů.",
+    question: "„Failover“ v replikaci databáze označuje:",
+    options: ["Povýšení repliky na primární server, když primární selže", "Load balancing čtení mezi všemi replikami", "Plánovanou zálohu před údržbou", "Vypínání nečinných replik kvůli úspoře nákladů"],
+    explanation: "Failover povýší zdravou repliku na primární server, aby se po selhání primáru obnovila dostupnost zápisů.",
   },
   "rm-sysdesign-46": {
     introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na sync.",
@@ -9860,10 +9848,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Klíč s vysokou kardinalitou a rovnoměrným rozložením se vyhýbá hotspotům a vyvažuje zátěž napříč shardy.",
   },
   "rm-sysdesign-51": {
-    introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na hotspot.",
-    question: "„Hotspot“ shard je ten, který:",
-    options: ["Nedrží žádná data", "Přijímá nepoměrný podíl provozu/dat", "Je vždy offline", "Má nejvíce indexů"],
-    explanation: "Hotspot vzniká ze zkresleného shard klíče, soustředí zátěž a maří účel shardování.",
+    question: "„Hotspot“ shard je takový, který:",
+    options: ["Dostává neúměrný podíl provozu nebo dat", "Ukládá routovací metadata pro celý cluster", "Drží jen zřídka používaná archivní data", "Je kvůli rychlosti držen celý v paměti"],
+    explanation: "Hotspot vzniká, když zkosený shard key koncentruje zátěž na jeden shard, čímž maří smysl shardingu.",
   },
   "rm-sysdesign-52": {
     introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na dotazy.",
@@ -9890,10 +9877,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Range shardování může soustředit aktuální provoz na nejnovější rozsah; hash shardování rozprostírá zátěž rovnoměrněji.",
   },
   "rm-sysdesign-56": {
-    introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na strategii.",
-    question: "Týmy obvykle přijímají shardování:",
-    options: ["Vždy hned první den", "Až po vyčerpání jednoduššího škálování (cachování, repliky), kvůli jeho složitosti", "Nikdy", "Aby zmenšily kód"],
-    explanation: "Shardování přidává značnou provozní a dotazovací složitost, takže je to typicky poslední možnost po jiném škálování.",
+    question: "Týmy obvykle sahají po shardingu databáze:",
+    options: ["Jako po prvním kroku škálování u každé nové aplikace", "Až když se vyčerpají jednodušší možnosti jako caching a read repliky", "Kdykoli přidají druhý aplikační server", "Jen při přechodu na NoSQL databázi"],
+    explanation: "Sharding přináší značnou provozní i dotazovou složitost, takže je typicky poslední možností po cachingu, replikách a vertikálním škálování.",
   },
   "rm-sysdesign-57": {
     introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na základy.",
@@ -9932,10 +9918,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Backpressure zabraňuje přetížení tím, že zpomaluje nebo bufferuje producenty, když konzumenti zaostávají.",
   },
   "rm-sysdesign-63": {
-    introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na event-driven.",
-    question: "Architektura řízená událostmi (event-driven) podporuje:",
-    options: ["Těsnou synchronní vazbu", "Volnou vazbu prostřednictvím událostí, na které služby reagují", "Jednu obří databázi", "Žádné zasílání zpráv"],
-    explanation: "Služby vydávají a reagují na události, čímž se oddělují a umožňují nezávislé škálování a vývoj.",
+    question: "Event-driven architektura podporuje:",
+    options: ["Těsné synchronní provázání služeb", "Volné vazby přes události, na které služby reagují", "Silnější okamžitou konzistenci než synchronní volání", "Jednu sdílenou databázi pro všechny služby"],
+    explanation: "Služby emitují události a reagují na ně, čímž se od sebe oddělí a mohou škálovat i vyvíjet se nezávisle — za cenu eventuální konzistence.",
   },
   "rm-sysdesign-64": {
     introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na kompromisy.",
@@ -10016,10 +10001,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Retry-After radí klientovi, kdy může bezpečně opakovat, a pomáhá mu se elegantně stáhnout.",
   },
   "rm-sysdesign-77": {
-    introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na throttling.",
-    question: "Throttling se liší od tvrdého odmítnutí tím, že:",
-    options: ["Zahazuje veškerý provoz", "Zpomaluje/řadí nadbytečné požadavky do fronty místo jejich přímého odmítnutí", "Šifruje požadavky", "Přidává indexy"],
-    explanation: "Throttling vyhlazuje nadbytečnou zátěž (zpožďováním/řazením do fronty) místo okamžitého odmítnutí, kde je to vhodné.",
+    question: "Throttling se od tvrdého odmítnutí liší tím, že:",
+    options: ["Všechen nadbytečný provoz okamžitě zahodí", "Nadbytečné požadavky zpomalí nebo zařadí do fronty, místo aby je rovnou odmítl", "Klienty po jediném porušení trvale zablokuje", "Všem nadbytečným požadavkům servíruje odpovědi z cache"],
+    explanation: "Throttling vyhladí špičky zátěže tím, že požadavky zdrží nebo zařadí do fronty místo okamžitého odmítnutí — pokud to daný workload snese.",
   },
   "rm-sysdesign-78": {
     introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na backoff.",
@@ -10052,10 +10036,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Cachovatelná statická aktiva jsou pro CDN ideální; vysoce personalizovaný dynamický obsah těží méně (bez edge logiky).",
   },
   "rm-sysdesign-83": {
-    introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na latenci.",
-    question: "Obsluhování aktiv z okraje blízko uživatele snižuje:",
-    options: ["Správnost", "Síťovou latenci (kratší vzdálenost zpáteční cesty)", "Bezpečnost", "Pouze náklady na úložiště"],
-    explanation: "Fyzická blízkost zkracuje zpáteční cesty, takže edge doručování snižuje latenci pro uživatele po celém světě.",
+    question: "Servírování assetů z edge lokality blízko uživatele primárně snižuje:",
+    options: ["Síťovou latenci, protože round tripy jsou kratší", "Celkové množství přenesených dat", "Čas server-side renderování stránek", "Potřebu cache-control hlaviček"],
+    explanation: "Fyzická blízkost zkracuje round tripy, takže doručování z edge snižuje latenci pro uživatele po celém světě; nezmenšuje payloady ani nenahrazuje pravidla cachování.",
   },
   "rm-sysdesign-84": {
     introduction: "Zaměřte se na ústřední myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Mysli na cache-busting.",
@@ -10310,10 +10293,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Dobře napsané testy dokumentují zamýšlené chování pomocí konkrétních příkladů, které zůstávají v souladu s kódem.",
   },
   "rm-testing-6": {
-    introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na náklady.",
-    question: "Najít chybu dříve (např. v unit testu oproti produkci) je:",
-    options: ["Dražší", "Levnější a rychlejší na opravu", "Nemožné", "Nepodstatné"],
-    explanation: "Čím dříve je defekt odhalen, tím levnější je jeho oprava; testy posouvají detekci chyb doleva, před vydáním.",
+    question: "Najít bug dřív (např. v unit testu vs. v produkci) je:",
+    options: ["Levnější a rychlejší na opravu", "Dražší, protože se musí aktualizovat i testy", "Zhruba stejně nákladné jako najít ho v produkci", "Výhodné jen ve velkých týmech"],
+    explanation: "Čím dřív se defekt zachytí, tím méně kontextu a předělávek jeho oprava stojí; testy posouvají detekci doleva, před release.",
   },
   "rm-testing-7": {
     introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na filozofii.",
@@ -10334,16 +10316,14 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Pyramida upřednostňuje mnoho rychlých unit testů, méně integračních testů a malý počet pomalých E2E testů.",
   },
   "rm-testing-10": {
-    introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na pyramidu.",
-    question: "Unit testy jsou v základně pyramidy, protože jsou:",
-    options: ["Pomalé a nestabilní", "Rychlé, levné a početné", "Vždy end-to-end", "Manuální"],
-    explanation: "Unit testy jsou rychlé a izolované, takže si jich můžeš dovolit mnoho jako základ.",
+    question: "Unit testy sedí na základně testovací pyramidy, protože jsou:",
+    options: ["Rychlé, levné a početné", "Nejrealističtější simulací chování uživatele", "Vyžadované předtím, než se smí napsat jakýkoli kód", "Jediný druh testů, který umí CI spustit"],
+    explanation: "Unit testy jsou rychlé a izolované, takže si jich jako základu můžeš dovolit hodně; realismus je to, za co E2E testy platí rychlostí.",
   },
   "rm-testing-11": {
-    introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na pyramidu.",
-    question: "End-to-end testy jsou na vrcholu, protože jsou:",
-    options: ["Nejrychlejší", "Pomalejší, křehčí a nákladnější — takže jich používej méně", "Nejlevnější", "Nikdy užitečné"],
-    explanation: "E2E testy prověřují celý systém; jsou cenné, ale pomalé a křehké, takže jich měj jen málo a zaměřené.",
+    question: "End-to-end testy sedí na vrcholu pyramidy, protože jsou:",
+    options: ["Pomalejší, křehčí a dražší — takže si jich necháváš méně", "Nejrychlejší na spuštění a nejsnazší na údržbu", "Izolovanější než unit testy", "Určené k úplnému nahrazení integračních testů"],
+    explanation: "E2E testy procvičují celý systém; jsou cenné, ale pomalé a křehké, takže jich měj málo a zaměřené na klíčové flow.",
   },
   "rm-testing-12": {
     introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na antivzor.",
@@ -10412,16 +10392,14 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Chyby o jedničku a hraniční podmínky jsou klasickými zdroji chyb, takže explicitně testuj okraje.",
   },
   "rm-testing-23": {
-    introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na srozumitelnost.",
-    question: "Když unit test selže, dobrý test toto selhání učiní:",
-    options: ["Těžko rozpoznatelným, co se rozbilo", "Jasným, které chování se rozbilo a proč", "Stejně procházejícím", "Tichým pádem celé sady"],
-    explanation: "Zaměřený test s jasným názvem a assertion přesně ukáže, které chování zregredovalo.",
+    question: "Když dobře napsaný unit test selže, měl by:",
+    options: ["Dát jasně najevo, které chování se rozbilo a proč", "Ukázat na přesný řádek produkčního kódu, který se musí změnit", "Automaticky opravit regresi", "Opakovat se, dokud neprojde"],
+    explanation: "Zaměřený test s jasným názvem a assertem přesně určí, které chování zregresovalo; najít přesnou opravu je pořád práce vývojáře.",
   },
   "rm-testing-24": {
-    introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na zaměření.",
     question: "Každý unit test by měl ideálně ověřovat:",
-    options: ["Deset nesouvisejících chování", "Jedno konkrétní chování/očekávání", "Celou aplikaci", "Nic konkrétního"],
-    explanation: "Malé jednoúčelové testy jsou srozumitelnější a lépe lokalizují selhání než rozsáhlé testy s mnoha assertions.",
+    options: ["Jedno konkrétní chování nebo očekávání", "Co nejvíc chování najednou, aby se maximalizovalo pokrytí na test", "Privátní implementační detaily místo výsledků", "Kompletní cestu uživatele aplikací"],
+    explanation: "Malé testy s jedním účelem se snáz chápou a lokalizují selhání líp než rozlehlé testy s mnoha asserty.",
   },
   "rm-testing-25": {
     introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na základy.",
@@ -10448,16 +10426,14 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "expect(() => fn()).toThrow() ověří, že volání vyhodí chybu (volitelně odpovídající zprávě/typu).",
   },
   "rm-testing-29": {
-    introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na syntaxi.",
-    question: "Běžná struktura assertion je:",
-    options: ["expect(actual).matcher(expected)", "assert(expected)(actual)", "check actual", "verify()"],
-    explanation: "Většina frameworků se čte jako expect(actual).matcher(expected), např. expect(sum(2,3)).toBe(5).",
+    question: "V assertech ve stylu Jest je konvenční pořadí argumentů:",
+    options: ["expect(actual).matcher(expected), např. expect(sum(2,3)).toBe(5)", "expect(expected).matcher(actual), např. expect(5).toBe(sum(2,3))", "expect(actual, expected) bez matcheru", "matcher(expected).expect(actual)"],
+    explanation: "Skutečnou hodnotu předáváš do expect() a očekávanou do matcheru: expect(sum(2,3)).toBe(5). Jejich prohození dělá chybové zprávy zavádějícími.",
   },
   "rm-testing-30": {
-    introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na pojmenování.",
-    question: "Výstižný název testu by měl uvádět:",
-    options: ["Jméno autora", "Testované chování a očekávaný výsledek", "Náhodné id", "Velikost souboru"],
-    explanation: "Dobré názvy jako „vrací 0 pro prázdný košík“ dokumentují chování a činí selhání samopopisná.",
+    question: "Popisný název testu by měl uvádět:",
+    options: ["Testované chování a očekávaný výsledek", "Číslo ticketu, kvůli kterému test vznikl", "Název souboru, který se testuje", "Jak dlouho smí test běžet"],
+    explanation: "Názvy jako „vrátí 0 pro prázdný košík“ dokumentují chování a dělají selhání srozumitelnými sama o sobě.",
   },
   "rm-testing-31": {
     introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na zaměření.",
@@ -10628,22 +10604,19 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Cypress a Playwright ovládají reálný prohlížeč a testují celé uživatelské toky end to end.",
   },
   "rm-testing-59": {
-    introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na hodnotu.",
     question: "E2E testy jsou cenné, protože:",
-    options: ["Jsou nejrychlejší testy", "Ověřují, že kritické uživatelské cesty skutečně fungují napříč celým systémem", "Nahrazují unit testy", "Nikdy se nerozbijí"],
-    explanation: "E2E testy dávají nejvyšší jistotu, že klíčové toky (registrace, pokladna) skutečně fungují pro uživatele.",
+    options: ["Ověřují, že kritické uživatelské cesty skutečně fungují napříč celým systémem", "Jsou nejrychlejší testy v celé sadě", "Dokážou plně nahradit unit a integrační testy", "Testují každou funkci v naprosté izolaci"],
+    explanation: "E2E testy dávají nejvyšší jistotu, že klíčové flow (registrace, checkout) uživatelům opravdu fungují od začátku do konce.",
   },
   "rm-testing-60": {
-    introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na nevýhody.",
-    question: "Nevýhodou E2E testů je, že jsou:",
-    options: ["Příliš rychlé", "Pomalé a náchylné k nestabilitě", "Příliš izolované", "Zbytečné"],
-    explanation: "Ovládání celého systému je pomalé a citlivé na časování/prostředí, což činí E2E testy pomalejšími a nestabilnějšími.",
+    question: "Častou nevýhodou E2E testů je, že jsou:",
+    options: ["Pomalé a náchylné k flakiness", "Příliš izolované od reálného chování prohlížeče", "Nespustitelné v CI pipeline", "Neschopné zachytit integrační bugy"],
+    explanation: "Prohánět celý systém skutečným prohlížečem je pomalé a citlivé na časování i prostředí, takže E2E sady bývají pomalejší a víc flaky.",
   },
   "rm-testing-61": {
-    introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na rozsah.",
-    question: "E2E testy bys měl vyhradit pro:",
-    options: ["Každou drobnou funkci", "Kritické, vysoce hodnotné uživatelské cesty", "Čisté utility funkce", "Kontroly typů"],
-    explanation: "Protože jsou nákladné, E2E testy by měly pokrývat nejdůležitější end-to-end toky, ne každý detail.",
+    question: "E2E testy by sis měl šetřit na:",
+    options: ["Kritické, vysoce hodnotné uživatelské cesty", "Každou funkci v codebase", "Čisté utility funkce bez UI", "Cesty kódem už pokryté unit testy"],
+    explanation: "Protože jsou nákladné, E2E testy by měly pokrývat nejdůležitější end-to-end flow, ne každý detail.",
   },
   "rm-testing-62": {
     introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na nestabilitu.",
@@ -10688,10 +10661,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Falešné časovače umožňují testům deterministicky posunout čas a testovat zpoždění/timeouty okamžitě a spolehlivě.",
   },
   "rm-testing-69": {
-    introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na nestabilitu.",
-    question: "Spoléhání na reálná zpoždění setTimeout v testech obvykle:",
-    options: ["Zlepší spolehlivost", "Učiní testy pomalými a nestabilními", "Je vyžadováno", "Zrychlí CI"],
-    explanation: "Reálné časové čekání je pomalé a závislé na časování; upřednostni falešné časovače nebo čekání na explicitní podmínky.",
+    question: "Spoléhat v testech na skutečné setTimeout prodlevy vede k tomu, že:",
+    options: ["Testy jsou pomalé a flaky", "Testy jsou realističtější, a proto spolehlivější", "Nemá to žádný vliv na délku běhu sady", "Je to nutné pro testování jakéhokoli async kódu"],
+    explanation: "Skutečné čekání na čas je pomalé a závislé na časování; radši použij fake timery nebo čekej na explicitní podmínky.",
   },
   "rm-testing-70": {
     introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na opakování.",
@@ -10730,10 +10702,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "In-memory fake repozitář rychle prověří byznys logiku bez reálné databáze, i když je méně realistický než integrační testy.",
   },
   "rm-testing-76": {
-    introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na externí.",
-    question: "Mockování API třetí strany v testech se vyhne:",
-    options: ["Determinismu", "Síťovým voláním, rate limitům a externí nestabilitě", "Assertions", "Pokrytí"],
-    explanation: "Stubování externích API udrží testy offline, rychlé a imunní vůči výpadkům nebo limitům třetích stran.",
+    question: "Mockování third-party API v testech tě zbaví:",
+    options: ["Síťových volání, rate limitů a externí flakiness", "Potřeby testovat cesty ošetření chyb", "Psaní assertů o zpracování odpovědi", "Testování vlastního integračního kódu vůbec"],
+    explanation: "Stubování externích API drží testy offline, rychlé a imunní vůči výpadkům nebo limitům třetích stran — to, jak tvůj kód zachází s odpověďmi, testuješ pořád.",
   },
   "rm-testing-77": {
     introduction: "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na riziko.",
@@ -11102,16 +11073,14 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "CI integruje kód často a při každé změně spouští automatizované buildy/testy, aby zachytila problémy včas.",
   },
   "rm-devops-18": {
-    introduction: "Zaměřte se na ústřední myšlenku otázky a vylučte možnosti, které zjevně nesedí. Mysli na spouštěče.",
-    question: "CI pipeline obvykle spouští:",
-    options: ["Připomínka v kalendáři", "Push nebo pull request do repozitáře", "Manuální telefonát", "Zápis do databáze"],
-    explanation: "CI běží automaticky při událostech v repozitáři (push/PR) a poskytuje okamžitou zpětnou vazbu ke každé změně.",
+    question: "CI pipeline se obvykle spouští:",
+    options: ["Pushem nebo pull requestem do repozitáře", "Ručním stiskem tlačítka release managerem", "Alertem o produkčním incidentu", "Tím, že aplikace dosáhne prahu provozu"],
+    explanation: "CI běží automaticky na události v repozitáři (push/PR) a dává okamžitou zpětnou vazbu ke každé změně; plánované a ruční spouštění existuje, ale není normou.",
   },
   "rm-devops-19": {
-    introduction: "Zaměřte se na ústřední myšlenku otázky a vylučte možnosti, které zjevně nesedí. Mysli na fáze.",
     question: "Typická CI pipeline spouští:",
-    options: ["Pouze nasazení", "Instalaci závislostí, lint, build a testy", "Pouze databázi", "Nic"],
-    explanation: "CI běžně instaluje závislosti, spouští lintery/typové kontroly, sestavuje a provádí testovací sadu.",
+    options: ["Instalaci závislostí, lint, build a testy", "Jen deployment do produkce", "Jen databázové migrace", "Krok lidské code review"],
+    explanation: "CI běžně nainstaluje závislosti, spustí lintery/typové kontroly, build a testovací sadu; review probíhá v PR, ne v pipeline.",
   },
   "rm-devops-20": {
     introduction: "Zaměřte se na ústřední myšlenku otázky a vylučte možnosti, které zjevně nesedí. Mysli na přínos.",
@@ -11126,10 +11095,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Udržování zeleného main je základní disciplínou CI; červený main blokuje všechny a měl by se rychle opravit.",
   },
   "rm-devops-22": {
-    introduction: "Zaměřte se na ústřední myšlenku otázky a vylučte možnosti, které zjevně nesedí. Mysli na konfiguraci.",
-    question: "Konfigurace CI je obvykle uložena:",
-    options: ["Pouze v něčí hlavě", "Jako kód v repozitáři (např. YAML soubor workflow)", "V tabulce", "V produkci"],
-    explanation: "Pipeline jako kód (např. YAML v GitHub Actions) verzuje konfiguraci CI spolu s aplikací kvůli reprodukovatelnosti.",
+    question: "CI konfiguraci je nejlepší ukládat:",
+    options: ["Jako kód v repozitáři (např. YAML workflow soubor)", "Jen ve webovém UI CI poskytovatele, odděleně od kódu", "V lokálním nastavení každého vývojáře", "V environment proměnných na produkčním serveru"],
+    explanation: "Pipeline-as-code (např. YAML pro GitHub Actions) verzuje CI konfiguraci spolu s aplikací, takže je reviewovatelná a reprodukovatelná — na rozdíl od pipeline naklikaných jen v UI.",
   },
   "rm-devops-23": {
     introduction: "Zaměřte se na ústřední myšlenku otázky a vylučte možnosti, které zjevně nesedí. Mysli na reprodukovatelnost.",
@@ -11192,10 +11160,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Oddělení nasazení od aktivace funkce snižuje riziko a umožňuje postupné, řízené zavádění.",
   },
   "rm-devops-33": {
-    introduction: "Zaměřte se na ústřední myšlenku otázky a vylučte možnosti, které zjevně nesedí. Mysli na build.",
-    question: "Krok sestavení (build) obvykle:",
-    options: ["Spouští produkční databázi", "Kompiluje/balí zdroj do nasaditelného artefaktu", "Posílá e-maily", "Maže kód"],
-    explanation: "Build transformuje zdroj (např. TS → JS bundle) na artefakt připravený k testování a nasazení.",
+    question: "Build krok v pipeline typicky:",
+    options: ["Zkompiluje/zabundluje zdrojáky do nasaditelného artefaktu", "Servíruje aplikaci koncovým uživatelům", "Aplikuje databázové migrace na produkci", "Nahrává surové zdrojové soubory rovnou do prohlížečů uživatelů"],
+    explanation: "Build transformuje zdroj (např. TS → JS bundle) do artefaktu připraveného k testování a nasazení.",
   },
   "rm-devops-34": {
     introduction: "Zaměřte se na ústřední myšlenku otázky a vylučte možnosti, které zjevně nesedí. Mysli na artefakty.",
@@ -12278,10 +12245,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Režim ladění často odhaluje citlivé vnitřní informace (stack trace, tajemství, cesty), čímž pomáhá útočníkům — v produkci ho vypněte.",
   },
   "rm-security-94": {
-    introduction: "Zaměřte se na hlavní testovanou myšlenku a vylučte možnosti, které zjevně nesedí. Mějte na paměti výchozí přihlašovací údaje.",
-    question: "Výchozí/ukázkové přihlašovací údaje (admin/admin) by měly být:",
-    options: ["Ponechány tak, jak jsou", "Změněny/odstraněny před nasazením", "Zveřejněny", "Používány opakovaně všude"],
-    explanation: "Výchozí přihlašovací údaje jsou všeobecně známé a jednou z hlavních příčin průniků; vždy je změňte nebo zakažte.",
+    question: "Proč jsou výchozí přihlašovací údaje jako admin/admin tak vážné riziko?",
+    options: ["Jsou veřejně zdokumentované a útočníci je rutinně skenují", "Rychle expirují a zamknou administrátorům přístup", "Znatelně zpomalují přihlašování", "Záleží na nich jen v interních sítích"],
+    explanation: "Výchozí přihlašovací údaje jsou ve vendor dokumentaci, takže je útočníci automaticky zkoušejí ve velkém; před nasazením je změň nebo zakaž.",
   },
   "rm-security-95": {
     introduction: "Zaměřte se na hlavní testovanou myšlenku a vylučte možnosti, které zjevně nesedí. Mějte na paměti CORS.",
@@ -12344,10 +12310,9 @@ export const roadmapExtraTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Méně závislostí znamená méně cizího kódu, kterému je třeba důvěřovat, auditovat ho a záplatovat — menší plocha dodavatelského řetězce.",
   },
   "rm-security-105": {
-    introduction: "Zaměřte se na hlavní testovanou myšlenku a vylučte možnosti, které zjevně nesedí. Mějte na paměti PII.",
-    question: "PII (osobní identifikační údaje) zahrnují:",
-    options: ["Dobu provozu serveru", "Data jako jména, e-maily, adresy, která identifikují osobu", "Teplotu CPU", "Build logy"],
-    explanation: "PII jsou data, která identifikují jednotlivce; vyžadují pečlivé zacházení, ochranu a minimalizaci.",
+    question: "PII (personally identifiable information) zahrnuje:",
+    options: ["Data jako jména, e-maily a adresy, která identifikují osobu", "Jen čísla státních dokladů", "Jakákoli data uložená v databázi", "Jen data, která uživatel označil jako soukromá"],
+    explanation: "PII jsou jakákoli data, která dokážou identifikovat jednotlivce — nejen oficiální doklady — a vyžadují pečlivé zacházení, ochranu a minimalizaci bez ohledu na nastavení uživatele.",
   },
   "rm-security-106": {
     introduction: "Zaměřte se na hlavní testovanou myšlenku a vylučte možnosti, které zjevně nesedí. Mějte na paměti minimalizaci.",

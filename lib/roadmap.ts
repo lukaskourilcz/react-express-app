@@ -107,7 +107,7 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
   html: [
     'HTML Basics', 'Document Structure', 'Text Elements', 'Links & Images', 'Lists',
     'Attributes', 'Forms: Inputs', 'Forms: Controls', 'Tables', 'Semantic HTML',
-    'Media', 'Metadata & Head', 'Accessibility', 'Entities & Special', 'Advanced HTML',
+    'Media', 'Metadata & Head', 'Accessibility', 'Entities & Special Characters', 'Advanced HTML',
   ],
   css: [
     'How CSS Works', 'Selectors & Classes', 'The Box Model',
@@ -134,7 +134,7 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'Caching & CDNs', 'Authentication Basics', 'Databases Overview', 'Deployment & Hosting', 'Performance & Optimization',
   ],
   internet: [
-    'What Is the Internet?', 'IP Addresses', 'DNS — The Internet’s Phonebook', 'Packets & Routing', 'TCP & UDP',
+    'What is the Internet?', 'IP Addresses', 'DNS — The Internet’s Phonebook', 'Packets & Routing', 'TCP & UDP',
     'The Protocol Stack (TCP/IP)', 'The Web over HTTP', 'Ports, NAT & Firewalls', 'ISPs & Physical Connections', 'Security, HTTPS & Encryption',
   ],
   ai: [

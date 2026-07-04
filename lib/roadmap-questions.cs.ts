@@ -1458,10 +1458,9 @@ export const roadmapTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "B rozšiřuje A, takže potřebuje x i y, které jsou přítomné.",
   },
   "rm-ts-43": {
-    introduction: "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
     question: "Co vrátí g.greet()?\n\n```ts\ninterface Greeter {\n  greet(): string;\n}\nconst g: Greeter = { greet: () => \"hi\" };\ng.greet();\n```",
-    options: ["\"hi\"","string","void","Error"],
-    explanation: "greet vrací řetězec \"hi\".",
+    options: ["\"hi\"","\"HI\"","undefined","Nastane chyba typu"],
+    explanation: "greet je arrow funkce, která vrací řetězec \"hi\" a splňuje tak rozhraní (interface) Greeter.",
   },
   "rm-ts-44": {
     introduction: "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
@@ -1482,10 +1481,9 @@ export const roadmapTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Rozhraní (interface) se stejným názvem se slučují, takže A potřebuje x i y.",
   },
   "rm-ts-47": {
-    introduction: "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
     question: "Co vrátí f(3)?\n\n```ts\ninterface Fn {\n  (n: number): number;\n}\nconst f: Fn = n => n * 2;\nf(3);\n```",
-    options: ["6","číslo","Error","undefined"],
-    explanation: "Volací signatura popisuje funkci; f(3) zdvojnásobí na 6.",
+    options: ["6","9","Nastane chyba typu","undefined"],
+    explanation: "Call signatura rozhraní (interface) typuje f jako funkci, která bere a vrací number; f(3) vrátí 3 * 2 = 6.",
   },
   "rm-ts-48": {
     introduction: "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
@@ -2742,10 +2740,9 @@ export const roadmapTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Event handlery dostanou odpovídající objekt události.",
   },
   "rm-react-57": {
-    introduction: "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-    question: "Co je n po překreslení?\n\n```jsx\nconst [n, setN] = useState(0);\nsetN(5);\n```",
+    question: "Jaké je n poté, co proběhne click handler a komponenta se překreslí?\n\n```jsx\nconst [n, setN] = useState(0);\nfunction handleClick() {\n  setN(5);\n}\n// user clicks a button wired to handleClick\n```",
     options: ["0","5","undefined","NaN"],
-    explanation: "setN(5) naplánuje nový stav, takže po překreslení je n rovno 5.",
+    explanation: "setN(5) naplánuje aktualizaci stavu, takže při dalším renderu je n 5.",
   },
   "rm-react-58": {
     introduction: "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",

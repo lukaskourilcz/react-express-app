@@ -77,7 +77,7 @@ export const cs: Record<TranslationKey, string> = {
   // Shop (tokens)
   'shop.kicker': 'Tokeny',
   'shop.title': 'Obchod',
-  'shop.subtitle': 'Utrať tokeny za bonusy a vychytávky. Tokeny získáváš pasivně, 10 % z každého zisku XP.',
+  'shop.subtitle': 'Utrať tokeny za bonusy a vychytávky. Získáváš je automaticky s každým ziskem XP.',
   'shop.balanceLabel': 'Tvůj zůstatek',
   'shop.tokensUnit': 'tokenů',
   'shop.earnRate': '+10 % z každého zisku XP',
@@ -156,7 +156,7 @@ export const cs: Record<TranslationKey, string> = {
   // Difficulty modes
   'difficulty.basics': 'Základy',
   'difficulty.easy': 'Lehká',
-  'difficulty.zero-to-hero': 'Od nuly k mistrovi',
+  'difficulty.zero-to-hero': 'Vzestupná',
   'difficulty.advanced': 'Pokročilá',
   'difficulty.mixed': 'Smíšená',
   'difficulty.basics.tip': 'Definice a základní pojmy.',
@@ -215,12 +215,12 @@ export const cs: Record<TranslationKey, string> = {
   // Red-flag a question ("this looks wrong / misleading")
   'flag.ariaLabel': 'Označit otázku jako špatnou nebo zavádějící',
   'flag.title': 'Nahlásit tuto otázku',
-  'flag.intro': 'Něco je špatně nebo zavádějící? Dejte nám vědět a podíváme se na to.',
+  'flag.intro': 'Něco je špatně nebo zavádějící? Dej nám vědět a podíváme se na to.',
   'flag.detailLabel': 'Co je špatně? (nepovinné)',
   'flag.reviewLabel': 'Tato otázka by měla být zkontrolována',
   'flag.send': 'Odeslat',
   'flag.sending': 'Odesílání…',
-  'flag.sent': 'Děkujeme, otázka byla označena ke kontrole.',
+  'flag.sent': 'Díky, otázku prověříme.',
   'flag.failed': 'Označení se nepodařilo odeslat',
 
   'common.cancel': 'Zrušit',
@@ -286,7 +286,7 @@ export const cs: Record<TranslationKey, string> = {
   'xp.gainQuiz': '+{xp} XP získáno',
   'xp.gainPractice': '+{xp} XP · procvičování',
   'xp.rankUpKicker': 'Postup',
-  'xp.rankUp': 'Nyní jste {title}',
+  'xp.rankUp': 'Teď jsi {title}',
 
   // Achievements
   'achievement.first-quiz.label': 'První kroky',
@@ -416,7 +416,7 @@ export const cs: Record<TranslationKey, string> = {
   'roadmap.introKicker': 'Než začneš',
   'roadmap.introStart': 'Spustit úroveň',
   'roadmap.passed': 'Splněno',
-  'roadmap.allDone': 'Zvládl(a) jsi všechny úrovně. Skvělá práce!',
+  'roadmap.allDone': 'Zvládl(a) jsi tady všechny úrovně. Dobrá práce.',
   'roadmap.retry': 'Zkusit znovu',
   'roadmap.error': 'Nepodařilo se načíst roadmapu. Zkus to prosím znovu.',
   'roadmap.question': 'Otázka {current} z {total}',
@@ -548,7 +548,7 @@ export const cs: Record<TranslationKey, string> = {
   'challenge.rule3': 'Závodíš taky s 90sekundovým časem, hru ukončí to, co dojde dřív.',
   'challenge.rule4': 'Skóre = počet správných odpovědí. Překonej nejvyšší skóre a získej titul šampiona.',
   'challenge.currentChampion': 'Aktuální šampion',
-  'challenge.noChampion': 'Skóre ještě nikdo nemá. Buď první!',
+  'challenge.noChampion': 'Skóre ještě nikdo nemá. Buď první.',
   'challenge.hallOfFame': 'Síň slávy',
   'challenge.startButton': 'Vstoupit do výzvy',
   'challenge.score': 'Skóre',

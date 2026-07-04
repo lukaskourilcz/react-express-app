@@ -48,8 +48,8 @@ export const en = {
   'home.pathDialogSubtitle': 'Pick the track to focus on.',
   'home.pathCurrent': 'Current',
   'home.pathChosenCta': 'Your path: {label}',
-  'home.pathChosenHint': 'You are set on the {label} path. Jump in whenever you are ready.',
-  'home.trackSavedSnack': 'Saved. You are on the {label} path.',
+  'home.pathChosenHint': 'You’re set on the {label} path. Start whenever you’re ready.',
+  'home.trackSavedSnack': 'Saved. You’re on the {label} path.',
   'home.continueTrack': 'Continue: {track}',
   'home.stepsTitle': 'How to get started',
   'home.step1Title': 'Sign in',
@@ -76,7 +76,7 @@ export const en = {
   // Shop (tokens)
   'shop.kicker': 'Tokens',
   'shop.title': 'Shop',
-  'shop.subtitle': 'Spend tokens on perks and cosmetics. Earn tokens passively, every XP gain credits 10% as tokens.',
+  'shop.subtitle': 'Spend tokens on perks and cosmetics. You earn them automatically as you gain XP.',
   'shop.balanceLabel': 'Your balance',
   'shop.tokensUnit': 'tokens',
   'shop.earnRate': '+10% of every XP gain',
@@ -155,7 +155,7 @@ export const en = {
   // Difficulty modes
   'difficulty.basics': 'Basics',
   'difficulty.easy': 'Easy',
-  'difficulty.zero-to-hero': 'Zero to Hero',
+  'difficulty.zero-to-hero': 'Climb',
   'difficulty.advanced': 'Advanced',
   'difficulty.mixed': 'Mixed',
   'difficulty.basics.tip': 'Definitions and basic terms.',
@@ -269,7 +269,7 @@ export const en = {
 
   // Learning track
   'profile.trackTitle': 'Learning track',
-  'profile.trackHelp': "Pick your path and we'll unlock its first lessons so you can dive straight in.",
+  'profile.trackHelp': "Pick your path and we'll unlock its first lessons so you can start right away.",
   'profile.trackSectionsLabel': 'Your starting sections',
   'profile.trackSet': '{label} track set, starting sections unlocked',
   'profile.trackGoLearn': 'Go to learning path →',
@@ -415,7 +415,7 @@ export const en = {
   'roadmap.introKicker': 'Before you start',
   'roadmap.introStart': 'Start the level',
   'roadmap.passed': 'Passed',
-  'roadmap.allDone': 'You’ve mastered every level here. Nice work!',
+  'roadmap.allDone': 'You’ve cleared every level here. Nice work.',
   'roadmap.retry': 'Try again',
   'roadmap.error': 'Couldn’t load the roadmap. Please try again.',
   'roadmap.question': 'Question {current} of {total}',
@@ -536,7 +536,7 @@ export const en = {
   'careerRoadmap.beyond.communication.detail': 'Code review, mentoring, scoping, saying no, product sense.',
   'careerRoadmap.beyond.leadership.label': 'Leadership & ownership',
   'careerRoadmap.beyond.leadership.detail': 'Driving projects, mentoring others, and being accountable for outcomes.',
-  'careerRoadmap.footer': 'Master these fundamentals here, then go get the reps. That combination is what actually makes it in this market.',
+  'careerRoadmap.footer': 'Nail the fundamentals here, then go get the reps. That combination is what actually makes it in this market.',
 
   // Biggest Shark Challenge
   'challenge.title': 'The Biggest Shark Challenge',
@@ -547,7 +547,7 @@ export const en = {
   'challenge.rule3': 'You also race a 90-second clock, whichever runs out first ends the run.',
   'challenge.rule4': 'Score = correct answers. Beat the top score to claim the championship.',
   'challenge.currentChampion': 'Current champion',
-  'challenge.noChampion': 'No one has set a score yet. Be the first!',
+  'challenge.noChampion': 'No one has set a score yet. Be the first.',
   'challenge.hallOfFame': 'Hall of Fame',
   'challenge.startButton': 'Enter the challenge',
   'challenge.score': 'Score',

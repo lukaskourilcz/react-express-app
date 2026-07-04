@@ -17,10 +17,9 @@ export const internetTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Internet je síť pod tím vším; web (stránky přes HTTP) je jen jednou z mnoha věcí, které po něm jezdí.",
   },
   "rm-internet-3": {
-    introduction: "Vzpomeň si, co všechno na počítači nebo telefonu používá připojení k síti.",
-    question: "Co dalšího kromě webových stránek putuje po internetu?",
-    options: ["Jen webové stránky", "Jen obrázky", "Nic dalšího", "E-maily, videohovory, hry a data aplikací"],
-    explanation: "E-maily, streamování, online hry i provoz aplikací jezdí po internetu, nejen webové stránky v prohlížeči.",
+    question: "Jaký je vztah mezi internetem a webem?",
+    options: ["Jsou to dva názvy pro tutéž věc", "Web je jedna ze služeb běžících na internetu, vedle e-mailu, videohovorů a provozu aplikací", "Internet je služba, která běží nad webem", "Web je hardware a internet je software"],
+    explanation: "Internet je síť pod tím vším; web (HTTP stránky) je jen jednou z mnoha služeb na něm, spolu s e-mailem, streamováním, hrami a daty aplikací.",
   },
   "rm-internet-4": {
     introduction: "Zaměř se na to, kdo nebo co internet řídí, a jestli má vůbec jeden střed.",
@@ -185,10 +184,9 @@ export const internetTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "Spolehlivé protokoly jako TCP poznají chybějící pakety a vyžádají si jejich opětovné poslání.",
   },
   "rm-internet-31": {
-    introduction: "Vzpomeň si, co přesně ti příkaz ping ukazuje o spojení.",
     question: "Co zhruba měří příkaz „ping“?",
-    options: ["Místo na disku", "Sílu hesla", "Jas obrazovky", "Dobu cesty paketu k hostiteli a zpět"],
-    explanation: "Ping pošle malý paket a změří, jak dlouho trvá cesta tam a zpět, což ukazuje latenci k hostiteli.",
+    options: ["Šířku pásma tvého připojení", "Dobu, za kterou paket doletí k hostu a zpět (round-trip time)", "Počet routerových hopů k hostu", "Jak dlouho trvá DNS lookup"],
+    explanation: "Ping pošle malý paket a změří cestu tam a zpět, což ukazuje latenci k hostu. Šířka pásma potřebuje test propustnosti a počet hopů dává traceroute.",
   },
   "rm-internet-32": {
     introduction: "Rozliš zpoždění od množství dat, které proteče.",
@@ -419,10 +417,9 @@ export const internetTranslationsCs: Record<string, QuestionTranslation> = {
     explanation: "IXP jsou fyzická místa, kde se ISP a sítě propojují, aby si efektivně vyměňovaly provoz.",
   },
   "rm-internet-70": {
-    introduction: "Přemýšlej, kolik mezikroků provoz cestou ke vzdálenému webu projde.",
     question: "Když posíláš data na vzdálený web, tvůj provoz obvykle:",
-    options: ["Jde přímo bez zastávek", "Projde cestou mnoha routery a sítěmi", "Putuje jen přes tvého poskytovatele", "Přeskočí veškerý hardware"],
-    explanation: "Data typicky proskáčou přes několik routerů a sítí poskytovatelů, než dorazí ke vzdálenému cíli.",
+    options: ["Putuje jediným skokem přímo na cílový server", "Projde cestou mnoha routery a sítěmi", "Zůstává celou dobu uvnitř sítě tvého ISP", "Používá vyhrazený kabel rezervovaný jen pro tvoje připojení"],
+    explanation: "Data typicky skáčou přes několik routerů a sítí poskytovatelů (viditelné přes traceroute), než dorazí do vzdáleného cíle.",
   },
   "rm-internet-71": {
     introduction: "Zamysli se, jakou vzdálenost musí signál u satelitu urazit navíc.",

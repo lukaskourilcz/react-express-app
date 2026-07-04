@@ -38,7 +38,7 @@ export const tsSeedsB: Seed[] = [
   // ── Level 6 — Interfaces ───────────────────────────────────────────────
   { q: 'What happens?\n\n```ts\ninterface A {\n  f(): void;\n}\nconst a: A = { f() {} };\n```', opts: ['Type error', 'Compiles', 'f is missing', 'Runtime error'], a: 1, e: 'The object provides the required method f, so it satisfies A.', tags: ['Interfaces'] },
   { q: 'What happens?\n\n```ts\ninterface A {\n  x: number;\n}\ninterface A {\n  y: number;\n}\nconst a: A = { x: 1, y: 2 };\n```', opts: ['Type error', 'Compiles (interfaces merge)', 'duplicate error', 'Runtime error'], a: 1, e: 'Interfaces with the same name merge, so A needs both x and y.', tags: ['Interfaces', 'Merging'] },
-  { q: 'What does f(3) return?\n\n```ts\ninterface Fn {\n  (n: number): number;\n}\nconst f: Fn = n => n * 2;\nf(3);\n```', opts: ['6', 'a number', 'Error', 'undefined'], a: 0, e: 'The call signature describes a function; f(3) doubles to 6.', tags: ['Interfaces', 'Call signatures'] },
+  { q: 'What does f(3) return?\n\n```ts\ninterface Fn {\n  (n: number): number;\n}\nconst f: Fn = n => n * 2;\nf(3);\n```', opts: ['6', '9', 'A type error occurs', 'undefined'], a: 0, e: 'The interface\'s call signature types f as a function taking and returning a number; f(3) returns 3 * 2 = 6.', tags: ['Interfaces', 'Call signatures'] },
   { q: 'A readonly interface property can be:\n\n```ts\ninterface A {\n  readonly id: number;\n}\n```', opts: ['reassigned freely', 'set at creation only', 'optional', 'a string'], a: 1, e: 'readonly means it is set when the object is created and never reassigned.', tags: ['Interfaces', 'readonly'] },
 
   // ── Level 7 — Union Types ──────────────────────────────────────────────

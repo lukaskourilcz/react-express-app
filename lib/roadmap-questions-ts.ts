@@ -38,7 +38,7 @@ export const tsSeedsA: Seed[] = [
   // ── Level 6 — Interfaces ───────────────────────────────────────────────
   { q: 'What type is dog.name?\n\n```ts\ninterface Animal {\n  name: string;\n}\nconst dog: Animal = { name: "Rex" };\ndog.name;\n```', opts: ['string', 'number', 'Animal', 'any'], a: 0, e: 'The interface declares name as string.', tags: ['Interfaces'] },
   { q: 'What happens?\n\n```ts\ninterface A {\n  x: number;\n}\ninterface B extends A {\n  y: number;\n}\nconst b: B = { x: 1, y: 2 };\n```', opts: ['Type error', 'Compiles', 'y missing', 'x missing'], a: 1, e: 'B extends A, so it needs both x and y, which are present.', tags: ['Interfaces', 'extends'] },
-  { q: 'What does g.greet() return?\n\n```ts\ninterface Greeter {\n  greet(): string;\n}\nconst g: Greeter = { greet: () => "hi" };\ng.greet();\n```', opts: ['"hi"', 'string', 'void', 'Error'], a: 0, e: 'greet returns the string "hi".', tags: ['Interfaces', 'Methods'] },
+  { q: 'What does g.greet() return?\n\n```ts\ninterface Greeter {\n  greet(): string;\n}\nconst g: Greeter = { greet: () => "hi" };\ng.greet();\n```', opts: ['"hi"', '"HI"', 'undefined', 'A type error occurs'], a: 0, e: 'greet is an arrow function that returns the string "hi", satisfying the Greeter interface.', tags: ['Interfaces', 'Methods'] },
   { q: 'What happens?\n\n```ts\ninterface Box {\n  value: number;\n}\nconst b: Box = {};\n```', opts: ['Compiles', 'Type error', 'value is 0', 'undefined'], a: 1, e: 'Box requires value, so the empty object is a type error.', tags: ['Interfaces', 'Errors'] },
 
   // ── Level 7 — Union Types ──────────────────────────────────────────────

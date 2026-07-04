@@ -48,7 +48,7 @@ export const reactSeedsA: Seed[] = [
   { q: 'What is e.target.value?\n\n```jsx\n<input onChange={e => console.log(e.target.value)} />;\n```', opts: ['The input value', 'The element', 'undefined', 'the event name'], a: 0, e: 'e.target is the input, and its value is the current text.', tags: ['Events', 'Forms'] },
 
   // ── Level 8 — Updating State ───────────────────────────────────────────
-  { q: 'After re-render, what is n?\n\n```jsx\nconst [n, setN] = useState(0);\nsetN(5);\n```', opts: ['0', '5', 'undefined', 'NaN'], a: 1, e: 'setN(5) schedules the new state, so after re-render n is 5.', tags: ['useState'] },
+  { q: 'After the click handler runs and the component re-renders, what is n?\n\n```jsx\nconst [n, setN] = useState(0);\nfunction handleClick() {\n  setN(5);\n}\n// user clicks a button wired to handleClick\n```', opts: ['0', '5', 'undefined', 'NaN'], a: 1, e: 'setN(5) schedules a state update, so on the next render n is 5.', tags: ['useState'] },
   { q: 'What is prev here?\n\n```jsx\nsetN(prev => prev + 1);\n```', opts: ['The new value', 'The current state value', 'undefined', 'the setter'], a: 1, e: 'The functional updater receives the latest state as prev.', tags: ['useState'] },
   { q: 'After one call from n = 0, what is n?\n\n```jsx\nconst [n, setN] = useState(0);\nfunction handle() {\n  setN(n + 1);\n  setN(n + 1);\n}\n```', opts: ['1', '2', '0', '3'], a: 0, e: 'Both calls read the same stale n (0), so both set it to 1. The result is 1.', tags: ['useState', 'Gotchas'] },
   { q: 'After one call from n = 0, what is n?\n\n```jsx\nfunction handle() {\n  setN(p => p + 1);\n  setN(p => p + 1);\n}\n```', opts: ['1', '2', '0', '3'], a: 1, e: 'Functional updates use the latest value each time, so 0 → 1 → 2.', tags: ['useState'] },

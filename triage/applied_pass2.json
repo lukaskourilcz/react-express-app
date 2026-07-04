@@ -1,0 +1,367 @@
+{
+ "appliedAt": "2026-07-04",
+ "pass": 2,
+ "scope": "678 borderline keeps re-reviewed (relevance==3, clarity<=3, or difficulty_fit<=2 & relevance<=4)",
+ "northStar": "does knowing this make someone a better working web developer?",
+ "results": {
+  "keep": 591,
+  "drop": 33,
+  "fix": 54
+ },
+ "drops": [
+  {
+   "id": "649",
+   "reason": "ThisType is library-author esoterica beyond beginner-to-mid audience."
+  },
+  {
+   "id": "657",
+   "reason": "prependOnceListener is docs-footnote API minutiae with no transfer value."
+  },
+  {
+   "id": "739",
+   "reason": "Annotated-only push flag is docs-footnote minutiae devs look up."
+  },
+  {
+   "id": "754",
+   "reason": "Cone-mode sparse-checkout command sequence is look-it-up tool esoterica."
+  },
+  {
+   "id": "rm-js-111",
+   "reason": "map's thisArg parameter is obsolete docs-footnote trivia."
+  },
+  {
+   "id": "rm-react-164",
+   "reason": "Trivial arithmetic mislabeled as difficulty-5 hooks; teaches nothing about hooks."
+  },
+  {
+   "id": "rm-next-55",
+   "reason": "Duplicate of rm-next-50 with absurd distractors (localStorage, a global)."
+  },
+  {
+   "id": "rm-next-94",
+   "reason": "styled-jsx is dated niche tooling; incompatible with Server Components."
+  },
+  {
+   "id": "rm-node-194",
+   "reason": "require.cache deletion incantation is look-it-up esoterica."
+  },
+  {
+   "id": "rm-html-39",
+   "reason": "Presentational type attribute minutiae; CSS list-style-type replaces it."
+  },
+  {
+   "id": "rm-dsa-6",
+   "reason": "Tautological \u2014 the stem answers itself, zero discrimination or transfer."
+  },
+  {
+   "id": "rm-dsa-83",
+   "reason": "Exact duplicate of rm-dsa-20 (linear search worst case O(n))."
+  },
+  {
+   "id": "rm-algorithms-57",
+   "reason": "Pure logic riddle; no transfer value for working devs"
+  },
+  {
+   "id": "rm-abbr-33",
+   "reason": "Gotcha trivia; 'Node Package Manager' is defensible in practice"
+  },
+  {
+   "id": "rm-internet-65",
+   "reason": "ISP definition is general public knowledge; no dev value"
+  },
+  {
+   "id": "rm-internet-67",
+   "reason": "Physics trivia, guessable, duplicates undersea-cable question"
+  },
+  {
+   "id": "rm-ai-155",
+   "reason": "Vendor brand trivia; no skill transfer"
+  },
+  {
+   "id": "rm-ai-160",
+   "reason": "Brand-to-model matching; rote vendor trivia"
+  },
+  {
+   "id": "rm-rhf-24",
+   "reason": "Exact duplicate of rm-rhf-17 (handleSubmit returns a handler)"
+  },
+  {
+   "id": "rm-db-38",
+   "reason": "AVG is self-describing; zero discrimination"
+  },
+  {
+   "id": "rm-db-39",
+   "reason": "MIN/MAX self-describing; zero discrimination"
+  },
+  {
+   "id": "rm-testing-64",
+   "reason": "Environment-dependent claim; redundant with adjacent E2E-cost questions"
+  },
+  {
+   "id": "rm-devops-7",
+   "reason": "Answer restates the term; tests nothing beyond English"
+  },
+  {
+   "id": "rm-devops-20",
+   "reason": "Content-free; redundant with other CI questions in pool"
+  },
+  {
+   "id": "rm-devops-24",
+   "reason": "Content-free rationale question; distractors absurd"
+  },
+  {
+   "id": "rm-devops-38",
+   "reason": "Direction-obvious; real nuance (cache keys) untested"
+  },
+  {
+   "id": "rm-devops-39",
+   "reason": "Duplicates pipeline-as-code question rm-devops-22"
+  },
+  {
+   "id": "rm-devops-40",
+   "reason": "Redundant with CI gating questions; absurd distractors"
+  },
+  {
+   "id": "rm-devops-71",
+   "reason": "Self-describing term; zero discrimination"
+  },
+  {
+   "id": "rm-devops-78",
+   "reason": "Redundant with other CI/CD pipeline questions"
+  },
+  {
+   "id": "rm-devops-97",
+   "reason": "Definition restates the word 'monitoring'; no content"
+  },
+  {
+   "id": "rm-devops-102",
+   "reason": "Self-evident; 'punish engineers' distractor is a joke"
+  },
+  {
+   "id": "rm-devops-120",
+   "reason": "Summary platitude; tests nothing"
+  }
+ ],
+ "fixes": [
+  {
+   "id": "72",
+   "reason": "Only/only/only/both pattern makes inclusive option guessable."
+  },
+  {
+   "id": "161",
+   "reason": "Absurd 'doesn't exist' distractor; correct option conspicuously longest."
+  },
+  {
+   "id": "164",
+   "reason": "Double-barreled stem and absurd 'only console.log exists' distractor."
+  },
+  {
+   "id": "199",
+   "reason": "Two absurd distractors make the answer guessable."
+  },
+  {
+   "id": "259",
+   "reason": "Absurd 'doesn't exist' distractor; correct option conspicuously longest."
+  },
+  {
+   "id": "263",
+   "reason": "UI-navigation options weak; test what the feature is for instead."
+  },
+  {
+   "id": "268",
+   "reason": "'Nothing' and 'Only HTML' are throwaway distractors."
+  },
+  {
+   "id": "332",
+   "reason": "Distractors are browser-absurd in a Node question."
+  },
+  {
+   "id": "351",
+   "reason": "Only/only/either pattern makes inclusive option guessable."
+  },
+  {
+   "id": "655",
+   "reason": "Import line in stem names the answer."
+  },
+  {
+   "id": "695",
+   "reason": "Correct option conspicuously longer with embedded explanation."
+  },
+  {
+   "id": "696",
+   "reason": "Correct option triple-length and packs three facts; not parallel."
+  },
+  {
+   "id": "699",
+   "reason": "Correct option far longer than distractors; narrow to key bug."
+  },
+  {
+   "id": "rm-ts-43",
+   "reason": "Distractor 'string' is also defensible as what greet returns."
+  },
+  {
+   "id": "rm-ts-47",
+   "reason": "'a number' is also a correct description of the return value."
+  },
+  {
+   "id": "rm-react-57",
+   "reason": "Calling setN in render body would infinite-loop, not just re-render."
+  },
+  {
+   "id": "rm-next-31",
+   "reason": "Correct option conspicuously longer and more detailed than distractors."
+  },
+  {
+   "id": "rm-next-46",
+   "reason": "All distractors are invented names; real APIs make it discriminate."
+  },
+  {
+   "id": "rm-dsa-39",
+   "reason": "Correct option echoes 'hash' and is longer/hedged than distractors."
+  },
+  {
+   "id": "rm-general-12",
+   "reason": "Vague stem and absurd 'guessing' distractor"
+  },
+  {
+   "id": "rm-internet-3",
+   "reason": "Three 'only' distractors make it content-free; recast as internet-vs-web"
+  },
+  {
+   "id": "rm-internet-31",
+   "reason": "Distractors absurd for a networking question"
+  },
+  {
+   "id": "rm-internet-70",
+   "reason": "Two absurd distractors; concept (multi-hop routing) worth keeping"
+  },
+  {
+   "id": "rm-rhf-92",
+   "reason": "Absurd distractors (dark mode); concept worth testing"
+  },
+  {
+   "id": "rm-sysdesign-27",
+   "reason": "Nonsensical distractors; concept worth testing"
+  },
+  {
+   "id": "rm-sysdesign-28",
+   "reason": "Distractors implausible; use rival balancing algorithms instead"
+  },
+  {
+   "id": "rm-sysdesign-30",
+   "reason": "Distractors obviously wrong; concept core to availability"
+  },
+  {
+   "id": "rm-sysdesign-34",
+   "reason": "Distractors implausible; vocabulary worth keeping"
+  },
+  {
+   "id": "rm-sysdesign-35",
+   "reason": "Nonsensical distractors (color, owner); concept legit"
+  },
+  {
+   "id": "rm-sysdesign-43",
+   "reason": "Two absurd distractors; add plausible ones"
+  },
+  {
+   "id": "rm-sysdesign-45",
+   "reason": "Implausible distractors; failover is core vocabulary"
+  },
+  {
+   "id": "rm-sysdesign-51",
+   "reason": "Implausible distractors; hotspot concept worth keeping"
+  },
+  {
+   "id": "rm-sysdesign-56",
+   "reason": "Distractors absurd; sharding-as-last-resort worth testing"
+  },
+  {
+   "id": "rm-sysdesign-63",
+   "reason": "Weak distractors; loose-coupling concept worth keeping"
+  },
+  {
+   "id": "rm-sysdesign-77",
+   "reason": "Two absurd distractors; throttle-vs-reject worth testing"
+  },
+  {
+   "id": "rm-sysdesign-83",
+   "reason": "Distractors implausible; edge-latency concept worth keeping"
+  },
+  {
+   "id": "rm-testing-6",
+   "reason": "Distractors absurd; shift-left concept worth testing"
+  },
+  {
+   "id": "rm-testing-10",
+   "reason": "Implausible distractors; pyramid rationale worth keeping"
+  },
+  {
+   "id": "rm-testing-11",
+   "reason": "Implausible distractors; concept worth keeping"
+  },
+  {
+   "id": "rm-testing-23",
+   "reason": "Distractors absurd; test-clarity concept worth keeping"
+  },
+  {
+   "id": "rm-testing-24",
+   "reason": "Distractors absurd; one-behavior-per-test worth keeping"
+  },
+  {
+   "id": "rm-testing-29",
+   "reason": "Weak distractors; recast to test actual/expected argument order"
+  },
+  {
+   "id": "rm-testing-30",
+   "reason": "Distractors absurd; naming discipline worth keeping"
+  },
+  {
+   "id": "rm-testing-59",
+   "reason": "'Never break' absurd; replace-unit-tests misconception is better"
+  },
+  {
+   "id": "rm-testing-60",
+   "reason": "Distractors absurd; downside concept worth keeping"
+  },
+  {
+   "id": "rm-testing-61",
+   "reason": "Distractors weak; scoping guidance worth keeping"
+  },
+  {
+   "id": "rm-testing-69",
+   "reason": "Distractors weak; real-timer flakiness worth keeping"
+  },
+  {
+   "id": "rm-testing-76",
+   "reason": "Distractors nonsensical; mocking rationale worth keeping"
+  },
+  {
+   "id": "rm-devops-18",
+   "reason": "Absurd distractors (phone call, calendar); trigger concept worth keeping"
+  },
+  {
+   "id": "rm-devops-19",
+   "reason": "'Nothing' and 'only the database' are throwaways"
+  },
+  {
+   "id": "rm-devops-22",
+   "reason": "Spreadsheet/head distractors absurd; UI-only config is the real alternative"
+  },
+  {
+   "id": "rm-devops-33",
+   "reason": "Emails/deletes-code distractors absurd; build-step concept worth keeping"
+  },
+  {
+   "id": "rm-security-94",
+   "reason": "Un-missable as written; recast to test why it matters"
+  },
+  {
+   "id": "rm-security-105",
+   "reason": "CPU-temperature distractors absurd; PII scope worth testing"
+  }
+ ],
+ "mechanism": {
+  "drops": "question_edits soft-delete (restorable in /dev)",
+  "fixes": "in-place source rewrites in lib/quiz-data.ts + roadmap seed files; Czech entries retranslated to match"
+ }
+}
