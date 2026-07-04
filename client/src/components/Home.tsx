@@ -5,7 +5,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, Paper, Typography, Button, Snackbar, Alert, CircularProgress } from '@mui/material';
+import { Box, Paper, Typography, Button, Snackbar, Alert, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 import { heroMeshFor } from '../theme/meshGradient';
 import { useColorMode } from '../theme/ColorModeContext';
@@ -32,6 +32,7 @@ export default function Home() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [savedSnack, setSavedSnack] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
+  const isMobile = useMediaQuery(useTheme().breakpoints.down('sm'));
 
   const handleSignIn = async () => {
     setSigningIn(true);
@@ -59,8 +60,11 @@ export default function Home() {
 
   return (
     // One-viewport landing: hero pitch + the three things a new learner gets.
-    // Fills the shell exactly (no page scroll); vertically centred.
-    <Box sx={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: { xs: 2, sm: 3 } }}>
+    // Centred via auto margins, NOT justify-content: center — flexbox centre
+    // clips the top irretrievably when content overflows (iPhone Safari with
+    // its browser chrome). Auto margins collapse to zero under overflow, so
+    // the page stays top-anchored and fully scrollable instead of cropping.
+    <Box sx={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', gap: { xs: 2, sm: 3 } }}>
       {/* Hero: Colorflow-style OKLCH mesh gradient behind the pitch. It's a
           pure CSS background-image (zero runtime, no dependency) and degrades to
           the flat theme background where oklch() isn't supported. */}
@@ -72,6 +76,7 @@ export default function Home() {
           px: { xs: 2, sm: 4 },
           py: { xs: 3, sm: 5 },
           mx: { xs: -0.5, sm: 0 },
+          mt: 'auto',
         }}
       >
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mb: { xs: 1, sm: 2 } }}>
@@ -127,12 +132,14 @@ export default function Home() {
         </Typography>
       </Box>
 
-      {/* What a new learner gets — three compact chalkboards. */}
-      <Box sx={{ display: 'flex', gap: { xs: 1.5, sm: 2 }, flexWrap: 'wrap' }}>
+      {/* What a new learner gets — compact chalkboards. The career-roadmap
+          card is desktop-only: on phones two cards keep the landing inside
+          one screen, and the roadmap is a big-picture surface anyway. */}
+      <Box sx={{ display: 'flex', gap: { xs: 1.5, sm: 2 }, flexWrap: 'wrap', mb: 'auto' }}>
         {[
           { title: t('home.featureLearnTitle'), text: t('home.featureLearnText') },
           { title: t('home.featureQuizTitle'), text: t('home.featureQuizText') },
-          { title: t('home.featureRoadmapTitle'), text: t('home.featureRoadmapText') },
+          ...(isMobile ? [] : [{ title: t('home.featureRoadmapTitle'), text: t('home.featureRoadmapText') }]),
         ].map((f, i) => (
           <MotionItem key={f.title} index={i} style={CARD_MOTION_STYLE}>
             <FeatureCard title={f.title} text={f.text} />
