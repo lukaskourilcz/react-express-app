@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { Box, Typography, Button, LinearProgress, Chip, Skeleton, Tooltip, IconButton, Snackbar, useTheme, CircularProgress } from '@mui/material';
+import { Box, Typography, Button, LinearProgress, Chip, Skeleton, Tooltip, IconButton, Snackbar, useTheme } from '@mui/material';
 import type {
   RoadmapTopic,
   RoadmapLevelMeta,
@@ -54,6 +54,7 @@ import { reportQuestion } from '../lib/supabase';
 import { shuffleDifferentFrom } from '../lib/shuffle';
 import { readString, writeString } from '../lib/storage';
 import { renderQuestion } from './CodeBlock';
+import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { RedFlagDialog } from './RedFlagDialog';
 import './Roadmap.css';
 
@@ -361,12 +362,14 @@ function Roadmap() {
     setPlayable(null);
     setLoadingLesson(true);
     setLessonError(null);
+    const startedAt = Date.now();
     const req =
       a.kind === 'level'
         ? fetchRoadmapLevel(topic, a.ref, lang, controller.signal)
         : fetchRoadmapPartTest(topic, a.ref, lang, controller.signal);
     req
-      .then((data) => {
+      .then(async (data) => {
+        await holdLoadingScreen(startedAt);
         if (controller.signal.aborted) return;
         // A part test comes back as a generic exam; give it a localized title.
         setPlayable(a.kind === 'test' ? { ...data, title: t('roadmap.partLabel', { n: a.ref }) } : data);
@@ -479,16 +482,7 @@ function Roadmap() {
   /* ──── lesson view ──────────────────────────────────────────────────── */
   if (active !== null) {
     if (loadingLesson) {
-      return (
-        <Box sx={{ maxWidth: 640, mx: 'auto' }}>
-          <Skeleton variant="text" width="40%" />
-          <Skeleton variant="rectangular" height={10} sx={{ my: 2, borderRadius: 1 }} />
-          <Skeleton variant="rounded" height={120} sx={{ mb: 2 }} />
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} variant="rounded" height={52} sx={{ mb: 1.25 }} />
-          ))}
-        </Box>
-      );
+      return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
     }
     if (lessonError || !playable) {
       return <LessonError message={lessonError ?? t('roadmap.error')} onRetry={() => open(active)} onExit={exitLesson} t={t} />;
@@ -1184,9 +1178,11 @@ function LessonRunner({
   const isRight = selected === question.correctAnswer;
 
   return (
-    // One-viewport lesson layout: header + chips fixed, question scrolls,
-    // answer options anchored toward the bottom in a stable position.
-    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', width: '100%', maxWidth: 640, mx: 'auto' }}>
+    // One-viewport lesson layout matching the Quiz card geometry: 560px
+    // column, content capped at ~80% height on sm+ and centred; question
+    // scrolls, answer options anchored toward the bottom in a stable position.
+    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', width: '100%', maxWidth: { xs: 680, sm: 560 }, mx: 'auto' }}>
+    <Box sx={{ flex: '1 1 auto', minHeight: 0, maxHeight: { sm: '80%' }, display: 'flex', flexDirection: 'column' }}>
       {/* Header: exit + (hearts for a level, progress bar for a checkpoint) */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexShrink: 0 }}>
         <Button onClick={onExit} variant="text" size="small" sx={{ minWidth: 'auto', color: 'text.secondary', fontSize: '1.1rem', lineHeight: 1 }} aria-label={t('roadmap.exit')}>
@@ -1313,6 +1309,7 @@ function LessonRunner({
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Box>
+    </Box>
   );
 }
 
@@ -1378,10 +1375,12 @@ function SkillCheckRunner({
   const start = useCallback(async () => {
     setPhase('loading');
     setError(null);
+    const startedAt = Date.now();
     try {
       const batch = await fetchChallengeBatch({ lang });
       const trimmed = batch.questions.slice(0, ASSESSMENT_QUESTION_COUNT);
       if (trimmed.length === 0) throw new Error('No questions available');
+      await holdLoadingScreen(startedAt);
       setSessionId(batch.sessionId);
       setQuestions(trimmed);
       setAnswers({});
@@ -1454,12 +1453,7 @@ function SkillCheckRunner({
   }
 
   if (phase === 'loading' || phase === 'submitting') {
-    return (
-      <Box sx={{ maxWidth: 480, mx: 'auto', textAlign: 'center', mt: 6 }}>
-        <CircularProgress sx={{ color: BRAND.green, mb: 2 }} />
-        <Typography color="text.secondary">{t('roadmap.skillCheckLoading')}</Typography>
-      </Box>
-    );
+    return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('roadmap.skillCheckLoading')} />;
   }
 
   if (phase === 'error') {

@@ -9,7 +9,6 @@ import {
   Alert,
   Chip,
   Divider,
-  CircularProgress,
   ToggleButton,
   ToggleButtonGroup,
   RadioGroup,
@@ -35,6 +34,7 @@ import { visibleCategoryOptionsFor } from '../lib/categories';
 import type { CategoryType } from '../types/quiz';
 import { friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
+import { QuoteLoader } from './LoadingScreen';
 import { BRAND, brandButtonSx } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import { useGameConfig } from '../lib/gameConfig';
@@ -502,24 +502,9 @@ export function PlayMatch() {
   };
 
   if (joining) {
-    return (
-      <Box
-        role="status"
-        aria-live="polite"
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 1.5,
-          mt: 6,
-        }}
-      >
-        <CircularProgress sx={{ color: BRAND.green }} aria-hidden />
-        <Typography variant="body2" color="text.secondary">
-          {t('play.joining')}
-        </Typography>
-      </Box>
-    );
+    // Same loading look as the other study modes, but no artificial minimum
+    // hold: a live match runs on a shared clock, so joining must be instant.
+    return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('play.joining')} />;
   }
 
   if (error && !match) {
@@ -538,7 +523,8 @@ export function PlayMatch() {
   const currentQuestion = match.questions[match.current_index];
 
   return (
-    <Box sx={{ maxWidth: { xs: 600, md: 820 }, mx: 'auto' }}>
+    // Same question-column width as Quiz / Learn / Challenge.
+    <Box sx={{ maxWidth: { xs: 680, sm: 560 }, mx: 'auto', width: '100%' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Box>
           <Typography variant="h6" component="h1" sx={{ fontWeight: 700 }}>

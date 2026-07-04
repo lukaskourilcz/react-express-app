@@ -22,6 +22,33 @@ interface Props {
 // loads never flash a tip; short enough to read one on a slow load.
 const TIP_DELAY_MS = 2500;
 
+/* ──── Study-mode loading beat (shared by Quiz, Learn, Challenge, Play) ────
+ * Every question-fetching moment shows the house motto with the swimming fin
+ * beneath, and holds for at least MIN_LOADING_MS so it reads as a beat, not a
+ * flicker. Use `holdLoadingScreen(startedAt)` after the fetch resolves. */
+
+export const MIN_LOADING_MS = 1200;
+
+export const holdLoadingScreen = (startedAt: number): Promise<void> =>
+  new Promise((resolve) => window.setTimeout(resolve, Math.max(0, MIN_LOADING_MS - (Date.now() - startedAt))));
+
+/** The quote + fin loading state for study modes. Fills its flex parent. */
+export function QuoteLoader({ quote, label }: { quote: string; label: string }) {
+  return (
+    <Box
+      role="status"
+      aria-live="polite"
+      sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}
+    >
+      <Typography sx={{ fontStyle: 'italic', fontWeight: 600, fontSize: '1.15rem', color: 'text.secondary', textAlign: 'center' }}>
+        {quote}
+      </Typography>
+      <SwimmingShark size={44} />
+      <Box component="span" sx={visuallyHidden}>{label}</Box>
+    </Box>
+  );
+}
+
 /** Centered swimming-shark-fin indicator with a screen-reader-announced label. */
 export default function LoadingScreen({ label, size, sx, tips }: Props) {
   // -1 until the delay elapses, then the index of the tip to reveal.

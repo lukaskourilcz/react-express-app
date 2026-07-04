@@ -34,6 +34,7 @@ import { useAuth, getUserProfile } from '../lib/auth';
 import { BRAND, brandButtonSx, visuallyHidden } from '../theme/MuiTheme';
 import { SharkFin } from './SharkFin';
 import { renderQuestion } from './CodeBlock';
+import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { awardQuestXp } from '../lib/xp';
 import { challengeRunXp } from '../lib/leveling';
 
@@ -166,7 +167,9 @@ export default function Challenge() {
     setTimeLeft(TIME_LIMIT_S);
     awardedRef.current = false;
     buffer.current = null;
+    const startedAt = Date.now();
     await ensureBufferTopUp([]);
+    await holdLoadingScreen(startedAt);
     if (!buffer.current) return; // ensureBufferTopUp already set the error phase
     const next = popNext();
     if (!next) {
@@ -397,15 +400,7 @@ export default function Challenge() {
   }
 
   if (phase === 'loading') {
-    return (
-      <Box sx={introWrapperSx} aria-busy="true">
-        <Skeleton variant="text" sx={{ fontSize: '1.5rem', mb: 2 }} />
-        <Skeleton variant="rectangular" height={48} sx={{ mb: 1 }} />
-        <Skeleton variant="rectangular" height={48} sx={{ mb: 1 }} />
-        <Skeleton variant="rectangular" height={48} sx={{ mb: 1 }} />
-        <Skeleton variant="rectangular" height={48} />
-      </Box>
-    );
+    return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
   }
 
   if (phase === 'error') {
@@ -500,9 +495,10 @@ export default function Challenge() {
   if (!current) return null;
 
   return (
-    // One-viewport layout: fills the shell height; question text scrolls
-    // internally, answers + lock-in stay anchored near the bottom.
-    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', maxWidth: 760, mx: 'auto', width: '100%', p: { xs: 0.5, sm: 1 } }}>
+    // One-viewport layout matching the Quiz card geometry: 560px column,
+    // primary card capped at ~80% height on sm+, centred; question text
+    // scrolls internally, answers + lock-in stay anchored near the bottom.
+    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: { xs: 680, sm: 560 }, mx: 'auto', width: '100%', p: { xs: 0.5, sm: 1 } }}>
       {/* One-shot low-time announcement for screen readers (the visual cue is
           colour + pulse, which AT users can't perceive). */}
       <Box component="span" sx={visuallyHidden} aria-live="polite">
@@ -545,7 +541,7 @@ export default function Challenge() {
         </Box>
       </Box>
 
-      <Card sx={{ borderTop: `4px solid ${BRAND.green}`, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <Card sx={{ borderTop: `4px solid ${BRAND.green}`, flex: '1 1 auto', minHeight: 0, maxHeight: { sm: '80%' }, display: 'flex', flexDirection: 'column' }}>
         <CardContent sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap', flexShrink: 0 }}>
             <Chip

@@ -263,19 +263,20 @@ function App() {
     location.pathname.startsWith('/play');
   const contentMaxWidth = isDev ? 'none' : isHome ? 1000 : isWide ? 1200 : 800;
 
-  // 1–7 shark fins on the footer ocean line, at random (non-overlapping) spots
-  // each page load. Positions are sampled across 6–94%; the 10% minimum gap
-  // still fits the full school of 7 (6 gaps × 10% ≤ the 88% span) while keeping
-  // dorsals from visually colliding.
-  const finPositions = useMemo<number[]>(() => {
-    const count = 1 + Math.floor(Math.random() * 7); // 1..7 inclusive
+  // 1–5 shark fins on the footer ocean line, at random (non-overlapping) spots
+  // each page load, each independently facing left or right so the school
+  // isn't all swimming the same way.
+  const fins = useMemo<{ left: number; flip: boolean }[]>(() => {
+    const count = 1 + Math.floor(Math.random() * 5); // 1..5 inclusive
     const minGap = 10;
-    const out: number[] = [];
+    const out: { left: number; flip: boolean }[] = [];
     let tries = 0;
     while (out.length < count && tries < 400) {
       tries += 1;
       const pos = 6 + Math.random() * 88;
-      if (out.every((p) => Math.abs(p - pos) >= minGap)) out.push(pos);
+      if (out.every((f) => Math.abs(f.left - pos) >= minGap)) {
+        out.push({ left: pos, flip: Math.random() < 0.5 });
+      }
     }
     return out;
   }, []);
@@ -552,8 +553,12 @@ function App() {
           <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 8 }}>
             <Waterline />
           </Box>
-          {finPositions.map((leftPct, i) => (
-            <Box key={i} sx={{ position: 'absolute', bottom: 7, left: `${leftPct}%`, transform: 'translateX(-50%)', lineHeight: 0 }}>
+          {fins.map((fin, i) => (
+            <Box
+              key={i}
+              // scaleX(-1) mirrors the fin so it swims the other way.
+              sx={{ position: 'absolute', bottom: 7, left: `${fin.left}%`, transform: `translateX(-50%)${fin.flip ? ' scaleX(-1)' : ''}`, lineHeight: 0 }}
+            >
               <SwimmingFin size={20} />
             </Box>
           ))}

@@ -45,7 +45,7 @@ import {
 import { recordCategoryStats } from '../lib/play';
 import { apiFetch, friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
-import { SwimmingShark } from './SharkFin';
+import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
 import { addFlashcard, removeFlashcard } from '../lib/flashcards';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -67,11 +67,6 @@ const DIFFICULTY_VALUES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', '
 const PROGRESS_KEY = 'devquiz:in-progress';
 const SETUP_KEY = 'devquiz:quiz-setup:v1';
 
-// The loading screen (quote + swimming fin) always shows for at least this
-// long, so the moment reads as a beat, not a flicker.
-const MIN_LOADING_MS = 1200;
-const holdLoadingScreen = (startedAt: number): Promise<void> =>
-  new Promise((resolve) => window.setTimeout(resolve, Math.max(0, MIN_LOADING_MS - (Date.now() - startedAt))));
 
 interface SavedSetup {
   count?: number;
@@ -566,22 +561,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   /* ──── render branches ─────────────────────────────────────────── */
 
   if (state === 'loading') {
-    // A beat before the quiz: the house motto with the swimming fin beneath.
-    return (
-      <Box
-        role="status"
-        aria-live="polite"
-        sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}
-      >
-        <Typography
-          sx={{ fontStyle: 'italic', fontWeight: 600, fontSize: '1.15rem', color: 'text.secondary', textAlign: 'center' }}
-        >
-          {t('quiz.loadingQuote')}
-        </Typography>
-        <SwimmingShark size={44} />
-        <Box component="span" sx={visuallyHidden}>{t('common.loading')}</Box>
-      </Box>
-    );
+    return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
   }
 
   if (state === 'error') {
