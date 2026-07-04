@@ -136,6 +136,7 @@ export const cs: Record<TranslationKey, string> = {
   // Quiz, setup screen
   'quiz.title': 'Kvíz webového vývoje',
   'quiz.subtitle': '1500+ otázek · podporovány klávesové zkratky',
+  'quiz.loadingQuote': 'začni v malém a pošli to.',
   'quiz.todaysChallenge': 'Dnešní výzva',
   'quiz.dailyMeta': '5 otázek',
   'quiz.categories': 'Kategorie',

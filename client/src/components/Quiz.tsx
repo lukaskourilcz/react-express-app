@@ -16,7 +16,6 @@ import {
   Tooltip,
   ClickAwayListener,
   IconButton,
-  Skeleton,
   Snackbar,
   Dialog,
   DialogTitle,
@@ -46,6 +45,7 @@ import {
 import { recordCategoryStats } from '../lib/play';
 import { apiFetch, friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
+import { SwimmingShark } from './SharkFin';
 import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
 import { addFlashcard, removeFlashcard } from '../lib/flashcards';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -66,6 +66,12 @@ const DIFFICULTY_VALUES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', '
 
 const PROGRESS_KEY = 'devquiz:in-progress';
 const SETUP_KEY = 'devquiz:quiz-setup:v1';
+
+// The loading screen (quote + swimming fin) always shows for at least this
+// long, so the moment reads as a beat, not a flicker.
+const MIN_LOADING_MS = 1200;
+const holdLoadingScreen = (startedAt: number): Promise<void> =>
+  new Promise((resolve) => window.setTimeout(resolve, Math.max(0, MIN_LOADING_MS - (Date.now() - startedAt))));
 
 interface SavedSetup {
   count?: number;
@@ -250,6 +256,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
       setState('loading');
       setError(null);
+      const startedAt = Date.now();
       try {
         const params = new URLSearchParams({
           count: String(count),
@@ -261,6 +268,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           `/api/quiz/questions?${params}`,
           { signal: controller.signal },
         );
+        await holdLoadingScreen(startedAt);
         if (controller.signal.aborted) return;
         setSessionId(data.sessionId);
         setQuestions(data.questions);
@@ -281,8 +289,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     setState('loading');
     setError(null);
     capture('quiz_started', { mode: 'daily' });
+    const startedAt = Date.now();
     try {
       const data = await getDailyChallenge(lang);
+      await holdLoadingScreen(startedAt);
       setSessionId(data.sessionId);
       setQuestions(data.questions as Question[]);
       setAnswers({});
@@ -556,18 +566,21 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   /* ──── render branches ─────────────────────────────────────────── */
 
   if (state === 'loading') {
+    // A beat before the quiz: the house motto with the swimming fin beneath.
     return (
-      <Card className="quiz-card" aria-busy="true">
-        <CardContent className="quiz-card-content">
-          <Skeleton variant="text" sx={{ fontSize: '0.75rem', width: '30%' }} />
-          <Skeleton variant="rectangular" height={6} sx={{ mt: 1, mb: 3, borderRadius: 1 }} />
-          <Skeleton variant="text" sx={{ fontSize: '1rem' }} />
-          <Skeleton variant="text" sx={{ fontSize: '1rem', width: '70%', mb: 3 }} />
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} variant="rounded" height={48} sx={{ mb: 1 }} />
-          ))}
-        </CardContent>
-      </Card>
+      <Box
+        role="status"
+        aria-live="polite"
+        sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}
+      >
+        <Typography
+          sx={{ fontStyle: 'italic', fontWeight: 600, fontSize: '1.15rem', color: 'text.secondary', textAlign: 'center' }}
+        >
+          {t('quiz.loadingQuote')}
+        </Typography>
+        <SwimmingShark size={44} />
+        <Box component="span" sx={visuallyHidden}>{t('common.loading')}</Box>
+      </Box>
     );
   }
 

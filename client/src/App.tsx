@@ -117,6 +117,21 @@ const MenuIcon = () => (
   </svg>
 );
 
+const TrophyNavIcon = () => (
+  <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" />
+    <path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
+  </svg>
+);
+
+const ShopNavIcon = () => (
+  <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <path d="M16 10a4 4 0 0 1-8 0" />
+  </svg>
+);
+
 // `feature` ties a nav item to a toggle in /dev → Settings; when that feature is
 // off, the item is hidden from the nav (quiz is always available).
 const NAV_ITEMS: {
@@ -202,10 +217,12 @@ function App() {
 
   // Nav items for features that are currently enabled in /dev → Settings.
   const navItems = NAV_ITEMS.filter((item) => !item.feature || config.features[item.feature]);
-  // Leaderboard & Shop aren't learning surfaces — they live as small links under
-  // the profile in the account widget, so keep them out of the desktop top nav.
+  // Leaderboard & Shop aren't learning surfaces, so they don't crowd the centre
+  // nav — they get compact icon buttons in the right slot instead (and stay in
+  // the mobile drawer via navItems).
   const SECONDARY_ROUTES = ['/leaderboard', '/shop'];
   const primaryNavItems = navItems.filter((item) => !SECONDARY_ROUTES.includes(item.to));
+  const showLeaderboardIcon = navItems.some((item) => item.to === '/leaderboard');
 
   useEffect(() => {
     const titleKey = ROUTE_TITLE_KEYS[location.pathname];
@@ -299,6 +316,7 @@ function App() {
     // always visible. `dvh` tracks the collapsing mobile URL bar.
     <Box
       sx={{
+        position: 'relative',
         height: '100vh',
         '@supports (height: 100dvh)': { height: '100dvh' },
         maxWidth: '100vw',
@@ -388,10 +406,37 @@ function App() {
             </Box>
 
             {/* Right slot: sound/theme toggles (mobile only — on desktop they
-                float in the top-right corner) + the auth widget. */}
+                float in the top-right corner), Leaderboard + Shop icons, and
+                the auth widget. */}
             <Box sx={{ flex: '1 1 0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: { xs: 0.5, sm: 1 }, minWidth: 0 }}>
               <Box sx={{ display: { xs: 'inline-flex', sm: 'none' }, alignItems: 'center', gap: 0.25 }}>
                 {utilityToggles}
+              </Box>
+              {/* Icon links to the non-learning surfaces. Hidden below 760px —
+                  the drawer covers them there. */}
+              <Box sx={{ display: 'none', '@media (min-width:760px)': { display: 'inline-flex' }, alignItems: 'center' }}>
+                {showLeaderboardIcon && (
+                  <Tooltip title={t('nav.leaderboard')}>
+                    <IconButton
+                      component={Link}
+                      to="/leaderboard"
+                      aria-label={t('nav.leaderboard')}
+                      sx={{ color: location.pathname === '/leaderboard' ? BRAND.green : 'text.secondary' }}
+                    >
+                      <TrophyNavIcon />
+                    </IconButton>
+                  </Tooltip>
+                )}
+                <Tooltip title={t('nav.shop')}>
+                  <IconButton
+                    component={Link}
+                    to="/shop"
+                    aria-label={t('nav.shop')}
+                    sx={{ color: location.pathname === '/shop' ? BRAND.green : 'text.secondary' }}
+                  >
+                    <ShopNavIcon />
+                  </IconButton>
+                </Tooltip>
               </Box>
               <Suspense fallback={null}>
                 <AuthButton />
@@ -446,6 +491,9 @@ function App() {
             : isQuiz
               ? { xs: '0.75rem', sm: '1rem 1.5rem' }
               : { xs: '1rem', sm: '1.5rem' },
+          // Clear the floating ocean overlay so anchored buttons and the end
+          // of scrolled pages never sit under the waterline.
+          pb: isDev ? undefined : '2.5rem',
           boxSizing: 'border-box',
           outline: 'none',
         }}
@@ -495,7 +543,10 @@ function App() {
         <Box
           component="footer"
           aria-hidden
-          sx={{ position: 'relative', width: '100%', height: 30, flexShrink: 0, overflow: 'hidden', pointerEvents: 'none' }}
+          // Transparent overlay pinned to the shell bottom (not a layout band):
+          // the wave + fins float over whatever is behind them, so there is no
+          // solid background strip. Content scrolls beneath; pointer-events off.
+          sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 30, zIndex: 1, overflow: 'hidden', pointerEvents: 'none' }}
         >
           <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 8 }}>
             <Waterline />

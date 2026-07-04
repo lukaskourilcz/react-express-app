@@ -135,6 +135,7 @@ export const en = {
   // Quiz, setup screen
   'quiz.title': 'Web Development Quiz',
   'quiz.subtitle': '1500+ questions · keyboard shortcuts supported',
+  'quiz.loadingQuote': 'start small and send it.',
   'quiz.todaysChallenge': 'Today’s challenge',
   'quiz.dailyMeta': '5 questions',
   'quiz.categories': 'Categories',

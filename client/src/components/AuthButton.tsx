@@ -121,15 +121,22 @@ function AuthButton() {
           >
             {displayName}
           </Typography>
-          {/* The full rank ("Superjunior Frontend Developer") must always be
-              readable — wrap to two lines instead of truncating. */}
+          {/* The full rank — up to "Superjunior Full-Stack Developer" — must
+              always be readable: wrap to at most two lines, never truncate
+              mid-title, never push the toolbar taller. */}
           <Typography
             variant="caption"
             sx={{
               color: (theme) => (theme.palette.mode === 'dark' ? BRAND.greenBright : BRAND.green),
               fontWeight: 600,
+              fontSize: '0.62rem',
               lineHeight: 1.2,
               maxWidth: '100%',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+              overflowWrap: 'break-word',
             }}
           >
             {rankTitle}
