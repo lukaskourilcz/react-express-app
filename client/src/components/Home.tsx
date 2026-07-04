@@ -58,31 +58,32 @@ export default function Home() {
   const ctaSx = { px: 3, py: 1.25, fontWeight: 700, textTransform: 'none' as const };
 
   return (
-    <Box sx={{ width: '100%' }}>
+    // One-viewport landing: hero pitch + the three things a new learner gets.
+    // Fills the shell exactly (no page scroll); vertically centred.
+    <Box sx={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: { xs: 2, sm: 3 } }}>
       {/* Hero: Colorflow-style OKLCH mesh gradient behind the pitch. It's a
           pure CSS background-image (zero runtime, no dependency) and degrades to
           the flat theme background where oklch() isn't supported. */}
       <Box
         sx={{
           textAlign: 'center',
-          mb: { xs: 4, sm: 6 },
           backgroundImage: heroMeshFor(mode),
           borderRadius: 3,
           px: { xs: 2, sm: 4 },
-          py: { xs: 4, sm: 6 },
+          py: { xs: 3, sm: 5 },
           mx: { xs: -0.5, sm: 0 },
         }}
       >
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mb: 2 }}>
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mb: { xs: 1, sm: 2 } }}>
           <SwimmingFin size={34} />
           <Typography variant="overline" sx={{ color: BRAND.green, fontWeight: 800, letterSpacing: 1.5 }}>
             devShark
           </Typography>
         </Box>
-        <Typography variant="h3" component="h1" sx={{ fontWeight: 900, mb: 1.5, lineHeight: 1.1, fontSize: { xs: '2rem', sm: '2.75rem' } }}>
+        <Typography variant="h3" component="h1" sx={{ fontWeight: 900, mb: 1.25, lineHeight: 1.1, fontSize: { xs: '1.85rem', sm: '2.75rem' } }}>
           {t('home.title')}
         </Typography>
-        <Typography variant="h6" component="p" sx={{ color: 'text.secondary', fontWeight: 400, maxWidth: 680, mx: 'auto', mb: 2.5 }}>
+        <Typography variant="h6" component="p" sx={{ color: 'text.secondary', fontWeight: 400, maxWidth: 680, mx: 'auto', mb: { xs: 2, sm: 2.5 }, fontSize: { xs: '1rem', sm: '1.15rem' } }}>
           {t('home.subtitle')}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -119,62 +120,15 @@ export default function Home() {
             </>
           )}
         </Box>
+        {/* The free promise lives right under the decision point — one quiet
+            line instead of a whole banner section. */}
+        <Typography variant="caption" sx={{ display: 'block', mt: 1.5, color: 'text.secondary' }}>
+          {t('home.freeText')}
+        </Typography>
       </Box>
 
-      {/* Free banner — a quiet, low-key note rather than a loud callout. */}
-      <Paper
-        elevation={0}
-        sx={{
-          p: { xs: 1.5, sm: 2 },
-          mb: { xs: 3, sm: 3.5 },
-          border: 'none',
-          borderRadius: 1,
-          backgroundColor: 'action.hover',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 1.5,
-        }}
-      >
-        <Box
-          aria-hidden
-          sx={{
-            px: 1,
-            py: 0.5,
-            backgroundColor: BRAND.green,
-            color: '#fff',
-            fontWeight: 800,
-            fontSize: '0.7rem',
-            letterSpacing: '0.12em',
-            lineHeight: 1,
-            borderRadius: 0.5,
-            alignSelf: 'flex-start',
-            flexShrink: 0,
-          }}
-        >
-          FREE
-        </Box>
-        <Box>
-          <Typography variant="body2" color="text.secondary">
-            {t('home.freeText')}
-          </Typography>
-        </Box>
-      </Paper>
-
-      {/* How to get started: cards stagger in on mount (reduced-motion safe). */}
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: { xs: 4, sm: 5 } }}>
-        {[
-          { title: t('home.step1Title'), text: t('home.step1Text') },
-          { title: t('home.step2Title'), text: t('home.step2Text') },
-          { title: t('home.step3Title'), text: t('home.step3Text') },
-        ].map((s, i) => (
-          <MotionItem key={s.title} index={i} style={CARD_MOTION_STYLE}>
-            <StepCard title={s.title} text={s.text} />
-          </MotionItem>
-        ))}
-      </Box>
-
-      {/* What's inside */}
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+      {/* What a new learner gets — three compact chalkboards. */}
+      <Box sx={{ display: 'flex', gap: { xs: 1.5, sm: 2 }, flexWrap: 'wrap' }}>
         {[
           { title: t('home.featureLearnTitle'), text: t('home.featureLearnText') },
           { title: t('home.featureQuizTitle'), text: t('home.featureQuizText') },
@@ -230,7 +184,7 @@ const CHALK_DIM = 'rgba(241, 245, 238, 0.74)';
 const chalkboardSx = {
   flex: '1 1 220px',
   minWidth: 220,
-  p: 2.75,
+  p: { xs: 1.75, sm: 2.5 },
   borderRadius: 0,
   color: CHALK,
   backgroundColor: '#21302a',
@@ -259,19 +213,6 @@ function ChalkHeading({ children }: { children: ReactNode }) {
     >
       {children}
     </Typography>
-  );
-}
-
-function StepCard({ title, text }: { title: string; text: string }) {
-  return (
-    <Paper elevation={0} sx={chalkboardSx}>
-      <Box sx={{ mb: 0.75 }}>
-        <ChalkHeading>{title}</ChalkHeading>
-      </Box>
-      <Typography variant="body2" sx={{ color: CHALK_DIM }}>
-        {text}
-      </Typography>
-    </Paper>
   );
 }
 
