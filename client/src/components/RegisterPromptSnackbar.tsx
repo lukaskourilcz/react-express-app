@@ -127,7 +127,7 @@ function RegisterPromptSnackbar() {
               </Typography>
             </Stack>
           </Stack>
-          <Stack direction="row" spacing={1}>
+          <Stack direction="row" spacing={1} justifyContent="flex-end">
             <Button
               size="small"
               variant="contained"
