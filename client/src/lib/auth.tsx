@@ -2,6 +2,12 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
 import { apiFetch } from './api';
+import { registerAccessTokenReader } from './roadmap';
+
+// Cache the latest access token in memory so the pagehide beacon (which can't
+// await getSession()) can attach the Authorization header synchronously.
+let cachedAccessToken: string | null = null;
+registerAccessTokenReader(() => cachedAccessToken);
 
 // Report a real sign-in to the server (powers the /dev "Logs" tab) at most once
 // per browser tab session, so page refreshes (which re-emit SIGNED_IN) don't log
@@ -56,6 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      cachedAccessToken = session?.access_token ?? null;
       setUser(session?.user ?? null);
       setIsLoading(false);
     });
@@ -63,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      cachedAccessToken = session?.access_token ?? null;
       setUser(session?.user ?? null);
       setIsLoading(false);
       // Only a genuine sign-in emits SIGNED_IN; INITIAL_SESSION (restored on page

@@ -58,8 +58,7 @@ export const en = {
 
   // Register prompt (guest snackbar)
   'register.title': 'Save your progress',
-  'register.body': 'Your progress, XP and streak are saved to your account — plus a one-time {tokens}-token welcome bonus.',
-  'register.freeBadge': 'devShark is 100% free',
+  'register.body': 'Sign in to keep your XP and streak. +{tokens} tokens on us.',
   'register.cta': 'Sign in',
   'register.dismiss': 'Not now',
 

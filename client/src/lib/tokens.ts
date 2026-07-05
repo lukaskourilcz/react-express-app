@@ -39,8 +39,41 @@ export function getTokens(): number {
 }
 
 function writeBalance(value: number): void {
-  writeJSON(TOKENS_KEY, clampTokens(value));
+  const next = clampTokens(value);
+  writeJSON(TOKENS_KEY, next);
   tokensStore.emit();
+  // Any balance change gets scheduled for the account sync so the wallet
+  // survives a device switch. Fire-and-forget: local write already succeeded.
+  scheduleAccountSync();
+}
+
+/** Direct write of an authoritative balance — used by the account-sync merge. */
+export function setBalanceFromServer(value: number): void {
+  const next = clampTokens(value);
+  writeJSON(TOKENS_KEY, next);
+  tokensStore.emit();
+}
+
+// Debounce account pushes: many quick token gains (e.g. rapid-fire XP toasts
+// during a lesson) coalesce into a single PUT. Import lazily to avoid a
+// module-load cycle with roadmap.ts.
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleAccountSync(): void {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    syncTimer = null;
+    // Dynamic import so this module doesn't force roadmap.ts into the shell
+    // graph. roadmap.ts is already eagerly imported by many components anyway,
+    // so the resolution is instant at runtime.
+    void import('./roadmap').then((m) => m.pushProgressToServer().catch(() => {}));
+  }, 800);
+}
+
+export function flushAccountSyncNow(): void {
+  if (syncTimer) {
+    clearTimeout(syncTimer);
+    syncTimer = null;
+  }
 }
 
 /**

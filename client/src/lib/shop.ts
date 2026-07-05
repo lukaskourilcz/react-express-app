@@ -105,6 +105,11 @@ interface Inventory {
 const INVENTORY_KEY = 'devquiz:shop:inventory:v1';
 const EMPTY: Inventory = { owned: [], ring: null, flair: null, doubleXp: 0 };
 
+/** Imperative read of the current inventory, for the account-sync merge. */
+export function getInventorySnapshot(): Inventory {
+  return readInventory();
+}
+
 function readInventory(): Inventory {
   const raw = readJSON<Partial<Inventory>>(INVENTORY_KEY, EMPTY);
   const doubleXp = Number(raw.doubleXp);
@@ -121,6 +126,31 @@ const inventoryStore = createStore<Inventory>(readInventory);
 function writeInventory(next: Inventory): void {
   writeJSON(INVENTORY_KEY, next);
   inventoryStore.emit();
+  // Push to the account so purchases + equipped cosmetics survive a device
+  // switch. Debounced with the token wallet in tokens.ts.
+  scheduleAccountSync();
+}
+
+/** Direct write of authoritative inventory — used by the account-sync merge. */
+export function setInventoryFromServer(next: Inventory): void {
+  writeJSON(INVENTORY_KEY, next);
+  inventoryStore.emit();
+}
+
+let syncTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleAccountSync(): void {
+  if (syncTimer) clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    syncTimer = null;
+    void import('./roadmap').then((m) => m.pushProgressToServer().catch(() => {}));
+  }, 800);
+}
+
+export function flushInventorySyncNow(): void {
+  if (syncTimer) {
+    clearTimeout(syncTimer);
+    syncTimer = null;
+  }
 }
 
 /** Live inventory (re-renders on change). */

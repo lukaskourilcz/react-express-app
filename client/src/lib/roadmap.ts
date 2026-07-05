@@ -445,45 +445,163 @@ export function mergeProgress(a: RoadmapProgress, b: RoadmapProgress): RoadmapPr
   return out;
 }
 
-/** PUT the current (or given) local progress + unlocks to the user's account. */
+/** Shape of what tokens.ts + shop.ts contribute to the account-synced blob. */
+export interface AccountExtras {
+  wallet: { balance: number };
+  inventory: { owned: string[]; ring: string | null; flair: string | null; doubleXp: number };
+}
+
+// tokens.ts and shop.ts each register a getter here so this module can PUT
+// the whole synced blob in one request without importing them (which would
+// create a cycle: shop -> roadmap -> shop).
+let accountExtrasSource: (() => AccountExtras) | null = null;
+let onAccountExtrasReceived: ((extras: AccountExtras) => void) | null = null;
+
+export function registerAccountExtras(
+  source: () => AccountExtras,
+  onReceive: (extras: AccountExtras) => void,
+): void {
+  accountExtrasSource = source;
+  onAccountExtrasReceived = onReceive;
+}
+
+function readAccountExtras(): AccountExtras {
+  return accountExtrasSource?.() ?? {
+    wallet: { balance: 0 },
+    inventory: { owned: [], ring: null, flair: null, doubleXp: 0 },
+  };
+}
+
+/** PUT the current (or given) local progress + unlocks + wallet + inventory. */
 export async function pushProgressToServer(
   progress: RoadmapProgress = readProgress(),
   extraUnlocks: RoadmapTopic[] = readExtraUnlocks(),
 ): Promise<void> {
+  const account = readAccountExtras();
   await apiFetch(PROGRESS_PUT, {
     method: 'PUT',
     body: JSON.stringify({
       data: progress,
-      extra: { unlocked: extraUnlocks },
+      extra: {
+        unlocked: extraUnlocks,
+        wallet: account.wallet,
+        inventory: account.inventory,
+      },
     }),
   });
 }
 
-// On sign-in: pull the account's progress, merge it with whatever is on this
-// device, store the union locally, and push it back so both sides agree.
-// `extra.unlocked` (skill-check grants) sync the same way — union of both.
-export async function syncProgressWithServer(): Promise<void> {
-  let serverProgress: RoadmapProgress = {};
-  let serverExtra: RoadmapTopic[] = [];
+/**
+ * Fire the same PUT with `keepalive: true` so the request survives the tab
+ * closing (Chrome/Safari finish it after unload). Used from the pagehide /
+ * visibilitychange flush so no learner ever loses a lesson pass by closing
+ * the tab a beat too early. Best-effort — errors are swallowed.
+ *
+ * Skips itself when signed out (the endpoint would 401 anyway) by only
+ * running if a Supabase access token is already in memory.
+ */
+export function flushProgressBeacon(): void {
   try {
-    const res = await apiFetch<{
-      data: RoadmapProgress;
-      extra?: { unlocked?: string[] };
-    }>(PROGRESS_GET);
+    const account = readAccountExtras();
+    const payload = JSON.stringify({
+      data: readProgress(),
+      extra: {
+        unlocked: readExtraUnlocks(),
+        wallet: account.wallet,
+        inventory: account.inventory,
+      },
+    });
+    // The auth Bearer is read via getAccessToken() inside apiFetch, which is
+    // async — we can't await here. Use the plain fetch with the stored token
+    // reference; if missing we just skip (guest users have nothing to sync).
+    const token = readCachedAccessToken();
+    if (!token) return;
+    void fetch(PROGRESS_PUT, {
+      method: 'PUT',
+      keepalive: true,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: payload,
+    });
+  } catch {
+    // Absolutely best-effort — do not throw during unload.
+  }
+}
+
+// Auth cache accessor set by lib/auth on session change so beacons can read
+// the current token synchronously (supabase-js exposes an async getSession(),
+// which is unusable inside pagehide).
+let readCachedAccessToken: () => string | null = () => null;
+export function registerAccessTokenReader(fn: () => string | null): void {
+  readCachedAccessToken = fn;
+}
+/** Public wrapper for other modules (xp.ts) that need the cached token. */
+export function getCachedAccessTokenForBeacon(): string | null {
+  return readCachedAccessToken();
+}
+
+/**
+ * Install one-time listeners that flush any pending sync when the tab
+ * becomes hidden or unloads. `pagehide` covers Safari (which doesn't fire
+ * `beforeunload` for the back/forward cache); `visibilitychange` covers
+ * mobile Chrome swipes. Both use fetch keepalive so the request completes
+ * even after the tab dies.
+ */
+export function installProgressSyncFlusher(): void {
+  if (typeof window === 'undefined') return;
+  const flush = () => flushProgressBeacon();
+  window.addEventListener('pagehide', flush);
+  window.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flush();
+  });
+}
+
+// On sign-in: pull the account's progress + wallet + inventory, merge each
+// with whatever is on this device (progress: latch pass + max score; unlocks:
+// union; balance: max — tokens can only grow; owned items: union; equipped
+// items: server wins if valid, otherwise local; doubleXp charges: max), store
+// the union locally, and push it back so both sides agree.
+export async function syncProgressWithServer(): Promise<void> {
+  interface ServerExtras {
+    unlocked?: string[];
+    wallet?: { balance?: number };
+    inventory?: { owned?: string[]; ring?: string | null; flair?: string | null; doubleXp?: number };
+  }
+  let serverProgress: RoadmapProgress = {};
+  let serverExtras: ServerExtras = {};
+  try {
+    const res = await apiFetch<{ data: RoadmapProgress; extra?: ServerExtras }>(PROGRESS_GET);
     serverProgress = res.data ?? {};
-    serverExtra = (res.extra?.unlocked ?? []).filter((id): id is RoadmapTopic =>
-      (Object.keys(TOPIC_PREREQS) as string[]).includes(id),
-    ) as RoadmapTopic[];
+    serverExtras = res.extra ?? {};
   } catch {
     return; // not signed in or offline — keep local only
   }
   const mergedProgress = mergeProgress(readProgress(), serverProgress);
   writeProgress(mergedProgress);
 
-  // Union local + server unlocks so skill-check grants never get revoked by sync.
+  const serverUnlocked = (serverExtras.unlocked ?? []).filter((id): id is RoadmapTopic =>
+    (Object.keys(TOPIC_PREREQS) as string[]).includes(id),
+  ) as RoadmapTopic[];
   const local = readExtraUnlocks();
-  const union = Array.from(new Set<RoadmapTopic>([...local, ...serverExtra]));
+  const union = Array.from(new Set<RoadmapTopic>([...local, ...serverUnlocked]));
   if (union.length !== local.length) writeExtraUnlocks(union);
+
+  // Merge wallet + inventory via the registered receiver (tokens.ts + shop.ts).
+  if (onAccountExtrasReceived) {
+    const inv = serverExtras.inventory ?? {};
+    onAccountExtrasReceived({
+      wallet: { balance: typeof serverExtras.wallet?.balance === 'number' ? serverExtras.wallet.balance : 0 },
+      inventory: {
+        owned: Array.isArray(inv.owned) ? inv.owned : [],
+        ring: typeof inv.ring === 'string' ? inv.ring : null,
+        flair: typeof inv.flair === 'string' ? inv.flair : null,
+        doubleXp: typeof inv.doubleXp === 'number' ? inv.doubleXp : 0,
+      },
+    });
+  }
 
   try {
     await pushProgressToServer(mergedProgress, union);

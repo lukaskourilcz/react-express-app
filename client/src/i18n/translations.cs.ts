@@ -59,8 +59,7 @@ export const cs: Record<TranslationKey, string> = {
 
   // Register prompt (guest snackbar)
   'register.title': 'Ulož si svůj pokrok',
-  'register.body': 'Tvůj postup, XP a série se ukládají k tvému účtu — a k tomu jednorázový uvítací bonus {tokens} tokenů.',
-  'register.freeBadge': 'devShark je 100% zdarma',
+  'register.body': 'Přihlas se a XP i série zůstanou u tebe. Na uvítanou {tokens} tokenů.',
   'register.cta': 'Přihlásit se',
   'register.dismiss': 'Teď ne',
 

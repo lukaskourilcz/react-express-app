@@ -64,12 +64,28 @@ interface Entry {
 type TopicProgress = { levels: Record<string, Entry>; checkpoints: Record<string, Entry> };
 type ProgressBlob = Record<string, TopicProgress>;
 
-// Skill-check unlocks live alongside roadmap progress so both sync in one round
-// trip. Shape: { unlocked: RoadmapTopic[] }. Empty when the user hasn't taken
-// the skill check or earned nothing from it.
+// Skill-check unlocks, the token wallet, and the shop inventory all live in
+// this "extra" blob alongside roadmap progress so a single sync round-trip
+// covers everything the learner has earned or bought. Balance is a max-merge
+// (tokens can only grow across devices — no one gets refunded twice), owned
+// items are a set union (a cosmetic bought on one device stays owned on all),
+// and doubleXp charges are a max-merge (grant on any device applies).
 interface ExtraBlob {
   unlocked: string[];
+  wallet?: { balance: number };
+  inventory?: {
+    owned: string[];
+    ring: string | null;
+    flair: string | null;
+    doubleXp: number;
+  };
 }
+
+const MAX_TOKEN_BALANCE = 100_000_000;
+const MAX_INVENTORY_ITEMS = 64;
+const MAX_STR_LEN = 64;
+const isSafeId = (v: unknown): v is string =>
+  typeof v === 'string' && v.length > 0 && v.length <= MAX_STR_LEN && /^[a-z0-9_-]+$/i.test(v);
 
 const clampPct = (n: unknown): number => {
   const v = typeof n === 'number' && Number.isFinite(n) ? Math.round(n) : 0;
@@ -81,18 +97,42 @@ const clampPct = (n: unknown): number => {
 export function sanitizeExtra(input: unknown): ExtraBlob {
   const out: ExtraBlob = { unlocked: [] };
   if (!input || typeof input !== 'object') return out;
-  const raw = (input as Record<string, unknown>).unlocked;
-  if (!Array.isArray(raw)) return out;
-  const seen = new Set<string>();
-  const known = new Set<string>(ROADMAP_TOPICS);
-  for (const v of raw) {
-    if (typeof v !== 'string') continue;
-    const id = v.toLowerCase();
-    if (!known.has(id) || seen.has(id)) continue;
-    seen.add(id);
-    out.unlocked.push(id);
-    if (out.unlocked.length >= ROADMAP_TOPICS.length) break;
+  const rec = input as Record<string, unknown>;
+
+  // unlocked topic ids
+  const raw = rec.unlocked;
+  if (Array.isArray(raw)) {
+    const seen = new Set<string>();
+    const known = new Set<string>(ROADMAP_TOPICS);
+    for (const v of raw) {
+      if (typeof v !== 'string') continue;
+      const id = v.toLowerCase();
+      if (!known.has(id) || seen.has(id)) continue;
+      seen.add(id);
+      out.unlocked.push(id);
+      if (out.unlocked.length >= ROADMAP_TOPICS.length) break;
+    }
   }
+
+  // wallet
+  if (rec.wallet && typeof rec.wallet === 'object') {
+    const w = rec.wallet as Record<string, unknown>;
+    const bal = typeof w.balance === 'number' && Number.isFinite(w.balance) ? Math.max(0, Math.floor(w.balance)) : 0;
+    out.wallet = { balance: Math.min(MAX_TOKEN_BALANCE, bal) };
+  }
+
+  // inventory
+  if (rec.inventory && typeof rec.inventory === 'object') {
+    const inv = rec.inventory as Record<string, unknown>;
+    const owned = Array.isArray(inv.owned)
+      ? Array.from(new Set(inv.owned.filter(isSafeId))).slice(0, MAX_INVENTORY_ITEMS)
+      : [];
+    const ring = isSafeId(inv.ring) && owned.includes(inv.ring) ? inv.ring : null;
+    const flair = isSafeId(inv.flair) && owned.includes(inv.flair) ? inv.flair : null;
+    const dx = typeof inv.doubleXp === 'number' && Number.isFinite(inv.doubleXp) ? Math.max(0, Math.floor(inv.doubleXp)) : 0;
+    out.inventory = { owned, ring, flair, doubleXp: Math.min(1000, dx) };
+  }
+
   return out;
 }
 

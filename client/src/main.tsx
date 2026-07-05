@@ -17,6 +17,45 @@ initSentry();
 // Load PostHog product analytics in the background (no-op without a key; the
 // SDK is dynamically imported so it never lands in the initial bundle).
 initAnalytics();
+// Register wallet + inventory into the account-synced blob so any sign-in
+// pulls the balance/owned/equipped that was earned on other devices. Runs at
+// module load, before any component mounts.
+import('./lib/roadmap').then(({ registerAccountExtras, installProgressSyncFlusher }) => {
+  installProgressSyncFlusher();
+  // XP has its own debounce; hook its beacon into the same pagehide/hidden events.
+  import('./lib/xp').then(({ flushQuestXpBeacon }) => {
+    const flush = () => flushQuestXpBeacon();
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flush();
+    });
+  });
+  Promise.all([import('./lib/tokens'), import('./lib/shop')]).then(([tok, sh]) => {
+    registerAccountExtras(
+      () => ({
+        wallet: { balance: tok.getTokens() },
+        inventory: sh.getInventorySnapshot(),
+      }),
+      (server) => {
+        // Max-merge balance; union owned; server-wins on equipped (if valid),
+        // max on doubleXp charges — never revoke on sync.
+        const localBal = tok.getTokens();
+        const nextBal = Math.max(localBal, server.wallet.balance);
+        if (nextBal !== localBal) tok.setBalanceFromServer(nextBal);
+        const localInv = sh.getInventorySnapshot();
+        const ownedUnion = Array.from(new Set([...localInv.owned, ...server.inventory.owned]));
+        const ring = ownedUnion.includes(server.inventory.ring ?? '') ? server.inventory.ring : localInv.ring;
+        const flair = ownedUnion.includes(server.inventory.flair ?? '') ? server.inventory.flair : localInv.flair;
+        sh.setInventoryFromServer({
+          owned: ownedUnion,
+          ring,
+          flair,
+          doubleXp: Math.max(localInv.doubleXp, server.inventory.doubleXp),
+        });
+      },
+    );
+  });
+});
 
 // React Query devtools, dev-only: the dynamic import lives in a DEV-gated branch
 // so it (and the dependency) is dropped from the production bundle entirely.

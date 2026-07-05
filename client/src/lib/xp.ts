@@ -9,7 +9,7 @@
 import { apiFetch } from './api';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
-import { useRoadmapProgress, getRoadmapProgress } from './roadmap';
+import { useRoadmapProgress, getRoadmapProgress, getCachedAccessTokenForBeacon } from './roadmap';
 import {
   computeLearningXp,
   levelForXp,
@@ -142,6 +142,7 @@ let syncTimer: ReturnType<typeof setTimeout> | null = null;
 function scheduleSync(): void {
   if (syncTimer) clearTimeout(syncTimer);
   syncTimer = setTimeout(() => {
+    syncTimer = null;
     pushQuestXpToServer().catch(() => {});
   }, 1500);
 }
@@ -149,6 +150,33 @@ function scheduleSync(): void {
 /** PUT the local quest XP to the account (server keeps the max). */
 export async function pushQuestXpToServer(): Promise<void> {
   await apiFetch(XP_PUT, { method: 'PUT', body: JSON.stringify({ quest_xp: readQuest() }) });
+}
+
+/**
+ * Beacon-style flush for pagehide: fire any queued quest-XP push with
+ * `keepalive: true` so a fresh gain isn't lost when the tab closes. No-op
+ * if nothing is queued.
+ */
+export function flushQuestXpBeacon(): void {
+  if (!syncTimer) return;
+  clearTimeout(syncTimer);
+  syncTimer = null;
+  try {
+    const token = getCachedAccessTokenForBeacon();
+    if (!token) return;
+    void fetch(XP_PUT, {
+      method: 'PUT',
+      keepalive: true,
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ quest_xp: readQuest() }),
+    });
+  } catch {
+    /* best-effort */
+  }
 }
 
 // On sign-in: pull the account's quest XP, keep the larger of local/server
