@@ -46,6 +46,7 @@ import { recordCategoryStats } from '../lib/play';
 import { apiFetch, friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
+import { RotatingTip } from './reactbits/RotatingTip';
 import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
 import { addFlashcard, removeFlashcard } from '../lib/flashcards';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -1158,7 +1159,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               value={answers[currentQuestion.id] ?? ''}
               onChange={(e) => handleAnswer(currentQuestion.id, parseInt(e.target.value, 10))}
               aria-labelledby={`question-text-${currentQuestion.id}`}
-              sx={{ flexShrink: 0, mt: 'auto' }}
+              // Raise the anchored answers ~50px off the wave on phones so
+              // they sit mid-lower screen instead of at the very bottom edge.
+              sx={{ flexShrink: 0, mt: 'auto', mb: { xs: '50px', sm: 0 } }}
             >
               <div className="quiz-options-container">
                 {currentQuestion.options.map((option, index) => {
@@ -1181,6 +1184,36 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           </Box>
         </CardContent>
       </Card>
+
+      {/* Small coaching strip: nudges the learner toward good habits (docs
+          first, read explanations, name concepts). Rotates every 10s so the
+          same tip never lingers, only render when a question is actually up. */}
+      <Box
+        sx={{
+          mt: 1.25,
+          px: 1.5,
+          py: 0.75,
+          borderRadius: 1,
+          borderLeft: `3px solid ${BRAND.green}`,
+          backgroundColor: 'action.hover',
+          fontSize: '0.78rem',
+          color: 'text.secondary',
+          lineHeight: 1.4,
+          minHeight: '2.2em',
+          flexShrink: 0,
+        }}
+      >
+        <RotatingTip
+          tips={[
+            t('quiz.tip1'),
+            t('quiz.tip2'),
+            t('quiz.tip3'),
+            t('quiz.tip4'),
+            t('quiz.tip5'),
+          ]}
+          intervalMs={10000}
+        />
+      </Box>
 
       {/* Nav row shares the card's column and edges: Previous hugs the card's
           left edge, Next its right, Exit sits on the exact centreline — so the

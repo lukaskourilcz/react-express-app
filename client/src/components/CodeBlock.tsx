@@ -90,6 +90,33 @@ export function CodeBlock({ code, language }: { code: string; language: string }
   );
 }
 
+// Inline code style — a soft chip that reads as code without the visual noise
+// of raw backticks. Kept subtle so a stem stays legible even when it names
+// several APIs.
+const INLINE_CODE_STYLE: React.CSSProperties = {
+  fontFamily: '"SF Mono", Consolas, Monaco, monospace',
+  fontSize: '0.92em',
+  padding: '0.1em 0.35em',
+  borderRadius: 4,
+  backgroundColor: 'rgba(127, 127, 127, 0.14)',
+  border: '1px solid rgba(127, 127, 127, 0.18)',
+};
+
+/** Render a plain-text run with `single backticks` swapped for inline chips. */
+function renderInline(text: string, keyBase: string) {
+  const bits = text.split(/(`[^`]+`)/g);
+  return bits.map((bit, i) => {
+    if (bit.startsWith('`') && bit.endsWith('`') && bit.length >= 2) {
+      return (
+        <code key={`${keyBase}-${i}`} style={INLINE_CODE_STYLE}>
+          {bit.slice(1, -1)}
+        </code>
+      );
+    }
+    return <span key={`${keyBase}-${i}`}>{bit}</span>;
+  });
+}
+
 export function renderQuestion(text: string) {
   const parts = text.split(/(```[\s\S]*?```)/g);
   return parts.map((part, index) => {
@@ -106,6 +133,6 @@ export function renderQuestion(text: string) {
       const code = part.replace(/```\w*\n?/, '').replace(/```$/, '').trim();
       return <CodeBlock key={index} code={code} language={language} />;
     }
-    return <span key={index}>{part}</span>;
+    return <span key={index}>{renderInline(part, String(index))}</span>;
   });
 }

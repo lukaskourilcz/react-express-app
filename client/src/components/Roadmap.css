@@ -111,3 +111,12 @@
     animation: none !important;
   }
 }
+
+/* Finish-screen title picks up h5 sizing without needing the MUI Typography
+   wrapper, so SplitText can render the per-word spans directly. */
+.rm-finish-title {
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  line-height: 1.25;
+}

@@ -498,7 +498,7 @@ export default function Challenge() {
     // One-viewport layout matching the Quiz card geometry: 560px column,
     // primary card capped at ~80% height on sm+, centred; question text
     // scrolls internally, answers + lock-in stay anchored near the bottom.
-    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: { xs: 680, sm: 560 }, mx: 'auto', width: '100%', p: { xs: 0.5, sm: 1 } }}>
+    <Box sx={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: { xs: 680, sm: 560 }, mx: 'auto', width: '100%', p: { xs: 0.5, sm: 1 } }}>
       {/* One-shot low-time announcement for screen readers (the visual cue is
           colour + pulse, which AT users can't perceive). */}
       <Box component="span" sx={visuallyHidden} aria-live="polite">
@@ -569,7 +569,8 @@ export default function Challenge() {
             value={selected ?? ''}
             onChange={(e) => !lastResult && setSelected(parseInt(e.target.value, 10))}
             aria-labelledby="challenge-question"
-            sx={{ flexShrink: 0, mt: 'auto' }}
+            // Raise the anchored answers ~50px off the wave on phones.
+            sx={{ flexShrink: 0, mt: 'auto', mb: { xs: '50px', sm: 0 } }}
           >
             {current.options.map((opt, idx) => {
               let bg: string | undefined;
@@ -598,25 +599,41 @@ export default function Challenge() {
             })}
           </RadioGroup>
 
-          {/* Live region: announces correct/strike + explanation to AT the
-              moment the grade lands. Capped height so a long explanation
-              scrolls instead of pushing the anchored answers around. */}
-          <Box aria-live="assertive" sx={{ flexShrink: 0 }}>
-            {lastResult && (
-              <Alert severity={lastResult.isCorrect ? 'success' : 'error'} sx={{ mt: 1.5, maxHeight: '28vh', overflowY: 'auto' }}>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                  {lastResult.isCorrect ? t('challenge.correct') : t('challenge.wrong')}
-                </Typography>
-                {lastResult.explanation && (
-                  <Typography variant="body2" sx={{ mt: 0.5 }}>
-                    {lastResult.explanation}
-                  </Typography>
-                )}
-              </Alert>
-            )}
-          </Box>
         </CardContent>
       </Card>
+
+      {/* Feedback overlay: a floating card that sits over the answer options
+          so the grade doesn't push the layout around. */}
+      {lastResult && (
+        <Box
+          aria-live="assertive"
+          sx={{
+            position: 'absolute',
+            left: { xs: 8, sm: 16 },
+            right: { xs: 8, sm: 16 },
+            bottom: { xs: 68, sm: 72 },
+            zIndex: 5,
+          }}
+        >
+          <Alert
+            severity={lastResult.isCorrect ? 'success' : 'error'}
+            sx={{
+              maxHeight: '48vh',
+              overflowY: 'auto',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.35)',
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {lastResult.isCorrect ? t('challenge.correct') : t('challenge.wrong')}
+            </Typography>
+            {lastResult.explanation && (
+              <Typography variant="body2" sx={{ mt: 0.5 }}>
+                {lastResult.explanation}
+              </Typography>
+            )}
+          </Alert>
+        </Box>
+      )}
 
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5, gap: 1, flexShrink: 0 }}>
         {!lastResult ? (

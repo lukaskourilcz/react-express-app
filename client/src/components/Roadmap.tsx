@@ -30,7 +30,6 @@ import {
   PARTS_PER_TOPIC,
   getRoadmapProgress,
   isTopicUnlocked,
-  topicUnlockHint,
   unlockExtraTopics,
   useExtraUnlocks,
   getExtraUnlocks,
@@ -55,6 +54,7 @@ import { shuffleDifferentFrom } from '../lib/shuffle';
 import { readString, writeString } from '../lib/storage';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
+import { SplitText } from './reactbits/SplitText';
 import { RedFlagDialog } from './RedFlagDialog';
 import './Roadmap.css';
 
@@ -285,11 +285,6 @@ function Roadmap() {
     (tpc: RoadmapTopic) => isTopicUnlocked(progress, tpc, extraUnlocksSet),
     [progress, extraUnlocksSet],
   );
-  const lockedCount = useMemo(
-    () => TOPICS.filter((tpc) => !isUnlocked(tpc)).length,
-    [isUnlocked],
-  );
-
   // The topic's full (global) level list, split into PARTS_PER_TOPIC parts. Only
   // the selected part's slice is rendered as a path, so it stays short.
   const levels: RoadmapLevelMeta[] = structure?.structure[topic]?.levels ?? [];
@@ -559,70 +554,40 @@ function Roadmap() {
           path from starter → expert is legible without overwhelming. */}
       {/* Radiogroup semantics (not tabs — there is no tabpanel wiring), so AT
           announces "N of M selected" correctly. */}
+      {/* Only unlocked topics appear — locked ones are hidden entirely, so
+          the strip stays focused on what the learner can actually start. */}
       <Box role="radiogroup" aria-label={t('roadmap.topicsAria')} sx={{ display: 'flex', gap: 0.75, justifyContent: 'center', mb: 2.5, flexWrap: 'wrap' }}>
-        {TOPICS.map((value) => {
+        {TOPICS.filter(isUnlocked).map((value) => {
           const selected = topic === value;
-          const unlocked = isUnlocked(value);
           const color = getCategoryHexColor(value);
-          const lockedHint = !unlocked
-            ? t('roadmap.topicLockedHint', {
-                prereqs: topicUnlockHint(progress, value, getCategoryLabel),
-              })
-            : '';
           return (
-            <Tooltip key={value} title={lockedHint} arrow placement="top" disableHoverListener={unlocked}>
-              <Box component="span" sx={{ display: 'inline-flex' }}>
-                <Button
-                  role="radio"
-                  aria-checked={selected}
-                  aria-disabled={!unlocked}
-                  disabled={!unlocked}
-                  onClick={() => selectTopic(value)}
-                  startIcon={!unlocked ? <LockIcon size={12} /> : undefined}
-                  sx={{
-                    textTransform: 'none',
-                    fontWeight: 600,
-                    fontSize: '0.78rem',
-                    minWidth: 'auto',
-                    px: 1.4,
-                    // ≥32px tall pills — comfortable tap targets in a dense wrap.
-                    py: 0.75,
-                    borderRadius: 999,
-                    lineHeight: 1.3,
-                    transition: 'all 0.15s ease',
-                    color: !unlocked
-                      ? 'text.disabled'
-                      : selected
-                        ? onCategoryColorText(value)
-                        : 'text.secondary',
-                    backgroundColor: !unlocked
-                      ? 'action.hover'
-                      : selected
-                        ? color
-                        : 'background.paper',
-                    border: '2px solid',
-                    borderColor: !unlocked ? 'divider' : selected ? color : 'divider',
-                    opacity: unlocked ? 1 : 0.55,
-                    '&:hover': unlocked
-                      ? { backgroundColor: selected ? color : 'action.hover', borderColor: color }
-                      : undefined,
-                    '&.Mui-disabled': { color: 'text.disabled' },
-                    '& .MuiButton-startIcon': { mr: 0.5 },
-                  }}
-                >
-                  {getCategoryLabel(value)}
-                </Button>
-              </Box>
-            </Tooltip>
+            <Button
+              key={value}
+              role="radio"
+              aria-checked={selected}
+              onClick={() => selectTopic(value)}
+              sx={{
+                textTransform: 'none',
+                fontWeight: 600,
+                fontSize: '0.78rem',
+                minWidth: 'auto',
+                px: 1.4,
+                py: 0.75,
+                borderRadius: 999,
+                lineHeight: 1.3,
+                transition: 'all 0.15s ease',
+                color: selected ? onCategoryColorText(value) : 'text.secondary',
+                backgroundColor: selected ? color : 'background.paper',
+                border: '2px solid',
+                borderColor: selected ? color : 'divider',
+                '&:hover': { backgroundColor: selected ? color : 'action.hover', borderColor: color },
+              }}
+            >
+              {getCategoryLabel(value)}
+            </Button>
           );
         })}
       </Box>
-
-      {lockedCount > 0 && (
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mb: 2 }}>
-          {t('roadmap.lockedCountFooter', { count: lockedCount })}
-        </Typography>
-      )}
 
       {loadingStructure ? (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 3, mt: 2 }}>
@@ -1130,14 +1095,33 @@ function LessonRunner({
         ? isCheckpoint ? t('roadmap.checkpointComplete') : t('roadmap.levelComplete')
         : isCheckpoint ? t('roadmap.checkpointFailed') : t('roadmap.levelFailed');
     return (
-      <Box sx={{ maxWidth: 520, mx: 'auto', textAlign: 'center', mt: 2, position: 'relative' }}>
+      // Center vertically in the lesson viewport (celebration deserves the
+      // stage). The mount `key` on SplitText forces a re-play whenever the
+      // learner replays the lesson.
+      <Box
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          textAlign: 'center',
+          maxWidth: 520,
+          mx: 'auto',
+          position: 'relative',
+          px: 2,
+        }}
+      >
         {passed && <Confetti color={accent} />}
         <Box className="rm-celebrate" sx={{ fontSize: '3.5rem', lineHeight: 1, mb: 1 }} aria-hidden>
           {emoji}
         </Box>
-        <Typography variant="h5" component="h2" sx={{ fontWeight: 800, mb: 1 }}>
-          {title}
-        </Typography>
+        <SplitText
+          as="h2"
+          text={title}
+          className="rm-finish-title"
+        />
         {dead ? (
           <Typography color="text.secondary" sx={{ mb: 2 }}>
             {t('roadmap.outOfHeartsBody', { max: MAX_HEARTS })}
@@ -1181,7 +1165,7 @@ function LessonRunner({
     // One-viewport lesson layout matching the Quiz card geometry: 560px
     // column, content capped at ~80% height on sm+ and centred; question
     // scrolls, answer options anchored toward the bottom in a stable position.
-    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', width: '100%', maxWidth: { xs: 680, sm: 560 }, mx: 'auto' }}>
+    <Box sx={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', width: '100%', maxWidth: { xs: 680, sm: 560 }, mx: 'auto' }}>
     <Box sx={{ flex: '1 1 auto', minHeight: 0, maxHeight: { sm: '80%' }, display: 'flex', flexDirection: 'column' }}>
       {/* Header: exit + (hearts for a level, progress bar for a checkpoint) */}
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexShrink: 0 }}>
@@ -1235,7 +1219,7 @@ function LessonRunner({
       </Box>
 
       {/* Options — anchored toward the bottom, labelled by the question. */}
-      <Box role="group" aria-labelledby="lesson-question" sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, flexShrink: 0, mt: 'auto' }}>
+      <Box role="group" aria-labelledby="lesson-question" sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, flexShrink: 0, mt: 'auto', mb: { xs: '50px', sm: 0 } }}>
         {question.options.map((option, index) => {
           const isCorrect = index === question.correctAnswer;
           const isPicked = index === selected;
@@ -1284,21 +1268,56 @@ function LessonRunner({
         </Typography>
       )}
 
-      {/* Live region so AT hears the grade; capped height keeps the anchored
-          options from being pushed around by long explanations. */}
-      <Box aria-live="polite" sx={{ flexShrink: 0 }}>
-        {revealed && (
-          <Box className="rm-feedback" sx={{ mt: 1.5, p: 2, borderRadius: 2, borderLeft: '4px solid', borderColor: isRight ? 'success.dark' : 'error.dark', backgroundColor: isRight ? 'rgba(46,125,50,0.08)' : 'rgba(198,40,40,0.08)', maxHeight: '28vh', overflowY: 'auto' }}>
+      {/* Feedback OVERLAYS the answer options — a solid card floating over
+          the bottom of the lesson viewport, so the anchored options don't get
+          shoved around when the grade lands. Live region keeps AT informed. */}
+      {revealed && (
+        <Box
+          aria-live="polite"
+          sx={{
+            position: 'absolute',
+            left: { xs: 8, sm: 16 },
+            right: { xs: 8, sm: 16 },
+            bottom: { xs: 12, sm: 20 },
+            zIndex: 5,
+          }}
+        >
+          <Box
+            className="rm-feedback"
+            sx={{
+              p: 2,
+              borderRadius: 2,
+              borderLeft: '4px solid',
+              borderColor: isRight ? 'success.dark' : 'error.dark',
+              backgroundColor: 'background.paper',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.35)',
+              maxHeight: '48vh',
+              overflowY: 'auto',
+            }}
+          >
             <Typography sx={{ fontWeight: 800, color: isRight ? 'success.dark' : 'error.dark', mb: 0.5 }}>
               {isRight ? t('roadmap.correct') : t('roadmap.incorrect')}
             </Typography>
-            <Typography variant="body2" color="text.secondary">{question.explanation}</Typography>
-            <Button fullWidth variant="contained" onClick={advance} sx={{ mt: 2, textTransform: 'none', fontWeight: 700, backgroundColor: accent, '&:hover': { backgroundColor: accent, filter: 'brightness(0.92)' } }}>
+            <Typography variant="body2" color="text.secondary">
+              {question.explanation}
+            </Typography>
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={advance}
+              sx={{
+                mt: 2,
+                textTransform: 'none',
+                fontWeight: 700,
+                backgroundColor: accent,
+                '&:hover': { backgroundColor: accent, filter: 'brightness(0.92)' },
+              }}
+            >
               {outOfHearts ? t('roadmap.seeResult') : qIndex < total - 1 ? t('roadmap.continue') : t('roadmap.finish')}
             </Button>
           </Box>
-        )}
-      </Box>
+        </Box>
+      )}
 
       <RedFlagDialog open={flagOpen} onClose={() => setFlagOpen(false)} onSubmit={submitFlag} />
       <Snackbar
