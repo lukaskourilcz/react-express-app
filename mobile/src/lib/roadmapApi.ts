@@ -7,10 +7,24 @@ import {
   offlineRoadmapStructure,
   offlineRoadmapLevel,
   offlineRoadmapCheckpoint,
+  offlineRoadmapPartTest,
 } from '../data/offline';
 import type { CategoryType } from '../types';
 
-export type RoadmapTopic = 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs' | 'html' | 'css' | 'git' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'rhf-zod' | 'cool-stuff';
+// Mirrors ROADMAP_TOPICS in lib/roadmap.ts (server source of truth). Keep the
+// order identical so pickers and the offline structure line up with web.
+export type RoadmapTopic =
+  | 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs'
+  | 'html' | 'css' | 'git' | 'dsa' | 'algorithms'
+  | 'abbreviations' | 'general' | 'internet' | 'ai' | 'rhf-zod' | 'cool-stuff'
+  | 'databases' | 'system-design' | 'testing' | 'devops' | 'security';
+
+export const ROADMAP_TOPICS: RoadmapTopic[] = [
+  'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
+  'html', 'css', 'git', 'dsa', 'algorithms',
+  'abbreviations', 'general', 'internet', 'ai', 'rhf-zod', 'cool-stuff',
+  'databases', 'system-design', 'testing', 'devops', 'security',
+];
 
 export interface RoadmapLevelMeta {
   level: number;
@@ -86,6 +100,19 @@ export async function fetchRoadmapCheckpoint(topic: RoadmapTopic, checkpoint: nu
     return await apiFetch<RoadmapPlayable>(`/api/quiz/roadmap?${params}`);
   } catch (err) {
     if (isOfflineError(err)) return offlineRoadmapCheckpoint(topic, checkpoint);
+    throw err;
+  }
+}
+
+// A part's end-of-part test: a focused exam sampled across the part's levels,
+// graded at 85%. Result is stored in the topic's checkpoints map keyed by part
+// number (matches the web client). Falls back to the offline bundle.
+export async function fetchRoadmapPartTest(topic: RoadmapTopic, part: number, lang = 'en') {
+  const params = new URLSearchParams({ topic, test: String(part), lang });
+  try {
+    return await apiFetch<RoadmapPlayable>(`/api/quiz/roadmap?${params}`);
+  } catch (err) {
+    if (isOfflineError(err)) return offlineRoadmapPartTest(topic, part);
     throw err;
   }
 }

@@ -9,6 +9,8 @@ import {
   LEVEL_PASS,
   CHECKPOINT_PASS,
   LEVELS_PER_CHECKPOINT,
+  PART_TEST_PASS,
+  partRanges,
 } from '../lib/roadmapProgress';
 import type {
   RoadmapStructure,
@@ -55,9 +57,15 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   algorithms: 'rm-algorithms',
   abbreviations: 'rm-abbr',
   general: 'rm-general',
+  internet: 'rm-internet',
   ai: 'rm-ai',
   'rhf-zod': 'rm-rhf',
   'cool-stuff': 'rm-cool',
+  databases: 'rm-db',
+  'system-design': 'rm-sysdesign',
+  testing: 'rm-testing',
+  devops: 'rm-devops',
+  security: 'rm-security',
 };
 const PER_LEVEL = DATA.questionsPerLevel || 8;
 
@@ -121,6 +129,32 @@ export function offlineRoadmapCheckpoint(topic: RoadmapTopic, checkpoint: number
     ref: checkpoint,
     title: meta?.title ?? `Checkpoint ${checkpoint}`,
     passPct: meta?.passPct ?? CHECKPOINT_PASS,
+    questions,
+  };
+}
+
+// Up to this many questions are sampled into a part test (matches PART_TEST_SIZE
+// on the server).
+const PART_TEST_SIZE = 20;
+
+export function offlineRoadmapPartTest(topic: RoadmapTopic, part: number): RoadmapPlayable {
+  const levelCount = DATA.structure.structure[topic]?.levels.length ?? 0;
+  const range = partRanges(levelCount).find((r) => r.part === part);
+  const pool: string[] = [];
+  if (range) {
+    for (let l = range.startLevel; l <= range.endLevel; l++) pool.push(...levelIds(topic, l));
+  }
+  const questions = shuffle(pool)
+    .map((id) => byId.get(id))
+    .filter((q): q is OfflineQuestion => Boolean(q))
+    .slice(0, PART_TEST_SIZE)
+    .map(toRoadmapQuestion);
+  return {
+    kind: 'checkpoint',
+    topic,
+    ref: part,
+    title: `Part ${part}`,
+    passPct: PART_TEST_PASS,
     questions,
   };
 }

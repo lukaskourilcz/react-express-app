@@ -3,36 +3,32 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { useColors } from '../lib/useColors';
 import { friendlyError } from '../lib/api';
 import {
   fetchRoadmapLevel,
-  fetchRoadmapCheckpoint,
+  fetchRoadmapPartTest,
   type RoadmapPlayable,
   type RoadmapTopic,
 } from '../lib/roadmapApi';
-import { recordLevelResult, recordCheckpointResult, pushProgressToServer, nextAfter } from '../lib/roadmapProgress';
+import {
+  recordLevelResult,
+  recordPartTestResult,
+  pushProgressToServer,
+  nextAfter,
+  getProgress,
+} from '../lib/roadmapProgress';
+import { computeLearningXp } from '../lib/leveling';
+import { awardLearningOutcome } from '../lib/xp';
 import { recordActivityToday } from '../lib/streak';
+import { playCorrect, playWrong } from '../lib/settings';
 import { useT, getLang } from '../lib/i18n';
-
-function haptic(kind: 'select' | 'success' | 'warning'): void {
-  try {
-    if (kind === 'select') void Haptics.selectionAsync();
-    else if (kind === 'success') void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    else void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-  } catch {
-    // haptics unavailable (web/simulator) — ignore
-  }
-}
 import { QuestionText } from '../components/QuestionText';
 import { Hearts } from '../components/Hearts';
+import { ReportDialog } from '../components/ReportDialog';
 import { PrimaryButton } from '../components/ui';
 
 const MAX_HEARTS = 3;
-const GREEN = '#2e7d32';
-const RED = '#c62828';
-const GOLD = '#ffb300';
 
 export default function LessonScreen() {
   const c = useColors();
@@ -40,19 +36,18 @@ export default function LessonScreen() {
   const { t } = useT();
   const params = useLocalSearchParams<{
     topic: RoadmapTopic;
-    kind: 'level' | 'checkpoint';
+    kind: 'level' | 'test';
     ref: string;
     lc?: string;
-    cc?: string;
   }>();
   const topic = params.topic;
   const kind = params.kind;
   const ref = parseInt(params.ref ?? '1', 10);
   const levelCount = parseInt(params.lc ?? '0', 10);
-  const checkpointCount = parseInt(params.cc ?? '0', 10);
 
   const [playable, setPlayable] = useState<RoadmapPlayable | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const [qIndex, setQIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
@@ -77,10 +72,9 @@ export default function LessonScreen() {
     setPlayable(null);
     resetPlayer();
     const req =
-      kind === 'checkpoint' ? fetchRoadmapCheckpoint(topic, ref, getLang()) : fetchRoadmapLevel(topic, ref, getLang());
+      kind === 'test' ? fetchRoadmapPartTest(topic, ref, getLang()) : fetchRoadmapLevel(topic, ref, getLang());
     req.then(setPlayable).catch((e) => setError(friendlyError(e)));
   };
-  // Re-runs when params change too, so "Next level" (router.replace) starts fresh.
   useEffect(load, [topic, kind, ref]);
 
   if (error) {
@@ -102,11 +96,11 @@ export default function LessonScreen() {
     );
   }
 
-  const isCheckpoint = playable.kind === 'checkpoint';
-  const accent = isCheckpoint ? GOLD : c.brand;
+  const isExam = playable.kind === 'checkpoint';
+  const accent = isExam ? c.gold : c.brand;
   const total = playable.questions.length;
   const question = playable.questions[qIndex];
-  const outOfHearts = !isCheckpoint && mistakes >= MAX_HEARTS;
+  const outOfHearts = !isExam && mistakes >= MAX_HEARTS;
   const isRight = selected === question.correctAnswer;
 
   const choose = (i: number) => {
@@ -115,20 +109,23 @@ export default function LessonScreen() {
     setRevealed(true);
     if (i === question.correctAnswer) {
       setCorrectCount((n) => n + 1);
-      haptic('success');
+      playCorrect();
     } else {
-      if (!isCheckpoint) setMistakes((m) => m + 1);
-      haptic('warning');
+      if (!isExam) setMistakes((m) => m + 1);
+      playWrong();
     }
   };
 
   const finish = (deadByHearts: boolean) => {
     const pct = Math.round((correctCount / total) * 100);
-    if (isCheckpoint) recordCheckpointResult(topic, ref, pct, playable.passPct);
+    // Learning XP is derived from progress, so measure it before/after the pass.
+    const before = computeLearningXp(getProgress());
+    if (kind === 'test') recordPartTestResult(topic, ref, pct, playable.passPct);
     else recordLevelResult(topic, ref, pct, playable.passPct);
+    const after = computeLearningXp(getProgress());
+    awardLearningOutcome(after - before);
     void recordActivityToday();
     void pushProgressToServer();
-    if (!deadByHearts && pct >= playable.passPct) haptic('success');
     setDead(deadByHearts);
     setFinished(true);
   };
@@ -148,23 +145,23 @@ export default function LessonScreen() {
   if (finished) {
     const pct = Math.round((correctCount / total) * 100);
     const passed = !dead && pct >= playable.passPct;
-    const next = passed && levelCount > 0 ? nextAfter(kind, ref, levelCount, checkpointCount) : null;
+    const next = passed && levelCount > 0 ? nextAfter(kind, ref, levelCount) : null;
     const goNext = () => {
       if (!next) return;
       router.replace({
         pathname: '/lesson',
-        params: { topic, kind: next.kind, ref: String(next.ref), lc: String(levelCount), cc: String(checkpointCount) },
+        params: { topic, kind: next.kind, ref: String(next.ref), lc: String(levelCount) },
       });
     };
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: c.background }]}>
         <Centered c={c}>
-          <Text style={styles.emoji}>{dead ? '💔' : passed ? (isCheckpoint ? '🏆' : '🎉') : '💪'}</Text>
+          <Text style={styles.emoji}>{dead ? '💔' : passed ? (isExam ? '🏆' : '🎉') : '💪'}</Text>
           <Text style={[styles.resultTitle, { color: c.text }]}>
             {dead
               ? t('lesson.outOfHearts')
               : passed
-                ? isCheckpoint ? t('lesson.checkpointComplete') : t('lesson.levelComplete')
+                ? isExam ? t('lesson.checkpointComplete') : t('lesson.levelComplete')
                 : t('lesson.notPassed')}
           </Text>
           {dead ? (
@@ -185,7 +182,7 @@ export default function LessonScreen() {
           <View style={{ width: '100%', maxWidth: 320, marginTop: 24, gap: 12 }}>
             {next && (
               <PrimaryButton
-                label={next.kind === 'checkpoint' ? t('lesson.checkpointExam') : t('lesson.nextLevel')}
+                label={next.kind === 'test' ? t('lesson.partTest') : t('lesson.nextLevel')}
                 onPress={goNext}
                 style={{ backgroundColor: accent }}
               />
@@ -205,10 +202,10 @@ export default function LessonScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: c.background }]}>
       <View style={styles.lessonHeader}>
-        <Pressable onPress={() => router.back()} hitSlop={10} accessibilityLabel="Exit">
+        <Pressable onPress={() => router.back()} hitSlop={10} accessibilityLabel={t('common.back')}>
           <Ionicons name="close" size={26} color={c.textSecondary} />
         </Pressable>
-        {isCheckpoint ? (
+        {isExam ? (
           <View style={[styles.progressTrack, { backgroundColor: c.border }]}>
             <View style={{ width: `${((qIndex + (revealed ? 1 : 0)) / total) * 100}%`, height: '100%', backgroundColor: accent, borderRadius: 6 }} />
           </View>
@@ -221,10 +218,15 @@ export default function LessonScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.lessonBody}>
-        <View style={[styles.chip, { backgroundColor: c.brandSoft }]}>
-          <Text style={{ color: c.text, fontWeight: '700', fontSize: 12 }}>
-            {isCheckpoint ? t('lesson.checkpoint') : t('lesson.level', { n: playable.ref })} · {playable.title}
-          </Text>
+        <View style={styles.chipRow}>
+          <View style={[styles.chip, { backgroundColor: c.brandSoft }]}>
+            <Text style={{ color: c.text, fontWeight: '700', fontSize: 12 }}>
+              {isExam ? t('lesson.partTest') : t('lesson.level', { n: playable.ref })} · {playable.title}
+            </Text>
+          </View>
+          <Pressable onPress={() => setReportOpen(true)} hitSlop={8} accessibilityLabel={t('report.title')}>
+            <Ionicons name="flag-outline" size={18} color={c.textSecondary} />
+          </Pressable>
         </View>
 
         <View style={{ marginVertical: 16 }}>
@@ -239,9 +241,9 @@ export default function LessonScreen() {
             let bg = c.card;
             let fg = c.text;
             if (revealed && isCorrect) {
-              borderColor = GREEN; bg = 'rgba(46,125,50,0.12)'; fg = GREEN;
+              borderColor = c.success; bg = 'rgba(46,125,50,0.12)'; fg = c.success;
             } else if (revealed && isPicked && !isCorrect) {
-              borderColor = RED; bg = 'rgba(198,40,40,0.12)'; fg = RED;
+              borderColor = c.error; bg = 'rgba(198,40,40,0.12)'; fg = c.error;
             } else if (isPicked) {
               borderColor = accent;
             }
@@ -253,15 +255,15 @@ export default function LessonScreen() {
                 style={[styles.option, { borderColor, backgroundColor: bg }]}
               >
                 <Text style={{ color: fg, fontSize: 15, fontWeight: '600', flex: 1 }}>{option}</Text>
-                {revealed && isCorrect && <Ionicons name="checkmark-circle" size={20} color={GREEN} />}
+                {revealed && isCorrect && <Ionicons name="checkmark-circle" size={20} color={c.success} />}
               </Pressable>
             );
           })}
         </View>
 
         {revealed && (
-          <View style={[styles.feedback, { borderLeftColor: isRight ? GREEN : RED, backgroundColor: isRight ? 'rgba(46,125,50,0.08)' : 'rgba(198,40,40,0.08)' }]}>
-            <Text style={{ fontWeight: '800', color: isRight ? GREEN : RED, marginBottom: 4 }}>
+          <View style={[styles.feedback, { borderLeftColor: isRight ? c.success : c.error, backgroundColor: isRight ? 'rgba(46,125,50,0.08)' : 'rgba(198,40,40,0.08)' }]}>
+            <Text style={{ fontWeight: '800', color: isRight ? c.success : c.error, marginBottom: 4 }}>
               {isRight ? t('lesson.correct') : t('lesson.incorrect')}
             </Text>
             <Text style={{ color: c.textSecondary, lineHeight: 20 }}>{question.explanation}</Text>
@@ -278,6 +280,8 @@ export default function LessonScreen() {
           />
         </View>
       )}
+
+      <ReportDialog questionId={question.id} visible={reportOpen} onClose={() => setReportOpen(false)} />
     </SafeAreaView>
   );
 }
@@ -292,6 +296,7 @@ const styles = StyleSheet.create({
   lessonHeader: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingHorizontal: 16, paddingVertical: 10 },
   progressTrack: { flex: 1, height: 12, borderRadius: 6, overflow: 'hidden' },
   lessonBody: { paddingHorizontal: 16, paddingBottom: 24 },
+  chipRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   chip: { alignSelf: 'flex-start', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
   option: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 2, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14 },
   feedback: { marginTop: 16, borderLeftWidth: 4, borderRadius: 10, padding: 14 },

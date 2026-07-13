@@ -14,9 +14,15 @@ export type CategoryType =
   | 'algorithms'
   | 'abbreviations'
   | 'general'
+  | 'internet'
   | 'ai'
   | 'rhf-zod'
   | 'cool-stuff'
+  | 'databases'
+  | 'system-design'
+  | 'testing'
+  | 'devops'
+  | 'security'
   | 'dev-world'
   | 'code-snippets';
 

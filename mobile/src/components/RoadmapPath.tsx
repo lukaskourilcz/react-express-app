@@ -1,11 +1,24 @@
-// The serpentine "snake" learning path, restructured for phone widths (2–3
-// columns measured from the layout). Connectors are drawn with react-native-svg
-// through the node centres; nodes are tappable raised "bubbles".
+// The serpentine "snake" learning path for ONE part of a topic, restructured for
+// phone widths. A part is a contiguous slice of the topic's global levels ending
+// in a part-test node — matching the web client's parts model. Connectors are
+// drawn with react-native-svg through the node centres; nodes are tappable
+// raised "bubbles".
 import { useEffect, useState } from 'react';
 import { LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import Svg, { Line } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
+import { useColors } from '../lib/useColors';
+import type { RoadmapLevelMeta, RoadmapTopic } from '../lib/roadmapApi';
+import {
+  type RoadmapProgress,
+  type PartRange,
+  isPartLevelUnlocked,
+  isLevelPassed,
+  levelBestPct,
+  isPartTestUnlocked,
+  isPartTestPassed,
+} from '../lib/roadmapProgress';
 
 // A gentle infinite bob for the current ("play me") node.
 function useBob(active: boolean) {
@@ -26,20 +39,7 @@ function useBob(active: boolean) {
   }, [active]);
   return useAnimatedStyle(() => ({ transform: [{ translateY: v.value }] }));
 }
-import { useColors } from '../lib/useColors';
-import type { RoadmapLevelMeta, RoadmapCheckpointMeta, RoadmapTopic } from '../lib/roadmapApi';
-import {
-  type RoadmapProgress,
-  isLevelUnlocked,
-  isLevelPassed,
-  levelBestPct,
-  isCheckpointUnlocked,
-  isCheckpointPassed,
-  LEVELS_PER_CHECKPOINT,
-} from '../lib/roadmapProgress';
 
-const GOLD = '#ffb300';
-const GOLD_DARK = '#e08e00';
 // Rainbow by difficulty tier (1→5), matching the web path.
 const BANDS: [string, string][] = [
   ['#58cc02', '#46a302'],
@@ -52,40 +52,40 @@ const bandFor = (d: number): [string, string] => BANDS[Math.min(5, Math.max(1, d
 
 type Node =
   | { type: 'level'; meta: RoadmapLevelMeta }
-  | { type: 'checkpoint'; meta: RoadmapCheckpointMeta };
-
-function buildPath(levels: RoadmapLevelMeta[], checkpoints: RoadmapCheckpointMeta[]): Node[] {
-  const out: Node[] = [];
-  for (const meta of levels) {
-    out.push({ type: 'level', meta });
-    if (meta.level % LEVELS_PER_CHECKPOINT === 0) {
-      const cp = checkpoints.find((c) => c.afterLevel === meta.level);
-      if (cp) out.push({ type: 'checkpoint', meta: cp });
-    }
-  }
-  return out;
-}
+  | { type: 'test'; part: number; title: string; questionCount: number; passPct: number };
 
 export function RoadmapPath({
   topic,
+  range,
   levels,
-  checkpoints,
+  partTitle,
+  partQuestionCount,
+  partPassPct,
   progress,
   onOpenLevel,
-  onOpenCheckpoint,
+  onOpenPartTest,
 }: {
   topic: RoadmapTopic;
+  range: PartRange;
+  /** All the topic's level metas; filtered to the part's global range here. */
   levels: RoadmapLevelMeta[];
-  checkpoints: RoadmapCheckpointMeta[];
+  partTitle: string;
+  partQuestionCount: number;
+  partPassPct: number;
   progress: RoadmapProgress;
-  onOpenLevel: (level: number) => void;
-  onOpenCheckpoint: (cp: number) => void;
+  onOpenLevel: (globalLevel: number) => void;
+  onOpenPartTest: (part: number) => void;
 }) {
   const c = useColors();
   const [width, setWidth] = useState(0);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
-  const nodes = buildPath(levels, checkpoints);
+  const partLevels = levels.filter((l) => l.level >= range.startLevel && l.level <= range.endLevel);
+  const nodes: Node[] = [
+    ...partLevels.map<Node>((meta) => ({ type: 'level', meta })),
+    { type: 'test', part: range.part, title: partTitle, questionCount: partQuestionCount, passPct: partPassPct },
+  ];
+
   const cols = width < 360 ? 2 : 3;
   const cellW = width > 0 ? width / cols : 0;
   const ROW_H = 132;
@@ -104,6 +104,9 @@ export function RoadmapPath({
   const rows = Math.ceil(nodes.length / cols);
   const height = BASE + (rows - 1) * ROW_H + (cols - 1) * SLOPE + 40 + LABEL_H;
 
+  const nodePassed = (node: Node): boolean =>
+    node.type === 'level' ? isLevelPassed(progress, topic, node.meta.level) : isPartTestPassed(progress, topic, node.part);
+
   return (
     <View onLayout={onLayout} style={{ width: '100%', height: width > 0 ? height : 240 }}>
       {width > 0 && (
@@ -111,32 +114,28 @@ export function RoadmapPath({
           <Svg width={width} height={height} style={StyleSheet.absoluteFill}>
             {placed.slice(0, -1).map((a, i) => {
               const b = placed[i + 1];
-              const aPassed = a.node.type === 'level'
-                ? isLevelPassed(progress, topic, a.node.meta.level)
-                : isCheckpointPassed(progress, topic, a.node.meta.checkpoint);
-              const bPassed = b.node.type === 'level'
-                ? isLevelPassed(progress, topic, b.node.meta.level)
-                : isCheckpointPassed(progress, topic, b.node.meta.checkpoint);
-              const done = aPassed && bPassed;
+              const done = nodePassed(a.node) && nodePassed(b.node);
               const stroke = done
-                ? b.node.type === 'checkpoint'
-                  ? GOLD
-                  : bandFor(b.node.type === 'level' ? b.node.meta.difficulty : 1)[0]
+                ? b.node.type === 'test'
+                  ? c.gold
+                  : bandFor(b.node.meta.difficulty)[0]
                 : c.border;
               return <Line key={i} x1={a.cx} y1={a.cy} x2={b.cx} y2={b.cy} stroke={stroke} strokeWidth={6} strokeLinecap="round" />;
             })}
           </Svg>
           {placed.map(({ node, cx, cy }) =>
-            node.type === 'checkpoint' ? (
-              <CheckpointBubble
-                key={`cp-${node.meta.checkpoint}`}
-                cp={node.meta}
+            node.type === 'test' ? (
+              <PartTestBubble
+                key={`test-${node.part}`}
+                title={node.title}
+                questionCount={node.questionCount}
+                passPct={node.passPct}
                 cx={cx}
                 cy={cy}
                 cellW={cellW}
-                unlocked={isCheckpointUnlocked(progress, topic, node.meta.checkpoint)}
-                passed={isCheckpointPassed(progress, topic, node.meta.checkpoint)}
-                onPress={() => onOpenCheckpoint(node.meta.checkpoint)}
+                unlocked={isPartTestUnlocked(progress, topic, range)}
+                passed={isPartTestPassed(progress, topic, node.part)}
+                onPress={() => onOpenPartTest(node.part)}
               />
             ) : (
               <LevelBubble
@@ -145,7 +144,7 @@ export function RoadmapPath({
                 cx={cx}
                 cy={cy}
                 cellW={cellW}
-                unlocked={isLevelUnlocked(progress, topic, node.meta.level)}
+                unlocked={isPartLevelUnlocked(progress, topic, range, node.meta.level)}
                 passed={isLevelPassed(progress, topic, node.meta.level)}
                 best={levelBestPct(progress, topic, node.meta.level)}
                 onPress={() => onOpenLevel(node.meta.level)}
@@ -215,10 +214,10 @@ function LevelBubble({
   );
 }
 
-function CheckpointBubble({
-  cp, cx, cy, cellW, unlocked, passed, onPress,
+function PartTestBubble({
+  title, questionCount, passPct, cx, cy, cellW, unlocked, passed, onPress,
 }: {
-  cp: RoadmapCheckpointMeta; cx: number; cy: number; cellW: number;
+  title: string; questionCount: number; passPct: number; cx: number; cy: number; cellW: number;
   unlocked: boolean; passed: boolean; onPress: () => void;
 }) {
   const c = useColors();
@@ -231,14 +230,14 @@ function CheckpointBubble({
         onPress={unlocked ? onPress : undefined}
         disabled={!unlocked}
         accessibilityRole="button"
-        accessibilityLabel={`Checkpoint: ${cp.title}${unlocked ? '' : ' (locked)'}`}
+        accessibilityLabel={`Part test: ${title}${unlocked ? '' : ' (locked)'}`}
         style={({ pressed }) => [
           styles.bubble,
           {
             width: CP, height: CP, borderRadius: 20,
-            backgroundColor: passed ? GOLD : c.card,
-            borderColor: passed || isCurrent ? GOLD_DARK : c.border,
-            shadowColor: passed || isCurrent ? GOLD_DARK : '#000',
+            backgroundColor: passed ? c.gold : c.card,
+            borderColor: passed || isCurrent ? c.goldDark : c.border,
+            shadowColor: passed || isCurrent ? c.goldDark : '#000',
             transform: [{ translateY: pressed ? 3 : 0 }],
             opacity: unlocked ? 1 : 0.55,
           },
@@ -247,16 +246,16 @@ function CheckpointBubble({
         {passed ? (
           <Ionicons name="checkmark" size={34} color="#fff" />
         ) : unlocked ? (
-          <Ionicons name="trophy" size={30} color={GOLD_DARK} />
+          <Ionicons name="trophy" size={30} color={c.goldDark} />
         ) : (
           <Ionicons name="lock-closed" size={22} color={c.textSecondary} />
         )}
       </Pressable>
       </Animated.View>
       <Text numberOfLines={1} style={[styles.label, { color: unlocked ? c.text : c.textSecondary, fontWeight: '700' }]}>
-        {cp.title}
+        {title}
       </Text>
-      <Text style={[styles.cpMeta, { color: c.textSecondary }]}>{cp.questionCount} Q · {cp.passPct}%</Text>
+      <Text style={[styles.cpMeta, { color: c.textSecondary }]}>{questionCount} Q · {passPct}%</Text>
     </View>
   );
 }
