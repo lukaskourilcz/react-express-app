@@ -15,6 +15,14 @@ export function fetchUserStats() {
   return apiFetch<{ data: UserStats | null }>('/api/user/stats');
 }
 
+/** Record a finished quiz to the account (updates totals + streak server-side). */
+export function recordQuizResult(userId: string, correct: number, total: number) {
+  return apiFetch<{ data: UserStats | null }>('/api/user/stats', {
+    method: 'POST',
+    body: JSON.stringify({ user_id: userId, quiz_result: { correct, total } }),
+  });
+}
+
 export interface Flashcard {
   question_id: string;
   question: string;

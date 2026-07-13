@@ -159,6 +159,14 @@ export function offlineRoadmapPartTest(topic: RoadmapTopic, part: number): Roadm
   };
 }
 
+// A shuffled batch of questions WITH answers for the time-attack Challenge
+// (Biggest Shark) — sourced from the bundle so it works offline and can give
+// instant feedback. Play-only "cool-stuff" trivia is excluded.
+export function offlineChallengeQuestions(count: number): RoadmapQuestion[] {
+  const pool = DATA.questions.filter((q) => q.category !== 'cool-stuff');
+  return shuffle(pool).slice(0, count).map(toRoadmapQuestion);
+}
+
 /* ──── offline quiz (local selection + grading) ─────────────────────────── */
 
 const OFFLINE_PREFIX = 'offline:';
