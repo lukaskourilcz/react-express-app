@@ -1,18 +1,39 @@
-# DevQuiz Mobile (Expo / React Native)
+# devShark Mobile (Expo / React Native)
 
-A native iOS + Android client for DevQuiz, built with **Expo (managed)** and
+A native iOS + Android client for **devShark**, built with **Expo (managed)** and
 **Expo Router**. It reuses the existing backend unchanged — the same Vercel API
 and Supabase project that power the web app.
 
-It includes the **Learn** experience ported from the web: the Duolingo-style
-learning paths (6 topics — JavaScript, TypeScript, React, HTML, CSS, Git) shown
-as a serpentine "snake" of levels and checkpoints, a level player with the
-3-hearts lives system, a daily **streak** with a GitHub-style practice
-**garden**, plus the solo Quiz, Leaderboard, and Account. Progress is stored
-locally and synced to the same account record the web app uses.
+It mirrors the web experience closely:
+
+- **Learn** — the Duolingo-style learning paths across all **21 roadmap topics**,
+  each split into **3 parts** with an end-of-part test, shown as a serpentine
+  "snake" of levels, a level player with the 3-hearts lives system, and topic
+  gating (starter paths + prereqs). Part-test progress is keyed the same way as
+  web so the two clients interoperate in the shared account record.
+- **Quiz** — solo quiz with XP rewards, account stats, question bookmarks, a
+  report-a-question flow, and a daily-challenge shortcut.
+- **Challenge** — the "Biggest Shark" 90-second time-attack (3 lives), paying out
+  XP + tokens.
+- **Play** — join a live web-hosted match by code, with a per-question timer.
+- **Leaderboard** — All-time / Today / By-topic tabs.
+- **Shop** — spend tokens on the Double-XP booster, avatar rings, title flairs,
+  and instant learning-path unlocks.
+- **Gamification** — a career ladder (XP → 10 ranks), achievements, a token
+  wallet (with a 200-token signup bonus), and an XP toaster — all synced to the
+  same account record the web app uses.
+- **Streak** — a daily practice streak with a GitHub-style **garden**.
+- **Settings** — light/dark/system theme, sound & haptics, language (en/cs),
+  learning track.
+
+Branding is the shark-fin **devShark** identity, with light/dark theming.
 
 It also ships a native **iOS Home Screen widget** (WidgetKit/SwiftUI) that shows
 the streak + garden, fed by the app through a shared App Group.
+
+> **Sound:** the web plays short WebAudio tones; React Native has no tone
+> synthesiser without bundled audio assets, so on mobile the "sound effects"
+> setting drives **haptic** feedback instead.
 
 ## What's reused vs. rewritten
 
@@ -28,21 +49,28 @@ the streak + garden, fed by the app through a shared App Group.
 ```
 mobile/
 ├── app/                      # Expo Router (file-based routes)
-│   ├── _layout.tsx           #   providers + root stack
-│   ├── lesson.tsx            #   → Lesson player (level/checkpoint, hearts)
+│   ├── _layout.tsx           #   providers + storage hydration + XP toaster
+│   ├── lesson.tsx            #   → Lesson player (level / part test, hearts)
+│   ├── home.tsx              #   → Home / hub (landing)
+│   ├── challenge.tsx         #   → Biggest Shark time-attack
+│   ├── shop.tsx              #   → Token shop
+│   ├── settings.tsx          #   → Settings (theme, sound, language, track)
+│   ├── flashcards.tsx        #   → Saved cards
 │   └── (tabs)/               #   bottom tab navigator
 │       ├── _layout.tsx
 │       ├── index.tsx         #   → Learn (the learning paths)
 │       ├── streak.tsx        #   → Streak + garden
 │       ├── quiz.tsx          #   → Quiz
+│       ├── play.tsx          #   → Play (join a live match)
 │       ├── leaderboard.tsx   #   → Leaderboard
-│       └── account.tsx       #   → Account (sign in/out)
+│       └── account.tsx       #   → Account / profile hub
 ├── src/
-│   ├── lib/                  # supabase, api, auth, quizApi, roadmapApi,
-│   │                         #   roadmapProgress, streak, widget, categories
-│   ├── screens/              # Learn / Lesson / Streak / Quiz / …
-│   ├── components/           # RoadmapPath, Hearts, Garden, QuestionText, ui
-│   ├── theme.ts              # brand palette (light/dark)
+│   ├── lib/                  # api, auth, storage/store adapters, roadmapProgress
+│   │                         #   (parts + gating + sync), xp, leveling, tokens,
+│   │                         #   shop, achievements, settings, bookmarks, colorMode
+│   ├── screens/              # Learn / Lesson / Quiz / Challenge / Shop / Home / …
+│   ├── components/           # SharkFin, RoadmapPath, XpToaster, ReportDialog, ui
+│   ├── theme.ts              # brand palette (green/ocean/gold/coral, light/dark)
 │   └── types.ts              # domain types mirroring the API
 ├── modules/devquiz-widget/   # local Expo module: App Group bridge (Swift)
 └── targets/widget/           # WidgetKit extension (SwiftUI) via @bacons/apple-targets
@@ -137,9 +165,20 @@ screenshots, description, and privacy details, and submit for review.
   compiled/tested via `expo prebuild` + Xcode/EAS, which needs your Apple
   account. Expect to tweak signing and the App Group id for your team.
 
-## Not yet ported (easy to add next)
+## Parity notes
 
-- Account sync of the streak/garden (currently local + widget; the roadmap
-  *progress* already syncs).
-- **Play** (multiplayer) and **Flashcards** screens.
-- Czech (`cs`) strings for the mobile UI.
+Most of the web surface is now present on mobile (Learn with parts, Quiz, Play,
+Leaderboard, Challenge, Shop, gamification, streak/garden, flashcards, settings,
+Czech strings). A few things remain web-only by design:
+
+- **Hosting/controlling** a multiplayer match (mobile joins by code; the host UI
+  and classroom live-distribution stay on the web). Mobile syncs match state by
+  polling rather than the web's realtime broadcast.
+- The **/dev admin console** (questions editor, triage, flags) — an
+  owner-only web surface.
+- The **skill-check assessment** that bulk-unlocks topics.
+- Real audio (mobile uses haptics for answer feedback).
+
+The offline question bundle (`src/data/offline-data.ts`) is generated by
+`scripts/generate-mobile-offline.ts`; regenerate it after any question/roadmap
+change so the offline path doesn't drift.
