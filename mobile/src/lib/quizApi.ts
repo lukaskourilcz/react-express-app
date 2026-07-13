@@ -43,3 +43,25 @@ export function fetchGlobalLeaderboard(limit = 50) {
     `/api/leaderboard?period=global&limit=${limit}`,
   );
 }
+
+export type LeaderboardPeriod = 'global' | 'daily' | 'category';
+
+// Rows vary a little by period (global → total_correct; daily → correct/total;
+// category → total_correct + accuracy), so keep the shape permissive.
+export interface LeaderboardEntry {
+  display_name: string;
+  picture?: string | null;
+  total_correct?: number;
+  total_quizzes?: number;
+  longest_streak?: number;
+  correct?: number;
+  total?: number;
+  attempts?: number;
+  accuracy?: number;
+}
+
+export function fetchLeaderboard(period: LeaderboardPeriod, opts: { category?: string; limit?: number } = {}) {
+  const params = new URLSearchParams({ period, limit: String(opts.limit ?? 50) });
+  if (period === 'category' && opts.category) params.set('category', opts.category);
+  return apiFetch<{ period: string; entries: LeaderboardEntry[] }>(`/api/leaderboard?${params}`);
+}
