@@ -7,7 +7,7 @@
 import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Paper, Typography, LinearProgress, Chip, Button, Divider, Alert, ToggleButton, ToggleButtonGroup } from '@mui/material';
-import { BRAND, brandButtonSx } from '../theme/MuiTheme';
+import { brandButtonSx } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import {
@@ -18,7 +18,7 @@ import {
 import { useRoadmapStructure } from '../lib/queries';
 import { useTrack, isTopicInTrack, specializationForTrack, useActiveTracks, TOPIC_DETAIL, TRACK_ORDER, tracksForSubject } from '../lib/tracks';
 import { getCategoryHexColor, getCategoryLabel } from '../lib/categories';
-import { useSubject, type SubjectId } from '../lib/subjects';
+import { useSubject, useActiveSubject, type SubjectId } from '../lib/subjects';
 import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
 import { levelForXp, displayTitle, getCareerRanks } from '../lib/leveling';
@@ -107,7 +107,14 @@ export default function CareerRoadmap() {
   const [subject] = useSubject();
   const tracks = useActiveTracks();
   const isWebdev = subject === 'webdev';
+  const sdef = useActiveSubject();
   const pillars = useMemo(() => buildPillars(subject, t), [subject, t]);
+
+  // Header copy: Web Dev keeps its curated career framing; other subjects get a
+  // clean, subject-branded header (the fullstack track blurb is the pitch).
+  const kicker = isWebdev ? t('roadmapPage.kicker') : `${sdef.label} roadmap`;
+  const pageTitle = isWebdev ? t('roadmapPage.title') : `Your ${sdef.label} roadmap`;
+  const headerBody = isWebdev ? t('careerRoadmap.headerBody') : tracks.fullstack.blurb;
 
   // Sync account progress so the percentages are accurate even on a fresh device.
   useEffect(() => {
@@ -141,14 +148,14 @@ export default function CareerRoadmap() {
   return (
     <Box sx={{ maxWidth: 760, mx: 'auto' }}>
       <Box sx={{ mb: 3 }}>
-        <Typography variant="overline" sx={{ color: BRAND.green, letterSpacing: '0.8px' }}>
-          {t('roadmapPage.kicker')}
+        <Typography variant="overline" sx={{ color: 'var(--brand-accent)', letterSpacing: '0.8px' }}>
+          {kicker}
         </Typography>
         <Typography variant="h4" component="h1" sx={{ fontWeight: 800, mb: 1 }}>
-          {t('roadmapPage.title')}
+          {pageTitle}
         </Typography>
         <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-          {t('careerRoadmap.headerBody')}
+          {headerBody}
         </Typography>
       </Box>
 
@@ -184,9 +191,9 @@ export default function CareerRoadmap() {
                 textTransform: 'none',
                 fontWeight: 700,
                 '&.Mui-selected': {
-                  backgroundColor: BRAND.green,
+                  backgroundColor: 'var(--brand-accent)',
                   color: '#fff',
-                  '&:hover': { backgroundColor: BRAND.greenHover },
+                  '&:hover': { backgroundColor: 'var(--brand-accent-hover)' },
                 },
               }}
             >
@@ -200,15 +207,15 @@ export default function CareerRoadmap() {
       </Box>
 
       {/* Where you are now */}
-      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 3, border: '1px solid', borderColor: 'divider', borderTop: `4px solid ${BRAND.green}`, borderRadius: 2 }}>
+      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 3, border: '1px solid', borderColor: 'divider', borderTop: `4px solid var(--brand-accent)`, borderRadius: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
           <Typography variant="overline" color="text.secondary" component="h2">
             {t('careerRoadmap.progressTitle')}
           </Typography>
-          <Chip size="small" label={tracks[track].label} sx={{ fontWeight: 700, backgroundColor: BRAND.greenSoft, color: BRAND.green }} />
+          <Chip size="small" label={tracks[track].label} sx={{ fontWeight: 700, backgroundColor: 'var(--brand-accent-soft)', color: 'var(--brand-accent)' }} />
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, mt: 1, mb: 1.5, flexWrap: 'wrap' }}>
-          <Typography variant="h3" sx={{ fontWeight: 800, color: BRAND.green, lineHeight: 1 }}>
+          <Typography variant="h3" sx={{ fontWeight: 800, color: 'var(--brand-accent)', lineHeight: 1 }}>
             {overall.pct}%
           </Typography>
           <Typography variant="body2" color="text.secondary">
@@ -222,15 +229,23 @@ export default function CareerRoadmap() {
         <LinearProgress
           variant="determinate"
           value={overall.pct}
-          sx={{ height: 10, borderRadius: 5, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: BRAND.green } }}
+          sx={{ height: 10, borderRadius: 5, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: 'var(--brand-accent)' } }}
         />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
-          <Chip size="small" label={`${info.rank.emoji} ${rankTitle}`} sx={{ fontWeight: 700, backgroundColor: BRAND.greenSoft, color: 'text.primary' }} />
-          <Typography variant="caption" color="text.secondary">
-            {reachedSenior
-              ? t('careerRoadmap.seniorReached')
-              : t('careerRoadmap.xpToSenior', { xp: xpToSenior.toLocaleString() })}
-          </Typography>
+          {isWebdev ? (
+            <>
+              <Chip size="small" label={`${info.rank.emoji} ${rankTitle}`} sx={{ fontWeight: 700, backgroundColor: 'var(--brand-accent-soft)', color: 'text.primary' }} />
+              <Typography variant="caption" color="text.secondary">
+                {reachedSenior
+                  ? t('careerRoadmap.seniorReached')
+                  : t('careerRoadmap.xpToSenior', { xp: xpToSenior.toLocaleString() })}
+              </Typography>
+            </>
+          ) : (
+            // Other subjects use a neutral XP chip — the "senior engineer"
+            // career ranks are Web Dev specific.
+            <Chip size="small" label={`${info.rank.emoji} ${totalXp.toLocaleString()} XP`} sx={{ fontWeight: 700, backgroundColor: 'var(--brand-accent-soft)', color: 'text.primary' }} />
+          )}
         </Box>
       </Paper>
 
@@ -267,7 +282,7 @@ export default function CareerRoadmap() {
           <Paper key={pillar.id} elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
               <Typography variant="h6" sx={{ fontWeight: 700 }}>{pillar.title}</Typography>
-              <Chip size="small" label={`${pPct}%`} sx={{ fontWeight: 700, backgroundColor: pPct === 100 ? BRAND.green : BRAND.greenSoft, color: pPct === 100 ? '#fff' : BRAND.green }} />
+              <Chip size="small" label={`${pPct}%`} sx={{ fontWeight: 700, backgroundColor: pPct === 100 ? 'var(--brand-accent)' : 'var(--brand-accent-soft)', color: pPct === 100 ? '#fff' : 'var(--brand-accent)' }} />
             </Box>
             {pillar.intro && (
               <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{pillar.intro}</Typography>

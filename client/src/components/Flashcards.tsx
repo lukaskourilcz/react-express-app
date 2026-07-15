@@ -9,7 +9,7 @@ import { friendlyError } from '../lib/api';
 import { useFlashcards } from '../lib/queries';
 import { queryClient } from '../lib/queryClient';
 import { renderQuestion } from './CodeBlock';
-import { BRAND, brandButtonSx } from '../theme/MuiTheme';
+import { brandButtonSx } from '../theme/MuiTheme';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 
@@ -118,7 +118,7 @@ function Flashcards() {
         <Chip label={t('card.counter', { current: index + 1, total: cards.length })} sx={{ fontWeight: 700 }} />
       </Box>
 
-      <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderTop: `4px solid ${BRAND.green}`, borderRadius: 2, minHeight: 240, display: 'flex', flexDirection: 'column' }}>
+      <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderTop: `4px solid var(--brand-accent)`, borderRadius: 2, minHeight: 240, display: 'flex', flexDirection: 'column' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
           {card.category ? (
             <Chip size="small" label={card.category} sx={{ fontWeight: 600 }} />
@@ -145,7 +145,7 @@ function Flashcards() {
           ) : (
             <Box>
               <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>{t('card.answerLabel')}</Typography>
-              <Box sx={{ p: 1.5, borderRadius: 1, backgroundColor: 'rgba(45,122,45,0.1)', borderLeft: `4px solid ${BRAND.green}`, fontWeight: 600 }}>
+              <Box sx={{ p: 1.5, borderRadius: 1, backgroundColor: 'rgba(45,122,45,0.1)', borderLeft: `4px solid var(--brand-accent)`, fontWeight: 600 }}>
                 {card.correct_answer}
               </Box>
               {card.explanation && (

@@ -13,7 +13,6 @@ import type { SlideProps } from '@mui/material/Slide';
 import { useAuth } from '../lib/auth';
 import { useT } from '../i18n/LanguageContext';
 import { SIGNUP_BONUS_TOKENS } from '../lib/tokens';
-import { BRAND } from '../theme/MuiTheme';
 import { SharkFin } from './SharkFin';
 
 const SESSION_FLAG = 'devquiz:register-prompt:dismissed:v1';
@@ -101,7 +100,7 @@ function RegisterPromptSnackbar() {
             borderRadius: 2,
             boxShadow: '0 10px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.06)',
             // Brand-green shark-fin accent on the leading edge.
-            borderLeft: `4px solid ${BRAND.green}`,
+            borderLeft: `4px solid var(--brand-accent)`,
             p: 2,
             pr: 2.5,
           }}
@@ -116,7 +115,7 @@ function RegisterPromptSnackbar() {
           </IconButton>
           <Stack direction="row" spacing={1.25} alignItems="flex-start" sx={{ mb: 1.25, pr: 3 }}>
             <Box sx={{ mt: '2px' }}>
-              <SharkFin size={22} color={BRAND.green} />
+              <SharkFin size={22} color={'var(--brand-accent)'} />
             </Box>
             <Stack spacing={0.25}>
               <Typography sx={{ fontWeight: 700, color: '#111827', fontSize: '0.95rem', lineHeight: 1.25 }}>
@@ -133,13 +132,13 @@ function RegisterPromptSnackbar() {
               variant="contained"
               onClick={handleSignIn}
               sx={{
-                backgroundColor: BRAND.green,
+                backgroundColor: 'var(--brand-accent)',
                 color: '#fff',
                 fontWeight: 700,
                 textTransform: 'none',
                 px: 1.75,
                 boxShadow: 'none',
-                '&:hover': { backgroundColor: BRAND.greenHover, boxShadow: 'none' },
+                '&:hover': { backgroundColor: 'var(--brand-accent-hover)', boxShadow: 'none' },
               }}
             >
               {t('register.cta')}

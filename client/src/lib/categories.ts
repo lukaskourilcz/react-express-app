@@ -4,7 +4,6 @@
 // solo quiz, the Play landing, and any future surface stay in sync.
 
 import type { CategoryType } from '../types/quiz';
-import { BRAND } from '../theme/MuiTheme';
 import { getSubject, categoriesForSubject } from './subjects';
 
 export interface CategoryOption {
@@ -132,7 +131,7 @@ export function categoryProgressBackground(categories: string[]): string {
       CATEGORY_ORDER.indexOf(a as CategoryType) - CATEGORY_ORDER.indexOf(b as CategoryType),
   );
   const colors = unique.map(getCategoryHexColor);
-  if (colors.length === 0) return BRAND.green;
+  if (colors.length === 0) return 'var(--brand-accent)';
   if (colors.length === 1) return colors[0];
   return `linear-gradient(90deg, ${colors.join(', ')})`;
 }

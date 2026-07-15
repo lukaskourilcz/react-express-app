@@ -31,7 +31,7 @@ import {
 } from '../lib/categories';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
-import { BRAND, brandButtonSx, visuallyHidden } from '../theme/MuiTheme';
+import { brandButtonSx, visuallyHidden } from '../theme/MuiTheme';
 import { SharkFin } from './SharkFin';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
@@ -347,7 +347,7 @@ export default function Challenge() {
       <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }} aria-label={t('challenge.livesAria', { left: livesLeft })}>
         {Array.from({ length: MAX_LIVES }).map((_, i) => (
           <Box key={i} sx={{ opacity: i < livesLeft ? 1 : 0.2 }}>
-            <SharkFin size={20} color={i < livesLeft ? BRAND.green : '#888'} />
+            <SharkFin size={20} color={i < livesLeft ? 'var(--brand-accent)' : '#888'} />
           </Box>
         ))}
       </Box>
@@ -363,7 +363,7 @@ export default function Challenge() {
         </Typography>
 
         {/* The rules list is the single explanation — no duplicate prose above. */}
-        <Paper variant="outlined" sx={{ p: 2, mb: 2, borderColor: BRAND.green }}>
+        <Paper variant="outlined" sx={{ p: 2, mb: 2, borderColor: 'var(--brand-accent)' }}>
           <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
             {t('challenge.howItWorks')}
           </Typography>
@@ -432,7 +432,7 @@ export default function Challenge() {
           {timeLeft <= 0 ? t('challenge.endedByTime') : t('challenge.endedByStrikes')}
         </Typography>
         {/* The big number IS the score — no repeated caption underneath. */}
-        <Typography variant="h2" sx={{ textAlign: 'center', mb: 3, color: BRAND.green, fontWeight: 800 }}>
+        <Typography variant="h2" sx={{ textAlign: 'center', mb: 3, color: 'var(--brand-accent)', fontWeight: 800 }}>
           {score}
         </Typography>
 
@@ -509,7 +509,7 @@ export default function Challenge() {
           <Typography variant="overline" color="text.secondary">
             {t('challenge.score')}
           </Typography>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: BRAND.green }}>
+          <Typography variant="h5" sx={{ fontWeight: 700, color: 'var(--brand-accent)' }}>
             {score}
           </Typography>
         </Box>
@@ -541,7 +541,7 @@ export default function Challenge() {
         </Box>
       </Box>
 
-      <Card sx={{ borderTop: `4px solid ${BRAND.green}`, flex: '1 1 auto', minHeight: 0, maxHeight: { sm: '80%' }, display: 'flex', flexDirection: 'column' }}>
+      <Card sx={{ borderTop: `4px solid var(--brand-accent)`, flex: '1 1 auto', minHeight: 0, maxHeight: { sm: '80%' }, display: 'flex', flexDirection: 'column' }}>
         <CardContent sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap', flexShrink: 0 }}>
             <Chip
@@ -686,7 +686,7 @@ const introWrapperSx = {
   borderRadius: 2,
   border: '1px solid',
   borderColor: 'divider',
-  borderTop: `4px solid ${BRAND.green}`,
+  borderTop: `4px solid var(--brand-accent)`,
 };
 
 function ChampionBadge({
@@ -757,7 +757,7 @@ function LeaderboardList({ board }: { board: ChallengeLeaderboard }) {
               {row.name}
             </Typography>
           </Box>
-          <Typography variant="body2" sx={{ fontWeight: 700, color: i === 0 ? BRAND.green : 'text.primary' }}>
+          <Typography variant="body2" sx={{ fontWeight: 700, color: i === 0 ? 'var(--brand-accent)' : 'text.primary' }}>
             {row.score}
           </Typography>
         </Box>

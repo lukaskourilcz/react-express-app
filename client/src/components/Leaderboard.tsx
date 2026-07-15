@@ -18,7 +18,6 @@ import {
 } from '../lib/play';
 import { friendlyError } from '../lib/api';
 import { useLeaderboard } from '../lib/queries';
-import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import { visibleCategoryOptionsFor, getCategoryLabel } from '../lib/categories';
 import ErrorRetry from './ErrorRetry';
@@ -183,7 +182,7 @@ function Row({ rank, entry, tab }: { rank: number; entry: Entry; tab: Tab }) {
         backgroundColor: rank <= 3 ? 'rgba(45,122,45,0.04)' : 'transparent',
       }}
     >
-      <Box sx={{ width: 28, fontWeight: 700, color: rank <= 3 ? BRAND.green : 'text.secondary' }}>
+      <Box sx={{ width: 28, fontWeight: 700, color: rank <= 3 ? 'var(--brand-accent)' : 'text.secondary' }}>
         {medal ?? rank}
       </Box>
       <Avatar src={entry.picture ?? undefined} alt="" sx={{ width: 32, height: 32 }} />

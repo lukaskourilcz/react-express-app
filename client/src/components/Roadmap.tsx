@@ -536,8 +536,8 @@ function Roadmap() {
           sx={{
             textTransform: 'none',
             fontWeight: 700,
-            borderColor: BRAND.green,
-            color: BRAND.green,
+            borderColor: 'var(--brand-accent)',
+            color: 'var(--brand-accent)',
             borderRadius: 999,
             px: 2,
             py: 0.6,
@@ -545,7 +545,7 @@ function Roadmap() {
             flexDirection: 'column',
             gap: 0.15,
             lineHeight: 1.15,
-            '&:hover': { borderColor: BRAND.greenHover, backgroundColor: 'rgba(45,122,45,0.06)' },
+            '&:hover': { borderColor: 'var(--brand-accent-hover)', backgroundColor: 'rgba(45,122,45,0.06)' },
           }}
         >
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -1365,7 +1365,7 @@ function LessonError({ message, onRetry, onExit, t }: { message: string; onRetry
     <Box sx={{ maxWidth: 480, mx: 'auto', textAlign: 'center', mt: 4 }}>
       <Typography color="error" role="alert" sx={{ mb: 2 }}>{message}</Typography>
       <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center' }}>
-        <Button variant="contained" onClick={onRetry} sx={{ textTransform: 'none', backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}>
+        <Button variant="contained" onClick={onRetry} sx={{ textTransform: 'none', backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}>
           {t('roadmap.retry')}
         </Button>
         <Button variant="outlined" onClick={onExit} sx={{ textTransform: 'none' }}>
@@ -1467,7 +1467,7 @@ function SkillCheckRunner({
           <Button
             variant="contained"
             onClick={() => void start()}
-            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}
           >
             {t('roadmap.skillCheckStart')}
           </Button>
@@ -1518,7 +1518,7 @@ function SkillCheckRunner({
           <Button
             variant="contained"
             onClick={() => onFinished(correct)}
-            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}
           >
             {t('roadmap.skillCheckBack')}
           </Button>
@@ -1554,7 +1554,7 @@ function SkillCheckRunner({
             height: 10,
             borderRadius: 5,
             backgroundColor: 'action.hover',
-            '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: BRAND.green, transition: 'transform 0.35s ease' },
+            '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: 'var(--brand-accent)', transition: 'transform 0.35s ease' },
           }}
         />
         <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}>
@@ -1596,7 +1596,7 @@ function SkillCheckRunner({
                 py: 1.5,
                 borderRadius: 2,
                 border: '2px solid',
-                borderColor: picked ? BRAND.green : 'divider',
+                borderColor: picked ? 'var(--brand-accent)' : 'divider',
                 backgroundColor: picked ? 'rgba(45,122,45,0.07)' : 'background.paper',
                 color: 'text.primary',
                 fontSize: '0.95rem',
@@ -1607,7 +1607,7 @@ function SkillCheckRunner({
                 alignItems: 'center',
                 gap: 1.5,
                 transition: 'border-color 0.12s ease, background-color 0.12s ease',
-                '&:hover': { borderColor: BRAND.green, backgroundColor: 'action.hover' },
+                '&:hover': { borderColor: 'var(--brand-accent)', backgroundColor: 'action.hover' },
               }}
             >
               <Box
@@ -1643,7 +1643,7 @@ function SkillCheckRunner({
             variant="contained"
             onClick={goNext}
             disabled={!answered}
-            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}
           >
             {t('roadmap.skillCheckNext')}
           </Button>
@@ -1652,7 +1652,7 @@ function SkillCheckRunner({
             variant="contained"
             onClick={() => void finish()}
             disabled={!allAnswered}
-            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}
           >
             {t('roadmap.skillCheckFinish')}
           </Button>

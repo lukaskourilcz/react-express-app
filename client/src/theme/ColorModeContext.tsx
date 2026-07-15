@@ -17,6 +17,16 @@ const ColorModeContext = createContext<ColorModeContextValue>({
 
 const STORAGE_KEY = 'devquiz:color-mode';
 
+// Convert a #rrggbb hex to an rgba() string — used to derive the soft accent
+// (a translucent tint) for chip backgrounds and subtle fills.
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 const resolveInitial = (): PaletteMode => {
   if (typeof window === 'undefined') return 'light';
   const stored = readString(STORAGE_KEY);
@@ -47,6 +57,17 @@ export function ColorModeProvider({ children }: { children: ReactNode }) {
   }, [subject]);
   const theme = useMemo(() => createAppTheme(mode, accent), [mode, accent]);
 
+  // Expose the active accent as CSS custom properties so component `sx` and
+  // template-literal styles (borders, chips, overlines) recolour per subject
+  // without threading the theme through every call site.
+  useEffect(() => {
+    const root = document.documentElement.style;
+    const main = mode === 'light' ? accent.main : accent.bright;
+    root.setProperty('--brand-accent', main);
+    root.setProperty('--brand-accent-hover', accent.hover);
+    root.setProperty('--brand-accent-soft', hexToRgba(accent.main, 0.12));
+  }, [accent, mode]);
+
   return (
     <ColorModeContext.Provider value={value}>
       <ThemeProvider theme={theme}>
@@ -54,6 +75,13 @@ export function ColorModeProvider({ children }: { children: ReactNode }) {
         {/* Never allow the page to exceed the viewport width (no horizontal scroll). */}
         <GlobalStyles
           styles={{
+            // Accent defaults (Web Dev green) so styles resolve before the
+            // per-subject effect runs; overwritten at runtime per subject.
+            ':root': {
+              '--brand-accent': '#2d7a2d',
+              '--brand-accent-hover': '#246124',
+              '--brand-accent-soft': 'rgba(45, 122, 45, 0.12)',
+            },
             'html, body, #root': { maxWidth: '100vw', overflowX: 'hidden' },
             '*, *::before, *::after': { boxSizing: 'border-box' },
           }}

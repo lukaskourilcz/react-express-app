@@ -29,8 +29,8 @@ export const BRAND = {
 // The brand-green filled-button look (background + hover). Spread into a
 // component's `sx` so the colour pair isn't repeated at every call site.
 export const brandButtonSx = {
-  backgroundColor: BRAND.green,
-  '&:hover': { backgroundColor: BRAND.greenHover },
+  backgroundColor: 'var(--brand-accent)',
+  '&:hover': { backgroundColor: 'var(--brand-accent-hover)' },
 };
 
 // Visually hide an element while keeping it available to screen readers.
@@ -122,7 +122,7 @@ const baseOptions = (mode: PaletteMode, accent: Accent): ThemeOptions => ({
           padding: '8px 16px',
           boxShadow: 'none',
           '&:focus-visible': {
-            outline: `2px solid ${BRAND.green}`,
+            outline: `2px solid var(--brand-accent)`,
             outlineOffset: '2px',
           },
         },
@@ -132,7 +132,7 @@ const baseOptions = (mode: PaletteMode, accent: Accent): ThemeOptions => ({
       styleOverrides: {
         root: {
           '&:focus-visible': {
-            outline: `2px solid ${BRAND.green}`,
+            outline: `2px solid var(--brand-accent)`,
             outlineOffset: '2px',
           },
         },
@@ -158,7 +158,7 @@ const baseOptions = (mode: PaletteMode, accent: Accent): ThemeOptions => ({
           padding: '4px',
           color: mode === 'light' ? '#bdbdbd' : '#6b6b6b',
           '& .MuiSvgIcon-root': { fontSize: '1.1rem' },
-          '&.Mui-checked': { color: BRAND.green },
+          '&.Mui-checked': { color: 'var(--brand-accent)' },
         },
       },
     },
@@ -184,12 +184,12 @@ const baseOptions = (mode: PaletteMode, accent: Accent): ThemeOptions => ({
           transition: 'all 0.15s ease',
           minHeight: 44,
           '&:hover': {
-            borderColor: BRAND.green,
+            borderColor: 'var(--brand-accent)',
             backgroundColor: mode === 'light' ? '#fafafa' : '#1f222a',
           },
           '&:focus-within': {
-            borderColor: BRAND.green,
-            boxShadow: `0 0 0 2px ${BRAND.greenSoft}`,
+            borderColor: 'var(--brand-accent)',
+            boxShadow: `0 0 0 2px var(--brand-accent-soft)`,
           },
         },
         label: { fontWeight: 400, fontSize: '0.9rem' },
@@ -240,10 +240,10 @@ export const quizStyles = {
     color: 'text.secondary',
     border: '1px solid',
     borderColor: 'divider',
-    '&:hover': { borderColor: BRAND.green, color: BRAND.green },
+    '&:hover': { borderColor: 'var(--brand-accent)', color: 'var(--brand-accent)' },
   },
   optionSelected: {
-    borderColor: BRAND.green,
-    backgroundColor: BRAND.greenSoft,
+    borderColor: 'var(--brand-accent)',
+    backgroundColor: 'var(--brand-accent-soft)',
   },
 };

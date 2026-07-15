@@ -9,7 +9,6 @@ import { preferredLanguageOf } from './lib/languagePref';
 import { preferredTrackOf } from './lib/trackPref';
 import { setTrackValue } from './lib/tracks';
 import type { TranslationKey } from './i18n/translations';
-import { BRAND } from './theme/MuiTheme';
 import { useGameConfig, type GameConfig } from './lib/gameConfig';
 import { primeRankMarker } from './lib/xp';
 import XpToaster from './components/XpToaster';
@@ -64,7 +63,7 @@ const ROUTE_TRANSITION = { duration: 0.2, ease: 'easeOut' } as const;
 // Pure module-level styler for the top-nav links — hoisting it out of the
 // component avoids a fresh object literal on every App render.
 const navLinkSx = (isActive: boolean) => ({
-  color: isActive ? BRAND.green : 'text.secondary',
+  color: isActive ? 'var(--brand-accent)' : 'text.secondary',
   fontWeight: isActive ? 700 : 500,
   textTransform: 'none' as const,
   textDecoration: isActive ? 'underline' : 'none',
@@ -335,7 +334,7 @@ function App() {
           aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
           aria-pressed={settings.soundEffects}
           // ≥24×24px hit area (WCAG 2.5.8): 8px padding + 16px icon = 32px.
-          sx={{ p: 1, color: settings.soundEffects ? BRAND.green : 'text.secondary', '& svg': { width: 16, height: 16 } }}
+          sx={{ p: 1, color: settings.soundEffects ? 'var(--brand-accent)' : 'text.secondary', '& svg': { width: 16, height: 16 } }}
         >
           {settings.soundEffects ? <SoundOnIcon /> : <SoundOffIcon />}
         </IconButton>
@@ -465,7 +464,7 @@ function App() {
                       component={Link}
                       to="/leaderboard"
                       aria-label={t('nav.leaderboard')}
-                      sx={{ color: location.pathname === '/leaderboard' ? BRAND.green : 'text.secondary' }}
+                      sx={{ color: location.pathname === '/leaderboard' ? 'var(--brand-accent)' : 'text.secondary' }}
                     >
                       <TrophyNavIcon />
                     </IconButton>
@@ -476,7 +475,7 @@ function App() {
                     component={Link}
                     to="/shop"
                     aria-label={t('nav.shop')}
-                    sx={{ color: location.pathname === '/shop' ? BRAND.green : 'text.secondary' }}
+                    sx={{ color: location.pathname === '/shop' ? 'var(--brand-accent)' : 'text.secondary' }}
                   >
                     <ShopNavIcon />
                   </IconButton>
@@ -636,7 +635,7 @@ function App() {
           severity="success"
           variant="filled"
           onClose={() => setSignupBonusOpen(false)}
-          sx={{ backgroundColor: BRAND.green }}
+          sx={{ backgroundColor: 'var(--brand-accent)' }}
         >
           +{SIGNUP_BONUS_TOKENS} tokens · welcome to StudyShark
         </Alert>

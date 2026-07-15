@@ -51,11 +51,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Pick one question per difficulty bucket, deterministically per date.
+  // Optional subject scoping: the client sends the active subject's categories
+  // so the daily mix stays within one subject. Absent/empty → all categories.
+  const catRaw = typeof req.query.categories === 'string' ? req.query.categories : '';
+  const catSet = new Set(catRaw.split(',').map((s) => s.trim()).filter(Boolean));
+
   const allQuestions = await getEffectiveQuestions();
   const selected: Question[] = [];
   for (const diff of DAILY_DIFFICULTIES) {
     // Never surface private (owner-only) categories in the shared daily mix.
-    const pool = allQuestions.filter((q) => q.difficulty === diff && !PRIVATE_CATEGORIES.includes(q.category));
+    const pool = allQuestions.filter(
+      (q) =>
+        q.difficulty === diff &&
+        !PRIVATE_CATEGORIES.includes(q.category) &&
+        (catSet.size === 0 || catSet.has(q.category)),
+    );
     if (pool.length === 0) continue;
     // Keep the daily out of "filler" territory: prefer importance ≥ 4 when there
     // are still enough to vary day to day, otherwise fall back to the full pool.

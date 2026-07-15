@@ -6,7 +6,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, Box, Typography } from '@mui/material';
 import { tracksForActiveSubject, TRACK_ORDER, type Track } from '../lib/tracks';
-import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 
 export default function PathPickerDialog({
@@ -80,17 +79,17 @@ export default function PathPickerDialog({
                   p: 2,
                   borderRadius: 2,
                   border: '2px solid',
-                  borderColor: selected ? BRAND.green : 'divider',
-                  backgroundColor: selected ? BRAND.greenSoft : 'background.paper',
+                  borderColor: selected ? 'var(--brand-accent)' : 'divider',
+                  backgroundColor: selected ? 'var(--brand-accent-soft)' : 'background.paper',
                   transition: 'border-color 0.15s ease, background-color 0.15s ease',
-                  '&:hover': { borderColor: BRAND.green },
-                  '&:focus-visible': { outline: `2px solid ${BRAND.green}`, outlineOffset: 2 },
+                  '&:hover': { borderColor: 'var(--brand-accent)' },
+                  '&:focus-visible': { outline: `2px solid var(--brand-accent)`, outlineOffset: 2 },
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 0.5 }}>
                   <Typography sx={{ fontWeight: 700 }}>{tracksForActiveSubject()[tk].label}</Typography>
                   {tk === current && (
-                    <Typography component="span" sx={{ color: BRAND.green, fontWeight: 700, fontSize: '0.75rem', letterSpacing: 0.5 }}>
+                    <Typography component="span" sx={{ color: 'var(--brand-accent)', fontWeight: 700, fontSize: '0.75rem', letterSpacing: 0.5 }}>
                       {t('home.pathCurrent')}
                     </Typography>
                   )}

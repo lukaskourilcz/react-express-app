@@ -6,7 +6,7 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Paper, Typography, Button, Snackbar, Alert, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
-import { BRAND, brandButtonSx } from '../theme/MuiTheme';
+import { brandButtonSx } from '../theme/MuiTheme';
 import { heroMeshFor } from '../theme/meshGradient';
 import { useColorMode } from '../theme/ColorModeContext';
 import { SwimmingFin } from './SharkFin';
@@ -88,7 +88,7 @@ export default function Home() {
       >
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mb: { xs: 1, sm: 2 } }}>
           <SwimmingFin size={34} />
-          <Typography variant="overline" sx={{ color: BRAND.green, fontWeight: 800, letterSpacing: 1.5 }}>
+          <Typography variant="overline" sx={{ color: 'var(--brand-accent)', fontWeight: 800, letterSpacing: 1.5 }}>
             StudyShark
           </Typography>
         </Box>
@@ -177,7 +177,7 @@ export default function Home() {
         onClose={() => setSavedSnack(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity="success" variant="filled" onClose={() => setSavedSnack(null)} sx={{ backgroundColor: BRAND.green }}>
+        <Alert severity="success" variant="filled" onClose={() => setSavedSnack(null)} sx={{ backgroundColor: 'var(--brand-accent)' }}>
           {savedSnack}
         </Alert>
       </Snackbar>

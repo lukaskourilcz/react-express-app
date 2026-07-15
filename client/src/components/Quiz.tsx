@@ -25,7 +25,7 @@ import {
 } from '@mui/material';
 import { useAuth, getUserProfile } from '../lib/auth';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
-import { quizStyles, BRAND, CATEGORY_GRADIENT, visuallyHidden } from '../theme/MuiTheme';
+import { quizStyles, CATEGORY_GRADIENT, visuallyHidden } from '../theme/MuiTheme';
 import {
   CATEGORY_LOOKUP,
   CATEGORY_OPTIONS,
@@ -601,7 +601,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           borderRadius: 2,
           border: '1px solid',
           borderColor: 'divider',
-          borderTop: `4px solid ${BRAND.green}`,
+          borderTop: `4px solid var(--brand-accent)`,
           boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
         }}
       >
@@ -619,7 +619,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             onClick={startDailyChallenge}
             variant="text"
             size="small"
-            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { color: BRAND.green } }}
+            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { color: 'var(--brand-accent)' } }}
           >
             {t('quiz.todaysChallenge')}
           </Button>
@@ -629,7 +629,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             to="/challenge"
             variant="text"
             size="small"
-            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { color: BRAND.green } }}
+            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { color: 'var(--brand-accent)' } }}
           >
             {t('challenge.cta')}
           </Button>
@@ -749,9 +749,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                     minHeight: 40,
                     fontWeight: 600,
                     fontSize: '0.9rem',
-                    color: questionCount === count ? BRAND.green : 'text.secondary',
-                    border: questionCount === count ? `2px solid ${BRAND.green}` : '1px solid',
-                    borderColor: questionCount === count ? BRAND.green : 'divider',
+                    color: questionCount === count ? 'var(--brand-accent)' : 'text.secondary',
+                    border: questionCount === count ? `2px solid var(--brand-accent)` : '1px solid',
+                    borderColor: questionCount === count ? 'var(--brand-accent)' : 'divider',
                   }}
                 >
                   {count}
@@ -780,9 +780,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                         fontSize: '0.85rem',
                         minHeight: 40,
                         textTransform: 'none',
-                        color: difficultyMode === value ? BRAND.green : 'text.secondary',
-                        border: difficultyMode === value ? `2px solid ${BRAND.green}` : '1px solid',
-                        borderColor: difficultyMode === value ? BRAND.green : 'divider',
+                        color: difficultyMode === value ? 'var(--brand-accent)' : 'text.secondary',
+                        border: difficultyMode === value ? `2px solid var(--brand-accent)` : '1px solid',
+                        borderColor: difficultyMode === value ? 'var(--brand-accent)' : 'divider',
                       }}
                     >
                       {label}
@@ -827,7 +827,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   if (state === 'submitted' && result) {
     return (
       <>
-        <Card className="quiz-card" sx={{ borderTop: `4px solid ${BRAND.green}` }}>
+        <Card className="quiz-card" sx={{ borderTop: `4px solid var(--brand-accent)` }}>
           <CardContent className="quiz-result-card" role="region" aria-labelledby="quiz-result-heading">
             <Typography
               id="quiz-result-heading"
@@ -952,7 +952,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                           questionResult?.explanation ?? '',
                         )
                       }
-                      sx={{ color: isBookmarked ? BRAND.green : 'text.secondary' }}
+                      sx={{ color: isBookmarked ? 'var(--brand-accent)' : 'text.secondary' }}
                     >
                       <BookmarkIcon filled={isBookmarked} />
                     </IconButton>
@@ -1194,7 +1194,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           px: 1.5,
           py: 0.75,
           borderRadius: 1,
-          borderLeft: `3px solid ${BRAND.green}`,
+          borderLeft: `3px solid var(--brand-accent)`,
           backgroundColor: 'action.hover',
           fontSize: '0.78rem',
           color: 'text.secondary',
