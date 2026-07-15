@@ -66,12 +66,12 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   math: {
     id: 'math',
     label: 'Math',
-    blurb: 'From arithmetic to calculus — build real fluency, one level at a time.',
+    blurb: 'From arithmetic all the way to university analysis — build real fluency, level by level.',
     emoji: '➗',
     accent: '#1565c0',
     accentBright: '#42a5f5',
-    topics: ['arithmetic', 'fractions', 'prealgebra', 'algebra', 'geometry', 'trigonometry', 'statistics', 'precalculus', 'calculus', 'linear-algebra'],
-    categories: ['arithmetic', 'fractions', 'prealgebra', 'algebra', 'geometry', 'trigonometry', 'statistics', 'precalculus', 'calculus', 'linear-algebra'],
+    topics: ['arithmetic', 'fractions', 'prealgebra', 'algebra', 'geometry', 'trigonometry', 'statistics', 'precalculus', 'calculus', 'linear-algebra', 'discrete-math', 'number-theory', 'multivariable-calculus', 'differential-equations', 'real-analysis'],
+    categories: ['arithmetic', 'fractions', 'prealgebra', 'algebra', 'geometry', 'trigonometry', 'statistics', 'precalculus', 'calculus', 'linear-algebra', 'discrete-math', 'number-theory', 'multivariable-calculus', 'differential-equations', 'real-analysis'],
   },
   history: {
     id: 'history',

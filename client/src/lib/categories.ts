@@ -81,6 +81,12 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'strategy', label: 'Positional Strategy', color: '#8c5a3c' },
   { value: 'endgames', label: 'Essential Endgames', color: '#a0522d' },
   { value: 'combinations', label: 'Advanced Combinations', color: '#5e3820' },
+  // Math (advanced)
+  { value: 'discrete-math', label: 'Discrete Math', color: '#7c3aed' },
+  { value: 'number-theory', label: 'Number Theory', color: '#b45309' },
+  { value: 'multivariable-calculus', label: 'Multivariable Calculus', color: '#a21caf' },
+  { value: 'differential-equations', label: 'Differential Equations', color: '#0891b2' },
+  { value: 'real-analysis', label: 'Real Analysis', color: '#be123c' },
 ];
 
 export const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c]));

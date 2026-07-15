@@ -89,6 +89,11 @@ export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
   strategy: 'Pawn structure, outposts, files, and plans.',
   endgames: 'King & pawn, the opposition, basic mates.',
   combinations: 'Sacrifices, deflection, decoys, and calculation.',
+  'discrete-math': 'Logic, sets, combinatorics, graphs, and recurrences.',
+  'number-theory': 'Divisibility, primes, modular arithmetic, and the theorems of Fermat and Euler.',
+  'multivariable-calculus': 'Partial derivatives, gradients, multiple integrals, and vector calculus.',
+  'differential-equations': 'Solving ODEs: separable, linear, second-order, and Laplace transforms.',
+  'real-analysis': 'Rigorous limits, sequences, series, continuity, and integration.',
 };
 
 // Curated tracks. Each is a top-to-bottom story: foundations → specialise →
@@ -183,12 +188,13 @@ const MATH_TRACKS: Record<Track, TrackDef> = {
   },
   fullstack: {
     label: 'The Full Journey',
-    blurb: 'Zero to hero: every topic, from counting all the way up to calculus and linear algebra.',
+    blurb: 'Zero to hero: from counting all the way up through university mathematics — calculus, analysis, and beyond.',
     stages: [
       { title: 'Foundations', topics: ['arithmetic', 'fractions', 'prealgebra'] },
       { title: 'Core', topics: ['algebra', 'geometry'] },
       { title: 'Advanced high school', topics: ['trigonometry', 'statistics', 'precalculus'] },
       { title: 'Higher math', topics: ['calculus', 'linear-algebra'] },
+      { title: 'University mathematics', topics: ['discrete-math', 'number-theory', 'multivariable-calculus', 'differential-equations', 'real-analysis'] },
     ],
   },
 };

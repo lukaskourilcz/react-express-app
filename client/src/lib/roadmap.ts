@@ -118,6 +118,11 @@ export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
   // Tier 4 — the deepest topics.
   strategy: ['openings', 'tactics'],
   combinations: ['tactics'],
+  'discrete-math': ['algebra'],
+  'number-theory': ['algebra'],
+  'multivariable-calculus': ['calculus'],
+  'differential-equations': ['calculus'],
+  'real-analysis': ['calculus'],
 };
 
 // Unlock tiers granted by the skill-check assessment. Each correct-answer band

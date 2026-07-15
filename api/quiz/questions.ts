@@ -34,6 +34,12 @@ const ALL_CATEGORIES: CategoryType[] = [
   'prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern',
   // Chess
   'rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations',
+  // Math (advanced)
+  'discrete-math',
+  'number-theory',
+  'multivariable-calculus',
+  'differential-equations',
+  'real-analysis',
 ];
 const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
