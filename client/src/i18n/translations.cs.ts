@@ -273,6 +273,8 @@ export const cs: Record<TranslationKey, string> = {
   'profile.trackGoLearn': 'Přejít na studijní cestu →',
 
   // Career level (XP)
+  'profile.otherPlatforms': 'Prozkoumej další platformy Shark',
+  'profile.otherPlatformsSub': 'Zeměpis, matematika, dějepis, biologie, šachy, poker a další na StudyShark',
   'profile.career': 'Kariérní úroveň',
   'profile.careerLevelOf': 'Úroveň {level} z {max}',
   'profile.xpUnit': 'XP',

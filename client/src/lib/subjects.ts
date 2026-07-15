@@ -30,12 +30,18 @@ export interface SubjectDef {
   topics: RoadmapTopic[];
   /** Categories available in the solo Quiz / Play pickers for this subject. */
   categories: CategoryType[];
+  /**
+   * Wordmark to use when this subject runs as its *own* standalone site (see
+   * the locked-subject mode below) — e.g. "devShark". Falls back to `label`.
+   */
+  standaloneBrand?: string;
 }
 
 export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   webdev: {
     id: 'webdev',
     label: 'Web Dev',
+    standaloneBrand: 'devShark',
     blurb: 'Frontend, backend and fullstack: the languages and tools of the modern web.',
     emoji: '💻',
     accent: '#2d7a2d',
@@ -56,6 +62,7 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   geography: {
     id: 'geography',
     label: 'Geography',
+    standaloneBrand: 'geoShark',
     blurb: 'The whole world: continents, countries, capitals, climate and the Earth itself.',
     emoji: '🌍',
     accent: '#ea580c',
@@ -66,6 +73,7 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   math: {
     id: 'math',
     label: 'Math',
+    standaloneBrand: 'mathShark',
     blurb: 'From basic arithmetic all the way to university-level math, one level at a time.',
     emoji: '➗',
     accent: '#1565c0',
@@ -76,6 +84,7 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   history: {
     id: 'history',
     label: 'History',
+    standaloneBrand: 'historyShark',
     blurb: 'The human story from prehistory to the modern era, age by age.',
     emoji: '📜',
     accent: '#4b5563',
@@ -86,6 +95,7 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   chess: {
     id: 'chess',
     label: 'Chess',
+    standaloneBrand: 'chessShark',
     blurb: 'For players who know the rules: openings, tactics, strategy, endgames and advanced theory.',
     emoji: '♟️',
     accent: '#7b4b2a',
@@ -96,6 +106,7 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   biology: {
     id: 'biology',
     label: 'Human Biology',
+    standaloneBrand: 'bioShark',
     blurb: 'The human body from cells to whole systems: anatomy and physiology, step by step.',
     emoji: '🧬',
     accent: '#0d9488',
@@ -106,6 +117,7 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   poker: {
     id: 'poker',
     label: 'Poker',
+    standaloneBrand: 'pokerShark',
     blurb: "Get good at no-limit Texas Hold'em, from position and pot odds to advanced strategy.",
     emoji: '♠️',
     accent: '#b91c1c',
@@ -132,6 +144,22 @@ for (const id of SUBJECT_ORDER) {
 export const subjectOfTopic = (t: RoadmapTopic): SubjectId | undefined => TOPIC_TO_SUBJECT.get(t);
 export const subjectOfCategory = (c: CategoryType): SubjectId | undefined => CATEGORY_TO_SUBJECT.get(c);
 
+/* ──── Standalone (locked-subject) mode ─────────────────────────────────────
+ * The same codebase powers both StudyShark (the full multi-subject picker) and
+ * each subject's own standalone site (e.g. devShark). A standalone deploy sets
+ * `VITE_LOCK_SUBJECT` to a subject id: the whole app then boots locked to that
+ * one subject — no picker, no switcher, no `/subjects` route — and the Profile
+ * links out to the umbrella site via `VITE_SIBLING_URL`. StudyShark sets
+ * neither var and behaves as the full picker.
+ */
+const rawLock = ((import.meta.env.VITE_LOCK_SUBJECT as string | undefined) ?? '').trim();
+/** The subject this deploy is locked to, or `null` for the full multi-subject app. */
+export const LOCKED_SUBJECT: SubjectId | null = isSubject(rawLock) ? rawLock : null;
+/** True when this deploy is a single-subject standalone site. */
+export const isSubjectLocked = (): boolean => LOCKED_SUBJECT !== null;
+/** URL of the umbrella StudyShark site, surfaced on standalone deploys. Empty when unset. */
+export const SIBLING_PLATFORMS_URL = ((import.meta.env.VITE_SIBLING_URL as string | undefined) ?? '').trim();
+
 /* ──── Persisted, shared active-subject selection ───────────────────────── */
 
 const SUBJECT_KEY = 'studyshark:subject';
@@ -140,10 +168,13 @@ const SUBJECT_KEY = 'studyshark:subject';
 const SUBJECT_CHOSEN_KEY = 'studyshark:subject:chosen';
 
 const readSubject = (): SubjectId => {
+  // A locked deploy always resolves to its one subject, ignoring any stored value.
+  if (LOCKED_SUBJECT) return LOCKED_SUBJECT;
   const saved = readJSON<string>(SUBJECT_KEY, 'webdev');
   return isSubject(saved) ? saved : 'webdev';
 };
-const readChosen = (): boolean => readJSON<boolean>(SUBJECT_CHOSEN_KEY, false) === true;
+// Locked deploys have nothing to choose, so the landing gate is always satisfied.
+const readChosen = (): boolean => LOCKED_SUBJECT !== null || readJSON<boolean>(SUBJECT_CHOSEN_KEY, false) === true;
 
 const subjectStore = createStore<SubjectId>(readSubject);
 const chosenStore = createStore<boolean>(readChosen);
@@ -162,6 +193,8 @@ export const getActiveAccent = (): string => SUBJECTS[subjectStore.get()].accent
  * localStorage and notifies both stores so every surface re-renders.
  */
 export function setSubjectValue(next: SubjectId, opts?: { markChosen?: boolean }): void {
+  // Standalone deploys are pinned to a single subject; ignore switch attempts.
+  if (LOCKED_SUBJECT) return;
   writeJSON(SUBJECT_KEY, next);
   subjectStore.emit();
   if (opts?.markChosen !== false) {

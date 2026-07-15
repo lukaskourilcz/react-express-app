@@ -253,6 +253,8 @@ The `VITE_` prefix exposes a variable to the client bundle at build time; the re
 | `DEV_PASSWORD` | ⚠️ recommended | server | Gates the `/dev` console + `/api/admin` (via `x-dev-password`). **Defaults to `autobus` — set a strong value in prod**, the admin API exposes answer keys. |
 | `OWNER_EMAIL` | optional | server | Email whose private categories are visible; defaults to `kouril.lukas@gmail.com`. |
 | `VITE_SENTRY_DSN` | optional | client | Enables Sentry error/perf monitoring; omit to disable (the SDK is then tree-shaken out). |
+| `VITE_LOCK_SUBJECT` | optional | client | Standalone single-subject mode. Set to a subject id (`webdev`, `geography`, `math`, `history`, `chess`, `biology`, `poker`) to lock the whole app to it — no picker/switcher, standalone wordmark (e.g. devShark). Unset on the umbrella StudyShark deploy. |
+| `VITE_SIBLING_URL` | optional | client | URL of the umbrella StudyShark site. When set (typically on a locked deploy) the Profile shows an "Explore the other Shark platforms" link. |
 
 **Mobile (`mobile/`)** uses `EXPO_PUBLIC_*` vars (inlined at build) or `app.json` → `expo.extra`: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_BASE_URL` (your deployed Vercel URL). Use only public/anon values — never secrets.
 
