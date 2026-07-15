@@ -110,6 +110,12 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'digestive-system', label: 'Digestive System', color: '#ca8a04' },
   { value: 'immune-system', label: 'Immune System', color: '#16a34a' },
   { value: 'reproductive-system', label: 'Reproductive & Urinary', color: '#db2777' },
+  // Chess (advanced)
+  { value: 'opening-theory', label: 'Opening Theory', color: '#166534' },
+  { value: 'middlegame', label: 'Middlegame', color: '#9a3412' },
+  { value: 'pawn-structures', label: 'Pawn Structures', color: '#a16207' },
+  { value: 'endgame-technique', label: 'Endgame Technique', color: '#7c2d12' },
+  { value: 'chess-history', label: 'Chess History', color: '#4d7c0f' },
 ];
 
 export const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c]));

@@ -152,4 +152,10 @@ export const STATS_CATEGORIES = new Set([
   'digestive-system',
   'immune-system',
   'reproductive-system',
+  // Chess (advanced)
+  'opening-theory',
+  'middlegame',
+  'pawn-structures',
+  'endgame-technique',
+  'chess-history',
 ]);

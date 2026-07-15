@@ -15,6 +15,11 @@ import { tacticsSeeds } from './roadmap-questions-tactics';
 import { strategySeeds } from './roadmap-questions-strategy';
 import { endgamesSeeds } from './roadmap-questions-endgames';
 import { combinationsSeeds } from './roadmap-questions-combinations';
+import { openingTheorySeeds } from './roadmap-questions-opening-theory';
+import { middlegameSeeds } from './roadmap-questions-middlegame';
+import { pawnStructuresSeeds } from './roadmap-questions-pawn-structures';
+import { endgameTechniqueSeeds } from './roadmap-questions-endgame-technique';
+import { chessHistorySeeds } from './roadmap-questions-chess-history';
 
 export const roadmapRulesQuestions = buildRoadmap('rm-rules', 'rules', rulesSeeds);
 export const roadmapPiecesQuestions = buildRoadmap('rm-piece', 'pieces', piecesSeeds);
@@ -26,6 +31,11 @@ export const roadmapTacticsQuestions = buildRoadmap('rm-tac', 'tactics', tactics
 export const roadmapStrategyQuestions = buildRoadmap('rm-strat', 'strategy', strategySeeds);
 export const roadmapEndgamesQuestions = buildRoadmap('rm-end', 'endgames', endgamesSeeds);
 export const roadmapCombinationsQuestions = buildRoadmap('rm-combo', 'combinations', combinationsSeeds);
+export const roadmapOpeningTheoryQuestions = buildRoadmap('rm-openthy', 'opening-theory', openingTheorySeeds);
+export const roadmapMiddlegameQuestions = buildRoadmap('rm-middle', 'middlegame', middlegameSeeds);
+export const roadmapPawnStructuresQuestions = buildRoadmap('rm-pawns', 'pawn-structures', pawnStructuresSeeds);
+export const roadmapEndgameTechniqueQuestions = buildRoadmap('rm-endgtech', 'endgame-technique', endgameTechniqueSeeds);
+export const roadmapChessHistoryQuestions = buildRoadmap('rm-chesshist', 'chess-history', chessHistorySeeds);
 
 // The full roadmap bank across all 10 chess topics, in taxonomy order.
 export const allRoadmapChessQuestions = [
@@ -39,4 +49,9 @@ export const allRoadmapChessQuestions = [
   ...roadmapStrategyQuestions,
   ...roadmapEndgamesQuestions,
   ...roadmapCombinationsQuestions,
+  ...roadmapOpeningTheoryQuestions,
+  ...roadmapMiddlegameQuestions,
+  ...roadmapPawnStructuresQuestions,
+  ...roadmapEndgameTechniqueQuestions,
+  ...roadmapChessHistoryQuestions,
 ];

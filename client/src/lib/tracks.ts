@@ -114,6 +114,11 @@ export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
   'digestive-system': 'How food is digested and nutrients absorbed.',
   'immune-system': 'How the body defends itself against disease.',
   'reproductive-system': 'The kidneys, reproduction and human genetics.',
+  'opening-theory': 'Opening principles, the main open and semi-open defenses, and gambits.',
+  'middlegame': 'Forming plans, piece activity, king attacks, prophylaxis and converting advantages.',
+  'pawn-structures': 'Pawn weaknesses, breaks, passed pawns, and the classic IQP and Carlsbad plans.',
+  'endgame-technique': 'Endgame theory from king-and-pawn play through rook and minor-piece endings.',
+  'chess-history': 'The story of chess from its origins through the World Champions to the engine era.',
 };
 
 // Curated tracks. Each is a top-to-bottom story: foundations → specialise →
@@ -283,6 +288,7 @@ const CHESS_TRACKS: Record<Track, TrackDef> = {
       { title: 'Openings & tactics', topics: ['openings', 'tactics'] },
       { title: 'Strategy & endgames', topics: ['strategy', 'endgames'] },
       { title: 'Master combinations', topics: ['combinations'] },
+      { title: 'Advanced play', topics: ['opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history'] },
     ],
   },
 };

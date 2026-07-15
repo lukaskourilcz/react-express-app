@@ -63,6 +63,12 @@ const ALL_CATEGORIES: CategoryType[] = [
   'digestive-system',
   'immune-system',
   'reproductive-system',
+  // Chess (advanced)
+  'opening-theory',
+  'middlegame',
+  'pawn-structures',
+  'endgame-technique',
+  'chess-history',
 ];
 const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
