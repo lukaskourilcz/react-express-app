@@ -56,8 +56,11 @@ async function authEvent(req: VercelRequest, res: VercelResponse) {
   return res.json({ ok: true, kind });
 }
 
-// Per-user "quest" XP (career leveling). Learning XP is derived from roadmap
-// progress on the client; only the quiz/practice accumulator is persisted here.
+// Per-user "quest" XP (career leveling), counted PER SUBJECT (platform).
+// Learning XP is derived from roadmap progress on the client; only the
+// quiz/practice accumulators are persisted here: a `quest_xp_by_subject`
+// jsonb map plus the legacy `quest_xp` total kept as the map's sum so old
+// clients still see a sensible (monotone) number.
 // Kept on the existing user function so we don't add a Vercel Hobby function.
 const MAX_XP = 100_000_000;
 
@@ -67,33 +70,93 @@ const clampXp = (n: unknown): number => {
   return v < 0 ? 0 : v > MAX_XP ? MAX_XP : v;
 };
 
+const MAX_SUBJECT_KEYS = 16;
+const SUBJECT_KEY_RE = /^[a-z][a-z0-9-]{0,31}$/;
+
+function sanitizeBySubject(input: unknown): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return out;
+  let n = 0;
+  for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+    if (n >= MAX_SUBJECT_KEYS) break;
+    if (!SUBJECT_KEY_RE.test(k)) continue;
+    const xp = clampXp(v);
+    if (xp > 0) {
+      out[k] = xp;
+      n++;
+    }
+  }
+  return out;
+}
+
+// Before migration 020 the `quest_xp_by_subject` column doesn't exist yet —
+// detect that specific failure so the endpoint can fall back to legacy shape
+// instead of erroring.
+const isMissingBySubjectColumn = (error: { message?: string } | null | undefined): boolean =>
+  typeof error?.message === 'string' && error.message.includes('quest_xp_by_subject');
+
+async function readXpRow(userId: string): Promise<
+  | { ok: true; questXp: number; bySubject: Record<string, number>; hasBySubjectColumn: boolean }
+  | { ok: false }
+> {
+  const { data, error } = await withTimeout(
+    supabase!.from('user_xp').select('quest_xp, quest_xp_by_subject').eq('user_id', userId).maybeSingle(),
+  );
+  if (!error) {
+    return {
+      ok: true,
+      questXp: Number(data?.quest_xp ?? 0),
+      bySubject: sanitizeBySubject(data?.quest_xp_by_subject),
+      hasBySubjectColumn: true,
+    };
+  }
+  if (!isMissingBySubjectColumn(error)) return { ok: false };
+  const fallback = await withTimeout(
+    supabase!.from('user_xp').select('quest_xp').eq('user_id', userId).maybeSingle(),
+  );
+  if (fallback.error) return { ok: false };
+  return { ok: true, questXp: Number(fallback.data?.quest_xp ?? 0), bySubject: {}, hasBySubjectColumn: false };
+}
+
 async function xp(req: VercelRequest, res: VercelResponse) {
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
   try {
     if (req.method === 'GET') {
-      const { data, error } = await withTimeout(
-        supabase!.from('user_xp').select('quest_xp').eq('user_id', userId).maybeSingle(),
-      );
-      if (error) return jsonError(res, 500, 'db_error', 'Could not load XP');
-      return res.json({ data: { quest_xp: Number(data?.quest_xp ?? 0) } });
+      const row = await readXpRow(userId);
+      if (!row.ok) return jsonError(res, 500, 'db_error', 'Could not load XP');
+      return res.json({ data: { quest_xp: row.questXp, by_subject: row.bySubject } });
     }
 
     if (req.method === 'PUT') {
-      const body = (req.body || {}) as { quest_xp?: unknown };
-      const incoming = clampXp(body.quest_xp);
-      // XP only grows: never let a stale device lower the stored value.
-      const { data: existing } = await withTimeout(
-        supabase!.from('user_xp').select('quest_xp').eq('user_id', userId).maybeSingle(),
-      );
-      const merged = Math.max(Number(existing?.quest_xp ?? 0), incoming);
+      const body = (req.body || {}) as { quest_xp?: unknown; by_subject?: unknown };
+      const incomingTotal = clampXp(body.quest_xp);
+      const incomingMap = sanitizeBySubject(body.by_subject);
+
+      // XP only grows: never let a stale device lower a stored value — merge
+      // per subject with max, and keep the legacy total monotone too.
+      const row = await readXpRow(userId);
+      if (!row.ok) return jsonError(res, 500, 'db_error', 'Could not load XP');
+
+      const mergedMap: Record<string, number> = { ...row.bySubject };
+      for (const [k, v] of Object.entries(incomingMap)) {
+        mergedMap[k] = Math.max(mergedMap[k] ?? 0, v);
+      }
+      const mapSum = clampXp(Object.values(mergedMap).reduce((acc, v) => acc + v, 0));
+      const mergedTotal = Math.max(row.questXp, incomingTotal, mapSum);
+
+      const record: Record<string, unknown> = {
+        user_id: userId,
+        quest_xp: mergedTotal,
+        updated_at: new Date().toISOString(),
+      };
+      if (row.hasBySubjectColumn) record.quest_xp_by_subject = mergedMap;
+
       const { error } = await withTimeout(
-        supabase!
-          .from('user_xp')
-          .upsert({ user_id: userId, quest_xp: merged, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }),
+        supabase!.from('user_xp').upsert(record, { onConflict: 'user_id' }),
       );
       if (error) return jsonError(res, 500, 'db_error', 'Could not save XP');
-      return res.json({ ok: true, data: { quest_xp: merged } });
+      return res.json({ ok: true, data: { quest_xp: mergedTotal, by_subject: row.hasBySubjectColumn ? mergedMap : {} } });
     }
 
     res.setHeader('Allow', 'GET, PUT');

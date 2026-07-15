@@ -1,21 +1,28 @@
 // Token economy: a separate currency from XP, spent in the in-app Shop.
 //
+// Tokens are counted PER SUBJECT (platform): each subject has its own wallet,
+// earned on that platform and spendable only in that platform's shop. Every
+// hook/getter here is scoped to the active subject.
+//
 //   • Passive accrual — every XP gain (quiz, learning, practice) also awards
-//     10 % of that amount in tokens. This is the only earn path for now; XP
-//     itself must still be earned the normal way.
+//     10 % of that amount in tokens, into the active subject's wallet.
 //   • Sign-up bonus — the first time a brand-new account signs in, we mint
-//     200 tokens as a welcome gift. Guarded by a `user_metadata` flag so the
-//     grant doesn't repeat across devices or sign-outs.
+//     200 tokens as a welcome gift (into the wallet of the subject active at
+//     that moment). Guarded by a `user_metadata` flag so the grant doesn't
+//     repeat across devices or sign-outs.
 //
 // State lives in localStorage like the quest-XP store; the server-side mirror
-// uses Supabase `user_metadata` (no DB migration needed for the MVP).
+// rides along in the account-synced roadmap blob (see roadmap.ts).
 
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import { supabase } from './supabaseClient';
+import { getSubject, useSubject, isSubjectId, type SubjectId } from './subjects';
 import type { User } from '@supabase/supabase-js';
 
-const TOKENS_KEY = 'devquiz:tokens:balance:v1';
+// v1 held ONE global balance shared by every subject; v2 keys wallets by subject.
+const TOKENS_KEY_LEGACY = 'devquiz:tokens:balance:v1';
+const TOKENS_KEY = 'devquiz:tokens:balance:v2';
 const REGISTRATION_BONUS_KEY = 'devquiz:tokens:registration-bonus:v1';
 const REGISTRATION_BONUS_AMOUNT = 200;
 const XP_TO_TOKEN_RATIO = 0.1;
@@ -24,33 +31,77 @@ const MAX_TOKENS = 100_000_000;
 const clampTokens = (n: number): number =>
   Number.isFinite(n) && n > 0 ? Math.min(MAX_TOKENS, Math.round(n)) : 0;
 
-const readBalance = (): number => clampTokens(readJSON<number>(TOKENS_KEY, 0));
+type BalanceMap = Partial<Record<SubjectId, number>>;
 
-const tokensStore = createStore<number>(readBalance);
+function sanitizeBalances(raw: unknown): BalanceMap {
+  const out: BalanceMap = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (!isSubjectId(k)) continue;
+    const bal = clampTokens(typeof v === 'number' ? v : 0);
+    if (bal > 0) out[k] = bal;
+  }
+  return out;
+}
 
-/** Live token balance (re-renders on change). */
+function readBalances(): BalanceMap {
+  const raw = readJSON<Record<string, unknown> | null>(TOKENS_KEY, null);
+  if (raw !== null) return sanitizeBalances(raw);
+  // One-time migration: the pre-split balance was shared by all subjects.
+  // Attribute it to the subject active right now (same rule as quest XP).
+  const legacy = clampTokens(readJSON<number>(TOKENS_KEY_LEGACY, 0));
+  const migrated: BalanceMap = legacy > 0 ? { [getSubject()]: legacy } : {};
+  writeJSON(TOKENS_KEY, migrated);
+  return migrated;
+}
+
+const tokensStore = createStore<BalanceMap>(readBalances);
+
+/** Live token balance of the ACTIVE subject (re-renders on change). */
 export function useTokens(): number {
-  return useStore(tokensStore);
+  const map = useStore(tokensStore);
+  const [subject] = useSubject();
+  return map[subject] ?? 0;
 }
 
-/** Imperative read of the current balance. */
+/** Imperative read of the active subject's balance. */
 export function getTokens(): number {
-  return readBalance();
+  return readBalances()[getSubject()] ?? 0;
 }
 
-function writeBalance(value: number): void {
-  const next = clampTokens(value);
-  writeJSON(TOKENS_KEY, next);
+/** Snapshot of every subject's wallet, for the account sync. */
+export function getWalletsSnapshot(): Record<string, { balance: number }> {
+  const out: Record<string, { balance: number }> = {};
+  for (const [k, v] of Object.entries(readBalances())) out[k] = { balance: v ?? 0 };
+  return out;
+}
+
+function writeBalance(subject: SubjectId, value: number): void {
+  writeJSON(TOKENS_KEY, { ...readBalances(), [subject]: clampTokens(value) });
   tokensStore.emit();
   // Any balance change gets scheduled for the account sync so the wallet
   // survives a device switch. Fire-and-forget: local write already succeeded.
   scheduleAccountSync();
 }
 
-/** Direct write of an authoritative balance — used by the account-sync merge. */
-export function setBalanceFromServer(value: number): void {
-  const next = clampTokens(value);
-  writeJSON(TOKENS_KEY, next);
+/**
+ * Merge authoritative per-subject balances from the account sync: per-subject
+ * max (tokens only grow across devices — no one gets refunded twice).
+ */
+export function mergeBalancesFromServer(wallets: Record<string, { balance: number }>): void {
+  const local = readBalances();
+  let changed = false;
+  const merged: BalanceMap = { ...local };
+  for (const [k, v] of Object.entries(wallets)) {
+    if (!isSubjectId(k)) continue;
+    const server = clampTokens(Number(v?.balance ?? 0));
+    if (server > (merged[k] ?? 0)) {
+      merged[k] = server;
+      changed = true;
+    }
+  }
+  if (!changed) return;
+  writeJSON(TOKENS_KEY, merged);
   tokensStore.emit();
 }
 
@@ -77,13 +128,14 @@ export function flushAccountSyncNow(): void {
 }
 
 /**
- * Award tokens to the live balance. Called from the XP store on every XP gain
- * (`tokensFromXp(amount)` chooses the size of the award).
+ * Award tokens to the active subject's balance. Called from the XP store on
+ * every XP gain (`tokensFromXp(amount)` chooses the size of the award).
  */
 export function awardTokens(amount: number): void {
   const add = clampTokens(amount);
   if (add <= 0) return;
-  writeBalance(readBalance() + add);
+  const subject = getSubject();
+  writeBalance(subject, (readBalances()[subject] ?? 0) + add);
 }
 
 /** Convert an XP gain into the matching token award (10 %). */
@@ -92,12 +144,13 @@ export function tokensFromXp(xp: number): number {
   return Math.floor(xp * XP_TO_TOKEN_RATIO);
 }
 
-/** Spend tokens (e.g. on a shop purchase). Returns true if balance allowed it. */
+/** Spend tokens from the active subject's wallet. Returns true if balance allowed it. */
 export function spendTokens(amount: number): boolean {
   const cost = clampTokens(amount);
-  const balance = readBalance();
+  const subject = getSubject();
+  const balance = readBalances()[subject] ?? 0;
   if (cost <= 0 || cost > balance) return false;
-  writeBalance(balance - cost);
+  writeBalance(subject, balance - cost);
   return true;
 }
 
@@ -128,7 +181,8 @@ export async function grantRegistrationBonusIfNew(user: User): Promise<boolean> 
     }
   }
   writeJSON(REGISTRATION_BONUS_KEY, true);
-  writeBalance(readBalance() + REGISTRATION_BONUS_AMOUNT);
+  const subject = getSubject();
+  writeBalance(subject, (readBalances()[subject] ?? 0) + REGISTRATION_BONUS_AMOUNT);
   return true;
 }
 

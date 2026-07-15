@@ -28,6 +28,7 @@ import {
 } from '../lib/roadmap';
 import { getCategoryLabel } from '../lib/categories';
 import { useAuth, getUserProfile } from '../lib/auth';
+import { useActiveSubject } from '../lib/subjects';
 import { brandButtonSx } from '../theme/MuiTheme';
 
 const TokenIcon = () => (
@@ -62,6 +63,9 @@ function Shop() {
   const tokens = useTokens();
   const inv = useInventory();
   const config = useGameConfig();
+  // The shop is per platform: tokens, inventory and the path list all belong
+  // to the active subject.
+  const subject = useActiveSubject();
   const { isAuthenticated } = useAuth();
   // Subscribe so the "Unlocked" badge updates the moment a buy lands.
   useRoadmapProgress();
@@ -114,10 +118,16 @@ function Shop() {
                 {tokens.toLocaleString()} {t('shop.tokensUnit')}
               </Typography>
             </Stack>
+            {/* The wallet is per platform — make the scope visible. */}
+            <Chip
+              label={`${subject.emoji} ${subject.label}`}
+              size="small"
+              sx={{ backgroundColor: 'var(--brand-accent-soft)', color: 'var(--brand-accent)', fontWeight: 700 }}
+            />
             <Chip
               label={t('shop.earnRate')}
               size="small"
-              sx={{ backgroundColor: 'var(--brand-accent-soft)', color: 'var(--brand-accent)', fontWeight: 600 }}
+              sx={{ backgroundColor: 'var(--brand-accent-soft)', color: 'var(--brand-accent)', fontWeight: 600, display: { xs: 'none', sm: 'inline-flex' } }}
             />
           </Stack>
         </CardContent>
@@ -138,7 +148,10 @@ function Shop() {
               (and after) buying. */}
           {kinds.includes('ring') && <StylePreview />}
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' }, gap: 1.5 }}>
-            {CATALOGUE.filter((p) => kinds.includes(p.kind)).map((p) => {
+            {CATALOGUE.filter((p) => kinds.includes(p.kind))
+              // Path products exist for every subject; show only the active one's.
+              .filter((p) => p.kind !== 'path' || p.subject === subject.id)
+              .map((p) => {
               const ownedPath = p.kind === 'path' && p.topic ? isPathAlreadyUnlocked(p.topic) : false;
               const price = priceOf(p, config);
               return (

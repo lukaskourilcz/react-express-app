@@ -37,7 +37,7 @@ import { useT, useLanguage } from '../i18n/LanguageContext';
 import type { Lang } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
-import { SIBLING_PLATFORMS_URL } from '../lib/subjects';
+import { SIBLING_PLATFORMS_URL, useActiveSubject, topicSetForSubject } from '../lib/subjects';
 import { savePreferredLanguage } from '../lib/languagePref';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
@@ -379,7 +379,10 @@ function CareerCard() {
   }, []);
 
   const [track] = useTrack();
-  const learningXp = computeLearningXp(progress);
+  // XP and rank are per subject: only the active subject's roadmap progress
+  // and quest accumulator count here.
+  const subject = useActiveSubject();
+  const learningXp = computeLearningXp(progress, topicSetForSubject(subject.id));
   const totalXp = learningXp + questXp;
   const info = levelForXp(totalXp);
   // Subject-aware rank label ("Junior Full-Stack Developer" for Web Dev,

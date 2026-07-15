@@ -130,8 +130,22 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
 const isSubject = (v: unknown): v is SubjectId =>
   typeof v === 'string' && (SUBJECT_ORDER as string[]).includes(v);
 
+/** Type guard for a SubjectId — used by the per-subject XP/token/shop stores. */
+export const isSubjectId = isSubject;
+
 export const topicsForSubject = (id: SubjectId): RoadmapTopic[] => SUBJECTS[id].topics;
 export const categoriesForSubject = (id: SubjectId): CategoryType[] => SUBJECTS[id].categories;
+
+// Cached per-subject topic sets, for scoping XP computations to one subject.
+const TOPIC_SETS = new Map<SubjectId, ReadonlySet<string>>();
+export function topicSetForSubject(id: SubjectId): ReadonlySet<string> {
+  let set = TOPIC_SETS.get(id);
+  if (!set) {
+    set = new Set<string>(SUBJECTS[id].topics);
+    TOPIC_SETS.set(id, set);
+  }
+  return set;
+}
 
 // Reverse lookups: which subject owns a given topic / category. Because subjects
 // are disjoint, these are unambiguous. Used to keep progress and pickers scoped.

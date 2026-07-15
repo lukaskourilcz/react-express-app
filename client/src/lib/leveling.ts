@@ -43,11 +43,16 @@ const levelXp = (difficulty: number): number => LEVEL_XP_PER_DIFFICULTY * clampD
 // Checkpoint n covers levels (n-1)·5+1 … n·5, whose difficulty tier is exactly n.
 const checkpointXp = (checkpoint: number): number => CHECKPOINT_XP_PER_DIFFICULTY * Math.max(1, checkpoint);
 
-/** Total learning XP implied by a progress blob (only PASSED items count). */
-export function computeLearningXp(progress: RoadmapProgress): number {
+/**
+ * Total learning XP implied by a progress blob (only PASSED items count).
+ * Pass `topics` to scope the total to one subject's topics — XP and ranks are
+ * counted per subject, so every caller displaying a total should scope it.
+ */
+export function computeLearningXp(progress: RoadmapProgress, topics?: ReadonlySet<string>): number {
   let xp = 0;
-  for (const tp of Object.values(progress)) {
+  for (const [topic, tp] of Object.entries(progress)) {
     if (!tp) continue;
+    if (topics && !topics.has(topic)) continue;
     for (const [lvl, entry] of Object.entries(tp.levels ?? {})) {
       if (entry?.passed) xp += levelXp(difficultyForLevel(Number(lvl)));
     }

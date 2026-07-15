@@ -5,6 +5,7 @@
 import { apiFetch } from './api';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
+import { getSubject } from './subjects';
 import type { RoadmapStructure, RoadmapPlayable, RoadmapTopic } from '../types/quiz';
 
 // Pass thresholds (must match lib/roadmap.ts on the server).
@@ -536,10 +537,17 @@ export function mergeProgress(a: RoadmapProgress, b: RoadmapProgress): RoadmapPr
   return out;
 }
 
-/** Shape of what tokens.ts + shop.ts contribute to the account-synced blob. */
+/** Shape of what tokens.ts + shop.ts contribute to the account-synced blob:
+ *  one wallet + one inventory PER SUBJECT (platform), keyed by subject id. */
+export interface SyncedInventory {
+  owned: string[];
+  ring: string | null;
+  flair: string | null;
+  doubleXp: number;
+}
 export interface AccountExtras {
-  wallet: { balance: number };
-  inventory: { owned: string[]; ring: string | null; flair: string | null; doubleXp: number };
+  wallets: Record<string, { balance: number }>;
+  inventories: Record<string, SyncedInventory>;
 }
 
 // tokens.ts and shop.ts each register a getter here so this module can PUT
@@ -557,13 +565,10 @@ export function registerAccountExtras(
 }
 
 function readAccountExtras(): AccountExtras {
-  return accountExtrasSource?.() ?? {
-    wallet: { balance: 0 },
-    inventory: { owned: [], ring: null, flair: null, doubleXp: 0 },
-  };
+  return accountExtrasSource?.() ?? { wallets: {}, inventories: {} };
 }
 
-/** PUT the current (or given) local progress + unlocks + wallet + inventory. */
+/** PUT the current (or given) local progress + unlocks + per-subject wallets + inventories. */
 export async function pushProgressToServer(
   progress: RoadmapProgress = readProgress(),
   extraUnlocks: RoadmapTopic[] = readExtraUnlocks(),
@@ -575,8 +580,8 @@ export async function pushProgressToServer(
       data: progress,
       extra: {
         unlocked: extraUnlocks,
-        wallet: account.wallet,
-        inventory: account.inventory,
+        wallets: account.wallets,
+        inventories: account.inventories,
       },
     }),
   });
@@ -598,8 +603,8 @@ export function flushProgressBeacon(): void {
       data: readProgress(),
       extra: {
         unlocked: readExtraUnlocks(),
-        wallet: account.wallet,
-        inventory: account.inventory,
+        wallets: account.wallets,
+        inventories: account.inventories,
       },
     });
     // The auth Bearer is read via getAccessToken() inside apiFetch, which is
@@ -650,16 +655,27 @@ export function installProgressSyncFlusher(): void {
   });
 }
 
-// On sign-in: pull the account's progress + wallet + inventory, merge each
-// with whatever is on this device (progress: latch pass + max score; unlocks:
-// union; balance: max — tokens can only grow; owned items: union; equipped
-// items: server wins if valid, otherwise local; doubleXp charges: max), store
-// the union locally, and push it back so both sides agree.
+// On sign-in: pull the account's progress + per-subject wallets/inventories,
+// merge each with whatever is on this device (progress: latch pass + max
+// score; unlocks: union; balances: per-subject max — tokens can only grow;
+// owned items: per-subject union; equipped items: server wins if valid,
+// otherwise local; doubleXp charges: per-subject max), store the union
+// locally, and push it back so both sides agree. A legacy account blob (one
+// pre-split wallet/inventory, no per-subject maps) is attributed to the
+// active subject — the same rule the local stores use when migrating.
 export async function syncProgressWithServer(): Promise<void> {
+  interface ServerInventory {
+    owned?: string[];
+    ring?: string | null;
+    flair?: string | null;
+    doubleXp?: number;
+  }
   interface ServerExtras {
     unlocked?: string[];
     wallet?: { balance?: number };
-    inventory?: { owned?: string[]; ring?: string | null; flair?: string | null; doubleXp?: number };
+    inventory?: ServerInventory;
+    wallets?: Record<string, { balance?: number }>;
+    inventories?: Record<string, ServerInventory>;
   }
   let serverProgress: RoadmapProgress = {};
   let serverExtras: ServerExtras = {};
@@ -680,18 +696,33 @@ export async function syncProgressWithServer(): Promise<void> {
   const union = Array.from(new Set<RoadmapTopic>([...local, ...serverUnlocked]));
   if (union.length !== local.length) writeExtraUnlocks(union);
 
-  // Merge wallet + inventory via the registered receiver (tokens.ts + shop.ts).
+  // Merge wallets + inventories via the registered receiver (tokens.ts + shop.ts).
   if (onAccountExtrasReceived) {
-    const inv = serverExtras.inventory ?? {};
-    onAccountExtrasReceived({
-      wallet: { balance: typeof serverExtras.wallet?.balance === 'number' ? serverExtras.wallet.balance : 0 },
-      inventory: {
-        owned: Array.isArray(inv.owned) ? inv.owned : [],
-        ring: typeof inv.ring === 'string' ? inv.ring : null,
-        flair: typeof inv.flair === 'string' ? inv.flair : null,
-        doubleXp: typeof inv.doubleXp === 'number' ? inv.doubleXp : 0,
-      },
+    const toInventory = (inv: ServerInventory | undefined): SyncedInventory => ({
+      owned: Array.isArray(inv?.owned) ? inv!.owned!.filter((x): x is string => typeof x === 'string') : [],
+      ring: typeof inv?.ring === 'string' ? inv.ring : null,
+      flair: typeof inv?.flair === 'string' ? inv.flair : null,
+      doubleXp: typeof inv?.doubleXp === 'number' ? inv.doubleXp : 0,
     });
+
+    const wallets: Record<string, { balance: number }> = {};
+    for (const [k, v] of Object.entries(serverExtras.wallets ?? {})) {
+      wallets[k] = { balance: typeof v?.balance === 'number' ? v.balance : 0 };
+    }
+    const inventories: Record<string, SyncedInventory> = {};
+    for (const [k, v] of Object.entries(serverExtras.inventories ?? {})) {
+      inventories[k] = toInventory(v);
+    }
+    // Legacy pre-split blob → attribute to the active subject.
+    const legacyBalance = typeof serverExtras.wallet?.balance === 'number' ? serverExtras.wallet.balance : 0;
+    if (Object.keys(wallets).length === 0 && legacyBalance > 0) {
+      wallets[getSubject()] = { balance: legacyBalance };
+    }
+    if (Object.keys(inventories).length === 0 && serverExtras.inventory) {
+      inventories[getSubject()] = toInventory(serverExtras.inventory);
+    }
+
+    onAccountExtrasReceived({ wallets, inventories });
   }
 
   try {
