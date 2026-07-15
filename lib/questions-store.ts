@@ -32,6 +32,12 @@ export const KNOWN_CATEGORIES: CategoryType[] = [
   'prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern',
   // Chess
   'rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations',
+  // Math (advanced)
+  'discrete-math',
+  'number-theory',
+  'multivariable-calculus',
+  'differential-equations',
+  'real-analysis',
 ];
 
 export interface QuestionEditRow {

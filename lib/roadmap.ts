@@ -27,7 +27,9 @@ export type RoadmapTopic =
   // History
   | 'prehistory' | 'ancient' | 'classical' | 'medieval' | 'renaissance' | 'earlymodern' | 'industrial' | 'worldwars' | 'coldwar' | 'modern'
   // Chess
-  | 'rules' | 'pieces' | 'specialmoves' | 'checkmate' | 'notation' | 'openings' | 'tactics' | 'strategy' | 'endgames' | 'combinations';
+  | 'rules' | 'pieces' | 'specialmoves' | 'checkmate' | 'notation' | 'openings' | 'tactics' | 'strategy' | 'endgames' | 'combinations'
+  // Math (advanced)
+  | 'discrete-math' | 'number-theory' | 'multivariable-calculus' | 'differential-equations' | 'real-analysis';
 
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
@@ -42,6 +44,8 @@ export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern',
   // Chess
   'rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations',
+  // Math (advanced)
+  'discrete-math', 'number-theory', 'multivariable-calculus', 'differential-equations', 'real-analysis',
 ];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
@@ -121,6 +125,11 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   strategy: 'rm-strat',
   endgames: 'rm-end',
   combinations: 'rm-combo',
+  'discrete-math': 'rm-discrete',
+  'number-theory': 'rm-numthy',
+  'multivariable-calculus': 'rm-mvcalc',
+  'differential-equations': 'rm-ode',
+  'real-analysis': 'rm-analysis',
 };
 
 // Level titles per topic, in increasing difficulty. Index 0 is level 1. The
@@ -401,6 +410,21 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
   combinations: [
     'What Is a Combination?', 'Sacrifices', 'Deflection', 'Decoy & Attraction', 'Interference & Clearance',
     'Zwischenzug (In-Between Moves)', 'Mating Combinations', 'Overloading', 'Calculating Combinations', 'Combinations Mastery',
+  ],
+  'discrete-math': [
+    'Propositional Logic & Truth Tables', 'Sets, Relations, Functions & Cardinality', 'Combinatorics', 'Graph Theory', 'Recurrences, Induction & Number-Theoretic Counting',
+  ],
+  'number-theory': [
+    'Divisibility & Primes', 'Modular Arithmetic & Congruences', 'Fermat, Euler & Totient', 'Diophantine Equations & CRT', 'Quadratic Residues & Primitive Roots',
+  ],
+  'multivariable-calculus': [
+    'Functions of Several Variables & Partial Derivatives', 'Gradient, Directional Derivatives & Chain Rule', 'Double & Triple Integrals', 'Vector Fields, Line Integrals, Divergence & Curl', 'Integral Theorems & Lagrange Multipliers',
+  ],
+  'differential-equations': [
+    'First-Order Separable & Linear', 'Exact Equations, Integrating Factors & Applications', 'Second-Order Linear Homogeneous (Constant Coefficients)', 'Nonhomogeneous Equations (Undetermined Coefficients & Variation of Parameters)', 'Systems, Laplace Transforms & Series Solutions',
+  ],
+  'real-analysis': [
+    'The Real Numbers', 'Sequences and Limits', 'Infinite Series', 'Continuity', 'Differentiation and Integration',
   ],
 };
 

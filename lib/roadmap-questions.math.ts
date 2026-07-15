@@ -15,6 +15,11 @@ import { statisticsSeeds } from './roadmap-questions-statistics';
 import { preCalculusSeeds } from './roadmap-questions-precalculus';
 import { calculusSeeds } from './roadmap-questions-calculus';
 import { linearAlgebraSeeds } from './roadmap-questions-linear-algebra';
+import { discreteMathSeeds } from './roadmap-questions-discrete-math';
+import { numberTheorySeeds } from './roadmap-questions-number-theory';
+import { multivariableCalculusSeeds } from './roadmap-questions-multivariable-calculus';
+import { differentialEquationsSeeds } from './roadmap-questions-differential-equations';
+import { realAnalysisSeeds } from './roadmap-questions-real-analysis';
 
 export const roadmapArithmeticQuestions = buildRoadmap('rm-arith', 'arithmetic', arithmeticSeeds);
 export const roadmapFractionsQuestions = buildRoadmap('rm-frac', 'fractions', fractionsSeeds);
@@ -26,6 +31,11 @@ export const roadmapStatisticsQuestions = buildRoadmap('rm-stat', 'statistics', 
 export const roadmapPreCalculusQuestions = buildRoadmap('rm-precalc', 'precalculus', preCalculusSeeds);
 export const roadmapCalculusQuestions = buildRoadmap('rm-calc', 'calculus', calculusSeeds);
 export const roadmapLinearAlgebraQuestions = buildRoadmap('rm-linalg', 'linear-algebra', linearAlgebraSeeds);
+export const roadmapDiscreteMathQuestions = buildRoadmap('rm-discrete', 'discrete-math', discreteMathSeeds);
+export const roadmapNumberTheoryQuestions = buildRoadmap('rm-numthy', 'number-theory', numberTheorySeeds);
+export const roadmapMultivariableCalculusQuestions = buildRoadmap('rm-mvcalc', 'multivariable-calculus', multivariableCalculusSeeds);
+export const roadmapDifferentialEquationsQuestions = buildRoadmap('rm-ode', 'differential-equations', differentialEquationsSeeds);
+export const roadmapRealAnalysisQuestions = buildRoadmap('rm-analysis', 'real-analysis', realAnalysisSeeds);
 
 // The full set, in canonical topic order — the solo quiz pool is composed from this.
 export const allRoadmapMathQuestions = [
@@ -39,4 +49,9 @@ export const allRoadmapMathQuestions = [
   ...roadmapPreCalculusQuestions,
   ...roadmapCalculusQuestions,
   ...roadmapLinearAlgebraQuestions,
+  ...roadmapDiscreteMathQuestions,
+  ...roadmapNumberTheoryQuestions,
+  ...roadmapMultivariableCalculusQuestions,
+  ...roadmapDifferentialEquationsQuestions,
+  ...roadmapRealAnalysisQuestions,
 ];
