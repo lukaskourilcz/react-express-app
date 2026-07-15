@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- PLACEHOLDER StudyShark mark — a simple shark fin on the brand green.
+     Vector source for the favicon/manifest icon. Replace with the real
+     Recraft/Ideogram mascot (keep the filename) — see NEEDED.md. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="StudyShark">
+  <rect width="512" height="512" rx="112" fill="#2d7a2d"/>
+  <path d="M96 352c96 8 168-40 224-152 16 72 8 128-8 152 40-8 72-28 96-56-8 64-72 116-160 116-84 0-148-24-152-60z"
+        fill="#ffffff"/>
+  <circle cx="212" cy="286" r="13" fill="#2d7a2d"/>
+</svg>

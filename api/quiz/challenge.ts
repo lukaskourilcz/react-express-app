@@ -12,7 +12,7 @@ import { jsonError, createLogger } from '../../lib/http';
 import { tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getChallengeLeaderboard, recordChallengeScore } from '../../lib/challenge-store';
-import { checkRateLimit } from '../../lib/rate-limit';
+import { enforceRateLimit } from '../../lib/rate-limit';
 
 // Biggest Shark Challenge: a single function serving every challenge resource
 // so we stay within Vercel's 12-function Hobby limit. Routing:
@@ -111,7 +111,7 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
 async function handleSubmitScore(req: VercelRequest, res: VercelResponse) {
   // Per-IP throttle so a script can't flood the Hall of Fame. Legit humans
   // finish ~90s runs, so 10 posts / hour with a small burst is generous.
-  if (!checkRateLimit(req, res, { key: 'challenge_score', capacity: 3, refillPerSecond: 10 / 3600 })) return;
+  if (!(await enforceRateLimit(req, res, { key: 'challenge_score', capacity: 3, refillPerSecond: 10 / 3600 }))) return;
 
   const body = (req.body || {}) as { name?: unknown; score?: unknown };
   const name = typeof body.name === 'string' ? body.name.trim().slice(0, MAX_NAME) : '';

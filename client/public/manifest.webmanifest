@@ -1,0 +1,16 @@
+{
+  "name": "StudyShark",
+  "short_name": "StudyShark",
+  "description": "Learn and test yourself across Web Dev, Geography, Math, History and Chess — level-by-level roadmaps, quizzes and leaderboards.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#2d7a2d",
+  "icons": [
+    { "src": "/icon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" },
+    { "src": "/icon-192.png", "type": "image/png", "sizes": "192x192", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "type": "image/png", "sizes": "512x512", "purpose": "any maskable" }
+  ]
+}

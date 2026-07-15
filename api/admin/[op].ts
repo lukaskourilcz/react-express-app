@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { jsonError, createLogger } from '../../lib/http';
 import { requireDevPassword } from '../../lib/admin-auth';
-import { checkRateLimit } from '../../lib/rate-limit';
+import { enforceRateLimit } from '../../lib/rate-limit';
 import {
   listAdminQuestions,
   saveQuestion,
@@ -29,7 +29,7 @@ const boundedString = (v: unknown, max: number): string | null =>
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Anti-brute-force: at most ~1 auth attempt per second per IP, small burst.
   // Runs before password check so wrong guesses count toward the budget.
-  if (!checkRateLimit(req, res, { key: 'admin_gate', capacity: 5, refillPerSecond: 1 })) return;
+  if (!(await enforceRateLimit(req, res, { key: 'admin_gate', capacity: 5, refillPerSecond: 1 }))) return;
   // Every admin op is password-gated.
   if (!requireDevPassword(req, res)) return;
 
