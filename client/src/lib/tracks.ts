@@ -5,7 +5,8 @@
 // exposed through a tiny observable store so both surfaces re-render together.
 
 import type { RoadmapTopic } from '../types/quiz';
-import type { Specialization } from './leveling';
+import type { Specialization, CareerRank } from './leveling';
+import { displayTitle, subjectRankLabel, RANK_TITLES } from './leveling';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import type { SubjectId } from './subjects';
@@ -311,6 +312,21 @@ const TRACK_SPECIALIZATION: Record<Track, Specialization> = {
 
 /** The career-rank specialization label for a track. */
 export const specializationForTrack = (track: Track): Specialization => TRACK_SPECIALIZATION[track];
+
+/**
+ * The learner-rank label ({title, emoji}) for the ACTIVE subject. Web Dev keeps
+ * the developer ladder with the track specialization composed in ("Junior
+ * Full-Stack Developer"); every other subject uses its own ladder ("Junior
+ * Explorer", "Club Player", …). Shared by the profile, avatar menu and toaster.
+ */
+export function rankLabelFor(rank: CareerRank, track: Track): { title: string; emoji: string } {
+  const subject = getSubject();
+  if (subject === 'webdev') {
+    return { title: displayTitle(rank.title, specializationForTrack(track)), emoji: rank.emoji };
+  }
+  const idx = RANK_TITLES.indexOf(rank.title);
+  return subjectRankLabel(subject, idx >= 0 ? idx : 0);
+}
 
 /* ──── Persisted, shared selection ──────────────────────────────────────── */
 

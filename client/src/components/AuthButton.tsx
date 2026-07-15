@@ -6,8 +6,8 @@ import { useT } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useQuestXp } from '../lib/xp';
 import { useRoadmapProgress } from '../lib/roadmap';
-import { computeLearningXp, levelForXp, displayTitle } from '../lib/leveling';
-import { useTrack, specializationForTrack } from '../lib/tracks';
+import { computeLearningXp, levelForXp } from '../lib/leveling';
+import { useTrack, rankLabelFor } from '../lib/tracks';
 import { useEquippedRingColor } from '../lib/shop';
 
 function AuthButton() {
@@ -21,7 +21,7 @@ function AuthButton() {
   const ringColor = useEquippedRingColor();
   const [track] = useTrack();
   const levelInfo = levelForXp(totalXp);
-  const rankTitle = displayTitle(levelInfo.rank.title, specializationForTrack(track));
+  const { title: rankTitle } = rankLabelFor(levelInfo.rank, track);
   const navigate = useNavigate();
   const t = useT();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
