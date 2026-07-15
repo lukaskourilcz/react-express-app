@@ -99,6 +99,17 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'economic-history', label: 'Economic History', color: '#a16207' },
   { value: 'intellectual-history', label: 'Intellectual History', color: '#6d28d9' },
   { value: 'military-history', label: 'Military History', color: '#7f1d1d' },
+  // Human Biology
+  { value: 'cell-biology', label: 'Cell Biology', color: '#0d9488' },
+  { value: 'skeletal-system', label: 'Skeletal System', color: '#64748b' },
+  { value: 'muscular-system', label: 'Muscular System', color: '#dc2626' },
+  { value: 'nervous-system', label: 'Nervous System', color: '#7c3aed' },
+  { value: 'endocrine-system', label: 'Endocrine System', color: '#d946ef' },
+  { value: 'cardiovascular-system', label: 'Cardiovascular System', color: '#e11d48' },
+  { value: 'respiratory-system', label: 'Respiratory System', color: '#0891b2' },
+  { value: 'digestive-system', label: 'Digestive System', color: '#ca8a04' },
+  { value: 'immune-system', label: 'Immune System', color: '#16a34a' },
+  { value: 'reproductive-system', label: 'Reproductive & Urinary', color: '#db2777' },
 ];
 
 export const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c]));

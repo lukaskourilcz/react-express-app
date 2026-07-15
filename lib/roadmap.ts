@@ -33,7 +33,9 @@ export type RoadmapTopic =
   // Geography (advanced)
   | 'geomorphology' | 'oceanography' | 'biogeography' | 'geopolitics' | 'gis'
   // History (thematic)
-  | 'historiography' | 'history-of-science' | 'economic-history' | 'intellectual-history' | 'military-history';
+  | 'historiography' | 'history-of-science' | 'economic-history' | 'intellectual-history' | 'military-history'
+  // Human Biology
+  | 'cell-biology' | 'skeletal-system' | 'muscular-system' | 'nervous-system' | 'endocrine-system' | 'cardiovascular-system' | 'respiratory-system' | 'digestive-system' | 'immune-system' | 'reproductive-system';
 
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
@@ -54,6 +56,8 @@ export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'geomorphology', 'oceanography', 'biogeography', 'geopolitics', 'gis',
   // History (thematic)
   'historiography', 'history-of-science', 'economic-history', 'intellectual-history', 'military-history',
+  // Human Biology
+  'cell-biology', 'skeletal-system', 'muscular-system', 'nervous-system', 'endocrine-system', 'cardiovascular-system', 'respiratory-system', 'digestive-system', 'immune-system', 'reproductive-system',
 ];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
@@ -148,6 +152,16 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   'economic-history': 'rm-econhist',
   'intellectual-history': 'rm-intelhist',
   'military-history': 'rm-milhist',
+  'cell-biology': 'rm-cellbio',
+  'skeletal-system': 'rm-skel',
+  'muscular-system': 'rm-musc',
+  'nervous-system': 'rm-nervous',
+  'endocrine-system': 'rm-endo',
+  'cardiovascular-system': 'rm-cardio',
+  'respiratory-system': 'rm-resp',
+  'digestive-system': 'rm-digest',
+  'immune-system': 'rm-immune',
+  'reproductive-system': 'rm-repro',
 };
 
 // Level titles per topic, in increasing difficulty. Index 0 is level 1. The
@@ -473,6 +487,36 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
   ],
   'military-history': [
     'Ancient Warfare', 'Medieval Warfare', 'Gunpowder & Early-Modern Warfare', 'Industrial-Age Warfare & World War I', 'World War II & Modern Warfare',
+  ],
+  'cell-biology': [
+    'Cell structure & organelles', 'The cell membrane & transport', 'Biomolecules', 'Cellular respiration & metabolism', 'DNA, genes & protein synthesis',
+  ],
+  'skeletal-system': [
+    'Bone structure & types', 'The axial skeleton', 'The appendicular skeleton', 'Joints & articulations', 'Bone growth, remodeling & disorders',
+  ],
+  'muscular-system': [
+    'Muscle types & properties', 'Skeletal muscle structure', 'Sliding filament theory', 'Major muscles & movements', 'Energy, fatigue & physiology',
+  ],
+  'nervous-system': [
+    'Neurons & glial cells', 'Nerve impulses & synapses', 'The central nervous system', 'Peripheral & autonomic systems', 'The senses',
+  ],
+  'endocrine-system': [
+    'Hormones & glands overview', 'Hypothalamus & pituitary', 'Thyroid, parathyroid & adrenal', 'Pancreas & blood-sugar regulation', 'Reproductive hormones & feedback',
+  ],
+  'cardiovascular-system': [
+    'Blood: composition & functions', 'The heart: structure & chambers', 'The cardiac cycle & conduction', 'Blood vessels & circulation', 'Blood pressure & regulation',
+  ],
+  'respiratory-system': [
+    'Respiratory system anatomy', 'Mechanics of breathing', 'Gas exchange & transport', 'Control of respiration', 'Respiratory health & altitude',
+  ],
+  'digestive-system': [
+    'The digestive tract & path of food', 'Mechanical & chemical digestion', 'Enzymes & accessory organs', 'Absorption & the small intestine', 'Nutrition & metabolism',
+  ],
+  'immune-system': [
+    'Innate immunity & barriers', 'The lymphatic system', 'Adaptive immunity: B & T cells', 'Antibodies & memory', 'Vaccines, allergies & disorders',
+  ],
+  'reproductive-system': [
+    'The urinary system & kidneys', 'The male reproductive system', 'The female reproductive system', 'Menstrual cycle & fertilization', 'Development, pregnancy & genetics',
   ],
 };
 

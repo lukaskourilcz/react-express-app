@@ -1,0 +1,248 @@
+import type { QuestionTranslation } from './quiz-data';
+
+// Czech (cs) translations for the Urinary & Reproductive Systems roadmap
+// question bank (rm-repro-*). Only text is translated; options keep the SAME
+// length and order as the English source so the stored correctAnswer index
+// stays valid.
+export const reproductiveSystemTranslationsCs: Record<string, QuestionTranslation> = {
+  "rm-repro-1": {
+    introduction: "Zamysli se, k čemu slouží ledviny v těle.",
+    question: "Jaká je hlavní úloha ledvin?",
+    options: ["Přečerpávání krve", "Filtrování krve a tvorba moči", "Trávení potravy", "Tvorba inzulinu"],
+    explanation: "Ledviny filtrují z krve odpadní a přebytečné látky a tvoří moč, čímž pomáhají udržovat rovnováhu v těle.",
+  },
+  "rm-repro-2": {
+    introduction: "Vzpomeň si, kolik ledvin má běžně zdravý člověk.",
+    question: "Kolik ledvin má obvykle zdravý člověk?",
+    options: ["Jednu", "Dvě", "Tři", "Čtyři"],
+    explanation: "Většina lidí má dvě ledviny, po jedné na každé straně páteře v oblasti beder.",
+  },
+  "rm-repro-3": {
+    introduction: "Rozliš trubice, které vedou moč z ledviny a z močového měchýře.",
+    question: "Která trubice odvádí moč z ledviny do močového měchýře?",
+    options: ["Močová trubice", "Močovod", "Aorta", "Vejcovod"],
+    explanation: "Každý močovod (ureter) vede moč z ledviny do močového měchýře; močová trubice (uretra) později vyprazdňuje měchýř ven z těla.",
+  },
+  "rm-repro-4": {
+    introduction: "Kde se moč hromadí, než opustí tělo?",
+    question: "Kde se moč skladuje, než opustí tělo?",
+    options: ["V ledvině", "V močovém měchýři", "V játrech", "V močovodu"],
+    explanation: "Močový měchýř je svalový vak, který uchovává moč, dokud není vypuštěna močovou trubicí.",
+  },
+  "rm-repro-5": {
+    introduction: "Jak se jmenuje mikroskopická filtrační jednotka ledviny?",
+    question: "Jak se nazývá drobná filtrační jednotka ledviny?",
+    options: ["Nefron", "Neuron", "Plicní sklípek", "Klk"],
+    explanation: "Nefron je funkční filtrační jednotka ledviny; každá ledvina jich obsahuje asi milion.",
+  },
+  "rm-repro-6": {
+    introduction: "Jak se odborně říká udržování stálého vnitřního prostředí těla?",
+    question: "Udržování stálého vnitřního prostředí (například rovnováhy vody a solí) se nazývá:",
+    options: ["Homeostáza", "Trávení", "Dýchání", "Rozmnožování"],
+    explanation: "Homeostáza je udržování stálých vnitřních podmínek; ledviny jsou jejím klíčovým regulátorem.",
+  },
+  "rm-repro-7": {
+    introduction: "Který odpadní produkt ledviny odstraňují z krve?",
+    question: "Který z těchto je hlavní odpadní látka odstraňovaná ledvinami?",
+    options: ["Glukóza", "Močovina", "Kyslík", "Bílkovina"],
+    explanation: "Močovina, která vzniká v játrech při odbourávání přebytečných aminokyselin, je odfiltrována ledvinami.",
+  },
+  "rm-repro-8": {
+    introduction: "Jak ledviny reagují, když se hodně potíš a ztrácíš vodu?",
+    question: "V horkém dni, kdy se hodně potíš, ledviny obvykle tvoří moč, která je:",
+    options: ["Vydatnější a zředěná", "Méně vydatná a koncentrovaná", "Úplně stejná jako vždy", "Plná červených krvinek"],
+    explanation: "Aby tělo šetřilo vodou ztracenou potem, ledviny více vody zpětně vstřebávají a tvoří menší množství koncentrované moči.",
+  },
+  "rm-repro-9": {
+    introduction: "Kde v mužském těle vznikají spermie?",
+    question: "Kde se tvoří spermie?",
+    options: ["Prostata", "Varlata", "Močový měchýř", "Penis"],
+    explanation: "Spermie vznikají ve varlatech, která jsou uložena mimo tělní dutinu v šourku.",
+  },
+  "rm-repro-10": {
+    introduction: "Proč jsou varlata uložena v šourku mimo hlavní tělní dutinu?",
+    question: "Proč jsou varlata uložena v šourku, mimo hlavní tělní dutinu?",
+    options: ["Aby byla o něco chladnější než tělesná teplota", "Aby byla teplejší", "Aby skladovala moč", "Aby filtrovala krev"],
+    explanation: "Tvorba spermií probíhá nejlépe o několik stupňů níže, než je tělesné jádro, a proto šourek udržuje varlata chladnější.",
+  },
+  "rm-repro-11": {
+    introduction: "Který hormon je hlavním mužským pohlavním hormonem?",
+    question: "Jaký je hlavní mužský pohlavní hormon?",
+    options: ["Estrogen", "Inzulin", "Testosteron", "Progesteron"],
+    explanation: "Testosteron, tvořený převážně ve varlatech, řídí tvorbu spermií a mužské druhotné pohlavní znaky.",
+  },
+  "rm-repro-12": {
+    introduction: "Kterou trubicí putují spermie z varlete směrem k močové trubici?",
+    question: "Která trubice vede spermie z varlete směrem k močové trubici?",
+    options: ["Močovod", "Chámovod", "Vejcovod", "Průduška"],
+    explanation: "Chámovod (vas deferens) přenáší zralé spermie z nadvarlete směrem k močové trubici při ejakulaci.",
+  },
+  "rm-repro-13": {
+    introduction: "Z čeho se skládá sperma (ejakulát)?",
+    question: "Co je sperma?",
+    options: ["Pouze spermie", "Spermie smíchané s tekutinami ze žláz", "Přefiltrovaná krev", "Druh moči"],
+    explanation: "Sperma je směs spermií a výživných tekutin ze žláz, jako je prostata a semenné váčky.",
+  },
+  "rm-repro-14": {
+    introduction: "Co všechno u mužů prochází močovou trubicí?",
+    question: "U mužů močová trubice odvádí:",
+    options: ["Pouze moč", "Pouze sperma", "Moč i sperma (v různou dobu)", "Krev"],
+    explanation: "Mužská močová trubice je společná cesta, kterou odchází moč z měchýře i sperma při ejakulaci, ale ne současně.",
+  },
+  "rm-repro-15": {
+    introduction: "Kde spermie dozrávají a jsou uloženy?",
+    question: "Útvar, kde spermie dozrávají a jsou skladovány, je:",
+    options: ["Nadvarle", "Prostata", "Šourek", "Močový měchýř"],
+    explanation: "Spermie vzniklé ve varlatech přecházejí do nadvarlete, kde dozrávají a jsou uloženy až do ejakulace.",
+  },
+  "rm-repro-16": {
+    introduction: "Čím je zralá spermie uzpůsobena ke své funkci?",
+    question: "Zralá lidská spermie je uzpůsobena ke své úloze hlavně tím, že má:",
+    options: ["Bičík k plavání", "Silné kosti", "Zelené barvivo", "Mnoho jader"],
+    explanation: "Spermie má bičík k plavání, mitochondrie pro energii a špičku plnou enzymů k proniknutí do vajíčka.",
+  },
+  "rm-repro-17": {
+    introduction: "Kde v ženském těle vznikají vajíčka?",
+    question: "Kde se tvoří vajíčka (ova)?",
+    options: ["Děloha", "Vaječníky", "Děložní hrdlo", "Močový měchýř"],
+    explanation: "Dva vaječníky tvoří vajíčka a uvolňují ženské pohlavní hormony estrogen a progesteron.",
+  },
+  "rm-repro-18": {
+    introduction: "Ve kterém orgánu se z oplozeného vajíčka vyvíjí dítě?",
+    question: "Ve kterém orgánu se obvykle vyvíjí oplozené vajíčko v dítě?",
+    options: ["Vaječník", "Děloha", "Pochva", "Ledvina"],
+    explanation: "Děloha je svalový orgán, ve kterém se zahnízdí zárodek a během těhotenství roste plod.",
+  },
+  "rm-repro-19": {
+    introduction: "Kterou trubicí putuje vajíčko z vaječníku k děloze?",
+    question: "Která trubice vede vajíčko z vaječníku směrem k děloze?",
+    options: ["Chámovod", "Vejcovod", "Močovod", "Močová trubice"],
+    explanation: "Vejcovod (oviductus) vede vajíčko směrem k děloze a obvykle právě v něm dochází k oplození.",
+  },
+  "rm-repro-20": {
+    introduction: "Jak se nazývá uvolnění vajíčka z vaječníku?",
+    question: "Jak se nazývá uvolnění vajíčka z vaječníku?",
+    options: ["Menstruace", "Ovulace", "Ejakulace", "Zahnízdění"],
+    explanation: "Ovulace je uvolnění zralého vajíčka z vaječníku, přibližně uprostřed menstruačního cyklu.",
+  },
+  "rm-repro-21": {
+    introduction: "Jak se nazývá úzká dolní část dělohy ústící do pochvy?",
+    question: "Úzká dolní část dělohy, která ústí do pochvy, je:",
+    options: ["Děložní hrdlo", "Vaječník", "Močová trubice", "Třásně vejcovodu"],
+    explanation: "Děložní hrdlo (cervix) je krček dělohy; spojuje dělohu s pochvou a při porodu se otevírá.",
+  },
+  "rm-repro-22": {
+    introduction: "Který hormon uvolňují vaječníky v pubertě?",
+    question: "Jaký je hlavní ženský pohlavní hormon uvolňovaný vaječníky v pubertě?",
+    options: ["Testosteron", "Estrogen", "Inzulin", "Adrenalin"],
+    explanation: "Estrogen řídí ženské druhotné pohlavní znaky a pomáhá řídit menstruační cyklus.",
+  },
+  "rm-repro-23": {
+    introduction: "Porovnej vajíčko se spermií.",
+    question: "V porovnání se spermií je lidské vajíčko:",
+    options: ["Mnohem větší a nepohyblivé", "Mnohem menší", "Schopné rychle plavat", "Bez jádra"],
+    explanation: "Vajíčko je jednou z největších lidských buněk a neumí plavat; vejcovodem je posouváno řasinkami a svalovinou.",
+  },
+  "rm-repro-24": {
+    introduction: "Jak se nazývá vnitřní výstelka dělohy, která se každý cyklus zesiluje?",
+    question: "Vnitřní výstelka dělohy, která se každý cyklus zesiluje, je:",
+    options: ["Endometrium", "Nadvarle", "Kůra", "Myelin"],
+    explanation: "Endometrium je děložní výstelka, která se zesiluje, aby přijala zárodek, a při menstruaci se odloučí, pokud k zahnízdění nedojde.",
+  },
+  "rm-repro-25": {
+    introduction: "Jak dlouhý je obvyklý menstruační cyklus?",
+    question: "Jak dlouhý je přibližně typický menstruační cyklus?",
+    options: ["Asi 7 dní", "Asi 28 dní", "Asi 90 dní", "Asi 365 dní"],
+    explanation: "Menstruační cyklus trvá v průměru asi 28 dní, i když se přirozeně u každého člověka liší.",
+  },
+  "rm-repro-26": {
+    introduction: "Co se děje během menstruace?",
+    question: "Co se děje během menstruace?",
+    options: ["Odloučí se děložní výstelka", "Oplodní se vajíčko", "Narodí se dítě", "Tvoří se spermie"],
+    explanation: "Pokud se nezahnízdí zárodek, zesílená děložní výstelka se rozpadne a odchází z těla jako menstruační krvácení.",
+  },
+  "rm-repro-27": {
+    introduction: "Kdy během 28denního cyklu obvykle nastává ovulace?",
+    question: "Kdy zhruba v 28denním cyklu obvykle nastává ovulace?",
+    options: ["První den", "Kolem 14. dne (uprostřed cyklu)", "Poslední den", "Nikdy nenastává"],
+    explanation: "Ovulace obvykle nastává přibližně uprostřed cyklu, zhruba 14. den u 28denního cyklu.",
+  },
+  "rm-repro-28": {
+    introduction: "Co je oplození?",
+    question: "Co je oplození?",
+    options: ["Splynutí jádra spermie s jádrem vajíčka", "Rozdělení vajíčka na dvě části", "Odloučení výstelky", "Filtrace moči"],
+    explanation: "Oplození je splynutí spermie a vajíčka, při němž se spojí jejich genetická informace a vznikne zygota.",
+  },
+  "rm-repro-29": {
+    introduction: "Kde obvykle dochází k oplození?",
+    question: "Kde obvykle dochází k oplození?",
+    options: ["Ve vaječníku", "Ve vejcovodu", "V pochvě", "V močovém měchýři"],
+    explanation: "Spermie se s vajíčkem obvykle setkají a oplodní ho ve vejcovodu, načež vzniklý zárodek putuje do dělohy.",
+  },
+  "rm-repro-30": {
+    introduction: "Jak se nazývá přichycení zárodku k děložní výstelce?",
+    question: "Po oplození se raný zárodek přichytí k děložní výstelce v procesu zvaném:",
+    options: ["Ovulace", "Zahnízdění (nidace)", "Menstruace", "Filtrace"],
+    explanation: "Zahnízdění je vnoření raného zárodku (blastocysty) do endometria, čímž začíná těhotenství.",
+  },
+  "rm-repro-31": {
+    introduction: "Který hormon udržuje děložní výstelku po ovulaci?",
+    question: "Který hormon z vaječníků hlavně pomáhá udržet zesílenou děložní výstelku po ovulaci?",
+    options: ["Progesteron", "Testosteron", "Inzulin", "Adrenalin"],
+    explanation: "Progesteron, uvolňovaný po ovulaci, udržuje endometrium připravené na možné těhotenství.",
+  },
+  "rm-repro-32": {
+    introduction: "Jak se nazývá jediná buňka vzniklá oplozením vajíčka spermií?",
+    question: "Jediná buňka vzniklá oplozením vajíčka spermií se nazývá:",
+    options: ["Gameta", "Zygota", "Nefron", "Folikul"],
+    explanation: "Zygota je první jediná buňka nového jedince, vzniklá splynutím dvou gamet (spermie a vajíčka).",
+  },
+  "rm-repro-33": {
+    introduction: "Jak dlouho trvá lidské těhotenství?",
+    question: "Jak dlouho přibližně trvá typické lidské těhotenství?",
+    options: ["Asi 9 týdnů", "Asi 40 týdnů", "Asi 12 měsíců", "Asi 6 měsíců"],
+    explanation: "Donošené lidské těhotenství trvá asi 40 týdnů (přibližně 9 měsíců) od poslední menstruace.",
+  },
+  "rm-repro-34": {
+    introduction: "Který orgán zprostředkovává výměnu látek mezi plodem a matkou?",
+    question: "Který orgán umožňuje plodu vyměňovat kyslík a živiny s krví matky?",
+    options: ["Placenta", "Játra", "Ledvina", "Plíce"],
+    explanation: "Placenta spojuje plod se stěnou dělohy a umožňuje výměnu kyslíku, živin a odpadních látek s krví matky.",
+  },
+  "rm-repro-35": {
+    introduction: "Co spojuje plod s placentou?",
+    question: "Co spojuje plod s placentou?",
+    options: ["Pupeční šňůra", "Děložní hrdlo", "Močovod", "Chámovod"],
+    explanation: "Pupeční šňůra vede krev mezi plodem a placentou, přivádí živiny a odvádí odpadní látky.",
+  },
+  "rm-repro-36": {
+    introduction: "Kolik chromozomů má běžná tělní buňka člověka?",
+    question: "Kolik chromozomů má normální lidská tělní buňka?",
+    options: ["23", "46", "92", "12"],
+    explanation: "Lidské tělní buňky obsahují 46 chromozomů uspořádaných do 23 párů, přičemž z každého páru je jeden od každého rodiče.",
+  },
+  "rm-repro-37": {
+    introduction: "Kolik chromozomů nese pohlavní buňka?",
+    question: "Kolik chromozomů nese normální lidská gameta (spermie nebo vajíčko)?",
+    options: ["46", "23", "92", "2"],
+    explanation: "Gamety jsou haploidní s 23 chromozomy, takže oplozením se v zygotě obnoví plný počet 46.",
+  },
+  "rm-repro-38": {
+    introduction: "Který pár pohlavních chromozomů je typický pro muže?",
+    question: "Který pár pohlavních chromozomů je typický pro biologického muže?",
+    options: ["XX", "XY", "YY", "XO"],
+    explanation: "Biologický muž má obvykle jeden chromozom X a jeden Y (XY); žena má obvykle dva chromozomy X (XX).",
+  },
+  "rm-repro-39": {
+    introduction: "Co určuje pohlaví dítěte?",
+    question: "Biologické pohlaví dítěte je určeno hlavně chromozomem obsaženým v:",
+    options: ["Vajíčku", "Spermii", "Placentě", "Pupeční šňůře"],
+    explanation: "Vajíčka vždy nesou chromozom X; spermie nese buď X, nebo Y, takže pohlaví potomka určuje spermie.",
+  },
+  "rm-repro-40": {
+    introduction: "Jak vznikají jednovaječná dvojčata?",
+    question: "Jednovaječná dvojčata vznikají, když:",
+    options: ["Jedno oplozené vajíčko se rozdělí na dva zárodky", "Dvě vajíčka oplodní dvě spermie", "Dvě spermie oplodní jedno vajíčko", "Vajíčko se vyvíjí bez spermie"],
+    explanation: "Jednovaječná (monozygotická) dvojčata vznikají, když se jediná zygota rozdělí na dvě, takže mají stejnou DNA.",
+  },
+};

@@ -163,6 +163,18 @@ const SUBJECT_RANK_LADDER: Record<SubjectId, ReadonlyArray<{ title: string; emoj
     { title: 'Master', emoji: '🏅' },
     { title: 'Grandmaster', emoji: '👑' },
   ],
+  biology: [
+    { title: 'Student', emoji: '🌱' },
+    { title: 'Junior Biologist', emoji: '🔬' },
+    { title: 'Biology Student', emoji: '🧫' },
+    { title: 'Biologist', emoji: '🧬' },
+    { title: 'Physiologist', emoji: '🩺' },
+    { title: 'Senior Biologist', emoji: '🚀' },
+    { title: 'Anatomist', emoji: '🧠' },
+    { title: 'Researcher', emoji: '🏥' },
+    { title: 'Distinguished Biologist', emoji: '🏅' },
+    { title: 'Master Biologist', emoji: '👨‍🔬' },
+  ],
 };
 
 /**
