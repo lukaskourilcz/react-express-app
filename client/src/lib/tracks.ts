@@ -94,6 +94,11 @@ export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
   'multivariable-calculus': 'Partial derivatives, gradients, multiple integrals, and vector calculus.',
   'differential-equations': 'Solving ODEs: separable, linear, second-order, and Laplace transforms.',
   'real-analysis': 'Rigorous limits, sequences, series, continuity, and integration.',
+  'geomorphology': 'How weathering, rivers, ice, wind and tectonics shape the land.',
+  'oceanography': 'Ocean basins, currents, tides, and how the sea shapes climate.',
+  'biogeography': 'Biomes, ecosystems, and how life is distributed across the planet.',
+  'geopolitics': 'States, alliances, geostrategy, and the geography of global power.',
+  'gis': 'Coordinate systems, projections, remote sensing, and spatial analysis.',
 };
 
 // Curated tracks. Each is a top-to-bottom story: foundations → specialise →
@@ -163,6 +168,7 @@ const GEOGRAPHY_TRACKS: Record<Track, TrackDef> = {
       { title: 'The physical world', topics: ['landforms', 'climate', 'earth'] },
       { title: 'The human world', topics: ['population', 'political', 'economic'] },
       { title: 'Master the map', topics: ['cartography'] },
+      { title: 'Advanced geography', topics: ['geomorphology', 'oceanography', 'biogeography', 'geopolitics', 'gis'] },
     ],
   },
 };

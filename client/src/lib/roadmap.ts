@@ -123,6 +123,11 @@ export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
   'multivariable-calculus': ['calculus'],
   'differential-equations': ['calculus'],
   'real-analysis': ['calculus'],
+  'geomorphology': ['landforms'],
+  'oceanography': ['earth'],
+  'biogeography': ['climate'],
+  'geopolitics': ['political'],
+  'gis': ['cartography'],
 };
 
 // Unlock tiers granted by the skill-check assessment. Each correct-answer band
