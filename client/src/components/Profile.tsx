@@ -37,6 +37,7 @@ import { useT, useLanguage } from '../i18n/LanguageContext';
 import type { Lang } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
+import { SIBLING_PLATFORMS_URL } from '../lib/subjects';
 import { savePreferredLanguage } from '../lib/languagePref';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
@@ -160,6 +161,47 @@ function ProfileBody({
           </Box>
         </Box>
       </Paper>
+
+      {/* On a standalone deploy (e.g. devShark) point learners at the umbrella
+          site so they can discover the other Shark platforms. Hidden when
+          VITE_SIBLING_URL is unset (i.e. on StudyShark itself). */}
+      {SIBLING_PLATFORMS_URL && (
+        <Paper
+          component="a"
+          href={SIBLING_PLATFORMS_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          elevation={0}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 2,
+            p: { xs: 2, sm: 2.5 },
+            mb: 2,
+            border: '1px solid',
+            borderColor: 'divider',
+            borderRadius: 2,
+            textDecoration: 'none',
+            color: 'inherit',
+            transition: 'border-color 0.15s ease, background-color 0.15s ease',
+            '&:hover': { borderColor: 'var(--brand-accent)', backgroundColor: 'action.hover' },
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
+            <Box aria-hidden sx={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>🦈</Box>
+            <Box sx={{ minWidth: 0 }}>
+              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                {t('profile.otherPlatforms')}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {t('profile.otherPlatformsSub')}
+              </Typography>
+            </Box>
+          </Box>
+          <Box aria-hidden sx={{ color: 'var(--brand-accent)', fontWeight: 800, fontSize: '1.25rem', flexShrink: 0 }}>→</Box>
+        </Paper>
+      )}
 
       {isFirstTime && (
         <Alert

@@ -272,6 +272,8 @@ export const en = {
   'profile.trackGoLearn': 'Go to learning path →',
 
   // Career level (XP)
+  'profile.otherPlatforms': 'Explore the other Shark platforms',
+  'profile.otherPlatformsSub': 'Geography, math, history, biology, chess, poker and more on StudyShark',
   'profile.career': 'Career level',
   'profile.careerLevelOf': 'Level {level} of {max}',
   'profile.xpUnit': 'XP',

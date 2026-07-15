@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider, Snackbar, Alert, Chip } from '@mui/material';
-import { Routes, Route, Link, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
 import LoadingScreen from './components/LoadingScreen';
 import { SwimmingFin, Waterline } from './components/SharkFin';
 import { useColorMode } from './theme/ColorModeContext';
@@ -14,7 +14,7 @@ import { primeRankMarker } from './lib/xp';
 import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import { useAuth } from './lib/auth';
-import { useHasChosenSubject, useActiveSubject } from './lib/subjects';
+import { useHasChosenSubject, useActiveSubject, isSubjectLocked } from './lib/subjects';
 import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
 import { useSettings } from './lib/settings';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
@@ -199,6 +199,24 @@ function SubjectSwitcher() {
 function HeaderBrand() {
   const subject = useActiveSubject();
   const t = useT();
+  const locked = isSubjectLocked();
+  // On a standalone deploy (devShark, geoShark, …) the umbrella "StudyShark"
+  // wordmark is replaced by this subject's own brand, and there's no chip to
+  // switch subjects because there's nothing to switch to.
+  if (locked) {
+    return (
+      <Typography
+        variant="h6"
+        component={Link}
+        to="/"
+        aria-label={t('nav.home')}
+        sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: subject.accent, textDecoration: 'none', fontSize: '1.1rem' }}
+      >
+        <SwimmingFin size={22} />
+        {subject.standaloneBrand ?? subject.label}
+      </Typography>
+    );
+  }
   return (
     <>
       <Typography
@@ -520,18 +538,23 @@ function App() {
             <Typography
               variant="h6"
               component={Link}
-              to="/subjects"
+              to={isSubjectLocked() ? '/' : '/subjects'}
               sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: activeSubject.accent, textDecoration: 'none' }}
             >
               <Box component="span" aria-hidden sx={{ fontSize: '1.35rem', lineHeight: 1 }}>{activeSubject.emoji}</Box>
-              {activeSubject.label}
+              {isSubjectLocked() ? (activeSubject.standaloneBrand ?? activeSubject.label) : activeSubject.label}
             </Typography>
             <Divider />
             <List>
-              <ListItemButton component={Link} to="/subjects" selected={location.pathname === '/subjects'}>
-                <ListItemText primary={t('nav.switchSubject')} />
-              </ListItemButton>
-              <Divider sx={{ my: 0.5 }} />
+              {/* No "switch subject" on a standalone deploy — there's only one. */}
+              {!isSubjectLocked() && (
+                <>
+                  <ListItemButton component={Link} to="/subjects" selected={location.pathname === '/subjects'}>
+                    <ListItemText primary={t('nav.switchSubject')} />
+                  </ListItemButton>
+                  <Divider sx={{ my: 0.5 }} />
+                </>
+              )}
               {navItems.map((item) => (
                 <ListItemButton
                   key={item.to}
@@ -605,7 +628,7 @@ function App() {
               <Suspense fallback={<RouteLoader />}>
                 <Routes location={location}>
                   <Route path="/" element={<Landing />} />
-                  <Route path="/subjects" element={<SubjectPicker />} />
+                  <Route path="/subjects" element={isSubjectLocked() ? <Navigate to="/" replace /> : <SubjectPicker />} />
                   <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
                   <Route path="/learn" element={<Roadmap />} />
                   <Route path="/roadmap" element={<CareerRoadmap />} />
