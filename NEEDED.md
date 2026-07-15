@@ -119,6 +119,53 @@ StudyShark monetises).
 
 ---
 
+## 7. Standalone devShark — second Vercel project (High, dashboard-only)
+
+**Status without you:** the standalone mode is fully coded and is a **no-op on
+StudyShark** (the existing deploy is untouched — still the full subject picker,
+Web Dev included). To actually get the separate **devShark** site live, you
+create one more Vercel project. No code changes needed.
+
+**How the mode works:** the same repo, deployed a second time, reads two env
+vars. `VITE_LOCK_SUBJECT` locks the whole app to one subject (no picker, no
+switcher, no `/subjects` route, and the wordmark becomes that subject's
+standalone brand — `devShark`). `VITE_SIBLING_URL` makes the Profile show an
+"Explore the other Shark platforms →" link back to StudyShark.
+
+**To launch devShark:**
+
+1. **Vercel → Add New → Project**, and import the **same** `react-express-app`
+   repo again (deploy from the same branch you use for StudyShark). This is a
+   separate Vercel project — it does **not** replace the StudyShark one.
+2. Give the new project these Environment Variables:
+
+   | Name | Value |
+   | --- | --- |
+   | `VITE_LOCK_SUBJECT` | `webdev` |
+   | `VITE_SIBLING_URL` | `https://<your-studyshark-domain>` |
+   | `VITE_SUPABASE_URL` | same value as StudyShark (shared backend/data) |
+   | `VITE_SUPABASE_ANON_KEY` | same value as StudyShark |
+   | `SUPABASE_SERVICE_ROLE_KEY` | same value as StudyShark |
+   | `SESSION_SECRET` | same value as StudyShark |
+
+   Copy any other env vars you set on StudyShark (PostHog, Sentry, Upstash,
+   `DEV_PASSWORD`, `OWNER_EMAIL`, …) so the two sites behave identically apart
+   from the lock.
+3. Add a domain to the new project (e.g. `devshark.<your-domain>`) and deploy.
+4. **Leave the StudyShark project unchanged** — set neither `VITE_LOCK_SUBJECT`
+   nor `VITE_SIBLING_URL` there, so it stays the full 7-subject picker.
+
+**Later — more standalone sites:** repeat with a different `VITE_LOCK_SUBJECT`
+(`geography`, `math`, `history`, `chess`, `biology`, `poker`) to spin up
+`geoShark`, `mathShark`, etc. Each is just another Vercel project + domain on
+the same repo — no code changes.
+
+> Valid `VITE_LOCK_SUBJECT` ids: `webdev`, `geography`, `math`, `history`,
+> `chess`, `biology`, `poker`. An invalid/empty value simply falls back to the
+> full StudyShark picker.
+
+---
+
 ### Summary of what shipped in code (no action needed)
 
 - `lib/rate-limit.ts` — `enforceRateLimit()` with Upstash backend + graceful
@@ -128,3 +175,7 @@ StudyShark monetises).
   apple-touch-icon, OG/Twitter image tags.
 - `mobile/app.json` — display name → StudyShark, icon/splash/adaptive-icon wired.
 - Placeholder PNGs + `scripts/gen-placeholder-assets.mjs`.
+- Standalone single-subject mode — `VITE_LOCK_SUBJECT` / `VITE_SIBLING_URL` in
+  `client/src/lib/subjects.ts`, `App.tsx`, `Profile.tsx` (per-subject
+  `standaloneBrand`; picker/switcher/`/subjects` removed when locked). No-op
+  unless the env vars are set. See §7 to launch devShark.
