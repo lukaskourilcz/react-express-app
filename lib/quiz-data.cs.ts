@@ -3,6 +3,7 @@ import { roadmapTranslationsCs } from './roadmap-questions.cs';
 import { internetTranslationsCs } from './roadmap-questions-internet.cs';
 import { roadmapExtraTranslationsCs } from './roadmap-questions-extra.cs';
 import { geographyTranslationsCs } from './roadmap-questions.geography.cs';
+import { mathTranslationsCs } from './roadmap-questions.math.cs';
 import { biologyTranslationsCs } from './roadmap-questions.biology.cs';
 import { chessTranslationsCs } from './roadmap-questions.chess.cs';
 import { pokerTranslationsCs } from './roadmap-questions.poker.cs';
@@ -19,6 +20,7 @@ import { pokerTranslationsCs } from './roadmap-questions.poker.cs';
 // CSS, Git, DSA, DB, security, … (roadmapExtraTranslationsCs) — spread in below.
 export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   ...geographyTranslationsCs,
+  ...mathTranslationsCs,
   ...biologyTranslationsCs,
   ...chessTranslationsCs,
   ...pokerTranslationsCs,
