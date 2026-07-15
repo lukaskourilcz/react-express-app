@@ -128,6 +128,11 @@ export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
   'biogeography': ['climate'],
   'geopolitics': ['political'],
   'gis': ['cartography'],
+  'historiography': ['ancient'],
+  'history-of-science': ['renaissance'],
+  'economic-history': ['industrial'],
+  'intellectual-history': ['classical'],
+  'military-history': ['classical'],
 };
 
 // Unlock tiers granted by the skill-check assessment. Each correct-answer band

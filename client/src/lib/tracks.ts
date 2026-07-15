@@ -99,6 +99,11 @@ export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
   'biogeography': 'Biomes, ecosystems, and how life is distributed across the planet.',
   'geopolitics': 'States, alliances, geostrategy, and the geography of global power.',
   'gis': 'Coordinate systems, projections, remote sensing, and spatial analysis.',
+  'historiography': 'How historians use sources, methods and theory to reconstruct the past.',
+  'history-of-science': 'From Greek natural philosophy to the Scientific Revolution and modern physics.',
+  'economic-history': 'From coinage and trade to industrial capitalism and modern finance.',
+  'intellectual-history': 'The big ideas that shaped history, from Greek philosophy to modern ideologies.',
+  'military-history': 'How warfare, strategy and technology evolved from the phalanx to the nuclear age.',
 };
 
 // Curated tracks. Each is a top-to-bottom story: foundations → specialise →
@@ -235,6 +240,7 @@ const HISTORY_TRACKS: Record<Track, TrackDef> = {
       { title: 'Rebirth & Revolution', topics: ['renaissance', 'earlymodern'] },
       { title: 'Industry & Empire', topics: ['industrial'] },
       { title: 'The Modern World', topics: ['worldwars', 'coldwar', 'modern'] },
+      { title: 'Thematic history', topics: ['historiography', 'history-of-science', 'economic-history', 'intellectual-history', 'military-history'] },
     ],
   },
 };

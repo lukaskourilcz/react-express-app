@@ -93,6 +93,12 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'biogeography', label: 'Biogeography', color: '#15803d' },
   { value: 'geopolitics', label: 'Geopolitics', color: '#7c2d12' },
   { value: 'gis', label: 'GIS & Mapping', color: '#6d28d9' },
+  // History (thematic)
+  { value: 'historiography', label: 'Historiography', color: '#57534e' },
+  { value: 'history-of-science', label: 'History of Science', color: '#0e7490' },
+  { value: 'economic-history', label: 'Economic History', color: '#a16207' },
+  { value: 'intellectual-history', label: 'Intellectual History', color: '#6d28d9' },
+  { value: 'military-history', label: 'Military History', color: '#7f1d1d' },
 ];
 
 export const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c]));

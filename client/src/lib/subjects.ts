@@ -80,8 +80,8 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
     emoji: '📜',
     accent: '#4b5563',
     accentBright: '#9ca3af',
-    topics: ['prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern'],
-    categories: ['prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern'],
+    topics: ['prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern', 'historiography', 'history-of-science', 'economic-history', 'intellectual-history', 'military-history'],
+    categories: ['prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern', 'historiography', 'history-of-science', 'economic-history', 'intellectual-history', 'military-history'],
   },
   chess: {
     id: 'chess',

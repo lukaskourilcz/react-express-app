@@ -44,6 +44,12 @@ export const KNOWN_CATEGORIES: CategoryType[] = [
   'biogeography',
   'geopolitics',
   'gis',
+  // History (thematic)
+  'historiography',
+  'history-of-science',
+  'economic-history',
+  'intellectual-history',
+  'military-history',
 ];
 
 export interface QuestionEditRow {
