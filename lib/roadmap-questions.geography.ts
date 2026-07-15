@@ -15,6 +15,11 @@ import { politicalSeeds } from './roadmap-questions-political';
 import { economicSeeds } from './roadmap-questions-economic';
 import { cartographySeeds } from './roadmap-questions-cartography';
 import { earthSeeds } from './roadmap-questions-earth';
+import { geomorphologySeeds } from './roadmap-questions-geomorphology';
+import { oceanographySeeds } from './roadmap-questions-oceanography';
+import { biogeographySeeds } from './roadmap-questions-biogeography';
+import { geopoliticsSeeds } from './roadmap-questions-geopolitics';
+import { gisSeeds } from './roadmap-questions-gis';
 
 export const roadmapContinentsQuestions = buildRoadmap('rm-cont', 'continents', continentsSeeds);
 export const roadmapCapitalsQuestions = buildRoadmap('rm-cap', 'capitals', capitalsSeeds);
@@ -26,6 +31,11 @@ export const roadmapPoliticalQuestions = buildRoadmap('rm-pol', 'political', pol
 export const roadmapEconomicQuestions = buildRoadmap('rm-econ', 'economic', economicSeeds);
 export const roadmapCartographyQuestions = buildRoadmap('rm-carto', 'cartography', cartographySeeds);
 export const roadmapEarthQuestions = buildRoadmap('rm-earth', 'earth', earthSeeds);
+export const roadmapGeomorphologyQuestions = buildRoadmap('rm-geomorph', 'geomorphology', geomorphologySeeds);
+export const roadmapOceanographyQuestions = buildRoadmap('rm-ocean', 'oceanography', oceanographySeeds);
+export const roadmapBiogeographyQuestions = buildRoadmap('rm-biogeo', 'biogeography', biogeographySeeds);
+export const roadmapGeopoliticsQuestions = buildRoadmap('rm-geopol', 'geopolitics', geopoliticsSeeds);
+export const roadmapGisQuestions = buildRoadmap('rm-gis', 'gis', gisSeeds);
 
 // The full roadmap bank in topic order — consumed by lib/quiz-data.ts.
 export const allRoadmapGeographyQuestions = [
@@ -39,4 +49,9 @@ export const allRoadmapGeographyQuestions = [
   ...roadmapEconomicQuestions,
   ...roadmapCartographyQuestions,
   ...roadmapEarthQuestions,
+  ...roadmapGeomorphologyQuestions,
+  ...roadmapOceanographyQuestions,
+  ...roadmapBiogeographyQuestions,
+  ...roadmapGeopoliticsQuestions,
+  ...roadmapGisQuestions,
 ];

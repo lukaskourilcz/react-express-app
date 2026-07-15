@@ -29,7 +29,9 @@ export type RoadmapTopic =
   // Chess
   | 'rules' | 'pieces' | 'specialmoves' | 'checkmate' | 'notation' | 'openings' | 'tactics' | 'strategy' | 'endgames' | 'combinations'
   // Math (advanced)
-  | 'discrete-math' | 'number-theory' | 'multivariable-calculus' | 'differential-equations' | 'real-analysis';
+  | 'discrete-math' | 'number-theory' | 'multivariable-calculus' | 'differential-equations' | 'real-analysis'
+  // Geography (advanced)
+  | 'geomorphology' | 'oceanography' | 'biogeography' | 'geopolitics' | 'gis';
 
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
@@ -46,6 +48,8 @@ export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations',
   // Math (advanced)
   'discrete-math', 'number-theory', 'multivariable-calculus', 'differential-equations', 'real-analysis',
+  // Geography (advanced)
+  'geomorphology', 'oceanography', 'biogeography', 'geopolitics', 'gis',
 ];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
@@ -130,6 +134,11 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   'multivariable-calculus': 'rm-mvcalc',
   'differential-equations': 'rm-ode',
   'real-analysis': 'rm-analysis',
+  'geomorphology': 'rm-geomorph',
+  'oceanography': 'rm-ocean',
+  'biogeography': 'rm-biogeo',
+  'geopolitics': 'rm-geopol',
+  'gis': 'rm-gis',
 };
 
 // Level titles per topic, in increasing difficulty. Index 0 is level 1. The
@@ -425,6 +434,21 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
   ],
   'real-analysis': [
     'The Real Numbers', 'Sequences and Limits', 'Infinite Series', 'Continuity', 'Differentiation and Integration',
+  ],
+  'geomorphology': [
+    'Weathering & Erosion', 'Fluvial Landforms', 'Glacial & Periglacial', 'Coastal & Aeolian', 'Tectonic & Landscape Evolution',
+  ],
+  'oceanography': [
+    'Ocean Basins & Seafloor', 'Seawater Properties', 'Currents & Circulation', 'Waves, Tides & Coasts', 'Marine Ecosystems & Ocean-Climate',
+  ],
+  'biogeography': [
+    'Biomes & Global Distribution', 'Ecosystems & Energy Flow', 'Species Distribution & Barriers', 'Island Biogeography & Endemism', 'Biodiversity, Realms & Human Impact',
+  ],
+  'geopolitics': [
+    'States, Sovereignty & Borders', 'International Organizations & Alliances', 'Classical Geostrategy', 'Resource & Economic Geopolitics', 'Contemporary Flashpoints & Disputed Territories',
+  ],
+  'gis': [
+    'Coordinate Systems', 'Map Projections & Distortion', 'Spatial Data Models', 'Remote Sensing & Satellite Imagery', 'Spatial Analysis & GIS Applications',
   ],
 };
 

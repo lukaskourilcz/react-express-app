@@ -38,6 +38,12 @@ export const KNOWN_CATEGORIES: CategoryType[] = [
   'multivariable-calculus',
   'differential-equations',
   'real-analysis',
+  // Geography (advanced)
+  'geomorphology',
+  'oceanography',
+  'biogeography',
+  'geopolitics',
+  'gis',
 ];
 
 export interface QuestionEditRow {

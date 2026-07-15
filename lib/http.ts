@@ -129,4 +129,10 @@ export const STATS_CATEGORIES = new Set([
   'multivariable-calculus',
   'differential-equations',
   'real-analysis',
+  // Geography (advanced)
+  'geomorphology',
+  'oceanography',
+  'biogeography',
+  'geopolitics',
+  'gis',
 ]);

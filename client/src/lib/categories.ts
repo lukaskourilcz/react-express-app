@@ -87,6 +87,12 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'multivariable-calculus', label: 'Multivariable Calculus', color: '#a21caf' },
   { value: 'differential-equations', label: 'Differential Equations', color: '#0891b2' },
   { value: 'real-analysis', label: 'Real Analysis', color: '#be123c' },
+  // Geography (advanced)
+  { value: 'geomorphology', label: 'Geomorphology', color: '#a16207' },
+  { value: 'oceanography', label: 'Oceanography', color: '#0369a1' },
+  { value: 'biogeography', label: 'Biogeography', color: '#15803d' },
+  { value: 'geopolitics', label: 'Geopolitics', color: '#7c2d12' },
+  { value: 'gis', label: 'GIS & Mapping', color: '#6d28d9' },
 ];
 
 export const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c]));
