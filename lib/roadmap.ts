@@ -31,7 +31,9 @@ export type RoadmapTopic =
   // Math (advanced)
   | 'discrete-math' | 'number-theory' | 'multivariable-calculus' | 'differential-equations' | 'real-analysis'
   // Geography (advanced)
-  | 'geomorphology' | 'oceanography' | 'biogeography' | 'geopolitics' | 'gis';
+  | 'geomorphology' | 'oceanography' | 'biogeography' | 'geopolitics' | 'gis'
+  // History (thematic)
+  | 'historiography' | 'history-of-science' | 'economic-history' | 'intellectual-history' | 'military-history';
 
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
@@ -50,6 +52,8 @@ export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'discrete-math', 'number-theory', 'multivariable-calculus', 'differential-equations', 'real-analysis',
   // Geography (advanced)
   'geomorphology', 'oceanography', 'biogeography', 'geopolitics', 'gis',
+  // History (thematic)
+  'historiography', 'history-of-science', 'economic-history', 'intellectual-history', 'military-history',
 ];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
@@ -139,6 +143,11 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   'biogeography': 'rm-biogeo',
   'geopolitics': 'rm-geopol',
   'gis': 'rm-gis',
+  'historiography': 'rm-histiog',
+  'history-of-science': 'rm-histsci',
+  'economic-history': 'rm-econhist',
+  'intellectual-history': 'rm-intelhist',
+  'military-history': 'rm-milhist',
 };
 
 // Level titles per topic, in increasing difficulty. Index 0 is level 1. The
@@ -449,6 +458,21 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
   ],
   'gis': [
     'Coordinate Systems', 'Map Projections & Distortion', 'Spatial Data Models', 'Remote Sensing & Satellite Imagery', 'Spatial Analysis & GIS Applications',
+  ],
+  'historiography': [
+    'Sources & Evidence', 'Historical Method', 'Schools of Thought', 'Interpretation & Causation', 'Memory, Revisionism & Public History',
+  ],
+  'history-of-science': [
+    'Ancient & Medieval Science', 'The Scientific Revolution', 'Enlightenment & 19th-Century Science', 'The Modern Physics Revolution', '20th-Century Biology, Medicine & Computing',
+  ],
+  'economic-history': [
+    'Early Economies', 'Medieval & Mercantile Economies', 'Industrial Revolution & Rise of Capitalism', 'Money, Banking & Financial Systems', '20th-Century Economic History',
+  ],
+  'intellectual-history': [
+    'Ancient Philosophy', 'Religious & Medieval Thought', 'Renaissance Humanism & the Enlightenment', 'Modern Political Ideologies', 'Modern Thought',
+  ],
+  'military-history': [
+    'Ancient Warfare', 'Medieval Warfare', 'Gunpowder & Early-Modern Warfare', 'Industrial-Age Warfare & World War I', 'World War II & Modern Warfare',
   ],
 };
 

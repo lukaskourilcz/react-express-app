@@ -46,6 +46,12 @@ const ALL_CATEGORIES: CategoryType[] = [
   'biogeography',
   'geopolitics',
   'gis',
+  // History (thematic)
+  'historiography',
+  'history-of-science',
+  'economic-history',
+  'intellectual-history',
+  'military-history',
 ];
 const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 

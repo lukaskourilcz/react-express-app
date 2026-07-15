@@ -15,6 +15,11 @@ import { industrialSeeds } from './roadmap-questions-industrial';
 import { worldwarsSeeds } from './roadmap-questions-worldwars';
 import { coldwarSeeds } from './roadmap-questions-coldwar';
 import { modernSeeds } from './roadmap-questions-modern';
+import { historiographySeeds } from './roadmap-questions-historiography';
+import { historyOfScienceSeeds } from './roadmap-questions-history-of-science';
+import { economicHistorySeeds } from './roadmap-questions-economic-history';
+import { intellectualHistorySeeds } from './roadmap-questions-intellectual-history';
+import { militaryHistorySeeds } from './roadmap-questions-military-history';
 
 export const roadmapPrehistoryQuestions = buildRoadmap('rm-prehist', 'prehistory', prehistorySeeds);
 export const roadmapAncientQuestions = buildRoadmap('rm-ancient', 'ancient', ancientSeeds);
@@ -26,6 +31,11 @@ export const roadmapIndustrialQuestions = buildRoadmap('rm-indust', 'industrial'
 export const roadmapWorldWarsQuestions = buildRoadmap('rm-wwars', 'worldwars', worldwarsSeeds);
 export const roadmapColdWarQuestions = buildRoadmap('rm-coldwar', 'coldwar', coldwarSeeds);
 export const roadmapModernQuestions = buildRoadmap('rm-modern', 'modern', modernSeeds);
+export const roadmapHistoriographyQuestions = buildRoadmap('rm-histiog', 'historiography', historiographySeeds);
+export const roadmapHistoryOfScienceQuestions = buildRoadmap('rm-histsci', 'history-of-science', historyOfScienceSeeds);
+export const roadmapEconomicHistoryQuestions = buildRoadmap('rm-econhist', 'economic-history', economicHistorySeeds);
+export const roadmapIntellectualHistoryQuestions = buildRoadmap('rm-intelhist', 'intellectual-history', intellectualHistorySeeds);
+export const roadmapMilitaryHistoryQuestions = buildRoadmap('rm-milhist', 'military-history', militaryHistorySeeds);
 
 // The full roadmap bank: all ten eras concatenated in chronological order.
 export const allRoadmapHistoryQuestions = [
@@ -39,4 +49,9 @@ export const allRoadmapHistoryQuestions = [
   ...roadmapWorldWarsQuestions,
   ...roadmapColdWarQuestions,
   ...roadmapModernQuestions,
+  ...roadmapHistoriographyQuestions,
+  ...roadmapHistoryOfScienceQuestions,
+  ...roadmapEconomicHistoryQuestions,
+  ...roadmapIntellectualHistoryQuestions,
+  ...roadmapMilitaryHistoryQuestions,
 ];

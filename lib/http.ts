@@ -135,4 +135,10 @@ export const STATS_CATEGORIES = new Set([
   'biogeography',
   'geopolitics',
   'gis',
+  // History (thematic)
+  'historiography',
+  'history-of-science',
+  'economic-history',
+  'intellectual-history',
+  'military-history',
 ]);
