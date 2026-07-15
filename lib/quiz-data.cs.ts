@@ -4,6 +4,7 @@ import { internetTranslationsCs } from './roadmap-questions-internet.cs';
 import { roadmapExtraTranslationsCs } from './roadmap-questions-extra.cs';
 import { biologyTranslationsCs } from './roadmap-questions.biology.cs';
 import { chessTranslationsCs } from './roadmap-questions.chess.cs';
+import { pokerTranslationsCs } from './roadmap-questions.poker.cs';
 
 // Czech (cs) translations of quiz questions, keyed by question id.
 //
@@ -18,6 +19,7 @@ import { chessTranslationsCs } from './roadmap-questions.chess.cs';
 export const questionTranslationsCs: Record<string, QuestionTranslation> = {
   ...biologyTranslationsCs,
   ...chessTranslationsCs,
+  ...pokerTranslationsCs,
   ...roadmapExtraTranslationsCs,
   ...roadmapTranslationsCs,
   ...internetTranslationsCs,

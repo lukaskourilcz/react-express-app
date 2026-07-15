@@ -175,6 +175,18 @@ const SUBJECT_RANK_LADDER: Record<SubjectId, ReadonlyArray<{ title: string; emoj
     { title: 'Distinguished Biologist', emoji: '🏅' },
     { title: 'Master Biologist', emoji: '👨‍🔬' },
   ],
+  poker: [
+    { title: 'Beginner', emoji: '🌱' },
+    { title: 'Novice', emoji: '🃏' },
+    { title: 'Casual Player', emoji: '♠️' },
+    { title: 'Amateur', emoji: '🎲' },
+    { title: 'Regular', emoji: '💵' },
+    { title: 'Winning Player', emoji: '🚀' },
+    { title: 'Shark', emoji: '🦈' },
+    { title: 'Pro', emoji: '🏆' },
+    { title: 'High Roller', emoji: '🏅' },
+    { title: 'Poker Master', emoji: '👑' },
+  ],
 };
 
 /**

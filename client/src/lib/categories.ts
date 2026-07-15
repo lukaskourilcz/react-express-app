@@ -116,6 +116,17 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'pawn-structures', label: 'Pawn Structures', color: '#a16207' },
   { value: 'endgame-technique', label: 'Endgame Technique', color: '#7c2d12' },
   { value: 'chess-history', label: 'Chess History', color: '#4d7c0f' },
+  // Poker
+  { value: 'hand-rankings', label: 'Hand Rankings', color: '#b91c1c' },
+  { value: 'rules-formats', label: 'Rules & Betting', color: '#dc2626' },
+  { value: 'positions', label: 'Position', color: '#ea580c' },
+  { value: 'starting-hands', label: 'Starting Hands', color: '#d97706' },
+  { value: 'pot-odds', label: 'Pot Odds & Equity', color: '#ca8a04' },
+  { value: 'betting-strategy', label: 'Betting Strategy', color: '#65a30d' },
+  { value: 'postflop', label: 'Postflop Play', color: '#0d9488' },
+  { value: 'tournament-play', label: 'Tournaments', color: '#0891b2' },
+  { value: 'psychology', label: 'Psychology', color: '#7c3aed' },
+  { value: 'gto-advanced', label: 'GTO & Theory', color: '#4338ca' },
 ];
 
 export const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c]));

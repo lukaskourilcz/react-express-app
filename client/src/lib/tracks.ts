@@ -119,6 +119,16 @@ export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
   'pawn-structures': 'Pawn weaknesses, breaks, passed pawns, and the classic IQP and Carlsbad plans.',
   'endgame-technique': 'Endgame theory from king-and-pawn play through rook and minor-piece endings.',
   'chess-history': 'The story of chess from its origins through the World Champions to the engine era.',
+  'hand-rankings': 'The ten poker hands, reading the best five of seven, kickers, ties and odds.',
+  'rules-formats': "How a Texas Hold'em hand plays out, from blinds and betting to all-ins, side pots and formats.",
+  'positions': 'How seat position and table dynamics shape poker strategy.',
+  'starting-hands': 'Choosing profitable starting hands and building preflop ranges.',
+  'pot-odds': 'Counting outs, estimating equity, and comparing it to pot, implied and fold-equity odds.',
+  'betting-strategy': 'Why, when and how much to bet, from value and bluffs to sizing and range construction.',
+  'postflop': 'Reading board texture, valuing made hands and draws, and putting opponents on ranges.',
+  'tournament-play': 'How poker tournaments work, from blind levels through push/fold, ICM and final-table play.',
+  'psychology': 'Poker mindset: tilt control, table image, reading opponents, player types and bankroll.',
+  'gto-advanced': 'Advanced theory: GTO vs exploitative play, MDF, combinatorics, range construction and solvers.',
 };
 
 // Curated tracks. Each is a top-to-bottom story: foundations → specialise →
@@ -326,6 +336,38 @@ const BIOLOGY_TRACKS: Record<Track, TrackDef> = {
   },
 };
 
+const POKER_TRACKS: Record<Track, TrackDef> = {
+  frontend: {
+    label: 'Poker Basics',
+    blurb: 'Learn the game: the hands, the rules, and why position matters.',
+    stages: [
+      { title: 'The cards', topics: ['hand-rankings', 'rules-formats'] },
+      { title: 'Position', topics: ['positions'] },
+    ],
+  },
+  backend: {
+    label: 'Winning Play',
+    blurb: 'The skills that make money: hand selection, the math, and betting.',
+    stages: [
+      { title: 'Hand selection', topics: ['starting-hands'] },
+      { title: 'The math', topics: ['pot-odds'] },
+      { title: 'Betting & postflop', topics: ['betting-strategy', 'postflop'] },
+    ],
+  },
+  fullstack: {
+    label: 'The Full Game',
+    blurb: 'Zero to shark: every skill from the rules of the game to solver-based theory.',
+    stages: [
+      { title: 'Foundations', topics: ['hand-rankings', 'rules-formats'] },
+      { title: 'Position & selection', topics: ['positions', 'starting-hands'] },
+      { title: 'The math', topics: ['pot-odds'] },
+      { title: 'Betting & postflop', topics: ['betting-strategy', 'postflop'] },
+      { title: 'Beyond the cards', topics: ['tournament-play', 'psychology'] },
+      { title: 'Mastery', topics: ['gto-advanced'] },
+    ],
+  },
+};
+
 export const TRACKS_BY_SUBJECT: Record<SubjectId, Record<Track, TrackDef>> = {
   webdev: WEBDEV_TRACKS,
   geography: GEOGRAPHY_TRACKS,
@@ -333,6 +375,7 @@ export const TRACKS_BY_SUBJECT: Record<SubjectId, Record<Track, TrackDef>> = {
   history: HISTORY_TRACKS,
   chess: CHESS_TRACKS,
   biology: BIOLOGY_TRACKS,
+  poker: POKER_TRACKS,
 };
 
 /** The track map for a given subject. */
