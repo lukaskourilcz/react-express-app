@@ -3,7 +3,7 @@ import { decodeSession, localizeQuestion, normalizeLang } from '../../lib/quiz-d
 import { AuthError, tryAuth } from '../../lib/auth';
 import { createAnonClient, jsonError, createLogger, withTimeout } from '../../lib/http';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
-import { checkRateLimit } from '../../lib/rate-limit';
+import { enforceRateLimit } from '../../lib/rate-limit';
 
 const MAX_ANSWERS = 50;
 
@@ -106,7 +106,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 // recorded so reporter_sub can't be forged.
 async function handleReport(req: VercelRequest, res: VercelResponse) {
   // Anonymous inserts allowed, so throttle per-IP against spam.
-  if (!checkRateLimit(req, res, { key: 'question_report', capacity: 3, refillPerSecond: 20 / 3600 })) return;
+  if (!(await enforceRateLimit(req, res, { key: 'question_report', capacity: 3, refillPerSecond: 20 / 3600 }))) return;
 
   if (!supabase) {
     return jsonError(res, 503, 'not_configured', 'Reporting backend is not configured');

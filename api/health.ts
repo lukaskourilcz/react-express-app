@@ -6,11 +6,18 @@ const supabase = createAnonClient();
 /**
  * GET /api/health
  *
- * Lightweight liveness probe. Returns:
- *   { ok: true, supabase: 'ok' | 'down' | 'unconfigured', ts: ISO }
+ * Liveness + readiness probe. Returns:
+ *   { ok, supabase: 'ok' | 'down' | 'unconfigured', ts: ISO }
  *
- * Uptime monitors should treat status 200 as healthy regardless of the
- * supabase field, and check the body for cross-dep health.
+ * Status code reflects readiness so a plain uptime monitor (UptimeRobot,
+ * Better Stack) alerts without body parsing:
+ *   • 200 — healthy: Supabase reachable, or intentionally unconfigured
+ *           (e.g. a preview deploy without DB env). `ok: true`.
+ *   • 503 — degraded: Supabase is configured but unreachable. `ok: false`,
+ *           `Retry-After: 30`. This is the case a monitor must catch.
+ *
+ * Previously this always returned 200, so downtime looked healthy — the whole
+ * point of pointing a monitor here was defeated.
  */
 export default async function handler(_req: VercelRequest, res: VercelResponse) {
   let supabaseStatus: 'ok' | 'down' | 'unconfigured' = 'unconfigured';
@@ -24,9 +31,11 @@ export default async function handler(_req: VercelRequest, res: VercelResponse) 
     }
   }
 
+  const degraded = supabaseStatus === 'down';
   res.setHeader('Cache-Control', 'no-store');
-  res.status(200).json({
-    ok: true,
+  if (degraded) res.setHeader('Retry-After', '30');
+  res.status(degraded ? 503 : 200).json({
+    ok: !degraded,
     supabase: supabaseStatus,
     ts: new Date().toISOString(),
   });

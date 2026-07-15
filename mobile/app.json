@@ -1,12 +1,18 @@
 {
   "expo": {
-    "name": "DevQuiz",
+    "name": "StudyShark",
     "slug": "devquiz",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "devquiz",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.yourcompany.devquiz",
@@ -15,11 +21,16 @@
       }
     },
     "android": {
-      "package": "com.yourcompany.devquiz"
+      "package": "com.yourcompany.devquiz",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#2d7a2d"
+      }
     },
     "web": {
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "favicon": "./assets/favicon.png"
     },
     "plugins": ["expo-router", "@bacons/apple-targets"],
     "experiments": {
