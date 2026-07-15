@@ -2,6 +2,7 @@ import type { QuestionTranslation } from './quiz-data';
 import { roadmapTranslationsCs } from './roadmap-questions.cs';
 import { internetTranslationsCs } from './roadmap-questions-internet.cs';
 import { roadmapExtraTranslationsCs } from './roadmap-questions-extra.cs';
+import { geographyTranslationsCs } from './roadmap-questions.geography.cs';
 import { biologyTranslationsCs } from './roadmap-questions.biology.cs';
 import { chessTranslationsCs } from './roadmap-questions.chess.cs';
 import { pokerTranslationsCs } from './roadmap-questions.poker.cs';
@@ -17,6 +18,7 @@ import { pokerTranslationsCs } from './roadmap-questions.poker.cs';
 // path (internetTranslationsCs), and every remaining topic such as Node, HTML,
 // CSS, Git, DSA, DB, security, … (roadmapExtraTranslationsCs) — spread in below.
 export const questionTranslationsCs: Record<string, QuestionTranslation> = {
+  ...geographyTranslationsCs,
   ...biologyTranslationsCs,
   ...chessTranslationsCs,
   ...pokerTranslationsCs,
