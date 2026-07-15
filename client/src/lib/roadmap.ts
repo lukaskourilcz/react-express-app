@@ -143,6 +143,11 @@ export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
   'digestive-system': ['cell-biology'],
   'immune-system': ['cell-biology'],
   'reproductive-system': ['endocrine-system'],
+  'opening-theory': ['openings'],
+  'middlegame': ['strategy'],
+  'pawn-structures': ['strategy'],
+  'endgame-technique': ['endgames'],
+  'chess-history': ['notation'],
 };
 
 // Unlock tiers granted by the skill-check assessment. Each correct-answer band

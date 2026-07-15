@@ -35,7 +35,9 @@ export type RoadmapTopic =
   // History (thematic)
   | 'historiography' | 'history-of-science' | 'economic-history' | 'intellectual-history' | 'military-history'
   // Human Biology
-  | 'cell-biology' | 'skeletal-system' | 'muscular-system' | 'nervous-system' | 'endocrine-system' | 'cardiovascular-system' | 'respiratory-system' | 'digestive-system' | 'immune-system' | 'reproductive-system';
+  | 'cell-biology' | 'skeletal-system' | 'muscular-system' | 'nervous-system' | 'endocrine-system' | 'cardiovascular-system' | 'respiratory-system' | 'digestive-system' | 'immune-system' | 'reproductive-system'
+  // Chess (advanced)
+  | 'opening-theory' | 'middlegame' | 'pawn-structures' | 'endgame-technique' | 'chess-history';
 
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
@@ -58,6 +60,8 @@ export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'historiography', 'history-of-science', 'economic-history', 'intellectual-history', 'military-history',
   // Human Biology
   'cell-biology', 'skeletal-system', 'muscular-system', 'nervous-system', 'endocrine-system', 'cardiovascular-system', 'respiratory-system', 'digestive-system', 'immune-system', 'reproductive-system',
+  // Chess (advanced)
+  'opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history',
 ];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
@@ -162,6 +166,11 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   'digestive-system': 'rm-digest',
   'immune-system': 'rm-immune',
   'reproductive-system': 'rm-repro',
+  'opening-theory': 'rm-openthy',
+  'middlegame': 'rm-middle',
+  'pawn-structures': 'rm-pawns',
+  'endgame-technique': 'rm-endgtech',
+  'chess-history': 'rm-chesshist',
 };
 
 // Level titles per topic, in increasing difficulty. Index 0 is level 1. The
@@ -517,6 +526,21 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
   ],
   'reproductive-system': [
     'The urinary system & kidneys', 'The male reproductive system', 'The female reproductive system', 'Menstrual cycle & fertilization', 'Development, pregnancy & genetics',
+  ],
+  'opening-theory': [
+    'Opening principles & mistakes', 'Open games: Italian, Ruy Lopez, Scotch', 'Semi-open: Sicilian, French, Caro-Kann', 'Closed & queen\'s-pawn openings', 'Gambits & modern systems',
+  ],
+  'middlegame': [
+    'Making a plan', 'Piece activity & the bishop pair', 'Attacking the king', 'Prophylaxis, defense & improvement', 'Imbalances, initiative & converting',
+  ],
+  'pawn-structures': [
+    'Pawn weaknesses', 'Pawn chains & breaks', 'Passed pawns', 'Classic structures (IQP, Carlsbad)', 'Minority attack & majorities',
+  ],
+  'endgame-technique': [
+    'King & pawn endings', 'Rook endings', 'Minor-piece endings', 'Queen & complex endings', 'Practical technique',
+  ],
+  'chess-history': [
+    'Origins & early history', 'Romantic era & first champions', 'Classical & Soviet school', 'Famous champions & rivalries', 'Modern era & computer chess',
   ],
 };
 

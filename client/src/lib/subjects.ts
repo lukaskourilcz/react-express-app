@@ -90,8 +90,8 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
     emoji: '♟️',
     accent: '#7b4b2a',
     accentBright: '#c8935f',
-    topics: ['rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations'],
-    categories: ['rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations'],
+    topics: ['rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations', 'opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history'],
+    categories: ['rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations', 'opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history'],
   },
   biology: {
     id: 'biology',

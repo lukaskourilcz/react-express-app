@@ -61,6 +61,12 @@ export const KNOWN_CATEGORIES: CategoryType[] = [
   'digestive-system',
   'immune-system',
   'reproductive-system',
+  // Chess (advanced)
+  'opening-theory',
+  'middlegame',
+  'pawn-structures',
+  'endgame-technique',
+  'chess-history',
 ];
 
 export interface QuestionEditRow {
