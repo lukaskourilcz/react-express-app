@@ -122,7 +122,7 @@ export const STATS_CATEGORIES = new Set([
   // History
   'prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern',
   // Chess
-  'rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations',
+  'openings', 'tactics', 'strategy', 'endgames', 'combinations',
   // Math (advanced)
   'discrete-math',
   'number-theory',
@@ -159,8 +159,6 @@ export const STATS_CATEGORIES = new Set([
   'endgame-technique',
   'chess-history',
   // Poker
-  'hand-rankings',
-  'rules-formats',
   'positions',
   'starting-hands',
   'pot-odds',

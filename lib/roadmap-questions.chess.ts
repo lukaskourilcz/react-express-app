@@ -5,11 +5,6 @@
 // difficulty. `allRoadmapQuestions` is the concatenation used by quiz-data.ts.
 
 import { buildRoadmap } from './roadmap-build';
-import { rulesSeeds } from './roadmap-questions-rules';
-import { piecesSeeds } from './roadmap-questions-pieces';
-import { specialMovesSeeds } from './roadmap-questions-specialmoves';
-import { checkmateSeeds } from './roadmap-questions-checkmate';
-import { notationSeeds } from './roadmap-questions-notation';
 import { openingsSeeds } from './roadmap-questions-openings';
 import { tacticsSeeds } from './roadmap-questions-tactics';
 import { strategySeeds } from './roadmap-questions-strategy';
@@ -21,11 +16,6 @@ import { pawnStructuresSeeds } from './roadmap-questions-pawn-structures';
 import { endgameTechniqueSeeds } from './roadmap-questions-endgame-technique';
 import { chessHistorySeeds } from './roadmap-questions-chess-history';
 
-export const roadmapRulesQuestions = buildRoadmap('rm-rules', 'rules', rulesSeeds);
-export const roadmapPiecesQuestions = buildRoadmap('rm-piece', 'pieces', piecesSeeds);
-export const roadmapSpecialMovesQuestions = buildRoadmap('rm-spec', 'specialmoves', specialMovesSeeds);
-export const roadmapCheckmateQuestions = buildRoadmap('rm-mate', 'checkmate', checkmateSeeds);
-export const roadmapNotationQuestions = buildRoadmap('rm-notat', 'notation', notationSeeds);
 export const roadmapOpeningsQuestions = buildRoadmap('rm-open', 'openings', openingsSeeds);
 export const roadmapTacticsQuestions = buildRoadmap('rm-tac', 'tactics', tacticsSeeds);
 export const roadmapStrategyQuestions = buildRoadmap('rm-strat', 'strategy', strategySeeds);
@@ -39,11 +29,6 @@ export const roadmapChessHistoryQuestions = buildRoadmap('rm-chesshist', 'chess-
 
 // The full roadmap bank across all 10 chess topics, in taxonomy order.
 export const allRoadmapChessQuestions = [
-  ...roadmapRulesQuestions,
-  ...roadmapPiecesQuestions,
-  ...roadmapSpecialMovesQuestions,
-  ...roadmapCheckmateQuestions,
-  ...roadmapNotationQuestions,
   ...roadmapOpeningsQuestions,
   ...roadmapTacticsQuestions,
   ...roadmapStrategyQuestions,

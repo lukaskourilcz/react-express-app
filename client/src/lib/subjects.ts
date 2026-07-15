@@ -86,12 +86,12 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   chess: {
     id: 'chess',
     label: 'Chess',
-    blurb: 'Learn the game for real: rules, tactics, openings, endgames and strategy.',
+    blurb: 'For players who know the rules: openings, tactics, strategy, endgames and advanced theory.',
     emoji: '♟️',
     accent: '#7b4b2a',
     accentBright: '#c8935f',
-    topics: ['rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations', 'opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history'],
-    categories: ['rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations', 'opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history'],
+    topics: ['openings', 'tactics', 'strategy', 'endgames', 'combinations', 'opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history'],
+    categories: ['openings', 'tactics', 'strategy', 'endgames', 'combinations', 'opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history'],
   },
   biology: {
     id: 'biology',
@@ -106,12 +106,12 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   poker: {
     id: 'poker',
     label: 'Poker',
-    blurb: "Master no-limit Texas Hold'em — from hand rankings to pot odds and GTO strategy.",
+    blurb: "Master no-limit Texas Hold'em — from position and pot odds to GTO strategy.",
     emoji: '♠️',
     accent: '#b91c1c',
     accentBright: '#ef4444',
-    topics: ['hand-rankings', 'rules-formats', 'positions', 'starting-hands', 'pot-odds', 'betting-strategy', 'postflop', 'tournament-play', 'psychology', 'gto-advanced'],
-    categories: ['hand-rankings', 'rules-formats', 'positions', 'starting-hands', 'pot-odds', 'betting-strategy', 'postflop', 'tournament-play', 'psychology', 'gto-advanced'],
+    topics: ['positions', 'starting-hands', 'pot-odds', 'betting-strategy', 'postflop', 'tournament-play', 'psychology', 'gto-advanced'],
+    categories: ['positions', 'starting-hands', 'pot-odds', 'betting-strategy', 'postflop', 'tournament-play', 'psychology', 'gto-advanced'],
   },
 };
 
