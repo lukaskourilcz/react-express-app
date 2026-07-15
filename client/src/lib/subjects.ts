@@ -36,7 +36,7 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   webdev: {
     id: 'webdev',
     label: 'Web Dev',
-    blurb: 'Frontend, backend and fullstack — the languages and tools of the modern web.',
+    blurb: 'Frontend, backend and fullstack: the languages and tools of the modern web.',
     emoji: '💻',
     accent: '#2d7a2d',
     accentBright: '#4caf50',
@@ -66,7 +66,7 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   math: {
     id: 'math',
     label: 'Math',
-    blurb: 'From arithmetic all the way to university analysis — build real fluency, level by level.',
+    blurb: 'From basic arithmetic all the way to university-level math, one level at a time.',
     emoji: '➗',
     accent: '#1565c0',
     accentBright: '#42a5f5',
@@ -96,7 +96,7 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   biology: {
     id: 'biology',
     label: 'Human Biology',
-    blurb: 'The human body from cells to systems — anatomy and physiology, level by level.',
+    blurb: 'The human body from cells to whole systems: anatomy and physiology, step by step.',
     emoji: '🧬',
     accent: '#0d9488',
     accentBright: '#2dd4bf',
@@ -106,7 +106,7 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   poker: {
     id: 'poker',
     label: 'Poker',
-    blurb: "Master no-limit Texas Hold'em — from position and pot odds to GTO strategy.",
+    blurb: "Get good at no-limit Texas Hold'em, from position and pot odds to advanced strategy.",
     emoji: '♠️',
     accent: '#b91c1c',
     accentBright: '#ef4444',

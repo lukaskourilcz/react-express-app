@@ -472,13 +472,10 @@ function App() {
               ))}
             </Box>
 
-            {/* Right slot: sound/theme toggles (mobile only — on desktop they
-                float in the top-right corner), Leaderboard + Shop icons, and
-                the auth widget. */}
+            {/* Right slot: Leaderboard + Shop icons and the auth widget. On
+                mobile the sound/theme toggles live in the nav drawer (not here),
+                so they never crowd the account avatar. */}
             <Box sx={{ flex: '1 1 0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: { xs: 0.5, sm: 1 }, minWidth: 0 }}>
-              <Box sx={{ display: { xs: 'inline-flex', sm: 'none' }, alignItems: 'center', gap: 0.25 }}>
-                {utilityToggles}
-              </Box>
               {/* Icon links to the non-learning surfaces. Hidden below 760px —
                   the drawer covers them there. */}
               <Box sx={{ display: 'none', '@media (min-width:760px)': { display: 'inline-flex' }, alignItems: 'center' }}>
@@ -546,6 +543,18 @@ function App() {
                 </ListItemButton>
               ))}
             </List>
+            <Divider />
+            {/* Sound + theme toggles live here on mobile. stopPropagation keeps
+                the drawer open so you can flip both without it closing. */}
+            <Box
+              sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 2, py: 1.5 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {utilityToggles}
+              <Typography variant="body2" color="text.secondary">
+                {t('nav.soundAndTheme')}
+              </Typography>
+            </Box>
           </Box>
         </Drawer>
         </>

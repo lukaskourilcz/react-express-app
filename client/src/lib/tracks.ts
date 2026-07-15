@@ -217,7 +217,7 @@ const MATH_TRACKS: Record<Track, TrackDef> = {
   },
   fullstack: {
     label: 'The Full Journey',
-    blurb: 'Zero to hero: from counting all the way up through university mathematics — calculus, analysis, and beyond.',
+    blurb: 'From counting all the way up to university math: calculus, analysis and beyond.',
     stages: [
       { title: 'Foundations', topics: ['arithmetic', 'fractions', 'prealgebra'] },
       { title: 'Core', topics: ['algebra', 'geometry'] },
