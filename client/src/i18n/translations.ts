@@ -16,6 +16,7 @@ export const en = {
   'nav.challenge': 'Challenge',
   'nav.profile': 'Profile',
   'nav.home': 'StudyShark home',
+  'nav.switchSubject': 'Switch subject',
   'nav.menu': 'Open navigation menu',
   'title.home': 'StudyShark — web dev quiz & learning paths',
   'title.quiz': 'Quiz · StudyShark',
