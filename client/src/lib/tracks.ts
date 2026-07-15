@@ -104,6 +104,16 @@ export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
   'economic-history': 'From coinage and trade to industrial capitalism and modern finance.',
   'intellectual-history': 'The big ideas that shaped history, from Greek philosophy to modern ideologies.',
   'military-history': 'How warfare, strategy and technology evolved from the phalanx to the nuclear age.',
+  'cell-biology': 'Core cell biology from organelles to genetics.',
+  'skeletal-system': 'How the skeleton is built, joined and remodeled.',
+  'muscular-system': 'Muscle types, contraction, and the movements they drive.',
+  'nervous-system': 'Neurons, the brain and spinal cord, and the senses.',
+  'endocrine-system': 'Hormones and glands that regulate the body.',
+  'cardiovascular-system': 'Blood, the heart, vessels and circulation.',
+  'respiratory-system': 'The lungs, breathing and gas exchange.',
+  'digestive-system': 'How food is digested and nutrients absorbed.',
+  'immune-system': 'How the body defends itself against disease.',
+  'reproductive-system': 'The kidneys, reproduction and human genetics.',
 };
 
 // Curated tracks. Each is a top-to-bottom story: foundations → specialise →
@@ -279,12 +289,44 @@ const CHESS_TRACKS: Record<Track, TrackDef> = {
 
 // All subjects' tracks, keyed by subject. The active subject selects which
 // map drives the roadmap/track pickers.
+const BIOLOGY_TRACKS: Record<Track, TrackDef> = {
+  frontend: {
+    label: 'Body Basics',
+    blurb: 'Start with the building blocks: cells, bones and muscles.',
+    stages: [
+      { title: 'The cell', topics: ['cell-biology'] },
+      { title: 'Structure & movement', topics: ['skeletal-system', 'muscular-system'] },
+    ],
+  },
+  backend: {
+    label: 'Systems & Control',
+    blurb: 'How the body senses, regulates, and keeps itself supplied.',
+    stages: [
+      { title: 'Control & sensing', topics: ['nervous-system', 'endocrine-system'] },
+      { title: 'Transport & exchange', topics: ['cardiovascular-system', 'respiratory-system'] },
+    ],
+  },
+  fullstack: {
+    label: 'The Whole Body',
+    blurb: 'The complete tour: every system, from a single cell to a whole human being.',
+    stages: [
+      { title: 'Foundations', topics: ['cell-biology'] },
+      { title: 'Structure & movement', topics: ['skeletal-system', 'muscular-system'] },
+      { title: 'Control & sensing', topics: ['nervous-system', 'endocrine-system'] },
+      { title: 'Transport & exchange', topics: ['cardiovascular-system', 'respiratory-system'] },
+      { title: 'Processing & defense', topics: ['digestive-system', 'immune-system'] },
+      { title: 'Balance & continuity', topics: ['reproductive-system'] },
+    ],
+  },
+};
+
 export const TRACKS_BY_SUBJECT: Record<SubjectId, Record<Track, TrackDef>> = {
   webdev: WEBDEV_TRACKS,
   geography: GEOGRAPHY_TRACKS,
   math: MATH_TRACKS,
   history: HISTORY_TRACKS,
   chess: CHESS_TRACKS,
+  biology: BIOLOGY_TRACKS,
 };
 
 /** The track map for a given subject. */

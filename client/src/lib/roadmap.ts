@@ -27,7 +27,7 @@ export const CHECKPOINT_COUNT = ROADMAP_LEVELS / LEVELS_PER_CHECKPOINT;
  * Prereqs are intentionally a shallow graph so the path from zero → hero stays
  * obvious: master JS basics, then HTML+CSS for React, then specialise.
  */
-export const STARTER_TOPICS: RoadmapTopic[] = ['html', 'css', 'javascript', 'continents', 'capitals', 'flags', 'arithmetic', 'fractions', 'prealgebra', 'prehistory', 'ancient', 'classical', 'rules', 'pieces', 'notation'];
+export const STARTER_TOPICS: RoadmapTopic[] = ['html', 'css', 'javascript', 'continents', 'capitals', 'flags', 'arithmetic', 'fractions', 'prealgebra', 'prehistory', 'ancient', 'classical', 'rules', 'pieces', 'notation', 'cell-biology'];
 
 // Levels of each prereq topic that must be passed before a topic unlocks.
 // 5 = "first checkpoint cleared" — the natural milestone in each path.
@@ -133,6 +133,16 @@ export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
   'economic-history': ['industrial'],
   'intellectual-history': ['classical'],
   'military-history': ['classical'],
+  'cell-biology': [],
+  'skeletal-system': ['cell-biology'],
+  'muscular-system': ['skeletal-system'],
+  'nervous-system': ['cell-biology'],
+  'endocrine-system': ['nervous-system'],
+  'cardiovascular-system': ['cell-biology'],
+  'respiratory-system': ['cardiovascular-system'],
+  'digestive-system': ['cell-biology'],
+  'immune-system': ['cell-biology'],
+  'reproductive-system': ['endocrine-system'],
 };
 
 // Unlock tiers granted by the skill-check assessment. Each correct-answer band

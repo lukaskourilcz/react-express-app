@@ -50,6 +50,17 @@ export const KNOWN_CATEGORIES: CategoryType[] = [
   'economic-history',
   'intellectual-history',
   'military-history',
+  // Human Biology
+  'cell-biology',
+  'skeletal-system',
+  'muscular-system',
+  'nervous-system',
+  'endocrine-system',
+  'cardiovascular-system',
+  'respiratory-system',
+  'digestive-system',
+  'immune-system',
+  'reproductive-system',
 ];
 
 export interface QuestionEditRow {

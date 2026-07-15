@@ -52,6 +52,17 @@ const ALL_CATEGORIES: CategoryType[] = [
   'economic-history',
   'intellectual-history',
   'military-history',
+  // Human Biology
+  'cell-biology',
+  'skeletal-system',
+  'muscular-system',
+  'nervous-system',
+  'endocrine-system',
+  'cardiovascular-system',
+  'respiratory-system',
+  'digestive-system',
+  'immune-system',
+  'reproductive-system',
 ];
 const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 

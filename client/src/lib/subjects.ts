@@ -12,8 +12,8 @@ import type { CategoryType, RoadmapTopic } from '../types/quiz';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 
-export type SubjectId = 'webdev' | 'geography' | 'math' | 'history' | 'chess';
-export const SUBJECT_ORDER: SubjectId[] = ['webdev', 'geography', 'math', 'history', 'chess'];
+export type SubjectId = 'webdev' | 'geography' | 'math' | 'history' | 'chess' | 'biology';
+export const SUBJECT_ORDER: SubjectId[] = ['webdev', 'geography', 'math', 'history', 'chess', 'biology'];
 
 export interface SubjectDef {
   id: SubjectId;
@@ -92,6 +92,16 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
     accentBright: '#c8935f',
     topics: ['rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations'],
     categories: ['rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations'],
+  },
+  biology: {
+    id: 'biology',
+    label: 'Human Biology',
+    blurb: 'The human body from cells to systems — anatomy and physiology, level by level.',
+    emoji: '🧬',
+    accent: '#0d9488',
+    accentBright: '#2dd4bf',
+    topics: ['cell-biology', 'skeletal-system', 'muscular-system', 'nervous-system', 'endocrine-system', 'cardiovascular-system', 'respiratory-system', 'digestive-system', 'immune-system', 'reproductive-system'],
+    categories: ['cell-biology', 'skeletal-system', 'muscular-system', 'nervous-system', 'endocrine-system', 'cardiovascular-system', 'respiratory-system', 'digestive-system', 'immune-system', 'reproductive-system'],
   },
 };
 
