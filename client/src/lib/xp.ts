@@ -13,11 +13,10 @@ import { useRoadmapProgress, getRoadmapProgress, getCachedAccessTokenForBeacon }
 import {
   computeLearningXp,
   levelForXp,
-  displayTitle,
   PRACTICE_XP,
   type LevelInfo,
 } from './leveling';
-import { specializationForTrack, getTrack } from './tracks';
+import { rankLabelFor, getTrack } from './tracks';
 import { awardTokens, tokensFromXp } from './tokens';
 import { consumeDoubleXpCharge } from './shop';
 
@@ -90,7 +89,7 @@ function reconcileRank(announce: boolean): LevelInfo {
   if (info.level > seen) {
     writeJSON(RANK_SEEN_KEY, info.level);
     if (announce) {
-      const title = displayTitle(info.rank.title, specializationForTrack(getTrack()));
+      const title = rankLabelFor(info.rank, getTrack()).title;
       emitToast({ kind: 'rankup', title, level: info.level });
     }
   } else if (info.level < seen) {

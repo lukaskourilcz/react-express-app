@@ -14,6 +14,7 @@
 // from the learner's chosen track (set in their profile).
 
 import type { RoadmapProgress } from './roadmap';
+import type { SubjectId } from './subjects';
 
 /* ──── XP economy ───────────────────────────────────────────────────────── */
 
@@ -107,6 +108,73 @@ const RANK_META: ReadonlyArray<{ title: string; emoji: string }> = [
 
 /** Rank titles in order — used to label the dev configuration UI. */
 export const RANK_TITLES: string[] = RANK_META.map((r) => r.title);
+
+// Per-subject rank ladders, index-aligned with RANK_META (same 10 XP tiers,
+// subject-appropriate titles + emojis). Web Dev keeps RANK_META and composes
+// the track specialization on top; every other subject uses its own complete
+// titles (no specialization). See rankLabelFor() in tracks.ts.
+const SUBJECT_RANK_LADDER: Record<SubjectId, ReadonlyArray<{ title: string; emoji: string }>> = {
+  webdev: RANK_META,
+  geography: [
+    { title: 'Wanderer', emoji: '🌱' },
+    { title: 'Junior Explorer', emoji: '🧭' },
+    { title: 'Explorer', emoji: '🗺️' },
+    { title: 'Navigator', emoji: '⛰️' },
+    { title: 'Cartographer', emoji: '🌍' },
+    { title: 'Senior Geographer', emoji: '🚩' },
+    { title: 'Regional Expert', emoji: '🏔️' },
+    { title: 'Continental Scholar', emoji: '🌐' },
+    { title: 'World Authority', emoji: '🏅' },
+    { title: 'Master Geographer', emoji: '🌟' },
+  ],
+  math: [
+    { title: 'Counter', emoji: '🌱' },
+    { title: 'Junior Mathematician', emoji: '➕' },
+    { title: 'Student Mathematician', emoji: '➗' },
+    { title: 'Mathematician', emoji: '📐' },
+    { title: 'Problem Solver', emoji: '📊' },
+    { title: 'Senior Mathematician', emoji: '🚀' },
+    { title: 'Analyst', emoji: '🔢' },
+    { title: 'Theorist', emoji: '🧮' },
+    { title: 'Distinguished Mathematician', emoji: '🏅' },
+    { title: 'Master Mathematician', emoji: '🧠' },
+  ],
+  history: [
+    { title: 'Novice', emoji: '🌱' },
+    { title: 'Junior Historian', emoji: '📜' },
+    { title: 'Student of History', emoji: '🏺' },
+    { title: 'Historian', emoji: '📖' },
+    { title: 'Chronicler', emoji: '🏛️' },
+    { title: 'Senior Historian', emoji: '🚀' },
+    { title: 'Scholar', emoji: '🎓' },
+    { title: 'Distinguished Historian', emoji: '📚' },
+    { title: 'Master Historian', emoji: '🏅' },
+    { title: 'Sage', emoji: '🦉' },
+  ],
+  chess: [
+    { title: 'Beginner', emoji: '🌱' },
+    { title: 'Novice', emoji: '♟️' },
+    { title: 'Casual Player', emoji: '♙' },
+    { title: 'Club Player', emoji: '♞' },
+    { title: 'Intermediate', emoji: '♝' },
+    { title: 'Advanced', emoji: '♜' },
+    { title: 'Expert', emoji: '♛' },
+    { title: 'Candidate Master', emoji: '🎖️' },
+    { title: 'Master', emoji: '🏅' },
+    { title: 'Grandmaster', emoji: '👑' },
+  ],
+};
+
+/**
+ * The subject-appropriate label ({title, emoji}) for a rank index. Falls back
+ * to the Web Dev ladder for an out-of-range index. Track specialization (for
+ * Web Dev) is composed separately by rankLabelFor() in tracks.ts.
+ */
+export function subjectRankLabel(subjectId: SubjectId, index: number): { title: string; emoji: string } {
+  const ladder = SUBJECT_RANK_LADDER[subjectId] ?? RANK_META;
+  const entry = ladder[index] ?? RANK_META[index] ?? RANK_META[0];
+  return { title: entry.title, emoji: entry.emoji };
+}
 
 export const MAX_RANK = RANK_META.length;
 

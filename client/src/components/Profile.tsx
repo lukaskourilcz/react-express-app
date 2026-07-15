@@ -24,10 +24,10 @@ import {
   unlockExtraTopics,
   pushProgressToServer,
 } from '../lib/roadmap';
-import { useTrack, trackStarterTopics, specializationForTrack, tracksForActiveSubject, TRACK_ORDER, type Track } from '../lib/tracks';
+import { useTrack, trackStarterTopics, rankLabelFor, tracksForActiveSubject, TRACK_ORDER, type Track } from '../lib/tracks';
 import { getCategoryHexColor, getCategoryLabel, onCategoryColorText } from '../lib/categories';
 import { useQuestXp, syncXpWithServer } from '../lib/xp';
-import { computeLearningXp, levelForXp, displayTitle, MAX_RANK } from '../lib/leveling';
+import { computeLearningXp, levelForXp, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { friendlyError } from '../lib/api';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
@@ -340,9 +340,10 @@ function CareerCard() {
   const learningXp = computeLearningXp(progress);
   const totalXp = learningXp + questXp;
   const info = levelForXp(totalXp);
-  const spec = specializationForTrack(track);
-  const title = displayTitle(info.rank.title, spec);
-  const nextTitle = info.next ? displayTitle(info.next.title, spec) : null;
+  // Subject-aware rank label ("Junior Full-Stack Developer" for Web Dev,
+  // "Junior Explorer" for Geography, "Club Player" for Chess, …).
+  const { title, emoji } = rankLabelFor(info.rank, track);
+  const nextTitle = info.next ? rankLabelFor(info.next, track).title : null;
   const nf = (n: number) => n.toLocaleString();
 
   return (
@@ -353,7 +354,7 @@ function CareerCard() {
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <Box sx={{ fontSize: { xs: 36, sm: 44 }, lineHeight: 1, flexShrink: 0 }} aria-hidden>
-          {info.rank.emoji}
+          {emoji}
         </Box>
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
