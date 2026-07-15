@@ -1,5 +1,6 @@
 import { apiFetch } from './api';
 import type { Question } from '../types/quiz';
+import { getSubject, categoriesForSubject } from './subjects';
 
 // Biggest Shark Challenge client. All resources live on one Vercel function
 // (to stay within the 12-function Hobby limit), differentiated by method +
@@ -33,6 +34,9 @@ export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string } 
     params.set('exclude', opts.exclude.slice(0, 400).join(','));
   }
   if (opts.lang) params.set('lang', opts.lang);
+  // Scope the challenge mix to the active subject so a Geography challenge never
+  // surfaces a Chess question.
+  params.set('categories', categoriesForSubject(getSubject()).join(','));
   const qs = params.toString();
   return apiFetch<ChallengeBatch>(`/api/quiz/challenge${qs ? `?${qs}` : ''}`);
 }

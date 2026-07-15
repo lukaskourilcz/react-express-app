@@ -28,11 +28,11 @@ import {
 } from '../lib/roadmap';
 import { getCategoryLabel } from '../lib/categories';
 import { useAuth, getUserProfile } from '../lib/auth';
-import { BRAND, brandButtonSx } from '../theme/MuiTheme';
+import { brandButtonSx } from '../theme/MuiTheme';
 
 const TokenIcon = () => (
   <svg aria-hidden="true" focusable="false" width="24" height="24" viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="12" r="10" fill={BRAND.green} />
+    <circle cx="12" cy="12" r="10" fill={'var(--brand-accent)'} />
     <circle cx="12" cy="12" r="7" fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.4" />
     <text
       x="12"
@@ -89,7 +89,7 @@ function Shop() {
   return (
     <Stack spacing={3}>
       <Stack spacing={1}>
-        <Typography variant="overline" sx={{ color: BRAND.green, letterSpacing: '0.8px' }}>
+        <Typography variant="overline" sx={{ color: 'var(--brand-accent)', letterSpacing: '0.8px' }}>
           {t('shop.kicker')}
         </Typography>
         <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>
@@ -110,14 +110,14 @@ function Shop() {
               <Typography variant="caption" sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.6px' }}>
                 {t('shop.balanceLabel')}
               </Typography>
-              <Typography variant="h5" sx={{ fontWeight: 700, color: BRAND.green }}>
+              <Typography variant="h5" sx={{ fontWeight: 700, color: 'var(--brand-accent)' }}>
                 {tokens.toLocaleString()} {t('shop.tokensUnit')}
               </Typography>
             </Stack>
             <Chip
               label={t('shop.earnRate')}
               size="small"
-              sx={{ backgroundColor: BRAND.greenSoft, color: BRAND.green, fontWeight: 600 }}
+              sx={{ backgroundColor: 'var(--brand-accent-soft)', color: 'var(--brand-accent)', fontWeight: 600 }}
             />
           </Stack>
         </CardContent>
@@ -170,7 +170,7 @@ function Shop() {
             severity={toast.ok ? 'success' : 'warning'}
             variant="filled"
             onClose={() => setToast(null)}
-            sx={toast.ok ? { backgroundColor: BRAND.green } : undefined}
+            sx={toast.ok ? { backgroundColor: 'var(--brand-accent)' } : undefined}
           >
             {toast.msg}
           </Alert>
@@ -224,12 +224,12 @@ function ProductCard({ product, price, owned, equipped, charges, canAfford, onBu
           <Chip
             size="small"
             label={`${price.toLocaleString()} ${t('shop.tokensUnit')}`}
-            sx={{ backgroundColor: BRAND.greenSoft, color: BRAND.green, fontWeight: 700 }}
+            sx={{ backgroundColor: 'var(--brand-accent-soft)', color: 'var(--brand-accent)', fontWeight: 700 }}
           />
           {isBooster ? (
             <Stack direction="row" spacing={1} alignItems="center">
               {charges > 0 && (
-                <Typography variant="caption" sx={{ color: BRAND.green, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                <Typography variant="caption" sx={{ color: 'var(--brand-accent)', fontWeight: 700, whiteSpace: 'nowrap' }}>
                   {t('shop.armed', { count: charges })}
                 </Typography>
               )}
@@ -239,7 +239,7 @@ function ProductCard({ product, price, owned, equipped, charges, canAfford, onBu
             </Stack>
           ) : isPath ? (
             owned ? (
-              <Chip size="small" label={t('shop.pathUnlocked')} sx={{ backgroundColor: BRAND.greenSoft, color: BRAND.green, fontWeight: 700 }} />
+              <Chip size="small" label={t('shop.pathUnlocked')} sx={{ backgroundColor: 'var(--brand-accent-soft)', color: 'var(--brand-accent)', fontWeight: 700 }} />
             ) : (
               <Button size="small" variant="contained" disabled={!canAfford} onClick={onBuy} sx={brandButtonSx}>
                 {t('shop.unlockPath')}
@@ -250,7 +250,7 @@ function ProductCard({ product, price, owned, equipped, charges, canAfford, onBu
               size="small"
               variant={equipped ? 'contained' : 'outlined'}
               onClick={onEquip}
-              sx={equipped ? brandButtonSx : { color: BRAND.green, borderColor: BRAND.green, textTransform: 'none' }}
+              sx={equipped ? brandButtonSx : { color: 'var(--brand-accent)', borderColor: 'var(--brand-accent)', textTransform: 'none' }}
             >
               {equipped ? t('shop.equipped') : t('shop.equip')}
             </Button>

@@ -24,13 +24,12 @@ import {
   unlockExtraTopics,
   pushProgressToServer,
 } from '../lib/roadmap';
-import { useTrack, trackStarterTopics, specializationForTrack, TRACKS, TRACK_ORDER, type Track } from '../lib/tracks';
+import { useTrack, trackStarterTopics, specializationForTrack, tracksForActiveSubject, TRACK_ORDER, type Track } from '../lib/tracks';
 import { getCategoryHexColor, getCategoryLabel, onCategoryColorText } from '../lib/categories';
 import { useQuestXp, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp, levelForXp, displayTitle, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { friendlyError } from '../lib/api';
-import { BRAND } from '../theme/MuiTheme';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
 import { computeAchievements, readPerfectQuizCount, type Achievement } from '../lib/achievements';
 import { renderQuestion } from './CodeBlock';
@@ -138,7 +137,7 @@ function ProfileBody({
     <Box sx={{ maxWidth: { xs: 500, md: 1160 }, mx: 'auto' }}>
       <Paper
         elevation={0}
-        sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderTop: `4px solid ${BRAND.green}`, borderRadius: 2 }}
+        sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderTop: `4px solid var(--brand-accent)`, borderRadius: 2 }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
           <Avatar
@@ -205,7 +204,7 @@ function ProfileBody({
               <Divider orientation="vertical" flexItem />
 
               <Box sx={{ flex: 1, textAlign: 'center' }}>
-                <Typography variant="h3" sx={{ fontWeight: 700, color: BRAND.green, lineHeight: 1, fontSize: { xs: '2.25rem', sm: '3rem' } }}>
+                <Typography variant="h3" sx={{ fontWeight: 700, color: 'var(--brand-accent)', lineHeight: 1, fontSize: { xs: '2.25rem', sm: '3rem' } }}>
                   {stats?.longest_streak || 0}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -365,7 +364,7 @@ function CareerCard() {
           </Typography>
         </Box>
         <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: BRAND.green, lineHeight: 1 }}>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: 'var(--brand-accent)', lineHeight: 1 }}>
             {nf(totalXp)}
           </Typography>
           <Typography variant="caption" color="text.secondary">
@@ -379,7 +378,7 @@ function CareerCard() {
           variant="determinate"
           value={info.progressPct}
           aria-label={info.isMax ? t('profile.maxRank') : t('profile.xpToNext', { xp: info.xpToNext, title: nextTitle ?? '' })}
-          sx={{ height: 10, borderRadius: 5, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: BRAND.green, transition: 'transform 0.5s ease' } }}
+          sx={{ height: 10, borderRadius: 5, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: 'var(--brand-accent)', transition: 'transform 0.5s ease' } }}
         />
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mt: 0.75, gap: 1 }}>
           <Typography variant="caption" color="text.secondary">
@@ -417,7 +416,7 @@ function LearningTrackCard() {
     unlockExtraTopics(trackStarterTopics(target));
     // Best-effort: persist the new unlocks to the account.
     pushProgressToServer().catch(() => {});
-    setSnack(t('profile.trackSet', { label: TRACKS[target].label }));
+    setSnack(t('profile.trackSet', { label: tracksForActiveSubject()[target].label }));
   };
 
   return (
@@ -443,16 +442,16 @@ function LearningTrackCard() {
             fontWeight: 700,
             textTransform: 'none',
             '&.Mui-selected': {
-              backgroundColor: BRAND.green,
+              backgroundColor: 'var(--brand-accent)',
               color: '#fff',
-              '&:hover': { backgroundColor: BRAND.greenHover },
+              '&:hover': { backgroundColor: 'var(--brand-accent-hover)' },
             },
           },
         }}
       >
         {TRACK_ORDER.map((tk) => (
           <ToggleButton key={tk} value={tk}>
-            {TRACKS[tk].label}
+            {tracksForActiveSubject()[tk].label}
           </ToggleButton>
         ))}
       </ToggleButtonGroup>
@@ -588,7 +587,7 @@ function AchievementBadge({ achievement }: { achievement: Achievement }) {
   const { id, earned } = achievement;
   const label = t(`achievement.${id}.label` as TranslationKey);
   const description = t(`achievement.${id}.description` as TranslationKey);
-  const accent = ACHIEVEMENT_ACCENT[id] ?? BRAND.green;
+  const accent = ACHIEVEMENT_ACCENT[id] ?? 'var(--brand-accent)';
 
   return (
     <Box
@@ -633,7 +632,7 @@ function AchievementBadge({ achievement }: { achievement: Achievement }) {
               width: 17,
               height: 17,
               borderRadius: '50%',
-              backgroundColor: BRAND.green,
+              backgroundColor: 'var(--brand-accent)',
               border: '2px solid',
               borderColor: 'background.paper',
               display: 'grid',
@@ -672,14 +671,14 @@ function AchievementsCard({ achievements }: { achievements: Achievement[] }) {
         <Typography variant="overline" color="text.secondary" component="h2">
           {t('profile.achievements', { earned: earnedCount, total: achievements.length })}
         </Typography>
-        <Typography variant="caption" sx={{ fontWeight: 800, color: BRAND.green }}>
+        <Typography variant="caption" sx={{ fontWeight: 800, color: 'var(--brand-accent)' }}>
           {pct}%
         </Typography>
       </Box>
       <LinearProgress
         variant="determinate"
         value={pct}
-        sx={{ height: 6, borderRadius: 3, mb: 2, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 3, backgroundColor: BRAND.green } }}
+        sx={{ height: 6, borderRadius: 3, mb: 2, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 3, backgroundColor: 'var(--brand-accent)' } }}
       />
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.25 }}>
         {achievements.map((a) => (

@@ -27,7 +27,7 @@ export const CHECKPOINT_COUNT = ROADMAP_LEVELS / LEVELS_PER_CHECKPOINT;
  * Prereqs are intentionally a shallow graph so the path from zero → hero stays
  * obvious: master JS basics, then HTML+CSS for React, then specialise.
  */
-export const STARTER_TOPICS: RoadmapTopic[] = ['html', 'css', 'javascript'];
+export const STARTER_TOPICS: RoadmapTopic[] = ['html', 'css', 'javascript', 'continents', 'capitals', 'flags', 'arithmetic', 'fractions', 'prealgebra', 'prehistory', 'ancient', 'classical', 'rules', 'pieces', 'notation'];
 
 // Levels of each prereq topic that must be passed before a topic unlocks.
 // 5 = "first checkpoint cleared" — the natural milestone in each path.
@@ -60,6 +60,64 @@ export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
   databases: ['nodejs'],
   'system-design': ['nodejs'],
   devops: ['nodejs'],
+  // Geography
+  // Starters: no prereqs, always open.
+  continents: [],
+  capitals: [],
+  flags: [],
+  // Tier 2 — physical geography builds on knowing the continents & oceans.
+  landforms: ['continents'],
+  climate: ['continents'],
+  cartography: ['continents'],
+  // Tier 2 — human geography builds on knowing the countries & capitals.
+  population: ['capitals'],
+  political: ['capitals'],
+  // Tier 3 — the deeper syntheses.
+  economic: ['population'],
+  earth: ['landforms'],
+  // Math
+  // Starters: no prereqs, always open.
+  arithmetic: [],
+  fractions: [],
+  prealgebra: [],
+  // Tier 2 — builds on the number sense from arithmetic/fractions/pre-algebra.
+  algebra: ['prealgebra'],
+  geometry: ['prealgebra'],
+  statistics: ['fractions'],
+  // Tier 3 — high-school math that leans on algebra & geometry.
+  trigonometry: ['geometry', 'algebra'],
+  precalculus: ['algebra'],
+  // Tier 4 — higher math.
+  calculus: ['precalculus', 'trigonometry'],
+  'linear-algebra': ['algebra'],
+  // History
+  // Starters: no prereqs, always open (the earliest three eras).
+  prehistory: [],
+  ancient: [],
+  classical: [],
+  // Each later era unlocks once the previous one has cleared its first checkpoint.
+  medieval: ['classical'],
+  renaissance: ['medieval'],
+  earlymodern: ['renaissance'],
+  industrial: ['earlymodern'],
+  worldwars: ['industrial'],
+  coldwar: ['worldwars'],
+  modern: ['coldwar'],
+  // Chess
+  // Starters: no prereqs, always open.
+  rules: [],
+  pieces: [],
+  notation: [],
+  // Tier 2 — build directly on knowing how the pieces move.
+  specialmoves: ['pieces'],
+  checkmate: ['pieces'],
+  // Tier 3 — the competitive skills, once you can deliver mate.
+  openings: ['pieces', 'checkmate'],
+  tactics: ['pieces', 'checkmate'],
+  endgames: ['checkmate'],
+  // Tier 4 — the deepest topics.
+  strategy: ['openings', 'tactics'],
+  combinations: ['tactics'],
 };
 
 // Unlock tiers granted by the skill-check assessment. Each correct-answer band

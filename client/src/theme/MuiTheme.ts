@@ -2,7 +2,7 @@ import { createTheme, responsiveFontSizes, type ThemeOptions } from '@mui/materi
 import type { PaletteMode } from '@mui/material';
 
 /**
- * devShark palette — one source of truth for every accent in the app.
+ * StudyShark palette — one source of truth for every accent in the app.
  *
  *   green   #2d7a2d  brand / primary actions / success moments ("shark green")
  *   ocean   #0e7490  informational accents, links, water flourishes
@@ -29,8 +29,8 @@ export const BRAND = {
 // The brand-green filled-button look (background + hover). Spread into a
 // component's `sx` so the colour pair isn't repeated at every call site.
 export const brandButtonSx = {
-  backgroundColor: BRAND.green,
-  '&:hover': { backgroundColor: BRAND.greenHover },
+  backgroundColor: 'var(--brand-accent)',
+  '&:hover': { backgroundColor: 'var(--brand-accent-hover)' },
 };
 
 // Visually hide an element while keeping it available to screen readers.
@@ -40,16 +40,27 @@ export const visuallyHidden = { position: 'absolute', left: -9999 } as const;
 export const CATEGORY_GRADIENT =
   'linear-gradient(90deg, #e34c26, #264de4, #f7df1e, #3178c6, #61dafb, #339933, #f05032, #8b5cf6, #06b6d4, #ec4899)';
 
-const baseOptions = (mode: PaletteMode): ThemeOptions => ({
+// The active subject's accent, so every default MUI control (focus rings,
+// progress bars, contained buttons, switches) recolours per subject without a
+// per-call-site override. Defaults to the umbrella StudyShark green (Web Dev).
+export interface Accent {
+  main: string;
+  bright: string;
+  hover: string;
+}
+export const DEFAULT_ACCENT: Accent = {
+  main: BRAND.green,
+  bright: BRAND.greenBright,
+  hover: BRAND.greenHover,
+};
+
+const baseOptions = (mode: PaletteMode, accent: Accent): ThemeOptions => ({
   palette: {
     mode,
-    // Brand green is the primary so every default MUI control (focus rings,
-    // progress bars, contained buttons, switches) inherits it without a
-    // per-call-site override.
     primary: {
-      main: mode === 'light' ? BRAND.green : BRAND.greenBright,
-      light: BRAND.greenBright,
-      dark: BRAND.greenHover,
+      main: mode === 'light' ? accent.main : accent.bright,
+      light: accent.bright,
+      dark: accent.hover,
       contrastText: '#ffffff',
     },
     secondary: {
@@ -111,7 +122,7 @@ const baseOptions = (mode: PaletteMode): ThemeOptions => ({
           padding: '8px 16px',
           boxShadow: 'none',
           '&:focus-visible': {
-            outline: `2px solid ${BRAND.green}`,
+            outline: `2px solid var(--brand-accent)`,
             outlineOffset: '2px',
           },
         },
@@ -121,7 +132,7 @@ const baseOptions = (mode: PaletteMode): ThemeOptions => ({
       styleOverrides: {
         root: {
           '&:focus-visible': {
-            outline: `2px solid ${BRAND.green}`,
+            outline: `2px solid var(--brand-accent)`,
             outlineOffset: '2px',
           },
         },
@@ -147,7 +158,7 @@ const baseOptions = (mode: PaletteMode): ThemeOptions => ({
           padding: '4px',
           color: mode === 'light' ? '#bdbdbd' : '#6b6b6b',
           '& .MuiSvgIcon-root': { fontSize: '1.1rem' },
-          '&.Mui-checked': { color: BRAND.green },
+          '&.Mui-checked': { color: 'var(--brand-accent)' },
         },
       },
     },
@@ -173,12 +184,12 @@ const baseOptions = (mode: PaletteMode): ThemeOptions => ({
           transition: 'all 0.15s ease',
           minHeight: 44,
           '&:hover': {
-            borderColor: BRAND.green,
+            borderColor: 'var(--brand-accent)',
             backgroundColor: mode === 'light' ? '#fafafa' : '#1f222a',
           },
           '&:focus-within': {
-            borderColor: BRAND.green,
-            boxShadow: `0 0 0 2px ${BRAND.greenSoft}`,
+            borderColor: 'var(--brand-accent)',
+            boxShadow: `0 0 0 2px var(--brand-accent-soft)`,
           },
         },
         label: { fontWeight: 400, fontSize: '0.9rem' },
@@ -190,7 +201,8 @@ const baseOptions = (mode: PaletteMode): ThemeOptions => ({
 // responsiveFontSizes makes all typography variants (h1–h6, body, caption, …)
 // scale down on smaller breakpoints, so headings/text are noticeably smaller on
 // phones and grow toward their full size on larger screens.
-export const createAppTheme = (mode: PaletteMode) => responsiveFontSizes(createTheme(baseOptions(mode)));
+export const createAppTheme = (mode: PaletteMode, accent: Accent = DEFAULT_ACCENT) =>
+  responsiveFontSizes(createTheme(baseOptions(mode, accent)));
 
 export const theme = createAppTheme('light');
 
@@ -228,10 +240,10 @@ export const quizStyles = {
     color: 'text.secondary',
     border: '1px solid',
     borderColor: 'divider',
-    '&:hover': { borderColor: BRAND.green, color: BRAND.green },
+    '&:hover': { borderColor: 'var(--brand-accent)', color: 'var(--brand-accent)' },
   },
   optionSelected: {
-    borderColor: BRAND.green,
-    backgroundColor: BRAND.greenSoft,
+    borderColor: 'var(--brand-accent)',
+    backgroundColor: 'var(--brand-accent-soft)',
   },
 };

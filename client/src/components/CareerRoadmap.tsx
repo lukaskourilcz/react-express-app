@@ -1,13 +1,13 @@
 // "Roadmap" — an honest, market-grounded picture of what it takes to become a
 // senior full-stack engineer, wired to the learner's actual progress on the
-// devShark learning path. It deliberately separates "what devShark can teach
+// StudyShark learning path. It deliberately separates "what StudyShark can teach
 // you" (the four knowledge pillars, with live completion %) from "what only the
 // real world can" (the Beyond list) so the page never over-promises.
 
 import { useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Paper, Typography, LinearProgress, Chip, Button, Divider, Alert, ToggleButton, ToggleButtonGroup } from '@mui/material';
-import { BRAND, brandButtonSx } from '../theme/MuiTheme';
+import { brandButtonSx } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import {
@@ -16,69 +16,70 @@ import {
   syncProgressWithServer,
 } from '../lib/roadmap';
 import { useRoadmapStructure } from '../lib/queries';
-import { useTrack, isTopicInTrack, specializationForTrack, TRACKS, TRACK_ORDER } from '../lib/tracks';
-import { getCategoryHexColor } from '../lib/categories';
+import { useTrack, isTopicInTrack, specializationForTrack, useActiveTracks, TOPIC_DETAIL, TRACK_ORDER, tracksForSubject } from '../lib/tracks';
+import { getCategoryHexColor, getCategoryLabel } from '../lib/categories';
+import { useSubject, useActiveSubject, type SubjectId } from '../lib/subjects';
 import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
 import { levelForXp, displayTitle, getCareerRanks } from '../lib/leveling';
 import RoadmapTree from './RoadmapTree';
 
+type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
+
 interface Area {
   topic: RoadmapTopic;
-  labelKey: TranslationKey;
-  blurbKey: TranslationKey;
+  label: string;
+  blurb: string;
 }
 interface Pillar {
   id: string;
-  titleKey: TranslationKey;
-  introKey: TranslationKey;
+  title: string;
+  intro: string;
   areas: Area[];
 }
 
-// Helper: each area maps 1:1 to a learning-path topic, and its label/blurb
-// live in the translation dictionaries under careerRoadmap.area.<topic>.*.
-function area(topic: RoadmapTopic): Area {
-  return {
+// Web Dev keeps its curated, market-framed pillars (copy in careerRoadmap.*).
+function webdevPillars(t: TFn): Pillar[] {
+  const area = (topic: RoadmapTopic): Area => ({
     topic,
-    labelKey: `careerRoadmap.area.${topic}.label` as TranslationKey,
-    blurbKey: `careerRoadmap.area.${topic}.blurb` as TranslationKey,
-  };
+    label: t(`careerRoadmap.area.${topic}.label` as TranslationKey),
+    blurb: t(`careerRoadmap.area.${topic}.blurb` as TranslationKey),
+  });
+  const p = (id: string, areas: Area[]): Pillar => ({
+    id,
+    title: t(`careerRoadmap.pillar.${id}.title` as TranslationKey),
+    intro: t(`careerRoadmap.pillar.${id}.intro` as TranslationKey),
+    areas,
+  });
+  return [
+    p('foundations', [area('html'), area('css'), area('javascript'), area('typescript')]),
+    p('frameworks', [area('react'), area('nextjs'), area('rhf-zod')]),
+    p('backend', [area('nodejs'), area('general'), area('internet')]),
+    p('cs', [area('dsa'), area('algorithms')]),
+    p('production', [area('databases'), area('system-design'), area('testing'), area('devops'), area('security')]),
+  ];
 }
 
-// The knowledge devShark actually covers, grouped the way the market thinks
-// about a full-stack engineer. All copy comes from the careerRoadmap.* keys.
-const PILLARS: Pillar[] = [
-  {
-    id: 'foundations',
-    titleKey: 'careerRoadmap.pillar.foundations.title',
-    introKey: 'careerRoadmap.pillar.foundations.intro',
-    areas: [area('html'), area('css'), area('javascript'), area('typescript')],
-  },
-  {
-    id: 'frameworks',
-    titleKey: 'careerRoadmap.pillar.frameworks.title',
-    introKey: 'careerRoadmap.pillar.frameworks.intro',
-    areas: [area('react'), area('nextjs'), area('rhf-zod')],
-  },
-  {
-    id: 'backend',
-    titleKey: 'careerRoadmap.pillar.backend.title',
-    introKey: 'careerRoadmap.pillar.backend.intro',
-    areas: [area('nodejs'), area('general'), area('internet')],
-  },
-  {
-    id: 'cs',
-    titleKey: 'careerRoadmap.pillar.cs.title',
-    introKey: 'careerRoadmap.pillar.cs.intro',
-    areas: [area('dsa'), area('algorithms')],
-  },
-  {
-    id: 'production',
-    titleKey: 'careerRoadmap.pillar.production.title',
-    introKey: 'careerRoadmap.pillar.production.intro',
-    areas: [area('databases'), area('system-design'), area('testing'), area('devops'), area('security')],
-  },
-];
+// Every other subject derives its pillars from its "fullstack" track: each
+// stage becomes a pillar, each topic an area, labelled from the shared category
+// / topic-detail metadata — no per-subject translation keys required.
+function derivedPillars(subject: SubjectId): Pillar[] {
+  const full = tracksForSubject(subject).fullstack;
+  return full.stages.map((stage, i) => ({
+    id: `stage-${i}`,
+    title: stage.title,
+    intro: '',
+    areas: stage.topics.map((topic) => ({
+      topic,
+      label: getCategoryLabel(topic),
+      blurb: TOPIC_DETAIL[topic] ?? '',
+    })),
+  }));
+}
+
+function buildPillars(subject: SubjectId, t: TFn): Pillar[] {
+  return subject === 'webdev' ? webdevPillars(t) : derivedPillars(subject);
+}
 
 // The honest part: things a quiz app genuinely cannot give you. Seniority is
 // mostly this list plus years of shipping.
@@ -102,6 +103,18 @@ export default function CareerRoadmap() {
   const structure = useRoadmapStructure().data ?? null;
   // The chosen track drives this whole page — map, pillars and headline %.
   const [track, setTrack] = useTrack();
+  // Subject scopes the tracks, pillars and (web-dev-only) career framing.
+  const [subject] = useSubject();
+  const tracks = useActiveTracks();
+  const isWebdev = subject === 'webdev';
+  const sdef = useActiveSubject();
+  const pillars = useMemo(() => buildPillars(subject, t), [subject, t]);
+
+  // Header copy: Web Dev keeps its curated career framing; other subjects get a
+  // clean, subject-branded header (the fullstack track blurb is the pitch).
+  const kicker = isWebdev ? t('roadmapPage.kicker') : `${sdef.label} roadmap`;
+  const pageTitle = isWebdev ? t('roadmapPage.title') : `Your ${sdef.label} roadmap`;
+  const headerBody = isWebdev ? t('careerRoadmap.headerBody') : tracks.fullstack.blurb;
 
   // Sync account progress so the percentages are accurate even on a fresh device.
   useEffect(() => {
@@ -115,7 +128,7 @@ export default function CareerRoadmap() {
   const overall = useMemo(() => {
     let passed = 0;
     let total = 0;
-    for (const pillar of PILLARS) {
+    for (const pillar of pillars) {
       for (const area of pillar.areas) {
         if (!isTopicInTrack(track, area.topic)) continue;
         total += levelsFor(area.topic);
@@ -123,7 +136,7 @@ export default function CareerRoadmap() {
       }
     }
     return { passed, total, pct: pct(passed, total) };
-  }, [progress, structure, track]);
+  }, [progress, structure, track, pillars]);
 
   const info = levelForXp(totalXp);
   const spec = specializationForTrack(track);
@@ -135,23 +148,25 @@ export default function CareerRoadmap() {
   return (
     <Box sx={{ maxWidth: 760, mx: 'auto' }}>
       <Box sx={{ mb: 3 }}>
-        <Typography variant="overline" sx={{ color: BRAND.green, letterSpacing: '0.8px' }}>
-          {t('roadmapPage.kicker')}
+        <Typography variant="overline" sx={{ color: 'var(--brand-accent)', letterSpacing: '0.8px' }}>
+          {kicker}
         </Typography>
         <Typography variant="h4" component="h1" sx={{ fontWeight: 800, mb: 1 }}>
-          {t('roadmapPage.title')}
+          {pageTitle}
         </Typography>
         <Typography variant="body1" sx={{ color: 'text.secondary' }}>
-          {t('careerRoadmap.headerBody')}
+          {headerBody}
         </Typography>
       </Box>
 
-      {/* Honesty banner */}
-      <Alert severity="info" icon={false} sx={{ mb: 3, border: '1px solid', borderColor: 'divider' }}>
-        <Typography variant="body2">
-          <strong>{t('careerRoadmap.honestyLead')}</strong> {t('careerRoadmap.honestyBody')}
-        </Typography>
-      </Alert>
+      {/* Honesty banner — the career/seniority framing is Web Dev specific. */}
+      {isWebdev && (
+        <Alert severity="info" icon={false} sx={{ mb: 3, border: '1px solid', borderColor: 'divider' }}>
+          <Typography variant="body2">
+            <strong>{t('careerRoadmap.honestyLead')}</strong> {t('careerRoadmap.honestyBody')}
+          </Typography>
+        </Alert>
+      )}
 
       {/* Track chooser — drives the headline %, the map and the pillars below. */}
       <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, mb: 3 }}>
@@ -176,53 +191,61 @@ export default function CareerRoadmap() {
                 textTransform: 'none',
                 fontWeight: 700,
                 '&.Mui-selected': {
-                  backgroundColor: BRAND.green,
+                  backgroundColor: 'var(--brand-accent)',
                   color: '#fff',
-                  '&:hover': { backgroundColor: BRAND.greenHover },
+                  '&:hover': { backgroundColor: 'var(--brand-accent-hover)' },
                 },
               }}
             >
-              {TRACKS[tk].label}
+              {tracks[tk].label}
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
         <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', maxWidth: 520 }}>
-          {TRACKS[track].blurb}
+          {tracks[track].blurb}
         </Typography>
       </Box>
 
       {/* Where you are now */}
-      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 3, border: '1px solid', borderColor: 'divider', borderTop: `4px solid ${BRAND.green}`, borderRadius: 2 }}>
+      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 3, border: '1px solid', borderColor: 'divider', borderTop: `4px solid var(--brand-accent)`, borderRadius: 2 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, flexWrap: 'wrap' }}>
           <Typography variant="overline" color="text.secondary" component="h2">
             {t('careerRoadmap.progressTitle')}
           </Typography>
-          <Chip size="small" label={TRACKS[track].label} sx={{ fontWeight: 700, backgroundColor: BRAND.greenSoft, color: BRAND.green }} />
+          <Chip size="small" label={tracks[track].label} sx={{ fontWeight: 700, backgroundColor: 'var(--brand-accent-soft)', color: 'var(--brand-accent)' }} />
         </Box>
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5, mt: 1, mb: 1.5, flexWrap: 'wrap' }}>
-          <Typography variant="h3" sx={{ fontWeight: 800, color: BRAND.green, lineHeight: 1 }}>
+          <Typography variant="h3" sx={{ fontWeight: 800, color: 'var(--brand-accent)', lineHeight: 1 }}>
             {overall.pct}%
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {t('careerRoadmap.progressCaption', {
               passed: overall.passed,
               total: overall.total || '…',
-              track: TRACKS[track].label,
+              track: tracks[track].label,
             })}
           </Typography>
         </Box>
         <LinearProgress
           variant="determinate"
           value={overall.pct}
-          sx={{ height: 10, borderRadius: 5, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: BRAND.green } }}
+          sx={{ height: 10, borderRadius: 5, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: 'var(--brand-accent)' } }}
         />
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, flexWrap: 'wrap' }}>
-          <Chip size="small" label={`${info.rank.emoji} ${rankTitle}`} sx={{ fontWeight: 700, backgroundColor: BRAND.greenSoft, color: 'text.primary' }} />
-          <Typography variant="caption" color="text.secondary">
-            {reachedSenior
-              ? t('careerRoadmap.seniorReached')
-              : t('careerRoadmap.xpToSenior', { xp: xpToSenior.toLocaleString() })}
-          </Typography>
+          {isWebdev ? (
+            <>
+              <Chip size="small" label={`${info.rank.emoji} ${rankTitle}`} sx={{ fontWeight: 700, backgroundColor: 'var(--brand-accent-soft)', color: 'text.primary' }} />
+              <Typography variant="caption" color="text.secondary">
+                {reachedSenior
+                  ? t('careerRoadmap.seniorReached')
+                  : t('careerRoadmap.xpToSenior', { xp: xpToSenior.toLocaleString() })}
+              </Typography>
+            </>
+          ) : (
+            // Other subjects use a neutral XP chip — the "senior engineer"
+            // career ranks are Web Dev specific.
+            <Chip size="small" label={`${info.rank.emoji} ${totalXp.toLocaleString()} XP`} sx={{ fontWeight: 700, backgroundColor: 'var(--brand-accent-soft)', color: 'text.primary' }} />
+          )}
         </Box>
       </Paper>
 
@@ -245,7 +268,7 @@ export default function CareerRoadmap() {
           {t('careerRoadmap.continueCta')}
         </Button>
       </Box>
-      {PILLARS.map((pillar) => {
+      {pillars.map((pillar) => {
         const areas = pillar.areas.filter((area) => inTrack(area.topic));
         if (areas.length === 0) return null;
         let pPassed = 0;
@@ -258,10 +281,12 @@ export default function CareerRoadmap() {
         return (
           <Paper key={pillar.id} elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1, flexWrap: 'wrap' }}>
-              <Typography variant="h6" sx={{ fontWeight: 700 }}>{t(pillar.titleKey)}</Typography>
-              <Chip size="small" label={`${pPct}%`} sx={{ fontWeight: 700, backgroundColor: pPct === 100 ? BRAND.green : BRAND.greenSoft, color: pPct === 100 ? '#fff' : BRAND.green }} />
+              <Typography variant="h6" sx={{ fontWeight: 700 }}>{pillar.title}</Typography>
+              <Chip size="small" label={`${pPct}%`} sx={{ fontWeight: 700, backgroundColor: pPct === 100 ? 'var(--brand-accent)' : 'var(--brand-accent-soft)', color: pPct === 100 ? '#fff' : 'var(--brand-accent)' }} />
             </Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{t(pillar.introKey)}</Typography>
+            {pillar.intro && (
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>{pillar.intro}</Typography>
+            )}
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
               {areas.map((area) => {
                 const total = levelsFor(area.topic);
@@ -273,13 +298,15 @@ export default function CareerRoadmap() {
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 1 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0 }}>
                         <Box aria-hidden sx={{ width: 9, height: 9, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
-                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{t(area.labelKey)}</Typography>
+                        <Typography variant="body2" sx={{ fontWeight: 600 }}>{area.label}</Typography>
                       </Box>
                       <Typography variant="caption" color="text.secondary">
                         {total ? t('careerRoadmap.areaLevels', { passed, total }) : '—'}
                       </Typography>
                     </Box>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, pl: 1.75 }}>{t(area.blurbKey)}</Typography>
+                    {area.blurb && (
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5, pl: 1.75 }}>{area.blurb}</Typography>
+                    )}
                     <LinearProgress
                       variant="determinate"
                       value={aPct}
@@ -293,25 +320,27 @@ export default function CareerRoadmap() {
         );
       })}
 
-      {/* The honest gap */}
-      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mt: 3, border: '1px dashed', borderColor: 'warning.main', borderRadius: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('careerRoadmap.beyondTitle')}</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-          {t('careerRoadmap.beyondIntro')}
-        </Typography>
-        <Divider sx={{ mb: 1.5 }} />
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-          {BEYOND.map((b) => (
-            <Box key={b.id} sx={{ display: 'flex', gap: 1 }}>
-              <Box aria-hidden sx={{ color: 'warning.dark', fontWeight: 700 }}>○</Box>
-              <Box>
-                <Typography variant="body2" sx={{ fontWeight: 600 }}>{t(b.labelKey)}</Typography>
-                <Typography variant="caption" color="text.secondary">{t(b.detailKey)}</Typography>
+      {/* The honest gap — Web Dev only (it's about engineering seniority). */}
+      {isWebdev && (
+        <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mt: 3, border: '1px dashed', borderColor: 'warning.main', borderRadius: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700 }}>{t('careerRoadmap.beyondTitle')}</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+            {t('careerRoadmap.beyondIntro')}
+          </Typography>
+          <Divider sx={{ mb: 1.5 }} />
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            {BEYOND.map((b) => (
+              <Box key={b.id} sx={{ display: 'flex', gap: 1 }}>
+                <Box aria-hidden sx={{ color: 'warning.dark', fontWeight: 700 }}>○</Box>
+                <Box>
+                  <Typography variant="body2" sx={{ fontWeight: 600 }}>{t(b.labelKey)}</Typography>
+                  <Typography variant="caption" color="text.secondary">{t(b.detailKey)}</Typography>
+                </Box>
               </Box>
-            </Box>
-          ))}
-        </Box>
-      </Paper>
+            ))}
+          </Box>
+        </Paper>
+      )}
 
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 3 }}>
         {t('careerRoadmap.footer')}

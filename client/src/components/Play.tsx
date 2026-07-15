@@ -35,7 +35,7 @@ import type { CategoryType } from '../types/quiz';
 import { friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader } from './LoadingScreen';
-import { BRAND, brandButtonSx } from '../theme/MuiTheme';
+import { brandButtonSx } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import { useGameConfig } from '../lib/gameConfig';
 
@@ -243,8 +243,8 @@ export function PlayLanding() {
               onClick={() => setCount(n)}
               sx={{
                 minWidth: 44,
-                borderColor: count === n ? BRAND.green : 'divider',
-                color: count === n ? BRAND.green : 'text.secondary',
+                borderColor: count === n ? 'var(--brand-accent)' : 'divider',
+                color: count === n ? 'var(--brand-accent)' : 'text.secondary',
               }}
             >
               {n}
@@ -266,8 +266,8 @@ export function PlayLanding() {
               onClick={() => setDurationS(n)}
               sx={{
                 minWidth: 44,
-                borderColor: durationS === n ? BRAND.green : 'divider',
-                color: durationS === n ? BRAND.green : 'text.secondary',
+                borderColor: durationS === n ? 'var(--brand-accent)' : 'divider',
+                color: durationS === n ? 'var(--brand-accent)' : 'text.secondary',
               }}
             >
               {formatDuration(n, t)}
@@ -649,8 +649,8 @@ function Lobby({
                 width: 28,
                 height: 28,
                 borderRadius: '50%',
-                backgroundColor: BRAND.greenSoft,
-                color: BRAND.green,
+                backgroundColor: 'var(--brand-accent-soft)',
+                color: 'var(--brand-accent)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -806,7 +806,7 @@ function RunningQuestion({
           sx={{
             height: '100%',
             width: `${pctLeft}%`,
-            backgroundColor: remainingS <= 5 ? 'error.main' : BRAND.green,
+            backgroundColor: remainingS <= 5 ? 'error.main' : 'var(--brand-accent)',
             transition: 'width 0.25s linear',
           }}
         />
@@ -829,8 +829,8 @@ function RunningQuestion({
               sx={
                 isCorrect
                   ? {
-                      borderColor: BRAND.green,
-                      backgroundColor: BRAND.greenSoft,
+                      borderColor: 'var(--brand-accent)',
+                      backgroundColor: 'var(--brand-accent-soft)',
                     }
                   : undefined
               }
@@ -909,7 +909,7 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
               backgroundColor: i === 0 ? 'rgba(45,122,45,0.08)' : 'transparent',
             }}
           >
-            <Typography variant="caption" sx={{ width: 24, fontWeight: 700, color: i === 0 ? BRAND.green : 'text.secondary' }}>
+            <Typography variant="caption" sx={{ width: 24, fontWeight: 700, color: i === 0 ? 'var(--brand-accent)' : 'text.secondary' }}>
               {i + 1}
             </Typography>
             <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -980,7 +980,7 @@ function DistributionChart({
             <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <Typography
                 variant="caption"
-                sx={{ width: 18, fontWeight: 700, color: isCorrect ? BRAND.green : 'text.secondary' }}
+                sx={{ width: 18, fontWeight: 700, color: isCorrect ? 'var(--brand-accent)' : 'text.secondary' }}
               >
                 {String.fromCharCode(65 + i)}
               </Typography>
@@ -998,7 +998,7 @@ function DistributionChart({
                   sx={{
                     height: '100%',
                     width: `${pct}%`,
-                    backgroundColor: isCorrect ? BRAND.green : 'rgba(0,0,0,0.25)',
+                    backgroundColor: isCorrect ? 'var(--brand-accent)' : 'rgba(0,0,0,0.25)',
                     transition: 'width 0.4s ease',
                   }}
                 />

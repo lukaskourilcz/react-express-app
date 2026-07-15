@@ -19,13 +19,29 @@ export type RoadmapTopic =
   | 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs'
   | 'html' | 'css' | 'git' | 'dsa' | 'algorithms'
   | 'abbreviations' | 'general' | 'internet' | 'ai' | 'rhf-zod' | 'cool-stuff'
-  | 'databases' | 'system-design' | 'testing' | 'devops' | 'security';
+  | 'databases' | 'system-design' | 'testing' | 'devops' | 'security'
+  // Geography
+  | 'continents' | 'capitals' | 'flags' | 'landforms' | 'climate' | 'population' | 'political' | 'economic' | 'cartography' | 'earth'
+  // Math
+  | 'arithmetic' | 'fractions' | 'prealgebra' | 'algebra' | 'geometry' | 'trigonometry' | 'statistics' | 'precalculus' | 'calculus' | 'linear-algebra'
+  // History
+  | 'prehistory' | 'ancient' | 'classical' | 'medieval' | 'renaissance' | 'earlymodern' | 'industrial' | 'worldwars' | 'coldwar' | 'modern'
+  // Chess
+  | 'rules' | 'pieces' | 'specialmoves' | 'checkmate' | 'notation' | 'openings' | 'tactics' | 'strategy' | 'endgames' | 'combinations';
 
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
   'html', 'css', 'git', 'dsa', 'algorithms',
   'abbreviations', 'general', 'internet', 'ai', 'rhf-zod', 'cool-stuff',
   'databases', 'system-design', 'testing', 'devops', 'security',
+  // Geography
+  'continents', 'capitals', 'flags', 'landforms', 'climate', 'population', 'political', 'economic', 'cartography', 'earth',
+  // Math
+  'arithmetic', 'fractions', 'prealgebra', 'algebra', 'geometry', 'trigonometry', 'statistics', 'precalculus', 'calculus', 'linear-algebra',
+  // History
+  'prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern',
+  // Chess
+  'rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations',
 ];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
@@ -61,6 +77,50 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   testing: 'rm-testing',
   devops: 'rm-devops',
   security: 'rm-security',
+  // Geography
+  continents: 'rm-cont',
+  capitals: 'rm-cap',
+  flags: 'rm-flag',
+  landforms: 'rm-land',
+  climate: 'rm-clim',
+  population: 'rm-pop',
+  political: 'rm-pol',
+  economic: 'rm-econ',
+  cartography: 'rm-carto',
+  earth: 'rm-earth',
+  // Math
+  arithmetic: 'rm-arith',
+  fractions: 'rm-frac',
+  prealgebra: 'rm-prealg',
+  algebra: 'rm-alg',
+  geometry: 'rm-geo',
+  trigonometry: 'rm-trig',
+  statistics: 'rm-stat',
+  precalculus: 'rm-precalc',
+  calculus: 'rm-calc',
+  'linear-algebra': 'rm-linalg',
+  // History
+  prehistory: 'rm-prehist',
+  ancient: 'rm-ancient',
+  classical: 'rm-classic',
+  medieval: 'rm-medieval',
+  renaissance: 'rm-renais',
+  earlymodern: 'rm-earlymod',
+  industrial: 'rm-indust',
+  worldwars: 'rm-wwars',
+  coldwar: 'rm-coldwar',
+  modern: 'rm-modern',
+  // Chess
+  rules: 'rm-rules',
+  pieces: 'rm-piece',
+  specialmoves: 'rm-spec',
+  checkmate: 'rm-mate',
+  notation: 'rm-notat',
+  openings: 'rm-open',
+  tactics: 'rm-tac',
+  strategy: 'rm-strat',
+  endgames: 'rm-end',
+  combinations: 'rm-combo',
 };
 
 // Level titles per topic, in increasing difficulty. Index 0 is level 1. The
@@ -177,6 +237,170 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'Security Fundamentals', 'Authentication', 'Authorization', 'Passwords & Hashing', 'Sessions & Tokens (JWT)',
     'HTTPS & TLS', 'Injection (SQLi)', 'XSS', 'CSRF', 'OWASP Top 10',
     'Secrets Management', 'Secure Defaults & Headers', 'Dependency & Supply Chain', 'Data Protection & Privacy', 'Secure Design & Threat Modeling',
+  ],
+  // Geography
+  continents: [
+    'The Seven Continents', 'The Five Oceans', 'Continent Sizes & Shapes', 'Where Continents Meet', 'Islands & Archipelagos',
+    'Seas, Gulfs & Bays', 'Hemispheres & the Equator', 'Continental Extremes', 'Ocean Depths & Features', 'Continents & Oceans Mastery',
+  ],
+  capitals: [
+    'European Capitals', 'Asian Capitals', 'African Capitals', 'Americas Capitals', 'Oceania & Island Capitals',
+    'Capitals of Large Countries', 'Tricky Capitals', 'Multiple & Former Capitals', 'Capital Cities Deep Dive', 'Capitals Mastery',
+  ],
+  flags: [
+    'Flag Basics', 'Colors & Meanings', 'European Flags', 'Asian & African Flags', 'Americas & Oceania Flags',
+    'Stars, Crosses & Crescents', 'National Symbols & Emblems', 'Similar-Looking Flags', 'Flag History & Change', 'Flags Mastery',
+  ],
+  landforms: [
+    'Mountains & Ranges', 'Rivers', 'Lakes & Inland Seas', 'Deserts', 'Valleys & Canyons',
+    'Plateaus & Plains', 'Coasts & Peninsulas', 'Volcanoes', 'Glaciers & Ice', 'Landforms Mastery',
+  ],
+  climate: [
+    'Weather vs Climate', 'Climate Zones', 'The Water Cycle', 'Rainforests & Jungles', 'Deserts & Drylands',
+    'Grasslands & Savannas', 'Temperate & Boreal Forests', 'Tundra & Polar', 'Extreme Weather & Climate Change', 'Climate & Biomes Mastery',
+  ],
+  population: [
+    'World Population Basics', 'Most Populous Countries', 'Megacities', 'Population Density', 'Urban vs Rural',
+    'Migration & Movement', 'Languages & Peoples', 'Population Growth & Decline', 'Cities of the World', 'Population Mastery',
+  ],
+  political: [
+    'Countries & Sovereignty', 'Borders & Boundaries', 'Landlocked & Coastal States', 'Territories & Dependencies', 'International Organizations',
+    'Capitals & Government Seats', 'Disputed Regions', 'Historical Borders & Change', 'Enclaves & Exclaves', 'Political Geography Mastery',
+  ],
+  economic: [
+    'Natural Resources', 'Agriculture & Farming', 'Energy & Fuels', 'Trade & Shipping', 'Industry & Manufacturing',
+    'Currencies & Economies', 'Tourism & Services', 'Development & Inequality', 'Global Supply Chains', 'Economic Geography Mastery',
+  ],
+  cartography: [
+    'Reading Maps', 'Latitude & Longitude', 'Map Scale & Distance', 'Map Projections', 'Compass & Direction',
+    'Contour Lines & Relief', 'Symbols, Keys & Legends', 'Time Zones', 'GPS & Modern Mapping', 'Cartography Mastery',
+  ],
+  earth: [
+    'Structure of the Earth', 'Plate Tectonics', 'Rocks & Minerals', 'Earthquakes', 'Volcanism',
+    'The Rock Cycle', 'Erosion & Weathering', "Earth's Atmosphere", 'Oceans & the Water System', 'Earth Systems Mastery',
+  ],
+  // Math
+  arithmetic: [
+    'Place Value & Counting', 'Addition', 'Subtraction', 'Multiplication', 'Division',
+    'Order of Operations', 'Factors & Multiples', 'Rounding & Estimation', 'Negative Numbers', 'Word Problems',
+  ],
+  fractions: [
+    'Understanding Fractions', 'Equivalent Fractions', 'Adding & Subtracting Fractions', 'Multiplying & Dividing Fractions', 'Mixed Numbers',
+    'Decimal Basics', 'Decimal Operations', 'Fractions & Decimals', 'Percentages', 'Ratios & Proportions',
+  ],
+  prealgebra: [
+    'Integers', 'Exponents & Powers', 'Square Roots', 'Order of Operations', 'Variables & Expressions',
+    'Simplifying Expressions', 'One-Step Equations', 'Two-Step Equations', 'Inequalities', 'The Coordinate Plane',
+  ],
+  algebra: [
+    'Linear Equations', 'Slope & Lines', 'Systems of Equations', 'Polynomials', 'Factoring',
+    'Quadratic Equations', 'The Quadratic Formula', 'Functions', 'Exponents & Radicals', 'Rational Expressions',
+  ],
+  geometry: [
+    'Points, Lines & Angles', 'Triangles', 'Quadrilaterals & Polygons', 'Circles', 'Perimeter',
+    'Area', 'Volume & Surface Area', 'The Pythagorean Theorem', 'Similarity & Congruence', 'Transformations',
+  ],
+  trigonometry: [
+    'Angles & Radians', 'Right-Triangle Ratios', 'Sine, Cosine & Tangent', 'The Unit Circle', 'Trig of Any Angle',
+    'Graphs of Trig Functions', 'Trig Identities', 'Law of Sines', 'Law of Cosines', 'Solving Trig Equations',
+  ],
+  statistics: [
+    'Data & Its Types', 'Mean, Median & Mode', 'Range & Spread', 'Standard Deviation', 'Data Displays',
+    'Basic Probability', 'Compound Probability', 'Permutations & Combinations', 'Distributions', 'Correlation & Inference',
+  ],
+  precalculus: [
+    'Function Notation', 'Domain & Range', 'Transformations of Functions', 'Composite & Inverse Functions', 'Polynomial & Rational Functions',
+    'Logarithms', 'Exponential & Log Equations', 'Sequences & Series', 'Complex Numbers', 'Introduction to Limits',
+  ],
+  calculus: [
+    'Limits', 'Continuity', 'The Derivative', 'Derivative Rules', 'The Chain Rule',
+    'Applications of Derivatives', 'Optimization', 'The Integral', 'Integration Techniques', 'The Fundamental Theorem',
+  ],
+  'linear-algebra': [
+    'Vectors', 'Vector Operations', 'The Dot Product', 'Matrices', 'Matrix Multiplication',
+    'Determinants', 'Matrix Inverses', 'Systems as Matrices', 'Linear Transformations', 'Eigenvalues & Eigenvectors',
+  ],
+  // History
+  prehistory: [
+    'Human Origins & Evolution', 'The Stone Age (Paleolithic)', 'Fire, Tools & Survival', 'Ice Age & Migration', 'Cave Art & Symbolism',
+    'The Neolithic Revolution', 'Early Agriculture & Domestication', 'First Settlements', 'Megaliths & Monuments', 'The Dawn of Metals',
+  ],
+  ancient: [
+    'The Fertile Crescent', 'Mesopotamia & Sumer', 'Ancient Egypt: Kingdoms', 'Egyptian Society & Religion', 'The Indus Valley',
+    'Ancient China: Early Dynasties', 'Writing & Law Codes', 'Trade & Cities', 'Empires of the Near East', 'Legacy of the Ancients',
+  ],
+  classical: [
+    'Early Greece & the Aegean', 'Greek City-States', 'Athens & Democracy', 'Greek Philosophy & Culture', 'Alexander & the Hellenistic World',
+    'The Roman Republic', 'Roman Expansion & the Punic Wars', 'The Roman Empire', 'Roman Society & Engineering', 'Decline of Rome',
+  ],
+  medieval: [
+    'Fall of Rome & the Early Middle Ages', 'The Byzantine Empire', 'The Rise of Islam', 'Feudalism & Manorialism', 'The Medieval Church',
+    'Charlemagne & the Franks', 'The Crusades', 'Medieval Life & Towns', 'Mongols & Asia', 'Plague & the Late Middle Ages',
+  ],
+  renaissance: [
+    'The Italian Renaissance', 'Renaissance Art & Humanism', 'The Printing Revolution', 'The Reformation', 'The Counter-Reformation',
+    'Age of Exploration Begins', 'New World Encounters', 'Trade Empires & the Columbian Exchange', 'The Scientific Revolution', 'A Changing Worldview',
+  ],
+  earlymodern: [
+    'Absolutism & Monarchy', 'The Enlightenment', 'Rise of Global Empires', 'The English Civil War & Glorious Revolution', 'The American Revolution (1776)',
+    'The French Revolution (1789)', 'Napoleon & His Wars', 'Revolutions in the Americas', 'Nationalism & Reform', 'A New Political Order',
+  ],
+  industrial: [
+    'The Agricultural Revolution', 'Origins of Industrialization', 'Steam, Coal & Iron', 'Factories & Labor', 'Transport & Railways',
+    'Urbanization & Society', 'Capitalism & Socialism', 'The Second Industrial Revolution', 'Imperialism & Colonization', 'Science & Invention',
+  ],
+  worldwars: [
+    'The Road to WWI', 'World War I: The Great War', 'Trench Warfare & Technology', 'The Russian Revolution', 'Treaty of Versailles & Aftermath',
+    'The Interwar Years', 'Rise of Fascism', 'World War II: Outbreak', 'WWII: Global Conflict & the Holocaust', 'The End of WWII',
+  ],
+  coldwar: [
+    'Origins of the Cold War', 'A Divided Europe', 'The Nuclear Arms Race', 'Korea & Proxy Wars', 'Decolonization in Asia & Africa',
+    'The Cuban Missile Crisis', 'The Space Race', 'Vietnam & Détente', 'Upheavals of the 1960s–70s', 'The Fall of the Berlin Wall',
+  ],
+  modern: [
+    'A New World Order', 'Globalization', 'The Digital Revolution', 'Conflict in the Middle East', 'Terrorism & 9/11',
+    'The Rise of China & Asia', 'The European Union', 'Financial Crises', 'Technology & Society', 'The 21st Century World',
+  ],
+  // Chess
+  rules: [
+    'The Chessboard', 'Setting Up the Pieces', 'Light & Dark Squares', 'Ranks, Files & Diagonals', 'The Goal of the Game',
+    'Turns & Touch-Move', 'Capturing Basics', 'Check Basics', 'Illegal Moves & Etiquette', 'Rules Mastery',
+  ],
+  pieces: [
+    'The Pawn', 'The Rook', 'The Bishop', 'The Knight', 'The Queen',
+    'The King', 'Piece Values', 'Captures & Attacks', 'Piece Coordination', 'Movement Mastery',
+  ],
+  specialmoves: [
+    'Kingside Castling', 'Queenside Castling', 'Castling Rules & Restrictions', 'Pawn Promotion', 'Underpromotion',
+    'En Passant Basics', 'En Passant Conditions', 'The Two-Square Pawn Move', 'Combining Special Moves', 'Special Moves Mastery',
+  ],
+  checkmate: [
+    'What Is Check?', 'Getting Out of Check', 'What Is Checkmate?', 'Back-Rank Mate', 'Basic Mating Patterns',
+    'What Is Stalemate?', 'Draws & Repetition', 'Mate vs Stalemate', 'Common Mating Nets', 'Checkmate Mastery',
+  ],
+  notation: [
+    'Naming the Squares', 'Piece Letters', 'Writing a Move', 'Captures in Notation', 'Castling & Special Notation',
+    'Check & Checkmate Symbols', 'Disambiguation', 'Reading a Game Score', 'FEN & Setup Notation', 'Notation Mastery',
+  ],
+  openings: [
+    'Control the Center', 'Develop Your Pieces', 'King Safety & Castling', 'Don’t Move the Same Piece Twice', 'Common First Moves',
+    'Open, Closed & Semi-Open', 'Famous Openings', 'Opening Traps & Blunders', 'Tempo & Development', 'Opening Mastery',
+  ],
+  tactics: [
+    'What Is a Tactic?', 'The Fork', 'The Pin', 'The Skewer', 'Discovered Attacks',
+    'Double Attacks', 'Removing the Defender', 'Trapped Pieces', 'Spotting Tactics', 'Tactics Mastery',
+  ],
+  strategy: [
+    'Pawn Structure Basics', 'Weak & Isolated Pawns', 'Open & Half-Open Files', 'Outposts & Strong Squares', 'Good vs Bad Bishops',
+    'Space & the Center', 'The Two Bishops', 'Weak Squares & Color Complexes', 'Planning & Piece Placement', 'Strategy Mastery',
+  ],
+  endgames: [
+    'King & Pawn vs King', 'The Opposition', 'Promoting a Pawn', 'King & Queen vs King', 'King & Rook vs King',
+    'Rook Endgames Basics', 'The Lucena & Philidor', 'Minor-Piece Endgames', 'King Activity', 'Endgame Mastery',
+  ],
+  combinations: [
+    'What Is a Combination?', 'Sacrifices', 'Deflection', 'Decoy & Attraction', 'Interference & Clearance',
+    'Zwischenzug (In-Between Moves)', 'Mating Combinations', 'Overloading', 'Calculating Combinations', 'Combinations Mastery',
   ],
 };
 

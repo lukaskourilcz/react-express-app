@@ -1,19 +1,20 @@
 // The landing page at "/". Instead of dropping visitors straight into the quiz,
-// it explains what devShark offers and the first thing to do: sign in (so
+// it explains what StudyShark offers and the first thing to do: sign in (so
 // progress is remembered), pick a dev path (Frontend / Backend / Fullstack),
 // then start learning. It also makes clear the whole app is free.
 
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Box, Paper, Typography, Button, Snackbar, Alert, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
-import { BRAND, brandButtonSx } from '../theme/MuiTheme';
+import { brandButtonSx } from '../theme/MuiTheme';
 import { heroMeshFor } from '../theme/meshGradient';
 import { useColorMode } from '../theme/ColorModeContext';
 import { SwimmingFin } from './SharkFin';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
 import { MotionItem } from '../lib/motion';
-import { useTrack, useHasChosenTrack, trackStarterTopics, TRACKS, type Track } from '../lib/tracks';
+import { useTrack, useHasChosenTrack, trackStarterTopics, tracksForActiveSubject, type Track } from '../lib/tracks';
+import { useActiveSubject } from '../lib/subjects';
 import { unlockExtraTopics, pushProgressToServer } from '../lib/roadmap';
 import { savePreferredTrack } from '../lib/trackPref';
 import PathPickerDialog from './PathPickerDialog';
@@ -24,6 +25,12 @@ const CARD_MOTION_STYLE = { display: 'flex', flex: '1 1 220px', minWidth: 220 } 
 
 export default function Home() {
   const t = useT();
+  // The hero adapts to the active subject: Web Dev keeps its curated copy;
+  // other subjects use their registry label/blurb so the shell never assumes
+  // "developer".
+  const subject = useActiveSubject();
+  const heroTitle = subject.id === 'webdev' ? t('home.title') : `Learn ${subject.label}`;
+  const heroSubtitle = subject.id === 'webdev' ? t('home.subtitle') : subject.blurb;
   const { isAuthenticated, signInWithGoogle } = useAuth();
   const { mode } = useColorMode();
   const [track, setTrack] = useTrack();
@@ -52,7 +59,7 @@ export default function Home() {
     unlockExtraTopics(trackStarterTopics(next));
     pushProgressToServer().catch(() => {});
     void savePreferredTrack(next);
-    setSavedSnack(t('home.trackSavedSnack', { label: TRACKS[next].label }));
+    setSavedSnack(t('home.trackSavedSnack', { label: tracksForActiveSubject()[next].label }));
     setPathOpen(false);
   };
 
@@ -81,21 +88,21 @@ export default function Home() {
       >
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mb: { xs: 1, sm: 2 } }}>
           <SwimmingFin size={34} />
-          <Typography variant="overline" sx={{ color: BRAND.green, fontWeight: 800, letterSpacing: 1.5 }}>
-            devShark
+          <Typography variant="overline" sx={{ color: 'var(--brand-accent)', fontWeight: 800, letterSpacing: 1.5 }}>
+            StudyShark
           </Typography>
         </Box>
         <Typography variant="h3" component="h1" sx={{ fontWeight: 900, mb: 1.25, lineHeight: 1.1, fontSize: { xs: '1.85rem', sm: '2.75rem' } }}>
-          {t('home.title')}
+          {heroTitle}
         </Typography>
         <Typography variant="h6" component="p" sx={{ color: 'text.secondary', fontWeight: 400, maxWidth: 680, mx: 'auto', mb: { xs: 2, sm: 2.5 }, fontSize: { xs: '1rem', sm: '1.15rem' } }}>
-          {t('home.subtitle')}
+          {heroSubtitle}
         </Typography>
         <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
           {isAuthenticated ? (
             hasChosenPath ? (
               <Button variant="contained" size="large" component={Link} to="/learn" sx={{ ...brandButtonSx, ...ctaSx }}>
-                {t('home.continueTrack', { track: TRACKS[track].label })}
+                {t('home.continueTrack', { track: tracksForActiveSubject()[track].label })}
               </Button>
             ) : (
               <>
@@ -170,7 +177,7 @@ export default function Home() {
         onClose={() => setSavedSnack(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity="success" variant="filled" onClose={() => setSavedSnack(null)} sx={{ backgroundColor: BRAND.green }}>
+        <Alert severity="success" variant="filled" onClose={() => setSavedSnack(null)} sx={{ backgroundColor: 'var(--brand-accent)' }}>
           {savedSnack}
         </Alert>
       </Snackbar>

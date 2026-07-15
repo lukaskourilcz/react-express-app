@@ -21,9 +21,8 @@ import {
   type PathStatus,
   type RoadmapProgress,
 } from '../lib/roadmap';
-import { TRACKS, TOPIC_DETAIL, type Track } from '../lib/tracks';
+import { tracksForActiveSubject, TOPIC_DETAIL, type Track } from '../lib/tracks';
 import { getCategoryLabel, getCategoryHexColor, onCategoryColorText } from '../lib/categories';
-import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 
@@ -35,7 +34,7 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
   const extraUnlocks = useExtraUnlocks();
   const extraSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
 
-  const def = TRACKS[track];
+  const def = tracksForActiveSubject()[track];
   const levelCountOf = (family: RoadmapTopic): number =>
     structure?.structure?.[family]?.levels.length ?? 0;
 
@@ -66,7 +65,7 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
                 width: 22,
                 height: 22,
                 borderRadius: '50%',
-                backgroundColor: BRAND.green,
+                backgroundColor: 'var(--brand-accent)',
                 color: '#fff',
                 fontSize: '0.72rem',
                 fontWeight: 800,

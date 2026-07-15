@@ -37,6 +37,7 @@ import {
   ASSESSMENT_QUESTION_COUNT,
   type PartRange,
 } from '../lib/roadmap';
+import { useSubject, topicsForSubject } from '../lib/subjects';
 import { levelIntro, preloadLevelIntros } from '../lib/levelIntros';
 import { useRoadmapStructure } from '../lib/queries';
 import { fetchChallengeBatch } from '../lib/challengeApi';
@@ -62,14 +63,8 @@ type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => stri
 // `ref` is the GLOBAL level number for a level, or the part number for a test.
 type Active = { kind: 'level' | 'test'; ref: number };
 
-// 'cool-stuff' is deliberately absent: it's a Play-mode-only category with no
-// learning path.
-const TOPICS: RoadmapTopic[] = [
-  'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
-  'html', 'css', 'git', 'dsa', 'algorithms',
-  'abbreviations', 'general', 'internet', 'ai', 'rhf-zod',
-  'databases', 'system-design', 'testing', 'devops', 'security',
-];
+// The roadmap topic list is scoped to the active subject (see subjects.ts);
+// each subject exposes its own ordered set of Learn topics.
 const TOPIC_KEY = 'devquiz:roadmap:topic';
 const PART_KEY = 'devquiz:roadmap:part';
 const CHECKPOINT_GOLD = BRAND.gold;
@@ -247,17 +242,21 @@ function Roadmap() {
   const structure: RoadmapStructure | null = structureQuery.data ?? null;
   const loadingStructure = structureQuery.isPending;
   const structureError = structureQuery.error ? friendlyError(structureQuery.error) : null;
+  // Topics for the active subject, in path order. The first is the default/
+  // fallback landing topic.
+  const [subject] = useSubject();
+  const TOPICS = topicsForSubject(subject);
   const [topic, setTopic] = useState<RoadmapTopic>(() => {
     // A deep link from the roadmap tree (/learn?topic=…&part=…) wins over the
     // last-opened topic so clicking a part on the tree lands on that path.
     const fromUrl = new URLSearchParams(window.location.search).get('topic');
     const saved = fromUrl && (TOPICS as string[]).includes(fromUrl) ? fromUrl : readString(TOPIC_KEY);
     const candidate =
-      saved && (TOPICS as string[]).includes(saved) ? (saved as RoadmapTopic) : 'javascript';
+      saved && (TOPICS as string[]).includes(saved) ? (saved as RoadmapTopic) : TOPICS[0];
     // If the saved topic is locked (fresh user, reset progress, etc.) fall back
     // to the always-open starter so the page lands somewhere actionable.
     if (!isTopicUnlocked(getRoadmapProgress(), candidate, new Set(getExtraUnlocks()))) {
-      return 'javascript';
+      return TOPICS[0];
     }
     return candidate;
   });
@@ -268,6 +267,15 @@ function Roadmap() {
     const saved = parseInt(readString(PART_KEY) ?? '', 10);
     return Number.isInteger(saved) && saved >= 1 && saved <= PARTS_PER_TOPIC ? saved : 1;
   });
+
+  // If the subject changes while this page is mounted, the current topic may no
+  // longer belong to it — snap back to the subject's first topic.
+  useEffect(() => {
+    if (!(TOPICS as string[]).includes(topic)) {
+      setTopic(TOPICS[0]);
+      setPart(1);
+    }
+  }, [subject]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [active, setActive] = useState<Active | null>(null);
   const [playable, setPlayable] = useState<RoadmapPlayable | null>(null);
@@ -528,8 +536,8 @@ function Roadmap() {
           sx={{
             textTransform: 'none',
             fontWeight: 700,
-            borderColor: BRAND.green,
-            color: BRAND.green,
+            borderColor: 'var(--brand-accent)',
+            color: 'var(--brand-accent)',
             borderRadius: 999,
             px: 2,
             py: 0.6,
@@ -537,7 +545,7 @@ function Roadmap() {
             flexDirection: 'column',
             gap: 0.15,
             lineHeight: 1.15,
-            '&:hover': { borderColor: BRAND.greenHover, backgroundColor: 'rgba(45,122,45,0.06)' },
+            '&:hover': { borderColor: 'var(--brand-accent-hover)', backgroundColor: 'rgba(45,122,45,0.06)' },
           }}
         >
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -1357,7 +1365,7 @@ function LessonError({ message, onRetry, onExit, t }: { message: string; onRetry
     <Box sx={{ maxWidth: 480, mx: 'auto', textAlign: 'center', mt: 4 }}>
       <Typography color="error" role="alert" sx={{ mb: 2 }}>{message}</Typography>
       <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center' }}>
-        <Button variant="contained" onClick={onRetry} sx={{ textTransform: 'none', backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}>
+        <Button variant="contained" onClick={onRetry} sx={{ textTransform: 'none', backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}>
           {t('roadmap.retry')}
         </Button>
         <Button variant="outlined" onClick={onExit} sx={{ textTransform: 'none' }}>
@@ -1459,7 +1467,7 @@ function SkillCheckRunner({
           <Button
             variant="contained"
             onClick={() => void start()}
-            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}
           >
             {t('roadmap.skillCheckStart')}
           </Button>
@@ -1510,7 +1518,7 @@ function SkillCheckRunner({
           <Button
             variant="contained"
             onClick={() => onFinished(correct)}
-            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}
           >
             {t('roadmap.skillCheckBack')}
           </Button>
@@ -1546,7 +1554,7 @@ function SkillCheckRunner({
             height: 10,
             borderRadius: 5,
             backgroundColor: 'action.hover',
-            '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: BRAND.green, transition: 'transform 0.35s ease' },
+            '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: 'var(--brand-accent)', transition: 'transform 0.35s ease' },
           }}
         />
         <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}>
@@ -1588,7 +1596,7 @@ function SkillCheckRunner({
                 py: 1.5,
                 borderRadius: 2,
                 border: '2px solid',
-                borderColor: picked ? BRAND.green : 'divider',
+                borderColor: picked ? 'var(--brand-accent)' : 'divider',
                 backgroundColor: picked ? 'rgba(45,122,45,0.07)' : 'background.paper',
                 color: 'text.primary',
                 fontSize: '0.95rem',
@@ -1599,7 +1607,7 @@ function SkillCheckRunner({
                 alignItems: 'center',
                 gap: 1.5,
                 transition: 'border-color 0.12s ease, background-color 0.12s ease',
-                '&:hover': { borderColor: BRAND.green, backgroundColor: 'action.hover' },
+                '&:hover': { borderColor: 'var(--brand-accent)', backgroundColor: 'action.hover' },
               }}
             >
               <Box
@@ -1635,7 +1643,7 @@ function SkillCheckRunner({
             variant="contained"
             onClick={goNext}
             disabled={!answered}
-            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}
           >
             {t('roadmap.skillCheckNext')}
           </Button>
@@ -1644,7 +1652,7 @@ function SkillCheckRunner({
             variant="contained"
             onClick={() => void finish()}
             disabled={!allAnswered}
-            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: BRAND.green, '&:hover': { backgroundColor: BRAND.greenHover } }}
+            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}
           >
             {t('roadmap.skillCheckFinish')}
           </Button>

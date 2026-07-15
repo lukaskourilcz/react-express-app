@@ -65,9 +65,17 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
       .slice(0, MAX_EXCLUDE),
   );
 
+  // Optional subject scoping: the client sends the active subject's categories
+  // so a challenge never mixes subjects. Absent/empty → all public categories.
+  const catRaw = typeof req.query.categories === 'string' ? req.query.categories : '';
+  const catSet = new Set(catRaw.split(',').map((s) => s.trim()).filter(Boolean));
+
   const all = await getEffectiveQuestions();
   const pool = all.filter(
-    (q) => !PRIVATE_CATEGORIES.includes(q.category) && !excludeSet.has(q.id),
+    (q) =>
+      !PRIVATE_CATEGORIES.includes(q.category) &&
+      !excludeSet.has(q.id) &&
+      (catSet.size === 0 || catSet.has(q.category)),
   );
   if (pool.length === 0) {
     return jsonError(res, 404, 'no_questions', 'No challenge questions available');

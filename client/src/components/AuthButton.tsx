@@ -65,11 +65,11 @@ function AuthButton() {
           variant="outlined"
           onClick={handleLogin}
           sx={{
-            borderColor: BRAND.green,
-            color: BRAND.green,
+            borderColor: 'var(--brand-accent)',
+            color: 'var(--brand-accent)',
             fontWeight: 500,
             textTransform: 'none',
-            '&:hover': { borderColor: BRAND.greenHover, backgroundColor: 'rgba(45,122,45,0.06)' },
+            '&:hover': { borderColor: 'var(--brand-accent-hover)', backgroundColor: 'rgba(45,122,45,0.06)' },
           }}
         >
           {t('auth.logIn')}
@@ -101,7 +101,7 @@ function AuthButton() {
           aria-label={t('auth.accountMenu', { name: displayName })}
           sx={{
             borderRadius: '50%',
-            '&:focus-visible': { outline: `2px solid ${BRAND.green}`, outlineOffset: 2 },
+            '&:focus-visible': { outline: `2px solid var(--brand-accent)`, outlineOffset: 2 },
           }}
         >
           <Avatar
@@ -127,7 +127,7 @@ function AuthButton() {
           <Typography
             variant="caption"
             sx={{
-              color: (theme) => (theme.palette.mode === 'dark' ? BRAND.greenBright : BRAND.green),
+              color: (theme) => (theme.palette.mode === 'dark' ? BRAND.greenBright : 'var(--brand-accent)'),
               fontWeight: 600,
               fontSize: '0.62rem',
               lineHeight: 1.2,
@@ -153,7 +153,7 @@ function AuthButton() {
                   width: `${levelInfo.progressPct}%`,
                   height: '100%',
                   borderRadius: 2,
-                  backgroundColor: (theme) => (theme.palette.mode === 'dark' ? BRAND.greenBright : BRAND.green),
+                  backgroundColor: (theme) => (theme.palette.mode === 'dark' ? BRAND.greenBright : 'var(--brand-accent)'),
                   transition: 'width 0.4s ease',
                 }}
               />
