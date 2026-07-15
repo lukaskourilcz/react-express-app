@@ -71,11 +71,6 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'coldwar', label: 'The Cold War', color: '#5f8a8b' },
   { value: 'modern', label: 'The Modern World', color: '#6d5577' },
   // Chess
-  { value: 'rules', label: 'The Board & Setup', color: '#7b4b2a' },
-  { value: 'pieces', label: 'How the Pieces Move', color: '#8a5a2b' },
-  { value: 'specialmoves', label: 'Special Moves', color: '#a9683b' },
-  { value: 'checkmate', label: 'Check & Checkmate', color: '#b5651d' },
-  { value: 'notation', label: 'Reading & Writing Chess', color: '#9c6d3e' },
   { value: 'openings', label: 'Opening Principles', color: '#c8935f' },
   { value: 'tactics', label: 'Basic Tactics', color: '#d98a3d' },
   { value: 'strategy', label: 'Positional Strategy', color: '#8c5a3c' },
@@ -117,8 +112,6 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'endgame-technique', label: 'Endgame Technique', color: '#7c2d12' },
   { value: 'chess-history', label: 'Chess History', color: '#4d7c0f' },
   // Poker
-  { value: 'hand-rankings', label: 'Hand Rankings', color: '#b91c1c' },
-  { value: 'rules-formats', label: 'Rules & Betting', color: '#dc2626' },
   { value: 'positions', label: 'Position', color: '#ea580c' },
   { value: 'starting-hands', label: 'Starting Hands', color: '#d97706' },
   { value: 'pot-odds', label: 'Pot Odds & Equity', color: '#ca8a04' },

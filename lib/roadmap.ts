@@ -27,7 +27,7 @@ export type RoadmapTopic =
   // History
   | 'prehistory' | 'ancient' | 'classical' | 'medieval' | 'renaissance' | 'earlymodern' | 'industrial' | 'worldwars' | 'coldwar' | 'modern'
   // Chess
-  | 'rules' | 'pieces' | 'specialmoves' | 'checkmate' | 'notation' | 'openings' | 'tactics' | 'strategy' | 'endgames' | 'combinations'
+  | 'openings' | 'tactics' | 'strategy' | 'endgames' | 'combinations'
   // Math (advanced)
   | 'discrete-math' | 'number-theory' | 'multivariable-calculus' | 'differential-equations' | 'real-analysis'
   // Geography (advanced)
@@ -39,7 +39,7 @@ export type RoadmapTopic =
   // Chess (advanced)
   | 'opening-theory' | 'middlegame' | 'pawn-structures' | 'endgame-technique' | 'chess-history'
   // Poker
-  | 'hand-rankings' | 'rules-formats' | 'positions' | 'starting-hands' | 'pot-odds' | 'betting-strategy' | 'postflop' | 'tournament-play' | 'psychology' | 'gto-advanced';
+  | 'positions' | 'starting-hands' | 'pot-odds' | 'betting-strategy' | 'postflop' | 'tournament-play' | 'psychology' | 'gto-advanced';
 
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
@@ -53,7 +53,7 @@ export const ROADMAP_TOPICS: RoadmapTopic[] = [
   // History
   'prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern',
   // Chess
-  'rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations',
+  'openings', 'tactics', 'strategy', 'endgames', 'combinations',
   // Math (advanced)
   'discrete-math', 'number-theory', 'multivariable-calculus', 'differential-equations', 'real-analysis',
   // Geography (advanced)
@@ -65,7 +65,7 @@ export const ROADMAP_TOPICS: RoadmapTopic[] = [
   // Chess (advanced)
   'opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history',
   // Poker
-  'hand-rankings', 'rules-formats', 'positions', 'starting-hands', 'pot-odds', 'betting-strategy', 'postflop', 'tournament-play', 'psychology', 'gto-advanced',
+  'positions', 'starting-hands', 'pot-odds', 'betting-strategy', 'postflop', 'tournament-play', 'psychology', 'gto-advanced',
 ];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
@@ -135,11 +135,6 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   coldwar: 'rm-coldwar',
   modern: 'rm-modern',
   // Chess
-  rules: 'rm-rules',
-  pieces: 'rm-piece',
-  specialmoves: 'rm-spec',
-  checkmate: 'rm-mate',
-  notation: 'rm-notat',
   openings: 'rm-open',
   tactics: 'rm-tac',
   strategy: 'rm-strat',
@@ -175,8 +170,6 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   'pawn-structures': 'rm-pawns',
   'endgame-technique': 'rm-endgtech',
   'chess-history': 'rm-chesshist',
-  'hand-rankings': 'rm-pkhands',
-  'rules-formats': 'rm-pkrules',
   'positions': 'rm-pkpos',
   'starting-hands': 'rm-pkstart',
   'pot-odds': 'rm-pkodds',
@@ -426,26 +419,6 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'The Rise of China & Asia', 'The European Union', 'Financial Crises', 'Technology & Society', 'The 21st Century World',
   ],
   // Chess
-  rules: [
-    'The Chessboard', 'Setting Up the Pieces', 'Light & Dark Squares', 'Ranks, Files & Diagonals', 'The Goal of the Game',
-    'Turns & Touch-Move', 'Capturing Basics', 'Check Basics', 'Illegal Moves & Etiquette', 'Rules Mastery',
-  ],
-  pieces: [
-    'The Pawn', 'The Rook', 'The Bishop', 'The Knight', 'The Queen',
-    'The King', 'Piece Values', 'Captures & Attacks', 'Piece Coordination', 'Movement Mastery',
-  ],
-  specialmoves: [
-    'Kingside Castling', 'Queenside Castling', 'Castling Rules & Restrictions', 'Pawn Promotion', 'Underpromotion',
-    'En Passant Basics', 'En Passant Conditions', 'The Two-Square Pawn Move', 'Combining Special Moves', 'Special Moves Mastery',
-  ],
-  checkmate: [
-    'What Is Check?', 'Getting Out of Check', 'What Is Checkmate?', 'Back-Rank Mate', 'Basic Mating Patterns',
-    'What Is Stalemate?', 'Draws & Repetition', 'Mate vs Stalemate', 'Common Mating Nets', 'Checkmate Mastery',
-  ],
-  notation: [
-    'Naming the Squares', 'Piece Letters', 'Writing a Move', 'Captures in Notation', 'Castling & Special Notation',
-    'Check & Checkmate Symbols', 'Disambiguation', 'Reading a Game Score', 'FEN & Setup Notation', 'Notation Mastery',
-  ],
   openings: [
     'Control the Center', 'Develop Your Pieces', 'King Safety & Castling', 'Don’t Move the Same Piece Twice', 'Common First Moves',
     'Open, Closed & Semi-Open', 'Famous Openings', 'Opening Traps & Blunders', 'Tempo & Development', 'Opening Mastery',
@@ -555,12 +528,6 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
   ],
   'chess-history': [
     'Origins & early history', 'Romantic era & first champions', 'Classical & Soviet school', 'Famous champions & rivalries', 'Modern era & computer chess',
-  ],
-  'hand-rankings': [
-    'The 10 poker hands & ranking order', 'Reading your hand (best 5 of 7)', 'Comparing hands, kickers & ties', 'Hand probabilities & frequencies', 'Tricky rankings & board-reading',
-  ],
-  'rules-formats': [
-    'The flow of a hand', 'Betting actions & rounds', 'Blinds, antes, button & acting order', 'Bet sizing, all-ins & side pots', 'Formats & variants',
   ],
   'positions': [
     'The positions at the table', 'Why position matters', 'Opening ranges by position', 'In and out of position postflop', 'Table dynamics & seat selection',

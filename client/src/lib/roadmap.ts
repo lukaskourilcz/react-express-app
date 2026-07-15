@@ -27,7 +27,7 @@ export const CHECKPOINT_COUNT = ROADMAP_LEVELS / LEVELS_PER_CHECKPOINT;
  * Prereqs are intentionally a shallow graph so the path from zero → hero stays
  * obvious: master JS basics, then HTML+CSS for React, then specialise.
  */
-export const STARTER_TOPICS: RoadmapTopic[] = ['html', 'css', 'javascript', 'continents', 'capitals', 'flags', 'arithmetic', 'fractions', 'prealgebra', 'prehistory', 'ancient', 'classical', 'rules', 'pieces', 'notation', 'cell-biology', 'hand-rankings'];
+export const STARTER_TOPICS: RoadmapTopic[] = ['html', 'css', 'javascript', 'continents', 'capitals', 'flags', 'arithmetic', 'fractions', 'prealgebra', 'prehistory', 'ancient', 'classical', 'openings', 'cell-biology', 'positions'];
 
 // Levels of each prereq topic that must be passed before a topic unlocks.
 // 5 = "first checkpoint cleared" — the natural milestone in each path.
@@ -105,16 +105,11 @@ export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
   modern: ['coldwar'],
   // Chess
   // Starters: no prereqs, always open.
-  rules: [],
-  pieces: [],
-  notation: [],
   // Tier 2 — build directly on knowing how the pieces move.
-  specialmoves: ['pieces'],
-  checkmate: ['pieces'],
   // Tier 3 — the competitive skills, once you can deliver mate.
-  openings: ['pieces', 'checkmate'],
-  tactics: ['pieces', 'checkmate'],
-  endgames: ['checkmate'],
+  openings: [],
+  tactics: [],
+  endgames: [],
   // Tier 4 — the deepest topics.
   strategy: ['openings', 'tactics'],
   combinations: ['tactics'],
@@ -147,16 +142,14 @@ export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
   'middlegame': ['strategy'],
   'pawn-structures': ['strategy'],
   'endgame-technique': ['endgames'],
-  'chess-history': ['notation'],
-  'hand-rankings': [],
-  'rules-formats': ['hand-rankings'],
-  'positions': ['rules-formats'],
+  'chess-history': [],
+  'positions': [],
   'starting-hands': ['positions'],
-  'pot-odds': ['rules-formats'],
+  'pot-odds': ['positions'],
   'betting-strategy': ['starting-hands'],
   'postflop': ['betting-strategy'],
   'tournament-play': ['betting-strategy'],
-  'psychology': ['rules-formats'],
+  'psychology': ['positions'],
   'gto-advanced': ['pot-odds'],
 };
 

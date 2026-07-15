@@ -31,7 +31,7 @@ export const KNOWN_CATEGORIES: CategoryType[] = [
   // History
   'prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern',
   // Chess
-  'rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations',
+  'openings', 'tactics', 'strategy', 'endgames', 'combinations',
   // Math (advanced)
   'discrete-math',
   'number-theory',
@@ -68,8 +68,6 @@ export const KNOWN_CATEGORIES: CategoryType[] = [
   'endgame-technique',
   'chess-history',
   // Poker
-  'hand-rankings',
-  'rules-formats',
   'positions',
   'starting-hands',
   'pot-odds',

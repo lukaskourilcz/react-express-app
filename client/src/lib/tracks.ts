@@ -79,11 +79,6 @@ export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
   coldwar: 'Superpower rivalry, proxy wars, and decolonization.',
   modern: 'Globalization, the digital age, and the world today.',
   // Chess
-  rules: 'The board, setup, turns, and how a game is won.',
-  pieces: 'How every piece moves, captures, and its value.',
-  specialmoves: 'Castling, promotion, and en passant.',
-  checkmate: 'Check, checkmate, stalemate, and draws.',
-  notation: 'Read & write games in algebraic notation.',
   openings: 'Center, development, and safe kings.',
   tactics: 'Forks, pins, skewers, and discovered attacks.',
   strategy: 'Pawn structure, outposts, files, and plans.',
@@ -119,8 +114,6 @@ export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
   'pawn-structures': 'Pawn weaknesses, breaks, passed pawns, and the classic IQP and Carlsbad plans.',
   'endgame-technique': 'Endgame theory from king-and-pawn play through rook and minor-piece endings.',
   'chess-history': 'The story of chess from its origins through the World Champions to the engine era.',
-  'hand-rankings': 'The ten poker hands, reading the best five of seven, kickers, ties and odds.',
-  'rules-formats': "How a Texas Hold'em hand plays out, from blinds and betting to all-ins, side pots and formats.",
   'positions': 'How seat position and table dynamics shape poker strategy.',
   'starting-hands': 'Choosing profitable starting hands and building preflop ranges.',
   'pot-odds': 'Counting outs, estimating equity, and comparing it to pot, implied and fold-equity odds.',
@@ -272,12 +265,12 @@ const HISTORY_TRACKS: Record<Track, TrackDef> = {
 
 const CHESS_TRACKS: Record<Track, TrackDef> = {
   frontend: {
-    label: 'Beginner (Learn the Rules)',
-    blurb: 'Everything you need to sit down and play a legal game with confidence.',
+    label: 'Fundamentals',
+    blurb: 'The core skills every player needs: sound openings, sharp tactics, and basic endgames.',
     stages: [
-      { title: 'The basics', topics: ['rules', 'pieces'] },
-      { title: 'Moves & mate', topics: ['specialmoves', 'checkmate'] },
-      { title: 'Read the game', topics: ['notation'] },
+      { title: 'Open well', topics: ['openings'] },
+      { title: 'Win material', topics: ['tactics', 'combinations'] },
+      { title: 'Finish the game', topics: ['endgames'] },
     ],
   },
   backend: {
@@ -291,10 +284,8 @@ const CHESS_TRACKS: Record<Track, TrackDef> = {
   },
   fullstack: {
     label: 'The Full Path',
-    blurb: 'The whole journey: from the rules of the board to advanced combinations.',
+    blurb: 'The whole journey for players who know the rules: from openings to advanced theory.',
     stages: [
-      { title: 'Learn the rules', topics: ['rules', 'pieces', 'specialmoves'] },
-      { title: 'Checkmate & notation', topics: ['checkmate', 'notation'] },
       { title: 'Openings & tactics', topics: ['openings', 'tactics'] },
       { title: 'Strategy & endgames', topics: ['strategy', 'endgames'] },
       { title: 'Master combinations', topics: ['combinations'] },
@@ -338,27 +329,27 @@ const BIOLOGY_TRACKS: Record<Track, TrackDef> = {
 
 const POKER_TRACKS: Record<Track, TrackDef> = {
   frontend: {
-    label: 'Poker Basics',
-    blurb: 'Learn the game: the hands, the rules, and why position matters.',
+    label: 'The Fundamentals',
+    blurb: 'Where winning starts: position, hand selection, and the math.',
     stages: [
-      { title: 'The cards', topics: ['hand-rankings', 'rules-formats'] },
       { title: 'Position', topics: ['positions'] },
+      { title: 'Hand selection', topics: ['starting-hands'] },
+      { title: 'The math', topics: ['pot-odds'] },
     ],
   },
   backend: {
     label: 'Winning Play',
-    blurb: 'The skills that make money: hand selection, the math, and betting.',
+    blurb: 'The skills that make money: betting, postflop, and adjusting to opponents.',
     stages: [
-      { title: 'Hand selection', topics: ['starting-hands'] },
-      { title: 'The math', topics: ['pot-odds'] },
       { title: 'Betting & postflop', topics: ['betting-strategy', 'postflop'] },
+      { title: 'Read opponents', topics: ['psychology'] },
+      { title: 'Tournaments', topics: ['tournament-play'] },
     ],
   },
   fullstack: {
     label: 'The Full Game',
-    blurb: 'Zero to shark: every skill from the rules of the game to solver-based theory.',
+    blurb: 'Zero to shark: every skill from position and the math to solver-based theory.',
     stages: [
-      { title: 'Foundations', topics: ['hand-rankings', 'rules-formats'] },
       { title: 'Position & selection', topics: ['positions', 'starting-hands'] },
       { title: 'The math', topics: ['pot-odds'] },
       { title: 'Betting & postflop', topics: ['betting-strategy', 'postflop'] },
