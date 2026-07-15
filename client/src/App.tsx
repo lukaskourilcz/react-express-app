@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider, Snackbar, Alert } from '@mui/material';
+import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider, Snackbar, Alert, Chip } from '@mui/material';
 import { Routes, Route, Link, useLocation } from 'react-router-dom';
 import LoadingScreen from './components/LoadingScreen';
 import { SwimmingFin, Waterline } from './components/SharkFin';
@@ -15,6 +15,7 @@ import { primeRankMarker } from './lib/xp';
 import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import { useAuth } from './lib/auth';
+import { useHasChosenSubject, useActiveSubject } from './lib/subjects';
 import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
 import { useSettings } from './lib/settings';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
@@ -37,6 +38,14 @@ const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ defaul
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 const Challenge = lazy(() => import('./components/Challenge'));
 const DevPage = lazy(() => import('./components/dev/DevPage'));
+const SubjectPicker = lazy(() => import('./components/SubjectPicker'));
+
+// The landing gate: show the subject picker until the learner has chosen a
+// subject, then the normal home. Both are lazy and render inside the shared
+// route <Suspense>.
+function Landing() {
+  return useHasChosenSubject() ? <Home /> : <SubjectPicker />;
+}
 
 // Route-transition variants, hoisted so the m.div props keep a stable identity
 // across App re-renders (App re-renders on every navigation — hottest path).
@@ -158,6 +167,31 @@ const RouteLoader = () => {
   // surfaces under the shark if the load runs long.
   return <LoadingScreen label={t('common.loading')} size={28} tips={config.devTips} sx={{ minHeight: 'auto', py: 6 }} />;
 };
+
+// Compact active-subject indicator in the header; tapping it opens the subject
+// picker so the learner can switch what they're studying.
+function SubjectSwitcher() {
+  const subject = useActiveSubject();
+  return (
+    <Chip
+      component={Link}
+      to="/subjects"
+      clickable
+      size="small"
+      label={`${subject.emoji} ${subject.label}`}
+      sx={{
+        ml: 0.5,
+        fontWeight: 700,
+        cursor: 'pointer',
+        color: subject.accent,
+        borderColor: subject.accent,
+        backgroundColor: 'transparent',
+        border: '1px solid',
+        '& .MuiChip-label': { px: 1 },
+      }}
+    />
+  );
+}
 
 function App() {
   const location = useLocation();
@@ -395,8 +429,9 @@ function App() {
                 sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: 'text.primary', textDecoration: 'none', fontSize: '1.1rem' }}
               >
                 <SwimmingFin size={22} />
-                devShark
+                StudyShark
               </Typography>
+              <SubjectSwitcher />
             </Box>
 
             {/* Centre slot: primary nav links, perfectly centred between logo
@@ -462,7 +497,7 @@ function App() {
           <Box sx={{ width: 240 }} role="presentation" onClick={() => setMobileNavOpen(false)}>
             <Typography variant="h6" sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: 'text.primary' }}>
               <SwimmingFin size={22} />
-              devShark
+              StudyShark
             </Typography>
             <Divider />
             <List>
@@ -526,7 +561,8 @@ function App() {
             >
               <Suspense fallback={<RouteLoader />}>
                 <Routes location={location}>
-                  <Route path="/" element={<Home />} />
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/subjects" element={<SubjectPicker />} />
                   <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
                   <Route path="/learn" element={<Roadmap />} />
                   <Route path="/roadmap" element={<CareerRoadmap />} />
@@ -545,7 +581,7 @@ function App() {
         </Box>
       </Box>
 
-      {/* devShark ocean: pinned to the bottom of the fixed-height shell, so the
+      {/* StudyShark ocean: pinned to the bottom of the fixed-height shell, so the
           waterline + surfacing fins are visible on every page, always. Hidden
           only in the /dev admin console. */}
       {!isDev && (
@@ -602,7 +638,7 @@ function App() {
           onClose={() => setSignupBonusOpen(false)}
           sx={{ backgroundColor: BRAND.green }}
         >
-          +{SIGNUP_BONUS_TOKENS} tokens · welcome to devShark
+          +{SIGNUP_BONUS_TOKENS} tokens · welcome to StudyShark
         </Alert>
       </Snackbar>
     </Box>

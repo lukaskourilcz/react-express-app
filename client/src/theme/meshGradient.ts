@@ -1,6 +1,6 @@
 // Mesh gradients, Colorflow-style (colorflow.ls.graphics) - authored in the
 // OKLCH colour space so the colour stops blend perceptually instead of muddying
-// through sRGB. Tuned to devShark's brand green with teal/lime accents.
+// through sRGB. Tuned to StudyShark's brand green with teal/lime accents.
 //
 // Zero runtime cost and zero dependency: these are plain CSS `background-image`
 // layers (radial gradients only, no base colour) so they compose *over* the

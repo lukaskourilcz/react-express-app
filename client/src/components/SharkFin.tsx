@@ -1,4 +1,4 @@
-// devShark branding flourish: a dorsal-fin glyph, plus an animated "swimming"
+// StudyShark branding flourish: a dorsal-fin glyph, plus an animated "swimming"
 // variant used in the header wordmark and the loading screen. Animations respect
 // prefers-reduced-motion (they freeze for users who opt out of motion).
 

@@ -24,6 +24,14 @@ export const KNOWN_CATEGORIES: CategoryType[] = [
   'nextjs', 'nodejs', 'git', 'dsa', 'algorithms',
   'abbreviations', 'general', 'ai',
   'dev-world', 'code-snippets',
+  // Geography
+  'continents', 'capitals', 'flags', 'landforms', 'climate', 'population', 'political', 'economic', 'cartography', 'earth',
+  // Math
+  'arithmetic', 'fractions', 'prealgebra', 'algebra', 'geometry', 'trigonometry', 'statistics', 'precalculus', 'calculus', 'linear-algebra',
+  // History
+  'prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern',
+  // Chess
+  'rules', 'pieces', 'specialmoves', 'checkmate', 'notation', 'openings', 'tactics', 'strategy', 'endgames', 'combinations',
 ];
 
 export interface QuestionEditRow {

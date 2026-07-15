@@ -3,6 +3,7 @@ import { ThemeProvider, CssBaseline, GlobalStyles } from '@mui/material';
 import { type PaletteMode } from '@mui/material';
 import { createAppTheme } from './MuiTheme';
 import { readString, writeString } from '../lib/storage';
+import { useSubject, SUBJECTS } from '../lib/subjects';
 
 interface ColorModeContextValue {
   mode: PaletteMode;
@@ -37,7 +38,14 @@ export function ColorModeProvider({ children }: { children: ReactNode }) {
     [mode],
   );
 
-  const theme = useMemo(() => createAppTheme(mode), [mode]);
+  // The active subject drives the primary accent, so the whole UI recolours
+  // when the learner switches subjects.
+  const [subject] = useSubject();
+  const accent = useMemo(() => {
+    const s = SUBJECTS[subject];
+    return { main: s.accent, bright: s.accentBright, hover: s.accent };
+  }, [subject]);
+  const theme = useMemo(() => createAppTheme(mode, accent), [mode, accent]);
 
   return (
     <ColorModeContext.Provider value={value}>

@@ -37,6 +37,7 @@ import {
   ASSESSMENT_QUESTION_COUNT,
   type PartRange,
 } from '../lib/roadmap';
+import { useSubject, topicsForSubject } from '../lib/subjects';
 import { levelIntro, preloadLevelIntros } from '../lib/levelIntros';
 import { useRoadmapStructure } from '../lib/queries';
 import { fetchChallengeBatch } from '../lib/challengeApi';
@@ -62,14 +63,8 @@ type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => stri
 // `ref` is the GLOBAL level number for a level, or the part number for a test.
 type Active = { kind: 'level' | 'test'; ref: number };
 
-// 'cool-stuff' is deliberately absent: it's a Play-mode-only category with no
-// learning path.
-const TOPICS: RoadmapTopic[] = [
-  'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
-  'html', 'css', 'git', 'dsa', 'algorithms',
-  'abbreviations', 'general', 'internet', 'ai', 'rhf-zod',
-  'databases', 'system-design', 'testing', 'devops', 'security',
-];
+// The roadmap topic list is scoped to the active subject (see subjects.ts);
+// each subject exposes its own ordered set of Learn topics.
 const TOPIC_KEY = 'devquiz:roadmap:topic';
 const PART_KEY = 'devquiz:roadmap:part';
 const CHECKPOINT_GOLD = BRAND.gold;
@@ -247,17 +242,21 @@ function Roadmap() {
   const structure: RoadmapStructure | null = structureQuery.data ?? null;
   const loadingStructure = structureQuery.isPending;
   const structureError = structureQuery.error ? friendlyError(structureQuery.error) : null;
+  // Topics for the active subject, in path order. The first is the default/
+  // fallback landing topic.
+  const [subject] = useSubject();
+  const TOPICS = topicsForSubject(subject);
   const [topic, setTopic] = useState<RoadmapTopic>(() => {
     // A deep link from the roadmap tree (/learn?topic=…&part=…) wins over the
     // last-opened topic so clicking a part on the tree lands on that path.
     const fromUrl = new URLSearchParams(window.location.search).get('topic');
     const saved = fromUrl && (TOPICS as string[]).includes(fromUrl) ? fromUrl : readString(TOPIC_KEY);
     const candidate =
-      saved && (TOPICS as string[]).includes(saved) ? (saved as RoadmapTopic) : 'javascript';
+      saved && (TOPICS as string[]).includes(saved) ? (saved as RoadmapTopic) : TOPICS[0];
     // If the saved topic is locked (fresh user, reset progress, etc.) fall back
     // to the always-open starter so the page lands somewhere actionable.
     if (!isTopicUnlocked(getRoadmapProgress(), candidate, new Set(getExtraUnlocks()))) {
-      return 'javascript';
+      return TOPICS[0];
     }
     return candidate;
   });
@@ -268,6 +267,15 @@ function Roadmap() {
     const saved = parseInt(readString(PART_KEY) ?? '', 10);
     return Number.isInteger(saved) && saved >= 1 && saved <= PARTS_PER_TOPIC ? saved : 1;
   });
+
+  // If the subject changes while this page is mounted, the current topic may no
+  // longer belong to it — snap back to the subject's first topic.
+  useEffect(() => {
+    if (!(TOPICS as string[]).includes(topic)) {
+      setTopic(TOPICS[0]);
+      setPart(1);
+    }
+  }, [subject]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [active, setActive] = useState<Active | null>(null);
   const [playable, setPlayable] = useState<RoadmapPlayable | null>(null);

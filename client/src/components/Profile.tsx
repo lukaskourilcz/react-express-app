@@ -24,7 +24,7 @@ import {
   unlockExtraTopics,
   pushProgressToServer,
 } from '../lib/roadmap';
-import { useTrack, trackStarterTopics, specializationForTrack, TRACKS, TRACK_ORDER, type Track } from '../lib/tracks';
+import { useTrack, trackStarterTopics, specializationForTrack, tracksForActiveSubject, TRACK_ORDER, type Track } from '../lib/tracks';
 import { getCategoryHexColor, getCategoryLabel, onCategoryColorText } from '../lib/categories';
 import { useQuestXp, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp, levelForXp, displayTitle, MAX_RANK } from '../lib/leveling';
@@ -417,7 +417,7 @@ function LearningTrackCard() {
     unlockExtraTopics(trackStarterTopics(target));
     // Best-effort: persist the new unlocks to the account.
     pushProgressToServer().catch(() => {});
-    setSnack(t('profile.trackSet', { label: TRACKS[target].label }));
+    setSnack(t('profile.trackSet', { label: tracksForActiveSubject()[target].label }));
   };
 
   return (
@@ -452,7 +452,7 @@ function LearningTrackCard() {
       >
         {TRACK_ORDER.map((tk) => (
           <ToggleButton key={tk} value={tk}>
-            {TRACKS[tk].label}
+            {tracksForActiveSubject()[tk].label}
           </ToggleButton>
         ))}
       </ToggleButtonGroup>

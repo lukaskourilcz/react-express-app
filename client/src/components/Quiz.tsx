@@ -490,8 +490,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   const handleShare = async () => {
     if (!result) return;
-    const text = `I scored ${result.percentage}% on devShark (${result.correctAnswers}/${result.totalQuestions}). Try it!`;
-    const shareData = { title: 'devShark', text, url: window.location.origin };
+    const text = `I scored ${result.percentage}% on StudyShark (${result.correctAnswers}/${result.totalQuestions}). Try it!`;
+    const shareData = { title: 'StudyShark', text, url: window.location.origin };
     try {
       if (navigator.share) {
         await navigator.share(shareData);

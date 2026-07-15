@@ -5,6 +5,7 @@
 
 import type { CategoryType } from '../types/quiz';
 import { BRAND } from '../theme/MuiTheme';
+import { getSubject, categoriesForSubject } from './subjects';
 
 export interface CategoryOption {
   value: CategoryType;
@@ -37,6 +38,50 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'security', label: 'Security', color: '#b02a37' },
   { value: 'dev-world', label: 'Dev World', color: '#8b5cf6' },
   { value: 'code-snippets', label: 'Code Snippets', color: '#ec4899' },
+  // Geography
+  { value: 'continents', label: 'Continents & Oceans', color: '#ea580c' },
+  { value: 'capitals', label: 'Countries & Capitals', color: '#f97316' },
+  { value: 'flags', label: 'Flags & Symbols', color: '#fb923c' },
+  { value: 'landforms', label: 'Landforms', color: '#9a3412' },
+  { value: 'climate', label: 'Climate & Biomes', color: '#d97706' },
+  { value: 'population', label: 'Population & Cities', color: '#b45309' },
+  { value: 'political', label: 'Political Geography', color: '#c2410c' },
+  { value: 'economic', label: 'Economic Geography', color: '#f59e0b' },
+  { value: 'cartography', label: 'Maps & Cartography', color: '#e8590c' },
+  { value: 'earth', label: 'Earth & Geology', color: '#92400e' },
+  // Math
+  { value: 'arithmetic', label: 'Arithmetic', color: '#1565c0' },
+  { value: 'fractions', label: 'Fractions & Decimals', color: '#0e7490' },
+  { value: 'prealgebra', label: 'Pre-Algebra', color: '#2563eb' },
+  { value: 'algebra', label: 'Algebra', color: '#7c3aed' },
+  { value: 'geometry', label: 'Geometry', color: '#0891b2' },
+  { value: 'trigonometry', label: 'Trigonometry', color: '#d97706' },
+  { value: 'statistics', label: 'Statistics & Probability', color: '#db2777' },
+  { value: 'precalculus', label: 'Pre-Calculus', color: '#059669' },
+  { value: 'calculus', label: 'Calculus', color: '#4338ca' },
+  { value: 'linear-algebra', label: 'Linear Algebra', color: '#0284c7' },
+  // History
+  { value: 'prehistory', label: 'Prehistory', color: '#a97142' },
+  { value: 'ancient', label: 'Ancient Civilizations', color: '#64748b' },
+  { value: 'classical', label: 'The Classical World', color: '#b08d57' },
+  { value: 'medieval', label: 'The Middle Ages', color: '#6b7d4a' },
+  { value: 'renaissance', label: 'Renaissance & Exploration', color: '#5b7a99' },
+  { value: 'earlymodern', label: 'Early Modern & Revolutions', color: '#8c4a4a' },
+  { value: 'industrial', label: 'The Industrial Age', color: '#b5651d' },
+  { value: 'worldwars', label: 'The World Wars', color: '#7d7466' },
+  { value: 'coldwar', label: 'The Cold War', color: '#5f8a8b' },
+  { value: 'modern', label: 'The Modern World', color: '#6d5577' },
+  // Chess
+  { value: 'rules', label: 'The Board & Setup', color: '#7b4b2a' },
+  { value: 'pieces', label: 'How the Pieces Move', color: '#8a5a2b' },
+  { value: 'specialmoves', label: 'Special Moves', color: '#a9683b' },
+  { value: 'checkmate', label: 'Check & Checkmate', color: '#b5651d' },
+  { value: 'notation', label: 'Reading & Writing Chess', color: '#9c6d3e' },
+  { value: 'openings', label: 'Opening Principles', color: '#c8935f' },
+  { value: 'tactics', label: 'Basic Tactics', color: '#d98a3d' },
+  { value: 'strategy', label: 'Positional Strategy', color: '#8c5a3c' },
+  { value: 'endgames', label: 'Essential Endgames', color: '#a0522d' },
+  { value: 'combinations', label: 'Advanced Combinations', color: '#5e3820' },
 ];
 
 export const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c]));
@@ -66,10 +111,14 @@ export const visibleCategoryOptionsFor = (
   email?: string | null,
   opts: { includePlayOnly?: boolean } = {},
 ): CategoryOption[] => {
+  // Scope to the active subject so each subject's picker shows only its own
+  // categories (subjects are disjoint, so this is an exact partition).
+  const inSubject = new Set<string>(categoriesForSubject(getSubject()));
+  const scoped = CATEGORY_OPTIONS.filter((c) => inSubject.has(c.value));
   const base =
     (email ?? '').toLowerCase() === OWNER_EMAIL
-      ? CATEGORY_OPTIONS
-      : CATEGORY_OPTIONS.filter((c) => !PRIVATE_CATEGORIES.includes(c.value));
+      ? scoped
+      : scoped.filter((c) => !PRIVATE_CATEGORIES.includes(c.value));
   return opts.includePlayOnly ? base : base.filter((c) => !PLAY_ONLY_CATEGORIES.includes(c.value));
 };
 

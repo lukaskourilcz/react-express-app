@@ -22,8 +22,12 @@ import {
   roadmapDevopsQuestions,
   roadmapSecurityQuestions,
 } from './roadmap-questions';
+import { allRoadmapGeographyQuestions } from './roadmap-questions.geography';
+import { allRoadmapMathQuestions } from './roadmap-questions.math';
+import { allRoadmapHistoryQuestions } from './roadmap-questions.history';
+import { allRoadmapChessQuestions } from './roadmap-questions.chess';
 
-export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'internet' | 'ai' | 'rhf-zod' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets';
+export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'internet' | 'ai' | 'rhf-zod' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets' | 'continents' | 'capitals' | 'flags' | 'landforms' | 'climate' | 'population' | 'political' | 'economic' | 'cartography' | 'earth' | 'arithmetic' | 'fractions' | 'prealgebra' | 'algebra' | 'geometry' | 'trigonometry' | 'statistics' | 'precalculus' | 'calculus' | 'linear-algebra' | 'prehistory' | 'ancient' | 'classical' | 'medieval' | 'renaissance' | 'earlymodern' | 'industrial' | 'worldwars' | 'coldwar' | 'modern' | 'rules' | 'pieces' | 'specialmoves' | 'checkmate' | 'notation' | 'openings' | 'tactics' | 'strategy' | 'endgames' | 'combinations';
 
 // Categories that are private to the owner: never served to other users
 // (not via /api/quiz/questions for non-owners, and never in the daily mix).
@@ -10545,6 +10549,10 @@ export const questions: Question[] = [
   ...roadmapTestingQuestions,
   ...roadmapDevopsQuestions,
   ...roadmapSecurityQuestions,
+  ...allRoadmapGeographyQuestions,
+  ...allRoadmapMathQuestions,
+  ...allRoadmapHistoryQuestions,
+  ...allRoadmapChessQuestions,
 ];
 
 

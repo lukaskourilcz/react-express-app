@@ -5,7 +5,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, Box, Typography } from '@mui/material';
-import { TRACKS, TRACK_ORDER, type Track } from '../lib/tracks';
+import { tracksForActiveSubject, TRACK_ORDER, type Track } from '../lib/tracks';
 import { BRAND } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 
@@ -88,7 +88,7 @@ export default function PathPickerDialog({
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 0.5 }}>
-                  <Typography sx={{ fontWeight: 700 }}>{TRACKS[tk].label}</Typography>
+                  <Typography sx={{ fontWeight: 700 }}>{tracksForActiveSubject()[tk].label}</Typography>
                   {tk === current && (
                     <Typography component="span" sx={{ color: BRAND.green, fontWeight: 700, fontSize: '0.75rem', letterSpacing: 0.5 }}>
                       {t('home.pathCurrent')}
@@ -96,7 +96,7 @@ export default function PathPickerDialog({
                   )}
                 </Box>
                 <Typography variant="body2" color="text.secondary">
-                  {TRACKS[tk].blurb}
+                  {tracksForActiveSubject()[tk].blurb}
                 </Typography>
               </Box>
             );

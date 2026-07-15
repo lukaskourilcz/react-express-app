@@ -8,6 +8,8 @@ import type { RoadmapTopic } from '../types/quiz';
 import type { Specialization } from './leveling';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
+import type { SubjectId } from './subjects';
+import { getSubject, useSubject } from './subjects';
 
 export type Track = 'frontend' | 'backend' | 'fullstack';
 export const TRACK_ORDER: Track[] = ['frontend', 'backend', 'fullstack'];
@@ -42,13 +44,57 @@ export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
   'system-design': 'Caching, queues, sharding, trade-offs.',
   devops: 'CI/CD, containers, observability, the cloud.',
   security: 'Auth, the OWASP Top 10, secure defaults.',
+  // Geography
+  continents: 'The seven continents and five oceans.',
+  capitals: 'Countries and their capital cities.',
+  flags: 'National flags, colors, and symbols.',
+  landforms: 'Mountains, rivers, deserts, and coasts.',
+  climate: 'Climate zones, biomes, and weather.',
+  population: 'People, cities, and migration.',
+  political: 'Borders, countries, and territories.',
+  economic: 'Resources, trade, and industry.',
+  cartography: 'Maps, projections, and coordinates.',
+  earth: 'Plate tectonics, rocks, and Earth systems.',
+  // Math
+  arithmetic: 'Whole numbers, the four operations, order of operations.',
+  fractions: 'Fractions, decimals, percentages, and ratios.',
+  prealgebra: 'Integers, exponents, variables, and first equations.',
+  algebra: 'Equations, lines, factoring, quadratics, functions.',
+  geometry: 'Angles, shapes, area, volume, the Pythagorean theorem.',
+  trigonometry: 'Sine, cosine, tangent, the unit circle, identities.',
+  statistics: 'Averages, spread, probability, and counting.',
+  precalculus: 'Functions, logarithms, sequences, complex numbers.',
+  calculus: 'Limits, derivatives, integrals, the fundamental theorem.',
+  'linear-algebra': 'Vectors, matrices, determinants, eigenvalues.',
+  // History
+  prehistory: 'Human origins, the Stone Age, and the first farmers.',
+  ancient: 'Mesopotamia, Egypt, the Indus, and early China.',
+  classical: 'Greece, Rome, and the Hellenistic world.',
+  medieval: 'Byzantium, Islam, feudalism, and the Crusades.',
+  renaissance: 'Humanism, the Reformation, and global exploration.',
+  earlymodern: 'The Enlightenment and the age of revolutions.',
+  industrial: 'Steam, factories, empire, and mass society.',
+  worldwars: 'WWI, WWII, and the upheavals between them.',
+  coldwar: 'Superpower rivalry, proxy wars, and decolonization.',
+  modern: 'Globalization, the digital age, and the world today.',
+  // Chess
+  rules: 'The board, setup, turns, and how a game is won.',
+  pieces: 'How every piece moves, captures, and its value.',
+  specialmoves: 'Castling, promotion, and en passant.',
+  checkmate: 'Check, checkmate, stalemate, and draws.',
+  notation: 'Read & write games in algebraic notation.',
+  openings: 'Center, development, and safe kings.',
+  tactics: 'Forks, pins, skewers, and discovered attacks.',
+  strategy: 'Pawn structure, outposts, files, and plans.',
+  endgames: 'King & pawn, the opposition, basic mates.',
+  combinations: 'Sacrifices, deflection, decoys, and calculation.',
 };
 
 // Curated tracks. Each is a top-to-bottom story: foundations → specialise →
 // production. Fullstack is the union; Frontend and Backend share the core
 // (JS/TS/Git/Testing) and branch into their own concerns. Non-essential topics
 // (Cool Stuff, AI, Abbreviations) are intentionally left off.
-export const TRACKS: Record<Track, TrackDef> = {
+const WEBDEV_TRACKS: Record<Track, TrackDef> = {
   frontend: {
     label: 'Frontend',
     blurb: 'Build the interfaces people actually touch: markup, styling, and the React stack.',
@@ -83,19 +129,166 @@ export const TRACKS: Record<Track, TrackDef> = {
   },
 };
 
-// The set of topics a track covers = the union of its stages. Used to filter
-// the pillar breakdown so it shows exactly what the map shows.
-const topicsOf = (track: Track): Set<RoadmapTopic> =>
-  new Set(TRACKS[track].stages.flatMap((s) => s.topics));
-
-export const TRACK_TOPICS: Record<Track, Set<RoadmapTopic>> = {
-  frontend: topicsOf('frontend'),
-  backend: topicsOf('backend'),
-  fullstack: topicsOf('fullstack'),
+const GEOGRAPHY_TRACKS: Record<Track, TrackDef> = {
+  frontend: {
+    label: 'World Basics',
+    blurb: 'Get your bearings: the continents, oceans, countries, and how to read a map.',
+    stages: [
+      { title: 'The map of the world', topics: ['continents', 'capitals'] },
+      { title: 'Reading the world', topics: ['flags', 'cartography'] },
+      { title: 'The physical world', topics: ['landforms', 'climate'] },
+      { title: 'Going deeper', topics: ['earth'] },
+    ],
+  },
+  backend: {
+    label: 'Human Geography',
+    blurb: 'How people shape the world: countries, borders, cities, and economies.',
+    stages: [
+      { title: 'Countries & capitals', topics: ['capitals', 'flags'] },
+      { title: 'People & borders', topics: ['population', 'political'] },
+      { title: 'How the world works', topics: ['economic', 'cartography'] },
+    ],
+  },
+  fullstack: {
+    label: 'The Full Atlas',
+    blurb: 'The whole picture: physical geography, human geography, and everything between.',
+    stages: [
+      { title: 'Foundations', topics: ['continents', 'capitals', 'flags'] },
+      { title: 'The physical world', topics: ['landforms', 'climate', 'earth'] },
+      { title: 'The human world', topics: ['population', 'political', 'economic'] },
+      { title: 'Master the map', topics: ['cartography'] },
+    ],
+  },
 };
 
+const MATH_TRACKS: Record<Track, TrackDef> = {
+  frontend: {
+    label: 'School Math',
+    blurb: 'Where it all begins: numbers, fractions, and your very first algebra and shapes.',
+    stages: [
+      { title: 'Number foundations', topics: ['arithmetic', 'fractions'] },
+      { title: 'Building blocks', topics: ['prealgebra', 'geometry'] },
+      { title: 'Into algebra', topics: ['algebra'] },
+    ],
+  },
+  backend: {
+    label: 'High School Math',
+    blurb: 'The high-school core: algebra and geometry, then trigonometry, statistics, and pre-calculus.',
+    stages: [
+      { title: 'Core algebra & geometry', topics: ['algebra', 'geometry'] },
+      { title: 'Trig & data', topics: ['trigonometry', 'statistics'] },
+      { title: 'Toward calculus', topics: ['precalculus'] },
+    ],
+  },
+  fullstack: {
+    label: 'The Full Journey',
+    blurb: 'Zero to hero: every topic, from counting all the way up to calculus and linear algebra.',
+    stages: [
+      { title: 'Foundations', topics: ['arithmetic', 'fractions', 'prealgebra'] },
+      { title: 'Core', topics: ['algebra', 'geometry'] },
+      { title: 'Advanced high school', topics: ['trigonometry', 'statistics', 'precalculus'] },
+      { title: 'Higher math', topics: ['calculus', 'linear-algebra'] },
+    ],
+  },
+};
+
+const HISTORY_TRACKS: Record<Track, TrackDef> = {
+  frontend: {
+    label: 'The Ancient World',
+    blurb: 'Journey from human origins through the great early civilizations to the medieval age.',
+    stages: [
+      { title: 'Foundations', topics: ['prehistory', 'ancient'] },
+      { title: 'The Classical Age', topics: ['classical'] },
+      { title: 'The Middle Ages', topics: ['medieval'] },
+      { title: 'A World Reborn', topics: ['renaissance'] },
+    ],
+  },
+  backend: {
+    label: 'The Modern Era',
+    blurb: 'Trace the modern world from the age of revolutions through the World Wars to today.',
+    stages: [
+      { title: 'Revolutions', topics: ['renaissance', 'earlymodern'] },
+      { title: 'Industry & Empire', topics: ['industrial'] },
+      { title: 'The World at War', topics: ['worldwars', 'coldwar'] },
+      { title: 'The World Today', topics: ['modern'] },
+    ],
+  },
+  fullstack: {
+    label: 'The Full Timeline',
+    blurb: 'The whole story of humanity, from the Stone Age to the twenty-first century.',
+    stages: [
+      { title: 'The Ancient World', topics: ['prehistory', 'ancient', 'classical'] },
+      { title: 'The Middle Ages', topics: ['medieval'] },
+      { title: 'Rebirth & Revolution', topics: ['renaissance', 'earlymodern'] },
+      { title: 'Industry & Empire', topics: ['industrial'] },
+      { title: 'The Modern World', topics: ['worldwars', 'coldwar', 'modern'] },
+    ],
+  },
+};
+
+const CHESS_TRACKS: Record<Track, TrackDef> = {
+  frontend: {
+    label: 'Beginner (Learn the Rules)',
+    blurb: 'Everything you need to sit down and play a legal game with confidence.',
+    stages: [
+      { title: 'The basics', topics: ['rules', 'pieces'] },
+      { title: 'Moves & mate', topics: ['specialmoves', 'checkmate'] },
+      { title: 'Read the game', topics: ['notation'] },
+    ],
+  },
+  backend: {
+    label: 'Club Player',
+    blurb: 'Start winning games: open well, spot tactics, and convert the endgame.',
+    stages: [
+      { title: 'Start strong', topics: ['openings'] },
+      { title: 'Win material', topics: ['tactics', 'combinations'] },
+      { title: 'Outplay them', topics: ['strategy', 'endgames'] },
+    ],
+  },
+  fullstack: {
+    label: 'The Full Path',
+    blurb: 'The whole journey: from the rules of the board to advanced combinations.',
+    stages: [
+      { title: 'Learn the rules', topics: ['rules', 'pieces', 'specialmoves'] },
+      { title: 'Checkmate & notation', topics: ['checkmate', 'notation'] },
+      { title: 'Openings & tactics', topics: ['openings', 'tactics'] },
+      { title: 'Strategy & endgames', topics: ['strategy', 'endgames'] },
+      { title: 'Master combinations', topics: ['combinations'] },
+    ],
+  },
+};
+
+// All subjects' tracks, keyed by subject. The active subject selects which
+// map drives the roadmap/track pickers.
+export const TRACKS_BY_SUBJECT: Record<SubjectId, Record<Track, TrackDef>> = {
+  webdev: WEBDEV_TRACKS,
+  geography: GEOGRAPHY_TRACKS,
+  math: MATH_TRACKS,
+  history: HISTORY_TRACKS,
+  chess: CHESS_TRACKS,
+};
+
+/** The track map for a given subject. */
+export const tracksForSubject = (id: SubjectId): Record<Track, TrackDef> => TRACKS_BY_SUBJECT[id];
+/** The track map for the active subject (imperative). */
+export const tracksForActiveSubject = (): Record<Track, TrackDef> => TRACKS_BY_SUBJECT[getSubject()];
+/** Live track map for the active subject — re-renders when the subject changes. */
+export function useActiveTracks(): Record<Track, TrackDef> {
+  const [subject] = useSubject();
+  return TRACKS_BY_SUBJECT[subject];
+}
+
+// The set of topics a track covers = the union of its stages. Used to filter
+// the pillar breakdown so it shows exactly what the map shows.
+const topicsOf = (tracks: Record<Track, TrackDef>, track: Track): Set<RoadmapTopic> =>
+  new Set(tracks[track].stages.flatMap((s) => s.topics));
+
+/** The topics a track covers, within the active subject. */
+export const trackTopics = (track: Track): Set<RoadmapTopic> =>
+  topicsOf(tracksForActiveSubject(), track);
+
 export const isTopicInTrack = (track: Track, topic: RoadmapTopic): boolean =>
-  TRACK_TOPICS[track].has(topic);
+  trackTopics(track).has(topic);
 
 /**
  * The learning sections unlocked when a learner commits to a track in their
@@ -104,7 +297,7 @@ export const isTopicInTrack = (track: Track, topic: RoadmapTopic): boolean =>
  * the path keeps unlocking through the normal prerequisite progression.
  */
 export function trackStarterTopics(track: Track): RoadmapTopic[] {
-  const stages = TRACKS[track].stages.slice(0, 2);
+  const stages = tracksForActiveSubject()[track].stages.slice(0, 2);
   return Array.from(new Set(stages.flatMap((s) => s.topics)));
 }
 
