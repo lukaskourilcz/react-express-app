@@ -67,6 +67,17 @@ export const KNOWN_CATEGORIES: CategoryType[] = [
   'pawn-structures',
   'endgame-technique',
   'chess-history',
+  // Poker
+  'hand-rankings',
+  'rules-formats',
+  'positions',
+  'starting-hands',
+  'pot-odds',
+  'betting-strategy',
+  'postflop',
+  'tournament-play',
+  'psychology',
+  'gto-advanced',
 ];
 
 export interface QuestionEditRow {

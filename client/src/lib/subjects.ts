@@ -12,8 +12,8 @@ import type { CategoryType, RoadmapTopic } from '../types/quiz';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 
-export type SubjectId = 'webdev' | 'geography' | 'math' | 'history' | 'chess' | 'biology';
-export const SUBJECT_ORDER: SubjectId[] = ['webdev', 'geography', 'math', 'history', 'chess', 'biology'];
+export type SubjectId = 'webdev' | 'geography' | 'math' | 'history' | 'chess' | 'biology' | 'poker';
+export const SUBJECT_ORDER: SubjectId[] = ['webdev', 'geography', 'math', 'history', 'chess', 'biology', 'poker'];
 
 export interface SubjectDef {
   id: SubjectId;
@@ -102,6 +102,16 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
     accentBright: '#2dd4bf',
     topics: ['cell-biology', 'skeletal-system', 'muscular-system', 'nervous-system', 'endocrine-system', 'cardiovascular-system', 'respiratory-system', 'digestive-system', 'immune-system', 'reproductive-system'],
     categories: ['cell-biology', 'skeletal-system', 'muscular-system', 'nervous-system', 'endocrine-system', 'cardiovascular-system', 'respiratory-system', 'digestive-system', 'immune-system', 'reproductive-system'],
+  },
+  poker: {
+    id: 'poker',
+    label: 'Poker',
+    blurb: "Master no-limit Texas Hold'em — from hand rankings to pot odds and GTO strategy.",
+    emoji: '♠️',
+    accent: '#b91c1c',
+    accentBright: '#ef4444',
+    topics: ['hand-rankings', 'rules-formats', 'positions', 'starting-hands', 'pot-odds', 'betting-strategy', 'postflop', 'tournament-play', 'psychology', 'gto-advanced'],
+    categories: ['hand-rankings', 'rules-formats', 'positions', 'starting-hands', 'pot-odds', 'betting-strategy', 'postflop', 'tournament-play', 'psychology', 'gto-advanced'],
   },
 };
 

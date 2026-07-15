@@ -27,7 +27,7 @@ export const CHECKPOINT_COUNT = ROADMAP_LEVELS / LEVELS_PER_CHECKPOINT;
  * Prereqs are intentionally a shallow graph so the path from zero → hero stays
  * obvious: master JS basics, then HTML+CSS for React, then specialise.
  */
-export const STARTER_TOPICS: RoadmapTopic[] = ['html', 'css', 'javascript', 'continents', 'capitals', 'flags', 'arithmetic', 'fractions', 'prealgebra', 'prehistory', 'ancient', 'classical', 'rules', 'pieces', 'notation', 'cell-biology'];
+export const STARTER_TOPICS: RoadmapTopic[] = ['html', 'css', 'javascript', 'continents', 'capitals', 'flags', 'arithmetic', 'fractions', 'prealgebra', 'prehistory', 'ancient', 'classical', 'rules', 'pieces', 'notation', 'cell-biology', 'hand-rankings'];
 
 // Levels of each prereq topic that must be passed before a topic unlocks.
 // 5 = "first checkpoint cleared" — the natural milestone in each path.
@@ -148,6 +148,16 @@ export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
   'pawn-structures': ['strategy'],
   'endgame-technique': ['endgames'],
   'chess-history': ['notation'],
+  'hand-rankings': [],
+  'rules-formats': ['hand-rankings'],
+  'positions': ['rules-formats'],
+  'starting-hands': ['positions'],
+  'pot-odds': ['rules-formats'],
+  'betting-strategy': ['starting-hands'],
+  'postflop': ['betting-strategy'],
+  'tournament-play': ['betting-strategy'],
+  'psychology': ['rules-formats'],
+  'gto-advanced': ['pot-odds'],
 };
 
 // Unlock tiers granted by the skill-check assessment. Each correct-answer band

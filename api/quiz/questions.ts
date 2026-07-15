@@ -69,6 +69,17 @@ const ALL_CATEGORIES: CategoryType[] = [
   'pawn-structures',
   'endgame-technique',
   'chess-history',
+  // Poker
+  'hand-rankings',
+  'rules-formats',
+  'positions',
+  'starting-hands',
+  'pot-odds',
+  'betting-strategy',
+  'postflop',
+  'tournament-play',
+  'psychology',
+  'gto-advanced',
 ];
 const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 

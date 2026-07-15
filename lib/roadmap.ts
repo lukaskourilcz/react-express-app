@@ -37,7 +37,9 @@ export type RoadmapTopic =
   // Human Biology
   | 'cell-biology' | 'skeletal-system' | 'muscular-system' | 'nervous-system' | 'endocrine-system' | 'cardiovascular-system' | 'respiratory-system' | 'digestive-system' | 'immune-system' | 'reproductive-system'
   // Chess (advanced)
-  | 'opening-theory' | 'middlegame' | 'pawn-structures' | 'endgame-technique' | 'chess-history';
+  | 'opening-theory' | 'middlegame' | 'pawn-structures' | 'endgame-technique' | 'chess-history'
+  // Poker
+  | 'hand-rankings' | 'rules-formats' | 'positions' | 'starting-hands' | 'pot-odds' | 'betting-strategy' | 'postflop' | 'tournament-play' | 'psychology' | 'gto-advanced';
 
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
@@ -62,6 +64,8 @@ export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'cell-biology', 'skeletal-system', 'muscular-system', 'nervous-system', 'endocrine-system', 'cardiovascular-system', 'respiratory-system', 'digestive-system', 'immune-system', 'reproductive-system',
   // Chess (advanced)
   'opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history',
+  // Poker
+  'hand-rankings', 'rules-formats', 'positions', 'starting-hands', 'pot-odds', 'betting-strategy', 'postflop', 'tournament-play', 'psychology', 'gto-advanced',
 ];
 
 // Pass thresholds (percent). Levels are gentle; checkpoints are the real gate.
@@ -171,6 +175,16 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   'pawn-structures': 'rm-pawns',
   'endgame-technique': 'rm-endgtech',
   'chess-history': 'rm-chesshist',
+  'hand-rankings': 'rm-pkhands',
+  'rules-formats': 'rm-pkrules',
+  'positions': 'rm-pkpos',
+  'starting-hands': 'rm-pkstart',
+  'pot-odds': 'rm-pkodds',
+  'betting-strategy': 'rm-pkbet',
+  'postflop': 'rm-pkpost',
+  'tournament-play': 'rm-pktourn',
+  'psychology': 'rm-pkpsych',
+  'gto-advanced': 'rm-pkgto',
 };
 
 // Level titles per topic, in increasing difficulty. Index 0 is level 1. The
@@ -541,6 +555,36 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
   ],
   'chess-history': [
     'Origins & early history', 'Romantic era & first champions', 'Classical & Soviet school', 'Famous champions & rivalries', 'Modern era & computer chess',
+  ],
+  'hand-rankings': [
+    'The 10 poker hands & ranking order', 'Reading your hand (best 5 of 7)', 'Comparing hands, kickers & ties', 'Hand probabilities & frequencies', 'Tricky rankings & board-reading',
+  ],
+  'rules-formats': [
+    'The flow of a hand', 'Betting actions & rounds', 'Blinds, antes, button & acting order', 'Bet sizing, all-ins & side pots', 'Formats & variants',
+  ],
+  'positions': [
+    'The positions at the table', 'Why position matters', 'Opening ranges by position', 'In and out of position postflop', 'Table dynamics & seat selection',
+  ],
+  'starting-hands': [
+    'Premium hands & hand notation', 'Hand categories', 'Preflop selection by position', 'Ranges & 3-betting', 'Adjusting ranges',
+  ],
+  'pot-odds': [
+    'Counting outs', 'The rule of 2 and 4', 'Pot odds vs equity', 'Implied & reverse implied odds', 'Expected value & fold equity',
+  ],
+  'betting-strategy': [
+    'Why we bet (value vs bluff)', 'Bet sizing fundamentals', 'Continuation bets', 'Bluffing & fold equity', 'Multi-street planning & ranges',
+  ],
+  'postflop': [
+    'Board texture', 'Made hands vs draws', 'Playing the turn and river', 'Check-raising, floating, bluff-catching', 'Hand reading & ranges',
+  ],
+  'tournament-play': [
+    'How tournaments work', 'Stack sizes & stages', 'Short-stack, push/fold & M-ratio', 'The bubble, ICM & pay-jumps', 'Final-table & heads-up',
+  ],
+  'psychology': [
+    'Tilt & emotional control', 'Table image', 'Reading opponents & tells', 'Player types & exploiting them', 'Bankroll & responsible play',
+  ],
+  'gto-advanced': [
+    'GTO vs exploitative play', 'Balanced ranges, MDF & ratios', 'Combinatorics & blockers', 'Range construction & bet-sizing', 'Equilibrium, solvers & simplifications',
   ],
 };
 

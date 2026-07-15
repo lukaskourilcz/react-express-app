@@ -158,4 +158,15 @@ export const STATS_CATEGORIES = new Set([
   'pawn-structures',
   'endgame-technique',
   'chess-history',
+  // Poker
+  'hand-rankings',
+  'rules-formats',
+  'positions',
+  'starting-hands',
+  'pot-odds',
+  'betting-strategy',
+  'postflop',
+  'tournament-play',
+  'psychology',
+  'gto-advanced',
 ]);
