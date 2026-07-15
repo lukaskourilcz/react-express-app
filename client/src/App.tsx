@@ -374,9 +374,8 @@ function App() {
   }, []);
   const showChrome = !isDev && !(quizActive && isQuiz);
 
-  // Sound + theme toggles. Rendered floating in the top-right corner on desktop,
-  // but inline in the toolbar on mobile (where the account avatar sits in that
-  // corner) so the two never overlap.
+  // Sound + theme toggles. On desktop/tablet they sit in the toolbar's profile
+  // section (next to the account widget); on mobile they live in the nav drawer.
   const utilityToggles = (
     <>
       <Tooltip title={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}>
@@ -441,22 +440,6 @@ function App() {
 
       {showChrome && (
         <>
-        {/* Sound + theme toggles, floating in the top-right corner on desktop.
-            On mobile they move into the toolbar (see the right slot) to avoid
-            overlapping the account avatar. */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 4,
-            right: 8,
-            zIndex: (theme) => theme.zIndex.appBar + 1,
-            display: { xs: 'none', sm: 'flex' },
-            alignItems: 'center',
-            gap: 0.25,
-          }}
-        >
-          {utilityToggles}
-        </Box>
         <AppBar position="static" elevation={0} sx={{ backgroundColor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
           <Toolbar sx={{ maxWidth: 1200, width: '100%', mx: 'auto', px: { xs: 2, sm: 3 }, gap: 1 }}>
             {/* Left slot: mobile menu + logo. Flex-basis 0 so all three slots
@@ -490,9 +473,9 @@ function App() {
               ))}
             </Box>
 
-            {/* Right slot: Leaderboard + Shop icons and the auth widget. On
-                mobile the sound/theme toggles live in the nav drawer (not here),
-                so they never crowd the account avatar. */}
+            {/* Right slot: Leaderboard + Shop icons, sound/theme toggles, and
+                the auth widget. On mobile the sound/theme toggles live in the
+                nav drawer (not here), so they never crowd the account avatar. */}
             <Box sx={{ flex: '1 1 0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: { xs: 0.5, sm: 1 }, minWidth: 0 }}>
               {/* Icon links to the non-learning surfaces. Hidden below 760px —
                   the drawer covers them there. */}
@@ -519,6 +502,12 @@ function App() {
                     <ShopNavIcon />
                   </IconButton>
                 </Tooltip>
+              </Box>
+              {/* Sound + theme toggles, grouped into the profile section on
+                  desktop/tablet. Hidden below `sm` — the nav drawer covers
+                  them there. */}
+              <Box sx={{ display: { xs: 'none', sm: 'inline-flex' }, alignItems: 'center', gap: 0.25 }}>
+                {utilityToggles}
               </Box>
               <Suspense fallback={null}>
                 <AuthButton />
