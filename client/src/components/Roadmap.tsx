@@ -768,7 +768,7 @@ function LevelNode({
   // gated by the previous part's test at the part selector, never here.
   const lockedHint = t('roadmap.lockedHint');
   const label = unlocked
-    ? `${t('roadmap.levelLabel', { n: displayNum })}: ${meta.title}${passed ? ` — ${t('roadmap.passed')} ${best}%` : ''}`
+    ? `${t('roadmap.levelLabel', { n: displayNum })}: ${meta.title}${passed ? `, ${t('roadmap.passed')} ${best}%` : ''}`
     : `${t('roadmap.levelLabel', { n: displayNum })}: ${t('roadmap.locked')}`;
   const labelWidth = Math.max(72, Math.min(150, cellW - 10));
 
