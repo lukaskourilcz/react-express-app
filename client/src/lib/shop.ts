@@ -1,5 +1,11 @@
 // In-app token shop. A small catalogue of consumable boosters, permanent
 // cosmetics, and Learn-path unlocks, paid for with tokens (see tokens.ts).
+//
+// The shop is PER SUBJECT (platform): purchases are paid from the active
+// subject's wallet and land in the active subject's inventory, so boosters and
+// cosmetics bought on one platform belong to that platform. Path products are
+// generated for every subject; the Shop page shows only the active subject's.
+//
 // Cosmetics + boosters are localStorage-backed; path unlocks route through
 // the roadmap store so they participate in the cross-device account sync.
 
@@ -9,6 +15,7 @@ import { spendTokens, getTokens } from './tokens';
 import type { RoadmapTopic } from '../types/quiz';
 import {
   STARTER_TOPICS,
+  TOPIC_PREREQS,
   getExtraUnlocks,
   getRoadmapProgress,
   isTopicUnlocked,
@@ -16,6 +23,7 @@ import {
 } from './roadmap';
 import { getCategoryHexColor } from './categories';
 import { getGameConfig, type GameConfig } from './gameConfig';
+import { getSubject, useSubject, isSubjectId, SUBJECTS, SUBJECT_ORDER, type SubjectId } from './subjects';
 
 export type ProductKind = 'booster' | 'ring' | 'flair' | 'path';
 
@@ -29,6 +37,8 @@ export interface Product {
   color?: string;
   /** For `path` products: the roadmap topic this unlocks. */
   topic?: RoadmapTopic;
+  /** For `path` products: the subject that topic belongs to. */
+  subject?: SubjectId;
 }
 
 // Default token prices (the configurable defaults live in lib/settings-store.ts
@@ -49,25 +59,23 @@ const STATIC_CATALOGUE: Product[] = [
 /** Default tokens to instantly unlock one learning path the user hasn't earned. */
 export const PATH_UNLOCK_PRICE = 200;
 
-// All non-starter topics are buyable. Starters are always free / always open.
-// Ordered the same way the Learn-page topic strip is, so the shop list mirrors
-// the map visually.
-// 'cool-stuff' is Play-mode-only (no learning path), so it isn't buyable.
-const PATH_TOPICS: RoadmapTopic[] = [
-  'typescript', 'react', 'nextjs', 'nodejs',
-  'git', 'dsa', 'algorithms',
-  'abbreviations', 'general', 'ai', 'rhf-zod',
-  'databases', 'system-design', 'testing', 'devops', 'security',
-];
-
-const PATH_PRODUCTS: Product[] = PATH_TOPICS.map<Product>((topic) => ({
-  id: `path-${topic}`,
-  kind: 'path',
-  price: PATH_UNLOCK_PRICE,
-  emoji: '🗺️',
-  color: getCategoryHexColor(topic),
-  topic,
-}));
+// Every subject's buyable paths: its non-starter topics that are actually
+// gated by prereqs (starters and zero-prereq topics are always open, so
+// there's nothing to sell). Ordered per subject the same way the Learn-page
+// topic strip is, so each shop list mirrors its map visually.
+const PATH_PRODUCTS: Product[] = SUBJECT_ORDER.flatMap((subject) =>
+  SUBJECTS[subject].topics
+    .filter((topic) => !STARTER_TOPICS.includes(topic) && (TOPIC_PREREQS[topic] ?? []).length > 0)
+    .map<Product>((topic) => ({
+      id: `path-${topic}`,
+      kind: 'path',
+      price: PATH_UNLOCK_PRICE,
+      emoji: '🗺️',
+      color: getCategoryHexColor(topic),
+      topic,
+      subject,
+    })),
+);
 
 // Each product resolves its display copy from i18n keys derived from the id:
 // `shop.item.<id>.name` and `shop.item.<id>.desc` (paths use a shared template
@@ -102,38 +110,88 @@ interface Inventory {
   doubleXp: number;
 }
 
-const INVENTORY_KEY = 'devquiz:shop:inventory:v1';
+// v1 held ONE inventory shared by every subject; v2 keys inventories by subject.
+const INVENTORY_KEY_LEGACY = 'devquiz:shop:inventory:v1';
+const INVENTORY_KEY = 'devquiz:shop:inventory:v2';
 const EMPTY: Inventory = { owned: [], ring: null, flair: null, doubleXp: 0 };
 
-/** Imperative read of the current inventory, for the account-sync merge. */
-export function getInventorySnapshot(): Inventory {
-  return readInventory();
-}
+type InventoryMap = Partial<Record<SubjectId, Inventory>>;
 
-function readInventory(): Inventory {
-  const raw = readJSON<Partial<Inventory>>(INVENTORY_KEY, EMPTY);
-  const doubleXp = Number(raw.doubleXp);
+function sanitizeInventory(raw: unknown): Inventory {
+  if (!raw || typeof raw !== 'object') return { ...EMPTY, owned: [] };
+  const rec = raw as Partial<Inventory>;
+  const doubleXp = Number(rec.doubleXp);
   return {
-    owned: Array.isArray(raw.owned) ? raw.owned.filter((x): x is string => typeof x === 'string') : [],
-    ring: typeof raw.ring === 'string' ? raw.ring : null,
-    flair: typeof raw.flair === 'string' ? raw.flair : null,
+    owned: Array.isArray(rec.owned) ? rec.owned.filter((x): x is string => typeof x === 'string') : [],
+    ring: typeof rec.ring === 'string' ? rec.ring : null,
+    flair: typeof rec.flair === 'string' ? rec.flair : null,
     doubleXp: Number.isFinite(doubleXp) && doubleXp > 0 ? Math.floor(doubleXp) : 0,
   };
 }
 
-const inventoryStore = createStore<Inventory>(readInventory);
+function sanitizeInventories(raw: unknown): InventoryMap {
+  const out: InventoryMap = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (isSubjectId(k)) out[k] = sanitizeInventory(v);
+  }
+  return out;
+}
 
-function writeInventory(next: Inventory): void {
-  writeJSON(INVENTORY_KEY, next);
+function readInventories(): InventoryMap {
+  const raw = readJSON<Record<string, unknown> | null>(INVENTORY_KEY, null);
+  if (raw !== null) return sanitizeInventories(raw);
+  // One-time migration: the pre-split inventory was shared by all subjects.
+  // Attribute it to the subject active right now (same rule as XP + tokens).
+  const legacy = readJSON<Partial<Inventory> | null>(INVENTORY_KEY_LEGACY, null);
+  const migrated: InventoryMap = legacy !== null ? { [getSubject()]: sanitizeInventory(legacy) } : {};
+  writeJSON(INVENTORY_KEY, migrated);
+  return migrated;
+}
+
+const readInventory = (subject: SubjectId = getSubject()): Inventory =>
+  readInventories()[subject] ?? { ...EMPTY, owned: [] };
+
+const inventoryStore = createStore<InventoryMap>(readInventories);
+
+/** Snapshot of every subject's inventory, for the account-sync merge. */
+export function getInventoriesSnapshot(): Record<string, Inventory> {
+  const out: Record<string, Inventory> = {};
+  for (const [k, v] of Object.entries(readInventories())) {
+    if (v) out[k] = v;
+  }
+  return out;
+}
+
+function writeInventory(subject: SubjectId, next: Inventory): void {
+  writeJSON(INVENTORY_KEY, { ...readInventories(), [subject]: next });
   inventoryStore.emit();
   // Push to the account so purchases + equipped cosmetics survive a device
   // switch. Debounced with the token wallet in tokens.ts.
   scheduleAccountSync();
 }
 
-/** Direct write of authoritative inventory — used by the account-sync merge. */
-export function setInventoryFromServer(next: Inventory): void {
-  writeJSON(INVENTORY_KEY, next);
+/**
+ * Merge authoritative per-subject inventories from the account sync: per
+ * subject, owned is a set union, equipped is server-wins (if valid, else
+ * local), and doubleXp charges are a max — never revoke anything on sync.
+ */
+export function mergeInventoriesFromServer(server: Record<string, Inventory>): void {
+  const local = readInventories();
+  const merged: InventoryMap = { ...local };
+  for (const [k, remote] of Object.entries(server)) {
+    if (!isSubjectId(k)) continue;
+    const mine = local[k] ?? { ...EMPTY, owned: [] };
+    const theirs = sanitizeInventory(remote);
+    const ownedUnion = Array.from(new Set([...mine.owned, ...theirs.owned]));
+    merged[k] = {
+      owned: ownedUnion,
+      ring: ownedUnion.includes(theirs.ring ?? '') ? theirs.ring : mine.ring,
+      flair: ownedUnion.includes(theirs.flair ?? '') ? theirs.flair : mine.flair,
+      doubleXp: Math.max(mine.doubleXp, theirs.doubleXp),
+    };
+  }
+  writeJSON(INVENTORY_KEY, merged);
   inventoryStore.emit();
 }
 
@@ -153,18 +211,20 @@ export function flushInventorySyncNow(): void {
   }
 }
 
-/** Live inventory (re-renders on change). */
+/** Live inventory of the ACTIVE subject (re-renders on change). */
 export function useInventory(): Inventory {
-  return useStore(inventoryStore);
+  const map = useStore(inventoryStore);
+  const [subject] = useSubject();
+  return map[subject] ?? EMPTY;
 }
 
 export type PurchaseResult = 'ok' | 'insufficient' | 'owned' | 'unknown';
 
 /**
- * Buy a product: spend its price in tokens, then grant it. Cosmetics are a
- * one-time purchase; the Double-XP booster adds a stackable charge; a Learn
- * path routes through the roadmap-unlock store. Returns a status the caller
- * can surface to the learner.
+ * Buy a product: spend its price from the active subject's wallet, then grant
+ * it into the active subject's inventory. Cosmetics are a one-time purchase;
+ * the Double-XP booster adds a stackable charge; a Learn path routes through
+ * the roadmap-unlock store. Returns a status the caller can surface.
  */
 export function purchase(id: string): PurchaseResult {
   const product = byId.get(id);
@@ -180,15 +240,16 @@ export function purchase(id: string): PurchaseResult {
     return 'ok';
   }
 
-  const inv = readInventory();
+  const subject = getSubject();
+  const inv = readInventory(subject);
   if (product.kind !== 'booster' && inv.owned.includes(id)) return 'owned';
   if (getTokens() < price) return 'insufficient';
   if (!spendTokens(price)) return 'insufficient';
 
   if (product.kind === 'booster') {
-    writeInventory({ ...inv, doubleXp: inv.doubleXp + 1 });
+    writeInventory(subject, { ...inv, doubleXp: inv.doubleXp + 1 });
   } else {
-    writeInventory({ ...inv, owned: [...inv.owned, id] });
+    writeInventory(subject, { ...inv, owned: [...inv.owned, id] });
   }
   return 'ok';
 }
@@ -197,31 +258,33 @@ export function purchase(id: string): PurchaseResult {
 export function equip(id: string): void {
   const product = byId.get(id);
   if (!product) return;
-  const inv = readInventory();
+  const subject = getSubject();
+  const inv = readInventory(subject);
   if (!inv.owned.includes(id)) return;
   if (product.kind === 'ring') {
-    writeInventory({ ...inv, ring: inv.ring === id ? null : id });
+    writeInventory(subject, { ...inv, ring: inv.ring === id ? null : id });
   } else if (product.kind === 'flair') {
-    writeInventory({ ...inv, flair: inv.flair === id ? null : id });
+    writeInventory(subject, { ...inv, flair: inv.flair === id ? null : id });
   }
 }
 
-/** Consume one Double-XP charge if any are armed. Returns true if consumed. */
+/** Consume one of the active subject's Double-XP charges if any are armed. */
 export function consumeDoubleXpCharge(): boolean {
-  const inv = readInventory();
+  const subject = getSubject();
+  const inv = readInventory(subject);
   if (inv.doubleXp <= 0) return false;
-  writeInventory({ ...inv, doubleXp: inv.doubleXp - 1 });
+  writeInventory(subject, { ...inv, doubleXp: inv.doubleXp - 1 });
   return true;
 }
 
-/** Colour of the equipped avatar ring, or null. */
+/** Colour of the active subject's equipped avatar ring, or null. */
 export function useEquippedRingColor(): string | null {
-  const inv = useStore(inventoryStore);
+  const inv = useInventory();
   return inv.ring ? byId.get(inv.ring)?.color ?? null : null;
 }
 
-/** Emoji of the equipped title flair, or null. */
+/** Emoji of the active subject's equipped title flair, or null. */
 export function useEquippedFlair(): string | null {
-  const inv = useStore(inventoryStore);
+  const inv = useInventory();
   return inv.flair ? byId.get(inv.flair)?.emoji ?? null : null;
 }

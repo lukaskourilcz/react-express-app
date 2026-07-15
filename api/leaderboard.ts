@@ -28,6 +28,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (period === 'global') {
+      // Per-subject (platform) scoping: ?categories=a,b,c sums each user's
+      // per-category lifetime stats over exactly those categories. The client
+      // sends the active subject's category set; subjects are disjoint, so the
+      // result is that platform's own all-time board.
+      const catRaw = typeof req.query.categories === 'string' ? req.query.categories : '';
+      const cats = Array.from(
+        new Set(catRaw.split(',').map((s) => s.trim()).filter((c) => STATS_CATEGORIES.has(c))),
+      ).slice(0, 64);
+
+      if (cats.length > 0) {
+        const { data, error } = await withTimeout(
+          supabase.rpc('subject_leaderboard', { p_categories: cats, p_limit: limit }),
+        );
+        if (error) {
+          if (isRpcMissing(error)) {
+            return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-020.sql to enable per-subject leaderboards');
+          }
+          logEvent({ status: 500, error: error.message });
+          return jsonError(res, 500, 'db_error', 'Could not load leaderboard');
+        }
+        res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+        return res.json({ period: 'global', categories: cats, entries: data });
+      }
+
+      // No categories → the legacy all-platform board (kept for old clients).
       const { data, error } = await withTimeout(
         supabase.rpc('global_leaderboard', { p_limit: limit }),
       );

@@ -64,33 +64,57 @@ interface Entry {
 type TopicProgress = { levels: Record<string, Entry>; checkpoints: Record<string, Entry> };
 type ProgressBlob = Record<string, TopicProgress>;
 
-// Skill-check unlocks, the token wallet, and the shop inventory all live in
+// Skill-check unlocks, the token wallets, and the shop inventories all live in
 // this "extra" blob alongside roadmap progress so a single sync round-trip
-// covers everything the learner has earned or bought. Balance is a max-merge
+// covers everything the learner has earned or bought. Wallets and inventories
+// are keyed PER SUBJECT (platform); the un-keyed `wallet`/`inventory` fields
+// are the legacy pre-split shape, still sanitized so old stored rows (and old
+// clients) round-trip until they migrate. Balance is a max-merge client-side
 // (tokens can only grow across devices — no one gets refunded twice), owned
 // items are a set union (a cosmetic bought on one device stays owned on all),
 // and doubleXp charges are a max-merge (grant on any device applies).
+interface InventoryBlob {
+  owned: string[];
+  ring: string | null;
+  flair: string | null;
+  doubleXp: number;
+}
 interface ExtraBlob {
   unlocked: string[];
   wallet?: { balance: number };
-  inventory?: {
-    owned: string[];
-    ring: string | null;
-    flair: string | null;
-    doubleXp: number;
-  };
+  inventory?: InventoryBlob;
+  wallets?: Record<string, { balance: number }>;
+  inventories?: Record<string, InventoryBlob>;
 }
 
 const MAX_TOKEN_BALANCE = 100_000_000;
 const MAX_INVENTORY_ITEMS = 64;
 const MAX_STR_LEN = 64;
+const MAX_SUBJECT_KEYS = 16;
 const isSafeId = (v: unknown): v is string =>
   typeof v === 'string' && v.length > 0 && v.length <= MAX_STR_LEN && /^[a-z0-9_-]+$/i.test(v);
+const isSubjectKey = (v: string): boolean => /^[a-z][a-z0-9-]{0,31}$/.test(v);
 
 const clampPct = (n: unknown): number => {
   const v = typeof n === 'number' && Number.isFinite(n) ? Math.round(n) : 0;
   return v < 0 ? 0 : v > 100 ? 100 : v;
 };
+
+const clampBalance = (n: unknown): number => {
+  const bal = typeof n === 'number' && Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+  return Math.min(MAX_TOKEN_BALANCE, bal);
+};
+
+function sanitizeInventory(input: unknown): InventoryBlob {
+  const inv = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>;
+  const owned = Array.isArray(inv.owned)
+    ? Array.from(new Set(inv.owned.filter(isSafeId))).slice(0, MAX_INVENTORY_ITEMS)
+    : [];
+  const ring = isSafeId(inv.ring) && owned.includes(inv.ring) ? inv.ring : null;
+  const flair = isSafeId(inv.flair) && owned.includes(inv.flair) ? inv.flair : null;
+  const dx = typeof inv.doubleXp === 'number' && Number.isFinite(inv.doubleXp) ? Math.max(0, Math.floor(inv.doubleXp)) : 0;
+  return { owned, ring, flair, doubleXp: Math.min(1000, dx) };
+}
 
 // Rebuild a clean extras blob from untrusted input: only known topic ids,
 // de-duplicated and bounded. Exported for tests.
@@ -114,23 +138,40 @@ export function sanitizeExtra(input: unknown): ExtraBlob {
     }
   }
 
-  // wallet
+  // legacy single wallet (pre-split rows/clients)
   if (rec.wallet && typeof rec.wallet === 'object') {
-    const w = rec.wallet as Record<string, unknown>;
-    const bal = typeof w.balance === 'number' && Number.isFinite(w.balance) ? Math.max(0, Math.floor(w.balance)) : 0;
-    out.wallet = { balance: Math.min(MAX_TOKEN_BALANCE, bal) };
+    out.wallet = { balance: clampBalance((rec.wallet as Record<string, unknown>).balance) };
   }
 
-  // inventory
+  // legacy single inventory (pre-split rows/clients)
   if (rec.inventory && typeof rec.inventory === 'object') {
-    const inv = rec.inventory as Record<string, unknown>;
-    const owned = Array.isArray(inv.owned)
-      ? Array.from(new Set(inv.owned.filter(isSafeId))).slice(0, MAX_INVENTORY_ITEMS)
-      : [];
-    const ring = isSafeId(inv.ring) && owned.includes(inv.ring) ? inv.ring : null;
-    const flair = isSafeId(inv.flair) && owned.includes(inv.flair) ? inv.flair : null;
-    const dx = typeof inv.doubleXp === 'number' && Number.isFinite(inv.doubleXp) ? Math.max(0, Math.floor(inv.doubleXp)) : 0;
-    out.inventory = { owned, ring, flair, doubleXp: Math.min(1000, dx) };
+    out.inventory = sanitizeInventory(rec.inventory);
+  }
+
+  // per-subject wallets
+  if (rec.wallets && typeof rec.wallets === 'object' && !Array.isArray(rec.wallets)) {
+    const wallets: Record<string, { balance: number }> = {};
+    let n = 0;
+    for (const [k, v] of Object.entries(rec.wallets as Record<string, unknown>)) {
+      if (n >= MAX_SUBJECT_KEYS) break;
+      if (!isSubjectKey(k) || !v || typeof v !== 'object') continue;
+      wallets[k] = { balance: clampBalance((v as Record<string, unknown>).balance) };
+      n++;
+    }
+    out.wallets = wallets;
+  }
+
+  // per-subject inventories
+  if (rec.inventories && typeof rec.inventories === 'object' && !Array.isArray(rec.inventories)) {
+    const inventories: Record<string, InventoryBlob> = {};
+    let n = 0;
+    for (const [k, v] of Object.entries(rec.inventories as Record<string, unknown>)) {
+      if (n >= MAX_SUBJECT_KEYS) break;
+      if (!isSubjectKey(k) || !v || typeof v !== 'object') continue;
+      inventories[k] = sanitizeInventory(v);
+      n++;
+    }
+    out.inventories = inventories;
   }
 
   return out;

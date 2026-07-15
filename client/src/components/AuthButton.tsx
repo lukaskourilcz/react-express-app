@@ -9,15 +9,18 @@ import { useRoadmapProgress } from '../lib/roadmap';
 import { computeLearningXp, levelForXp } from '../lib/leveling';
 import { useTrack, rankLabelFor } from '../lib/tracks';
 import { useEquippedRingColor } from '../lib/shop';
+import { useActiveSubject, topicSetForSubject } from '../lib/subjects';
 
 function AuthButton() {
   const { isAuthenticated, isLoading, user, signInWithGoogle, signOut } = useAuth();
   const profile = getUserProfile(user);
   // Subscribe to roadmap progress once; derive total XP locally rather than
-  // calling useTotalXp() (which would set up a second subscription).
+  // calling useTotalXp() (which would set up a second subscription). XP is
+  // per subject, so only the active subject's topics count.
   const progress = useRoadmapProgress();
   const questXp = useQuestXp();
-  const totalXp = computeLearningXp(progress) + questXp;
+  const subject = useActiveSubject();
+  const totalXp = computeLearningXp(progress, topicSetForSubject(subject.id)) + questXp;
   const ringColor = useEquippedRingColor();
   const [track] = useTrack();
   const levelInfo = levelForXp(totalXp);

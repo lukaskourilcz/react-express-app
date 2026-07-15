@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Box,
@@ -20,33 +20,53 @@ import { friendlyError } from '../lib/api';
 import { useLeaderboard } from '../lib/queries';
 import { useT } from '../i18n/LanguageContext';
 import { visibleCategoryOptionsFor, getCategoryLabel } from '../lib/categories';
+import { useActiveSubject, categoriesForSubject } from '../lib/subjects';
 import ErrorRetry from './ErrorRetry';
 
 type Tab = 'global' | 'daily' | 'category';
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-// The public (non-owner) categories that have their own leaderboard.
-const CATEGORIES = visibleCategoryOptionsFor();
-
 type Entry = LeaderboardGlobalEntry | LeaderboardDailyEntry | CategoryLeaderboardEntry;
 
 function Leaderboard() {
   const t = useT();
+  // The whole board is scoped to the active subject (platform): the all-time
+  // tab sums that subject's categories, and the category chips are its own.
+  const subject = useActiveSubject();
+  const CATEGORIES = visibleCategoryOptionsFor();
   const [tab, setTab] = useState<Tab>('global');
-  const [category, setCategory] = useState<string>('javascript');
+  const [category, setCategory] = useState<string>(() => CATEGORIES[0]?.value ?? '');
   const [date] = useState<string>(today());
 
-  const { data, isLoading: loading, error: queryError, refetch } = useLeaderboard(tab, date, category);
+  // Switching platform swaps the category list — reset the selection with it.
+  useEffect(() => {
+    setCategory(categoriesForSubject(subject.id)[0] ?? '');
+  }, [subject.id]);
+
+  const { data, isLoading: loading, error: queryError, refetch } = useLeaderboard(
+    tab,
+    date,
+    category,
+    categoriesForSubject(subject.id),
+  );
   const entries = (data?.entries ?? []) as Entry[];
   const error = queryError ? friendlyError(queryError) : null;
   const reload = () => void refetch();
 
   return (
     <Box sx={{ maxWidth: { xs: 600, md: 880 }, mx: 'auto' }}>
-      <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mb: 2 }}>
-        {t('leaderboard.title')}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
+        <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
+          {t('leaderboard.title')}
+        </Typography>
+        {/* Every tab counts this platform only — make the scope visible. */}
+        <Chip
+          size="small"
+          label={`${subject.emoji} ${subject.label}`}
+          sx={{ fontWeight: 700, color: subject.accent, border: '1px solid', borderColor: subject.accent, backgroundColor: 'transparent' }}
+        />
+      </Box>
 
       <ToggleButtonGroup
         value={tab}
@@ -153,10 +173,12 @@ function Row({ rank, entry, tab }: { rank: number; entry: Entry; tab: Tab }) {
   let secondary = '';
 
   if (tab === 'global') {
-    const e = entry as LeaderboardGlobalEntry;
+    // Subject-scoped all-time board: same shape as a category board (the
+    // server sums the subject's categories), so render the same columns.
+    const e = entry as CategoryLeaderboardEntry;
     primary = e.total_correct;
     primaryLabel = t('leaderboard.correct');
-    secondary = t('leaderboard.globalSecondary', { quizzes: e.total_quizzes, streak: e.longest_streak });
+    secondary = t('leaderboard.categorySecondary', { attempts: e.total_questions, accuracy: e.accuracy_pct });
   } else if (tab === 'daily') {
     const e = entry as LeaderboardDailyEntry;
     primary = e.correct;

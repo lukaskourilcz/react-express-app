@@ -23,16 +23,18 @@ export function useRoadmapStructure() {
   });
 }
 
-/** A leaderboard board. The key only includes the inputs that affect the result. */
-export function useLeaderboard(period: LeaderboardPeriod, date: string, category: string) {
+/** A leaderboard board. The key only includes the inputs that affect the result.
+ *  `categories` scopes the all-time board to the active subject (platform). */
+export function useLeaderboard(period: LeaderboardPeriod, date: string, category: string, categories: string[]) {
   return useQuery({
     queryKey: [
       'leaderboard',
       period,
       period === 'daily' ? date : null,
       period === 'category' ? category : null,
+      period === 'global' ? categories.join(',') : null,
     ],
-    queryFn: () => fetchLeaderboard(period, { date, category }),
+    queryFn: () => fetchLeaderboard(period, { date, category, categories }),
     staleTime: 30_000,
   });
 }

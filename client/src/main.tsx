@@ -33,25 +33,14 @@ import('./lib/roadmap').then(({ registerAccountExtras, installProgressSyncFlushe
   Promise.all([import('./lib/tokens'), import('./lib/shop')]).then(([tok, sh]) => {
     registerAccountExtras(
       () => ({
-        wallet: { balance: tok.getTokens() },
-        inventory: sh.getInventorySnapshot(),
+        wallets: tok.getWalletsSnapshot(),
+        inventories: sh.getInventoriesSnapshot(),
       }),
       (server) => {
-        // Max-merge balance; union owned; server-wins on equipped (if valid),
-        // max on doubleXp charges — never revoke on sync.
-        const localBal = tok.getTokens();
-        const nextBal = Math.max(localBal, server.wallet.balance);
-        if (nextBal !== localBal) tok.setBalanceFromServer(nextBal);
-        const localInv = sh.getInventorySnapshot();
-        const ownedUnion = Array.from(new Set([...localInv.owned, ...server.inventory.owned]));
-        const ring = ownedUnion.includes(server.inventory.ring ?? '') ? server.inventory.ring : localInv.ring;
-        const flair = ownedUnion.includes(server.inventory.flair ?? '') ? server.inventory.flair : localInv.flair;
-        sh.setInventoryFromServer({
-          owned: ownedUnion,
-          ring,
-          flair,
-          doubleXp: Math.max(localInv.doubleXp, server.inventory.doubleXp),
-        });
+        // Per subject: max-merge balances; union owned; server-wins on
+        // equipped (if valid), max on doubleXp charges — never revoke on sync.
+        tok.mergeBalancesFromServer(server.wallets);
+        sh.mergeInventoriesFromServer(server.inventories);
       },
     );
   });

@@ -126,11 +126,15 @@ export const sendHeartbeat = (code: string, host_id: string) =>
 
 export const fetchLeaderboard = (
   period: 'global' | 'daily' | 'category' = 'global',
-  options: { date?: string; category?: string } = {},
+  options: { date?: string; category?: string; categories?: string[] } = {},
 ) => {
   const qs = new URLSearchParams({ period });
   if (options.date && period === 'daily') qs.set('date', options.date);
   if (options.category && period === 'category') qs.set('category', options.category);
+  // Scope the all-time board to one subject (platform): the server sums the
+  // per-category stats of exactly these categories. Subjects' categories are
+  // disjoint, so this is an exact per-platform board.
+  if (options.categories?.length && period === 'global') qs.set('categories', options.categories.join(','));
   return apiFetch<{
     period: string;
     date?: string;
