@@ -17,6 +17,7 @@ export const cs: Record<TranslationKey, string> = {
   'nav.challenge': 'Výzva',
   'nav.profile': 'Profil',
   'nav.home': 'Domů StudyShark',
+  'nav.switchSubject': 'Změnit předmět',
   'nav.menu': 'Otevřít navigační menu',
   'title.home': 'StudyShark — kvízy a studijní cesty pro webové vývojáře',
   'title.quiz': 'Kvíz · StudyShark',

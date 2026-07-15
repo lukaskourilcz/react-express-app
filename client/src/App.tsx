@@ -192,12 +192,46 @@ function SubjectSwitcher() {
   );
 }
 
+// The header brand. On desktop it's the umbrella StudyShark wordmark with the
+// active-subject chip beside it; on mobile (where space is tight and the chip
+// is easy to miss) the wordmark itself becomes the logo of the platform the
+// learner is currently on — its emoji + name in the subject accent.
+function HeaderBrand() {
+  const subject = useActiveSubject();
+  const t = useT();
+  return (
+    <>
+      <Typography
+        variant="h6"
+        component={Link}
+        to="/"
+        aria-label={t('nav.home')}
+        sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: 'text.primary', textDecoration: 'none', fontSize: '1.1rem' }}
+      >
+        <Box component="span" sx={{ display: 'none', '@media (min-width:760px)': { display: 'inline-flex' }, alignItems: 'center', gap: 0.75 }}>
+          <SwimmingFin size={22} />
+          StudyShark
+        </Box>
+        <Box component="span" sx={{ display: 'inline-flex', '@media (min-width:760px)': { display: 'none' }, alignItems: 'center', gap: 0.5, color: subject.accent }}>
+          <Box component="span" aria-hidden sx={{ fontSize: '1.25rem', lineHeight: 1 }}>{subject.emoji}</Box>
+          {subject.label}
+        </Box>
+      </Typography>
+      {/* The subject chip is redundant on mobile (the wordmark shows it), so it's desktop-only. */}
+      <Box sx={{ display: 'none', '@media (min-width:760px)': { display: 'inline-flex' } }}>
+        <SubjectSwitcher />
+      </Box>
+    </>
+  );
+}
+
 function App() {
   const location = useLocation();
   const { t, setLang } = useLanguage();
   const config = useGameConfig();
   const [quizActive, setQuizActive] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const activeSubject = useActiveSubject();
   const { mode, toggle } = useColorMode();
   const [settings, updateSettings] = useSettings();
   const { user } = useAuth();
@@ -420,17 +454,7 @@ function App() {
               >
                 <MenuIcon />
               </IconButton>
-              <Typography
-                variant="h6"
-                component={Link}
-                to="/"
-                aria-label={t('nav.home')}
-                sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: 'text.primary', textDecoration: 'none', fontSize: '1.1rem' }}
-              >
-                <SwimmingFin size={22} />
-                StudyShark
-              </Typography>
-              <SubjectSwitcher />
+              <HeaderBrand />
             </Box>
 
             {/* Centre slot: primary nav links, perfectly centred between logo
@@ -494,12 +518,23 @@ function App() {
           sx={{ display: 'block', '@media (min-width:760px)': { display: 'none' } }}
         >
           <Box sx={{ width: 240 }} role="presentation" onClick={() => setMobileNavOpen(false)}>
-            <Typography variant="h6" sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: 'text.primary' }}>
-              <SwimmingFin size={22} />
-              StudyShark
+            {/* Drawer header shows the platform the learner is on, and tapping
+                it opens the subject picker to switch. */}
+            <Typography
+              variant="h6"
+              component={Link}
+              to="/subjects"
+              sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: activeSubject.accent, textDecoration: 'none' }}
+            >
+              <Box component="span" aria-hidden sx={{ fontSize: '1.35rem', lineHeight: 1 }}>{activeSubject.emoji}</Box>
+              {activeSubject.label}
             </Typography>
             <Divider />
             <List>
+              <ListItemButton component={Link} to="/subjects" selected={location.pathname === '/subjects'}>
+                <ListItemText primary={t('nav.switchSubject')} />
+              </ListItemButton>
+              <Divider sx={{ my: 0.5 }} />
               {navItems.map((item) => (
                 <ListItemButton
                   key={item.to}
