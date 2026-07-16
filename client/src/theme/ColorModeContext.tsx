@@ -41,6 +41,9 @@ export function ColorModeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     writeString(STORAGE_KEY, mode);
     document.documentElement.dataset.colorMode = mode;
+    // Astryx reads light/dark from html[data-theme]; keep it in lock-step with
+    // the MUI colour mode so the design system and the legacy screens agree.
+    document.documentElement.dataset.theme = mode;
   }, [mode]);
 
   const value = useMemo(

@@ -1,5 +1,8 @@
 import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
+// Astryx design-system foundation (component CSS + themed tokens). Imported
+// before the app so its base layer sits under any component-level styles.
+import './styles/astryx-theme.css';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import App from './App';

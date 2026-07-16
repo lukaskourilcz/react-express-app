@@ -2,10 +2,20 @@
 // active subject (persisted) and drops the learner into the normal app, now
 // scoped to that subject's roadmap, quiz, categories and accent. Reachable any
 // time at /subjects to switch subjects.
+//
+// Redesigned on the Astryx design system: subjects render as ClickableCards in
+// a responsive auto-fitting Grid, each carrying its own accent.
 
 import { useNavigate } from 'react-router-dom';
-import { Box, Typography, Paper, Chip } from '@mui/material';
+import { Grid } from '@astryxdesign/core/Grid';
+import { VStack } from '@astryxdesign/core/VStack';
+import { HStack } from '@astryxdesign/core/HStack';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Text } from '@astryxdesign/core/Text';
+import { Badge } from '@astryxdesign/core/Badge';
+import { ClickableCard } from '@astryxdesign/core/ClickableCard';
 import { SwimmingFin } from './SharkFin';
+import { useT } from '../i18n/LanguageContext';
 import {
   SUBJECTS,
   SUBJECT_ORDER,
@@ -14,9 +24,22 @@ import {
   type SubjectId,
 } from '../lib/subjects';
 
+// Each subject maps to the closest Astryx colour variant for its "Current"
+// badge; the exact brand hex still drives the emoji tile + title colour.
+const BADGE_VARIANT: Record<SubjectId, 'green' | 'orange' | 'blue' | 'neutral' | 'yellow' | 'teal' | 'red'> = {
+  webdev: 'green',
+  geography: 'orange',
+  math: 'blue',
+  history: 'neutral',
+  chess: 'yellow',
+  biology: 'teal',
+  poker: 'red',
+};
+
 export default function SubjectPicker() {
   const navigate = useNavigate();
   const [current] = useSubject();
+  const t = useT();
 
   const choose = (id: SubjectId) => {
     setSubjectValue(id);
@@ -24,85 +47,75 @@ export default function SubjectPicker() {
   };
 
   return (
-    <Box sx={{ maxWidth: 900, mx: 'auto', px: { xs: 1, sm: 2 } }}>
-      <Box sx={{ textAlign: 'center', mb: { xs: 3, sm: 4 } }}>
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mb: 1 }}>
-          <SwimmingFin size={30} />
-          <Typography variant="h4" component="h1" sx={{ fontWeight: 800 }}>
-            StudyShark
-          </Typography>
-        </Box>
-        <Typography variant="h6" sx={{ fontWeight: 600, mb: 0.5 }}>
-          What do you want to learn?
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Pick a subject to start. You can switch any time.
-        </Typography>
-      </Box>
+    <div style={{ width: '100%', maxWidth: 980, margin: '0 auto' }}>
+      <VStack gap={5} align="center">
+        <VStack gap={2} align="center">
+          <HStack gap={1.5} align="center">
+            <SwimmingFin size={30} />
+            <Heading level={1} type="display-3" justify="center">
+              StudyShark
+            </Heading>
+          </HStack>
+          <Heading level={2} justify="center">
+            {t('subject.prompt')}
+          </Heading>
+          <Text type="large" color="secondary" justify="center">
+            {t('subject.subtitle')}
+          </Text>
+        </VStack>
 
-      <Box
-        sx={{
-          display: 'grid',
-          gap: { xs: 1.5, sm: 2 },
-          gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: '1fr 1fr 1fr' },
-        }}
-      >
-        {SUBJECT_ORDER.map((id) => {
-          const s = SUBJECTS[id];
-          const active = id === current;
-          return (
-            <Paper
-              key={id}
-              elevation={0}
-              onClick={() => choose(id)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  choose(id);
-                }
-              }}
-              aria-label={`Study ${s.label}`}
-              sx={{
-                cursor: 'pointer',
-                p: { xs: 2.5, sm: 3 },
-                borderRadius: 3,
-                border: '2px solid',
-                borderColor: active ? s.accent : 'divider',
-                borderTop: `6px solid ${s.accent}`,
-                transition: 'transform .15s ease, box-shadow .15s ease, border-color .15s ease',
-                '&:hover, &:focus-visible': {
-                  transform: 'translateY(-3px)',
-                  borderColor: s.accent,
-                  boxShadow: 6,
-                  outline: 'none',
-                },
-              }}
-            >
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, mb: 1 }}>
-                <Box aria-hidden sx={{ fontSize: '2rem', lineHeight: 1 }}>{s.emoji}</Box>
-                <Typography variant="h6" sx={{ fontWeight: 800, color: s.accent }}>
-                  {s.label}
-                </Typography>
-                {active && (
-                  <Chip
-                    size="small"
-                    label="Current"
-                    sx={{ ml: 'auto', fontWeight: 700, backgroundColor: s.accent, color: '#fff' }}
-                  />
-                )}
-              </Box>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-                {s.blurb}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {s.topics.length} topics · Learn path, quizzes & leaderboards
-              </Typography>
-            </Paper>
-          );
-        })}
-      </Box>
-    </Box>
+        <Grid columns={{ minWidth: 260, max: 3 }} gap={3} width="100%">
+          {SUBJECT_ORDER.map((id) => {
+            const s = SUBJECTS[id];
+            const active = id === current;
+            return (
+              <ClickableCard
+                key={id}
+                label={t('subject.study', { subject: s.label })}
+                onClick={() => choose(id)}
+                variant={active ? 'muted' : 'default'}
+                padding={4}
+              >
+                <VStack gap={2}>
+                  <HStack gap={2} align="center">
+                    <div
+                      aria-hidden
+                      style={{
+                        width: 46,
+                        height: 46,
+                        borderRadius: 14,
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: '1.65rem',
+                        lineHeight: 1,
+                        flexShrink: 0,
+                        background: `${s.accent}22`,
+                        boxShadow: `inset 0 0 0 1.5px ${s.accent}55`,
+                      }}
+                    >
+                      {s.emoji}
+                    </div>
+                    <Heading level={3}>
+                      <span style={{ color: s.accent }}>{s.label}</span>
+                    </Heading>
+                    {active && (
+                      <div style={{ marginLeft: 'auto' }}>
+                        <Badge variant={BADGE_VARIANT[id]} label={t('subject.current')} />
+                      </div>
+                    )}
+                  </HStack>
+                  <Text type="supporting" color="secondary">
+                    {s.blurb}
+                  </Text>
+                  <Text type="supporting" size="xsm" color="secondary">
+                    {t('subject.meta', { count: s.topics.length })}
+                  </Text>
+                </VStack>
+              </ClickableCard>
+            );
+          })}
+        </Grid>
+      </VStack>
+    </div>
   );
 }
