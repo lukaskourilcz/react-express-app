@@ -154,6 +154,20 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
+}
+/* The logo sits on its own constant white chip, so it stays sharp whether the
+   pill is idle (surface) or selected (filled with the topic colour). */
+.rm-topic-glyph {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(23, 39, 46, 0.12);
+  flex-shrink: 0;
+}
+.rm-topic-pill {
   text-transform: none;
   font-weight: 600;
   font-size: 0.8125rem;

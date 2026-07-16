@@ -155,18 +155,11 @@ export function PlayLanding() {
   return (
     <div style={{ maxWidth: isDesktop ? 980 : 560, margin: '0 auto', width: '100%' }}>
       <VStack gap={3}>
-        <div
-          className="ss-pop"
-          style={{
-            position: 'relative',
-            overflow: 'hidden',
-            borderRadius: 'var(--radius-container)',
-            padding: 'clamp(1.5rem, 3.5vw, 2rem) clamp(1.25rem, 3.5vw, 1.75rem)',
-            background: `radial-gradient(120% 130% at 0% -20%, ${accent}1a, transparent 65%)`,
-            border: `1px solid ${accent}2e`,
-          }}
-        >
-          <VStack gap={0.5}>
+        {/* Page opener in the house voice: kicker + display heading, same as
+            Shop and the Career Roadmap. */}
+        <div className="ss-pop" style={{ width: '100%' }}>
+          <VStack gap={1}>
+            <span className="ss-kicker">{t('play.kicker')}</span>
             <Heading level={1} type="display-3">
               {t('play.title')}
             </Heading>
@@ -199,9 +192,7 @@ export function PlayLanding() {
           <Card padding={4} width="100%">
             <VStack gap={3}>
               <VStack gap={2}>
-                <Text type="label" weight="bold" color="secondary">
-                  {t('play.hostGame')}
-                </Text>
+                <span className="ss-kicker">{t('play.hostGame')}</span>
                 <ToggleButtonGroup
                   label={t('play.gameMode')}
                   type="single"
@@ -343,14 +334,12 @@ export function PlayLanding() {
             <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
             <Card padding={4} width="100%">
               <VStack gap={2}>
-                <Text type="label" weight="bold" color="secondary">
-                  {t('play.joinWithCode')}
-                </Text>
+                <span className="ss-kicker">{t('play.joinWithCode')}</span>
                 {/* Room code is the star of the join card: big, monospaced,
                     accent-ringed input so it reads like a ticket stub. */}
                 <div
                   style={{
-                    borderRadius: 14,
+                    borderRadius: 'var(--radius-element)',
                     padding: 12,
                     background: `${accent}0f`,
                     border: `1.5px dashed ${accent}55`,

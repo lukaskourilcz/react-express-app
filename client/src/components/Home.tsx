@@ -95,15 +95,15 @@ export default function Home() {
           aria-hidden
           style={{
             position: 'absolute',
-            right: '-3%',
-            bottom: '-22%',
+            right: '-6%',
+            bottom: '-38%',
             opacity: 0.05,
             transform: 'rotate(-8deg)',
             pointerEvents: 'none',
             color: 'var(--ss-ink)',
           }}
         >
-          <SharkFin size={280} color="currentColor" />
+          <SharkFin size={840} color="currentColor" />
         </div>
         <VStack gap={2} align="center">
           <HStack gap={1} align="center">
