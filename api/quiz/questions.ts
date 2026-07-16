@@ -176,6 +176,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     selected = buckets.slice(0, count);
   }
 
+  // The difficulty filters above (e.g. `easy` → difficulty ≤ 2, `advanced` →
+  // difficulty ≥ 3) can empty the pool even though the category had questions —
+  // a category with only easy questions yields nothing for `advanced`. Never
+  // hand the client a 200 with zero questions (it renders a blank screen);
+  // surface it as "no questions match those filters" instead.
+  if (selected.length === 0) {
+    logEvent({ status: 404, reason: 'empty_after_difficulty', difficulty: difficultyMode, latency_ms: Date.now() - started });
+    return jsonError(res, 404, 'no_questions', 'No questions match those filters');
+  }
+
   const lang = normalizeLang(req.query.lang);
 
   const sessionData: { questionId: string; correctAnswer: number }[] = [];

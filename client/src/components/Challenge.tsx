@@ -38,16 +38,17 @@ import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { awardQuestXp } from '../lib/xp';
 import { challengeRunXp } from '../lib/leveling';
 
-// Biggest Shark Challenge: answer as many questions as you can within a fixed
-// time limit, or until you collect three strikes — whichever comes first.
-// Score = correct answers. Mix of all categories and difficulties. The page
-// keeps its own state machine separate from the regular Quiz component.
+// Biggest Shark Challenge: answer as many questions as you can until you
+// collect three strikes. Each question carries its own 90-second clock —
+// letting it run out costs a fin, just like a wrong answer. Score = correct
+// answers. Mix of all categories and difficulties. The page keeps its own
+// state machine separate from the regular Quiz component.
 
 type Phase = 'intro' | 'loading' | 'playing' | 'gameover' | 'error';
 
 const MAX_LIVES = 3;
 const LOW_BATCH_THRESHOLD = 4; // top up the buffer when this few remain
-const TIME_LIMIT_S = 90; // a run lasts at most 90 seconds
+const TIME_LIMIT_S = 90; // each question is capped at 90 seconds
 const LOW_TIME_S = 15; // highlight + pulse the clock under this many seconds
 
 /** Seconds → "m:ss" (e.g. 90 → "1:30"). Clamps negatives to 0. */
@@ -63,6 +64,8 @@ interface AnsweredQ {
   isCorrect: boolean;
   explanation: string;
   question: Question;
+  /** True when the strike came from the per-question clock hitting zero. */
+  timedOut?: boolean;
 }
 
 interface BufferState {
@@ -94,7 +97,8 @@ export default function Challenge() {
   const [name, setName] = useState<string>(profile.name ?? '');
   const [submittedScore, setSubmittedScore] = useState(false);
   const [snack, setSnack] = useState<string | null>(null);
-  // Seconds remaining in the current run; the countdown effect drives it down.
+  // Seconds remaining on the current question; reset to TIME_LIMIT_S each time
+  // a new question is shown, and the countdown effect drives it down.
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_S);
 
   // Buffered question batches: we always keep one round of questions ready so
@@ -213,6 +217,8 @@ export default function Challenge() {
       setSeenIds((prev) => [...prev, next!.id].slice(-300));
       setSelected(null);
       setLastResult(null);
+      // Fresh question, fresh clock.
+      setTimeLeft(TIME_LIMIT_S);
     },
     [ensureBufferTopUp, popNext, seenIds],
   );
@@ -256,6 +262,26 @@ export default function Challenge() {
     void advance(willGameOver);
   }, [advance, lastResult, livesLost]);
 
+  // The per-question clock ran out before an answer was locked in. That costs a
+  // fin, exactly like a wrong answer; the graded feedback card then lets the
+  // learner continue (or ends the run if it was the third strike).
+  const handleTimeout = useCallback(() => {
+    if (!current || lastResult) return; // already graded — nothing to time out
+    setLivesLost((l) => l + 1);
+    // No answer was locked in, so there's no selection to highlight (-1). Kept
+    // free of `selected` so the once-per-second tick effect isn't reset every
+    // time the learner changes their pick.
+    setLastResult({
+      questionId: current.id,
+      selectedIndex: -1,
+      correctAnswer: -1,
+      isCorrect: false,
+      explanation: '',
+      question: current,
+      timedOut: true,
+    });
+  }, [current, lastResult]);
+
   /* ─── leaderboard submit on game over ───────────────────────── */
 
   const onSubmitScore = useCallback(async () => {
@@ -280,18 +306,19 @@ export default function Challenge() {
 
   /* ─── countdown clock ───────────────────────────────────────── */
 
-  // A run is capped at TIME_LIMIT_S. While playing, tick once per second and
-  // end the run the moment the clock hits zero (independent of the strikes
-  // rule — whichever ends the run first wins).
+  // Each question is capped at TIME_LIMIT_S. Tick once per second while the
+  // learner is still working on the current question; pause once it's graded
+  // (the feedback card is up) so reading the explanation doesn't burn the next
+  // question's time. When the clock hits zero unanswered, it's a timeout strike.
   useEffect(() => {
-    if (phase !== 'playing') return;
+    if (phase !== 'playing' || lastResult) return;
     if (timeLeft <= 0) {
-      setPhase('gameover');
+      handleTimeout();
       return;
     }
     const id = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
     return () => clearTimeout(id);
-  }, [phase, timeLeft]);
+  }, [phase, timeLeft, lastResult, handleTimeout]);
 
   /* ─── reward on game over ───────────────────────────────────── */
 
@@ -429,7 +456,7 @@ export default function Challenge() {
           {t('challenge.gameOver')}
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 1.5 }} role="status">
-          {timeLeft <= 0 ? t('challenge.endedByTime') : t('challenge.endedByStrikes')}
+          {lastResult?.timedOut ? t('challenge.endedByTime') : t('challenge.endedByStrikes')}
         </Typography>
         {/* The big number IS the score — no repeated caption underneath. */}
         <Typography variant="h2" sx={{ textAlign: 'center', mb: 3, color: 'var(--brand-accent)', fontWeight: 800 }}>
@@ -624,7 +651,11 @@ export default function Challenge() {
             }}
           >
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {lastResult.isCorrect ? t('challenge.correct') : t('challenge.wrong')}
+              {lastResult.isCorrect
+                ? t('challenge.correct')
+                : lastResult.timedOut
+                  ? t('challenge.questionTimeout')
+                  : t('challenge.wrong')}
             </Typography>
             {lastResult.explanation && (
               <Typography variant="body2" sx={{ mt: 0.5 }}>
