@@ -45,6 +45,8 @@ type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => stri
 // its own category — adapts to light/dark automatically.
 type CardVariant = 'green' | 'blue' | 'purple' | 'teal' | 'orange';
 const PILLAR_VARIANTS: CardVariant[] = ['green', 'blue', 'purple', 'teal', 'orange'];
+// A playful emoji per pillar; cycles for subjects with derived pillars.
+const PILLAR_EMOJI = ['🧱', '⚛️', '🛠️', '🧠', '🚀'];
 
 interface Area {
   topic: RoadmapTopic;
@@ -170,17 +172,22 @@ export default function CareerRoadmap() {
     <div style={{ width: '100%', maxWidth: 780, margin: '0 auto' }}>
       <VStack gap={4}>
         {/* Header */}
-        <VStack gap={1}>
-          <Text type="label" weight="bold" color="accent">
-            {kicker}
-          </Text>
-          <Heading level={1} type="display-3">
-            {pageTitle}
-          </Heading>
-          <Text type="large" color="secondary">
-            {headerBody}
-          </Text>
-        </VStack>
+        <div className="ss-pop" style={{ width: '100%' }}>
+          <VStack gap={1}>
+            <HStack gap={1} align="center">
+              <span aria-hidden className="ss-float" style={{ fontSize: '1.4rem', lineHeight: 1 }}>🗺️</span>
+              <Text type="label" weight="bold" color="accent">
+                {kicker}
+              </Text>
+            </HStack>
+            <Heading level={1} type="display-3">
+              <span className="ss-gradient-text">{pageTitle}</span>
+            </Heading>
+            <Text type="large" color="secondary">
+              {headerBody}
+            </Text>
+          </VStack>
+        </div>
 
         {/* Honesty banner — the career/seniority framing is Web Dev specific. */}
         {isWebdev && (
@@ -214,7 +221,10 @@ export default function CareerRoadmap() {
         </VStack>
 
         {/* Where you are now — the headline stat for the chosen track. */}
-        <Card variant="muted" padding={5}>
+        <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
+        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 16, width: '100%' }}>
+        <Card variant="muted" padding={5} width="100%">
+          <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 16, right: 20, fontSize: '2rem', opacity: 0.55 }}>📈</span>
           <VStack gap={2}>
             <HStack justify="between" align="center" gap={1} wrap="wrap">
               <Text type="label" color="secondary">
@@ -224,10 +234,10 @@ export default function CareerRoadmap() {
             </HStack>
 
             <HStack gap={2} align="end" wrap="wrap">
-              <Text type="display-2" color="accent" weight="bold">
+              <Text type="display-1" color="accent" weight="bold">
                 {overall.pct}%
               </Text>
-              <div style={{ flex: '1 1 200px', minWidth: 0, paddingBottom: 4 }}>
+              <div style={{ flex: '1 1 200px', minWidth: 0, paddingBottom: 8 }}>
                 <Text type="supporting" color="secondary">
                   {t('careerRoadmap.progressCaption', {
                     passed: overall.passed,
@@ -263,15 +273,21 @@ export default function CareerRoadmap() {
             </HStack>
           </VStack>
         </Card>
+        </div>
+        </div>
 
         {/* The full roadmap as a dependency tree, each topic branched into its 3
             parts, coloured by the learner's live progress. */}
-        <Card variant="default" padding={4}>
+        <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+        <Card variant="default" padding={4} width="100%">
           <VStack gap={2}>
             <VStack gap={0.5}>
-              <Heading level={2}>
-                {t('roadmapPage.treeTitle')}
-              </Heading>
+              <HStack gap={1} align="center">
+                <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1 }}>🌳</span>
+                <Heading level={2}>
+                  {t('roadmapPage.treeTitle')}
+                </Heading>
+              </HStack>
               <Text type="supporting" color="secondary">
                 {t('roadmapPage.treeIntro')}
               </Text>
@@ -279,6 +295,7 @@ export default function CareerRoadmap() {
             <RoadmapTree structure={structure} track={track} />
           </VStack>
         </Card>
+        </div>
 
         {/* The pillars, filtered to the chosen track (empty pillars are hidden).
             One shared CTA up top instead of repeating it under every pillar. */}
@@ -303,10 +320,14 @@ export default function CareerRoadmap() {
             }
             const pPct = pct(pPassed, pTotal);
             return (
-              <Card key={pillar.id} variant={PILLAR_VARIANTS[i % PILLAR_VARIANTS.length]} padding={4}>
+              <div key={pillar.id} className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+              <Card variant={PILLAR_VARIANTS[i % PILLAR_VARIANTS.length]} padding={4} width="100%">
                 <VStack gap={2}>
                   <HStack justify="between" align="center" gap={1} wrap="wrap">
-                    <Heading level={3}>{pillar.title}</Heading>
+                    <HStack gap={1.5} align="center">
+                      <span aria-hidden style={{ fontSize: '1.5rem', lineHeight: 1 }}>{PILLAR_EMOJI[i % PILLAR_EMOJI.length]}</span>
+                      <Heading level={3}>{pillar.title}</Heading>
+                    </HStack>
                     <Badge variant={pPct === 100 ? 'success' : 'neutral'} label={`${pPct}%`} />
                   </HStack>
                   {pillar.intro && (
@@ -349,15 +370,20 @@ export default function CareerRoadmap() {
                   </VStack>
                 </VStack>
               </Card>
+              </div>
             );
           })}
         </Grid>
 
         {/* The honest gap — Web Dev only (it's about engineering seniority). */}
         {isWebdev && (
-          <Card variant="orange" padding={4}>
+          <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+          <Card variant="orange" padding={4} width="100%">
             <VStack gap={1.5}>
-              <Heading level={2}>{t('careerRoadmap.beyondTitle')}</Heading>
+              <HStack gap={1.5} align="center">
+                <span aria-hidden style={{ fontSize: '1.4rem', lineHeight: 1 }}>🧗</span>
+                <Heading level={2}>{t('careerRoadmap.beyondTitle')}</Heading>
+              </HStack>
               <Text type="supporting" color="secondary">
                 {t('careerRoadmap.beyondIntro')}
               </Text>
@@ -375,6 +401,7 @@ export default function CareerRoadmap() {
               </VStack>
             </VStack>
           </Card>
+          </div>
         )}
 
         <Text type="supporting" size="xsm" color="secondary" justify="center">

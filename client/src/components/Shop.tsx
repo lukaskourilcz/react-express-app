@@ -88,10 +88,10 @@ function EmojiTile({ emoji, color, size = 46 }: { emoji: string; color?: string;
 // Sections ordered by value to the learner: functional unlocks first (paths),
 // then boosters, then cosmetics — with rings + flairs merged into one "Style"
 // section so the shop reads as three clear ideas instead of four lists.
-const SECTIONS: { key: TranslationKey; kinds: ProductKind[] }[] = [
-  { key: 'shop.section.paths', kinds: ['path'] },
-  { key: 'shop.section.boosters', kinds: ['booster'] },
-  { key: 'shop.section.style', kinds: ['ring', 'flair'] },
+const SECTIONS: { key: TranslationKey; kinds: ProductKind[]; emoji: string }[] = [
+  { key: 'shop.section.paths', kinds: ['path'], emoji: '🧭' },
+  { key: 'shop.section.boosters', kinds: ['booster'], emoji: '⚡' },
+  { key: 'shop.section.style', kinds: ['ring', 'flair'], emoji: '✨' },
 ];
 
 function Shop() {
@@ -132,40 +132,64 @@ function Shop() {
         <Text type="label" weight="bold" color="accent">
           {t('shop.kicker')}
         </Text>
-        <Heading level={1} type="display-3">
-          {t('shop.title')}
-        </Heading>
+        <HStack gap={1.5} align="center" wrap="wrap">
+          <span aria-hidden className="ss-float" style={{ display: 'inline-flex', fontSize: '1.9rem', lineHeight: 1 }}>
+            🛒
+          </span>
+          <Heading level={1} type="display-3">
+            <span className="ss-gradient-text">{t('shop.title')}</span>
+          </Heading>
+        </HStack>
         <Text type="large" color="secondary">
           {t('shop.subtitle')}
         </Text>
       </VStack>
 
-      {/* Wallet: the accent-tinted balance is the anchor of the page. */}
-      <Card variant="muted" padding={4} width="100%">
-        <HStack gap={3} align="center" wrap="wrap">
-          <TokenIcon size={40} />
-          <VStack gap={0.5}>
-            <Text type="label" color="secondary">
-              {t('shop.balanceLabel')}
-            </Text>
-            <Heading level={2} color="accent">
-              {tokens.toLocaleString()} {t('shop.tokensUnit')}
-            </Heading>
-          </VStack>
-          {/* The wallet is per platform — make the scope visible. */}
-          <div style={{ marginLeft: 'auto' }}>
-            <HStack gap={1} align="center" wrap="wrap" justify="end">
-              <Badge variant="neutral" label={`${subject.emoji} ${subject.label}`} />
-              <Badge variant="cyan" label={t('shop.earnRate')} />
-            </HStack>
-          </div>
-        </HStack>
-      </Card>
+      {/* Wallet: the accent-tinted balance is the anchor of the page — a big,
+          bold token count with a gently bobbing coin to make spending feel fun. */}
+      <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
+        <Card variant="muted" padding={4} width="100%">
+          <HStack gap={3} align="center" wrap="wrap">
+            <span className="ss-float" style={{ display: 'inline-flex' }}>
+              <TokenIcon size={52} />
+            </span>
+            <VStack gap={0.5}>
+              <Text type="label" weight="bold" color="secondary">
+                {t('shop.balanceLabel')}
+              </Text>
+              <HStack gap={1} align="end" wrap="wrap">
+                <Heading level={2} type="display-2" color="accent">
+                  {tokens.toLocaleString()}
+                </Heading>
+                <Text type="large" weight="bold" color="accent">
+                  {t('shop.tokensUnit')}
+                </Text>
+              </HStack>
+            </VStack>
+            {/* The wallet is per platform — make the scope visible. */}
+            <div style={{ marginLeft: 'auto' }}>
+              <HStack gap={1} align="center" wrap="wrap" justify="end">
+                <Badge variant="neutral" label={`${subject.emoji} ${subject.label}`} />
+                <Badge variant="cyan" label={t('shop.earnRate')} />
+              </HStack>
+            </div>
+          </HStack>
+        </Card>
+      </div>
 
-      {SECTIONS.map(({ key, kinds }) => (
+      {SECTIONS.map(({ key, kinds, emoji }) => (
         <VStack key={key} gap={2}>
           <VStack gap={0.5}>
-            <Heading level={3}>{t(key)}</Heading>
+            <HStack gap={1.5} align="center">
+              <span
+                aria-hidden
+                className="ss-emoji-tile"
+                style={{ width: 34, height: 34, fontSize: '1.15rem', background: 'var(--ss-card-bg)' }}
+              >
+                {emoji}
+              </span>
+              <Heading level={3}>{t(key)}</Heading>
+            </HStack>
             {kinds.includes('path') && (
               <Text type="supporting" color="secondary">
                 {t('shop.section.pathsHint', { price: config.shop.pathUnlockPrice })}
@@ -244,8 +268,28 @@ function ProductCard({ product, price, owned, equipped, charges, canAfford, onBu
     ? t('shop.path.desc')
     : t(`shop.item.${product.id}.desc` as TranslationKey);
 
+  // Accent-tinted price pill with a mini token coin — reads as "spend me",
+  // coloured by the product's own accent (path topics) or the brand accent.
+  const accent = product.color ?? 'var(--brand-accent)';
   const priceBadge = (
-    <Badge variant="neutral" label={`${price.toLocaleString()} ${t('shop.tokensUnit')}`} />
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 6,
+        padding: '4px 12px',
+        borderRadius: 999,
+        fontWeight: 700,
+        fontSize: '0.8125rem',
+        lineHeight: 1.2,
+        color: accent,
+        background: `color-mix(in srgb, ${accent} 14%, transparent)`,
+        boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${accent} 30%, transparent)`,
+      }}
+    >
+      <TokenIcon size={14} />
+      {price.toLocaleString()} {t('shop.tokensUnit')}
+    </span>
   );
 
   // The action shown in the card footer depends on the product kind + state.
@@ -280,24 +324,26 @@ function ProductCard({ product, price, owned, equipped, charges, canAfford, onBu
   }
 
   return (
-    <Card padding={3} width="100%">
-      <VStack gap={2} height="100%" justify="between">
-        <HStack gap={1.5} align="center">
-          <EmojiTile emoji={product.emoji} color={product.color} size={44} />
-          <VStack gap={0.5}>
-            <Text weight="bold">{name}</Text>
-            <Text type="supporting" color="secondary">
-              {desc}
-            </Text>
-          </VStack>
-        </HStack>
+    <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+      <Card padding={3} width="100%">
+        <VStack gap={2} height="100%" justify="between">
+          <HStack gap={1.5} align="center">
+            <EmojiTile emoji={product.emoji} color={product.color} size={44} />
+            <VStack gap={0.5}>
+              <Text weight="bold">{name}</Text>
+              <Text type="supporting" color="secondary">
+                {desc}
+              </Text>
+            </VStack>
+          </HStack>
 
-        <HStack gap={1} align="center" justify="between" wrap="wrap">
-          {priceBadge}
-          {action}
-        </HStack>
-      </VStack>
-    </Card>
+          <HStack gap={1} align="center" justify="between" wrap="wrap">
+            {priceBadge}
+            {action}
+          </HStack>
+        </VStack>
+      </Card>
+    </div>
   );
 }
 

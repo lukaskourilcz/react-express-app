@@ -23,6 +23,7 @@ import { Badge } from '@astryxdesign/core/Badge';
 import { SelectableCard } from '@astryxdesign/core/SelectableCard';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { useAuth, getUserProfile } from '../lib/auth';
+import { useActiveSubject } from '../lib/subjects';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { CATEGORY_GRADIENT, visuallyHidden } from '../theme/MuiTheme';
 import {
@@ -135,6 +136,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const { lang, t } = useLanguage();
   const navigate = useNavigate();
   const config = useGameConfig();
+  const subject = useActiveSubject();
   const [state, setState] = useState<QuizState>('ready');
   const [sessionId, setSessionId] = useState<string>('');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -601,14 +603,27 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   if (state === 'ready') {
     return (
-      <div style={{ width: '100%', maxWidth: 640, margin: 'auto' }}>
+      <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: 'auto' }}>
         <Card padding={5} width="100%">
           <VStack gap={4}>
-            <VStack gap={0.5} align="center">
-              <Heading level={1} justify="center">
-                {t('quiz.title')}
+            <VStack gap={1} align="center">
+              <div
+                aria-hidden
+                className="ss-emoji-tile ss-float"
+                style={{
+                  width: 64,
+                  height: 64,
+                  fontSize: '2.25rem',
+                  background: `linear-gradient(135deg, ${subject.accent}2b, ${subject.accent}12)`,
+                  boxShadow: `inset 0 0 0 1.5px ${subject.accent}44, 0 6px 16px ${subject.accent}22`,
+                }}
+              >
+                {subject.emoji}
+              </div>
+              <Heading level={1} type="display-2" justify="center">
+                <span className="ss-gradient-text">{t('quiz.title')}</span>
               </Heading>
-              <Text type="supporting" color="secondary" justify="center">
+              <Text type="large" color="secondary" justify="center">
                 {t('quiz.subtitle')}
               </Text>
             </VStack>
@@ -633,9 +648,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             {/* Categories */}
             <VStack gap={1.5} as="fieldset">
               <HStack justify="between" align="center">
-                <Text as="label" type="label" color="secondary">
-                  {t('quiz.categories')}
-                </Text>
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1.1rem' }}>🗂️</span>
+                  <Text as="label" type="label" color="secondary">
+                    {t('quiz.categories')}
+                  </Text>
+                </HStack>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -646,33 +664,39 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
               <div role="group" aria-label={t('quiz.categoriesAria')} style={{ width: '100%' }}>
                 <Grid columns={{ minWidth: 150, max: 3 }} gap={1.5}>
-                  {displayedCategoryOptions.map((cat) => {
+                  {displayedCategoryOptions.map((cat, i) => {
                     const selected = selectedCategories.includes(cat.value);
                     return (
-                      <SelectableCard
+                      <div
                         key={cat.value}
-                        label={cat.label}
-                        isSelected={selected}
-                        onChange={() => handleCategoryToggle(cat.value)}
-                        padding={1.5}
+                        className="ss-lift ss-pop"
+                        style={{ display: 'flex', width: '100%', animationDelay: `${i * 40}ms` }}
                       >
-                        <HStack gap={1.5} align="center">
-                          <span
-                            aria-hidden
-                            style={{
-                              width: 12,
-                              height: 12,
-                              borderRadius: '50%',
-                              flexShrink: 0,
-                              backgroundColor: cat.color,
-                              boxShadow: `0 0 0 3px ${cat.color}22`,
-                            }}
-                          />
-                          <Text type="body" size="sm" weight={selected ? 'semibold' : 'medium'}>
-                            {cat.label}
-                          </Text>
-                        </HStack>
-                      </SelectableCard>
+                        <SelectableCard
+                          label={cat.label}
+                          isSelected={selected}
+                          onChange={() => handleCategoryToggle(cat.value)}
+                          padding={1.5}
+                        >
+                          <HStack gap={1.5} align="center">
+                            <span
+                              aria-hidden
+                              className="ss-emoji-tile"
+                              style={{
+                                width: 26,
+                                height: 26,
+                                fontSize: 0,
+                                flexShrink: 0,
+                                background: `linear-gradient(135deg, ${cat.color}, ${cat.color}bb)`,
+                                boxShadow: `inset 0 0 0 1.5px ${cat.color}44, 0 0 0 3px ${cat.color}1f`,
+                              }}
+                            />
+                            <Text type="body" size="sm" weight={selected ? 'semibold' : 'medium'}>
+                              {cat.label}
+                            </Text>
+                          </HStack>
+                        </SelectableCard>
+                      </div>
                     );
                   })}
                 </Grid>
@@ -738,9 +762,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             {/* Count + difficulty */}
             <Grid columns={{ minWidth: 240, max: 2 }} gap={3}>
               <VStack gap={1.5} as="fieldset">
-                <Text as="label" type="label" color="secondary">
-                  {t('quiz.questionsLegend')}
-                </Text>
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1.1rem' }}>🔢</span>
+                  <Text as="label" type="label" color="secondary">
+                    {t('quiz.questionsLegend')}
+                  </Text>
+                </HStack>
                 <HStack gap={1} wrap="wrap">
                   {config.quiz.countOptions.map((count) => (
                     <SelectableCard
@@ -762,9 +789,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               </VStack>
 
               <VStack gap={1.5} as="fieldset">
-                <Text as="label" type="label" color="secondary">
-                  {t('quiz.difficulty')}
-                </Text>
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1.1rem' }}>🌊</span>
+                  <Text as="label" type="label" color="secondary">
+                    {t('quiz.difficulty')}
+                  </Text>
+                </HStack>
                 <HStack gap={1} wrap="wrap">
                   {DIFFICULTY_VALUES.map((value) => {
                     const label = t(`difficulty.${value}` as TranslationKey);
@@ -795,6 +825,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 variant="primary"
                 size="lg"
                 label={t('quiz.startQuiz')}
+                icon={<span aria-hidden style={{ fontSize: '1.15rem', lineHeight: 1 }}>🦈</span>}
                 onClick={handleStart}
                 isDisabled={selectedCategories.length === 0}
               />
@@ -814,11 +845,16 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   }
 
   if (state === 'submitted' && result) {
+    const resultEmoji = result.percentage === 100 ? '🏆' : result.percentage >= 60 ? '🎉' : '🦈';
     return (
       <>
+        <div className="ss-pop">
         <Card padding={0} width="100%">
           <div className="quiz-result-card" role="region" aria-labelledby="quiz-result-heading">
             <VStack gap={2} align="center">
+              <span aria-hidden className="ss-float" style={{ fontSize: '3.25rem', lineHeight: 1 }}>
+                {resultEmoji}
+              </span>
               <div id="quiz-result-heading" ref={resultHeadingRef} tabIndex={-1} style={{ outline: 'none' }}>
                 <Heading level={2} justify="center">
                   {t('quiz.complete')}
@@ -869,6 +905,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </VStack>
           </div>
         </Card>
+        </div>
 
         <h3 id="quiz-review" className="quiz-review-header">
           {t('quiz.reviewYourAnswers', { count: questions.length })}
@@ -1030,6 +1067,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         >
           {/* Progress header */}
           <HStack gap={1.5} align="center" style={{ flexShrink: 0, marginBottom: 16 }}>
+            <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>{subject.emoji}</span>
             <Text type="supporting" size="xsm" weight="medium">
               {currentIndex + 1}/{questions.length}
             </Text>

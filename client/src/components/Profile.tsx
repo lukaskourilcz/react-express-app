@@ -50,12 +50,48 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }
 // Astryx Card colour variants used for the tinted stat / streak tiles.
 type CardVariant = 'default' | 'muted' | 'blue' | 'cyan' | 'gray' | 'green' | 'orange' | 'pink' | 'purple' | 'red' | 'teal' | 'yellow';
 
-// Small uppercase section label, the Astryx stand-in for MUI's "overline".
-function SectionLabel({ children }: { children: ReactNode }) {
+// Small uppercase section label, the Astryx stand-in for MUI's "overline". An
+// optional emoji gives each section a little personality.
+function SectionLabel({ emoji, children }: { emoji?: string; children: ReactNode }) {
   return (
-    <Text type="label" color="secondary" weight="bold">
+    <HStack gap={1} align="center">
+      {emoji && <span aria-hidden style={{ fontSize: '1.05rem', lineHeight: 1 }}>{emoji}</span>}
+      <Text type="label" color="secondary" weight="bold">
+        {children}
+      </Text>
+    </HStack>
+  );
+}
+
+// Accent-tinted rounded meta pill. `color` sets both the text and (via
+// currentColor) the soft translucent background — a playful stand-in for a
+// muted caption.
+function MetaPill({ color = 'var(--brand-accent)', children }: { color?: string; children: ReactNode }) {
+  return (
+    <span
+      style={{
+        display: 'inline-block',
+        borderRadius: 999,
+        padding: '2px 9px',
+        fontFamily: 'var(--font-family-body)',
+        fontWeight: 700,
+        fontSize: '0.68rem',
+        letterSpacing: '0.02em',
+        color,
+        background: 'color-mix(in srgb, currentColor 14%, transparent)',
+      }}
+    >
       {children}
-    </Text>
+    </span>
+  );
+}
+
+// Springy-lift wrapper — the single biggest depth win for flat Astryx cards.
+function Lift({ children }: { children: ReactNode }) {
+  return (
+    <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+      {children}
+    </div>
   );
 }
 
@@ -154,32 +190,36 @@ function ProfileBody({
   return (
     <div style={{ width: '100%', maxWidth: 1160, margin: '0 auto' }}>
       <VStack gap={2}>
-        {/* Identity header — subject-accented top edge, avatar + name. */}
-        <div style={{ borderTop: '4px solid var(--brand-accent)', borderRadius: 16 }}>
-          <Card variant="default" padding={3} width="100%">
-            <HStack gap={2} align="center">
-              <div
-                style={{
-                  flexShrink: 0,
-                  borderRadius: '50%',
-                  display: 'inline-flex',
-                  ...(ringColor
-                    ? { padding: 3, background: `${ringColor}33`, boxShadow: `0 0 0 2px ${ringColor}` }
-                    : null),
-                }}
-              >
-                <Avatar src={user.picture} name={user.name} alt="" size={64} />
-              </div>
-              <VStack gap={0.5}>
-                <Heading level={3} maxLines={1}>
-                  {flair ? `${flair} ` : ''}{user.name}
-                </Heading>
-                <Text type="supporting" color="secondary" maxLines={1}>
-                  {user.email}
-                </Text>
-              </VStack>
-            </HStack>
-          </Card>
+        {/* Identity header — subject-accented top edge, avatar + name, a
+            playful floating shark and a gradient wordmark on the name. */}
+        <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
+          <div style={{ borderTop: '4px solid var(--brand-accent)', borderRadius: 16, width: '100%', position: 'relative', overflow: 'hidden' }}>
+            <Card variant="default" padding={3} width="100%">
+              <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 12, right: 18, fontSize: '1.8rem', opacity: 0.6 }}>🦈</span>
+              <HStack gap={2} align="center">
+                <div
+                  style={{
+                    flexShrink: 0,
+                    borderRadius: '50%',
+                    display: 'inline-flex',
+                    ...(ringColor
+                      ? { padding: 3, background: `${ringColor}33`, boxShadow: `0 0 0 2px ${ringColor}` }
+                      : null),
+                  }}
+                >
+                  <Avatar src={user.picture} name={user.name} alt="" size={64} />
+                </div>
+                <VStack gap={0.5}>
+                  <Heading level={3} maxLines={1}>
+                    {flair ? `${flair} ` : ''}<span className="ss-gradient-text">{user.name}</span>
+                  </Heading>
+                  <Text type="supporting" color="secondary" maxLines={1}>
+                    {user.email}
+                  </Text>
+                </VStack>
+              </HStack>
+            </Card>
+          </div>
         </div>
 
         {/* On a standalone deploy (e.g. devShark) point learners at the umbrella
@@ -228,34 +268,37 @@ function ProfileBody({
 
             <LearningTrackCard />
 
+            <Lift>
             <Card variant="default" padding={3} width="100%">
               <VStack gap={2}>
-                <SectionLabel>{t('profile.streaks')}</SectionLabel>
+                <SectionLabel emoji="🔥">{t('profile.streaks')}</SectionLabel>
 
                 <Grid columns={2} gap={2}>
-                  <Card variant="orange" padding={2}>
-                    <VStack gap={0.5} align="center">
-                      <Text size="4xl" weight="bold">{stats?.current_streak || 0}</Text>
-                      <Text type="supporting" color="secondary" justify="center">
-                        {t('profile.currentStreak')}
-                      </Text>
-                      <Text type="supporting" size="xsm" color="secondary" justify="center">
-                        {t('profile.days')}
-                      </Text>
-                    </VStack>
-                  </Card>
+                  <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+                    <Card variant="orange" padding={2} width="100%">
+                      <VStack gap={0.5} align="center">
+                        <span aria-hidden style={{ fontSize: '1.6rem', lineHeight: 1 }}>🔥</span>
+                        <Text size="4xl" weight="bold">{stats?.current_streak || 0}</Text>
+                        <Text type="supporting" color="secondary" justify="center">
+                          {t('profile.currentStreak')}
+                        </Text>
+                        <MetaPill color="#f97316">{t('profile.days')}</MetaPill>
+                      </VStack>
+                    </Card>
+                  </div>
 
-                  <Card variant="cyan" padding={2}>
-                    <VStack gap={0.5} align="center">
-                      <Text size="4xl" weight="bold" color="accent">{stats?.longest_streak || 0}</Text>
-                      <Text type="supporting" color="secondary" justify="center">
-                        {t('profile.longestStreak')}
-                      </Text>
-                      <Text type="supporting" size="xsm" color="secondary" justify="center">
-                        {t('profile.days')}
-                      </Text>
-                    </VStack>
-                  </Card>
+                  <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+                    <Card variant="cyan" padding={2} width="100%">
+                      <VStack gap={0.5} align="center">
+                        <span aria-hidden style={{ fontSize: '1.6rem', lineHeight: 1 }}>⚡</span>
+                        <Text size="4xl" weight="bold" color="accent">{stats?.longest_streak || 0}</Text>
+                        <Text type="supporting" color="secondary" justify="center">
+                          {t('profile.longestStreak')}
+                        </Text>
+                        <MetaPill color="#0ea5e9">{t('profile.days')}</MetaPill>
+                      </VStack>
+                    </Card>
+                  </div>
                 </Grid>
 
                 {stats?.last_quiz_date && (
@@ -265,32 +308,37 @@ function ProfileBody({
                 )}
               </VStack>
             </Card>
+            </Lift>
           </VStack>
 
           <VStack gap={2}>
+            <Lift>
             <Card variant="default" padding={3} width="100%">
               <VStack gap={2}>
-                <SectionLabel>{t('profile.statistics')}</SectionLabel>
+                <SectionLabel emoji="📊">{t('profile.statistics')}</SectionLabel>
 
                 <Grid columns={{ minWidth: 130, max: 2 }} gap={1.5}>
-                  <StatTile label={t('profile.quizzesCompleted')} value={totalQuizzes} variant="blue" />
-                  <StatTile label={t('profile.questionsAnswered')} value={totalQuestions} variant="purple" />
-                  <StatTile label={t('profile.correctAnswers')} value={totalCorrect} variant="green" />
+                  <StatTile label={t('profile.quizzesCompleted')} value={totalQuizzes} variant="blue" emoji="📝" />
+                  <StatTile label={t('profile.questionsAnswered')} value={totalQuestions} variant="purple" emoji="❓" />
+                  <StatTile label={t('profile.correctAnswers')} value={totalCorrect} variant="green" emoji="✅" />
                   <StatTile
                     label={t('profile.averageScore')}
                     value={`${averageScore}%`}
                     variant={averageScore >= 70 ? 'green' : 'gray'}
+                    emoji="🎯"
                   />
                 </Grid>
               </VStack>
             </Card>
+            </Lift>
 
             <AchievementsCard achievements={achievements} />
 
             {bookmarkedQuestions.length > 0 && (
+              <Lift>
               <Card variant="default" padding={3} width="100%">
                 <VStack gap={2}>
-                  <SectionLabel>{t('profile.bookmarks', { count: bookmarkedQuestions.length })}</SectionLabel>
+                  <SectionLabel emoji="🔖">{t('profile.bookmarks', { count: bookmarkedQuestions.length })}</SectionLabel>
                   <VStack gap={1.5}>
                     {bookmarkedQuestions.slice(0, 20).map((q) => (
                       <Card key={q.id} variant="muted" padding={2}>
@@ -318,6 +366,7 @@ function ProfileBody({
                   </VStack>
                 </VStack>
               </Card>
+              </Lift>
             )}
 
             <PreferencesCard />
@@ -368,21 +417,20 @@ function CareerCard() {
     : t('profile.xpToNext', { xp: nf(info.xpToNext), title: nextTitle ?? '' });
 
   return (
+    <Lift>
     <Card variant="default" padding={3} width="100%">
       <VStack gap={2}>
-        <SectionLabel>{t('profile.career')}</SectionLabel>
+        <SectionLabel emoji="🚀">{t('profile.career')}</SectionLabel>
 
         <HStack gap={2} align="center">
           <div
             aria-hidden
+            className="ss-emoji-tile"
             style={{
               width: 56,
               height: 56,
               borderRadius: 16,
-              display: 'grid',
-              placeItems: 'center',
               fontSize: '2rem',
-              lineHeight: 1,
               flexShrink: 0,
               background: 'var(--brand-accent-soft, rgba(0,0,0,0.05))',
               boxShadow: 'inset 0 0 0 1.5px color-mix(in srgb, var(--brand-accent) 45%, transparent)',
@@ -396,9 +444,9 @@ function CareerCard() {
               {t('profile.careerLevelOf', { level: info.level, max: MAX_RANK })}
             </Text>
           </VStack>
-          <VStack gap={0} align="end">
-            <Text size="2xl" weight="bold" color="accent">{nf(totalXp)}</Text>
-            <Text type="supporting" size="xsm" color="secondary">{t('profile.xpUnit')}</Text>
+          <VStack gap={0.5} align="end">
+            <Text size="3xl" weight="bold" color="accent">{nf(totalXp)}</Text>
+            <MetaPill>{t('profile.xpUnit')}</MetaPill>
           </VStack>
         </HStack>
 
@@ -419,6 +467,7 @@ function CareerCard() {
         </VStack>
       </VStack>
     </Card>
+    </Lift>
   );
 }
 
@@ -449,10 +498,11 @@ function LearningTrackCard() {
   };
 
   return (
+    <Lift>
     <Card variant="default" padding={3} width="100%">
       <VStack gap={2}>
         <VStack gap={0.5}>
-          <SectionLabel>{t('profile.trackTitle')}</SectionLabel>
+          <SectionLabel emoji="🧭">{t('profile.trackTitle')}</SectionLabel>
           <Text type="supporting" color="secondary">{t('profile.trackHelp')}</Text>
         </VStack>
 
@@ -524,6 +574,7 @@ function LearningTrackCard() {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
     </Card>
+    </Lift>
   );
 }
 
@@ -620,6 +671,7 @@ function AchievementBadge({ achievement }: { achievement: Achievement }) {
 
   return (
     <div
+      className="ss-lift"
       aria-label={t('profile.achievementAria', {
         label,
         state: earned ? t('profile.earned') : t('profile.locked'),
@@ -694,11 +746,12 @@ function AchievementsCard({ achievements }: { achievements: Achievement[] }) {
   const pct = achievements.length > 0 ? Math.round((earnedCount / achievements.length) * 100) : 0;
 
   return (
+    <Lift>
     <Card variant="default" padding={3} width="100%">
       <VStack gap={2}>
         <HStack align="center" justify="between" gap={1} wrap="wrap">
-          <SectionLabel>{t('profile.achievements', { earned: earnedCount, total: achievements.length })}</SectionLabel>
-          <Badge variant="neutral" label={`${pct}%`} />
+          <SectionLabel emoji="🏆">{t('profile.achievements', { earned: earnedCount, total: achievements.length })}</SectionLabel>
+          <Badge variant={pct === 100 ? 'success' : 'neutral'} label={`${pct}%`} />
         </HStack>
         <ProgressBar label={t('profile.achievements', { earned: earnedCount, total: achievements.length })} value={pct} isLabelHidden />
         <Grid columns={{ minWidth: 200, max: 2 }} gap={1.5}>
@@ -708,6 +761,7 @@ function AchievementsCard({ achievements }: { achievements: Achievement[] }) {
         </Grid>
       </VStack>
     </Card>
+    </Lift>
   );
 }
 
@@ -723,9 +777,10 @@ function PreferencesCard() {
   };
 
   return (
+    <Lift>
     <Card variant="default" padding={3} width="100%">
       <VStack gap={2}>
-        <SectionLabel>{t('profile.preferences')}</SectionLabel>
+        <SectionLabel emoji="⚙️">{t('profile.preferences')}</SectionLabel>
         <HStack justify="between" align="center" gap={2} wrap="wrap">
           <VStack gap={0}>
             <Text weight="semibold">{t('profile.language')}</Text>
@@ -745,16 +800,20 @@ function PreferencesCard() {
         </HStack>
       </VStack>
     </Card>
+    </Lift>
   );
 }
 
-const StatTile = ({ label, value, variant }: { label: string; value: number | string; variant: CardVariant }) => (
-  <Card variant={variant} padding={2}>
-    <VStack gap={0.5}>
-      <Text size="2xl" weight="bold">{value}</Text>
-      <Text type="supporting" size="xsm" color="secondary">{label}</Text>
-    </VStack>
-  </Card>
+const StatTile = ({ label, value, variant, emoji }: { label: string; value: number | string; variant: CardVariant; emoji?: string }) => (
+  <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+    <Card variant={variant} padding={2} width="100%">
+      <VStack gap={0.5}>
+        {emoji && <span aria-hidden style={{ fontSize: '1.35rem', lineHeight: 1 }}>{emoji}</span>}
+        <Text size="4xl" weight="bold">{value}</Text>
+        <Text type="supporting" size="xsm" color="secondary">{label}</Text>
+      </VStack>
+    </Card>
+  </div>
 );
 
 export default Profile;

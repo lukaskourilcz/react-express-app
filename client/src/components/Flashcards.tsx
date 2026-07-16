@@ -15,6 +15,7 @@ import { Badge } from '@astryxdesign/core/Badge';
 import { Card } from '@astryxdesign/core/Card';
 import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../lib/auth';
+import { useActiveSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
 import { removeFlashcard, type Flashcard } from '../lib/flashcards';
 import { friendlyError } from '../lib/api';
@@ -37,6 +38,7 @@ const TrashIcon = () => (
 function Flashcards() {
   const t = useT();
   const navigate = useNavigate();
+  const accent = useActiveSubject().accent;
   const { isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
@@ -84,8 +86,10 @@ function Flashcards() {
 
   if (!isAuthenticated) {
     return (
-      <Card variant="default" padding={6} maxWidth={520} width="100%">
+      <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 520, margin: '0 auto' }}>
+      <Card variant="default" padding={6} width="100%">
         <VStack gap={2} align="center">
+          <div aria-hidden className="ss-float" style={{ fontSize: '2.6rem', lineHeight: 1 }}>🦈</div>
           <Heading level={2} justify="center">{t('card.signInTitle')}</Heading>
           <Text type="body" color="secondary" justify="center">{t('card.signInBody')}</Text>
           <div style={{ marginTop: '0.5rem' }}>
@@ -93,6 +97,7 @@ function Flashcards() {
           </div>
         </VStack>
       </Card>
+      </div>
     );
   }
 
@@ -102,9 +107,10 @@ function Flashcards() {
 
   if (cards.length === 0) {
     return (
-      <Card variant="default" padding={6} maxWidth={520} width="100%">
+      <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 520, margin: '0 auto' }}>
+      <Card variant="default" padding={6} width="100%">
         <VStack gap={2} align="center">
-          <div aria-hidden style={{ fontSize: '2.4rem', lineHeight: 1 }}>🔖</div>
+          <div aria-hidden className="ss-float" style={{ fontSize: '3rem', lineHeight: 1 }}>🔖</div>
           <Heading level={2} justify="center">{t('card.emptyTitle')}</Heading>
           <Text type="body" color="secondary" justify="center">{t('card.emptyHint')}</Text>
           <div style={{ marginTop: '0.5rem' }}>
@@ -112,6 +118,7 @@ function Flashcards() {
           </div>
         </VStack>
       </Card>
+      </div>
     );
   }
 
@@ -128,14 +135,45 @@ function Flashcards() {
     <div style={{ maxWidth: 640, margin: '0 auto', width: '100%' }}>
       <VStack gap={3} width="100%">
         <HStack justify="between" align="center" gap={2} width="100%">
-          <VStack gap={0.5}>
-            <Heading level={1}>{t('card.heading')}</Heading>
-            <Text type="supporting" color="secondary">{t('card.subtitle')}</Text>
-          </VStack>
-          <Badge variant="neutral" label={t('card.counter', { current: index + 1, total: cards.length })} />
+          <HStack gap={1.5} align="center">
+            <div
+              aria-hidden
+              className="ss-emoji-tile ss-float"
+              style={{
+                width: 46,
+                height: 46,
+                fontSize: '1.5rem',
+                flexShrink: 0,
+                background: `linear-gradient(135deg, ${accent}2b, ${accent}12)`,
+                boxShadow: `inset 0 0 0 1.5px ${accent}44, 0 6px 16px ${accent}22`,
+              }}
+            >
+              🃏
+            </div>
+            <VStack gap={0.5}>
+              <Heading level={1}>{t('card.heading')}</Heading>
+              <Text type="supporting" color="secondary">{t('card.subtitle')}</Text>
+            </VStack>
+          </HStack>
+          <div
+            style={{
+              flexShrink: 0,
+              alignSelf: 'flex-start',
+              borderRadius: 999,
+              padding: '4px 12px',
+              fontWeight: 700,
+              fontSize: '0.78rem',
+              color: accent,
+              background: `${accent}14`,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {t('card.counter', { current: index + 1, total: cards.length })}
+          </div>
         </HStack>
 
         {/* The study card. A tinted top rule carries the subject accent. */}
+        <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
         <Card variant="default" padding={5} width="100%" minHeight={260}>
           <div
             aria-hidden
@@ -172,9 +210,16 @@ function Flashcards() {
                 />
               ) : (
                 <VStack gap={1.5} width="100%">
-                  <Text type="label" color="secondary">{t('card.answerLabel')}</Text>
+                  <HStack gap={1} align="center">
+                    <span aria-hidden style={{ fontSize: '1.1rem', lineHeight: 1 }}>💡</span>
+                    <Text type="label" color="secondary">{t('card.answerLabel')}</Text>
+                  </HStack>
                   <div
+                    className="ss-pop"
                     style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
                       padding: '14px 16px',
                       borderRadius: 12,
                       background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
@@ -182,7 +227,8 @@ function Flashcards() {
                       fontWeight: 600,
                     }}
                   >
-                    {card.correct_answer}
+                    <span aria-hidden style={{ fontSize: '1.15rem', lineHeight: 1, flexShrink: 0 }}>✅</span>
+                    <span>{card.correct_answer}</span>
                   </div>
                   {card.explanation && (
                     <Text type="body" color="secondary">{card.explanation}</Text>
@@ -192,6 +238,7 @@ function Flashcards() {
             </div>
           </div>
         </Card>
+        </div>
 
         <HStack gap={1.5} width="100%">
           <div style={{ flex: 1 }}>

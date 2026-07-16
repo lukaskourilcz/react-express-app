@@ -106,8 +106,11 @@ function Leaderboard() {
     <div style={{ width: '100%', maxWidth: 880, margin: '0 auto' }}>
       <VStack gap={2} width="100%">
         <HStack gap={1.5} align="center" wrap="wrap">
+          <span aria-hidden className="ss-float" style={{ display: 'inline-flex', fontSize: '1.9rem', lineHeight: 1 }}>
+            🏆
+          </span>
           <Heading level={1} type="display-3">
-            {t('leaderboard.title')}
+            <span className="ss-gradient-text">{t('leaderboard.title')}</span>
           </Heading>
           {/* Every tab counts this platform only — make the scope visible. */}
           <span
@@ -204,6 +207,19 @@ function Leaderboard() {
         {!loading && !error && rows.length === 0 && (
           <Card variant="default" padding={6} width="100%">
             <VStack gap={2} align="center">
+              <div
+                aria-hidden
+                className="ss-emoji-tile ss-float"
+                style={{
+                  width: 64,
+                  height: 64,
+                  fontSize: '2rem',
+                  background: `linear-gradient(135deg, ${subject.accent}2b, ${subject.accent}12)`,
+                  boxShadow: `inset 0 0 0 1.5px ${subject.accent}44, 0 6px 16px ${subject.accent}22`,
+                }}
+              >
+                🦈
+              </div>
               <Text type="body" color="secondary" justify="center">
                 {tab === 'category'
                   ? t('leaderboard.noCategoryAttempts', { label: getCategoryLabel(category) })
@@ -217,28 +233,30 @@ function Leaderboard() {
         {hasRows && isMobile && (
           <VStack gap={1.5} width="100%">
             {rows.map((row) => (
-              <Card key={row.rank} variant={row.medal ? 'muted' : 'default'} padding={3} width="100%">
-                <HStack gap={2} align="center">
-                  <RankMedal rank={row.rank} medal={row.medal} />
-                  <Avatar src={row.picture ?? undefined} name={row.name} size="small" />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <Text type="body" weight="semibold" maxLines={1}>
-                      {row.name}
-                    </Text>
-                    <Text type="supporting" size="xsm" color="secondary">
-                      {row.secondary}
-                    </Text>
-                  </div>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <Text type="large" weight="bold">
-                      {row.score}
-                    </Text>
-                    <Text type="supporting" size="xsm" color="secondary">
-                      {scoreLabel}
-                    </Text>
-                  </div>
-                </HStack>
-              </Card>
+              <div key={row.rank} className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+                <Card variant={row.medal ? 'muted' : 'default'} padding={3} width="100%">
+                  <HStack gap={2} align="center">
+                    <RankMedal rank={row.rank} medal={row.medal} />
+                    <Avatar src={row.picture ?? undefined} name={row.name} size="small" />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Text type="body" weight="semibold" maxLines={1}>
+                        {row.name}
+                      </Text>
+                      <Text type="supporting" size="xsm" color="secondary">
+                        {row.secondary}
+                      </Text>
+                    </div>
+                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                      <Text type="large" weight="bold">
+                        {row.score}
+                      </Text>
+                      <Text type="supporting" size="xsm" color="secondary">
+                        {scoreLabel}
+                      </Text>
+                    </div>
+                  </HStack>
+                </Card>
+              </div>
             ))}
           </VStack>
         )}
@@ -307,8 +325,24 @@ function Leaderboard() {
 // glance without a full-row highlight.
 function RankMedal({ rank, medal }: { rank: number; medal: string | null }): ReactNode {
   if (medal) {
+    // Podium flair: each medal sits in a tinted disc glowing in its own metal —
+    // gold / silver / bronze — so the top three pop off the board.
+    const tint = rank === 1 ? '#f5b301' : rank === 2 ? '#9aa4b2' : '#cd7f32';
     return (
-      <span aria-label={`#${rank}`} style={{ fontSize: '1.35rem', lineHeight: 1 }}>
+      <span
+        aria-label={`#${rank}`}
+        style={{
+          display: 'inline-grid',
+          placeItems: 'center',
+          width: 38,
+          height: 38,
+          borderRadius: 999,
+          fontSize: '1.35rem',
+          lineHeight: 1,
+          background: `linear-gradient(135deg, ${tint}30, ${tint}12)`,
+          boxShadow: `inset 0 0 0 1.5px ${tint}66, 0 4px 14px ${tint}40`,
+        }}
+      >
         {medal}
       </span>
     );

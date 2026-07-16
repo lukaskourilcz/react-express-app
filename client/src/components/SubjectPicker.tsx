@@ -51,9 +51,11 @@ export default function SubjectPicker() {
       <VStack gap={5} align="center">
         <VStack gap={2} align="center">
           <HStack gap={1.5} align="center">
-            <SwimmingFin size={30} />
-            <Heading level={1} type="display-3" justify="center">
-              StudyShark
+            <span className="ss-float" style={{ display: 'inline-flex' }}>
+              <SwimmingFin size={34} />
+            </span>
+            <Heading level={1} type="display-2" justify="center">
+              <span className="ss-gradient-text">StudyShark</span>
             </Heading>
           </HStack>
           <Heading level={2} justify="center">
@@ -64,54 +66,68 @@ export default function SubjectPicker() {
           </Text>
         </VStack>
 
-        <Grid columns={{ minWidth: 260, max: 3 }} gap={3} width="100%">
-          {SUBJECT_ORDER.map((id) => {
+        <Grid columns={{ minWidth: 262, max: 3 }} gap={3} width="100%">
+          {SUBJECT_ORDER.map((id, i) => {
             const s = SUBJECTS[id];
             const active = id === current;
             return (
-              <ClickableCard
+              <div
                 key={id}
-                label={t('subject.study', { subject: s.label })}
-                onClick={() => choose(id)}
-                variant={active ? 'muted' : 'default'}
-                padding={4}
+                className="ss-lift ss-pop"
+                style={{ display: 'flex', animationDelay: `${i * 55}ms` }}
               >
-                <VStack gap={2}>
-                  <HStack gap={2} align="center">
+                <ClickableCard
+                  label={t('subject.study', { subject: s.label })}
+                  onClick={() => choose(id)}
+                  variant={active ? 'muted' : 'default'}
+                  padding={4}
+                  width="100%"
+                >
+                  <VStack gap={2}>
+                    <HStack gap={2} align="center">
+                      <div
+                        aria-hidden
+                        className="ss-emoji-tile"
+                        style={{
+                          width: 56,
+                          height: 56,
+                          fontSize: '2rem',
+                          background: `linear-gradient(135deg, ${s.accent}2b, ${s.accent}12)`,
+                          boxShadow: `inset 0 0 0 1.5px ${s.accent}44, 0 6px 16px ${s.accent}22`,
+                        }}
+                      >
+                        {s.emoji}
+                      </div>
+                      <Heading level={3}>
+                        <span style={{ color: s.accent }}>{s.label}</span>
+                      </Heading>
+                      {active && (
+                        <div style={{ marginLeft: 'auto' }}>
+                          <Badge variant={BADGE_VARIANT[id]} label={t('subject.current')} />
+                        </div>
+                      )}
+                    </HStack>
+                    <Text type="supporting" color="secondary">
+                      {s.blurb}
+                    </Text>
                     <div
-                      aria-hidden
                       style={{
-                        width: 46,
-                        height: 46,
-                        borderRadius: 14,
-                        display: 'grid',
-                        placeItems: 'center',
-                        fontSize: '1.65rem',
-                        lineHeight: 1,
-                        flexShrink: 0,
-                        background: `${s.accent}22`,
-                        boxShadow: `inset 0 0 0 1.5px ${s.accent}55`,
+                        marginTop: 2,
+                        alignSelf: 'flex-start',
+                        borderRadius: 999,
+                        padding: '3px 10px',
+                        fontFamily: 'var(--font-family-body)',
+                        fontWeight: 700,
+                        fontSize: '0.72rem',
+                        color: s.accent,
+                        background: `${s.accent}14`,
                       }}
                     >
-                      {s.emoji}
+                      {t('subject.meta', { count: s.topics.length })}
                     </div>
-                    <Heading level={3}>
-                      <span style={{ color: s.accent }}>{s.label}</span>
-                    </Heading>
-                    {active && (
-                      <div style={{ marginLeft: 'auto' }}>
-                        <Badge variant={BADGE_VARIANT[id]} label={t('subject.current')} />
-                      </div>
-                    )}
-                  </HStack>
-                  <Text type="supporting" color="secondary">
-                    {s.blurb}
-                  </Text>
-                  <Text type="supporting" size="xsm" color="secondary">
-                    {t('subject.meta', { count: s.topics.length })}
-                  </Text>
-                </VStack>
-              </ClickableCard>
+                  </VStack>
+                </ClickableCard>
+              </div>
             );
           })}
         </Grid>

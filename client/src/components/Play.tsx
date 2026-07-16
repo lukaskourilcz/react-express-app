@@ -32,6 +32,7 @@ import {
 } from '../lib/play';
 import { joinMatchChannel, type RealtimeChannel } from '../lib/realtime';
 import { visibleCategoryOptionsFor } from '../lib/categories';
+import { useActiveSubject } from '../lib/subjects';
 import type { CategoryType } from '../types/quiz';
 import { friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
@@ -55,6 +56,7 @@ export function PlayLanding() {
   const config = useGameConfig();
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const accent = useActiveSubject().accent;
   const { user, isAuthenticated, signInWithGoogle } = useAuth();
   const profile = getUserProfile(user);
   const [mode, setMode] = useState<'multiplayer' | 'classroom'>('multiplayer');
@@ -73,9 +75,10 @@ export function PlayLanding() {
 
   if (!isAuthenticated) {
     return (
-      <div style={{ maxWidth: 480, margin: '0 auto' }}>
-        <Card padding={6}>
+      <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+        <Card padding={6} width="100%">
           <VStack gap={2} align="center">
+            <div aria-hidden className="ss-float" style={{ fontSize: '2.8rem', lineHeight: 1 }}>🦈</div>
             <Heading level={2} justify="center">
               {t('play.signInTitle')}
             </Heading>
@@ -154,14 +157,44 @@ export function PlayLanding() {
   return (
     <div style={{ maxWidth: isDesktop ? 980 : 560, margin: '0 auto', width: '100%' }}>
       <VStack gap={3}>
-        <VStack gap={0.5}>
-          <Heading level={1} type="display-3">
-            {t('play.title')}
-          </Heading>
-          <Text type="large" color="secondary">
-            {t('play.subtitle')}
-          </Text>
-        </VStack>
+        <div
+          className="ss-pop"
+          style={{
+            position: 'relative',
+            overflow: 'hidden',
+            borderRadius: 22,
+            padding: 'clamp(1.25rem, 3.5vw, 2rem) clamp(1rem, 3.5vw, 1.75rem)',
+            background: `radial-gradient(120% 130% at 0% -20%, ${accent}22, transparent 65%)`,
+            border: `1px solid ${accent}2e`,
+          }}
+        >
+          <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 12, right: 18, fontSize: '1.8rem', opacity: 0.75 }}>🎮</span>
+          <span aria-hidden className="ss-float" style={{ position: 'absolute', bottom: 10, right: 60, fontSize: '1.2rem', opacity: 0.55, animationDelay: '1.5s' }}>🫧</span>
+          <HStack gap={1.5} align="center">
+            <div
+              aria-hidden
+              className="ss-emoji-tile ss-float"
+              style={{
+                width: 52,
+                height: 52,
+                fontSize: '1.7rem',
+                flexShrink: 0,
+                background: `linear-gradient(135deg, ${accent}2b, ${accent}12)`,
+                boxShadow: `inset 0 0 0 1.5px ${accent}44, 0 6px 16px ${accent}22`,
+              }}
+            >
+              🦈
+            </div>
+            <VStack gap={0.5}>
+              <Heading level={1} type="display-3">
+                <span className="ss-gradient-text">{t('play.title')}</span>
+              </Heading>
+              <Text type="large" color="secondary">
+                {t('play.subtitle')}
+              </Text>
+            </VStack>
+          </HStack>
+        </div>
 
         {error && (
           <Banner
@@ -182,12 +215,16 @@ export function PlayLanding() {
             alignItems: 'start',
           }}
         >
-          <Card padding={4}>
+          <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+          <Card padding={4} width="100%">
             <VStack gap={3}>
               <VStack gap={2}>
-                <Text type="label" weight="bold" color="secondary">
-                  {t('play.hostGame')}
-                </Text>
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1.15rem', lineHeight: 1 }}>🚀</span>
+                  <Text type="label" weight="bold" color="secondary">
+                    {t('play.hostGame')}
+                  </Text>
+                </HStack>
                 <ToggleButtonGroup
                   label={t('play.gameMode')}
                   type="single"
@@ -314,6 +351,7 @@ export function PlayLanding() {
               </VStack>
             </VStack>
           </Card>
+          </div>
 
           <div>
             {!isDesktop && (
@@ -321,21 +359,39 @@ export function PlayLanding() {
                 <Divider label={t('play.or')} />
               </div>
             )}
-            <Card padding={4}>
+            <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+            <Card padding={4} width="100%">
               <VStack gap={2}>
-                <Text type="label" weight="bold" color="secondary">
-                  {t('play.joinWithCode')}
-                </Text>
-                <TextInput
-                  label={t('play.matchCode')}
-                  value={joinCode}
-                  placeholder="ABC123"
-                  onChange={(v) => setJoinCode(v.toUpperCase())}
-                />
+                <HStack gap={1} align="center">
+                  <span aria-hidden className="ss-float" style={{ fontSize: '1.15rem', lineHeight: 1 }}>🔑</span>
+                  <Text type="label" weight="bold" color="secondary">
+                    {t('play.joinWithCode')}
+                  </Text>
+                </HStack>
+                {/* Room code is the star of the join card: big, monospaced,
+                    accent-ringed input so it reads like a ticket stub. */}
+                <div
+                  style={{
+                    borderRadius: 14,
+                    padding: 12,
+                    background: `${accent}0f`,
+                    border: `1.5px dashed ${accent}55`,
+                  }}
+                >
+                  <div style={{ fontFamily: 'monospace', letterSpacing: '0.32em', fontWeight: 800, fontSize: '1.2rem' }}>
+                    <TextInput
+                      label={t('play.matchCode')}
+                      value={joinCode}
+                      placeholder="ABC123"
+                      onChange={(v) => setJoinCode(v.toUpperCase())}
+                    />
+                  </div>
+                </div>
                 <div style={{ display: 'grid' }}>
                   <Button
-                    variant="secondary"
-                    label={loading === 'join' ? '…' : t('play.join')}
+                    variant="primary"
+                    size="lg"
+                    label={loading === 'join' ? '…' : `${t('play.join')} →`}
                     isLoading={loading === 'join'}
                     isDisabled={loading !== null}
                     onClick={handleJoin}
@@ -343,6 +399,7 @@ export function PlayLanding() {
                 </div>
               </VStack>
             </Card>
+            </div>
           </div>
         </div>
       </VStack>
@@ -648,10 +705,29 @@ function Lobby({
   const t = useT();
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/play/${match.code}` : '';
   return (
-    <Card padding={4}>
+    <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
+    <Card padding={4} width="100%">
       <VStack gap={3}>
         <VStack gap={1}>
-          <Heading level={2}>{t('play.lobby')}</Heading>
+          <HStack gap={1.5} align="center">
+            <span aria-hidden className="ss-float" style={{ fontSize: '1.6rem', lineHeight: 1 }}>👋</span>
+            <Heading level={2}>{t('play.lobby')}</Heading>
+            {participants.length > 0 && (
+              <div
+                style={{
+                  marginLeft: 'auto',
+                  borderRadius: 999,
+                  padding: '3px 11px',
+                  fontWeight: 700,
+                  fontSize: '0.78rem',
+                  color: 'var(--brand-accent)',
+                  background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
+                }}
+              >
+                {participants.length}
+              </div>
+            )}
+          </HStack>
           <Text color="secondary">
             {t('play.shareInstructions', {
               code: match.code,
@@ -661,21 +737,30 @@ function Lobby({
         </VStack>
 
         <VStack gap={1}>
-          {participants.map((p) => (
-            <Card key={p.user_id} variant="muted" padding={1.5}>
-              <HStack gap={1.5} align="center">
-                <Avatar name={p.display_name} size="small" />
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <Text weight="medium">{p.display_name}</Text>
-                </div>
-                {p.user_id === match.host_id && <Badge variant="neutral" label={t('play.host')} />}
-              </HStack>
-            </Card>
+          {participants.map((p, i) => (
+            <div
+              key={p.user_id}
+              className="ss-lift ss-pop"
+              style={{ display: 'flex', width: '100%', animationDelay: `${i * 55}ms` }}
+            >
+              <Card variant="muted" padding={1.5} width="100%">
+                <HStack gap={1.5} align="center">
+                  <Avatar name={p.display_name} size="small" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text weight="medium">{p.display_name}</Text>
+                  </div>
+                  {p.user_id === match.host_id && <Badge variant="yellow" label={`👑 ${t('play.host')}`} />}
+                </HStack>
+              </Card>
+            </div>
           ))}
           {participants.length === 0 && (
-            <Text type="supporting" size="xsm" color="secondary">
-              {t('play.noPlayers')}
-            </Text>
+            <VStack gap={1} align="center" padding={2}>
+              <span aria-hidden className="ss-float" style={{ fontSize: '2rem', lineHeight: 1 }}>🫧</span>
+              <Text type="supporting" size="xsm" color="secondary" justify="center">
+                {t('play.noPlayers')}
+              </Text>
+            </VStack>
           )}
         </VStack>
 
@@ -688,7 +773,8 @@ function Lobby({
           {isHost && (
             <Button
               variant="primary"
-              label={t('play.startWithCount', { count: match.questions.length })}
+              size="lg"
+              label={`🚀 ${t('play.startWithCount', { count: match.questions.length })}`}
               isDisabled={participants.length < 1}
               onClick={onStart}
             />
@@ -696,6 +782,7 @@ function Lobby({
         </HStack>
       </VStack>
     </Card>
+    </div>
   );
 }
 
@@ -776,7 +863,8 @@ function RunningQuestion({
         : 'var(--astryx-color-text-secondary, currentColor)';
 
   return (
-    <Card padding={4}>
+    <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+    <Card padding={4} width="100%">
       <VStack gap={2}>
         <HStack justify="between" align="center" gap={1}>
           <Text type="supporting" size="xsm" color="secondary">
@@ -788,7 +876,22 @@ function RunningQuestion({
             })}
           </Text>
           <span
-            style={{ fontFamily: 'monospace', fontWeight: 700, fontSize: '0.8rem', color: timerColor }}
+            className={!noLimit && remainingS <= 5 ? 'ss-float' : undefined}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              fontFamily: 'monospace',
+              fontWeight: 800,
+              fontSize: '0.95rem',
+              padding: '4px 11px',
+              borderRadius: 999,
+              color: timerColor,
+              background:
+                !noLimit && remainingS <= 5
+                  ? 'color-mix(in srgb, #d33 15%, transparent)'
+                  : 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
+            }}
             aria-live="polite"
             aria-atomic="true"
           >
@@ -874,6 +977,7 @@ function RunningQuestion({
         <ScoreboardList scoreboard={scoreboard} />
       </VStack>
     </Card>
+    </div>
   );
 }
 
@@ -882,9 +986,12 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
   if (scoreboard.length === 0) return null;
   return (
     <VStack gap={1}>
-      <Text type="label" weight="bold" color="secondary">
-        {t('play.liveScoreboard')}
-      </Text>
+      <HStack gap={1} align="center">
+        <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
+        <Text type="label" weight="bold" color="secondary">
+          {t('play.liveScoreboard')}
+        </Text>
+      </HStack>
       <VStack gap={0.5}>
         {scoreboard.map((s, i) => (
           <div
@@ -895,18 +1002,19 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
               gap: 8,
               padding: '6px 8px',
               borderRadius: 8,
-              background: i === 0 ? 'var(--brand-accent-soft, rgba(45,122,45,0.08))' : 'transparent',
+              background: i === 0 ? 'color-mix(in srgb, var(--brand-accent) 10%, transparent)' : 'transparent',
             }}
           >
             <span
               style={{
                 width: 24,
+                textAlign: 'center',
                 fontWeight: 700,
-                fontSize: '0.8rem',
+                fontSize: i < 3 ? '1rem' : '0.8rem',
                 color: i === 0 ? 'var(--brand-accent)' : 'inherit',
               }}
             >
-              {i + 1}
+              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
             </span>
             <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               <Text weight="medium">{s.display_name}</Text>
@@ -1018,28 +1126,40 @@ function Finished({
 }) {
   const t = useT();
   return (
-    <Card padding={4}>
+    <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
+    <Card padding={4} width="100%">
       <VStack gap={3} align="center">
-        <VStack gap={1} align="center">
+        <VStack gap={1.5} align="center">
+          <span aria-hidden className="ss-float" style={{ fontSize: '3rem', lineHeight: 1 }}>🎉</span>
           <Heading level={1} type="display-3" justify="center">
-            {t('play.matchComplete')}
+            <span className="ss-gradient-text">{t('play.matchComplete')}</span>
           </Heading>
           {scoreboard.length > 0 && (
-            <Text color="secondary" justify="center">
-              {t('play.winner', {
+            <div
+              style={{
+                borderRadius: 999,
+                padding: '6px 16px',
+                fontWeight: 700,
+                color: 'var(--brand-accent)',
+                background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
+                textAlign: 'center',
+              }}
+            >
+              🥇 {t('play.winner', {
                 name: scoreboard[0].display_name,
                 correct: scoreboard[0].correct,
                 total: match.questions.length,
               })}
-            </Text>
+            </div>
           )}
         </VStack>
         <div style={{ width: '100%', textAlign: 'left' }}>
           <ScoreboardList scoreboard={scoreboard} />
         </div>
-        <Button variant="primary" label={t('common.back')} onClick={onLeave} />
+        <Button variant="primary" size="lg" label={t('common.back')} onClick={onLeave} />
       </VStack>
     </Card>
+    </div>
   );
 }
 

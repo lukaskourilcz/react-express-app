@@ -373,21 +373,47 @@ export default function Challenge() {
     return (
       <div style={pageWrapStyle}>
         <VStack gap={3} width="100%">
-          <VStack gap={1} align="center">
-            <HStack gap={1.5} align="center">
-              <SharkFin size={30} />
-              <Heading level={1} justify="center">
-                {t('challenge.title')}
-              </Heading>
-            </HStack>
-          </VStack>
+          {/* High-energy shark hero: a glowing tinted panel with a floating
+              fin, the big title and the 🦈 mascot. */}
+          <div
+            className="ss-pop"
+            style={{
+              position: 'relative',
+              overflow: 'hidden',
+              borderRadius: 24,
+              padding: 'clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 4vw, 2rem)',
+              textAlign: 'center',
+              background:
+                'radial-gradient(120% 120% at 50% -10%, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 70%)',
+              border: '1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)',
+              boxShadow: '0 16px 40px color-mix(in srgb, var(--brand-accent) 18%, transparent)',
+            }}
+          >
+            <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 14, left: 20, fontSize: '1.5rem', opacity: 0.7 }}>🌊</span>
+            <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 20, right: 22, fontSize: '1.3rem', opacity: 0.6, animationDelay: '1.4s' }}>🫧</span>
+            <VStack gap={1.5} align="center">
+              <span className="ss-float" style={{ display: 'inline-flex', fontSize: '2.6rem', lineHeight: 1 }} aria-hidden>
+                🦈
+              </span>
+              <HStack gap={1.5} align="center" justify="center">
+                <SharkFin size={30} />
+                <Heading level={1} type="display-3" justify="center">
+                  <span className="ss-gradient-text">{t('challenge.title')}</span>
+                </Heading>
+              </HStack>
+            </VStack>
+          </div>
 
           {/* The rules list is the single explanation — no duplicate prose above. */}
+          <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
           <Card variant="muted" padding={4} width="100%">
             <VStack gap={1.5}>
-              <Text type="label" color="secondary">
-                {t('challenge.howItWorks')}
-              </Text>
+              <HStack gap={1} align="center">
+                <span aria-hidden style={{ fontSize: '1.1rem', lineHeight: 1 }}>⚡</span>
+                <Text type="label" color="secondary">
+                  {t('challenge.howItWorks')}
+                </Text>
+              </HStack>
               <VStack gap={1}>
                 <RuleRow text={t('challenge.rule1')} />
                 <RuleRow text={t('challenge.rule2')} />
@@ -396,6 +422,7 @@ export default function Challenge() {
               </VStack>
             </VStack>
           </Card>
+          </div>
 
           <ChampionBadge champion={champion} loading={boardLoading} />
 
@@ -403,16 +430,19 @@ export default function Challenge() {
             <Button
               variant="primary"
               size="lg"
-              label={t('challenge.startButton')}
+              label={`🦈 ${t('challenge.startButton')}`}
               onClick={() => void startRun()}
             />
           </HStack>
 
           {board && board.top.length > 0 && (
             <VStack gap={1} width="100%">
-              <Text type="label" color="secondary">
-                {t('challenge.hallOfFame')}
-              </Text>
+              <HStack gap={1} align="center">
+                <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
+                <Text type="label" color="secondary">
+                  {t('challenge.hallOfFame')}
+                </Text>
+              </HStack>
               <LeaderboardList board={board} />
             </VStack>
           )}
@@ -442,9 +472,12 @@ export default function Challenge() {
     return (
       <div style={pageWrapStyle}>
         <VStack gap={3} width="100%" align="center">
+          <span aria-hidden className="ss-float" style={{ fontSize: '3rem', lineHeight: 1 }}>
+            {score > 0 ? '🎉' : '🦈'}
+          </span>
           <div ref={gameOverHeadingRef} tabIndex={-1} style={{ outline: 'none' }}>
-            <Heading level={1} justify="center">
-              {t('challenge.gameOver')}
+            <Heading level={1} type="display-3" justify="center">
+              <span className="ss-gradient-text">{t('challenge.gameOver')}</span>
             </Heading>
           </div>
           <div role="status">
@@ -454,11 +487,13 @@ export default function Challenge() {
           </div>
           {/* The big number IS the score — no repeated caption underneath. */}
           <div
+            className="ss-pop"
             style={{
-              fontSize: 'clamp(3rem, 12vw, 4.5rem)',
+              fontSize: 'clamp(3.25rem, 13vw, 5rem)',
               fontWeight: 800,
               lineHeight: 1,
               color: 'var(--brand-accent)',
+              textShadow: '0 8px 30px color-mix(in srgb, var(--brand-accent) 35%, transparent)',
             }}
           >
             {score}
@@ -503,9 +538,12 @@ export default function Challenge() {
 
           {board && board.top.length > 0 && (
             <VStack gap={1} width="100%">
-              <Text type="label" color="secondary">
-                {t('challenge.hallOfFame')}
-              </Text>
+              <HStack gap={1} align="center">
+                <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
+                <Text type="label" color="secondary">
+                  {t('challenge.hallOfFame')}
+                </Text>
+              </HStack>
               <LeaderboardList board={board} />
             </VStack>
           )}
@@ -559,14 +597,22 @@ export default function Challenge() {
             <div
               role="timer"
               aria-label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
+              className={timeLow ? 'ss-float' : undefined}
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: 5,
-                fontWeight: 700,
+                gap: 6,
+                padding: '5px 12px',
+                borderRadius: 999,
+                fontWeight: 800,
+                fontSize: '1.05rem',
                 fontVariantNumeric: 'tabular-nums',
-                color: timeLow ? 'var(--color-error-text, #dc2626)' : 'inherit',
-                minWidth: 52,
+                color: timeLow ? 'var(--color-error-text, #dc2626)' : 'var(--brand-accent)',
+                background: timeLow
+                  ? 'color-mix(in srgb, var(--color-error-text, #dc2626) 14%, transparent)'
+                  : 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
+                minWidth: 68,
+                justifyContent: 'center',
               }}
             >
               <ClockIcon />
@@ -585,6 +631,7 @@ export default function Challenge() {
         </VStack>
 
         {/* Question card. A tinted top rule carries the subject accent. */}
+        <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
         <Card variant="default" padding={5} width="100%">
           <div
             aria-hidden
@@ -666,6 +713,7 @@ export default function Challenge() {
             </div>
           </VStack>
         </Card>
+        </div>
 
         {/* Grade feedback + explanation. */}
         {lastResult && (
@@ -758,9 +806,12 @@ function ChampionBadge({
 }) {
   const { t } = useLanguage();
   return (
+    <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
     <Card variant="muted" padding={3} width="100%">
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, opacity: dim ? 0.55 : 1 }}>
-        <SharkFin size={28} />
+        <span className="ss-float" style={{ display: 'inline-flex' }}>
+          <SharkFin size={28} />
+        </span>
         <div style={{ flex: 1, minWidth: 0 }}>
           <Text type="label" color="secondary">
             {t('challenge.currentChampion')}
@@ -779,6 +830,7 @@ function ChampionBadge({
         </div>
       </div>
     </Card>
+    </div>
   );
 }
 
@@ -786,6 +838,7 @@ function LeaderboardList({ board }: { board: ChallengeLeaderboard }) {
   // role="list" restores list semantics that Safari/VoiceOver drop when
   // list-style is none.
   return (
+    <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
     <Card variant="default" padding={2} width="100%">
       <ol role="list" style={{ margin: 0, padding: 0, listStyle: 'none' }}>
         {board.top.map((row, i) => (
@@ -817,5 +870,6 @@ function LeaderboardList({ board }: { board: ChallengeLeaderboard }) {
         ))}
       </ol>
     </Card>
+    </div>
   );
 }

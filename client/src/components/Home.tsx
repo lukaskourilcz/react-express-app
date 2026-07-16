@@ -85,16 +85,27 @@ export default function Home() {
     // overflow so the page stays top-anchored and scrollable on small screens.
     <div style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div
+        className="ss-pop"
         style={{
+          position: 'relative',
+          overflow: 'hidden',
           backgroundImage: heroMeshFor(mode),
-          borderRadius: 20,
+          borderRadius: 28,
           marginTop: 'auto',
-          padding: 'clamp(1.5rem, 4vw, 3rem) clamp(1rem, 4vw, 2.5rem)',
+          padding: 'clamp(1.75rem, 4vw, 3.25rem) clamp(1rem, 4vw, 2.5rem)',
+          boxShadow: '0 20px 60px var(--ss-hero-glow)',
+          border: '1px solid var(--ss-ring)',
         }}
       >
+        {/* Playful floating sea-life, purely decorative. */}
+        <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 18, left: 22, fontSize: '1.7rem', opacity: 0.7 }}>🐠</span>
+        <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 28, right: 30, fontSize: '2rem', opacity: 0.7, animationDelay: '1.2s' }}>🦈</span>
+        <span aria-hidden className="ss-float" style={{ position: 'absolute', bottom: 20, right: 64, fontSize: '1.4rem', opacity: 0.6, animationDelay: '2.1s' }}>🫧</span>
         <VStack gap={2} align="center">
           <HStack gap={1} align="center">
-            <SwimmingFin size={30} />
+            <span className="ss-float" style={{ display: 'inline-flex' }}>
+              <SwimmingFin size={30} />
+            </span>
             <Text type="label" weight="bold" color="accent">
               STUDYSHARK
             </Text>
@@ -146,20 +157,24 @@ export default function Home() {
       <div style={{ marginBottom: 'auto' }}>
         <Grid columns={{ minWidth: 220, max: 3 }} gap={2}>
           {features.map((f, i) => (
-            <MotionItem key={f.title} index={i} style={{ display: 'flex' }}>
-              <Card variant={f.variant} padding={4} width="100%">
-                <VStack gap={1}>
-                  <HStack gap={1} align="center">
-                    <span aria-hidden style={{ fontSize: '1.4rem', lineHeight: 1 }}>
+            <MotionItem key={f.title} index={i} style={{ display: 'flex', width: '100%' }}>
+              <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+                <Card variant={f.variant} padding={4} width="100%">
+                  <VStack gap={1.5}>
+                    <div
+                      aria-hidden
+                      className="ss-emoji-tile"
+                      style={{ width: 44, height: 44, fontSize: '1.5rem', background: 'var(--ss-card-bg)' }}
+                    >
                       {f.emoji}
-                    </span>
+                    </div>
                     <Heading level={3}>{f.title}</Heading>
-                  </HStack>
-                  <Text type="supporting" color="secondary">
-                    {f.text}
-                  </Text>
-                </VStack>
-              </Card>
+                    <Text type="supporting" color="secondary">
+                      {f.text}
+                    </Text>
+                  </VStack>
+                </Card>
+              </div>
             </MotionItem>
           ))}
         </Grid>

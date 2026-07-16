@@ -100,10 +100,16 @@ const baseOptions = (mode: PaletteMode, accent: Accent): ThemeOptions => ({
     divider: mode === 'light' ? '#e5e5e5' : '#2a2d35',
   },
   typography: {
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-    h4: { fontWeight: 600 },
-    h5: { fontWeight: 600 },
-    h6: { fontWeight: 600 },
+    // Friendly rounded body (Nunito) + chunky rounded display (Baloo 2), loaded
+    // in index.html — matches the Astryx --font-family-* tokens so MUI and
+    // Astryx text render identically.
+    fontFamily: '"Nunito", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    h1: { fontFamily: '"Baloo 2", "Nunito", sans-serif', fontWeight: 800, letterSpacing: '-0.01em' },
+    h2: { fontFamily: '"Baloo 2", "Nunito", sans-serif', fontWeight: 800, letterSpacing: '-0.01em' },
+    h3: { fontFamily: '"Baloo 2", "Nunito", sans-serif', fontWeight: 700 },
+    h4: { fontFamily: '"Baloo 2", "Nunito", sans-serif', fontWeight: 700 },
+    h5: { fontFamily: '"Baloo 2", "Nunito", sans-serif', fontWeight: 700 },
+    h6: { fontFamily: '"Baloo 2", "Nunito", sans-serif', fontWeight: 700 },
     overline: {
       fontSize: '0.7rem',
       fontWeight: 600,

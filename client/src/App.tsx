@@ -401,7 +401,9 @@ function App() {
         '@supports (height: 100dvh)': { height: '100dvh' },
         maxWidth: '100vw',
         overflow: 'hidden',
-        backgroundColor: 'background.default',
+        // Playful ocean backdrop (soft colour blobs + sky→mint gradient) instead
+        // of a flat fill, so cards pop against a warm, colourful surface.
+        background: 'var(--ss-app-bg)',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -427,7 +429,17 @@ function App() {
 
       {showChrome && (
         <>
-        <AppBar position="static" elevation={0} sx={{ backgroundColor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
+        <AppBar
+          position="static"
+          elevation={0}
+          sx={{
+            background: 'var(--ss-header-bg)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            borderBottom: '1px solid var(--ss-header-border)',
+            color: 'text.primary',
+          }}
+        >
           <Toolbar sx={{ maxWidth: 1200, width: '100%', mx: 'auto', px: { xs: 2, sm: 3 }, gap: 1 }}>
             {/* Left slot: mobile menu + logo. Flex-basis 0 so all three slots
                 share width equally, keeping the centre slot truly centred. */}
