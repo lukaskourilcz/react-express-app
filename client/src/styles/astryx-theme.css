@@ -1,13 +1,14 @@
 /*
- * StudyShark × Astryx — playful design foundation.
+ * StudyShark × Astryx — professional design foundation.
  *
  * We import Astryx's component styles + the neutral token theme, then override
  * the design TOKENS Astryx components consume (radius, colour, shadow, font) to
- * give the whole app a rounder, warmer, more playful feel — plus a set of
- * utility classes and a themed backdrop the app's own wrappers use.
+ * give the app a clean, modern, editorial feel — professional first, with
+ * warmth coming from the subject accent colours and the shark mascot rather
+ * than from decoration.
  *
- * Astryx's own reset.css is intentionally NOT imported — MUI's <CssBaseline>
- * is the single reset during the staged migration.
+ * Astryx's own reset.css is intentionally NOT imported — the app ships its own
+ * reset (styles/reset.css) as the single baseline.
  */
 @import '@astryxdesign/core/astryx.css';
 @import '@astryxdesign/theme-neutral/theme.css';
@@ -20,140 +21,122 @@
   --color-text-accent: var(--brand-accent, #2d7a2d);
   --color-border-accent: var(--brand-accent, #2d7a2d);
 
-  /* — Type: chunky rounded display + friendly rounded body — */
-  --font-family-body: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-family-heading: 'Baloo 2', 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  /* — Semantic feedback colours: the ONE green/red pair for correct/incorrect
+       everywhere (quiz review, lesson feedback, toasts). — */
+  --ss-success: light-dark(#16803c, #4ade80);
+  --ss-success-strong: light-dark(#166534, #22c55e);
+  --ss-success-soft: light-dark(rgba(22, 128, 60, 0.08), rgba(74, 222, 128, 0.12));
+  --ss-error: light-dark(#dc2626, #f87171);
+  --ss-error-soft: light-dark(rgba(220, 38, 38, 0.07), rgba(248, 113, 113, 0.12));
 
-  /* — Rounder shapes everywhere (cards, buttons, inputs, badges) — */
-  --radius-page: 2rem;
-  --radius-container: 1.25rem;
-  --radius-element: 0.9rem;
-  --radius-inner: 0.7rem;
+  /* — Type: confident geometric display + highly-legible body — */
+  --font-family-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-heading: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
-  /* — Softer, larger, friendlier elevation — */
+  /* — Calm, consistent shape scale (cards, buttons, inputs, badges) — */
+  --radius-page: 1.25rem;
+  --radius-container: 1rem;
+  --radius-element: 0.625rem;
+  --radius-inner: 0.5rem;
+
+  /* — Quiet elevation: one soft ambient layer + one contact layer — */
   --shadow-low:
-    0 2px 6px light-dark(rgba(20, 40, 80, 0.06), rgba(0, 0, 0, 0.35)),
-    0 8px 20px light-dark(rgba(20, 40, 80, 0.06), rgba(0, 0, 0, 0.45));
+    0 1px 2px light-dark(rgba(15, 26, 42, 0.05), rgba(0, 0, 0, 0.3)),
+    0 4px 12px light-dark(rgba(15, 26, 42, 0.06), rgba(0, 0, 0, 0.35));
   --shadow-med:
-    0 4px 10px light-dark(rgba(20, 40, 80, 0.08), rgba(0, 0, 0, 0.4)),
-    0 14px 34px light-dark(rgba(20, 40, 80, 0.1), rgba(0, 0, 0, 0.55));
+    0 2px 4px light-dark(rgba(15, 26, 42, 0.06), rgba(0, 0, 0, 0.35)),
+    0 8px 24px light-dark(rgba(15, 26, 42, 0.08), rgba(0, 0, 0, 0.45));
   --shadow-high:
-    0 8px 18px light-dark(rgba(20, 40, 80, 0.1), rgba(0, 0, 0, 0.5)),
-    0 24px 60px light-dark(rgba(20, 40, 80, 0.14), rgba(0, 0, 0, 0.65));
+    0 4px 8px light-dark(rgba(15, 26, 42, 0.07), rgba(0, 0, 0, 0.4)),
+    0 16px 40px light-dark(rgba(15, 26, 42, 0.1), rgba(0, 0, 0, 0.55));
 
-  /* — Playful app backdrop (sky → mint with soft ocean blobs) — */
+  /* — App backdrop: near-neutral surface with one faint accent wash at the
+       top so pages feel lit without reading as a gradient poster. — */
   --ss-app-bg:
-    radial-gradient(1200px 620px at 12% -8%, rgba(45, 122, 45, 0.10), transparent 60%),
-    radial-gradient(1000px 560px at 100% 0%, rgba(14, 116, 144, 0.12), transparent 55%),
-    radial-gradient(900px 700px at 50% 120%, rgba(245, 166, 35, 0.08), transparent 60%),
-    linear-gradient(180deg, #eef6ff 0%, #f2fbf5 55%, #f6f9fb 100%);
-  --ss-hero-glow: rgba(14, 116, 144, 0.16);
+    radial-gradient(1100px 480px at 50% -12%, var(--brand-accent-soft, rgba(45, 122, 45, 0.07)), transparent 62%),
+    linear-gradient(180deg, #f7f9fb 0%, #f5f7fa 100%);
+  --ss-hero-glow: rgba(15, 26, 42, 0.07);
   --ss-card-bg: #ffffff;
-  --ss-ring: rgba(20, 40, 80, 0.08);
-  --ss-header-bg: rgba(255, 255, 255, 0.72);
-  --ss-header-border: rgba(20, 40, 80, 0.08);
+  --ss-ring: rgba(15, 26, 42, 0.08);
+  --ss-header-bg: rgba(255, 255, 255, 0.78);
+  --ss-header-border: rgba(15, 26, 42, 0.08);
 }
 
 :root[data-theme='dark'] {
   --ss-app-bg:
-    radial-gradient(1200px 620px at 12% -8%, rgba(76, 175, 80, 0.14), transparent 60%),
-    radial-gradient(1000px 560px at 100% 0%, rgba(34, 163, 196, 0.14), transparent 55%),
-    radial-gradient(900px 700px at 50% 120%, rgba(245, 166, 35, 0.08), transparent 60%),
-    linear-gradient(180deg, #0c141d 0%, #0e1620 55%, #0d1319 100%);
-  --ss-hero-glow: rgba(34, 163, 196, 0.22);
-  --ss-card-bg: #161d27;
+    radial-gradient(1100px 480px at 50% -12%, var(--brand-accent-soft, rgba(76, 175, 80, 0.08)), transparent 62%),
+    linear-gradient(180deg, #0d1319 0%, #0c1117 100%);
+  --ss-hero-glow: rgba(0, 0, 0, 0.35);
+  --ss-card-bg: #151b23;
   --ss-ring: rgba(255, 255, 255, 0.08);
-  --ss-header-bg: rgba(16, 22, 30, 0.72);
+  --ss-header-bg: rgba(15, 20, 27, 0.78);
   --ss-header-border: rgba(255, 255, 255, 0.08);
 }
 
-/* Heading font weight bump so Baloo 2 reads as a proper display face. */
+/* Headings use the display face with tight tracking for a modern editorial
+ * voice; weight comes from the components themselves. */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-family-heading);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 
 /* ───────────────────────── Utility classes ───────────────────────── */
 
-/* Hover-lift: apply to a wrapper around a Card/ClickableCard. Carries a soft
- * resting shadow so cards have depth even before hover (Astryx cards are
- * border-only), then lifts + deepens on hover. */
+/* Hover-lift: apply to a wrapper around a clickable Card/ClickableCard.
+ * Carries a soft resting shadow so cards have depth even before hover (Astryx
+ * cards are border-only), then lifts subtly on hover — feedback, not bounce. */
 .ss-lift {
   border-radius: var(--radius-container);
-  box-shadow: 0 6px 18px rgba(20, 40, 80, 0.07), 0 1px 3px rgba(20, 40, 80, 0.06);
-  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease;
-  will-change: transform;
+  box-shadow: 0 1px 2px rgba(15, 26, 42, 0.05), 0 4px 14px rgba(15, 26, 42, 0.06);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 :root[data-theme='dark'] .ss-lift {
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 .ss-lift:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 18px 34px rgba(20, 40, 80, 0.16), 0 2px 6px rgba(20, 40, 80, 0.08);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 4px rgba(15, 26, 42, 0.05), 0 10px 24px rgba(15, 26, 42, 0.1);
 }
 :root[data-theme='dark'] .ss-lift:hover {
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
 }
 @media (prefers-reduced-motion: reduce) {
   .ss-lift { transition: none; }
   .ss-lift:hover { transform: none; }
 }
 
-/* Gentle float for decorative bubbles/emoji. */
-@keyframes ssFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+/* Static variant for read-only tiles (stats, streaks): the same resting depth
+ * as .ss-lift with no hover motion, so passive cards don't pretend to be
+ * clickable. */
+.ss-raised {
+  border-radius: var(--radius-container);
+  box-shadow: 0 1px 2px rgba(15, 26, 42, 0.05), 0 4px 14px rgba(15, 26, 42, 0.06);
 }
-.ss-float { animation: ssFloat 6s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) { .ss-float { animation: none; } }
+:root[data-theme='dark'] .ss-raised {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
 
-/* Pop-in entrance for hero content. */
+/* Pop-in entrance for page content. */
 @keyframes ssPop {
-  from { opacity: 0; transform: translateY(10px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-.ss-pop { animation: ssPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.ss-pop { animation: ssPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
 @media (prefers-reduced-motion: reduce) { .ss-pop { animation: none; } }
 
-/* Accent gradient text for playful headlines. */
-.ss-gradient-text {
-  background: linear-gradient(100deg, var(--brand-accent, #2d7a2d), #0e7490 55%, #f5a623);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  -webkit-text-fill-color: transparent;
-}
-
-/* A rounded emoji "chip" tile — used across cards for a playful icon. */
-.ss-emoji-tile {
+/* A rounded icon/colour tile used across cards as a compact visual anchor. */
+.ss-tile {
   display: grid;
   place-items: center;
-  border-radius: 16px;
+  border-radius: var(--radius-inner);
   line-height: 1;
   flex-shrink: 0;
-  box-shadow: inset 0 0 0 1.5px var(--ss-ring);
+  box-shadow: inset 0 0 0 1px var(--ss-ring);
 }
 
-/* Soft rounded panel with the card background + friendly shadow + ring. */
+/* Soft rounded panel with the card background + quiet shadow + ring. */
 .ss-panel {
   background: var(--ss-card-bg);
   border-radius: var(--radius-container);
   box-shadow: 0 1px 0 var(--ss-ring), var(--shadow-low);
 }
-
-/* Decorative floating blobs layer (fixed, behind everything). */
-.ss-bubbles {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-.ss-bubbles span {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(2px);
-  opacity: 0.5;
-  animation: ssFloat 9s ease-in-out infinite;
-}
-@media (prefers-reduced-motion: reduce) { .ss-bubbles span { animation: none; } }
