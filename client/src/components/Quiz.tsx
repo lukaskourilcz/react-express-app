@@ -8,7 +8,6 @@ import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Badge } from '@astryxdesign/core/Badge';
-import { SelectableCard } from '@astryxdesign/core/SelectableCard';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
@@ -51,7 +50,8 @@ import { useGameConfig } from '../lib/gameConfig';
 import { ReportDialog } from './ReportDialog';
 import { capture } from '../lib/analytics';
 import { MotionPop, MotionItem } from '../lib/motion';
-import { RadioCardGroup, RadioCard } from './ui/RadioCards';
+import { RadioCardGroup, RadioCard, CheckCard } from './ui/RadioCards';
+import { CategoryGlyph } from './ui/techIcons';
 import './Quiz.css';
 
 type QuizMode = 'standard' | 'daily';
@@ -625,10 +625,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   if (state === 'ready') {
     return (
-      <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: 'auto' }}>
+      <div className="ss-pop" style={{ width: '100%', maxWidth: 680, margin: 'auto' }}>
+        <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
         <Card padding={5} width="100%">
           <VStack gap={4}>
             <VStack gap={1} align="center">
+              <span className="ss-kicker ss-kicker--center">{subject.label}</span>
               <Heading level={1} type="display-2" justify="center">
                 {t('quiz.title')}
               </Heading>
@@ -654,10 +656,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               />
             </HStack>
 
-            {/* Categories */}
-            <VStack gap={1.5} as="fieldset">
+            {/* Categories: real technology logos as the visual anchor — the
+                cards share the option-card language of the pickers below. */}
+            <VStack gap={1.5}>
               <HStack justify="between" align="center">
-                <Text as="label" type="label" color="secondary">
+                <Text as="label" type="label" color="secondary" id="quiz-categories-label">
                   {t('quiz.categories')}
                 </Text>
                 <Button
@@ -668,41 +671,25 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 />
               </HStack>
 
-              <div role="group" aria-label={t('quiz.categoriesAria')} style={{ width: '100%' }}>
-                <Grid columns={{ minWidth: 150, max: 3 }} gap={1.5}>
-                  {displayedCategoryOptions.map((cat, i) => {
+              <div role="group" aria-labelledby="quiz-categories-label" style={{ width: '100%' }}>
+                <Grid columns={{ minWidth: 170, max: 3 }} gap={1.5}>
+                  {displayedCategoryOptions.map((cat) => {
                     const selected = selectedCategories.includes(cat.value);
                     return (
-                      <div
+                      <CheckCard
                         key={cat.value}
-                        className="ss-lift ss-pop"
-                        style={{ display: 'flex', width: '100%', animationDelay: `${i * 40}ms` }}
+                        checked={selected}
+                        onChange={() => handleCategoryToggle(cat.value)}
+                        label={cat.label}
+                        padding={3}
                       >
-                        <SelectableCard
-                          label={cat.label}
-                          isSelected={selected}
-                          onChange={() => handleCategoryToggle(cat.value)}
-                          padding={3}
-                        >
-                          <HStack gap={1.5} align="center">
-                            <span
-                              aria-hidden
-                              className="ss-tile"
-                              style={{
-                                width: 14,
-                                height: 14,
-                                borderRadius: 4,
-                                flexShrink: 0,
-                                background: cat.color,
-                                boxShadow: 'none',
-                              }}
-                            />
-                            <Text type="body" size="sm" weight={selected ? 'semibold' : 'medium'}>
-                              {cat.label}
-                            </Text>
-                          </HStack>
-                        </SelectableCard>
-                      </div>
+                        <HStack gap={1.5} align="center">
+                          <CategoryGlyph category={cat.value} color={cat.color} size={20} />
+                          <Text type="body" size="sm" weight={selected ? 'semibold' : 'medium'} maxLines={1}>
+                            {cat.label}
+                          </Text>
+                        </HStack>
+                      </CheckCard>
                     );
                   })}
                 </Grid>
@@ -765,8 +752,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               </Card>
             )}
 
-            {/* Count + difficulty */}
-            <Grid columns={{ minWidth: 240, max: 2 }} gap={3}>
+            {/* Count + difficulty: full-width rows so the five pills always
+                sit on one line instead of wrapping into orphans. */}
+            <VStack gap={3}>
               <VStack gap={1.5}>
                 <Text as="label" type="label" color="secondary" id="quiz-count-label">
                   {t('quiz.questionsLegend')}
@@ -776,7 +764,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   onChange={(v) => setQuestionCount(v as number)}
                   labelledBy="quiz-count-label"
                   orientation="horizontal"
-                  style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}
+                  style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}
                 >
                   {config.quiz.countOptions.map((count, i) => (
                     <RadioCard
@@ -785,7 +773,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       index={i}
                       label={t('quiz.countQuestionsAria', { count })}
                       padding={3}
-                      width={58}
+                      width={56}
                     >
                       <div style={{ textAlign: 'center', width: '100%' }}>
                         <Text type="body" weight="bold">
@@ -806,7 +794,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   onChange={(v) => setDifficultyMode(v as DifficultyMode)}
                   labelledBy="quiz-difficulty-label"
                   orientation="horizontal"
-                  style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}
+                  style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}
                 >
                   {DIFFICULTY_VALUES.map((value, i) => {
                     const label = t(`difficulty.${value}` as TranslationKey);
@@ -831,7 +819,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   })}
                 </RadioCardGroup>
               </VStack>
-            </Grid>
+            </VStack>
 
             <div style={{ display: 'grid' }}>
               <Button
@@ -844,6 +832,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </div>
           </VStack>
         </Card>
+        </div>
 
         <AppToast
           open={!!snack}

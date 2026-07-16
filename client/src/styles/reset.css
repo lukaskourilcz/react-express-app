@@ -16,6 +16,14 @@ body {
   padding: 0;
 }
 
+/* Fieldsets are used for semantics only — never draw the UA's boxed chrome. */
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
 html,
 body,
 #root {

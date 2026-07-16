@@ -118,6 +118,43 @@ export function RadioCardGroup({ value, onChange, label, labelledBy, orientation
   );
 }
 
+/**
+ * Multi-select sibling of RadioCard: same .ss-radio-card visual language,
+ * checkbox semantics (individually tabbable, aria-checked). Use it wherever
+ * option cards toggle independently (e.g. quiz categories) so single- and
+ * multi-select cards read as one system.
+ */
+export function CheckCard({
+  checked,
+  onChange,
+  label,
+  padding = 3,
+  style,
+  children,
+}: {
+  checked: boolean;
+  onChange: () => void;
+  label?: string;
+  padding?: number;
+  style?: CSSProperties;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={label}
+      className="ss-radio-card"
+      data-selected={checked}
+      onClick={onChange}
+      style={{ padding: padding * 4, ...style }}
+    >
+      {children}
+    </button>
+  );
+}
+
 interface CardProps {
   value: RadioValue;
   /** Position in the group's navigation order (0-based, unique). */
