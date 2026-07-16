@@ -179,7 +179,7 @@ export default function Challenge() {
     const next = popNext();
     if (!next) {
       setPhase('error');
-      setError('No questions available right now.');
+      setError(t('challenge.noQuestions'));
       return;
     }
     setCurrent(next);

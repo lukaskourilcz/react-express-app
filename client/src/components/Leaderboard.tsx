@@ -29,7 +29,7 @@ import { friendlyError } from '../lib/api';
 import { useLeaderboard } from '../lib/queries';
 import { useT } from '../i18n/LanguageContext';
 import { visibleCategoryOptionsFor, getCategoryLabel, onCategoryColorText } from '../lib/categories';
-import { useActiveSubject, categoriesForSubject } from '../lib/subjects';
+import { useActiveSubject, categoriesForSubject, subjectNameKey } from '../lib/subjects';
 import ErrorRetry from './ErrorRetry';
 import { IconTile, TrophyIcon } from './ui/icons';
 import { visuallyHidden } from '../theme/MuiTheme';
@@ -128,7 +128,7 @@ function Leaderboard() {
             }}
           >
             <span aria-hidden>{subject.emoji}</span>
-            {subject.label}
+            {t(subjectNameKey(subject.id))}
           </span>
         </HStack>
 

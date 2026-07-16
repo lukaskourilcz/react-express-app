@@ -6,7 +6,7 @@
 // Redesigned on the Astryx design system: an OKLCH mesh hero with Astryx
 // typography + buttons, and a responsive Grid of feature cards.
 
-import { useState, type ReactNode } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -20,15 +20,15 @@ import { useT } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
 import { MotionItem } from '../lib/motion';
 import { useTrack, useHasChosenTrack, trackStarterTopics, tracksForActiveSubject, type Track } from '../lib/tracks';
-import { useActiveSubject } from '../lib/subjects';
+import { useActiveSubject, subjectNameKey, subjectBlurbKey } from '../lib/subjects';
 import { unlockExtraTopics, pushProgressToServer } from '../lib/roadmap';
 import { savePreferredTrack } from '../lib/trackPref';
 import PathPickerDialog from './PathPickerDialog';
 import { AppToast } from './ui/AppToast';
 import { useIsMobile } from '../lib/useMediaQuery';
-import { CompassIcon, BoltIcon, MapIcon, IconTile } from './ui/icons';
+import { IconTile } from './ui/icons';
+import { HOME_FEATURES } from '../lib/homeFeatures';
 
-type Feature = { icon: ReactNode; color: string; title: string; text: string; variant: 'green' | 'blue' | 'purple' };
 
 export default function Home() {
   const t = useT();
@@ -37,8 +37,9 @@ export default function Home() {
   // other subjects use their registry label/blurb so the shell never assumes
   // "developer".
   const subject = useActiveSubject();
-  const heroTitle = subject.id === 'webdev' ? t('home.title') : `Learn ${subject.label}`;
-  const heroSubtitle = subject.id === 'webdev' ? t('home.subtitle') : subject.blurb;
+  const subjectName = t(subjectNameKey(subject.id));
+  const heroTitle = subject.id === 'webdev' ? t('home.title') : t('home.titleSubject', { label: subjectName });
+  const heroSubtitle = subject.id === 'webdev' ? t('home.subtitle') : t(subjectBlurbKey(subject.id));
   const { isAuthenticated, signInWithGoogle } = useAuth();
   const [track, setTrack] = useTrack();
   const hasChosenPath = useHasChosenTrack();
@@ -70,13 +71,9 @@ export default function Home() {
     setPathOpen(false);
   };
 
-  const features: Feature[] = [
-    { icon: <CompassIcon size={22} />, color: '#2d7a2d', title: t('home.featureLearnTitle'), text: t('home.featureLearnText'), variant: 'green' },
-    { icon: <BoltIcon size={22} />, color: '#1565c0', title: t('home.featureQuizTitle'), text: t('home.featureQuizText'), variant: 'blue' },
-    ...(isMobile
-      ? []
-      : [{ icon: <MapIcon size={22} />, color: '#7c3aed', title: t('home.featureRoadmapTitle'), text: t('home.featureRoadmapText'), variant: 'purple' as const }]),
-  ];
+  // Thematic, per-subject cards (History never advertises a dev career
+  // roadmap). Phones show two cards so the landing stays one screen tall.
+  const features = HOME_FEATURES[subject.id].slice(0, isMobile ? 2 : 3);
 
   return (
     // One-viewport landing: hero pitch + the things a new learner gets. Auto
@@ -160,16 +157,16 @@ export default function Home() {
       <div style={{ marginBottom: 'auto' }}>
         <Grid columns={{ minWidth: 220, max: 3 }} gap={2}>
           {features.map((f, i) => (
-            <MotionItem key={f.title} index={i} style={{ display: 'flex', width: '100%' }}>
+            <MotionItem key={f.titleKey} index={i} style={{ display: 'flex', width: '100%' }}>
               <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
                 <Card variant={f.variant} padding={5} width="100%">
                   <VStack gap={2}>
                     <IconTile color={f.color} size={44} style={{ background: 'var(--ss-card-bg)' }}>
                       {f.icon}
                     </IconTile>
-                    <Heading level={3}>{f.title}</Heading>
+                    <Heading level={3}>{t(f.titleKey)}</Heading>
                     <Text type="supporting" color="secondary">
-                      {f.text}
+                      {t(f.textKey)}
                     </Text>
                   </VStack>
                 </Card>

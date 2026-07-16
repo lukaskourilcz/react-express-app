@@ -21,6 +21,8 @@ import {
   SUBJECT_ORDER,
   useSubject,
   setSubjectValue,
+  subjectNameKey,
+  subjectBlurbKey,
   type SubjectId,
 } from '../lib/subjects';
 
@@ -76,7 +78,7 @@ export default function SubjectPicker() {
                 style={{ display: 'flex', animationDelay: `${i * 55}ms` }}
               >
                 <ClickableCard
-                  label={t('subject.study', { subject: s.label })}
+                  label={t('subject.study', { subject: t(subjectNameKey(id)) })}
                   onClick={() => choose(id)}
                   variant={active ? 'muted' : 'default'}
                   padding={5}
@@ -98,7 +100,7 @@ export default function SubjectPicker() {
                         {s.emoji}
                       </div>
                       <Heading level={3}>
-                        <span style={{ color: `light-dark(${s.accent}, ${s.accentBright})` }}>{s.label}</span>
+                        <span style={{ color: `light-dark(${s.accent}, ${s.accentBright})` }}>{t(subjectNameKey(id))}</span>
                       </Heading>
                       {active && (
                         <div style={{ marginLeft: 'auto' }}>
@@ -107,7 +109,7 @@ export default function SubjectPicker() {
                       )}
                     </HStack>
                     <Text type="supporting" color="secondary">
-                      {s.blurb}
+                      {t(subjectBlurbKey(id))}
                     </Text>
                     <div
                       style={{

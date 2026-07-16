@@ -18,7 +18,7 @@ import { primeRankMarker } from './lib/xp';
 import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import { useAuth } from './lib/auth';
-import { useHasChosenSubject, useActiveSubject, isSubjectLocked } from './lib/subjects';
+import { useHasChosenSubject, useActiveSubject, isSubjectLocked, subjectNameKey } from './lib/subjects';
 import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
 import { useSettings } from './lib/settings';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
@@ -163,12 +163,13 @@ const RouteLoader = () => {
 // picker so the learner can switch what they're studying.
 function SubjectSwitcher() {
   const subject = useActiveSubject();
+  const t = useT();
   return (
     <Link
       to="/subjects"
       style={{ marginLeft: 4, display: 'inline-flex', textDecoration: 'none', borderRadius: 999 }}
     >
-      <AxBadge label={`${subject.emoji} ${subject.label}`} />
+      <AxBadge label={`${subject.emoji} ${t(subjectNameKey(subject.id))}`} />
     </Link>
   );
 }
@@ -211,7 +212,7 @@ function HeaderBrand() {
         </span>
         <span className="ss-brand-compact" style={{ alignItems: 'center', gap: 4, color: subject.accent, whiteSpace: 'nowrap' }}>
           <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1 }}>{subject.emoji}</span>
-          {subject.label}
+          {t(subjectNameKey(subject.id))}
         </span>
       </Link>
       {/* The subject chip is redundant on small screens (the drawer shows it),
@@ -525,7 +526,7 @@ function App() {
                 style={{ color: activeSubject.accent }}
               >
                 <span aria-hidden style={{ fontSize: '1.35rem', lineHeight: 1 }}>{activeSubject.emoji}</span>
-                {isSubjectLocked() ? (activeSubject.standaloneBrand ?? activeSubject.label) : activeSubject.label}
+                {isSubjectLocked() ? (activeSubject.standaloneBrand ?? activeSubject.label) : t(subjectNameKey(activeSubject.id))}
               </Link>
               <div style={{ height: 1, background: 'var(--color-border)' }} />
               <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
