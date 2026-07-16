@@ -7,9 +7,9 @@
 // its 3 parts — each part pill reflects live progress and deep-links into
 // /learn.
 
-import { useMemo } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
-import { Box, Typography, Tooltip } from '@mui/material';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import type { RoadmapStructure, RoadmapTopic } from '../types/quiz';
 import {
   useRoadmapProgress,
@@ -24,7 +24,9 @@ import {
 import { tracksForActiveSubject, TOPIC_DETAIL, type Track } from '../lib/tracks';
 import { getCategoryLabel, getCategoryHexColor, onCategoryColorText } from '../lib/categories';
 import { useT } from '../i18n/LanguageContext';
+import { useIsMobile } from '../lib/useMediaQuery';
 import type { TranslationKey } from '../i18n/translations';
+import './Roadmap.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
@@ -41,27 +43,22 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
   return (
     // The map: stages flow top → bottom. Keyed by track so switching tracks
     // remounts and gently re-animates the new path into place.
-    <Box
+    <div
       key={track}
-      sx={{
+      className="rm-track-in"
+      style={{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         width: '100%',
-        '@keyframes rmTrackIn': {
-          from: { opacity: 0, transform: 'translateY(8px)' },
-          to: { opacity: 1, transform: 'none' },
-        },
-        animation: 'rmTrackIn 320ms ease-out',
-        '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
       }}
     >
       {def.stages.map((stage, i) => (
-        <Box key={stage.title} sx={{ width: '100%' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mb: 1.25 }}>
-            <Box
+        <div key={stage.title} style={{ width: '100%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 }}>
+            <div
               aria-hidden
-              sx={{
+              style={{
                 width: 22,
                 height: 22,
                 borderRadius: '50%',
@@ -75,13 +72,13 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
               }}
             >
               {i + 1}
-            </Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 800, letterSpacing: '0.3px' }}>
+            </div>
+            <div style={{ fontSize: '0.875rem', fontWeight: 800, letterSpacing: '0.3px' }}>
               {stage.title}
-            </Typography>
-          </Box>
+            </div>
+          </div>
 
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.25, justifyContent: 'center' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
             {stage.topics.map((family) => (
               <TopicCard
                 key={family}
@@ -92,28 +89,27 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
                 t={t}
               />
             ))}
-          </Box>
+          </div>
 
           {i < def.stages.length - 1 && <StageConnector />}
-        </Box>
+        </div>
       ))}
-    </Box>
+    </div>
   );
 }
 
 /** A short vertical line + downward chevron linking one stage to the next. */
 function StageConnector() {
   return (
-    <Box aria-hidden sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', my: 1 }}>
-      <Box sx={{ width: 2, height: 16, backgroundColor: 'divider' }} />
-      <Box
-        component="svg"
+    <div aria-hidden style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 8, marginBottom: 8 }}>
+      <div style={{ width: 2, height: 16, backgroundColor: 'var(--color-border)' }} />
+      <svg
         viewBox="0 0 12 8"
-        sx={{ width: 12, height: 8, color: 'divider', display: 'block', mt: '-2px' }}
+        style={{ width: 12, height: 8, color: 'var(--color-border)', display: 'block', marginTop: -2 }}
       >
         <path d="M1 1l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      </Box>
-    </Box>
+      </svg>
+    </div>
   );
 }
 
@@ -127,6 +123,7 @@ function TopicCard({
   extraSet: Set<RoadmapTopic>;
   t: TFn;
 }) {
+  const isMobile = useIsMobile();
   const color = getCategoryHexColor(family);
   const unlocked = isTopicUnlocked(progress, family, extraSet);
   const ranges = partRanges(levelCount);
@@ -136,48 +133,47 @@ function TopicCard({
   const detail = TOPIC_DETAIL[family];
 
   return (
-    <Box
-      sx={{
+    <div
+      style={{
         flex: '1 1 200px',
-        maxWidth: { xs: '100%', sm: 260 },
-        borderRadius: 2,
-        border: '1px solid',
-        borderColor: complete ? color : unlocked ? 'divider' : 'transparent',
+        maxWidth: isMobile ? '100%' : 260,
+        borderRadius: 8,
+        border: `1px solid ${complete ? color : unlocked ? 'var(--color-border)' : 'transparent'}`,
         borderTop: `3px solid ${color}`,
-        backgroundColor: 'background.paper',
+        backgroundColor: 'var(--color-background-surface)',
         opacity: unlocked ? 1 : 0.6,
         boxShadow: unlocked ? `0 1px 6px ${color}22` : 'none',
-        p: 1.25,
+        padding: 10,
         display: 'flex',
         flexDirection: 'column',
-        gap: 0.6,
+        gap: 4.8,
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
-        <Box aria-hidden sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
-        <Typography variant="body2" sx={{ fontWeight: 700, color: unlocked ? 'text.primary' : 'text.disabled', lineHeight: 1.2 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
+        <div style={{ fontSize: '0.875rem', fontWeight: 700, color: unlocked ? 'var(--color-text-primary)' : 'var(--color-text-disabled)', lineHeight: 1.2 }}>
           {getCategoryLabel(family)}
-        </Typography>
+        </div>
         {complete && (
-          <Box component="svg" aria-hidden viewBox="0 0 24 24" sx={{ width: 16, height: 16, ml: 'auto', color }}>
+          <svg aria-hidden viewBox="0 0 24 24" style={{ width: 16, height: 16, marginLeft: 'auto', color }}>
             <path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-          </Box>
+          </svg>
         )}
-      </Box>
+      </div>
 
       {detail && (
-        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.4, minHeight: 32 }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', lineHeight: 1.4, minHeight: 32 }}>
           {detail}
-        </Typography>
+        </div>
       )}
 
-      <Box sx={{ display: 'flex', gap: 0.5, mt: 'auto', pt: 0.25 }}>
+      <div style={{ display: 'flex', gap: 4, marginTop: 'auto', paddingTop: 2 }}>
         {(ranges.length > 0 ? ranges.map((r) => r.part) : Array.from({ length: PARTS_PER_TOPIC }, (_, i) => i + 1)).map((part) => {
           const status: PathStatus = ranges.length > 0 ? pathStatus(progress, family, ranges, part, extraSet) : 'locked';
           return <PartPill key={part} family={family} part={part} status={status} color={color} t={t} />;
         })}
-      </Box>
-    </Box>
+      </div>
+    </div>
   );
 }
 
@@ -192,17 +188,16 @@ function PartPill({
   const stateLabel = t(
     complete ? 'roadmapTree.complete' : status === 'in-progress' ? 'roadmapTree.inProgress' : locked ? 'roadmapTree.locked' : 'roadmapTree.available',
   );
-  const sx = {
+  const style: CSSProperties = {
     flex: 1,
-    textAlign: 'center' as const,
+    textAlign: 'center',
     fontSize: '0.62rem',
     fontWeight: 800,
     lineHeight: 1.6,
-    borderRadius: 1,
-    border: '1.5px solid',
-    borderColor: locked ? 'divider' : color,
+    borderRadius: 4,
+    border: `1.5px solid ${locked ? 'var(--color-border)' : color}`,
     backgroundColor: filled ? color : status === 'in-progress' ? `${color}24` : 'transparent',
-    color: filled ? onCategoryColorText(family) : locked ? 'text.disabled' : 'text.primary',
+    color: filled ? onCategoryColorText(family) : locked ? 'var(--color-text-disabled)' : 'var(--color-text-primary)',
     textDecoration: 'none',
     cursor: locked ? 'default' : 'pointer',
     display: 'block',
@@ -211,16 +206,16 @@ function PartPill({
   const title = `${getCategoryLabel(family)} · ${label} — ${stateLabel}`;
   if (locked) {
     return (
-      <Tooltip title={title} arrow>
-        <Box role="img" tabIndex={0} sx={sx} aria-label={title}>{part}</Box>
+      <Tooltip content={title} placement="above">
+        <div role="img" tabIndex={0} style={style} aria-label={title}>{part}</div>
       </Tooltip>
     );
   }
   return (
-    <Tooltip title={title} arrow>
-      <Box component={Link} to={`/learn?topic=${family}&part=${part}`} sx={sx} aria-label={title}>
+    <Tooltip content={title} placement="above">
+      <Link to={`/learn?topic=${family}&part=${part}`} style={style} aria-label={title}>
         {part}
-      </Box>
+      </Link>
     </Tooltip>
   );
 }

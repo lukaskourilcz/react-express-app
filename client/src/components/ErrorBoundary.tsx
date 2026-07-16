@@ -1,5 +1,7 @@
 import { Component, type ReactNode } from 'react';
-import { Box, Button, Typography, Paper } from '@mui/material';
+import { Button } from '@astryxdesign/core/Button';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Text } from '@astryxdesign/core/Text';
 import { reportError } from '../lib/sentry';
 
 interface Props {
@@ -31,33 +33,42 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <Box
+      <div
         role="alert"
-        sx={{
+        style={{
           minHeight: '60vh',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          p: 3,
+          padding: 24,
         }}
       >
-        <Paper elevation={0} sx={{ p: 4, maxWidth: 480, textAlign: 'center', border: '1px solid', borderColor: 'divider' }}>
-          <Typography variant="h5" sx={{ mb: 1 }}>
-            Something went wrong
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            The page hit an unexpected error. Reloading usually fixes it.
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center' }}>
-            <Button onClick={this.handleReset} variant="outlined">
-              Try again
-            </Button>
-            <Button onClick={() => window.location.reload()} variant="contained">
-              Reload page
-            </Button>
-          </Box>
-        </Paper>
-      </Box>
+        <div
+          style={{
+            padding: 32,
+            maxWidth: 480,
+            textAlign: 'center',
+            border: '1px solid var(--color-border)',
+            borderRadius: 'var(--radius-container)',
+            background: 'var(--color-background-surface)',
+          }}
+        >
+          <div style={{ marginBottom: 8 }}>
+            <Heading level={3} justify="center">
+              Something went wrong
+            </Heading>
+          </div>
+          <div style={{ marginBottom: 24 }}>
+            <Text type="body" color="secondary">
+              The page hit an unexpected error. Reloading usually fixes it.
+            </Text>
+          </div>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+            <Button onClick={this.handleReset} variant="secondary" label="Try again" />
+            <Button onClick={() => window.location.reload()} variant="primary" label="Reload page" />
+          </div>
+        </div>
+      </div>
     );
   }
 }

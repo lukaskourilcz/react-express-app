@@ -1,0 +1,159 @@
+/*
+ * StudyShark × Astryx — playful design foundation.
+ *
+ * We import Astryx's component styles + the neutral token theme, then override
+ * the design TOKENS Astryx components consume (radius, colour, shadow, font) to
+ * give the whole app a rounder, warmer, more playful feel — plus a set of
+ * utility classes and a themed backdrop the app's own wrappers use.
+ *
+ * Astryx's own reset.css is intentionally NOT imported — MUI's <CssBaseline>
+ * is the single reset during the staged migration.
+ */
+@import '@astryxdesign/core/astryx.css';
+@import '@astryxdesign/theme-neutral/theme.css';
+
+:root {
+  /* — Accent bridged to the active subject (ColorModeContext writes it) — */
+  --color-accent: var(--brand-accent, #2d7a2d);
+  --color-accent-muted: var(--brand-accent-soft, rgba(45, 122, 45, 0.12));
+  --color-icon-accent: var(--brand-accent, #2d7a2d);
+  --color-text-accent: var(--brand-accent, #2d7a2d);
+  --color-border-accent: var(--brand-accent, #2d7a2d);
+
+  /* — Type: chunky rounded display + friendly rounded body — */
+  --font-family-body: 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-heading: 'Baloo 2', 'Nunito', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  /* — Rounder shapes everywhere (cards, buttons, inputs, badges) — */
+  --radius-page: 2rem;
+  --radius-container: 1.25rem;
+  --radius-element: 0.9rem;
+  --radius-inner: 0.7rem;
+
+  /* — Softer, larger, friendlier elevation — */
+  --shadow-low:
+    0 2px 6px light-dark(rgba(20, 40, 80, 0.06), rgba(0, 0, 0, 0.35)),
+    0 8px 20px light-dark(rgba(20, 40, 80, 0.06), rgba(0, 0, 0, 0.45));
+  --shadow-med:
+    0 4px 10px light-dark(rgba(20, 40, 80, 0.08), rgba(0, 0, 0, 0.4)),
+    0 14px 34px light-dark(rgba(20, 40, 80, 0.1), rgba(0, 0, 0, 0.55));
+  --shadow-high:
+    0 8px 18px light-dark(rgba(20, 40, 80, 0.1), rgba(0, 0, 0, 0.5)),
+    0 24px 60px light-dark(rgba(20, 40, 80, 0.14), rgba(0, 0, 0, 0.65));
+
+  /* — Playful app backdrop (sky → mint with soft ocean blobs) — */
+  --ss-app-bg:
+    radial-gradient(1200px 620px at 12% -8%, rgba(45, 122, 45, 0.10), transparent 60%),
+    radial-gradient(1000px 560px at 100% 0%, rgba(14, 116, 144, 0.12), transparent 55%),
+    radial-gradient(900px 700px at 50% 120%, rgba(245, 166, 35, 0.08), transparent 60%),
+    linear-gradient(180deg, #eef6ff 0%, #f2fbf5 55%, #f6f9fb 100%);
+  --ss-hero-glow: rgba(14, 116, 144, 0.16);
+  --ss-card-bg: #ffffff;
+  --ss-ring: rgba(20, 40, 80, 0.08);
+  --ss-header-bg: rgba(255, 255, 255, 0.72);
+  --ss-header-border: rgba(20, 40, 80, 0.08);
+}
+
+:root[data-theme='dark'] {
+  --ss-app-bg:
+    radial-gradient(1200px 620px at 12% -8%, rgba(76, 175, 80, 0.14), transparent 60%),
+    radial-gradient(1000px 560px at 100% 0%, rgba(34, 163, 196, 0.14), transparent 55%),
+    radial-gradient(900px 700px at 50% 120%, rgba(245, 166, 35, 0.08), transparent 60%),
+    linear-gradient(180deg, #0c141d 0%, #0e1620 55%, #0d1319 100%);
+  --ss-hero-glow: rgba(34, 163, 196, 0.22);
+  --ss-card-bg: #161d27;
+  --ss-ring: rgba(255, 255, 255, 0.08);
+  --ss-header-bg: rgba(16, 22, 30, 0.72);
+  --ss-header-border: rgba(255, 255, 255, 0.08);
+}
+
+/* Heading font weight bump so Baloo 2 reads as a proper display face. */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-family-heading);
+  letter-spacing: -0.01em;
+}
+
+/* ───────────────────────── Utility classes ───────────────────────── */
+
+/* Hover-lift: apply to a wrapper around a Card/ClickableCard. Carries a soft
+ * resting shadow so cards have depth even before hover (Astryx cards are
+ * border-only), then lifts + deepens on hover. */
+.ss-lift {
+  border-radius: var(--radius-container);
+  box-shadow: 0 6px 18px rgba(20, 40, 80, 0.07), 0 1px 3px rgba(20, 40, 80, 0.06);
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.18s ease;
+  will-change: transform;
+}
+:root[data-theme='dark'] .ss-lift {
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+}
+.ss-lift:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 34px rgba(20, 40, 80, 0.16), 0 2px 6px rgba(20, 40, 80, 0.08);
+}
+:root[data-theme='dark'] .ss-lift:hover {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ss-lift { transition: none; }
+  .ss-lift:hover { transform: none; }
+}
+
+/* Gentle float for decorative bubbles/emoji. */
+@keyframes ssFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.ss-float { animation: ssFloat 6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .ss-float { animation: none; } }
+
+/* Pop-in entrance for hero content. */
+@keyframes ssPop {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.ss-pop { animation: ssPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
+@media (prefers-reduced-motion: reduce) { .ss-pop { animation: none; } }
+
+/* Accent gradient text for playful headlines. */
+.ss-gradient-text {
+  background: linear-gradient(100deg, var(--brand-accent, #2d7a2d), #0e7490 55%, #f5a623);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* A rounded emoji "chip" tile — used across cards for a playful icon. */
+.ss-emoji-tile {
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 1.5px var(--ss-ring);
+}
+
+/* Soft rounded panel with the card background + friendly shadow + ring. */
+.ss-panel {
+  background: var(--ss-card-bg);
+  border-radius: var(--radius-container);
+  box-shadow: 0 1px 0 var(--ss-ring), var(--shadow-low);
+}
+
+/* Decorative floating blobs layer (fixed, behind everything). */
+.ss-bubbles {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ss-bubbles span {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(2px);
+  opacity: 0.5;
+  animation: ssFloat 9s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .ss-bubbles span { animation: none; } }

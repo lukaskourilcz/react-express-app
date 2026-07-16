@@ -1,45 +1,50 @@
 import { useState } from 'react';
-import { Box, Tabs, Tab, Button, Typography } from '@mui/material';
+import { Button } from '@astryxdesign/core/Button';
+import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
+import { useIsMobile } from '../../lib/useMediaQuery';
 import DevQuestions from './DevQuestions';
 import DevTriage from './DevTriage';
 import DevReports from './DevReports';
 import DevLogs from './DevLogs';
 import DevSettings from './DevSettings';
 
+type Tab = 'questions' | 'triage' | 'flags' | 'logs' | 'settings';
+
 /** The signed-in /dev shell: a header with a lock button and Questions/Settings tabs. */
 export default function DevConsole({ onLock }: { onLock: () => void }) {
-  const [tab, setTab] = useState(0);
+  const [tab, setTab] = useState<Tab>('questions');
+  const isMobile = useIsMobile();
 
   return (
-    <Box sx={{ width: '100%', mx: 'auto', px: { xs: 1.5, sm: 2 }, py: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
-        <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>
+    <div style={{ width: '100%', margin: '0 auto', padding: isMobile ? '16px 12px' : '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'var(--color-text-primary)' }}>
           Dev console
-        </Typography>
-        <Button variant="outlined" size="small" onClick={onLock}>
-          Lock
-        </Button>
-      </Box>
+        </h1>
+        <Button variant="secondary" size="sm" label="Lock" onClick={onLock} />
+      </div>
 
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-        <Tab label="Questions" />
-        <Tab label="Triage" />
-        <Tab label="Flags" />
-        <Tab label="Logs" />
-        <Tab label="Settings" />
-      </Tabs>
+      <div style={{ marginBottom: 16, borderBottom: '1px solid var(--color-border)', paddingBottom: 8 }}>
+        <SegmentedControl value={tab} onChange={(v) => setTab(v as Tab)} label="Dev console section">
+          <SegmentedControlItem value="questions" label="Questions" />
+          <SegmentedControlItem value="triage" label="Triage" />
+          <SegmentedControlItem value="flags" label="Flags" />
+          <SegmentedControlItem value="logs" label="Logs" />
+          <SegmentedControlItem value="settings" label="Settings" />
+        </SegmentedControl>
+      </div>
 
-      {tab === 0 ? (
+      {tab === 'questions' ? (
         <DevQuestions />
-      ) : tab === 1 ? (
+      ) : tab === 'triage' ? (
         <DevTriage />
-      ) : tab === 2 ? (
+      ) : tab === 'flags' ? (
         <DevReports />
-      ) : tab === 3 ? (
+      ) : tab === 'logs' ? (
         <DevLogs />
       ) : (
         <DevSettings />
       )}
-    </Box>
+    </div>
   );
 }

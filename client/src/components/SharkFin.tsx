@@ -2,14 +2,40 @@
 // variant used in the header wordmark and the loading screen. Animations respect
 // prefers-reduced-motion (they freeze for users who opt out of motion).
 
-import { Box } from '@mui/material';
-
 interface FinProps {
   /** Glyph size in px (square). */
   size?: number;
   /** Fill colour; defaults to brand green. */
   color?: string;
 }
+
+// Keyframes + reduced-motion overrides for the swimming variants. Injected via a
+// scoped <style> (previously MUI `sx` `@keyframes`) so the animation lives with
+// the component. Duplicate <style> tags across mounts are harmless — the rules
+// are keyed by global name.
+const SHARK_ANIM_CSS = `
+@keyframes devsharkSwim {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-2px) rotate(-5deg); }
+}
+@keyframes devsharkCruise {
+  0% { transform: translateX(-130%) translateY(0) rotate(-6deg); }
+  50% { transform: translateX(-50%) translateY(-3px) rotate(6deg); }
+  100% { transform: translateX(30%) translateY(0) rotate(-6deg); }
+}
+@keyframes devsharkWake {
+  0%, 100% { opacity: 0.15; transform: scaleX(0.9); }
+  50% { opacity: 0.35; transform: scaleX(1); }
+}
+.devshark-swim { animation: devsharkSwim 3s ease-in-out infinite; }
+.devshark-cruise { animation: devsharkCruise 2.4s ease-in-out infinite alternate; }
+.devshark-wake { animation: devsharkWake 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .devshark-swim { animation: none; }
+  .devshark-cruise { animation: none; transform: translateX(-50%); }
+  .devshark-wake { animation: none; }
+}
+`;
 
 /** A static dorsal shark fin. `aria-hidden` — it's decorative. */
 export function SharkFin({ size = 22, color = 'var(--brand-accent)' }: FinProps) {
@@ -29,27 +55,16 @@ export function SharkFin({ size = 22, color = 'var(--brand-accent)' }: FinProps)
  */
 export function SwimmingFin({ size = 22, color = 'var(--brand-accent)' }: FinProps) {
   return (
-    <Box
-      component="span"
-      sx={{
-        display: 'inline-flex',
-        transformOrigin: 'bottom center',
-        '@keyframes devsharkSwim': {
-          '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
-          '50%': { transform: 'translateY(-2px) rotate(-5deg)' },
-        },
-        animation: 'devsharkSwim 3s ease-in-out infinite',
-        '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-      }}
-    >
+    <span className="devshark-swim" style={{ display: 'inline-flex', transformOrigin: 'bottom center' }}>
+      <style>{SHARK_ANIM_CSS}</style>
       <SharkFin size={size} color={color} />
-    </Box>
+    </span>
   );
 }
 
 /**
  * A wavy "ocean surface" line in brand green that stretches to fill its parent's
- * width (set the width on the wrapping Box). Decorative. The stroke stays a
+ * width (set the width on the wrapping element). Decorative. The stroke stays a
  * constant thickness regardless of how far it's stretched.
  */
 export function Waterline({ color = 'var(--brand-accent)' }: { color?: string }) {
@@ -64,12 +79,11 @@ export function Waterline({ color = 'var(--brand-accent)' }: { color?: string })
   for (let k = 2; k <= count; k++) d += ` T ${k * step} ${mid}`;
 
   return (
-    <Box
-      component="svg"
+    <svg
       aria-hidden="true"
       viewBox={`0 0 ${span} 10`}
       preserveAspectRatio="none"
-      sx={{ width: '100%', height: 10, display: 'block' }}
+      style={{ width: '100%', height: 10, display: 'block' }}
     >
       <path
         d={d}
@@ -80,7 +94,7 @@ export function Waterline({ color = 'var(--brand-accent)' }: { color?: string })
         opacity={0.65}
         vectorEffect="non-scaling-stroke"
       />
-    </Box>
+    </svg>
   );
 }
 
@@ -93,29 +107,24 @@ export function SwimmingShark({ size = 56 }: { size?: number }) {
   // the fin bobs + rotates. `overflow: hidden` clips the horizontal cruise
   // outside the box but doesn't crop the top of the fin anymore.
   return (
-    <Box sx={{ position: 'relative', width: size * 1.8, height: size * 1.3, overflow: 'hidden' }} aria-hidden="true">
-      <Box
-        component="span"
-        sx={{
+    <div style={{ position: 'relative', width: size * 1.8, height: size * 1.3, overflow: 'hidden' }} aria-hidden="true">
+      <style>{SHARK_ANIM_CSS}</style>
+      <span
+        className="devshark-cruise"
+        style={{
           position: 'absolute',
           bottom: size * 0.18,
           left: '50%',
           display: 'inline-flex',
           transformOrigin: 'bottom center',
-          '@keyframes devsharkCruise': {
-            '0%': { transform: 'translateX(-130%) translateY(0) rotate(-6deg)' },
-            '50%': { transform: 'translateX(-50%) translateY(-3px) rotate(6deg)' },
-            '100%': { transform: 'translateX(30%) translateY(0) rotate(-6deg)' },
-          },
-          animation: 'devsharkCruise 2.4s ease-in-out infinite alternate',
-          '@media (prefers-reduced-motion: reduce)': { animation: 'none', transform: 'translateX(-50%)' },
         }}
       >
         <SharkFin size={size} />
-      </Box>
+      </span>
       {/* water line + wake ripple */}
-      <Box
-        sx={{
+      <div
+        className="devshark-wake"
+        style={{
           position: 'absolute',
           left: 0,
           right: 0,
@@ -124,14 +133,8 @@ export function SwimmingShark({ size = 56 }: { size?: number }) {
           backgroundColor: 'var(--brand-accent)',
           opacity: 0.25,
           borderRadius: 2,
-          '@keyframes devsharkWake': {
-            '0%, 100%': { opacity: 0.15, transform: 'scaleX(0.9)' },
-            '50%': { opacity: 0.35, transform: 'scaleX(1)' },
-          },
-          animation: 'devsharkWake 2.4s ease-in-out infinite',
-          '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
         }}
       />
-    </Box>
+    </div>
   );
 }

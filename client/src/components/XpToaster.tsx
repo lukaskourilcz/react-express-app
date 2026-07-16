@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import { Snackbar, Box, Typography } from '@mui/material';
+import { createPortal } from 'react-dom';
+import { Text } from '@astryxdesign/core/Text';
 import { onXpToast, type XpToast } from '../lib/xp';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
-import { MotionPop } from '../lib/motion';
+import { MotionPop, m, AnimatePresence } from '../lib/motion';
+import { useIsMobile } from '../lib/useMediaQuery';
 
 // A global, self-contained listener for XP events. Mounted once at the app root
 // so XP gains and rank-ups toast from anywhere (quiz results, the learning path,
@@ -22,6 +24,7 @@ const GAIN_KEY: Record<GainSource, TranslationKey> = {
 
 export default function XpToaster() {
   const t = useT();
+  const isMobile = useIsMobile();
   const [queue, setQueue] = useState<XpToast[]>([]);
   const [current, setCurrent] = useState<XpToast | null>(null);
   const [open, setOpen] = useState(false);
@@ -38,10 +41,13 @@ export default function XpToaster() {
     }
   }, [queue, current]);
 
-  const handleClose = (_e: unknown, reason?: string) => {
-    if (reason === 'clickaway') return;
-    setOpen(false);
-  };
+  // Auto-hide, then let the exit transition run before clearing `current`.
+  useEffect(() => {
+    if (!open || !current) return;
+    const ms = current.kind === 'rankup' ? RANKUP_MS : GAIN_MS;
+    const id = window.setTimeout(() => setOpen(false), ms);
+    return () => window.clearTimeout(id);
+  }, [open, current]);
 
   // After the exit transition, clear `current` so the next item can show.
   const handleExited = () => setCurrent(null);
@@ -50,59 +56,76 @@ export default function XpToaster() {
   const isRankUp = current.kind === 'rankup';
   seq.current += 1;
 
-  return (
-    <Snackbar
-      key={seq.current}
-      open={open}
-      autoHideDuration={isRankUp ? RANKUP_MS : GAIN_MS}
-      onClose={handleClose}
-      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      TransitionProps={{ onExited: handleExited }}
-      sx={{ mb: { xs: 1, sm: 2 } }}
+  return createPortal(
+    <div
+      style={{
+        position: 'fixed',
+        left: 0,
+        right: 0,
+        bottom: isMobile ? 32 : 40,
+        display: 'flex',
+        justifyContent: 'center',
+        pointerEvents: 'none',
+        zIndex: 1400,
+        padding: '0 16px',
+      }}
     >
-      {/* Plain wrapper takes the Snackbar's Grow transition; MotionPop springs
-          the content on a separate node so the two never fight over transform. */}
-      <div>
-      <MotionPop>
-      {isRankUp ? (
-        <Box
-          role="status"
-          className="rm-celebrate"
-          sx={{
-            display: 'flex', alignItems: 'center', gap: 1.25, px: 2.5, py: 1.5, borderRadius: 3,
-            color: '#3a2c00', fontWeight: 800,
-            background: 'linear-gradient(150deg, #ffd54f, #f5a623)',
-            boxShadow: '0 8px 24px rgba(245,166,35,0.5)',
-          }}
-        >
-          <Box component="span" sx={{ fontSize: '1.6rem', lineHeight: 1 }} aria-hidden>🎉</Box>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 900, fontSize: '0.7rem', letterSpacing: 1, textTransform: 'uppercase', opacity: 0.8 }}>
-              {t('xp.rankUpKicker')}
-            </Typography>
-            <Typography sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-              {t('xp.rankUp', { title: current.title })}
-            </Typography>
-          </Box>
-        </Box>
-      ) : (
-        <Box
-          role="status"
-          sx={{
-            display: 'flex', alignItems: 'center', gap: 1, px: 2.25, py: 1.25, borderRadius: 999,
-            color: '#fff', fontWeight: 800,
-            background: 'linear-gradient(150deg, #2e841d, #2d7a2d)',
-            boxShadow: '0 6px 18px rgba(46,132,29,0.45)',
-          }}
-        >
-          <Box component="span" sx={{ fontSize: '1.15rem', lineHeight: 1 }} aria-hidden>⚡</Box>
-          <Typography sx={{ fontWeight: 800 }}>
-            {t(GAIN_KEY[current.source], { xp: current.amount })}
-          </Typography>
-        </Box>
-      )}
-      </MotionPop>
-      </div>
-    </Snackbar>
+      {/* AnimatePresence provides the exit transition (was the Snackbar's Grow);
+          MotionPop springs the content on a separate node so the two never fight
+          over transform. */}
+      <AnimatePresence onExitComplete={handleExited}>
+        {open && (
+          <m.div
+            key={seq.current}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            style={{ pointerEvents: 'auto' }}
+          >
+            <MotionPop>
+              {isRankUp ? (
+                <div
+                  role="status"
+                  className="rm-celebrate"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '12px 20px', borderRadius: 12,
+                    color: '#3a2c00', fontWeight: 800,
+                    background: 'linear-gradient(150deg, #ffd54f, #f5a623)',
+                    boxShadow: '0 8px 24px rgba(245,166,35,0.5)',
+                  }}
+                >
+                  <span style={{ fontSize: '1.6rem', lineHeight: 1 }} aria-hidden>🎉</span>
+                  <div style={{ minWidth: 0 }}>
+                    <span style={{ display: 'block', fontWeight: 900, fontSize: '0.7rem', letterSpacing: 1, textTransform: 'uppercase', opacity: 0.8 }}>
+                      {t('xp.rankUpKicker')}
+                    </span>
+                    <Text as="div" color="inherit" weight="bold">
+                      {t('xp.rankUp', { title: current.title })}
+                    </Text>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  role="status"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 999,
+                    color: '#fff', fontWeight: 800,
+                    background: 'linear-gradient(150deg, #2e841d, #2d7a2d)',
+                    boxShadow: '0 6px 18px rgba(46,132,29,0.45)',
+                  }}
+                >
+                  <span style={{ fontSize: '1.15rem', lineHeight: 1 }} aria-hidden>⚡</span>
+                  <Text as="span" color="inherit" weight="bold">
+                    {t(GAIN_KEY[current.source], { xp: current.amount })}
+                  </Text>
+                </div>
+              )}
+            </MotionPop>
+          </m.div>
+        )}
+      </AnimatePresence>
+    </div>,
+    document.body,
   );
 }

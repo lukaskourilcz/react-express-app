@@ -1,21 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  CircularProgress,
-  FormControlLabel,
-  Paper,
-  Radio,
-  RadioGroup,
-  Skeleton,
-  Snackbar,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { VStack } from '@astryxdesign/core/VStack';
+import { HStack } from '@astryxdesign/core/HStack';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Text } from '@astryxdesign/core/Text';
+import { Button } from '@astryxdesign/core/Button';
+import { Card } from '@astryxdesign/core/Card';
+import { Badge } from '@astryxdesign/core/Badge';
+import { Banner } from '@astryxdesign/core/Banner';
+import { ProgressBar } from '@astryxdesign/core/ProgressBar';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { SelectableCard } from '@astryxdesign/core/SelectableCard';
+import type { CardVariant } from '@astryxdesign/core/Card';
+import { AppToast } from './ui/AppToast';
 import { apiFetch, friendlyError } from '../lib/api';
 import {
   fetchChallengeBatch,
@@ -23,7 +19,7 @@ import {
   type ChallengeLeaderboard,
 } from '../lib/challengeApi';
 import { useChallengeLeaderboard } from '../lib/queries';
-import type { Question, QuizResult } from '../types/quiz';
+import type { Question, QuizResult, CategoryType } from '../types/quiz';
 import {
   getCategoryHexColor,
   getCategoryLabel,
@@ -31,7 +27,10 @@ import {
 } from '../lib/categories';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
-import { brandButtonSx, visuallyHidden } from '../theme/MuiTheme';
+import { useActiveSubject } from '../lib/subjects';
+import { useIsMobile } from '../lib/useMediaQuery';
+import { visuallyHidden } from '../theme/MuiTheme';
+import { MotionPop } from '../lib/motion';
 import { SharkFin } from './SharkFin';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
@@ -77,6 +76,8 @@ export default function Challenge() {
   const { lang, t } = useLanguage();
   const { user } = useAuth();
   const profile = getUserProfile(user);
+  const accent = useActiveSubject().accent;
+  const isMobile = useIsMobile();
 
   const [phase, setPhase] = useState<Phase>('intro');
   const [error, setError] = useState<string | null>(null);
@@ -108,7 +109,7 @@ export default function Challenge() {
   // Guards the once-per-run XP/token payout on game over.
   const awardedRef = useRef(false);
   // Focus target when the run ends, so AT users hear the transition.
-  const gameOverHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const gameOverHeadingRef = useRef<HTMLDivElement | null>(null);
   const [scoreSubmitting, setScoreSubmitting] = useState(false);
 
   const livesLeft = MAX_LIVES - livesLost;
@@ -371,58 +372,89 @@ export default function Challenge() {
 
   const livesIndicator = useMemo(
     () => (
-      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }} aria-label={t('challenge.livesAria', { left: livesLeft })}>
+      <div
+        style={{ display: 'flex', gap: 4, alignItems: 'center' }}
+        aria-label={t('challenge.livesAria', { left: livesLeft })}
+      >
         {Array.from({ length: MAX_LIVES }).map((_, i) => (
-          <Box key={i} sx={{ opacity: i < livesLeft ? 1 : 0.2 }}>
+          <span key={i} style={{ display: 'inline-flex', opacity: i < livesLeft ? 1 : 0.2 }}>
             <SharkFin size={20} color={i < livesLeft ? 'var(--brand-accent)' : '#888'} />
-          </Box>
+          </span>
         ))}
-      </Box>
+      </div>
     ),
     [livesLeft, t],
   );
 
   if (phase === 'intro') {
     return (
-      <Box sx={introWrapperSx}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 2, textAlign: 'center' }}>
-          {t('challenge.title')}
-        </Typography>
+      <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: '0 auto' }}>
+        <Card padding={5} width="100%">
+          <VStack gap={3}>
+            {/* Bold shark-themed hero. */}
+            <VStack gap={1.5} align="center">
+              <div
+                aria-hidden
+                className="ss-emoji-tile ss-float"
+                style={{
+                  width: 64,
+                  height: 64,
+                  fontSize: '2.25rem',
+                  background: `linear-gradient(135deg, ${accent}2b, ${accent}12)`,
+                  boxShadow: `inset 0 0 0 1.5px ${accent}44, 0 6px 16px ${accent}22`,
+                }}
+              >
+                🦈
+              </div>
+              <Heading level={1} type="display-2" justify="center">
+                <span className="ss-gradient-text">{t('challenge.title')}</span>
+              </Heading>
+            </VStack>
 
-        {/* The rules list is the single explanation — no duplicate prose above. */}
-        <Paper variant="outlined" sx={{ p: 2, mb: 2, borderColor: 'var(--brand-accent)' }}>
-          <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-            {t('challenge.howItWorks')}
-          </Typography>
-          <Box component="ul" sx={{ pl: 2, m: 0, color: 'text.secondary', fontSize: '0.9rem' }}>
-            <li>{t('challenge.rule1')}</li>
-            <li>{t('challenge.rule2')}</li>
-            <li>{t('challenge.rule3')}</li>
-            <li>{t('challenge.rule4')}</li>
-          </Box>
-        </Paper>
+            {/* The rules list is the single explanation — no duplicate prose above. */}
+            <div className="ss-panel" style={{ padding: 16, borderLeft: `4px solid ${accent}` }}>
+              <VStack gap={1}>
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1.1rem', lineHeight: 1 }}>📋</span>
+                  <Text type="label" color="secondary">
+                    {t('challenge.howItWorks')}
+                  </Text>
+                </HStack>
+                <ul style={{ paddingLeft: 20, margin: 0, color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+                  <li>{t('challenge.rule1')}</li>
+                  <li>{t('challenge.rule2')}</li>
+                  <li>{t('challenge.rule3')}</li>
+                  <li>{t('challenge.rule4')}</li>
+                </ul>
+              </VStack>
+            </div>
 
-        <ChampionBadge champion={champion} loading={boardLoading} />
+            <ChampionBadge champion={champion} loading={boardLoading} />
 
-        <Button
-          variant="contained"
-          size="large"
-          onClick={() => void startRun()}
-          fullWidth
-          sx={{ mt: 2, py: 1.5, fontWeight: 700, textTransform: 'none', ...brandButtonSx }}
-        >
-          {t('challenge.startButton')}
-        </Button>
+            <div style={{ display: 'grid' }}>
+              <Button
+                variant="primary"
+                size="lg"
+                label={t('challenge.startButton')}
+                icon={<span aria-hidden style={{ fontSize: '1.15rem', lineHeight: 1 }}>🦈</span>}
+                onClick={() => void startRun()}
+              />
+            </div>
 
-        {board && board.top.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="overline" color="text.secondary">
-              {t('challenge.hallOfFame')}
-            </Typography>
-            <LeaderboardList board={board} />
-          </Box>
-        )}
-      </Box>
+            {board && board.top.length > 0 && (
+              <VStack gap={1}>
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
+                  <Text type="label" color="secondary">
+                    {t('challenge.hallOfFame')}
+                  </Text>
+                </HStack>
+                <LeaderboardList board={board} />
+              </VStack>
+            )}
+          </VStack>
+        </Card>
+      </div>
     );
   }
 
@@ -432,267 +464,361 @@ export default function Challenge() {
 
   if (phase === 'error') {
     return (
-      <Box sx={introWrapperSx}>
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error || t('error.somethingWrong')}
-        </Alert>
-        <Button variant="outlined" onClick={() => void startRun()}>
-          {t('quiz.retry')}
-        </Button>
-      </Box>
+      <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: '0 auto' }}>
+        <Card padding={5} width="100%">
+          <VStack gap={2}>
+            <Banner status="error" title={error || t('error.somethingWrong')} />
+            <div>
+              <Button variant="secondary" label={t('quiz.retry')} onClick={() => void startRun()} />
+            </div>
+          </VStack>
+        </Card>
+      </div>
     );
   }
 
   if (phase === 'gameover') {
+    const beatChampion = !!champion && score > champion.score;
+    // Celebratory face scales with how big the run was.
+    const resultEmoji = score >= 10 ? '🏆' : score >= 5 ? '🎉' : '🦈';
     return (
-      <Box sx={introWrapperSx}>
-        <Typography
-          ref={gameOverHeadingRef}
-          tabIndex={-1}
-          variant="h4"
-          component="h1"
-          sx={{ fontWeight: 700, mb: 0.5, textAlign: 'center', outline: 'none' }}
-        >
-          {t('challenge.gameOver')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 1.5 }} role="status">
-          {lastResult?.timedOut ? t('challenge.endedByTime') : t('challenge.endedByStrikes')}
-        </Typography>
-        {/* The big number IS the score — no repeated caption underneath. */}
-        <Typography variant="h2" sx={{ textAlign: 'center', mb: 3, color: 'var(--brand-accent)', fontWeight: 800 }}>
-          {score}
-        </Typography>
+      <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: '0 auto' }}>
+        <Card padding={5} width="100%">
+          <VStack gap={2}>
+            <VStack gap={1} align="center">
+              <span aria-hidden className="ss-float" style={{ fontSize: '3.25rem', lineHeight: 1 }}>
+                {resultEmoji}
+              </span>
+              <div ref={gameOverHeadingRef} tabIndex={-1} style={{ outline: 'none' }}>
+                <Heading level={1} type="display-2" justify="center">
+                  {t('challenge.gameOver')}
+                </Heading>
+              </div>
+              <Text type="body" size="sm" color="secondary" justify="center">
+                <span role="status">
+                  {lastResult?.timedOut ? t('challenge.endedByTime') : t('challenge.endedByStrikes')}
+                </span>
+              </Text>
+              {/* The big number IS the score — no repeated caption underneath. */}
+              <MotionPop>
+                <div style={{ fontSize: 'clamp(3rem, 12vw, 4.5rem)', fontWeight: 800, lineHeight: 1, color: accent }}>
+                  {score}
+                </div>
+              </MotionPop>
+            </VStack>
 
-        <ChampionBadge champion={champion} loading={boardLoading} dim={!!champion && score > champion.score} />
+            <ChampionBadge champion={champion} loading={boardLoading} dim={beatChampion} />
 
-        {!submittedScore ? (
-          <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              {t('challenge.submitPrompt')}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexDirection: { xs: 'column', sm: 'row' } }}>
-              <TextField
-                size="small"
-                sx={{ flex: '1 1 auto' }}
-                label={t('challenge.nameLabel')}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                inputProps={{ maxLength: 40 }}
-              />
-              <Button
-                variant="contained"
-                onClick={() => void onSubmitScore()}
-                disabled={scoreSubmitting}
-                sx={{ ...brandButtonSx, flexShrink: 0, whiteSpace: 'nowrap' }}
-              >
-                {scoreSubmitting ? <CircularProgress size={18} sx={{ color: 'inherit' }} /> : t('challenge.submitScore')}
-              </Button>
-            </Box>
-          </Paper>
-        ) : (
-          <Alert severity="success" sx={{ mt: 2 }}>
-            {t('challenge.scoreSubmitted')}
-          </Alert>
-        )}
+            {!submittedScore ? (
+              <div className="ss-panel" style={{ padding: 16 }}>
+                <VStack gap={1.5}>
+                  <Text type="body" size="sm">
+                    {t('challenge.submitPrompt')}
+                  </Text>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 8,
+                      flexDirection: isMobile ? 'column' : 'row',
+                      alignItems: isMobile ? 'stretch' : 'flex-end',
+                    }}
+                  >
+                    <div style={{ flex: '1 1 auto' }}>
+                      <TextInput
+                        label={t('challenge.nameLabel')}
+                        value={name}
+                        onChange={(v) => setName(v.slice(0, 40))}
+                        onEnter={() => void onSubmitScore()}
+                      />
+                    </div>
+                    <Button
+                      variant="primary"
+                      label={t('challenge.submitScore')}
+                      onClick={() => void onSubmitScore()}
+                      isDisabled={scoreSubmitting}
+                      isLoading={scoreSubmitting}
+                    />
+                  </div>
+                </VStack>
+              </div>
+            ) : (
+              <Banner status="success" title={t('challenge.scoreSubmitted')} />
+            )}
 
-        {board && board.top.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="overline" color="text.secondary">
-              {t('challenge.hallOfFame')}
-            </Typography>
-            <LeaderboardList board={board} />
-          </Box>
-        )}
+            {board && board.top.length > 0 && (
+              <VStack gap={1}>
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
+                  <Text type="label" color="secondary">
+                    {t('challenge.hallOfFame')}
+                  </Text>
+                </HStack>
+                <LeaderboardList board={board} />
+              </VStack>
+            )}
 
-        <Box sx={{ display: 'flex', gap: 1, mt: 3, justifyContent: 'center' }}>
-          <Button variant="contained" onClick={() => void startRun()} sx={brandButtonSx}>
-            {t('challenge.playAgain')}
-          </Button>
-          <Button variant="outlined" onClick={() => setPhase('intro')}>
-            {t('challenge.backToIntro')}
-          </Button>
-        </Box>
+            <HStack gap={1.5} justify="center" wrap="wrap">
+              <Button variant="primary" label={t('challenge.playAgain')} onClick={() => void startRun()} />
+              <Button variant="secondary" label={t('challenge.backToIntro')} onClick={() => setPhase('intro')} />
+            </HStack>
+          </VStack>
+        </Card>
 
-        <Snackbar open={!!snack} autoHideDuration={2500} onClose={() => setSnack(null)} message={snack ?? ''} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} />
-      </Box>
+        <AppToast
+          open={!!snack}
+          onClose={() => setSnack(null)}
+          severity="info"
+          message={snack ?? ''}
+          autoHideDuration={2500}
+        />
+      </div>
     );
   }
 
   // ── playing ──
   if (!current) return null;
 
+  const low = timeLeft <= LOW_TIME_S;
+  const timePct = (Math.max(0, timeLeft) / TIME_LIMIT_S) * 100;
+
   return (
-    // One-viewport layout matching the Quiz card geometry: 560px column,
+    // One-viewport layout matching the Quiz card geometry: ~560px column,
     // primary card capped at ~80% height on sm+, centred; question text
     // scrolls internally, answers + lock-in stay anchored near the bottom.
-    <Box sx={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: { xs: 680, sm: 560 }, mx: 'auto', width: '100%', p: { xs: 0.5, sm: 1 } }}>
+    <div
+      style={{
+        position: 'relative',
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        maxWidth: isMobile ? 680 : 560,
+        margin: '0 auto',
+        width: '100%',
+        padding: isMobile ? 4 : 8,
+      }}
+    >
       {/* One-shot low-time announcement for screen readers (the visual cue is
           colour + pulse, which AT users can't perceive). */}
-      <Box component="span" sx={visuallyHidden} aria-live="polite">
+      <span style={visuallyHidden} aria-live="polite">
         {timeLeft === LOW_TIME_S ? t('challenge.lowTime') : ''}
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, gap: 1, flexShrink: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '1 1 auto', minWidth: 0 }}>
-          <Typography variant="overline" color="text.secondary">
+      </span>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 8,
+          gap: 12,
+          flexShrink: 0,
+        }}
+      >
+        <HStack gap={1} align="center" style={{ flex: '1 1 auto', minWidth: 0 }}>
+          <span aria-hidden style={{ fontSize: '1.1rem', lineHeight: 1 }}>🦈</span>
+          <Text type="label" color="secondary">
             {t('challenge.score')}
-          </Typography>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: 'var(--brand-accent)' }}>
+          </Text>
+          <Text type="large" weight="bold" color="accent">
             {score}
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
-          <Box
+          </Text>
+        </HStack>
+        <HStack gap={1.5} align="center" style={{ flexShrink: 0 }}>
+          <span
             role="timer"
             aria-label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
-            sx={{
+            className={low ? 'ss-float' : undefined}
+            style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 0.5,
-              px: 1,
-              py: 0.25,
-              borderRadius: 1,
-              border: '1.5px solid',
-              borderColor: timeLeft <= LOW_TIME_S ? 'error.main' : 'divider',
-              color: timeLeft <= LOW_TIME_S ? 'error.main' : 'text.primary',
-              fontWeight: 700,
+              gap: 4,
+              padding: '4px 11px',
+              borderRadius: 999,
+              fontFamily: 'monospace',
+              fontWeight: 800,
               fontVariantNumeric: 'tabular-nums',
-              '@keyframes chalTimePulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.5 } },
-              animation: timeLeft <= LOW_TIME_S ? 'chalTimePulse 1s ease-in-out infinite' : 'none',
-              '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+              color: low ? '#d33' : 'var(--brand-accent)',
+              background: low
+                ? 'color-mix(in srgb, #d33 15%, transparent)'
+                : 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
             }}
           >
             <ClockIcon />
-            <Box component="span">{fmtClock(timeLeft)}</Box>
-          </Box>
+            <span>{fmtClock(timeLeft)}</span>
+          </span>
           {livesIndicator}
-        </Box>
-      </Box>
+        </HStack>
+      </div>
 
-      <Card sx={{ borderTop: `4px solid var(--brand-accent)`, flex: '1 1 auto', minHeight: 0, maxHeight: { sm: '80%' }, display: 'flex', flexDirection: 'column' }}>
-        <CardContent sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap', flexShrink: 0 }}>
-            <Chip
-              size="small"
-              label={getCategoryLabel(current.category)}
-              sx={{
-                backgroundColor: getCategoryHexColor(current.category),
-                color: onCategoryColorText(current.category),
-                fontWeight: 600,
-              }}
-            />
-            <Chip
-              size="small"
-              variant="outlined"
-              label={t('challenge.difficultyLevel', { level: current.difficulty })}
-            />
-          </Box>
+      {/* Per-question countdown as a bar — accent, flipping to error under the
+          low-time threshold to reinforce the pulsing clock. */}
+      <div style={{ marginBottom: 10, flexShrink: 0 }}>
+        <ProgressBar
+          label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
+          isLabelHidden
+          value={timePct}
+          variant={low ? 'error' : 'accent'}
+        />
+      </div>
+
+      {/* Surface styled with Astryx tokens so it themes with the rest of the
+          system, while plain flex/scroll keeps the one-viewport behaviour. */}
+      <div
+        style={{
+          flex: '1 1 auto',
+          minHeight: 0,
+          maxHeight: isMobile ? undefined : '80%',
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'var(--color-background-card)',
+          border: '1px solid var(--color-border)',
+          borderTop: `4px solid ${accent}`,
+          borderRadius: 16,
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            padding: 'clamp(1rem, 3.5vw, 1.5rem)',
+          }}
+        >
+          <HStack gap={1} align="center" wrap="wrap" style={{ marginBottom: 12, flexShrink: 0 }}>
+            <CategoryTag category={current.category} />
+            <Badge variant="neutral" label={t('challenge.difficultyLevel', { level: current.difficulty })} />
+          </HStack>
 
           {/* Scrollable question region — answers below keep their position. */}
-          <Box id="challenge-question" sx={{ mb: 2, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
+          <div id="challenge-question" style={{ marginBottom: 16, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
             {renderQuestion(current.question)}
-          </Box>
+          </div>
 
-          <RadioGroup
-            value={selected ?? ''}
-            onChange={(e) => !lastResult && setSelected(parseInt(e.target.value, 10))}
+          {/* Answer options as SelectableCards. Raise the anchored answers ~50px
+              off the wave on phones. */}
+          <div
+            role="radiogroup"
             aria-labelledby="challenge-question"
-            // Raise the anchored answers ~50px off the wave on phones.
-            sx={{ flexShrink: 0, mt: 'auto', mb: { xs: '50px', sm: 0 } }}
+            style={{ flexShrink: 0, marginTop: 'auto', marginBottom: isMobile ? 50 : 0 }}
           >
-            {current.options.map((opt, idx) => {
-              let bg: string | undefined;
-              if (lastResult) {
-                // Theme-derived tints so dark mode inherits the adjustment.
-                if (idx === lastResult.correctAnswer) bg = 'rgba(22, 163, 74, 0.15)';
-                else if (idx === lastResult.selectedIndex && !lastResult.isCorrect)
-                  bg = 'rgba(220, 38, 38, 0.15)';
-              }
-              return (
-                <FormControlLabel
-                  key={idx}
-                  value={idx}
-                  disabled={!!lastResult}
-                  control={<Radio />}
-                  label={opt}
-                  sx={{
-                    m: 0,
-                    mb: 0.5,
-                    px: 1,
-                    borderRadius: 1,
-                    backgroundColor: bg,
-                  }}
-                />
-              );
-            })}
-          </RadioGroup>
-
-        </CardContent>
-      </Card>
+            <VStack gap={1}>
+              {current.options.map((opt, idx) => {
+                const isSel = selected === idx;
+                const graded = !!lastResult;
+                const isCorrectOpt = graded && idx === lastResult!.correctAnswer;
+                const isWrongPick =
+                  graded && idx === lastResult!.selectedIndex && !lastResult!.isCorrect;
+                const variant: CardVariant = isCorrectOpt ? 'green' : isWrongPick ? 'red' : 'default';
+                return (
+                  <SelectableCard
+                    key={idx}
+                    label={opt}
+                    isSelected={graded ? isCorrectOpt || isWrongPick : isSel}
+                    isDisabled={graded}
+                    variant={variant}
+                    padding={2}
+                    onChange={() => {
+                      if (!lastResult) setSelected(idx);
+                    }}
+                  >
+                    <HStack gap={2} align="center">
+                      <span
+                        aria-hidden
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 8,
+                          display: 'grid',
+                          placeItems: 'center',
+                          flexShrink: 0,
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          background: isSel ? 'var(--color-accent-muted)' : 'var(--color-background-muted)',
+                          color: isSel ? 'var(--color-text-accent)' : 'inherit',
+                        }}
+                      >
+                        {idx + 1}
+                      </span>
+                      <Text type="body" weight={isSel ? 'semibold' : 'normal'}>
+                        {opt}
+                      </Text>
+                    </HStack>
+                  </SelectableCard>
+                );
+              })}
+            </VStack>
+          </div>
+        </div>
+      </div>
 
       {/* Feedback overlay: a floating card that sits over the answer options
           so the grade doesn't push the layout around. */}
       {lastResult && (
-        <Box
+        <div
           aria-live="assertive"
-          sx={{
+          style={{
             position: 'absolute',
-            left: { xs: 8, sm: 16 },
-            right: { xs: 8, sm: 16 },
-            bottom: { xs: 68, sm: 72 },
+            left: isMobile ? 8 : 16,
+            right: isMobile ? 8 : 16,
+            bottom: isMobile ? 68 : 72,
             zIndex: 5,
+            maxHeight: '48vh',
+            overflowY: 'auto',
+            borderRadius: 'var(--radius-element, 0.9rem)',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.35)',
           }}
         >
-          <Alert
-            severity={lastResult.isCorrect ? 'success' : 'error'}
-            sx={{
-              maxHeight: '48vh',
-              overflowY: 'auto',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.35)',
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {lastResult.isCorrect
+          <Banner
+            status={lastResult.isCorrect ? 'success' : 'error'}
+            title={
+              lastResult.isCorrect
                 ? t('challenge.correct')
                 : lastResult.timedOut
                   ? t('challenge.questionTimeout')
-                  : t('challenge.wrong')}
-            </Typography>
-            {lastResult.explanation && (
-              <Typography variant="body2" sx={{ mt: 0.5 }}>
-                {lastResult.explanation}
-              </Typography>
-            )}
-          </Alert>
-        </Box>
+                  : t('challenge.wrong')
+            }
+            description={lastResult.explanation || undefined}
+          />
+        </div>
       )}
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5, gap: 1, flexShrink: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 8, flexShrink: 0 }}>
         {!lastResult ? (
           <Button
-            variant="contained"
-            disabled={selected == null || submitting}
+            variant="primary"
+            label={t('challenge.lockIn')}
+            isDisabled={selected == null || submitting}
+            isLoading={submitting}
             onClick={() => void submitAnswer()}
-            sx={brandButtonSx}
-          >
-            {submitting ? <CircularProgress size={18} sx={{ color: 'inherit' }} /> : t('challenge.lockIn')}
-          </Button>
+          />
         ) : (
-          <Button variant="contained" onClick={onContinue} sx={brandButtonSx}>
-            {livesLost >= MAX_LIVES ? t('challenge.seeResult') : t('challenge.nextQuestion')}
-          </Button>
+          <Button
+            variant="primary"
+            label={livesLost >= MAX_LIVES ? t('challenge.seeResult') : t('challenge.nextQuestion')}
+            onClick={onContinue}
+          />
         )}
-      </Box>
+      </div>
 
-      <Snackbar open={!!snack} autoHideDuration={2500} onClose={() => setSnack(null)} message={snack ?? ''} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} />
-    </Box>
+      <AppToast
+        open={!!snack}
+        onClose={() => setSnack(null)}
+        severity="info"
+        message={snack ?? ''}
+        autoHideDuration={2500}
+      />
+    </div>
   );
 }
 
 /** A small outline clock glyph for the countdown chip. Decorative. */
 function ClockIcon() {
   return (
-    <Box
-      component="svg"
+    <svg
       aria-hidden
       viewBox="0 0 24 24"
       fill="none"
@@ -700,25 +826,36 @@ function ClockIcon() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      sx={{ width: 15, height: 15, display: 'block' }}
+      style={{ width: 15, height: 15, display: 'block' }}
     >
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3 2" />
-    </Box>
+    </svg>
   );
 }
 
-const introWrapperSx = {
-  maxWidth: 640,
-  mx: 'auto',
-  width: '100%',
-  p: { xs: 2, sm: 3 },
-  backgroundColor: 'background.paper',
-  borderRadius: 2,
-  border: '1px solid',
-  borderColor: 'divider',
-  borderTop: `4px solid var(--brand-accent)`,
-};
+// A compact category tag that keeps each subject's brand/logo colour (Astryx
+// Badge only exposes a fixed palette, so we render the exact hex tint here).
+function CategoryTag({ category }: { category: CategoryType }) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        height: 26,
+        padding: '0 10px',
+        borderRadius: 8,
+        fontSize: '0.78rem',
+        fontWeight: 600,
+        lineHeight: 1,
+        backgroundColor: getCategoryHexColor(category),
+        color: onCategoryColorText(category),
+      }}
+    >
+      {getCategoryLabel(category)}
+    </span>
+  );
+}
 
 function ChampionBadge({
   champion,
@@ -731,35 +868,35 @@ function ChampionBadge({
 }) {
   const { t } = useLanguage();
   return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 1.5,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1.25,
-        borderColor: 'divider',
-        opacity: dim ? 0.6 : 1,
-      }}
-    >
-      <SharkFin size={28} />
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="overline" color="text.secondary" sx={{ display: 'block', lineHeight: 1.1 }}>
-          {t('challenge.currentChampion')}
-        </Typography>
-        {loading ? (
-          <Skeleton variant="text" sx={{ fontSize: '1rem', width: 200 }} />
-        ) : champion ? (
-          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-            {champion.name} — {champion.score}
-          </Typography>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            {t('challenge.noChampion')}
-          </Typography>
-        )}
-      </Box>
-    </Paper>
+    <div className="ss-lift" style={{ display: 'flex', width: '100%', opacity: dim ? 0.6 : 1 }}>
+      <Card variant="muted" padding={2} width="100%">
+        <HStack gap={1.5} align="center">
+          <SharkFin size={28} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <VStack gap={0}>
+              <Text type="label" color="secondary">
+                {t('challenge.currentChampion')}
+              </Text>
+              {loading ? (
+                <Text type="body" size="sm" color="secondary">
+                  …
+                </Text>
+              ) : champion ? (
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <Text type="body" weight="bold">
+                    {champion.name} — {champion.score}
+                  </Text>
+                </span>
+              ) : (
+                <Text type="body" size="sm" color="secondary">
+                  {t('challenge.noChampion')}
+                </Text>
+              )}
+            </VStack>
+          </div>
+        </HStack>
+      </Card>
+    </div>
   );
 }
 
@@ -767,32 +904,35 @@ function LeaderboardList({ board }: { board: ChallengeLeaderboard }) {
   // role="list" restores list semantics that Safari/VoiceOver drop when
   // list-style is none.
   return (
-    <Box component="ol" role="list" sx={{ m: 0, mt: 0.5, p: 0, listStyle: 'none' }}>
+    <ol role="list" style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column' }}>
       {board.top.map((row, i) => (
-        <Box
+        <div
           key={row.id}
-          sx={{
+          style={{
             display: 'flex',
             justifyContent: 'space-between',
-            gap: 1,
-            py: 0.5,
-            borderBottom: i === board.top.length - 1 ? 'none' : '1px dashed',
-            borderColor: 'divider',
+            gap: 8,
+            padding: '6px 0',
+            borderBottom: i === board.top.length - 1 ? 'none' : '1px dashed var(--color-border)',
           }}
         >
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', minWidth: 0 }}>
-            <Typography variant="body2" sx={{ width: 24, color: 'text.secondary' }}>
-              {i + 1}.
-            </Typography>
-            <Typography variant="body2" sx={{ fontWeight: i === 0 ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {row.name}
-            </Typography>
-          </Box>
-          <Typography variant="body2" sx={{ fontWeight: 700, color: i === 0 ? 'var(--brand-accent)' : 'text.primary' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 }}>
+            <span style={{ width: 24, flexShrink: 0 }}>
+              <Text type="body" size="sm" color="secondary">
+                {i + 1}.
+              </Text>
+            </span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <Text type="body" size="sm" weight={i === 0 ? 'bold' : 'medium'}>
+                {row.name}
+              </Text>
+            </span>
+          </div>
+          <Text type="body" size="sm" weight="bold" color={i === 0 ? 'accent' : 'primary'}>
             {row.score}
-          </Typography>
-        </Box>
+          </Text>
+        </div>
       ))}
-    </Box>
+    </ol>
   );
 }

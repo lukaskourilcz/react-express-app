@@ -1,15 +1,27 @@
+// Flashcard study view. Bookmarked questions become a flip-through deck: reveal
+// the answer, step forward/back, or remove a card from the deck.
+//
+// Redesigned on the Astryx design system — Astryx Card/Button/Badge/typography
+// and layout primitives, with the reveal ("flip") and bookmark logic preserved.
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
-import { Box, Paper, Typography, Button, Chip, IconButton, Tooltip } from '@mui/material';
+import { VStack } from '@astryxdesign/core/VStack';
+import { HStack } from '@astryxdesign/core/HStack';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Text } from '@astryxdesign/core/Text';
+import { Badge } from '@astryxdesign/core/Badge';
+import { Card } from '@astryxdesign/core/Card';
+import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../lib/auth';
+import { useActiveSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
 import { removeFlashcard, type Flashcard } from '../lib/flashcards';
 import { friendlyError } from '../lib/api';
 import { useFlashcards } from '../lib/queries';
 import { queryClient } from '../lib/queryClient';
 import { renderQuestion } from './CodeBlock';
-import { brandButtonSx } from '../theme/MuiTheme';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 
@@ -26,6 +38,7 @@ const TrashIcon = () => (
 function Flashcards() {
   const t = useT();
   const navigate = useNavigate();
+  const accent = useActiveSubject().accent;
   const { isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
   const [index, setIndex] = useState(0);
   const [revealed, setRevealed] = useState(false);
@@ -73,13 +86,18 @@ function Flashcards() {
 
   if (!isAuthenticated) {
     return (
-      <Paper elevation={0} sx={{ p: 4, maxWidth: 520, mx: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>{t('card.signInTitle')}</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>{t('card.signInBody')}</Typography>
-        <Button variant="contained" onClick={() => signInWithGoogle().catch(() => {})} sx={brandButtonSx}>
-          {t('auth.logIn')}
-        </Button>
-      </Paper>
+      <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 520, margin: '0 auto' }}>
+      <Card variant="default" padding={6} width="100%">
+        <VStack gap={2} align="center">
+          <div aria-hidden className="ss-float" style={{ fontSize: '2.6rem', lineHeight: 1 }}>🦈</div>
+          <Heading level={2} justify="center">{t('card.signInTitle')}</Heading>
+          <Text type="body" color="secondary" justify="center">{t('card.signInBody')}</Text>
+          <div style={{ marginTop: '0.5rem' }}>
+            <Button variant="primary" label={t('auth.logIn')} onClick={() => signInWithGoogle().catch(() => {})} />
+          </div>
+        </VStack>
+      </Card>
+      </div>
     );
   }
 
@@ -89,13 +107,18 @@ function Flashcards() {
 
   if (cards.length === 0) {
     return (
-      <Paper elevation={0} sx={{ p: 4, maxWidth: 520, mx: 'auto', border: '1px solid', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>{t('card.emptyTitle')}</Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>{t('card.emptyHint')}</Typography>
-        <Button variant="contained" onClick={() => navigate('/quiz')} sx={brandButtonSx}>
-          {t('card.goToQuiz')}
-        </Button>
-      </Paper>
+      <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 520, margin: '0 auto' }}>
+      <Card variant="default" padding={6} width="100%">
+        <VStack gap={2} align="center">
+          <div aria-hidden className="ss-float" style={{ fontSize: '3rem', lineHeight: 1 }}>🔖</div>
+          <Heading level={2} justify="center">{t('card.emptyTitle')}</Heading>
+          <Text type="body" color="secondary" justify="center">{t('card.emptyHint')}</Text>
+          <div style={{ marginTop: '0.5rem' }}>
+            <Button variant="primary" label={t('card.goToQuiz')} onClick={() => navigate('/quiz')} />
+          </div>
+        </VStack>
+      </Card>
+      </div>
     );
   }
 
@@ -109,62 +132,124 @@ function Flashcards() {
   const go = (delta: number) => setIndex((i) => (i + delta + cards.length) % cards.length);
 
   return (
-    <Box sx={{ maxWidth: 640, mx: 'auto' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Box>
-          <Typography variant="h5" component="h1" sx={{ fontWeight: 700 }}>{t('card.heading')}</Typography>
-          <Typography variant="body2" color="text.secondary">{t('card.subtitle')}</Typography>
-        </Box>
-        <Chip label={t('card.counter', { current: index + 1, total: cards.length })} sx={{ fontWeight: 700 }} />
-      </Box>
-
-      <Paper elevation={0} sx={{ p: 3, border: '1px solid', borderColor: 'divider', borderTop: `4px solid var(--brand-accent)`, borderRadius: 2, minHeight: 240, display: 'flex', flexDirection: 'column' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-          {card.category ? (
-            <Chip size="small" label={card.category} sx={{ fontWeight: 600 }} />
-          ) : <span />}
-          <Tooltip title={t('card.remove')} arrow placement="top">
-            <IconButton size="small" aria-label={t('card.remove')} onClick={handleRemove} sx={{ color: 'text.secondary' }}>
-              <TrashIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
-
-        <Box sx={{ fontWeight: 500, mb: 2 }}>{renderQuestion(card.question)}</Box>
-
-        <Box sx={{ mt: 'auto' }}>
-          {!revealed ? (
-            <Button
-              fullWidth
-              variant="contained"
-              onClick={() => setRevealed(true)}
-              sx={{ py: 1.25, fontWeight: 600, ...brandButtonSx }}
+    <div style={{ maxWidth: 640, margin: '0 auto', width: '100%' }}>
+      <VStack gap={3} width="100%">
+        <HStack justify="between" align="center" gap={2} width="100%">
+          <HStack gap={1.5} align="center">
+            <div
+              aria-hidden
+              className="ss-emoji-tile ss-float"
+              style={{
+                width: 46,
+                height: 46,
+                fontSize: '1.5rem',
+                flexShrink: 0,
+                background: `linear-gradient(135deg, ${accent}2b, ${accent}12)`,
+                boxShadow: `inset 0 0 0 1.5px ${accent}44, 0 6px 16px ${accent}22`,
+              }}
             >
-              {t('card.reveal')}
-            </Button>
-          ) : (
-            <Box>
-              <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>{t('card.answerLabel')}</Typography>
-              <Box sx={{ p: 1.5, borderRadius: 1, backgroundColor: 'rgba(45,122,45,0.1)', borderLeft: `4px solid var(--brand-accent)`, fontWeight: 600 }}>
-                {card.correct_answer}
-              </Box>
-              {card.explanation && (
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }}>{card.explanation}</Typography>
-              )}
-            </Box>
-          )}
-        </Box>
-      </Paper>
+              🃏
+            </div>
+            <VStack gap={0.5}>
+              <Heading level={1}>{t('card.heading')}</Heading>
+              <Text type="supporting" color="secondary">{t('card.subtitle')}</Text>
+            </VStack>
+          </HStack>
+          <div
+            style={{
+              flexShrink: 0,
+              alignSelf: 'flex-start',
+              borderRadius: 999,
+              padding: '4px 12px',
+              fontWeight: 700,
+              fontSize: '0.78rem',
+              color: accent,
+              background: `${accent}14`,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {t('card.counter', { current: index + 1, total: cards.length })}
+          </div>
+        </HStack>
 
-      <Box sx={{ display: 'flex', gap: 1.5, mt: 2 }}>
-        <Button variant="outlined" onClick={() => go(-1)} disabled={cards.length < 2} sx={{ flex: 1 }}>
-          {t('card.prev')}
-        </Button>
-        <Button variant="outlined" onClick={() => go(1)} disabled={cards.length < 2} sx={{ flex: 1 }}>
-          {t('card.next')}
-        </Button>
-      </Box>
-    </Box>
+        {/* The study card. A tinted top rule carries the subject accent. */}
+        <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
+        <Card variant="default" padding={5} width="100%" minHeight={260}>
+          <div
+            aria-hidden
+            style={{
+              height: 4,
+              borderRadius: 999,
+              background: 'var(--brand-accent)',
+              margin: '-4px 0 20px',
+            }}
+          />
+          <div style={{ display: 'flex', flexDirection: 'column', minHeight: 200 }}>
+            <HStack justify="between" align="center" gap={1} width="100%">
+              {card.category ? <Badge variant="cyan" label={card.category} /> : <span />}
+              <Button
+                variant="ghost"
+                size="sm"
+                isIconOnly
+                icon={<TrashIcon />}
+                label={t('card.remove')}
+                tooltip={t('card.remove')}
+                onClick={handleRemove}
+              />
+            </HStack>
+
+            <div style={{ fontWeight: 500, margin: '16px 0 20px' }}>{renderQuestion(card.question)}</div>
+
+            <div style={{ marginTop: 'auto' }}>
+              {!revealed ? (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  label={t('card.reveal')}
+                  onClick={() => setRevealed(true)}
+                />
+              ) : (
+                <VStack gap={1.5} width="100%">
+                  <HStack gap={1} align="center">
+                    <span aria-hidden style={{ fontSize: '1.1rem', lineHeight: 1 }}>💡</span>
+                    <Text type="label" color="secondary">{t('card.answerLabel')}</Text>
+                  </HStack>
+                  <div
+                    className="ss-pop"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 10,
+                      padding: '14px 16px',
+                      borderRadius: 12,
+                      background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
+                      borderLeft: '4px solid var(--brand-accent)',
+                      fontWeight: 600,
+                    }}
+                  >
+                    <span aria-hidden style={{ fontSize: '1.15rem', lineHeight: 1, flexShrink: 0 }}>✅</span>
+                    <span>{card.correct_answer}</span>
+                  </div>
+                  {card.explanation && (
+                    <Text type="body" color="secondary">{card.explanation}</Text>
+                  )}
+                </VStack>
+              )}
+            </div>
+          </div>
+        </Card>
+        </div>
+
+        <HStack gap={1.5} width="100%">
+          <div style={{ flex: 1 }}>
+            <Button variant="secondary" label={t('card.prev')} onClick={() => go(-1)} isDisabled={cards.length < 2} />
+          </div>
+          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+            <Button variant="secondary" label={t('card.next')} onClick={() => go(1)} isDisabled={cards.length < 2} />
+          </div>
+        </HStack>
+      </VStack>
+    </div>
   );
 }
 

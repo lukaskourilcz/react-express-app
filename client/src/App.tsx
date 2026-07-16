@@ -1,6 +1,10 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider, Snackbar, Alert, Chip } from '@mui/material';
-import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { IconButton as AxIconButton } from '@astryxdesign/core/IconButton';
+import { Badge as AxBadge } from '@astryxdesign/core/Badge';
+import { AppToast } from './components/ui/AppToast';
+import { useIsMobile } from './lib/useMediaQuery';
+import './styles/app-shell.css';
 import LoadingScreen from './components/LoadingScreen';
 import { SwimmingFin, Waterline } from './components/SharkFin';
 import { useColorMode } from './theme/ColorModeContext';
@@ -59,22 +63,6 @@ const ROUTE_ANIM_REDUCED = {
   exit: { opacity: 0 },
 } as const;
 const ROUTE_TRANSITION = { duration: 0.2, ease: 'easeOut' } as const;
-
-// Pure module-level styler for the top-nav links — hoisting it out of the
-// component avoids a fresh object literal on every App render.
-const navLinkSx = (isActive: boolean) => ({
-  color: isActive ? 'var(--brand-accent)' : 'text.secondary',
-  fontWeight: isActive ? 700 : 500,
-  textTransform: 'none' as const,
-  textDecoration: isActive ? 'underline' : 'none',
-  textUnderlineOffset: '4px',
-  // Hug the label instead of MUI's 64px min-width, so short links ("Quiz")
-  // don't get extra padding that makes the row look unevenly spaced. The flex
-  // `gap` on the container then provides uniform spacing between every link.
-  minWidth: 'auto',
-  px: 1.25,
-  '&:hover': { backgroundColor: 'action.hover' },
-});
 
 const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/': 'title.home',
@@ -172,23 +160,12 @@ const RouteLoader = () => {
 function SubjectSwitcher() {
   const subject = useActiveSubject();
   return (
-    <Chip
-      component={Link}
+    <Link
       to="/subjects"
-      clickable
-      size="small"
-      label={`${subject.emoji} ${subject.label}`}
-      sx={{
-        ml: 0.5,
-        fontWeight: 700,
-        cursor: 'pointer',
-        color: subject.accent,
-        borderColor: subject.accent,
-        backgroundColor: 'transparent',
-        border: '1px solid',
-        '& .MuiChip-label': { px: 1 },
-      }}
-    />
+      style={{ marginLeft: 4, display: 'inline-flex', textDecoration: 'none', borderRadius: 999 }}
+    >
+      <AxBadge label={`${subject.emoji} ${subject.label}`} />
+    </Link>
   );
 }
 
@@ -205,46 +182,45 @@ function HeaderBrand() {
   // switch subjects because there's nothing to switch to.
   if (locked) {
     return (
-      <Typography
-        variant="h6"
-        component={Link}
+      <Link
         to="/"
         aria-label={t('nav.home')}
-        sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: subject.accent, textDecoration: 'none', fontSize: '1.1rem' }}
+        className="ss-drawer-brand"
+        style={{ padding: 0, color: subject.accent }}
       >
         <SwimmingFin size={22} />
         {subject.standaloneBrand ?? subject.label}
-      </Typography>
+      </Link>
     );
   }
   return (
     <>
-      <Typography
-        variant="h6"
-        component={Link}
+      <Link
         to="/"
         aria-label={t('nav.home')}
-        sx={{ display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: 'text.primary', textDecoration: 'none', fontSize: '1.1rem' }}
+        className="ss-drawer-brand"
+        style={{ padding: 0, color: 'var(--color-text-primary)' }}
       >
-        <Box component="span" sx={{ display: 'none', '@media (min-width:760px)': { display: 'inline-flex' }, alignItems: 'center', gap: 0.75 }}>
+        <span className="ss-show-desktop" style={{ alignItems: 'center', gap: 6 }}>
           <SwimmingFin size={22} />
           StudyShark
-        </Box>
-        <Box component="span" sx={{ display: 'inline-flex', '@media (min-width:760px)': { display: 'none' }, alignItems: 'center', gap: 0.5, color: subject.accent, whiteSpace: 'nowrap' }}>
-          <Box component="span" aria-hidden sx={{ fontSize: '1.25rem', lineHeight: 1 }}>{subject.emoji}</Box>
+        </span>
+        <span className="ss-show-mobile" style={{ alignItems: 'center', gap: 4, color: subject.accent, whiteSpace: 'nowrap' }}>
+          <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1 }}>{subject.emoji}</span>
           {subject.label}
-        </Box>
-      </Typography>
+        </span>
+      </Link>
       {/* The subject chip is redundant on mobile (the wordmark shows it), so it's desktop-only. */}
-      <Box sx={{ display: 'none', '@media (min-width:760px)': { display: 'inline-flex' } }}>
+      <span className="ss-show-desktop">
         <SubjectSwitcher />
-      </Box>
+      </span>
     </>
   );
 }
 
 function App() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { t, setLang } = useLanguage();
   const config = useGameConfig();
   const [quizActive, setQuizActive] = useState(false);
@@ -255,6 +231,7 @@ function App() {
   const { user } = useAuth();
   const [signupBonusOpen, setSignupBonusOpen] = useState(false);
   const reduceMotion = useReducedMotion();
+  const mobile = useIsMobile();
   const analyticsIdentified = useRef(false);
 
   // Remember the learner's current rank on load so we don't re-celebrate a
@@ -378,28 +355,22 @@ function App() {
   // section (next to the account widget); on mobile they live in the nav drawer.
   const utilityToggles = (
     <>
-      <Tooltip title={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}>
-        <IconButton
-          size="small"
-          onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
-          aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
-          aria-pressed={settings.soundEffects}
-          // ≥24×24px hit area (WCAG 2.5.8): 8px padding + 16px icon = 32px.
-          sx={{ p: 1, color: settings.soundEffects ? 'var(--brand-accent)' : 'text.secondary', '& svg': { width: 16, height: 16 } }}
-        >
-          {settings.soundEffects ? <SoundOnIcon /> : <SoundOffIcon />}
-        </IconButton>
-      </Tooltip>
-      <Tooltip title={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
-        <IconButton
-          size="small"
-          onClick={toggle}
-          aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
-          sx={{ p: 1, color: 'text.secondary', '& svg': { width: 16, height: 16 } }}
-        >
-          {mode === 'light' ? <MoonIcon /> : <SunIcon />}
-        </IconButton>
-      </Tooltip>
+      <AxIconButton
+        variant="ghost"
+        size="sm"
+        onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
+        label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
+        tooltip={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
+        icon={settings.soundEffects ? <SoundOnIcon /> : <SoundOffIcon />}
+      />
+      <AxIconButton
+        variant="ghost"
+        size="sm"
+        onClick={toggle}
+        label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
+        tooltip={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
+        icon={mode === 'light' ? <MoonIcon /> : <SunIcon />}
+      />
     </>
   );
 
@@ -407,176 +378,151 @@ function App() {
     // One-screen shell: the app is exactly one viewport tall. Pages scroll
     // INSIDE <main>, so the header and the ocean footer (waterline + fins) are
     // always visible. `dvh` tracks the collapsing mobile URL bar.
-    <Box
-      sx={{
-        position: 'relative',
-        height: '100vh',
-        '@supports (height: 100dvh)': { height: '100dvh' },
-        maxWidth: '100vw',
-        overflow: 'hidden',
-        backgroundColor: 'background.default',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <Box
-        component="a"
-        href="#main-content"
-        sx={{
-          position: 'absolute',
-          left: -9999,
-          top: 8,
-          zIndex: 9999,
-          backgroundColor: 'background.paper',
-          color: 'text.primary',
-          px: 2,
-          py: 1,
-          borderRadius: 1,
-          '&:focus': { left: 8 },
-        }}
-      >
+    <div className="ss-app-root">
+      <a href="#main-content" className="ss-skip-link">
         {t('common.skipToContent')}
-      </Box>
+      </a>
 
       {showChrome && (
         <>
-        <AppBar position="static" elevation={0} sx={{ backgroundColor: 'background.paper', borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Toolbar sx={{ maxWidth: 1200, width: '100%', mx: 'auto', px: { xs: 2, sm: 3 }, gap: 1 }}>
+        <header className="ss-header">
+          <div className="ss-toolbar">
             {/* Left slot: mobile menu + logo. Flex-basis 0 so all three slots
                 share width equally, keeping the centre slot truly centred. */}
-            <Box sx={{ flex: '1 1 0', display: 'flex', alignItems: 'center', minWidth: 0 }}>
-              <IconButton
-                edge="start"
-                aria-label={t('nav.menu')}
-                onClick={() => setMobileNavOpen(true)}
-                // Nav links appear from 760px (tablets), not MUI's 900px `md`,
-                // so a 768px iPad doesn't get a mostly-empty toolbar.
-                sx={{ display: 'inline-flex', '@media (min-width:760px)': { display: 'none' }, mr: 0.5, color: 'text.secondary' }}
-              >
-                <MenuIcon />
-              </IconButton>
+            <div className="ss-slot">
+              {/* Nav links appear from 760px (tablets), not MUI's 900px `md`,
+                  so a 768px iPad doesn't get a mostly-empty toolbar. */}
+              <span className="ss-show-mobile" style={{ marginRight: 4 }}>
+                <AxIconButton
+                  variant="ghost"
+                  size="sm"
+                  label={t('nav.menu')}
+                  onClick={() => setMobileNavOpen(true)}
+                  icon={<MenuIcon />}
+                />
+              </span>
               <HeaderBrand />
-            </Box>
+            </div>
 
             {/* Centre slot: primary nav links, perfectly centred between logo
                 and auth widget from 760px up. Below that, the drawer. */}
-            <Box sx={{ flex: '1 1 0', display: 'none', '@media (min-width:760px)': { display: 'flex' }, justifyContent: 'center', alignItems: 'center', gap: 2, minWidth: 0 }}>
+            <nav className="ss-nav-center">
               {primaryNavItems.map((item) => (
-                <Button
+                <Link
                   key={item.to}
-                  component={Link}
                   to={item.to}
-                  sx={navLinkSx(item.isActive(location.pathname))}
+                  className="ss-navlink"
+                  data-active={item.isActive(location.pathname)}
                 >
                   {t(item.key)}
-                </Button>
+                </Link>
               ))}
-            </Box>
+            </nav>
 
             {/* Right slot: Leaderboard + Shop icons, sound/theme toggles, and
                 the auth widget. On mobile the sound/theme toggles live in the
                 nav drawer (not here), so they never crowd the account avatar. */}
-            <Box sx={{ flex: '1 1 0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: { xs: 0.5, sm: 1 }, minWidth: 0 }}>
+            <div className="ss-slot ss-slot-end">
               {/* Icon links to the non-learning surfaces. Hidden below 760px —
                   the drawer covers them there. */}
-              <Box sx={{ display: 'none', '@media (min-width:760px)': { display: 'inline-flex' }, alignItems: 'center' }}>
+              <span className="ss-show-desktop" style={{ alignItems: 'center', gap: 2 }}>
                 {showLeaderboardIcon && (
-                  <Tooltip title={t('nav.leaderboard')}>
-                    <IconButton
-                      component={Link}
-                      to="/leaderboard"
-                      aria-label={t('nav.leaderboard')}
-                      sx={{ color: location.pathname === '/leaderboard' ? 'var(--brand-accent)' : 'text.secondary' }}
-                    >
-                      <TrophyNavIcon />
-                    </IconButton>
-                  </Tooltip>
+                  <AxIconButton
+                    variant="ghost"
+                    size="sm"
+                    label={t('nav.leaderboard')}
+                    tooltip={t('nav.leaderboard')}
+                    onClick={() => navigate('/leaderboard')}
+                    icon={<TrophyNavIcon />}
+                  />
                 )}
-                <Tooltip title={t('nav.shop')}>
-                  <IconButton
-                    component={Link}
-                    to="/shop"
-                    aria-label={t('nav.shop')}
-                    sx={{ color: location.pathname === '/shop' ? 'var(--brand-accent)' : 'text.secondary' }}
-                  >
-                    <ShopNavIcon />
-                  </IconButton>
-                </Tooltip>
-              </Box>
+                <AxIconButton
+                  variant="ghost"
+                  size="sm"
+                  label={t('nav.shop')}
+                  tooltip={t('nav.shop')}
+                  onClick={() => navigate('/shop')}
+                  icon={<ShopNavIcon />}
+                />
+              </span>
               {/* Sound + theme toggles, grouped into the profile section on
                   desktop/tablet. Hidden below `sm` — the nav drawer covers
                   them there. */}
-              <Box sx={{ display: { xs: 'none', sm: 'inline-flex' }, alignItems: 'center', gap: 0.25 }}>
+              <span className="ss-toggles">
                 {utilityToggles}
-              </Box>
+              </span>
               <Suspense fallback={null}>
                 <AuthButton />
               </Suspense>
-            </Box>
-          </Toolbar>
-        </AppBar>
-        <Drawer
-          anchor="left"
-          open={mobileNavOpen}
-          onClose={() => setMobileNavOpen(false)}
-          sx={{ display: 'block', '@media (min-width:760px)': { display: 'none' } }}
-        >
-          <Box sx={{ width: 240 }} role="presentation" onClick={() => setMobileNavOpen(false)}>
-            {/* Drawer header shows the platform the learner is on, and tapping
-                it opens the subject picker to switch. */}
-            <Typography
-              variant="h6"
-              component={Link}
-              to={isSubjectLocked() ? '/' : '/subjects'}
-              sx={{ p: 2, display: 'flex', alignItems: 'center', gap: 0.75, fontWeight: 700, color: activeSubject.accent, textDecoration: 'none' }}
+            </div>
+          </div>
+        </header>
+        {mobileNavOpen && (
+          <div className="ss-show-mobile">
+            <div className="ss-drawer-backdrop" onClick={() => setMobileNavOpen(false)} />
+            <div
+              className="ss-drawer-panel"
+              role="presentation"
+              onClick={() => setMobileNavOpen(false)}
             >
-              <Box component="span" aria-hidden sx={{ fontSize: '1.35rem', lineHeight: 1 }}>{activeSubject.emoji}</Box>
-              {isSubjectLocked() ? (activeSubject.standaloneBrand ?? activeSubject.label) : activeSubject.label}
-            </Typography>
-            <Divider />
-            <List>
-              {/* No "switch subject" on a standalone deploy — there's only one. */}
-              {!isSubjectLocked() && (
-                <>
-                  <ListItemButton component={Link} to="/subjects" selected={location.pathname === '/subjects'}>
-                    <ListItemText primary={t('nav.switchSubject')} />
-                  </ListItemButton>
-                  <Divider sx={{ my: 0.5 }} />
-                </>
-              )}
-              {navItems.map((item) => (
-                <ListItemButton
-                  key={item.to}
-                  component={Link}
-                  to={item.to}
-                  selected={item.isActive(location.pathname)}
-                >
-                  <ListItemText primary={t(item.key)} />
-                </ListItemButton>
-              ))}
-            </List>
-            <Divider />
-            {/* Sound + theme toggles live here on mobile. stopPropagation keeps
-                the drawer open so you can flip both without it closing. */}
-            <Box
-              sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 2, py: 1.5 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {utilityToggles}
-              <Typography variant="body2" color="text.secondary">
-                {t('nav.soundAndTheme')}
-              </Typography>
-            </Box>
-          </Box>
-        </Drawer>
+              {/* Drawer header shows the platform the learner is on, and tapping
+                  it opens the subject picker to switch. */}
+              <Link
+                to={isSubjectLocked() ? '/' : '/subjects'}
+                className="ss-drawer-brand"
+                style={{ color: activeSubject.accent }}
+              >
+                <span aria-hidden style={{ fontSize: '1.35rem', lineHeight: 1 }}>{activeSubject.emoji}</span>
+                {isSubjectLocked() ? (activeSubject.standaloneBrand ?? activeSubject.label) : activeSubject.label}
+              </Link>
+              <div style={{ height: 1, background: 'var(--color-border)' }} />
+              <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                {/* No "switch subject" on a standalone deploy — there's only one. */}
+                {!isSubjectLocked() && (
+                  <>
+                    <Link
+                      to="/subjects"
+                      className="ss-drawer-link"
+                      data-active={location.pathname === '/subjects'}
+                    >
+                      {t('nav.switchSubject')}
+                    </Link>
+                    <div style={{ height: 1, background: 'var(--color-border)', margin: '4px 0' }} />
+                  </>
+                )}
+                {navItems.map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    className="ss-drawer-link"
+                    data-active={item.isActive(location.pathname)}
+                  >
+                    {t(item.key)}
+                  </Link>
+                ))}
+              </div>
+              <div style={{ height: 1, background: 'var(--color-border)' }} />
+              {/* Sound + theme toggles live here on mobile. stopPropagation keeps
+                  the drawer open so you can flip both without it closing. */}
+              <div
+                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 16px' }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {utilityToggles}
+                <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                  {t('nav.soundAndTheme')}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
         </>
       )}
 
-      <Box
-        component="main"
+      <main
         id="main-content"
         tabIndex={-1}
-        sx={{
+        style={{
           // The ONLY scroll container in the app: pages taller than the
           // viewport scroll here, keeping the chrome + ocean footer in place.
           flex: 1,
@@ -586,13 +532,13 @@ function App() {
           display: 'flex',
           justifyContent: 'center',
           padding: isDev
-            ? { xs: '0.5rem', sm: '0.5rem 1rem' }
+            ? (mobile ? '0.5rem' : '0.5rem 1rem')
             : isQuiz
-              ? { xs: '0.75rem', sm: '1rem 1.5rem' }
-              : { xs: '1rem', sm: '1.5rem' },
+              ? (mobile ? '0.75rem' : '1rem 1.5rem')
+              : (mobile ? '1rem' : '1.5rem'),
           // Clear the floating ocean overlay so anchored buttons and the end
           // of scrolled pages never sit under the waterline.
-          pb: isDev ? undefined : '2.5rem',
+          paddingBottom: isDev ? undefined : '2.5rem',
           boxSizing: 'border-box',
           outline: 'none',
         }}
@@ -601,7 +547,7 @@ function App() {
             (and scroll within <main>); question screens (quiz/challenge/lesson)
             set flex:1 on their root to fill EXACTLY one viewport, keeping the
             answers anchored in a stable position with no page scroll. */}
-        <Box sx={{ width: '100%', maxWidth: contentMaxWidth, minWidth: 0, minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: '100%', maxWidth: contentMaxWidth, minWidth: 0, minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
           {/* Route transition: each navigation fades/slides the new view in.
               `mode="wait"` lets the old view fade out first; `initial={false}`
               skips the animation on the very first load. Reduced-motion users
@@ -633,70 +579,57 @@ function App() {
               </Suspense>
             </m.div>
           </AnimatePresence>
-        </Box>
-      </Box>
+        </div>
+      </main>
 
       {/* StudyShark ocean: pinned to the bottom of the fixed-height shell, so the
           waterline + surfacing fins are visible on every page, always. Hidden
           only in the /dev admin console. */}
       {!isDev && (
-        <Box
-          component="footer"
+        <footer
           aria-hidden
           // Transparent overlay pinned to the shell bottom (not a layout band):
           // the wave + fins float over whatever is behind them, so there is no
           // solid background strip. Content scrolls beneath; pointer-events off.
-          sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 30, zIndex: 1, overflow: 'hidden', pointerEvents: 'none' }}
+          style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 30, zIndex: 1, overflow: 'hidden', pointerEvents: 'none' }}
         >
-          <Box sx={{ position: 'absolute', left: 0, right: 0, bottom: 8 }}>
+          <div style={{ position: 'absolute', left: 0, right: 0, bottom: 8 }}>
             <Waterline />
-          </Box>
+          </div>
           {fins.map((fin, i) => (
-            <Box
+            <div
               key={i}
-              sx={{ position: 'absolute', bottom: 7, left: `${fin.left}%`, transform: 'translateX(-50%)', lineHeight: 0 }}
+              style={{ position: 'absolute', bottom: 7, left: `${fin.left}%`, transform: 'translateX(-50%)', lineHeight: 0 }}
             >
               {/* Slow sideways drift — ±22px over 70–120s, so the motion sits
-                  right at the edge of perception. */}
-              <Box
-                sx={{
-                  '@keyframes devsharkDrift': {
-                    '0%': { transform: 'translateX(-22px)' },
-                    '100%': { transform: 'translateX(22px)' },
-                  },
-                  animation: `devsharkDrift ${fin.driftS}s ease-in-out ${fin.delayS}s infinite alternate`,
-                  '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
+                  right at the edge of perception (keyframes in app-shell.css). */}
+              <div
+                className="ss-fin-drift"
+                style={{
+                  animation: `ssFinDrift ${fin.driftS}s ease-in-out ${fin.delayS}s infinite alternate`,
                   lineHeight: 0,
                 }}
               >
                 {/* scaleX(-1) mirrors the fin so it swims the other way. */}
-                <Box sx={{ transform: fin.flip ? 'scaleX(-1)' : 'none', lineHeight: 0 }}>
+                <div style={{ transform: fin.flip ? 'scaleX(-1)' : 'none', lineHeight: 0 }}>
                   <SwimmingFin size={20} />
-                </Box>
-              </Box>
-            </Box>
+                </div>
+              </div>
+            </div>
           ))}
-        </Box>
+        </footer>
       )}
 
       <XpToaster />
       <RegisterPromptSnackbar />
-      <Snackbar
+      <AppToast
         open={signupBonusOpen}
-        autoHideDuration={6000}
         onClose={() => setSignupBonusOpen(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert
-          severity="success"
-          variant="filled"
-          onClose={() => setSignupBonusOpen(false)}
-          sx={{ backgroundColor: 'var(--brand-accent)' }}
-        >
-          +{SIGNUP_BONUS_TOKENS} tokens · welcome to StudyShark
-        </Alert>
-      </Snackbar>
-    </Box>
+        severity="success"
+        autoHideDuration={6000}
+        message={`+${SIGNUP_BONUS_TOKENS} tokens · welcome to StudyShark`}
+      />
+    </div>
   );
 }
 

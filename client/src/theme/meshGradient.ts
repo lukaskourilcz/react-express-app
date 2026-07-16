@@ -9,7 +9,7 @@
 // through - graceful degradation for free. Kept low-alpha so foreground text
 // stays well above contrast thresholds.
 
-import type { PaletteMode } from '@mui/material';
+type PaletteMode = 'light' | 'dark';
 
 // Light mode runs noticeably richer chroma + alpha than dark: pastel washes on
 // a near-white page need the extra saturation to register at all.

@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  Box,
-  Button,
-  Paper,
-  Typography,
-  TextField,
-  Alert,
-  Chip,
-  Divider,
-  ToggleButton,
-  ToggleButtonGroup,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-} from '@mui/material';
+import { useMediaQuery } from '../lib/useMediaQuery';
+import { VStack } from '@astryxdesign/core/VStack';
+import { HStack } from '@astryxdesign/core/HStack';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Text } from '@astryxdesign/core/Text';
+import { Button } from '@astryxdesign/core/Button';
+import { Card } from '@astryxdesign/core/Card';
+import { SelectableCard } from '@astryxdesign/core/SelectableCard';
+import { Badge } from '@astryxdesign/core/Badge';
+import { Avatar } from '@astryxdesign/core/Avatar';
+import { Banner } from '@astryxdesign/core/Banner';
+import { Divider } from '@astryxdesign/core/Divider';
+import { ProgressBar } from '@astryxdesign/core/ProgressBar';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { ToggleButton } from '@astryxdesign/core/ToggleButton';
+import { ToggleButtonGroup } from '@astryxdesign/core/ToggleButton';
 import { useAuth, getUserProfile, displayNameFromProfile } from '../lib/auth';
 import {
   createMatch,
@@ -31,11 +32,11 @@ import {
 } from '../lib/play';
 import { joinMatchChannel, type RealtimeChannel } from '../lib/realtime';
 import { visibleCategoryOptionsFor } from '../lib/categories';
+import { useActiveSubject } from '../lib/subjects';
 import type { CategoryType } from '../types/quiz';
 import { friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader } from './LoadingScreen';
-import { brandButtonSx } from '../theme/MuiTheme';
 import { useT } from '../i18n/LanguageContext';
 import { useGameConfig } from '../lib/gameConfig';
 
@@ -53,6 +54,8 @@ export function PlayLanding() {
   const navigate = useNavigate();
   const t = useT();
   const config = useGameConfig();
+  const isDesktop = useMediaQuery('(min-width: 900px)');
+  const accent = useActiveSubject().accent;
   const { user, isAuthenticated, signInWithGoogle } = useAuth();
   const profile = getUserProfile(user);
   const [mode, setMode] = useState<'multiplayer' | 'classroom'>('multiplayer');
@@ -71,27 +74,38 @@ export function PlayLanding() {
 
   if (!isAuthenticated) {
     return (
-      <Paper elevation={0} sx={{ p: 4, border: '1px solid', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
-        <Typography variant="h6" sx={{ mb: 1 }}>
-          {t('play.signInTitle')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          {t('play.signInBody')}
-        </Typography>
-        <Button
-          variant="contained"
-          onClick={async () => {
-            try {
-              await signInWithGoogle();
-            } catch (err) {
-              setError(err instanceof Error ? err.message : friendlyError(err));
-            }
-          }}
-          sx={brandButtonSx}
-        >
-          {t('auth.logIn')}
-        </Button>
-      </Paper>
+      <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+        <Card padding={6} width="100%">
+          <VStack gap={2} align="center">
+            <div aria-hidden className="ss-float" style={{ fontSize: '2.8rem', lineHeight: 1 }}>🦈</div>
+            <Heading level={2} justify="center">
+              {t('play.signInTitle')}
+            </Heading>
+            <Text color="secondary" justify="center">
+              {t('play.signInBody')}
+            </Text>
+            <div style={{ marginTop: 8 }}>
+              <Button
+                variant="primary"
+                size="lg"
+                label={t('auth.logIn')}
+                onClick={async () => {
+                  try {
+                    await signInWithGoogle();
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : friendlyError(err));
+                  }
+                }}
+              />
+            </div>
+            {error && (
+              <Text type="supporting" color="secondary" justify="center">
+                {error}
+              </Text>
+            )}
+          </VStack>
+        </Card>
+      </div>
     );
   }
 
@@ -140,192 +154,255 @@ export function PlayLanding() {
   };
 
   return (
-    <Box sx={{ maxWidth: { xs: 520, md: 900 }, mx: 'auto' }}>
-      <Typography variant="h5" component="h1" sx={{ fontWeight: 700, mb: 0.5 }}>
-        {t('play.title')}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-        {t('play.subtitle')}
-      </Typography>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {/* Host + Join sit side by side on desktop (2:1) so the short "join" card
-          no longer stacks below the tall host card. They stack on mobile. */}
-      <Box sx={{ display: { md: 'grid' }, gridTemplateColumns: { md: '2fr 1fr' }, columnGap: { md: 2.5 }, alignItems: 'start' }}>
-      <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-        <Typography variant="overline" component="h2" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-          {t('play.hostGame')}
-        </Typography>
-        <ToggleButtonGroup
-          aria-label={t('play.gameMode')}
-          value={mode}
-          exclusive
-          size="small"
-          onChange={(_, v) => v && setMode(v)}
-          sx={{ mb: 2 }}
+    <div style={{ maxWidth: isDesktop ? 980 : 560, margin: '0 auto', width: '100%' }}>
+      <VStack gap={3}>
+        <div
+          className="ss-pop"
+          style={{
+            position: 'relative',
+            overflow: 'hidden',
+            borderRadius: 22,
+            padding: 'clamp(1.25rem, 3.5vw, 2rem) clamp(1rem, 3.5vw, 1.75rem)',
+            background: `radial-gradient(120% 130% at 0% -20%, ${accent}22, transparent 65%)`,
+            border: `1px solid ${accent}2e`,
+          }}
         >
-          <ToggleButton value="multiplayer" aria-label={t('play.multiplayerFfa')}>
-            {t('play.multiplayerFfa')}
-          </ToggleButton>
-          <ToggleButton value="classroom" aria-label={t('play.classroom')}>
-            {t('play.classroom')}
-          </ToggleButton>
-        </ToggleButtonGroup>
-
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Typography variant="overline" component="h3" color="text.secondary">
-            {t('play.categories')}
-          </Typography>
-          {selectedCategories.length > 0 && (
-            <Button
-              size="small"
-              onClick={() => setSelectedCategories([])}
-              sx={{ fontSize: '0.7rem', textTransform: 'none', color: 'text.secondary', minWidth: 'auto', p: '2px 8px' }}
-            >
-              {t('play.clear')}
-            </Button>
-          )}
-        </Box>
-        <Box
-          role="group"
-          aria-label={t('play.categories')}
-          sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1 }}
-        >
-          {categoryOptions.map((cat) => {
-            const selected = selectedCategories.includes(cat.value);
-            return (
-              <Chip
-                key={cat.value}
-                label={cat.label}
-                onClick={() => toggleCategory(cat.value)}
-                role="checkbox"
-                aria-checked={selected}
-                tabIndex={0}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    toggleCategory(cat.value);
-                  }
-                }}
-                size="small"
-                sx={{
-                  cursor: 'pointer',
-                  backgroundColor: 'background.paper',
-                  color: selected ? cat.color : 'text.secondary',
-                  border: selected ? `2px solid ${cat.color}` : '1px solid',
-                  borderColor: selected ? cat.color : 'divider',
-                  borderLeft: `4px solid ${cat.color}`,
-                  borderRadius: 1,
-                  fontWeight: selected ? 600 : 500,
-                  '&:hover': { backgroundColor: 'action.hover' },
-                }}
-              />
-            );
-          })}
-        </Box>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
-          {selectedCategories.length === 0
-            ? t('play.allCategoriesHint')
-            : t('play.categoriesSelected', { count: selectedCategories.length })}
-        </Typography>
-
-        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          {config.play.countOptions.map((n) => (
-            <Button
-              key={n}
-              variant="outlined"
-              size="small"
-              onClick={() => setCount(n)}
-              sx={{
-                minWidth: 44,
-                borderColor: count === n ? 'var(--brand-accent)' : 'divider',
-                color: count === n ? 'var(--brand-accent)' : 'text.secondary',
+          <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 12, right: 18, fontSize: '1.8rem', opacity: 0.75 }}>🎮</span>
+          <span aria-hidden className="ss-float" style={{ position: 'absolute', bottom: 10, right: 60, fontSize: '1.2rem', opacity: 0.55, animationDelay: '1.5s' }}>🫧</span>
+          <HStack gap={1.5} align="center">
+            <div
+              aria-hidden
+              className="ss-emoji-tile ss-float"
+              style={{
+                width: 52,
+                height: 52,
+                fontSize: '1.7rem',
+                flexShrink: 0,
+                background: `linear-gradient(135deg, ${accent}2b, ${accent}12)`,
+                boxShadow: `inset 0 0 0 1.5px ${accent}44, 0 6px 16px ${accent}22`,
               }}
             >
-              {n}
-            </Button>
-          ))}
-          <Typography variant="caption" color="text.secondary" sx={{ alignSelf: 'center', ml: 1 }}>
-            {t('play.questions')}
-          </Typography>
-        </Box>
-        <Typography variant="overline" component="h3" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-          {t('play.timeLimit')}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          {config.play.durationOptionsS.map((n) => (
-            <Button
-              key={n}
-              variant="outlined"
-              size="small"
-              onClick={() => setDurationS(n)}
-              sx={{
-                minWidth: 44,
-                borderColor: durationS === n ? 'var(--brand-accent)' : 'divider',
-                color: durationS === n ? 'var(--brand-accent)' : 'text.secondary',
-              }}
-            >
-              {formatDuration(n, t)}
-            </Button>
-          ))}
-        </Box>
-        <Button
-          fullWidth
-          variant="contained"
-          onClick={handleCreate}
-          disabled={loading !== null}
-          sx={brandButtonSx}
-        >
-          {loading === 'create'
-            ? t('play.creating')
-            : mode === 'multiplayer'
-              ? t('play.createMultiplayer')
-              : t('play.createClassroom')}
-        </Button>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-          {mode === 'multiplayer' ? t('play.multiplayerHint') : t('play.classroomHint')}
-        </Typography>
-      </Paper>
+              🦈
+            </div>
+            <VStack gap={0.5}>
+              <Heading level={1} type="display-3">
+                <span className="ss-gradient-text">{t('play.title')}</span>
+              </Heading>
+              <Text type="large" color="secondary">
+                {t('play.subtitle')}
+              </Text>
+            </VStack>
+          </HStack>
+        </div>
 
-      <Box>
-        <Divider sx={{ my: 2, display: { xs: 'block', md: 'none' } }}>{t('play.or')}</Divider>
-
-        <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-        <Typography variant="overline" component="h2" color="text.secondary" sx={{ display: 'block', mb: 1.5 }}>
-          {t('play.joinWithCode')}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
-          <TextField
-            fullWidth
-            label={t('play.matchCode')}
-            placeholder="ABC123"
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-            inputProps={{
-              maxLength: 8,
-              style: { textTransform: 'uppercase', letterSpacing: '0.2em', fontFamily: 'monospace' },
-              'aria-label': t('play.matchCode'),
-            }}
-            size="small"
+        {error && (
+          <Banner
+            status="error"
+            title={error}
+            isDismissable
+            onDismiss={() => setError(null)}
           />
-          <Button
-            variant="contained"
-            onClick={handleJoin}
-            disabled={loading !== null}
-            sx={{ flexShrink: 0, width: { xs: '100%', sm: 'auto' } }}
-          >
-            {loading === 'join' ? '…' : t('play.join')}
-          </Button>
-        </Box>
-        </Paper>
-      </Box>
-      </Box>
-    </Box>
+        )}
+
+        {/* Host + Join sit side by side on desktop (2:1) so the short "join" card
+            no longer stacks below the tall host card. They stack on mobile. */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isDesktop ? '2fr 1fr' : '1fr',
+            gap: 20,
+            alignItems: 'start',
+          }}
+        >
+          <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+          <Card padding={4} width="100%">
+            <VStack gap={3}>
+              <VStack gap={2}>
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1.15rem', lineHeight: 1 }}>🚀</span>
+                  <Text type="label" weight="bold" color="secondary">
+                    {t('play.hostGame')}
+                  </Text>
+                </HStack>
+                <ToggleButtonGroup
+                  label={t('play.gameMode')}
+                  type="single"
+                  size="sm"
+                  value={mode}
+                  onChange={(v) => v && setMode(v as 'multiplayer' | 'classroom')}
+                >
+                  <ToggleButton value="multiplayer" label={t('play.multiplayerFfa')} />
+                  <ToggleButton value="classroom" label={t('play.classroom')} />
+                </ToggleButtonGroup>
+              </VStack>
+
+              <VStack gap={1}>
+                <HStack justify="between" align="center">
+                  <Text type="label" weight="bold" color="secondary">
+                    {t('play.categories')}
+                  </Text>
+                  {selectedCategories.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      label={t('play.clear')}
+                      onClick={() => setSelectedCategories([])}
+                    />
+                  )}
+                </HStack>
+                <div
+                  role="group"
+                  aria-label={t('play.categories')}
+                  style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}
+                >
+                  {categoryOptions.map((cat) => {
+                    const selected = selectedCategories.includes(cat.value);
+                    return (
+                      <button
+                        key={cat.value}
+                        type="button"
+                        role="checkbox"
+                        aria-checked={selected}
+                        onClick={() => toggleCategory(cat.value)}
+                        style={{
+                          cursor: 'pointer',
+                          padding: '5px 10px',
+                          fontSize: '0.8rem',
+                          fontWeight: selected ? 600 : 500,
+                          color: selected ? cat.color : 'var(--astryx-color-text-secondary, inherit)',
+                          background: selected ? `${cat.color}18` : 'transparent',
+                          border: `1px solid ${selected ? cat.color : 'var(--astryx-color-border, rgba(128,128,128,0.35))'}`,
+                          borderLeft: `4px solid ${cat.color}`,
+                          borderRadius: 8,
+                          lineHeight: 1.4,
+                        }}
+                      >
+                        {cat.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <Text type="supporting" size="xsm" color="secondary">
+                  {selectedCategories.length === 0
+                    ? t('play.allCategoriesHint')
+                    : t('play.categoriesSelected', { count: selectedCategories.length })}
+                </Text>
+              </VStack>
+
+              <VStack gap={1}>
+                <HStack gap={1} align="center" wrap="wrap">
+                  <ToggleButtonGroup
+                    label={t('play.questions')}
+                    type="single"
+                    size="sm"
+                    value={String(count)}
+                    onChange={(v) => v && setCount(Number(v))}
+                  >
+                    {config.play.countOptions.map((n) => (
+                      <ToggleButton key={n} value={String(n)} label={String(n)} />
+                    ))}
+                  </ToggleButtonGroup>
+                  <Text type="supporting" size="xsm" color="secondary">
+                    {t('play.questions')}
+                  </Text>
+                </HStack>
+              </VStack>
+
+              <VStack gap={1}>
+                <Text type="label" weight="bold" color="secondary">
+                  {t('play.timeLimit')}
+                </Text>
+                <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+                  <ToggleButtonGroup
+                    label={t('play.timeLimit')}
+                    type="single"
+                    size="sm"
+                    value={String(durationS)}
+                    onChange={(v) => v && setDurationS(Number(v))}
+                  >
+                    {config.play.durationOptionsS.map((n) => (
+                      <ToggleButton key={n} value={String(n)} label={formatDuration(n, t)} />
+                    ))}
+                  </ToggleButtonGroup>
+                </div>
+              </VStack>
+
+              <VStack gap={1} align="stretch">
+                <div style={{ display: 'grid' }}>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    label={
+                      loading === 'create'
+                        ? t('play.creating')
+                        : mode === 'multiplayer'
+                          ? t('play.createMultiplayer')
+                          : t('play.createClassroom')
+                    }
+                    isLoading={loading === 'create'}
+                    isDisabled={loading !== null}
+                    onClick={handleCreate}
+                  />
+                </div>
+                <Text type="supporting" size="xsm" color="secondary">
+                  {mode === 'multiplayer' ? t('play.multiplayerHint') : t('play.classroomHint')}
+                </Text>
+              </VStack>
+            </VStack>
+          </Card>
+          </div>
+
+          <div>
+            {!isDesktop && (
+              <div style={{ margin: '8px 0 16px' }}>
+                <Divider label={t('play.or')} />
+              </div>
+            )}
+            <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+            <Card padding={4} width="100%">
+              <VStack gap={2}>
+                <HStack gap={1} align="center">
+                  <span aria-hidden className="ss-float" style={{ fontSize: '1.15rem', lineHeight: 1 }}>🔑</span>
+                  <Text type="label" weight="bold" color="secondary">
+                    {t('play.joinWithCode')}
+                  </Text>
+                </HStack>
+                {/* Room code is the star of the join card: big, monospaced,
+                    accent-ringed input so it reads like a ticket stub. */}
+                <div
+                  style={{
+                    borderRadius: 14,
+                    padding: 12,
+                    background: `${accent}0f`,
+                    border: `1.5px dashed ${accent}55`,
+                  }}
+                >
+                  <div style={{ fontFamily: 'monospace', letterSpacing: '0.32em', fontWeight: 800, fontSize: '1.2rem' }}>
+                    <TextInput
+                      label={t('play.matchCode')}
+                      value={joinCode}
+                      placeholder="ABC123"
+                      onChange={(v) => setJoinCode(v.toUpperCase())}
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'grid' }}>
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    label={loading === 'join' ? '…' : `${t('play.join')} →`}
+                    isLoading={loading === 'join'}
+                    isDisabled={loading !== null}
+                    onClick={handleJoin}
+                  />
+                </div>
+              </VStack>
+            </Card>
+            </div>
+          </div>
+        </div>
+      </VStack>
+    </div>
   );
 }
 
@@ -509,12 +586,14 @@ export function PlayMatch() {
 
   if (error && !match) {
     return (
-      <Box sx={{ maxWidth: 480, mx: 'auto' }}>
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-        <Button onClick={() => navigate('/play')}>{t('common.back')}</Button>
-      </Box>
+      <div style={{ maxWidth: 480, margin: '0 auto' }}>
+        <VStack gap={2}>
+          <Banner status="error" title={error} />
+          <div>
+            <Button variant="secondary" label={t('common.back')} onClick={() => navigate('/play')} />
+          </div>
+        </VStack>
+      </div>
     );
   }
   if (!match) return null;
@@ -524,59 +603,64 @@ export function PlayMatch() {
 
   return (
     // Same question-column width as Quiz / Learn / Challenge.
-    <Box sx={{ maxWidth: { xs: 680, sm: 560 }, mx: 'auto', width: '100%' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-        <Box>
-          <Typography variant="h6" component="h1" sx={{ fontWeight: 700 }}>
-            {match.mode === 'classroom' ? t('play.classroom') : t('play.multiplayer')}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {t('play.hostedBy', { name: match.host_name })}
-          </Typography>
-        </Box>
-        <CodeBadge code={code} />
-      </Box>
+    <div style={{ maxWidth: 620, margin: '0 auto', width: '100%' }}>
+      <VStack gap={2}>
+        <HStack justify="between" align="center" gap={2}>
+          <VStack gap={0}>
+            <Heading level={1} type="display-3">
+              {match.mode === 'classroom' ? t('play.classroom') : t('play.multiplayer')}
+            </Heading>
+            <Text type="supporting" size="xsm" color="secondary">
+              {t('play.hostedBy', { name: match.host_name })}
+            </Text>
+          </VStack>
+          <CodeBadge code={code} />
+        </HStack>
 
-      {error && (
-        <Alert severity="warning" onClose={() => setError(null)} sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
+        {error && (
+          <Banner
+            status="warning"
+            title={error}
+            isDismissable
+            onDismiss={() => setError(null)}
+          />
+        )}
 
-      {match.status === 'lobby' && (
-        <Lobby
-          match={match}
-          participants={participants}
-          isHost={isHost}
-          onStart={startMatch}
-        />
-      )}
+        {match.status === 'lobby' && (
+          <Lobby
+            match={match}
+            participants={participants}
+            isHost={isHost}
+            onStart={startMatch}
+          />
+        )}
 
-      {match.status === 'running' && currentQuestion && (
-        <RunningQuestion
-          match={match}
-          questionIdx={match.current_index}
-          total={totalQuestions}
-          q={currentQuestion}
-          isHost={isHost}
-          mode={match.mode}
-          selected={selected}
-          submitted={submitted}
-          onSelect={setSelected}
-          onSubmit={submitAnswer}
-          onAdvance={advance}
-          onFinish={finish}
-          scoreboard={scoreboard}
-          participants={participants}
-          hostSub={user?.id}
-          code={code}
-        />
-      )}
+        {match.status === 'running' && currentQuestion && (
+          <RunningQuestion
+            match={match}
+            questionIdx={match.current_index}
+            total={totalQuestions}
+            q={currentQuestion}
+            isHost={isHost}
+            mode={match.mode}
+            selected={selected}
+            submitted={submitted}
+            onSelect={setSelected}
+            onSubmit={submitAnswer}
+            onAdvance={advance}
+            onFinish={finish}
+            scoreboard={scoreboard}
+            participants={participants}
+            hostSub={user?.id}
+            code={code}
+          />
+        )}
 
-      {match.status === 'finished' && (
-        <Finished match={match} scoreboard={scoreboard} onLeave={() => navigate('/play')} />
-      )}
-    </Box>
+        {match.status === 'finished' && (
+          <Finished match={match} scoreboard={scoreboard} onLeave={() => navigate('/play')} />
+        )}
+      </VStack>
+    </div>
   );
 }
 
@@ -584,13 +668,10 @@ const CodeBadge = ({ code }: { code: string }) => {
   const t = useT();
   const [copied, setCopied] = useState(false);
   return (
-    <Chip
-      label={
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-          <span style={{ fontFamily: 'monospace', letterSpacing: '0.2em' }}>{code}</span>
-          <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>{copied ? t('play.copied') : t('play.copy')}</span>
-        </Box>
-      }
+    <Button
+      variant="secondary"
+      size="sm"
+      label={`${code} — ${copied ? t('play.copied') : t('play.copy')}`}
       onClick={() => {
         navigator.clipboard.writeText(code).then(
           () => {
@@ -600,8 +681,12 @@ const CodeBadge = ({ code }: { code: string }) => {
           () => {},
         );
       }}
-      sx={{ fontWeight: 700, cursor: 'pointer' }}
-    />
+    >
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ fontFamily: 'monospace', letterSpacing: '0.2em', fontWeight: 700 }}>{code}</span>
+        <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>{copied ? t('play.copied') : t('play.copy')}</span>
+      </span>
+    </Button>
   );
 };
 
@@ -619,79 +704,84 @@ function Lobby({
   const t = useT();
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/play/${match.code}` : '';
   return (
-    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <Typography variant="h6" sx={{ mb: 1 }}>
-        {t('play.lobby')}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        {t('play.shareInstructions', {
-          code: match.code,
-          action: isHost ? t('play.actionHostStart') : t('play.actionGuestWait'),
-        })}
-      </Typography>
+    <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
+    <Card padding={4} width="100%">
+      <VStack gap={3}>
+        <VStack gap={1}>
+          <HStack gap={1.5} align="center">
+            <span aria-hidden className="ss-float" style={{ fontSize: '1.6rem', lineHeight: 1 }}>👋</span>
+            <Heading level={2}>{t('play.lobby')}</Heading>
+            {participants.length > 0 && (
+              <div
+                style={{
+                  marginLeft: 'auto',
+                  borderRadius: 999,
+                  padding: '3px 11px',
+                  fontWeight: 700,
+                  fontSize: '0.78rem',
+                  color: 'var(--brand-accent)',
+                  background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
+                }}
+              >
+                {participants.length}
+              </div>
+            )}
+          </HStack>
+          <Text color="secondary">
+            {t('play.shareInstructions', {
+              code: match.code,
+              action: isHost ? t('play.actionHostStart') : t('play.actionGuestWait'),
+            })}
+          </Text>
+        </VStack>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75, mb: 3 }}>
-        {participants.map((p) => (
-          <Box
-            key={p.user_id}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              p: 1,
-              border: '1px solid',
-              borderColor: 'divider',
-              borderRadius: 1,
-            }}
-          >
-            <Box
-              sx={{
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                backgroundColor: 'var(--brand-accent-soft)',
-                color: 'var(--brand-accent)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.85rem',
-                fontWeight: 700,
-              }}
+        <VStack gap={1}>
+          {participants.map((p, i) => (
+            <div
+              key={p.user_id}
+              className="ss-lift ss-pop"
+              style={{ display: 'flex', width: '100%', animationDelay: `${i * 55}ms` }}
             >
-              {p.display_name.slice(0, 1).toUpperCase()}
-            </Box>
-            <Typography variant="body2" sx={{ fontWeight: 500, flex: 1 }}>
-              {p.display_name}
-            </Typography>
-            {p.user_id === match.host_id && <Chip size="small" label={t('play.host')} />}
-          </Box>
-        ))}
-        {participants.length === 0 && (
-          <Typography variant="caption" color="text.secondary">
-            {t('play.noPlayers')}
-          </Typography>
-        )}
-      </Box>
+              <Card variant="muted" padding={1.5} width="100%">
+                <HStack gap={1.5} align="center">
+                  <Avatar name={p.display_name} size="small" />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text weight="medium">{p.display_name}</Text>
+                  </div>
+                  {p.user_id === match.host_id && <Badge variant="yellow" label={`👑 ${t('play.host')}`} />}
+                </HStack>
+              </Card>
+            </div>
+          ))}
+          {participants.length === 0 && (
+            <VStack gap={1} align="center" padding={2}>
+              <span aria-hidden className="ss-float" style={{ fontSize: '2rem', lineHeight: 1 }}>🫧</span>
+              <Text type="supporting" size="xsm" color="secondary" justify="center">
+                {t('play.noPlayers')}
+              </Text>
+            </VStack>
+          )}
+        </VStack>
 
-      <Box sx={{ display: 'flex', gap: 1.5, flexDirection: { xs: 'column', sm: 'row' } }}>
-        <Button
-          variant="outlined"
-          onClick={() => navigator.clipboard.writeText(shareUrl)}
-        >
-          {t('play.copyLink')}
-        </Button>
-        {isHost && (
+        <HStack gap={1.5} wrap="wrap" justify="between">
           <Button
-            variant="contained"
-            onClick={onStart}
-            disabled={participants.length < 1}
-            sx={{ ml: 'auto', ...brandButtonSx }}
-          >
-            {t('play.startWithCount', { count: match.questions.length })}
-          </Button>
-        )}
-      </Box>
-    </Paper>
+            variant="secondary"
+            label={t('play.copyLink')}
+            onClick={() => navigator.clipboard.writeText(shareUrl)}
+          />
+          {isHost && (
+            <Button
+              variant="primary"
+              size="lg"
+              label={`🚀 ${t('play.startWithCount', { count: match.questions.length })}`}
+              isDisabled={participants.length < 1}
+              onClick={onStart}
+            />
+          )}
+        </HStack>
+      </VStack>
+    </Card>
+    </div>
   );
 }
 
@@ -763,128 +853,130 @@ function RunningQuestion({
     }
   }, [remainingMs, noLimit, isHost, submitted, selected, onSubmit]);
 
+  const timerColor = noLimit
+    ? 'var(--astryx-color-text-secondary, currentColor)'
+    : remainingS <= 5
+      ? '#d33'
+      : remainingS <= 10
+        ? '#c47f00'
+        : 'var(--astryx-color-text-secondary, currentColor)';
+
   return (
-    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-        <Typography variant="caption" color="text.secondary">
-          {t('play.questionMeta', {
-            idx: questionIdx + 1,
-            total,
-            category: q.category,
-            difficulty: q.difficulty,
-          })}
-        </Typography>
-        <Typography
-          variant="caption"
-          sx={{
-            fontFamily: 'monospace',
-            fontWeight: 700,
-            color: noLimit
-              ? 'text.secondary'
-              : remainingS <= 5
-                ? 'error.main'
-                : remainingS <= 10
-                  ? 'warning.dark'
-                  : 'text.secondary',
-          }}
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          ⏱ {noLimit ? '∞' : `${remainingS}s`}
-        </Typography>
-      </Box>
-      <Box
-        sx={{
-          height: 4,
-          borderRadius: 2,
-          backgroundColor: 'action.hover',
-          overflow: 'hidden',
-          mb: 2,
-        }}
-      >
-        <Box
-          sx={{
-            height: '100%',
-            width: `${pctLeft}%`,
-            backgroundColor: remainingS <= 5 ? 'error.main' : 'var(--brand-accent)',
-            transition: 'width 0.25s linear',
-          }}
+    <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+    <Card padding={4} width="100%">
+      <VStack gap={2}>
+        <HStack justify="between" align="center" gap={1}>
+          <Text type="supporting" size="xsm" color="secondary">
+            {t('play.questionMeta', {
+              idx: questionIdx + 1,
+              total,
+              category: q.category,
+              difficulty: q.difficulty,
+            })}
+          </Text>
+          <span
+            className={!noLimit && remainingS <= 5 ? 'ss-float' : undefined}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              fontFamily: 'monospace',
+              fontWeight: 800,
+              fontSize: '0.95rem',
+              padding: '4px 11px',
+              borderRadius: 999,
+              color: timerColor,
+              background:
+                !noLimit && remainingS <= 5
+                  ? 'color-mix(in srgb, #d33 15%, transparent)'
+                  : 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
+            }}
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            ⏱ {noLimit ? '∞' : `${remainingS}s`}
+          </span>
+        </HStack>
+
+        <ProgressBar
+          label={t('play.timeLimit')}
+          isLabelHidden
+          value={pctLeft}
+          variant={!noLimit && remainingS <= 5 ? 'error' : 'accent'}
         />
-      </Box>
-      <Box sx={{ my: 2 }}>{renderQuestion(q.question)}</Box>
 
-      <RadioGroup
-        value={selected ?? ''}
-        onChange={(e) => onSelect(parseInt(e.target.value, 10))}
-      >
-        {q.options.map((opt, i) => {
-          const isCorrect = isHost && q.correct_index === i;
-          return (
-            <FormControlLabel
-              key={i}
-              value={i}
-              disabled={submitted}
-              control={<Radio />}
-              label={opt}
-              sx={
-                isCorrect
-                  ? {
-                      borderColor: 'var(--brand-accent)',
-                      backgroundColor: 'var(--brand-accent-soft)',
-                    }
-                  : undefined
-              }
-            />
-          );
-        })}
-      </RadioGroup>
+        <div>{renderQuestion(q.question)}</div>
 
-      {!isHost && !submitted && (
-        <Button
-          variant="contained"
-          onClick={onSubmit}
-          disabled={selected === null}
-          sx={{ mt: 2, ...brandButtonSx }}
-        >
-          {t('play.lockIn')}
-        </Button>
-      )}
-      {!isHost && submitted && (
-        <Alert severity="success" sx={{ mt: 2 }}>
-          {t('play.answerLocked', {
-            who: mode === 'classroom' ? t('play.theInstructor') : t('play.theHost'),
+        <VStack gap={1}>
+          {q.options.map((opt, i) => {
+            const isCorrect = isHost && q.correct_index === i;
+            return (
+              <SelectableCard
+                key={i}
+                label={opt}
+                isSelected={isCorrect || selected === i}
+                isDisabled={submitted}
+                variant={isCorrect ? 'green' : 'default'}
+                padding={2}
+                onChange={() => onSelect(i)}
+              >
+                <Text>{opt}</Text>
+              </SelectableCard>
+            );
           })}
-        </Alert>
-      )}
+        </VStack>
 
-      {isHost && (
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="caption" color="text.secondary">
-            {t('play.liveAnswers', { count: answeredCount, total: participants.length })}
-          </Typography>
-
-          {mode === 'classroom' && hostSub && (
-            <DistributionChart code={code} questionIdx={questionIdx} hostSub={hostSub} options={q.options} correctIndex={q.correct_index} />
-          )}
-
-          <Box sx={{ display: 'flex', gap: 1, mt: 1.5 }}>
-            <Button variant="outlined" onClick={onFinish}>
-              {t('play.endMatch')}
-            </Button>
+        {!isHost && !submitted && (
+          <div style={{ display: 'grid' }}>
             <Button
-              variant="contained"
-              onClick={onAdvance}
-              sx={{ ml: 'auto', ...brandButtonSx }}
-            >
-              {lastQuestion ? t('play.showResults') : t('play.nextQuestion')}
-            </Button>
-          </Box>
-        </Box>
-      )}
+              variant="primary"
+              label={t('play.lockIn')}
+              isDisabled={selected === null}
+              onClick={onSubmit}
+            />
+          </div>
+        )}
+        {!isHost && submitted && (
+          <Banner
+            status="success"
+            title={t('play.answerLocked', {
+              who: mode === 'classroom' ? t('play.theInstructor') : t('play.theHost'),
+            })}
+          />
+        )}
 
-      <Divider sx={{ my: 3 }} />
-      <ScoreboardList scoreboard={scoreboard} />
-    </Paper>
+        {isHost && (
+          <VStack gap={1.5}>
+            <Text type="supporting" size="xsm" color="secondary">
+              {t('play.liveAnswers', { count: answeredCount, total: participants.length })}
+            </Text>
+
+            {mode === 'classroom' && hostSub && (
+              <DistributionChart
+                code={code}
+                questionIdx={questionIdx}
+                hostSub={hostSub}
+                options={q.options}
+                correctIndex={q.correct_index}
+              />
+            )}
+
+            <HStack gap={1} justify="between">
+              <Button variant="secondary" label={t('play.endMatch')} onClick={onFinish} />
+              <Button
+                variant="primary"
+                label={lastQuestion ? t('play.showResults') : t('play.nextQuestion')}
+                onClick={onAdvance}
+              />
+            </HStack>
+          </VStack>
+        )}
+
+        <Divider />
+        <ScoreboardList scoreboard={scoreboard} />
+      </VStack>
+    </Card>
+    </div>
   );
 }
 
@@ -892,39 +984,48 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
   const t = useT();
   if (scoreboard.length === 0) return null;
   return (
-    <Box>
-      <Typography variant="overline" color="text.secondary" component="h3" sx={{ display: 'block', mb: 1 }}>
-        {t('play.liveScoreboard')}
-      </Typography>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+    <VStack gap={1}>
+      <HStack gap={1} align="center">
+        <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
+        <Text type="label" weight="bold" color="secondary">
+          {t('play.liveScoreboard')}
+        </Text>
+      </HStack>
+      <VStack gap={0.5}>
         {scoreboard.map((s, i) => (
-          <Box
+          <div
             key={s.user_id}
-            sx={{
+            style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 1,
-              p: 0.75,
-              borderRadius: 1,
-              backgroundColor: i === 0 ? 'rgba(45,122,45,0.08)' : 'transparent',
+              gap: 8,
+              padding: '6px 8px',
+              borderRadius: 8,
+              background: i === 0 ? 'color-mix(in srgb, var(--brand-accent) 10%, transparent)' : 'transparent',
             }}
           >
-            <Typography variant="caption" sx={{ width: 24, fontWeight: 700, color: i === 0 ? 'var(--brand-accent)' : 'text.secondary' }}>
-              {i + 1}
-            </Typography>
-            <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {s.display_name}
-            </Typography>
-            <Typography variant="body2" sx={{ fontWeight: 700 }}>
-              {s.score ?? s.correct}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <span
+              style={{
+                width: 24,
+                textAlign: 'center',
+                fontWeight: 700,
+                fontSize: i < 3 ? '1rem' : '0.8rem',
+                color: i === 0 ? 'var(--brand-accent)' : 'inherit',
+              }}
+            >
+              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+            </span>
+            <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <Text weight="medium">{s.display_name}</Text>
+            </div>
+            <span style={{ fontWeight: 700 }}>{s.score ?? s.correct}</span>
+            <span style={{ fontSize: '0.75rem', opacity: 0.65, whiteSpace: 'nowrap', flexShrink: 0 }}>
               {s.score != null ? `· ${s.correct}✓` : ''} · {(s.total_ms / 1000).toFixed(1)}s
-            </Typography>
-          </Box>
+            </span>
+          </div>
         ))}
-      </Box>
-    </Box>
+      </VStack>
+    </VStack>
   );
 }
 
@@ -966,68 +1067,50 @@ function DistributionChart({
   const total = buckets.reduce((sum, b) => sum + b.count, 0) || 1;
 
   return (
-    <Box sx={{ mt: 2 }}>
-      <Typography variant="overline" color="text.secondary" component="h3" sx={{ display: 'block', mb: 1 }}>
+    <VStack gap={1}>
+      <Text type="label" weight="bold" color="secondary">
         {t('play.classAnswers')}
-      </Typography>
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+      </Text>
+      <VStack gap={1}>
         {options.map((opt, i) => {
           const b = buckets.find((x) => x.selected_idx === i);
           const count = b?.count ?? 0;
           const pct = (count / total) * 100;
           const isCorrect = correctIndex === i;
           return (
-            <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Typography
-                variant="caption"
-                sx={{ width: 18, fontWeight: 700, color: isCorrect ? 'var(--brand-accent)' : 'text.secondary' }}
-              >
-                {String.fromCharCode(65 + i)}
-              </Typography>
-              <Box
-                sx={{
-                  flex: 1,
-                  height: 22,
-                  borderRadius: 1,
-                  backgroundColor: 'action.hover',
-                  overflow: 'hidden',
-                  position: 'relative',
+            <HStack key={i} gap={1} align="center">
+              <span
+                style={{
+                  width: 18,
+                  fontWeight: 700,
+                  fontSize: '0.8rem',
+                  color: isCorrect ? 'var(--brand-accent)' : 'inherit',
+                  flexShrink: 0,
                 }}
               >
-                <Box
-                  sx={{
-                    height: '100%',
-                    width: `${pct}%`,
-                    backgroundColor: isCorrect ? 'var(--brand-accent)' : 'rgba(0,0,0,0.25)',
-                    transition: 'width 0.4s ease',
-                  }}
-                />
-                <Typography
-                  variant="caption"
-                  sx={{
-                    position: 'absolute',
-                    left: 8,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: 'text.primary',
-                    fontWeight: 500,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                    maxWidth: 'calc(100% - 50px)',
-                  }}
-                >
-                  {opt}
-                </Typography>
-              </Box>
-              <Typography variant="caption" sx={{ width: 36, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                {String.fromCharCode(65 + i)}
+              </span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <VStack gap={0.5}>
+                  <Text type="supporting" size="xsm">
+                    {opt}
+                  </Text>
+                  <ProgressBar
+                    label={opt}
+                    isLabelHidden
+                    value={pct}
+                    variant={isCorrect ? 'accent' : 'neutral'}
+                  />
+                </VStack>
+              </div>
+              <span style={{ width: 36, textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: '0.8rem' }}>
                 {count}
-              </Typography>
-            </Box>
+              </span>
+            </HStack>
           );
         })}
-      </Box>
-    </Box>
+      </VStack>
+    </VStack>
   );
 }
 
@@ -1042,26 +1125,40 @@ function Finished({
 }) {
   const t = useT();
   return (
-    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, border: '1px solid', borderColor: 'divider', borderRadius: 2, textAlign: 'center' }}>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 1 }}>
-        {t('play.matchComplete')}
-      </Typography>
-      {scoreboard.length > 0 && (
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          {t('play.winner', {
-            name: scoreboard[0].display_name,
-            correct: scoreboard[0].correct,
-            total: match.questions.length,
-          })}
-        </Typography>
-      )}
-      <Box sx={{ textAlign: 'left' }}>
-        <ScoreboardList scoreboard={scoreboard} />
-      </Box>
-      <Button onClick={onLeave} sx={{ mt: 3 }} variant="contained">
-        {t('common.back')}
-      </Button>
-    </Paper>
+    <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
+    <Card padding={4} width="100%">
+      <VStack gap={3} align="center">
+        <VStack gap={1.5} align="center">
+          <span aria-hidden className="ss-float" style={{ fontSize: '3rem', lineHeight: 1 }}>🎉</span>
+          <Heading level={1} type="display-3" justify="center">
+            <span className="ss-gradient-text">{t('play.matchComplete')}</span>
+          </Heading>
+          {scoreboard.length > 0 && (
+            <div
+              style={{
+                borderRadius: 999,
+                padding: '6px 16px',
+                fontWeight: 700,
+                color: 'var(--brand-accent)',
+                background: 'color-mix(in srgb, var(--brand-accent) 14%, transparent)',
+                textAlign: 'center',
+              }}
+            >
+              🥇 {t('play.winner', {
+                name: scoreboard[0].display_name,
+                correct: scoreboard[0].correct,
+                total: match.questions.length,
+              })}
+            </div>
+          )}
+        </VStack>
+        <div style={{ width: '100%', textAlign: 'left' }}>
+          <ScoreboardList scoreboard={scoreboard} />
+        </div>
+        <Button variant="primary" size="lg" label={t('common.back')} onClick={onLeave} />
+      </VStack>
+    </Card>
+    </div>
   );
 }
 

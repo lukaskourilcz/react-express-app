@@ -2,11 +2,19 @@
 // it explains what StudyShark offers and the first thing to do: sign in (so
 // progress is remembered), pick a dev path (Frontend / Backend / Fullstack),
 // then start learning. It also makes clear the whole app is free.
+//
+// Redesigned on the Astryx design system: an OKLCH mesh hero with Astryx
+// typography + buttons, and a responsive Grid of feature cards.
 
-import { useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
-import { Box, Paper, Typography, Button, Snackbar, Alert, CircularProgress, useMediaQuery, useTheme } from '@mui/material';
-import { brandButtonSx } from '../theme/MuiTheme';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { VStack } from '@astryxdesign/core/VStack';
+import { HStack } from '@astryxdesign/core/HStack';
+import { Grid } from '@astryxdesign/core/Grid';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Text } from '@astryxdesign/core/Text';
+import { Button } from '@astryxdesign/core/Button';
+import { Card } from '@astryxdesign/core/Card';
 import { heroMeshFor } from '../theme/meshGradient';
 import { useColorMode } from '../theme/ColorModeContext';
 import { SwimmingFin } from './SharkFin';
@@ -18,13 +26,14 @@ import { useActiveSubject } from '../lib/subjects';
 import { unlockExtraTopics, pushProgressToServer } from '../lib/roadmap';
 import { savePreferredTrack } from '../lib/trackPref';
 import PathPickerDialog from './PathPickerDialog';
+import { AppToast } from './ui/AppToast';
+import { useIsMobile } from '../lib/useMediaQuery';
 
-// The motion wrapper becomes the flex item, so it carries the card's flex
-// sizing and lays the (flex) Paper out to fill it.
-const CARD_MOTION_STYLE = { display: 'flex', flex: '1 1 220px', minWidth: 220 } as const;
+type Feature = { emoji: string; title: string; text: string; variant: 'green' | 'blue' | 'purple' };
 
 export default function Home() {
   const t = useT();
+  const navigate = useNavigate();
   // The hero adapts to the active subject: Web Dev keeps its curated copy;
   // other subjects use their registry label/blurb so the shell never assumes
   // "developer".
@@ -39,7 +48,7 @@ export default function Home() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [savedSnack, setSavedSnack] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
-  const isMobile = useMediaQuery(useTheme().breakpoints.down('sm'));
+  const isMobile = useIsMobile();
 
   const handleSignIn = async () => {
     setSigningIn(true);
@@ -63,107 +72,122 @@ export default function Home() {
     setPathOpen(false);
   };
 
-  const ctaSx = { px: 3, py: 1.25, fontWeight: 700, textTransform: 'none' as const };
+  const features: Feature[] = [
+    { emoji: '🧭', title: t('home.featureLearnTitle'), text: t('home.featureLearnText'), variant: 'green' },
+    { emoji: '⚡', title: t('home.featureQuizTitle'), text: t('home.featureQuizText'), variant: 'blue' },
+    ...(isMobile
+      ? []
+      : [{ emoji: '🗺️', title: t('home.featureRoadmapTitle'), text: t('home.featureRoadmapText'), variant: 'purple' as const }]),
+  ];
 
   return (
-    // One-viewport landing: hero pitch + the three things a new learner gets.
-    // Centred via auto margins, NOT justify-content: center — flexbox centre
-    // clips the top irretrievably when content overflows (iPhone Safari with
-    // its browser chrome). Auto margins collapse to zero under overflow, so
-    // the page stays top-anchored and fully scrollable instead of cropping.
-    <Box sx={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', gap: { xs: 2, sm: 3 } }}>
-      {/* Hero: Colorflow-style OKLCH mesh gradient behind the pitch. It's a
-          pure CSS background-image (zero runtime, no dependency) and degrades to
-          the flat theme background where oklch() isn't supported. */}
-      <Box
-        sx={{
-          textAlign: 'center',
+    // One-viewport landing: hero pitch + the things a new learner gets. Auto
+    // margins (top on hero, bottom on cards) centre the block but collapse under
+    // overflow so the page stays top-anchored and scrollable on small screens.
+    <div style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <div
+        className="ss-pop"
+        style={{
+          position: 'relative',
+          overflow: 'hidden',
           backgroundImage: heroMeshFor(mode),
-          borderRadius: 3,
-          px: { xs: 2, sm: 4 },
-          py: { xs: 3, sm: 5 },
-          mx: { xs: -0.5, sm: 0 },
-          mt: 'auto',
+          borderRadius: 28,
+          marginTop: 'auto',
+          padding: 'clamp(1.75rem, 4vw, 3.25rem) clamp(1rem, 4vw, 2.5rem)',
+          boxShadow: '0 20px 60px var(--ss-hero-glow)',
+          border: '1px solid var(--ss-ring)',
         }}
       >
-        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1, mb: { xs: 1, sm: 2 } }}>
-          <SwimmingFin size={34} />
-          <Typography variant="overline" sx={{ color: 'var(--brand-accent)', fontWeight: 800, letterSpacing: 1.5 }}>
-            StudyShark
-          </Typography>
-        </Box>
-        <Typography variant="h3" component="h1" sx={{ fontWeight: 900, mb: 1.25, lineHeight: 1.1, fontSize: { xs: '1.85rem', sm: '2.75rem' } }}>
-          {heroTitle}
-        </Typography>
-        <Typography variant="h6" component="p" sx={{ color: 'text.secondary', fontWeight: 400, maxWidth: 680, mx: 'auto', mb: { xs: 2, sm: 2.5 }, fontSize: { xs: '1rem', sm: '1.15rem' } }}>
-          {heroSubtitle}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
-          {isAuthenticated ? (
-            hasChosenPath ? (
-              <Button variant="contained" size="large" component={Link} to="/learn" sx={{ ...brandButtonSx, ...ctaSx }}>
-                {t('home.continueTrack', { track: tracksForActiveSubject()[track].label })}
-              </Button>
+        {/* Playful floating sea-life, purely decorative. */}
+        <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 18, left: 22, fontSize: '1.7rem', opacity: 0.7 }}>🐠</span>
+        <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 28, right: 30, fontSize: '2rem', opacity: 0.7, animationDelay: '1.2s' }}>🦈</span>
+        <span aria-hidden className="ss-float" style={{ position: 'absolute', bottom: 20, right: 64, fontSize: '1.4rem', opacity: 0.6, animationDelay: '2.1s' }}>🫧</span>
+        <VStack gap={2} align="center">
+          <HStack gap={1} align="center">
+            <span className="ss-float" style={{ display: 'inline-flex' }}>
+              <SwimmingFin size={30} />
+            </span>
+            <Text type="label" weight="bold" color="accent">
+              STUDYSHARK
+            </Text>
+          </HStack>
+          <Heading level={1} type="display-2" justify="center">
+            {heroTitle}
+          </Heading>
+          <div style={{ maxWidth: 640 }}>
+            <Text type="large" color="secondary" justify="center">
+              {heroSubtitle}
+            </Text>
+          </div>
+          <HStack gap={1.5} justify="center" wrap="wrap">
+            {isAuthenticated ? (
+              hasChosenPath ? (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  label={t('home.continueTrack', { track: tracksForActiveSubject()[track].label })}
+                  onClick={() => navigate('/learn')}
+                />
+              ) : (
+                <>
+                  <Button variant="primary" size="lg" label={t('home.ctaChoosePath')} onClick={() => setPathOpen(true)} />
+                  <Button variant="secondary" size="lg" label={t('home.ctaLearn')} onClick={() => navigate('/learn')} />
+                </>
+              )
             ) : (
               <>
-                <Button variant="contained" size="large" onClick={() => setPathOpen(true)} sx={{ ...brandButtonSx, ...ctaSx }}>
-                  {t('home.ctaChoosePath')}
-                </Button>
-                <Button variant="outlined" size="large" component={Link} to="/learn" sx={ctaSx}>
-                  {t('home.ctaLearn')}
-                </Button>
+                <Button
+                  variant="primary"
+                  size="lg"
+                  label={t('home.ctaSignIn')}
+                  isLoading={signingIn}
+                  onClick={handleSignIn}
+                />
+                <Button variant="secondary" size="lg" label={t('home.ctaQuiz')} onClick={() => navigate('/quiz')} />
               </>
-            )
-          ) : (
-            <>
-              <Button
-                variant="contained"
-                size="large"
-                onClick={handleSignIn}
-                disabled={signingIn}
-                startIcon={signingIn ? <CircularProgress size={18} color="inherit" /> : undefined}
-                sx={{ ...brandButtonSx, ...ctaSx }}
-              >
-                {t('home.ctaSignIn')}
-              </Button>
-              <Button variant="outlined" size="large" component={Link} to="/quiz" sx={ctaSx}>
-                {t('home.ctaQuiz')}
-              </Button>
-            </>
-          )}
-        </Box>
-        {/* The free promise lives right under the decision point — one quiet
-            line instead of a whole banner section. */}
-        <Typography variant="caption" sx={{ display: 'block', mt: 1.5, color: 'text.secondary' }}>
-          {t('home.freeText')}
-        </Typography>
-      </Box>
+            )}
+          </HStack>
+          <Text type="supporting" size="xsm" color="secondary" justify="center">
+            {t('home.freeText')}
+          </Text>
+        </VStack>
+      </div>
 
-      {/* What a new learner gets — compact chalkboards. The career-roadmap
-          card is desktop-only: on phones two cards keep the landing inside
-          one screen, and the roadmap is a big-picture surface anyway. */}
-      <Box sx={{ display: 'flex', gap: { xs: 1.5, sm: 2 }, flexWrap: 'wrap', mb: 'auto' }}>
-        {[
-          { title: t('home.featureLearnTitle'), text: t('home.featureLearnText') },
-          { title: t('home.featureQuizTitle'), text: t('home.featureQuizText') },
-          ...(isMobile ? [] : [{ title: t('home.featureRoadmapTitle'), text: t('home.featureRoadmapText') }]),
-        ].map((f, i) => (
-          <MotionItem key={f.title} index={i} style={CARD_MOTION_STYLE}>
-            <FeatureCard title={f.title} text={f.text} />
-          </MotionItem>
-        ))}
-      </Box>
+      {/* What a new learner gets. The career-roadmap card is desktop-only: on
+          phones two cards keep the landing inside one screen. */}
+      <div style={{ marginBottom: 'auto' }}>
+        <Grid columns={{ minWidth: 220, max: 3 }} gap={2}>
+          {features.map((f, i) => (
+            <MotionItem key={f.title} index={i} style={{ display: 'flex', width: '100%' }}>
+              <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+                <Card variant={f.variant} padding={4} width="100%">
+                  <VStack gap={1.5}>
+                    <div
+                      aria-hidden
+                      className="ss-emoji-tile"
+                      style={{ width: 44, height: 44, fontSize: '1.5rem', background: 'var(--ss-card-bg)' }}
+                    >
+                      {f.emoji}
+                    </div>
+                    <Heading level={3}>{f.title}</Heading>
+                    <Text type="supporting" color="secondary">
+                      {f.text}
+                    </Text>
+                  </VStack>
+                </Card>
+              </div>
+            </MotionItem>
+          ))}
+        </Grid>
+      </div>
 
-      <Snackbar
+      <AppToast
         open={!!authError}
-        autoHideDuration={5000}
         onClose={() => setAuthError(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity="error" variant="filled" onClose={() => setAuthError(null)}>
-          {authError}
-        </Alert>
-      </Snackbar>
+        severity="error"
+        message={authError}
+        autoHideDuration={5000}
+      />
 
       <PathPickerDialog
         open={pathOpen}
@@ -171,74 +195,13 @@ export default function Home() {
         current={track}
         onChoose={handleChoosePath}
       />
-      <Snackbar
+      <AppToast
         open={!!savedSnack}
-        autoHideDuration={3000}
         onClose={() => setSavedSnack(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity="success" variant="filled" onClose={() => setSavedSnack(null)} sx={{ backgroundColor: 'var(--brand-accent)' }}>
-          {savedSnack}
-        </Alert>
-      </Snackbar>
-    </Box>
-  );
-}
-
-/* ──── Chalkboard cards ─────────────────────────────────────────────────────
- * The "how to get started" and "what's inside" cards are styled as little slate
- * chalkboards: a dark green slate inside a wooden frame, chalk-white text with a
- * faint chalk glow, and a hand-drawn underline beneath each heading. Sharp
- * corners (the wood frame) keep them in step with the rest of the redesign. The
- * dark surface is the same in light and dark mode by design — a chalkboard is a
- * chalkboard. */
-const CHALK = '#f1f5ee';
-const CHALK_DIM = 'rgba(241, 245, 238, 0.74)';
-
-const chalkboardSx = {
-  flex: '1 1 220px',
-  minWidth: 220,
-  p: { xs: 1.75, sm: 2.5 },
-  borderRadius: 0,
-  color: CHALK,
-  backgroundColor: '#21302a',
-  // Faint, uneven chalk dust so the slate isn't a flat fill.
-  backgroundImage:
-    'radial-gradient(circle at 18% 12%, rgba(255,255,255,0.05), transparent 42%), radial-gradient(circle at 85% 88%, rgba(255,255,255,0.04), transparent 38%)',
-  border: '6px solid #3b2c1e', // wooden frame
-  boxShadow:
-    'inset 0 0 0 2px rgba(255,255,255,0.06), inset 0 0 34px rgba(0,0,0,0.5), 0 4px 14px rgba(0,0,0,0.22)',
-} as const;
-
-// A chalky heading with a hand-drawn underline.
-function ChalkHeading({ children }: { children: ReactNode }) {
-  return (
-    <Typography
-      component="h3"
-      sx={{
-        fontWeight: 800,
-        color: CHALK,
-        textShadow: '0 0 1px rgba(255,255,255,0.35)',
-        display: 'inline-block',
-        pb: 0.4,
-        borderBottom: '2px solid rgba(241,245,238,0.4)',
-        lineHeight: 1.3,
-      }}
-    >
-      {children}
-    </Typography>
-  );
-}
-
-function FeatureCard({ title, text }: { title: string; text: string }) {
-  return (
-    <Paper elevation={0} sx={chalkboardSx}>
-      <Box sx={{ mb: 0.75 }}>
-        <ChalkHeading>{title}</ChalkHeading>
-      </Box>
-      <Typography variant="body2" sx={{ color: CHALK_DIM }}>
-        {text}
-      </Typography>
-    </Paper>
+        severity="success"
+        message={savedSnack}
+        autoHideDuration={3000}
+      />
+    </div>
   );
 }

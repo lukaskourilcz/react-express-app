@@ -1,31 +1,24 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import {
-  Card,
-  CardContent,
-  Button,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  LinearProgress,
-  Typography,
-  Box,
-  Alert,
-  Chip,
-  Paper,
-  Tooltip,
-  ClickAwayListener,
-  IconButton,
-  Snackbar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { VStack } from '@astryxdesign/core/VStack';
+import { HStack } from '@astryxdesign/core/HStack';
+import { Grid } from '@astryxdesign/core/Grid';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Text } from '@astryxdesign/core/Text';
+import { Button } from '@astryxdesign/core/Button';
+import { Card } from '@astryxdesign/core/Card';
+import { Badge } from '@astryxdesign/core/Badge';
+import { SelectableCard } from '@astryxdesign/core/SelectableCard';
+import { ProgressBar } from '@astryxdesign/core/ProgressBar';
+import { Banner } from '@astryxdesign/core/Banner';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
+import { Popover } from '@astryxdesign/core/Popover';
+import { AlertDialog } from '@astryxdesign/core/AlertDialog';
+import { AppToast } from './ui/AppToast';
 import { useAuth, getUserProfile } from '../lib/auth';
+import { useActiveSubject } from '../lib/subjects';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
-import { quizStyles, CATEGORY_GRADIENT, visuallyHidden } from '../theme/MuiTheme';
+import { CATEGORY_GRADIENT, visuallyHidden } from '../theme/MuiTheme';
 import {
   CATEGORY_LOOKUP,
   CATEGORY_OPTIONS,
@@ -33,7 +26,6 @@ import {
   onCategoryColorText,
   getCategoryHexColor,
   getCategoryLabel,
-  categoryProgressBackground,
 } from '../lib/categories';
 import { readJSON, writeJSON } from '../lib/storage';
 import {
@@ -112,9 +104,49 @@ const ReportFlagIcon = () => (
   </svg>
 );
 
+// Shared style for the small icon-only action buttons in the review list
+// (bookmark / report / hint) — a MUI-free stand-in for IconButton size="small".
+const iconBtnStyle = (color: string): React.CSSProperties => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 32,
+  height: 32,
+  padding: 0,
+  margin: 0,
+  border: 'none',
+  borderRadius: 8,
+  background: 'transparent',
+  color,
+  cursor: 'pointer',
+});
+
+// A compact category tag that keeps each subject's brand/logo colour (Astryx
+// Badge only exposes a fixed palette, so we render the exact hex tint here).
+const CategoryTag = ({ category }: { category: CategoryType }) => (
+  <span
+    style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      height: 26,
+      padding: '0 10px',
+      borderRadius: 8,
+      fontSize: '0.78rem',
+      fontWeight: 600,
+      lineHeight: 1,
+      backgroundColor: getCategoryHexColor(category),
+      color: onCategoryColorText(category),
+    }}
+  >
+    {getCategoryLabel(category)}
+  </span>
+);
+
 function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }) {
   const { lang, t } = useLanguage();
+  const navigate = useNavigate();
   const config = useGameConfig();
+  const subject = useActiveSubject();
   const [state, setState] = useState<QuizState>('ready');
   const [sessionId, setSessionId] = useState<string>('');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -148,7 +180,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [settings] = useSettings();
 
-  const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const resultHeadingRef = useRef<HTMLDivElement | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
 
   const { isAuthenticated, user } = useAuth();
@@ -171,14 +203,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const hasCollapsedSubset =
     collapsedOptions.length > 0 && collapsedOptions.length < visibleCategoryOptions.length;
   const [showAllCategories, setShowAllCategories] = useState(false);
-  // The progress-bar gradient blends the colours of every category present in
-  // the current quiz. `categoryProgressBackground` allocates a Set + sort +
-  // gradient string; memo on the questions array keeps it from running on
-  // every answer keystroke.
-  const progressBackground = useMemo(
-    () => categoryProgressBackground(questions.map((q) => q.category)),
-    [questions],
-  );
 
   // Lookup table for the review-mode result rows. Replaces an O(n) array.find()
   // per question with an O(1) Map.get() — important when the snackbar/report
@@ -418,10 +442,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
       if (isAuthenticated && user?.id) {
         // Pre-build category breakdown once.
-        const resultsById = new Map(data.results.map((r) => [r.questionId, r]));
+        const resultsByIdLocal = new Map(data.results.map((r) => [r.questionId, r]));
         const byCategory: Record<string, { correct: number; total: number }> = {};
         for (const q of questions) {
-          const r = resultsById.get(q.id);
+          const r = resultsByIdLocal.get(q.id);
           if (!r) continue;
           const bucket = byCategory[q.category] ?? { correct: 0, total: 0 };
           bucket.total += 1;
@@ -580,347 +604,333 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   if (state === 'error') {
     return (
-      <Card className="quiz-card">
-        <CardContent sx={{ p: 3 }}>
-          <Alert
-            severity="error"
-            role="alert"
-            sx={{ mb: 2 }}
-            action={
-              <Button onClick={() => fetchQuestions(questionCount, difficultyMode, selectedCategories)} color="inherit" size="small">
-                {t('quiz.retry')}
-              </Button>
-            }
-          >
-            {error || t('error.somethingWrong')}
-          </Alert>
-          <Button onClick={handleRestart} variant="outlined" fullWidth>
-            {t('quiz.backToSettings')}
-          </Button>
-        </CardContent>
-      </Card>
+      <div style={{ width: '100%', maxWidth: 560, margin: '0 auto' }}>
+        <Card padding={5} width="100%">
+          <VStack gap={3}>
+            <Banner status="error" title={error || t('error.somethingWrong')} />
+            <HStack gap={1.5} wrap="wrap">
+              <Button
+                variant="primary"
+                label={t('quiz.retry')}
+                onClick={() => fetchQuestions(questionCount, difficultyMode, selectedCategories)}
+              />
+              <Button variant="secondary" label={t('quiz.backToSettings')} onClick={handleRestart} />
+            </HStack>
+          </VStack>
+        </Card>
+      </div>
     );
   }
 
   if (state === 'ready') {
     return (
-      <Box
-        sx={{
-          my: 'auto',
-          mx: 'auto',
-          width: '100%',
-          p: { xs: 2, sm: 3 },
-          backgroundColor: 'background.paper',
-          borderRadius: 2,
-          border: '1px solid',
-          borderColor: 'divider',
-          borderTop: `4px solid var(--brand-accent)`,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-        }}
-      >
-        <Typography variant="h5" component="h1" sx={{ mb: 0.5, fontWeight: 600, textAlign: 'center' }}>
-          {t('quiz.title')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, fontSize: '0.85rem', textAlign: 'center' }}>
-          {t('quiz.subtitle')}
-        </Typography>
-
-        {/* Secondary modes as quiet links — the single primary CTA on this
-            screen is "Start quiz" below. */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-          <Button
-            onClick={startDailyChallenge}
-            variant="text"
-            size="small"
-            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { color: 'var(--brand-accent)' } }}
-          >
-            {t('quiz.todaysChallenge')}
-          </Button>
-          <Box component="span" aria-hidden sx={{ color: 'text.disabled', alignSelf: 'center', fontSize: '0.7rem', display: { xs: 'none', sm: 'inline' } }}>•</Box>
-          <Button
-            component={Link}
-            to="/challenge"
-            variant="text"
-            size="small"
-            sx={{ textTransform: 'none', color: 'text.secondary', fontWeight: 600, '&:hover': { color: 'var(--brand-accent)' } }}
-          >
-            {t('challenge.cta')}
-          </Button>
-        </Box>
-
-        <Box component="fieldset" sx={{ mb: 2.5, p: 0, border: 0 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-            <Typography component="legend" variant="overline" color="text.secondary" sx={{ p: 0 }}>
-              {t('quiz.categories')}
-            </Typography>
-            <Button
-              size="small"
-              onClick={handleSelectAll}
-              sx={{ fontSize: '0.7rem', textTransform: 'none', color: 'text.secondary', minWidth: 'auto', p: '2px 8px' }}
-            >
-              {isAllSelected ? t('quiz.deselectAll') : t('quiz.selectAll')}
-            </Button>
-          </Box>
-          <Box role="group" aria-label={t('quiz.categoriesAria')} sx={{ display: 'flex', flexWrap: 'wrap', gap: '6px', justifyContent: 'center' }}>
-            {displayedCategoryOptions.map((cat) => {
-              const selected = selectedCategories.includes(cat.value);
-              return (
-                <Chip
-                  key={cat.value}
-                  label={cat.label}
-                  size="small"
-                  onClick={() => handleCategoryToggle(cat.value)}
-                  role="checkbox"
-                  aria-checked={selected}
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleCategoryToggle(cat.value);
-                    }
-                  }}
-                  sx={{
-                    cursor: 'pointer',
-                    backgroundColor: 'background.paper',
-                    color: selected ? cat.color : 'text.secondary',
-                    border: selected ? `2px solid ${cat.color}` : '1px solid',
-                    borderColor: selected ? cat.color : 'divider',
-                    borderLeft: `3px solid ${cat.color}`,
-                    borderRadius: 1,
-                    fontWeight: selected ? 600 : 500,
-                    fontSize: '0.72rem',
-                    // 32px tall + the row's 6px gap keeps taps comfortably
-                    // above the 24px WCAG minimum without ballooning the grid.
-                    height: 32,
-                    '& .MuiChip-label': { px: 1.1 },
-                    '&:hover': { backgroundColor: 'action.hover' },
-                  }}
-                />
-              );
-            })}
-          </Box>
-          {hasCollapsedSubset && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-              <Button
-                size="small"
-                onClick={() => setShowAllCategories((v) => !v)}
-                sx={{ fontSize: '0.72rem', textTransform: 'none', color: 'text.secondary', minWidth: 'auto', px: 1 }}
+      <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: 'auto' }}>
+        <Card padding={5} width="100%">
+          <VStack gap={4}>
+            <VStack gap={1} align="center">
+              <div
+                aria-hidden
+                className="ss-emoji-tile ss-float"
+                style={{
+                  width: 64,
+                  height: 64,
+                  fontSize: '2.25rem',
+                  background: `linear-gradient(135deg, ${subject.accent}2b, ${subject.accent}12)`,
+                  boxShadow: `inset 0 0 0 1.5px ${subject.accent}44, 0 6px 16px ${subject.accent}22`,
+                }}
               >
-                {showAllCategories ? t('quiz.showFewer') : t('quiz.showAllCategories')}
-              </Button>
-            </Box>
-          )}
-          {/* Always in the DOM so the Start button's aria-describedby target
-              exists whenever it is referenced. */}
-          <Typography variant="caption" color="error" id="categories-error" role="alert" sx={{ mt: 1, display: 'block' }}>
-            {attemptedStart && selectedCategories.length === 0 ? t('quiz.selectAtLeastOne') : ''}
-          </Typography>
-        </Box>
+                {subject.emoji}
+              </div>
+              <Heading level={1} type="display-2" justify="center">
+                <span className="ss-gradient-text">{t('quiz.title')}</span>
+              </Heading>
+              <Text type="large" color="secondary" justify="center">
+                {t('quiz.subtitle')}
+              </Text>
+            </VStack>
 
-        {selectedCategories.length > 0 && (
-          <Box sx={{ mb: 2.5, p: 1, backgroundColor: 'action.hover', borderRadius: 1 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.75 }}>
-              {t('quiz.selectedCount', { count: selectedCategories.length, total: visibleCategories.length })}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-              {selectedCategories.map((cat) => {
-                const category = CATEGORY_LOOKUP.get(cat);
-                return (
-                  <Chip
-                    key={cat}
-                    label={category?.label}
-                    size="small"
-                    sx={{
-                      height: 24,
-                      fontSize: '0.7rem',
-                      fontWeight: 500,
-                      backgroundColor: category?.color,
-                      color: onCategoryColorText(cat),
-                    }}
-                  />
-                );
-              })}
-            </Box>
-          </Box>
-        )}
+            {/* Secondary modes as quiet links — the single primary CTA on this
+                screen is "Start quiz" below. */}
+            <HStack gap={1} justify="center" wrap="wrap">
+              <Button
+                variant="ghost"
+                size="sm"
+                label={t('quiz.todaysChallenge')}
+                onClick={startDailyChallenge}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                label={t('challenge.cta')}
+                onClick={() => navigate('/challenge')}
+              />
+            </HStack>
 
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: { xs: 2.5, sm: 3 }, mb: 2.5 }}>
-          <Box component="fieldset" sx={{ p: 0, m: 0, border: 0 }}>
-            <Typography component="legend" variant="overline" color="text.secondary" sx={{ p: 0, mb: 1, display: 'block' }}>
-              {t('quiz.questionsLegend')}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-              {config.quiz.countOptions.map((count) => (
+            {/* Categories */}
+            <VStack gap={1.5} as="fieldset">
+              <HStack justify="between" align="center">
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1.1rem' }}>🗂️</span>
+                  <Text as="label" type="label" color="secondary">
+                    {t('quiz.categories')}
+                  </Text>
+                </HStack>
                 <Button
-                  key={count}
-                  variant="outlined"
-                  onClick={() => setQuestionCount(count)}
-                  aria-pressed={questionCount === count}
-                  aria-label={t('quiz.countQuestionsAria', { count })}
-                  sx={{
-                    minWidth: 42,
-                    minHeight: 40,
-                    fontWeight: 600,
-                    fontSize: '0.9rem',
-                    color: questionCount === count ? 'var(--brand-accent)' : 'text.secondary',
-                    border: questionCount === count ? `2px solid var(--brand-accent)` : '1px solid',
-                    borderColor: questionCount === count ? 'var(--brand-accent)' : 'divider',
-                  }}
-                >
-                  {count}
-                </Button>
-              ))}
-            </Box>
-          </Box>
+                  variant="ghost"
+                  size="sm"
+                  label={isAllSelected ? t('quiz.deselectAll') : t('quiz.selectAll')}
+                  onClick={handleSelectAll}
+                />
+              </HStack>
 
-          <Box component="fieldset" sx={{ p: 0, m: 0, border: 0, flex: 1 }}>
-            <Typography component="legend" variant="overline" color="text.secondary" sx={{ p: 0, mb: 1, display: 'block' }}>
-              {t('quiz.difficulty')}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-              {DIFFICULTY_VALUES.map((value) => {
-                const label = t(`difficulty.${value}` as TranslationKey);
-                const tip = t(`difficulty.${value}.tip` as TranslationKey);
-                return (
-                  <Tooltip key={value} title={tip} arrow placement="top">
-                    <Button
-                      variant="outlined"
-                      onClick={() => setDifficultyMode(value)}
-                      aria-pressed={difficultyMode === value}
-                      aria-label={t('quiz.difficultyAria', { label })}
-                      sx={{
-                        fontWeight: 500,
-                        fontSize: '0.85rem',
-                        minHeight: 40,
-                        textTransform: 'none',
-                        color: difficultyMode === value ? 'var(--brand-accent)' : 'text.secondary',
-                        border: difficultyMode === value ? `2px solid var(--brand-accent)` : '1px solid',
-                        borderColor: difficultyMode === value ? 'var(--brand-accent)' : 'divider',
-                      }}
+              <div role="group" aria-label={t('quiz.categoriesAria')} style={{ width: '100%' }}>
+                <Grid columns={{ minWidth: 150, max: 3 }} gap={1.5}>
+                  {displayedCategoryOptions.map((cat, i) => {
+                    const selected = selectedCategories.includes(cat.value);
+                    return (
+                      <div
+                        key={cat.value}
+                        className="ss-lift ss-pop"
+                        style={{ display: 'flex', width: '100%', animationDelay: `${i * 40}ms` }}
+                      >
+                        <SelectableCard
+                          label={cat.label}
+                          isSelected={selected}
+                          onChange={() => handleCategoryToggle(cat.value)}
+                          padding={1.5}
+                        >
+                          <HStack gap={1.5} align="center">
+                            <span
+                              aria-hidden
+                              className="ss-emoji-tile"
+                              style={{
+                                width: 26,
+                                height: 26,
+                                fontSize: 0,
+                                flexShrink: 0,
+                                background: `linear-gradient(135deg, ${cat.color}, ${cat.color}bb)`,
+                                boxShadow: `inset 0 0 0 1.5px ${cat.color}44, 0 0 0 3px ${cat.color}1f`,
+                              }}
+                            />
+                            <Text type="body" size="sm" weight={selected ? 'semibold' : 'medium'}>
+                              {cat.label}
+                            </Text>
+                          </HStack>
+                        </SelectableCard>
+                      </div>
+                    );
+                  })}
+                </Grid>
+              </div>
+
+              {hasCollapsedSubset && (
+                <HStack justify="center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    label={showAllCategories ? t('quiz.showFewer') : t('quiz.showAllCategories')}
+                    onClick={() => setShowAllCategories((v) => !v)}
+                  />
+                </HStack>
+              )}
+
+              {/* Always in the DOM so the Start button's aria-describedby target
+                  exists whenever it is referenced. */}
+              <div
+                id="categories-error"
+                role="alert"
+                style={{ minHeight: '1.2em', fontSize: '0.78rem', fontWeight: 600, color: '#e5484d' }}
+              >
+                {attemptedStart && selectedCategories.length === 0 ? t('quiz.selectAtLeastOne') : ''}
+              </div>
+            </VStack>
+
+            {selectedCategories.length > 0 && (
+              <Card variant="muted" padding={2} width="100%">
+                <VStack gap={1}>
+                  <Text type="supporting" size="xsm">
+                    {t('quiz.selectedCount', { count: selectedCategories.length, total: visibleCategories.length })}
+                  </Text>
+                  <HStack gap={0.5} wrap="wrap">
+                    {selectedCategories.map((cat) => {
+                      const category = CATEGORY_LOOKUP.get(cat);
+                      if (!category) return null;
+                      return (
+                        <span
+                          key={cat}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            height: 24,
+                            padding: '0 9px',
+                            borderRadius: 7,
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                            lineHeight: 1,
+                            backgroundColor: category.color,
+                            color: onCategoryColorText(cat),
+                          }}
+                        >
+                          {category.label}
+                        </span>
+                      );
+                    })}
+                  </HStack>
+                </VStack>
+              </Card>
+            )}
+
+            {/* Count + difficulty */}
+            <Grid columns={{ minWidth: 240, max: 2 }} gap={3}>
+              <VStack gap={1.5} as="fieldset">
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1.1rem' }}>🔢</span>
+                  <Text as="label" type="label" color="secondary">
+                    {t('quiz.questionsLegend')}
+                  </Text>
+                </HStack>
+                <HStack gap={1} wrap="wrap">
+                  {config.quiz.countOptions.map((count) => (
+                    <SelectableCard
+                      key={count}
+                      label={t('quiz.countQuestionsAria', { count })}
+                      isSelected={questionCount === count}
+                      onChange={() => setQuestionCount(count)}
+                      padding={1.5}
+                      width={54}
                     >
-                      {label}
-                    </Button>
-                  </Tooltip>
-                );
-              })}
-            </Box>
-          </Box>
-        </Box>
+                      <div style={{ textAlign: 'center', width: '100%' }}>
+                        <Text type="body" weight="bold">
+                          {count}
+                        </Text>
+                      </div>
+                    </SelectableCard>
+                  ))}
+                </HStack>
+              </VStack>
 
-        <Button
-          variant="contained"
-          size="large"
-          onClick={handleStart}
-          disabled={selectedCategories.length === 0}
-          fullWidth
-          aria-describedby={selectedCategories.length === 0 ? 'categories-error' : undefined}
-          sx={{
-            py: 1.5,
-            fontSize: '0.95rem',
-            fontWeight: 600,
-            textTransform: 'none',
-            borderRadius: 1,
-            ...quizStyles.brandButton,
-          }}
-        >
-          {t('quiz.startQuiz')}
-        </Button>
+              <VStack gap={1.5} as="fieldset">
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1.1rem' }}>🌊</span>
+                  <Text as="label" type="label" color="secondary">
+                    {t('quiz.difficulty')}
+                  </Text>
+                </HStack>
+                <HStack gap={1} wrap="wrap">
+                  {DIFFICULTY_VALUES.map((value) => {
+                    const label = t(`difficulty.${value}` as TranslationKey);
+                    const tip = t(`difficulty.${value}.tip` as TranslationKey);
+                    return (
+                      <Tooltip key={value} content={tip} placement="above">
+                        <span style={{ display: 'inline-flex' }}>
+                          <SelectableCard
+                            label={t('quiz.difficultyAria', { label })}
+                            isSelected={difficultyMode === value}
+                            onChange={() => setDifficultyMode(value)}
+                            padding={1.5}
+                          >
+                            <Text type="body" size="sm" weight={difficultyMode === value ? 'semibold' : 'medium'}>
+                              {label}
+                            </Text>
+                          </SelectableCard>
+                        </span>
+                      </Tooltip>
+                    );
+                  })}
+                </HStack>
+              </VStack>
+            </Grid>
 
-        <Snackbar
+            <div style={{ display: 'grid' }}>
+              <Button
+                variant="primary"
+                size="lg"
+                label={t('quiz.startQuiz')}
+                icon={<span aria-hidden style={{ fontSize: '1.15rem', lineHeight: 1 }}>🦈</span>}
+                onClick={handleStart}
+                isDisabled={selectedCategories.length === 0}
+              />
+            </div>
+          </VStack>
+        </Card>
+
+        <AppToast
           open={!!snack}
-          autoHideDuration={2500}
           onClose={() => setSnack(null)}
+          severity="info"
           message={snack ?? ''}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          autoHideDuration={2500}
         />
-      </Box>
+      </div>
     );
   }
 
   if (state === 'submitted' && result) {
+    const resultEmoji = result.percentage === 100 ? '🏆' : result.percentage >= 60 ? '🎉' : '🦈';
     return (
       <>
-        <Card className="quiz-card" sx={{ borderTop: `4px solid var(--brand-accent)` }}>
-          <CardContent className="quiz-result-card" role="region" aria-labelledby="quiz-result-heading">
-            <Typography
-              id="quiz-result-heading"
-              ref={resultHeadingRef}
-              tabIndex={-1}
-              variant="h4"
-              component="h2"
-              sx={{ mb: 2, outline: 'none' }}
-            >
-              {t('quiz.complete')}
-            </Typography>
-            <MotionPop>
-              <Typography
-                role="status"
-                aria-live="polite"
-                className="quiz-score-text"
-                sx={{
-                  background: CATEGORY_GRADIENT,
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
-              >
-                {result.percentage}%
-              </Typography>
-            </MotionPop>
-            <Typography variant="h6" sx={{ mt: 1 }}>
-              {t('quiz.scoreOutOf', { correct: result.correctAnswers, total: result.totalQuestions })}
-            </Typography>
+        <div className="ss-pop">
+        <Card padding={0} width="100%">
+          <div className="quiz-result-card" role="region" aria-labelledby="quiz-result-heading">
+            <VStack gap={2} align="center">
+              <span aria-hidden className="ss-float" style={{ fontSize: '3.25rem', lineHeight: 1 }}>
+                {resultEmoji}
+              </span>
+              <div id="quiz-result-heading" ref={resultHeadingRef} tabIndex={-1} style={{ outline: 'none' }}>
+                <Heading level={2} justify="center">
+                  {t('quiz.complete')}
+                </Heading>
+              </div>
+              <MotionPop>
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="quiz-score-text"
+                  style={{
+                    background: CATEGORY_GRADIENT,
+                    backgroundClip: 'text',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                  }}
+                >
+                  {result.percentage}%
+                </div>
+              </MotionPop>
+              <Heading level={4} justify="center">
+                {t('quiz.scoreOutOf', { correct: result.correctAnswers, total: result.totalQuestions })}
+              </Heading>
 
-            {mode === 'daily' && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1, mb: 2 }}>
-                {t('quiz.dailyComplete')}
-              </Typography>
-            )}
-            <Box
-              sx={{
-                mt: 3,
-                display: 'flex',
-                gap: 1.5,
-                justifyContent: 'center',
-                flexWrap: 'wrap',
-                flexDirection: { xs: 'column', sm: 'row' },
-                alignItems: { xs: 'stretch', sm: 'center' },
-              }}
-            >
-              <Button
-                variant="contained"
-                onClick={handleRestart}
-                sx={{ ...quizStyles.startButton, ...quizStyles.brandButton }}
-              >
-                {t('quiz.newQuiz')}
-              </Button>
-              <Button
-                variant="outlined"
-                startIcon={<ShareIcon />}
-                onClick={handleShare}
-                sx={{ textTransform: 'none' }}
-              >
-                {t('quiz.shareResult')}
-              </Button>
-              <Button
-                variant="text"
-                onClick={() => {
-                  document.getElementById('quiz-review')?.scrollIntoView({ behavior: 'smooth' });
-                }}
-                sx={{ textTransform: 'none' }}
-              >
-                {t('quiz.reviewAnswersArrow')}
-              </Button>
-              <Button variant="text" component={Link} to="/" sx={{ textTransform: 'none' }}>
-                {t('quiz.backHome')}
-              </Button>
-            </Box>
-          </CardContent>
+              {mode === 'daily' && (
+                <Text type="supporting" color="secondary" justify="center">
+                  {t('quiz.dailyComplete')}
+                </Text>
+              )}
+
+              <HStack gap={1.5} justify="center" wrap="wrap">
+                <Button variant="primary" label={t('quiz.newQuiz')} onClick={handleRestart} />
+                <Button
+                  variant="secondary"
+                  label={t('quiz.shareResult')}
+                  icon={<ShareIcon />}
+                  onClick={handleShare}
+                />
+                <Button
+                  variant="ghost"
+                  label={t('quiz.reviewAnswersArrow')}
+                  onClick={() => {
+                    document.getElementById('quiz-review')?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                />
+                <Button variant="ghost" label={t('quiz.backHome')} onClick={() => navigate('/')} />
+              </HStack>
+            </VStack>
+          </div>
         </Card>
+        </div>
 
-        <Typography variant="h6" component="h3" id="quiz-review" className="quiz-review-header">
+        <h3 id="quiz-review" className="quiz-review-header">
           {t('quiz.reviewYourAnswers', { count: questions.length })}
-        </Typography>
+        </h3>
         {questions.map((question, index) => {
           const questionResult = resultsById.get(question.id);
           const isCorrect = questionResult?.isCorrect;
@@ -928,105 +938,86 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
           return (
             <MotionItem key={question.id} index={index}>
-            <Paper
-              elevation={0}
-              className={`quiz-result-item ${isCorrect ? 'correct' : 'incorrect'}`}
-            >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <Typography variant="subtitle2" component="h4">
-                    {t('quiz.questionN', { n: index + 1 })}
-                  </Typography>
-                  <Typography
-                    component="span"
-                    variant="caption"
-                    sx={{
-                      px: 0.75,
-                      py: 0.25,
-                      borderRadius: 0.5,
-                      fontWeight: 700,
-                      backgroundColor: isCorrect ? 'success.dark' : 'error.dark',
-                      color: '#fff',
-                    }}
-                  >
-                    {isCorrect ? t('quiz.correct') : t('quiz.incorrect')}
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Tooltip title={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')} arrow placement="top">
-                    <IconButton
-                      size="small"
-                      aria-pressed={isBookmarked}
-                      aria-label={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
-                      onClick={() =>
-                        toggleBookmark(
-                          question,
-                          questionResult?.correctAnswer ?? 0,
-                          questionResult?.explanation ?? '',
-                        )
-                      }
-                      sx={{ color: isBookmarked ? 'var(--brand-accent)' : 'text.secondary' }}
+              <Card variant={isCorrect ? 'green' : 'red'} padding={4} width="100%">
+                <VStack gap={1.5}>
+                  <HStack justify="between" align="center" wrap="wrap" gap={1}>
+                    <HStack gap={1} align="center">
+                      <Heading level={4}>{t('quiz.questionN', { n: index + 1 })}</Heading>
+                      <Badge
+                        variant={isCorrect ? 'success' : 'error'}
+                        label={isCorrect ? t('quiz.correct') : t('quiz.incorrect')}
+                      />
+                    </HStack>
+                    <HStack gap={0.5} align="center">
+                      <button
+                        type="button"
+                        aria-pressed={isBookmarked}
+                        aria-label={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
+                        title={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
+                        onClick={() =>
+                          toggleBookmark(
+                            question,
+                            questionResult?.correctAnswer ?? 0,
+                            questionResult?.explanation ?? '',
+                          )
+                        }
+                        style={iconBtnStyle(isBookmarked ? 'var(--brand-accent)' : 'var(--color-text-secondary)')}
+                      >
+                        <BookmarkIcon filled={isBookmarked} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={t('quiz.reportAria')}
+                        title={t('quiz.reportAria')}
+                        onClick={() => setReportTarget(question.id)}
+                        style={iconBtnStyle('var(--color-text-secondary)')}
+                      >
+                        <ReportFlagIcon />
+                      </button>
+                      <CategoryTag category={question.category} />
+                    </HStack>
+                  </HStack>
+
+                  <div style={{ fontWeight: 500 }}>{renderQuestion(question.question)}</div>
+
+                  <Text type="body" size="sm">
+                    {t('quiz.yourAnswerLabel')}{' '}
+                    <strong>{question.options[questionResult?.selectedIndex ?? 0]}</strong>
+                  </Text>
+                  {!isCorrect && (
+                    <span style={{ color: '#16a34a' }}>
+                      <Text type="body" size="sm" color="inherit">
+                        {t('quiz.correctLabel')}{' '}
+                        <strong>{question.options[questionResult?.correctAnswer ?? 0]}</strong>
+                      </Text>
+                    </span>
+                  )}
+                  {questionResult?.explanation && (
+                    <div
+                      style={{
+                        padding: '12px 14px',
+                        backgroundColor: `${getCategoryHexColor(question.category)}1a`,
+                        borderRadius: 8,
+                        borderLeft: `4px solid ${getCategoryHexColor(question.category)}`,
+                      }}
                     >
-                      <BookmarkIcon filled={isBookmarked} />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={t('quiz.reportAria')} arrow placement="top">
-                    <IconButton
-                      size="small"
-                      aria-label={t('quiz.reportAria')}
-                      onClick={() => setReportTarget(question.id)}
-                      sx={{ color: 'text.secondary' }}
-                    >
-                      <ReportFlagIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Chip
-                    label={getCategoryLabel(question.category)}
-                    size="small"
-                    sx={{
-                      backgroundColor: getCategoryHexColor(question.category),
-                      color: onCategoryColorText(question.category),
-                      fontWeight: 600,
-                      fontSize: { xs: '0.7rem', sm: '0.8rem' },
-                      height: { xs: '24px', sm: '28px' },
-                    }}
-                  />
-                </Box>
-              </Box>
-              <Box sx={{ mb: 2, fontWeight: 500 }}>{renderQuestion(question.question)}</Box>
-              <Typography variant="body2">
-                {t('quiz.yourAnswerLabel')} <strong>{question.options[questionResult?.selectedIndex ?? 0]}</strong>
-              </Typography>
-              {!isCorrect && (
-                <Typography variant="body2" color="success.dark" sx={{ mt: 0.75 }}>
-                  {t('quiz.correctLabel')} <strong>{question.options[questionResult?.correctAnswer ?? 0]}</strong>
-                </Typography>
-              )}
-              {questionResult?.explanation && (
-                <Typography
-                  variant="body2"
-                  sx={{
-                    mt: 1.5,
-                    p: 1.5,
-                    backgroundColor: `${getCategoryHexColor(question.category)}1a`,
-                    borderRadius: 1,
-                    borderLeft: `4px solid ${getCategoryHexColor(question.category)}`,
-                  }}
-                >
-                  {questionResult.explanation}
-                </Typography>
-              )}
-            </Paper>
+                      <Text type="body" size="sm">
+                        {questionResult.explanation}
+                      </Text>
+                    </div>
+                  )}
+                </VStack>
+              </Card>
             </MotionItem>
           );
         })}
 
-        <Snackbar
+        <AppToast
           open={!!snack}
-          autoHideDuration={2500}
           onClose={() => setSnack(null)}
+          severity="info"
           message={snack ?? ''}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          autoHideDuration={2500}
         />
         <ReportDialog
           open={!!reportTarget}
@@ -1049,248 +1040,276 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     // One-viewport question layout: the question text scrolls internally if
     // long, and the answers + nav stay anchored at a stable position on every
     // question. On phones the card uses the full height; on larger screens it
-    // is capped (~80% tall, 560px wide) and centred so it doesn't balloon.
-    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', width: '100%', maxWidth: { xs: 680, sm: 560 }, mx: 'auto' }}>
+    // is capped and centred so it doesn't balloon.
+    <div
+      style={{
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        width: '100%',
+        maxWidth: 600,
+        margin: '0 auto',
+      }}
+    >
       {error && (
-        <Alert severity="error" role="alert" onClose={() => setError(null)} sx={{ mb: 1.5, flexShrink: 0 }}>
-          {error}
-        </Alert>
+        <div style={{ marginBottom: 12, flexShrink: 0 }}>
+          <Banner status="error" title={error} isDismissable onDismiss={() => setError(null)} />
+        </div>
       )}
 
-      <Card className="quiz-card" sx={{ flex: '1 1 auto', minHeight: 0, maxHeight: { sm: '80%' }, display: 'flex', flexDirection: 'column' }}>
-        <CardContent className="quiz-card-content" sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2, flexShrink: 0 }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
+      {/* Surface styled with Astryx tokens so it themes with the rest of the
+          system, while plain flex/scroll keeps the one-viewport behaviour. */}
+      <div
+        style={{
+          flex: '1 1 auto',
+          minHeight: 0,
+          maxHeight: '82%',
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'var(--color-background-card)',
+          border: '1px solid var(--color-border)',
+          borderRadius: 16,
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            padding: 'clamp(1.25rem, 4vw, 1.75rem)',
+          }}
+        >
+          {/* Progress header */}
+          <HStack gap={1.5} align="center" style={{ flexShrink: 0, marginBottom: 16 }}>
+            <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>{subject.emoji}</span>
+            <Text type="supporting" size="xsm" weight="medium">
               {currentIndex + 1}/{questions.length}
-            </Typography>
-            <LinearProgress
-              variant="determinate"
-              value={progress}
-              aria-label={t('quiz.progressAria')}
-              sx={{
-                flex: 1,
-                height: 6,
-                borderRadius: 3,
-                backgroundColor: 'action.hover',
-                '& .MuiLinearProgress-bar': { borderRadius: 3, background: progressBackground },
-              }}
-            />
-            <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 500, whiteSpace: 'nowrap', fontSize: '0.75rem' }}>
+            </Text>
+            <div style={{ flex: 1 }}>
+              <ProgressBar
+                label={t('quiz.progressAria')}
+                value={progress}
+                isLabelHidden
+                variant="accent"
+              />
+            </div>
+            <Text type="supporting" size="xsm" weight="medium">
               {answered}/{questions.length}
-            </Typography>
-          </Box>
+            </Text>
+          </HStack>
 
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.5, gap: 1, flexWrap: 'wrap', flexShrink: 0 }}>
-            <Chip
-              label={getCategoryLabel(currentQuestion.category)}
-              size="small"
-              sx={{
-                backgroundColor: getCategoryHexColor(currentQuestion.category),
-                color: onCategoryColorText(currentQuestion.category),
-                fontWeight: 600,
-                fontSize: '0.8rem',
-                height: 28,
-              }}
-            />
+          {/* Category + tags */}
+          <HStack gap={1} align="center" wrap="wrap" style={{ flexShrink: 0, marginBottom: 12 }}>
+            <CategoryTag category={currentQuestion.category} />
             {currentQuestion.tags && currentQuestion.tags.length > 0 && (
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap', ml: 'auto' }}>
+              <HStack gap={0.5} align="center" wrap="wrap" style={{ marginLeft: 'auto' }}>
                 {currentQuestion.tags.map((tag) => (
-                  <Chip
-                    key={tag}
-                    label={`#${tag}`}
-                    size="small"
-                    variant="outlined"
-                    sx={{ fontSize: '0.7rem', height: 22, color: 'text.secondary' }}
-                  />
+                  <Badge key={tag} variant="neutral" label={`#${tag}`} />
                 ))}
-              </Box>
+              </HStack>
             )}
-          </Box>
+          </HStack>
 
-          <Box
-            component="fieldset"
-            sx={{ p: 0, border: 0, m: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+          <fieldset
+            style={{
+              padding: 0,
+              border: 0,
+              margin: 0,
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
             aria-describedby={`question-text-${currentQuestion.id}`}
           >
-            <Typography component="legend" sx={visuallyHidden}>
+            <legend style={visuallyHidden}>
               {t('quiz.questionOf', { current: currentIndex + 1, total: questions.length })}
-            </Typography>
+            </legend>
 
             {/* Only the question text scrolls when long — the answers below
                 keep their anchored position. */}
-            <Box
+            <div
               id={`question-text-${currentQuestion.id}`}
               className="quiz-question-text"
-              sx={{ display: 'flex', alignItems: 'flex-start', gap: '4px', flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: 4, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}
             >
-              <Box sx={{ flex: 1 }}>{renderQuestion(currentQuestion.question)}</Box>
+              <div style={{ flex: 1 }}>{renderQuestion(currentQuestion.question)}</div>
               {currentQuestion.introduction && (
-                <ClickAwayListener onClickAway={() => setRevealedHints((prev) => ({ ...prev, [currentQuestion.id]: false }))}>
-                  <span>
-                    <Tooltip
-                      title={currentQuestion.introduction}
-                      open={!!revealedHints[currentQuestion.id]}
-                      disableHoverListener
-                      disableTouchListener
-                      arrow
-                      placement="bottom"
-                      slotProps={{
-                        tooltip: {
-                          sx: {
-                            backgroundColor: 'grey.800',
-                            fontSize: '0.82rem',
-                            lineHeight: 1.6,
-                            p: 1.5,
-                            maxWidth: 320,
-                          },
-                        },
-                        arrow: { sx: { color: 'grey.800' } },
-                      }}
-                    >
-                      <IconButton
-                        size="small"
-                        aria-label={t('quiz.showHint')}
-                        aria-pressed={!!revealedHints[currentQuestion.id]}
-                        onClick={() =>
-                          setRevealedHints((prev) => ({ ...prev, [currentQuestion.id]: !prev[currentQuestion.id] }))
-                        }
-                        sx={{
-                          mt: '1px',
-                          color: revealedHints[currentQuestion.id] ? getCategoryHexColor(currentQuestion.category) : 'text.secondary',
-                          '&:hover': { color: getCategoryHexColor(currentQuestion.category) },
-                        }}
-                      >
-                        <HintIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </span>
-                </ClickAwayListener>
+                <Popover
+                  isOpen={!!revealedHints[currentQuestion.id]}
+                  onOpenChange={(o) =>
+                    setRevealedHints((prev) => ({ ...prev, [currentQuestion.id]: o }))
+                  }
+                  placement="below"
+                  width={320}
+                  label={t('quiz.showHint')}
+                  content={
+                    <div style={{ fontSize: '0.82rem', lineHeight: 1.6 }}>
+                      {currentQuestion.introduction}
+                    </div>
+                  }
+                >
+                  <button
+                    type="button"
+                    aria-label={t('quiz.showHint')}
+                    aria-pressed={!!revealedHints[currentQuestion.id]}
+                    title={t('quiz.showHint')}
+                    style={{
+                      ...iconBtnStyle(
+                        revealedHints[currentQuestion.id]
+                          ? getCategoryHexColor(currentQuestion.category)
+                          : 'var(--color-text-secondary)',
+                      ),
+                      marginTop: 1,
+                    }}
+                  >
+                    <HintIcon />
+                  </button>
+                </Popover>
               )}
-            </Box>
+            </div>
 
-            <RadioGroup
-              value={answers[currentQuestion.id] ?? ''}
-              onChange={(e) => handleAnswer(currentQuestion.id, parseInt(e.target.value, 10))}
+            {/* Answer options as SelectableCards. Raise the anchored answers a
+                little off the wave on phones so they sit mid-lower screen. */}
+            <div
+              role="radiogroup"
               aria-labelledby={`question-text-${currentQuestion.id}`}
-              // Raise the anchored answers ~50px off the wave on phones so
-              // they sit mid-lower screen instead of at the very bottom edge.
-              sx={{ flexShrink: 0, mt: 'auto', mb: { xs: '50px', sm: 0 } }}
+              style={{ flexShrink: 0, marginTop: 'auto' }}
             >
-              <div className="quiz-options-container">
+              <VStack gap={1}>
                 {currentQuestion.options.map((option, index) => {
                   const isSelected = answers[currentQuestion.id] === index;
                   return (
-                    <FormControlLabel
+                    <SelectableCard
                       key={index}
-                      value={index}
-                      control={<Radio />}
                       label={option}
-                      sx={isSelected ? quizStyles.optionSelected : undefined}
-                    />
+                      isSelected={isSelected}
+                      onChange={() => handleAnswer(currentQuestion.id, index)}
+                      padding={2}
+                    >
+                      <HStack gap={2} align="center">
+                        <span
+                          aria-hidden
+                          style={{
+                            width: 26,
+                            height: 26,
+                            borderRadius: 8,
+                            display: 'grid',
+                            placeItems: 'center',
+                            flexShrink: 0,
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            background: isSelected ? 'var(--color-accent-muted)' : 'var(--color-background-muted)',
+                            color: isSelected ? 'var(--color-text-accent)' : 'inherit',
+                          }}
+                        >
+                          {index + 1}
+                        </span>
+                        <Text type="body" weight={isSelected ? 'semibold' : 'normal'}>
+                          {option}
+                        </Text>
+                      </HStack>
+                    </SelectableCard>
                   );
                 })}
-              </div>
-            </RadioGroup>
-            <Typography variant="caption" color="text.secondary" sx={{ display: { xs: 'none', sm: 'block' }, mt: 1, flexShrink: 0 }}>
-              {t('quiz.keyboardTip', { max: currentQuestion.options.length })}
-            </Typography>
-          </Box>
-        </CardContent>
-      </Card>
+              </VStack>
+            </div>
 
-      {/* Small coaching strip: nudges the learner toward good habits (docs
-          first, read explanations, name concepts). Rotates every 10s so the
-          same tip never lingers, only render when a question is actually up. */}
-      <Box
-        sx={{
-          mt: 1.25,
-          px: 1.5,
-          py: 0.75,
-          borderRadius: 1,
-          borderLeft: `3px solid var(--brand-accent)`,
-          backgroundColor: 'action.hover',
-          fontSize: '0.78rem',
-          color: 'text.secondary',
-          lineHeight: 1.4,
+            <div style={{ marginTop: 8, flexShrink: 0 }}>
+              <Text type="supporting" size="xsm" color="secondary">
+                {t('quiz.keyboardTip', { max: currentQuestion.options.length })}
+              </Text>
+            </div>
+          </fieldset>
+        </div>
+      </div>
+
+      {/* Small coaching strip: nudges the learner toward good habits. Rotates
+          every 10s so the same tip never lingers. */}
+      <div
+        style={{
+          marginTop: 10,
+          padding: '6px 12px',
+          borderRadius: 8,
+          borderLeft: '3px solid var(--brand-accent)',
+          background: 'var(--color-background-muted)',
           minHeight: '2.2em',
           flexShrink: 0,
+          display: 'flex',
+          alignItems: 'center',
         }}
       >
-        <RotatingTip
-          tips={[
-            t('quiz.tip1'),
-            t('quiz.tip2'),
-            t('quiz.tip3'),
-            t('quiz.tip4'),
-            t('quiz.tip5'),
-          ]}
-          intervalMs={10000}
-        />
-      </Box>
+        <Text type="supporting" size="xsm" color="secondary">
+          <RotatingTip
+            tips={[
+              t('quiz.tip1'),
+              t('quiz.tip2'),
+              t('quiz.tip3'),
+              t('quiz.tip4'),
+              t('quiz.tip5'),
+            ]}
+            intervalMs={10000}
+          />
+        </Text>
+      </div>
 
-      {/* Nav row shares the card's column and edges: Previous hugs the card's
-          left edge, Next its right, Exit sits on the exact centreline — so the
-          row always reads as centred with the card, whatever the button widths. */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mt: 2, flexShrink: 0, gap: 1 }}>
-        <Box sx={{ flex: '1 1 0', display: 'flex', justifyContent: 'flex-start' }}>
-          <Button variant="outlined" onClick={handlePrevious} disabled={currentIndex === 0} sx={quizStyles.previousButton}>
-            {t('quiz.previous')}
-          </Button>
-        </Box>
-        <Box sx={{ flex: '0 0 auto' }}>
-          <Button variant="text" onClick={handleAbandon} sx={{ color: 'text.secondary', textTransform: 'none' }}>
-            {t('quiz.exitQuiz')}
-          </Button>
-        </Box>
-        <Box sx={{ flex: '1 1 0', display: 'flex', justifyContent: 'flex-end' }}>
+      {/* Nav row shares the card's edges: Previous hugs the left, Next the
+          right, Exit sits on the centreline. */}
+      <div style={{ display: 'flex', alignItems: 'center', marginTop: 16, flexShrink: 0, gap: 8 }}>
+        <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'flex-start' }}>
+          <Button
+            variant="secondary"
+            label={t('quiz.previous')}
+            onClick={handlePrevious}
+            isDisabled={currentIndex === 0}
+          />
+        </div>
+        <div style={{ flex: '0 0 auto' }}>
+          <Button variant="ghost" label={t('quiz.exitQuiz')} onClick={handleAbandon} />
+        </div>
+        <div style={{ flex: '1 1 0', display: 'flex', justifyContent: 'flex-end' }}>
           {currentIndex === questions.length - 1 ? (
-            <Tooltip title={!allAnswered ? t('quiz.answerMore', { count: remaining }) : ''} placement="top" arrow>
-              <span>
-                <Button
-                  variant="contained"
-                  onClick={handleSubmit}
-                  disabled={!allAnswered || submitting}
-                  sx={quizStyles.submitButton}
-                >
-                  {submitting ? t('quiz.submitting') : t('quiz.submitQuiz')}
-                </Button>
-              </span>
-            </Tooltip>
+            <Button
+              variant="primary"
+              label={submitting ? t('quiz.submitting') : t('quiz.submitQuiz')}
+              onClick={handleSubmit}
+              isDisabled={!allAnswered || submitting}
+              isLoading={submitting}
+              tooltip={!allAnswered ? t('quiz.answerMore', { count: remaining }) : undefined}
+            />
           ) : (
-            <Button variant="contained" onClick={handleNext} sx={quizStyles.nextButton}>
-              {t('quiz.next')}
-            </Button>
+            <Button variant="primary" label={t('quiz.next')} onClick={handleNext} />
           )}
-        </Box>
-      </Box>
+        </div>
+      </div>
 
-      <Snackbar
+      <AppToast
         open={!!snack}
-        autoHideDuration={2500}
         onClose={() => setSnack(null)}
+        severity="info"
         message={snack ?? ''}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        autoHideDuration={2500}
       />
       <ReportDialog
         open={!!reportTarget}
         onClose={() => setReportTarget(null)}
         onSubmit={handleReport}
       />
-      <Dialog open={leaveConfirmOpen} onClose={() => setLeaveConfirmOpen(false)} aria-labelledby="leave-quiz-title">
-        <DialogTitle id="leave-quiz-title">{t('quiz.leaveTitle')}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>{t('quiz.leaveBody')}</DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setLeaveConfirmOpen(false)} autoFocus sx={{ textTransform: 'none' }}>
-            {t('quiz.leaveCancel')}
-          </Button>
-          <Button onClick={confirmAbandon} color="error" sx={{ textTransform: 'none' }}>
-            {t('quiz.leaveConfirm')}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+      <AlertDialog
+        isOpen={leaveConfirmOpen}
+        onOpenChange={setLeaveConfirmOpen}
+        title={t('quiz.leaveTitle')}
+        description={t('quiz.leaveBody')}
+        actionLabel={t('quiz.leaveConfirm')}
+        cancelLabel={t('quiz.leaveCancel')}
+        onAction={confirmAbandon}
+      />
+    </div>
   );
 }
 

@@ -1,0 +1,42 @@
+/*
+ * Minimal global reset — replaces MUI's <CssBaseline> + the old <GlobalStyles>
+ * now that MUI is removed. Box-sizing, zeroed margins, base body typography/
+ * colours from the Astryx tokens, no horizontal overflow, and the default
+ * brand accent (overwritten per-subject at runtime by ColorModeContext).
+ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  background: var(--color-background-body);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Default accent (Web Dev green) so var(--brand-accent) resolves before the
+   per-subject ColorModeContext effect runs; overwritten at runtime. */
+:root {
+  --brand-accent: #2d7a2d;
+  --brand-accent-hover: #246124;
+  --brand-accent-soft: rgba(45, 122, 45, 0.12);
+}
