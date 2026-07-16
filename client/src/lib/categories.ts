@@ -134,9 +134,29 @@ export const PRIVATE_CATEGORIES: CategoryType[] = [];
 export const PLAY_ONLY_CATEGORIES: CategoryType[] = ['cool-stuff'];
 
 // Categories whose logo color is light, so they need dark text for contrast.
-const DARK_TEXT_CATEGORIES = new Set(['javascript', 'react', 'abbreviations', 'general', 'cool-stuff']);
-export const onCategoryColorText = (cat: string) =>
-  DARK_TEXT_CATEGORIES.has(cat) ? '#1a1a1a' : '#fff';
+// Text colour for content sitting on a category's brand hex. Computed from
+// WCAG relative luminance instead of a hand-kept allowlist — with ~100
+// category colours across subjects, the list drifted and ~40% of pairs failed
+// the 4.5:1 contrast bar (e.g. white on Node green #339933 = 3.66:1).
+const onColorTextCache = new Map<string, string>();
+function textOnColor(hex: string): string {
+  const cached = onColorTextCache.get(hex);
+  if (cached) return cached;
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
+  const chan = (i: number) => {
+    const v = parseInt(full.slice(i, i + 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  };
+  const lum = 0.2126 * chan(0) + 0.7152 * chan(2) + 0.0722 * chan(4);
+  // Contrast vs white = (1.05)/(lum+0.05); vs near-black #1a1a1a ≈ (lum+0.05)/(0.0602).
+  const white = 1.05 / (lum + 0.05);
+  const dark = (lum + 0.05) / 0.0602;
+  const result = white >= dark ? '#fff' : '#1a1a1a';
+  onColorTextCache.set(hex, result);
+  return result;
+}
+export const onCategoryColorText = (cat: string) => textOnColor(getCategoryHexColor(cat));
 export const getCategoryHexColor = (category: string) =>
   CATEGORY_LOOKUP.get(category as CategoryType)?.color || '#666';
 export const getCategoryLabel = (category: string) =>

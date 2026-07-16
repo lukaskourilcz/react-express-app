@@ -24,6 +24,7 @@ import { queryClient } from '../lib/queryClient';
 import { renderQuestion } from './CodeBlock';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
+import { IconTile, BookmarkIcon, CheckCircleIcon } from './ui/icons';
 
 const FLASHCARDS_KEY = ['flashcards'] as const;
 
@@ -89,7 +90,6 @@ function Flashcards() {
       <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 520, margin: '0 auto' }}>
       <Card variant="default" padding={6} width="100%">
         <VStack gap={2} align="center">
-          <div aria-hidden className="ss-float" style={{ fontSize: '2.6rem', lineHeight: 1 }}>🦈</div>
           <Heading level={2} justify="center">{t('card.signInTitle')}</Heading>
           <Text type="body" color="secondary" justify="center">{t('card.signInBody')}</Text>
           <div style={{ marginTop: '0.5rem' }}>
@@ -110,7 +110,9 @@ function Flashcards() {
       <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 520, margin: '0 auto' }}>
       <Card variant="default" padding={6} width="100%">
         <VStack gap={2} align="center">
-          <div aria-hidden className="ss-float" style={{ fontSize: '3rem', lineHeight: 1 }}>🔖</div>
+          <IconTile size={48}>
+            <BookmarkIcon size={22} />
+          </IconTile>
           <Heading level={2} justify="center">{t('card.emptyTitle')}</Heading>
           <Text type="body" color="secondary" justify="center">{t('card.emptyHint')}</Text>
           <div style={{ marginTop: '0.5rem' }}>
@@ -135,26 +137,10 @@ function Flashcards() {
     <div style={{ maxWidth: 640, margin: '0 auto', width: '100%' }}>
       <VStack gap={3} width="100%">
         <HStack justify="between" align="center" gap={2} width="100%">
-          <HStack gap={1.5} align="center">
-            <div
-              aria-hidden
-              className="ss-emoji-tile ss-float"
-              style={{
-                width: 46,
-                height: 46,
-                fontSize: '1.5rem',
-                flexShrink: 0,
-                background: `linear-gradient(135deg, ${accent}2b, ${accent}12)`,
-                boxShadow: `inset 0 0 0 1.5px ${accent}44, 0 6px 16px ${accent}22`,
-              }}
-            >
-              🃏
-            </div>
-            <VStack gap={0.5}>
-              <Heading level={1}>{t('card.heading')}</Heading>
-              <Text type="supporting" color="secondary">{t('card.subtitle')}</Text>
-            </VStack>
-          </HStack>
+          <VStack gap={0.5}>
+            <Heading level={1}>{t('card.heading')}</Heading>
+            <Text type="supporting" color="secondary">{t('card.subtitle')}</Text>
+          </VStack>
           <div
             style={{
               flexShrink: 0,
@@ -210,10 +196,7 @@ function Flashcards() {
                 />
               ) : (
                 <VStack gap={1.5} width="100%">
-                  <HStack gap={1} align="center">
-                    <span aria-hidden style={{ fontSize: '1.1rem', lineHeight: 1 }}>💡</span>
-                    <Text type="label" color="secondary">{t('card.answerLabel')}</Text>
-                  </HStack>
+                  <Text type="label" color="secondary">{t('card.answerLabel')}</Text>
                   <div
                     className="ss-pop"
                     style={{
@@ -221,13 +204,15 @@ function Flashcards() {
                       alignItems: 'center',
                       gap: 10,
                       padding: '14px 16px',
-                      borderRadius: 12,
+                      borderRadius: 'var(--radius-element)',
                       background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
                       borderLeft: '4px solid var(--brand-accent)',
                       fontWeight: 600,
                     }}
                   >
-                    <span aria-hidden style={{ fontSize: '1.15rem', lineHeight: 1, flexShrink: 0 }}>✅</span>
+                    <span style={{ color: 'var(--ss-success-strong)', display: 'inline-flex', flexShrink: 0 }} aria-hidden>
+                      <CheckCircleIcon size={18} />
+                    </span>
                     <span>{card.correct_answer}</span>
                   </div>
                   {card.explanation && (
