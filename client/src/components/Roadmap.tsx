@@ -46,7 +46,7 @@ import {
   ASSESSMENT_QUESTION_COUNT,
   type PartRange,
 } from '../lib/roadmap';
-import { useSubject, topicsForSubject } from '../lib/subjects';
+import { useSubject, topicsForSubject, subjectNameKey } from '../lib/subjects';
 import { levelIntro, preloadLevelIntros } from '../lib/levelIntros';
 import { useRoadmapStructure } from '../lib/queries';
 import { fetchChallengeBatch } from '../lib/challengeApi';
@@ -67,6 +67,7 @@ import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { SplitText } from './reactbits/SplitText';
 import { RedFlagDialog } from './RedFlagDialog';
 import { IconTile, BoltIcon, CloseIcon, FlagIcon } from './ui/icons';
+import { CategoryGlyph } from './ui/techIcons';
 import './Roadmap.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
@@ -530,6 +531,9 @@ function Roadmap() {
   return (
     <div style={{ maxWidth: 900, margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
+          <span className="ss-kicker ss-kicker--center">{t(subjectNameKey(subject))}</span>
+        </div>
         <Heading level={1} justify="center">{t('roadmap.title')}</Heading>
         <div style={{ marginTop: 4 }}>
           <Text type="supporting" color="secondary">{t('roadmap.subtitle')}</Text>
@@ -574,6 +578,7 @@ function Roadmap() {
               onClick={() => selectTopic(value)}
               style={{ ['--rm-accent']: color, ['--rm-on-accent']: onCategoryColorText(value) } as CSSProperties}
             >
+              <CategoryGlyph category={value} color={color} size={15} />
               {getCategoryLabel(value)}
             </button>
           );

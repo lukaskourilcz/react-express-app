@@ -9,8 +9,17 @@
 // (see tracks.ts), so every surface re-renders together when it changes.
 
 import type { CategoryType, RoadmapTopic } from '../types/quiz';
+import type { TranslationKey } from '../i18n/translations';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
+
+/**
+ * i18n keys for a subject's display name / blurb — the registry's `label` and
+ * `blurb` fields are the English fallbacks; user-visible surfaces should
+ * render `t(subjectNameKey(id))` so Czech gets Czech subject names.
+ */
+export const subjectNameKey = (id: SubjectId): TranslationKey => `subject.${id}.name` as TranslationKey;
+export const subjectBlurbKey = (id: SubjectId): TranslationKey => `subject.${id}.blurb` as TranslationKey;
 
 export type SubjectId = 'webdev' | 'geography' | 'math' | 'history' | 'chess' | 'biology' | 'poker';
 export const SUBJECT_ORDER: SubjectId[] = ['webdev', 'geography', 'math', 'history', 'chess', 'biology', 'poker'];

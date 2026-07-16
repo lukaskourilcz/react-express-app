@@ -18,7 +18,7 @@ import { primeRankMarker } from './lib/xp';
 import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import { useAuth } from './lib/auth';
-import { useHasChosenSubject, useActiveSubject, isSubjectLocked } from './lib/subjects';
+import { useHasChosenSubject, useActiveSubject, isSubjectLocked, subjectNameKey } from './lib/subjects';
 import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
 import { useSettings } from './lib/settings';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
@@ -163,12 +163,13 @@ const RouteLoader = () => {
 // picker so the learner can switch what they're studying.
 function SubjectSwitcher() {
   const subject = useActiveSubject();
+  const t = useT();
   return (
     <Link
       to="/subjects"
       style={{ marginLeft: 4, display: 'inline-flex', textDecoration: 'none', borderRadius: 999 }}
     >
-      <AxBadge label={`${subject.emoji} ${subject.label}`} />
+      <AxBadge label={`${subject.emoji} ${t(subjectNameKey(subject.id))}`} />
     </Link>
   );
 }
@@ -211,7 +212,7 @@ function HeaderBrand() {
         </span>
         <span className="ss-brand-compact" style={{ alignItems: 'center', gap: 4, color: subject.accent, whiteSpace: 'nowrap' }}>
           <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1 }}>{subject.emoji}</span>
-          {subject.label}
+          {t(subjectNameKey(subject.id))}
         </span>
       </Link>
       {/* The subject chip is redundant on small screens (the drawer shows it),
@@ -525,7 +526,7 @@ function App() {
                 style={{ color: activeSubject.accent }}
               >
                 <span aria-hidden style={{ fontSize: '1.35rem', lineHeight: 1 }}>{activeSubject.emoji}</span>
-                {isSubjectLocked() ? (activeSubject.standaloneBrand ?? activeSubject.label) : activeSubject.label}
+                {isSubjectLocked() ? (activeSubject.standaloneBrand ?? activeSubject.label) : t(subjectNameKey(activeSubject.id))}
               </Link>
               <div style={{ height: 1, background: 'var(--color-border)' }} />
               <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -592,9 +593,6 @@ function App() {
             : isQuiz
               ? (mobile ? '0.75rem' : '1rem 1.5rem')
               : (mobile ? '1rem' : '1.5rem'),
-          // Clear the floating ocean overlay so anchored buttons and the end
-          // of scrolled pages never sit under the waterline.
-          paddingBottom: isDev ? undefined : '2.5rem',
           boxSizing: 'border-box',
           outline: 'none',
         }}
@@ -602,14 +600,40 @@ function App() {
         {/* minHeight 100% + flex column: normal pages take their natural height
             (and scroll within <main>); question screens (quiz/challenge/lesson)
             set flex:1 on their root to fill EXACTLY one viewport, keeping the
-            answers anchored in a stable position with no page scroll. */}
-        <div style={{ width: '100%', maxWidth: contentMaxWidth, minWidth: 0, minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+            answers anchored in a stable position with no page scroll.
+            The bottom reserve that clears the floating ocean overlay (30px of
+            waterline + fins, plus ≥12px of air) lives HERE and not as the
+            scroll container's padding: a scroll container's own bottom padding
+            is not preserved below overflowing children, so tall centred cards
+            used to end up underneath the waterline. This wrapper grows with
+            its content, so the reserve always sits below the last card. */}
+        <div
+          style={{
+            width: '100%',
+            maxWidth: contentMaxWidth,
+            minWidth: 0,
+            minHeight: '100%',
+            // flex-start, not the default stretch: stretch pins the wrapper to
+            // the viewport height as a DEFINITE size, so tall pages overflowed
+            // it and the bottom reserve never ended up below the content.
+            alignSelf: 'flex-start',
+            display: 'flex',
+            flexDirection: 'column',
+            boxSizing: 'border-box',
+            paddingBottom: isDev ? undefined : '2.75rem',
+          }}
+        >
           {/* Route transition: the new view fades in over a stable backdrop —
               no exit phase, so navigation never shows a blank beat. Reduced
               motion still gets the (movement-free) fade. */}
           <m.div
             key={location.pathname}
-            style={{ flex: 1, minHeight: 0, minWidth: 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' }}
+            // flex-basis auto (not 0): the route box must GROW with tall pages
+            // so the wrapper's bottom reserve lands below the content. With
+            // basis 0 the box stayed viewport-sized, tall cards overflowed
+            // straight through every padding, and page ends slid under the
+            // waterline overlay.
+            style={{ flex: '1 0 auto', minWidth: 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' }}
             {...ROUTE_ANIM}
             transition={ROUTE_TRANSITION}
           >

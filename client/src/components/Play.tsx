@@ -115,7 +115,7 @@ export function PlayLanding() {
     try {
       const m = await createMatch({
         host_id: user.id,
-        host_name: displayNameFromProfile(profile, 'Host'),
+        host_name: displayNameFromProfile(profile, t('play.hostFallback')),
         mode,
         count,
         categories: selectedCategories,
@@ -142,7 +142,7 @@ export function PlayLanding() {
       await joinMatch({
         code,
         user_id: user.id,
-        display_name: displayNameFromProfile(profile, 'Player'),
+        display_name: displayNameFromProfile(profile, t('play.playerFallback')),
       });
       navigate(`/play/${code}`);
     } catch (err) {
@@ -417,7 +417,7 @@ export function PlayMatch() {
         const m = await joinMatch({
           code,
           user_id: user.id,
-          display_name: displayNameFromProfile(profile, 'Player'),
+          display_name: displayNameFromProfile(profile, t('play.playerFallback')),
         });
         if (cancelled) return;
         setMatch(m);
