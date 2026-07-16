@@ -42,11 +42,10 @@ import RoadmapTree from './RoadmapTree';
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
 // Tinted Card variants cycle across the pillars so each knowledge area reads as
-// its own category — adapts to light/dark automatically.
+// its own category — adapts to light/dark automatically. The tint alone is the
+// differentiator; pillar titles stay clean text.
 type CardVariant = 'green' | 'blue' | 'purple' | 'teal' | 'orange';
 const PILLAR_VARIANTS: CardVariant[] = ['green', 'blue', 'purple', 'teal', 'orange'];
-// A playful emoji per pillar; cycles for subjects with derived pillars.
-const PILLAR_EMOJI = ['🧱', '⚛️', '🛠️', '🧠', '🚀'];
 
 interface Area {
   topic: RoadmapTopic;
@@ -174,14 +173,11 @@ export default function CareerRoadmap() {
         {/* Header */}
         <div className="ss-pop" style={{ width: '100%' }}>
           <VStack gap={1}>
-            <HStack gap={1} align="center">
-              <span aria-hidden className="ss-float" style={{ fontSize: '1.4rem', lineHeight: 1 }}>🗺️</span>
-              <Text type="label" weight="bold" color="accent">
-                {kicker}
-              </Text>
-            </HStack>
+            <Text type="label" weight="bold" color="accent">
+              {kicker}
+            </Text>
             <Heading level={1} type="display-3">
-              <span className="ss-gradient-text">{pageTitle}</span>
+              {pageTitle}
             </Heading>
             <Text type="large" color="secondary">
               {headerBody}
@@ -221,10 +217,9 @@ export default function CareerRoadmap() {
         </VStack>
 
         {/* Where you are now — the headline stat for the chosen track. */}
-        <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
-        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 16, width: '100%' }}>
+        <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
+        <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-container)', width: '100%' }}>
         <Card variant="muted" padding={5} width="100%">
-          <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 16, right: 20, fontSize: '2rem', opacity: 0.55 }}>📈</span>
           <VStack gap={2}>
             <HStack justify="between" align="center" gap={1} wrap="wrap">
               <Text type="label" color="secondary">
@@ -278,16 +273,13 @@ export default function CareerRoadmap() {
 
         {/* The full roadmap as a dependency tree, each topic branched into its 3
             parts, coloured by the learner's live progress. */}
-        <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
-        <Card variant="default" padding={4} width="100%">
+        <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
+        <Card variant="default" padding={5} width="100%">
           <VStack gap={2}>
             <VStack gap={0.5}>
-              <HStack gap={1} align="center">
-                <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1 }}>🌳</span>
-                <Heading level={2}>
-                  {t('roadmapPage.treeTitle')}
-                </Heading>
-              </HStack>
+              <Heading level={2}>
+                {t('roadmapPage.treeTitle')}
+              </Heading>
               <Text type="supporting" color="secondary">
                 {t('roadmapPage.treeIntro')}
               </Text>
@@ -320,14 +312,11 @@ export default function CareerRoadmap() {
             }
             const pPct = pct(pPassed, pTotal);
             return (
-              <div key={pillar.id} className="ss-lift" style={{ display: 'flex', width: '100%' }}>
-              <Card variant={PILLAR_VARIANTS[i % PILLAR_VARIANTS.length]} padding={4} width="100%">
+              <div key={pillar.id} className="ss-raised" style={{ display: 'flex', width: '100%' }}>
+              <Card variant={PILLAR_VARIANTS[i % PILLAR_VARIANTS.length]} padding={5} width="100%">
                 <VStack gap={2}>
                   <HStack justify="between" align="center" gap={1} wrap="wrap">
-                    <HStack gap={1.5} align="center">
-                      <span aria-hidden style={{ fontSize: '1.5rem', lineHeight: 1 }}>{PILLAR_EMOJI[i % PILLAR_EMOJI.length]}</span>
-                      <Heading level={3}>{pillar.title}</Heading>
-                    </HStack>
+                    <Heading level={3}>{pillar.title}</Heading>
                     <Badge variant={pPct === 100 ? 'success' : 'neutral'} label={`${pPct}%`} />
                   </HStack>
                   {pillar.intro && (

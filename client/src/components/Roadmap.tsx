@@ -66,6 +66,7 @@ import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { SplitText } from './reactbits/SplitText';
 import { RedFlagDialog } from './RedFlagDialog';
+import { IconTile, BoltIcon, CloseIcon, FlagIcon, TrophyIcon, CheckCircleIcon } from './ui/icons';
 import './Roadmap.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
@@ -543,7 +544,7 @@ function Roadmap() {
           onClick={() => setSkillCheckOpen(true)}
         >
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <span aria-hidden>⚡️</span>
+            <span aria-hidden style={{ display: 'inline-flex', color: 'var(--brand-accent)' }}><BoltIcon size={15} /></span>
             <span>{t('roadmap.skillCheckCta')}</span>
           </span>
           <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>
@@ -1024,7 +1025,7 @@ function LessonRunner({
     return (
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-          <AxButton isIconOnly icon={<span aria-hidden>✕</span>} variant="ghost" size="sm" label={t('roadmap.exit')} onClick={onExit} />
+          <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="sm" label={t('roadmap.exit')} onClick={onExit} />
           <div style={{ flex: 1 }} />
         </div>
         <div
@@ -1065,7 +1066,6 @@ function LessonRunner({
   if (finished) {
     const pct = Math.round((correctCount / total) * 100);
     const passed = !dead && pct >= playable.passPct;
-    const emoji = dead ? '💔' : passed ? (isCheckpoint ? '🏆' : '🎉') : '💪';
     const title = dead
       ? t('roadmap.outOfHeartsTitle')
       : passed
@@ -1091,10 +1091,15 @@ function LessonRunner({
           paddingRight: 16,
         }}
       >
+        {/* Confetti IS the celebration on a pass; the icon stays quiet. */}
         {passed && <Confetti color={accent} />}
-        <div className="rm-celebrate" style={{ fontSize: '3.5rem', lineHeight: 1, marginBottom: 8 }} aria-hidden>
-          {emoji}
-        </div>
+        {passed && (
+          <div className="rm-celebrate" style={{ marginBottom: 12 }} aria-hidden>
+            <IconTile color={accent} size={56}>
+              {isCheckpoint ? <TrophyIcon size={26} /> : <CheckCircleIcon size={26} />}
+            </IconTile>
+          </div>
+        )}
         <SplitText
           as="h2"
           text={title}
@@ -1147,7 +1152,7 @@ function LessonRunner({
     <div style={{ flex: '1 1 auto', minHeight: 0, maxHeight: isMobile ? undefined : '80%', display: 'flex', flexDirection: 'column' }}>
       {/* Header: exit + (hearts for a level, progress bar for a checkpoint) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexShrink: 0 }}>
-        <AxButton isIconOnly icon={<span aria-hidden>✕</span>} variant="ghost" size="sm" label={t('roadmap.exit')} onClick={onExit} />
+        <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="sm" label={t('roadmap.exit')} onClick={onExit} />
         {isCheckpoint ? (
           <>
             <div
@@ -1172,7 +1177,7 @@ function LessonRunner({
         )}
         <IconButton
           label={t('flag.ariaLabel')}
-          icon={<span aria-hidden>🚩</span>}
+          icon={<FlagIcon size={16} />}
           variant="ghost"
           size="sm"
           tooltip={t('flag.ariaLabel')}
@@ -1441,8 +1446,10 @@ function SkillCheckRunner({
             : 'roadmap.skillCheckLow';
     return (
       <div style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center', marginTop: 16 }}>
-        <div style={{ fontSize: '3.5rem', lineHeight: 1, marginBottom: 8 }} aria-hidden>
-          ⚡️
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+          <IconTile size={52}>
+            <BoltIcon size={24} />
+          </IconTile>
         </div>
         <Heading level={2} justify="center">{t('roadmap.skillCheckResult', { correct, total })}</Heading>
         <div style={{ marginTop: 8, marginBottom: 24 }}>
@@ -1464,7 +1471,7 @@ function SkillCheckRunner({
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <AxButton
           isIconOnly
-          icon={<span aria-hidden>✕</span>}
+          icon={<CloseIcon size={18} />}
           variant="ghost"
           size="sm"
           label={t('roadmap.skillCheckCancel')}
