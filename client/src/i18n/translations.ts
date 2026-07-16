@@ -123,6 +123,7 @@ export const en = {
   // Auth
   'auth.logIn': 'Log in',
   'auth.logOut': 'Log out',
+  'auth.signInFailed': 'Sign-in failed. Please try again.',
   'auth.profile': 'Profile',
   'auth.account': 'Account',
   'auth.loadingAccount': 'Loading account',
@@ -240,7 +241,7 @@ export const en = {
   'leaderboard.footerDefault': 'Updated every 60s. Take a quiz to appear here.',
   'leaderboard.correct': 'correct',
   'leaderboard.todayLabel': 'today',
-  'leaderboard.globalSecondary': '{quizzes} quizzes · 🔥 {streak}d longest',
+  'leaderboard.globalSecondary': '{quizzes} quizzes · {streak}-day best streak',
   'leaderboard.categorySecondary': '{attempts} attempts · {accuracy}% accuracy',
 
   // Profile
@@ -366,7 +367,7 @@ export const en = {
   'play.liveScoreboard': 'Live scoreboard',
   'play.classAnswers': 'Class answers (live)',
   'play.matchComplete': 'Match complete',
-  'play.winner': '🏆 Winner: {name}, {correct}/{total}',
+  'play.winner': 'Winner: {name} — {correct}/{total}',
   'common.back': 'Back',
 
   // Loading / error states
