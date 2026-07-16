@@ -2,9 +2,19 @@
 // learner choose Frontend / Backend / Fullstack, each with a short description.
 // The parent (Home) handles applying + autosaving the choice; this component
 // only presents the options and reports the selection.
+//
+// Redesigned on the Astryx design system: an Astryx Dialog whose options are
+// SelectableCards. Selecting a card reports the choice immediately (the parent
+// applies + closes), and the currently-applied track carries a "current" Badge.
 
-import { useEffect, useRef, useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, Box, Typography } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
+import { VStack } from '@astryxdesign/core/VStack';
+import { HStack } from '@astryxdesign/core/HStack';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Text } from '@astryxdesign/core/Text';
+import { Badge } from '@astryxdesign/core/Badge';
+import { SelectableCard } from '@astryxdesign/core/SelectableCard';
 import { tracksForActiveSubject, TRACK_ORDER, type Track } from '../lib/tracks';
 import { useT } from '../i18n/LanguageContext';
 
@@ -20,88 +30,59 @@ export default function PathPickerDialog({
   onChoose: (track: Track) => void;
 }) {
   const t = useT();
-  // Roving-tabindex radio group: the active option is the only tab stop and
-  // arrow keys move both focus and selection between the options.
+  // Track which option is visually highlighted; selecting a card reports the
+  // choice up to the parent (which applies + closes).
   const [active, setActive] = useState<Track>(current);
-  const itemRefs = useRef<Partial<Record<Track, HTMLDivElement | null>>>({});
+  const tracks = tracksForActiveSubject();
 
   useEffect(() => {
     if (open) setActive(current);
   }, [open, current]);
 
-  const moveActive = (delta: number) => {
-    const idx = TRACK_ORDER.indexOf(active);
-    const next = TRACK_ORDER[(idx + delta + TRACK_ORDER.length) % TRACK_ORDER.length];
-    setActive(next);
-    itemRefs.current[next]?.focus();
-  };
-
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth aria-labelledby="path-dialog-title">
-      <DialogTitle id="path-dialog-title" sx={{ pb: 0.5, fontWeight: 800 }}>
-        {t('home.pathDialogTitle')}
-      </DialogTitle>
-      <DialogContent sx={{ overflowY: 'auto' }}>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          {t('home.pathDialogSubtitle')}
-        </Typography>
-        <Box
-          role="radiogroup"
-          aria-label={t('home.pathDialogTitle')}
-          sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}
-        >
-          {TRACK_ORDER.map((tk) => {
-            const selected = tk === active;
-            return (
-              <Box
-                key={tk}
-                ref={(el: HTMLDivElement | null) => {
-                  itemRefs.current[tk] = el;
-                }}
-                role="radio"
-                aria-checked={selected}
-                tabIndex={selected ? 0 : -1}
-                onClick={() => onChoose(tk)}
-                onKeyDown={(e) => {
-                  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
-                    e.preventDefault();
-                    moveActive(1);
-                  } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
-                    e.preventDefault();
-                    moveActive(-1);
-                  } else if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    onChoose(tk);
-                  }
-                }}
-                sx={{
-                  cursor: 'pointer',
-                  p: 2,
-                  borderRadius: 2,
-                  border: '2px solid',
-                  borderColor: selected ? 'var(--brand-accent)' : 'divider',
-                  backgroundColor: selected ? 'var(--brand-accent-soft)' : 'background.paper',
-                  transition: 'border-color 0.15s ease, background-color 0.15s ease',
-                  '&:hover': { borderColor: 'var(--brand-accent)' },
-                  '&:focus-visible': { outline: `2px solid var(--brand-accent)`, outlineOffset: 2 },
-                }}
-              >
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 0.5 }}>
-                  <Typography sx={{ fontWeight: 700 }}>{tracksForActiveSubject()[tk].label}</Typography>
-                  {tk === current && (
-                    <Typography component="span" sx={{ color: 'var(--brand-accent)', fontWeight: 700, fontSize: '0.75rem', letterSpacing: 0.5 }}>
-                      {t('home.pathCurrent')}
-                    </Typography>
-                  )}
-                </Box>
-                <Typography variant="body2" color="text.secondary">
-                  {tracksForActiveSubject()[tk].blurb}
-                </Typography>
-              </Box>
-            );
-          })}
-        </Box>
-      </DialogContent>
+    <Dialog
+      isOpen={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      purpose="form"
+      width="min(560px, 94vw)"
+    >
+      <DialogHeader
+        title={t('home.pathDialogTitle')}
+        subtitle={t('home.pathDialogSubtitle')}
+        onOpenChange={(next) => {
+          if (!next) onClose();
+        }}
+      />
+      <VStack gap={1.5} padding={4} width="100%">
+        {TRACK_ORDER.map((tk) => {
+          const selected = tk === active;
+          return (
+            <SelectableCard
+              key={tk}
+              label={tracks[tk].label}
+              isSelected={selected}
+              variant={selected ? 'muted' : 'default'}
+              width="100%"
+              onChange={() => {
+                setActive(tk);
+                onChoose(tk);
+              }}
+            >
+              <VStack gap={0.5}>
+                <HStack gap={1} align="center" justify="between">
+                  <Heading level={4}>{tracks[tk].label}</Heading>
+                  {tk === current && <Badge variant="cyan" label={t('home.pathCurrent')} />}
+                </HStack>
+                <Text type="supporting" color="secondary">
+                  {tracks[tk].blurb}
+                </Text>
+              </VStack>
+            </SelectableCard>
+          );
+        })}
+      </VStack>
     </Dialog>
   );
 }

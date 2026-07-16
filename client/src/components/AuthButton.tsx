@@ -1,7 +1,18 @@
-import { Avatar, ButtonBase, Box, Menu, MenuItem, Typography, Button, Skeleton, Snackbar, Alert } from '@mui/material';
+// The account widget in the header: avatar, sign-in / out, and the account menu.
+//
+// Redesigned on the Astryx design system: Astryx Avatar + a level Badge for the
+// signed-in identity, Astryx Button for the signed-out call to action, and
+// Astryx Text for the name / rank. The account dropdown keeps MUI's Menu (no
+// clean Astryx equivalent) but its trigger is fully restyled with Astryx.
+
+import { Box, Menu, MenuItem, Snackbar, Alert } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BRAND } from '../theme/MuiTheme';
+import { Avatar } from '@astryxdesign/core/Avatar';
+import { Button } from '@astryxdesign/core/Button';
+import { Badge } from '@astryxdesign/core/Badge';
+import { Text } from '@astryxdesign/core/Text';
+import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useQuestXp } from '../lib/xp';
@@ -54,29 +65,19 @@ function AuthButton() {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, px: 1 }} aria-label={t('auth.loadingAccount')}>
-        <Skeleton variant="circular" width={32} height={32} />
-        <Skeleton variant="text" width={56} sx={{ display: { xs: 'none', sm: 'block' } }} />
-      </Box>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 8px' }} aria-label={t('auth.loadingAccount')}>
+        <Skeleton width={34} height={34} radius="rounded" />
+        <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+          <Skeleton width={64} height={12} radius={2} />
+        </Box>
+      </div>
     );
   }
 
   if (!isAuthenticated) {
     return (
       <>
-        <Button
-          variant="outlined"
-          onClick={handleLogin}
-          sx={{
-            borderColor: 'var(--brand-accent)',
-            color: 'var(--brand-accent)',
-            fontWeight: 500,
-            textTransform: 'none',
-            '&:hover': { borderColor: 'var(--brand-accent-hover)', backgroundColor: 'rgba(45,122,45,0.06)' },
-          }}
-        >
-          {t('auth.logIn')}
-        </Button>
+        <Button variant="secondary" size="md" label={t('auth.logIn')} onClick={handleLogin} />
         <Snackbar
           open={!!authError}
           autoHideDuration={8000}
@@ -95,75 +96,87 @@ function AuthButton() {
 
   return (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <ButtonBase
-          onClick={handleMenuOpen}
-          aria-haspopup="menu"
-          aria-expanded={open}
-          aria-controls={open ? 'account-menu' : undefined}
-          aria-label={t('auth.accountMenu', { name: displayName })}
-          sx={{
+      <button
+        type="button"
+        onClick={handleMenuOpen}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-controls={open ? 'account-menu' : undefined}
+        aria-label={t('auth.accountMenu', { name: displayName })}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          maxWidth: 232,
+          margin: 0,
+          padding: 4,
+          background: 'transparent',
+          border: 'none',
+          borderRadius: 14,
+          cursor: 'pointer',
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexShrink: 0,
             borderRadius: '50%',
-            '&:focus-visible': { outline: `2px solid var(--brand-accent)`, outlineOffset: 2 },
+            ...(ringColor
+              ? { padding: 2, background: `${ringColor}22`, boxShadow: `0 0 0 1.5px ${ringColor}` }
+              : null),
           }}
         >
-          <Avatar
-            src={profile.picture}
-            alt=""
-            sx={{
-              width: 34,
-              height: 34,
-              ...(ringColor ? { border: `2px solid ${ringColor}`, boxShadow: `0 0 0 1.5px ${ringColor}33` } : null),
-            }}
-          />
-        </ButtonBase>
-        <Box sx={{ display: { xs: 'none', sm: 'flex' }, flexDirection: 'column', alignItems: 'flex-start', minWidth: 0, maxWidth: 190 }}>
-          <Typography
-            variant="body2"
-            sx={{ fontWeight: 500, color: 'text.primary', lineHeight: 1.2, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-          >
-            {displayName}
-          </Typography>
+          <Avatar src={profile.picture} name={displayName} alt="" size="medium" />
+        </div>
+        <Box
+          sx={{
+            display: { xs: 'none', sm: 'flex' },
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            minWidth: 0,
+            maxWidth: 190,
+            gap: '2px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: '100%' }}>
+            <Text type="body" weight="medium" color="primary" maxLines={1}>
+              {displayName}
+            </Text>
+            <Badge variant="green" label={levelInfo.level} />
+          </div>
           {/* The full rank — up to "Superjunior Full-Stack Developer" — must
               always be readable: wrap to at most two lines, never truncate
               mid-title, never push the toolbar taller. */}
-          <Typography
-            variant="caption"
-            sx={{
-              color: (theme) => (theme.palette.mode === 'dark' ? BRAND.greenBright : 'var(--brand-accent)'),
-              fontWeight: 600,
-              fontSize: '0.62rem',
-              lineHeight: 1.2,
-              maxWidth: '100%',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-              overflowWrap: 'break-word',
-            }}
-          >
+          <Text type="supporting" size="xsm" color="accent" weight="semibold" maxLines={2}>
             {rankTitle}
-          </Typography>
+          </Text>
           {/* Thin progress bar toward the next rank — ambient goal feedback
               with zero extra copy. Hidden at the ladder cap. */}
           {!levelInfo.isMax && (
-            <Box
+            <div
               aria-hidden
-              sx={{ mt: 0.4, width: '100%', height: 3, borderRadius: 2, backgroundColor: 'action.hover', overflow: 'hidden' }}
+              style={{
+                marginTop: 2,
+                width: '100%',
+                height: 3,
+                borderRadius: 2,
+                background: 'rgba(128,128,128,0.25)',
+                overflow: 'hidden',
+              }}
             >
-              <Box
-                sx={{
+              <div
+                style={{
                   width: `${levelInfo.progressPct}%`,
                   height: '100%',
                   borderRadius: 2,
-                  backgroundColor: (theme) => (theme.palette.mode === 'dark' ? BRAND.greenBright : 'var(--brand-accent)'),
+                  background: 'var(--brand-accent)',
                   transition: 'width 0.4s ease',
                 }}
               />
-            </Box>
+            </div>
           )}
         </Box>
-      </Box>
+      </button>
       <Menu
         id="account-menu"
         anchorEl={anchorEl}
@@ -171,7 +184,7 @@ function AuthButton() {
         onClose={handleMenuClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        slotProps={{ paper: { sx: { minWidth: 160, mt: 1 } } }}
+        slotProps={{ paper: { sx: { minWidth: 168, mt: 1, borderRadius: 2.5 } } }}
       >
         <MenuItem onClick={handleProfile}>{t('auth.profile')}</MenuItem>
         <MenuItem onClick={handleLogout}>{t('auth.logOut')}</MenuItem>

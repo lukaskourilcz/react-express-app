@@ -1,18 +1,16 @@
+// Report-a-question dialog. Lets a learner flag a problem with a question by
+// picking a reason and (optionally) adding detail. Redesigned on the Astryx
+// design system: an Astryx form Dialog with a RadioList of reasons, a TextArea
+// for detail, and a Banner for submit errors. All logic is preserved.
+
 import { useState } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  TextField,
-  FormLabel,
-  FormControl,
-  Alert,
-} from '@mui/material';
+import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
+import { Button } from '@astryxdesign/core/Button';
+import { Banner } from '@astryxdesign/core/Banner';
+import { TextArea } from '@astryxdesign/core/TextArea';
+import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList';
+import { VStack } from '@astryxdesign/core/VStack';
+import { HStack } from '@astryxdesign/core/HStack';
 import { useT } from '../i18n/LanguageContext';
 
 type Reason = 'incorrect-answer' | 'unclear' | 'typo' | 'outdated' | 'duplicate' | 'other';
@@ -54,64 +52,51 @@ export function ReportDialog({ open, onClose, onSubmit }: Props) {
 
   return (
     <Dialog
-      open={open}
-      onClose={handleClose}
-      maxWidth="sm"
-      fullWidth
-      aria-labelledby="report-dialog-title"
+      isOpen={open}
+      onOpenChange={(next) => {
+        if (!next) handleClose();
+      }}
+      purpose="form"
+      width="min(560px, 94vw)"
     >
-      <DialogTitle id="report-dialog-title">{t('report.title')}</DialogTitle>
-      <DialogContent>
-        <FormControl component="fieldset" sx={{ width: '100%' }}>
-          <FormLabel id="report-reason-label" sx={{ mb: 1, fontSize: '0.85rem' }}>
-            {t('report.reasonLabel')}
-          </FormLabel>
-          <RadioGroup
-            aria-labelledby="report-reason-label"
-            value={reason}
-            onChange={(e) => setReason(e.target.value as Reason)}
-          >
-            {REASON_VALUES.map((value) => (
-              <FormControlLabel
-                key={value}
-                value={value}
-                control={<Radio />}
-                label={t(`report.reason.${value}` as const)}
-                sx={{
-                  my: 0.25,
-                  border: 0,
-                  p: 0,
-                  minHeight: 'auto',
-                  '&:hover': { backgroundColor: 'transparent' },
-                }}
-              />
-            ))}
-          </RadioGroup>
-        </FormControl>
-        <TextField
-          fullWidth
-          multiline
-          minRows={2}
-          maxRows={5}
+      <DialogHeader
+        title={t('report.title')}
+        onOpenChange={(next) => {
+          if (!next) handleClose();
+        }}
+      />
+      <VStack gap={3} padding={4} width="100%">
+        <RadioList
+          label={t('report.reasonLabel')}
+          value={reason}
+          onChange={(value) => setReason(value as Reason)}
+        >
+          {REASON_VALUES.map((value) => (
+            <RadioListItem key={value} value={value} label={t(`report.reason.${value}` as const)} />
+          ))}
+        </RadioList>
+
+        <TextArea
           label={t('report.detailLabel')}
           value={detail}
-          onChange={(e) => setDetail(e.target.value.slice(0, 1000))}
-          sx={{ mt: 2 }}
+          onChange={(value) => setDetail(value.slice(0, 1000))}
+          maxLength={1000}
+          rows={3}
+          isOptional
         />
-        {error && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {error}
-          </Alert>
-        )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={handleClose} disabled={submitting}>
-          {t('common.cancel')}
-        </Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={submitting}>
-          {submitting ? t('report.sending') : t('report.send')}
-        </Button>
-      </DialogActions>
+
+        {error && <Banner status="error" title={error} />}
+
+        <HStack gap={1.5} justify="end" width="100%">
+          <Button variant="ghost" label={t('common.cancel')} onClick={handleClose} isDisabled={submitting} />
+          <Button
+            variant="primary"
+            label={submitting ? t('report.sending') : t('report.send')}
+            onClick={handleSubmit}
+            isLoading={submitting}
+          />
+        </HStack>
+      </VStack>
     </Dialog>
   );
 }

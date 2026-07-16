@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Snackbar, Box, Typography } from '@mui/material';
+import { Snackbar, Box } from '@mui/material';
+import { Text } from '@astryxdesign/core/Text';
 import { onXpToast, type XpToast } from '../lib/xp';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
@@ -77,12 +78,12 @@ export default function XpToaster() {
         >
           <Box component="span" sx={{ fontSize: '1.6rem', lineHeight: 1 }} aria-hidden>🎉</Box>
           <Box sx={{ minWidth: 0 }}>
-            <Typography sx={{ fontWeight: 900, fontSize: '0.7rem', letterSpacing: 1, textTransform: 'uppercase', opacity: 0.8 }}>
+            <span style={{ display: 'block', fontWeight: 900, fontSize: '0.7rem', letterSpacing: 1, textTransform: 'uppercase', opacity: 0.8 }}>
               {t('xp.rankUpKicker')}
-            </Typography>
-            <Typography sx={{ fontWeight: 800, lineHeight: 1.2 }}>
+            </span>
+            <Text as="div" color="inherit" weight="bold">
               {t('xp.rankUp', { title: current.title })}
-            </Typography>
+            </Text>
           </Box>
         </Box>
       ) : (
@@ -96,9 +97,9 @@ export default function XpToaster() {
           }}
         >
           <Box component="span" sx={{ fontSize: '1.15rem', lineHeight: 1 }} aria-hidden>⚡</Box>
-          <Typography sx={{ fontWeight: 800 }}>
+          <Text as="span" color="inherit" weight="bold">
             {t(GAIN_KEY[current.source], { xp: current.amount })}
-          </Typography>
+          </Text>
         </Box>
       )}
       </MotionPop>

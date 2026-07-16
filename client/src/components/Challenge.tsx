@@ -1,21 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Chip,
-  CircularProgress,
-  FormControlLabel,
-  Paper,
-  Radio,
-  RadioGroup,
-  Skeleton,
-  Snackbar,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { Snackbar, TextField } from '@mui/material';
+import { VStack } from '@astryxdesign/core/VStack';
+import { HStack } from '@astryxdesign/core/HStack';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Text } from '@astryxdesign/core/Text';
+import { Badge } from '@astryxdesign/core/Badge';
+import { Card } from '@astryxdesign/core/Card';
+import { Button } from '@astryxdesign/core/Button';
+import { Banner } from '@astryxdesign/core/Banner';
+import { Spinner } from '@astryxdesign/core/Spinner';
+import { SelectableCard } from '@astryxdesign/core/SelectableCard';
+import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { apiFetch, friendlyError } from '../lib/api';
 import {
   fetchChallengeBatch,
@@ -31,7 +26,6 @@ import {
 } from '../lib/categories';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
-import { brandButtonSx, visuallyHidden } from '../theme/MuiTheme';
 import { SharkFin } from './SharkFin';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
@@ -42,13 +36,30 @@ import { challengeRunXp } from '../lib/leveling';
 // time limit, or until you collect three strikes — whichever comes first.
 // Score = correct answers. Mix of all categories and difficulties. The page
 // keeps its own state machine separate from the regular Quiz component.
+//
+// Redesigned on the Astryx design system: SelectableCard answer options, a
+// ProgressBar countdown, Astryx Cards/Buttons/Badges and typography. Only the
+// presentation changed — the timers, scoring, buffering and payout are intact.
 
 type Phase = 'intro' | 'loading' | 'playing' | 'gameover' | 'error';
 
 const MAX_LIVES = 3;
 const LOW_BATCH_THRESHOLD = 4; // top up the buffer when this few remain
 const TIME_LIMIT_S = 90; // a run lasts at most 90 seconds
-const LOW_TIME_S = 15; // highlight + pulse the clock under this many seconds
+const LOW_TIME_S = 15; // highlight the clock under this many seconds
+
+// Screen-reader-only visually-hidden style for the live low-time announcement.
+const srOnly: React.CSSProperties = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+};
 
 /** Seconds → "m:ss" (e.g. 90 → "1:30"). Clamps negatives to 0. */
 const fmtClock = (s: number): string => {
@@ -104,7 +115,7 @@ export default function Challenge() {
   // Guards the once-per-run XP/token payout on game over.
   const awardedRef = useRef(false);
   // Focus target when the run ends, so AT users hear the transition.
-  const gameOverHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const gameOverHeadingRef = useRef<HTMLDivElement | null>(null);
   const [scoreSubmitting, setScoreSubmitting] = useState(false);
 
   const livesLeft = MAX_LIVES - livesLost;
@@ -344,58 +355,69 @@ export default function Challenge() {
 
   const livesIndicator = useMemo(
     () => (
-      <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }} aria-label={t('challenge.livesAria', { left: livesLeft })}>
+      <div
+        style={{ display: 'flex', gap: 4, alignItems: 'center' }}
+        aria-label={t('challenge.livesAria', { left: livesLeft })}
+      >
         {Array.from({ length: MAX_LIVES }).map((_, i) => (
-          <Box key={i} sx={{ opacity: i < livesLeft ? 1 : 0.2 }}>
+          <div key={i} style={{ opacity: i < livesLeft ? 1 : 0.2, display: 'flex' }}>
             <SharkFin size={20} color={i < livesLeft ? 'var(--brand-accent)' : '#888'} />
-          </Box>
+          </div>
         ))}
-      </Box>
+      </div>
     ),
     [livesLeft, t],
   );
 
   if (phase === 'intro') {
     return (
-      <Box sx={introWrapperSx}>
-        <Typography variant="h4" component="h1" sx={{ fontWeight: 700, mb: 2, textAlign: 'center' }}>
-          {t('challenge.title')}
-        </Typography>
+      <div style={pageWrapStyle}>
+        <VStack gap={3} width="100%">
+          <VStack gap={1} align="center">
+            <HStack gap={1.5} align="center">
+              <SharkFin size={30} />
+              <Heading level={1} justify="center">
+                {t('challenge.title')}
+              </Heading>
+            </HStack>
+          </VStack>
 
-        {/* The rules list is the single explanation — no duplicate prose above. */}
-        <Paper variant="outlined" sx={{ p: 2, mb: 2, borderColor: 'var(--brand-accent)' }}>
-          <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>
-            {t('challenge.howItWorks')}
-          </Typography>
-          <Box component="ul" sx={{ pl: 2, m: 0, color: 'text.secondary', fontSize: '0.9rem' }}>
-            <li>{t('challenge.rule1')}</li>
-            <li>{t('challenge.rule2')}</li>
-            <li>{t('challenge.rule3')}</li>
-            <li>{t('challenge.rule4')}</li>
-          </Box>
-        </Paper>
+          {/* The rules list is the single explanation — no duplicate prose above. */}
+          <Card variant="muted" padding={4} width="100%">
+            <VStack gap={1.5}>
+              <Text type="label" color="secondary">
+                {t('challenge.howItWorks')}
+              </Text>
+              <VStack gap={1}>
+                <RuleRow text={t('challenge.rule1')} />
+                <RuleRow text={t('challenge.rule2')} />
+                <RuleRow text={t('challenge.rule3')} />
+                <RuleRow text={t('challenge.rule4')} />
+              </VStack>
+            </VStack>
+          </Card>
 
-        <ChampionBadge champion={champion} loading={boardLoading} />
+          <ChampionBadge champion={champion} loading={boardLoading} />
 
-        <Button
-          variant="contained"
-          size="large"
-          onClick={() => void startRun()}
-          fullWidth
-          sx={{ mt: 2, py: 1.5, fontWeight: 700, textTransform: 'none', ...brandButtonSx }}
-        >
-          {t('challenge.startButton')}
-        </Button>
+          <HStack justify="center" width="100%">
+            <Button
+              variant="primary"
+              size="lg"
+              label={t('challenge.startButton')}
+              onClick={() => void startRun()}
+            />
+          </HStack>
 
-        {board && board.top.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="overline" color="text.secondary">
-              {t('challenge.hallOfFame')}
-            </Typography>
-            <LeaderboardList board={board} />
-          </Box>
-        )}
-      </Box>
+          {board && board.top.length > 0 && (
+            <VStack gap={1} width="100%">
+              <Text type="label" color="secondary">
+                {t('challenge.hallOfFame')}
+              </Text>
+              <LeaderboardList board={board} />
+            </VStack>
+          )}
+        </VStack>
+      </div>
     );
   }
 
@@ -405,263 +427,305 @@ export default function Challenge() {
 
   if (phase === 'error') {
     return (
-      <Box sx={introWrapperSx}>
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error || t('error.somethingWrong')}
-        </Alert>
-        <Button variant="outlined" onClick={() => void startRun()}>
-          {t('quiz.retry')}
-        </Button>
-      </Box>
+      <div style={pageWrapStyle}>
+        <VStack gap={2} width="100%">
+          <Banner status="error" title={error || t('error.somethingWrong')} />
+          <HStack>
+            <Button variant="secondary" label={t('quiz.retry')} onClick={() => void startRun()} />
+          </HStack>
+        </VStack>
+      </div>
     );
   }
 
   if (phase === 'gameover') {
     return (
-      <Box sx={introWrapperSx}>
-        <Typography
-          ref={gameOverHeadingRef}
-          tabIndex={-1}
-          variant="h4"
-          component="h1"
-          sx={{ fontWeight: 700, mb: 0.5, textAlign: 'center', outline: 'none' }}
-        >
-          {t('challenge.gameOver')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 1.5 }} role="status">
-          {timeLeft <= 0 ? t('challenge.endedByTime') : t('challenge.endedByStrikes')}
-        </Typography>
-        {/* The big number IS the score — no repeated caption underneath. */}
-        <Typography variant="h2" sx={{ textAlign: 'center', mb: 3, color: 'var(--brand-accent)', fontWeight: 800 }}>
-          {score}
-        </Typography>
+      <div style={pageWrapStyle}>
+        <VStack gap={3} width="100%" align="center">
+          <div ref={gameOverHeadingRef} tabIndex={-1} style={{ outline: 'none' }}>
+            <Heading level={1} justify="center">
+              {t('challenge.gameOver')}
+            </Heading>
+          </div>
+          <div role="status">
+            <Text type="body" color="secondary" justify="center">
+              {timeLeft <= 0 ? t('challenge.endedByTime') : t('challenge.endedByStrikes')}
+            </Text>
+          </div>
+          {/* The big number IS the score — no repeated caption underneath. */}
+          <div
+            style={{
+              fontSize: 'clamp(3rem, 12vw, 4.5rem)',
+              fontWeight: 800,
+              lineHeight: 1,
+              color: 'var(--brand-accent)',
+            }}
+          >
+            {score}
+          </div>
 
-        <ChampionBadge champion={champion} loading={boardLoading} dim={!!champion && score > champion.score} />
+          <div style={{ width: '100%' }}>
+            <ChampionBadge
+              champion={champion}
+              loading={boardLoading}
+              dim={!!champion && score > champion.score}
+            />
+          </div>
 
-        {!submittedScore ? (
-          <Paper variant="outlined" sx={{ p: 2, mt: 2 }}>
-            <Typography variant="body2" sx={{ mb: 1 }}>
-              {t('challenge.submitPrompt')}
-            </Typography>
-            <Box sx={{ display: 'flex', gap: 1, flexDirection: { xs: 'column', sm: 'row' } }}>
-              <TextField
-                size="small"
-                sx={{ flex: '1 1 auto' }}
-                label={t('challenge.nameLabel')}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                inputProps={{ maxLength: 40 }}
-              />
-              <Button
-                variant="contained"
-                onClick={() => void onSubmitScore()}
-                disabled={scoreSubmitting}
-                sx={{ ...brandButtonSx, flexShrink: 0, whiteSpace: 'nowrap' }}
-              >
-                {scoreSubmitting ? <CircularProgress size={18} sx={{ color: 'inherit' }} /> : t('challenge.submitScore')}
-              </Button>
-            </Box>
-          </Paper>
-        ) : (
-          <Alert severity="success" sx={{ mt: 2 }}>
-            {t('challenge.scoreSubmitted')}
-          </Alert>
-        )}
+          {!submittedScore ? (
+            <Card variant="default" padding={4} width="100%">
+              <VStack gap={1.5}>
+                <Text type="body">{t('challenge.submitPrompt')}</Text>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <TextField
+                    size="small"
+                    sx={{ flex: '1 1 200px' }}
+                    label={t('challenge.nameLabel')}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    inputProps={{ maxLength: 40 }}
+                  />
+                  <Button
+                    variant="primary"
+                    label={t('challenge.submitScore')}
+                    isLoading={scoreSubmitting}
+                    isDisabled={scoreSubmitting}
+                    onClick={() => void onSubmitScore()}
+                  />
+                </div>
+              </VStack>
+            </Card>
+          ) : (
+            <div style={{ width: '100%' }}>
+              <Banner status="success" title={t('challenge.scoreSubmitted')} />
+            </div>
+          )}
 
-        {board && board.top.length > 0 && (
-          <Box sx={{ mt: 3 }}>
-            <Typography variant="overline" color="text.secondary">
-              {t('challenge.hallOfFame')}
-            </Typography>
-            <LeaderboardList board={board} />
-          </Box>
-        )}
+          {board && board.top.length > 0 && (
+            <VStack gap={1} width="100%">
+              <Text type="label" color="secondary">
+                {t('challenge.hallOfFame')}
+              </Text>
+              <LeaderboardList board={board} />
+            </VStack>
+          )}
 
-        <Box sx={{ display: 'flex', gap: 1, mt: 3, justifyContent: 'center' }}>
-          <Button variant="contained" onClick={() => void startRun()} sx={brandButtonSx}>
-            {t('challenge.playAgain')}
-          </Button>
-          <Button variant="outlined" onClick={() => setPhase('intro')}>
-            {t('challenge.backToIntro')}
-          </Button>
-        </Box>
+          <HStack gap={1.5} justify="center" wrap="wrap">
+            <Button variant="primary" label={t('challenge.playAgain')} onClick={() => void startRun()} />
+            <Button variant="secondary" label={t('challenge.backToIntro')} onClick={() => setPhase('intro')} />
+          </HStack>
+        </VStack>
 
-        <Snackbar open={!!snack} autoHideDuration={2500} onClose={() => setSnack(null)} message={snack ?? ''} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} />
-      </Box>
+        <Snackbar
+          open={!!snack}
+          autoHideDuration={2500}
+          onClose={() => setSnack(null)}
+          message={snack ?? ''}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        />
+      </div>
     );
   }
 
   // ── playing ──
   if (!current) return null;
 
+  const timeLow = timeLeft <= LOW_TIME_S;
+
   return (
-    // One-viewport layout matching the Quiz card geometry: 560px column,
-    // primary card capped at ~80% height on sm+, centred; question text
-    // scrolls internally, answers + lock-in stay anchored near the bottom.
-    <Box sx={{ position: 'relative', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: { xs: 680, sm: 560 }, mx: 'auto', width: '100%', p: { xs: 0.5, sm: 1 } }}>
+    <div style={{ maxWidth: 620, margin: '0 auto', width: '100%' }}>
       {/* One-shot low-time announcement for screen readers (the visual cue is
-          colour + pulse, which AT users can't perceive). */}
-      <Box component="span" sx={visuallyHidden} aria-live="polite">
+          colour, which AT users can't perceive). */}
+      <span style={srOnly} aria-live="polite">
         {timeLeft === LOW_TIME_S ? t('challenge.lowTime') : ''}
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1, gap: 1, flexShrink: 0 }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flex: '1 1 auto', minWidth: 0 }}>
-          <Typography variant="overline" color="text.secondary">
-            {t('challenge.score')}
-          </Typography>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: 'var(--brand-accent)' }}>
-            {score}
-          </Typography>
-        </Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexShrink: 0 }}>
-          <Box
-            role="timer"
-            aria-label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
-            sx={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 0.5,
-              px: 1,
-              py: 0.25,
-              borderRadius: 1,
-              border: '1.5px solid',
-              borderColor: timeLeft <= LOW_TIME_S ? 'error.main' : 'divider',
-              color: timeLeft <= LOW_TIME_S ? 'error.main' : 'text.primary',
-              fontWeight: 700,
-              fontVariantNumeric: 'tabular-nums',
-              '@keyframes chalTimePulse': { '0%, 100%': { opacity: 1 }, '50%': { opacity: 0.5 } },
-              animation: timeLeft <= LOW_TIME_S ? 'chalTimePulse 1s ease-in-out infinite' : 'none',
-              '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
-            }}
-          >
-            <ClockIcon />
-            <Box component="span">{fmtClock(timeLeft)}</Box>
-          </Box>
-          {livesIndicator}
-        </Box>
-      </Box>
+      </span>
 
-      <Card sx={{ borderTop: `4px solid var(--brand-accent)`, flex: '1 1 auto', minHeight: 0, maxHeight: { sm: '80%' }, display: 'flex', flexDirection: 'column' }}>
-        <CardContent sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap', flexShrink: 0 }}>
-            <Chip
-              size="small"
-              label={getCategoryLabel(current.category)}
-              sx={{
-                backgroundColor: getCategoryHexColor(current.category),
-                color: onCategoryColorText(current.category),
-                fontWeight: 600,
+      <VStack gap={3} width="100%">
+        {/* Status: score + lives, then the countdown bar. */}
+        <VStack gap={1.5} width="100%">
+          <HStack justify="between" align="center" gap={2} width="100%">
+            <HStack gap={1} align="center">
+              <Text type="label" color="secondary">
+                {t('challenge.score')}
+              </Text>
+              <Heading level={3}>
+                <span style={{ color: 'var(--brand-accent)' }}>{score}</span>
+              </Heading>
+            </HStack>
+            {livesIndicator}
+          </HStack>
+
+          <HStack gap={1.5} align="center" width="100%">
+            <div
+              role="timer"
+              aria-label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 5,
+                fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums',
+                color: timeLow ? 'var(--color-error-text, #dc2626)' : 'inherit',
+                minWidth: 52,
               }}
+            >
+              <ClockIcon />
+              <span>{fmtClock(timeLeft)}</span>
+            </div>
+            <div style={{ flex: 1 }}>
+              <ProgressBar
+                label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
+                isLabelHidden
+                value={Math.max(0, timeLeft)}
+                max={TIME_LIMIT_S}
+                variant={timeLow ? 'error' : 'accent'}
+              />
+            </div>
+          </HStack>
+        </VStack>
+
+        {/* Question card. A tinted top rule carries the subject accent. */}
+        <Card variant="default" padding={5} width="100%">
+          <div
+            aria-hidden
+            style={{ height: 4, borderRadius: 999, background: 'var(--brand-accent)', margin: '-4px 0 20px' }}
+          />
+          <VStack gap={2} width="100%">
+            <HStack gap={1} wrap="wrap" align="center">
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '3px 10px',
+                  borderRadius: 999,
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  backgroundColor: getCategoryHexColor(current.category),
+                  color: onCategoryColorText(current.category),
+                }}
+              >
+                {getCategoryLabel(current.category)}
+              </span>
+              <Badge
+                variant="neutral"
+                label={t('challenge.difficultyLevel', { level: current.difficulty })}
+              />
+            </HStack>
+
+            <div id="challenge-question">{renderQuestion(current.question)}</div>
+
+            <div role="group" aria-labelledby="challenge-question">
+              <VStack gap={1} width="100%">
+                {current.options.map((opt, idx) => {
+                  let variant: 'default' | 'green' | 'red' = 'default';
+                  if (lastResult) {
+                    if (idx === lastResult.correctAnswer) variant = 'green';
+                    else if (idx === lastResult.selectedIndex && !lastResult.isCorrect) variant = 'red';
+                  }
+                  const isSel = lastResult
+                    ? idx === lastResult.selectedIndex || idx === lastResult.correctAnswer
+                    : selected === idx;
+                  return (
+                    <SelectableCard
+                      key={idx}
+                      label={opt}
+                      isSelected={isSel}
+                      isDisabled={!!lastResult}
+                      onChange={() => {
+                        if (!lastResult) setSelected(idx);
+                      }}
+                      variant={variant}
+                      padding={2}
+                      width="100%"
+                    >
+                      <HStack gap={1.5} align="center">
+                        <span
+                          aria-hidden
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            width: 26,
+                            height: 26,
+                            borderRadius: 8,
+                            flexShrink: 0,
+                            fontSize: '0.8rem',
+                            fontWeight: 700,
+                            background: 'color-mix(in srgb, var(--brand-accent) 15%, transparent)',
+                            color: 'var(--brand-accent)',
+                          }}
+                        >
+                          {idx + 1}
+                        </span>
+                        <Text type="body">{opt}</Text>
+                      </HStack>
+                    </SelectableCard>
+                  );
+                })}
+              </VStack>
+            </div>
+          </VStack>
+        </Card>
+
+        {/* Grade feedback + explanation. */}
+        {lastResult && (
+          <div aria-live="assertive" style={{ width: '100%' }}>
+            <Banner
+              status={lastResult.isCorrect ? 'success' : 'error'}
+              title={lastResult.isCorrect ? t('challenge.correct') : t('challenge.wrong')}
+              description={lastResult.explanation || undefined}
             />
-            <Chip
-              size="small"
-              variant="outlined"
-              label={t('challenge.difficultyLevel', { level: current.difficulty })}
-            />
-          </Box>
-
-          {/* Scrollable question region — answers below keep their position. */}
-          <Box id="challenge-question" sx={{ mb: 2, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
-            {renderQuestion(current.question)}
-          </Box>
-
-          <RadioGroup
-            value={selected ?? ''}
-            onChange={(e) => !lastResult && setSelected(parseInt(e.target.value, 10))}
-            aria-labelledby="challenge-question"
-            // Raise the anchored answers ~50px off the wave on phones.
-            sx={{ flexShrink: 0, mt: 'auto', mb: { xs: '50px', sm: 0 } }}
-          >
-            {current.options.map((opt, idx) => {
-              let bg: string | undefined;
-              if (lastResult) {
-                // Theme-derived tints so dark mode inherits the adjustment.
-                if (idx === lastResult.correctAnswer) bg = 'rgba(22, 163, 74, 0.15)';
-                else if (idx === lastResult.selectedIndex && !lastResult.isCorrect)
-                  bg = 'rgba(220, 38, 38, 0.15)';
-              }
-              return (
-                <FormControlLabel
-                  key={idx}
-                  value={idx}
-                  disabled={!!lastResult}
-                  control={<Radio />}
-                  label={opt}
-                  sx={{
-                    m: 0,
-                    mb: 0.5,
-                    px: 1,
-                    borderRadius: 1,
-                    backgroundColor: bg,
-                  }}
-                />
-              );
-            })}
-          </RadioGroup>
-
-        </CardContent>
-      </Card>
-
-      {/* Feedback overlay: a floating card that sits over the answer options
-          so the grade doesn't push the layout around. */}
-      {lastResult && (
-        <Box
-          aria-live="assertive"
-          sx={{
-            position: 'absolute',
-            left: { xs: 8, sm: 16 },
-            right: { xs: 8, sm: 16 },
-            bottom: { xs: 68, sm: 72 },
-            zIndex: 5,
-          }}
-        >
-          <Alert
-            severity={lastResult.isCorrect ? 'success' : 'error'}
-            sx={{
-              maxHeight: '48vh',
-              overflowY: 'auto',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.35)',
-            }}
-          >
-            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {lastResult.isCorrect ? t('challenge.correct') : t('challenge.wrong')}
-            </Typography>
-            {lastResult.explanation && (
-              <Typography variant="body2" sx={{ mt: 0.5 }}>
-                {lastResult.explanation}
-              </Typography>
-            )}
-          </Alert>
-        </Box>
-      )}
-
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1.5, gap: 1, flexShrink: 0 }}>
-        {!lastResult ? (
-          <Button
-            variant="contained"
-            disabled={selected == null || submitting}
-            onClick={() => void submitAnswer()}
-            sx={brandButtonSx}
-          >
-            {submitting ? <CircularProgress size={18} sx={{ color: 'inherit' }} /> : t('challenge.lockIn')}
-          </Button>
-        ) : (
-          <Button variant="contained" onClick={onContinue} sx={brandButtonSx}>
-            {livesLost >= MAX_LIVES ? t('challenge.seeResult') : t('challenge.nextQuestion')}
-          </Button>
+          </div>
         )}
-      </Box>
 
-      <Snackbar open={!!snack} autoHideDuration={2500} onClose={() => setSnack(null)} message={snack ?? ''} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }} />
-    </Box>
+        <HStack justify="end" width="100%">
+          {!lastResult ? (
+            <Button
+              variant="primary"
+              label={t('challenge.lockIn')}
+              isLoading={submitting}
+              isDisabled={selected == null || submitting}
+              onClick={() => void submitAnswer()}
+            />
+          ) : (
+            <Button
+              variant="primary"
+              label={livesLost >= MAX_LIVES ? t('challenge.seeResult') : t('challenge.nextQuestion')}
+              onClick={onContinue}
+            />
+          )}
+        </HStack>
+      </VStack>
+
+      <Snackbar
+        open={!!snack}
+        autoHideDuration={2500}
+        onClose={() => setSnack(null)}
+        message={snack ?? ''}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
+    </div>
   );
 }
 
-/** A small outline clock glyph for the countdown chip. Decorative. */
+/** A rule bullet in the intro's "how it works" list. */
+function RuleRow({ text }: { text: string }) {
+  return (
+    <HStack gap={1} align="start">
+      <span aria-hidden style={{ color: 'var(--brand-accent)', fontWeight: 700, lineHeight: 1.5 }}>
+        •
+      </span>
+      <Text type="supporting" color="secondary">
+        {text}
+      </Text>
+    </HStack>
+  );
+}
+
+/** A small outline clock glyph for the countdown. Decorative. */
 function ClockIcon() {
   return (
-    <Box
-      component="svg"
+    <svg
       aria-hidden
       viewBox="0 0 24 24"
       fill="none"
@@ -669,24 +733,18 @@ function ClockIcon() {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      sx={{ width: 15, height: 15, display: 'block' }}
+      style={{ width: 15, height: 15, display: 'block' }}
     >
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3 2" />
-    </Box>
+    </svg>
   );
 }
 
-const introWrapperSx = {
+const pageWrapStyle: React.CSSProperties = {
   maxWidth: 640,
-  mx: 'auto',
+  margin: '0 auto',
   width: '100%',
-  p: { xs: 2, sm: 3 },
-  backgroundColor: 'background.paper',
-  borderRadius: 2,
-  border: '1px solid',
-  borderColor: 'divider',
-  borderTop: `4px solid var(--brand-accent)`,
 };
 
 function ChampionBadge({
@@ -700,35 +758,27 @@ function ChampionBadge({
 }) {
   const { t } = useLanguage();
   return (
-    <Paper
-      variant="outlined"
-      sx={{
-        p: 1.5,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 1.25,
-        borderColor: 'divider',
-        opacity: dim ? 0.6 : 1,
-      }}
-    >
-      <SharkFin size={28} />
-      <Box sx={{ flex: 1, minWidth: 0 }}>
-        <Typography variant="overline" color="text.secondary" sx={{ display: 'block', lineHeight: 1.1 }}>
-          {t('challenge.currentChampion')}
-        </Typography>
-        {loading ? (
-          <Skeleton variant="text" sx={{ fontSize: '1rem', width: 200 }} />
-        ) : champion ? (
-          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-            {champion.name} — {champion.score}
-          </Typography>
-        ) : (
-          <Typography variant="body2" color="text.secondary">
-            {t('challenge.noChampion')}
-          </Typography>
-        )}
-      </Box>
-    </Paper>
+    <Card variant="muted" padding={3} width="100%">
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, opacity: dim ? 0.55 : 1 }}>
+        <SharkFin size={28} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Text type="label" color="secondary">
+            {t('challenge.currentChampion')}
+          </Text>
+          {loading ? (
+            <Spinner size="sm" />
+          ) : champion ? (
+            <Text type="large" weight="bold">
+              {champion.name} — {champion.score}
+            </Text>
+          ) : (
+            <Text type="body" color="secondary">
+              {t('challenge.noChampion')}
+            </Text>
+          )}
+        </div>
+      </div>
+    </Card>
   );
 }
 
@@ -736,32 +786,36 @@ function LeaderboardList({ board }: { board: ChallengeLeaderboard }) {
   // role="list" restores list semantics that Safari/VoiceOver drop when
   // list-style is none.
   return (
-    <Box component="ol" role="list" sx={{ m: 0, mt: 0.5, p: 0, listStyle: 'none' }}>
-      {board.top.map((row, i) => (
-        <Box
-          key={row.id}
-          sx={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            gap: 1,
-            py: 0.5,
-            borderBottom: i === board.top.length - 1 ? 'none' : '1px dashed',
-            borderColor: 'divider',
-          }}
-        >
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', minWidth: 0 }}>
-            <Typography variant="body2" sx={{ width: 24, color: 'text.secondary' }}>
-              {i + 1}.
-            </Typography>
-            <Typography variant="body2" sx={{ fontWeight: i === 0 ? 700 : 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {row.name}
-            </Typography>
-          </Box>
-          <Typography variant="body2" sx={{ fontWeight: 700, color: i === 0 ? 'var(--brand-accent)' : 'text.primary' }}>
-            {row.score}
-          </Typography>
-        </Box>
-      ))}
-    </Box>
+    <Card variant="default" padding={2} width="100%">
+      <ol role="list" style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+        {board.top.map((row, i) => (
+          <li
+            key={row.id}
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              gap: 8,
+              alignItems: 'center',
+              padding: '8px 8px',
+              borderBottom: i === board.top.length - 1 ? 'none' : '1px dashed var(--color-border, rgba(128,128,128,0.25))',
+            }}
+          >
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', minWidth: 0 }}>
+              <Text type="body" color="secondary">
+                {i + 1}.
+              </Text>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <Text type="body" weight={i === 0 ? 'bold' : 'normal'}>
+                  {row.name}
+                </Text>
+              </span>
+            </div>
+            <span style={{ color: i === 0 ? 'var(--brand-accent)' : undefined, fontWeight: 700 }}>
+              {row.score}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </Card>
   );
 }

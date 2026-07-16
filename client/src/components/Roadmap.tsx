@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Box, Typography, Button, LinearProgress, Chip, Skeleton, Tooltip, IconButton, Snackbar, useTheme } from '@mui/material';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Text } from '@astryxdesign/core/Text';
+import { Badge } from '@astryxdesign/core/Badge';
+import { Button as AxButton } from '@astryxdesign/core/Button';
+import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import type {
   RoadmapTopic,
   RoadmapLevelMeta,
@@ -520,12 +525,12 @@ function Roadmap() {
 
   return (
     <Box sx={{ maxWidth: 900, mx: 'auto' }}>
-      <Typography variant="h5" component="h1" sx={{ fontWeight: 800, textAlign: 'center', mb: 0.5 }}>
-        {t('roadmap.title')}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mb: 2 }}>
-        {t('roadmap.subtitle')}
-      </Typography>
+      <div style={{ textAlign: 'center', marginBottom: 16 }}>
+        <Heading level={1} justify="center">{t('roadmap.title')}</Heading>
+        <div style={{ marginTop: 4 }}>
+          <Text type="supporting" color="secondary">{t('roadmap.subtitle')}</Text>
+        </div>
+      </div>
 
       {/* Skill check entry point — quick exit ramp for experienced learners. */}
       <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2.5 }}>
@@ -606,7 +611,7 @@ function Roadmap() {
       ) : structureError ? (
         <Box sx={{ textAlign: 'center', mt: 4 }}>
           <Typography color="error" sx={{ mb: 2 }} role="alert">{structureError}</Typography>
-          <Button variant="outlined" onClick={() => structureQuery.refetch()}>{t('roadmap.retry')}</Button>
+          <AxButton variant="secondary" label={t('roadmap.retry')} onClick={() => structureQuery.refetch()} />
         </Box>
       ) : (
         <>
@@ -650,12 +655,12 @@ function Roadmap() {
           {/* Current-part progress */}
           <Box sx={{ mb: 3 }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+              <Text type="supporting" color="secondary" weight="bold">
                 {getCategoryLabel(topic)} · {t('roadmap.partLabel', { n: safePart })}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
+              </Text>
+              <Text type="supporting" color="secondary">
                 {t('roadmap.progress', { done: partDone, total: range?.size ?? 0 })}
-              </Typography>
+              </Text>
             </Box>
             <LinearProgress
               variant="determinate"
@@ -1365,12 +1370,8 @@ function LessonError({ message, onRetry, onExit, t }: { message: string; onRetry
     <Box sx={{ maxWidth: 480, mx: 'auto', textAlign: 'center', mt: 4 }}>
       <Typography color="error" role="alert" sx={{ mb: 2 }}>{message}</Typography>
       <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center' }}>
-        <Button variant="contained" onClick={onRetry} sx={{ textTransform: 'none', backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}>
-          {t('roadmap.retry')}
-        </Button>
-        <Button variant="outlined" onClick={onExit} sx={{ textTransform: 'none' }}>
-          {t('roadmap.backToPath')}
-        </Button>
+        <AxButton variant="primary" label={t('roadmap.retry')} onClick={onRetry} />
+        <AxButton variant="secondary" label={t('roadmap.backToPath')} onClick={onExit} />
       </Box>
     </Box>
   );
@@ -1454,26 +1455,16 @@ function SkillCheckRunner({
   if (phase === 'intro') {
     return (
       <Box sx={{ maxWidth: 560, mx: 'auto', textAlign: 'center', mt: 2 }}>
-        <Typography variant="h5" component="h2" sx={{ fontWeight: 800, mb: 1 }}>
-          {t('roadmap.skillCheckTitle')}
-        </Typography>
-        <Typography color="text.secondary" sx={{ mb: 1.5 }}>
-          {t('roadmap.skillCheckIntro')}
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-          {t('roadmap.skillCheckBands')}
-        </Typography>
+        <Heading level={2} justify="center">{t('roadmap.skillCheckTitle')}</Heading>
+        <div style={{ marginTop: 8 }}>
+          <Text color="secondary">{t('roadmap.skillCheckIntro')}</Text>
+        </div>
+        <div style={{ marginTop: 12, marginBottom: 24 }}>
+          <Text type="supporting" color="secondary">{t('roadmap.skillCheckBands')}</Text>
+        </div>
         <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center' }}>
-          <Button
-            variant="contained"
-            onClick={() => void start()}
-            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}
-          >
-            {t('roadmap.skillCheckStart')}
-          </Button>
-          <Button variant="outlined" onClick={onCancel} sx={{ textTransform: 'none' }}>
-            {t('roadmap.skillCheckCancel')}
-          </Button>
+          <AxButton variant="primary" label={t('roadmap.skillCheckStart')} onClick={() => void start()} />
+          <AxButton variant="secondary" label={t('roadmap.skillCheckCancel')} onClick={onCancel} />
         </Box>
       </Box>
     );
@@ -1508,23 +1499,13 @@ function SkillCheckRunner({
         <Box sx={{ fontSize: '3.5rem', lineHeight: 1, mb: 1 }} aria-hidden>
           ⚡️
         </Box>
-        <Typography variant="h5" component="h2" sx={{ fontWeight: 800, mb: 1 }}>
-          {t('roadmap.skillCheckResult', { correct, total })}
-        </Typography>
-        <Typography color="text.secondary" sx={{ mb: 3 }}>
-          {t(tier as TranslationKey)}
-        </Typography>
+        <Heading level={2} justify="center">{t('roadmap.skillCheckResult', { correct, total })}</Heading>
+        <div style={{ marginTop: 8, marginBottom: 24 }}>
+          <Text color="secondary">{t(tier as TranslationKey)}</Text>
+        </div>
         <Box sx={{ display: 'flex', gap: 1.5, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <Button
-            variant="contained"
-            onClick={() => onFinished(correct)}
-            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}
-          >
-            {t('roadmap.skillCheckBack')}
-          </Button>
-          <Button variant="outlined" onClick={() => void start()} sx={{ textTransform: 'none' }}>
-            {t('roadmap.skillCheckRetry')}
-          </Button>
+          <AxButton variant="primary" label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct)} />
+          <AxButton variant="secondary" label={t('roadmap.skillCheckRetry')} onClick={() => void start()} />
         </Box>
       </Box>
     );
@@ -1536,30 +1517,25 @@ function SkillCheckRunner({
   return (
     <Box sx={{ maxWidth: 640, mx: 'auto' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-        <Button
+        <AxButton
+          isIconOnly
+          icon={<span aria-hidden>✕</span>}
+          variant="ghost"
+          size="sm"
+          label={t('roadmap.skillCheckCancel')}
           onClick={onCancel}
-          variant="text"
-          size="small"
-          sx={{ minWidth: 'auto', color: 'text.secondary', fontSize: '1.1rem', lineHeight: 1 }}
-          aria-label={t('roadmap.skillCheckCancel')}
-        >
-          ✕
-        </Button>
-        <LinearProgress
-          variant="determinate"
-          value={progressPct}
-          aria-label={t('roadmap.skillCheckQuestion', { current: qIndex + 1, total })}
-          sx={{
-            flex: 1,
-            height: 10,
-            borderRadius: 5,
-            backgroundColor: 'action.hover',
-            '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: 'var(--brand-accent)', transition: 'transform 0.35s ease' },
-          }}
         />
-        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.secondary', whiteSpace: 'nowrap' }}>
+        <div style={{ flex: 1 }}>
+          <ProgressBar
+            label={t('roadmap.skillCheckQuestion', { current: qIndex + 1, total })}
+            value={progressPct}
+            isLabelHidden
+            variant="accent"
+          />
+        </div>
+        <Text type="supporting" color="secondary" weight="bold">
           {qIndex + 1}/{total}
-        </Typography>
+        </Text>
       </Box>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
@@ -1572,10 +1548,12 @@ function SkillCheckRunner({
             fontWeight: 600,
           }}
         />
-        <Chip size="small" variant="outlined" label={`Lvl ${current.difficulty}`} />
-        <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
-          {t('roadmap.skillCheckQuestion', { current: qIndex + 1, total })}
-        </Typography>
+        <Badge variant="neutral" label={`Lvl ${current.difficulty}`} />
+        <Box sx={{ ml: 'auto' }}>
+          <Text type="supporting" color="secondary">
+            {t('roadmap.skillCheckQuestion', { current: qIndex + 1, total })}
+          </Text>
+        </Box>
       </Box>
 
       <Box id="skillcheck-question" sx={{ fontWeight: 500, mb: 2 }}>{renderQuestion(current.question)}</Box>
@@ -1635,27 +1613,11 @@ function SkillCheckRunner({
       </Box>
 
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-        <Button variant="text" onClick={onCancel} sx={{ textTransform: 'none', color: 'text.secondary' }}>
-          {t('roadmap.skillCheckCancel')}
-        </Button>
+        <AxButton variant="ghost" label={t('roadmap.skillCheckCancel')} onClick={onCancel} />
         {qIndex < total - 1 ? (
-          <Button
-            variant="contained"
-            onClick={goNext}
-            disabled={!answered}
-            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}
-          >
-            {t('roadmap.skillCheckNext')}
-          </Button>
+          <AxButton variant="primary" label={t('roadmap.skillCheckNext')} onClick={goNext} isDisabled={!answered} />
         ) : (
-          <Button
-            variant="contained"
-            onClick={() => void finish()}
-            disabled={!allAnswered}
-            sx={{ textTransform: 'none', fontWeight: 700, backgroundColor: 'var(--brand-accent)', '&:hover': { backgroundColor: 'var(--brand-accent-hover)' } }}
-          >
-            {t('roadmap.skillCheckFinish')}
-          </Button>
+          <AxButton variant="primary" label={t('roadmap.skillCheckFinish')} onClick={() => void finish()} isDisabled={!allAnswered} />
         )}
       </Box>
     </Box>

@@ -1,19 +1,22 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Box,
-  Typography,
-  Avatar,
-  Paper,
-  Button,
-  Divider,
   Alert,
-  LinearProgress,
   Chip,
   Snackbar,
   ToggleButton,
   ToggleButtonGroup,
 } from '@mui/material';
+import { Grid } from '@astryxdesign/core/Grid';
+import { VStack } from '@astryxdesign/core/VStack';
+import { HStack } from '@astryxdesign/core/HStack';
+import { Heading } from '@astryxdesign/core/Heading';
+import { Text } from '@astryxdesign/core/Text';
+import { Badge } from '@astryxdesign/core/Badge';
+import { Card } from '@astryxdesign/core/Card';
+import { Button } from '@astryxdesign/core/Button';
+import { Avatar } from '@astryxdesign/core/Avatar';
+import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import type { UserStats } from '../lib/supabase';
 import { useProfileStats } from '../lib/queries';
 import {
@@ -44,6 +47,18 @@ import ErrorRetry from './ErrorRetry';
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
 
+// Astryx Card colour variants used for the tinted stat / streak tiles.
+type CardVariant = 'default' | 'muted' | 'blue' | 'cyan' | 'gray' | 'green' | 'orange' | 'pink' | 'purple' | 'red' | 'teal' | 'yellow';
+
+// Small uppercase section label, the Astryx stand-in for MUI's "overline".
+function SectionLabel({ children }: { children: ReactNode }) {
+  return (
+    <Text type="label" color="secondary" weight="bold">
+      {children}
+    </Text>
+  );
+}
+
 function Profile() {
   const t = useT();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -71,9 +86,11 @@ function Profile() {
 
   if (!isAuthenticated || !user) {
     return (
-      <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', mt: 6 }}>
-        {t('profile.redirecting')}
-      </Typography>
+      <div style={{ textAlign: 'center', marginTop: '3rem' }}>
+        <Text type="supporting" color="secondary">
+          {t('profile.redirecting')}
+        </Text>
+      </div>
     );
   }
 
@@ -135,232 +152,188 @@ function ProfileBody({
   });
 
   return (
-    <Box sx={{ maxWidth: { xs: 500, md: 1160 }, mx: 'auto' }}>
-      <Paper
-        elevation={0}
-        sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderTop: `4px solid var(--brand-accent)`, borderRadius: 2 }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-          <Avatar
-            src={user.picture}
-            alt=""
-            sx={{
-              width: { xs: 52, sm: 64 },
-              height: { xs: 52, sm: 64 },
-              flexShrink: 0,
-              ...(ringColor ? { border: `3px solid ${ringColor}`, boxShadow: `0 0 0 2px ${ringColor}33` } : null),
-            }}
-          />
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {flair ? `${flair} ` : ''}{user.name}
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {user.email}
-            </Typography>
-          </Box>
-        </Box>
-      </Paper>
-
-      {/* On a standalone deploy (e.g. devShark) point learners at the umbrella
-          site so they can discover the other Shark platforms. Hidden when
-          VITE_SIBLING_URL is unset (i.e. on StudyShark itself). */}
-      {SIBLING_PLATFORMS_URL && (
-        <Paper
-          component="a"
-          href={SIBLING_PLATFORMS_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          elevation={0}
-          sx={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 2,
-            p: { xs: 2, sm: 2.5 },
-            mb: 2,
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 2,
-            textDecoration: 'none',
-            color: 'inherit',
-            transition: 'border-color 0.15s ease, background-color 0.15s ease',
-            '&:hover': { borderColor: 'var(--brand-accent)', backgroundColor: 'action.hover' },
-          }}
-        >
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minWidth: 0 }}>
-            <Box aria-hidden sx={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>🦈</Box>
-            <Box sx={{ minWidth: 0 }}>
-              <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                {t('profile.otherPlatforms')}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {t('profile.otherPlatformsSub')}
-              </Typography>
-            </Box>
-          </Box>
-          <Box aria-hidden sx={{ color: 'var(--brand-accent)', fontWeight: 800, fontSize: '1.25rem', flexShrink: 0 }}>→</Box>
-        </Paper>
-      )}
-
-      {isFirstTime && (
-        <Alert
-          severity="info"
-          sx={{ mb: 2 }}
-          action={
-            <Button color="inherit" size="small" onClick={() => navigate('/quiz')}>
-              {t('profile.firstQuizCta')}
-            </Button>
-          }
-        >
-          {t('profile.noQuizzes')}
-        </Alert>
-      )}
-
-      {/* On desktop the cards split into two columns so the profile lands close
-          to one viewport instead of one long scroll. On mobile they stack. */}
-      <Box sx={{ display: { md: 'grid' }, gridTemplateColumns: { md: '1fr 1fr' }, columnGap: { md: 2.5 }, alignItems: 'start' }}>
-        <Box>
-          <CareerCard />
-
-          <LearningTrackCard />
-
-          <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-            <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
-              {t('profile.streaks')}
-            </Typography>
-
-            <Box sx={{ display: 'flex', gap: 3 }}>
-              <Box sx={{ flex: 1, textAlign: 'center' }}>
-                <Typography variant="h3" sx={{ fontWeight: 700, color: 'warning.dark', lineHeight: 1, fontSize: { xs: '2.25rem', sm: '3rem' } }}>
-                  {stats?.current_streak || 0}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  {t('profile.currentStreak')}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {t('profile.days')}
-                </Typography>
-              </Box>
-
-              <Divider orientation="vertical" flexItem />
-
-              <Box sx={{ flex: 1, textAlign: 'center' }}>
-                <Typography variant="h3" sx={{ fontWeight: 700, color: 'var(--brand-accent)', lineHeight: 1, fontSize: { xs: '2.25rem', sm: '3rem' } }}>
-                  {stats?.longest_streak || 0}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  {t('profile.longestStreak')}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {t('profile.days')}
-                </Typography>
-              </Box>
-            </Box>
-
-            {stats?.last_quiz_date && (
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block', textAlign: 'center', mt: 2 }}>
-                {t('profile.lastQuiz', { date: dateFormatter.format(new Date(stats.last_quiz_date)) })}
-              </Typography>
-            )}
-          </Paper>
-        </Box>
-
-        <Box>
-          <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-            <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
-              {t('profile.statistics')}
-            </Typography>
-
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <StatRow label={t('profile.quizzesCompleted')} value={totalQuizzes} />
-              <StatRow label={t('profile.questionsAnswered')} value={totalQuestions} />
-              <StatRow label={t('profile.correctAnswers')} value={totalCorrect} />
-              <Box
-                sx={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  p: 1.5,
-                  backgroundColor: averageScore >= 70 ? 'rgba(22,163,74,0.1)' : 'action.hover',
-                  borderRadius: 1,
+    <div style={{ width: '100%', maxWidth: 1160, margin: '0 auto' }}>
+      <VStack gap={2}>
+        {/* Identity header — subject-accented top edge, avatar + name. */}
+        <div style={{ borderTop: '4px solid var(--brand-accent)', borderRadius: 16 }}>
+          <Card variant="default" padding={3} width="100%">
+            <HStack gap={2} align="center">
+              <div
+                style={{
+                  flexShrink: 0,
+                  borderRadius: '50%',
+                  display: 'inline-flex',
+                  ...(ringColor
+                    ? { padding: 3, background: `${ringColor}33`, boxShadow: `0 0 0 2px ${ringColor}` }
+                    : null),
                 }}
               >
-                <Typography variant="body2" color="text.secondary">
-                  {t('profile.averageScore')}
-                </Typography>
-                <Typography variant="body1" sx={{ fontWeight: 600, color: averageScore >= 70 ? 'success.dark' : 'text.primary' }}>
-                  {averageScore}%
-                </Typography>
-              </Box>
-            </Box>
-          </Paper>
+                <Avatar src={user.picture} name={user.name} alt="" size={64} />
+              </div>
+              <VStack gap={0.5}>
+                <Heading level={3} maxLines={1}>
+                  {flair ? `${flair} ` : ''}{user.name}
+                </Heading>
+                <Text type="supporting" color="secondary" maxLines={1}>
+                  {user.email}
+                </Text>
+              </VStack>
+            </HStack>
+          </Card>
+        </div>
 
-          <AchievementsCard achievements={achievements} />
+        {/* On a standalone deploy (e.g. devShark) point learners at the umbrella
+            site so they can discover the other Shark platforms. Hidden when
+            VITE_SIBLING_URL is unset (i.e. on StudyShark itself). */}
+        {SIBLING_PLATFORMS_URL && (
+          <a
+            href={SIBLING_PLATFORMS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
+          >
+            <Card variant="muted" padding={2} width="100%">
+              <HStack gap={1.5} align="center" justify="between">
+                <HStack gap={1.5} align="center">
+                  <span aria-hidden style={{ fontSize: 28, lineHeight: 1, flexShrink: 0 }}>🦈</span>
+                  <VStack gap={0}>
+                    <Text weight="bold">{t('profile.otherPlatforms')}</Text>
+                    <Text type="supporting" size="xsm" color="secondary">
+                      {t('profile.otherPlatformsSub')}
+                    </Text>
+                  </VStack>
+                </HStack>
+                <span aria-hidden style={{ color: 'var(--brand-accent)', fontWeight: 800, fontSize: '1.25rem', flexShrink: 0 }}>→</span>
+              </HStack>
+            </Card>
+          </a>
+        )}
 
-          {bookmarkedQuestions.length > 0 && (
-            <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-              <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
-                {t('profile.bookmarks', { count: bookmarkedQuestions.length })}
-              </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
-                {bookmarkedQuestions.slice(0, 20).map((q) => (
-                  <Box
-                    key={q.id}
-                    sx={{
-                      p: 1.5,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: 1,
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 1,
-                    }}
-                  >
-                    <Box sx={{ fontSize: '0.9rem' }}>{renderQuestion(q.question)}</Box>
-                    <Typography variant="caption" color="success.dark">
-                      {t('profile.answerLabel', { answer: q.options[q.correctIndex] ?? '-' })}
-                    </Typography>
-                    {q.explanation && (
-                      <Typography variant="caption" color="text.secondary">
-                        {q.explanation}
-                      </Typography>
-                    )}
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
-                      <Button
-                        size="small"
-                        onClick={() => removeBookmark(q.id)}
-                        sx={{ textTransform: 'none', color: 'text.secondary' }}
-                      >
-                        {t('common.remove')}
-                      </Button>
-                    </Box>
-                  </Box>
-                ))}
-                {bookmarkedQuestions.length > 20 && (
-                  <Typography variant="caption" color="text.secondary">
-                    {t('profile.showingOf', { total: bookmarkedQuestions.length })}
-                  </Typography>
+        {isFirstTime && (
+          <Alert
+            severity="info"
+            action={
+              <Button variant="ghost" size="sm" label={t('profile.firstQuizCta')} onClick={() => navigate('/quiz')} />
+            }
+          >
+            {t('profile.noQuizzes')}
+          </Alert>
+        )}
+
+        {/* On desktop the cards split into two columns so the profile lands close
+            to one viewport instead of one long scroll. On mobile they stack. */}
+        <Grid columns={{ minWidth: 360, max: 2 }} gap={2} align="start" width="100%">
+          <VStack gap={2}>
+            <CareerCard />
+
+            <LearningTrackCard />
+
+            <Card variant="default" padding={3} width="100%">
+              <VStack gap={2}>
+                <SectionLabel>{t('profile.streaks')}</SectionLabel>
+
+                <Grid columns={2} gap={2}>
+                  <Card variant="orange" padding={2}>
+                    <VStack gap={0.5} align="center">
+                      <Text size="4xl" weight="bold">{stats?.current_streak || 0}</Text>
+                      <Text type="supporting" color="secondary" justify="center">
+                        {t('profile.currentStreak')}
+                      </Text>
+                      <Text type="supporting" size="xsm" color="secondary" justify="center">
+                        {t('profile.days')}
+                      </Text>
+                    </VStack>
+                  </Card>
+
+                  <Card variant="cyan" padding={2}>
+                    <VStack gap={0.5} align="center">
+                      <Text size="4xl" weight="bold" color="accent">{stats?.longest_streak || 0}</Text>
+                      <Text type="supporting" color="secondary" justify="center">
+                        {t('profile.longestStreak')}
+                      </Text>
+                      <Text type="supporting" size="xsm" color="secondary" justify="center">
+                        {t('profile.days')}
+                      </Text>
+                    </VStack>
+                  </Card>
+                </Grid>
+
+                {stats?.last_quiz_date && (
+                  <Text type="supporting" size="xsm" color="secondary" justify="center">
+                    {t('profile.lastQuiz', { date: dateFormatter.format(new Date(stats.last_quiz_date)) })}
+                  </Text>
                 )}
-              </Box>
-            </Paper>
-          )}
+              </VStack>
+            </Card>
+          </VStack>
 
-          <PreferencesCard />
-        </Box>
-      </Box>
+          <VStack gap={2}>
+            <Card variant="default" padding={3} width="100%">
+              <VStack gap={2}>
+                <SectionLabel>{t('profile.statistics')}</SectionLabel>
 
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1 }}>
-        <Button
-          variant="text"
-          size="small"
-          onClick={() => navigate('/quiz')}
-          sx={{ textTransform: 'none', fontWeight: 600 }}
-        >
-          {isFirstTime ? t('profile.startQuiz') : t('profile.backToQuiz')}
-        </Button>
-      </Box>
-    </Box>
+                <Grid columns={{ minWidth: 130, max: 2 }} gap={1.5}>
+                  <StatTile label={t('profile.quizzesCompleted')} value={totalQuizzes} variant="blue" />
+                  <StatTile label={t('profile.questionsAnswered')} value={totalQuestions} variant="purple" />
+                  <StatTile label={t('profile.correctAnswers')} value={totalCorrect} variant="green" />
+                  <StatTile
+                    label={t('profile.averageScore')}
+                    value={`${averageScore}%`}
+                    variant={averageScore >= 70 ? 'green' : 'gray'}
+                  />
+                </Grid>
+              </VStack>
+            </Card>
+
+            <AchievementsCard achievements={achievements} />
+
+            {bookmarkedQuestions.length > 0 && (
+              <Card variant="default" padding={3} width="100%">
+                <VStack gap={2}>
+                  <SectionLabel>{t('profile.bookmarks', { count: bookmarkedQuestions.length })}</SectionLabel>
+                  <VStack gap={1.5}>
+                    {bookmarkedQuestions.slice(0, 20).map((q) => (
+                      <Card key={q.id} variant="muted" padding={2}>
+                        <VStack gap={1}>
+                          <div style={{ fontSize: '0.9rem' }}>{renderQuestion(q.question)}</div>
+                          <Text type="supporting" size="xsm" color="accent">
+                            {t('profile.answerLabel', { answer: q.options[q.correctIndex] ?? '-' })}
+                          </Text>
+                          {q.explanation && (
+                            <Text type="supporting" size="xsm" color="secondary">
+                              {q.explanation}
+                            </Text>
+                          )}
+                          <HStack justify="end">
+                            <Button variant="ghost" size="sm" label={t('common.remove')} onClick={() => removeBookmark(q.id)} />
+                          </HStack>
+                        </VStack>
+                      </Card>
+                    ))}
+                    {bookmarkedQuestions.length > 20 && (
+                      <Text type="supporting" size="xsm" color="secondary">
+                        {t('profile.showingOf', { total: bookmarkedQuestions.length })}
+                      </Text>
+                    )}
+                  </VStack>
+                </VStack>
+              </Card>
+            )}
+
+            <PreferencesCard />
+          </VStack>
+        </Grid>
+
+        <HStack justify="center">
+          <Button
+            variant="ghost"
+            size="sm"
+            label={isFirstTime ? t('profile.startQuiz') : t('profile.backToQuiz')}
+            onClick={() => navigate('/quiz')}
+          />
+        </HStack>
+      </VStack>
+    </div>
   );
 }
 
@@ -390,52 +363,62 @@ function CareerCard() {
   const { title, emoji } = rankLabelFor(info.rank, track);
   const nextTitle = info.next ? rankLabelFor(info.next, track).title : null;
   const nf = (n: number) => n.toLocaleString();
+  const nextLabel = info.isMax
+    ? t('profile.maxRank')
+    : t('profile.xpToNext', { xp: nf(info.xpToNext), title: nextTitle ?? '' });
 
   return (
-    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
-        {t('profile.career')}
-      </Typography>
+    <Card variant="default" padding={3} width="100%">
+      <VStack gap={2}>
+        <SectionLabel>{t('profile.career')}</SectionLabel>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Box sx={{ fontSize: { xs: 36, sm: 44 }, lineHeight: 1, flexShrink: 0 }} aria-hidden>
-          {emoji}
-        </Box>
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="h6" sx={{ fontWeight: 800, lineHeight: 1.2 }}>
-            {title}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {t('profile.careerLevelOf', { level: info.level, max: MAX_RANK })}
-          </Typography>
-        </Box>
-        <Box sx={{ textAlign: 'right', flexShrink: 0 }}>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: 'var(--brand-accent)', lineHeight: 1 }}>
-            {nf(totalXp)}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {t('profile.xpUnit')}
-          </Typography>
-        </Box>
-      </Box>
+        <HStack gap={2} align="center">
+          <div
+            aria-hidden
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 16,
+              display: 'grid',
+              placeItems: 'center',
+              fontSize: '2rem',
+              lineHeight: 1,
+              flexShrink: 0,
+              background: 'var(--brand-accent-soft, rgba(0,0,0,0.05))',
+              boxShadow: 'inset 0 0 0 1.5px color-mix(in srgb, var(--brand-accent) 45%, transparent)',
+            }}
+          >
+            {emoji}
+          </div>
+          <VStack gap={0} width="100%">
+            <Heading level={4} maxLines={1}>{title}</Heading>
+            <Text type="supporting" size="xsm" color="secondary">
+              {t('profile.careerLevelOf', { level: info.level, max: MAX_RANK })}
+            </Text>
+          </VStack>
+          <VStack gap={0} align="end">
+            <Text size="2xl" weight="bold" color="accent">{nf(totalXp)}</Text>
+            <Text type="supporting" size="xsm" color="secondary">{t('profile.xpUnit')}</Text>
+          </VStack>
+        </HStack>
 
-      <Box sx={{ mt: 2.5 }}>
-        <LinearProgress
-          variant="determinate"
-          value={info.progressPct}
-          aria-label={info.isMax ? t('profile.maxRank') : t('profile.xpToNext', { xp: info.xpToNext, title: nextTitle ?? '' })}
-          sx={{ height: 10, borderRadius: 5, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 5, backgroundColor: 'var(--brand-accent)', transition: 'transform 0.5s ease' } }}
-        />
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', mt: 0.75, gap: 1 }}>
-          <Typography variant="caption" color="text.secondary">
-            {t('profile.xpBreakdown', { learn: nf(learningXp), quest: nf(questXp) })}
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600, whiteSpace: 'nowrap' }}>
-            {info.isMax ? t('profile.maxRank') : t('profile.xpToNext', { xp: nf(info.xpToNext), title: nextTitle ?? '' })}
-          </Typography>
-        </Box>
-      </Box>
-    </Paper>
+        <VStack gap={1}>
+          <ProgressBar
+            label={nextLabel}
+            value={info.progressPct}
+            isLabelHidden
+          />
+          <HStack justify="between" align="start" gap={1} wrap="wrap">
+            <Text type="supporting" size="xsm" color="secondary">
+              {t('profile.xpBreakdown', { learn: nf(learningXp), quest: nf(questXp) })}
+            </Text>
+            <Text type="supporting" size="xsm" color="secondary" weight="semibold">
+              {nextLabel}
+            </Text>
+          </HStack>
+        </VStack>
+      </VStack>
+    </Card>
   );
 }
 
@@ -466,71 +449,72 @@ function LearningTrackCard() {
   };
 
   return (
-    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 1 }}>
-        {t('profile.trackTitle')}
-      </Typography>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-        {t('profile.trackHelp')}
-      </Typography>
+    <Card variant="default" padding={3} width="100%">
+      <VStack gap={2}>
+        <VStack gap={0.5}>
+          <SectionLabel>{t('profile.trackTitle')}</SectionLabel>
+          <Text type="supporting" color="secondary">{t('profile.trackHelp')}</Text>
+        </VStack>
 
-      <ToggleButtonGroup
-        value={track}
-        exclusive
-        onChange={applyTrack}
-        aria-label={t('profile.trackTitle')}
-        sx={{
-          flexWrap: 'wrap',
-          mb: 2.5,
-          '& .MuiToggleButton-root': {
-            px: 2,
-            py: 0.6,
-            fontWeight: 700,
-            textTransform: 'none',
-            '&.Mui-selected': {
-              backgroundColor: 'var(--brand-accent)',
-              color: '#fff',
-              '&:hover': { backgroundColor: 'var(--brand-accent-hover)' },
+        <ToggleButtonGroup
+          value={track}
+          exclusive
+          onChange={applyTrack}
+          aria-label={t('profile.trackTitle')}
+          sx={{
+            flexWrap: 'wrap',
+            '& .MuiToggleButton-root': {
+              px: 2,
+              py: 0.6,
+              fontWeight: 700,
+              textTransform: 'none',
+              '&.Mui-selected': {
+                backgroundColor: 'var(--brand-accent)',
+                color: '#fff',
+                '&:hover': { backgroundColor: 'var(--brand-accent-hover)' },
+              },
             },
-          },
-        }}
-      >
-        {TRACK_ORDER.map((tk) => (
-          <ToggleButton key={tk} value={tk}>
-            {tracksForActiveSubject()[tk].label}
-          </ToggleButton>
-        ))}
-      </ToggleButtonGroup>
+          }}
+        >
+          {TRACK_ORDER.map((tk) => (
+            <ToggleButton key={tk} value={tk}>
+              {tracksForActiveSubject()[tk].label}
+            </ToggleButton>
+          ))}
+        </ToggleButtonGroup>
 
-      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 1 }}>
-        {t('profile.trackSectionsLabel')}
-      </Typography>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 2 }}>
-        {sections.map((topic) => {
-          const unlocked = isTopicUnlocked(progress, topic, extraSet);
-          const color = getCategoryHexColor(topic);
-          return (
-            <Chip
-              key={topic}
-              label={getCategoryLabel(topic)}
-              size="small"
-              onClick={() => navigate(`/learn?topic=${topic}`)}
-              sx={{
-                cursor: 'pointer',
-                fontWeight: 600,
-                border: '1px solid',
-                borderColor: color,
-                backgroundColor: unlocked ? color : 'transparent',
-                color: unlocked ? onCategoryColorText(topic) : 'text.secondary',
-              }}
-            />
-          );
-        })}
-      </Box>
+        <VStack gap={1}>
+          <Text type="supporting" size="xsm" color="secondary">
+            {t('profile.trackSectionsLabel')}
+          </Text>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {sections.map((topic) => {
+              const unlocked = isTopicUnlocked(progress, topic, extraSet);
+              const color = getCategoryHexColor(topic);
+              return (
+                <Chip
+                  key={topic}
+                  label={getCategoryLabel(topic)}
+                  size="small"
+                  onClick={() => navigate(`/learn?topic=${topic}`)}
+                  sx={{
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    border: '1px solid',
+                    borderColor: color,
+                    backgroundColor: unlocked ? color : 'transparent',
+                    color: unlocked ? onCategoryColorText(topic) : 'text.secondary',
+                  }}
+                />
+              );
+            })}
+          </div>
+        </VStack>
 
-      <Button variant="outlined" size="small" onClick={() => navigate('/learn')} sx={{ textTransform: 'none' }}>
-        {t('profile.trackGoLearn')}
-      </Button>
+        <HStack>
+          <Button variant="secondary" size="sm" label={t('profile.trackGoLearn')} onClick={() => navigate('/learn')} />
+        </HStack>
+      </VStack>
 
       <Snackbar
         open={!!snack}
@@ -539,7 +523,7 @@ function LearningTrackCard() {
         message={snack ?? ''}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       />
-    </Paper>
+    </Card>
   );
 }
 
@@ -612,8 +596,7 @@ const ACHIEVEMENT_ICON: Record<string, ReactNode> = {
 
 function AchievementIcon({ id }: { id: string }) {
   return (
-    <Box
-      component="svg"
+    <svg
       aria-hidden
       viewBox="0 0 24 24"
       fill="none"
@@ -621,10 +604,10 @@ function AchievementIcon({ id }: { id: string }) {
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      sx={{ width: 22, height: 22, display: 'block' }}
+      style={{ width: 22, height: 22, display: 'block' }}
     >
       {ACHIEVEMENT_ICON[id] ?? ACHIEVEMENT_ICON['first-quiz']}
-    </Box>
+    </svg>
   );
 }
 
@@ -636,42 +619,42 @@ function AchievementBadge({ achievement }: { achievement: Achievement }) {
   const accent = ACHIEVEMENT_ACCENT[id] ?? 'var(--brand-accent)';
 
   return (
-    <Box
+    <div
       aria-label={t('profile.achievementAria', {
         label,
         state: earned ? t('profile.earned') : t('profile.locked'),
         description,
       })}
-      sx={{
+      style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 1.25,
-        p: 1.25,
+        gap: 10,
+        padding: 10,
         border: '1px solid',
-        borderColor: earned ? `${accent}66` : 'divider',
-        borderRadius: 2,
+        borderColor: earned ? `${accent}66` : 'var(--astryx-border, rgba(0,0,0,0.12))',
+        borderRadius: 12,
         backgroundColor: earned ? `${accent}14` : 'transparent',
       }}
     >
-      <Box sx={{ position: 'relative', flexShrink: 0 }}>
-        <Box
-          sx={{
+      <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div
+          style={{
             width: 44,
             height: 44,
             borderRadius: '50%',
             display: 'grid',
             placeItems: 'center',
-            backgroundColor: earned ? accent : 'action.hover',
-            color: earned ? '#fff' : 'text.disabled',
+            backgroundColor: earned ? accent : 'rgba(128,128,128,0.16)',
+            color: earned ? '#fff' : 'rgba(128,128,128,0.7)',
             boxShadow: earned ? `0 2px 8px ${accent}59` : 'none',
           }}
         >
           <AchievementIcon id={id} />
-        </Box>
+        </div>
         {earned && (
-          <Box
+          <div
             aria-hidden
-            sx={{
+            style={{
               position: 'absolute',
               right: -2,
               bottom: -2,
@@ -679,28 +662,27 @@ function AchievementBadge({ achievement }: { achievement: Achievement }) {
               height: 17,
               borderRadius: '50%',
               backgroundColor: 'var(--brand-accent)',
-              border: '2px solid',
-              borderColor: 'background.paper',
+              border: '2px solid var(--astryx-surface, #fff)',
               display: 'grid',
               placeItems: 'center',
             }}
           >
-            <Box component="svg" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" sx={{ width: 9, height: 9, display: 'block' }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" style={{ width: 9, height: 9, display: 'block' }}>
               <path d="M20 6 9 17l-5-5" />
-            </Box>
-          </Box>
+            </svg>
+          </div>
         )}
-      </Box>
+      </div>
 
-      <Box sx={{ minWidth: 0 }}>
-        <Typography variant="body2" sx={{ fontWeight: 700, lineHeight: 1.2, color: earned ? 'text.primary' : 'text.secondary' }}>
+      <div style={{ minWidth: 0 }}>
+        <Text weight="bold" color={earned ? 'primary' : 'secondary'}>
           {label}
-        </Typography>
-        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', lineHeight: 1.35 }}>
+        </Text>
+        <Text type="supporting" size="xsm" color="secondary" display="block">
           {description}
-        </Typography>
-      </Box>
-    </Box>
+        </Text>
+      </div>
+    </div>
   );
 }
 
@@ -712,26 +694,20 @@ function AchievementsCard({ achievements }: { achievements: Achievement[] }) {
   const pct = achievements.length > 0 ? Math.round((earnedCount / achievements.length) * 100) : 0;
 
   return (
-    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, mb: 1.5, flexWrap: 'wrap' }}>
-        <Typography variant="overline" color="text.secondary" component="h2">
-          {t('profile.achievements', { earned: earnedCount, total: achievements.length })}
-        </Typography>
-        <Typography variant="caption" sx={{ fontWeight: 800, color: 'var(--brand-accent)' }}>
-          {pct}%
-        </Typography>
-      </Box>
-      <LinearProgress
-        variant="determinate"
-        value={pct}
-        sx={{ height: 6, borderRadius: 3, mb: 2, backgroundColor: 'action.hover', '& .MuiLinearProgress-bar': { borderRadius: 3, backgroundColor: 'var(--brand-accent)' } }}
-      />
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.25 }}>
-        {achievements.map((a) => (
-          <AchievementBadge key={a.id} achievement={a} />
-        ))}
-      </Box>
-    </Paper>
+    <Card variant="default" padding={3} width="100%">
+      <VStack gap={2}>
+        <HStack align="center" justify="between" gap={1} wrap="wrap">
+          <SectionLabel>{t('profile.achievements', { earned: earnedCount, total: achievements.length })}</SectionLabel>
+          <Badge variant="neutral" label={`${pct}%`} />
+        </HStack>
+        <ProgressBar label={t('profile.achievements', { earned: earnedCount, total: achievements.length })} value={pct} isLabelHidden />
+        <Grid columns={{ minWidth: 200, max: 2 }} gap={1.5}>
+          {achievements.map((a) => (
+            <AchievementBadge key={a.id} achievement={a} />
+          ))}
+        </Grid>
+      </VStack>
+    </Card>
   );
 }
 
@@ -747,44 +723,38 @@ function PreferencesCard() {
   };
 
   return (
-    <Paper elevation={0} sx={{ p: { xs: 2, sm: 3 }, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 2 }}>
-        {t('profile.preferences')}
-      </Typography>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            {t('profile.language')}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {t('profile.languageHelp')}
-          </Typography>
-        </Box>
-        <ToggleButtonGroup
-          value={lang}
-          exclusive
-          size="small"
-          onChange={handleLang}
-          aria-label={t('profile.language')}
-          sx={{ '& .MuiToggleButton-root': { px: 1.5, py: 0.4, fontSize: '0.75rem', fontWeight: 700, textTransform: 'none' } }}
-        >
-          <ToggleButton value="en">EN</ToggleButton>
-          <ToggleButton value="cs">CS</ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
-    </Paper>
+    <Card variant="default" padding={3} width="100%">
+      <VStack gap={2}>
+        <SectionLabel>{t('profile.preferences')}</SectionLabel>
+        <HStack justify="between" align="center" gap={2} wrap="wrap">
+          <VStack gap={0}>
+            <Text weight="semibold">{t('profile.language')}</Text>
+            <Text type="supporting" size="xsm" color="secondary">{t('profile.languageHelp')}</Text>
+          </VStack>
+          <ToggleButtonGroup
+            value={lang}
+            exclusive
+            size="small"
+            onChange={handleLang}
+            aria-label={t('profile.language')}
+            sx={{ '& .MuiToggleButton-root': { px: 1.5, py: 0.4, fontSize: '0.75rem', fontWeight: 700, textTransform: 'none' } }}
+          >
+            <ToggleButton value="en">EN</ToggleButton>
+            <ToggleButton value="cs">CS</ToggleButton>
+          </ToggleButtonGroup>
+        </HStack>
+      </VStack>
+    </Card>
   );
 }
 
-const StatRow = ({ label, value }: { label: string; value: number }) => (
-  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', p: 1.5, backgroundColor: 'action.hover', borderRadius: 1 }}>
-    <Typography variant="body2" color="text.secondary">
-      {label}
-    </Typography>
-    <Typography variant="body1" sx={{ fontWeight: 600 }}>
-      {value}
-    </Typography>
-  </Box>
+const StatTile = ({ label, value, variant }: { label: string; value: number | string; variant: CardVariant }) => (
+  <Card variant={variant} padding={2}>
+    <VStack gap={0.5}>
+      <Text size="2xl" weight="bold">{value}</Text>
+      <Text type="supporting" size="xsm" color="secondary">{label}</Text>
+    </VStack>
+  </Card>
 );
 
 export default Profile;

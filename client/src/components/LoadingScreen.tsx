@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Box, Typography, type SxProps, type Theme } from '@mui/material';
+import { Box, type SxProps, type Theme } from '@mui/material';
+import { Text } from '@astryxdesign/core/Text';
 import { visuallyHidden } from '../theme/MuiTheme';
 import { SwimmingShark } from './SharkFin';
 
@@ -40,9 +41,11 @@ export function QuoteLoader({ quote, label }: { quote: string; label: string }) 
       aria-live="polite"
       sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}
     >
-      <Typography sx={{ fontStyle: 'italic', fontWeight: 600, fontSize: '1.15rem', color: 'text.secondary', textAlign: 'center' }}>
-        {quote}
-      </Typography>
+      <div style={{ fontStyle: 'italic', textAlign: 'center', maxWidth: 520, padding: '0 8px' }}>
+        <Text type="large" weight="semibold" color="secondary">
+          {quote}
+        </Text>
+      </div>
       <SwimmingShark size={44} />
       <Box component="span" sx={visuallyHidden}>{label}</Box>
     </Box>
@@ -81,7 +84,7 @@ export default function LoadingScreen({ label, size, sx, tips }: Props) {
         {label}
       </Box>
       {tip && (
-        <Typography
+        <Box
           // Decorative flourish — the status label above already conveys "loading",
           // so keep the tip out of the live region to avoid talking over it.
           aria-hidden="true"
@@ -90,7 +93,6 @@ export default function LoadingScreen({ label, size, sx, tips }: Props) {
             px: 2,
             textAlign: 'center',
             fontStyle: 'italic',
-            color: 'text.secondary',
             '@keyframes devsharkTipIn': {
               from: { opacity: 0, transform: 'translateY(4px)' },
               to: { opacity: 1, transform: 'translateY(0)' },
@@ -99,8 +101,10 @@ export default function LoadingScreen({ label, size, sx, tips }: Props) {
             '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
           }}
         >
-          {tip}
-        </Typography>
+          <Text type="body" color="secondary">
+            {tip}
+          </Text>
+        </Box>
       )}
     </Box>
   );

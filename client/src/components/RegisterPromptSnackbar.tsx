@@ -8,8 +8,10 @@
 // distinct product moment against the dark chrome.
 
 import { useEffect, useState } from 'react';
-import { Box, Button, IconButton, Slide, Snackbar, Stack, Typography } from '@mui/material';
+import { Box, IconButton, Slide, Snackbar, Stack } from '@mui/material';
 import type { SlideProps } from '@mui/material/Slide';
+import { Button } from '@astryxdesign/core/Button';
+import { Text } from '@astryxdesign/core/Text';
 import { useAuth } from '../lib/auth';
 import { useT } from '../i18n/LanguageContext';
 import { SIGNUP_BONUS_TOKENS } from '../lib/tokens';
@@ -94,10 +96,13 @@ function RegisterPromptSnackbar() {
             position: 'relative',
             width: 320,
             maxWidth: 'calc(100vw - 24px)',
-            // Always white, both themes — that's the "catch the eye" ask.
+            // Always white, both themes — that's the "catch the eye" ask. Pin
+            // color-scheme to light so the nested Astryx Text/Button resolve
+            // their light-theme (dark-on-white) tokens even in dark mode.
+            colorScheme: 'light',
             backgroundColor: '#ffffff',
             color: '#111827',
-            borderRadius: 2,
+            borderRadius: 3,
             boxShadow: '0 10px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.06)',
             // Brand-green shark-fin accent on the leading edge.
             borderLeft: `4px solid var(--brand-accent)`,
@@ -118,39 +123,17 @@ function RegisterPromptSnackbar() {
               <SharkFin size={22} color={'var(--brand-accent)'} />
             </Box>
             <Stack spacing={0.25}>
-              <Typography sx={{ fontWeight: 700, color: '#111827', fontSize: '0.95rem', lineHeight: 1.25 }}>
+              <Text as="div" type="body" weight="bold" color="primary">
                 {t('register.title')}
-              </Typography>
-              <Typography sx={{ color: '#4b5563', fontSize: '0.82rem', lineHeight: 1.35 }}>
+              </Text>
+              <Text as="div" type="supporting" color="secondary">
                 {t('register.body', { tokens: String(SIGNUP_BONUS_TOKENS) })}
-              </Typography>
+              </Text>
             </Stack>
           </Stack>
           <Stack direction="row" spacing={1} justifyContent="flex-end">
-            <Button
-              size="small"
-              variant="contained"
-              onClick={handleSignIn}
-              sx={{
-                backgroundColor: 'var(--brand-accent)',
-                color: '#fff',
-                fontWeight: 700,
-                textTransform: 'none',
-                px: 1.75,
-                boxShadow: 'none',
-                '&:hover': { backgroundColor: 'var(--brand-accent-hover)', boxShadow: 'none' },
-              }}
-            >
-              {t('register.cta')}
-            </Button>
-            <Button
-              size="small"
-              variant="text"
-              onClick={handleClose}
-              sx={{ color: 'rgba(0, 0, 0, 0.6)', textTransform: 'none' }}
-            >
-              {t('register.dismiss')}
-            </Button>
+            <Button size="sm" variant="ghost" label={t('register.dismiss')} onClick={handleClose} />
+            <Button size="sm" variant="primary" label={t('register.cta')} onClick={handleSignIn} />
           </Stack>
         </Box>
       </Snackbar>

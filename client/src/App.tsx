@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { Box, AppBar, Toolbar, Typography, Button, IconButton, Tooltip, Drawer, List, ListItemButton, ListItemText, Divider, Snackbar, Alert, Chip } from '@mui/material';
-import { Routes, Route, Link, Navigate, useLocation } from 'react-router-dom';
+import { Box, AppBar, Toolbar, Typography, Button, Drawer, List, ListItemButton, ListItemText, Divider, Snackbar, Alert } from '@mui/material';
+import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { IconButton as AxIconButton } from '@astryxdesign/core/IconButton';
+import { Badge as AxBadge } from '@astryxdesign/core/Badge';
 import LoadingScreen from './components/LoadingScreen';
 import { SwimmingFin, Waterline } from './components/SharkFin';
 import { useColorMode } from './theme/ColorModeContext';
@@ -172,23 +174,13 @@ const RouteLoader = () => {
 function SubjectSwitcher() {
   const subject = useActiveSubject();
   return (
-    <Chip
+    <Box
       component={Link}
       to="/subjects"
-      clickable
-      size="small"
-      label={`${subject.emoji} ${subject.label}`}
-      sx={{
-        ml: 0.5,
-        fontWeight: 700,
-        cursor: 'pointer',
-        color: subject.accent,
-        borderColor: subject.accent,
-        backgroundColor: 'transparent',
-        border: '1px solid',
-        '& .MuiChip-label': { px: 1 },
-      }}
-    />
+      sx={{ ml: 0.5, display: 'inline-flex', textDecoration: 'none', borderRadius: 999 }}
+    >
+      <AxBadge label={`${subject.emoji} ${subject.label}`} />
+    </Box>
   );
 }
 
@@ -245,6 +237,7 @@ function HeaderBrand() {
 
 function App() {
   const location = useLocation();
+  const navigate = useNavigate();
   const { t, setLang } = useLanguage();
   const config = useGameConfig();
   const [quizActive, setQuizActive] = useState(false);
@@ -378,28 +371,22 @@ function App() {
   // section (next to the account widget); on mobile they live in the nav drawer.
   const utilityToggles = (
     <>
-      <Tooltip title={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}>
-        <IconButton
-          size="small"
-          onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
-          aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
-          aria-pressed={settings.soundEffects}
-          // ≥24×24px hit area (WCAG 2.5.8): 8px padding + 16px icon = 32px.
-          sx={{ p: 1, color: settings.soundEffects ? 'var(--brand-accent)' : 'text.secondary', '& svg': { width: 16, height: 16 } }}
-        >
-          {settings.soundEffects ? <SoundOnIcon /> : <SoundOffIcon />}
-        </IconButton>
-      </Tooltip>
-      <Tooltip title={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
-        <IconButton
-          size="small"
-          onClick={toggle}
-          aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
-          sx={{ p: 1, color: 'text.secondary', '& svg': { width: 16, height: 16 } }}
-        >
-          {mode === 'light' ? <MoonIcon /> : <SunIcon />}
-        </IconButton>
-      </Tooltip>
+      <AxIconButton
+        variant="ghost"
+        size="sm"
+        onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
+        label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
+        tooltip={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
+        icon={settings.soundEffects ? <SoundOnIcon /> : <SoundOffIcon />}
+      />
+      <AxIconButton
+        variant="ghost"
+        size="sm"
+        onClick={toggle}
+        label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
+        tooltip={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
+        icon={mode === 'light' ? <MoonIcon /> : <SunIcon />}
+      />
     </>
   );
 
@@ -445,16 +432,17 @@ function App() {
             {/* Left slot: mobile menu + logo. Flex-basis 0 so all three slots
                 share width equally, keeping the centre slot truly centred. */}
             <Box sx={{ flex: '1 1 0', display: 'flex', alignItems: 'center', minWidth: 0 }}>
-              <IconButton
-                edge="start"
-                aria-label={t('nav.menu')}
-                onClick={() => setMobileNavOpen(true)}
-                // Nav links appear from 760px (tablets), not MUI's 900px `md`,
-                // so a 768px iPad doesn't get a mostly-empty toolbar.
-                sx={{ display: 'inline-flex', '@media (min-width:760px)': { display: 'none' }, mr: 0.5, color: 'text.secondary' }}
-              >
-                <MenuIcon />
-              </IconButton>
+              {/* Nav links appear from 760px (tablets), not MUI's 900px `md`,
+                  so a 768px iPad doesn't get a mostly-empty toolbar. */}
+              <Box sx={{ display: 'inline-flex', '@media (min-width:760px)': { display: 'none' }, mr: 0.5 }}>
+                <AxIconButton
+                  variant="ghost"
+                  size="sm"
+                  label={t('nav.menu')}
+                  onClick={() => setMobileNavOpen(true)}
+                  icon={<MenuIcon />}
+                />
+              </Box>
               <HeaderBrand />
             </Box>
 
@@ -479,29 +467,25 @@ function App() {
             <Box sx={{ flex: '1 1 0', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: { xs: 0.5, sm: 1 }, minWidth: 0 }}>
               {/* Icon links to the non-learning surfaces. Hidden below 760px —
                   the drawer covers them there. */}
-              <Box sx={{ display: 'none', '@media (min-width:760px)': { display: 'inline-flex' }, alignItems: 'center' }}>
+              <Box sx={{ display: 'none', '@media (min-width:760px)': { display: 'inline-flex' }, alignItems: 'center', gap: 0.25 }}>
                 {showLeaderboardIcon && (
-                  <Tooltip title={t('nav.leaderboard')}>
-                    <IconButton
-                      component={Link}
-                      to="/leaderboard"
-                      aria-label={t('nav.leaderboard')}
-                      sx={{ color: location.pathname === '/leaderboard' ? 'var(--brand-accent)' : 'text.secondary' }}
-                    >
-                      <TrophyNavIcon />
-                    </IconButton>
-                  </Tooltip>
+                  <AxIconButton
+                    variant="ghost"
+                    size="sm"
+                    label={t('nav.leaderboard')}
+                    tooltip={t('nav.leaderboard')}
+                    onClick={() => navigate('/leaderboard')}
+                    icon={<TrophyNavIcon />}
+                  />
                 )}
-                <Tooltip title={t('nav.shop')}>
-                  <IconButton
-                    component={Link}
-                    to="/shop"
-                    aria-label={t('nav.shop')}
-                    sx={{ color: location.pathname === '/shop' ? 'var(--brand-accent)' : 'text.secondary' }}
-                  >
-                    <ShopNavIcon />
-                  </IconButton>
-                </Tooltip>
+                <AxIconButton
+                  variant="ghost"
+                  size="sm"
+                  label={t('nav.shop')}
+                  tooltip={t('nav.shop')}
+                  onClick={() => navigate('/shop')}
+                  icon={<ShopNavIcon />}
+                />
               </Box>
               {/* Sound + theme toggles, grouped into the profile section on
                   desktop/tablet. Hidden below `sm` — the nav drawer covers
