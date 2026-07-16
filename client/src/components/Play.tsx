@@ -7,7 +7,6 @@ import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
-import { SelectableCard } from '@astryxdesign/core/SelectableCard';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { Banner } from '@astryxdesign/core/Banner';
@@ -38,6 +37,7 @@ import { friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader } from './LoadingScreen';
 import { useT } from '../i18n/LanguageContext';
+import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { useGameConfig } from '../lib/gameConfig';
 
 const POLL_FALLBACK_MS = 4000;
@@ -883,24 +883,30 @@ function RunningQuestion({
 
         <div>{renderQuestion(q.question)}</div>
 
-        <VStack gap={1}>
-          {q.options.map((opt, i) => {
-            const isCorrect = isHost && q.correct_index === i;
-            return (
-              <SelectableCard
-                key={i}
-                label={opt}
-                isSelected={isCorrect || selected === i}
-                isDisabled={submitted}
-                variant={isCorrect ? 'green' : 'default'}
-                padding={2}
-                onChange={() => onSelect(i)}
-              >
-                <Text>{opt}</Text>
-              </SelectableCard>
-            );
-          })}
-        </VStack>
+        <RadioCardGroup
+          value={selected}
+          onChange={(v) => onSelect(v as number)}
+          label={t('play.answersAria')}
+        >
+          <VStack gap={1}>
+            {q.options.map((opt, i) => {
+              const isCorrect = isHost && q.correct_index === i;
+              return (
+                <RadioCard
+                  key={i}
+                  value={i}
+                  index={i}
+                  label={opt}
+                  padding={2}
+                  disabled={submitted}
+                  tone={isCorrect ? 'success' : 'default'}
+                >
+                  <Text>{opt}</Text>
+                </RadioCard>
+              );
+            })}
+          </VStack>
+        </RadioCardGroup>
 
         {!isHost && !submitted && (
           <div style={{ display: 'grid' }}>

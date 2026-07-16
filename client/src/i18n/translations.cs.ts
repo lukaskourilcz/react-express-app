@@ -25,6 +25,7 @@ export const cs: Record<TranslationKey, string> = {
   'nav.switchSubject': 'Změnit předmět',
   'nav.soundAndTheme': 'Zvuk a motiv',
   'nav.menu': 'Otevřít navigační menu',
+  'nav.menuTitle': 'Navigace',
   'title.home': 'StudyShark, kvízy a studijní cesty pro webové vývojáře',
   'title.quiz': 'Kvíz · StudyShark',
   'title.learn': 'Učení · StudyShark',
@@ -370,6 +371,7 @@ export const cs: Record<TranslationKey, string> = {
   'play.classAnswers': 'Odpovědi třídy (naživo)',
   'play.matchComplete': 'Hra dokončena',
   'play.winner': 'Vítěz: {name} — {correct}/{total}',
+  'play.answersAria': 'Možnosti odpovědí',
   'common.back': 'Zpět',
 
   // Loading / error states

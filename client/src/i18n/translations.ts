@@ -24,6 +24,7 @@ export const en = {
   'subject.meta': '{count} topics · Learn path, quizzes & leaderboards',
   'nav.soundAndTheme': 'Sound & theme',
   'nav.menu': 'Open navigation menu',
+  'nav.menuTitle': 'Navigation',
   'title.home': 'StudyShark: quizzes and learning paths',
   'title.quiz': 'Quiz · StudyShark',
   'title.learn': 'Learn · StudyShark',
@@ -369,6 +370,7 @@ export const en = {
   'play.classAnswers': 'Class answers (live)',
   'play.matchComplete': 'Match complete',
   'play.winner': 'Winner: {name} — {correct}/{total}',
+  'play.answersAria': 'Answer choices',
   'common.back': 'Back',
 
   // Loading / error states
