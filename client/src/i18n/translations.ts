@@ -124,6 +124,7 @@ export const en = {
   'auth.logIn': 'Log in',
   'auth.logOut': 'Log out',
   'auth.signInFailed': 'Sign-in failed. Please try again.',
+  'auth.signupBonusToast': '+{tokens} tokens · welcome to StudyShark',
   'auth.profile': 'Profile',
   'auth.account': 'Account',
   'auth.loadingAccount': 'Loading account',

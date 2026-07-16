@@ -45,6 +45,7 @@ const Highlighter = lazy(async () => {
   return {
     default: ({ language, code }: { language: string; code: string }) => (
       <PrismLight
+        aria-label={`${language} code block`}
         language={language}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         style={oneDark as any}

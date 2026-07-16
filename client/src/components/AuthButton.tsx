@@ -80,7 +80,7 @@ function AuthButton() {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Sign-in failed. Please try again.');
+      setAuthError(err instanceof Error ? err.message : t('auth.signInFailed'));
     }
   };
 

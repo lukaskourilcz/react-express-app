@@ -125,6 +125,7 @@ export const cs: Record<TranslationKey, string> = {
   'auth.logIn': 'Přihlásit se',
   'auth.logOut': 'Odhlásit se',
   'auth.signInFailed': 'Přihlášení se nezdařilo. Zkuste to prosím znovu.',
+  'auth.signupBonusToast': '+{tokens} žetonů · vítejte ve StudySharku',
   'auth.profile': 'Profil',
   'auth.account': 'Účet',
   'auth.loadingAccount': 'Načítání účtu',

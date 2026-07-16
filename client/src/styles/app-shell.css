@@ -54,20 +54,19 @@
 /* Nav links. */
 .ss-navlink {
   font-family: var(--font-family-body);
-  font-weight: 600;
-  font-size: 0.95rem;
+  font-weight: 500;
+  font-size: 0.9rem;
   text-decoration: none;
   color: var(--color-text-secondary);
-  padding: 6px 10px;
-  border-radius: 10px;
+  padding: 8px 12px;
+  border-radius: var(--radius-element);
   transition: color 0.15s ease, background 0.15s ease;
 }
 .ss-navlink:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
 .ss-navlink[data-active='true'] {
   color: var(--brand-accent);
-  font-weight: 800;
-  text-decoration: underline;
-  text-underline-offset: 4px;
+  font-weight: 700;
+  background: var(--brand-accent-soft, var(--color-background-muted));
 }
 
 /* Mobile drawer. */
@@ -157,4 +156,28 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .ss-fin-drift { animation: none !important; }
+}
+
+/* Shark mascot animations (SharkFin.tsx) — one static copy instead of a
+   per-mount <style> injection. */
+@keyframes devsharkSwim {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-2px) rotate(-5deg); }
+}
+@keyframes devsharkCruise {
+  0% { transform: translateX(-130%) translateY(0) rotate(-6deg); }
+  50% { transform: translateX(-50%) translateY(-3px) rotate(6deg); }
+  100% { transform: translateX(30%) translateY(0) rotate(-6deg); }
+}
+@keyframes devsharkWake {
+  0%, 100% { opacity: 0.15; transform: scaleX(0.9); }
+  50% { opacity: 0.35; transform: scaleX(1); }
+}
+.devshark-swim { animation: devsharkSwim 3s ease-in-out infinite; }
+.devshark-cruise { animation: devsharkCruise 2.4s ease-in-out infinite alternate; }
+.devshark-wake { animation: devsharkWake 2.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .devshark-swim { animation: none; }
+  .devshark-cruise { animation: none; transform: translateX(-50%); }
+  .devshark-wake { animation: none; }
 }

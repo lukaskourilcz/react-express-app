@@ -74,7 +74,7 @@ function RegisterPromptSnackbar() {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Sign-in failed');
+      setError(err instanceof Error ? err.message : t('auth.signInFailed'));
     }
   };
 
@@ -141,7 +141,7 @@ function RegisterPromptSnackbar() {
                 appearance: 'none',
                 border: 'none',
                 background: 'transparent',
-                color: 'rgba(0, 0, 0, 0.42)',
+                color: 'rgba(0, 0, 0, 0.6)',
                 cursor: 'pointer',
                 padding: 4,
                 lineHeight: 0,

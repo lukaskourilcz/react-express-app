@@ -65,7 +65,9 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
     standaloneBrand: 'geoShark',
     blurb: 'The whole world: continents, countries, capitals, climate and the Earth itself.',
     emoji: '🌍',
-    accent: '#ea580c',
+    // orange-700: white "on-accent" text on primary buttons passes 4.5:1
+    // (the previous #ea580c sat at 3.56:1 in light mode).
+    accent: '#c2410c',
     accentBright: '#fb923c',
     topics: ['continents', 'capitals', 'flags', 'landforms', 'climate', 'population', 'political', 'economic', 'cartography', 'earth', 'geomorphology', 'oceanography', 'biogeography', 'geopolitics', 'gis'],
     categories: ['continents', 'capitals', 'flags', 'landforms', 'climate', 'population', 'political', 'economic', 'cartography', 'earth', 'geomorphology', 'oceanography', 'biogeography', 'geopolitics', 'gis'],
@@ -109,7 +111,9 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
     standaloneBrand: 'bioShark',
     blurb: 'The human body from cells to whole systems: anatomy and physiology, step by step.',
     emoji: '🧬',
-    accent: '#0d9488',
+    // teal-700: white "on-accent" text on primary buttons passes 4.5:1
+    // (the previous #0d9488 sat at 3.74:1 in light mode).
+    accent: '#0f766e',
     accentBright: '#2dd4bf',
     topics: ['cell-biology', 'skeletal-system', 'muscular-system', 'nervous-system', 'endocrine-system', 'cardiovascular-system', 'respiratory-system', 'digestive-system', 'immune-system', 'reproductive-system'],
     categories: ['cell-biology', 'skeletal-system', 'muscular-system', 'nervous-system', 'endocrine-system', 'cardiovascular-system', 'respiratory-system', 'digestive-system', 'immune-system', 'reproductive-system'],
