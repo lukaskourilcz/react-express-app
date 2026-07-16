@@ -373,6 +373,7 @@ export const cs: Record<TranslationKey, string> = {
   // Loading / error states
   'quiz.retry': 'Zkusit znovu',
   'quiz.backToSettings': 'Zpět na nastavení',
+  'quiz.noQuestions': 'Žádné otázky neodpovídají tomuto nastavení. Zkus jiné kategorie nebo obtížnost.',
   'error.somethingWrong': 'Něco se pokazilo',
 
   // Practice / stats toasts
@@ -545,11 +546,11 @@ export const cs: Record<TranslationKey, string> = {
 
   // Biggest Shark Challenge
   'challenge.title': 'Výzva největšího žraloka',
-  'challenge.description': 'Odpověz na co nejvíc otázek, než hru ukončí tři chyby nebo časomíra.',
+  'challenge.description': 'Odpověz na co nejvíc otázek, než hru ukončí tři chyby — každá otázka má vlastní 90sekundový čas.',
   'challenge.howItWorks': 'Jak to funguje',
   'challenge.rule1': 'Náhodné otázky ze všech kategorií a obtížností.',
   'challenge.rule2': 'Začínáš se třemi žraločími ploutvemi, každá chyba bere jednu.',
-  'challenge.rule3': 'Závodíš taky s 90sekundovým časem, hru ukončí to, co dojde dřív.',
+  'challenge.rule3': 'Každá otázka má vlastní 90sekundový čas — když dojde na nulu, přijdeš o ploutev.',
   'challenge.rule4': 'Skóre = počet správných odpovědí. Překonej nejvyšší skóre a získej titul šampiona.',
   'challenge.currentChampion': 'Aktuální šampion',
   'challenge.noChampion': 'Skóre ještě nikdo nemá. Buď první.',
@@ -564,6 +565,7 @@ export const cs: Record<TranslationKey, string> = {
   'challenge.difficultyLevel': 'Obtížnost {level}',
   'challenge.correct': 'Správně!',
   'challenge.wrong': 'Chyba!',
+  'challenge.questionTimeout': 'Čas vypršel — to je chyba.',
   'challenge.lockIn': 'Potvrdit',
   'challenge.nextQuestion': 'Další otázka',
   'challenge.seeResult': 'Zobrazit výsledek',
@@ -576,5 +578,5 @@ export const cs: Record<TranslationKey, string> = {
   'challenge.playAgain': 'Hrát znovu',
   'challenge.backToIntro': 'Zpět',
   'challenge.cta': 'Výzva největšího žraloka',
-  'challenge.ctaSubtitle': '90 sekund · 3 chyby · smíšená obtížnost',
+  'challenge.ctaSubtitle': '90 s na otázku · 3 chyby · smíšená obtížnost',
 };

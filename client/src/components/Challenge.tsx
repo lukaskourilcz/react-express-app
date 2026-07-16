@@ -3,14 +3,14 @@ import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
-import { Badge } from '@astryxdesign/core/Badge';
-import { Card } from '@astryxdesign/core/Card';
 import { Button } from '@astryxdesign/core/Button';
+import { Card } from '@astryxdesign/core/Card';
+import { Badge } from '@astryxdesign/core/Badge';
 import { Banner } from '@astryxdesign/core/Banner';
-import { Spinner } from '@astryxdesign/core/Spinner';
-import { SelectableCard } from '@astryxdesign/core/SelectableCard';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { TextInput } from '@astryxdesign/core/TextInput';
+import { SelectableCard } from '@astryxdesign/core/SelectableCard';
+import type { CardVariant } from '@astryxdesign/core/Card';
 import { AppToast } from './ui/AppToast';
 import { apiFetch, friendlyError } from '../lib/api';
 import {
@@ -19,7 +19,7 @@ import {
   type ChallengeLeaderboard,
 } from '../lib/challengeApi';
 import { useChallengeLeaderboard } from '../lib/queries';
-import type { Question, QuizResult } from '../types/quiz';
+import type { Question, QuizResult, CategoryType } from '../types/quiz';
 import {
   getCategoryHexColor,
   getCategoryLabel,
@@ -27,40 +27,28 @@ import {
 } from '../lib/categories';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
+import { useActiveSubject } from '../lib/subjects';
+import { useIsMobile } from '../lib/useMediaQuery';
+import { visuallyHidden } from '../theme/MuiTheme';
+import { MotionPop } from '../lib/motion';
 import { SharkFin } from './SharkFin';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { awardQuestXp } from '../lib/xp';
 import { challengeRunXp } from '../lib/leveling';
 
-// Biggest Shark Challenge: answer as many questions as you can within a fixed
-// time limit, or until you collect three strikes — whichever comes first.
-// Score = correct answers. Mix of all categories and difficulties. The page
-// keeps its own state machine separate from the regular Quiz component.
-//
-// Redesigned on the Astryx design system: SelectableCard answer options, a
-// ProgressBar countdown, Astryx Cards/Buttons/Badges and typography. Only the
-// presentation changed — the timers, scoring, buffering and payout are intact.
+// Biggest Shark Challenge: answer as many questions as you can until you
+// collect three strikes. Each question carries its own 90-second clock —
+// letting it run out costs a fin, just like a wrong answer. Score = correct
+// answers. Mix of all categories and difficulties. The page keeps its own
+// state machine separate from the regular Quiz component.
 
 type Phase = 'intro' | 'loading' | 'playing' | 'gameover' | 'error';
 
 const MAX_LIVES = 3;
 const LOW_BATCH_THRESHOLD = 4; // top up the buffer when this few remain
-const TIME_LIMIT_S = 90; // a run lasts at most 90 seconds
-const LOW_TIME_S = 15; // highlight the clock under this many seconds
-
-// Screen-reader-only visually-hidden style for the live low-time announcement.
-const srOnly: React.CSSProperties = {
-  position: 'absolute',
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: 'hidden',
-  clip: 'rect(0 0 0 0)',
-  whiteSpace: 'nowrap',
-  border: 0,
-};
+const TIME_LIMIT_S = 90; // each question is capped at 90 seconds
+const LOW_TIME_S = 15; // highlight + pulse the clock under this many seconds
 
 /** Seconds → "m:ss" (e.g. 90 → "1:30"). Clamps negatives to 0. */
 const fmtClock = (s: number): string => {
@@ -75,6 +63,8 @@ interface AnsweredQ {
   isCorrect: boolean;
   explanation: string;
   question: Question;
+  /** True when the strike came from the per-question clock hitting zero. */
+  timedOut?: boolean;
 }
 
 interface BufferState {
@@ -86,6 +76,8 @@ export default function Challenge() {
   const { lang, t } = useLanguage();
   const { user } = useAuth();
   const profile = getUserProfile(user);
+  const accent = useActiveSubject().accent;
+  const isMobile = useIsMobile();
 
   const [phase, setPhase] = useState<Phase>('intro');
   const [error, setError] = useState<string | null>(null);
@@ -106,7 +98,8 @@ export default function Challenge() {
   const [name, setName] = useState<string>(profile.name ?? '');
   const [submittedScore, setSubmittedScore] = useState(false);
   const [snack, setSnack] = useState<string | null>(null);
-  // Seconds remaining in the current run; the countdown effect drives it down.
+  // Seconds remaining on the current question; reset to TIME_LIMIT_S each time
+  // a new question is shown, and the countdown effect drives it down.
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_S);
 
   // Buffered question batches: we always keep one round of questions ready so
@@ -225,6 +218,8 @@ export default function Challenge() {
       setSeenIds((prev) => [...prev, next!.id].slice(-300));
       setSelected(null);
       setLastResult(null);
+      // Fresh question, fresh clock.
+      setTimeLeft(TIME_LIMIT_S);
     },
     [ensureBufferTopUp, popNext, seenIds],
   );
@@ -268,6 +263,26 @@ export default function Challenge() {
     void advance(willGameOver);
   }, [advance, lastResult, livesLost]);
 
+  // The per-question clock ran out before an answer was locked in. That costs a
+  // fin, exactly like a wrong answer; the graded feedback card then lets the
+  // learner continue (or ends the run if it was the third strike).
+  const handleTimeout = useCallback(() => {
+    if (!current || lastResult) return; // already graded — nothing to time out
+    setLivesLost((l) => l + 1);
+    // No answer was locked in, so there's no selection to highlight (-1). Kept
+    // free of `selected` so the once-per-second tick effect isn't reset every
+    // time the learner changes their pick.
+    setLastResult({
+      questionId: current.id,
+      selectedIndex: -1,
+      correctAnswer: -1,
+      isCorrect: false,
+      explanation: '',
+      question: current,
+      timedOut: true,
+    });
+  }, [current, lastResult]);
+
   /* ─── leaderboard submit on game over ───────────────────────── */
 
   const onSubmitScore = useCallback(async () => {
@@ -292,18 +307,19 @@ export default function Challenge() {
 
   /* ─── countdown clock ───────────────────────────────────────── */
 
-  // A run is capped at TIME_LIMIT_S. While playing, tick once per second and
-  // end the run the moment the clock hits zero (independent of the strikes
-  // rule — whichever ends the run first wins).
+  // Each question is capped at TIME_LIMIT_S. Tick once per second while the
+  // learner is still working on the current question; pause once it's graded
+  // (the feedback card is up) so reading the explanation doesn't burn the next
+  // question's time. When the clock hits zero unanswered, it's a timeout strike.
   useEffect(() => {
-    if (phase !== 'playing') return;
+    if (phase !== 'playing' || lastResult) return;
     if (timeLeft <= 0) {
-      setPhase('gameover');
+      handleTimeout();
       return;
     }
     const id = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
     return () => clearTimeout(id);
-  }, [phase, timeLeft]);
+  }, [phase, timeLeft, lastResult, handleTimeout]);
 
   /* ─── reward on game over ───────────────────────────────────── */
 
@@ -361,9 +377,9 @@ export default function Challenge() {
         aria-label={t('challenge.livesAria', { left: livesLeft })}
       >
         {Array.from({ length: MAX_LIVES }).map((_, i) => (
-          <div key={i} style={{ opacity: i < livesLeft ? 1 : 0.2, display: 'flex' }}>
+          <span key={i} style={{ display: 'inline-flex', opacity: i < livesLeft ? 1 : 0.2 }}>
             <SharkFin size={20} color={i < livesLeft ? 'var(--brand-accent)' : '#888'} />
-          </div>
+          </span>
         ))}
       </div>
     ),
@@ -372,82 +388,72 @@ export default function Challenge() {
 
   if (phase === 'intro') {
     return (
-      <div style={pageWrapStyle}>
-        <VStack gap={3} width="100%">
-          {/* High-energy shark hero: a glowing tinted panel with a floating
-              fin, the big title and the 🦈 mascot. */}
-          <div
-            className="ss-pop"
-            style={{
-              position: 'relative',
-              overflow: 'hidden',
-              borderRadius: 24,
-              padding: 'clamp(1.5rem, 4vw, 2.5rem) clamp(1rem, 4vw, 2rem)',
-              textAlign: 'center',
-              background:
-                'radial-gradient(120% 120% at 50% -10%, color-mix(in srgb, var(--brand-accent) 22%, transparent), transparent 70%)',
-              border: '1px solid color-mix(in srgb, var(--brand-accent) 30%, transparent)',
-              boxShadow: '0 16px 40px color-mix(in srgb, var(--brand-accent) 18%, transparent)',
-            }}
-          >
-            <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 14, left: 20, fontSize: '1.5rem', opacity: 0.7 }}>🌊</span>
-            <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 20, right: 22, fontSize: '1.3rem', opacity: 0.6, animationDelay: '1.4s' }}>🫧</span>
+      <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: '0 auto' }}>
+        <Card padding={5} width="100%">
+          <VStack gap={3}>
+            {/* Bold shark-themed hero. */}
             <VStack gap={1.5} align="center">
-              <span className="ss-float" style={{ display: 'inline-flex', fontSize: '2.6rem', lineHeight: 1 }} aria-hidden>
+              <div
+                aria-hidden
+                className="ss-emoji-tile ss-float"
+                style={{
+                  width: 64,
+                  height: 64,
+                  fontSize: '2.25rem',
+                  background: `linear-gradient(135deg, ${accent}2b, ${accent}12)`,
+                  boxShadow: `inset 0 0 0 1.5px ${accent}44, 0 6px 16px ${accent}22`,
+                }}
+              >
                 🦈
-              </span>
-              <HStack gap={1.5} align="center" justify="center">
-                <SharkFin size={30} />
-                <Heading level={1} type="display-3" justify="center">
-                  <span className="ss-gradient-text">{t('challenge.title')}</span>
-                </Heading>
-              </HStack>
+              </div>
+              <Heading level={1} type="display-2" justify="center">
+                <span className="ss-gradient-text">{t('challenge.title')}</span>
+              </Heading>
             </VStack>
-          </div>
 
-          {/* The rules list is the single explanation — no duplicate prose above. */}
-          <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
-          <Card variant="muted" padding={4} width="100%">
-            <VStack gap={1.5}>
-              <HStack gap={1} align="center">
-                <span aria-hidden style={{ fontSize: '1.1rem', lineHeight: 1 }}>⚡</span>
-                <Text type="label" color="secondary">
-                  {t('challenge.howItWorks')}
-                </Text>
-              </HStack>
+            {/* The rules list is the single explanation — no duplicate prose above. */}
+            <div className="ss-panel" style={{ padding: 16, borderLeft: `4px solid ${accent}` }}>
               <VStack gap={1}>
-                <RuleRow text={t('challenge.rule1')} />
-                <RuleRow text={t('challenge.rule2')} />
-                <RuleRow text={t('challenge.rule3')} />
-                <RuleRow text={t('challenge.rule4')} />
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1.1rem', lineHeight: 1 }}>📋</span>
+                  <Text type="label" color="secondary">
+                    {t('challenge.howItWorks')}
+                  </Text>
+                </HStack>
+                <ul style={{ paddingLeft: 20, margin: 0, color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+                  <li>{t('challenge.rule1')}</li>
+                  <li>{t('challenge.rule2')}</li>
+                  <li>{t('challenge.rule3')}</li>
+                  <li>{t('challenge.rule4')}</li>
+                </ul>
               </VStack>
-            </VStack>
-          </Card>
-          </div>
+            </div>
 
-          <ChampionBadge champion={champion} loading={boardLoading} />
+            <ChampionBadge champion={champion} loading={boardLoading} />
 
-          <HStack justify="center" width="100%">
-            <Button
-              variant="primary"
-              size="lg"
-              label={`🦈 ${t('challenge.startButton')}`}
-              onClick={() => void startRun()}
-            />
-          </HStack>
+            <div style={{ display: 'grid' }}>
+              <Button
+                variant="primary"
+                size="lg"
+                label={t('challenge.startButton')}
+                icon={<span aria-hidden style={{ fontSize: '1.15rem', lineHeight: 1 }}>🦈</span>}
+                onClick={() => void startRun()}
+              />
+            </div>
 
-          {board && board.top.length > 0 && (
-            <VStack gap={1} width="100%">
-              <HStack gap={1} align="center">
-                <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
-                <Text type="label" color="secondary">
-                  {t('challenge.hallOfFame')}
-                </Text>
-              </HStack>
-              <LeaderboardList board={board} />
-            </VStack>
-          )}
-        </VStack>
+            {board && board.top.length > 0 && (
+              <VStack gap={1}>
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
+                  <Text type="label" color="secondary">
+                    {t('challenge.hallOfFame')}
+                  </Text>
+                </HStack>
+                <LeaderboardList board={board} />
+              </VStack>
+            )}
+          </VStack>
+        </Card>
       </div>
     );
   }
@@ -458,104 +464,105 @@ export default function Challenge() {
 
   if (phase === 'error') {
     return (
-      <div style={pageWrapStyle}>
-        <VStack gap={2} width="100%">
-          <Banner status="error" title={error || t('error.somethingWrong')} />
-          <HStack>
-            <Button variant="secondary" label={t('quiz.retry')} onClick={() => void startRun()} />
-          </HStack>
-        </VStack>
+      <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: '0 auto' }}>
+        <Card padding={5} width="100%">
+          <VStack gap={2}>
+            <Banner status="error" title={error || t('error.somethingWrong')} />
+            <div>
+              <Button variant="secondary" label={t('quiz.retry')} onClick={() => void startRun()} />
+            </div>
+          </VStack>
+        </Card>
       </div>
     );
   }
 
   if (phase === 'gameover') {
+    const beatChampion = !!champion && score > champion.score;
+    // Celebratory face scales with how big the run was.
+    const resultEmoji = score >= 10 ? '🏆' : score >= 5 ? '🎉' : '🦈';
     return (
-      <div style={pageWrapStyle}>
-        <VStack gap={3} width="100%" align="center">
-          <span aria-hidden className="ss-float" style={{ fontSize: '3rem', lineHeight: 1 }}>
-            {score > 0 ? '🎉' : '🦈'}
-          </span>
-          <div ref={gameOverHeadingRef} tabIndex={-1} style={{ outline: 'none' }}>
-            <Heading level={1} type="display-3" justify="center">
-              <span className="ss-gradient-text">{t('challenge.gameOver')}</span>
-            </Heading>
-          </div>
-          <div role="status">
-            <Text type="body" color="secondary" justify="center">
-              {timeLeft <= 0 ? t('challenge.endedByTime') : t('challenge.endedByStrikes')}
-            </Text>
-          </div>
-          {/* The big number IS the score — no repeated caption underneath. */}
-          <div
-            className="ss-pop"
-            style={{
-              fontSize: 'clamp(3.25rem, 13vw, 5rem)',
-              fontWeight: 800,
-              lineHeight: 1,
-              color: 'var(--brand-accent)',
-              textShadow: '0 8px 30px color-mix(in srgb, var(--brand-accent) 35%, transparent)',
-            }}
-          >
-            {score}
-          </div>
+      <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: '0 auto' }}>
+        <Card padding={5} width="100%">
+          <VStack gap={2}>
+            <VStack gap={1} align="center">
+              <span aria-hidden className="ss-float" style={{ fontSize: '3.25rem', lineHeight: 1 }}>
+                {resultEmoji}
+              </span>
+              <div ref={gameOverHeadingRef} tabIndex={-1} style={{ outline: 'none' }}>
+                <Heading level={1} type="display-2" justify="center">
+                  {t('challenge.gameOver')}
+                </Heading>
+              </div>
+              <Text type="body" size="sm" color="secondary" justify="center">
+                <span role="status">
+                  {lastResult?.timedOut ? t('challenge.endedByTime') : t('challenge.endedByStrikes')}
+                </span>
+              </Text>
+              {/* The big number IS the score — no repeated caption underneath. */}
+              <MotionPop>
+                <div style={{ fontSize: 'clamp(3rem, 12vw, 4.5rem)', fontWeight: 800, lineHeight: 1, color: accent }}>
+                  {score}
+                </div>
+              </MotionPop>
+            </VStack>
 
-          <div style={{ width: '100%' }}>
-            <ChampionBadge
-              champion={champion}
-              loading={boardLoading}
-              dim={!!champion && score > champion.score}
-            />
-          </div>
+            <ChampionBadge champion={champion} loading={boardLoading} dim={beatChampion} />
 
-          {!submittedScore ? (
-            <Card variant="default" padding={4} width="100%">
-              <VStack gap={1.5}>
-                <Text type="body">{t('challenge.submitPrompt')}</Text>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <div style={{ flex: '1 1 200px' }}>
-                    <TextInput
-                      size="sm"
-                      isLabelHidden
-                      label={t('challenge.nameLabel')}
-                      placeholder={t('challenge.nameLabel')}
-                      value={name}
-                      onChange={(v) => setName(v.slice(0, 40))}
+            {!submittedScore ? (
+              <div className="ss-panel" style={{ padding: 16 }}>
+                <VStack gap={1.5}>
+                  <Text type="body" size="sm">
+                    {t('challenge.submitPrompt')}
+                  </Text>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: 8,
+                      flexDirection: isMobile ? 'column' : 'row',
+                      alignItems: isMobile ? 'stretch' : 'flex-end',
+                    }}
+                  >
+                    <div style={{ flex: '1 1 auto' }}>
+                      <TextInput
+                        label={t('challenge.nameLabel')}
+                        value={name}
+                        onChange={(v) => setName(v.slice(0, 40))}
+                        onEnter={() => void onSubmitScore()}
+                      />
+                    </div>
+                    <Button
+                      variant="primary"
+                      label={t('challenge.submitScore')}
+                      onClick={() => void onSubmitScore()}
+                      isDisabled={scoreSubmitting}
+                      isLoading={scoreSubmitting}
                     />
                   </div>
-                  <Button
-                    variant="primary"
-                    label={t('challenge.submitScore')}
-                    isLoading={scoreSubmitting}
-                    isDisabled={scoreSubmitting}
-                    onClick={() => void onSubmitScore()}
-                  />
-                </div>
-              </VStack>
-            </Card>
-          ) : (
-            <div style={{ width: '100%' }}>
+                </VStack>
+              </div>
+            ) : (
               <Banner status="success" title={t('challenge.scoreSubmitted')} />
-            </div>
-          )}
+            )}
 
-          {board && board.top.length > 0 && (
-            <VStack gap={1} width="100%">
-              <HStack gap={1} align="center">
-                <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
-                <Text type="label" color="secondary">
-                  {t('challenge.hallOfFame')}
-                </Text>
-              </HStack>
-              <LeaderboardList board={board} />
-            </VStack>
-          )}
+            {board && board.top.length > 0 && (
+              <VStack gap={1}>
+                <HStack gap={1} align="center">
+                  <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
+                  <Text type="label" color="secondary">
+                    {t('challenge.hallOfFame')}
+                  </Text>
+                </HStack>
+                <LeaderboardList board={board} />
+              </VStack>
+            )}
 
-          <HStack gap={1.5} justify="center" wrap="wrap">
-            <Button variant="primary" label={t('challenge.playAgain')} onClick={() => void startRun()} />
-            <Button variant="secondary" label={t('challenge.backToIntro')} onClick={() => setPhase('intro')} />
-          </HStack>
-        </VStack>
+            <HStack gap={1.5} justify="center" wrap="wrap">
+              <Button variant="primary" label={t('challenge.playAgain')} onClick={() => void startRun()} />
+              <Button variant="secondary" label={t('challenge.backToIntro')} onClick={() => setPhase('intro')} />
+            </HStack>
+          </VStack>
+        </Card>
 
         <AppToast
           open={!!snack}
@@ -571,182 +578,231 @@ export default function Challenge() {
   // ── playing ──
   if (!current) return null;
 
-  const timeLow = timeLeft <= LOW_TIME_S;
+  const low = timeLeft <= LOW_TIME_S;
+  const timePct = (Math.max(0, timeLeft) / TIME_LIMIT_S) * 100;
 
   return (
-    <div style={{ maxWidth: 620, margin: '0 auto', width: '100%' }}>
+    // One-viewport layout matching the Quiz card geometry: ~560px column,
+    // primary card capped at ~80% height on sm+, centred; question text
+    // scrolls internally, answers + lock-in stay anchored near the bottom.
+    <div
+      style={{
+        position: 'relative',
+        flex: 1,
+        minHeight: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'center',
+        maxWidth: isMobile ? 680 : 560,
+        margin: '0 auto',
+        width: '100%',
+        padding: isMobile ? 4 : 8,
+      }}
+    >
       {/* One-shot low-time announcement for screen readers (the visual cue is
-          colour, which AT users can't perceive). */}
-      <span style={srOnly} aria-live="polite">
+          colour + pulse, which AT users can't perceive). */}
+      <span style={visuallyHidden} aria-live="polite">
         {timeLeft === LOW_TIME_S ? t('challenge.lowTime') : ''}
       </span>
 
-      <VStack gap={3} width="100%">
-        {/* Status: score + lives, then the countdown bar. */}
-        <VStack gap={1.5} width="100%">
-          <HStack justify="between" align="center" gap={2} width="100%">
-            <HStack gap={1} align="center">
-              <Text type="label" color="secondary">
-                {t('challenge.score')}
-              </Text>
-              <Heading level={3}>
-                <span style={{ color: 'var(--brand-accent)' }}>{score}</span>
-              </Heading>
-            </HStack>
-            {livesIndicator}
-          </HStack>
-
-          <HStack gap={1.5} align="center" width="100%">
-            <div
-              role="timer"
-              aria-label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
-              className={timeLow ? 'ss-float' : undefined}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 6,
-                padding: '5px 12px',
-                borderRadius: 999,
-                fontWeight: 800,
-                fontSize: '1.05rem',
-                fontVariantNumeric: 'tabular-nums',
-                color: timeLow ? 'var(--color-error-text, #dc2626)' : 'var(--brand-accent)',
-                background: timeLow
-                  ? 'color-mix(in srgb, var(--color-error-text, #dc2626) 14%, transparent)'
-                  : 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
-                minWidth: 68,
-                justifyContent: 'center',
-              }}
-            >
-              <ClockIcon />
-              <span>{fmtClock(timeLeft)}</span>
-            </div>
-            <div style={{ flex: 1 }}>
-              <ProgressBar
-                label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
-                isLabelHidden
-                value={Math.max(0, timeLeft)}
-                max={TIME_LIMIT_S}
-                variant={timeLow ? 'error' : 'accent'}
-              />
-            </div>
-          </HStack>
-        </VStack>
-
-        {/* Question card. A tinted top rule carries the subject accent. */}
-        <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
-        <Card variant="default" padding={5} width="100%">
-          <div
-            aria-hidden
-            style={{ height: 4, borderRadius: 999, background: 'var(--brand-accent)', margin: '-4px 0 20px' }}
-          />
-          <VStack gap={2} width="100%">
-            <HStack gap={1} wrap="wrap" align="center">
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  padding: '3px 10px',
-                  borderRadius: 999,
-                  fontSize: '0.78rem',
-                  fontWeight: 600,
-                  backgroundColor: getCategoryHexColor(current.category),
-                  color: onCategoryColorText(current.category),
-                }}
-              >
-                {getCategoryLabel(current.category)}
-              </span>
-              <Badge
-                variant="neutral"
-                label={t('challenge.difficultyLevel', { level: current.difficulty })}
-              />
-            </HStack>
-
-            <div id="challenge-question">{renderQuestion(current.question)}</div>
-
-            <div role="group" aria-labelledby="challenge-question">
-              <VStack gap={1} width="100%">
-                {current.options.map((opt, idx) => {
-                  let variant: 'default' | 'green' | 'red' = 'default';
-                  if (lastResult) {
-                    if (idx === lastResult.correctAnswer) variant = 'green';
-                    else if (idx === lastResult.selectedIndex && !lastResult.isCorrect) variant = 'red';
-                  }
-                  const isSel = lastResult
-                    ? idx === lastResult.selectedIndex || idx === lastResult.correctAnswer
-                    : selected === idx;
-                  return (
-                    <SelectableCard
-                      key={idx}
-                      label={opt}
-                      isSelected={isSel}
-                      isDisabled={!!lastResult}
-                      onChange={() => {
-                        if (!lastResult) setSelected(idx);
-                      }}
-                      variant={variant}
-                      padding={2}
-                      width="100%"
-                    >
-                      <HStack gap={1.5} align="center">
-                        <span
-                          aria-hidden
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            width: 26,
-                            height: 26,
-                            borderRadius: 8,
-                            flexShrink: 0,
-                            fontSize: '0.8rem',
-                            fontWeight: 700,
-                            background: 'color-mix(in srgb, var(--brand-accent) 15%, transparent)',
-                            color: 'var(--brand-accent)',
-                          }}
-                        >
-                          {idx + 1}
-                        </span>
-                        <Text type="body">{opt}</Text>
-                      </HStack>
-                    </SelectableCard>
-                  );
-                })}
-              </VStack>
-            </div>
-          </VStack>
-        </Card>
-        </div>
-
-        {/* Grade feedback + explanation. */}
-        {lastResult && (
-          <div aria-live="assertive" style={{ width: '100%' }}>
-            <Banner
-              status={lastResult.isCorrect ? 'success' : 'error'}
-              title={lastResult.isCorrect ? t('challenge.correct') : t('challenge.wrong')}
-              description={lastResult.explanation || undefined}
-            />
-          </div>
-        )}
-
-        <HStack justify="end" width="100%">
-          {!lastResult ? (
-            <Button
-              variant="primary"
-              label={t('challenge.lockIn')}
-              isLoading={submitting}
-              isDisabled={selected == null || submitting}
-              onClick={() => void submitAnswer()}
-            />
-          ) : (
-            <Button
-              variant="primary"
-              label={livesLost >= MAX_LIVES ? t('challenge.seeResult') : t('challenge.nextQuestion')}
-              onClick={onContinue}
-            />
-          )}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 8,
+          gap: 12,
+          flexShrink: 0,
+        }}
+      >
+        <HStack gap={1} align="center" style={{ flex: '1 1 auto', minWidth: 0 }}>
+          <span aria-hidden style={{ fontSize: '1.1rem', lineHeight: 1 }}>🦈</span>
+          <Text type="label" color="secondary">
+            {t('challenge.score')}
+          </Text>
+          <Text type="large" weight="bold" color="accent">
+            {score}
+          </Text>
         </HStack>
-      </VStack>
+        <HStack gap={1.5} align="center" style={{ flexShrink: 0 }}>
+          <span
+            role="timer"
+            aria-label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
+            className={low ? 'ss-float' : undefined}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '4px 11px',
+              borderRadius: 999,
+              fontFamily: 'monospace',
+              fontWeight: 800,
+              fontVariantNumeric: 'tabular-nums',
+              color: low ? '#d33' : 'var(--brand-accent)',
+              background: low
+                ? 'color-mix(in srgb, #d33 15%, transparent)'
+                : 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
+            }}
+          >
+            <ClockIcon />
+            <span>{fmtClock(timeLeft)}</span>
+          </span>
+          {livesIndicator}
+        </HStack>
+      </div>
+
+      {/* Per-question countdown as a bar — accent, flipping to error under the
+          low-time threshold to reinforce the pulsing clock. */}
+      <div style={{ marginBottom: 10, flexShrink: 0 }}>
+        <ProgressBar
+          label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
+          isLabelHidden
+          value={timePct}
+          variant={low ? 'error' : 'accent'}
+        />
+      </div>
+
+      {/* Surface styled with Astryx tokens so it themes with the rest of the
+          system, while plain flex/scroll keeps the one-viewport behaviour. */}
+      <div
+        style={{
+          flex: '1 1 auto',
+          minHeight: 0,
+          maxHeight: isMobile ? undefined : '80%',
+          display: 'flex',
+          flexDirection: 'column',
+          background: 'var(--color-background-card)',
+          border: '1px solid var(--color-border)',
+          borderTop: `4px solid ${accent}`,
+          borderRadius: 16,
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            padding: 'clamp(1rem, 3.5vw, 1.5rem)',
+          }}
+        >
+          <HStack gap={1} align="center" wrap="wrap" style={{ marginBottom: 12, flexShrink: 0 }}>
+            <CategoryTag category={current.category} />
+            <Badge variant="neutral" label={t('challenge.difficultyLevel', { level: current.difficulty })} />
+          </HStack>
+
+          {/* Scrollable question region — answers below keep their position. */}
+          <div id="challenge-question" style={{ marginBottom: 16, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
+            {renderQuestion(current.question)}
+          </div>
+
+          {/* Answer options as SelectableCards. Raise the anchored answers ~50px
+              off the wave on phones. */}
+          <div
+            role="radiogroup"
+            aria-labelledby="challenge-question"
+            style={{ flexShrink: 0, marginTop: 'auto', marginBottom: isMobile ? 50 : 0 }}
+          >
+            <VStack gap={1}>
+              {current.options.map((opt, idx) => {
+                const isSel = selected === idx;
+                const graded = !!lastResult;
+                const isCorrectOpt = graded && idx === lastResult!.correctAnswer;
+                const isWrongPick =
+                  graded && idx === lastResult!.selectedIndex && !lastResult!.isCorrect;
+                const variant: CardVariant = isCorrectOpt ? 'green' : isWrongPick ? 'red' : 'default';
+                return (
+                  <SelectableCard
+                    key={idx}
+                    label={opt}
+                    isSelected={graded ? isCorrectOpt || isWrongPick : isSel}
+                    isDisabled={graded}
+                    variant={variant}
+                    padding={2}
+                    onChange={() => {
+                      if (!lastResult) setSelected(idx);
+                    }}
+                  >
+                    <HStack gap={2} align="center">
+                      <span
+                        aria-hidden
+                        style={{
+                          width: 26,
+                          height: 26,
+                          borderRadius: 8,
+                          display: 'grid',
+                          placeItems: 'center',
+                          flexShrink: 0,
+                          fontSize: '0.78rem',
+                          fontWeight: 700,
+                          background: isSel ? 'var(--color-accent-muted)' : 'var(--color-background-muted)',
+                          color: isSel ? 'var(--color-text-accent)' : 'inherit',
+                        }}
+                      >
+                        {idx + 1}
+                      </span>
+                      <Text type="body" weight={isSel ? 'semibold' : 'normal'}>
+                        {opt}
+                      </Text>
+                    </HStack>
+                  </SelectableCard>
+                );
+              })}
+            </VStack>
+          </div>
+        </div>
+      </div>
+
+      {/* Feedback overlay: a floating card that sits over the answer options
+          so the grade doesn't push the layout around. */}
+      {lastResult && (
+        <div
+          aria-live="assertive"
+          style={{
+            position: 'absolute',
+            left: isMobile ? 8 : 16,
+            right: isMobile ? 8 : 16,
+            bottom: isMobile ? 68 : 72,
+            zIndex: 5,
+            maxHeight: '48vh',
+            overflowY: 'auto',
+            borderRadius: 'var(--radius-element, 0.9rem)',
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.35)',
+          }}
+        >
+          <Banner
+            status={lastResult.isCorrect ? 'success' : 'error'}
+            title={
+              lastResult.isCorrect
+                ? t('challenge.correct')
+                : lastResult.timedOut
+                  ? t('challenge.questionTimeout')
+                  : t('challenge.wrong')
+            }
+            description={lastResult.explanation || undefined}
+          />
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 8, flexShrink: 0 }}>
+        {!lastResult ? (
+          <Button
+            variant="primary"
+            label={t('challenge.lockIn')}
+            isDisabled={selected == null || submitting}
+            isLoading={submitting}
+            onClick={() => void submitAnswer()}
+          />
+        ) : (
+          <Button
+            variant="primary"
+            label={livesLost >= MAX_LIVES ? t('challenge.seeResult') : t('challenge.nextQuestion')}
+            onClick={onContinue}
+          />
+        )}
+      </div>
 
       <AppToast
         open={!!snack}
@@ -759,21 +815,7 @@ export default function Challenge() {
   );
 }
 
-/** A rule bullet in the intro's "how it works" list. */
-function RuleRow({ text }: { text: string }) {
-  return (
-    <HStack gap={1} align="start">
-      <span aria-hidden style={{ color: 'var(--brand-accent)', fontWeight: 700, lineHeight: 1.5 }}>
-        •
-      </span>
-      <Text type="supporting" color="secondary">
-        {text}
-      </Text>
-    </HStack>
-  );
-}
-
-/** A small outline clock glyph for the countdown. Decorative. */
+/** A small outline clock glyph for the countdown chip. Decorative. */
 function ClockIcon() {
   return (
     <svg
@@ -792,11 +834,28 @@ function ClockIcon() {
   );
 }
 
-const pageWrapStyle: React.CSSProperties = {
-  maxWidth: 640,
-  margin: '0 auto',
-  width: '100%',
-};
+// A compact category tag that keeps each subject's brand/logo colour (Astryx
+// Badge only exposes a fixed palette, so we render the exact hex tint here).
+function CategoryTag({ category }: { category: CategoryType }) {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        height: 26,
+        padding: '0 10px',
+        borderRadius: 8,
+        fontSize: '0.78rem',
+        fontWeight: 600,
+        lineHeight: 1,
+        backgroundColor: getCategoryHexColor(category),
+        color: onCategoryColorText(category),
+      }}
+    >
+      {getCategoryLabel(category)}
+    </span>
+  );
+}
 
 function ChampionBadge({
   champion,
@@ -809,30 +868,34 @@ function ChampionBadge({
 }) {
   const { t } = useLanguage();
   return (
-    <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
-    <Card variant="muted" padding={3} width="100%">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, opacity: dim ? 0.55 : 1 }}>
-        <span className="ss-float" style={{ display: 'inline-flex' }}>
+    <div className="ss-lift" style={{ display: 'flex', width: '100%', opacity: dim ? 0.6 : 1 }}>
+      <Card variant="muted" padding={2} width="100%">
+        <HStack gap={1.5} align="center">
           <SharkFin size={28} />
-        </span>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <Text type="label" color="secondary">
-            {t('challenge.currentChampion')}
-          </Text>
-          {loading ? (
-            <Spinner size="sm" />
-          ) : champion ? (
-            <Text type="large" weight="bold">
-              {champion.name} — {champion.score}
-            </Text>
-          ) : (
-            <Text type="body" color="secondary">
-              {t('challenge.noChampion')}
-            </Text>
-          )}
-        </div>
-      </div>
-    </Card>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <VStack gap={0}>
+              <Text type="label" color="secondary">
+                {t('challenge.currentChampion')}
+              </Text>
+              {loading ? (
+                <Text type="body" size="sm" color="secondary">
+                  …
+                </Text>
+              ) : champion ? (
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <Text type="body" weight="bold">
+                    {champion.name} — {champion.score}
+                  </Text>
+                </span>
+              ) : (
+                <Text type="body" size="sm" color="secondary">
+                  {t('challenge.noChampion')}
+                </Text>
+              )}
+            </VStack>
+          </div>
+        </HStack>
+      </Card>
     </div>
   );
 }
@@ -841,38 +904,35 @@ function LeaderboardList({ board }: { board: ChallengeLeaderboard }) {
   // role="list" restores list semantics that Safari/VoiceOver drop when
   // list-style is none.
   return (
-    <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
-    <Card variant="default" padding={2} width="100%">
-      <ol role="list" style={{ margin: 0, padding: 0, listStyle: 'none' }}>
-        {board.top.map((row, i) => (
-          <li
-            key={row.id}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              gap: 8,
-              alignItems: 'center',
-              padding: '8px 8px',
-              borderBottom: i === board.top.length - 1 ? 'none' : '1px dashed var(--color-border, rgba(128,128,128,0.25))',
-            }}
-          >
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', minWidth: 0 }}>
-              <Text type="body" color="secondary">
+    <ol role="list" style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column' }}>
+      {board.top.map((row, i) => (
+        <div
+          key={row.id}
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            gap: 8,
+            padding: '6px 0',
+            borderBottom: i === board.top.length - 1 ? 'none' : '1px dashed var(--color-border)',
+          }}
+        >
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 }}>
+            <span style={{ width: 24, flexShrink: 0 }}>
+              <Text type="body" size="sm" color="secondary">
                 {i + 1}.
               </Text>
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                <Text type="body" weight={i === 0 ? 'bold' : 'normal'}>
-                  {row.name}
-                </Text>
-              </span>
-            </div>
-            <span style={{ color: i === 0 ? 'var(--brand-accent)' : undefined, fontWeight: 700 }}>
-              {row.score}
             </span>
-          </li>
-        ))}
-      </ol>
-    </Card>
-    </div>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <Text type="body" size="sm" weight={i === 0 ? 'bold' : 'medium'}>
+                {row.name}
+              </Text>
+            </span>
+          </div>
+          <Text type="body" size="sm" weight="bold" color={i === 0 ? 'accent' : 'primary'}>
+            {row.score}
+          </Text>
+        </div>
+      ))}
+    </ol>
   );
 }

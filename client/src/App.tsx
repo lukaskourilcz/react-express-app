@@ -205,7 +205,7 @@ function HeaderBrand() {
           <SwimmingFin size={22} />
           StudyShark
         </span>
-        <span className="ss-show-mobile" style={{ alignItems: 'center', gap: 4, color: subject.accent }}>
+        <span className="ss-show-mobile" style={{ alignItems: 'center', gap: 4, color: subject.accent, whiteSpace: 'nowrap' }}>
           <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1 }}>{subject.emoji}</span>
           {subject.label}
         </span>
