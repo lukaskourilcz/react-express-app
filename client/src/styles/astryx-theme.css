@@ -186,6 +186,11 @@ h1, h2, h3, h4, h5, h6 {
 .ss-kicker--center { text-align: center; }
 .ss-kicker--center::after { margin-left: auto; margin-right: auto; }
 
+/* Monochrome tech logos (e.g. Next.js) flip to white on deep water. */
+:root[data-theme='dark'] .ss-tech-mono {
+  filter: invert(1) brightness(1.6);
+}
+
 /* Full-width waterline rule — an ink hairline that waves. */
 .ss-waterline-rule {
   height: 6px;
