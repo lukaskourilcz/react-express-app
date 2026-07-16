@@ -578,7 +578,12 @@ function Roadmap() {
               onClick={() => selectTopic(value)}
               style={{ ['--rm-accent']: color, ['--rm-on-accent']: onCategoryColorText(value) } as CSSProperties}
             >
-              <CategoryGlyph category={value} color={color} size={15} />
+              {/* Constant white chip under the logo: the selected pill fills
+                  with the topic's own colour, which used to swallow a
+                  same-coloured glyph. */}
+              <span className="rm-topic-glyph">
+                <CategoryGlyph category={value} color={color} size={13} />
+              </span>
               {getCategoryLabel(value)}
             </button>
           );

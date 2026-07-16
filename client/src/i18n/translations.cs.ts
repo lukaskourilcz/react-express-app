@@ -381,6 +381,7 @@ export const cs: Record<TranslationKey, string> = {
   'play.signInBody': 'Multiplayer a hry pro třídu vyžadují účet, abychom mohli zobrazit tvé jméno na výsledkové tabuli.',
   'play.enterCode': 'Zadej kód hry',
   'play.title': 'Hrát naživo',
+  'play.kicker': 'Hraj naživo',
   'play.subtitle': 'Závoď s přáteli v multiplayeru, nebo veď výuku ve třídě.',
   'play.hostGame': 'Hostovat hru',
   'play.gameMode': 'Herní režim',

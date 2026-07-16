@@ -380,6 +380,7 @@ export const en = {
   'play.signInBody': 'Multiplayer and classroom games need an account so we can show your name on the scoreboard.',
   'play.enterCode': 'Enter a match code',
   'play.title': 'Play live',
+  'play.kicker': 'Play live',
   'play.subtitle': 'Race friends in multiplayer, or run a classroom session.',
   'play.hostGame': 'Host a game',
   'play.gameMode': 'Game mode',
