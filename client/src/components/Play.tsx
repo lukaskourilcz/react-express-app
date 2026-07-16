@@ -74,7 +74,7 @@ export function PlayLanding() {
 
   if (!isAuthenticated) {
     return (
-      <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
         <Card padding={6} width="100%">
           <VStack gap={2} align="center">
             <Heading level={2} justify="center">
@@ -195,7 +195,7 @@ export function PlayLanding() {
             alignItems: 'start',
           }}
         >
-          <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+          <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
           <Card padding={4} width="100%">
             <VStack gap={3}>
               <VStack gap={2}>
@@ -340,7 +340,7 @@ export function PlayLanding() {
                 <Divider label={t('play.or')} />
               </div>
             )}
-            <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+            <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
             <Card padding={4} width="100%">
               <VStack gap={2}>
                 <Text type="label" weight="bold" color="secondary">
@@ -663,7 +663,7 @@ const CodeBadge = ({ code }: { code: string }) => {
     >
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
         <span style={{ fontFamily: 'monospace', letterSpacing: '0.2em', fontWeight: 700 }}>{code}</span>
-        <span style={{ fontSize: '0.65rem', opacity: 0.7 }}>{copied ? t('play.copied') : t('play.copy')}</span>
+        <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{copied ? t('play.copied') : t('play.copy')}</span>
       </span>
     </Button>
   );
@@ -683,7 +683,7 @@ function Lobby({
   const t = useT();
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/play/${match.code}` : '';
   return (
-    <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
+    <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
     <Card padding={4} width="100%">
       <VStack gap={3}>
         <VStack gap={1}>
@@ -717,7 +717,7 @@ function Lobby({
           {participants.map((p, i) => (
             <div
               key={p.user_id}
-              className="ss-lift ss-pop"
+              className="ss-raised ss-pop"
               style={{ display: 'flex', width: '100%', animationDelay: `${i * 55}ms` }}
             >
               <Card variant="muted" padding={1.5} width="100%">
@@ -839,7 +839,7 @@ function RunningQuestion({
         : 'var(--astryx-color-text-secondary, currentColor)';
 
   return (
-    <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+    <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
     <Card padding={4} width="100%">
       <VStack gap={2}>
         <HStack justify="between" align="center" gap={1}>
@@ -1104,7 +1104,7 @@ function Finished({
     headingRef.current?.focus({ preventScroll: true });
   }, []);
   return (
-    <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
+    <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
     <Card padding={5} width="100%">
       <VStack gap={3} align="center">
         <VStack gap={1.5} align="center">

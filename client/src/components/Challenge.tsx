@@ -837,7 +837,7 @@ function ChampionBadge({
 }) {
   const { t } = useLanguage();
   return (
-    <div className="ss-lift" style={{ display: 'flex', width: '100%', opacity: dim ? 0.6 : 1 }}>
+    <div className="ss-raised" style={{ display: 'flex', width: '100%', opacity: dim ? 0.6 : 1 }}>
       <Card variant="muted" padding={2} width="100%">
         <HStack gap={1.5} align="center">
           <SharkFin size={28} />

@@ -66,7 +66,7 @@ import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { SplitText } from './reactbits/SplitText';
 import { RedFlagDialog } from './RedFlagDialog';
-import { IconTile, BoltIcon, CloseIcon, FlagIcon, TrophyIcon, CheckCircleIcon } from './ui/icons';
+import { IconTile, BoltIcon, CloseIcon, FlagIcon } from './ui/icons';
 import './Roadmap.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
@@ -1096,7 +1096,7 @@ function LessonRunner({
         {passed && (
           <div className="rm-celebrate" style={{ marginBottom: 12 }} aria-hidden>
             <IconTile color={accent} size={56}>
-              {isCheckpoint ? <TrophyIcon size={26} /> : <CheckCircleIcon size={26} />}
+              {isCheckpoint ? <TrophyIcon size={26} /> : <CheckIcon size={26} />}
             </IconTile>
           </div>
         )}

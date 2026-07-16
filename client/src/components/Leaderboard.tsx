@@ -224,7 +224,7 @@ function Leaderboard() {
         {hasRows && isMobile && (
           <VStack gap={1.5} width="100%">
             {rows.map((row) => (
-              <div key={row.rank} className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+              <div key={row.rank} className="ss-raised" style={{ display: 'flex', width: '100%' }}>
                 <Card variant={row.medal ? 'muted' : 'default'} padding={3} width="100%">
                   <HStack gap={2} align="center">
                     <RankMedal rank={row.rank} medal={row.medal} />

@@ -154,7 +154,7 @@ export default function Home() {
         <Grid columns={{ minWidth: 220, max: 3 }} gap={2}>
           {features.map((f, i) => (
             <MotionItem key={f.title} index={i} style={{ display: 'flex', width: '100%' }}>
-              <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+              <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
                 <Card variant={f.variant} padding={5} width="100%">
                   <VStack gap={2}>
                     <IconTile color={f.color} size={44} style={{ background: 'var(--ss-card-bg)' }}>

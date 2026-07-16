@@ -87,7 +87,7 @@ function Flashcards() {
 
   if (!isAuthenticated) {
     return (
-      <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 520, margin: '0 auto' }}>
+      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 520, margin: '0 auto' }}>
       <Card variant="default" padding={6} width="100%">
         <VStack gap={2} align="center">
           <Heading level={2} justify="center">{t('card.signInTitle')}</Heading>
@@ -107,7 +107,7 @@ function Flashcards() {
 
   if (cards.length === 0) {
     return (
-      <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 520, margin: '0 auto' }}>
+      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 520, margin: '0 auto' }}>
       <Card variant="default" padding={6} width="100%">
         <VStack gap={2} align="center">
           <IconTile size={48}>
@@ -159,7 +159,7 @@ function Flashcards() {
         </HStack>
 
         {/* The study card. A tinted top rule carries the subject accent. */}
-        <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
+        <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
         <Card variant="default" padding={5} width="100%" minHeight={260}>
           <div
             aria-hidden

@@ -366,13 +366,10 @@ export default function CareerRoadmap() {
 
         {/* The honest gap — Web Dev only (it's about engineering seniority). */}
         {isWebdev && (
-          <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
-          <Card variant="orange" padding={4} width="100%">
+          <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
+          <Card variant="orange" padding={5} width="100%">
             <VStack gap={1.5}>
-              <HStack gap={1.5} align="center">
-                <span aria-hidden style={{ fontSize: '1.4rem', lineHeight: 1 }}>🧗</span>
-                <Heading level={2}>{t('careerRoadmap.beyondTitle')}</Heading>
-              </HStack>
+              <Heading level={2}>{t('careerRoadmap.beyondTitle')}</Heading>
               <Text type="supporting" color="secondary">
                 {t('careerRoadmap.beyondIntro')}
               </Text>

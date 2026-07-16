@@ -681,7 +681,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                           label={cat.label}
                           isSelected={selected}
                           onChange={() => handleCategoryToggle(cat.value)}
-                          padding={2.5}
+                          padding={3}
                         >
                           <HStack gap={1.5} align="center">
                             <span
@@ -777,7 +777,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       label={t('quiz.countQuestionsAria', { count })}
                       isSelected={questionCount === count}
                       onChange={() => setQuestionCount(count)}
-                      padding={2.5}
+                      padding={3}
                       width={58}
                     >
                       <div style={{ textAlign: 'center', width: '100%' }}>
@@ -805,7 +805,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                             label={t('quiz.difficultyAria', { label })}
                             isSelected={difficultyMode === value}
                             onChange={() => setDifficultyMode(value)}
-                            padding={2.5}
+                            padding={3}
                           >
                             <Text type="body" size="sm" weight={difficultyMode === value ? 'semibold' : 'medium'}>
                               {label}

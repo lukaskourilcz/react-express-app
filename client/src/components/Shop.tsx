@@ -299,7 +299,7 @@ function ProductCard({ product, price, owned, equipped, charges, canAfford, onBu
   }
 
   return (
-    <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+    <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
       <Card padding={3} width="100%">
         <VStack gap={2} height="100%" justify="between">
           <HStack gap={1.5} align="center">
