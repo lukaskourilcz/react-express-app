@@ -367,6 +367,7 @@ export const en = {
   // Loading / error states
   'quiz.retry': 'Retry',
   'quiz.backToSettings': 'Back to settings',
+  'quiz.noQuestions': 'No questions match those settings. Try different categories or a different difficulty.',
   'error.somethingWrong': 'Something went wrong',
 
   // Practice / stats toasts
@@ -539,11 +540,11 @@ export const en = {
 
   // Biggest Shark Challenge
   'challenge.title': 'The Biggest Shark Challenge',
-  'challenge.description': 'Answer as many questions as you can before three wrong answers or the clock ends the run.',
+  'challenge.description': 'Answer as many questions as you can before three wrong answers end the run — each question has its own 90-second clock.',
   'challenge.howItWorks': 'How it works',
   'challenge.rule1': 'Random questions across every category and difficulty.',
   'challenge.rule2': 'You start with three shark fins, each wrong answer costs one.',
-  'challenge.rule3': 'You also race a 90-second clock, whichever runs out first ends the run.',
+  'challenge.rule3': 'Every question has its own 90-second clock — let it hit zero and it costs a fin.',
   'challenge.rule4': 'Score = correct answers. Beat the top score to claim the championship.',
   'challenge.currentChampion': 'Current champion',
   'challenge.noChampion': 'No one has set a score yet. Be the first.',
@@ -558,6 +559,7 @@ export const en = {
   'challenge.difficultyLevel': 'Difficulty {level}',
   'challenge.correct': 'Correct!',
   'challenge.wrong': 'Strike!',
+  'challenge.questionTimeout': "Time's up — that's a strike.",
   'challenge.lockIn': 'Lock in answer',
   'challenge.nextQuestion': 'Next question',
   'challenge.seeResult': 'See result',
@@ -570,7 +572,7 @@ export const en = {
   'challenge.playAgain': 'Play again',
   'challenge.backToIntro': 'Back',
   'challenge.cta': 'Biggest Shark Challenge',
-  'challenge.ctaSubtitle': '90 seconds · 3 strikes · mixed difficulty',
+  'challenge.ctaSubtitle': '90s per question · 3 strikes · mixed difficulty',
 } as const;
 
 export type TranslationKey = keyof typeof en;

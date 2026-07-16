@@ -230,7 +230,7 @@ function HeaderBrand() {
           <SwimmingFin size={22} />
           StudyShark
         </Box>
-        <Box component="span" sx={{ display: 'inline-flex', '@media (min-width:760px)': { display: 'none' }, alignItems: 'center', gap: 0.5, color: subject.accent }}>
+        <Box component="span" sx={{ display: 'inline-flex', '@media (min-width:760px)': { display: 'none' }, alignItems: 'center', gap: 0.5, color: subject.accent, whiteSpace: 'nowrap' }}>
           <Box component="span" aria-hidden sx={{ fontSize: '1.25rem', lineHeight: 1 }}>{subject.emoji}</Box>
           {subject.label}
         </Box>

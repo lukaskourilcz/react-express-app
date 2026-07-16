@@ -266,6 +266,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         );
         await holdLoadingScreen(startedAt);
         if (controller.signal.aborted) return;
+        // Guard against an empty question set (e.g. a difficulty/category combo
+        // the server can't fill). Rendering 'in-progress' with no questions
+        // would leave the learner staring at a blank screen.
+        if (!Array.isArray(data.questions) || data.questions.length === 0) {
+          setError(t('quiz.noQuestions'));
+          setState('error');
+          return;
+        }
         setSessionId(data.sessionId);
         setQuestions(data.questions);
         setAnswers({});
@@ -278,7 +286,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         setState('error');
       }
     },
-    [lang],
+    [lang, t],
   );
 
   const startDailyChallenge = useCallback(async () => {
@@ -289,6 +297,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     try {
       const data = await getDailyChallenge(lang);
       await holdLoadingScreen(startedAt);
+      if (!Array.isArray(data.questions) || data.questions.length === 0) {
+        setError(t('quiz.noQuestions'));
+        setState('error');
+        return;
+      }
       setSessionId(data.sessionId);
       setQuestions(data.questions as Question[]);
       setAnswers({});
@@ -299,7 +312,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setError(friendlyError(err));
       setState('error');
     }
-  }, [lang]);
+  }, [lang, t]);
 
   const handleStart = () => {
     setAttemptedStart(true);
