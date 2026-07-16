@@ -56,6 +56,7 @@ export default function SubjectPicker() {
               StudyShark
             </Heading>
           </HStack>
+          <div aria-hidden className="ss-waterline-rule" style={{ width: 84 }} />
           <Heading level={2} justify="center">
             {t('subject.prompt')}
           </Heading>
@@ -97,7 +98,7 @@ export default function SubjectPicker() {
                         {s.emoji}
                       </div>
                       <Heading level={3}>
-                        <span style={{ color: s.accent }}>{s.label}</span>
+                        <span style={{ color: `light-dark(${s.accent}, ${s.accentBright})` }}>{s.label}</span>
                       </Heading>
                       {active && (
                         <div style={{ marginLeft: 'auto' }}>
@@ -117,7 +118,7 @@ export default function SubjectPicker() {
                         fontFamily: 'var(--font-family-body)',
                         fontWeight: 600,
                         fontSize: '0.75rem',
-                        color: s.accent,
+                        color: `light-dark(${s.accent}, ${s.accentBright})`,
                         background: `${s.accent}14`,
                       }}
                     >

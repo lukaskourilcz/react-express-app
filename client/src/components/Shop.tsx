@@ -128,9 +128,7 @@ function Shop() {
   return (
     <VStack gap={5} width="100%" maxWidth={1080}>
       <VStack gap={1}>
-        <Text type="label" weight="bold" color="accent">
-          {t('shop.kicker')}
-        </Text>
+        <span className="ss-kicker">{t('shop.kicker')}</span>
         <Heading level={1} type="display-3">
           {t('shop.title')}
         </Heading>

@@ -14,12 +14,38 @@
 @import '@astryxdesign/theme-neutral/theme.css';
 
 :root {
+  /* ————————————————————————— Brand: The Deep End —————————————————————————
+     StudyShark's identity commits to the ocean the product already owns:
+     · INK, not gray — every neutral is a deep blue-green "ocean ink".
+     · PAPER, not vector-flat — surfaces carry a whisper of grain.
+     · THE WATERLINE — a fine sine wave is the recurring mark (header fins,
+       kicker ticks, footer surface line).
+     · CARD STOCK — cards read as tactile index cards: hairline ink border,
+       a crisp bottom edge, one quiet ink-tinted shadow.
+     · Subject accents stay reserved for identity moments (kickers, active
+       states, progress), never washes. */
+
+  /* — Ocean-ink neutral ramp (overrides theme-neutral's grays) — */
+  --ss-ink: light-dark(#17272e, #e8eef0);
+  --color-text-primary: light-dark(#17272e, #e8eef0);
+  --color-text-secondary: light-dark(#4f6570, #9db3bc);
+  --color-background-body: light-dark(#f3f6f5, #0b141b);
+  --color-background-surface: light-dark(#ffffff, #101c24);
+  --color-background-muted: light-dark(#edf2f1, #16242d);
+  --color-border: light-dark(rgba(23, 39, 46, 0.12), rgba(232, 238, 240, 0.1));
+  --ss-card-line: light-dark(rgba(23, 39, 46, 0.1), rgba(232, 238, 240, 0.08));
+  --ss-card-edge: light-dark(rgba(23, 39, 46, 0.16), rgba(0, 0, 0, 0.55));
+
   /* — Accent bridged to the active subject (ColorModeContext writes it) — */
   --color-accent: var(--brand-accent, #2d7a2d);
   --color-accent-muted: var(--brand-accent-soft, rgba(45, 122, 45, 0.12));
   --color-icon-accent: var(--brand-accent, #2d7a2d);
   --color-text-accent: var(--brand-accent, #2d7a2d);
   --color-border-accent: var(--brand-accent, #2d7a2d);
+
+  /* — Brand assets: paper grain (tiled noise) + the waterline (mask) — */
+  --ss-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.045'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  --ss-wave: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='6' viewBox='0 0 24 6'%3E%3Cpath d='M0 3 Q 6 0.4 12 3 T 24 3' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E");
 
   /* — Semantic feedback colours: the ONE green/red pair for correct/incorrect
        everywhere (quiz review, lesson feedback, toasts). — */
@@ -50,27 +76,27 @@
     0 4px 8px light-dark(rgba(15, 26, 42, 0.07), rgba(0, 0, 0, 0.4)),
     0 16px 40px light-dark(rgba(15, 26, 42, 0.1), rgba(0, 0, 0, 0.55));
 
-  /* — App backdrop: near-neutral surface with one faint accent wash at the
-       top so pages feel lit without reading as a gradient poster. — */
+  /* — App backdrop: paper with grain. The texture is what separates "page"
+       from "vector fill"; the accent never washes the backdrop. — */
   --ss-app-bg:
-    radial-gradient(1100px 480px at 50% -12%, var(--brand-accent-soft, rgba(45, 122, 45, 0.07)), transparent 62%),
-    linear-gradient(180deg, #f7f9fb 0%, #f5f7fa 100%);
-  --ss-hero-glow: rgba(15, 26, 42, 0.07);
+    var(--ss-grain),
+    linear-gradient(180deg, #f4f7f6 0%, #eef2f1 100%);
+  --ss-hero-glow: rgba(23, 39, 46, 0.07);
   --ss-card-bg: #ffffff;
-  --ss-ring: rgba(15, 26, 42, 0.08);
-  --ss-header-bg: rgba(255, 255, 255, 0.78);
-  --ss-header-border: rgba(15, 26, 42, 0.08);
+  --ss-ring: rgba(23, 39, 46, 0.08);
+  --ss-header-bg: rgba(255, 255, 255, 0.8);
+  --ss-header-border: rgba(23, 39, 46, 0.08);
 }
 
 :root[data-theme='dark'] {
   --ss-app-bg:
-    radial-gradient(1100px 480px at 50% -12%, var(--brand-accent-soft, rgba(76, 175, 80, 0.08)), transparent 62%),
-    linear-gradient(180deg, #0d1319 0%, #0c1117 100%);
+    var(--ss-grain),
+    linear-gradient(180deg, #0c161e 0%, #0a1219 100%);
   --ss-hero-glow: rgba(0, 0, 0, 0.35);
-  --ss-card-bg: #151b23;
-  --ss-ring: rgba(255, 255, 255, 0.08);
-  --ss-header-bg: rgba(15, 20, 27, 0.78);
-  --ss-header-border: rgba(255, 255, 255, 0.08);
+  --ss-card-bg: #101c24;
+  --ss-ring: rgba(232, 238, 240, 0.08);
+  --ss-header-bg: rgba(13, 22, 29, 0.8);
+  --ss-header-border: rgba(232, 238, 240, 0.08);
 }
 
 /* Headings use the display face with tight tracking for a modern editorial
@@ -82,38 +108,27 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ───────────────────────── Utility classes ───────────────────────── */
 
-/* Hover-lift: apply to a wrapper around a clickable Card/ClickableCard.
- * Carries a soft resting shadow so cards have depth even before hover (Astryx
- * cards are border-only), then lifts subtly on hover — feedback, not bounce. */
-.ss-lift {
+/* Card stock: cards read as tactile index cards — a crisp 2px bottom edge
+ * (stacked paper) + one quiet ink-tinted ambient shadow. Applied via the
+ * wrappers so every Astryx Card inherits the same anatomy.
+ * .ss-lift additionally answers hover with a subtle rise (clickable cards
+ * only); .ss-raised is the static variant for read-only cards. */
+.ss-lift,
+.ss-raised {
   border-radius: var(--radius-container);
-  box-shadow: 0 1px 2px rgba(15, 26, 42, 0.05), 0 4px 14px rgba(15, 26, 42, 0.06);
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  border-bottom: 2px solid var(--ss-card-edge);
+  box-shadow: 0 2px 10px light-dark(rgba(23, 39, 46, 0.06), rgba(0, 0, 0, 0.4));
 }
-:root[data-theme='dark'] .ss-lift {
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+.ss-lift {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .ss-lift:hover {
   transform: translateY(-2px);
-  box-shadow: 0 2px 4px rgba(15, 26, 42, 0.05), 0 10px 24px rgba(15, 26, 42, 0.1);
-}
-:root[data-theme='dark'] .ss-lift:hover {
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 6px 18px light-dark(rgba(23, 39, 46, 0.1), rgba(0, 0, 0, 0.5));
 }
 @media (prefers-reduced-motion: reduce) {
   .ss-lift { transition: none; }
   .ss-lift:hover { transform: none; }
-}
-
-/* Static variant for read-only tiles (stats, streaks): the same resting depth
- * as .ss-lift with no hover motion, so passive cards don't pretend to be
- * clickable. */
-.ss-raised {
-  border-radius: var(--radius-container);
-  box-shadow: 0 1px 2px rgba(15, 26, 42, 0.05), 0 4px 14px rgba(15, 26, 42, 0.06);
-}
-:root[data-theme='dark'] .ss-raised {
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
 }
 
 /* Pop-in entrance for page content. */
@@ -134,11 +149,50 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: inset 0 0 0 1px var(--ss-ring);
 }
 
-/* Soft rounded panel with the card background + quiet shadow + ring. */
+/* Soft rounded panel with the card background + card-stock anatomy. */
 .ss-panel {
   background: var(--ss-card-bg);
   border-radius: var(--radius-container);
-  box-shadow: 0 1px 0 var(--ss-ring), var(--shadow-low);
+  border: 1px solid var(--ss-card-line);
+  border-bottom: 2px solid var(--ss-card-edge);
+  box-shadow: 0 2px 10px light-dark(rgba(23, 39, 46, 0.06), rgba(0, 0, 0, 0.4));
+}
+
+/* ─────────────────── Brand marks: kicker + waterline ─────────────────── */
+
+/* Editorial kicker: small uppercase label in the subject accent with a short
+ * waterline tick beneath — the signature "dive marker" that opens major
+ * sections. */
+.ss-kicker {
+  display: block;
+  font-family: var(--font-family-body);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--brand-accent);
+}
+.ss-kicker::after {
+  content: '';
+  display: block;
+  width: 46px;
+  height: 6px;
+  margin-top: 5px;
+  background-color: var(--brand-accent);
+  opacity: 0.85;
+  mask: var(--ss-wave) repeat-x left center / 24px 6px;
+  -webkit-mask: var(--ss-wave) repeat-x left center / 24px 6px;
+}
+.ss-kicker--center { text-align: center; }
+.ss-kicker--center::after { margin-left: auto; margin-right: auto; }
+
+/* Full-width waterline rule — an ink hairline that waves. */
+.ss-waterline-rule {
+  height: 6px;
+  background-color: var(--ss-ink);
+  opacity: 0.18;
+  mask: var(--ss-wave) repeat-x left center / 24px 6px;
+  -webkit-mask: var(--ss-wave) repeat-x left center / 24px 6px;
 }
 
 /* Radio option cards (ui/RadioCards.tsx) — visually SelectableCard, but with

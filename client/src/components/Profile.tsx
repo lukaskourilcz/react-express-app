@@ -49,14 +49,10 @@ const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }
 // Astryx Card colour variants used for the tinted stat / streak tiles.
 type CardVariant = 'default' | 'muted' | 'blue' | 'cyan' | 'gray' | 'green' | 'orange' | 'pink' | 'purple' | 'red' | 'teal' | 'yellow';
 
-// Small uppercase section label, the Astryx stand-in for MUI's "overline".
-// Text only — the tinted cards below carry the visual interest.
+// Section opener in the brand's editorial voice: uppercase accent kicker with
+// the waterline tick beneath (the "dive marker" that starts every section).
 function SectionLabel({ children }: { children: ReactNode }) {
-  return (
-    <Text type="label" color="secondary" weight="bold">
-      {children}
-    </Text>
-  );
+  return <span className="ss-kicker">{children}</span>;
 }
 
 // Accent-tinted rounded meta pill. `color` sets both the text and (via

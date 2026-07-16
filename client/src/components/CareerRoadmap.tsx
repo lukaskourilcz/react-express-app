@@ -173,9 +173,7 @@ export default function CareerRoadmap() {
         {/* Header */}
         <div className="ss-pop" style={{ width: '100%' }}>
           <VStack gap={1}>
-            <Text type="label" weight="bold" color="accent">
-              {kicker}
-            </Text>
+            <span className="ss-kicker">{kicker}</span>
             <Heading level={1} type="display-3">
               {pageTitle}
             </Heading>
