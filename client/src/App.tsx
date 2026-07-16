@@ -22,7 +22,7 @@ import { useHasChosenSubject, useActiveSubject, isSubjectLocked } from './lib/su
 import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
 import { useSettings } from './lib/settings';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
-import { m, AnimatePresence, useReducedMotion } from './lib/motion';
+import { m } from './lib/motion';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
 // modules — heavy for the initial bundle. Lazy-load it so the app shell
@@ -52,17 +52,14 @@ function Landing() {
 
 // Route-transition variants, hoisted so the m.div props keep a stable identity
 // across App re-renders (App re-renders on every navigation — hottest path).
+// Enter-only fade: the previous AnimatePresence mode="wait" exit pass left a
+// blank beat between routes that read as flicker; pages supply their own
+// subtle entrance motion on top of this.
 const ROUTE_ANIM = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -8 },
-} as const;
-const ROUTE_ANIM_REDUCED = {
   initial: { opacity: 0 },
   animate: { opacity: 1 },
-  exit: { opacity: 0 },
 } as const;
-const ROUTE_TRANSITION = { duration: 0.2, ease: 'easeOut' } as const;
+const ROUTE_TRANSITION = { duration: 0.14, ease: 'easeOut' } as const;
 
 const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/': 'title.home',
@@ -150,8 +147,15 @@ const NAV_ITEMS: {
 const RouteLoader = () => {
   const t = useT();
   const config = useGameConfig();
-  // Full-page route load: hand the configured dev tips to the loader so one
-  // surfaces under the shark if the load runs long.
+  // Show nothing for the first beat: most lazy chunks resolve in well under
+  // 200ms (or are already cached), and flashing a spinner for that instant
+  // reads as glitching. The shark only surfaces on genuinely slow loads.
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setVisible(true), 200);
+    return () => window.clearTimeout(id);
+  }, []);
+  if (!visible) return null;
   return <LoadingScreen label={t('common.loading')} size={28} tips={config.devTips} sx={{ minHeight: 'auto', py: 6 }} />;
 };
 
@@ -201,17 +205,18 @@ function HeaderBrand() {
         className="ss-drawer-brand"
         style={{ padding: 0, color: 'var(--color-text-primary)' }}
       >
-        <span className="ss-show-desktop" style={{ alignItems: 'center', gap: 6 }}>
+        <span className="ss-brand-full" style={{ alignItems: 'center', gap: 6 }}>
           <SwimmingFin size={22} />
           StudyShark
         </span>
-        <span className="ss-show-mobile" style={{ alignItems: 'center', gap: 4, color: subject.accent, whiteSpace: 'nowrap' }}>
+        <span className="ss-brand-compact" style={{ alignItems: 'center', gap: 4, color: subject.accent, whiteSpace: 'nowrap' }}>
           <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1 }}>{subject.emoji}</span>
           {subject.label}
         </span>
       </Link>
-      {/* The subject chip is redundant on mobile (the wordmark shows it), so it's desktop-only. */}
-      <span className="ss-show-desktop">
+      {/* The subject chip is redundant on small screens (the drawer shows it),
+          so it rides with the full brand. */}
+      <span className="ss-brand-full">
         <SubjectSwitcher />
       </span>
     </>
@@ -231,7 +236,6 @@ function App() {
   const [settings, updateSettings] = useSettings();
   const { user } = useAuth();
   const [signupBonusOpen, setSignupBonusOpen] = useState(false);
-  const reduceMotion = useReducedMotion();
   const mobile = useIsMobile();
   const analyticsIdentified = useRef(false);
 
@@ -335,8 +339,8 @@ function App() {
       : location.pathname.startsWith('/play/')
         ? t('title.playMatch')
         : t('title.default');
-    // Move focus after the AnimatePresence enter transition (200ms) settles,
-    // so AT reads the new route's content rather than the exiting tree.
+    // Move focus after the route fade-in settles, so AT reads the new
+    // route's content rather than the previous tree.
     const timer = window.setTimeout(() => {
       document.getElementById('main-content')?.focus({ preventScroll: true });
     }, 230);
@@ -493,7 +497,9 @@ function App() {
               <span className="ss-toggles">
                 {utilityToggles}
               </span>
-              <Suspense fallback={null}>
+              {/* Fallback reserves the avatar footprint so the toolbar
+                  doesn't reflow when the chunk lands. */}
+              <Suspense fallback={<span aria-hidden style={{ width: 56, height: 56, flexShrink: 0 }} />}>
                 <AuthButton />
               </Suspense>
             </div>
@@ -575,6 +581,10 @@ function App() {
           minHeight: 0,
           overflowY: 'auto',
           overflowX: 'hidden',
+          // Reserve the scrollbar lane even on short pages, so content never
+          // shifts sideways when navigating between scrolling and
+          // one-viewport sections.
+          scrollbarGutter: 'stable',
           display: 'flex',
           justifyContent: 'center',
           padding: isDev
@@ -594,37 +604,33 @@ function App() {
             set flex:1 on their root to fill EXACTLY one viewport, keeping the
             answers anchored in a stable position with no page scroll. */}
         <div style={{ width: '100%', maxWidth: contentMaxWidth, minWidth: 0, minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
-          {/* Route transition: each navigation fades/slides the new view in.
-              `mode="wait"` lets the old view fade out first; `initial={false}`
-              skips the animation on the very first load. Reduced-motion users
-              get a plain opacity fade with no movement. Routes is handed the
-              current location so the exiting view keeps rendering its own tree. */}
-          <AnimatePresence mode="wait" initial={false}>
-            <m.div
-              key={location.pathname}
-              style={{ flex: 1, minHeight: 0, minWidth: 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' }}
-              {...(reduceMotion ? ROUTE_ANIM_REDUCED : ROUTE_ANIM)}
-              transition={ROUTE_TRANSITION}
-            >
-              <Suspense fallback={<RouteLoader />}>
-                <Routes location={location}>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/subjects" element={isSubjectLocked() ? <Navigate to="/" replace /> : <SubjectPicker />} />
-                  <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
-                  <Route path="/learn" element={<Roadmap />} />
-                  <Route path="/roadmap" element={<CareerRoadmap />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/leaderboard" element={<Leaderboard />} />
-                  <Route path="/cards" element={<Flashcards />} />
-                  <Route path="/shop" element={<Shop />} />
-                  <Route path="/play" element={<PlayLanding />} />
-                  <Route path="/play/:code" element={<PlayMatch />} />
-                  <Route path="/challenge" element={<Challenge />} />
-                  <Route path="/dev" element={<DevPage />} />
-                </Routes>
-              </Suspense>
-            </m.div>
-          </AnimatePresence>
+          {/* Route transition: the new view fades in over a stable backdrop —
+              no exit phase, so navigation never shows a blank beat. Reduced
+              motion still gets the (movement-free) fade. */}
+          <m.div
+            key={location.pathname}
+            style={{ flex: 1, minHeight: 0, minWidth: 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' }}
+            {...ROUTE_ANIM}
+            transition={ROUTE_TRANSITION}
+          >
+            <Suspense fallback={<RouteLoader />}>
+              <Routes location={location}>
+                <Route path="/" element={<Landing />} />
+                <Route path="/subjects" element={isSubjectLocked() ? <Navigate to="/" replace /> : <SubjectPicker />} />
+                <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
+                <Route path="/learn" element={<Roadmap />} />
+                <Route path="/roadmap" element={<CareerRoadmap />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/cards" element={<Flashcards />} />
+                <Route path="/shop" element={<Shop />} />
+                <Route path="/play" element={<PlayLanding />} />
+                <Route path="/play/:code" element={<PlayMatch />} />
+                <Route path="/challenge" element={<Challenge />} />
+                <Route path="/dev" element={<DevPage />} />
+              </Routes>
+            </Suspense>
+          </m.div>
         </div>
       </main>
 

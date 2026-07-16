@@ -24,28 +24,55 @@
 @media (min-width: 600px) {
   .ss-toolbar { padding: 8px 24px; }
 }
+/* From the nav breakpoint the toolbar becomes a grid whose side columns size
+   to their CONTENT (auto) with the nav flexing between them — overlap is
+   structurally impossible, unlike the old equal-thirds flex where a wide nav
+   or account widget bled into its neighbours. */
+@media (min-width: 1024px) {
+  .ss-toolbar {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+}
 
-/* Three equal toolbar slots so the centre nav stays truly centred. */
-.ss-slot { flex: 1 1 0; display: flex; align-items: center; min-width: 0; }
+.ss-slot { display: flex; align-items: center; min-width: 0; }
 .ss-slot-end { justify-content: flex-end; gap: 4px; }
 @media (min-width: 600px) { .ss-slot-end { gap: 8px; } }
 
-/* Responsive visibility helpers keyed to the 760px nav breakpoint. */
+/* Responsive visibility keyed to the 1024px nav breakpoint: with 6–7 primary
+   links the inline nav genuinely fits only from ~1024; below that the drawer
+   takes over (760px used to collide). */
 .ss-show-mobile { display: inline-flex; }
 .ss-show-desktop { display: none; }
-@media (min-width: 760px) {
+@media (min-width: 1024px) {
   .ss-show-mobile { display: none; }
   .ss-show-desktop { display: inline-flex; }
 }
+
+/* Brand variants: the compact subject wordmark is for small phones only; the
+   full StudyShark wordmark appears from 600px (independent of the nav). */
+.ss-brand-full { display: none; }
+.ss-brand-compact { display: inline-flex; }
+@media (min-width: 600px) {
+  .ss-brand-full { display: inline-flex; }
+  .ss-brand-compact { display: none; }
+}
+
+/* Extras that only fit on genuinely wide desktops (account name/rank column):
+   brand + nav + icons + full widget need ~1250px before nothing squeezes. */
+.ss-show-wide { display: none; }
+@media (min-width: 1280px) {
+  .ss-show-wide { display: flex; }
+}
 .ss-nav-center {
   display: none;
-  flex: 1 1 0;
   justify-content: center;
   align-items: center;
-  gap: 16px;
+  gap: 4px;
   min-width: 0;
+  overflow: hidden;
 }
-@media (min-width: 760px) { .ss-nav-center { display: flex; } }
+@media (min-width: 1024px) { .ss-nav-center { display: flex; } }
 
 /* Sound/theme toggles: hidden below the sm breakpoint (drawer covers them). */
 .ss-toggles { display: none; align-items: center; gap: 2px; }
@@ -55,7 +82,8 @@
 .ss-navlink {
   font-family: var(--font-family-body);
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  white-space: nowrap;
   text-decoration: none;
   color: var(--color-text-secondary);
   padding: 8px 12px;

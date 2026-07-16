@@ -15,9 +15,7 @@ import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
-import { heroMeshFor } from '../theme/meshGradient';
-import { useColorMode } from '../theme/ColorModeContext';
-import { SwimmingFin } from './SharkFin';
+import { SharkFin, SwimmingFin } from './SharkFin';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
 import { MotionItem } from '../lib/motion';
@@ -42,7 +40,6 @@ export default function Home() {
   const heroTitle = subject.id === 'webdev' ? t('home.title') : `Learn ${subject.label}`;
   const heroSubtitle = subject.id === 'webdev' ? t('home.subtitle') : subject.blurb;
   const { isAuthenticated, signInWithGoogle } = useAuth();
-  const { mode } = useColorMode();
   const [track, setTrack] = useTrack();
   const hasChosenPath = useHasChosenTrack();
   const [pathOpen, setPathOpen] = useState(false);
@@ -87,24 +84,34 @@ export default function Home() {
     // overflow so the page stays top-anchored and scrollable on small screens.
     <div style={{ flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       <div
-        className="ss-pop"
+        className="ss-panel ss-pop"
         style={{
           position: 'relative',
           overflow: 'hidden',
-          backgroundImage: heroMeshFor(mode),
           borderRadius: 'var(--radius-page)',
           marginTop: 'auto',
           padding: 'clamp(2rem, 5vw, 3.5rem) clamp(1.25rem, 4vw, 2.5rem)',
-          boxShadow: 'var(--shadow-low)',
-          border: '1px solid var(--ss-ring)',
         }}
       >
+        {/* Brand watermark: an oversized fin ghosted into the card stock. */}
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            right: '-3%',
+            bottom: '-22%',
+            opacity: 0.05,
+            transform: 'rotate(-8deg)',
+            pointerEvents: 'none',
+            color: 'var(--ss-ink)',
+          }}
+        >
+          <SharkFin size={280} color="currentColor" />
+        </div>
         <VStack gap={2} align="center">
           <HStack gap={1} align="center">
-            <SwimmingFin size={26} />
-            <Text type="label" weight="bold" color="accent">
-              STUDYSHARK
-            </Text>
+            <SwimmingFin size={22} />
+            <span className="ss-kicker ss-kicker--center">StudyShark</span>
           </HStack>
           <Heading level={1} type="display-2" justify="center">
             {heroTitle}

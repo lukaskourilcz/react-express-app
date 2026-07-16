@@ -14,7 +14,6 @@ import { Text } from '@astryxdesign/core/Text';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Popover } from '@astryxdesign/core/Popover';
 import { AppToast } from './ui/AppToast';
-import { useIsMobile } from '../lib/useMediaQuery';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useQuestXp } from '../lib/xp';
@@ -71,7 +70,6 @@ function AuthButton() {
   const { title: rankTitle } = rankLabelFor(levelInfo.rank, track);
   const navigate = useNavigate();
   const t = useT();
-  const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const open = menuOpen;
@@ -94,11 +92,14 @@ function AuthButton() {
   };
 
   if (isLoading) {
+    // Mirror the signed-in footprint (48px avatar + text column on wide
+    // screens) so the toolbar doesn't reflow when auth resolves.
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 8px' }} aria-label={t('auth.loadingAccount')}>
-        <Skeleton width={34} height={34} radius="rounded" />
-        <div style={{ display: isMobile ? 'none' : 'block' }}>
-          <Skeleton width={64} height={12} radius={2} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 4 }} aria-label={t('auth.loadingAccount')}>
+        <Skeleton width={48} height={48} radius="rounded" />
+        <div className="ss-show-wide" style={{ flexDirection: 'column', gap: 4 }}>
+          <Skeleton width={96} height={12} radius={2} />
+          <Skeleton width={128} height={10} radius={2} />
         </div>
       </div>
     );
@@ -145,7 +146,7 @@ function AuthButton() {
           display: 'flex',
           alignItems: 'center',
           gap: 10,
-          maxWidth: 232,
+          maxWidth: 240,
           margin: 0,
           padding: 4,
           background: 'transparent',
@@ -166,13 +167,17 @@ function AuthButton() {
         >
           <Avatar src={profile.picture} name={displayName} alt="" size="medium" />
         </div>
+        {/* Name + rank are a wide-desktop luxury: below 1080px the widget is
+            the avatar alone, so it can never crowd the centre nav. The rank
+            stays on ONE ellipsized line (full title on hover + in Profile) so
+            the 56px toolbar height never changes with title length. */}
         <div
+          className="ss-show-wide"
           style={{
-            display: isMobile ? 'none' : 'flex',
             flexDirection: 'column',
             alignItems: 'flex-start',
             minWidth: 0,
-            maxWidth: 190,
+            maxWidth: 170,
             gap: '2px',
           }}
         >
@@ -182,12 +187,11 @@ function AuthButton() {
             </Text>
             <Badge variant="green" label={levelInfo.level} />
           </div>
-          {/* The full rank — up to "Superjunior Full-Stack Developer" — must
-              always be readable: wrap to at most two lines, never truncate
-              mid-title, never push the toolbar taller. */}
-          <Text type="supporting" size="xsm" color="accent" weight="semibold" maxLines={2}>
-            {rankTitle}
-          </Text>
+          <span title={rankTitle} style={{ display: 'block', maxWidth: '100%', minWidth: 0 }}>
+            <Text type="supporting" size="xsm" color="accent" weight="semibold" maxLines={1}>
+              {rankTitle}
+            </Text>
+          </span>
           {/* Thin progress bar toward the next rank — ambient goal feedback
               with zero extra copy. Hidden at the ladder cap. */}
           {!levelInfo.isMax && (
