@@ -77,7 +77,6 @@ export function PlayLanding() {
       <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
         <Card padding={6} width="100%">
           <VStack gap={2} align="center">
-            <div aria-hidden className="ss-float" style={{ fontSize: '2.8rem', lineHeight: 1 }}>🦈</div>
             <Heading level={2} justify="center">
               {t('play.signInTitle')}
             </Heading>
@@ -161,38 +160,20 @@ export function PlayLanding() {
           style={{
             position: 'relative',
             overflow: 'hidden',
-            borderRadius: 22,
-            padding: 'clamp(1.25rem, 3.5vw, 2rem) clamp(1rem, 3.5vw, 1.75rem)',
-            background: `radial-gradient(120% 130% at 0% -20%, ${accent}22, transparent 65%)`,
+            borderRadius: 'var(--radius-container)',
+            padding: 'clamp(1.5rem, 3.5vw, 2rem) clamp(1.25rem, 3.5vw, 1.75rem)',
+            background: `radial-gradient(120% 130% at 0% -20%, ${accent}1a, transparent 65%)`,
             border: `1px solid ${accent}2e`,
           }}
         >
-          <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 12, right: 18, fontSize: '1.8rem', opacity: 0.75 }}>🎮</span>
-          <span aria-hidden className="ss-float" style={{ position: 'absolute', bottom: 10, right: 60, fontSize: '1.2rem', opacity: 0.55, animationDelay: '1.5s' }}>🫧</span>
-          <HStack gap={1.5} align="center">
-            <div
-              aria-hidden
-              className="ss-emoji-tile ss-float"
-              style={{
-                width: 52,
-                height: 52,
-                fontSize: '1.7rem',
-                flexShrink: 0,
-                background: `linear-gradient(135deg, ${accent}2b, ${accent}12)`,
-                boxShadow: `inset 0 0 0 1.5px ${accent}44, 0 6px 16px ${accent}22`,
-              }}
-            >
-              🦈
-            </div>
-            <VStack gap={0.5}>
-              <Heading level={1} type="display-3">
-                <span className="ss-gradient-text">{t('play.title')}</span>
-              </Heading>
-              <Text type="large" color="secondary">
-                {t('play.subtitle')}
-              </Text>
-            </VStack>
-          </HStack>
+          <VStack gap={0.5}>
+            <Heading level={1} type="display-3">
+              {t('play.title')}
+            </Heading>
+            <Text type="large" color="secondary">
+              {t('play.subtitle')}
+            </Text>
+          </VStack>
         </div>
 
         {error && (
@@ -218,12 +199,9 @@ export function PlayLanding() {
           <Card padding={4} width="100%">
             <VStack gap={3}>
               <VStack gap={2}>
-                <HStack gap={1} align="center">
-                  <span aria-hidden style={{ fontSize: '1.15rem', lineHeight: 1 }}>🚀</span>
-                  <Text type="label" weight="bold" color="secondary">
-                    {t('play.hostGame')}
-                  </Text>
-                </HStack>
+                <Text type="label" weight="bold" color="secondary">
+                  {t('play.hostGame')}
+                </Text>
                 <ToggleButtonGroup
                   label={t('play.gameMode')}
                   type="single"
@@ -266,10 +244,14 @@ export function PlayLanding() {
                         onClick={() => toggleCategory(cat.value)}
                         style={{
                           cursor: 'pointer',
-                          padding: '5px 10px',
+                          padding: '7px 12px',
                           fontSize: '0.8rem',
                           fontWeight: selected ? 600 : 500,
-                          color: selected ? cat.color : 'var(--astryx-color-text-secondary, inherit)',
+                          // The colour lives in the border/left-accent; text stays
+                          // neutral so light brand hues never fail contrast.
+                          color: selected
+                            ? 'var(--color-text-primary, inherit)'
+                            : 'var(--astryx-color-text-secondary, inherit)',
                           background: selected ? `${cat.color}18` : 'transparent',
                           border: `1px solid ${selected ? cat.color : 'var(--astryx-color-border, rgba(128,128,128,0.35))'}`,
                           borderLeft: `4px solid ${cat.color}`,
@@ -361,12 +343,9 @@ export function PlayLanding() {
             <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
             <Card padding={4} width="100%">
               <VStack gap={2}>
-                <HStack gap={1} align="center">
-                  <span aria-hidden className="ss-float" style={{ fontSize: '1.15rem', lineHeight: 1 }}>🔑</span>
-                  <Text type="label" weight="bold" color="secondary">
-                    {t('play.joinWithCode')}
-                  </Text>
-                </HStack>
+                <Text type="label" weight="bold" color="secondary">
+                  {t('play.joinWithCode')}
+                </Text>
                 {/* Room code is the star of the join card: big, monospaced,
                     accent-ringed input so it reads like a ticket stub. */}
                 <div
@@ -709,7 +688,6 @@ function Lobby({
       <VStack gap={3}>
         <VStack gap={1}>
           <HStack gap={1.5} align="center">
-            <span aria-hidden className="ss-float" style={{ fontSize: '1.6rem', lineHeight: 1 }}>👋</span>
             <Heading level={2}>{t('play.lobby')}</Heading>
             {participants.length > 0 && (
               <div
@@ -748,14 +726,13 @@ function Lobby({
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <Text weight="medium">{p.display_name}</Text>
                   </div>
-                  {p.user_id === match.host_id && <Badge variant="yellow" label={`👑 ${t('play.host')}`} />}
+                  {p.user_id === match.host_id && <Badge variant="yellow" label={t('play.host')} />}
                 </HStack>
               </Card>
             </div>
           ))}
           {participants.length === 0 && (
-            <VStack gap={1} align="center" padding={2}>
-              <span aria-hidden className="ss-float" style={{ fontSize: '2rem', lineHeight: 1 }}>🫧</span>
+            <VStack gap={1} align="center" padding={3}>
               <Text type="supporting" size="xsm" color="secondary" justify="center">
                 {t('play.noPlayers')}
               </Text>
@@ -773,7 +750,7 @@ function Lobby({
             <Button
               variant="primary"
               size="lg"
-              label={`🚀 ${t('play.startWithCount', { count: match.questions.length })}`}
+              label={t('play.startWithCount', { count: match.questions.length })}
               isDisabled={participants.length < 1}
               onClick={onStart}
             />
@@ -856,7 +833,7 @@ function RunningQuestion({
   const timerColor = noLimit
     ? 'var(--astryx-color-text-secondary, currentColor)'
     : remainingS <= 5
-      ? '#d33'
+      ? 'var(--ss-error)'
       : remainingS <= 10
         ? '#c47f00'
         : 'var(--astryx-color-text-secondary, currentColor)';
@@ -875,26 +852,25 @@ function RunningQuestion({
             })}
           </Text>
           <span
-            className={!noLimit && remainingS <= 5 ? 'ss-float' : undefined}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: 4,
               fontFamily: 'monospace',
-              fontWeight: 800,
+              fontWeight: 700,
               fontSize: '0.95rem',
               padding: '4px 11px',
               borderRadius: 999,
               color: timerColor,
               background:
                 !noLimit && remainingS <= 5
-                  ? 'color-mix(in srgb, #d33 15%, transparent)'
+                  ? 'color-mix(in srgb, var(--ss-error) 15%, transparent)'
                   : 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
             }}
             aria-live="polite"
             aria-atomic="true"
           >
-            ⏱ {noLimit ? '∞' : `${remainingS}s`}
+            {noLimit ? '∞' : `${remainingS}s`}
           </span>
         </HStack>
 
@@ -985,12 +961,9 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
   if (scoreboard.length === 0) return null;
   return (
     <VStack gap={1}>
-      <HStack gap={1} align="center">
-        <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
-        <Text type="label" weight="bold" color="secondary">
-          {t('play.liveScoreboard')}
-        </Text>
-      </HStack>
+      <Text type="label" weight="bold" color="secondary">
+        {t('play.liveScoreboard')}
+      </Text>
       <VStack gap={0.5}>
         {scoreboard.map((s, i) => (
           <div
@@ -1124,15 +1097,22 @@ function Finished({
   onLeave: () => void;
 }) {
   const t = useT();
+  // Move focus to the heading when the match ends so AT announces the result
+  // (same pattern as the Quiz/Challenge completion screens).
+  const headingRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    headingRef.current?.focus({ preventScroll: true });
+  }, []);
   return (
     <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
-    <Card padding={4} width="100%">
+    <Card padding={5} width="100%">
       <VStack gap={3} align="center">
         <VStack gap={1.5} align="center">
-          <span aria-hidden className="ss-float" style={{ fontSize: '3rem', lineHeight: 1 }}>🎉</span>
-          <Heading level={1} type="display-3" justify="center">
-            <span className="ss-gradient-text">{t('play.matchComplete')}</span>
-          </Heading>
+          <div ref={headingRef} tabIndex={-1}>
+            <Heading level={1} type="display-3" justify="center">
+              {t('play.matchComplete')}
+            </Heading>
+          </div>
           {scoreboard.length > 0 && (
             <div
               style={{
@@ -1144,7 +1124,7 @@ function Finished({
                 textAlign: 'center',
               }}
             >
-              🥇 {t('play.winner', {
+              {t('play.winner', {
                 name: scoreboard[0].display_name,
                 correct: scoreboard[0].correct,
                 total: match.questions.length,
