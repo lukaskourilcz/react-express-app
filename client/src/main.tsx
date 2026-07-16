@@ -1,7 +1,9 @@
 import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
-// Astryx design-system foundation (component CSS + themed tokens). Imported
-// before the app so its base layer sits under any component-level styles.
+// Global reset (replaces MUI's CssBaseline) + the Astryx design-system
+// foundation (component CSS + themed tokens). Reset first so its base layer
+// sits under the component styles.
+import './styles/reset.css';
 import './styles/astryx-theme.css';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';

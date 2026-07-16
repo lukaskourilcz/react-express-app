@@ -2,10 +2,9 @@
 //
 // Redesigned on the Astryx design system: Astryx Avatar + a level Badge for the
 // signed-in identity, Astryx Button for the signed-out call to action, and
-// Astryx Text for the name / rank. The account dropdown keeps MUI's Menu (no
-// clean Astryx equivalent) but its trigger is fully restyled with Astryx.
+// Astryx Text for the name / rank. The account dropdown uses an Astryx Popover
+// (trigger = the account button, content = a column of action buttons).
 
-import { Box, Menu, MenuItem, Snackbar, Alert } from '@mui/material';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar } from '@astryxdesign/core/Avatar';
@@ -13,6 +12,9 @@ import { Button } from '@astryxdesign/core/Button';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Text } from '@astryxdesign/core/Text';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
+import { Popover } from '@astryxdesign/core/Popover';
+import { AppToast } from './ui/AppToast';
+import { useIsMobile } from '../lib/useMediaQuery';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useQuestXp } from '../lib/xp';
@@ -21,6 +23,37 @@ import { computeLearningXp, levelForXp } from '../lib/leveling';
 import { useTrack, rankLabelFor } from '../lib/tracks';
 import { useEquippedRingColor } from '../lib/shop';
 import { useActiveSubject, topicSetForSubject } from '../lib/subjects';
+
+// A single row in the account dropdown — a full-width, left-aligned button that
+// mimics a menu item (subtle hover fill) without pulling in MUI's MenuItem.
+function MenuAction({ label, onClick }: { label: string; onClick: () => void }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        display: 'block',
+        width: '100%',
+        textAlign: 'left',
+        padding: '8px 14px',
+        margin: 0,
+        font: 'inherit',
+        fontSize: '0.9rem',
+        color: 'var(--color-text-primary)',
+        background: hover ? 'var(--color-background-muted)' : 'transparent',
+        border: 'none',
+        borderRadius: 8,
+        cursor: 'pointer',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
 function AuthButton() {
   const { isAuthenticated, isLoading, user, signInWithGoogle, signOut } = useAuth();
@@ -38,9 +71,10 @@ function AuthButton() {
   const { title: rankTitle } = rankLabelFor(levelInfo.rank, track);
   const navigate = useNavigate();
   const t = useT();
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
-  const open = Boolean(anchorEl);
+  const open = menuOpen;
 
   const handleLogin = async () => {
     try {
@@ -50,16 +84,12 @@ function AuthButton() {
     }
   };
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-  const handleMenuClose = () => setAnchorEl(null);
   const handleProfile = () => {
-    handleMenuClose();
+    setMenuOpen(false);
     navigate('/profile');
   };
   const handleLogout = () => {
-    handleMenuClose();
+    setMenuOpen(false);
     signOut();
   };
 
@@ -67,9 +97,9 @@ function AuthButton() {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 8px' }} aria-label={t('auth.loadingAccount')}>
         <Skeleton width={34} height={34} radius="rounded" />
-        <Box sx={{ display: { xs: 'none', sm: 'block' } }}>
+        <div style={{ display: isMobile ? 'none' : 'block' }}>
           <Skeleton width={64} height={12} radius={2} />
-        </Box>
+        </div>
       </div>
     );
   }
@@ -78,16 +108,13 @@ function AuthButton() {
     return (
       <>
         <Button variant="secondary" size="md" label={t('auth.logIn')} onClick={handleLogin} />
-        <Snackbar
+        <AppToast
           open={!!authError}
-          autoHideDuration={8000}
           onClose={() => setAuthError(null)}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        >
-          <Alert severity="error" variant="filled" onClose={() => setAuthError(null)}>
-            {authError}
-          </Alert>
-        </Snackbar>
+          severity="error"
+          message={authError}
+          autoHideDuration={8000}
+        />
       </>
     );
   }
@@ -95,13 +122,24 @@ function AuthButton() {
   const displayName = profile.name?.split(' ')[0] || profile.email?.split('@')[0] || t('auth.account');
 
   return (
-    <>
+    <Popover
+      isOpen={menuOpen}
+      onOpenChange={setMenuOpen}
+      placement="below"
+      alignment="end"
+      width={168}
+      label={t('auth.accountMenu', { name: displayName })}
+      content={
+        <div role="menu" style={{ display: 'flex', flexDirection: 'column', minWidth: 168 }}>
+          <MenuAction label={t('auth.profile')} onClick={handleProfile} />
+          <MenuAction label={t('auth.logOut')} onClick={handleLogout} />
+        </div>
+      }
+    >
       <button
         type="button"
-        onClick={handleMenuOpen}
         aria-haspopup="menu"
         aria-expanded={open}
-        aria-controls={open ? 'account-menu' : undefined}
         aria-label={t('auth.accountMenu', { name: displayName })}
         style={{
           display: 'flex',
@@ -128,9 +166,9 @@ function AuthButton() {
         >
           <Avatar src={profile.picture} name={displayName} alt="" size="medium" />
         </div>
-        <Box
-          sx={{
-            display: { xs: 'none', sm: 'flex' },
+        <div
+          style={{
+            display: isMobile ? 'none' : 'flex',
             flexDirection: 'column',
             alignItems: 'flex-start',
             minWidth: 0,
@@ -175,21 +213,9 @@ function AuthButton() {
               />
             </div>
           )}
-        </Box>
+        </div>
       </button>
-      <Menu
-        id="account-menu"
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleMenuClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-        slotProps={{ paper: { sx: { minWidth: 168, mt: 1, borderRadius: 2.5 } } }}
-      >
-        <MenuItem onClick={handleProfile}>{t('auth.profile')}</MenuItem>
-        <MenuItem onClick={handleLogout}>{t('auth.logOut')}</MenuItem>
-      </Menu>
-    </>
+    </Popover>
   );
 }
 

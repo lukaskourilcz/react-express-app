@@ -1,17 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Alert,
-  Tooltip,
-  ClickAwayListener,
-  IconButton,
-  Snackbar,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-} from '@mui/material';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Grid } from '@astryxdesign/core/Grid';
@@ -22,6 +10,11 @@ import { Card } from '@astryxdesign/core/Card';
 import { Badge } from '@astryxdesign/core/Badge';
 import { SelectableCard } from '@astryxdesign/core/SelectableCard';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
+import { Banner } from '@astryxdesign/core/Banner';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
+import { Popover } from '@astryxdesign/core/Popover';
+import { AlertDialog } from '@astryxdesign/core/AlertDialog';
+import { AppToast } from './ui/AppToast';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useActiveSubject } from '../lib/subjects';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
@@ -110,6 +103,23 @@ const ReportFlagIcon = () => (
     <line x1="4" y1="22" x2="4" y2="15" />
   </svg>
 );
+
+// Shared style for the small icon-only action buttons in the review list
+// (bookmark / report / hint) — a MUI-free stand-in for IconButton size="small".
+const iconBtnStyle = (color: string): React.CSSProperties => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 32,
+  height: 32,
+  padding: 0,
+  margin: 0,
+  border: 'none',
+  borderRadius: 8,
+  background: 'transparent',
+  color,
+  cursor: 'pointer',
+});
 
 // A compact category tag that keeps each subject's brand/logo colour (Astryx
 // Badge only exposes a fixed palette, so we render the exact hex tint here).
@@ -584,9 +594,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       <div style={{ width: '100%', maxWidth: 560, margin: '0 auto' }}>
         <Card padding={5} width="100%">
           <VStack gap={3}>
-            <Alert severity="error" role="alert">
-              {error || t('error.somethingWrong')}
-            </Alert>
+            <Banner status="error" title={error || t('error.somethingWrong')} />
             <HStack gap={1.5} wrap="wrap">
               <Button
                 variant="primary"
@@ -800,7 +808,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                     const label = t(`difficulty.${value}` as TranslationKey);
                     const tip = t(`difficulty.${value}.tip` as TranslationKey);
                     return (
-                      <Tooltip key={value} title={tip} arrow placement="top">
+                      <Tooltip key={value} content={tip} placement="above">
                         <span style={{ display: 'inline-flex' }}>
                           <SelectableCard
                             label={t('quiz.difficultyAria', { label })}
@@ -833,12 +841,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           </VStack>
         </Card>
 
-        <Snackbar
+        <AppToast
           open={!!snack}
-          autoHideDuration={2500}
           onClose={() => setSnack(null)}
+          severity="info"
           message={snack ?? ''}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          autoHideDuration={2500}
         />
       </div>
     );
@@ -928,33 +936,31 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       />
                     </HStack>
                     <HStack gap={0.5} align="center">
-                      <Tooltip title={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')} arrow placement="top">
-                        <IconButton
-                          size="small"
-                          aria-pressed={isBookmarked}
-                          aria-label={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
-                          onClick={() =>
-                            toggleBookmark(
-                              question,
-                              questionResult?.correctAnswer ?? 0,
-                              questionResult?.explanation ?? '',
-                            )
-                          }
-                          sx={{ color: isBookmarked ? 'var(--brand-accent)' : 'text.secondary' }}
-                        >
-                          <BookmarkIcon filled={isBookmarked} />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title={t('quiz.reportAria')} arrow placement="top">
-                        <IconButton
-                          size="small"
-                          aria-label={t('quiz.reportAria')}
-                          onClick={() => setReportTarget(question.id)}
-                          sx={{ color: 'text.secondary' }}
-                        >
-                          <ReportFlagIcon />
-                        </IconButton>
-                      </Tooltip>
+                      <button
+                        type="button"
+                        aria-pressed={isBookmarked}
+                        aria-label={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
+                        title={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
+                        onClick={() =>
+                          toggleBookmark(
+                            question,
+                            questionResult?.correctAnswer ?? 0,
+                            questionResult?.explanation ?? '',
+                          )
+                        }
+                        style={iconBtnStyle(isBookmarked ? 'var(--brand-accent)' : 'var(--color-text-secondary)')}
+                      >
+                        <BookmarkIcon filled={isBookmarked} />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={t('quiz.reportAria')}
+                        title={t('quiz.reportAria')}
+                        onClick={() => setReportTarget(question.id)}
+                        style={iconBtnStyle('var(--color-text-secondary)')}
+                      >
+                        <ReportFlagIcon />
+                      </button>
                       <CategoryTag category={question.category} />
                     </HStack>
                   </HStack>
@@ -993,12 +999,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           );
         })}
 
-        <Snackbar
+        <AppToast
           open={!!snack}
-          autoHideDuration={2500}
           onClose={() => setSnack(null)}
+          severity="info"
           message={snack ?? ''}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          autoHideDuration={2500}
         />
         <ReportDialog
           open={!!reportTarget}
@@ -1035,9 +1041,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       }}
     >
       {error && (
-        <Alert severity="error" role="alert" onClose={() => setError(null)} sx={{ mb: 1.5, flexShrink: 0 }}>
-          {error}
-        </Alert>
+        <div style={{ marginBottom: 12, flexShrink: 0 }}>
+          <Banner status="error" title={error} isDismissable onDismiss={() => setError(null)} />
+        </div>
       )}
 
       {/* Surface styled with Astryx tokens so it themes with the rest of the
@@ -1121,46 +1127,37 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             >
               <div style={{ flex: 1 }}>{renderQuestion(currentQuestion.question)}</div>
               {currentQuestion.introduction && (
-                <ClickAwayListener onClickAway={() => setRevealedHints((prev) => ({ ...prev, [currentQuestion.id]: false }))}>
-                  <span>
-                    <Tooltip
-                      title={currentQuestion.introduction}
-                      open={!!revealedHints[currentQuestion.id]}
-                      disableHoverListener
-                      disableTouchListener
-                      arrow
-                      placement="bottom"
-                      slotProps={{
-                        tooltip: {
-                          sx: {
-                            backgroundColor: 'grey.800',
-                            fontSize: '0.82rem',
-                            lineHeight: 1.6,
-                            p: 1.5,
-                            maxWidth: 320,
-                          },
-                        },
-                        arrow: { sx: { color: 'grey.800' } },
-                      }}
-                    >
-                      <IconButton
-                        size="small"
-                        aria-label={t('quiz.showHint')}
-                        aria-pressed={!!revealedHints[currentQuestion.id]}
-                        onClick={() =>
-                          setRevealedHints((prev) => ({ ...prev, [currentQuestion.id]: !prev[currentQuestion.id] }))
-                        }
-                        sx={{
-                          mt: '1px',
-                          color: revealedHints[currentQuestion.id] ? getCategoryHexColor(currentQuestion.category) : 'text.secondary',
-                          '&:hover': { color: getCategoryHexColor(currentQuestion.category) },
-                        }}
-                      >
-                        <HintIcon />
-                      </IconButton>
-                    </Tooltip>
-                  </span>
-                </ClickAwayListener>
+                <Popover
+                  isOpen={!!revealedHints[currentQuestion.id]}
+                  onOpenChange={(o) =>
+                    setRevealedHints((prev) => ({ ...prev, [currentQuestion.id]: o }))
+                  }
+                  placement="below"
+                  width={320}
+                  label={t('quiz.showHint')}
+                  content={
+                    <div style={{ fontSize: '0.82rem', lineHeight: 1.6 }}>
+                      {currentQuestion.introduction}
+                    </div>
+                  }
+                >
+                  <button
+                    type="button"
+                    aria-label={t('quiz.showHint')}
+                    aria-pressed={!!revealedHints[currentQuestion.id]}
+                    title={t('quiz.showHint')}
+                    style={{
+                      ...iconBtnStyle(
+                        revealedHints[currentQuestion.id]
+                          ? getCategoryHexColor(currentQuestion.category)
+                          : 'var(--color-text-secondary)',
+                      ),
+                      marginTop: 1,
+                    }}
+                  >
+                    <HintIcon />
+                  </button>
+                </Popover>
               )}
             </div>
 
@@ -1278,28 +1275,27 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         </div>
       </div>
 
-      <Snackbar
+      <AppToast
         open={!!snack}
-        autoHideDuration={2500}
         onClose={() => setSnack(null)}
+        severity="info"
         message={snack ?? ''}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        autoHideDuration={2500}
       />
       <ReportDialog
         open={!!reportTarget}
         onClose={() => setReportTarget(null)}
         onSubmit={handleReport}
       />
-      <Dialog open={leaveConfirmOpen} onClose={() => setLeaveConfirmOpen(false)} aria-labelledby="leave-quiz-title">
-        <DialogTitle id="leave-quiz-title">{t('quiz.leaveTitle')}</DialogTitle>
-        <DialogContent>
-          <DialogContentText>{t('quiz.leaveBody')}</DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button variant="ghost" label={t('quiz.leaveCancel')} onClick={() => setLeaveConfirmOpen(false)} />
-          <Button variant="destructive" label={t('quiz.leaveConfirm')} onClick={confirmAbandon} />
-        </DialogActions>
-      </Dialog>
+      <AlertDialog
+        isOpen={leaveConfirmOpen}
+        onOpenChange={setLeaveConfirmOpen}
+        title={t('quiz.leaveTitle')}
+        description={t('quiz.leaveBody')}
+        actionLabel={t('quiz.leaveConfirm')}
+        cancelLabel={t('quiz.leaveCancel')}
+        onAction={confirmAbandon}
+      />
     </div>
   );
 }

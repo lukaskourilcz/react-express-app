@@ -6,13 +6,21 @@
 // question text and current deleted state come from the admin API.
 
 import { useMemo, useState } from 'react';
+import { Badge } from '@astryxdesign/core/Badge';
+import { Button } from '@astryxdesign/core/Button';
+import { TextInput } from '@astryxdesign/core/TextInput';
 import {
-  Box, Typography, TextField, Button, Chip, Snackbar, MenuItem, Tooltip,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination, Paper,
-} from '@mui/material';
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHeaderCell,
+} from '@astryxdesign/core/Table';
 import { useQuery } from '@tanstack/react-query';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
+import { AppToast } from '../ui/AppToast';
 import { getCategoryLabel } from '../../lib/categories';
 import { friendlyError } from '../../lib/api';
 import { listQuestions, setQuestionDeleted, type AdminQuestion } from '../../lib/devApi';
@@ -25,6 +33,17 @@ interface Row {
 
 type DecisionFilter = 'cut' | 'keep' | 'all';
 const ROWS_PER_PAGE_OPTIONS = [25, 50, 100];
+
+// Shared style for the native <select> filter controls (mirrors a small input).
+const selectStyle: React.CSSProperties = {
+  height: 32,
+  padding: '0 8px',
+  borderRadius: 8,
+  border: '1px solid var(--color-border)',
+  background: 'var(--color-background-surface)',
+  color: 'var(--color-text-primary)',
+  fontSize: '0.875rem',
+};
 
 // Mean → colour band for the score badge.
 function meanColor(mean: number): string {
@@ -108,6 +127,9 @@ export default function DevTriage() {
 
   const pageStart = Math.min(page * rowsPerPage, Math.max(0, (Math.ceil(filtered.length / rowsPerPage) - 1) * rowsPerPage));
   const pageRows = filtered.slice(pageStart, pageStart + rowsPerPage);
+  const currentPage = Math.floor(pageStart / rowsPerPage);
+  const rangeFrom = filtered.length === 0 ? 0 : pageStart + 1;
+  const rangeTo = Math.min(pageStart + rowsPerPage, filtered.length);
 
   // One click = gone. The row is filtered out instantly (optimistic) and the
   // question is deleted on the server so it's gone everywhere on reload too.
@@ -152,170 +174,176 @@ export default function DevTriage() {
   if (error) return <ErrorRetry message={error} onRetry={reload} />;
 
   return (
-    <Box>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+    <div>
+      <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: '0 0 12px' }}>
         Pre-computed triage of the question bank — gates (binary cut) kept separate from the 1–5 scores
         (R relevance · D discrimination · F difficulty-fit · C clarity). Default rule:{' '}
         <code>{triageQuery.data?.meta.keepRule}</code>. Delete removes a question from the bank for good — one click, no undo.
-      </Typography>
+      </p>
 
       {/* Summary */}
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-        <Chip label={`${stats.total} scored`} size="small" />
-        <Chip label={`${stats.keep} keep`} size="small" color="success" variant="outlined" />
-        <Chip label={`${stats.cut} cut`} size="small" color="error" variant="outlined" />
-        <Chip label={`${stats.gone} deleted`} size="small" color="error" />
-        <Chip label={`${filtered.length} shown`} size="small" variant="outlined" />
-      </Box>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        <Badge variant="neutral" label={`${stats.total} scored`} />
+        <Badge variant="success" label={`${stats.keep} keep`} />
+        <Badge variant="error" label={`${stats.cut} cut`} />
+        <Badge variant="error" label={`${stats.gone} deleted`} />
+        <Badge variant="neutral" label={`${filtered.length} shown`} />
+      </div>
 
       {/* Filters */}
-      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
-        <TextField
-          size="small"
-          placeholder="Search question or id…"
-          value={search}
-          onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-          sx={{ flex: 1, minWidth: 200 }}
-        />
-        <TextField select size="small" label="Decision" value={decision}
-          onChange={(e) => { setDecision(e.target.value as DecisionFilter); setPage(0); }} sx={{ minWidth: 130 }}>
-          <MenuItem value="cut">Cut candidates</MenuItem>
-          <MenuItem value="keep">Keep</MenuItem>
-          <MenuItem value="all">All</MenuItem>
-        </TextField>
-        <TextField select size="small" label="Reason" value={gateFilter}
-          onChange={(e) => { setGateFilter(e.target.value); setPage(0); }} sx={{ minWidth: 150 }}>
-          <MenuItem value="all">All reasons</MenuItem>
-          <MenuItem value="trivial_recall">Trivial recall</MenuItem>
-          <MenuItem value="ambiguous">Ambiguous</MenuItem>
-          <MenuItem value="wrong_or_outdated">Wrong / outdated</MenuItem>
-          <MenuItem value="duplicate">Duplicate</MenuItem>
-        </TextField>
-        <TextField select size="small" label="Category" value={categoryFilter}
-          onChange={(e) => { setCategoryFilter(e.target.value); setPage(0); }} sx={{ minWidth: 150 }}>
-          <MenuItem value="all">All categories</MenuItem>
-          {categories.map((c) => <MenuItem key={c} value={c}>{getCategoryLabel(c)}</MenuItem>)}
-        </TextField>
-      </Box>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+        <div style={{ flex: 1, minWidth: 200 }}>
+          <TextInput
+            size="sm"
+            label="Search"
+            isLabelHidden
+            width="100%"
+            placeholder="Search question or id…"
+            value={search}
+            onChange={(value) => { setSearch(value); setPage(0); }}
+          />
+        </div>
+        <select aria-label="Decision" value={decision} style={{ ...selectStyle, minWidth: 130 }}
+          onChange={(e) => { setDecision(e.target.value as DecisionFilter); setPage(0); }}>
+          <option value="cut">Cut candidates</option>
+          <option value="keep">Keep</option>
+          <option value="all">All</option>
+        </select>
+        <select aria-label="Reason" value={gateFilter} style={{ ...selectStyle, minWidth: 150 }}
+          onChange={(e) => { setGateFilter(e.target.value); setPage(0); }}>
+          <option value="all">All reasons</option>
+          <option value="trivial_recall">Trivial recall</option>
+          <option value="ambiguous">Ambiguous</option>
+          <option value="wrong_or_outdated">Wrong / outdated</option>
+          <option value="duplicate">Duplicate</option>
+        </select>
+        <select aria-label="Category" value={categoryFilter} style={{ ...selectStyle, minWidth: 150 }}
+          onChange={(e) => { setCategoryFilter(e.target.value); setPage(0); }}>
+          <option value="all">All categories</option>
+          {categories.map((c) => <option key={c} value={c}>{getCategoryLabel(c)}</option>)}
+        </select>
+      </div>
 
       {/* Bulk action */}
-      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap', mb: 2, p: 1, border: '1px dashed', borderColor: 'divider', borderRadius: 1 }}>
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>Bulk:</Typography>
-        <Button size="small" color="error" variant="outlined" disabled={busy || filtered.length === 0} onClick={removeAllShown}>
-          Delete all {filtered.length} shown
-        </Button>
-        <Typography variant="caption" color="text.secondary">
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16, padding: 8, border: '1px dashed var(--color-border)', borderRadius: 8 }}>
+        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>Bulk:</span>
+        <Button size="sm" variant="destructive" isDisabled={busy || filtered.length === 0} onClick={removeAllShown}
+          label={`Delete all ${filtered.length} shown`} />
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
           Applies to the current filter. Permanent — confirmed once.
-        </Typography>
-      </Box>
+        </span>
+      </div>
 
-      <TableContainer component={Paper} variant="outlined">
-        <Table size="small" stickyHeader>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ width: '52%' }}>Question &amp; answers</TableCell>
-              <TableCell>Category</TableCell>
-              <TableCell align="center">Scores</TableCell>
-              <TableCell>Verdict</TableCell>
-              <TableCell align="right">Action</TableCell>
+      <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflowX: 'auto' }}>
+        <Table density="compact" dividers="rows" hasHover verticalAlign="top">
+          <TableHeader>
+            <TableRow isHeaderRow>
+              <TableHeaderCell style={{ width: '52%' }}>Question &amp; answers</TableHeaderCell>
+              <TableHeaderCell>Category</TableHeaderCell>
+              <TableHeaderCell style={{ textAlign: 'center' }}>Scores</TableHeaderCell>
+              <TableHeaderCell>Verdict</TableHeaderCell>
+              <TableHeaderCell style={{ textAlign: 'right' }}>Action</TableHeaderCell>
             </TableRow>
-          </TableHead>
+          </TableHeader>
           <TableBody>
             {pageRows.map(({ q, v }) => (
-              <TableRow key={q.id} hover sx={{ verticalAlign: 'top' }}>
-                <TableCell sx={{ py: 1.25 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 600, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              <TableRow key={q.id}>
+                <TableCell style={{ verticalAlign: 'top' }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: 'var(--color-text-primary)' }}>
                     {q.question}
-                  </Typography>
-                  <Box sx={{ mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.1 }}>
+                  </div>
+                  <div style={{ marginTop: 4, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     {q.options.map((opt, i) => (
-                      <Typography key={i} variant="caption" sx={{
-                        color: i === q.correctAnswer ? 'success.dark' : 'text.secondary',
+                      <div key={i} style={{
+                        fontSize: '0.75rem',
+                        color: i === q.correctAnswer ? '#2e7d32' : 'var(--color-text-secondary)',
                         fontWeight: i === q.correctAnswer ? 700 : 400,
                         whiteSpace: 'pre-wrap', wordBreak: 'break-word',
                       }}>
                         {i === q.correctAnswer ? '✓' : '○'} {opt}
-                      </Typography>
+                      </div>
                     ))}
-                  </Box>
+                  </div>
                   {v.note && (
-                    <Typography variant="caption" sx={{ display: 'block', mt: 0.5, fontStyle: 'italic', color: 'text.secondary' }}>
+                    <div style={{ fontSize: '0.75rem', marginTop: 4, fontStyle: 'italic', color: 'var(--color-text-secondary)' }}>
                       “{v.note}”
-                    </Typography>
+                    </div>
                   )}
-                  <Typography variant="caption" color="text.disabled" sx={{ display: 'block', mt: 0.25 }}>{q.id} · diff {v.diff}</Typography>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: 2 }}>{q.id} · diff {v.diff}</div>
                 </TableCell>
 
-                <TableCell><Typography variant="caption">{getCategoryLabel(q.category)}</Typography></TableCell>
+                <TableCell><span style={{ fontSize: '0.75rem', color: 'var(--color-text-primary)' }}>{getCategoryLabel(q.category)}</span></TableCell>
 
-                <TableCell align="center">
-                  <Tooltip title="Mean of the 4 axes">
-                    <Box component="span" sx={{
-                      display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                      minWidth: 34, height: 24, px: 0.5, borderRadius: 1, fontWeight: 700, fontSize: '0.8rem',
-                      color: '#fff', backgroundColor: meanColor(v.mean),
-                    }}>
-                      {v.mean.toFixed(2)}
-                    </Box>
-                  </Tooltip>
-                  <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.25, fontFamily: 'monospace' }}>
+                <TableCell style={{ textAlign: 'center' }}>
+                  <span title="Mean of the 4 axes" style={{
+                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                    minWidth: 34, height: 24, padding: '0 4px', borderRadius: 8, fontWeight: 700, fontSize: '0.8rem',
+                    color: '#fff', backgroundColor: meanColor(v.mean),
+                  }}>
+                    {v.mean.toFixed(2)}
+                  </span>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: 2, fontFamily: 'monospace' }}>
                     R{v.rel} D{v.disc} F{v.fit} C{v.clar}
-                  </Typography>
+                  </div>
                 </TableCell>
 
                 <TableCell>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4, alignItems: 'flex-start' }}>
-                    <Chip
-                      label={v.dec === 'cut' ? 'CUT' : 'KEEP'}
-                      size="small"
-                      color={v.dec === 'cut' ? 'error' : 'success'}
-                      variant={v.dec === 'cut' ? 'filled' : 'outlined'}
-                      sx={{ height: 20, fontWeight: 800 }}
-                    />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
+                    <Badge variant={v.dec === 'cut' ? 'error' : 'success'} label={v.dec === 'cut' ? 'CUT' : 'KEEP'} />
                     {v.reasons.map((r) => (
-                      <Chip key={r} label={reasonLabel(r)} size="small" variant="outlined"
-                        color={v.greasons.includes(r) ? 'error' : 'default'}
-                        sx={{ height: 18, fontSize: '0.65rem' }} />
+                      <Badge key={r} variant={v.greasons.includes(r) ? 'error' : 'neutral'} label={reasonLabel(r)} />
                     ))}
-                  </Box>
+                  </div>
                 </TableCell>
 
-                <TableCell align="right">
-                  <Button size="small" color="error" variant="contained" disabled={busy} onClick={() => remove({ q, v })} sx={{ minWidth: 'auto' }}>
-                    Delete
-                  </Button>
+                <TableCell style={{ textAlign: 'right' }}>
+                  <Button size="sm" variant="destructive" isDisabled={busy} onClick={() => remove({ q, v })} label="Delete" />
                 </TableCell>
               </TableRow>
             ))}
             {pageRows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5}>
-                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', textAlign: 'center', padding: '32px 0' }}>
                     No questions match these filters.
-                  </Typography>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
-      </TableContainer>
-      <TablePagination
-        component="div"
-        count={filtered.length}
-        page={pageStart / rowsPerPage}
-        onPageChange={(_, p) => setPage(p)}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
-        rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
-      />
+      </div>
 
-      <Snackbar
+      {/* Pagination */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 16, padding: '8px 4px', flexWrap: 'wrap' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+          Rows per page:
+          <select
+            value={rowsPerPage}
+            style={selectStyle}
+            onChange={(e) => { setRowsPerPage(parseInt(e.target.value, 10)); setPage(0); }}
+          >
+            {ROWS_PER_PAGE_OPTIONS.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </label>
+        <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+          {rangeFrom}–{rangeTo} of {filtered.length}
+        </span>
+        <div style={{ display: 'flex', gap: 4 }}>
+          <Button size="sm" variant="ghost" label="Previous page" isIconOnly icon={<span aria-hidden>‹</span>}
+            isDisabled={pageStart === 0} onClick={() => setPage(currentPage - 1)} />
+          <Button size="sm" variant="ghost" label="Next page" isIconOnly icon={<span aria-hidden>›</span>}
+            isDisabled={pageStart + rowsPerPage >= filtered.length} onClick={() => setPage(currentPage + 1)} />
+        </div>
+      </div>
+
+      <AppToast
         open={!!snack}
-        autoHideDuration={2500}
         onClose={() => setSnack(null)}
         message={snack ?? ''}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        severity="info"
+        autoHideDuration={2500}
       />
-    </Box>
+    </div>
   );
 }

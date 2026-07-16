@@ -1,12 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Alert,
-  Chip,
-  Snackbar,
-  ToggleButton,
-  ToggleButtonGroup,
-} from '@mui/material';
 import { Grid } from '@astryxdesign/core/Grid';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -17,6 +10,10 @@ import { Card } from '@astryxdesign/core/Card';
 import { Button } from '@astryxdesign/core/Button';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
+import { Banner } from '@astryxdesign/core/Banner';
+import { ToggleButton } from '@astryxdesign/core/ToggleButton';
+import { ToggleButtonGroup } from '@astryxdesign/core/ToggleButton';
+import { AppToast } from './ui/AppToast';
 import type { UserStats } from '../lib/supabase';
 import { useProfileStats } from '../lib/queries';
 import {
@@ -250,14 +247,13 @@ function ProfileBody({
         )}
 
         {isFirstTime && (
-          <Alert
-            severity="info"
-            action={
+          <Banner
+            status="info"
+            title={t('profile.noQuizzes')}
+            endContent={
               <Button variant="ghost" size="sm" label={t('profile.firstQuizCta')} onClick={() => navigate('/quiz')} />
             }
-          >
-            {t('profile.noQuizzes')}
-          </Alert>
+          />
         )}
 
         {/* On desktop the cards split into two columns so the profile lands close
@@ -486,10 +482,10 @@ function LearningTrackCard() {
 
   const sections = trackStarterTopics(track);
 
-  const applyTrack = (_: React.MouseEvent<HTMLElement>, next: Track | null) => {
+  const applyTrack = (next: string | null) => {
     // Clicking the already-selected track re-applies (re-unlocks) it rather than
     // deselecting, so the starting sections are always ensured.
-    const target = next ?? track;
+    const target = (next as Track) || track;
     if (target !== track) setTrack(target);
     unlockExtraTopics(trackStarterTopics(target));
     // Best-effort: persist the new unlocks to the account.
@@ -507,29 +503,13 @@ function LearningTrackCard() {
         </VStack>
 
         <ToggleButtonGroup
+          label={t('profile.trackTitle')}
+          type="single"
           value={track}
-          exclusive
           onChange={applyTrack}
-          aria-label={t('profile.trackTitle')}
-          sx={{
-            flexWrap: 'wrap',
-            '& .MuiToggleButton-root': {
-              px: 2,
-              py: 0.6,
-              fontWeight: 700,
-              textTransform: 'none',
-              '&.Mui-selected': {
-                backgroundColor: 'var(--brand-accent)',
-                color: '#fff',
-                '&:hover': { backgroundColor: 'var(--brand-accent-hover)' },
-              },
-            },
-          }}
         >
           {TRACK_ORDER.map((tk) => (
-            <ToggleButton key={tk} value={tk}>
-              {tracksForActiveSubject()[tk].label}
-            </ToggleButton>
+            <ToggleButton key={tk} value={tk} label={tracksForActiveSubject()[tk].label} />
           ))}
         </ToggleButtonGroup>
 
@@ -542,20 +522,24 @@ function LearningTrackCard() {
               const unlocked = isTopicUnlocked(progress, topic, extraSet);
               const color = getCategoryHexColor(topic);
               return (
-                <Chip
+                <button
                   key={topic}
-                  label={getCategoryLabel(topic)}
-                  size="small"
+                  type="button"
                   onClick={() => navigate(`/learn?topic=${topic}`)}
-                  sx={{
+                  style={{
                     cursor: 'pointer',
                     fontWeight: 600,
-                    border: '1px solid',
-                    borderColor: color,
+                    fontSize: '0.8125rem',
+                    lineHeight: 1.4,
+                    padding: '4px 12px',
+                    borderRadius: 999,
+                    border: `1px solid ${color}`,
                     backgroundColor: unlocked ? color : 'transparent',
-                    color: unlocked ? onCategoryColorText(topic) : 'text.secondary',
+                    color: unlocked ? onCategoryColorText(topic) : 'var(--color-text-secondary)',
                   }}
-                />
+                >
+                  {getCategoryLabel(topic)}
+                </button>
               );
             })}
           </div>
@@ -566,12 +550,12 @@ function LearningTrackCard() {
         </HStack>
       </VStack>
 
-      <Snackbar
+      <AppToast
         open={!!snack}
-        autoHideDuration={3000}
         onClose={() => setSnack(null)}
+        severity="info"
         message={snack ?? ''}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        autoHideDuration={3000}
       />
     </Card>
     </Lift>
@@ -770,10 +754,10 @@ function AchievementsCard({ achievements }: { achievements: Achievement[] }) {
 function PreferencesCard() {
   const { t, lang, setLang } = useLanguage();
 
-  const handleLang = (_: React.MouseEvent<HTMLElement>, next: Lang | null) => {
+  const handleLang = (next: string | null) => {
     if (!next || next === lang) return;
-    setLang(next);
-    void savePreferredLanguage(next);
+    setLang(next as Lang);
+    void savePreferredLanguage(next as Lang);
   };
 
   return (
@@ -787,15 +771,14 @@ function PreferencesCard() {
             <Text type="supporting" size="xsm" color="secondary">{t('profile.languageHelp')}</Text>
           </VStack>
           <ToggleButtonGroup
+            label={t('profile.language')}
+            type="single"
+            size="sm"
             value={lang}
-            exclusive
-            size="small"
             onChange={handleLang}
-            aria-label={t('profile.language')}
-            sx={{ '& .MuiToggleButton-root': { px: 1.5, py: 0.4, fontSize: '0.75rem', fontWeight: 700, textTransform: 'none' } }}
           >
-            <ToggleButton value="en">EN</ToggleButton>
-            <ToggleButton value="cs">CS</ToggleButton>
+            <ToggleButton value="en" label="EN" />
+            <ToggleButton value="cs" label="CS" />
           </ToggleButtonGroup>
         </HStack>
       </VStack>

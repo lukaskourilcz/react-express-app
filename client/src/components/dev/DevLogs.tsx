@@ -1,18 +1,15 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { Badge } from '@astryxdesign/core/Badge';
+import { Button } from '@astryxdesign/core/Button';
 import {
-  Box,
-  Typography,
-  Chip,
-  Button,
   Table,
+  TableHeader,
   TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
-  Paper,
-} from '@mui/material';
+  TableCell,
+  TableHeaderCell,
+} from '@astryxdesign/core/Table';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
 import { friendlyError } from '../../lib/api';
@@ -52,75 +49,73 @@ export default function DevLogs() {
   if (error) return <ErrorRetry message={error} onRetry={reload} />;
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
-        <Chip label={`${events.length} events`} size="small" />
-        <Chip label={`${stats.registers} registrations`} size="small" color="success" variant="outlined" />
-        <Chip label={`${stats.logins} logins`} size="small" color="info" variant="outlined" />
-        <Box sx={{ flex: 1 }} />
-        <Button size="small" onClick={reload}>
-          Refresh
-        </Button>
-      </Box>
+    <div>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+        <Badge variant="neutral" label={`${events.length} events`} />
+        <Badge variant="success" label={`${stats.registers} registrations`} />
+        <Badge variant="info" label={`${stats.logins} logins`} />
+        <div style={{ flex: 1 }} />
+        <Button size="sm" variant="ghost" label="Refresh" onClick={reload} />
+      </div>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: '0 0 16px' }}>
         Authentication activity (newest first). A user's first-ever sign-in is a registration; later
         sign-ins are logins. Repeat sign-ins within a couple of minutes are de-duplicated.
-      </Typography>
+      </p>
 
-      <TableContainer component={Paper} variant="outlined">
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Action</TableCell>
-              <TableCell sx={{ minWidth: 220 }}>User</TableCell>
-              <TableCell>Provider</TableCell>
-              <TableCell>When</TableCell>
+      <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflowX: 'auto' }}>
+        <Table density="compact" dividers="rows" hasHover>
+          <TableHeader>
+            <TableRow isHeaderRow>
+              <TableHeaderCell>Action</TableHeaderCell>
+              <TableHeaderCell style={{ minWidth: 220 }}>User</TableHeaderCell>
+              <TableHeaderCell>Provider</TableHeaderCell>
+              <TableHeaderCell>When</TableHeaderCell>
             </TableRow>
-          </TableHead>
+          </TableHeader>
           <TableBody>
             {events.map((e) => (
-              <TableRow key={e.id} hover>
+              <TableRow key={e.id}>
                 <TableCell>
                   {e.event_type === 'register' ? (
-                    <Chip label="Registered" size="small" color="success" variant="outlined" />
+                    <Badge variant="success" label="Registered" />
                   ) : (
-                    <Chip label="Logged in" size="small" color="info" variant="outlined" />
+                    <Badge variant="info" label="Logged in" />
                   )}
                 </TableCell>
-                <TableCell sx={{ maxWidth: 320 }}>
-                  <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                <TableCell style={{ maxWidth: 320 }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
                     {e.email || '(no email)'}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
                     {e.user_id}
-                  </Typography>
+                  </div>
                 </TableCell>
                 <TableCell>
-                  <Typography variant="body2" color="text.secondary">
+                  <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                     {e.provider || '—'}
-                  </Typography>
+                  </span>
                 </TableCell>
                 <TableCell>
-                  <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
                     {formatWhen(e.created_at)}
-                  </Typography>
+                  </span>
                 </TableCell>
               </TableRow>
             ))}
             {events.length === 0 && (
               <TableRow>
                 <TableCell colSpan={4}>
-                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', textAlign: 'center', padding: '32px 0' }}>
                     No auth events yet. They appear here once people sign in (requires the auth_events
                     table — supabase-schema-015.sql).
-                  </Typography>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
-      </TableContainer>
-    </Box>
+      </div>
+    </div>
   );
 }

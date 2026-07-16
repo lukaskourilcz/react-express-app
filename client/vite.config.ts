@@ -33,14 +33,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          // React lives in the same chunk as MUI since MUI imports React
-          // directly; the previous standalone `react` chunk hoisted to ~99
-          // bytes (a single re-export of MUI), wasting one HTTP request.
-          mui: [
-            'react', 'react-dom', 'react/jsx-runtime',
-            '@mui/material', '@mui/material/styles',
-            '@emotion/react', '@emotion/styled',
-          ],
+          // React core in its own long-lived chunk. (The app is now MUI-free —
+          // the old combined `mui` chunk is gone.)
+          react: ['react', 'react-dom', 'react/jsx-runtime'],
           router: ['react-router-dom'],
           tanstack: ['@tanstack/react-query', '@tanstack/query-core'],
           supabase: ['@supabase/supabase-js'],

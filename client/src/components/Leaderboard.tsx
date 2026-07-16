@@ -9,7 +9,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMediaQuery, useTheme } from '@mui/material';
+import { useIsMobile } from '../lib/useMediaQuery';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -55,7 +55,7 @@ function Leaderboard() {
   const subject = useActiveSubject();
   const CATEGORIES = visibleCategoryOptionsFor();
   const navigate = useNavigate();
-  const isMobile = useMediaQuery(useTheme().breakpoints.down('sm'));
+  const isMobile = useIsMobile();
   const [tab, setTab] = useState<Tab>('global');
   const [category, setCategory] = useState<string>(() => CATEGORIES[0]?.value ?? '');
   const [date] = useState<string>(today());

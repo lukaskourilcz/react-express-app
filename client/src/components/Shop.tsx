@@ -8,7 +8,8 @@
 // MUI Snackbar/Alert is kept for the toast behaviour.
 
 import { useState } from 'react';
-import { Avatar, Snackbar, Alert } from '@mui/material';
+import { Avatar } from '@astryxdesign/core/Avatar';
+import { AppToast } from './ui/AppToast';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Grid } from '@astryxdesign/core/Grid';
@@ -225,23 +226,13 @@ function Shop() {
         </VStack>
       ))}
 
-      <Snackbar
+      <AppToast
         open={!!toast}
-        autoHideDuration={3000}
         onClose={() => setToast(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        {toast ? (
-          <Alert
-            severity={toast.ok ? 'success' : 'warning'}
-            variant="filled"
-            onClose={() => setToast(null)}
-            sx={toast.ok ? { backgroundColor: 'var(--brand-accent)' } : undefined}
-          >
-            {toast.msg}
-          </Alert>
-        ) : undefined}
-      </Snackbar>
+        severity={toast?.ok ? 'success' : 'info'}
+        autoHideDuration={3000}
+        message={toast?.msg ?? ''}
+      />
     </VStack>
   );
 }
@@ -364,15 +355,18 @@ function StylePreview() {
   return (
     <Card variant="muted" padding={2} width="fit-content">
       <HStack gap={1.5} align="center">
-        <Avatar
-          src={profile.picture}
-          alt=""
-          sx={{
-            width: 40,
-            height: 40,
-            ...(ringColor ? { border: `2px solid ${ringColor}`, boxShadow: `0 0 0 1.5px ${ringColor}33` } : null),
+        <div
+          style={{
+            borderRadius: '50%',
+            display: 'inline-flex',
+            flexShrink: 0,
+            ...(ringColor
+              ? { boxShadow: `0 0 0 2px ${ringColor}, 0 0 0 3.5px ${ringColor}33` }
+              : null),
           }}
-        />
+        >
+          <Avatar src={profile.picture} name={displayName} alt="" size="medium" />
+        </div>
         <VStack gap={0.5}>
           <Text type="label" color="secondary">
             {t('shop.stylePreview')}

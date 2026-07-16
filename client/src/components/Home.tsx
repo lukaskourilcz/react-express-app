@@ -8,7 +8,6 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Snackbar, Alert, useMediaQuery, useTheme } from '@mui/material';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Grid } from '@astryxdesign/core/Grid';
@@ -27,6 +26,8 @@ import { useActiveSubject } from '../lib/subjects';
 import { unlockExtraTopics, pushProgressToServer } from '../lib/roadmap';
 import { savePreferredTrack } from '../lib/trackPref';
 import PathPickerDialog from './PathPickerDialog';
+import { AppToast } from './ui/AppToast';
+import { useIsMobile } from '../lib/useMediaQuery';
 
 type Feature = { emoji: string; title: string; text: string; variant: 'green' | 'blue' | 'purple' };
 
@@ -47,7 +48,7 @@ export default function Home() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [savedSnack, setSavedSnack] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
-  const isMobile = useMediaQuery(useTheme().breakpoints.down('sm'));
+  const isMobile = useIsMobile();
 
   const handleSignIn = async () => {
     setSigningIn(true);
@@ -180,16 +181,13 @@ export default function Home() {
         </Grid>
       </div>
 
-      <Snackbar
+      <AppToast
         open={!!authError}
-        autoHideDuration={5000}
         onClose={() => setAuthError(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity="error" variant="filled" onClose={() => setAuthError(null)}>
-          {authError}
-        </Alert>
-      </Snackbar>
+        severity="error"
+        message={authError}
+        autoHideDuration={5000}
+      />
 
       <PathPickerDialog
         open={pathOpen}
@@ -197,16 +195,13 @@ export default function Home() {
         current={track}
         onChoose={handleChoosePath}
       />
-      <Snackbar
+      <AppToast
         open={!!savedSnack}
-        autoHideDuration={3000}
         onClose={() => setSavedSnack(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert severity="success" variant="filled" onClose={() => setSavedSnack(null)} sx={{ backgroundColor: 'var(--brand-accent)' }}>
-          {savedSnack}
-        </Alert>
-      </Snackbar>
+        severity="success"
+        message={savedSnack}
+        autoHideDuration={3000}
+      />
     </div>
   );
 }

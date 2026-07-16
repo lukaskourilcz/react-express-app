@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Snackbar, TextField } from '@mui/material';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -11,6 +10,8 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { Spinner } from '@astryxdesign/core/Spinner';
 import { SelectableCard } from '@astryxdesign/core/SelectableCard';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { AppToast } from './ui/AppToast';
 import { apiFetch, friendlyError } from '../lib/api';
 import {
   fetchChallengeBatch,
@@ -512,14 +513,16 @@ export default function Challenge() {
               <VStack gap={1.5}>
                 <Text type="body">{t('challenge.submitPrompt')}</Text>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <TextField
-                    size="small"
-                    sx={{ flex: '1 1 200px' }}
-                    label={t('challenge.nameLabel')}
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    inputProps={{ maxLength: 40 }}
-                  />
+                  <div style={{ flex: '1 1 200px' }}>
+                    <TextInput
+                      size="sm"
+                      isLabelHidden
+                      label={t('challenge.nameLabel')}
+                      placeholder={t('challenge.nameLabel')}
+                      value={name}
+                      onChange={(v) => setName(v.slice(0, 40))}
+                    />
+                  </div>
                   <Button
                     variant="primary"
                     label={t('challenge.submitScore')}
@@ -554,12 +557,12 @@ export default function Challenge() {
           </HStack>
         </VStack>
 
-        <Snackbar
+        <AppToast
           open={!!snack}
-          autoHideDuration={2500}
           onClose={() => setSnack(null)}
+          severity="info"
           message={snack ?? ''}
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+          autoHideDuration={2500}
         />
       </div>
     );
@@ -745,12 +748,12 @@ export default function Challenge() {
         </HStack>
       </VStack>
 
-      <Snackbar
+      <AppToast
         open={!!snack}
-        autoHideDuration={2500}
         onClose={() => setSnack(null)}
+        severity="info"
         message={snack ?? ''}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        autoHideDuration={2500}
       />
     </div>
   );

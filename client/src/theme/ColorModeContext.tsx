@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ThemeProvider, CssBaseline, GlobalStyles } from '@mui/material';
-import { type PaletteMode } from '@mui/material';
-import { createAppTheme } from './MuiTheme';
 import { readString, writeString } from '../lib/storage';
 import { useSubject, SUBJECTS } from '../lib/subjects';
 
+/** Light/dark colour mode (was MUI's PaletteMode; now MUI-free). */
+export type ColorMode = 'light' | 'dark';
+
 interface ColorModeContextValue {
-  mode: PaletteMode;
+  mode: ColorMode;
   toggle: () => void;
 }
 
@@ -27,7 +27,7 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-const resolveInitial = (): PaletteMode => {
+const resolveInitial = (): ColorMode => {
   if (typeof window === 'undefined') return 'light';
   const stored = readString(STORAGE_KEY);
   if (stored === 'light' || stored === 'dark') return stored;
@@ -36,14 +36,16 @@ const resolveInitial = (): PaletteMode => {
 };
 
 export function ColorModeProvider({ children }: { children: ReactNode }) {
-  const [mode, setMode] = useState<PaletteMode>(resolveInitial);
+  const [mode, setMode] = useState<ColorMode>(resolveInitial);
 
   useEffect(() => {
     writeString(STORAGE_KEY, mode);
     document.documentElement.dataset.colorMode = mode;
     // Astryx reads light/dark from html[data-theme]; keep it in lock-step with
-    // the MUI colour mode so the design system and the legacy screens agree.
+    // the colour mode so the design system recolours correctly.
     document.documentElement.dataset.theme = mode;
+    // Drives the CSS light-dark() tokens.
+    document.documentElement.style.colorScheme = mode;
   }, [mode]);
 
   const value = useMemo(
@@ -58,11 +60,9 @@ export function ColorModeProvider({ children }: { children: ReactNode }) {
     const s = SUBJECTS[subject];
     return { main: s.accent, bright: s.accentBright, hover: s.accent };
   }, [subject]);
-  const theme = useMemo(() => createAppTheme(mode, accent), [mode, accent]);
 
-  // Expose the active accent as CSS custom properties so component `sx` and
-  // template-literal styles (borders, chips, overlines) recolour per subject
-  // without threading the theme through every call site.
+  // Expose the active accent as CSS custom properties so component styles
+  // (borders, chips, buttons, focus rings) recolour per subject + mode.
   useEffect(() => {
     const root = document.documentElement.style;
     const main = mode === 'light' ? accent.main : accent.bright;
@@ -71,28 +71,7 @@ export function ColorModeProvider({ children }: { children: ReactNode }) {
     root.setProperty('--brand-accent-soft', hexToRgba(accent.main, 0.12));
   }, [accent, mode]);
 
-  return (
-    <ColorModeContext.Provider value={value}>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        {/* Never allow the page to exceed the viewport width (no horizontal scroll). */}
-        <GlobalStyles
-          styles={{
-            // Accent defaults (Web Dev green) so styles resolve before the
-            // per-subject effect runs; overwritten at runtime per subject.
-            ':root': {
-              '--brand-accent': '#2d7a2d',
-              '--brand-accent-hover': '#246124',
-              '--brand-accent-soft': 'rgba(45, 122, 45, 0.12)',
-            },
-            'html, body, #root': { maxWidth: '100vw', overflowX: 'hidden' },
-            '*, *::before, *::after': { boxSizing: 'border-box' },
-          }}
-        />
-        {children}
-      </ThemeProvider>
-    </ColorModeContext.Provider>
-  );
+  return <ColorModeContext.Provider value={value}>{children}</ColorModeContext.Provider>;
 }
 
 export const useColorMode = () => useContext(ColorModeContext);

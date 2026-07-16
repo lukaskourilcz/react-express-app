@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useMediaQuery, useTheme } from '@mui/material';
+import { useMediaQuery } from '../lib/useMediaQuery';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -54,8 +54,7 @@ export function PlayLanding() {
   const navigate = useNavigate();
   const t = useT();
   const config = useGameConfig();
-  const theme = useTheme();
-  const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const isDesktop = useMediaQuery('(min-width: 900px)');
   const accent = useActiveSubject().accent;
   const { user, isAuthenticated, signInWithGoogle } = useAuth();
   const profile = getUserProfile(user);

@@ -1,30 +1,27 @@
 import { useMemo, useState } from 'react';
+import { Badge } from '@astryxdesign/core/Badge';
+import type { BadgeVariant } from '@astryxdesign/core/Badge';
+import { Button } from '@astryxdesign/core/Button';
+import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
 import {
-  Box,
-  Typography,
-  Chip,
-  Button,
-  Snackbar,
   Table,
+  TableHeader,
   TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
   TableRow,
-  Paper,
-  ToggleButton,
-  ToggleButtonGroup,
-} from '@mui/material';
+  TableCell,
+  TableHeaderCell,
+} from '@astryxdesign/core/Table';
 import { useQuery } from '@tanstack/react-query';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
+import { AppToast } from '../ui/AppToast';
 import { friendlyError } from '../../lib/api';
 import { queryClient } from '../../lib/queryClient';
 import { listReports, dismissReport, type AdminReport } from '../../lib/devApi';
 
 const REPORTS_KEY = ['admin', 'reports'] as const;
 
-// Friendly label + chip color per report reason. 'needs-review' is the learner
+// Friendly label + badge variant per report reason. 'needs-review' is the learner
 // red-flag from the learning path; the rest come from the full report dialog.
 const REASON_META: Record<string, { label: string; color: 'error' | 'warning' | 'info' | 'default' }> = {
   'needs-review': { label: '🚩 Flagged', color: 'error' },
@@ -37,6 +34,10 @@ const REASON_META: Record<string, { label: string; color: 'error' | 'warning' | 
 };
 
 const reasonMeta = (reason: string) => REASON_META[reason] ?? { label: reason, color: 'default' as const };
+
+// Map the reason meta colour onto an Astryx Badge variant.
+const badgeVariant = (color: 'error' | 'warning' | 'info' | 'default'): BadgeVariant =>
+  color === 'default' ? 'neutral' : color;
 
 const formatWhen = (iso: string | null): string => {
   if (!iso) return '';
@@ -82,78 +83,68 @@ export default function DevReports() {
   if (error) return <ErrorRetry message={error} onRetry={reload} />;
 
   return (
-    <Box>
-      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
-        <ToggleButtonGroup
-          size="small"
-          exclusive
-          value={filter}
-          onChange={(_, v) => v && setFilter(v)}
-          aria-label="Report filter"
-        >
-          <ToggleButton value="all">All reports</ToggleButton>
-          <ToggleButton value="flags">🚩 Red flags only</ToggleButton>
-        </ToggleButtonGroup>
-        <Chip label={`${reports.length} total`} size="small" />
-        <Chip label={`${flagCount} flagged for review`} size="small" color="error" variant="outlined" />
-        <Box sx={{ flex: 1 }} />
-        <Button size="small" onClick={reload}>
-          Refresh
-        </Button>
-      </Box>
+    <div>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+        <SegmentedControl value={filter} onChange={(v) => setFilter(v as 'all' | 'flags')} label="Report filter">
+          <SegmentedControlItem value="all" label="All reports" />
+          <SegmentedControlItem value="flags" label="🚩 Red flags only" />
+        </SegmentedControl>
+        <Badge variant="neutral" label={`${reports.length} total`} />
+        <Badge variant="error" label={`${flagCount} flagged for review`} />
+        <div style={{ flex: 1 }} />
+        <Button size="sm" variant="ghost" label="Refresh" onClick={reload} />
+      </div>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: '0 0 16px' }}>
         Learners flag questions that look wrong or misleading. Find the question in the Questions tab
         (search its id) to fix or hide it, then dismiss the report here.
-      </Typography>
+      </p>
 
-      <TableContainer component={Paper} variant="outlined">
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Reason</TableCell>
-              <TableCell sx={{ minWidth: 240 }}>Question</TableCell>
-              <TableCell>Note</TableCell>
-              <TableCell>When</TableCell>
-              <TableCell align="right">Action</TableCell>
+      <div style={{ border: '1px solid var(--color-border)', borderRadius: 8, overflowX: 'auto' }}>
+        <Table density="compact" dividers="rows" hasHover>
+          <TableHeader>
+            <TableRow isHeaderRow>
+              <TableHeaderCell>Reason</TableHeaderCell>
+              <TableHeaderCell style={{ minWidth: 240 }}>Question</TableHeaderCell>
+              <TableHeaderCell>Note</TableHeaderCell>
+              <TableHeaderCell>When</TableHeaderCell>
+              <TableHeaderCell style={{ textAlign: 'right' }}>Action</TableHeaderCell>
             </TableRow>
-          </TableHead>
+          </TableHeader>
           <TableBody>
             {shown.map((r) => {
               const meta = reasonMeta(r.reason);
               return (
-                <TableRow key={r.id} hover>
+                <TableRow key={r.id}>
                   <TableCell>
-                    <Chip label={meta.label} size="small" color={meta.color} variant="outlined" />
+                    <Badge variant={badgeVariant(meta.color)} label={meta.label} />
                   </TableCell>
-                  <TableCell sx={{ maxWidth: 380 }}>
+                  <TableCell style={{ maxWidth: 380 }}>
                     {r.questionSummary ? (
-                      <Typography variant="body2" sx={{ fontWeight: 500 }} title={r.questionSummary}>
+                      <div style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--color-text-primary)' }} title={r.questionSummary}>
                         {r.questionSummary}
-                      </Typography>
+                      </div>
                     ) : (
-                      <Typography variant="body2" color="text.secondary" fontStyle="italic">
+                      <div style={{ fontSize: '0.875rem', fontStyle: 'italic', color: 'var(--color-text-secondary)' }}>
                         (question no longer in the bank)
-                      </Typography>
+                      </div>
                     )}
-                    <Typography variant="caption" color="text.secondary">
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
                       {r.questionId}
-                    </Typography>
+                    </div>
                   </TableCell>
-                  <TableCell sx={{ maxWidth: 280 }}>
-                    <Typography variant="body2" color="text.secondary">
+                  <TableCell style={{ maxWidth: 280 }}>
+                    <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                       {r.detail || '—'}
-                    </Typography>
+                    </span>
                   </TableCell>
                   <TableCell>
-                    <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', whiteSpace: 'nowrap' }}>
                       {formatWhen(r.createdAt)}
-                    </Typography>
+                    </span>
                   </TableCell>
-                  <TableCell align="right">
-                    <Button size="small" onClick={() => handleDismiss(r)} disabled={busy === r.id}>
-                      Dismiss
-                    </Button>
+                  <TableCell style={{ textAlign: 'right' }}>
+                    <Button size="sm" variant="ghost" label="Dismiss" onClick={() => handleDismiss(r)} isDisabled={busy === r.id} />
                   </TableCell>
                 </TableRow>
               );
@@ -161,23 +152,23 @@ export default function DevReports() {
             {shown.length === 0 && (
               <TableRow>
                 <TableCell colSpan={5}>
-                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                  <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', textAlign: 'center', padding: '32px 0' }}>
                     {filter === 'flags' ? 'No red flags 🎉' : 'No reports yet.'}
-                  </Typography>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
-      </TableContainer>
+      </div>
 
-      <Snackbar
+      <AppToast
         open={!!snack}
-        autoHideDuration={2500}
         onClose={() => setSnack(null)}
         message={snack ?? ''}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        severity="info"
+        autoHideDuration={2500}
       />
-    </Box>
+    </div>
   );
 }

@@ -1,29 +1,14 @@
-import { useMemo, useState } from 'react';
-import {
-  Box,
-  Typography,
-  TextField,
-  Button,
-  Checkbox,
-  Chip,
-  Snackbar,
-  MenuItem,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TableSortLabel,
-  TablePagination,
-  Paper,
-  Tooltip,
-} from '@mui/material';
+import { useMemo, useState, type ReactNode } from 'react';
+import { Table, TableHeader, TableBody, TableRow, TableCell, TableHeaderCell } from '@astryxdesign/core/Table';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { Button } from '@astryxdesign/core/Button';
+import { Badge } from '@astryxdesign/core/Badge';
+import { CheckboxInput } from '@astryxdesign/core/CheckboxInput';
 import { useQuery } from '@tanstack/react-query';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
+import { AppToast } from '../ui/AppToast';
 import { getCategoryLabel } from '../../lib/categories';
-import { brandButtonSx } from '../../theme/MuiTheme';
 import { friendlyError } from '../../lib/api';
 import { importanceBand, IMPORTANCE_BAND_LABEL, type ImportanceBand } from '../../lib/importance';
 import {
@@ -41,12 +26,6 @@ const summarize = (text: string): string => {
   return beforeCode || text.replace(/\s+/g, ' ').trim();
 };
 
-const SOURCE_COLOR: Record<AdminQuestion['source'], 'default' | 'warning' | 'success'> = {
-  base: 'default',
-  edited: 'warning',
-  custom: 'success',
-};
-
 // Color for the importance score chip, by band.
 const SCORE_COLOR: Record<ImportanceBand, string> = {
   filler: '#c62828',
@@ -62,6 +41,150 @@ type SortDir = 'asc' | 'desc';
 type ImportanceFilter = 'all' | 'filler' | number;
 
 const ROWS_PER_PAGE_OPTIONS = [25, 50, 100];
+
+const captionStyle: React.CSSProperties = {
+  fontSize: '0.75rem',
+  color: 'var(--color-text-secondary)',
+};
+
+const selectStyle: React.CSSProperties = {
+  height: 40,
+  borderRadius: 'var(--radius-element)',
+  border: '1px solid var(--color-border)',
+  background: 'var(--color-background-surface)',
+  color: 'var(--color-text-primary)',
+  padding: '0 12px',
+  fontFamily: 'inherit',
+  fontSize: '0.9rem',
+};
+
+// A native <select> dressed to sit alongside the Astryx inputs — replaces
+// MUI's <TextField select>. Renders a Field-style label + optional helper.
+function SelectField({
+  label,
+  value,
+  onChange,
+  style,
+  children,
+}: {
+  label?: string;
+  value: string;
+  onChange: (value: string) => void;
+  style?: React.CSSProperties;
+  children: ReactNode;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, ...style }}>
+      {label && <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{label}</label>}
+      <select value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
+        {children}
+      </select>
+    </div>
+  );
+}
+
+// Sortable column header — replaces MUI's <TableSortLabel>.
+function SortLabel({
+  active,
+  direction,
+  onClick,
+  title,
+  children,
+}: {
+  active: boolean;
+  direction: SortDir;
+  onClick: () => void;
+  title?: string;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 4,
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
+        font: 'inherit',
+        fontWeight: active ? 700 : 600,
+        color: 'var(--color-text-primary)',
+      }}
+    >
+      {children}
+      <span aria-hidden style={{ opacity: active ? 1 : 0.25, fontSize: '0.7em' }}>
+        {direction === 'asc' ? '▲' : '▼'}
+      </span>
+    </button>
+  );
+}
+
+// Compact, subtle text button for row actions — mirrors MUI's small text
+// <Button>s (brand-accent by default, red for destructive actions).
+function ActionButton({ label, onClick, danger }: { label: string; onClick: () => void; danger?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        font: 'inherit',
+        fontSize: '0.8rem',
+        fontWeight: 600,
+        padding: '2px 6px',
+        borderRadius: 'var(--radius-inner)',
+        color: danger ? '#dc2626' : 'var(--brand-accent)',
+      }}
+    >
+      {label}
+    </button>
+  );
+}
+
+// Tiny outlined pill for inline meta (source tag, tags, flags) — mirrors the
+// dense outlined MUI <Chip>s used inside table cells.
+function Pill({
+  label,
+  color,
+  title,
+}: {
+  label: ReactNode;
+  color?: string;
+  title?: string;
+}) {
+  return (
+    <span
+      title={title}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        height: 18,
+        padding: '0 6px',
+        fontSize: '0.65rem',
+        lineHeight: 1,
+        borderRadius: 999,
+        border: '1px solid',
+        borderColor: color ?? 'var(--color-border)',
+        color: color ?? 'var(--color-text-secondary)',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      {label}
+    </span>
+  );
+}
+
+const SOURCE_PILL_COLOR: Record<AdminQuestion['source'], string> = {
+  base: 'var(--color-border)',
+  edited: '#f5a623',
+  custom: '#16a34a',
+};
 
 export default function DevQuestions() {
   const { data, isPending: loading, error: queryError, refetch } = useQuery({
@@ -258,314 +381,337 @@ export default function DevQuestions() {
   if (loading) return <LoadingScreen label="Loading questions…" />;
   if (error) return <ErrorRetry message={error} onRetry={reload} />;
 
+  const currentPage = pageStart / rowsPerPage;
+  const rangeFrom = sorted.length === 0 ? 0 : pageStart + 1;
+  const rangeTo = Math.min(pageStart + rowsPerPage, sorted.length);
+  const atLastPage = pageStart + rowsPerPage >= sorted.length;
+
   return (
-    <Box>
-      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexWrap: 'wrap', mb: 2 }}>
-        <TextField
-          size="small"
+    <div>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+        <TextInput
+          label="Search questions"
+          isLabelHidden
           placeholder="Search question, tag or id…"
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
+          onChange={(v) => {
+            setSearch(v);
             setPage(0);
           }}
-          sx={{ flex: 1, minWidth: 200 }}
+          size="sm"
+          style={{ flex: 1, minWidth: 200 }}
         />
-        <TextField
-          select
-          size="small"
+        <SelectField
           label="Category"
           value={categoryFilter}
-          onChange={(e) => {
-            setCategoryFilter(e.target.value);
+          onChange={(v) => {
+            setCategoryFilter(v);
             setPage(0);
           }}
-          sx={{ minWidth: 150 }}
+          style={{ minWidth: 150 }}
         >
-          <MenuItem value="all">All categories</MenuItem>
+          <option value="all">All categories</option>
           {categories.map((c) => (
-            <MenuItem key={c} value={c}>
+            <option key={c} value={c}>
               {getCategoryLabel(c)}
-            </MenuItem>
+            </option>
           ))}
-        </TextField>
-        <TextField
-          select
-          size="small"
+        </SelectField>
+        <SelectField
           label="Score"
           value={String(importanceFilter)}
-          onChange={(e) => {
-            const v = e.target.value;
+          onChange={(v) => {
             setImportanceFilter(v === 'all' || v === 'filler' ? v : Number(v));
             setPage(0);
           }}
-          sx={{ minWidth: 150 }}
+          style={{ minWidth: 150 }}
         >
-          <MenuItem value="all">All scores</MenuItem>
-          <MenuItem value="filler">Fillers (1–3)</MenuItem>
+          <option value="all">All scores</option>
+          <option value="filler">Fillers (1–3)</option>
           {[10, 9, 8, 7, 6, 5, 4, 3, 2, 1].map((n) => (
-            <MenuItem key={n} value={String(n)}>
+            <option key={n} value={String(n)}>
               Score = {n}
-            </MenuItem>
+            </option>
           ))}
-        </TextField>
-        <Button variant="contained" onClick={openNew} sx={brandButtonSx}>
-          + New question
-        </Button>
-      </Box>
+        </SelectField>
+        <Button variant="primary" label="+ New question" onClick={openNew} />
+      </div>
 
-      <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-        <Chip label={`${stats.total} total`} size="small" />
-        <Chip label={`${stats.edited} edited`} size="small" color="warning" variant="outlined" />
-        <Chip label={`${stats.custom} custom`} size="small" color="success" variant="outlined" />
-        <Chip label={`${stats.filler} filler (≤3)`} size="small" color="error" variant="outlined" />
-        <Chip label={`${filtered.length} shown`} size="small" variant="outlined" />
-      </Box>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+        <Badge variant="neutral" label={`${stats.total} total`} />
+        <Badge variant="warning" label={`${stats.edited} edited`} />
+        <Badge variant="success" label={`${stats.custom} custom`} />
+        <Badge variant="error" label={`${stats.filler} filler (≤3)`} />
+        <Badge variant="neutral" label={`${filtered.length} shown`} />
+      </div>
 
-      <Box
-        sx={{
+      <div
+        style={{
           display: 'flex',
-          gap: 1,
+          gap: 8,
           alignItems: 'center',
           flexWrap: 'wrap',
-          mb: 2,
-          p: 1,
-          border: '1px dashed',
-          borderColor: 'divider',
-          borderRadius: 1,
+          marginBottom: 16,
+          padding: 8,
+          border: '1px dashed var(--color-border)',
+          borderRadius: 'var(--radius-element)',
         }}
       >
-        <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
-          Bulk cleanup:
-        </Typography>
-        <TextField
-          select
-          size="small"
+        <span style={{ ...captionStyle, fontWeight: 600 }}>Bulk cleanup:</span>
+        <SelectField
           label="Hide score ≤"
-          value={bulkThreshold}
-          onChange={(e) => setBulkThreshold(Number(e.target.value))}
-          sx={{ minWidth: 110 }}
+          value={String(bulkThreshold)}
+          onChange={(v) => setBulkThreshold(Number(v))}
+          style={{ minWidth: 110 }}
         >
           {[1, 2, 3, 4, 5].map((n) => (
-            <MenuItem key={n} value={n}>
+            <option key={n} value={String(n)}>
               {n}
-            </MenuItem>
+            </option>
           ))}
-        </TextField>
-        <Button size="small" color="error" variant="outlined" onClick={handleBulkHide}>
-          Delete {bulkHideCount} filler{bulkHideCount === 1 ? '' : 's'}
-        </Button>
-        <Typography variant="caption" color="text.secondary">
-          Permanently removes them; learning paths re-level automatically.
-        </Typography>
-      </Box>
+        </SelectField>
+        <Button
+          variant="destructive"
+          size="sm"
+          label={`Delete ${bulkHideCount} filler${bulkHideCount === 1 ? '' : 's'}`}
+          onClick={handleBulkHide}
+        />
+        <span style={captionStyle}>Permanently removes them; learning paths re-level automatically.</span>
+      </div>
 
       {selected.size > 0 && (
-        <Box
-          sx={{
+        <div
+          style={{
             display: 'flex',
-            gap: 1.5,
+            gap: 12,
             alignItems: 'center',
             flexWrap: 'wrap',
-            mb: 2,
-            p: 1,
-            borderRadius: 1,
+            marginBottom: 16,
+            padding: 8,
+            borderRadius: 'var(--radius-element)',
             backgroundColor: 'rgba(198,40,40,0.06)',
-            border: '1px solid',
-            borderColor: 'error.light',
+            border: '1px solid #f4b4b4',
           }}
         >
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
+          <span style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
             {selected.size} selected
-          </Typography>
-          <Button size="small" color="error" variant="contained" onClick={handleDeleteSelected}>
-            Delete selected ({selected.size})
-          </Button>
-          <Button size="small" onClick={() => setSelected(new Set())}>
-            Clear
-          </Button>
-        </Box>
+          </span>
+          <Button variant="destructive" size="sm" label={`Delete selected (${selected.size})`} onClick={handleDeleteSelected} />
+          <Button variant="ghost" size="sm" label="Clear" onClick={() => setSelected(new Set())} />
+        </div>
       )}
 
-      <TableContainer component={Paper} variant="outlined" sx={{ width: '100%' }}>
-        <Table size="small" stickyHeader sx={{ width: '100%' }}>
-          <TableHead>
-            <TableRow>
-              <TableCell padding="checkbox">
-                <Checkbox
-                  size="small"
-                  checked={allPageSelected}
-                  indeterminate={!allPageSelected && somePageSelected}
+      <div
+        style={{
+          width: '100%',
+          border: '1px solid var(--color-border)',
+          borderRadius: 'var(--radius-container)',
+          overflow: 'hidden',
+          background: 'var(--color-background-surface)',
+        }}
+      >
+        <Table density="compact" dividers="rows" hasHover verticalAlign="top">
+          <TableHeader>
+            <TableRow isHeaderRow>
+              <TableHeaderCell>
+                <CheckboxInput
+                  label="Select all questions on this page"
+                  isLabelHidden
+                  size="sm"
+                  value={allPageSelected ? true : somePageSelected ? 'indeterminate' : false}
                   onChange={toggleSelectAllOnPage}
-                  inputProps={{ 'aria-label': 'Select all questions on this page' }}
                 />
-              </TableCell>
-              <TableCell sx={{ width: '55%' }}>
-                <TableSortLabel active={sortBy === 'question'} direction={sortBy === 'question' ? sortDir : 'asc'} onClick={() => toggleSort('question')}>
+              </TableHeaderCell>
+              <TableHeaderCell style={{ width: '55%' }}>
+                <SortLabel active={sortBy === 'question'} direction={sortBy === 'question' ? sortDir : 'asc'} onClick={() => toggleSort('question')}>
                   Question, answers &amp; info
-                </TableSortLabel>
-              </TableCell>
-              <TableCell>
-                <TableSortLabel active={sortBy === 'category'} direction={sortBy === 'category' ? sortDir : 'asc'} onClick={() => toggleSort('category')}>
+                </SortLabel>
+              </TableHeaderCell>
+              <TableHeaderCell>
+                <SortLabel active={sortBy === 'category'} direction={sortBy === 'category' ? sortDir : 'asc'} onClick={() => toggleSort('category')}>
                   Category
-                </TableSortLabel>
-              </TableCell>
-              <TableCell align="center">
-                <TableSortLabel active={sortBy === 'difficulty'} direction={sortBy === 'difficulty' ? sortDir : 'asc'} onClick={() => toggleSort('difficulty')}>
+                </SortLabel>
+              </TableHeaderCell>
+              <TableHeaderCell style={{ textAlign: 'center' }}>
+                <SortLabel active={sortBy === 'difficulty'} direction={sortBy === 'difficulty' ? sortDir : 'asc'} onClick={() => toggleSort('difficulty')}>
                   Diff
-                </TableSortLabel>
-              </TableCell>
-              <TableCell align="center">
-                <Tooltip title="Importance for a learner (1–10) — hand-judged per question, editable in the editor">
-                  <TableSortLabel active={sortBy === 'importance'} direction={sortBy === 'importance' ? sortDir : 'desc'} onClick={() => toggleSort('importance')}>
-                    Score
-                  </TableSortLabel>
-                </Tooltip>
-              </TableCell>
-              <TableCell align="center">Flags</TableCell>
-              <TableCell align="right">Actions</TableCell>
+                </SortLabel>
+              </TableHeaderCell>
+              <TableHeaderCell style={{ textAlign: 'center' }}>
+                <SortLabel
+                  active={sortBy === 'importance'}
+                  direction={sortBy === 'importance' ? sortDir : 'desc'}
+                  onClick={() => toggleSort('importance')}
+                  title="Importance for a learner (1–10) — hand-judged per question, editable in the editor"
+                >
+                  Score
+                </SortLabel>
+              </TableHeaderCell>
+              <TableHeaderCell style={{ textAlign: 'center' }}>Flags</TableHeaderCell>
+              <TableHeaderCell style={{ textAlign: 'right' }}>Actions</TableHeaderCell>
             </TableRow>
-          </TableHead>
+          </TableHeader>
           <TableBody>
             {pageRows.map((q) => (
-              <TableRow key={q.id} hover selected={selected.has(q.id)} sx={{ opacity: q.deleted ? 0.5 : 1, verticalAlign: 'top' }}>
-                <TableCell padding="checkbox">
-                  <Checkbox
-                    size="small"
-                    checked={selected.has(q.id)}
+              <TableRow key={q.id} style={{ opacity: q.deleted ? 0.5 : 1, backgroundColor: selected.has(q.id) ? 'var(--color-background-muted)' : undefined }}>
+                <TableCell>
+                  <CheckboxInput
+                    label={`Select question ${q.id}`}
+                    isLabelHidden
+                    size="sm"
+                    value={selected.has(q.id)}
                     onChange={() => toggleSelected(q.id)}
-                    inputProps={{ 'aria-label': `Select question ${q.id}` }}
                   />
                 </TableCell>
-                <TableCell sx={{ py: 1.25 }}>
-                  <Typography
-                    variant="body2"
-                    sx={{ fontWeight: 600, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-                  >
+                <TableCell>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600, whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: 'var(--color-text-primary)' }}>
                     {q.question}
-                  </Typography>
+                  </div>
 
-                  <Box sx={{ mt: 0.75, display: 'flex', flexDirection: 'column', gap: 0.25 }}>
+                  <div style={{ marginTop: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
                     {q.options.map((opt, i) => {
                       const correct = i === q.correctAnswer;
                       return (
-                        <Typography
+                        <div
                           key={i}
-                          variant="caption"
-                          sx={{
-                            color: correct ? 'success.dark' : 'text.secondary',
+                          style={{
+                            fontSize: '0.75rem',
+                            color: correct ? '#1b5e20' : 'var(--color-text-secondary)',
                             fontWeight: correct ? 700 : 400,
                             whiteSpace: 'pre-wrap',
                             wordBreak: 'break-word',
                           }}
                         >
                           {correct ? '✓' : '○'} {opt}
-                        </Typography>
+                        </div>
                       );
                     })}
-                  </Box>
+                  </div>
 
                   {q.introduction && (
-                    <Typography variant="caption" sx={{ display: 'block', mt: 0.75, color: 'text.secondary', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    <div style={{ fontSize: '0.75rem', marginTop: 6, color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                       <strong>Info:</strong> {q.introduction}
-                    </Typography>
+                    </div>
                   )}
                   {q.explanation && (
-                    <Typography variant="caption" sx={{ display: 'block', mt: 0.5, color: 'text.secondary', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                    <div style={{ fontSize: '0.75rem', marginTop: 4, color: 'var(--color-text-secondary)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                       <strong>Hint / explanation:</strong> {q.explanation}
-                    </Typography>
+                    </div>
                   )}
 
-                  <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap', mt: 0.75, alignItems: 'center' }}>
-                    {q.source !== 'base' && (
-                      <Chip label={q.source} size="small" color={SOURCE_COLOR[q.source]} variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
-                    )}
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 6, alignItems: 'center' }}>
+                    {q.source !== 'base' && <Pill label={q.source} color={SOURCE_PILL_COLOR[q.source]} />}
                     {q.tags.slice(0, 4).map((tag) => (
-                      <Chip key={tag} label={tag} size="small" variant="outlined" sx={{ height: 18, fontSize: '0.65rem' }} />
+                      <Pill key={tag} label={tag} />
                     ))}
-                    <Typography variant="caption" color="text.secondary">
-                      {q.id}
-                    </Typography>
-                  </Box>
+                    <span style={captionStyle}>{q.id}</span>
+                  </div>
                 </TableCell>
                 <TableCell>
-                  <Typography variant="caption">{getCategoryLabel(q.category)}</Typography>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-primary)' }}>{getCategoryLabel(q.category)}</span>
                 </TableCell>
-                <TableCell align="center">{q.difficulty}</TableCell>
-                <TableCell align="center">
-                  <Tooltip title={IMPORTANCE_BAND_LABEL[importanceBand(q.importance)]}>
-                    <Box
-                      component="span"
-                      sx={{
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: 26,
-                        height: 22,
-                        px: 0.5,
-                        borderRadius: 1,
-                        fontWeight: 700,
-                        fontSize: '0.8rem',
-                        color: '#fff',
-                        backgroundColor: SCORE_COLOR[importanceBand(q.importance)],
-                      }}
-                    >
-                      {q.importance}
-                    </Box>
-                  </Tooltip>
+                <TableCell style={{ textAlign: 'center' }}>{q.difficulty}</TableCell>
+                <TableCell style={{ textAlign: 'center' }}>
+                  <span
+                    title={IMPORTANCE_BAND_LABEL[importanceBand(q.importance)]}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: 26,
+                      height: 22,
+                      padding: '0 4px',
+                      borderRadius: 'var(--radius-inner)',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      color: '#fff',
+                      backgroundColor: SCORE_COLOR[importanceBand(q.importance)],
+                    }}
+                  >
+                    {q.importance}
+                  </span>
                 </TableCell>
-                <TableCell align="center">
+                <TableCell style={{ textAlign: 'center' }}>
                   {reportCounts[q.id] ? (
-                    <Tooltip title={`${reportCounts[q.id]} report(s) — see the Flags tab`}>
-                      <Chip label={`🚩 ${reportCounts[q.id]}`} size="small" color="error" variant="outlined" sx={{ height: 20 }} />
-                    </Tooltip>
+                    <Pill
+                      label={`🚩 ${reportCounts[q.id]}`}
+                      color="#dc2626"
+                      title={`${reportCounts[q.id]} report(s) — see the Flags tab`}
+                    />
                   ) : (
-                    <Typography variant="caption" color="text.disabled">
-                      —
-                    </Typography>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>—</span>
                   )}
                 </TableCell>
-                <TableCell align="right">
-                  <Box sx={{ display: 'inline-flex', gap: 0.25 }}>
-                    <Button size="small" onClick={() => openEdit(q)} sx={{ minWidth: 'auto' }}>
-                      Edit
-                    </Button>
-                    <Button size="small" color="error" onClick={() => handleDelete(q)} sx={{ minWidth: 'auto' }}>
-                      Delete
-                    </Button>
-                    {q.source === 'edited' && (
-                      <Button size="small" onClick={() => handleReset(q)} sx={{ minWidth: 'auto' }}>
-                        Revert
-                      </Button>
-                    )}
-                  </Box>
+                <TableCell style={{ textAlign: 'right' }}>
+                  <div style={{ display: 'inline-flex', gap: 2 }}>
+                    <ActionButton label="Edit" onClick={() => openEdit(q)} />
+                    <ActionButton label="Delete" danger onClick={() => handleDelete(q)} />
+                    {q.source === 'edited' && <ActionButton label="Revert" onClick={() => handleReset(q)} />}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
             {pageRows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={7}>
-                  <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+                  <div style={{ ...captionStyle, textAlign: 'center', padding: '32px 0' }}>
                     No questions match these filters.
-                  </Typography>
+                  </div>
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
-      </TableContainer>
-      <TablePagination
-        component="div"
-        count={sorted.length}
-        page={pageStart / rowsPerPage}
-        onPageChange={(_, p) => setPage(p)}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={(e) => {
-          setRowsPerPage(parseInt(e.target.value, 10));
-          setPage(0);
+      </div>
+
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          gap: 20,
+          padding: '8px 4px',
+          fontSize: '0.8rem',
+          color: 'var(--color-text-secondary)',
         }}
-        rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
-      />
+      >
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+          Rows per page:
+          <select
+            value={String(rowsPerPage)}
+            onChange={(e) => {
+              setRowsPerPage(parseInt(e.target.value, 10));
+              setPage(0);
+            }}
+            style={{ ...selectStyle, height: 32 }}
+          >
+            {ROWS_PER_PAGE_OPTIONS.map((n) => (
+              <option key={n} value={String(n)}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span>
+          {rangeFrom}–{rangeTo} of {sorted.length}
+        </span>
+        <div style={{ display: 'inline-flex', gap: 4 }}>
+          <Button
+            variant="ghost"
+            size="sm"
+            label="‹"
+            onClick={() => setPage(currentPage - 1)}
+            isDisabled={currentPage <= 0}
+          />
+          <Button
+            variant="ghost"
+            size="sm"
+            label="›"
+            onClick={() => setPage(currentPage + 1)}
+            isDisabled={atLastPage}
+          />
+        </div>
+      </div>
 
       <QuestionEditor
         open={editorOpen}
@@ -578,13 +724,13 @@ export default function DevQuestions() {
         }}
       />
 
-      <Snackbar
+      <AppToast
         open={!!snack}
-        autoHideDuration={2500}
         onClose={() => setSnack(null)}
         message={snack ?? ''}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        severity="info"
+        autoHideDuration={2500}
       />
-    </Box>
+    </div>
   );
 }

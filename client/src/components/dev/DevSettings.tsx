@@ -1,21 +1,12 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  MenuItem,
-  Switch,
-  FormControlLabel,
-  Button,
-  Snackbar,
-  Divider,
-  Chip,
-} from '@mui/material';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { TextArea } from '@astryxdesign/core/TextArea';
+import { Switch } from '@astryxdesign/core/Switch';
+import { Button } from '@astryxdesign/core/Button';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
-import { brandButtonSx } from '../../theme/MuiTheme';
+import { AppToast } from '../ui/AppToast';
 import { friendlyError } from '../../lib/api';
 import { queryClient } from '../../lib/queryClient';
 import { getAdminSettings, saveAdminSettings, type GameSettings } from '../../lib/devApi';
@@ -149,6 +140,50 @@ const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
   ownerEmail: f.ownerEmail.trim(),
 });
 
+const captionStyle: React.CSSProperties = {
+  fontSize: '0.75rem',
+  color: 'var(--color-text-secondary)',
+};
+
+const selectStyle: React.CSSProperties = {
+  height: 40,
+  borderRadius: 'var(--radius-element)',
+  border: '1px solid var(--color-border)',
+  background: 'var(--color-background-surface)',
+  color: 'var(--color-text-primary)',
+  padding: '0 12px',
+  fontFamily: 'inherit',
+  fontSize: '0.9rem',
+};
+
+// A native <select> dressed to sit alongside the Astryx TextInputs — replaces
+// MUI's <TextField select>. Renders a Field-style label + optional helper.
+function SelectField({
+  label,
+  value,
+  onChange,
+  helperText,
+  style,
+  children,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  helperText?: string;
+  style?: React.CSSProperties;
+  children: ReactNode;
+}) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, ...style }}>
+      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{label}</label>
+      <select value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
+        {children}
+      </select>
+      {helperText && <span style={captionStyle}>{helperText}</span>}
+    </div>
+  );
+}
+
 export default function DevSettings() {
   const settingsQuery = useQuery({ queryKey: SETTINGS_KEY, queryFn: getAdminSettings });
   const base = settingsQuery.data?.settings ?? null;
@@ -210,96 +245,104 @@ export default function DevSettings() {
   };
 
   const num = (key: keyof FormState, label: string) => (
-    <TextField
-      type="number"
-      size="small"
+    <TextInput
       label={label}
       value={form[key] as string}
-      onChange={(e) => set(key, e.target.value)}
-      sx={{ width: 160 }}
+      onChange={(v) => set(key, v)}
+      size="sm"
+      style={{ width: 160 }}
     />
   );
 
   return (
-    <Box sx={{ maxWidth: 720 }}>
-      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+    <div style={{ maxWidth: 720 }}>
+      <p style={{ ...captionStyle, marginTop: 0, marginBottom: 16 }}>
         Values are validated and clamped server-side. Lists are comma-separated. Changes take effect within a few
         seconds.
-      </Typography>
+      </p>
 
       <Section title="Quiz">
         {num('quizDefaultCount', 'Default count')}
         {num('quizMaxCount', 'Max count')}
-        <TextField
-          select
-          size="small"
+        <SelectField
           label="Default difficulty"
           value={form.quizDefaultDifficulty}
-          onChange={(e) => set('quizDefaultDifficulty', e.target.value)}
-          sx={{ width: 180 }}
+          onChange={(v) => set('quizDefaultDifficulty', v)}
+          style={{ width: 180 }}
         >
           {DIFFICULTY_MODES.map((d) => (
-            <MenuItem key={d} value={d}>
+            <option key={d} value={d}>
               {d}
-            </MenuItem>
+            </option>
           ))}
-        </TextField>
-        <TextField
-          select
-          size="small"
+        </SelectField>
+        <SelectField
           label="Min importance"
           helperText="Hide questions below this score from the quiz (1 = no floor)"
           value={form.quizMinImportance}
-          onChange={(e) => set('quizMinImportance', e.target.value)}
-          sx={{ width: 200 }}
+          onChange={(v) => set('quizMinImportance', v)}
+          style={{ width: 200 }}
         >
           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-            <MenuItem key={n} value={String(n)}>
+            <option key={n} value={String(n)}>
               {n}
-            </MenuItem>
+            </option>
           ))}
-        </TextField>
-        <TextField
-          size="small"
+        </SelectField>
+        <TextInput
           label="Count options"
           value={form.quizCountOptions}
-          onChange={(e) => set('quizCountOptions', e.target.value)}
-          sx={{ flex: 1, minWidth: 200 }}
+          onChange={(v) => set('quizCountOptions', v)}
+          size="sm"
+          style={{ flex: 1, minWidth: 200 }}
         />
       </Section>
 
       <Section title="Quiz — default visible categories">
-        <Typography variant="caption" color="text.secondary" sx={{ width: '100%', mb: 0.5 }}>
+        <span style={{ ...captionStyle, width: '100%', marginBottom: 4 }}>
           Shown on the quiz home by default; the rest appear when the learner clicks "Show all".
           Select none to show every category by default.
-        </Typography>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, width: '100%' }}>
+        </span>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, width: '100%' }}>
           {CATEGORY_OPTIONS.map((cat) => {
             const selected = form.quizDefaultCategoryIds.includes(cat.value);
             return (
-              <Chip
+              <span
                 key={cat.value}
-                label={cat.label}
-                size="small"
+                role="button"
+                tabIndex={0}
                 onClick={() => toggleDefaultCategory(cat.value)}
-                sx={{
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleDefaultCategory(cat.value);
+                  }
+                }}
+                style={{
                   cursor: 'pointer',
-                  backgroundColor: selected ? cat.color : 'background.paper',
-                  color: selected ? onCategoryColorText(cat.value) : 'text.secondary',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  padding: '3px 10px',
+                  fontSize: '0.75rem',
+                  borderRadius: 999,
+                  backgroundColor: selected ? cat.color : 'var(--color-background-surface)',
+                  color: selected ? onCategoryColorText(cat.value) : 'var(--color-text-secondary)',
                   border: '1px solid',
-                  borderColor: selected ? cat.color : 'divider',
+                  borderColor: selected ? cat.color : 'var(--color-border)',
                   borderLeft: `3px solid ${cat.color}`,
                   fontWeight: selected ? 600 : 500,
                 }}
-              />
+              >
+                {cat.label}
+              </span>
             );
           })}
-        </Box>
-        <Typography variant="caption" color="text.secondary" sx={{ width: '100%', mt: 0.5 }}>
+        </div>
+        <span style={{ ...captionStyle, width: '100%', marginTop: 4 }}>
           {form.quizDefaultCategoryIds.length === 0
             ? 'All categories visible by default'
             : `${form.quizDefaultCategoryIds.length} category(ies) visible by default`}
-        </Typography>
+        </span>
       </Section>
 
       <Section title="Daily challenge">{num('dailyCount', 'Question count')}</Section>
@@ -309,143 +352,141 @@ export default function DevSettings() {
         {num('playMinQuestions', 'Min questions')}
         {num('playMaxQuestions', 'Max questions')}
         {num('playMaxSpeedBonus', 'Max speed bonus')}
-        <TextField
-          size="small"
+        <TextInput
           label="Time options (s, 0 = none)"
           value={form.playDurationOptionsS}
-          onChange={(e) => set('playDurationOptionsS', e.target.value)}
-          sx={{ flex: 1, minWidth: 200 }}
+          onChange={(v) => set('playDurationOptionsS', v)}
+          size="sm"
+          style={{ flex: 1, minWidth: 200 }}
         />
-        <TextField
-          size="small"
+        <TextInput
           label="Question-count options"
           value={form.playCountOptions}
-          onChange={(e) => set('playCountOptions', e.target.value)}
-          sx={{ flex: 1, minWidth: 200 }}
+          onChange={(v) => set('playCountOptions', v)}
+          size="sm"
+          style={{ flex: 1, minWidth: 200 }}
         />
       </Section>
 
       <Section title="Features">
-        <FormControlLabel
-          control={<Switch checked={form.featDaily} onChange={(e) => set('featDaily', e.target.checked)} />}
-          label="Daily challenge"
-        />
-        <FormControlLabel
-          control={<Switch checked={form.featMulti} onChange={(e) => set('featMulti', e.target.checked)} />}
-          label="Multiplayer / Play"
-        />
-        <FormControlLabel
-          control={<Switch checked={form.featLeader} onChange={(e) => set('featLeader', e.target.checked)} />}
-          label="Leaderboard"
-        />
-        <FormControlLabel
-          control={<Switch checked={form.featFlash} onChange={(e) => set('featFlash', e.target.checked)} />}
-          label="Flashcards"
-        />
+        <Switch label="Daily challenge" value={form.featDaily} onChange={(c) => set('featDaily', c)} />
+        <Switch label="Multiplayer / Play" value={form.featMulti} onChange={(c) => set('featMulti', c)} />
+        <Switch label="Leaderboard" value={form.featLeader} onChange={(c) => set('featLeader', c)} />
+        <Switch label="Flashcards" value={form.featFlash} onChange={(c) => set('featFlash', c)} />
       </Section>
 
       <Section title="Career levels — total XP to reach each rank">
-        <Typography variant="caption" color="text.secondary" sx={{ width: '100%', mb: 0.5 }}>
+        <span style={{ ...captionStyle, width: '100%', marginBottom: 4 }}>
           Must be strictly increasing and start at 0; invalid values revert to the defaults on save.
-        </Typography>
+        </span>
         {RANK_TITLES.map((title, i) => (
-          <TextField
+          <TextInput
             key={title}
-            type="number"
-            size="small"
             label={`${i + 1}. ${title}`}
             value={form.levelThresholds[i] ?? ''}
-            onChange={(e) => setThreshold(i, e.target.value)}
-            disabled={i === 0}
-            helperText={i === 0 ? 'Always 0' : undefined}
-            sx={{ width: 190 }}
+            onChange={(v) => setThreshold(i, v)}
+            isDisabled={i === 0}
+            description={i === 0 ? 'Always 0' : undefined}
+            size="sm"
+            style={{ width: 190 }}
           />
         ))}
       </Section>
 
       <Section title="Shop — token prices">
-        <Typography variant="caption" color="text.secondary" sx={{ width: '100%', mb: 0.5 }}>
+        <span style={{ ...captionStyle, width: '100%', marginBottom: 4 }}>
           Token cost of each shop item. The path-unlock price applies to every learning-path unlock. 0 makes an item free.
-        </Typography>
+        </span>
         {Object.keys(base.shop.prices).map((id) => (
-          <TextField
+          <TextInput
             key={id}
-            type="number"
-            size="small"
             label={SHOP_PRICE_LABELS[id] ?? id}
             value={form.shopPrices[id] ?? ''}
-            onChange={(e) => setShopPrice(id, e.target.value)}
-            sx={{ width: 190 }}
+            onChange={(v) => setShopPrice(id, v)}
+            size="sm"
+            style={{ width: 190 }}
           />
         ))}
-        <TextField
-          type="number"
-          size="small"
+        <TextInput
           label="Path unlock (each)"
           value={form.shopPathUnlock}
-          onChange={(e) => set('shopPathUnlock', e.target.value)}
-          sx={{ width: 190 }}
+          onChange={(v) => set('shopPathUnlock', v)}
+          size="sm"
+          style={{ width: 190 }}
         />
       </Section>
 
       <Section title="Loading-screen dev tips">
-        <Typography variant="caption" color="text.secondary" sx={{ width: '100%', mb: 0.5 }}>
+        <span style={{ ...captionStyle, width: '100%', marginBottom: 4 }}>
           One tip per line. A random tip fades in under the shark after ~2.5s on longer, full-page loads. Keep them short
           one-liners so they're readable at a glance. Leave empty to show no tip.
-        </Typography>
-        <TextField
-          multiline
-          minRows={4}
-          maxRows={14}
-          size="small"
+        </span>
+        <TextArea
           label="Dev tips (one per line)"
+          rows={4}
+          size="sm"
           value={form.devTips}
-          onChange={(e) => set('devTips', e.target.value)}
-          sx={{ width: '100%' }}
+          onChange={(v) => set('devTips', v)}
+          style={{ width: '100%' }}
         />
-        <Typography variant="caption" color="text.secondary" sx={{ width: '100%', mt: 0.5 }}>
+        <span style={{ ...captionStyle, width: '100%', marginTop: 4 }}>
           {parseTips(form.devTips).length} tip(s)
-        </Typography>
+        </span>
       </Section>
 
       <Section title="Owner">
-        <TextField
-          size="small"
+        <TextInput
           label="Owner email (sees private categories)"
           value={form.ownerEmail}
-          onChange={(e) => set('ownerEmail', e.target.value)}
-          sx={{ flex: 1, minWidth: 260 }}
+          onChange={(v) => set('ownerEmail', v)}
+          size="sm"
+          style={{ flex: 1, minWidth: 260 }}
         />
       </Section>
 
-      <Box sx={{ display: 'flex', gap: 1.5, mt: 1 }}>
-        <Button variant="contained" onClick={handleSave} disabled={saving} sx={brandButtonSx}>
-          {saving ? 'Saving…' : 'Save settings'}
-        </Button>
-        <Button variant="outlined" onClick={() => setForm(toForm(base))} disabled={saving}>
-          Revert
-        </Button>
-      </Box>
+      <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+        <Button variant="primary" label={saving ? 'Saving…' : 'Save settings'} onClick={handleSave} isDisabled={saving} />
+        <Button variant="secondary" label="Revert" onClick={() => setForm(toForm(base))} isDisabled={saving} />
+      </div>
 
-      <Snackbar
+      <AppToast
         open={!!snack}
-        autoHideDuration={2500}
         onClose={() => setSnack(null)}
         message={snack ?? ''}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        severity="info"
+        autoHideDuration={2500}
       />
-    </Box>
+    </div>
   );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <Paper elevation={0} sx={{ p: 2, mb: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
-      <Typography variant="overline" color="text.secondary" component="h2" sx={{ display: 'block', mb: 1.5 }}>
+    <div
+      style={{
+        padding: 16,
+        marginBottom: 16,
+        border: '1px solid var(--color-border)',
+        borderRadius: 'var(--radius-container)',
+        background: 'var(--color-background-surface)',
+      }}
+    >
+      <h2
+        style={{
+          display: 'block',
+          margin: 0,
+          marginBottom: 12,
+          fontSize: '0.7rem',
+          letterSpacing: '0.08em',
+          textTransform: 'uppercase',
+          color: 'var(--color-text-secondary)',
+          fontWeight: 600,
+        }}
+      >
         {title}
-      </Typography>
-      <Divider sx={{ mb: 2 }} />
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>{children}</Box>
-    </Paper>
+      </h2>
+      <div style={{ height: 1, background: 'var(--color-border)', marginBottom: 16 }} />
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>{children}</div>
+    </div>
   );
 }

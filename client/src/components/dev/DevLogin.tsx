@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
-import { Box, Paper, Typography, TextField, Button, Alert } from '@mui/material';
-import { brandButtonSx } from '../../theme/MuiTheme';
+import { Button } from '@astryxdesign/core/Button';
+import { TextInput } from '@astryxdesign/core/TextInput';
+import { Banner } from '@astryxdesign/core/Banner';
 import { friendlyError } from '../../lib/api';
 import { verifyPassword, setDevPassword } from '../../lib/devApi';
 
@@ -31,40 +32,50 @@ export default function DevLogin({ onSuccess }: { onSuccess: () => void }) {
   };
 
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh', px: 2 }}>
-      <Paper
-        component="form"
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh', padding: '0 16px' }}>
+      <form
         onSubmit={handleSubmit}
-        elevation={0}
-        sx={{ p: 4, width: '100%', maxWidth: 380, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}
+        style={{
+          padding: 32,
+          width: '100%',
+          maxWidth: 380,
+          border: '1px solid var(--color-border)',
+          borderRadius: 16,
+          background: 'var(--color-background-surface)',
+        }}
       >
-        <Typography variant="h6" component="h1" sx={{ fontWeight: 700, mb: 0.5 }}>
+        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>
           Dev console
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        </h1>
+        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: '0 0 24px' }}>
           Enter the password to manage questions and game settings.
-        </Typography>
+        </p>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
-            {error}
-          </Alert>
+          <div style={{ marginBottom: 16 }}>
+            <Banner status="error" title={error} />
+          </div>
         )}
 
-        <TextField
-          autoFocus
-          fullWidth
-          type="password"
-          label="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
-          sx={{ mb: 2 }}
+        <div style={{ marginBottom: 16 }}>
+          <TextInput
+            hasAutoFocus
+            width="100%"
+            type="password"
+            label="Password"
+            value={password}
+            onChange={(value) => setPassword(value)}
+          />
+        </div>
+        <Button
+          type="submit"
+          variant="primary"
+          label={submitting ? 'Checking…' : 'Unlock'}
+          isDisabled={!password || submitting}
+          isLoading={submitting}
+          style={{ width: '100%' }}
         />
-        <Button type="submit" fullWidth variant="contained" disabled={!password || submitting} sx={brandButtonSx}>
-          {submitting ? 'Checking…' : 'Unlock'}
-        </Button>
-      </Paper>
-    </Box>
+      </form>
+    </div>
   );
 }

@@ -1,8 +1,41 @@
-import { useEffect, useState } from 'react';
-import { Box, type SxProps, type Theme } from '@mui/material';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { Text } from '@astryxdesign/core/Text';
 import { visuallyHidden } from '../theme/MuiTheme';
 import { SwimmingShark } from './SharkFin';
+
+/**
+ * Style object accepted by `LoadingScreen`. Mirrors the small slice of MUI `sx`
+ * callers actually pass (real CSS properties plus the `p*`/`m*` spacing
+ * shorthands, whose numeric values are ×8px), merged onto the centring wrapper.
+ */
+type SxLike = CSSProperties & Partial<Record<SpacingKey, number | string>>;
+
+type SpacingKey =
+  | 'p' | 'px' | 'py' | 'pt' | 'pr' | 'pb' | 'pl'
+  | 'm' | 'mx' | 'my' | 'mt' | 'mr' | 'mb' | 'ml';
+
+const SPACING_MAP: Record<SpacingKey, Array<keyof CSSProperties>> = {
+  p: ['padding'], px: ['paddingLeft', 'paddingRight'], py: ['paddingTop', 'paddingBottom'],
+  pt: ['paddingTop'], pr: ['paddingRight'], pb: ['paddingBottom'], pl: ['paddingLeft'],
+  m: ['margin'], mx: ['marginLeft', 'marginRight'], my: ['marginTop', 'marginBottom'],
+  mt: ['marginTop'], mr: ['marginRight'], mb: ['marginBottom'], ml: ['marginLeft'],
+};
+
+/** Expand MUI `sx` spacing shorthands (unit ×8px) into real CSS properties. */
+function sxToStyle(sx?: SxLike): CSSProperties {
+  if (!sx) return {};
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(sx)) {
+    const targets = SPACING_MAP[key as SpacingKey];
+    if (targets) {
+      const resolved = typeof value === 'number' ? value * 8 : value;
+      for (const prop of targets) out[prop as string] = resolved;
+    } else {
+      out[key] = value;
+    }
+  }
+  return out as CSSProperties;
+}
 
 interface Props {
   /** Screen-reader announcement describing what is loading. */
@@ -10,7 +43,7 @@ interface Props {
   /** Fin height in px. */
   size?: number;
   /** Extra styles merged onto the centering wrapper. */
-  sx?: SxProps<Theme>;
+  sx?: SxLike;
   /**
    * Optional one-liner "dev tips". When provided (and non-empty), a random tip
    * fades in beneath the shark after a short delay so the learner has something
@@ -22,6 +55,19 @@ interface Props {
 // How long the shark swims alone before a tip surfaces. Long enough that quick
 // loads never flash a tip; short enough to read one on a slow load.
 const TIP_DELAY_MS = 2500;
+
+// Tip fade-in keyframes (previously an inline MUI `sx` `@keyframes`). Scoped
+// <style> so the animation travels with the component.
+const TIP_ANIM_CSS = `
+@keyframes devsharkTipIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.devshark-tip { animation: devsharkTipIn 400ms ease-out; }
+@media (prefers-reduced-motion: reduce) {
+  .devshark-tip { animation: none; }
+}
+`;
 
 /* ──── Study-mode loading beat (shared by Quiz, Learn, Challenge, Play) ────
  * Every question-fetching moment shows the house motto with the swimming fin
@@ -36,10 +82,10 @@ export const holdLoadingScreen = (startedAt: number): Promise<void> =>
 /** The quote + fin loading state for study modes. Fills its flex parent. */
 export function QuoteLoader({ quote, label }: { quote: string; label: string }) {
   return (
-    <Box
+    <div
       role="status"
       aria-live="polite"
-      sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}
+      style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}
     >
       <div style={{ fontStyle: 'italic', textAlign: 'center', maxWidth: 520, padding: '0 8px' }}>
         <Text type="large" weight="semibold" color="secondary">
@@ -47,8 +93,8 @@ export function QuoteLoader({ quote, label }: { quote: string; label: string }) 
         </Text>
       </div>
       <SwimmingShark size={44} />
-      <Box component="span" sx={visuallyHidden}>{label}</Box>
-    </Box>
+      <span style={visuallyHidden}>{label}</span>
+    </div>
   );
 }
 
@@ -66,46 +112,41 @@ export default function LoadingScreen({ label, size, sx, tips }: Props) {
   const tip = tips && tipIndex >= 0 ? tips[tipIndex] : null;
 
   return (
-    <Box
+    <div
       role="status"
       aria-live="polite"
-      sx={{
+      style={{
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
         alignItems: 'center',
-        gap: 1.5,
+        gap: 12,
         minHeight: '50vh',
-        ...sx,
+        ...sxToStyle(sx),
       }}
     >
       <SwimmingShark size={size ?? 48} />
-      <Box component="span" sx={visuallyHidden}>
-        {label}
-      </Box>
+      <span style={visuallyHidden}>{label}</span>
       {tip && (
-        <Box
+        <div
           // Decorative flourish — the status label above already conveys "loading",
           // so keep the tip out of the live region to avoid talking over it.
           aria-hidden="true"
-          sx={{
+          className="devshark-tip"
+          style={{
             maxWidth: 360,
-            px: 2,
+            paddingLeft: 16,
+            paddingRight: 16,
             textAlign: 'center',
             fontStyle: 'italic',
-            '@keyframes devsharkTipIn': {
-              from: { opacity: 0, transform: 'translateY(4px)' },
-              to: { opacity: 1, transform: 'translateY(0)' },
-            },
-            animation: 'devsharkTipIn 400ms ease-out',
-            '@media (prefers-reduced-motion: reduce)': { animation: 'none' },
           }}
         >
+          <style>{TIP_ANIM_CSS}</style>
           <Text type="body" color="secondary">
             {tip}
           </Text>
-        </Box>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }
