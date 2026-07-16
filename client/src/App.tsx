@@ -357,7 +357,7 @@ function App() {
     <>
       <AxIconButton
         variant="ghost"
-        size="sm"
+        size="md"
         onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
         label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
         tooltip={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
@@ -365,7 +365,7 @@ function App() {
       />
       <AxIconButton
         variant="ghost"
-        size="sm"
+        size="md"
         onClick={toggle}
         label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
         tooltip={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
@@ -395,7 +395,7 @@ function App() {
               <span className="ss-show-mobile" style={{ marginRight: 4 }}>
                 <AxIconButton
                   variant="ghost"
-                  size="sm"
+                  size="lg"
                   label={t('nav.menu')}
                   onClick={() => setMobileNavOpen(true)}
                   icon={<MenuIcon />}
@@ -627,7 +627,7 @@ function App() {
         onClose={() => setSignupBonusOpen(false)}
         severity="success"
         autoHideDuration={6000}
-        message={`+${SIGNUP_BONUS_TOKENS} tokens · welcome to StudyShark`}
+        message={t('auth.signupBonusToast', { tokens: SIGNUP_BONUS_TOKENS })}
       />
     </div>
   );

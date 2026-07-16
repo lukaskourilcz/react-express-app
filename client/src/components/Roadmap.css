@@ -134,11 +134,11 @@
   color: var(--brand-accent);
   background: transparent;
   border-radius: 999px;
-  padding: 4.8px 16px;
-  line-height: 1.15;
+  padding: 10px 20px;
+  line-height: 1.2;
   display: flex;
   flex-direction: column;
-  gap: 1.2px;
+  gap: 2px;
   align-items: center;
   cursor: pointer;
   font-family: inherit;
@@ -153,9 +153,9 @@
 .rm-topic-pill {
   text-transform: none;
   font-weight: 600;
-  font-size: 0.78rem;
+  font-size: 0.8125rem;
   min-width: auto;
-  padding: 6px 11.2px;
+  padding: 9px 14px;
   border-radius: 999px;
   line-height: 1.3;
   transition: all 0.15s ease;
@@ -183,9 +183,9 @@
 .rm-part-pill {
   text-transform: none;
   font-weight: 700;
-  font-size: 0.8rem;
+  font-size: 0.8125rem;
   min-width: auto;
-  padding: 6px 14.4px;
+  padding: 9px 16px;
   border-radius: 999px;
   line-height: 1.3;
   border: 2px solid var(--color-border);
@@ -255,10 +255,10 @@
 .rm-accent-btn {
   border: none;
   color: #fff;
-  border-radius: 4px;
+  border-radius: var(--radius-element);
   font-weight: 700;
-  font-size: 0.875rem;
-  padding: 6px 16px;
+  font-size: 0.9rem;
+  padding: 12px 20px;
   cursor: pointer;
   font-family: inherit;
   transition: filter 0.15s ease;
@@ -270,10 +270,10 @@
   background: transparent;
   border: 1px solid var(--brand-accent);
   color: var(--brand-accent);
-  border-radius: 4px;
+  border-radius: var(--radius-element);
   font-weight: 700;
-  font-size: 0.875rem;
-  padding: 5px 15px;
+  font-size: 0.9rem;
+  padding: 11px 19px;
   cursor: pointer;
   font-family: inherit;
 }
@@ -285,11 +285,11 @@
   border: none;
   color: var(--color-text-secondary);
   font-weight: 600;
-  font-size: 0.875rem;
-  padding: 6px 8px;
+  font-size: 0.9rem;
+  padding: 10px 12px;
   cursor: pointer;
   font-family: inherit;
-  border-radius: 4px;
+  border-radius: var(--radius-element);
   line-height: 1;
 }
 .rm-text-btn:hover { background-color: var(--color-background-muted); }

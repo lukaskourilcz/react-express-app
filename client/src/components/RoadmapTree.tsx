@@ -191,10 +191,11 @@ function PartPill({
   const style: CSSProperties = {
     flex: 1,
     textAlign: 'center',
-    fontSize: '0.62rem',
-    fontWeight: 800,
-    lineHeight: 1.6,
-    borderRadius: 4,
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    lineHeight: 1.4,
+    padding: '6px 4px',
+    borderRadius: 6,
     border: `1.5px solid ${locked ? 'var(--color-border)' : color}`,
     backgroundColor: filled ? color : status === 'in-progress' ? `${color}24` : 'transparent',
     color: filled ? onCategoryColorText(family) : locked ? 'var(--color-text-disabled)' : 'var(--color-text-primary)',
@@ -205,9 +206,11 @@ function PartPill({
   const label = t('roadmapTree.partPill', { n: part });
   const title = `${getCategoryLabel(family)} · ${label} — ${stateLabel}`;
   if (locked) {
+    // A disabled control, not an image: keyboard users can still reach it and
+    // hear why it's inert.
     return (
       <Tooltip content={title} placement="above">
-        <div role="img" tabIndex={0} style={style} aria-label={title}>{part}</div>
+        <div role="button" aria-disabled="true" tabIndex={0} style={style} aria-label={title}>{part}</div>
       </Tooltip>
     );
   }

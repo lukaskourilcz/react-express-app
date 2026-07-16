@@ -9,33 +9,8 @@ interface FinProps {
   color?: string;
 }
 
-// Keyframes + reduced-motion overrides for the swimming variants. Injected via a
-// scoped <style> (previously MUI `sx` `@keyframes`) so the animation lives with
-// the component. Duplicate <style> tags across mounts are harmless — the rules
-// are keyed by global name.
-const SHARK_ANIM_CSS = `
-@keyframes devsharkSwim {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-2px) rotate(-5deg); }
-}
-@keyframes devsharkCruise {
-  0% { transform: translateX(-130%) translateY(0) rotate(-6deg); }
-  50% { transform: translateX(-50%) translateY(-3px) rotate(6deg); }
-  100% { transform: translateX(30%) translateY(0) rotate(-6deg); }
-}
-@keyframes devsharkWake {
-  0%, 100% { opacity: 0.15; transform: scaleX(0.9); }
-  50% { opacity: 0.35; transform: scaleX(1); }
-}
-.devshark-swim { animation: devsharkSwim 3s ease-in-out infinite; }
-.devshark-cruise { animation: devsharkCruise 2.4s ease-in-out infinite alternate; }
-.devshark-wake { animation: devsharkWake 2.4s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) {
-  .devshark-swim { animation: none; }
-  .devshark-cruise { animation: none; transform: translateX(-50%); }
-  .devshark-wake { animation: none; }
-}
-`;
+// The swim/cruise/wake keyframes live in styles/app-shell.css (one static
+// copy) — previously each mount injected its own duplicate <style> tag.
 
 /** A static dorsal shark fin. `aria-hidden` — it's decorative. */
 export function SharkFin({ size = 22, color = 'var(--brand-accent)' }: FinProps) {
@@ -56,7 +31,6 @@ export function SharkFin({ size = 22, color = 'var(--brand-accent)' }: FinProps)
 export function SwimmingFin({ size = 22, color = 'var(--brand-accent)' }: FinProps) {
   return (
     <span className="devshark-swim" style={{ display: 'inline-flex', transformOrigin: 'bottom center' }}>
-      <style>{SHARK_ANIM_CSS}</style>
       <SharkFin size={size} color={color} />
     </span>
   );
@@ -108,7 +82,6 @@ export function SwimmingShark({ size = 56 }: { size?: number }) {
   // outside the box but doesn't crop the top of the fin anymore.
   return (
     <div style={{ position: 'relative', width: size * 1.8, height: size * 1.3, overflow: 'hidden' }} aria-hidden="true">
-      <style>{SHARK_ANIM_CSS}</style>
       <span
         className="devshark-cruise"
         style={{

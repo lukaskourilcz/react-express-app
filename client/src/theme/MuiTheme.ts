@@ -21,9 +21,17 @@ export const BRAND = {
   textTertiary: '#6b6b6b',
 };
 
-export const CATEGORY_GRADIENT =
-  'linear-gradient(90deg, #e34c26, #264de4, #f7df1e, #3178c6, #61dafb, #339933, #f05032, #8b5cf6, #06b6d4, #ec4899)';
-
 // Visually hide an element while keeping it available to screen readers.
-// Used for status text and off-screen labels.
-export const visuallyHidden = { position: 'absolute', left: -9999 } as const;
+// Standard sr-only clipping (not off-screen positioning, which can create
+// phantom scroll regions). Used for status text and off-screen labels.
+export const visuallyHidden = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  margin: -1,
+  border: 0,
+  padding: 0,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+} as const;

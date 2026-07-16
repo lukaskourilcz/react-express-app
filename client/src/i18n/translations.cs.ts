@@ -124,6 +124,8 @@ export const cs: Record<TranslationKey, string> = {
   // Auth
   'auth.logIn': 'Přihlásit se',
   'auth.logOut': 'Odhlásit se',
+  'auth.signInFailed': 'Přihlášení se nezdařilo. Zkuste to prosím znovu.',
+  'auth.signupBonusToast': '+{tokens} žetonů · vítejte ve StudySharku',
   'auth.profile': 'Profil',
   'auth.account': 'Účet',
   'auth.loadingAccount': 'Načítání účtu',
@@ -241,7 +243,7 @@ export const cs: Record<TranslationKey, string> = {
   'leaderboard.footerDefault': 'Aktualizace každých 60 s. Zahraj si kvíz a objevíš se tady.',
   'leaderboard.correct': 'správně',
   'leaderboard.todayLabel': 'dnes',
-  'leaderboard.globalSecondary': '{quizzes} kvízů · 🔥 {streak} d nejdelší série',
+  'leaderboard.globalSecondary': '{quizzes} kvízů · nejdelší série {streak} dní',
   'leaderboard.categorySecondary': '{attempts} pokusů · {accuracy}% úspěšnost',
 
   // Profile
@@ -367,7 +369,7 @@ export const cs: Record<TranslationKey, string> = {
   'play.liveScoreboard': 'Živá výsledková tabule',
   'play.classAnswers': 'Odpovědi třídy (naživo)',
   'play.matchComplete': 'Hra dokončena',
-  'play.winner': '🏆 Vítěz: {name}, {correct}/{total}',
+  'play.winner': 'Vítěz: {name} — {correct}/{total}',
   'common.back': 'Zpět',
 
   // Loading / error states

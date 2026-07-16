@@ -6,7 +6,7 @@
 // Redesigned on the Astryx design system: an OKLCH mesh hero with Astryx
 // typography + buttons, and a responsive Grid of feature cards.
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -28,8 +28,9 @@ import { savePreferredTrack } from '../lib/trackPref';
 import PathPickerDialog from './PathPickerDialog';
 import { AppToast } from './ui/AppToast';
 import { useIsMobile } from '../lib/useMediaQuery';
+import { CompassIcon, BoltIcon, MapIcon, IconTile } from './ui/icons';
 
-type Feature = { emoji: string; title: string; text: string; variant: 'green' | 'blue' | 'purple' };
+type Feature = { icon: ReactNode; color: string; title: string; text: string; variant: 'green' | 'blue' | 'purple' };
 
 export default function Home() {
   const t = useT();
@@ -55,7 +56,7 @@ export default function Home() {
     try {
       await signInWithGoogle();
     } catch (err) {
-      setAuthError(err instanceof Error ? err.message : 'Sign-in failed. Please try again.');
+      setAuthError(err instanceof Error ? err.message : t('auth.signInFailed'));
       setSigningIn(false);
     }
   };
@@ -73,11 +74,11 @@ export default function Home() {
   };
 
   const features: Feature[] = [
-    { emoji: '🧭', title: t('home.featureLearnTitle'), text: t('home.featureLearnText'), variant: 'green' },
-    { emoji: '⚡', title: t('home.featureQuizTitle'), text: t('home.featureQuizText'), variant: 'blue' },
+    { icon: <CompassIcon size={22} />, color: '#2d7a2d', title: t('home.featureLearnTitle'), text: t('home.featureLearnText'), variant: 'green' },
+    { icon: <BoltIcon size={22} />, color: '#1565c0', title: t('home.featureQuizTitle'), text: t('home.featureQuizText'), variant: 'blue' },
     ...(isMobile
       ? []
-      : [{ emoji: '🗺️', title: t('home.featureRoadmapTitle'), text: t('home.featureRoadmapText'), variant: 'purple' as const }]),
+      : [{ icon: <MapIcon size={22} />, color: '#7c3aed', title: t('home.featureRoadmapTitle'), text: t('home.featureRoadmapText'), variant: 'purple' as const }]),
   ];
 
   return (
@@ -91,22 +92,16 @@ export default function Home() {
           position: 'relative',
           overflow: 'hidden',
           backgroundImage: heroMeshFor(mode),
-          borderRadius: 28,
+          borderRadius: 'var(--radius-page)',
           marginTop: 'auto',
-          padding: 'clamp(1.75rem, 4vw, 3.25rem) clamp(1rem, 4vw, 2.5rem)',
-          boxShadow: '0 20px 60px var(--ss-hero-glow)',
+          padding: 'clamp(2rem, 5vw, 3.5rem) clamp(1.25rem, 4vw, 2.5rem)',
+          boxShadow: 'var(--shadow-low)',
           border: '1px solid var(--ss-ring)',
         }}
       >
-        {/* Playful floating sea-life, purely decorative. */}
-        <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 18, left: 22, fontSize: '1.7rem', opacity: 0.7 }}>🐠</span>
-        <span aria-hidden className="ss-float" style={{ position: 'absolute', top: 28, right: 30, fontSize: '2rem', opacity: 0.7, animationDelay: '1.2s' }}>🦈</span>
-        <span aria-hidden className="ss-float" style={{ position: 'absolute', bottom: 20, right: 64, fontSize: '1.4rem', opacity: 0.6, animationDelay: '2.1s' }}>🫧</span>
         <VStack gap={2} align="center">
           <HStack gap={1} align="center">
-            <span className="ss-float" style={{ display: 'inline-flex' }}>
-              <SwimmingFin size={30} />
-            </span>
+            <SwimmingFin size={26} />
             <Text type="label" weight="bold" color="accent">
               STUDYSHARK
             </Text>
@@ -159,16 +154,12 @@ export default function Home() {
         <Grid columns={{ minWidth: 220, max: 3 }} gap={2}>
           {features.map((f, i) => (
             <MotionItem key={f.title} index={i} style={{ display: 'flex', width: '100%' }}>
-              <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
-                <Card variant={f.variant} padding={4} width="100%">
-                  <VStack gap={1.5}>
-                    <div
-                      aria-hidden
-                      className="ss-emoji-tile"
-                      style={{ width: 44, height: 44, fontSize: '1.5rem', background: 'var(--ss-card-bg)' }}
-                    >
-                      {f.emoji}
-                    </div>
+              <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
+                <Card variant={f.variant} padding={5} width="100%">
+                  <VStack gap={2}>
+                    <IconTile color={f.color} size={44} style={{ background: 'var(--ss-card-bg)' }}>
+                      {f.icon}
+                    </IconTile>
                     <Heading level={3}>{f.title}</Heading>
                     <Text type="supporting" color="secondary">
                       {f.text}

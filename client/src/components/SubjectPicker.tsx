@@ -51,11 +51,9 @@ export default function SubjectPicker() {
       <VStack gap={5} align="center">
         <VStack gap={2} align="center">
           <HStack gap={1.5} align="center">
-            <span className="ss-float" style={{ display: 'inline-flex' }}>
-              <SwimmingFin size={34} />
-            </span>
+            <SwimmingFin size={30} />
             <Heading level={1} type="display-2" justify="center">
-              <span className="ss-gradient-text">StudyShark</span>
+              StudyShark
             </Heading>
           </HStack>
           <Heading level={2} justify="center">
@@ -80,20 +78,20 @@ export default function SubjectPicker() {
                   label={t('subject.study', { subject: s.label })}
                   onClick={() => choose(id)}
                   variant={active ? 'muted' : 'default'}
-                  padding={4}
+                  padding={5}
                   width="100%"
                 >
                   <VStack gap={2}>
                     <HStack gap={2} align="center">
                       <div
                         aria-hidden
-                        className="ss-emoji-tile"
+                        className="ss-tile"
                         style={{
-                          width: 56,
-                          height: 56,
-                          fontSize: '2rem',
-                          background: `linear-gradient(135deg, ${s.accent}2b, ${s.accent}12)`,
-                          boxShadow: `inset 0 0 0 1.5px ${s.accent}44, 0 6px 16px ${s.accent}22`,
+                          width: 52,
+                          height: 52,
+                          fontSize: '1.75rem',
+                          background: `${s.accent}14`,
+                          boxShadow: `inset 0 0 0 1px ${s.accent}33`,
                         }}
                       >
                         {s.emoji}
@@ -117,8 +115,8 @@ export default function SubjectPicker() {
                         borderRadius: 999,
                         padding: '3px 10px',
                         fontFamily: 'var(--font-family-body)',
-                        fontWeight: 700,
-                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        fontSize: '0.75rem',
                         color: s.accent,
                         background: `${s.accent}14`,
                       }}

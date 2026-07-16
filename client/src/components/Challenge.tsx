@@ -391,35 +391,18 @@ export default function Challenge() {
       <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: '0 auto' }}>
         <Card padding={5} width="100%">
           <VStack gap={3}>
-            {/* Bold shark-themed hero. */}
             <VStack gap={1.5} align="center">
-              <div
-                aria-hidden
-                className="ss-emoji-tile ss-float"
-                style={{
-                  width: 64,
-                  height: 64,
-                  fontSize: '2.25rem',
-                  background: `linear-gradient(135deg, ${accent}2b, ${accent}12)`,
-                  boxShadow: `inset 0 0 0 1.5px ${accent}44, 0 6px 16px ${accent}22`,
-                }}
-              >
-                🦈
-              </div>
               <Heading level={1} type="display-2" justify="center">
-                <span className="ss-gradient-text">{t('challenge.title')}</span>
+                {t('challenge.title')}
               </Heading>
             </VStack>
 
             {/* The rules list is the single explanation — no duplicate prose above. */}
-            <div className="ss-panel" style={{ padding: 16, borderLeft: `4px solid ${accent}` }}>
+            <div className="ss-panel" style={{ padding: 20, borderLeft: `4px solid ${accent}` }}>
               <VStack gap={1}>
-                <HStack gap={1} align="center">
-                  <span aria-hidden style={{ fontSize: '1.1rem', lineHeight: 1 }}>📋</span>
-                  <Text type="label" color="secondary">
-                    {t('challenge.howItWorks')}
-                  </Text>
-                </HStack>
+                <Text type="label" color="secondary">
+                  {t('challenge.howItWorks')}
+                </Text>
                 <ul style={{ paddingLeft: 20, margin: 0, color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
                   <li>{t('challenge.rule1')}</li>
                   <li>{t('challenge.rule2')}</li>
@@ -436,19 +419,15 @@ export default function Challenge() {
                 variant="primary"
                 size="lg"
                 label={t('challenge.startButton')}
-                icon={<span aria-hidden style={{ fontSize: '1.15rem', lineHeight: 1 }}>🦈</span>}
                 onClick={() => void startRun()}
               />
             </div>
 
             {board && board.top.length > 0 && (
               <VStack gap={1}>
-                <HStack gap={1} align="center">
-                  <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
-                  <Text type="label" color="secondary">
-                    {t('challenge.hallOfFame')}
-                  </Text>
-                </HStack>
+                <Text type="label" color="secondary">
+                  {t('challenge.hallOfFame')}
+                </Text>
                 <LeaderboardList board={board} />
               </VStack>
             )}
@@ -479,17 +458,12 @@ export default function Challenge() {
 
   if (phase === 'gameover') {
     const beatChampion = !!champion && score > champion.score;
-    // Celebratory face scales with how big the run was.
-    const resultEmoji = score >= 10 ? '🏆' : score >= 5 ? '🎉' : '🦈';
     return (
       <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: '0 auto' }}>
         <Card padding={5} width="100%">
           <VStack gap={2}>
             <VStack gap={1} align="center">
-              <span aria-hidden className="ss-float" style={{ fontSize: '3.25rem', lineHeight: 1 }}>
-                {resultEmoji}
-              </span>
-              <div ref={gameOverHeadingRef} tabIndex={-1} style={{ outline: 'none' }}>
+              <div ref={gameOverHeadingRef} tabIndex={-1}>
                 <Heading level={1} type="display-2" justify="center">
                   {t('challenge.gameOver')}
                 </Heading>
@@ -547,12 +521,9 @@ export default function Challenge() {
 
             {board && board.top.length > 0 && (
               <VStack gap={1}>
-                <HStack gap={1} align="center">
-                  <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>🏆</span>
-                  <Text type="label" color="secondary">
-                    {t('challenge.hallOfFame')}
-                  </Text>
-                </HStack>
+                <Text type="label" color="secondary">
+                  {t('challenge.hallOfFame')}
+                </Text>
                 <LeaderboardList board={board} />
               </VStack>
             )}
@@ -616,7 +587,6 @@ export default function Challenge() {
         }}
       >
         <HStack gap={1} align="center" style={{ flex: '1 1 auto', minWidth: 0 }}>
-          <span aria-hidden style={{ fontSize: '1.1rem', lineHeight: 1 }}>🦈</span>
           <Text type="label" color="secondary">
             {t('challenge.score')}
           </Text>
@@ -628,7 +598,6 @@ export default function Challenge() {
           <span
             role="timer"
             aria-label={t('challenge.timeAria', { seconds: Math.max(0, timeLeft) })}
-            className={low ? 'ss-float' : undefined}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -638,9 +607,9 @@ export default function Challenge() {
               fontFamily: 'monospace',
               fontWeight: 800,
               fontVariantNumeric: 'tabular-nums',
-              color: low ? '#d33' : 'var(--brand-accent)',
+              color: low ? 'var(--ss-error)' : 'var(--brand-accent)',
               background: low
-                ? 'color-mix(in srgb, #d33 15%, transparent)'
+                ? 'color-mix(in srgb, var(--ss-error) 15%, transparent)'
                 : 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
             }}
           >
@@ -868,7 +837,7 @@ function ChampionBadge({
 }) {
   const { t } = useLanguage();
   return (
-    <div className="ss-lift" style={{ display: 'flex', width: '100%', opacity: dim ? 0.6 : 1 }}>
+    <div className="ss-raised" style={{ display: 'flex', width: '100%', opacity: dim ? 0.6 : 1 }}>
       <Card variant="muted" padding={2} width="100%">
         <HStack gap={1.5} align="center">
           <SharkFin size={28} />

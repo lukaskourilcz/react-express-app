@@ -40,8 +40,12 @@ export default defineConfig({
             output: {
                 manualChunks: {
                     // React core in its own long-lived chunk. (The app is now MUI-free —
-                    // the old combined `mui` chunk is gone.)
-                    react: ['react', 'react-dom', 'react/jsx-runtime'],
+                    // the old combined `mui` chunk is gone.) `react-dom/client` must be
+                    // listed explicitly: the app only imports the subpath (createRoot),
+                    // and the bare `react-dom` entry alone never matches it — the
+                    // renderer was silently landing in the main app chunk and getting
+                    // re-downloaded on every deploy.
+                    react: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'],
                     router: ['react-router-dom'],
                     tanstack: ['@tanstack/react-query', '@tanstack/query-core'],
                     supabase: ['@supabase/supabase-js'],

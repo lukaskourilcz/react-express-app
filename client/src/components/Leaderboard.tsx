@@ -28,9 +28,11 @@ import {
 import { friendlyError } from '../lib/api';
 import { useLeaderboard } from '../lib/queries';
 import { useT } from '../i18n/LanguageContext';
-import { visibleCategoryOptionsFor, getCategoryLabel } from '../lib/categories';
+import { visibleCategoryOptionsFor, getCategoryLabel, onCategoryColorText } from '../lib/categories';
 import { useActiveSubject, categoriesForSubject } from '../lib/subjects';
 import ErrorRetry from './ErrorRetry';
+import { IconTile, TrophyIcon } from './ui/icons';
+import { visuallyHidden } from '../theme/MuiTheme';
 
 type Tab = 'global' | 'daily' | 'category';
 
@@ -106,11 +108,8 @@ function Leaderboard() {
     <div style={{ width: '100%', maxWidth: 880, margin: '0 auto' }}>
       <VStack gap={2} width="100%">
         <HStack gap={1.5} align="center" wrap="wrap">
-          <span aria-hidden className="ss-float" style={{ display: 'inline-flex', fontSize: '1.9rem', lineHeight: 1 }}>
-            🏆
-          </span>
           <Heading level={1} type="display-3">
-            <span className="ss-gradient-text">{t('leaderboard.title')}</span>
+            {t('leaderboard.title')}
           </Heading>
           {/* Every tab counts this platform only — make the scope visible. */}
           <span
@@ -159,11 +158,13 @@ function Leaderboard() {
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
-                    padding: '6px 14px',
+                    padding: '8px 14px',
                     borderRadius: 999,
                     fontSize: '0.8125rem',
                     fontWeight: active ? 700 : 500,
-                    color: active ? '#fff' : c.color,
+                    // Luminance-aware text on the solid chip; inactive chips keep
+                    // neutral text so light brand hues never fail contrast.
+                    color: active ? onCategoryColorText(c.value) : 'var(--color-text-primary, inherit)',
                     background: active ? c.color : `${c.color}14`,
                     border: `1px solid ${active ? c.color : 'transparent'}`,
                     transition: 'background 120ms ease, color 120ms ease',
@@ -207,19 +208,9 @@ function Leaderboard() {
         {!loading && !error && rows.length === 0 && (
           <Card variant="default" padding={6} width="100%">
             <VStack gap={2} align="center">
-              <div
-                aria-hidden
-                className="ss-emoji-tile ss-float"
-                style={{
-                  width: 64,
-                  height: 64,
-                  fontSize: '2rem',
-                  background: `linear-gradient(135deg, ${subject.accent}2b, ${subject.accent}12)`,
-                  boxShadow: `inset 0 0 0 1.5px ${subject.accent}44, 0 6px 16px ${subject.accent}22`,
-                }}
-              >
-                🦈
-              </div>
+              <IconTile color={subject.accent} size={48}>
+                <TrophyIcon size={22} />
+              </IconTile>
               <Text type="body" color="secondary" justify="center">
                 {tab === 'category'
                   ? t('leaderboard.noCategoryAttempts', { label: getCategoryLabel(category) })
@@ -233,7 +224,7 @@ function Leaderboard() {
         {hasRows && isMobile && (
           <VStack gap={1.5} width="100%">
             {rows.map((row) => (
-              <div key={row.rank} className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+              <div key={row.rank} className="ss-raised" style={{ display: 'flex', width: '100%' }}>
                 <Card variant={row.medal ? 'muted' : 'default'} padding={3} width="100%">
                   <HStack gap={2} align="center">
                     <RankMedal rank={row.rank} medal={row.medal} />
@@ -324,46 +315,53 @@ function Leaderboard() {
 // disc. Top-three discs pick up the subject accent so the podium reads at a
 // glance without a full-row highlight.
 function RankMedal({ rank, medal }: { rank: number; medal: string | null }): ReactNode {
+  // Screen readers get the placement as text in both branches; the visual disc
+  // itself stays decorative.
   if (medal) {
-    // Podium flair: each medal sits in a tinted disc glowing in its own metal —
-    // gold / silver / bronze — so the top three pop off the board.
+    // Podium: the medal sits in a quietly tinted disc — gold / silver / bronze.
     const tint = rank === 1 ? '#f5b301' : rank === 2 ? '#9aa4b2' : '#cd7f32';
     return (
-      <span
-        aria-label={`#${rank}`}
-        style={{
-          display: 'inline-grid',
-          placeItems: 'center',
-          width: 38,
-          height: 38,
-          borderRadius: 999,
-          fontSize: '1.35rem',
-          lineHeight: 1,
-          background: `linear-gradient(135deg, ${tint}30, ${tint}12)`,
-          boxShadow: `inset 0 0 0 1.5px ${tint}66, 0 4px 14px ${tint}40`,
-        }}
-      >
-        {medal}
+      <span style={{ display: 'inline-flex' }}>
+        <span style={visuallyHidden}>#{rank}</span>
+        <span
+          aria-hidden
+          style={{
+            display: 'inline-grid',
+            placeItems: 'center',
+            width: 38,
+            height: 38,
+            borderRadius: 999,
+            fontSize: '1.25rem',
+            lineHeight: 1,
+            background: `${tint}1f`,
+            boxShadow: `inset 0 0 0 1px ${tint}55`,
+          }}
+        >
+          {medal}
+        </span>
       </span>
     );
   }
   return (
-    <span
-      aria-hidden
-      style={{
-        display: 'inline-grid',
-        placeItems: 'center',
-        minWidth: 28,
-        height: 28,
-        padding: '0 6px',
-        borderRadius: 999,
-        fontSize: '0.8125rem',
-        fontWeight: 700,
-        color: 'var(--astryx-color-text-secondary, #64748b)',
-        background: 'var(--astryx-color-surface-muted, rgba(100,116,139,0.12))',
-      }}
-    >
-      {rank}
+    <span style={{ display: 'inline-flex' }}>
+      <span style={visuallyHidden}>#{rank}</span>
+      <span
+        aria-hidden
+        style={{
+          display: 'inline-grid',
+          placeItems: 'center',
+          minWidth: 28,
+          height: 28,
+          padding: '0 6px',
+          borderRadius: 999,
+          fontSize: '0.8125rem',
+          fontWeight: 700,
+          color: 'var(--astryx-color-text-secondary, #64748b)',
+          background: 'var(--astryx-color-surface-muted, rgba(100,116,139,0.12))',
+        }}
+      >
+        {rank}
+      </span>
     </span>
   );
 }

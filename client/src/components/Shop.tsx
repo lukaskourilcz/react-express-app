@@ -7,7 +7,7 @@
 // three sections of purchasable items rendered as Cards in a responsive Grid.
 // MUI Snackbar/Alert is kept for the toast behaviour.
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { AppToast } from './ui/AppToast';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -42,6 +42,7 @@ import {
 import { getCategoryLabel } from '../lib/categories';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useActiveSubject } from '../lib/subjects';
+import { IconTile, CompassIcon, BoltIcon, SparkleIcon } from './ui/icons';
 
 const TokenIcon = ({ size = 24 }: { size?: number }) => (
   <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -61,24 +62,21 @@ const TokenIcon = ({ size = 24 }: { size?: number }) => (
   </svg>
 );
 
-// A tinted rounded tile holding the product/emoji, coloured by the product's
-// accent (path topics) or the brand accent otherwise — mirrors SubjectPicker.
+// A tinted rounded tile holding the product's emoji artwork, coloured by the
+// product's accent (path topics) or the brand accent otherwise. Product emojis
+// are item art (data), not chrome — they stay.
 function EmojiTile({ emoji, color, size = 46 }: { emoji: string; color?: string; size?: number }) {
   const accent = color ?? 'var(--brand-accent)';
   return (
     <div
       aria-hidden
+      className="ss-tile"
       style={{
         width: size,
         height: size,
-        borderRadius: 14,
-        display: 'grid',
-        placeItems: 'center',
-        fontSize: size * 0.55,
-        lineHeight: 1,
-        flexShrink: 0,
-        background: `color-mix(in srgb, ${accent} 15%, transparent)`,
-        boxShadow: `inset 0 0 0 1.5px color-mix(in srgb, ${accent} 40%, transparent)`,
+        fontSize: size * 0.5,
+        background: `color-mix(in srgb, ${accent} 12%, transparent)`,
+        boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${accent} 30%, transparent)`,
       }}
     >
       {emoji}
@@ -89,10 +87,10 @@ function EmojiTile({ emoji, color, size = 46 }: { emoji: string; color?: string;
 // Sections ordered by value to the learner: functional unlocks first (paths),
 // then boosters, then cosmetics — with rings + flairs merged into one "Style"
 // section so the shop reads as three clear ideas instead of four lists.
-const SECTIONS: { key: TranslationKey; kinds: ProductKind[]; emoji: string }[] = [
-  { key: 'shop.section.paths', kinds: ['path'], emoji: '🧭' },
-  { key: 'shop.section.boosters', kinds: ['booster'], emoji: '⚡' },
-  { key: 'shop.section.style', kinds: ['ring', 'flair'], emoji: '✨' },
+const SECTIONS: { key: TranslationKey; kinds: ProductKind[]; icon: ReactNode }[] = [
+  { key: 'shop.section.paths', kinds: ['path'], icon: <CompassIcon size={16} /> },
+  { key: 'shop.section.boosters', kinds: ['booster'], icon: <BoltIcon size={16} /> },
+  { key: 'shop.section.style', kinds: ['ring', 'flair'], icon: <SparkleIcon size={16} /> },
 ];
 
 function Shop() {
@@ -133,27 +131,19 @@ function Shop() {
         <Text type="label" weight="bold" color="accent">
           {t('shop.kicker')}
         </Text>
-        <HStack gap={1.5} align="center" wrap="wrap">
-          <span aria-hidden className="ss-float" style={{ display: 'inline-flex', fontSize: '1.9rem', lineHeight: 1 }}>
-            🛒
-          </span>
-          <Heading level={1} type="display-3">
-            <span className="ss-gradient-text">{t('shop.title')}</span>
-          </Heading>
-        </HStack>
+        <Heading level={1} type="display-3">
+          {t('shop.title')}
+        </Heading>
         <Text type="large" color="secondary">
           {t('shop.subtitle')}
         </Text>
       </VStack>
 
-      {/* Wallet: the accent-tinted balance is the anchor of the page — a big,
-          bold token count with a gently bobbing coin to make spending feel fun. */}
-      <div className="ss-lift ss-pop" style={{ display: 'flex', width: '100%' }}>
-        <Card variant="muted" padding={4} width="100%">
+      {/* Wallet: the accent-tinted balance is the anchor of the page. */}
+      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
+        <Card variant="muted" padding={5} width="100%">
           <HStack gap={3} align="center" wrap="wrap">
-            <span className="ss-float" style={{ display: 'inline-flex' }}>
-              <TokenIcon size={52} />
-            </span>
+            <TokenIcon size={48} />
             <VStack gap={0.5}>
               <Text type="label" weight="bold" color="secondary">
                 {t('shop.balanceLabel')}
@@ -178,17 +168,11 @@ function Shop() {
         </Card>
       </div>
 
-      {SECTIONS.map(({ key, kinds, emoji }) => (
+      {SECTIONS.map(({ key, kinds, icon }) => (
         <VStack key={key} gap={2}>
           <VStack gap={0.5}>
             <HStack gap={1.5} align="center">
-              <span
-                aria-hidden
-                className="ss-emoji-tile"
-                style={{ width: 34, height: 34, fontSize: '1.15rem', background: 'var(--ss-card-bg)' }}
-              >
-                {emoji}
-              </span>
+              <IconTile size={32}>{icon}</IconTile>
               <Heading level={3}>{t(key)}</Heading>
             </HStack>
             {kinds.includes('path') && (
@@ -315,7 +299,7 @@ function ProductCard({ product, price, owned, equipped, charges, canAfford, onBu
   }
 
   return (
-    <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+    <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
       <Card padding={3} width="100%">
         <VStack gap={2} height="100%" justify="between">
           <HStack gap={1.5} align="center">
