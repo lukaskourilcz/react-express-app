@@ -29,6 +29,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react": "^4.2.1",
+    "purgecss": "^7.0.2",
     "rollup-plugin-visualizer": "^7.0.1",
     "typescript": "^5.3.3",
     "vite": "^5.0.12"

@@ -51,6 +51,7 @@ import { useGameConfig } from '../lib/gameConfig';
 import { ReportDialog } from './ReportDialog';
 import { capture } from '../lib/analytics';
 import { MotionPop, MotionItem } from '../lib/motion';
+import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import './Quiz.css';
 
 type QuizMode = 'standard' | 'daily';
@@ -766,17 +767,23 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
             {/* Count + difficulty */}
             <Grid columns={{ minWidth: 240, max: 2 }} gap={3}>
-              <VStack gap={1.5} as="fieldset">
-                <Text as="label" type="label" color="secondary">
+              <VStack gap={1.5}>
+                <Text as="label" type="label" color="secondary" id="quiz-count-label">
                   {t('quiz.questionsLegend')}
                 </Text>
-                <HStack gap={1} wrap="wrap">
-                  {config.quiz.countOptions.map((count) => (
-                    <SelectableCard
+                <RadioCardGroup
+                  value={questionCount}
+                  onChange={(v) => setQuestionCount(v as number)}
+                  labelledBy="quiz-count-label"
+                  orientation="horizontal"
+                  style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}
+                >
+                  {config.quiz.countOptions.map((count, i) => (
+                    <RadioCard
                       key={count}
+                      value={count}
+                      index={i}
                       label={t('quiz.countQuestionsAria', { count })}
-                      isSelected={questionCount === count}
-                      onChange={() => setQuestionCount(count)}
                       padding={3}
                       width={58}
                     >
@@ -785,37 +792,44 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                           {count}
                         </Text>
                       </div>
-                    </SelectableCard>
+                    </RadioCard>
                   ))}
-                </HStack>
+                </RadioCardGroup>
               </VStack>
 
-              <VStack gap={1.5} as="fieldset">
-                <Text as="label" type="label" color="secondary">
+              <VStack gap={1.5}>
+                <Text as="label" type="label" color="secondary" id="quiz-difficulty-label">
                   {t('quiz.difficulty')}
                 </Text>
-                <HStack gap={1} wrap="wrap">
-                  {DIFFICULTY_VALUES.map((value) => {
+                <RadioCardGroup
+                  value={difficultyMode}
+                  onChange={(v) => setDifficultyMode(v as DifficultyMode)}
+                  labelledBy="quiz-difficulty-label"
+                  orientation="horizontal"
+                  style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}
+                >
+                  {DIFFICULTY_VALUES.map((value, i) => {
                     const label = t(`difficulty.${value}` as TranslationKey);
                     const tip = t(`difficulty.${value}.tip` as TranslationKey);
                     return (
                       <Tooltip key={value} content={tip} placement="above">
                         <span style={{ display: 'inline-flex' }}>
-                          <SelectableCard
+                          <RadioCard
+                            value={value}
+                            index={i}
                             label={t('quiz.difficultyAria', { label })}
-                            isSelected={difficultyMode === value}
-                            onChange={() => setDifficultyMode(value)}
                             padding={3}
+                            width="auto"
                           >
                             <Text type="body" size="sm" weight={difficultyMode === value ? 'semibold' : 'medium'}>
                               {label}
                             </Text>
-                          </SelectableCard>
+                          </RadioCard>
                         </span>
                       </Tooltip>
                     );
                   })}
-                </HStack>
+                </RadioCardGroup>
               </VStack>
             </Grid>
 
@@ -1142,24 +1156,20 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               )}
             </div>
 
-            {/* Answer options as SelectableCards. Raise the anchored answers a
-                little off the wave on phones so they sit mid-lower screen. */}
-            <div
-              role="radiogroup"
-              aria-labelledby={`question-text-${currentQuestion.id}`}
+            {/* Answer options as radio cards (one Tab stop, arrow keys move +
+                select). Raised off the wave on phones so they sit mid-lower
+                screen. */}
+            <RadioCardGroup
+              value={answers[currentQuestion.id] ?? null}
+              onChange={(v) => handleAnswer(currentQuestion.id, v as number)}
+              labelledBy={`question-text-${currentQuestion.id}`}
               style={{ flexShrink: 0, marginTop: 'auto' }}
             >
               <VStack gap={1}>
                 {currentQuestion.options.map((option, index) => {
                   const isSelected = answers[currentQuestion.id] === index;
                   return (
-                    <SelectableCard
-                      key={index}
-                      label={option}
-                      isSelected={isSelected}
-                      onChange={() => handleAnswer(currentQuestion.id, index)}
-                      padding={2}
-                    >
+                    <RadioCard key={index} value={index} index={index} label={option} padding={2}>
                       <HStack gap={2} align="center">
                         <span
                           aria-hidden
@@ -1182,11 +1192,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                           {option}
                         </Text>
                       </HStack>
-                    </SelectableCard>
+                    </RadioCard>
                   );
                 })}
               </VStack>
-            </div>
+            </RadioCardGroup>
 
             <div style={{ marginTop: 8, flexShrink: 0 }}>
               <Text type="supporting" size="xsm" color="secondary">

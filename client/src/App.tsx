@@ -225,6 +225,7 @@ function App() {
   const config = useGameConfig();
   const [quizActive, setQuizActive] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
   const activeSubject = useActiveSubject();
   const { mode, toggle } = useColorMode();
   const [settings, updateSettings] = useSettings();
@@ -237,6 +238,47 @@ function App() {
   // Remember the learner's current rank on load so we don't re-celebrate a
   // rank-up earned in a previous session.
   useEffect(() => primeRankMarker(), []);
+
+  // The drawer is modal while open: focus moves in, Tab cycles inside, Escape
+  // closes, and focus returns to whatever opened it (the hamburger). Every
+  // other overlay gets this from Astryx's Dialog; the drawer is hand-rolled
+  // for the slide-in layout, so it implements the same contract here.
+  useEffect(() => {
+    if (!mobileNavOpen) return;
+    const panel = drawerRef.current;
+    if (!panel) return;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusables = () =>
+      Array.from(
+        panel.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'),
+      ).filter((el) => el.offsetParent !== null);
+    (focusables()[0] ?? panel).focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setMobileNavOpen(false);
+        return;
+      }
+      if (e.key !== 'Tab') return;
+      const list = focusables();
+      if (list.length === 0) return;
+      const first = list[0];
+      const last = list[list.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || active === panel)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      opener?.focus();
+    };
+  }, [mobileNavOpen]);
 
   // Tie analytics events to the signed-in learner (and drop the identity on
   // sign-out). No-op unless PostHog is configured.
@@ -461,8 +503,12 @@ function App() {
           <div className="ss-show-mobile">
             <div className="ss-drawer-backdrop" onClick={() => setMobileNavOpen(false)} />
             <div
+              ref={drawerRef}
               className="ss-drawer-panel"
-              role="presentation"
+              role="dialog"
+              aria-modal="true"
+              aria-label={t('nav.menuTitle')}
+              tabIndex={-1}
               onClick={() => setMobileNavOpen(false)}
             >
               {/* Drawer header shows the platform the learner is on, and tapping
