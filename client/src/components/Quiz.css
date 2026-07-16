@@ -1,25 +1,10 @@
-.quiz-card {
-  margin-bottom: 0;
-  /* Let the MUI Card/Paper theme paint the background so it stays correct in
-     both light and dark mode. (The --mui-palette-* vars are not emitted under
-     MUI v5's createTheme, so an explicit background here would force white.) */
-}
-
-.quiz-card-content {
-  padding: clamp(1.25rem, 4vw, 1.75rem);
-}
+/* Quiz view styles — only the classes Quiz.tsx actually renders. */
 
 .quiz-question-text {
   font-size: clamp(0.95rem, 3vw, 1rem);
   margin-bottom: 1.25rem;
   font-weight: 500;
   line-height: 1.6;
-}
-
-.quiz-options-container {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
 }
 
 .quiz-result-card {
@@ -33,31 +18,11 @@
   margin-bottom: 0.5rem;
 }
 
-.quiz-result-item {
-  padding: clamp(1rem, 3vw, 1.25rem) clamp(1rem, 3vw, 1.5rem);
-  margin-bottom: 0.75rem;
-  border-radius: 8px;
-  border: 1px solid;
-  border-color: var(--mui-palette-divider, rgba(128, 128, 128, 0.25));
-  /* No explicit background: the .correct/.incorrect overlays below paint their
-     own tint, and the neutral case shows the themed card behind it. */
-}
-
-.quiz-result-item.correct {
-  background-color: rgba(22, 163, 74, 0.06);
-  border-left: 3px solid #16a34a;
-}
-
-.quiz-result-item.incorrect {
-  background-color: rgba(220, 38, 38, 0.06);
-  border-left: 3px solid #dc2626;
-}
-
 .quiz-review-header {
   font-weight: 600;
   margin-top: 2.5rem;
   margin-bottom: 1rem;
   font-size: clamp(1rem, 4vw, 1.1rem);
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--mui-palette-divider, rgba(128, 128, 128, 0.25));
+  border-bottom: 1px solid var(--color-border, rgba(128, 128, 128, 0.25));
 }
