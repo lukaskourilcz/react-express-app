@@ -13,7 +13,7 @@ import { preferredLanguageOf } from './lib/languagePref';
 import { preferredTrackOf } from './lib/trackPref';
 import { setTrackValue } from './lib/tracks';
 import type { TranslationKey } from './i18n/translations';
-import { useGameConfig, type GameConfig } from './lib/gameConfig';
+import { useGameConfig, localizedDevTips, type GameConfig } from './lib/gameConfig';
 import { primeRankMarker } from './lib/xp';
 import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
@@ -145,7 +145,7 @@ const NAV_ITEMS: {
 ];
 
 const RouteLoader = () => {
-  const t = useT();
+  const { t, lang } = useLanguage();
   const config = useGameConfig();
   // Show nothing for the first beat: most lazy chunks resolve in well under
   // 200ms (or are already cached), and flashing a spinner for that instant
@@ -156,7 +156,7 @@ const RouteLoader = () => {
     return () => window.clearTimeout(id);
   }, []);
   if (!visible) return null;
-  return <LoadingScreen label={t('common.loading')} size={28} tips={config.devTips} sx={{ minHeight: 'auto', py: 6 }} />;
+  return <LoadingScreen label={t('common.loading')} size={28} tips={localizedDevTips(config.devTips, lang)} sx={{ minHeight: 'auto', py: 6 }} />;
 };
 
 // Compact active-subject indicator in the header; tapping it opens the subject

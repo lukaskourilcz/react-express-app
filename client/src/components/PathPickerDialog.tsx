@@ -15,7 +15,8 @@ import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
 import { SelectableCard } from '@astryxdesign/core/SelectableCard';
-import { tracksForActiveSubject, TRACK_ORDER, type Track } from '../lib/tracks';
+import { trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tracks';
+import { useSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
 
 export default function PathPickerDialog({
@@ -30,10 +31,10 @@ export default function PathPickerDialog({
   onChoose: (track: Track) => void;
 }) {
   const t = useT();
+  const [subject] = useSubject();
   // Track which option is visually highlighted; selecting a card reports the
   // choice up to the parent (which applies + closes).
   const [active, setActive] = useState<Track>(current);
-  const tracks = tracksForActiveSubject();
 
   useEffect(() => {
     if (open) setActive(current);
@@ -61,7 +62,7 @@ export default function PathPickerDialog({
           return (
             <SelectableCard
               key={tk}
-              label={tracks[tk].label}
+              label={t(trackLabelKey(subject, tk))}
               isSelected={selected}
               variant={selected ? 'muted' : 'default'}
               width="100%"
@@ -72,11 +73,11 @@ export default function PathPickerDialog({
             >
               <VStack gap={0.5}>
                 <HStack gap={1} align="center" justify="between">
-                  <Heading level={4}>{tracks[tk].label}</Heading>
+                  <Heading level={4}>{t(trackLabelKey(subject, tk))}</Heading>
                   {tk === current && <Badge variant="cyan" label={t('home.pathCurrent')} />}
                 </HStack>
                 <Text type="supporting" color="secondary">
-                  {tracks[tk].blurb}
+                  {t(trackBlurbKey(subject, tk))}
                 </Text>
               </VStack>
             </SelectableCard>

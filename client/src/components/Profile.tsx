@@ -24,8 +24,8 @@ import {
   unlockExtraTopics,
   pushProgressToServer,
 } from '../lib/roadmap';
-import { useTrack, trackStarterTopics, rankLabelFor, tracksForActiveSubject, TRACK_ORDER, type Track } from '../lib/tracks';
-import { getCategoryHexColor, getCategoryLabel, onCategoryColorText } from '../lib/categories';
+import { useTrack, trackStarterTopics, rankLabelKeyFor, trackLabelKey, TRACK_ORDER, type Track } from '../lib/tracks';
+import { getCategoryHexColor, categoryLabelKey, onCategoryColorText } from '../lib/categories';
 import { useQuestXp, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp, levelForXp, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
@@ -397,9 +397,12 @@ function CareerCard() {
   const totalXp = learningXp + questXp;
   const info = levelForXp(totalXp);
   // Subject-aware rank label ("Junior Full-Stack Developer" for Web Dev,
-  // "Junior Explorer" for Geography, "Club Player" for Chess, …).
-  const { title, emoji } = rankLabelFor(info.rank, track);
-  const nextTitle = info.next ? rankLabelFor(info.next, track).title : null;
+  // "Junior Explorer" for Geography, "Club Player" for Chess, …), localized.
+  const rankKeys = rankLabelKeyFor(info.rank, track);
+  const title = t(rankKeys.key, rankKeys.vars);
+  const emoji = rankKeys.emoji;
+  const nextKeys = info.next ? rankLabelKeyFor(info.next, track) : null;
+  const nextTitle = nextKeys ? t(nextKeys.key, nextKeys.vars) : null;
   const nf = (n: number) => n.toLocaleString();
   const nextLabel = info.isMax
     ? t('profile.maxRank')
@@ -466,6 +469,7 @@ function CareerCard() {
 function LearningTrackCard() {
   const t = useT();
   const navigate = useNavigate();
+  const subject = useActiveSubject();
   const [track, setTrack] = useTrack();
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
@@ -482,7 +486,7 @@ function LearningTrackCard() {
     unlockExtraTopics(trackStarterTopics(target));
     // Best-effort: persist the new unlocks to the account.
     pushProgressToServer().catch(() => {});
-    setSnack(t('profile.trackSet', { label: tracksForActiveSubject()[target].label }));
+    setSnack(t('profile.trackSet', { label: t(trackLabelKey(subject.id, target)) }));
   };
 
   return (
@@ -501,7 +505,7 @@ function LearningTrackCard() {
           onChange={applyTrack}
         >
           {TRACK_ORDER.map((tk) => (
-            <ToggleButton key={tk} value={tk} label={tracksForActiveSubject()[tk].label} />
+            <ToggleButton key={tk} value={tk} label={t(trackLabelKey(subject.id, tk))} />
           ))}
         </ToggleButtonGroup>
 
@@ -530,7 +534,7 @@ function LearningTrackCard() {
                     color: unlocked ? onCategoryColorText(topic) : 'var(--color-text-secondary)',
                   }}
                 >
-                  {getCategoryLabel(topic)}
+                  {t(categoryLabelKey(topic))}
                 </button>
               );
             })}

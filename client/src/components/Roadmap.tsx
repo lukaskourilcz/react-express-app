@@ -53,7 +53,7 @@ import { fetchChallengeBatch } from '../lib/challengeApi';
 import { apiFetch } from '../lib/api';
 import { awardLearningOutcome, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp } from '../lib/leveling';
-import { getCategoryHexColor, getCategoryLabel, onCategoryColorText } from '../lib/categories';
+import { getCategoryHexColor, categoryLabelKey, onCategoryColorText } from '../lib/categories';
 import { BRAND } from '../theme/MuiTheme';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
@@ -358,7 +358,7 @@ function Roadmap() {
       if (added.length === 0) {
         setUnlockSnack(t('roadmap.skillCheckNoneAdded'));
       } else {
-        const labels = added.map(getCategoryLabel).join(', ');
+        const labels = added.map((c) => t(categoryLabelKey(c))).join(', ');
         setUnlockSnack(t('roadmap.skillCheckUnlocked', { topics: labels }));
       }
       // Persist to the user's account so unlocks follow them across devices.
@@ -584,7 +584,7 @@ function Roadmap() {
               <span className="rm-topic-glyph">
                 <CategoryGlyph category={value} color={color} size={13} />
               </span>
-              {getCategoryLabel(value)}
+              {t(categoryLabelKey(value))}
             </button>
           );
         })}
@@ -638,7 +638,7 @@ function Roadmap() {
           <div style={{ marginBottom: 24 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
               <Text type="supporting" color="secondary" weight="bold">
-                {getCategoryLabel(topic)} · {t('roadmap.partLabel', { n: safePart })}
+                {t(categoryLabelKey(topic))} · {t('roadmap.partLabel', { n: safePart })}
               </Text>
               <Text type="supporting" color="secondary">
                 {t('roadmap.progress', { done: partDone, total: range?.size ?? 0 })}
@@ -1367,7 +1367,7 @@ function SkillCheckRunner({
     try {
       const batch = await fetchChallengeBatch({ lang });
       const trimmed = batch.questions.slice(0, ASSESSMENT_QUESTION_COUNT);
-      if (trimmed.length === 0) throw new Error('No questions available');
+      if (trimmed.length === 0) throw new Error(t('challenge.noQuestions'));
       await holdLoadingScreen(startedAt);
       setSessionId(batch.sessionId);
       setQuestions(trimmed);
@@ -1378,7 +1378,7 @@ function SkillCheckRunner({
       setError(friendlyError(err));
       setPhase('error');
     }
-  }, [lang]);
+  }, [lang, t]);
 
   const total = questions.length;
   const current = questions[qIndex];
@@ -1512,9 +1512,9 @@ function SkillCheckRunner({
             display: 'inline-block',
           }}
         >
-          {getCategoryLabel(current.category)}
+          {t(categoryLabelKey(current.category))}
         </span>
-        <Badge variant="neutral" label={`Lvl ${current.difficulty}`} />
+        <Badge variant="neutral" label={t('common.levelShort', { n: current.difficulty })} />
         <div style={{ marginLeft: 'auto' }}>
           <Text type="supporting" color="secondary">
             {t('roadmap.skillCheckQuestion', { current: qIndex + 1, total })}

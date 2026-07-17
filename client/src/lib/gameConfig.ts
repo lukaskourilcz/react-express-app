@@ -61,6 +61,33 @@ const DEFAULT_DEV_TIPS = [
   'Consistency compounds.',
 ];
 
+// Czech twins of the built-in tips, index-aligned with DEFAULT_DEV_TIPS.
+const DEFAULT_DEV_TIPS_CS = [
+  'Nezapomeň programovat.',
+  'Stavět projekty je víc než talent.',
+  'Přečti si chybovou hlášku — a pak ještě jednou.',
+  'Vydávej po malých kouscích a často.',
+  'Pojmenovávej věci tak, jako by po tobě kód četl zase ty.',
+  'Hotové je lepší než dokonalé.',
+  'Commituj brzy, commituj často.',
+  'Nejlepší debugger je pořádně se vyspat.',
+  'Napiš test, který sis přál mít.',
+  'Pravidelnost se sčítá.',
+];
+
+const TIP_CS = new Map(DEFAULT_DEV_TIPS.map((tip, i) => [tip, DEFAULT_DEV_TIPS_CS[i]]));
+
+/**
+ * The tips list to show on loading screens: built-in default tips swap to
+ * their Czech twins when the UI language is Czech; dev-customized tips pass
+ * through untouched (per tip, so a partially customized list keeps its
+ * remaining defaults translated).
+ */
+export function localizedDevTips(tips: string[], lang: string): string[] {
+  if (lang !== 'cs') return tips;
+  return tips.map((tip) => TIP_CS.get(tip) ?? tip);
+}
+
 export const DEFAULT_CONFIG: GameConfig = {
   quiz: {
     defaultCount: 10,

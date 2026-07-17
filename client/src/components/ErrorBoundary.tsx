@@ -3,6 +3,9 @@ import { Button } from '@astryxdesign/core/Button';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { reportError } from '../lib/sentry';
+// The boundary may catch a crash inside the LanguageProvider itself, so it
+// uses the non-React translateStatic (shared dictionaries, no context).
+import { translateStatic } from '../i18n/LanguageContext';
 
 interface Props {
   children: ReactNode;
@@ -55,17 +58,17 @@ export class ErrorBoundary extends Component<Props, State> {
         >
           <div style={{ marginBottom: 8 }}>
             <Heading level={3} justify="center">
-              Something went wrong
+              {translateStatic('error.somethingWrong')}
             </Heading>
           </div>
           <div style={{ marginBottom: 24 }}>
             <Text type="body" color="secondary">
-              The page hit an unexpected error. Reloading usually fixes it.
+              {translateStatic('error.boundaryBody')}
             </Text>
           </div>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-            <Button onClick={this.handleReset} variant="secondary" label="Try again" />
-            <Button onClick={() => window.location.reload()} variant="primary" label="Reload page" />
+            <Button onClick={this.handleReset} variant="secondary" label={translateStatic('error.tryAgain')} />
+            <Button onClick={() => window.location.reload()} variant="primary" label={translateStatic('error.reloadPage')} />
           </div>
         </div>
       </div>

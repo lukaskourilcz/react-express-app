@@ -31,12 +31,12 @@ import {
   syncProgressWithServer,
 } from '../lib/roadmap';
 import { useRoadmapStructure } from '../lib/queries';
-import { useTrack, isTopicInTrack, specializationForTrack, useActiveTracks, TOPIC_DETAIL, TRACK_ORDER, tracksForSubject } from '../lib/tracks';
-import { getCategoryHexColor, getCategoryLabel } from '../lib/categories';
-import { useSubject, useActiveSubject, type SubjectId } from '../lib/subjects';
+import { useTrack, isTopicInTrack, rankLabelKeyFor, trackLabelKey, trackBlurbKey, stageTitleKey, localizedTopicDetail, TRACK_ORDER, tracksForSubject } from '../lib/tracks';
+import { getCategoryHexColor, categoryLabelKey } from '../lib/categories';
+import { useSubject, subjectNameKey, type SubjectId } from '../lib/subjects';
 import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
-import { levelForXp, displayTitle, getCareerRanks } from '../lib/leveling';
+import { levelForXp, getCareerRanks } from '../lib/leveling';
 import RoadmapTree from './RoadmapTree';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
@@ -83,23 +83,23 @@ function webdevPillars(t: TFn): Pillar[] {
 
 // Every other subject derives its pillars from its "fullstack" track: each
 // stage becomes a pillar, each topic an area, labelled from the shared category
-// / topic-detail metadata — no per-subject translation keys required.
-function derivedPillars(subject: SubjectId): Pillar[] {
+// / topic-detail translation keys.
+function derivedPillars(subject: SubjectId, t: TFn): Pillar[] {
   const full = tracksForSubject(subject).fullstack;
   return full.stages.map((stage, i) => ({
     id: `stage-${i}`,
-    title: stage.title,
+    title: t(stageTitleKey(subject, 'fullstack', i)),
     intro: '',
     areas: stage.topics.map((topic) => ({
       topic,
-      label: getCategoryLabel(topic),
-      blurb: TOPIC_DETAIL[topic] ?? '',
+      label: t(categoryLabelKey(topic)),
+      blurb: localizedTopicDetail(t, topic) ?? '',
     })),
   }));
 }
 
 function buildPillars(subject: SubjectId, t: TFn): Pillar[] {
-  return subject === 'webdev' ? webdevPillars(t) : derivedPillars(subject);
+  return subject === 'webdev' ? webdevPillars(t) : derivedPillars(subject, t);
 }
 
 // The honest part: things a quiz app genuinely cannot give you. Seniority is
@@ -127,16 +127,15 @@ export default function CareerRoadmap() {
   const [track, setTrack] = useTrack();
   // Subject scopes the tracks, pillars and (web-dev-only) career framing.
   const [subject] = useSubject();
-  const tracks = useActiveTracks();
   const isWebdev = subject === 'webdev';
-  const sdef = useActiveSubject();
   const pillars = useMemo(() => buildPillars(subject, t), [subject, t]);
 
   // Header copy: Web Dev keeps its curated career framing; other subjects get a
   // clean, subject-branded header (the fullstack track blurb is the pitch).
-  const kicker = isWebdev ? t('roadmapPage.kicker') : `${sdef.label} roadmap`;
-  const pageTitle = isWebdev ? t('roadmapPage.title') : `Your ${sdef.label} roadmap`;
-  const headerBody = isWebdev ? t('careerRoadmap.headerBody') : tracks.fullstack.blurb;
+  const subjectName = t(subjectNameKey(subject));
+  const kicker = isWebdev ? t('roadmapPage.kicker') : t('careerRoadmap.subjectKicker', { subject: subjectName });
+  const pageTitle = isWebdev ? t('roadmapPage.title') : t('careerRoadmap.subjectTitle', { subject: subjectName });
+  const headerBody = isWebdev ? t('careerRoadmap.headerBody') : t(trackBlurbKey(subject, 'fullstack'));
 
   // Sync account progress so the percentages are accurate even on a fresh device.
   useEffect(() => {
@@ -161,8 +160,8 @@ export default function CareerRoadmap() {
   }, [progress, structure, track, pillars]);
 
   const info = levelForXp(totalXp);
-  const spec = specializationForTrack(track);
-  const rankTitle = displayTitle(info.rank.title, spec);
+  const rankKeys = rankLabelKeyFor(info.rank, track);
+  const rankTitle = t(rankKeys.key, rankKeys.vars);
   const seniorRank = getCareerRanks().find((r) => r.title === SENIOR_RANK_TITLE);
   const reachedSenior = seniorRank ? totalXp >= seniorRank.minXp : false;
   const xpToSenior = seniorRank ? Math.max(0, seniorRank.minXp - totalXp) : 0;
@@ -205,12 +204,12 @@ export default function CareerRoadmap() {
               label={t('careerRoadmap.chooseTrack')}
             >
               {TRACK_ORDER.map((tk) => (
-                <SegmentedControlItem key={tk} value={tk} label={tracks[tk].label} />
+                <SegmentedControlItem key={tk} value={tk} label={t(trackLabelKey(subject, tk))} />
               ))}
             </SegmentedControl>
           </div>
           <Text type="supporting" color="secondary" justify="center">
-            {tracks[track].blurb}
+            {t(trackBlurbKey(subject, track))}
           </Text>
         </VStack>
 
@@ -223,7 +222,7 @@ export default function CareerRoadmap() {
               <Text type="label" color="secondary">
                 {t('careerRoadmap.progressTitle')}
               </Text>
-              <Badge variant="neutral" label={tracks[track].label} />
+              <Badge variant="neutral" label={t(trackLabelKey(subject, track))} />
             </HStack>
 
             <HStack gap={2} align="end" wrap="wrap">
@@ -235,7 +234,7 @@ export default function CareerRoadmap() {
                   {t('careerRoadmap.progressCaption', {
                     passed: overall.passed,
                     total: overall.total || '…',
-                    track: tracks[track].label,
+                    track: t(trackLabelKey(subject, track)),
                   })}
                 </Text>
               </div>

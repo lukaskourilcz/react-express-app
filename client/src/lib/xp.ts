@@ -21,7 +21,8 @@ import {
   PRACTICE_XP,
   type LevelInfo,
 } from './leveling';
-import { rankLabelFor, getTrack } from './tracks';
+import { rankLabelKeyFor, getTrack } from './tracks';
+import type { TranslationKey } from '../i18n/translations';
 import { awardTokens, tokensFromXp } from './tokens';
 import { consumeDoubleXpCharge } from './shop';
 import { getSubject, useSubject, isSubjectId, topicSetForSubject, type SubjectId } from './subjects';
@@ -115,7 +116,9 @@ export function useLevelInfo(): LevelInfo {
 
 export type XpToast =
   | { kind: 'gain'; amount: number; source: 'learn' | 'quiz' | 'practice' }
-  | { kind: 'rankup'; title: string; level: number };
+  // Rank titles are carried as an i18n key + vars (not a composed string) so
+  // the toaster renders them in the user's current language.
+  | { kind: 'rankup'; titleKey: TranslationKey; titleVars: Record<string, string>; level: number };
 
 const toastListeners = new Set<(t: XpToast) => void>();
 
@@ -156,8 +159,8 @@ function reconcileRank(announce: boolean): LevelInfo {
   if (info.level > seen) {
     writeRankSeen(subject, info.level);
     if (announce) {
-      const title = rankLabelFor(info.rank, getTrack()).title;
-      emitToast({ kind: 'rankup', title, level: info.level });
+      const { key, vars } = rankLabelKeyFor(info.rank, getTrack());
+      emitToast({ kind: 'rankup', titleKey: key, titleVars: vars, level: info.level });
     }
   } else if (info.level < seen) {
     writeRankSeen(subject, info.level); // keep the marker honest after a revision

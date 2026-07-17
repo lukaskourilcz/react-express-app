@@ -19,7 +19,7 @@ import { useAuth, getUserProfile } from '../lib/auth';
 import { useQuestXp } from '../lib/xp';
 import { useRoadmapProgress } from '../lib/roadmap';
 import { computeLearningXp, levelForXp } from '../lib/leveling';
-import { useTrack, rankLabelFor } from '../lib/tracks';
+import { useTrack, rankLabelKeyFor } from '../lib/tracks';
 import { useEquippedRingColor } from '../lib/shop';
 import { useActiveSubject, topicSetForSubject } from '../lib/subjects';
 
@@ -67,9 +67,10 @@ function AuthButton() {
   const ringColor = useEquippedRingColor();
   const [track] = useTrack();
   const levelInfo = levelForXp(totalXp);
-  const { title: rankTitle } = rankLabelFor(levelInfo.rank, track);
   const navigate = useNavigate();
   const t = useT();
+  const rankKeys = rankLabelKeyFor(levelInfo.rank, track);
+  const rankTitle = t(rankKeys.key, rankKeys.vars);
   const [menuOpen, setMenuOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const open = menuOpen;

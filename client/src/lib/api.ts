@@ -1,4 +1,6 @@
 import { supabase } from './supabaseClient';
+import { getStoredLang, translateStatic } from '../i18n/LanguageContext';
+import type { TranslationKey } from '../i18n/translations';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
@@ -70,11 +72,12 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
     if (err instanceof ApiError) throw err;
     if (controller.signal.aborted) {
       const reason = controller.signal.reason;
-      const message =
-        reason instanceof Error && reason.message === 'timeout'
-          ? 'Request timed out. Please try again.'
-          : 'Request was cancelled.';
-      throw new ApiError(message, 0, 'aborted');
+      const timedOut = reason instanceof Error && reason.message === 'timeout';
+      throw new ApiError(
+        timedOut ? 'Request timed out. Please try again.' : 'Request was cancelled.',
+        0,
+        timedOut ? 'timeout' : 'cancelled',
+      );
     }
     throw new ApiError(
       err instanceof Error ? err.message : 'Network error',
@@ -86,13 +89,36 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
   }
 }
 
+// Error codes with dedicated user-facing copy in the i18n dictionaries.
+// timeout/cancelled are minted client-side in apiFetch above; the play codes
+// have a single, unambiguous meaning so the dictionary copy fits every caller.
+const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
+  timeout: 'error.timeout',
+  cancelled: 'error.cancelled',
+  too_few_questions: 'error.tooFewQuestions',
+  finished: 'error.matchFinished',
+};
+
+// not_found spans several endpoints whose English server messages are more
+// specific than any one dictionary string — keep those for English and only
+// swap in the translated generic for Czech.
+const CS_ONLY_CODE_KEYS: Partial<Record<string, TranslationKey>> = {
+  not_found: 'error.notFound',
+};
+
+// friendlyError runs in the api layer (no React context), so it resolves the
+// shared dictionaries via translateStatic. Server messages for unmapped error
+// codes fall through as-is (English).
 export function friendlyError(err: unknown): string {
   if (err instanceof ApiError) {
-    if (err.code === 'aborted') return err.message;
-    if (err.status === 0) return 'Network error. Check your connection and try again.';
-    if (err.status >= 500) return 'Server error. Please try again in a moment.';
-    if (err.status === 401 || err.status === 403) return 'You need to sign in to do that.';
+    const codeKey =
+      (err.code && CODE_KEYS[err.code]) ||
+      (getStoredLang() === 'cs' && err.code ? CS_ONLY_CODE_KEYS[err.code] : undefined);
+    if (codeKey) return translateStatic(codeKey);
+    if (err.status === 0) return translateStatic('error.network');
+    if (err.status >= 500) return translateStatic('error.server');
+    if (err.status === 401 || err.status === 403) return translateStatic('error.signIn');
     return err.message;
   }
-  return 'Something went wrong. Please try again.';
+  return translateStatic('error.generic');
 }

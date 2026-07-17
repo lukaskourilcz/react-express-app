@@ -17,6 +17,8 @@ import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../lib/auth';
 import { useActiveSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
+import { CATEGORY_LOOKUP, categoryLabelKey } from '../lib/categories';
+import type { CategoryType } from '../types/quiz';
 import { removeFlashcard, type Flashcard } from '../lib/flashcards';
 import { friendlyError } from '../lib/api';
 import { useFlashcards } from '../lib/queries';
@@ -172,7 +174,21 @@ function Flashcards() {
           />
           <div style={{ display: 'flex', flexDirection: 'column', minHeight: 200 }}>
             <HStack justify="between" align="center" gap={1} width="100%">
-              {card.category ? <Badge variant="cyan" label={card.category} /> : <span />}
+              {/* Stored categories are free-form strings (older cards may
+                  predate the current registry) — translate known ones, show
+                  unknown ones verbatim rather than as a raw i18n key. */}
+              {card.category ? (
+                <Badge
+                  variant="cyan"
+                  label={
+                    CATEGORY_LOOKUP.has(card.category as CategoryType)
+                      ? t(categoryLabelKey(card.category))
+                      : card.category
+                  }
+                />
+              ) : (
+                <span />
+              )}
               <Button
                 variant="ghost"
                 size="sm"

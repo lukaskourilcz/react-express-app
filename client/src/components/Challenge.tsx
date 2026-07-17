@@ -22,10 +22,10 @@ import { useChallengeLeaderboard } from '../lib/queries';
 import type { Question, QuizResult, CategoryType } from '../types/quiz';
 import {
   getCategoryHexColor,
-  getCategoryLabel,
+  categoryLabelKey,
   onCategoryColorText,
 } from '../lib/categories';
-import { useLanguage } from '../i18n/LanguageContext';
+import { useLanguage, useT } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useActiveSubject } from '../lib/subjects';
 import { useIsMobile } from '../lib/useMediaQuery';
@@ -185,7 +185,7 @@ export default function Challenge() {
     setCurrent(next);
     setSeenIds([next.id]);
     setPhase('playing');
-  }, [ensureBufferTopUp, popNext]);
+  }, [ensureBufferTopUp, popNext, t]);
 
   const advance = useCallback(
     async (becameGameOver: boolean) => {
@@ -207,7 +207,7 @@ export default function Challenge() {
       }
       if (!next) {
         setPhase('error');
-        setError('No more questions available right now.');
+        setError(t('challenge.noQuestions'));
         return;
       }
       setCurrent(next);
@@ -221,7 +221,7 @@ export default function Challenge() {
       // Fresh question, fresh clock.
       setTimeLeft(TIME_LIMIT_S);
     },
-    [ensureBufferTopUp, popNext, seenIds],
+    [ensureBufferTopUp, popNext, seenIds, t],
   );
 
   const submitAnswer = useCallback(async () => {
@@ -806,6 +806,7 @@ function ClockIcon() {
 // A compact category tag that keeps each subject's brand/logo colour (Astryx
 // Badge only exposes a fixed palette, so we render the exact hex tint here).
 function CategoryTag({ category }: { category: CategoryType }) {
+  const t = useT();
   return (
     <span
       style={{
@@ -821,7 +822,7 @@ function CategoryTag({ category }: { category: CategoryType }) {
         color: onCategoryColorText(category),
       }}
     >
-      {getCategoryLabel(category)}
+      {t(categoryLabelKey(category))}
     </span>
   );
 }

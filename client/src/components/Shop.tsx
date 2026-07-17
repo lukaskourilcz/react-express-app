@@ -39,7 +39,7 @@ import {
   useExtraUnlocks,
   useRoadmapProgress,
 } from '../lib/roadmap';
-import { getCategoryLabel } from '../lib/categories';
+import { categoryLabelKey } from '../lib/categories';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useActiveSubject, subjectNameKey } from '../lib/subjects';
 import { IconTile, CompassIcon, BoltIcon, SparkleIcon } from './ui/icons';
@@ -110,7 +110,7 @@ function Shop() {
   const handleBuy = (p: Product) => {
     const res = purchase(p.id);
     const displayName =
-      p.kind === 'path' && p.topic ? getCategoryLabel(p.topic) : t(`shop.item.${p.id}.name` as TranslationKey);
+      p.kind === 'path' && p.topic ? t(categoryLabelKey(p.topic)) : t(`shop.item.${p.id}.name` as TranslationKey);
     if (res === 'ok') {
       setToast({ msg: t('shop.purchased', { name: displayName }), ok: true });
       // Path purchases live in the synced roadmap blob — push immediately so
@@ -235,7 +235,7 @@ function ProductCard({ product, price, owned, equipped, charges, canAfford, onBu
   const isBooster = product.kind === 'booster';
   const isPath = product.kind === 'path';
   const name = isPath && product.topic
-    ? t('shop.path.name', { topic: getCategoryLabel(product.topic) })
+    ? t('shop.path.name', { topic: t(categoryLabelKey(product.topic)) })
     : t(`shop.item.${product.id}.name` as TranslationKey);
   const desc = isPath
     ? t('shop.path.desc')

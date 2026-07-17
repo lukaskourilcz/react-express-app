@@ -75,9 +75,12 @@ export const createMatch = (input: {
   host_name: string;
   mode: 'multiplayer' | 'classroom';
   count: number;
+  /** Must be non-empty: the active subject's topics (or a subset of them). */
   categories: string[];
   /** Per-question time limit in seconds. 0 = no limit. */
   duration_s: number;
+  /** Question language for the whole match (host's UI language). */
+  lang: 'en' | 'cs';
 }) =>
   apiFetch<{ id: string; code: string; mode: string; status: string }>('/api/play/create', {
     method: 'POST',

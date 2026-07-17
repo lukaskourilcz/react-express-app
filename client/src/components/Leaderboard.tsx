@@ -28,7 +28,7 @@ import {
 import { friendlyError } from '../lib/api';
 import { useLeaderboard } from '../lib/queries';
 import { useT } from '../i18n/LanguageContext';
-import { visibleCategoryOptionsFor, getCategoryLabel, onCategoryColorText } from '../lib/categories';
+import { visibleCategoryOptionsFor, categoryLabelKey, onCategoryColorText } from '../lib/categories';
 import { useActiveSubject, categoriesForSubject, subjectNameKey } from '../lib/subjects';
 import ErrorRetry from './ErrorRetry';
 import { IconTile, TrophyIcon } from './ui/icons';
@@ -153,7 +153,7 @@ function Leaderboard() {
                   type="button"
                   onClick={() => setCategory(c.value)}
                   aria-pressed={active}
-                  aria-label={t('leaderboard.categoryAria', { label: c.label })}
+                  aria-label={t('leaderboard.categoryAria', { label: t(categoryLabelKey(c.value)) })}
                   style={{
                     cursor: 'pointer',
                     display: 'inline-flex',
@@ -170,7 +170,7 @@ function Leaderboard() {
                     transition: 'background 120ms ease, color 120ms ease',
                   }}
                 >
-                  {c.label}
+                  {t(categoryLabelKey(c.value))}
                 </button>
               );
             })}
@@ -213,7 +213,7 @@ function Leaderboard() {
               </IconTile>
               <Text type="body" color="secondary" justify="center">
                 {tab === 'category'
-                  ? t('leaderboard.noCategoryAttempts', { label: getCategoryLabel(category) })
+                  ? t('leaderboard.noCategoryAttempts', { label: t(categoryLabelKey(category)) })
                   : t('leaderboard.noEntries')}
               </Text>
               <Button variant="primary" size="sm" label={t('leaderboard.emptyCta')} onClick={() => navigate('/quiz')} />
