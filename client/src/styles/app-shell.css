@@ -36,7 +36,11 @@
 }
 
 .ss-slot { display: flex; align-items: center; min-width: 0; }
-.ss-slot-end { justify-content: flex-end; gap: 4px; }
+/* Below the 1024px grid breakpoint the toolbar is a plain flex row whose
+   slots take content width, so the end slot must pin itself to the right
+   edge — without this the account avatar sits wherever the brand ends
+   (visually mid-header on phones). */
+.ss-slot-end { justify-content: flex-end; gap: 4px; margin-left: auto; flex-shrink: 0; }
 @media (min-width: 600px) { .ss-slot-end { gap: 8px; } }
 
 /* Responsive visibility keyed to the 1024px nav breakpoint: with 6–7 primary
