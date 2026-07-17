@@ -75,16 +75,17 @@ const DEFAULT_DEV_TIPS_CS = [
   'Pravidelnost se sčítá.',
 ];
 
+const TIP_CS = new Map(DEFAULT_DEV_TIPS.map((tip, i) => [tip, DEFAULT_DEV_TIPS_CS[i]]));
+
 /**
- * The tips list to show on loading screens: a dev-customized list passes
- * through untouched, but the built-in English defaults swap to their Czech
- * twins when the UI language is Czech.
+ * The tips list to show on loading screens: built-in default tips swap to
+ * their Czech twins when the UI language is Czech; dev-customized tips pass
+ * through untouched (per tip, so a partially customized list keeps its
+ * remaining defaults translated).
  */
 export function localizedDevTips(tips: string[], lang: string): string[] {
   if (lang !== 'cs') return tips;
-  const isDefault =
-    tips.length === DEFAULT_DEV_TIPS.length && tips.every((tip, i) => tip === DEFAULT_DEV_TIPS[i]);
-  return isDefault ? DEFAULT_DEV_TIPS_CS : tips;
+  return tips.map((tip) => TIP_CS.get(tip) ?? tip);
 }
 
 export const DEFAULT_CONFIG: GameConfig = {

@@ -402,6 +402,10 @@ export function PlayMatch() {
   // Records when the local client first observed the current question_started_at,
   // so a slow broadcast doesn't unfairly penalise the speed bonus.
   const clientReceivedAtRef = useRef<string | null>(null);
+  // Synchronous submit lock: two clicks can land in the same render tick,
+  // before the async `submitted` state re-renders — the ref closes that gap
+  // so the first click is the one that counts.
+  const submitLockRef = useRef(false);
 
   // Initial join + state load.
   useEffect(() => {
@@ -470,6 +474,7 @@ export function PlayMatch() {
   useEffect(() => {
     setSelected(null);
     setSubmitted(false);
+    submitLockRef.current = false;
     setQuestionShownAt(Date.now());
     clientReceivedAtRef.current = new Date().toISOString();
   }, [match?.current_index, match?.status]);
@@ -530,31 +535,50 @@ export function PlayMatch() {
     }
   };
 
-  const submitAnswer = async () => {
-    if (selected === null || !match || !user?.id) return;
+  // Selection is only mutable until the first submit locks it in.
+  const selectOption = (i: number) => {
+    if (submitLockRef.current) return;
+    setSelected(i);
+  };
+
+  // One tap locks the answer — no confirm step. The card is marked selected
+  // and disabled optimistically, then the answer is recorded; a misclick is
+  // the player's own (by design).
+  const submitAnswer = async (selectedIdx: number) => {
+    if (!match || !user?.id || submitLockRef.current) return;
+    submitLockRef.current = true;
+    setSelected(selectedIdx);
+    setSubmitted(true);
     try {
       const result = await submitMatchAnswer({
         code,
         user_id: user.id,
         question_idx: match.current_index,
-        selected_idx: selected,
+        selected_idx: selectedIdx,
         duration_ms: Date.now() - questionShownAt,
         client_received_at: clientReceivedAtRef.current ?? new Date().toISOString(),
       });
-      setSubmitted(true);
       broadcastUpdate();
       // In multiplayer the server advances as soon as the last player locks
       // in. Pull fresh state right away so this client jumps to the next
       // question (or the results screen) without waiting for the poll.
       if (result.advanced) await refresh();
     } catch (err) {
-      // The match moved on before this submit landed (timeout expiry or the
-      // final answer racing ours) — not an error worth alarming the player
-      // about. Resync; the per-question reset effect takes it from there.
-      if (err instanceof ApiError && (err.code === 'wrong_question' || err.code === 'bad_state')) {
+      if (err instanceof ApiError && err.code === 'wrong_question') {
+        // The match moved past this question (timer expiry beat the submit).
+        // Tell the player their answer didn't count, then resync.
+        setError(t('play.tooLate'));
         await refresh();
         return;
       }
+      if (err instanceof ApiError && err.code === 'bad_state') {
+        // Match ended while the submit was in flight — just resync.
+        await refresh();
+        return;
+      }
+      // Genuine failure (network, server): unlock so the player can retry.
+      submitLockRef.current = false;
+      setSubmitted(false);
       setError(friendlyError(err));
     }
   };
@@ -626,8 +650,8 @@ export function PlayMatch() {
             mode={match.mode}
             selected={selected}
             submitted={submitted}
-            onSelect={setSelected}
-            onSubmit={submitAnswer}
+            onSelect={selectOption}
+            onAnswer={submitAnswer}
             onAdvance={advance}
             onFinish={finish}
             scoreboard={scoreboard}
@@ -774,7 +798,7 @@ function RunningQuestion({
   selected,
   submitted,
   onSelect,
-  onSubmit,
+  onAnswer,
   onAdvance,
   onFinish,
   scoreboard,
@@ -791,7 +815,7 @@ function RunningQuestion({
   selected: number | null;
   submitted: boolean;
   onSelect: (i: number) => void;
-  onSubmit: () => void;
+  onAnswer: (i: number) => void;
   onAdvance: () => void;
   onFinish: () => void;
   scoreboard: ScoreboardEntry[];
@@ -805,9 +829,37 @@ function RunningQuestion({
   // sees the answer key. Only a classroom host presents instead of playing.
   const isPlayer = mode === 'multiplayer' || !isHost;
   const isPresenter = isHost && mode === 'classroom';
-  const answeredCount = useMemo(
-    () => scoreboard.filter((s) => participants.some((p) => p.user_id === s.user_id)).length,
-    [scoreboard, participants],
+
+  // Presenter view polls the per-question answer distribution; the same
+  // buckets drive both the histogram and the "answers received" count (the
+  // cumulative scoreboard can't say who answered the CURRENT question).
+  const [buckets, setBuckets] = useState<DistributionBucket[]>([]);
+  useEffect(() => {
+    if (!isPresenter || !hostSub) return;
+    let cancelled = false;
+    setBuckets([]);
+    const load = () => {
+      fetchDistribution(code, questionIdx, hostSub)
+        .then((r) => {
+          if (!cancelled) setBuckets(r.buckets);
+        })
+        .catch(() => {
+          /* ignore — UI keeps last known state */
+        });
+    };
+    load();
+    const id = window.setInterval(load, 1500);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, [isPresenter, hostSub, code, questionIdx]);
+  const answeredCount = useMemo(() => buckets.reduce((sum, b) => sum + b.count, 0), [buckets]);
+  // The presenter is a participant row too but never answers — exclude them
+  // from the denominator.
+  const playerCount = useMemo(
+    () => participants.filter((p) => p.user_id !== match.host_id).length,
+    [participants, match.host_id],
   );
 
   // Countdown derived from question_started_at + question_duration_s.
@@ -829,12 +881,13 @@ function RunningQuestion({
   const remainingS = Math.ceil(remainingMs / 1000);
   const pctLeft = noLimit ? 100 : startedMs ? (remainingMs / (durationS * 1000)) * 100 : 100;
 
-  // Time-up auto-lock for players (skipped when there is no time limit).
+  // Time-up auto-lock: clicking locks instantly, so this only catches a
+  // keyboard user who arrow-browsed to an option but never pressed Enter.
   useEffect(() => {
     if (!noLimit && isPlayer && !submitted && remainingMs === 0 && selected !== null) {
-      onSubmit();
+      onAnswer(selected);
     }
-  }, [remainingMs, noLimit, isPlayer, submitted, selected, onSubmit]);
+  }, [remainingMs, noLimit, isPlayer, submitted, selected, onAnswer]);
 
   const timerColor = noLimit
     ? 'var(--astryx-color-text-secondary, currentColor)'
@@ -892,6 +945,11 @@ function RunningQuestion({
         <RadioCardGroup
           value={selected}
           onChange={(v) => onSelect(v as number)}
+          // One click locks the answer in — no confirm button. Arrow keys
+          // still browse without committing; Enter/Space commits.
+          onActivate={(v) => {
+            if (isPlayer && !submitted) onAnswer(v as number);
+          }}
           label={t('play.answersAria')}
         >
           <VStack gap={1}>
@@ -917,14 +975,9 @@ function RunningQuestion({
         </RadioCardGroup>
 
         {isPlayer && !submitted && (
-          <div style={{ display: 'grid' }}>
-            <Button
-              variant="primary"
-              label={t('play.lockIn')}
-              isDisabled={selected === null}
-              onClick={onSubmit}
-            />
-          </div>
+          <Text type="supporting" size="xsm" color="secondary">
+            {t('play.tapToLock')}
+          </Text>
         )}
         {isPlayer && submitted && (
           <Banner
@@ -937,29 +990,28 @@ function RunningQuestion({
           />
         )}
 
-        {/* A multiplayer host is just another player, but keeps a quiet way
-            out if the lobby stalls (e.g. an opponent left mid-match). */}
+        {/* A multiplayer host is just another player, but keeps quiet escape
+            hatches: skip a question nobody is answering (e.g. a player left a
+            no-limit match mid-question) or end the match early. */}
         {isHost && mode === 'multiplayer' && (
-          <HStack justify="end">
+          <HStack gap={1} justify="between">
             <Button variant="ghost" size="sm" label={t('play.endMatch')} onClick={onFinish} />
+            <Button
+              variant="ghost"
+              size="sm"
+              label={lastQuestion ? t('play.showResults') : t('play.skipQuestion')}
+              onClick={onAdvance}
+            />
           </HStack>
         )}
 
         {isPresenter && (
           <VStack gap={1.5}>
             <Text type="supporting" size="xsm" color="secondary">
-              {t('play.liveAnswers', { count: answeredCount, total: participants.length })}
+              {t('play.liveAnswers', { count: answeredCount, total: playerCount })}
             </Text>
 
-            {hostSub && (
-              <DistributionChart
-                code={code}
-                questionIdx={questionIdx}
-                hostSub={hostSub}
-                options={q.options}
-                correctIndex={q.correct_index}
-              />
-            )}
+            <DistributionChart options={q.options} buckets={buckets} correctIndex={q.correct_index} />
 
             <HStack gap={1} justify="between">
               <Button variant="secondary" label={t('play.endMatch')} onClick={onFinish} />
@@ -1026,41 +1078,18 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
   );
 }
 
+// Presentational histogram of the current question's answers; the buckets are
+// polled by RunningQuestion, which shares them with the live answered-count.
 function DistributionChart({
-  code,
-  questionIdx,
-  hostSub,
   options,
+  buckets,
   correctIndex,
 }: {
-  code: string;
-  questionIdx: number;
-  hostSub: string;
   options: string[];
+  buckets: DistributionBucket[];
   correctIndex?: number;
 }) {
   const t = useT();
-  const [buckets, setBuckets] = useState<DistributionBucket[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    const load = () => {
-      fetchDistribution(code, questionIdx, hostSub)
-        .then((r) => {
-          if (!cancelled) setBuckets(r.buckets);
-        })
-        .catch(() => {
-          /* ignore — UI keeps last known state */
-        });
-    };
-    load();
-    const id = window.setInterval(load, 1500);
-    return () => {
-      cancelled = true;
-      window.clearInterval(id);
-    };
-  }, [code, questionIdx, hostSub]);
-
   const total = buckets.reduce((sum, b) => sum + b.count, 0) || 1;
 
   return (

@@ -185,7 +185,7 @@ export default function Challenge() {
     setCurrent(next);
     setSeenIds([next.id]);
     setPhase('playing');
-  }, [ensureBufferTopUp, popNext]);
+  }, [ensureBufferTopUp, popNext, t]);
 
   const advance = useCallback(
     async (becameGameOver: boolean) => {
@@ -221,7 +221,7 @@ export default function Challenge() {
       // Fresh question, fresh clock.
       setTimeLeft(TIME_LIMIT_S);
     },
-    [ensureBufferTopUp, popNext, seenIds],
+    [ensureBufferTopUp, popNext, seenIds, t],
   );
 
   const submitAnswer = useCallback(async () => {

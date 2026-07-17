@@ -31,7 +31,7 @@ import {
   syncProgressWithServer,
 } from '../lib/roadmap';
 import { useRoadmapStructure } from '../lib/queries';
-import { useTrack, isTopicInTrack, rankLabelKeyFor, trackLabelKey, trackBlurbKey, stageTitleKey, topicDetailKey, TRACK_ORDER, tracksForSubject } from '../lib/tracks';
+import { useTrack, isTopicInTrack, rankLabelKeyFor, trackLabelKey, trackBlurbKey, stageTitleKey, localizedTopicDetail, TRACK_ORDER, tracksForSubject } from '../lib/tracks';
 import { getCategoryHexColor, categoryLabelKey } from '../lib/categories';
 import { useSubject, subjectNameKey, type SubjectId } from '../lib/subjects';
 import type { RoadmapTopic } from '../types/quiz';
@@ -93,7 +93,7 @@ function derivedPillars(subject: SubjectId, t: TFn): Pillar[] {
     areas: stage.topics.map((topic) => ({
       topic,
       label: t(categoryLabelKey(topic)),
-      blurb: t(topicDetailKey(topic)),
+      blurb: localizedTopicDetail(t, topic) ?? '',
     })),
   }));
 }

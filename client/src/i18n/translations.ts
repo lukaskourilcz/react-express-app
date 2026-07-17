@@ -391,7 +391,7 @@ export const en = {
   'play.creating': 'Creating…',
   'play.createMultiplayer': 'Create multiplayer match',
   'play.createClassroom': 'Create classroom match',
-  'play.multiplayerHint': 'Anyone with the code can join. Everyone answers — you included — and the match moves on once all players lock in (or time runs out).',
+  'play.multiplayerHint': 'Anyone with the code can join. Everyone answers — you included; one click locks your answer, and the match moves on once everyone has answered (or time runs out).',
   'play.classroomHint': 'Students join with the code. You control when each question advances.',
   'play.timeLimit': 'Time limit',
   'play.timeLimitSeconds': '{n}s',
@@ -418,7 +418,9 @@ export const en = {
   'play.copyLink': 'Copy link',
   'play.startWithCount': 'Start ({count} questions)',
   'play.questionMeta': 'Question {idx} of {total} · {category} · difficulty {difficulty}',
-  'play.lockIn': 'Lock in answer',
+  'play.tapToLock': 'Click an answer to lock it in — the first click counts.',
+  'play.tooLate': 'Time ran out before your answer landed — it didn’t count.',
+  'play.skipQuestion': 'Skip question →',
   'play.answerLocked': 'Answer locked. Waiting for {who} to advance…',
   'play.answerLockedVs': 'Answer locked. Waiting for the other players…',
   'play.theInstructor': 'the instructor',
@@ -1043,6 +1045,20 @@ export const en = {
   'common.levelShort': 'Lvl {n}',
   'common.dismiss': 'Dismiss',
   'a11y.codeBlock': '{language} code block',
+
+  // ── API / crash error copy (resolved via translateStatic) ─────────────
+  'error.timeout': 'Request timed out. Please try again.',
+  'error.cancelled': 'Request was cancelled.',
+  'error.network': 'Network error. Check your connection and try again.',
+  'error.server': 'Server error. Please try again in a moment.',
+  'error.signIn': 'You need to sign in to do that.',
+  'error.generic': 'Something went wrong. Please try again.',
+  'error.tooFewQuestions': 'Not enough questions for these topics.',
+  'error.matchFinished': 'This match is already over.',
+  'error.notFound': "We couldn't find that. Check the code and try again.",
+  'error.boundaryBody': 'The page hit an unexpected error. Reloading usually fixes it.',
+  'error.tryAgain': 'Try again',
+  'error.reloadPage': 'Reload page',
 } as const;
 
 export type TranslationKey = keyof typeof en;

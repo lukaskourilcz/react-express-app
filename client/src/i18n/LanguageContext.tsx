@@ -23,6 +23,17 @@ export function getStoredLang(): Lang {
   return detectInitialLang();
 }
 
+/**
+ * Non-reactive translation for code outside the React tree (error boundaries,
+ * the api layer) — same dictionaries as useT(), resolved via the persisted
+ * language. Before the lazy Czech table has loaded it falls back to English,
+ * the same graceful degradation the provider applies.
+ */
+export function translateStatic(key: TranslationKey, vars?: Vars): string {
+  const table = getStoredLang() === 'cs' && csCache ? csCache : en;
+  return interpolate(table[key] ?? en[key] ?? key, vars);
+}
+
 type Vars = Record<string, string | number>;
 
 interface LanguageContextValue {

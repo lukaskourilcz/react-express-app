@@ -127,7 +127,7 @@ export const RANK_TITLES: string[] = RANK_META.map((r) => r.title);
 // Per-subject rank ladders, index-aligned with RANK_META (same 10 XP tiers,
 // subject-appropriate titles + emojis). Web Dev keeps RANK_META and composes
 // the track specialization on top; every other subject uses its own complete
-// titles (no specialization). See rankLabelFor() in tracks.ts.
+// titles (no specialization). See rankLabelKeyFor() in tracks.ts.
 const SUBJECT_RANK_LADDER: Record<SubjectId, ReadonlyArray<{ title: string; emoji: string }>> = {
   webdev: RANK_META,
   geography: [
@@ -207,7 +207,7 @@ const SUBJECT_RANK_LADDER: Record<SubjectId, ReadonlyArray<{ title: string; emoj
 /**
  * The subject-appropriate label ({title, emoji}) for a rank index. Falls back
  * to the Web Dev ladder for an out-of-range index. Track specialization (for
- * Web Dev) is composed separately by rankLabelFor() in tracks.ts.
+ * Web Dev) is composed separately by rankLabelKeyFor() in tracks.ts.
  */
 export function subjectRankLabel(subjectId: SubjectId, index: number): { title: string; emoji: string } {
   const ladder = SUBJECT_RANK_LADDER[subjectId] ?? RANK_META;

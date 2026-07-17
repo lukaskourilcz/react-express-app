@@ -7,11 +7,11 @@
 import type { RoadmapTopic } from '../types/quiz';
 import type { TranslationKey } from '../i18n/translations';
 import type { Specialization, CareerRank } from './leveling';
-import { displayTitle, subjectRankLabel, rankTitleKey, RANK_TITLES } from './leveling';
+import { subjectRankLabel, rankTitleKey, RANK_TITLES } from './leveling';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import type { SubjectId } from './subjects';
-import { getSubject, useSubject } from './subjects';
+import { getSubject } from './subjects';
 
 export type Track = 'frontend' | 'backend' | 'fullstack';
 export const TRACK_ORDER: Track[] = ['frontend', 'backend', 'fullstack'];
@@ -391,10 +391,18 @@ export const TRACKS_BY_SUBJECT: Record<SubjectId, Record<Track, TrackDef>> = {
 export const tracksForSubject = (id: SubjectId): Record<Track, TrackDef> => TRACKS_BY_SUBJECT[id];
 /** The track map for the active subject (imperative). */
 export const tracksForActiveSubject = (): Record<Track, TrackDef> => TRACKS_BY_SUBJECT[getSubject()];
-/** Live track map for the active subject — re-renders when the subject changes. */
-export function useActiveTracks(): Record<Track, TrackDef> {
-  const [subject] = useSubject();
-  return TRACKS_BY_SUBJECT[subject];
+
+/**
+ * A topic's localized one-line detail, or undefined for topics that have none
+ * (the TOPIC_DETAIL registry decides coverage; the dictionaries carry the
+ * text). Shared by the roadmap tree and the career pillars so both surfaces
+ * agree on which topics show a detail line.
+ */
+export function localizedTopicDetail(
+  t: (key: TranslationKey) => string,
+  topic: RoadmapTopic,
+): string | undefined {
+  return TOPIC_DETAIL[topic] ? t(topicDetailKey(topic)) : undefined;
 }
 
 // The set of topics a track covers = the union of its stages. Used to filter
@@ -432,37 +440,26 @@ const TRACK_SPECIALIZATION: Record<Track, Specialization> = {
 export const specializationForTrack = (track: Track): Specialization => TRACK_SPECIALIZATION[track];
 
 /**
- * The learner-rank label ({title, emoji}) for the ACTIVE subject. Web Dev keeps
- * the developer ladder with the track specialization composed in ("Junior
- * Full-Stack Developer"); every other subject uses its own ladder ("Junior
- * Explorer", "Club Player", …). Shared by the profile, avatar menu and toaster.
- */
-export function rankLabelFor(rank: CareerRank, track: Track): { title: string; emoji: string } {
-  const subject = getSubject();
-  if (subject === 'webdev') {
-    return { title: displayTitle(rank.title, specializationForTrack(track)), emoji: rank.emoji };
-  }
-  const idx = RANK_TITLES.indexOf(rank.title);
-  return subjectRankLabel(subject, idx >= 0 ? idx : 0);
-}
-
-/**
- * The translatable form of rankLabelFor: an i18n key + interpolation vars +
- * emoji. Components render `t(key, vars)` so rank titles localize; the vars
- * carry the Web Dev track specialization ("Frontend" | "Backend" |
- * "Full-Stack" — industry loanwords, left untranslated).
+ * The learner-rank label for the ACTIVE subject as an i18n key +
+ * interpolation vars + emoji: components render `t(key, vars)` so rank
+ * titles localize. Web Dev keeps the developer ladder with the track
+ * specialization composed in via the {spec} var ("Junior Full-Stack
+ * Developer" — "Frontend"/"Backend"/"Full-Stack" are industry loanwords,
+ * left untranslated); every other subject uses its own ladder ("Junior
+ * Explorer", "Club Player", …). Shared by the profile, avatar menu and
+ * toaster.
  */
 export function rankLabelKeyFor(
   rank: CareerRank,
   track: Track,
 ): { key: TranslationKey; vars: Record<string, string>; emoji: string } {
   const subject = getSubject();
-  const idx = RANK_TITLES.indexOf(rank.title);
-  const label = rankLabelFor(rank, track); // English fallback + ladder emoji
+  const rawIdx = RANK_TITLES.indexOf(rank.title);
+  const idx = rawIdx >= 0 ? rawIdx : 0;
   return {
-    key: rankTitleKey(subject, idx >= 0 ? idx : 0),
+    key: rankTitleKey(subject, idx),
     vars: { spec: specializationForTrack(track) },
-    emoji: label.emoji,
+    emoji: subject === 'webdev' ? rank.emoji : subjectRankLabel(subject, idx).emoji,
   };
 }
 

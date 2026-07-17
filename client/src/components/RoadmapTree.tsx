@@ -21,7 +21,7 @@ import {
   type PathStatus,
   type RoadmapProgress,
 } from '../lib/roadmap';
-import { tracksForActiveSubject, stageTitleKey, topicDetailKey, TOPIC_DETAIL, type Track } from '../lib/tracks';
+import { tracksForActiveSubject, stageTitleKey, localizedTopicDetail, type Track } from '../lib/tracks';
 import { categoryLabelKey, getCategoryHexColor, onCategoryColorText } from '../lib/categories';
 import { useSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
@@ -132,8 +132,7 @@ function TopicCard({
   const complete =
     ranges.length > 0 &&
     ranges.every((r) => pathStatus(progress, family, ranges, r.part, extraSet) === 'complete');
-  // The data module gates which topics have a detail line; the key localizes it.
-  const detail = TOPIC_DETAIL[family] ? t(topicDetailKey(family)) : undefined;
+  const detail = localizedTopicDetail(t, family);
 
   return (
     <div
