@@ -105,7 +105,7 @@ export default function XpToaster() {
                       {t('xp.rankUpKicker')}
                     </span>
                     <Text as="div" color="inherit" weight="bold">
-                      {t('xp.rankUp', { title: current.title })}
+                      {t('xp.rankUp', { title: t(current.titleKey, current.titleVars) })}
                     </Text>
                   </div>
                 </div>

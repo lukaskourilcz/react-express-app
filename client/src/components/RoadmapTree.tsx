@@ -21,8 +21,9 @@ import {
   type PathStatus,
   type RoadmapProgress,
 } from '../lib/roadmap';
-import { tracksForActiveSubject, TOPIC_DETAIL, type Track } from '../lib/tracks';
-import { getCategoryLabel, getCategoryHexColor, onCategoryColorText } from '../lib/categories';
+import { tracksForActiveSubject, stageTitleKey, topicDetailKey, TOPIC_DETAIL, type Track } from '../lib/tracks';
+import { categoryLabelKey, getCategoryHexColor, onCategoryColorText } from '../lib/categories';
+import { useSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
 import { useIsMobile } from '../lib/useMediaQuery';
 import type { TranslationKey } from '../i18n/translations';
@@ -32,6 +33,7 @@ type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => stri
 
 export default function RoadmapTree({ structure, track }: { structure: RoadmapStructure | null; track: Track }) {
   const t = useT();
+  const [subject] = useSubject();
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
   const extraSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
@@ -74,7 +76,7 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
               {i + 1}
             </div>
             <div style={{ fontSize: '0.875rem', fontWeight: 800, letterSpacing: '0.3px' }}>
-              {stage.title}
+              {t(stageTitleKey(subject, track, i))}
             </div>
           </div>
 
@@ -130,7 +132,8 @@ function TopicCard({
   const complete =
     ranges.length > 0 &&
     ranges.every((r) => pathStatus(progress, family, ranges, r.part, extraSet) === 'complete');
-  const detail = TOPIC_DETAIL[family];
+  // The data module gates which topics have a detail line; the key localizes it.
+  const detail = TOPIC_DETAIL[family] ? t(topicDetailKey(family)) : undefined;
 
   return (
     <div
@@ -152,7 +155,7 @@ function TopicCard({
       <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
         <div aria-hidden style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: color, flexShrink: 0 }} />
         <div style={{ fontSize: '0.875rem', fontWeight: 700, color: unlocked ? 'var(--color-text-primary)' : 'var(--color-text-disabled)', lineHeight: 1.2 }}>
-          {getCategoryLabel(family)}
+          {t(categoryLabelKey(family))}
         </div>
         {complete && (
           <svg aria-hidden viewBox="0 0 24 24" style={{ width: 16, height: 16, marginLeft: 'auto', color }}>
@@ -204,7 +207,7 @@ function PartPill({
     display: 'block',
   };
   const label = t('roadmapTree.partPill', { n: part });
-  const title = `${getCategoryLabel(family)} · ${label} — ${stateLabel}`;
+  const title = `${t(categoryLabelKey(family))} · ${label} — ${stateLabel}`;
   if (locked) {
     // A disabled control, not an image: keyboard users can still reach it and
     // hear why it's inert.

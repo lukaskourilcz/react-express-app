@@ -1,4 +1,5 @@
 import React, { lazy, Suspense } from 'react';
+import { useT } from '../i18n/LanguageContext';
 
 // react-syntax-highlighter's `prism` build bundles every language grammar (and
 // every theme), which is ~640 KB raw. The `prism-light` build ships an empty
@@ -43,9 +44,11 @@ const Highlighter = lazy(async () => {
   }
   const oneDark = (styleMod as { default: unknown }).default;
   return {
-    default: ({ language, code }: { language: string; code: string }) => (
+    default: function HighlightedCode({ language, code }: { language: string; code: string }) {
+      const t = useT();
+      return (
       <PrismLight
-        aria-label={`${language} code block`}
+        aria-label={t('a11y.codeBlock', { language })}
         language={language}
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         style={oneDark as any}
@@ -61,27 +64,31 @@ const Highlighter = lazy(async () => {
       >
         {code}
       </PrismLight>
-    ),
+      );
+    },
   };
 });
 
-const PlainCode = ({ code, language }: { code: string; language: string }) => (
-  <pre
-    aria-label={`${language} code block`}
-    style={{
-      margin: '1rem 0',
-      padding: '1rem',
-      borderRadius: 6,
-      fontSize: '0.75rem',
-      background: '#1a1a1a',
-      color: '#e0e0e0',
-      overflowX: 'auto',
-      fontFamily: '"SF Mono", Consolas, Monaco, monospace',
-    }}
-  >
-    <code>{code}</code>
-  </pre>
-);
+const PlainCode = ({ code, language }: { code: string; language: string }) => {
+  const t = useT();
+  return (
+    <pre
+      aria-label={t('a11y.codeBlock', { language })}
+      style={{
+        margin: '1rem 0',
+        padding: '1rem',
+        borderRadius: 6,
+        fontSize: '0.75rem',
+        background: '#1a1a1a',
+        color: '#e0e0e0',
+        overflowX: 'auto',
+        fontFamily: '"SF Mono", Consolas, Monaco, monospace',
+      }}
+    >
+      <code>{code}</code>
+    </pre>
+  );
+};
 
 export function CodeBlock({ code, language }: { code: string; language: string }) {
   return (

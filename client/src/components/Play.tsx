@@ -33,10 +33,11 @@ import { joinMatchChannel, type RealtimeChannel } from '../lib/realtime';
 import { visibleCategoryOptionsFor } from '../lib/categories';
 import { useActiveSubject } from '../lib/subjects';
 import type { CategoryType } from '../types/quiz';
-import { friendlyError } from '../lib/api';
+import { friendlyError, ApiError } from '../lib/api';
+import { categoryLabelKey } from '../lib/categories';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader } from './LoadingScreen';
-import { useT } from '../i18n/LanguageContext';
+import { useLanguage, useT } from '../i18n/LanguageContext';
 import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { useGameConfig } from '../lib/gameConfig';
 
@@ -52,7 +53,7 @@ function formatDuration(n: number, t: ReturnType<typeof useT>): string {
 
 export function PlayLanding() {
   const navigate = useNavigate();
-  const t = useT();
+  const { t, lang } = useLanguage();
   const config = useGameConfig();
   const isDesktop = useMediaQuery('(min-width: 900px)');
   const accent = useActiveSubject().accent;
@@ -118,8 +119,13 @@ export function PlayLanding() {
         host_name: displayNameFromProfile(profile, t('play.hostFallback')),
         mode,
         count,
-        categories: selectedCategories,
+        // "No selection" means every topic of the ACTIVE subject — sending the
+        // explicit list keeps other subjects' questions out of the match.
+        categories: selectedCategories.length
+          ? selectedCategories
+          : categoryOptions.map((c) => c.value),
         duration_s: durationS,
+        lang,
       });
       navigate(`/play/${m.code}`);
     } catch (err) {
@@ -250,7 +256,7 @@ export function PlayLanding() {
                           lineHeight: 1.4,
                         }}
                       >
-                        {cat.label}
+                        {t(categoryLabelKey(cat.value))}
                       </button>
                     );
                   })}
@@ -537,11 +543,18 @@ export function PlayMatch() {
       });
       setSubmitted(true);
       broadcastUpdate();
-      // In a head-to-head match the server advances as soon as we lock in.
-      // Pull fresh state right away so this client jumps to the next question
-      // (or the results screen) without waiting for the polling fallback.
+      // In multiplayer the server advances as soon as the last player locks
+      // in. Pull fresh state right away so this client jumps to the next
+      // question (or the results screen) without waiting for the poll.
       if (result.advanced) await refresh();
     } catch (err) {
+      // The match moved on before this submit landed (timeout expiry or the
+      // final answer racing ours) — not an error worth alarming the player
+      // about. Resync; the per-question reset effect takes it from there.
+      if (err instanceof ApiError && (err.code === 'wrong_question' || err.code === 'bad_state')) {
+        await refresh();
+        return;
+      }
       setError(friendlyError(err));
     }
   };
@@ -788,6 +801,10 @@ function RunningQuestion({
 }) {
   const t = useT();
   const lastQuestion = questionIdx >= total - 1;
+  // Multiplayer is a fair race: the host answers like everyone else and never
+  // sees the answer key. Only a classroom host presents instead of playing.
+  const isPlayer = mode === 'multiplayer' || !isHost;
+  const isPresenter = isHost && mode === 'classroom';
   const answeredCount = useMemo(
     () => scoreboard.filter((s) => participants.some((p) => p.user_id === s.user_id)).length,
     [scoreboard, participants],
@@ -812,12 +829,12 @@ function RunningQuestion({
   const remainingS = Math.ceil(remainingMs / 1000);
   const pctLeft = noLimit ? 100 : startedMs ? (remainingMs / (durationS * 1000)) * 100 : 100;
 
-  // Time-up auto-lock for non-host (skipped when there is no time limit).
+  // Time-up auto-lock for players (skipped when there is no time limit).
   useEffect(() => {
-    if (!noLimit && !isHost && !submitted && remainingMs === 0 && selected !== null) {
+    if (!noLimit && isPlayer && !submitted && remainingMs === 0 && selected !== null) {
       onSubmit();
     }
-  }, [remainingMs, noLimit, isHost, submitted, selected, onSubmit]);
+  }, [remainingMs, noLimit, isPlayer, submitted, selected, onSubmit]);
 
   const timerColor = noLimit
     ? 'var(--astryx-color-text-secondary, currentColor)'
@@ -836,7 +853,7 @@ function RunningQuestion({
             {t('play.questionMeta', {
               idx: questionIdx + 1,
               total,
-              category: q.category,
+              category: t(categoryLabelKey(q.category)),
               difficulty: q.difficulty,
             })}
           </Text>
@@ -879,7 +896,9 @@ function RunningQuestion({
         >
           <VStack gap={1}>
             {q.options.map((opt, i) => {
-              const isCorrect = isHost && q.correct_index === i;
+              // Only the classroom presenter gets the answer key (the server
+              // withholds correct_index from everyone else while running).
+              const isCorrect = isPresenter && q.correct_index === i;
               return (
                 <RadioCard
                   key={i}
@@ -897,7 +916,7 @@ function RunningQuestion({
           </VStack>
         </RadioCardGroup>
 
-        {!isHost && !submitted && (
+        {isPlayer && !submitted && (
           <div style={{ display: 'grid' }}>
             <Button
               variant="primary"
@@ -907,22 +926,32 @@ function RunningQuestion({
             />
           </div>
         )}
-        {!isHost && submitted && (
+        {isPlayer && submitted && (
           <Banner
             status="success"
-            title={t('play.answerLocked', {
-              who: mode === 'classroom' ? t('play.theInstructor') : t('play.theHost'),
-            })}
+            title={
+              mode === 'multiplayer'
+                ? t('play.answerLockedVs')
+                : t('play.answerLocked', { who: t('play.theInstructor') })
+            }
           />
         )}
 
-        {isHost && (
+        {/* A multiplayer host is just another player, but keeps a quiet way
+            out if the lobby stalls (e.g. an opponent left mid-match). */}
+        {isHost && mode === 'multiplayer' && (
+          <HStack justify="end">
+            <Button variant="ghost" size="sm" label={t('play.endMatch')} onClick={onFinish} />
+          </HStack>
+        )}
+
+        {isPresenter && (
           <VStack gap={1.5}>
             <Text type="supporting" size="xsm" color="secondary">
               {t('play.liveAnswers', { count: answeredCount, total: participants.length })}
             </Text>
 
-            {mode === 'classroom' && hostSub && (
+            {hostSub && (
               <DistributionChart
                 code={code}
                 questionIdx={questionIdx}

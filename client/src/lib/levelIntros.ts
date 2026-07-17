@@ -823,7 +823,7 @@ export const LEVEL_INTROS: Partial<Record<RoadmapTopic, string[]>> = {
   ],
   endgames: [
     "The endgame is the final phase, with few pieces left. King and pawn versus king is the most basic: your goal is to shepherd the pawn safely to promotion.",
-    "The opposition is a key king-and-pawn idea: when the kings face off with one square between them, the player NOT to move often loses control of key squares.",
+    "The opposition is a key king-and-pawn idea: when the kings face off with one square between them, the player who must move often has to give way and cede key squares.",
     "Promoting a pawn usually wins, since a new queen is decisive. Learning to escort a passed pawn safely to the last rank is essential technique.",
     "King and queen versus a lone king is a basic checkmate. You use the queen to box the king toward an edge, then bring your own king up to help deliver mate.",
     "King and rook versus king is another must-know mate. The rook cuts the enemy king off, and your king marches up to drive it to the edge of the board.",

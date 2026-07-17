@@ -15,6 +15,16 @@
 
 import type { RoadmapProgress } from './roadmap';
 import type { SubjectId } from './subjects';
+import type { TranslationKey } from '../i18n/translations';
+
+/**
+ * i18n key for a rank title (0-based ladder index). The ladders below stay the
+ * English fallbacks; user-visible surfaces render t(rankTitleKey(...)) so
+ * Czech gets Czech rank names. Web Dev values carry a {spec} placeholder for
+ * the track specialization ("Junior {spec} Developer").
+ */
+export const rankTitleKey = (subject: SubjectId, index: number): TranslationKey =>
+  `rank.${subject}.${Math.min(Math.max(index, 0), 9) + 1}` as TranslationKey;
 
 /* ──── XP economy ───────────────────────────────────────────────────────── */
 

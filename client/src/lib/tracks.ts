@@ -5,8 +5,9 @@
 // exposed through a tiny observable store so both surfaces re-render together.
 
 import type { RoadmapTopic } from '../types/quiz';
+import type { TranslationKey } from '../i18n/translations';
 import type { Specialization, CareerRank } from './leveling';
-import { displayTitle, subjectRankLabel, RANK_TITLES } from './leveling';
+import { displayTitle, subjectRankLabel, rankTitleKey, RANK_TITLES } from './leveling';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import type { SubjectId } from './subjects';
@@ -14,6 +15,23 @@ import { getSubject, useSubject } from './subjects';
 
 export type Track = 'frontend' | 'backend' | 'fullstack';
 export const TRACK_ORDER: Track[] = ['frontend', 'backend', 'fullstack'];
+
+/*
+ * i18n keys for track/topic copy. The registry fields below stay the English
+ * fallbacks; user-visible surfaces render t(trackLabelKey(...)) etc. so Czech
+ * users get Czech track names, blurbs, stage titles and topic details (same
+ * pattern as subjectNameKey in subjects.ts).
+ */
+export const trackLabelKey = (subject: SubjectId, track: Track): TranslationKey =>
+  `track.${subject}.${track}.label` as TranslationKey;
+export const trackBlurbKey = (subject: SubjectId, track: Track): TranslationKey =>
+  `track.${subject}.${track}.blurb` as TranslationKey;
+/** Key for a stage title by its 0-based position within the track. */
+export const stageTitleKey = (subject: SubjectId, track: Track, stageIdx: number): TranslationKey =>
+  `track.${subject}.${track}.stage${stageIdx + 1}` as TranslationKey;
+/** Key for a topic's one-line "what you'll learn" detail. */
+export const topicDetailKey = (topic: string): TranslationKey =>
+  `topicDetail.${topic}` as TranslationKey;
 
 export interface Stage {
   title: string;
@@ -426,6 +444,26 @@ export function rankLabelFor(rank: CareerRank, track: Track): { title: string; e
   }
   const idx = RANK_TITLES.indexOf(rank.title);
   return subjectRankLabel(subject, idx >= 0 ? idx : 0);
+}
+
+/**
+ * The translatable form of rankLabelFor: an i18n key + interpolation vars +
+ * emoji. Components render `t(key, vars)` so rank titles localize; the vars
+ * carry the Web Dev track specialization ("Frontend" | "Backend" |
+ * "Full-Stack" — industry loanwords, left untranslated).
+ */
+export function rankLabelKeyFor(
+  rank: CareerRank,
+  track: Track,
+): { key: TranslationKey; vars: Record<string, string>; emoji: string } {
+  const subject = getSubject();
+  const idx = RANK_TITLES.indexOf(rank.title);
+  const label = rankLabelFor(rank, track); // English fallback + ladder emoji
+  return {
+    key: rankTitleKey(subject, idx >= 0 ? idx : 0),
+    vars: { spec: specializationForTrack(track) },
+    emoji: label.emoji,
+  };
 }
 
 /* ──── Persisted, shared selection ──────────────────────────────────────── */

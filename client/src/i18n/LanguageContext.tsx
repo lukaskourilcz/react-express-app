@@ -14,6 +14,15 @@ function detectInitialLang(): Lang {
   return navigator.language?.toLowerCase().startsWith('cs') ? 'cs' : 'en';
 }
 
+/**
+ * Snapshot of the persisted UI language for code that runs outside the React
+ * tree (error boundaries, api-layer error strings). Not reactive — components
+ * should use useLanguage()/useT() instead.
+ */
+export function getStoredLang(): Lang {
+  return detectInitialLang();
+}
+
 type Vars = Record<string, string | number>;
 
 interface LanguageContextValue {

@@ -3,6 +3,24 @@ import { Button } from '@astryxdesign/core/Button';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { reportError } from '../lib/sentry';
+import { getStoredLang } from '../i18n/LanguageContext';
+
+// The boundary may catch a crash inside the LanguageProvider itself, so it
+// keeps its own tiny bilingual dictionary instead of using useT().
+const COPY = {
+  en: {
+    title: 'Something went wrong',
+    body: 'The page hit an unexpected error. Reloading usually fixes it.',
+    tryAgain: 'Try again',
+    reload: 'Reload page',
+  },
+  cs: {
+    title: 'Něco se pokazilo',
+    body: 'Na stránce došlo k nečekané chybě. Obnovení stránky to obvykle spraví.',
+    tryAgain: 'Zkusit znovu',
+    reload: 'Obnovit stránku',
+  },
+} as const;
 
 interface Props {
   children: ReactNode;
@@ -31,6 +49,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (!this.state.hasError) return this.props.children;
+    const copy = COPY[getStoredLang()];
 
     return (
       <div
@@ -55,17 +74,17 @@ export class ErrorBoundary extends Component<Props, State> {
         >
           <div style={{ marginBottom: 8 }}>
             <Heading level={3} justify="center">
-              Something went wrong
+              {copy.title}
             </Heading>
           </div>
           <div style={{ marginBottom: 24 }}>
             <Text type="body" color="secondary">
-              The page hit an unexpected error. Reloading usually fixes it.
+              {copy.body}
             </Text>
           </div>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-            <Button onClick={this.handleReset} variant="secondary" label="Try again" />
-            <Button onClick={() => window.location.reload()} variant="primary" label="Reload page" />
+            <Button onClick={this.handleReset} variant="secondary" label={copy.tryAgain} />
+            <Button onClick={() => window.location.reload()} variant="primary" label={copy.reload} />
           </div>
         </div>
       </div>

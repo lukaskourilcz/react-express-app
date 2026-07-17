@@ -1,6 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useEffect } from 'react';
 import { m, AnimatePresence } from '../../lib/motion';
+import { useT } from '../../i18n/LanguageContext';
 
 /**
  * Lightweight toast — a MUI-free replacement for the app's `<Snackbar><Alert>`
@@ -29,6 +30,7 @@ export function AppToast({
   severity?: ToastSeverity;
   autoHideDuration?: number | null;
 }) {
+  const t = useT();
   useEffect(() => {
     if (!open || autoHideDuration == null) return;
     const id = window.setTimeout(onClose, autoHideDuration);
@@ -82,7 +84,7 @@ export function AppToast({
             <button
               type="button"
               onClick={onClose}
-              aria-label="Dismiss"
+              aria-label={t('common.dismiss')}
               style={{
                 appearance: 'none',
                 border: 'none',

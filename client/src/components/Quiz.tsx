@@ -15,7 +15,7 @@ import { Popover } from '@astryxdesign/core/Popover';
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { AppToast } from './ui/AppToast';
 import { useAuth, getUserProfile } from '../lib/auth';
-import { useActiveSubject } from '../lib/subjects';
+import { useActiveSubject, subjectNameKey } from '../lib/subjects';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { visuallyHidden } from '../theme/MuiTheme';
 import {
@@ -24,7 +24,7 @@ import {
   visibleCategoryOptionsFor,
   onCategoryColorText,
   getCategoryHexColor,
-  getCategoryLabel,
+  categoryLabelKey,
 } from '../lib/categories';
 import { readJSON, writeJSON } from '../lib/storage';
 import {
@@ -40,7 +40,7 @@ import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { RotatingTip } from './reactbits/RotatingTip';
 import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
 import { addFlashcard, removeFlashcard } from '../lib/flashcards';
-import { useLanguage } from '../i18n/LanguageContext';
+import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useSettings, playCorrect, playComplete } from '../lib/settings';
 import { recordPerfectQuiz } from '../lib/achievements';
@@ -124,24 +124,27 @@ const iconBtnStyle = (color: string): React.CSSProperties => ({
 
 // A compact category tag that keeps each subject's brand/logo colour (Astryx
 // Badge only exposes a fixed palette, so we render the exact hex tint here).
-const CategoryTag = ({ category }: { category: CategoryType }) => (
-  <span
-    style={{
-      display: 'inline-flex',
-      alignItems: 'center',
-      height: 26,
-      padding: '0 10px',
-      borderRadius: 8,
-      fontSize: '0.78rem',
-      fontWeight: 600,
-      lineHeight: 1,
-      backgroundColor: getCategoryHexColor(category),
-      color: onCategoryColorText(category),
-    }}
-  >
-    {getCategoryLabel(category)}
-  </span>
-);
+const CategoryTag = ({ category }: { category: CategoryType }) => {
+  const t = useT();
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        height: 26,
+        padding: '0 10px',
+        borderRadius: 8,
+        fontSize: '0.78rem',
+        fontWeight: 600,
+        lineHeight: 1,
+        backgroundColor: getCategoryHexColor(category),
+        color: onCategoryColorText(category),
+      }}
+    >
+      {t(categoryLabelKey(category))}
+    </span>
+  );
+};
 
 function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }) {
   const { lang, t } = useLanguage();
@@ -528,7 +531,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   const handleShare = async () => {
     if (!result) return;
-    const text = `I scored ${result.percentage}% on StudyShark (${result.correctAnswers}/${result.totalQuestions}). Try it!`;
+    const text = t('quiz.shareText', {
+      pct: result.percentage,
+      correct: result.correctAnswers,
+      total: result.totalQuestions,
+    });
     const shareData = { title: 'StudyShark', text, url: window.location.origin };
     try {
       if (navigator.share) {
@@ -630,7 +637,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         <Card padding={5} width="100%">
           <VStack gap={4}>
             <VStack gap={1} align="center">
-              <span className="ss-kicker ss-kicker--center">{subject.label}</span>
+              <span className="ss-kicker ss-kicker--center">{t(subjectNameKey(subject.id))}</span>
               <Heading level={1} type="display-2" justify="center">
                 {t('quiz.title')}
               </Heading>
@@ -680,13 +687,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                         key={cat.value}
                         checked={selected}
                         onChange={() => handleCategoryToggle(cat.value)}
-                        label={cat.label}
+                        label={t(categoryLabelKey(cat.value))}
                         padding={3}
                       >
                         <HStack gap={1.5} align="center">
                           <CategoryGlyph category={cat.value} color={cat.color} size={20} />
                           <Text type="body" size="sm" weight={selected ? 'semibold' : 'medium'} maxLines={1}>
-                            {cat.label}
+                            {t(categoryLabelKey(cat.value))}
                           </Text>
                         </HStack>
                       </CheckCard>
@@ -743,7 +750,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                             color: onCategoryColorText(cat),
                           }}
                         >
-                          {category.label}
+                          {t(categoryLabelKey(cat))}
                         </span>
                       );
                     })}

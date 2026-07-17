@@ -19,7 +19,7 @@ import { SharkFin, SwimmingFin } from './SharkFin';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
 import { MotionItem } from '../lib/motion';
-import { useTrack, useHasChosenTrack, trackStarterTopics, tracksForActiveSubject, type Track } from '../lib/tracks';
+import { useTrack, useHasChosenTrack, trackStarterTopics, trackLabelKey, type Track } from '../lib/tracks';
 import { useActiveSubject, subjectNameKey, subjectBlurbKey } from '../lib/subjects';
 import { unlockExtraTopics, pushProgressToServer } from '../lib/roadmap';
 import { savePreferredTrack } from '../lib/trackPref';
@@ -67,7 +67,7 @@ export default function Home() {
     unlockExtraTopics(trackStarterTopics(next));
     pushProgressToServer().catch(() => {});
     void savePreferredTrack(next);
-    setSavedSnack(t('home.trackSavedSnack', { label: tracksForActiveSubject()[next].label }));
+    setSavedSnack(t('home.trackSavedSnack', { label: t(trackLabelKey(subject.id, next)) }));
     setPathOpen(false);
   };
 
@@ -124,7 +124,7 @@ export default function Home() {
                 <Button
                   variant="primary"
                   size="lg"
-                  label={t('home.continueTrack', { track: tracksForActiveSubject()[track].label })}
+                  label={t('home.continueTrack', { track: t(trackLabelKey(subject.id, track)) })}
                   onClick={() => navigate('/learn')}
                 />
               ) : (

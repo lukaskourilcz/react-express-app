@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { secureShuffle } from '../../lib/quiz-data';
+import { secureShuffle, localizeQuestion, normalizeLang } from '../../lib/quiz-data';
 import {
   supabase,
   jsonError,
@@ -15,6 +15,14 @@ import { getGameSettings } from '../../lib/settings-store';
 
 const PING_GRACE_MS = 1000;
 const STALE_MATCH_MS = 5 * 60 * 1000;
+// Extra slack past the per-question time limit before the server force-advances
+// a multiplayer question, so a client's on-the-buzzer submit still lands.
+const QUESTION_EXPIRE_GRACE_MS = 2000;
+
+// Columns re-selected after a lazy server-side advance in state(); must match
+// the state() select list so the refreshed row can replace the original.
+const STATE_COLUMNS =
+  'id, code, mode, host_id, host_name, status, current_index, questions, ended_at, question_started_at, question_duration_s, last_heartbeat_at, started_at';
 
 interface MatchQuestion {
   id: string;
@@ -32,6 +40,43 @@ function computeSpeedBonus(elapsedMs: number, durationS: number, maxBonus: numbe
   if (elapsedMs <= 0) return maxBonus;
   const fraction = Math.max(0, 1 - elapsedMs / (durationS * 1000));
   return Math.round(fraction * maxBonus);
+}
+
+// In multiplayer everyone competes (the host included), so only classroom
+// hosts get the answer key while a match is running. Everyone sees it once
+// the match is finished.
+function canSeeAnswers(match: { mode: string; host_id: string; status: string }, sub: string | null): boolean {
+  if (match.status === 'finished') return true;
+  return match.mode === 'classroom' && sub !== null && sub === match.host_id;
+}
+
+// Move a running match to its next question — or finish it after the last
+// one. The conditional update (status + current_index must still match what
+// we read) makes concurrent calls advance at most once.
+async function tryAdvance(match: {
+  id: string;
+  status: string;
+  current_index: number | null;
+  questions: unknown;
+}): Promise<Record<string, unknown> | null> {
+  const total = Array.isArray(match.questions) ? match.questions.length : 0;
+  const nextIdx = (match.current_index ?? 0) + 1;
+  const now = new Date().toISOString();
+  const patch: Record<string, unknown> =
+    nextIdx >= total
+      ? { status: 'finished', ended_at: now, last_heartbeat_at: now }
+      : { current_index: nextIdx, question_started_at: now, last_heartbeat_at: now };
+
+  const { data } = await withTimeout(
+    supabase!
+      .from('matches')
+      .update(patch)
+      .eq('id', match.id)
+      .eq('status', 'running')
+      .eq('current_index', match.current_index ?? 0)
+      .select(STATE_COLUMNS),
+  );
+  return data && data.length > 0 ? (data[0] as Record<string, unknown>) : null;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -73,6 +118,7 @@ async function create(req: VercelRequest, res: VercelResponse) {
     count?: unknown;
     categories?: unknown;
     duration_s?: unknown;
+    lang?: unknown;
   };
 
   const { play: playSettings } = await getGameSettings();
@@ -92,17 +138,26 @@ async function create(req: VercelRequest, res: VercelResponse) {
   const categories = Array.isArray(body.categories)
     ? body.categories.filter((c): c is string => typeof c === 'string')
     : [];
+  // Match questions are snapshotted into the row in the host's language so
+  // every player sees the same text regardless of their own setting.
+  const lang = normalizeLang(body.lang);
+
+  // The client always sends the active subject's category list (or a subset
+  // of it), so an empty list is a malformed request — falling back to the
+  // whole bank would leak questions from other subjects into the match.
+  if (categories.length === 0) {
+    return jsonError(res, 400, 'bad_request', 'categories required');
+  }
 
   const allQuestions = await getEffectiveQuestions();
-  const pool = categories.length
-    ? allQuestions.filter((q) => categories.includes(q.category))
-    : allQuestions;
+  const pool = allQuestions.filter((q) => categories.includes(q.category));
   if (pool.length < playSettings.minQuestions) {
     return jsonError(res, 400, 'too_few_questions', 'Not enough questions for these filters');
   }
 
   const selected = secureShuffle(pool).slice(0, count);
-  const matchQuestions = selected.map((q) => {
+  const matchQuestions = selected.map((base) => {
+    const q = localizeQuestion(base, lang);
     const correctText = q.options[q.correctAnswer];
     const opts = secureShuffle(q.options);
     return {
@@ -210,9 +265,9 @@ async function join(req: VercelRequest, res: VercelResponse) {
       ),
     );
 
-    const isHost = match.host_id === sub;
+    const revealAnswers = canSeeAnswers(match, sub);
     const sanitized = (match.questions as Array<Record<string, unknown>>).map((q) => {
-      if (isHost) return q;
+      if (revealAnswers) return q;
       const { correct_index: _ci, explanation: _e, ...rest } = q as Record<string, unknown> & {
         correct_index?: unknown;
         explanation?: unknown;
@@ -295,9 +350,43 @@ async function state(req: VercelRequest, res: VercelResponse) {
       withTimeout(supabase!.rpc('match_scoreboard', { p_match_id: match.id })),
     ]);
 
-    const isHost = sub !== null && sub === match.host_id;
+    // Multiplayer matches advance themselves: nobody "runs" the questions, so
+    // each state poll checks whether the current question is done — either
+    // everyone answered (covers no-limit matches and heals a lost advance
+    // race) or the time limit ran out — and bumps the match forward.
+    if (match.status === 'running' && match.mode === 'multiplayer') {
+      const durationS = match.question_duration_s ?? 0;
+      const startedMs = match.question_started_at
+        ? new Date(match.question_started_at).getTime()
+        : null;
+      const expired =
+        durationS > 0 &&
+        startedMs !== null &&
+        Date.now() > startedMs + durationS * 1000 + QUESTION_EXPIRE_GRACE_MS;
+
+      let allAnswered = false;
+      if (!expired) {
+        const participantCount = participantsRes.data?.length ?? 0;
+        if (participantCount > 0) {
+          const { count: answeredCount } = await withTimeout(
+            supabase!
+              .from('match_answers')
+              .select('user_id', { count: 'exact', head: true })
+              .eq('match_id', match.id)
+              .eq('question_idx', match.current_index ?? 0),
+          );
+          allAnswered = (answeredCount ?? 0) >= participantCount;
+        }
+      }
+
+      if (expired || allAnswered) {
+        const bumped = await tryAdvance(match);
+        if (bumped) match = bumped as typeof match;
+      }
+    }
+
     const sanitizedQuestions = (match.questions as Array<Record<string, unknown>>).map((q) => {
-      if (isHost || match.status === 'finished') return q;
+      if (canSeeAnswers(match, sub)) return q;
       const { correct_index: _ci, explanation: _e, ...rest } = q;
       return rest;
     });
@@ -498,39 +587,31 @@ async function answer(req: VercelRequest, res: VercelResponse) {
       return jsonError(res, 500, 'db_error', 'Could not record answer');
     }
 
-    // Auto-advance for a head-to-head multiplayer match (host + one player).
-    // The host runs the questions and does not answer; as soon as the single
-    // answering player locks in, move everyone to the next question (or finish)
-    // without waiting on anyone else. Larger lobbies keep host-driven advance.
+    // In multiplayer everyone answers — the host competes like any other
+    // player — so the match advances the moment the last participant locks
+    // in (classroom keeps host-driven advance). The lazy check in state()
+    // backstops this if two final answers race past each other.
     let advanced = false;
-    if (match.mode === 'multiplayer' && sub !== match.host_id) {
-      const { count: participantCount } = await withTimeout(
-        supabase!
-          .from('match_participants')
-          .select('user_id', { count: 'exact', head: true })
-          .eq('match_id', match.id),
-      );
-      if (participantCount === 2) {
-        const total = Array.isArray(match.questions) ? match.questions.length : 0;
-        const nextIdx = (match.current_index ?? 0) + 1;
-        const now = new Date().toISOString();
-        const advancePatch: Record<string, unknown> =
-          nextIdx >= total
-            ? { status: 'finished', ended_at: now, last_heartbeat_at: now }
-            : { current_index: nextIdx, question_started_at: now, last_heartbeat_at: now };
-
-        // Conditional update guards against double-advance if the player's
-        // request is retried or two answers race in.
-        const { data: bumped } = await withTimeout(
+    if (match.mode === 'multiplayer') {
+      const [participantsCountRes, answersCountRes] = await Promise.all([
+        withTimeout(
           supabase!
-            .from('matches')
-            .update(advancePatch)
-            .eq('id', match.id)
-            .eq('status', 'running')
-            .eq('current_index', match.current_index ?? 0)
-            .select('id'),
-        );
-        advanced = !!(bumped && bumped.length > 0);
+            .from('match_participants')
+            .select('user_id', { count: 'exact', head: true })
+            .eq('match_id', match.id),
+        ),
+        withTimeout(
+          supabase!
+            .from('match_answers')
+            .select('user_id', { count: 'exact', head: true })
+            .eq('match_id', match.id)
+            .eq('question_idx', body.question_idx),
+        ),
+      ]);
+      const participantCount = participantsCountRes.count ?? 0;
+      const answeredCount = answersCountRes.count ?? 0;
+      if (participantCount > 0 && answeredCount >= participantCount) {
+        advanced = !!(await tryAdvance(match));
       }
     }
 

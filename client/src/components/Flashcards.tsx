@@ -17,6 +17,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../lib/auth';
 import { useActiveSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
+import { categoryLabelKey } from '../lib/categories';
 import { removeFlashcard, type Flashcard } from '../lib/flashcards';
 import { friendlyError } from '../lib/api';
 import { useFlashcards } from '../lib/queries';
@@ -172,7 +173,7 @@ function Flashcards() {
           />
           <div style={{ display: 'flex', flexDirection: 'column', minHeight: 200 }}>
             <HStack justify="between" align="center" gap={1} width="100%">
-              {card.category ? <Badge variant="cyan" label={card.category} /> : <span />}
+              {card.category ? <Badge variant="cyan" label={t(categoryLabelKey(card.category))} /> : <span />}
               <Button
                 variant="ghost"
                 size="sm"

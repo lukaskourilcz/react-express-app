@@ -4,6 +4,7 @@
 // solo quiz, the Play landing, and any future surface stay in sync.
 
 import type { CategoryType } from '../types/quiz';
+import type { TranslationKey } from '../i18n/translations';
 import { getSubject, categoriesForSubject } from './subjects';
 
 export interface CategoryOption {
@@ -12,6 +13,14 @@ export interface CategoryOption {
   /** Brand / programming-language logo color. */
   color: string;
 }
+
+/**
+ * i18n key for a category's display name. The registry's `label` field is the
+ * English fallback; user-visible surfaces should render
+ * `t(categoryLabelKey(cat))` so Czech gets Czech topic names (same pattern as
+ * subjectNameKey in subjects.ts).
+ */
+export const categoryLabelKey = (cat: string): TranslationKey => `category.${cat}` as TranslationKey;
 
 export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'html', label: 'HTML', color: '#e34c26' },

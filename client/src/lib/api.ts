@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { getStoredLang } from '../i18n/LanguageContext';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
@@ -86,13 +87,36 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
   }
 }
 
+// friendlyError runs in the api layer (no React context), so it localizes via
+// the persisted-language snapshot. Server messages for unmapped error codes
+// fall through in English.
+const FRIENDLY_CS: Record<string, string> = {
+  timeout: 'Požadavek vypršel. Zkus to prosím znovu.',
+  cancelled: 'Požadavek byl zrušen.',
+  network: 'Chyba sítě. Zkontroluj připojení a zkus to znovu.',
+  server: 'Chyba serveru. Zkus to prosím za chvíli.',
+  signin: 'Nejdřív se musíš přihlásit.',
+  generic: 'Něco se pokazilo. Zkus to prosím znovu.',
+  // User-facing API error codes worth translating (play flow).
+  too_few_questions: 'Pro tento výběr není dost otázek.',
+  not_found: 'Nic takového jsme nenašli. Zkontroluj kód a zkus to znovu.',
+  finished: 'Tenhle zápas už skončil.',
+};
+
 export function friendlyError(err: unknown): string {
+  const cs = getStoredLang() === 'cs';
   if (err instanceof ApiError) {
-    if (err.code === 'aborted') return err.message;
-    if (err.status === 0) return 'Network error. Check your connection and try again.';
-    if (err.status >= 500) return 'Server error. Please try again in a moment.';
-    if (err.status === 401 || err.status === 403) return 'You need to sign in to do that.';
+    if (err.code === 'aborted') {
+      if (!cs) return err.message;
+      return err.message.startsWith('Request timed out') ? FRIENDLY_CS.timeout : FRIENDLY_CS.cancelled;
+    }
+    if (cs && err.code && FRIENDLY_CS[err.code]) return FRIENDLY_CS[err.code];
+    if (err.status === 0)
+      return cs ? FRIENDLY_CS.network : 'Network error. Check your connection and try again.';
+    if (err.status >= 500) return cs ? FRIENDLY_CS.server : 'Server error. Please try again in a moment.';
+    if (err.status === 401 || err.status === 403)
+      return cs ? FRIENDLY_CS.signin : 'You need to sign in to do that.';
     return err.message;
   }
-  return 'Something went wrong. Please try again.';
+  return cs ? FRIENDLY_CS.generic : 'Something went wrong. Please try again.';
 }
