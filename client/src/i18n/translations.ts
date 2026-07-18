@@ -100,6 +100,18 @@ export const en = {
   'home.stripXpTitle': 'XP, streaks & leaderboards',
   'home.stripXpText': 'Earn XP per level, keep a daily streak, and climb global and per-topic boards.',
 
+  // Umbrella landing (SubjectPicker / "studyShark Landing v2")
+  'subject.landingTitle': 'Learn anything, one level at a time.',
+  'subject.landingSubtitle': 'Seven subjects broken into short, guided levels — with checkpoints, streaks, live matches and leaderboards. No paywalls, no trials, no credit card.',
+  'subject.chooseSubject': 'Choose a subject',
+  'subject.statSubjects': 'subjects',
+  'subject.pickTitle': 'Pick a subject — switch any time.',
+  'subject.topicsCount': '{count} topics',
+  'subject.andMoreTopics': '…and {n} more topics',
+  'subject.roadmapNote': 'Levels unlock as you pass checkpoints. Progress syncs to your account.',
+  'subject.stripCardsTitle': 'Flashcards',
+  'subject.stripCardsText': 'Save any question as a flashcard and revisit it until it sticks.',
+
 
   // Per-subject identity (names + blurbs shown in the picker, hero, chips)
   'subject.webdev.name': 'Web Dev',

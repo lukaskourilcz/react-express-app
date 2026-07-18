@@ -101,6 +101,18 @@ export const cs: Record<TranslationKey, string> = {
   'home.stripXpTitle': 'XP, série a žebříčky',
   'home.stripXpText': 'Získávej XP za úrovně, drž si denní sérii a stoupej v globálních i tématických žebříčcích.',
 
+  // Umbrella landing (SubjectPicker / "studyShark Landing v2")
+  'subject.landingTitle': 'Nauč se cokoli, úroveň po úrovni.',
+  'subject.landingSubtitle': 'Sedm předmětů rozdělených do krátkých, řízených úrovní — s kontrolními body, sériemi, živými zápasy a žebříčky. Žádné placené zdi, žádné zkušební verze, žádná platební karta.',
+  'subject.chooseSubject': 'Vyber si předmět',
+  'subject.statSubjects': 'předmětů',
+  'subject.pickTitle': 'Vyber si předmět — kdykoli ho změníš.',
+  'subject.topicsCount': '{count} témat',
+  'subject.andMoreTopics': '…a dalších {n} témat',
+  'subject.roadmapNote': 'Úrovně se odemykají, jak procházíš kontrolními body. Pokrok se ukládá k tvému účtu.',
+  'subject.stripCardsTitle': 'Kartičky',
+  'subject.stripCardsText': 'Ulož si jakoukoli otázku jako kartičku a vracej se k ní, dokud si ji nezapamatuješ.',
+
 
   // Identita předmětů (názvy + popisky v přehledu, hero a chipech)
   'subject.webdev.name': 'Web Dev',
