@@ -86,27 +86,29 @@ export function FadeFinCta({
 }
 
 /** A CTA whose fin swims the full width on hover (see DESIGN_RULES §3). */
-export function SwimCta({ label, onClick, dir }: { label: string; onClick: () => void; dir: 1 | -1 }) {
+export function SwimCta({ label, onClick, dir, disabled, size = 'md' }: { label: string; onClick: () => void; dir: 1 | -1; disabled?: boolean; size?: 'md' | 'lg' }) {
   const [hover, setHover] = useState(false);
   const distance = 260;
+  const active = hover && !disabled;
   return (
     <button
-      type="button" onClick={onClick}
+      type="button" onClick={onClick} disabled={disabled}
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       style={{
         position: 'relative', overflow: 'hidden', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         background: 'var(--brand-accent)', color: '#fff', border: 'none',
-        borderRadius: 'var(--radius-element)', padding: '10px 18px',
-        fontFamily: 'var(--font-family-body)', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer',
-        filter: hover ? 'brightness(0.92)' : 'none', transition: 'filter 0.2s ease',
+        borderRadius: 'var(--radius-element)', padding: size === 'lg' ? '13px 26px' : '10px 18px',
+        fontFamily: 'var(--font-family-body)', fontWeight: 600, fontSize: size === 'lg' ? '1rem' : '0.95rem',
+        cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
+        filter: active ? 'brightness(0.92)' : 'none', transition: 'filter 0.2s ease, opacity 0.2s ease',
       }}
     >
       <span
         aria-hidden
         style={{
           position: 'absolute', left: dir === 1 ? '0' : '100%', right: dir === -1 ? undefined : '100%',
-          bottom: -8, lineHeight: 0, opacity: hover ? 1 : 0,
-          transform: `translateX(${hover ? dir * distance : 0}px)${dir === 1 ? ' scaleX(-1)' : ''}`,
+          bottom: -8, lineHeight: 0, opacity: active ? 1 : 0,
+          transform: `translateX(${active ? dir * distance : 0}px)${dir === 1 ? ' scaleX(-1)' : ''}`,
           transition: `transform ${dir === 1 ? 3.8 : 2.6}s ease-in-out, opacity 0.4s ease`, pointerEvents: 'none',
         }}
       >

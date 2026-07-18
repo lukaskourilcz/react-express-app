@@ -1,25 +1,24 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SwimCta } from './landing/LandingKit';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
-import { Grid } from '@astryxdesign/core/Grid';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Badge } from '@astryxdesign/core/Badge';
-import { WaterlineProgress } from './SharkFin';
+import { WaterlineProgress, SharkFin } from './SharkFin';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { Popover } from '@astryxdesign/core/Popover';
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { AppToast } from './ui/AppToast';
 import { useAuth, getUserProfile } from '../lib/auth';
-import { useActiveSubject, subjectNameKey } from '../lib/subjects';
+import { useActiveSubject } from '../lib/subjects';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { visuallyHidden } from '../theme/MuiTheme';
 import {
-  CATEGORY_LOOKUP,
   CATEGORY_OPTIONS,
   visibleCategoryOptionsFor,
   onCategoryColorText,
@@ -50,7 +49,7 @@ import { useGameConfig } from '../lib/gameConfig';
 import { ReportDialog } from './ReportDialog';
 import { capture } from '../lib/analytics';
 import { MotionPop, MotionItem } from '../lib/motion';
-import { RadioCardGroup, RadioCard, CheckCard } from './ui/RadioCards';
+import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { CategoryGlyph } from './ui/techIcons';
 import './Quiz.css';
 
@@ -190,7 +189,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const { isAuthenticated, user } = useAuth();
   const profile = getUserProfile(user);
   const visibleCategoryOptions = visibleCategoryOptionsFor(profile.email);
-  const visibleCategories = visibleCategoryOptions.map((c) => c.value);
 
   // The /dev "default visible categories" setting picks which chips appear on
   // first sight; the rest unlock when the learner clicks "Show all". Empty
@@ -631,214 +629,103 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   }
 
   if (state === 'ready') {
+    const labelStyle: CSSProperties = { fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '0.95rem' };
+    const linkBtn: CSSProperties = { background: 'none', border: 'none', padding: 0, color: 'var(--brand-accent)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'var(--font-family-body)' };
+    const pill = (on: boolean): CSSProperties => ({
+      display: 'inline-flex', alignItems: 'center', gap: 6,
+      background: on ? 'var(--brand-accent-soft)' : 'var(--ss-card-bg)',
+      color: on ? 'var(--brand-accent)' : 'var(--color-text-primary)',
+      border: `1px solid ${on ? 'var(--brand-accent)' : 'var(--ss-card-line)'}`,
+      borderRadius: 999, padding: '7px 14px', fontFamily: 'var(--font-family-body)',
+      fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+      transition: 'border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease',
+    });
     return (
-      <div className="ss-pop" style={{ width: '100%', maxWidth: 680, margin: 'auto' }}>
-        <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
-        <Card padding={5} width="100%">
-          <VStack gap={4}>
-            <VStack gap={1} align="center">
-              <span className="ss-kicker ss-kicker--center">{t(subjectNameKey(subject.id))}</span>
-              <Heading level={1} type="display-2" justify="center">
-                {t('quiz.title')}
-              </Heading>
-              <Text type="large" color="secondary" justify="center">
-                {t('quiz.subtitle')}
-              </Text>
-            </VStack>
+      <div className="ss-pop" style={{ width: '100%', maxWidth: 680, margin: '0 auto' }}>
+        {/* Editorial header: kicker + wave tick + Manrope title + subline. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+          <span className="ss-kicker">{t('quiz.kicker')}</span>
+          <h1 style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '2rem', letterSpacing: '-0.015em' }}>
+            {t('quiz.buildTitle')}
+          </h1>
+          <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--color-text-secondary)' }}>{t('quiz.buildSubtitle')}</p>
+        </div>
 
-            {/* Secondary modes as quiet links — the single primary CTA on this
-                screen is "Start quiz" below. */}
-            <HStack gap={1} justify="center" wrap="wrap">
-              <Button
-                variant="ghost"
-                size="sm"
-                label={t('quiz.todaysChallenge')}
-                onClick={startDailyChallenge}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                label={t('challenge.cta')}
-                onClick={() => navigate('/challenge')}
-              />
-            </HStack>
+        <div className="ss-panel" style={{ position: 'relative', overflow: 'hidden', padding: 24, display: 'flex', flexDirection: 'column', gap: 20, borderRadius: 'var(--radius-page)' }}>
+          <div aria-hidden style={{ position: 'absolute', right: '-6%', bottom: '-38%', opacity: 0.04, transform: 'rotate(-8deg)', pointerEvents: 'none', color: 'var(--ss-ink)' }}>
+            <SharkFin size={360} color="currentColor" />
+          </div>
 
-            {/* Categories: real technology logos as the visual anchor — the
-                cards share the option-card language of the pickers below. */}
-            <VStack gap={1.5}>
-              <HStack justify="between" align="center">
-                <Text as="label" type="label" color="secondary" id="quiz-categories-label">
-                  {t('quiz.categories')}
-                </Text>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  label={isAllSelected ? t('quiz.deselectAll') : t('quiz.selectAll')}
-                  onClick={handleSelectAll}
-                />
-              </HStack>
-
-              <div role="group" aria-labelledby="quiz-categories-label" style={{ width: '100%' }}>
-                <Grid columns={{ minWidth: 170, max: 3 }} gap={1.5}>
-                  {displayedCategoryOptions.map((cat) => {
-                    const selected = selectedCategories.includes(cat.value);
-                    return (
-                      <CheckCard
-                        key={cat.value}
-                        checked={selected}
-                        onChange={() => handleCategoryToggle(cat.value)}
-                        label={t(categoryLabelKey(cat.value))}
-                        padding={3}
-                      >
-                        <HStack gap={1.5} align="center">
-                          <CategoryGlyph category={cat.value} color={cat.color} size={20} />
-                          <Text type="body" size="sm" weight={selected ? 'semibold' : 'medium'} maxLines={1}>
-                            {t(categoryLabelKey(cat.value))}
-                          </Text>
-                        </HStack>
-                      </CheckCard>
-                    );
-                  })}
-                </Grid>
-              </div>
-
-              {hasCollapsedSubset && (
-                <HStack justify="center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    label={showAllCategories ? t('quiz.showFewer') : t('quiz.showAllCategories')}
-                    onClick={() => setShowAllCategories((v) => !v)}
-                  />
-                </HStack>
-              )}
-
-              {/* Always in the DOM so the Start button's aria-describedby target
-                  exists whenever it is referenced. */}
-              <div
-                id="categories-error"
-                role="alert"
-                style={{ minHeight: '1.2em', fontSize: '0.78rem', fontWeight: 600, color: 'var(--ss-error)' }}
-              >
-                {attemptedStart && selectedCategories.length === 0 ? t('quiz.selectAtLeastOne') : ''}
-              </div>
-            </VStack>
-
-            {selectedCategories.length > 0 && (
-              <Card variant="muted" padding={2} width="100%">
-                <VStack gap={1}>
-                  <Text type="supporting" size="xsm">
-                    {t('quiz.selectedCount', { count: selectedCategories.length, total: visibleCategories.length })}
-                  </Text>
-                  <HStack gap={0.5} wrap="wrap">
-                    {selectedCategories.map((cat) => {
-                      const category = CATEGORY_LOOKUP.get(cat);
-                      if (!category) return null;
-                      return (
-                        <span
-                          key={cat}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            height: 24,
-                            padding: '0 9px',
-                            borderRadius: 7,
-                            fontSize: '0.7rem',
-                            fontWeight: 600,
-                            lineHeight: 1,
-                            backgroundColor: category.color,
-                            color: onCategoryColorText(cat),
-                          }}
-                        >
-                          {t(categoryLabelKey(cat))}
-                        </span>
-                      );
-                    })}
-                  </HStack>
-                </VStack>
-              </Card>
-            )}
-
-            {/* Count + difficulty: full-width rows so the five pills always
-                sit on one line instead of wrapping into orphans. */}
-            <VStack gap={3}>
-              <VStack gap={1.5}>
-                <Text as="label" type="label" color="secondary" id="quiz-count-label">
-                  {t('quiz.questionsLegend')}
-                </Text>
-                <RadioCardGroup
-                  value={questionCount}
-                  onChange={(v) => setQuestionCount(v as number)}
-                  labelledBy="quiz-count-label"
-                  orientation="horizontal"
-                  style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}
-                >
-                  {config.quiz.countOptions.map((count, i) => (
-                    <RadioCard
-                      key={count}
-                      value={count}
-                      index={i}
-                      label={t('quiz.countQuestionsAria', { count })}
-                      padding={3}
-                      width={56}
-                    >
-                      <div style={{ textAlign: 'center', width: '100%' }}>
-                        <Text type="body" weight="bold">
-                          {count}
-                        </Text>
-                      </div>
-                    </RadioCard>
-                  ))}
-                </RadioCardGroup>
-              </VStack>
-
-              <VStack gap={1.5}>
-                <Text as="label" type="label" color="secondary" id="quiz-difficulty-label">
-                  {t('quiz.difficulty')}
-                </Text>
-                <RadioCardGroup
-                  value={difficultyMode}
-                  onChange={(v) => setDifficultyMode(v as DifficultyMode)}
-                  labelledBy="quiz-difficulty-label"
-                  orientation="horizontal"
-                  style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}
-                >
-                  {DIFFICULTY_VALUES.map((value, i) => {
-                    const label = t(`difficulty.${value}` as TranslationKey);
-                    const tip = t(`difficulty.${value}.tip` as TranslationKey);
-                    return (
-                      <Tooltip key={value} content={tip} placement="above">
-                        <span style={{ display: 'inline-flex' }}>
-                          <RadioCard
-                            value={value}
-                            index={i}
-                            label={t('quiz.difficultyAria', { label })}
-                            padding={3}
-                            width="auto"
-                          >
-                            <Text type="body" size="sm" weight={difficultyMode === value ? 'semibold' : 'medium'}>
-                              {label}
-                            </Text>
-                          </RadioCard>
-                        </span>
-                      </Tooltip>
-                    );
-                  })}
-                </RadioCardGroup>
-              </VStack>
-            </VStack>
-
-            <div style={{ display: 'grid' }}>
-              <Button
-                variant="primary"
-                size="lg"
-                label={t('quiz.startQuiz')}
-                onClick={handleStart}
-                isDisabled={selectedCategories.length === 0}
-              />
+          {/* Categories as accent pills. */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span id="quiz-categories-label" style={labelStyle}>{t('quiz.categories')}</span>
+              <button type="button" onClick={handleSelectAll} style={linkBtn}>
+                {isAllSelected ? t('quiz.deselectAll') : t('quiz.selectAll')}
+              </button>
             </div>
-          </VStack>
-        </Card>
+            <div role="group" aria-labelledby="quiz-categories-label" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {displayedCategoryOptions.map((cat) => {
+                const selected = selectedCategories.includes(cat.value);
+                return (
+                  <button key={cat.value} type="button" aria-pressed={selected} onClick={() => handleCategoryToggle(cat.value)} style={pill(selected)}>
+                    <CategoryGlyph category={cat.value} color={cat.color} size={16} />
+                    {t(categoryLabelKey(cat.value))}
+                  </button>
+                );
+              })}
+            </div>
+            {hasCollapsedSubset && (
+              <button type="button" onClick={() => setShowAllCategories((v) => !v)} style={{ ...linkBtn, alignSelf: 'flex-start' }}>
+                {showAllCategories ? t('quiz.showFewer') : t('quiz.showAllCategories')}
+              </button>
+            )}
+            <div id="categories-error" role="alert" style={{ minHeight: '1.2em', fontSize: '0.78rem', fontWeight: 600, color: 'var(--ss-error)' }}>
+              {attemptedStart && selectedCategories.length === 0 ? t('quiz.selectAtLeastOne') : ''}
+            </div>
+          </div>
+
+          {/* Questions + Difficulty. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 20, position: 'relative' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <span id="quiz-count-label" style={labelStyle}>{t('quiz.questionsLegend')}</span>
+              <div role="radiogroup" aria-labelledby="quiz-count-label" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {config.quiz.countOptions.map((count) => (
+                  <button key={count} type="button" role="radio" aria-checked={questionCount === count} aria-label={t('quiz.countQuestionsAria', { count })} onClick={() => setQuestionCount(count)} style={{ ...pill(questionCount === count), minWidth: 48, justifyContent: 'center' }}>
+                    {count}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <span id="quiz-difficulty-label" style={labelStyle}>{t('quiz.difficulty')}</span>
+              <div role="radiogroup" aria-labelledby="quiz-difficulty-label" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {DIFFICULTY_VALUES.map((value) => {
+                  const label = t(`difficulty.${value}` as TranslationKey);
+                  const tip = t(`difficulty.${value}.tip` as TranslationKey);
+                  return (
+                    <Tooltip key={value} content={tip} placement="above">
+                      <button type="button" role="radio" aria-checked={difficultyMode === value} aria-label={t('quiz.difficultyAria', { label })} onClick={() => setDifficultyMode(value)} style={pill(difficultyMode === value)}>
+                        {label}
+                      </button>
+                    </Tooltip>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Start — swim-through CTA + reassurance line. */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', position: 'relative' }}>
+            <SwimCta label={t('quiz.startQuiz')} onClick={handleStart} dir={1} disabled={selectedCategories.length === 0} size="lg" />
+            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>{t('quiz.noPeeking')}</span>
+          </div>
+        </div>
+
+        {/* Quick entries into the daily challenge — kept as quiet links. */}
+        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 16 }}>
+          <button type="button" onClick={startDailyChallenge} style={linkBtn}>{t('quiz.todaysChallenge')}</button>
+          <button type="button" onClick={() => navigate('/challenge')} style={linkBtn}>{t('challenge.cta')}</button>
         </div>
 
         <AppToast

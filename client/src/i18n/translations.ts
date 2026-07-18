@@ -112,6 +112,13 @@ export const en = {
   'subject.stripCardsTitle': 'Flashcards',
   'subject.stripCardsText': 'Save any question as a flashcard and revisit it until it sticks.',
 
+  // Quiz setup ("Deep End v2")
+  'quiz.kicker': 'Solo quiz',
+  'quiz.buildTitle': 'Build your quiz.',
+  'quiz.buildSubtitle': 'Importance-weighted questions — the ones that matter most surface more often.',
+  'quiz.noPeeking': 'Answers stay on the server until you submit — no peeking.',
+  'quiz.keysHint': 'Keys 1–4 to answer · Enter to continue',
+
 
   // Per-subject identity (names + blurbs shown in the picker, hero, chips)
   'subject.webdev.name': 'Web Dev',

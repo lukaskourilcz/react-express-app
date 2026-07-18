@@ -113,6 +113,13 @@ export const cs: Record<TranslationKey, string> = {
   'subject.stripCardsTitle': 'Kartičky',
   'subject.stripCardsText': 'Ulož si jakoukoli otázku jako kartičku a vracej se k ní, dokud si ji nezapamatuješ.',
 
+  // Quiz setup ("Deep End v2")
+  'quiz.kicker': 'Sólo kvíz',
+  'quiz.buildTitle': 'Sestav si kvíz.',
+  'quiz.buildSubtitle': 'Otázky vážené podle důležitosti — ty nejdůležitější se objevují častěji.',
+  'quiz.noPeeking': 'Odpovědi zůstávají na serveru, dokud je neodešleš — žádné nakukování.',
+  'quiz.keysHint': 'Klávesy 1–4 pro odpověď · Enter pro pokračování',
+
 
   // Identita předmětů (názvy + popisky v přehledu, hero a chipech)
   'subject.webdev.name': 'Web Dev',
