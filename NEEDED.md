@@ -9,6 +9,22 @@ Grouped by the catalogue tool each item came from.
 
 ---
 
+## Tasks
+
+Each task has a one-line "why" and an importance score `[imp:N]` (5 = highest).
+Full how-to is in the numbered sections below.
+
+- [ ] **Generate real app icons, splash & OG image** — placeholders ship now; real artwork is an App Store submission blocker. `[imp:4]`
+- [ ] **Set the real iOS bundle id / Android package + EAS credentials** — still the `com.yourcompany.devquiz` placeholder, blocks a real build. `[imp:4]`
+- [ ] **Add an uptime monitor on `/api/health`** — the endpoint now returns 503 on real downtime; nothing watches it yet. `[imp:3]`
+- [ ] **Enable the Upstash distributed rate limiter** — in-memory limiting isn't shared across serverless instances today. `[imp:2]`
+- [ ] **Launch standalone devShark as a second Vercel project** — optional; ships coded and is a no-op on StudyShark. `[imp:2]`
+- [ ] **Run PageSpeed / DebugBear on the deployed URL** — measure Core Web Vitals before spending effort on perf tweaks. `[imp:2]`
+- [ ] **Browse Mobbin for iOS quiz-app references** — inspiration for the planned iOS redesign; no code. `[imp:1]`
+- [ ] **Offload endpoints to Cloudflare Workers if you outgrow Vercel's 12-function cap** — only relevant when you add more endpoints. `[imp:1]`
+
+---
+
 ## 1. Upstash — distributed rate limiting (High)
 
 **Status without you:** rate limiting still runs, but on the old in-memory
@@ -163,19 +179,3 @@ the same repo — no code changes.
 > Valid `VITE_LOCK_SUBJECT` ids: `webdev`, `geography`, `math`, `history`,
 > `chess`, `biology`, `poker`. An invalid/empty value simply falls back to the
 > full StudyShark picker.
-
----
-
-### Summary of what shipped in code (no action needed)
-
-- `lib/rate-limit.ts` — `enforceRateLimit()` with Upstash backend + graceful
-  in-memory fallback; wired into report / challenge / admin-gate.
-- `api/health.ts` — 503 on Supabase-down (+ `Retry-After`).
-- `client/index.html` + `client/public/manifest.webmanifest` — PWA manifest,
-  apple-touch-icon, OG/Twitter image tags.
-- `mobile/app.json` — display name → StudyShark, icon/splash/adaptive-icon wired.
-- Placeholder PNGs + `scripts/gen-placeholder-assets.mjs`.
-- Standalone single-subject mode — `VITE_LOCK_SUBJECT` / `VITE_SIBLING_URL` in
-  `client/src/lib/subjects.ts`, `App.tsx`, `Profile.tsx` (per-subject
-  `standaloneBrand`; picker/switcher/`/subjects` removed when locked). No-op
-  unless the env vars are set. See §7 to launch devShark.
