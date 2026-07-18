@@ -200,6 +200,25 @@ h1, h2, h3, h4, h5, h6 {
   -webkit-mask: var(--ss-wave) repeat-x left center / 24px 6px;
 }
 
+/* Editorial landing hero: two columns (pitch + sample card) that stack under
+ * ~760px, exactly like the design reference. */
+.ss-hero-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 48px;
+  align-items: center;
+}
+.ss-hero-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 32px;
+  margin-top: 8px;
+}
+@media (max-width: 760px) {
+  .ss-hero-grid { grid-template-columns: 1fr; gap: 32px; }
+  .ss-hero-stats { gap: 20px 28px; }
+}
+
 /* Radio option cards (ui/RadioCards.tsx) — visually SelectableCard, but with
  * real radio semantics. Selected = accent border + inset ring, same as
  * Astryx's selected treatment. */
