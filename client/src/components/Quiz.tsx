@@ -742,55 +742,58 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   if (state === 'submitted' && result) {
     return (
       <>
-        <div className="ss-pop">
-        <Card padding={0} width="100%">
-          <div className="quiz-result-card" role="region" aria-labelledby="quiz-result-heading">
-            <VStack gap={2} align="center">
-              <div id="quiz-result-heading" ref={resultHeadingRef} tabIndex={-1}>
-                <Heading level={2} justify="center">
-                  {t('quiz.complete')}
-                </Heading>
+        <div className="ss-pop" style={{ width: '100%', maxWidth: 680, margin: '0 auto' }}>
+          <div
+            className="ss-panel"
+            role="region"
+            aria-labelledby="quiz-result-heading"
+            style={{ position: 'relative', overflow: 'hidden', padding: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, borderRadius: 'var(--radius-page)' }}
+          >
+            <div aria-hidden style={{ position: 'absolute', right: '-6%', bottom: '-40%', opacity: 0.04, transform: 'rotate(-8deg)', pointerEvents: 'none', color: 'var(--ss-ink)' }}>
+              <SharkFin size={340} color="currentColor" />
+            </div>
+            <span className="ss-kicker ss-kicker--center" style={{ position: 'relative' }}>{t('quiz.complete')}</span>
+            <MotionPop>
+              <div
+                id="quiz-result-heading"
+                ref={resultHeadingRef}
+                tabIndex={-1}
+                role="status"
+                aria-live="polite"
+                aria-label={t('quiz.scoreOutOf', { correct: result.correctAnswers, total: result.totalQuestions })}
+                style={{ position: 'relative', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '3rem', lineHeight: 1, letterSpacing: '-0.02em', color: 'var(--brand-accent)' }}
+              >
+                {result.correctAnswers} / {result.totalQuestions}
               </div>
-              <MotionPop>
-                <div
-                  role="status"
-                  aria-live="polite"
-                  className="quiz-score-text"
-                  style={{ color: 'var(--brand-accent)' }}
-                >
-                  {result.percentage}%
-                </div>
-              </MotionPop>
-              <Heading level={4} justify="center">
-                {t('quiz.scoreOutOf', { correct: result.correctAnswers, total: result.totalQuestions })}
-              </Heading>
+            </MotionPop>
+            <span style={{ position: 'relative', fontSize: '0.95rem', color: 'var(--color-text-secondary)' }}>
+              {t('quiz.scoreOutOf', { correct: result.correctAnswers, total: result.totalQuestions })} · {result.percentage}%
+            </span>
 
-              {mode === 'daily' && (
-                <Text type="supporting" color="secondary" justify="center">
-                  {t('quiz.dailyComplete')}
-                </Text>
-              )}
+            {mode === 'daily' && (
+              <Text type="supporting" color="secondary" justify="center">
+                {t('quiz.dailyComplete')}
+              </Text>
+            )}
 
-              <HStack gap={1.5} justify="center" wrap="wrap">
-                <Button variant="primary" label={t('quiz.newQuiz')} onClick={handleRestart} />
-                <Button
-                  variant="secondary"
-                  label={t('quiz.shareResult')}
-                  icon={<ShareIcon />}
-                  onClick={handleShare}
-                />
-                <Button
-                  variant="ghost"
-                  label={t('quiz.reviewAnswersArrow')}
-                  onClick={() => {
-                    document.getElementById('quiz-review')?.scrollIntoView({ behavior: 'smooth' });
-                  }}
-                />
-                <Button variant="ghost" label={t('quiz.backHome')} onClick={() => navigate('/')} />
-              </HStack>
-            </VStack>
+            <HStack gap={1.5} justify="center" wrap="wrap" style={{ position: 'relative', marginTop: 4 }}>
+              <Button variant="primary" label={t('quiz.newQuiz')} onClick={handleRestart} />
+              <Button
+                variant="secondary"
+                label={t('quiz.shareResult')}
+                icon={<ShareIcon />}
+                onClick={handleShare}
+              />
+              <Button
+                variant="ghost"
+                label={t('quiz.reviewAnswersArrow')}
+                onClick={() => {
+                  document.getElementById('quiz-review')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              />
+              <Button variant="ghost" label={t('quiz.backHome')} onClick={() => navigate('/')} />
+            </HStack>
           </div>
-        </Card>
         </div>
 
         <h3 id="quiz-review" className="quiz-review-header">
