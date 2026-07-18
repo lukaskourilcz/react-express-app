@@ -8,7 +8,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Badge } from '@astryxdesign/core/Badge';
-import { ProgressBar } from '@astryxdesign/core/ProgressBar';
+import { WaterlineProgress } from './SharkFin';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { Popover } from '@astryxdesign/core/Popover';
@@ -1069,12 +1069,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               {currentIndex + 1}/{questions.length}
             </Text>
             <div style={{ flex: 1 }}>
-              <ProgressBar
-                label={t('quiz.progressAria')}
-                value={progress}
-                isLabelHidden
-                variant="accent"
-              />
+              <WaterlineProgress label={t('quiz.progressAria')} value={progress} />
             </div>
             <Text type="supporting" size="xsm" weight="medium">
               {answered}/{questions.length}

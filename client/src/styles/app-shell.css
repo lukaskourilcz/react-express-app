@@ -197,6 +197,8 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .ss-float { animation: none !important; }
+  /* The quiz progress fin snaps instead of gliding. */
+  .ss-progress-fin { transition: none !important; }
 }
 
 /* Shark mascot animations (SharkFin.tsx) — one static copy instead of a
