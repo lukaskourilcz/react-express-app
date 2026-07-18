@@ -14,6 +14,7 @@ Grouped by the catalogue tool each item came from.
 Each task has a one-line "why" and an importance score `[imp:N]` (5 = highest).
 Full how-to is in the numbered sections below.
 
+- [ ] **Finish + verify the "Deep End v2" redesign** — landings & Quiz done; Learn/Profile/Play/Career/Flashcards/Challenge still need restyling and backend-driven verification. See §0. `[imp:5]`
 - [ ] **Generate real app icons, splash & OG image** — placeholders ship now; real artwork is an App Store submission blocker. `[imp:4]`
 - [ ] **Set the real iOS bundle id / Android package + EAS credentials** — still the `com.yourcompany.devquiz` placeholder, blocks a real build. `[imp:4]`
 - [ ] **Add an uptime monitor on `/api/health`** — the endpoint now returns 503 on real downtime; nothing watches it yet. `[imp:3]`
@@ -22,6 +23,60 @@ Full how-to is in the numbered sections below.
 - [ ] **Run PageSpeed / DebugBear on the deployed URL** — measure Core Web Vitals before spending effort on perf tweaks. `[imp:2]`
 - [ ] **Browse Mobbin for iOS quiz-app references** — inspiration for the planned iOS redesign; no code. `[imp:1]`
 - [ ] **Offload endpoints to Cloudflare Workers if you outgrow Vercel's 12-function cap** — only relevant when you add more endpoints. `[imp:1]`
+
+---
+
+## 0. Design-system redesign "Deep End v2" — finish & verify (resume here)
+
+Applies the new **Deep End v2** design system from the Google Drive handoff
+(folder `1R3iDvrUDanVkpGuEdIxTtFAyNcGtjJ4L`; the `.dc.html` files are the pixel
+references). The rules are codified in **`DESIGN_RULES.md`** (fin baseline,
+per-subject accent swap, fade-in-only fin reveals, wave-variation,
+reduced-motion). Shared building blocks:
+
+- `client/src/components/landing/LandingKit.tsx` — `Kicker`, `Fin`, `finBg`,
+  `StatItem`, `FadeFinCta`, `SwimCta`, `SampleCard`, `CheckpointNode`, `pathWave`.
+- `client/src/components/SharkFin.tsx` — `WaterlineProgress` (fin-marker bar),
+  `SharkFin`, `Waterline`.
+- `client/src/lib/landingTopics.ts` — featured-topic data (real Level-1
+  questions + level names) for all 7 subjects.
+
+**Done & verified (screenshot + build):**
+
+- `Home.tsx` — per-subject editorial landing (hero + interactive sample
+  question + topic fin-schools + "Inside <Topic>" preview + feature strip +
+  pledge + family line). Re-skins across all 7 subjects.
+- `SubjectPicker.tsx` — the umbrella "studyShark Landing v2" (subjects as the
+  picker cards; live preview re-skins per subject).
+- `Quiz.tsx` — setup stage (kicker/heading/pills/swim CTA + ghost fin,
+  screenshot-verified); in-progress waterline fin-marker progress + results
+  score card (build-verified only — see below).
+
+**Still to do — restyle each to its `.dc.html`, preserving all logic:**
+
+- [ ] `Roadmap.tsx` (`/learn`) — the snaking "journey" path: kicker `Learn` +
+  "Your learning journey.", topic rail with per-topic `N/M levels`, nodes
+  (done `✓` / current ringed+pulse+bobbing-fin / locked muted), varied wave
+  connectors, gold checkpoints at each row turn, "Continue — Level N" swim CTA.
+- [ ] `Profile.tsx` — identity card (avatar ring, level badge, rank, XP bar),
+  stat tiles, per-category accuracy bars, achievements (earned vs 55%-locked),
+  settings rows.
+- [ ] `Play.tsx` — mode cards (Free-for-all / Head-to-head / Classroom),
+  per-question time-limit pills, Create-match CTA, join-by-code panel.
+- [ ] `CareerRoadmap.tsx` (`/roadmap`) — Frontend/Backend/Fullstack picker +
+  4-stage ladder ending in the gold "Senior-ready" node.
+- [ ] `Flashcards.tsx` (`/cards`) — saved-cards **grid** with tap-to-flip
+  reveal + "Practice all N" swim CTA (today it's a single-card flip-through).
+- [ ] `Challenge.tsx` — daily-challenge stat row, streak chip, today's top-5
+  board. **Keep** the per-question countdown bar as a plain bar — the fin-marker
+  progress is only for forward progress, never a shrinking timer.
+
+**Why these are unfinished:** each renders its main state only with the backend
+(`vercel dev` + Supabase) and a signed-in user, which the web sandbox can't run —
+so they couldn't be screenshot-verified here. **Tomorrow, once the backend is
+wired:** run the full stack, sign in, and drive + screenshot each state as it's
+restyled. Reuse the LandingKit + `WaterlineProgress` primitives; keep every new
+string as an i18n key in `translations.ts` **and** `translations.cs.ts`.
 
 ---
 

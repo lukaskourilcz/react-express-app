@@ -190,6 +190,17 @@
   .ss-fin-drift { animation: none !important; }
 }
 
+/* Gentle bob + tilt for landing topic-card icons. */
+@keyframes ssFloat {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-3px) rotate(-2deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ss-float { animation: none !important; }
+  /* The quiz progress fin snaps instead of gliding. */
+  .ss-progress-fin { transition: none !important; }
+}
+
 /* Shark mascot animations (SharkFin.tsx) — one static copy instead of a
    per-mount <style> injection. */
 @keyframes devsharkSwim {

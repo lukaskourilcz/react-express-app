@@ -73,6 +73,36 @@ export function Waterline({ color = 'var(--brand-accent)' }: { color?: string })
 }
 
 /**
+ * A progress bar rendered as a waterline: a hairline track, an accent fill, and
+ * a small shark fin that rides the leading edge of the fill like a dorsal
+ * breaking the surface. The signature "Deep End" progress moment, used in the
+ * quiz/challenge play flow. `value` is 0–100. Decorative marker; the semantics
+ * live on the surrounding label.
+ */
+export function WaterlineProgress({ value, label }: { value: number; label?: string }) {
+  const pct = `${Math.max(0, Math.min(100, value))}%`;
+  return (
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuenow={Math.round(value)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      style={{ position: 'relative', height: 18 }}
+    >
+      {/* Track */}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 8, height: 2, borderRadius: 2, background: 'var(--color-border)' }} />
+      {/* Fill */}
+      <div style={{ position: 'absolute', left: 0, top: 8, height: 2, borderRadius: 2, background: 'var(--brand-accent)', width: pct, transition: 'width 0.4s ease' }} />
+      {/* Fin marker riding the fill edge. */}
+      <div className="ss-progress-fin" aria-hidden style={{ position: 'absolute', top: -6, left: pct, transform: 'translateX(-50%)', lineHeight: 0, transition: 'left 0.4s ease' }}>
+        <SharkFin size={16} />
+      </div>
+    </div>
+  );
+}
+
+/**
  * A larger fin surfacing and swimming side-to-side over a rippling water line —
  * the branded loading indicator.
  */
