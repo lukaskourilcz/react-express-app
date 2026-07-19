@@ -177,19 +177,6 @@ const TrophyIcon = ({ size = 26 }: { size?: number }) => (
     <path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
   </svg>
 );
-const StarIcon = ({ filled, size = 14 }: { filled: boolean; size?: number }) => (
-  <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-  </svg>
-);
-
-function starsFor(pct: number, passPct: number): number {
-  if (pct >= 100) return 3;
-  if (pct >= passPct) return 2;
-  if (pct > 0) return 1;
-  return 0;
-}
-
 // Build one part's ordered path: its levels, then a single end-of-part test.
 type PathNode =
   | { type: 'level'; meta: RoadmapLevelMeta; range: PartRange }
@@ -447,15 +434,17 @@ function Roadmap() {
   const layout = useMemo(() => {
     if (!pathWidth || levels.length === 0) return null;
     const nodes = buildFullPath(levels, ranges);
-    const cols = Math.max(2, Math.min(5, Math.floor(pathWidth / 150)));
+    // Five levels + their checkpoint per row on desktop, three + checkpoint
+    // on narrow screens — the compact rhythm from the Deep End handoff.
+    const cols = 6;
     const cellW = pathWidth / cols;
     // ROW_H must clear the accumulated within-row slope so the lowest node of a
     // row doesn't collide with the next row's start node (same column at a turn) —
     // including a taller test node and its two-line label.
-    const ROW_H = 178;
-    const SLOPE = 12;
-    const BASE = 50;
-    const LABEL_H = 60;
+    const ROW_H = 126;
+    const SLOPE = 0;
+    const BASE = 34;
+    const LABEL_H = 42;
     const placed: PlacedNode[] = nodes.map((node, i): PlacedNode => {
       const row = Math.floor(i / cols);
       const p = i % cols;
@@ -466,7 +455,7 @@ function Roadmap() {
         const passed = isPartTestPassed(progress, topic, node.part);
         const unlocked = isPartTestUnlocked(progress, topic, node.range);
         return {
-          i, kind: 'test', key: `test-${node.part}`, cx, cy, half: 42,
+          i, kind: 'test', key: `test-${node.part}`, cx, cy, half: 25,
           accent: CHECKPOINT_GOLD, grad: CHECKPOINT_GRAD, part: node.part, range: node.range,
           unlocked, passed, isCurrent: unlocked && !passed,
           best: partTestBestPct(progress, topic, node.part),
@@ -477,8 +466,9 @@ function Roadmap() {
       const band = bandForCategory(topic, meta.difficulty);
       const passed = isLevelPassed(progress, topic, meta.level);
       const unlocked = isPartLevelUnlocked(progress, topic, nodeRange, meta.level);
+      const isCurrent = unlocked && !passed;
       return {
-        i, kind: 'level', key: `lvl-${meta.level}`, cx, cy, half: 32,
+        i, kind: 'level', key: `lvl-${meta.level}`, cx, cy, half: isCurrent ? 23 : 20,
         accent: band.solid, grad: band.grad, level: meta,
         displayNum: meta.level,
         unlocked, passed, isCurrent: unlocked && !passed,
@@ -546,7 +536,7 @@ function Roadmap() {
 
   return (
     <div className="de-page" style={{ maxWidth: 1060 }}>
-      <div style={{ marginBottom: 16 }}>
+      <div className="rm-journey-heading">
         <div style={{ display: 'flex', marginBottom: 6 }}>
           <span className="ss-kicker">{t('roadmap.title')}</span>
         </div>
@@ -556,32 +546,16 @@ function Roadmap() {
         </div>
       </div>
 
-      {/* Skill check entry point — quick exit ramp for experienced learners. */}
-      <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
-        <button
-          type="button"
-          className="rm-skillcheck-cta"
-          onClick={() => setSkillCheckOpen(true)}
-        >
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            <span aria-hidden style={{ display: 'inline-flex', color: 'var(--brand-accent)' }}><BoltIcon size={15} /></span>
-            <span>{t('roadmap.skillCheckCta')}</span>
-          </span>
-          <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>
-            {t('roadmap.skillCheckSubtitle')}
-          </span>
-        </button>
-      </div>
-
       {/* Topic selector — locked topics stay visible (dimmed + lock icon) so the
           path from starter → expert is legible without overwhelming. */}
       {/* Radiogroup semantics (not tabs — there is no tabpanel wiring), so AT
           announces "N of M selected" correctly. */}
       {/* Only unlocked topics appear — locked ones are hidden entirely, so
           the strip stays focused on what the learner can actually start. */}
-      <div role="radiogroup" aria-label={t('roadmap.topicsAria')} style={{ display: 'flex', gap: 6, justifyContent: 'center', marginBottom: 20, flexWrap: 'wrap' }}>
-        {TOPICS.filter(isUnlocked).map((value) => {
+      <div role="radiogroup" aria-label={t('roadmap.topicsAria')} className="rm-topic-rail">
+        {TOPICS.map((value) => {
           const selected = topic === value;
+          const unlocked = isUnlocked(value);
           const color = getCategoryHexColor(value);
           return (
             <button
@@ -589,16 +563,19 @@ function Roadmap() {
               type="button"
               role="radio"
               aria-checked={selected}
+              aria-disabled={!unlocked}
+              disabled={!unlocked}
               className="rm-topic-pill"
               data-selected={selected}
-              onClick={() => selectTopic(value)}
+              data-locked={!unlocked}
+              onClick={() => unlocked && selectTopic(value)}
               style={{ ['--rm-accent']: color, ['--rm-on-accent']: onCategoryColorText(value) } as CSSProperties}
             >
               {/* Constant white chip under the logo: the selected pill fills
                   with the topic's own colour, which used to swallow a
                   same-coloured glyph. */}
               <span className="rm-topic-glyph">
-                <CategoryGlyph category={value} color={color} size={13} />
+                <CategoryGlyph category={value} color={color} size={20} />
               </span>
               <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <span>{t(categoryLabelKey(value))}</span>
@@ -656,33 +633,33 @@ function Roadmap() {
           </div>
 
           {/* Current-part progress */}
-          <div className="ss-panel" style={{ marginBottom: 24, padding: 18, position: 'relative', overflow: 'hidden' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <Heading level={2}>{t(categoryLabelKey(topic))} — {t('roadmap.wholeSwim')}</Heading>
-              <Text type="supporting" color="secondary">
-                {t('roadmap.progress', { done: topicDone, total: levels.length })}
-              </Text>
+          <div className="rm-overview-card">
+            <div className="rm-overview-copy">
+              <span className="rm-overview-fin" aria-hidden="true" />
+              <div><Heading level={2}>{t(categoryLabelKey(topic))} — {t('roadmap.wholeSwim')}</Heading>
+                <Text type="supporting" color="secondary">{t('roadmap.progress', { done: topicDone, total: levels.length })}</Text></div>
             </div>
-            <div
+            <div className="rm-overview-actions">
+              <div
               role="progressbar"
               aria-label={t('roadmap.progress', { done: topicDone, total: levels.length })}
               aria-valuenow={Math.round(levels.length ? (topicDone / levels.length) * 100 : 0)}
               aria-valuemin={0}
               aria-valuemax={100}
-              style={{ height: 8, borderRadius: 4, backgroundColor: 'var(--color-background-muted)', overflow: 'hidden' }}
+              className="rm-overview-progress"
             >
               <div style={{ height: '100%', width: `${levels.length ? (topicDone / levels.length) * 100 : 0}%`, backgroundColor: topicColor, borderRadius: 4, transition: 'width 0.5s ease' }} />
-            </div>
-            {continueLevel && (
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
-                <SwimCta label={t('roadmap.continueLevel', { n: continueLevel.level })} dir={-1} onClick={() => open({ kind: 'level', ref: continueLevel.level })} />
               </div>
+            {continueLevel && (
+              <SwimCta label={t('roadmap.continueLevel', { n: continueLevel.level })} dir={-1} onClick={() => open({ kind: 'level', ref: continueLevel.level })} />
             )}
+            </div>
           </div>
 
           {/* The path — a serpentine ribbon flowing left→right and gently down,
               then wrapping back, drawn through node centres with an SVG. */}
-          <div ref={pathRef} style={{ position: 'relative', width: '100%', ...(layout ? { height: layout.height } : { minHeight: 220 }) }}>
+          <div className="rm-path-scroll">
+          <div ref={pathRef} className="rm-path-canvas" style={{ position: 'relative', ...(layout ? { height: layout.height } : { minHeight: 220 }) }}>
             {layout && (
               <>
                 <svg
@@ -729,7 +706,6 @@ function Roadmap() {
                           meta={n.level!}
                           displayNum={n.displayNum!}
                           accent={n.accent}
-                          grad={n.grad}
                           unlocked={n.unlocked}
                           passed={n.passed}
                           best={n.best}
@@ -745,12 +721,20 @@ function Roadmap() {
               </>
             )}
           </div>
+          </div>
 
           {topicComplete && (
             <div style={{ textAlign: 'center', marginTop: 24, fontWeight: 800, color: topicColor }}>
               {t('roadmap.allDone')}
             </div>
           )}
+
+          <div className="rm-skillcheck-row">
+            <span>{t('roadmap.skillCheckSubtitle')}</span>
+            <button type="button" className="rm-skillcheck-cta" onClick={() => setSkillCheckOpen(true)}>
+              <BoltIcon size={15} /> {t('roadmap.skillCheckCta')}
+            </button>
+          </div>
         </>
       )}
 
@@ -767,13 +751,12 @@ function Roadmap() {
 /* ──── level node ───────────────────────────────────────────────────────── */
 
 function LevelNode({
-  meta, displayNum, accent, grad, unlocked, passed, best, isCurrent, onClick, t, cellW,
+  meta, displayNum, accent, unlocked, passed, best, isCurrent, onClick, t, cellW,
 }: {
-  meta: RoadmapLevelMeta; displayNum: number; accent: string; grad: [string, string];
+  meta: RoadmapLevelMeta; displayNum: number; accent: string;
   unlocked: boolean; passed: boolean; best: number; isCurrent: boolean;
   onClick: () => void; t: TFn; cellW: number;
 }) {
-  const stars = passed ? starsFor(best, 75) : 0;
   // Within a shown part levels gate sequentially; the first level of a part is
   // gated by the previous part's test at the part selector, never here.
   const lockedHint = t('roadmap.lockedHint');
@@ -796,28 +779,19 @@ function LevelNode({
             disabled={!unlocked}
             aria-label={label}
             style={{
-              position: 'relative', width: 64, height: 64, borderRadius: '50%',
-              border: `3px solid ${passed || isCurrent ? accent : 'var(--color-border)'}`,
-              background: passed ? `linear-gradient(160deg, ${grad[0]}, ${grad[1]})` : 'var(--color-background-surface)',
+              position: 'relative', width: isCurrent ? 46 : 40, height: isCurrent ? 46 : 40, borderRadius: '50%',
+              border: `2px solid ${passed || isCurrent ? accent : 'transparent'}`,
+              background: passed ? accent : isCurrent ? 'var(--brand-accent-soft)' : 'var(--color-background-muted)',
               color: passed ? '#fff' : unlocked ? accent : 'var(--color-text-disabled)',
               cursor: unlocked ? 'pointer' : 'not-allowed',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '1.25rem',
-              // Duolingo-style raised "bubble": a solid darker lip beneath the node.
-              boxShadow: passed
-                ? `0 5px 0 ${grad[1]}, 0 9px 16px ${accent}55`
-                : unlocked
-                  ? `0 5px 0 ${accent}, 0 9px 16px ${accent}33`
-                  : 'none',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.86rem',
+              boxShadow: isCurrent ? `0 0 0 5px ${accent}1f` : 'none',
               transition: 'transform 0.14s ease, box-shadow 0.2s ease',
               fontFamily: 'inherit',
             }}
           >
             {passed ? <CheckIcon /> : unlocked ? displayNum : <LockIcon />}
-            {passed && (
-              <span style={{ position: 'absolute', bottom: -9, display: 'flex', color: '#ffc400', filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.25))', backgroundColor: 'var(--color-background-surface)', borderRadius: 999, padding: '0 2px' }}>
-                {[0, 1, 2].map((s) => <StarIcon key={s} filled={s < stars} />)}
-              </span>
-            )}
+            {isCurrent && <span className="rm-current-fin" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M3 18 Q 6 6 15 3 Q 17 11 21 18 Z" fill={accent} /></svg></span>}
           </button>
           </span>
         </Tooltip>
@@ -839,9 +813,6 @@ function LevelNode({
       >
         {meta.title}
       </div>
-      {isCurrent && (
-        <span style={{ height: 20, lineHeight: '20px', padding: '0 8px', fontSize: '0.65rem', fontWeight: 800, color: '#fff', borderRadius: 999, background: `linear-gradient(160deg, ${grad[0]}, ${grad[1]})` }}>{t('roadmap.start')}</span>
-      )}
     </div>
   );
 }
@@ -872,8 +843,8 @@ function PartTestNode({
             disabled={!unlocked}
             aria-label={label}
             style={{
-              position: 'relative', width: 84, height: 84, borderRadius: '24px',
-              border: `3px solid ${passed || isCurrent ? accent : 'var(--color-border)'}`,
+              position: 'relative', width: 50, height: 50, borderRadius: '14px',
+              border: `2px solid ${passed || isCurrent ? accent : `${accent}70`}`,
               background: passed
                 ? `linear-gradient(150deg, ${grad[0]}, ${grad[1]})`
                 : unlocked
@@ -882,12 +853,7 @@ function PartTestNode({
               color: passed ? '#3a2c00' : unlocked ? accent : 'var(--color-text-disabled)',
               cursor: unlocked ? 'pointer' : 'not-allowed',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              // Raised "bubble" lip beneath the boss node.
-              boxShadow: passed
-                ? `0 6px 0 ${grad[1]}, 0 10px 20px ${accent}55`
-                : unlocked
-                  ? `0 6px 0 ${accent}, 0 10px 20px ${accent}44`
-                  : 'none',
+              boxShadow: isCurrent ? `0 0 0 5px ${accent}20` : 'none',
               transition: 'transform 0.14s ease, box-shadow 0.2s ease',
               fontFamily: 'inherit',
             }}
