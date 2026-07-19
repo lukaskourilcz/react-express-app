@@ -797,14 +797,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         <h3 id="quiz-review" className="quiz-review-header">
           {t('quiz.reviewYourAnswers', { count: questions.length })}
         </h3>
+        <div className="quiz-review-grid">
         {questions.map((question, index) => {
           const questionResult = resultsById.get(question.id);
           const isCorrect = questionResult?.isCorrect;
           const isBookmarked = !!bookmarks[question.id];
 
           return (
-            <MotionItem key={question.id} index={index}>
-              <Card variant={isCorrect ? 'green' : 'red'} padding={4} width="100%">
+            <MotionItem key={question.id} index={index} className={`quiz-review-item ${isCorrect ? 'is-correct' : 'is-incorrect'}`}>
+              <Card variant="default" padding={3} width="100%" className="quiz-review-card">
                 <VStack gap={1.5}>
                   <HStack justify="between" align="center" wrap="wrap" gap={1}>
                     <HStack gap={1} align="center">
@@ -844,7 +845,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                     </HStack>
                   </HStack>
 
-                  <div style={{ fontWeight: 500 }}>{renderQuestion(question.question)}</div>
+                  <div className="quiz-review-question">{renderQuestion(question.question)}</div>
 
                   <Text type="body" size="sm">
                     {t('quiz.yourAnswerLabel')}{' '}
@@ -862,8 +863,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                     <div
                       style={{
                         padding: '12px 14px',
-                        backgroundColor: `${getCategoryHexColor(question.category)}1a`,
-                        borderRadius: 8,
+                        backgroundColor: 'var(--color-background-muted)',
+                        borderRadius: 'var(--radius-element)',
+                        border: '1px solid var(--color-border)',
                         borderLeft: `4px solid ${getCategoryHexColor(question.category)}`,
                       }}
                     >
@@ -877,6 +879,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </MotionItem>
           );
         })}
+        </div>
 
         <AppToast
           open={!!snack}
