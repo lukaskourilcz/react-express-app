@@ -4,7 +4,7 @@
 // Redesigned on the Astryx design system — Astryx Card/Button/Badge/typography
 // and layout primitives, with the reveal ("flip") and bookmark logic preserved.
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -15,7 +15,6 @@ import { Badge } from '@astryxdesign/core/Badge';
 import { Card } from '@astryxdesign/core/Card';
 import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../lib/auth';
-import { useActiveSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
 import { CATEGORY_LOOKUP, categoryLabelKey } from '../lib/categories';
 import type { CategoryType } from '../types/quiz';
@@ -27,6 +26,8 @@ import { renderQuestion } from './CodeBlock';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { IconTile, BookmarkIcon, CheckCircleIcon } from './ui/icons';
+import { SwimCta } from './landing/LandingKit';
+import './DeepEndScreens.css';
 
 const FLASHCARDS_KEY = ['flashcards'] as const;
 
@@ -41,10 +42,8 @@ const TrashIcon = () => (
 function Flashcards() {
   const t = useT();
   const navigate = useNavigate();
-  const accent = useActiveSubject().accent;
   const { isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
-  const [index, setIndex] = useState(0);
-  const [revealed, setRevealed] = useState(false);
+  const [revealedIds, setRevealedIds] = useState<Set<string>>(() => new Set());
   const [actionError, setActionError] = useState<string | null>(null);
 
   const enabled = !authLoading && isAuthenticated;
@@ -73,15 +72,6 @@ function Flashcards() {
       setActionError(t('card.removeFailed'));
     },
   });
-
-  // Keep the visible index in range as the deck shrinks, and reset the reveal
-  // whenever the visible card changes.
-  useEffect(() => {
-    setIndex((i) => Math.min(i, Math.max(0, cards.length - 1)));
-  }, [cards.length]);
-  useEffect(() => {
-    setRevealed(false);
-  }, [index]);
 
   if (authLoading || loading) {
     return <LoadingScreen label={t('card.loading')} />;
@@ -126,129 +116,47 @@ function Flashcards() {
     );
   }
 
-  const card = cards[index];
-
-  const handleRemove = () => {
+  const handleRemove = (questionId: string) => {
     setActionError(null);
-    removeMut.mutate(card.question_id);
+    removeMut.mutate(questionId);
   };
 
-  const go = (delta: number) => setIndex((i) => (i + delta + cards.length) % cards.length);
-
   return (
-    <div style={{ maxWidth: 640, margin: '0 auto', width: '100%' }}>
+    <div className="de-page de-cards-page">
       <VStack gap={3} width="100%">
-        <HStack justify="between" align="center" gap={2} width="100%">
+        <HStack justify="between" align="end" gap={2} width="100%" wrap="wrap">
           <VStack gap={0.5}>
+            <span className="ss-kicker">{t('card.kicker')}</span>
             <Heading level={1}>{t('card.heading')}</Heading>
             <Text type="supporting" color="secondary">{t('card.subtitle')}</Text>
           </VStack>
-          <div
-            style={{
-              flexShrink: 0,
-              alignSelf: 'flex-start',
-              borderRadius: 999,
-              padding: '4px 12px',
-              fontWeight: 700,
-              fontSize: '0.78rem',
-              color: accent,
-              background: `${accent}14`,
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {t('card.counter', { current: index + 1, total: cards.length })}
-          </div>
+          <SwimCta label={t('card.practiceAll', { count: cards.length })} dir={-1} onClick={() => setRevealedIds(new Set())} />
         </HStack>
 
-        {/* The study card. A tinted top rule carries the subject accent. */}
-        <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
-        <Card variant="default" padding={5} width="100%" minHeight={260}>
-          <div
-            aria-hidden
-            style={{
-              height: 4,
-              borderRadius: 999,
-              background: 'var(--brand-accent)',
-              margin: '-4px 0 20px',
-            }}
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', minHeight: 200 }}>
-            <HStack justify="between" align="center" gap={1} width="100%">
-              {/* Stored categories are free-form strings (older cards may
-                  predate the current registry) — translate known ones, show
-                  unknown ones verbatim rather than as a raw i18n key. */}
-              {card.category ? (
-                <Badge
-                  variant="cyan"
-                  label={
-                    CATEGORY_LOOKUP.has(card.category as CategoryType)
-                      ? t(categoryLabelKey(card.category))
-                      : card.category
-                  }
-                />
-              ) : (
-                <span />
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                isIconOnly
-                icon={<TrashIcon />}
-                label={t('card.remove')}
-                tooltip={t('card.remove')}
-                onClick={handleRemove}
-              />
-            </HStack>
-
-            <div style={{ fontWeight: 500, margin: '16px 0 20px' }}>{renderQuestion(card.question)}</div>
-
-            <div style={{ marginTop: 'auto' }}>
-              {!revealed ? (
-                <Button
-                  variant="primary"
-                  size="lg"
-                  label={t('card.reveal')}
-                  onClick={() => setRevealed(true)}
-                />
-              ) : (
-                <VStack gap={1.5} width="100%">
-                  <Text type="label" color="secondary">{t('card.answerLabel')}</Text>
-                  <div
-                    className="ss-pop"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 10,
-                      padding: '14px 16px',
-                      borderRadius: 'var(--radius-element)',
-                      background: 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
-                      borderLeft: '4px solid var(--brand-accent)',
-                      fontWeight: 600,
-                    }}
-                  >
-                    <span style={{ color: 'var(--ss-success-strong)', display: 'inline-flex', flexShrink: 0 }} aria-hidden>
-                      <CheckCircleIcon size={18} />
-                    </span>
-                    <span>{card.correct_answer}</span>
+        <div className="de-card-grid">
+          {cards.map((card) => {
+            const revealed = revealedIds.has(card.question_id);
+            const category = card.category && CATEGORY_LOOKUP.has(card.category as CategoryType)
+              ? t(categoryLabelKey(card.category)) : card.category;
+            return (
+              <article key={card.question_id} className={`de-flashcard ss-pop${revealed ? ' is-revealed' : ''}`}>
+                <div className="de-flashcard__top">
+                  {category ? <Badge variant="cyan" label={category} /> : <span />}
+                  <Button variant="ghost" size="sm" isIconOnly icon={<TrashIcon />} label={t('card.remove')} tooltip={t('card.remove')} onClick={() => handleRemove(card.question_id)} />
+                </div>
+                <button type="button" className="de-flashcard__body" aria-expanded={revealed} onClick={() => setRevealedIds((prev) => { const next = new Set(prev); if (next.has(card.question_id)) next.delete(card.question_id); else next.add(card.question_id); return next; })}>
+                  <div className="de-flashcard__question">{renderQuestion(card.question)}</div>
+                  <div className="de-flashcard__answer" aria-hidden={!revealed}>
+                    <span aria-hidden><CheckCircleIcon size={18} /></span>
+                    <strong>{card.correct_answer}</strong>
+                    {card.explanation && <span>{card.explanation}</span>}
                   </div>
-                  {card.explanation && (
-                    <Text type="body" color="secondary">{card.explanation}</Text>
-                  )}
-                </VStack>
-              )}
-            </div>
-          </div>
-        </Card>
+                  <span className="de-flashcard__hint">{revealed ? t('card.hideAnswer') : t('card.tapReveal')}</span>
+                </button>
+              </article>
+            );
+          })}
         </div>
-
-        <HStack gap={1.5} width="100%">
-          <div style={{ flex: 1 }}>
-            <Button variant="secondary" label={t('card.prev')} onClick={() => go(-1)} isDisabled={cards.length < 2} />
-          </div>
-          <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button variant="secondary" label={t('card.next')} onClick={() => go(1)} isDisabled={cards.length < 2} />
-          </div>
-        </HStack>
       </VStack>
     </div>
   );

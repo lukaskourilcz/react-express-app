@@ -436,6 +436,12 @@ export const en = {
   'play.enterCode': 'Enter a match code',
   'play.title': 'Play live',
   'play.kicker': 'Play live',
+  'play.headToHead': 'Head-to-head',
+  'play.modeFfaBlurb': 'Everyone races to answer — score is correctness × speed bonus.',
+  'play.modeH2hBlurb': 'Host runs the questions; the match advances as the player answers.',
+  'play.modeClassroomBlurb': 'Host advances each question and sees the live answer distribution.',
+  'play.scoringTitle': 'HOW SCORING WORKS',
+  'play.scoringBody': 'Score = correctness × speed bonus, computed on the server — clock tricks do not work here.',
   'play.subtitle': 'Race friends in multiplayer, or run a classroom session.',
   'play.hostGame': 'Host a game',
   'play.gameMode': 'Game mode',
@@ -507,6 +513,10 @@ export const en = {
 
   // Flashcards (Cards)
   'card.heading': 'Cards',
+  'card.kicker': 'Flashcards',
+  'card.practiceAll': 'Practice all {count}',
+  'card.tapReveal': 'Tap to reveal ↻',
+  'card.hideAnswer': 'Tap to hide ↻',
   'card.subtitle': 'Flashcards from questions you bookmarked. Reveal the answer when ready.',
   'card.signInTitle': 'Sign in to use Cards',
   'card.signInBody': 'Your flashcards are saved to your account so you can review them on any device.',
@@ -527,6 +537,9 @@ export const en = {
 
   // Roadmap ("Learn") mode
   'roadmap.title': 'Learn',
+  'roadmap.journeyTitle': 'Your learning journey.',
+  'roadmap.wholeSwim': 'the whole swim',
+  'roadmap.continueLevel': 'Continue — Level {n}',
   'roadmap.subtitle': 'Climb from the basics to the tricky stuff. Each topic is split into 3 short parts, clear the levels, then pass the part test.',
   'roadmap.topicsAria': 'Choose a topic',
   'roadmap.partsAria': 'Choose a part',
@@ -601,6 +614,13 @@ export const en = {
 
   // Career roadmap page (/roadmap)
   'careerRoadmap.headerBody': 'A straight-talking map of what it takes to make it as a senior full-stack engineer, and exactly how far StudyShark can carry you. No hype: the path below is the knowledge base, not the finish line.',
+  'careerRoadmap.editorialTitle': 'From zero to senior — see the whole swim.',
+  'careerRoadmap.editorialBody': 'Pick a path. Every stage lists the topic tracks it takes, and your Learn progress fills it in as you go.',
+  'careerRoadmap.stageDone': 'Complete',
+  'careerRoadmap.stageCurrent': 'In progress',
+  'careerRoadmap.stageAhead': 'Ahead',
+  'careerRoadmap.seniorReady': 'Senior-ready',
+  'careerRoadmap.skillCheckLead': 'Already know some of this? Take the skill check to unlock ahead.',
   'careerRoadmap.honestyLead': 'The honest version:',
   'careerRoadmap.honestyBody': 'senior full-stack is typically 5–8+ years of shipping real software. Knowledge is necessary but not sufficient, you also need the “Beyond StudyShark” list below, which no quiz app can hand you. StudyShark gets your fundamentals genuinely solid; the rest is reps in the real world.',
   'careerRoadmap.chooseTrack': 'Choose your track',
@@ -667,6 +687,13 @@ export const en = {
   // Biggest Shark Challenge
   'challenge.title': 'The Biggest Shark Challenge',
   'challenge.description': 'Answer as many questions as you can before three wrong answers end the run — each question has its own 90-second clock.',
+  'challenge.editorialTitle': 'Same questions. Every shark. One run.',
+  'challenge.todaySet': "today's set",
+  'challenge.finsStat': 'shark fins',
+  'challenge.perQuestion': 'per question',
+  'challenge.fairRace': 'A fair race — server-scored',
+  'challenge.todayBoard': "Today's board",
+  'challenge.boardHint': 'Global scores update after every completed run.',
   'challenge.howItWorks': 'How it works',
   'challenge.rule1': 'Random questions across every category and difficulty.',
   'challenge.rule2': 'You start with three shark fins, each wrong answer costs one.',
@@ -1117,4 +1144,3 @@ export const en = {
 } as const;
 
 export type TranslationKey = keyof typeof en;
-

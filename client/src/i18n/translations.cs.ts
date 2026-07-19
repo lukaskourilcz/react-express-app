@@ -437,6 +437,12 @@ export const cs: Record<TranslationKey, string> = {
   'play.enterCode': 'Zadej kód hry',
   'play.title': 'Hrát naživo',
   'play.kicker': 'Hraj naživo',
+  'play.headToHead': 'Jeden na jednoho',
+  'play.modeFfaBlurb': 'Všichni závodí v odpovědích — skóre kombinuje správnost a rychlost.',
+  'play.modeH2hBlurb': 'Host řídí otázky a hra postupuje podle odpovědí hráče.',
+  'play.modeClassroomBlurb': 'Host posouvá otázky a vidí živé rozložení odpovědí.',
+  'play.scoringTitle': 'JAK FUNGUJE SKÓRE',
+  'play.scoringBody': 'Skóre = správnost × bonus za rychlost, vše počítá server — triky s hodinami nefungují.',
   'play.subtitle': 'Závoď s přáteli v multiplayeru, nebo veď výuku ve třídě.',
   'play.hostGame': 'Hostovat hru',
   'play.gameMode': 'Herní režim',
@@ -508,6 +514,10 @@ export const cs: Record<TranslationKey, string> = {
 
   // Flashcards (Cards)
   'card.heading': 'Kartičky',
+  'card.kicker': 'Kartičky',
+  'card.practiceAll': 'Procvičit všech {count}',
+  'card.tapReveal': 'Klepni pro odpověď ↻',
+  'card.hideAnswer': 'Klepni pro skrytí ↻',
   'card.subtitle': 'Kartičky z otázek, které sis uložil(a). Až budeš chtít, odhal odpověď.',
   'card.signInTitle': 'Pro Kartičky se přihlas',
   'card.signInBody': 'Tvoje kartičky se ukládají k účtu, takže je můžeš procházet na jakémkoliv zařízení.',
@@ -528,6 +538,9 @@ export const cs: Record<TranslationKey, string> = {
 
   // Roadmap ("Learn") mode
   'roadmap.title': 'Učení',
+  'roadmap.journeyTitle': 'Tvoje cesta učením.',
+  'roadmap.wholeSwim': 'celá cesta',
+  'roadmap.continueLevel': 'Pokračovat — úroveň {n}',
   'roadmap.subtitle': 'Postupuj od základů až po záludnosti. Každé téma je rozdělené na 3 krátké části, splň úrovně a pak slož test části.',
   'roadmap.topicsAria': 'Vyber téma',
   'roadmap.partsAria': 'Vyber část',
@@ -602,6 +615,13 @@ export const cs: Record<TranslationKey, string> = {
 
   // Career roadmap page (/roadmap)
   'careerRoadmap.headerBody': 'Upřímná mapa toho, co obnáší prosadit se jako seniorní fullstack inženýr, a kam přesně tě StudyShark dokáže dovést. Bez přehánění: cesta níže je znalostní základ, ne cílová páska.',
+  'careerRoadmap.editorialTitle': 'Od nuly k seniorovi — celá cesta před tebou.',
+  'careerRoadmap.editorialBody': 'Vyber si směr. Každá etapa ukazuje potřebná témata a tvůj pokrok se doplňuje za pochodu.',
+  'careerRoadmap.stageDone': 'Hotovo',
+  'careerRoadmap.stageCurrent': 'Probíhá',
+  'careerRoadmap.stageAhead': 'Před tebou',
+  'careerRoadmap.seniorReady': 'Připraven na seniora',
+  'careerRoadmap.skillCheckLead': 'Něco už znáš? Ověř si dovednosti a odemkni další část.',
   'careerRoadmap.honestyLead': 'Na rovinu:',
   'careerRoadmap.honestyBody': 'seniorní fullstack obvykle znamená 5–8+ let dodávání skutečného softwaru. Znalosti jsou nutné, ale nestačí, potřebuješ i seznam „Nad rámec StudySharku“ níže, který ti žádná kvízová aplikace nedá. StudyShark ti pořádně upevní základy; zbytek jsou zkušenosti z reálného světa.',
   'careerRoadmap.chooseTrack': 'Vyber si směr',
@@ -668,6 +688,13 @@ export const cs: Record<TranslationKey, string> = {
   // Biggest Shark Challenge
   'challenge.title': 'Výzva největšího žraloka',
   'challenge.description': 'Odpověz na co nejvíc otázek, než hru ukončí tři chyby — každá otázka má vlastní 90sekundový čas.',
+  'challenge.editorialTitle': 'Stejné podmínky. Každý žralok. Jeden pokus.',
+  'challenge.todaySet': 'dnešní sada',
+  'challenge.finsStat': 'žraločí ploutve',
+  'challenge.perQuestion': 'na otázku',
+  'challenge.fairRace': 'Férový závod — skóruje server',
+  'challenge.todayBoard': 'Dnešní žebříček',
+  'challenge.boardHint': 'Globální skóre se aktualizuje po každém dokončeném pokusu.',
   'challenge.howItWorks': 'Jak to funguje',
   'challenge.rule1': 'Náhodné otázky ze všech kategorií a obtížností.',
   'challenge.rule2': 'Začínáš se třemi žraločími ploutvemi, každá chyba bere jednu.',

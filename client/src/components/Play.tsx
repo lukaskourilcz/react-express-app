@@ -40,6 +40,7 @@ import { QuoteLoader } from './LoadingScreen';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { useGameConfig } from '../lib/gameConfig';
+import './DeepEndScreens.css';
 
 const POLL_FALLBACK_MS = 4000;
 const DEFAULT_DURATION_S = 60;
@@ -59,7 +60,7 @@ export function PlayLanding() {
   const accent = useActiveSubject().accent;
   const { user, isAuthenticated, signInWithGoogle } = useAuth();
   const profile = getUserProfile(user);
-  const [mode, setMode] = useState<'multiplayer' | 'classroom'>('multiplayer');
+  const [mode, setMode] = useState<'ffa' | 'h2h' | 'classroom'>('ffa');
   const [count, setCount] = useState(10);
   const [durationS, setDurationS] = useState(60);
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
@@ -117,7 +118,7 @@ export function PlayLanding() {
       const m = await createMatch({
         host_id: user.id,
         host_name: displayNameFromProfile(profile, t('play.hostFallback')),
-        mode,
+        mode: mode === 'classroom' ? 'classroom' : 'multiplayer',
         count,
         // "No selection" means every topic of the ACTIVE subject — sending the
         // explicit list keeps other subjects' questions out of the match.
@@ -159,7 +160,7 @@ export function PlayLanding() {
   };
 
   return (
-    <div style={{ maxWidth: isDesktop ? 980 : 560, margin: '0 auto', width: '100%' }}>
+    <div className="de-page">
       <VStack gap={3}>
         {/* Page opener in the house voice: kicker + display heading, same as
             Shop and the Career Roadmap. */}
@@ -194,21 +195,24 @@ export function PlayLanding() {
             alignItems: 'start',
           }}
         >
-          <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
+          <div style={{ display: 'flex', width: '100%' }}>
           <Card padding={4} width="100%">
             <VStack gap={3}>
               <VStack gap={2}>
                 <span className="ss-kicker">{t('play.hostGame')}</span>
-                <ToggleButtonGroup
-                  label={t('play.gameMode')}
-                  type="single"
-                  size="sm"
-                  value={mode}
-                  onChange={(v) => v && setMode(v as 'multiplayer' | 'classroom')}
-                >
-                  <ToggleButton value="multiplayer" label={t('play.multiplayerFfa')} />
-                  <ToggleButton value="classroom" label={t('play.classroom')} />
-                </ToggleButtonGroup>
+                <div className="de-mode-list" role="radiogroup" aria-label={t('play.gameMode')}>
+                  {([
+                    ['ffa', '⚡', t('play.multiplayerFfa'), t('play.modeFfaBlurb')],
+                    ['h2h', '⚔', t('play.headToHead'), t('play.modeH2hBlurb')],
+                    ['classroom', '▣', t('play.classroom'), t('play.modeClassroomBlurb')],
+                  ] as const).map(([id, icon, name, blurb]) => (
+                    <button key={id} type="button" className="de-mode-card" role="radio" aria-checked={mode === id} aria-pressed={mode === id} onClick={() => setMode(id)}>
+                      <span className="de-mode-card__icon" aria-hidden>{icon}</span>
+                      <span className="de-mode-card__copy"><strong>{name}</strong><span>{blurb}</span></span>
+                      <span className="de-mode-card__check" aria-hidden>✓</span>
+                    </button>
+                  ))}
+                </div>
               </VStack>
 
               <VStack gap={1}>
@@ -314,7 +318,7 @@ export function PlayLanding() {
                     label={
                       loading === 'create'
                         ? t('play.creating')
-                        : mode === 'multiplayer'
+                        : mode !== 'classroom'
                           ? t('play.createMultiplayer')
                           : t('play.createClassroom')
                     }
@@ -324,7 +328,7 @@ export function PlayLanding() {
                   />
                 </div>
                 <Text type="supporting" size="xsm" color="secondary">
-                  {mode === 'multiplayer' ? t('play.multiplayerHint') : t('play.classroomHint')}
+                  {mode !== 'classroom' ? t('play.multiplayerHint') : t('play.classroomHint')}
                 </Text>
               </VStack>
             </VStack>
@@ -370,6 +374,7 @@ export function PlayLanding() {
                     onClick={handleJoin}
                   />
                 </div>
+                <div className="de-scoring-note"><strong>{t('play.scoringTitle')}</strong>{t('play.scoringBody')}</div>
               </VStack>
             </Card>
             </div>

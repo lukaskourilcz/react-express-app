@@ -36,6 +36,8 @@ import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { awardQuestXp } from '../lib/xp';
 import { challengeRunXp } from '../lib/leveling';
+import { SwimCta } from './landing/LandingKit';
+import './DeepEndScreens.css';
 
 // Biggest Shark Challenge: answer as many questions as you can until you
 // collect three strikes. Each question carries its own 90-second clock —
@@ -387,52 +389,34 @@ export default function Challenge() {
   );
 
   if (phase === 'intro') {
+    const today = new Intl.DateTimeFormat(lang, { month: 'short', day: 'numeric' }).format(new Date());
     return (
-      <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: '0 auto' }}>
-        <Card padding={5} width="100%">
+      <div className="de-page de-challenge-grid ss-pop">
+        <section className="de-hero-panel">
           <VStack gap={3}>
-            <VStack gap={1.5} align="center">
-              <Heading level={1} type="display-2" justify="center">
-                {t('challenge.title')}
-              </Heading>
+            <VStack gap={1}>
+              <span className="ss-kicker">{t('challenge.title')}</span>
+              <Heading level={1} type="display-3">{t('challenge.editorialTitle')}</Heading>
+              <Text type="large" color="secondary">{t('challenge.description')}</Text>
             </VStack>
-
-            {/* The rules list is the single explanation — no duplicate prose above. */}
-            <div className="ss-panel" style={{ padding: 20, borderLeft: `4px solid ${accent}` }}>
-              <VStack gap={1}>
-                <Text type="label" color="secondary">
-                  {t('challenge.howItWorks')}
-                </Text>
-                <ul style={{ paddingLeft: 20, margin: 0, color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
-                  <li>{t('challenge.rule1')}</li>
-                  <li>{t('challenge.rule2')}</li>
-                  <li>{t('challenge.rule3')}</li>
-                  <li>{t('challenge.rule4')}</li>
-                </ul>
-              </VStack>
+            <div className="de-stat-row">
+              <div className="de-stat"><strong>{today}</strong><span>{t('challenge.todaySet')}</span></div>
+              <div className="de-stat"><strong>{MAX_LIVES}</strong><span>{t('challenge.finsStat')}</span></div>
+              <div className="de-stat"><strong>⏱ {TIME_LIMIT_S}s</strong><span>{t('challenge.perQuestion')}</span></div>
             </div>
-
-            <ChampionBadge champion={champion} loading={boardLoading} />
-
-            <div style={{ display: 'grid' }}>
-              <Button
-                variant="primary"
-                size="lg"
-                label={t('challenge.startButton')}
-                onClick={() => void startRun()}
-              />
-            </div>
-
-            {board && board.top.length > 0 && (
-              <VStack gap={1}>
-                <Text type="label" color="secondary">
-                  {t('challenge.hallOfFame')}
-                </Text>
-                <LeaderboardList board={board} />
-              </VStack>
-            )}
+            <HStack gap={2} align="center" wrap="wrap">
+              <SwimCta label={t('challenge.startButton')} dir={-1} onClick={() => void startRun()} />
+              <span className="de-gold-pill">{t('challenge.fairRace')}</span>
+            </HStack>
           </VStack>
-        </Card>
+        </section>
+        <aside className="ss-panel" style={{ padding: 20 }}>
+          <VStack gap={1.5}>
+            <Heading level={3}>{t('challenge.todayBoard')}</Heading>
+            {boardLoading ? <Text color="secondary">…</Text> : board && board.top.length > 0 ? <LeaderboardList board={{ ...board, top: board.top.slice(0, 5) }} /> : <Text type="supporting" color="secondary">{t('challenge.noChampion')}</Text>}
+            <Text type="supporting" size="xsm" color="secondary">{t('challenge.boardHint')}</Text>
+          </VStack>
+        </aside>
       </div>
     );
   }

@@ -31,7 +31,7 @@ import {
   isPartTestPassed,
   levelBestPct,
   partTestBestPct,
-  partPassedLevels,
+  passedLevelCount,
   partRanges,
   currentPart,
   isPathUnlocked,
@@ -46,7 +46,7 @@ import {
   ASSESSMENT_QUESTION_COUNT,
   type PartRange,
 } from '../lib/roadmap';
-import { useSubject, topicsForSubject, subjectNameKey } from '../lib/subjects';
+import { useSubject, topicsForSubject } from '../lib/subjects';
 import { levelIntro, preloadLevelIntros } from '../lib/levelIntros';
 import { useRoadmapStructure } from '../lib/queries';
 import { fetchChallengeBatch } from '../lib/challengeApi';
@@ -68,7 +68,9 @@ import { SplitText } from './reactbits/SplitText';
 import { RedFlagDialog } from './RedFlagDialog';
 import { IconTile, BoltIcon, CloseIcon, FlagIcon } from './ui/icons';
 import { CategoryGlyph } from './ui/techIcons';
+import { SwimCta } from './landing/LandingKit';
 import './Roadmap.css';
+import './DeepEndScreens.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 // `ref` is the GLOBAL level number for a level, or the part number for a test.
@@ -190,13 +192,28 @@ function starsFor(pct: number, passPct: number): number {
 
 // Build one part's ordered path: its levels, then a single end-of-part test.
 type PathNode =
-  | { type: 'level'; meta: RoadmapLevelMeta }
+  | { type: 'level'; meta: RoadmapLevelMeta; range: PartRange }
   | { type: 'test'; part: number; range: PartRange };
 
-function buildPath(partLevels: RoadmapLevelMeta[], range: PartRange): PathNode[] {
-  const out: PathNode[] = partLevels.map((meta) => ({ type: 'level', meta }));
-  if (range.size > 0) out.push({ type: 'test', part: range.part, range });
-  return out;
+function buildFullPath(levels: RoadmapLevelMeta[], ranges: PartRange[]): PathNode[] {
+  return ranges.flatMap((range) => {
+    const partNodes: PathNode[] = levels
+      .slice(range.startLevel - 1, range.endLevel)
+      .map((meta) => ({ type: 'level', meta, range }));
+    if (range.size > 0) partNodes.push({ type: 'test', part: range.part, range });
+    return partNodes;
+  });
+}
+
+function variedConnector(x1: number, y1: number, x2: number, y2: number, index: number): string {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const length = Math.max(1, Math.hypot(dx, dy));
+  const amplitude = 4 + (index % 4) * 1.5;
+  const direction = index % 2 === 0 ? 1 : -1;
+  const mx = (x1 + x2) / 2 - (dy / length) * amplitude * direction;
+  const my = (y1 + y2) / 2 + (dx / length) * amplitude * direction;
+  return `M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`;
 }
 
 // Build the order a lesson is shown in: both the question sequence and each
@@ -303,17 +320,15 @@ function Roadmap() {
     (tpc: RoadmapTopic) => isTopicUnlocked(progress, tpc, extraUnlocksSet),
     [progress, extraUnlocksSet],
   );
-  // The topic's full (global) level list, split into PARTS_PER_TOPIC parts. Only
-  // the selected part's slice is rendered as a path, so it stays short.
+  // The topic's full (global) level list, split into progression checkpoints.
   const levels: RoadmapLevelMeta[] = structure?.structure[topic]?.levels ?? [];
   const ranges = useMemo(() => partRanges(levels.length), [levels.length]);
   const safePart = Math.min(Math.max(part, 1), Math.max(1, ranges.length));
-  const range: PartRange | undefined = ranges[safePart - 1];
-  const partLevels = useMemo(
-    () => (range ? levels.slice(range.startLevel - 1, range.endLevel) : []),
-    [levels, range],
-  );
   const topicColor = getCategoryHexColor(topic);
+  const continueLevel = levels.find((meta) => {
+    const owningRange = ranges.find((r) => meta.level >= r.startLevel && meta.level <= r.endLevel);
+    return !!owningRange && isPartLevelUnlocked(progress, topic, owningRange, meta.level) && !isLevelPassed(progress, topic, meta.level);
+  });
 
   // Keep the selected part on something the learner can actually open: if it's
   // locked (reset progress, switched topic, stale deep link) snap to the first
@@ -426,12 +441,12 @@ function Roadmap() {
     if (isAuthenticated) pushProgressToServer().catch(() => {});
   };
 
-  // Lay the SELECTED PART out as a serpentine: nodes flow left→right and gently
+  // Lay the whole topic out as a serpentine: nodes flow left→right and gently
   // down, then wrap and flow back the other way. Positions are computed
   // analytically so the SVG connectors hit each node centre without measuring.
   const layout = useMemo(() => {
-    if (!pathWidth || !range || partLevels.length === 0) return null;
-    const nodes = buildPath(partLevels, range);
+    if (!pathWidth || levels.length === 0) return null;
+    const nodes = buildFullPath(levels, ranges);
     const cols = Math.max(2, Math.min(5, Math.floor(pathWidth / 150)));
     const cellW = pathWidth / cols;
     // ROW_H must clear the accumulated within-row slope so the lowest node of a
@@ -458,13 +473,14 @@ function Roadmap() {
         };
       }
       const meta = node.meta;
+      const nodeRange = node.range;
       const band = bandForCategory(topic, meta.difficulty);
       const passed = isLevelPassed(progress, topic, meta.level);
-      const unlocked = isPartLevelUnlocked(progress, topic, range, meta.level);
+      const unlocked = isPartLevelUnlocked(progress, topic, nodeRange, meta.level);
       return {
         i, kind: 'level', key: `lvl-${meta.level}`, cx, cy, half: 32,
         accent: band.solid, grad: band.grad, level: meta,
-        displayNum: meta.level - range.startLevel + 1,
+        displayNum: meta.level,
         unlocked, passed, isCurrent: unlocked && !passed,
         best: levelBestPct(progress, topic, meta.level),
       };
@@ -478,7 +494,7 @@ function Roadmap() {
       return { x1: a.cx, y1: a.cy, x2: b.cx, y2: b.cy, color: done || active ? b.accent : null, active };
     });
     return { width: pathWidth, height, cellW, nodes: placed, segments };
-  }, [pathWidth, partLevels, range, progress, topic]);
+  }, [pathWidth, levels, ranges, progress, topic]);
 
   /* ──── skill check view ─────────────────────────────────────────────── */
   if (skillCheckOpen) {
@@ -525,16 +541,16 @@ function Roadmap() {
   }
 
   /* ──── map view ─────────────────────────────────────────────────────── */
-  const partDone = range ? partPassedLevels(progress, topic, range) : 0;
+  const topicDone = passedLevelCount(progress, topic);
   const topicComplete = ranges.length > 0 && ranges.every((r) => isPartTestPassed(progress, topic, r.part));
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto' }}>
-      <div style={{ textAlign: 'center', marginBottom: 16 }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>
-          <span className="ss-kicker ss-kicker--center">{t(subjectNameKey(subject))}</span>
+    <div className="de-page" style={{ maxWidth: 1060 }}>
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', marginBottom: 6 }}>
+          <span className="ss-kicker">{t('roadmap.title')}</span>
         </div>
-        <Heading level={1} justify="center">{t('roadmap.title')}</Heading>
+        <Heading level={1}>{t('roadmap.journeyTitle')}</Heading>
         <div style={{ marginTop: 4 }}>
           <Text type="supporting" color="secondary">{t('roadmap.subtitle')}</Text>
         </div>
@@ -584,7 +600,12 @@ function Roadmap() {
               <span className="rm-topic-glyph">
                 <CategoryGlyph category={value} color={color} size={13} />
               </span>
-              {t(categoryLabelKey(value))}
+              <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <span>{t(categoryLabelKey(value))}</span>
+                <span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.72 }}>
+                  {t('roadmap.progress', { done: passedLevelCount(progress, value), total: structure?.structure[value]?.levels.length ?? 0 })}
+                </span>
+              </span>
             </button>
           );
         })}
@@ -605,7 +626,7 @@ function Roadmap() {
         <>
           {/* Part selector — the topic is split into PARTS_PER_TOPIC shorter
               paths, each ending with a test; only one part shows at a time. */}
-          <div role="radiogroup" aria-label={t('roadmap.partsAria')} style={{ display: 'flex', gap: 8, justifyContent: 'center', marginBottom: 16, flexWrap: 'wrap' }}>
+          <div role="radiogroup" aria-label={t('roadmap.partsAria')} style={{ display: 'none' }}>
             {ranges.map((r) => {
               const status = pathStatus(progress, topic, ranges, r.part, extraUnlocksSet);
               const locked = status === 'locked';
@@ -635,25 +656,28 @@ function Roadmap() {
           </div>
 
           {/* Current-part progress */}
-          <div style={{ marginBottom: 24 }}>
+          <div className="ss-panel" style={{ marginBottom: 24, padding: 18, position: 'relative', overflow: 'hidden' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <Text type="supporting" color="secondary" weight="bold">
-                {t(categoryLabelKey(topic))} · {t('roadmap.partLabel', { n: safePart })}
-              </Text>
+              <Heading level={2}>{t(categoryLabelKey(topic))} — {t('roadmap.wholeSwim')}</Heading>
               <Text type="supporting" color="secondary">
-                {t('roadmap.progress', { done: partDone, total: range?.size ?? 0 })}
+                {t('roadmap.progress', { done: topicDone, total: levels.length })}
               </Text>
             </div>
             <div
               role="progressbar"
-              aria-label={t('roadmap.progress', { done: partDone, total: range?.size ?? 0 })}
-              aria-valuenow={Math.round(range && range.size ? (partDone / range.size) * 100 : 0)}
+              aria-label={t('roadmap.progress', { done: topicDone, total: levels.length })}
+              aria-valuenow={Math.round(levels.length ? (topicDone / levels.length) * 100 : 0)}
               aria-valuemin={0}
               aria-valuemax={100}
               style={{ height: 8, borderRadius: 4, backgroundColor: 'var(--color-background-muted)', overflow: 'hidden' }}
             >
-              <div style={{ height: '100%', width: `${range && range.size ? (partDone / range.size) * 100 : 0}%`, backgroundColor: topicColor, borderRadius: 4, transition: 'width 0.5s ease' }} />
+              <div style={{ height: '100%', width: `${levels.length ? (topicDone / levels.length) * 100 : 0}%`, backgroundColor: topicColor, borderRadius: 4, transition: 'width 0.5s ease' }} />
             </div>
+            {continueLevel && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
+                <SwimCta label={t('roadmap.continueLevel', { n: continueLevel.level })} dir={-1} onClick={() => open({ kind: 'level', ref: continueLevel.level })} />
+              </div>
+            )}
           </div>
 
           {/* The path — a serpentine ribbon flowing left→right and gently down,
@@ -668,12 +692,10 @@ function Roadmap() {
                   style={{ position: 'absolute', top: 0, left: 0, overflow: 'visible', pointerEvents: 'none' }}
                 >
                   {layout.segments.map((s, i) => (
-                    <line
+                    <path
                       key={i}
-                      x1={s.x1}
-                      y1={s.y1}
-                      x2={s.x2}
-                      y2={s.y2}
+                      d={variedConnector(s.x1, s.y1, s.x2, s.y2, i)}
+                      fill="none"
                       strokeWidth={7}
                       strokeLinecap="round"
                       className={s.active ? 'rm-flow' : undefined}

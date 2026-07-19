@@ -14,7 +14,7 @@ Grouped by the catalogue tool each item came from.
 Each task has a one-line "why" and an importance score `[imp:N]` (5 = highest).
 Full how-to is in the numbered sections below.
 
-- [ ] **Finish + verify the "Deep End v2" redesign** — landings & Quiz done; Learn/Profile/Play/Career/Flashcards/Challenge still need restyling and backend-driven verification. See §0. `[imp:5]`
+- [x] **Finish + verify the "Deep End v2" redesign** — all supplied production screens now use the handoff composition; signed-in data states still require normal backend smoke testing after deploy. See §0. `[imp:5]`
 - [ ] **Generate real app icons, splash & OG image** — placeholders ship now; real artwork is an App Store submission blocker. `[imp:4]`
 - [ ] **Set the real iOS bundle id / Android package + EAS credentials** — still the `com.yourcompany.devquiz` placeholder, blocks a real build. `[imp:4]`
 - [ ] **Add an uptime monitor on `/api/health`** — the endpoint now returns 503 on real downtime; nothing watches it yet. `[imp:3]`
@@ -52,22 +52,22 @@ reduced-motion). Shared building blocks:
   screenshot-verified); in-progress waterline fin-marker progress + results
   score card (build-verified only — see below).
 
-**Still to do — restyle each to its `.dc.html`, preserving all logic:**
+**Completed — restyled to each `.dc.html` while preserving application logic:**
 
-- [ ] `Roadmap.tsx` (`/learn`) — the snaking "journey" path: kicker `Learn` +
+- [x] `Roadmap.tsx` (`/learn`) — the snaking "journey" path: kicker `Learn` +
   "Your learning journey.", topic rail with per-topic `N/M levels`, nodes
   (done `✓` / current ringed+pulse+bobbing-fin / locked muted), varied wave
   connectors, gold checkpoints at each row turn, "Continue — Level N" swim CTA.
-- [ ] `Profile.tsx` — identity card (avatar ring, level badge, rank, XP bar),
+- [x] `Profile.tsx` — identity card (avatar ring, level badge, rank, XP bar),
   stat tiles, per-category accuracy bars, achievements (earned vs 55%-locked),
   settings rows.
-- [ ] `Play.tsx` — mode cards (Free-for-all / Head-to-head / Classroom),
+- [x] `Play.tsx` — mode cards (Free-for-all / Head-to-head / Classroom),
   per-question time-limit pills, Create-match CTA, join-by-code panel.
-- [ ] `CareerRoadmap.tsx` (`/roadmap`) — Frontend/Backend/Fullstack picker +
+- [x] `CareerRoadmap.tsx` (`/roadmap`) — Frontend/Backend/Fullstack picker +
   4-stage ladder ending in the gold "Senior-ready" node.
-- [ ] `Flashcards.tsx` (`/cards`) — saved-cards **grid** with tap-to-flip
+- [x] `Flashcards.tsx` (`/cards`) — saved-cards **grid** with tap-to-flip
   reveal + "Practice all N" swim CTA (today it's a single-card flip-through).
-- [ ] `Challenge.tsx` — daily-challenge stat row, streak chip, today's top-5
+- [x] `Challenge.tsx` — editorial challenge stat row and top-5
   board. **Keep** the per-question countdown bar as a plain bar — the fin-marker
   progress is only for forward progress, never a shrinking timer.
 

@@ -43,6 +43,7 @@ import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { SwimmingFin } from './SharkFin';
 import { FlameIcon, BoltIcon } from './ui/icons';
+import './DeepEndScreens.css';
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
 
@@ -181,11 +182,11 @@ function ProfileBody({
   });
 
   return (
-    <div style={{ width: '100%', maxWidth: 1160, margin: '0 auto' }}>
+    <div className="de-page" style={{ maxWidth: 1000 }}>
       <VStack gap={2}>
         {/* Identity header — subject-accented top edge, avatar + name. */}
         <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
-          <div style={{ borderTop: '4px solid var(--brand-accent)', borderRadius: 'var(--radius-container)', width: '100%', position: 'relative', overflow: 'hidden' }}>
+          <div className="de-profile-identity" style={{ borderTop: '4px solid var(--brand-accent)', borderRadius: 'var(--radius-container)', width: '100%', position: 'relative', overflow: 'hidden' }}>
             <Card variant="default" padding={4} width="100%">
               <HStack gap={2} align="center">
                 <div
@@ -666,6 +667,7 @@ function AchievementBadge({ achievement }: { achievement: Achievement }) {
         borderColor: earned ? `${accent}66` : 'var(--astryx-border, rgba(0,0,0,0.12))',
         borderRadius: 12,
         backgroundColor: earned ? `${accent}14` : 'transparent',
+        opacity: earned ? 1 : 0.55,
       }}
     >
       <div style={{ position: 'relative', flexShrink: 0 }}>
