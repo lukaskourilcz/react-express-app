@@ -24,7 +24,7 @@ const REPORTS_KEY = ['admin', 'reports'] as const;
 // Friendly label + badge variant per report reason. 'needs-review' is the learner
 // red-flag from the learning path; the rest come from the full report dialog.
 const REASON_META: Record<string, { label: string; color: 'error' | 'warning' | 'info' | 'default' }> = {
-  'needs-review': { label: '🚩 Flagged', color: 'error' },
+  'needs-review': { label: 'Flagged', color: 'error' },
   'incorrect-answer': { label: 'Wrong answer', color: 'error' },
   unclear: { label: 'Unclear', color: 'warning' },
   typo: { label: 'Typo', color: 'info' },
@@ -87,7 +87,7 @@ export default function DevReports() {
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
         <SegmentedControl value={filter} onChange={(v) => setFilter(v as 'all' | 'flags')} label="Report filter">
           <SegmentedControlItem value="all" label="All reports" />
-          <SegmentedControlItem value="flags" label="🚩 Red flags only" />
+          <SegmentedControlItem value="flags" label="Flagged only" />
         </SegmentedControl>
         <Badge variant="neutral" label={`${reports.length} total`} />
         <Badge variant="error" label={`${flagCount} flagged for review`} />
@@ -153,7 +153,7 @@ export default function DevReports() {
               <TableRow>
                 <TableCell colSpan={5}>
                   <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', textAlign: 'center', padding: '32px 0' }}>
-                    {filter === 'flags' ? 'No red flags 🎉' : 'No reports yet.'}
+                    {filter === 'flags' ? 'No flagged reports.' : 'No reports yet.'}
                   </div>
                 </TableCell>
               </TableRow>

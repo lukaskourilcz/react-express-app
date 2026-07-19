@@ -158,7 +158,7 @@ function Shop() {
             {/* The wallet is per platform — make the scope visible. */}
             <div style={{ marginLeft: 'auto' }}>
               <HStack gap={1} align="center" wrap="wrap" justify="end">
-                <Badge variant="neutral" label={`${subject.emoji} ${t(subjectNameKey(subject.id))}`} />
+                <Badge variant="neutral" label={t(subjectNameKey(subject.id))} />
                 <Badge variant="cyan" label={t('shop.earnRate')} />
               </HStack>
             </div>

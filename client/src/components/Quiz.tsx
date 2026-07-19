@@ -15,7 +15,6 @@ import { Popover } from '@astryxdesign/core/Popover';
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { AppToast } from './ui/AppToast';
 import { useAuth, getUserProfile } from '../lib/auth';
-import { useActiveSubject } from '../lib/subjects';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { visuallyHidden } from '../theme/MuiTheme';
 import {
@@ -149,7 +148,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const { lang, t } = useLanguage();
   const navigate = useNavigate();
   const config = useGameConfig();
-  const subject = useActiveSubject();
   const [state, setState] = useState<QuizState>('ready');
   const [sessionId, setSessionId] = useState<string>('');
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -954,16 +952,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         >
           {/* Progress header */}
           <HStack gap={1.5} align="center" style={{ flexShrink: 0, marginBottom: 16 }}>
-            <span aria-hidden style={{ fontSize: '1rem', lineHeight: 1 }}>{subject.emoji}</span>
             <Text type="supporting" size="xsm" weight="medium">
-              {currentIndex + 1}/{questions.length}
+              {t('quiz.questionCounter', { current: currentIndex + 1, total: questions.length })}
             </Text>
             <div style={{ flex: 1 }}>
               <WaterlineProgress label={t('quiz.progressAria')} value={progress} />
             </div>
-            <Text type="supporting" size="xsm" weight="medium">
-              {answered}/{questions.length}
-            </Text>
           </HStack>
 
           {/* Category + tags */}

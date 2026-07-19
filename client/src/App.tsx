@@ -6,7 +6,7 @@ import { AppToast } from './components/ui/AppToast';
 import { useIsMobile } from './lib/useMediaQuery';
 import './styles/app-shell.css';
 import LoadingScreen from './components/LoadingScreen';
-import { SwimmingFin, Waterline } from './components/SharkFin';
+import { SharkFin, SwimmingFin, Waterline } from './components/SharkFin';
 import { useColorMode } from './theme/ColorModeContext';
 import { useT, useLanguage } from './i18n/LanguageContext';
 import { preferredLanguageOf } from './lib/languagePref';
@@ -169,7 +169,7 @@ function SubjectSwitcher() {
       to="/subjects"
       style={{ marginLeft: 4, display: 'inline-flex', textDecoration: 'none', borderRadius: 999 }}
     >
-      <AxBadge label={`${subject.emoji} ${t(subjectNameKey(subject.id))}`} />
+      <AxBadge label={t(subjectNameKey(subject.id))} />
     </Link>
   );
 }
@@ -177,7 +177,7 @@ function SubjectSwitcher() {
 // The header brand. On desktop it's the umbrella StudyShark wordmark with the
 // active-subject chip beside it; on mobile (where space is tight and the chip
 // is easy to miss) the wordmark itself becomes the logo of the platform the
-// learner is currently on — its emoji + name in the subject accent.
+// learner is currently on — its name in the subject accent.
 function HeaderBrand() {
   const subject = useActiveSubject();
   const t = useT();
@@ -211,7 +211,7 @@ function HeaderBrand() {
           StudyShark
         </span>
         <span className="ss-brand-compact" style={{ alignItems: 'center', gap: 4, color: subject.accent, whiteSpace: 'nowrap' }}>
-          <span aria-hidden style={{ fontSize: '1.25rem', lineHeight: 1 }}>{subject.emoji}</span>
+          <SharkFin size={20} />
           {t(subjectNameKey(subject.id))}
         </span>
       </Link>
@@ -525,7 +525,7 @@ function App() {
                 className="ss-drawer-brand"
                 style={{ color: activeSubject.accent }}
               >
-                <span aria-hidden style={{ fontSize: '1.35rem', lineHeight: 1 }}>{activeSubject.emoji}</span>
+                <SharkFin size={22} />
                 {isSubjectLocked() ? (activeSubject.standaloneBrand ?? activeSubject.label) : t(subjectNameKey(activeSubject.id))}
               </Link>
               <div style={{ height: 1, background: 'var(--color-border)' }} />

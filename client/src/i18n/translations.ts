@@ -248,7 +248,7 @@ export const en = {
   // Quiz, setup screen
   'quiz.title': 'Web Development Quiz',
   'quiz.subtitle': '1500+ questions · keyboard shortcuts supported',
-  'quiz.loadingQuote': 'start small and send it.',
+  'quiz.loadingQuote': 'Preparing your questions.',
   'quiz.tip1': 'Stuck? Take your best guess, then read the explanation. That is where the learning happens.',
   'quiz.tip2': 'Say the answer out loud before you tap. If you can\'t explain why, that\'s the one to review.',
   'quiz.tip3': 'Wrong answers teach more than right ones. Read the explanation carefully; that is the point.',
@@ -286,6 +286,7 @@ export const en = {
   // Quiz, in progress
   'quiz.questionOf': 'Question {current} of {total}',
   'quiz.progressAria': 'Quiz progress',
+  'quiz.questionCounter': 'Question {current} of {total}',
   'quiz.showHint': 'Show hint',
   'quiz.keyboardTip': 'Tip: press 1–{max} to pick, ←/→ to navigate, Enter to advance.',
   'quiz.previous': 'Previous',
@@ -490,6 +491,7 @@ export const en = {
   'play.showResults': 'Show results',
   'play.nextQuestion': 'Next question →',
   'play.liveScoreboard': 'Live scoreboard',
+  'play.correctShort': 'correct',
   'play.classAnswers': 'Class answers (live)',
   'play.matchComplete': 'Match complete',
   'play.winner': 'Winner: {name} — {correct}/{total}',
@@ -619,7 +621,7 @@ export const en = {
   'careerRoadmap.stageDone': 'Complete',
   'careerRoadmap.stageCurrent': 'In progress',
   'careerRoadmap.stageAhead': 'Ahead',
-  'careerRoadmap.seniorReady': 'Senior-ready',
+  'careerRoadmap.seniorReady': 'Learning path complete',
   'careerRoadmap.skillCheckLead': 'Already know some of this? Take the skill check to unlock ahead.',
   'careerRoadmap.honestyLead': 'The honest version:',
   'careerRoadmap.honestyBody': 'senior full-stack is typically 5–8+ years of shipping real software. Knowledge is necessary but not sufficient, you also need the “Beyond StudyShark” list below, which no quiz app can hand you. StudyShark gets your fundamentals genuinely solid; the rest is reps in the real world.',

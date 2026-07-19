@@ -249,7 +249,7 @@ export const cs: Record<TranslationKey, string> = {
   // Quiz, setup screen
   'quiz.title': 'Kvíz webového vývoje',
   'quiz.subtitle': '1500+ otázek · podporovány klávesové zkratky',
-  'quiz.loadingQuote': 'začni v malém a pošli to.',
+  'quiz.loadingQuote': 'Připravujeme otázky.',
   'quiz.tip1': 'Nevíš? Zkus napřed MDN, ne AI, číst dokumentaci je dovednost, kterou si trénuješ tímhle návykem.',
   'quiz.tip2': 'Než klikneš, řekni si odpověď nahlas. Když ji neumíš vysvětlit, tuhle si projdi po kvízu.',
   'quiz.tip3': 'Špatné odpovědi učí víc než správné. Přečti si vysvětlení pořádně, tam je celá pointa.',
@@ -287,6 +287,7 @@ export const cs: Record<TranslationKey, string> = {
   // Quiz, in progress
   'quiz.questionOf': 'Otázka {current} z {total}',
   'quiz.progressAria': 'Průběh kvízu',
+  'quiz.questionCounter': 'Otázka {current} z {total}',
   'quiz.showHint': 'Zobrazit nápovědu',
   'quiz.keyboardTip': 'Tip: stiskni 1–{max} pro výběr, ←/→ pro navigaci, Enter pro pokračování.',
   'quiz.previous': 'Předchozí',
@@ -491,6 +492,7 @@ export const cs: Record<TranslationKey, string> = {
   'play.showResults': 'Zobrazit výsledky',
   'play.nextQuestion': 'Další otázka →',
   'play.liveScoreboard': 'Živá výsledková tabule',
+  'play.correctShort': 'správně',
   'play.classAnswers': 'Odpovědi třídy (naživo)',
   'play.matchComplete': 'Hra dokončena',
   'play.winner': 'Vítěz: {name} — {correct}/{total}',
@@ -620,7 +622,7 @@ export const cs: Record<TranslationKey, string> = {
   'careerRoadmap.stageDone': 'Hotovo',
   'careerRoadmap.stageCurrent': 'Probíhá',
   'careerRoadmap.stageAhead': 'Před tebou',
-  'careerRoadmap.seniorReady': 'Připraven na seniora',
+  'careerRoadmap.seniorReady': 'Studijní cesta dokončena',
   'careerRoadmap.skillCheckLead': 'Něco už znáš? Ověř si dovednosti a odemkni další část.',
   'careerRoadmap.honestyLead': 'Na rovinu:',
   'careerRoadmap.honestyBody': 'seniorní fullstack obvykle znamená 5–8+ let dodávání skutečného softwaru. Znalosti jsou nutné, ale nestačí, potřebuješ i seznam „Nad rámec StudySharku“ níže, který ti žádná kvízová aplikace nedá. StudyShark ti pořádně upevní základy; zbytek jsou zkušenosti z reálného světa.',

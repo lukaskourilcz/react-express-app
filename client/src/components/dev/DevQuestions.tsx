@@ -649,7 +649,7 @@ export default function DevQuestions() {
                 <TableCell style={{ textAlign: 'center' }}>
                   {reportCounts[q.id] ? (
                     <Pill
-                      label={`🚩 ${reportCounts[q.id]}`}
+                      label={`${reportCounts[q.id]} flagged`}
                       color="#dc2626"
                       title={`${reportCounts[q.id]} report(s) — see the Flags tab`}
                     />

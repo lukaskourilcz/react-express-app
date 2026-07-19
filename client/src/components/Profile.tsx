@@ -42,7 +42,7 @@ import { savePreferredLanguage } from '../lib/languagePref';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { SwimmingFin } from './SharkFin';
-import { FlameIcon, BoltIcon } from './ui/icons';
+import { FlameIcon, BoltIcon, TrophyIcon } from './ui/icons';
 import './DeepEndScreens.css';
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
@@ -401,7 +401,6 @@ function CareerCard() {
   // "Junior Explorer" for Geography, "Club Player" for Chess, …), localized.
   const rankKeys = rankLabelKeyFor(info.rank, track);
   const title = t(rankKeys.key, rankKeys.vars);
-  const emoji = rankKeys.emoji;
   const nextKeys = info.next ? rankLabelKeyFor(info.next, track) : null;
   const nextTitle = nextKeys ? t(nextKeys.key, nextKeys.vars) : null;
   const nf = (n: number) => n.toLocaleString();
@@ -428,7 +427,7 @@ function CareerCard() {
               boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--brand-accent) 35%, transparent)',
             }}
           >
-            {emoji}
+            <TrophyIcon size={25} />
           </div>
           <VStack gap={0} width="100%">
             <Heading level={4} maxLines={1}>{title}</Heading>

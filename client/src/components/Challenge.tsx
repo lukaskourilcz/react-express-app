@@ -402,7 +402,7 @@ export default function Challenge() {
             <div className="de-stat-row">
               <div className="de-stat"><strong>{today}</strong><span>{t('challenge.todaySet')}</span></div>
               <div className="de-stat"><strong>{MAX_LIVES}</strong><span>{t('challenge.finsStat')}</span></div>
-              <div className="de-stat"><strong>⏱ {TIME_LIMIT_S}s</strong><span>{t('challenge.perQuestion')}</span></div>
+              <div className="de-stat"><strong>{TIME_LIMIT_S} s</strong><span>{t('challenge.perQuestion')}</span></div>
             </div>
             <HStack gap={2} align="center" wrap="wrap">
               <SwimCta label={t('challenge.startButton')} dir={-1} onClick={() => void startRun()} />

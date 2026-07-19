@@ -41,6 +41,7 @@ import { useLanguage, useT } from '../i18n/LanguageContext';
 import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { useGameConfig } from '../lib/gameConfig';
 import './DeepEndScreens.css';
+import { BookIcon, TargetIcon, UsersIcon } from './ui/icons';
 
 const POLL_FALLBACK_MS = 4000;
 const DEFAULT_DURATION_S = 60;
@@ -202,9 +203,9 @@ export function PlayLanding() {
                 <span className="ss-kicker">{t('play.hostGame')}</span>
                 <div className="de-mode-list" role="radiogroup" aria-label={t('play.gameMode')}>
                   {([
-                    ['ffa', '⚡', t('play.multiplayerFfa'), t('play.modeFfaBlurb')],
-                    ['h2h', '⚔', t('play.headToHead'), t('play.modeH2hBlurb')],
-                    ['classroom', '▣', t('play.classroom'), t('play.modeClassroomBlurb')],
+                    ['ffa', <TargetIcon key="ffa" size={20} />, t('play.multiplayerFfa'), t('play.modeFfaBlurb')],
+                    ['h2h', <UsersIcon key="h2h" size={20} />, t('play.headToHead'), t('play.modeH2hBlurb')],
+                    ['classroom', <BookIcon key="classroom" size={20} />, t('play.classroom'), t('play.modeClassroomBlurb')],
                   ] as const).map(([id, icon, name, blurb]) => (
                     <button key={id} type="button" className="de-mode-card" role="radio" aria-checked={mode === id} aria-pressed={mode === id} onClick={() => setMode(id)}>
                       <span className="de-mode-card__icon" aria-hidden>{icon}</span>
@@ -1067,14 +1068,14 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
                 color: i === 0 ? 'var(--brand-accent)' : 'inherit',
               }}
             >
-              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+              {i + 1}
             </span>
             <div style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               <Text weight="medium">{s.display_name}</Text>
             </div>
             <span style={{ fontWeight: 700 }}>{s.score ?? s.correct}</span>
             <span style={{ fontSize: '0.75rem', opacity: 0.65, whiteSpace: 'nowrap', flexShrink: 0 }}>
-              {s.score != null ? `· ${s.correct}✓` : ''} · {(s.total_ms / 1000).toFixed(1)}s
+              {s.score != null ? `${s.correct} ${t('play.correctShort')} · ` : ''}{(s.total_ms / 1000).toFixed(1)} s
             </span>
           </div>
         ))}

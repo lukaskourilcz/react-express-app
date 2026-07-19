@@ -40,6 +40,7 @@ import { levelForXp, getCareerRanks } from '../lib/leveling';
 import RoadmapTree from './RoadmapTree';
 import { SwimCta } from './landing/LandingKit';
 import './DeepEndScreens.css';
+import { TrophyIcon } from './ui/icons';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
@@ -215,7 +216,7 @@ export default function CareerRoadmap() {
               </div>
             ))}
             <div className="de-stage de-stage--finish">
-              <div className="de-stage__rail"><span className="de-stage__node">🏆</span></div>
+              <div className="de-stage__rail"><span className="de-stage__node"><TrophyIcon size={18} /></span></div>
               <div className="de-stage__body">
                 <div className="de-stage__head"><strong style={{ color: '#c77f00' }}>{t('careerRoadmap.seniorReady')}</strong></div>
                 <Text type="supporting" color="secondary">{t('careerRoadmap.skillCheckLead')}</Text>
@@ -312,7 +313,7 @@ export default function CareerRoadmap() {
             <HStack gap={1} align="center" wrap="wrap">
               {isWebdev ? (
                 <>
-                  <Badge variant="neutral" label={`${info.rank.emoji} ${rankTitle}`} />
+                  <Badge variant="neutral" label={rankTitle} />
                   <Text type="supporting" size="xsm" color="secondary">
                     {reachedSenior
                       ? t('careerRoadmap.seniorReached')
@@ -322,7 +323,7 @@ export default function CareerRoadmap() {
               ) : (
                 // Other subjects use a neutral XP chip — the "senior engineer"
                 // career ranks are Web Dev specific.
-                <Badge variant="neutral" label={`${info.rank.emoji} ${totalXp.toLocaleString()} XP`} />
+                <Badge variant="neutral" label={`${totalXp.toLocaleString()} XP`} />
               )}
             </HStack>
           </VStack>

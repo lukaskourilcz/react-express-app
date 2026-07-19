@@ -83,7 +83,7 @@ function Leaderboard() {
 
   const rows: RankedRow[] = entries.map((entry, i) => {
     const rank = i + 1;
-    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+    const medal = rank <= 3 ? String(rank) : null;
 
     let secondary = '';
     let score = '';
@@ -127,7 +127,6 @@ function Leaderboard() {
               background: `${subject.accent}14`,
             }}
           >
-            <span aria-hidden>{subject.emoji}</span>
             {t(subjectNameKey(subject.id))}
           </span>
         </HStack>
@@ -311,14 +310,14 @@ function Leaderboard() {
   );
 }
 
-// The rank indicator: a medal for the podium, otherwise the number in a subtle
+// The rank indicator: a themed podium disc, otherwise the number in a subtle
 // disc. Top-three discs pick up the subject accent so the podium reads at a
 // glance without a full-row highlight.
 function RankMedal({ rank, medal }: { rank: number; medal: string | null }): ReactNode {
   // Screen readers get the placement as text in both branches; the visual disc
   // itself stays decorative.
   if (medal) {
-    // Podium: the medal sits in a quietly tinted disc — gold / silver / bronze.
+    // Controlled rank typography avoids platform-dependent emoji artwork.
     const tint = rank === 1 ? '#f5b301' : rank === 2 ? '#9aa4b2' : '#cd7f32';
     return (
       <span style={{ display: 'inline-flex' }}>

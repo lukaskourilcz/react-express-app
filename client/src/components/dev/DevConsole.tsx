@@ -48,7 +48,6 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
           <span className="dev-eyebrow">App context</span>
           <label htmlFor="dev-subject">Preview and edit as</label>
           <div className="dev-context-select-wrap">
-            <span aria-hidden="true">{activeSubject.emoji}</span>
             <select id="dev-subject" value={subject} disabled={isSubjectLocked()} onChange={(event) => setSubject(event.target.value as SubjectId)}>
               {SUBJECT_ORDER.map((id) => <option key={id} value={id}>{SUBJECTS[id].label}</option>)}
             </select>
@@ -68,8 +67,8 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
         </nav>
 
         <div className="dev-sidebar-footer">
-          <button type="button" onClick={toggleColorMode}>{mode === 'dark' ? '☀ Light mode' : '◐ Dark mode'}</button>
-          <button type="button" onClick={onLock}>⌁ Lock console</button>
+          <button type="button" onClick={toggleColorMode}>{mode === 'dark' ? 'Light mode' : 'Dark mode'}</button>
+          <button type="button" onClick={onLock}>Lock console</button>
         </div>
       </aside>
 
@@ -80,7 +79,7 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
         </header>
         <div className="dev-mobile-controls">
           <label><span>Section</span><select value={tab} onChange={(event) => selectTab(event.target.value as Tab)}>{NAV.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-          <label><span>App context</span><select value={subject} disabled={isSubjectLocked()} onChange={(event) => setSubject(event.target.value as SubjectId)}>{SUBJECT_ORDER.map((id) => <option key={id} value={id}>{SUBJECTS[id].emoji} {SUBJECTS[id].label}</option>)}</select></label>
+          <label><span>App context</span><select value={subject} disabled={isSubjectLocked()} onChange={(event) => setSubject(event.target.value as SubjectId)}>{SUBJECT_ORDER.map((id) => <option key={id} value={id}>{SUBJECTS[id].label}</option>)}</select></label>
         </div>
 
         <div className="dev-main-inner">
