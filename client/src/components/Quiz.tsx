@@ -1154,6 +1154,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         onSubmit={handleReport}
       />
       <AlertDialog
+        className="ss-alert-dialog"
         isOpen={leaveConfirmOpen}
         onOpenChange={setLeaveConfirmOpen}
         title={t('quiz.leaveTitle')}
@@ -1161,6 +1162,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         actionLabel={t('quiz.leaveConfirm')}
         cancelLabel={t('quiz.leaveCancel')}
         onAction={confirmAbandon}
+        width="min(460px, calc(100vw - 32px))"
       />
     </div>
   );

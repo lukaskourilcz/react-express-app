@@ -139,6 +139,48 @@ h1, h2, h3, h4, h5, h6 {
 .ss-pop { animation: ssPop 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
 @media (prefers-reduced-motion: reduce) { .ss-pop { animation: none; } }
 
+/* Deep End overlay surface. Astryx continues to own native dialog behavior,
+   focus trapping and restoration; this layer gives every dialog one brand. */
+dialog.astryx-dialog {
+  border: 1px solid var(--ss-card-line, var(--color-border)) !important;
+  border-bottom: 3px solid var(--brand-accent) !important;
+  border-radius: 20px !important;
+  background-color: var(--color-background-surface) !important;
+  background-image: var(--ss-grain), var(--ss-wave) !important;
+  background-repeat: repeat, repeat-x !important;
+  background-position: center, left top !important;
+  background-size: auto, 24px 6px !important;
+  box-shadow: 0 24px 70px rgba(23,39,46,.22), 0 3px 0 color-mix(in srgb,var(--brand-accent) 20%,transparent) !important;
+  overflow: hidden;
+}
+dialog.astryx-dialog::backdrop {
+  background: color-mix(in srgb, #17272e 58%, transparent) !important;
+  -webkit-backdrop-filter: blur(7px) saturate(.8);
+  backdrop-filter: blur(7px) saturate(.8);
+}
+dialog.astryx-dialog .astryx-layout-header { padding-top: 28px; }
+dialog.astryx-dialog .astryx-layout-footer {
+  border-top: 1px solid var(--color-border);
+  background: color-mix(in srgb,var(--color-background-muted) 55%,transparent);
+}
+.astryx-popover {
+  border: 1px solid var(--ss-card-line, var(--color-border)) !important;
+  border-bottom: 2px solid var(--brand-accent) !important;
+  border-radius: var(--radius-container) !important;
+  background-color: var(--color-background-surface) !important;
+  background-image: var(--ss-grain) !important;
+  box-shadow: 0 16px 46px rgba(23,39,46,.18) !important;
+}
+@media (max-width: 560px) {
+  dialog.astryx-dialog:not([data-variant='fullscreen']) {
+    width: calc(100vw - 16px) !important;
+    max-width: none !important;
+    max-height: calc(100dvh - 16px) !important;
+    margin: auto 8px 8px !important;
+    border-radius: 20px 20px 14px 14px !important;
+  }
+}
+
 /* A rounded icon/colour tile used across cards as a compact visual anchor. */
 .ss-tile {
   display: grid;

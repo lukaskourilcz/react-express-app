@@ -20,6 +20,7 @@ import {
 } from '../../lib/devApi';
 import QuestionEditor from './QuestionEditor';
 import { useActiveSubject } from '../../lib/subjects';
+import { BrandedConfirmDialog, type ConfirmRequest } from '../ui/BrandedConfirmDialog';
 
 // First line of a question, with any code block stripped, for the list summary.
 const summarize = (text: string): string => {
@@ -219,6 +220,7 @@ export default function DevQuestions() {
   const [editing, setEditing] = useState<AdminQuestion | null>(null);
   const [snack, setSnack] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
 
   useEffect(() => {
     setCategoryFilter('all');
@@ -311,14 +313,10 @@ export default function DevQuestions() {
   };
 
   const handleDelete = (q: AdminQuestion) => {
-    if (window.confirm('Delete this question permanently? This cannot be undone.')) {
-      runAction('Question deleted', () => setQuestionDeleted(q.id, true));
-    }
+    setConfirm({ title: 'Delete question?', description: 'This permanently removes the question from the bank and cannot be undone.', actionLabel: 'Delete permanently', onConfirm: () => runAction('Question deleted', () => setQuestionDeleted(q.id, true)) });
   };
   const handleReset = (q: AdminQuestion) => {
-    if (window.confirm('Discard edits and revert to the original question?')) {
-      runAction('Reverted to original', () => resetQuestion(q.id));
-    }
+    setConfirm({ title: 'Revert question?', description: 'Your edits will be discarded and the original question restored.', actionLabel: 'Revert', destructive: false, onConfirm: () => runAction('Reverted to original', () => resetQuestion(q.id)) });
   };
 
   // How many currently-visible, non-custom questions the bulk action would hide.
@@ -331,20 +329,15 @@ export default function DevQuestions() {
       setSnack(`No visible questions score ≤ ${bulkThreshold}`);
       return;
     }
-    if (
-      !window.confirm(
-        `Delete all ${bulkHideCount} questions scoring ≤ ${bulkThreshold} permanently? This cannot be undone. The learning paths re-level automatically.`,
-      )
-    ) {
-      return;
-    }
-    try {
-      const r = await bulkHideByImportance(bulkThreshold);
-      setSnack(`Deleted ${r.hidden} question${r.hidden === 1 ? '' : 's'}`);
-      reload();
-    } catch (err) {
-      setSnack(friendlyError(err));
-    }
+    setConfirm({
+      title: `Delete ${bulkHideCount} questions?`,
+      description: `Every question scoring ${bulkThreshold} or lower will be permanently removed. Learning paths will re-level automatically.`,
+      actionLabel: 'Delete permanently',
+      onConfirm: async () => {
+        try { const r = await bulkHideByImportance(bulkThreshold); setSnack(`Deleted ${r.hidden} question${r.hidden === 1 ? '' : 's'}`); reload(); }
+        catch (err) { setSnack(friendlyError(err)); }
+      },
+    });
   };
 
   const toggleSelected = (id: string) =>
@@ -372,13 +365,7 @@ export default function DevQuestions() {
   const handleDeleteSelected = async () => {
     const ids = [...selected];
     if (ids.length === 0) return;
-    if (
-      !window.confirm(
-        `Delete ${ids.length} selected question${ids.length === 1 ? '' : 's'} permanently? This cannot be undone.`,
-      )
-    ) {
-      return;
-    }
+    setConfirm({ title: `Delete ${ids.length} selected question${ids.length === 1 ? '' : 's'}?`, description: 'This permanently removes the selected questions and cannot be undone.', actionLabel: 'Delete permanently', onConfirm: async () => {
     try {
       let n = 0;
       for (const id of ids) {
@@ -391,6 +378,7 @@ export default function DevQuestions() {
     } catch (err) {
       setSnack(friendlyError(err));
     }
+    }});
   };
 
   if (loading) return <LoadingScreen label="Loading questions…" />;
@@ -746,6 +734,7 @@ export default function DevQuestions() {
         severity="info"
         autoHideDuration={2500}
       />
+      <BrandedConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
     </div>
   );
 }

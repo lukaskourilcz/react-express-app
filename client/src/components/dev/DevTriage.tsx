@@ -26,6 +26,7 @@ import { friendlyError } from '../../lib/api';
 import { listQuestions, setQuestionDeleted, type AdminQuestion } from '../../lib/devApi';
 import { loadTriageVerdicts, GATE_LABEL, type TriageVerdict } from '../../lib/triageApi';
 import { useActiveSubject } from '../../lib/subjects';
+import { BrandedConfirmDialog, type ConfirmRequest } from '../ui/BrandedConfirmDialog';
 
 interface Row {
   q: AdminQuestion;
@@ -71,6 +72,7 @@ export default function DevTriage() {
   const [rowsPerPage, setRowsPerPage] = useState(25);
   const [snack, setSnack] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   // Ids removed this session — filtered out immediately so the row vanishes on
   // click (the server soft-delete also makes them gone on any later reload).
   const [removed, setRemoved] = useState<Set<string>>(new Set());
@@ -161,7 +163,10 @@ export default function DevTriage() {
   // since it can be hundreds at once). Each is gone permanently.
   const removeAllShown = async () => {
     if (filtered.length === 0) return;
-    if (!window.confirm(`Delete all ${filtered.length} shown question(s) from the bank for good? This cannot be undone.`)) return;
+    setConfirm({ title: `Delete ${filtered.length} shown questions?`, description: 'This permanently removes every question matching the current filters and cannot be undone.', actionLabel: 'Delete permanently', onConfirm: () => removeAllShownConfirmed() });
+  };
+
+  const removeAllShownConfirmed = async () => {
     setBusy(true);
     const ids = filtered.map((r) => r.q.id);
     setRemoved((prev) => { const next = new Set(prev); ids.forEach((id) => next.add(id)); return next; });
@@ -353,6 +358,7 @@ export default function DevTriage() {
         severity="info"
         autoHideDuration={2500}
       />
+      <BrandedConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
     </div>
   );
 }

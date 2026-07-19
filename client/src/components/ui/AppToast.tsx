@@ -2,6 +2,7 @@ import { createPortal } from 'react-dom';
 import { useEffect } from 'react';
 import { m, AnimatePresence } from '../../lib/motion';
 import { useT } from '../../i18n/LanguageContext';
+import { CloseIcon } from './icons';
 
 /**
  * Lightweight toast — a MUI-free replacement for the app's `<Snackbar><Alert>`
@@ -11,10 +12,10 @@ import { useT } from '../../i18n/LanguageContext';
  */
 export type ToastSeverity = 'success' | 'error' | 'info';
 
-const STYLES: Record<ToastSeverity, { bg: string; fg: string }> = {
-  success: { bg: 'var(--brand-accent, #2d7a2d)', fg: '#ffffff' },
-  error: { bg: '#dc2626', fg: '#ffffff' },
-  info: { bg: 'var(--color-background-surface)', fg: 'var(--color-text-primary)' },
+const STYLES: Record<ToastSeverity, { accent: string }> = {
+  success: { accent: 'var(--brand-accent, #2d7a2d)' },
+  error: { accent: '#dc2626' },
+  info: { accent: 'var(--brand-accent, #2d7a2d)' },
 };
 
 export function AppToast({
@@ -71,13 +72,15 @@ export function AppToast({
               gap: 12,
               padding: '12px 16px',
               borderRadius: 'var(--radius-element, 0.9rem)',
-              background: s.bg,
-              color: s.fg,
+              background: 'var(--color-background-surface)',
+              color: 'var(--color-text-primary)',
               fontFamily: 'var(--font-family-body)',
               fontWeight: 700,
               fontSize: '0.9rem',
-              boxShadow: 'var(--shadow-high)',
-              border: severity === 'info' ? '1px solid var(--color-border)' : 'none',
+              boxShadow: '0 14px 44px rgba(23,39,46,.2)',
+              border: '1px solid var(--color-border)',
+              borderLeft: `4px solid ${s.accent}`,
+              borderBottom: `2px solid ${s.accent}`,
             }}
           >
             <span style={{ flex: 1 }}>{message}</span>
@@ -91,13 +94,16 @@ export function AppToast({
                 background: 'transparent',
                 color: 'inherit',
                 cursor: 'pointer',
-                opacity: 0.85,
-                fontSize: '1.1rem',
-                lineHeight: 1,
-                padding: 2,
+                opacity: 0.75,
+                width: 34,
+                height: 34,
+                display: 'grid',
+                placeItems: 'center',
+                padding: 0,
+                borderRadius: 8,
               }}
             >
-              ×
+              <CloseIcon size={17} />
             </button>
           </m.div>
         )}

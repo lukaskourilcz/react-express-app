@@ -103,8 +103,9 @@ function RegisterPromptSnackbar() {
         {open && (
           <m.div
             key="register-card"
-            role="dialog"
+            role="region"
             aria-label={t('register.title')}
+            className="ss-register-prompt"
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 40 }}
@@ -114,17 +115,15 @@ function RegisterPromptSnackbar() {
               position: 'relative',
               width: 320,
               maxWidth: 'calc(100vw - 24px)',
-              // Always white, both themes — that's the "catch the eye" ask. Pin
-              // color-scheme to light so the nested Astryx Text/Button resolve
-              // their light-theme (dark-on-white) tokens even in dark mode.
-              colorScheme: 'light',
-              backgroundColor: '#ffffff',
-              color: '#111827',
-              borderRadius: 12,
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.06)',
-              // Brand-green shark-fin accent on the leading edge.
-              borderLeft: '4px solid var(--brand-accent)',
-              padding: '16px 20px 16px 16px',
+              color: 'var(--color-text-primary)',
+              backgroundColor: 'var(--color-background-surface)',
+              borderRadius: 18,
+              boxShadow: '0 18px 48px rgba(23,39,46,.2)',
+              border: '1px solid var(--color-border)',
+              borderBottom: '3px solid var(--brand-accent)',
+              padding: '20px',
+              maxHeight: 'calc(100dvh - 24px)',
+              overflowY: 'auto',
             }}
           >
             <button
