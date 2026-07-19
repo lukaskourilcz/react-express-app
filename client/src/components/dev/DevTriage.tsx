@@ -5,7 +5,7 @@
 // tab). The verdicts are a static overlay (triage-verdicts.json); the live
 // question text and current deleted state come from the admin API.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { TextInput } from '@astryxdesign/core/TextInput';
@@ -25,6 +25,7 @@ import { getCategoryLabel } from '../../lib/categories';
 import { friendlyError } from '../../lib/api';
 import { listQuestions, setQuestionDeleted, type AdminQuestion } from '../../lib/devApi';
 import { loadTriageVerdicts, GATE_LABEL, type TriageVerdict } from '../../lib/triageApi';
+import { useActiveSubject } from '../../lib/subjects';
 
 interface Row {
   q: AdminQuestion;
@@ -58,6 +59,7 @@ const reasonLabel = (r: string): string =>
   GATE_LABEL[r] ?? (r === 'duplicate' ? 'Duplicate' : r.startsWith('relevance') ? 'Low relevance' : r.startsWith('mean') ? 'Low mean' : r);
 
 export default function DevTriage() {
+  const activeSubject = useActiveSubject();
   const questionsQuery = useQuery({ queryKey: ['admin', 'questions'], queryFn: listQuestions });
   const triageQuery = useQuery({ queryKey: ['triage', 'verdicts'], queryFn: () => loadTriageVerdicts() });
 
@@ -86,14 +88,21 @@ export default function DevTriage() {
   const rows: Row[] = useMemo(() => {
     const verdicts = triageQuery.data?.verdicts ?? {};
     const out: Row[] = [];
+    const subjectCategories = new Set<string>(activeSubject.categories);
     for (const q of questionsQuery.data?.questions ?? []) {
+      if (!subjectCategories.has(q.category)) continue;
       const v = verdicts[q.id];
       if (v) out.push({ q, v });
     }
     return out;
-  }, [questionsQuery.data, triageQuery.data]);
+  }, [questionsQuery.data, triageQuery.data, activeSubject]);
 
-  const categories = questionsQuery.data?.categories ?? [];
+  const categories = (questionsQuery.data?.categories ?? []).filter((category) => activeSubject.categories.includes(category as never));
+
+  useEffect(() => {
+    setCategoryFilter('all');
+    setPage(0);
+  }, [activeSubject.id]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();

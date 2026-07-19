@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHeaderCell } from '@astryxdesign/core/Table';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Button } from '@astryxdesign/core/Button';
@@ -19,6 +19,7 @@ import {
   type AdminQuestion,
 } from '../../lib/devApi';
 import QuestionEditor from './QuestionEditor';
+import { useActiveSubject } from '../../lib/subjects';
 
 // First line of a question, with any code block stripped, for the list summary.
 const summarize = (text: string): string => {
@@ -187,12 +188,20 @@ const SOURCE_PILL_COLOR: Record<AdminQuestion['source'], string> = {
 };
 
 export default function DevQuestions() {
+  const activeSubject = useActiveSubject();
   const { data, isPending: loading, error: queryError, refetch } = useQuery({
     queryKey: ['admin', 'questions'],
     queryFn: listQuestions,
   });
-  const questions = data?.questions ?? [];
-  const categories = data?.categories ?? [];
+  const subjectCategories = useMemo(() => new Set<string>(activeSubject.categories), [activeSubject]);
+  const questions = useMemo(
+    () => (data?.questions ?? []).filter((question) => subjectCategories.has(question.category)),
+    [data, subjectCategories],
+  );
+  const categories = useMemo(
+    () => (data?.categories ?? []).filter((category) => subjectCategories.has(category)),
+    [data, subjectCategories],
+  );
   const reportCounts = data?.reportCounts ?? {};
   const error = queryError ? friendlyError(queryError) : null;
   const reload = () => void refetch();
@@ -210,6 +219,12 @@ export default function DevQuestions() {
   const [editing, setEditing] = useState<AdminQuestion | null>(null);
   const [snack, setSnack] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setCategoryFilter('all');
+    setSelected(new Set());
+    setPage(0);
+  }, [activeSubject.id]);
 
   const stats = useMemo(() => {
     let edited = 0;

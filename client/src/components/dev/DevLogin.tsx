@@ -4,6 +4,7 @@ import { TextInput } from '@astryxdesign/core/TextInput';
 import { Banner } from '@astryxdesign/core/Banner';
 import { friendlyError } from '../../lib/api';
 import { verifyPassword, setDevPassword } from '../../lib/devApi';
+import './DevConsole.css';
 
 /** Password prompt for the /dev console. On success, stores the password and continues. */
 export default function DevLogin({ onSuccess }: { onSuccess: () => void }) {
@@ -32,23 +33,18 @@ export default function DevLogin({ onSuccess }: { onSuccess: () => void }) {
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '70vh', padding: '0 16px' }}>
+    <div className="dev-login-page">
       <form
+        className="dev-login-card"
         onSubmit={handleSubmit}
-        style={{
-          padding: 32,
-          width: '100%',
-          maxWidth: 380,
-          border: '1px solid var(--color-border)',
-          borderRadius: 16,
-          background: 'var(--color-background-surface)',
-        }}
       >
+        <span className="dev-brand-fin" aria-hidden="true" />
+        <span className="dev-eyebrow">StudyShark control room</span>
         <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: '0 0 4px', color: 'var(--color-text-primary)' }}>
-          Dev console
+          Welcome back
         </h1>
         <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: '0 0 24px' }}>
-          Enter the password to manage questions and game settings.
+          Unlock the workspace to manage content, switch app context and tune game settings.
         </p>
 
         {error && (

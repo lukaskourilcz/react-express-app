@@ -14,6 +14,7 @@ import { getAdminSettings, saveAdminSettings, type GameSettings } from '../../li
 const SETTINGS_KEY = ['admin', 'settings'] as const;
 import { RANK_TITLES, setRankThresholds } from '../../lib/leveling';
 import { CATEGORY_OPTIONS, onCategoryColorText } from '../../lib/categories';
+import { useActiveSubject } from '../../lib/subjects';
 
 const DIFFICULTY_MODES = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
@@ -185,6 +186,7 @@ function SelectField({
 }
 
 export default function DevSettings() {
+  const activeSubject = useActiveSubject();
   const settingsQuery = useQuery({ queryKey: SETTINGS_KEY, queryFn: getAdminSettings });
   const base = settingsQuery.data?.settings ?? null;
   const [form, setForm] = useState<FormState | null>(null);
@@ -304,7 +306,7 @@ export default function DevSettings() {
           Select none to show every category by default.
         </span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, width: '100%' }}>
-          {CATEGORY_OPTIONS.map((cat) => {
+          {CATEGORY_OPTIONS.filter((cat) => activeSubject.categories.includes(cat.value)).map((cat) => {
             const selected = form.quizDefaultCategoryIds.includes(cat.value);
             return (
               <span
