@@ -85,7 +85,9 @@ export function WaterlineProgress({ value, label }: { value: number; label?: str
   const clamped = Math.max(0, Math.min(100, value));
   const pct = `${clamped}%`;
   const clipId = useId().replace(/:/g, '');
-  const d = 'M0 9 Q 12 5 24 9 T 48 9 T 72 9 T 96 9 T 120 9 T 144 9 T 168 9 T 192 9 T 216 9 T 240 9 T 264 9 T 288 9 T 312 9 T 336 9 T 360 9 T 384 9 T 408 9 T 432 9 T 456 9 T 480 9 T 504 9 T 528 9 T 552 9 T 576 9 T 600 9';
+  // Begin and end beyond the viewport so translating one full wavelength is
+  // seamless: the water keeps moving without exposing either edge.
+  const d = 'M-48 9 Q -36 5 -24 9 T 0 9 T 24 9 T 48 9 T 72 9 T 96 9 T 120 9 T 144 9 T 168 9 T 192 9 T 216 9 T 240 9 T 264 9 T 288 9 T 312 9 T 336 9 T 360 9 T 384 9 T 408 9 T 432 9 T 456 9 T 480 9 T 504 9 T 528 9 T 552 9 T 576 9 T 600 9 T 624 9 T 648 9';
   return (
     <div
       role="progressbar"
@@ -96,13 +98,13 @@ export function WaterlineProgress({ value, label }: { value: number; label?: str
       style={{ position: 'relative', height: 18 }}
     >
       <svg aria-hidden viewBox="0 0 600 18" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: 18, overflow: 'visible' }}>
-        <defs><clipPath id={clipId}><rect x="0" y="0" width={clamped * 6} height="18" /></clipPath></defs>
-        <path d={d} fill="none" stroke="var(--color-border)" strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
-        <path d={d} fill="none" stroke="var(--brand-accent)" strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" clipPath={`url(#${clipId})`} />
+        <defs><clipPath id={clipId}><rect className="ss-waterline-reveal" x="0" y="0" width="600" height="18" style={{ transform: `scaleX(${clamped / 100})` }} /></clipPath></defs>
+        <path className="ss-waterline-drift" d={d} fill="none" stroke="var(--color-border)" strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+        <path className="ss-waterline-drift" d={d} fill="none" stroke="var(--brand-accent)" strokeWidth="2" strokeLinecap="round" vectorEffect="non-scaling-stroke" clipPath={`url(#${clipId})`} />
       </svg>
       {/* Fin marker riding the fill edge. */}
-      <div className="ss-progress-fin" aria-hidden style={{ position: 'absolute', top: -3, left: pct, transform: 'translateX(-50%)', lineHeight: 0, transition: 'left 0.4s ease' }}>
-        <SharkFin size={16} />
+      <div className="ss-progress-fin" aria-hidden style={{ position: 'absolute', top: -3, left: pct, transform: 'translateX(-50%)', lineHeight: 0 }}>
+        <span className="ss-progress-fin-motion"><SharkFin size={16} /></span>
       </div>
     </div>
   );

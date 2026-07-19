@@ -195,10 +195,38 @@
   0%, 100% { transform: translateY(0) rotate(0deg); }
   50% { transform: translateY(-3px) rotate(-2deg); }
 }
+@keyframes ssWaterlineDrift {
+  from { transform: translateX(0); }
+  to { transform: translateX(48px); }
+}
+@keyframes ssProgressFinSwim {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  35% { transform: translateY(-2px) rotate(4deg); }
+  70% { transform: translateY(1px) rotate(-5deg); }
+}
+.ss-waterline-drift {
+  animation: ssWaterlineDrift 1.8s linear infinite;
+  transform-box: fill-box;
+}
+.ss-waterline-reveal {
+  transform-origin: left center;
+  transition: transform .65s cubic-bezier(.22,.8,.3,1);
+}
+.ss-progress-fin {
+  transition: left .65s cubic-bezier(.22,.8,.3,1);
+}
+.ss-progress-fin-motion {
+  display: inline-flex;
+  transform-origin: center 75%;
+  animation: ssProgressFinSwim 1.45s ease-in-out infinite;
+}
 @media (prefers-reduced-motion: reduce) {
   .ss-float { animation: none !important; }
   /* The quiz progress fin snaps instead of gliding. */
   .ss-progress-fin { transition: none !important; }
+  .ss-progress-fin-motion,
+  .ss-waterline-drift { animation: none !important; }
+  .ss-waterline-reveal { transition: none !important; }
 }
 
 /* Shark mascot animations (SharkFin.tsx) — one static copy instead of a
