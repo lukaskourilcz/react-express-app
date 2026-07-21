@@ -22,12 +22,14 @@ const cleanUrl = (value: unknown): string => (typeof value === 'string' ? value.
 const URLS: Record<ProductId, string> = {
   studyshark: cleanUrl(import.meta.env.VITE_STUDYSHARK_URL || import.meta.env.VITE_SIBLING_URL),
   devshark: cleanUrl(import.meta.env.VITE_DEVSHARK_URL),
-  geoshark: cleanUrl(import.meta.env.VITE_GEOSHARK_URL),
-  mathshark: cleanUrl(import.meta.env.VITE_MATHSHARK_URL),
-  historyshark: cleanUrl(import.meta.env.VITE_HISTORYSHARK_URL),
-  bioshark: cleanUrl(import.meta.env.VITE_BIOSHARK_URL),
-  chessshark: cleanUrl(import.meta.env.VITE_CHESSSHARK_URL),
-  pokershark: cleanUrl(import.meta.env.VITE_POKERSHARK_URL),
+  // General subject brands are contexts inside StudyShark, never separate
+  // deployments or domains. BrandFooter builds their internal subject links.
+  geoshark: '',
+  mathshark: '',
+  historyshark: '',
+  bioshark: '',
+  chessshark: '',
+  pokershark: '',
 };
 
 export const PRODUCTS = Object.fromEntries(

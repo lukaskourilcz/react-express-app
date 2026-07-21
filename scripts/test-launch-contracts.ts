@@ -8,6 +8,7 @@ import {
 } from '../client/product-catalog';
 import {
   SUBJECT_SCOPE_CATALOG,
+  STUDYSHARK_SCOPE_SUBJECTS,
   allowedDeploymentSubjects,
 } from '../shared/subject-catalog';
 import {
@@ -22,6 +23,7 @@ import {
 } from '../lib/quiz-tokens';
 import { checkRateLimit, isDistributedRateLimitEnabled } from '../lib/rate-limit';
 import healthHandler from '../api/health';
+import roadmapHandler from '../api/quiz/roadmap';
 import { selectPersonalizedReview } from '../lib/review-selection';
 import { aiDailyGenerationLimit, isAiExplanationConfigured } from '../lib/ai-provider';
 import { inspectQuestionQuality } from '../lib/question-quality';
@@ -58,12 +60,18 @@ async function main() {
   assert.equal(apiFiles(join(process.cwd(), 'api')).length, 12, 'Vercel function budget must remain exactly 12');
 
   assert.equal(resolveCatalogProductId({ product: 'devshark' }), 'devshark');
-  assert.equal(resolveCatalogProductId({ lockSubject: 'geography' }), 'geoshark');
+  assert.equal(resolveCatalogProductId({ lockSubject: 'webdev' }), 'devshark');
+  assert.equal(resolveCatalogProductId({ lockSubject: 'geography' }), 'studyshark');
+  assert.equal(resolveCatalogProductId({ product: 'geoshark' }), 'studyshark');
   assert.equal(resolveCatalogProductId({}), 'studyshark');
   assert.equal(SHARK_BRAND_ORDER.length, 7);
   assert.equal(new Set(SHARK_BRAND_ORDER).size, SHARK_BRAND_ORDER.length);
   assert.ok(SHARK_BRAND_ORDER.every((id) => PRODUCT_CATALOG[id]));
   assert.deepEqual(allowedDeploymentSubjects({ VITE_PRODUCT: 'devshark' }), ['webdev']);
+  assert.deepEqual(allowedDeploymentSubjects({ VITE_LOCK_SUBJECT: 'webdev' }), ['webdev']);
+  assert.deepEqual(allowedDeploymentSubjects({ VITE_LOCK_SUBJECT: 'geography' }), [
+    'geography', 'math', 'history', 'chess', 'biology', 'poker',
+  ]);
   assert.ok(!allowedDeploymentSubjects({ VITE_PRODUCT: 'studyshark' }).includes('webdev'));
   assert.ok(SUBJECT_SCOPE_CATALOG.geography.categories.includes('capitals'));
 
@@ -204,6 +212,30 @@ async function main() {
   assert.equal(healthRes.statusCode, 405);
   assert.equal(healthRes.headers.get('allow'), 'GET');
   assert.ok(healthRes.headers.has('x-request-id'));
+
+  // Learn must be browsable for every StudyShark subject without a database
+  // write. This exercises the same structure and first-level GETs used by the
+  // client, and catches accidental subject locks or question-bank failures.
+  const structureRes = mockResponse();
+  await roadmapHandler({ method: 'GET', headers: {}, query: {} } as never, structureRes as never);
+  assert.equal(structureRes.statusCode, 200);
+  const structure = structureRes.body as { topics?: string[] };
+  assert.ok(Array.isArray(structure.topics));
+  assert.ok(STUDYSHARK_SCOPE_SUBJECTS.every((subject) =>
+    SUBJECT_SCOPE_CATALOG[subject].topics.every((topic) => structure.topics?.includes(topic)),
+  ));
+  for (const subject of STUDYSHARK_SCOPE_SUBJECTS) {
+    const topic = SUBJECT_SCOPE_CATALOG[subject].topics[0];
+    const lessonRes = mockResponse();
+    await roadmapHandler({
+      method: 'GET', headers: {}, query: { topic, level: '1', lang: 'cs' },
+    } as never, lessonRes as never);
+    assert.equal(lessonRes.statusCode, 200, `${subject} Learn level must load`);
+    const lesson = lessonRes.body as { sessionId?: string; questions?: Array<Record<string, unknown>> };
+    assert.match(lesson.sessionId ?? '', /^v2\./);
+    assert.ok((lesson.questions?.length ?? 0) > 0);
+    assert.ok(lesson.questions?.every((question) => !('correctAnswer' in question)));
+  }
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, rate limiting, health, and 12-function budget.');
 }

@@ -1191,6 +1191,7 @@ export const cs: Record<TranslationKey, string> = {
   'error.cancelled': 'Požadavek byl zrušen.',
   'error.network': 'Chyba sítě. Zkontroluj připojení a zkus to znovu.',
   'error.server': 'Chyba serveru. Zkus to prosím za chvíli.',
+  'error.serviceUnavailable': 'Výukové služby jsou dočasně nedostupné. Zkus to prosím později.',
   'error.signIn': 'Nejdřív se musíš přihlásit.',
   'error.generic': 'Něco se pokazilo. Zkus to prosím znovu.',
   'error.tooFewQuestions': 'Pro tento výběr není dost otázek.',

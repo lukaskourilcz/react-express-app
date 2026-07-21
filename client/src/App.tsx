@@ -196,7 +196,7 @@ function HeaderBrand() {
   const subject = useActiveSubject();
   const t = useT();
   const locked = isSubjectLocked();
-  // On a standalone deploy (devShark, geoShark, …) the umbrella "StudyShark"
+  // On the standalone devShark deploy the umbrella "StudyShark"
   // wordmark is replaced by this subject's own brand, and there's no chip to
   // switch subjects because there's nothing to switch to.
   if (locked) {

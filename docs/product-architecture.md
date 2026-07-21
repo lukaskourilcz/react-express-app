@@ -1,6 +1,6 @@
 # Product, brand, and deployment architecture
 
-The web repository implements separate public products on shared technology:
+The web repository implements two public products on shared technology:
 
 ```text
 devShark
@@ -41,33 +41,28 @@ list. Extend these sources instead.
 
 | Deployment | Identity | Subjects | Footer |
 |---|---|---|---|
-| devShark | devShark | webdev only | All Shark brands |
-| StudyShark | StudyShark | all non-development subjects | All Shark brands |
-| geoShark | geoShark | geography only | All Shark brands |
-| mathShark | mathShark | math only | All Shark brands |
-| historyShark | historyShark | history only | All Shark brands |
-| bioShark | bioShark | biology only | All Shark brands |
-| chessShark | chessShark | chess only | All Shark brands |
-| pokerShark | pokerShark | poker only | All Shark brands |
+| devShark | devShark | webdev only | devShark plus StudyShark subject links |
+| StudyShark | StudyShark | all non-development subjects | devShark plus every internal subject brand |
 
 Set matching client and server identity values on every deployment. For
 devShark, use `VITE_PRODUCT=devshark`, `VITE_LOCK_SUBJECT=webdev`,
 `PRODUCT_ID=devshark`, and `PRODUCT_SUBJECT=webdev`. For the StudyShark portal,
-use `studyshark` product values and leave both subject locks unset. A locked
-general brand uses its subject in both lock variables and its product id in both
-product variables.
+use `studyshark` product values and leave both subject locks unset. General
+subject lock/product values are intentionally ignored so stale configuration
+cannot split StudyShark into separate sites.
 
-All sibling URLs come from `VITE_*SHARK_URL`. An empty URL intentionally renders
-“Coming soon” without a dead link. Every deployment includes all seven Shark
-brands in the shared footer, marks the active brand accessibly, and links back
-to StudyShark where appropriate.
+Only `VITE_STUDYSHARK_URL` and `VITE_DEVSHARK_URL` are public product URLs.
+geoShark, mathShark, historyShark, bioShark, chessShark, and pokerShark are
+branded subject contexts linking to `/subjects?subject=…` on StudyShark. The
+shared footer marks the active context accessibly; “Coming soon” is reserved
+for an unconfigured devShark link.
 
 ## Adding a future subject
 
 1. Add the subject's unique topics/categories to `shared/subject-catalog.ts`.
 2. Add presentation metadata to `client/src/lib/subjects.ts` and product metadata
    to `client/product-catalog.ts`.
-3. Add its environment-backed URL in `client/src/lib/products.ts`, its question
+3. Add its internal brand mapping in `client/src/lib/products.ts`, its question
    chunk in `lib/question-bank-loader.ts`, and its localized UI labels.
 4. Extend the database subject checks in a new forward migration; never rewrite
    previously applied migration files in production.

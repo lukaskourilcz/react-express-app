@@ -1192,6 +1192,7 @@ export const en = {
   'error.cancelled': 'Request was cancelled.',
   'error.network': 'Network error. Check your connection and try again.',
   'error.server': 'Server error. Please try again in a moment.',
+  'error.serviceUnavailable': 'Learning services are temporarily unavailable. Please try again later.',
   'error.signIn': 'You need to sign in to do that.',
   'error.generic': 'Something went wrong. Please try again.',
   'error.tooFewQuestions': 'Not enough questions for these topics.',

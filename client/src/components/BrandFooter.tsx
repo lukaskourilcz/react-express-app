@@ -2,9 +2,11 @@ import { Link } from 'react-router-dom';
 import { useT } from '../i18n/LanguageContext';
 import { CURRENT_PRODUCT, PRODUCTS, SHARK_BRANDS, productUrl } from '../lib/products';
 import { capture } from '../lib/analytics';
+import { useSubject } from '../lib/subjects';
 
 export default function BrandFooter() {
   const t = useT();
+  const [activeSubject] = useSubject();
   const studySharkUrl = productUrl(PRODUCTS.studyshark);
 
   return (
@@ -21,12 +23,34 @@ export default function BrandFooter() {
       </div>
       <ul className="ss-brand-footer__brands">
         {SHARK_BRANDS.map((product) => {
-          const active = product.id === CURRENT_PRODUCT.id;
+          const subjectBrand = product.relationship === 'studyshark-subject' ? product.subjectId : null;
+          const active = product.id === CURRENT_PRODUCT.id ||
+            (CURRENT_PRODUCT.id === 'studyshark' && subjectBrand === activeSubject);
           const url = productUrl(product);
+          const subjectPath = subjectBrand ? `/subjects?subject=${subjectBrand}` : '';
+          const remoteSubjectUrl = subjectBrand && studySharkUrl
+            ? `${studySharkUrl}${subjectPath}`
+            : '';
           return (
             <li key={product.id}>
               {active ? (
                 <strong aria-current="page" style={{ color: product.accent }}>{product.brand}</strong>
+              ) : subjectBrand && CURRENT_PRODUCT.id === 'studyshark' ? (
+                <Link
+                  to={subjectPath}
+                  onClick={() => capture('subject_brand_visited', { product: product.id, subject: subjectBrand })}
+                  style={{ ['--footer-brand-accent' as string]: product.accent }}
+                >
+                  {product.brand}
+                </Link>
+              ) : remoteSubjectUrl ? (
+                <a
+                  href={remoteSubjectUrl}
+                  onClick={() => capture('subject_brand_visited', { product: product.id, subject: subjectBrand })}
+                  style={{ ['--footer-brand-accent' as string]: product.accent }}
+                >
+                  {product.brand}
+                </a>
               ) : url ? (
                 <a href={url} onClick={() => capture('sibling_brand_visited', { product: product.id })} style={{ ['--footer-brand-accent' as string]: product.accent }}>{product.brand}</a>
               ) : (

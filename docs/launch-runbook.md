@@ -29,10 +29,11 @@ is a historical audit and may describe issues that have since been resolved.
 | `PRODUCT_SUBJECT` | unset | `webdev` |
 | Canonical URL | `VITE_STUDYSHARK_URL` | `VITE_DEVSHARK_URL` |
 
-Set every public sibling URL on both deployments. Leave unreleased products
-empty; the footer intentionally labels them “coming soon”. Configure the same
-Supabase project only if shared accounts and progress are intended. Product
-scope is still enforced independently by every question-producing API.
+Set `VITE_STUDYSHARK_URL` and `VITE_DEVSHARK_URL` on both deployments. General
+subject brands are internal StudyShark links and have no separate deployment or
+URL. Configure the same Supabase project only if shared accounts and progress
+are intended. Product scope is still enforced independently by every
+question-producing API.
 
 ## Required production environment
 

@@ -7,15 +7,15 @@
 // Shares the hero / sample-question / stat / CTA primitives with Home via
 // LandingKit; the per-subject accent drives each card + the live preview.
 
-import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import {
   SUBJECTS, AVAILABLE_SUBJECT_ORDER, useSubject, setSubjectValue,
-  subjectNameKey, subjectBlurbKey, type SubjectId,
+  subjectNameKey, subjectBlurbKey, isSubjectId, type SubjectId,
 } from '../lib/subjects';
 import { LANDING_TOPICS } from '../lib/landingTopics';
 import {
@@ -147,13 +147,21 @@ const stripIcon = (path: ReactNode) => (
 export default function SubjectPicker() {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [current] = useSubject();
   const { isAuthenticated, signInWithGoogle } = useAuth();
   const [authError, setAuthError] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
   const subjectsRef = useRef<HTMLElement>(null);
 
-  const [selectedId, setSelectedId] = useState<SubjectId>(current);
+  const requestedSubject = searchParams.get('subject');
+  const requestedId = isSubjectId(requestedSubject) && AVAILABLE_SUBJECT_ORDER.includes(requestedSubject)
+    ? requestedSubject
+    : null;
+  const [selectedId, setSelectedId] = useState<SubjectId>(requestedId ?? current);
+  useEffect(() => {
+    if (requestedId) setSelectedId(requestedId);
+  }, [requestedId]);
   const sel = SUBJECTS[selectedId];
   const featuredRaw = LANDING_TOPICS[selectedId]?.[0];
   const featured = featuredRaw ? localizeLandingTopic(featuredRaw, lang, t) : undefined;

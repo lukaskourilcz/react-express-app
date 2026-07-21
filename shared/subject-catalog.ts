@@ -54,13 +54,13 @@ export const subjectForTopic = (topic: string): ScopeSubjectId | undefined => TO
 export const isScopeSubject = (value: unknown): value is ScopeSubjectId =>
   typeof value === 'string' && Object.prototype.hasOwnProperty.call(SUBJECT_SCOPE_CATALOG, value);
 
-/** Server deployment guard. VITE_LOCK_SUBJECT is shared with the build; the
- * server-only PRODUCT_SUBJECT override is useful when build/runtime envs differ. */
+/** Server deployment guard. Only devShark may be a locked single-subject
+ * deployment. General subjects always stay together on StudyShark, even if a
+ * stale deployment still carries one of the old per-subject lock values. */
 export function allowedDeploymentSubjects(env: Record<string, string | undefined>): ScopeSubjectId[] {
   const lock = env.PRODUCT_SUBJECT || env.VITE_LOCK_SUBJECT;
-  if (isScopeSubject(lock)) return [lock];
   const product = env.PRODUCT_ID || env.VITE_PRODUCT;
-  if (product?.toLowerCase() === 'devshark') return ['webdev'];
+  if (lock?.toLowerCase() === 'webdev' || product?.toLowerCase() === 'devshark') return ['webdev'];
   return STUDYSHARK_SCOPE_SUBJECTS;
 }
 

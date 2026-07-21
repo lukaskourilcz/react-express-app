@@ -24,9 +24,7 @@ export type CatalogProductId = keyof typeof PRODUCT_CATALOG;
 export const SHARK_BRAND_ORDER: CatalogProductId[] = ['devshark', 'geoshark', 'mathshark', 'historyshark', 'bioshark', 'chessshark', 'pokershark'];
 
 export function resolveCatalogProductId(input: { lockSubject?: string | null; product?: string | null }): CatalogProductId {
-  const explicit = input.product?.trim().toLowerCase() as CatalogProductId | undefined;
-  if (explicit && Object.prototype.hasOwnProperty.call(PRODUCT_CATALOG, explicit)) return explicit;
+  const explicit = input.product?.trim().toLowerCase();
   const lock = input.lockSubject?.trim().toLowerCase();
-  const match = Object.entries(PRODUCT_CATALOG).find(([, value]) => value.subjectId === lock);
-  return (match?.[0] as CatalogProductId | undefined) ?? 'studyshark';
+  return explicit === 'devshark' || lock === 'webdev' ? 'devshark' : 'studyshark';
 }

@@ -98,6 +98,8 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   too_few_questions: 'error.tooFewQuestions',
   finished: 'error.matchFinished',
   rate_limited: 'error.rateLimited',
+  not_configured: 'error.serviceUnavailable',
+  migration_required: 'error.serviceUnavailable',
 };
 
 // not_found spans several endpoints whose English server messages are more

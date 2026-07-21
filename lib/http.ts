@@ -74,7 +74,13 @@ export function withRequestContext<T>(
  * service-role key (bypasses RLS); falls back to the anon key for local dev.
  */
 export function createServiceClient(): SupabaseClient | null {
-  if (IS_PROD && !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
+  // Treat an accidentally copied public anon key as unconfigured. It cannot
+  // call the service-only learning RPCs and otherwise turns a clear readiness
+  // failure into opaque database permission errors.
+  if (IS_PROD && (
+    !process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY === ANON_KEY
+  )) return null;
   return SUPABASE_URL && SERVICE_KEY
     ? createClient(SUPABASE_URL, SERVICE_KEY, SERVER_SIDE_AUTH)
     : null;

@@ -17,7 +17,7 @@ Current content: **7,929 authored questions** — 3,609 web development, 1,000 g
 - Google sign-in through Supabase Auth, cross-device progress, profile settings, language preference, and permanent account deletion.
 - Optional voluntary support, post-answer AI explanations, Sentry monitoring, and PostHog analytics. Every optional integration is gated and disabled by default.
 - A role-gated `/dev` control room for question CRUD/overrides, EN/CS editing, importance tuning, quality and parity checks, report triage, auth logs, feature settings, support disclosure, and app-context switching.
-- Separate StudyShark and locked devShark deployments from one source tree, with a central subject/product registry and shared Shark-family footer.
+- Two deployments from one source tree: one multi-subject StudyShark domain and one locked devShark domain, with a central subject/product registry and shared Shark-family footer.
 
 Correct answers are not sent with unanswered questions. Quiz and learning sessions use authenticated AES-256-GCM envelopes, submissions are claimed once in Postgres, result receipts are idempotent, and competitive/progression mutations are performed through service-only APIs and atomic database functions.
 
@@ -103,7 +103,8 @@ Production requires:
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and server equivalents where used.
 - `SUPABASE_SERVICE_ROLE_KEY` — server only.
 - `SESSION_SECRET` — at least 32 random bytes.
-- `VITE_PRODUCT` and `PRODUCT_ID`; add the subject lock variables for devShark.
+- `VITE_PRODUCT` and `PRODUCT_ID`; add the `webdev` subject lock variables only for devShark.
+- `VITE_STUDYSHARK_URL` and `VITE_DEVSHARK_URL`; general subject brands use internal StudyShark links.
 - `ADMIN_EMAILS` or Supabase `app_metadata.role=admin` for `/dev`.
 - Google OAuth origins and callback URLs for every production domain.
 - All migrations through **`supabase-schema-023.sql`**.

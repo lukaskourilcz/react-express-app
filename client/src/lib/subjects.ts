@@ -41,10 +41,7 @@ export interface SubjectDef {
   topics: RoadmapTopic[];
   /** Categories available in the solo Quiz / Play pickers for this subject. */
   categories: CategoryType[];
-  /**
-   * Wordmark to use when this subject runs as its *own* standalone site (see
-   * the locked-subject mode below) — e.g. "devShark". Falls back to `label`.
-   */
+  /** Standalone wordmark. Only webdev uses this on the devShark deployment. */
   standaloneBrand?: string;
 }
 
@@ -62,7 +59,6 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   geography: {
     id: 'geography',
     label: 'Geography',
-    standaloneBrand: 'geoShark',
     blurb: 'The whole world: continents, countries, capitals, climate and the Earth itself.',
     // orange-700: white "on-accent" text on primary buttons passes 4.5:1
     // (the previous #ea580c sat at 3.56:1 in light mode).
@@ -74,7 +70,6 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   math: {
     id: 'math',
     label: 'Math',
-    standaloneBrand: 'mathShark',
     blurb: 'From basic arithmetic all the way to university-level math, one level at a time.',
     accent: '#1565c0',
     accentBright: '#42a5f5',
@@ -84,7 +79,6 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   history: {
     id: 'history',
     label: 'History',
-    standaloneBrand: 'historyShark',
     blurb: 'The human story from prehistory to the modern era, age by age.',
     accent: '#4b5563',
     accentBright: '#9ca3af',
@@ -94,7 +88,6 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   chess: {
     id: 'chess',
     label: 'Chess',
-    standaloneBrand: 'chessShark',
     blurb: 'For players who know the rules: openings, tactics, strategy, endgames and advanced theory.',
     accent: '#7b4b2a',
     accentBright: '#c8935f',
@@ -104,7 +97,6 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   biology: {
     id: 'biology',
     label: 'Human Biology',
-    standaloneBrand: 'bioShark',
     blurb: 'The human body from cells to whole systems: anatomy and physiology, step by step.',
     // teal-700: white "on-accent" text on primary buttons passes 4.5:1
     // (the previous #0d9488 sat at 3.74:1 in light mode).
@@ -116,7 +108,6 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
   poker: {
     id: 'poker',
     label: 'Poker',
-    standaloneBrand: 'pokerShark',
     blurb: "Get good at no-limit Texas Hold'em, from position and pot odds to advanced strategy.",
     accent: '#b91c1c',
     accentBright: '#ef4444',
@@ -157,16 +148,14 @@ export const subjectOfTopic = (t: RoadmapTopic): SubjectId | undefined => TOPIC_
 export const subjectOfCategory = (c: CategoryType): SubjectId | undefined => CATEGORY_TO_SUBJECT.get(c);
 
 /* ──── Standalone (locked-subject) mode ─────────────────────────────────────
- * The same codebase powers both StudyShark (the full multi-subject picker) and
- * each subject's own standalone site (e.g. devShark). A standalone deploy sets
- * `VITE_LOCK_SUBJECT` to a subject id: the whole app then boots locked to that
- * one subject — no picker, no switcher, no `/subjects` route — and the Profile
- * links out to the umbrella site via `VITE_SIBLING_URL`. StudyShark sets
- * neither var and behaves as the full picker.
+ * StudyShark always contains every general subject. The only supported locked
+ * deployment is devShark (`webdev`): no picker, no switcher, no `/subjects`
+ * route, and Profile links to StudyShark via `VITE_SIBLING_URL`. Stale general
+ * subject locks are deliberately ignored so they cannot split the platform.
  */
 const rawLock = ((import.meta.env.VITE_LOCK_SUBJECT as string | undefined) ?? '').trim();
 /** The subject this deploy is locked to, or `null` for the full multi-subject app. */
-export const LOCKED_SUBJECT: SubjectId | null = isSubject(rawLock) ? rawLock : null;
+export const LOCKED_SUBJECT: SubjectId | null = rawLock.toLowerCase() === 'webdev' ? 'webdev' : null;
 /** True when this deploy is a single-subject standalone site. */
 export const isSubjectLocked = (): boolean => LOCKED_SUBJECT !== null;
 /** The subjects this public deployment may offer. Admin tooling deliberately
