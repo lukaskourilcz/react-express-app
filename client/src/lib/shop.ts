@@ -1,5 +1,5 @@
-// In-app token shop. A small catalogue of consumable boosters, permanent
-// cosmetics, and Learn-path unlocks, paid for with tokens (see tokens.ts).
+// In-app token shop. The public catalogue is deliberately cosmetic-only:
+// tokens never bypass learning prerequisites or alter ranked progression.
 //
 // The shop is PER SUBJECT (platform): purchases are paid from the active
 // subject's wallet and land in the active subject's inventory, so boosters and
@@ -15,15 +15,13 @@ import { spendTokens, getTokens } from './tokens';
 import type { RoadmapTopic } from '../types/quiz';
 import {
   STARTER_TOPICS,
-  TOPIC_PREREQS,
   getExtraUnlocks,
   getRoadmapProgress,
   isTopicUnlocked,
   unlockExtraTopics,
 } from './roadmap';
-import { getCategoryHexColor } from './categories';
 import { getGameConfig, type GameConfig } from './gameConfig';
-import { getSubject, useSubject, isSubjectId, SUBJECTS, SUBJECT_ORDER, type SubjectId } from './subjects';
+import { getSubject, useSubject, isSubjectId, type SubjectId } from './subjects';
 
 export type ProductKind = 'booster' | 'ring' | 'flair' | 'path';
 
@@ -45,8 +43,6 @@ export interface Product {
 // and client/src/lib/gameConfig.ts; these are the static fallbacks). The live
 // price is resolved per purchase/display via priceOf() from the game config.
 const STATIC_CATALOGUE: Product[] = [
-  { id: 'double-xp', kind: 'booster', price: 75, marker: '2×' },
-
   { id: 'ring-emerald', kind: 'ring', price: 200, marker: '⬤', color: '#10b981' },
   { id: 'ring-gold', kind: 'ring', price: 250, marker: '⬤', color: '#d4af37' },
   { id: 'ring-violet', kind: 'ring', price: 375, marker: '⬤', color: '#8b5cf6' },
@@ -59,28 +55,10 @@ const STATIC_CATALOGUE: Product[] = [
 /** Default tokens to instantly unlock one learning path the user hasn't earned. */
 export const PATH_UNLOCK_PRICE = 200;
 
-// Every subject's buyable paths: its non-starter topics that are actually
-// gated by prereqs (starters and zero-prereq topics are always open, so
-// there's nothing to sell). Ordered per subject the same way the Learn-page
-// topic strip is, so each shop list mirrors its map visually.
-const PATH_PRODUCTS: Product[] = SUBJECT_ORDER.flatMap((subject) =>
-  SUBJECTS[subject].topics
-    .filter((topic) => !STARTER_TOPICS.includes(topic) && (TOPIC_PREREQS[topic] ?? []).length > 0)
-    .map<Product>((topic) => ({
-      id: `path-${topic}`,
-      kind: 'path',
-      price: PATH_UNLOCK_PRICE,
-      marker: '→',
-      color: getCategoryHexColor(topic),
-      topic,
-      subject,
-    })),
-);
-
 // Each product resolves its display copy from i18n keys derived from the id:
 // `shop.item.<id>.name` and `shop.item.<id>.desc` (paths use a shared template
 // with the topic label interpolated in).
-export const CATALOGUE: readonly Product[] = [...STATIC_CATALOGUE, ...PATH_PRODUCTS];
+export const CATALOGUE: readonly Product[] = STATIC_CATALOGUE;
 
 const byId = new Map(CATALOGUE.map((p) => [p.id, p]));
 export const productById = (id: string): Product | undefined => byId.get(id);

@@ -1,11 +1,11 @@
 // Token shop. Currency = tokens (separate from XP), earned passively as 10% of
 // every XP gain plus a one-time 200-token sign-up bonus. Spend them on a small
-// catalogue: a stackable Double-XP booster, avatar rings, title flairs, and
-// instant unlocks for individual Learn paths.
+// catalogue of avatar rings and title flairs. Purchases are cosmetic and never
+// bypass a learning prerequisite or influence competitive scoring.
 //
 // Redesigned on the Astryx design system: an accent-tinted wallet header, then
-// three sections of purchasable items rendered as Cards in a responsive Grid.
-// MUI Snackbar/Alert is kept for the toast behaviour.
+// purchasable items rendered as Cards in a responsive Grid.
+// The shared app toast provides purchase feedback.
 
 import { useState, type ReactNode } from 'react';
 import { Avatar } from '@astryxdesign/core/Avatar';
@@ -42,7 +42,7 @@ import {
 import { categoryLabelKey } from '../lib/categories';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useActiveSubject, subjectNameKey } from '../lib/subjects';
-import { IconTile, CompassIcon, BoltIcon, SparkleIcon } from './ui/icons';
+import { IconTile, SparkleIcon } from './ui/icons';
 
 const TokenIcon = ({ size = 24 }: { size?: number }) => (
   <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -85,12 +85,8 @@ function MarkerTile({ marker, color, size = 46 }: { marker: string; color?: stri
   );
 }
 
-// Sections ordered by value to the learner: functional unlocks first (paths),
-// then boosters, then cosmetics — with rings + flairs merged into one "Style"
-// section so the shop reads as three clear ideas instead of four lists.
+// One focused, fairness-neutral catalogue section.
 const SECTIONS: { key: TranslationKey; kinds: ProductKind[]; icon: ReactNode }[] = [
-  { key: 'shop.section.paths', kinds: ['path'], icon: <CompassIcon size={16} /> },
-  { key: 'shop.section.boosters', kinds: ['booster'], icon: <BoltIcon size={16} /> },
   { key: 'shop.section.style', kinds: ['ring', 'flair'], icon: <SparkleIcon size={16} /> },
 ];
 

@@ -74,7 +74,7 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
         </div>
       </aside>
 
-      <main className="dev-main" id="main-content" tabIndex={-1}>
+      <section className="dev-main" aria-label="Control room workspace">
         <header className="dev-mobile-header">
           <div className="dev-brand"><span className="dev-brand-fin" aria-hidden="true" /><strong>Control room</strong></div>
           <Button variant="secondary" size="sm" label="Lock" onClick={onLock} />
@@ -94,7 +94,7 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
             {tab === 'questions' ? <DevQuestions /> : tab === 'triage' ? <DevTriage /> : tab === 'quality' ? <DevQuality /> : tab === 'flags' ? <DevReports /> : tab === 'logs' ? <DevLogs /> : <DevSettings />}
           </section>
         </div>
-      </main>
+      </section>
     </div>
   );
 }

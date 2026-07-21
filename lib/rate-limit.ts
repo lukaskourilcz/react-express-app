@@ -51,6 +51,7 @@ export const RATE_LIMITS = {
   roadmapComplete: { key: 'roadmap_complete', capacity: 12, refillPerSecond: 12 / 60 },
   playCreate: { key: 'play_create', capacity: 5, refillPerSecond: 5 / 60 },
   playJoin: { key: 'play_join', capacity: 12, refillPerSecond: 12 / 60 },
+  playState: { key: 'play_state', capacity: 60, refillPerSecond: 60 / 60 },
   playMutation: { key: 'play_mutation', capacity: 30, refillPerSecond: 30 / 60 },
   accountDelete: { key: 'account_delete', capacity: 2, refillPerSecond: 2 / 3600 },
   aiExplanation: { key: 'ai_explanation', capacity: 3, refillPerSecond: 5 / 3600 },

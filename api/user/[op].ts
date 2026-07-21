@@ -13,6 +13,7 @@ import { recordAuthEvent } from '../../lib/auth-events-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { decodeQuizResultReceipt } from '../../lib/quiz-tokens';
 import { subjectForCategory } from '../../shared/subject-catalog';
+import { deploymentSubjectIds } from '../../lib/product-scope';
 
 const supabase = createServiceClient();
 
@@ -265,6 +266,9 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         }
         if (receipt.purpose !== 'quiz' && receipt.purpose !== 'daily') {
           return jsonError(res, 400, 'invalid_receipt', 'This result does not update quiz statistics');
+        }
+        if (!deploymentSubjectIds().includes(receipt.subject)) {
+          return jsonError(res, 400, 'invalid_receipt', 'Quiz result belongs to another product deployment');
         }
         if (Object.keys(receipt.breakdown).some((category) => subjectForCategory(category) !== receipt.subject)) {
           return jsonError(res, 400, 'invalid_receipt', 'Quiz result receipt has mixed product scope');

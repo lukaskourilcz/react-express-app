@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
 import {
-  createAnonClient,
+  createServiceClient,
   jsonError,
   createLogger,
   withTimeout,
@@ -14,7 +14,10 @@ import {
   validateCategoryScope,
 } from '../lib/product-scope';
 
-const supabase = createAnonClient();
+// Public responses are served by this scoped API, but leaderboard RPCs are
+// service-only so callers cannot bypass deployment/category validation through
+// the Supabase Data API.
+const supabase = createServiceClient();
 
 const logEvent = createLogger('leaderboard');
 

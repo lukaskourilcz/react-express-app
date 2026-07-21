@@ -320,3 +320,4 @@
 .ss-link-button--secondary { background: var(--color-background-muted); color: var(--color-text-primary); border: 1px solid var(--color-border); }
 @media (max-width: 700px) { .ss-info-sections { grid-template-columns: 1fr; } .ss-cost-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
 @media (prefers-reduced-motion: reduce) { .ss-cost-meter span { transition: none; } }
+.ss-language-toggle{min-width:38px;height:38px;padding:0 8px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-background-surface);color:var(--color-text-primary);font:700 .75rem var(--font-family-body);cursor:pointer}.ss-language-toggle:hover{background:var(--color-background-muted)}.ss-language-toggle:focus-visible{outline:3px solid color-mix(in srgb,var(--brand-accent) 48%,transparent);outline-offset:2px}

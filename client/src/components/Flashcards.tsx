@@ -4,7 +4,7 @@
 // Redesigned on the Astryx design system — Astryx Card/Button/Badge/typography
 // and layout primitives, with the reveal ("flip") and bookmark logic preserved.
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -28,8 +28,8 @@ import ErrorRetry from './ErrorRetry';
 import { IconTile, BookmarkIcon, CheckCircleIcon } from './ui/icons';
 import { SwimCta } from './landing/LandingKit';
 import './DeepEndScreens.css';
+import { useActiveSubject } from '../lib/subjects';
 
-const FLASHCARDS_KEY = ['flashcards'] as const;
 
 const TrashIcon = () => (
   <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -43,6 +43,9 @@ function Flashcards() {
   const t = useT();
   const navigate = useNavigate();
   const { isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
+  const subject = useActiveSubject();
+  const flashcardsKey = ['flashcards', subject.id] as const;
+  const firstCardRef = useRef<HTMLButtonElement>(null);
   const [revealedIds, setRevealedIds] = useState<Set<string>>(() => new Set());
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -60,15 +63,15 @@ function Flashcards() {
   const removeMut = useMutation({
     mutationFn: removeFlashcard,
     onMutate: async (qid: string) => {
-      await queryClient.cancelQueries({ queryKey: FLASHCARDS_KEY });
-      const prev = queryClient.getQueryData<Flashcard[]>(FLASHCARDS_KEY);
-      queryClient.setQueryData<Flashcard[]>(FLASHCARDS_KEY, (old) =>
+      await queryClient.cancelQueries({ queryKey: flashcardsKey });
+      const prev = queryClient.getQueryData<Flashcard[]>(flashcardsKey);
+      queryClient.setQueryData<Flashcard[]>(flashcardsKey, (old) =>
         (old ?? []).filter((c) => c.question_id !== qid),
       );
       return { prev };
     },
     onError: (_err, _qid, ctx) => {
-      if (ctx?.prev) queryClient.setQueryData(FLASHCARDS_KEY, ctx.prev);
+      if (ctx?.prev) queryClient.setQueryData(flashcardsKey, ctx.prev);
       setActionError(t('card.removeFailed'));
     },
   });
@@ -130,11 +133,14 @@ function Flashcards() {
             <Heading level={1}>{t('card.heading')}</Heading>
             <Text type="supporting" color="secondary">{t('card.subtitle')}</Text>
           </VStack>
-          <SwimCta label={t('card.practiceAll', { count: cards.length })} dir={-1} onClick={() => setRevealedIds(new Set())} />
+          <SwimCta label={t('card.practiceAll', { count: cards.length })} dir={-1} onClick={() => {
+            setRevealedIds(new Set());
+            requestAnimationFrame(() => firstCardRef.current?.focus());
+          }} />
         </HStack>
 
         <div className="de-card-grid">
-          {cards.map((card) => {
+          {cards.map((card, cardIndex) => {
             const revealed = revealedIds.has(card.question_id);
             const category = card.category && CATEGORY_LOOKUP.has(card.category as CategoryType)
               ? t(categoryLabelKey(card.category)) : card.category;
@@ -144,7 +150,7 @@ function Flashcards() {
                   {category ? <Badge variant="cyan" label={category} /> : <span />}
                   <Button variant="ghost" size="sm" isIconOnly icon={<TrashIcon />} label={t('card.remove')} tooltip={t('card.remove')} onClick={() => handleRemove(card.question_id)} />
                 </div>
-                <button type="button" className="de-flashcard__body" aria-expanded={revealed} onClick={() => setRevealedIds((prev) => { const next = new Set(prev); if (next.has(card.question_id)) next.delete(card.question_id); else next.add(card.question_id); return next; })}>
+                <button ref={cardIndex === 0 ? firstCardRef : undefined} type="button" className="de-flashcard__body" aria-expanded={revealed} onClick={() => setRevealedIds((prev) => { const next = new Set(prev); if (next.has(card.question_id)) next.delete(card.question_id); else next.add(card.question_id); return next; })}>
                   <div className="de-flashcard__question">{renderQuestion(card.question)}</div>
                   <div className="de-flashcard__answer" aria-hidden={!revealed}>
                     <span aria-hidden><CheckCircleIcon size={18} /></span>

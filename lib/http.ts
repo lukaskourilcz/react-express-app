@@ -17,6 +17,9 @@ const ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON
 // The service-role key bypasses row-level security. Callers are always verified
 // via requireAuth() and scoped to their own id, so using it server-side is safe.
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ANON_KEY;
+const IS_PROD =
+  process.env.NODE_ENV === 'production' ||
+  process.env.VERCEL_ENV === 'production';
 
 // No browser session to persist or refresh in a serverless function.
 const SERVER_SIDE_AUTH = { auth: { persistSession: false, autoRefreshToken: false } } as const;
@@ -35,10 +38,35 @@ export function withRequestContext<T>(
   req: VercelRequest,
   res: VercelResponse,
   run: () => T,
-): T {
+): Promise<Awaited<T> | VercelResponse | void> {
   const requestId = incomingRequestId(req);
   res.setHeader('X-Request-Id', requestId);
-  return requestContext.run({ requestId }, run);
+  const started = Date.now();
+  return requestContext.run({ requestId }, async () => {
+    try {
+      return await run();
+    } catch (error) {
+      logEvent('request', {
+        level: 'error',
+        method: req.method ?? 'UNKNOWN',
+        path: req.url?.split('?')[0] ?? 'unknown',
+        status: 500,
+        category: error instanceof AuthError ? error.code : error instanceof Error ? error.name : 'unknown',
+      });
+      if (res.headersSent) return;
+      if (error instanceof AuthError) {
+        return jsonError(res, error.status, error.code, error.message);
+      }
+      return jsonError(res, 500, 'internal_error', 'Internal error');
+    } finally {
+      logEvent('request', {
+        method: req.method ?? 'UNKNOWN',
+        path: req.url?.split('?')[0] ?? 'unknown',
+        status: res.statusCode ?? 200,
+        latency_ms: Date.now() - started,
+      });
+    }
+  }) as Promise<Awaited<T> | VercelResponse | void>;
 }
 
 /**
@@ -46,6 +74,7 @@ export function withRequestContext<T>(
  * service-role key (bypasses RLS); falls back to the anon key for local dev.
  */
 export function createServiceClient(): SupabaseClient | null {
+  if (IS_PROD && !process.env.SUPABASE_SERVICE_ROLE_KEY) return null;
   return SUPABASE_URL && SERVICE_KEY
     ? createClient(SUPABASE_URL, SERVICE_KEY, SERVER_SIDE_AUTH)
     : null;

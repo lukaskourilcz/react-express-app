@@ -84,9 +84,19 @@ export const en = {
   'home.chooseTopic': 'Choose a topic',
   'home.signInGoogle': 'Sign in with Google',
   'home.statTracks': 'topic tracks',
+  'home.statQuestions': 'questions',
   'home.statLevels': 'guided levels',
   'home.statPaths': 'career paths',
   'home.statForever': 'forever',
+  'home.introAria': 'Introduction',
+  'home.topicBlurbLocalized': '{name} is split into short lessons, practice and checkpoints.',
+  'home.levelLocalized': 'Level {n}',
+  'home.sampleQuestionLocalized': 'What is included in the {name} learning path?',
+  'home.sampleOptionFoundations': 'Foundations',
+  'home.sampleOptionPractice': 'Guided practice',
+  'home.sampleOptionReview': 'Checkpoint review',
+  'home.sampleOptionAll': 'All of the above',
+  'home.sampleExplanationLocalized': 'The {name} path combines foundations, practice and checkpoint review.',
   'home.tryOne': 'Try one — no signup',
   'home.sampleChip': 'Level 1 — {level}',
   'home.answerCorrect': 'Correct — nice.',
@@ -111,7 +121,7 @@ export const en = {
   'home.stripDailyTitle': 'Daily challenge',
   'home.stripDailyText': 'The same question set for everyone, every day — race the daily leaderboard.',
   'home.stripLiveTitle': 'Live matches & classroom',
-  'home.stripLiveText': 'Free-for-all races, head-to-head duels, or a host-driven classroom mode.',
+  'home.stripLiveText': 'Free-for-all races or a host-driven classroom mode.',
   'home.stripXpTitle': 'XP, streaks & leaderboards',
   'home.stripXpText': 'Earn XP per level, keep a daily streak, and climb global and per-topic boards.',
 
@@ -262,7 +272,7 @@ export const en = {
 
   // Quiz, setup screen
   'quiz.title': 'Web Development Quiz',
-  'quiz.subtitle': '1500+ questions · keyboard shortcuts supported',
+  'quiz.subtitle': 'Thousands of questions · keyboard shortcuts supported',
   'quiz.loadingQuote': 'Preparing your questions.',
   'quiz.tip1': 'Stuck? Take your best guess, then read the explanation. That is where the learning happens.',
   'quiz.tip2': 'Say the answer out loud before you tap. If you can\'t explain why, that\'s the one to review.',
@@ -285,6 +295,9 @@ export const en = {
   'quiz.difficultyAria': 'Difficulty: {label}',
   'quiz.startQuiz': 'Start quiz',
   'quiz.selectCategoryError': 'Select at least one category to start.',
+  'quiz.practiceMode': 'Practice mode',
+  'quiz.practiceModeHint': 'Learn without changing XP, streaks or leaderboard results.',
+  'quiz.practiceComplete': 'Practice complete — this result was not ranked or added to your progress.',
 
   // Difficulty modes
   'difficulty.basics': 'Basics',

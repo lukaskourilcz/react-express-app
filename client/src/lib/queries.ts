@@ -58,8 +58,9 @@ export function useProfileStats(
 
 /** The signed-in user's saved flashcards. */
 export function useFlashcards(enabled: boolean) {
+  const [subject] = useSubject();
   return useQuery({
-    queryKey: ['flashcards'],
+    queryKey: ['flashcards', subject],
     enabled,
     queryFn: listFlashcards,
   });

@@ -13,6 +13,8 @@ export interface VercelRequest {
 }
 
 export interface VercelResponse {
+  statusCode?: number;
+  headersSent?: boolean;
   status(code: number): VercelResponse;
   json(body: unknown): VercelResponse;
   send(body: unknown): VercelResponse;

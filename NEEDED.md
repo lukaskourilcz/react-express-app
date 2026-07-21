@@ -1,46 +1,36 @@
-# NEEDED — DevQuiz to-do list
+# NEEDED — owner actions
 
-Everything works **as-is with no action** — every integration degrades
-gracefully. Each task carries an importance score `[imp:N]` (1–5, 5 = highest).
-This file is parsed into the OwnDashboard **Úkoly** section, where you can filter
-tasks by that priority.
+The repository implementation is complete for the current web brief. This file lists only work that requires your accounts, credentials, legal decisions, production data, or external services. Importance uses `[imp:1–5]`; `[imp:5]` blocks a safe public launch.
 
-> **Mobile (iOS/Expo) is deferred.** All mobile-app tasks have been removed on
-> purpose — the native app will be built only once the web interface is fully
-> complete. This list is **web/API only**.
+## Before production launch
 
-## Tasks
+- [ ] **Back up Supabase and apply `supabase-schema-023.sql`** after all earlier migrations. Confirm the new tables/functions and revoked browser grants with the launch-runbook checks. `[imp:5]` `[owner:me]`
+- [ ] **Configure both Vercel projects and domains.** StudyShark: `VITE_PRODUCT=studyshark`, `PRODUCT_ID=studyshark`, no subject lock. devShark: `VITE_PRODUCT=devshark`, `PRODUCT_ID=devshark`, `VITE_LOCK_SUBJECT=webdev`, `PRODUCT_SUBJECT=webdev`. Set all canonical sibling URLs. `[imp:5]` `[owner:me]`
+- [ ] **Add production secrets** in Vercel: Supabase URL/anon key, service-role key, a unique 32+ byte `SESSION_SECRET`, and `ADMIN_EMAILS` or an admin app-metadata role. Never expose service/OpenAI/Upstash secrets through `VITE_` variables. `[imp:5]` `[owner:me]`
+- [ ] **Configure Google OAuth** for every production and preview origin/callback you intend to support, then test sign-in and account deletion with a disposable account. `[imp:5]` `[owner:me]`
+- [ ] **Complete legal/privacy review.** Add the real controller/operator identity and contact, retention periods, lawful bases, processor/transfer disclosures, age policy, analytics consent behavior, and Czech terms. Keep support, analytics, replay, and AI disabled until the disclosure matches production. `[imp:5]` `[owner:me]`
+- [ ] **Run the signed-in production smoke test** in English/Czech and desktop/mobile: Learn completion, Quiz replay rejection, Daily/Challenge idempotency, Flashcards, two-session Play/Classroom, leaderboards, `/dev`, and deletion. `[imp:4]` `[owner:me]`
 
-- [ ] **Smoke-test the redesigned signed-in screens after deploy** — Roadmap, Profile, Play, Challenge, and Flashcards render their main state only with the backend + a signed-in user, which the sandbox couldn't run. `[imp:3]` `[owner:me]`
-- [ ] **Generate real web icons + OG share image** — `client/public/icon.svg`, `apple-touch-icon.png`, `icon-192/512.png`, `og-image.png` all ship as brand-green placeholders. `[imp:3]` `[owner:me]`
-- [ ] **Add an uptime monitor on `/api/health`** — it now returns 503 on real downtime; nothing watches it yet. `[imp:3]` `[owner:me]`
-- [ ] **Enable the Upstash distributed rate limiter** — add `UPSTASH_REDIS_REST_URL` + `_TOKEN`; in-memory limiting isn't shared across serverless instances today. `[imp:2]` `[owner:me]`
-- [ ] **Launch standalone devShark as a second Vercel project** — same repo, `VITE_LOCK_SUBJECT=webdev` + `VITE_SIBLING_URL`; a no-op on StudyShark. `[imp:2]` `[owner:me]`
-- [ ] **Run PageSpeed / DebugBear on the deployed URL** — measure Core Web Vitals before spending effort on perf tweaks. `[imp:2]` `[owner:me]`
-- [ ] **Offload endpoints to Cloudflare Workers if you outgrow Vercel's 12-function cap** — only relevant when you add more endpoints (and Pages allows commercial use on its free tier). `[imp:1]` `[owner:me]`
+## Production reliability
 
-## Details
+- [ ] **Create an Upstash Redis database** and set `UPSTASH_REDIS_REST_URL` plus `UPSTASH_REDIS_REST_TOKEN` on both Vercel projects. The in-memory fallback is intentionally not a distributed production control. `[imp:4]` `[owner:me]`
+- [ ] **Monitor `/api/health` externally** and alert on non-2xx. The probe now verifies public DB access, service-role access to migration 023, and reports whether distributed rate limiting is configured. `[imp:4]` `[owner:me]`
+- [ ] **Schedule `select public.purge_expired_learning_data();`** daily with Supabase Cron or an equivalent owner job; choose and document retention periods before changing its defaults. `[imp:4]` `[owner:me]`
+- [ ] **Configure verified backups and a restore drill** using `docs/backup-restore.md`; record the recovery point/time objectives you accept. `[imp:4]` `[owner:me]`
+- [ ] **Enable Sentry and/or PostHog only if wanted**, configure the EU/privacy settings, scrub sensitive fields, and verify no token, email, submitted answer, or answer proof is captured. `[imp:3]` `[owner:me]`
 
-**Web icons + OG** — generate the shark mark with **Recraft** (<https://recraft.ai>,
-native SVG/app-icon output) or **Ideogram** (<https://ideogram.ai>), then
-overwrite in place (keep names & sizes): `client/public/icon.svg` (vector,
-source of truth), `apple-touch-icon.png` (180×180), `icon-192.png` / `icon-512.png`
-(PWA/maskable), `og-image.png` (1200×630). `node scripts/gen-placeholder-assets.mjs`
-regenerates the placeholders.
+## Brand and launch assets
 
-**Upstash** — create a free Redis DB (<https://upstash.com>), add the two REST
-vars in Vercel, redeploy. `lib/rate-limit.ts` auto-detects them and switches the
-`report` / `challenge` / `admin-gate` endpoints to a Redis sliding-window limit,
-falling back to in-memory if a Redis call fails.
+- [ ] **Replace placeholder icons and social artwork** (`client/public/icon.svg`, Apple/PWA icons, and `og-image.png`) with final licensed Shark-family assets and verify metadata on both domains. `[imp:3]` `[owner:me]`
+- [ ] **Run Lighthouse/PageSpeed on both deployed products** at mobile and desktop widths; save the baseline Core Web Vitals before making traffic-driven optimization decisions. `[imp:2]` `[owner:me]`
 
-**Uptime** — add an HTTP monitor on `https://<your-domain>/api/health` (alert on
-any non-2xx) via UptimeRobot (<https://uptimerobot.com>) or Better Stack; an
-optional keyword monitor can assert the body contains `"supabase":"ok"`.
+## Optional features
 
-**Standalone devShark** — Vercel → Add New → Project → import the **same** repo
-again (separate project). Set `VITE_LOCK_SUBJECT=webdev` and
-`VITE_SIBLING_URL=https://<studyshark-domain>`, plus the same Supabase / session
-env vars as StudyShark, and add a domain (e.g. `devshark.<domain>`). Leave the
-StudyShark project's lock vars unset so it stays the full picker. Repeat with
-other `VITE_LOCK_SUBJECT` ids (`geography`, `math`, `history`, `chess`,
-`biology`, `poker`) for more standalone sites.
+- [ ] **Voluntary support:** set `SUPPORT_ENABLED=true` only after legal/accounting review, then enter truthful provider URLs, target, amount covered, cost breakdown, update date, and public-thanks policy through `/dev`. Support remains unrelated to access or ranking. `[imp:3]` `[owner:me]`
+- [ ] **AI explanations:** choose a provider model and budget, then set `AI_EXPLANATIONS_ENABLED`, `OPENAI_API_KEY`, `OPENAI_MODEL`, and `AI_DAILY_GENERATION_LIMIT`. Start with a low daily cap and monitor cached versus generated usage. `[imp:2]` `[owner:me]`
+
+## When usage grows
+
+- [ ] Review [stack-and-scaling.md](./stack-and-scaling.md) monthly once traffic is meaningful. Upgrade Supabase compute before sustained saturation, add retention/partitioning for event tables, and redesign multiplayer fan-out before large classrooms or high concurrent-room counts. `[imp:1]` `[owner:me]`
+
+Native iOS/Android work remains intentionally deferred; it is not a missing item for this web release.

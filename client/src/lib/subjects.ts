@@ -33,7 +33,7 @@ export interface SubjectDef {
   label: string;
   /** One-line pitch shown on the subject picker card. */
   blurb: string;
-  /** Primary accent (light mode) — drives the MUI primary palette per subject. */
+  /** Primary accent (light mode) — drives product tokens per subject. */
   accent: string;
   /** Legible accent for small text on dark surfaces. */
   accentBright: string;

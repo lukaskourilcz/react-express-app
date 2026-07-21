@@ -80,6 +80,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (lang === 'cs' && !csCache) {
+      setCsReady(false);
       void loadCs().then(() => setCsReady(true));
     } else if (lang === 'en') {
       setCsReady(true);

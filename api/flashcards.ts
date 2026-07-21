@@ -1,10 +1,13 @@
 import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
 import { createServiceClient, jsonError, withTimeout, requireAuthSub, withRequestContext } from '../lib/http';
 import { enforceRateLimit, RATE_LIMITS } from '../lib/rate-limit';
+import { deploymentSubjectIds } from '../lib/product-scope';
+import { isScopeSubject, subjectForCategory } from '../shared/subject-catalog';
+import { getEffectiveQuestionsById } from '../lib/questions-store';
 
 const supabase = createServiceClient();
 
-const FIELDS = 'question_id,question,category,correct_answer,explanation,created_at';
+const FIELDS = 'question_id,question,category,correct_answer,explanation,created_at,subject';
 const MAX = { id: 64, short: 128, text: 4000, answer: 2000 };
 
 const str = (v: unknown, max: number): string | null =>
@@ -15,6 +18,13 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
 
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
+  const rawSubject = req.method === 'POST'
+    ? (req.body as { subject?: unknown } | undefined)?.subject
+    : req.query.subject;
+  if (!isScopeSubject(rawSubject) || !deploymentSubjectIds().includes(rawSubject)) {
+    return jsonError(res, 400, 'invalid_subject_scope', 'A subject from this deployment is required');
+  }
+  const subject = rawSubject;
   if (req.method !== 'GET' && !(await enforceRateLimit(req, res, RATE_LIMITS.flashcardMutation))) return;
 
   try {
@@ -24,6 +34,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
           .from('flashcards')
           .select(FIELDS)
           .eq('user_id', userId)
+          .eq('subject', subject)
           .order('created_at', { ascending: false }),
       );
       if (error) return jsonError(res, 500, 'db_error', 'Could not load cards');
@@ -38,11 +49,17 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       if (!question_id || !question || !correct_answer) {
         return jsonError(res, 400, 'bad_request', 'question_id, question and correct_answer are required');
       }
+      const bank = await getEffectiveQuestionsById(subject, false);
+      const source = bank.get(question_id);
+      if (!source || subjectForCategory(source.category) !== subject) {
+        return jsonError(res, 400, 'invalid_question', 'Question does not belong to this subject');
+      }
       const row = {
         user_id: userId,
+        subject,
         question_id,
         question,
-        category: str(body.category, MAX.short),
+        category: source.category,
         correct_answer,
         explanation: str(body.explanation, MAX.text),
       };
@@ -60,7 +77,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
           (req.body as { question_id: string }).question_id);
       if (!qid) return jsonError(res, 400, 'bad_request', 'question_id is required');
       const { error } = await withTimeout(
-        supabase.from('flashcards').delete().eq('user_id', userId).eq('question_id', qid),
+        supabase.from('flashcards').delete().eq('user_id', userId).eq('subject', subject).eq('question_id', qid),
       );
       if (error) return jsonError(res, 500, 'db_error', 'Could not delete card');
       return res.json({ ok: true });

@@ -9,7 +9,8 @@
 
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useT } from '../i18n/LanguageContext';
+import { useLanguage, useT } from '../i18n/LanguageContext';
+import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import {
@@ -22,6 +23,7 @@ import {
 } from './landing/LandingKit';
 import { AppToast } from './ui/AppToast';
 import SubjectGlyph from './ui/SubjectGlyph';
+import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 
 // A soft tint / accent override for a subject, so the sample card + roadmap
 // preview re-skin to whichever subject is selected.
@@ -36,15 +38,12 @@ function SubjectCard({
   id: SubjectId; selected: boolean; onSelect: () => void;
 }) {
   const t = useT();
-  const [hover, setHover] = useState(false);
   const s = SUBJECTS[id];
   const accentText = `light-dark(${s.accent}, ${s.accentBright})`;
   return (
     <button
       type="button"
       onClick={onSelect}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
       aria-label={t('subject.study', { subject: t(subjectNameKey(id)) })}
       aria-pressed={selected}
       style={{
@@ -54,8 +53,7 @@ function SubjectCard({
         borderBottom: '2px solid var(--ss-card-edge)',
         boxShadow: selected ? `inset 0 0 0 1px ${s.accent}` : '0 2px 10px light-dark(rgba(23,39,46,0.06), rgba(0,0,0,0.4))',
         borderRadius: 'var(--radius-container)', padding: '14px 16px', cursor: 'pointer',
-        transform: hover ? 'translateY(-2px)' : 'none',
-        transition: 'transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease, border-color 0.2s ease',
+        transition: 'box-shadow 0.15s ease, background 0.2s ease, border-color 0.2s ease',
       }}
     >
       <span aria-hidden style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: 'var(--radius-inner)', color: s.accent, lineHeight: 1, background: `${s.accent}14`, flexShrink: 0 }}>
@@ -77,10 +75,10 @@ function SubjectCard({
 // ───────────────────────────── Roadmap preview ────────────────────────────
 
 function SubjectPreview({ id, onStart }: { id: SubjectId; onStart: () => void }) {
-  const t = useT();
+  const { t, lang } = useLanguage();
   const s = SUBJECTS[id];
   const name = t(subjectNameKey(id));
-  const featured = LANDING_TOPICS[id] ?? [];
+  const featured = (LANDING_TOPICS[id] ?? []).map((topic) => localizeLandingTopic(topic, lang, t));
   const pathTopics = featured.slice(0, 5);
   const moreCount = s.topics.length - pathTopics.length;
   return (
@@ -147,7 +145,7 @@ const stripIcon = (path: ReactNode) => (
 // ───────────────────────────────── Landing ────────────────────────────────
 
 export default function SubjectPicker() {
-  const t = useT();
+  const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const [current] = useSubject();
   const { isAuthenticated, signInWithGoogle } = useAuth();
@@ -157,12 +155,14 @@ export default function SubjectPicker() {
 
   const [selectedId, setSelectedId] = useState<SubjectId>(current);
   const sel = SUBJECTS[selectedId];
-  const featured = LANDING_TOPICS[selectedId]?.[0];
+  const featuredRaw = LANDING_TOPICS[selectedId]?.[0];
+  const featured = featuredRaw ? localizeLandingTopic(featuredRaw, lang, t) : undefined;
 
   const totalTopics = AVAILABLE_SUBJECT_ORDER.reduce((sum, id) => sum + SUBJECTS[id].topics.length, 0);
+  const totalQuestions = AVAILABLE_SUBJECT_ORDER.reduce((sum, id) => sum + SUBJECT_SCOPE_CATALOG[id].questionCount, 0);
   const stats: StatSpec[] = [
     { value: `${totalTopics * 25}+`, label: t('home.statLevels'), pos: 'right top', size: 40 },
-    { value: String(totalTopics), label: t('home.statTracks'), pos: 'left bottom', size: 34 },
+    { value: totalQuestions.toLocaleString(), label: t('home.statQuestions'), pos: 'left bottom', size: 34 },
     { value: String(AVAILABLE_SUBJECT_ORDER.length), label: t('subject.statSubjects'), pos: 'center top', size: 32 },
     { value: '$0', label: t('home.statForever'), pos: 'right bottom', size: 38 },
   ];
@@ -179,7 +179,7 @@ export default function SubjectPicker() {
     { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', color: '#1565c0', to: '/challenge', icon: stripIcon(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
     { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', color: '#0e7490', to: '/play', icon: stripIcon(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
     { titleKey: 'subject.stripCardsTitle', textKey: 'subject.stripCardsText', color: '#7c3aed', to: '/cards', icon: stripIcon(<><rect x="3" y="6" width="13" height="15" rx="2" /><path d="M8 3h11a2 2 0 0 1 2 2v13" /></>) },
-    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: '#c77f00', to: '/leaderboard', icon: stripIcon(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
+    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: '#8a5700', to: '/leaderboard', icon: stripIcon(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
   ];
 
   const brand = 'StudyShark';
@@ -187,7 +187,7 @@ export default function SubjectPicker() {
   return (
     <div className="ss-pop" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 56 }}>
       {/* ── Hero ── */}
-      <section aria-label="Intro" className="ss-hero-grid">
+      <section aria-label={t('home.introAria')} className="ss-hero-grid">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 20 }}>
           <Kicker>{brand} · {t('home.freeForever')}</Kicker>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: 'clamp(2.6rem,4.8vw,3.5rem)', lineHeight: 1.06, letterSpacing: '-0.02em' }}>
@@ -197,9 +197,9 @@ export default function SubjectPicker() {
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <FadeFinCta label={t('subject.chooseSubject')} primary onClick={scrollToSubjects} finLeft="-2px" finSize={58} accent={sel.accent} />
             {isAuthenticated ? (
-              <FadeFinCta label={t('home.ctaLearn')} onClick={() => navigate('/')} finLeft="80%" finSize={58} accent={sel.accent} />
+              <FadeFinCta label={t('home.ctaLearn')} onClick={() => choose(selectedId)} finLeft="80%" finSize={58} accent={sel.accent} />
             ) : (
-              <FadeFinCta label={signingIn ? t('home.ctaSignIn') : t('home.signInGoogle')} onClick={handleSignIn} finLeft="80%" finSize={58} accent={sel.accent} />
+              <FadeFinCta disabled={signingIn} label={signingIn ? t('home.ctaSignIn') : t('home.signInGoogle')} onClick={handleSignIn} finLeft="80%" finSize={58} accent={sel.accent} />
             )}
           </div>
           <div className="ss-hero-stats">

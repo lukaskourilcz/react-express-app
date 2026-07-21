@@ -432,6 +432,15 @@ function App() {
   // section (next to the account widget); on mobile they live in the nav drawer.
   const utilityToggles = (
     <>
+      <button
+        type="button"
+        onClick={() => setLang(lang === 'en' ? 'cs' : 'en')}
+        aria-label={t(lang === 'en' ? 'lang.switchToCzech' : 'lang.switchToEnglish')}
+        title={t(lang === 'en' ? 'lang.switchToCzech' : 'lang.switchToEnglish')}
+        className="ss-language-toggle"
+      >
+        {lang === 'en' ? 'CS' : 'EN'}
+      </button>
       <AxIconButton
         variant="ghost"
         size="md"
@@ -490,6 +499,7 @@ function App() {
                   to={item.to}
                   className="ss-navlink"
                   data-active={item.isActive(location.pathname)}
+                  aria-current={item.isActive(location.pathname) ? 'page' : undefined}
                 >
                   {t(item.key)}
                 </Link>
@@ -567,6 +577,7 @@ function App() {
                       to="/subjects"
                       className="ss-drawer-link"
                       data-active={location.pathname === '/subjects'}
+                      aria-current={location.pathname === '/subjects' ? 'page' : undefined}
                     >
                       {t('nav.switchSubject')}
                     </Link>
@@ -579,6 +590,7 @@ function App() {
                     to={item.to}
                     className="ss-drawer-link"
                     data-active={item.isActive(location.pathname)}
+                    aria-current={item.isActive(location.pathname) ? 'page' : undefined}
                   >
                     {t(item.key)}
                   </Link>

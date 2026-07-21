@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { Banner } from '@astryxdesign/core/Banner';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
@@ -9,6 +9,7 @@ import { IconButton } from '@astryxdesign/core/IconButton';
 import { getCategoryLabel } from '../../lib/categories';
 import { friendlyError } from '../../lib/api';
 import { saveQuestion, type AdminQuestion, type QuestionPayload } from '../../lib/devApi';
+import { BrandedConfirmDialog, type ConfirmRequest } from '../ui/BrandedConfirmDialog';
 
 const MAX_OPTIONS = 8;
 const MIN_OPTIONS = 2;
@@ -117,10 +118,11 @@ function SelectField({
   style?: React.CSSProperties;
   children: ReactNode;
 }) {
+  const id = useId();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, ...style }}>
-      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
+      <label htmlFor={id} style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{label}</label>
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
         {children}
       </select>
       {helperText && <span style={captionStyle}>{helperText}</span>}
@@ -133,13 +135,17 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
   const [tab, setTab] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+  const baselineRef = useRef('');
 
   // Re-seed the form whenever the dialog opens for a different question.
   useEffect(() => {
     if (!open) return;
     setError(null);
     setTab(0);
-    setForm(initial ? seedForm(initial) : blankForm(categories));
+    const seeded = initial ? seedForm(initial) : blankForm(categories);
+    setForm(seeded);
+    baselineRef.current = JSON.stringify(seeded);
   }, [open, initial, categories]);
 
   const setOption = (index: number, value: string) =>
@@ -217,7 +223,18 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
   };
 
   const requestClose = (next: boolean) => {
-    if (!next && !saving) onClose();
+    if (next || saving) return;
+    if (JSON.stringify(form) === baselineRef.current) {
+      onClose();
+      return;
+    }
+    setConfirm({
+      title: 'Discard unsaved changes?',
+      description: 'Your edits to this question have not been saved.',
+      actionLabel: 'Discard changes',
+      destructive: true,
+      onConfirm: onClose,
+    });
   };
 
   return (
@@ -419,9 +436,10 @@ export default function QuestionEditor({ open, initial, categories, onClose, onS
           borderTop: '1px solid var(--color-border)',
         }}
       >
-        <Button variant="ghost" label="Cancel" onClick={onClose} isDisabled={saving} />
+        <Button variant="ghost" label="Cancel" onClick={() => requestClose(false)} isDisabled={saving} />
         <Button variant="primary" label={saving ? 'Saving…' : 'Save'} onClick={handleSave} isDisabled={saving} />
       </div>
+      <BrandedConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
     </Dialog>
   );
 }

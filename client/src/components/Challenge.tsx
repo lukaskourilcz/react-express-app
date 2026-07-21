@@ -38,6 +38,7 @@ import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { awardQuestXp, syncXpWithServer } from '../lib/xp';
 import { challengeRunXp } from '../lib/leveling';
 import { SwimCta } from './landing/LandingKit';
+import { readJSON, writeJSON, removeStored } from '../lib/storage';
 import './DeepEndScreens.css';
 
 // Biggest Shark Challenge: answer as many questions as you can until you
@@ -53,6 +54,13 @@ const LOW_BATCH_THRESHOLD = 4; // top up the buffer when this few remain
 const TIME_LIMIT_S = 90; // each question is capped at 90 seconds
 const RELAXED_TIME_LIMIT_S = 180; // accessibility practice pace; never ranked
 const LOW_TIME_S = 15; // highlight + pulse the clock under this many seconds
+const PENDING_CHALLENGE_KEY = 'studyshark:pending-challenge-reward:v1';
+
+interface PendingChallengeReward {
+  userId: string;
+  runToken: string;
+  proofs: string[];
+}
 
 /** Seconds → "m:ss" (e.g. 90 → "1:30"). Clamps negatives to 0. */
 const fmtClock = (s: number): string => {
@@ -116,6 +124,20 @@ export default function Challenge() {
   const topupInFlight = useRef<Promise<void> | null>(null);
   // Guards the once-per-run XP/token payout on game over.
   const awardedRef = useRef(false);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const pending = readJSON<PendingChallengeReward | null>(PENDING_CHALLENGE_KEY, null);
+    if (!pending || pending.userId !== user.id) return;
+    void completeChallengeRun({ runToken: pending.runToken, proofs: pending.proofs })
+      .then(() => {
+        removeStored(PENDING_CHALLENGE_KEY);
+        return syncXpWithServer();
+      })
+      .catch(() => {
+        // Keep the signed run for a later online retry.
+      });
+  }, [user?.id]);
   // Focus target when the run ends, so AT users hear the transition.
   const gameOverHeadingRef = useRef<HTMLDivElement | null>(null);
   const [scoreSubmitting, setScoreSubmitting] = useState(false);
@@ -353,10 +375,20 @@ export default function Challenge() {
       awardedRef.current = true;
       awardQuestXp(challengeRunXp(score), 'quiz');
       if (user && runTokenRef.current) {
-        void completeChallengeRun({
+        const pending: PendingChallengeReward = {
+          userId: user.id,
           runToken: runTokenRef.current,
-          proofs: scoreProofsRef.current,
-        }).then(() => syncXpWithServer()).catch(() => {});
+          proofs: [...scoreProofsRef.current],
+        };
+        writeJSON(PENDING_CHALLENGE_KEY, pending);
+        void completeChallengeRun({ runToken: pending.runToken, proofs: pending.proofs })
+          .then(() => {
+            removeStored(PENDING_CHALLENGE_KEY);
+            return syncXpWithServer();
+          })
+          .catch(() => {
+            // Retried automatically during the next signed-in session.
+          });
       }
     }
     // Announce the run's end to AT by moving focus to the game-over heading.
@@ -371,7 +403,7 @@ export default function Challenge() {
     if (phase !== 'playing' || !current) return;
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      if (target?.closest('input, textarea, select, button, a, [contenteditable="true"], [role="textbox"], [role="radio"], [role="checkbox"]')) return;
       if (lastResult) {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
@@ -670,7 +702,7 @@ export default function Challenge() {
           overflow: 'hidden',
         }}
       >
-        <div
+        <li
           style={{
             flex: 1,
             minHeight: 0,
@@ -744,7 +776,7 @@ export default function Challenge() {
               })}
             </VStack>
           </div>
-        </div>
+        </li>
       </div>
 
       {/* Feedback overlay: a floating card that sits over the answer options

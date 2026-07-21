@@ -17,7 +17,6 @@ export interface ChallengeScore {
   name: string;
   score: number;
   createdAt: string;
-  userId: string | null;
 }
 
 export interface ChallengeLeaderboard {
@@ -36,7 +35,6 @@ function rowToScore(row: Record<string, unknown>): ChallengeScore {
     name: String(row.name ?? ''),
     score: typeof row.score === 'number' ? row.score : Number(row.score) || 0,
     createdAt: String(row.created_at ?? ''),
-    userId: typeof row.user_id === 'string' ? row.user_id : null,
   };
 }
 
@@ -46,7 +44,7 @@ export async function getChallengeLeaderboard(subject: ScopeSubjectId, limit = 1
     let result = await withTimeout(
       supabase
         .from(TABLE)
-        .select('id, name, score, created_at, user_id')
+        .select('id, name, score, created_at')
         .eq('subject', subject)
         .order('score', { ascending: false })
         .order('created_at', { ascending: true })
@@ -60,7 +58,7 @@ export async function getChallengeLeaderboard(subject: ScopeSubjectId, limit = 1
       result = await withTimeout(
         supabase
           .from(TABLE)
-          .select('id, name, score, created_at, user_id')
+          .select('id, name, score, created_at')
           .order('score', { ascending: false })
           .order('created_at', { ascending: true })
           .limit(limit),
@@ -102,24 +100,17 @@ export async function recordChallengeScore(input: {
           subject: input.subject,
           user_id: input.userId ?? null,
         })
-        .select('id, name, score, created_at, user_id')
+        .select('id, name, score, created_at')
         .single(),
       5000,
     );
-    // Backward-compatible deploy order: schema 021 adds run_id. Until it is
-    // applied, keep verified scoring available (without DB-level retry dedupe).
-    if (
-      input.subject === 'webdev' &&
-      (result.error?.message?.includes('run_id') || result.error?.message?.includes('subject'))
-    ) {
+    if (result.error?.code === '23505') {
       result = await withTimeout(
-        supabase
-          .from(TABLE)
-          .insert({ name: cleanName, score: cleanScore, user_id: input.userId ?? null })
-          .select('id, name, score, created_at, user_id')
-          .single(),
+        supabase.from(TABLE).select('id, name, score, created_at').eq('run_id', input.runId).single(),
         5000,
       );
+    } else if (result.error?.message?.includes('run_id') || result.error?.message?.includes('subject')) {
+      throw new ChallengeStoreError('Migration 023 is required for verified challenge scores');
     }
     const { data, error } = result;
     if (error || !data) throw new ChallengeStoreError(error?.message || 'Could not save score');

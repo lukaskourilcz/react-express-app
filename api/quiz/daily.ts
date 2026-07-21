@@ -10,7 +10,7 @@ import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/pr
 
 // Daily challenge: deterministic per-UTC-date selection (one question per
 // difficulty bucket). Same set for every user on the same day, so leaderboards
-// are comparable. Date can be overridden via ?date=YYYY-MM-DD for testing.
+// are comparable. Date override is available only outside production testing.
 
 const DAILY_DIFFICULTIES = [1, 2, 3, 4, 5];
 
@@ -44,6 +44,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
     return jsonError(res, 400, 'bad_request', 'date must be YYYY-MM-DD');
   }
+  const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+  if (isProduction && dateParam !== today) {
+    return jsonError(res, 400, 'date_override_disabled', 'Daily challenge date override is disabled in production');
+  }
 
   // Restrict the ?date= override to a small window around today so an
   // attacker can't enumerate every historical daily challenge in one pass.
@@ -68,7 +72,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
   const catSet = new Set(scope.categories);
 
-  const allQuestions = await getEffectiveQuestions();
+  const lang = normalizeLang(req.query.lang);
+  const allQuestions = await getEffectiveQuestions(scope.subject, lang === 'cs');
   const selected: Question[] = [];
   for (const diff of DAILY_DIFFICULTIES) {
     // Never surface private (owner-only) categories in the shared daily mix.
@@ -87,8 +92,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     selected.push(shuffled[0]);
     if (selected.length >= dailyCount) break;
   }
-
-  const lang = normalizeLang(req.query.lang);
 
   // Shuffle option order per question (also deterministic).
   const sessionData: { questionId: string; correctAnswer: number }[] = [];

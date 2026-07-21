@@ -15,7 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { SharkFin, Waterline } from './SharkFin';
 import { CategoryGlyph } from './ui/techIcons';
 import SubjectGlyph from './ui/SubjectGlyph';
-import { useT } from '../i18n/LanguageContext';
+import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { useActiveSubject, subjectNameKey, subjectBlurbKey, type SubjectId } from '../lib/subjects';
@@ -24,6 +24,8 @@ import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingT
 import { AppToast } from './ui/AppToast';
 import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, type StatSpec } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
+import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
+import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 
 // ─────────────────────────────── Topic card ───────────────────────────────
 
@@ -154,12 +156,12 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
         })}
         {/* Gold checkpoint node. */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 110, flexShrink: 0 }}>
-          <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'rgba(245,166,35,0.14)', color: '#c77f00', border: '2px solid rgba(245,166,35,0.5)' }}>
+          <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'rgba(245,166,35,0.14)', color: '#8a5700', border: '2px solid rgba(138,87,0,0.5)' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
             </svg>
           </span>
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#c77f00', whiteSpace: 'nowrap' }}>{t('home.checkpoint')}</span>
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8a5700', whiteSpace: 'nowrap' }}>{t('home.checkpoint')}</span>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
@@ -180,7 +182,7 @@ const STRIP_ICON = (path: ReactNode) => (
 // ───────────────────────────────── Landing ────────────────────────────────
 
 export default function Home() {
-  const t = useT();
+  const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const subject = useActiveSubject();
   const { isAuthenticated, signInWithGoogle } = useAuth();
@@ -188,7 +190,7 @@ export default function Home() {
   const [signingIn, setSigningIn] = useState(false);
   const topicsRef = useRef<HTMLElement>(null);
 
-  const featured = LANDING_TOPICS[subject.id] ?? [];
+  const featured = (LANDING_TOPICS[subject.id] ?? []).map((topic) => localizeLandingTopic(topic, lang, t));
   const [selectedId, setSelectedId] = useState<string>(featured[0]?.id ?? '');
   const selected = featured.find((x) => x.id === selectedId) ?? featured[0];
 
@@ -201,7 +203,7 @@ export default function Home() {
   // Stats derived from the real roadmap shape: 25 levels per topic.
   const stats: StatSpec[] = [
     { value: String(subject.topics.length), label: t('home.statTracks'), pos: 'right top', size: 40 },
-    { value: `${subject.topics.length * 25}+`, label: t('home.statLevels'), pos: 'left bottom', size: 34 },
+    { value: SUBJECT_SCOPE_CATALOG[subject.id].questionCount.toLocaleString(), label: t('home.statQuestions'), pos: 'left bottom', size: 34 },
     { value: String(TRACK_ORDER.length), label: t('home.statPaths'), pos: 'center top', size: 32 },
     { value: '$0', label: t('home.statForever'), pos: 'right bottom', size: 38 },
   ];
@@ -222,13 +224,13 @@ export default function Home() {
     { titleKey: 'home.stripCareerTitle', textKey: 'home.stripCareerText', color: '#7c3aed', to: '/roadmap', icon: STRIP_ICON(<><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></>) },
     { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', color: '#1565c0', to: '/challenge', icon: STRIP_ICON(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
     { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', color: '#0e7490', to: '/play', icon: STRIP_ICON(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
-    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: '#c77f00', to: '/leaderboard', icon: STRIP_ICON(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
+    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: '#8a5700', to: '/leaderboard', icon: STRIP_ICON(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
   ];
 
   return (
     <div className="ss-pop" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 56 }}>
       {/* ── Hero ── */}
-      <section aria-label="Intro" className="ss-hero-grid">
+      <section aria-label={t('home.introAria')} className="ss-hero-grid">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 20 }}>
           <Kicker>{brand} · {t('home.freeForever')}</Kicker>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: 'clamp(2.6rem,4.8vw,3.5rem)', lineHeight: 1.06, letterSpacing: '-0.02em' }}>
@@ -238,9 +240,9 @@ export default function Home() {
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <FadeFinCta label={t('home.chooseTopic')} primary onClick={scrollToTopics} finLeft="-2px" finSize={58} accent={subject.accent} />
             {isAuthenticated ? (
-              <FadeFinCta label={t('home.ctaLearn')} onClick={() => navigate('/learn')} finLeft="80%" finSize={58} accent={subject.accent} />
+              <FadeFinCta label={t('home.ctaLearn')} onClick={() => navigate(`/learn?topic=${encodeURIComponent(selected?.id ?? '')}`)} finLeft="80%" finSize={58} accent={subject.accent} />
             ) : (
-              <FadeFinCta label={signingIn ? t('home.ctaSignIn') : t('home.signInGoogle')} onClick={handleSignIn} finLeft="80%" finSize={58} accent={subject.accent} />
+              <FadeFinCta disabled={signingIn} label={signingIn ? t('home.ctaSignIn') : t('home.signInGoogle')} onClick={handleSignIn} finLeft="80%" finSize={58} accent={subject.accent} />
             )}
           </div>
           <div className="ss-hero-stats">
@@ -293,7 +295,7 @@ export default function Home() {
       </section>
 
       {/* ── Roadmap preview ── */}
-      {selected && <RoadmapPreview topic={selected} onStart={() => navigate('/learn')} />}
+      {selected && <RoadmapPreview topic={selected} onStart={() => navigate(`/learn?topic=${encodeURIComponent(selected.id)}`)} />}
 
       {/* ── Everything-else feature strip (no hover) ── */}
       <section aria-label={t('home.moreKicker')} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>

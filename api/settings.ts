@@ -13,6 +13,19 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
 
   const s = await getGameSettings();
+  // This server-only flag is the production master switch. An administrator
+  // may prepare truthful amounts and provider URLs in app_settings, but no
+  // financial link can become public until the deployment explicitly opts in.
+  const supportMasterEnabled = process.env.SUPPORT_ENABLED === 'true';
+  const publicSupport = {
+    ...s.support,
+    enabled: supportMasterEnabled && s.support.enabled,
+    ...(!supportMasterEnabled ? {
+      kofiUrl: '',
+      githubSponsorsUrl: '',
+      publicThanksEnabled: false,
+    } : {}),
+  };
   res.setHeader('Cache-Control', 'public, s-maxage=15, stale-while-revalidate=60');
   return res.json({
     quiz: {
@@ -31,7 +44,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     features: s.features,
     leveling: s.leveling,
     shop: s.shop,
-    support: s.support,
+    support: publicSupport,
     ai: {
       explanationsEnabled: isAiExplanationConfigured(),
     },

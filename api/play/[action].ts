@@ -13,7 +13,7 @@ import { tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
 import { enforceRateLimit, RATE_LIMITS, type RateLimitConfig } from '../../lib/rate-limit';
-import { validateCategoryScope } from '../../lib/product-scope';
+import { deploymentSubjectIds, validateCategoryScope } from '../../lib/product-scope';
 
 const PING_GRACE_MS = 1000;
 const STALE_MATCH_MS = 5 * 60 * 1000;
@@ -24,7 +24,7 @@ const QUESTION_EXPIRE_GRACE_MS = 2000;
 // Columns re-selected after a lazy server-side advance in state(); must match
 // the state() select list so the refreshed row can replace the original.
 const STATE_COLUMNS =
-  'id, code, mode, host_id, host_name, status, current_index, questions, ended_at, question_started_at, question_duration_s, last_heartbeat_at, started_at';
+  'id, code, mode, subject, host_id, host_name, status, current_index, questions, ended_at, question_started_at, question_duration_s, last_heartbeat_at, started_at';
 
 interface MatchQuestion {
   id: string;
@@ -100,7 +100,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Match backend is not configured');
 
   const action = String(req.query.action || '').toLowerCase();
-  if (req.method !== 'GET') {
+  if (req.method === 'GET' && action === 'state') {
+    if (!(await enforceRateLimit(req, res, RATE_LIMITS.playState))) return;
+  } else if (req.method !== 'GET') {
     const policy: RateLimitConfig = action === 'create'
       ? RATE_LIMITS.playCreate
       : action === 'join'
@@ -184,7 +186,7 @@ async function create(req: VercelRequest, res: VercelResponse) {
   }
   categories = scope.categories;
 
-  const allQuestions = await getEffectiveQuestions();
+  const allQuestions = await getEffectiveQuestions(scope.subject, lang === 'cs');
   const pool = allQuestions.filter((q) => categories.includes(q.category));
   if (pool.length < playSettings.minQuestions) {
     return jsonError(res, 400, 'too_few_questions', 'Not enough questions for these filters');
@@ -222,6 +224,7 @@ async function create(req: VercelRequest, res: VercelResponse) {
         .insert({
           code,
           mode,
+          subject: scope.subject,
           host_id: hostSub,
           host_name: hostName,
           status: 'lobby',
@@ -285,9 +288,10 @@ async function join(req: VercelRequest, res: VercelResponse) {
       supabase!
         .from('matches')
         .select(
-          'id, code, mode, host_id, host_name, status, current_index, questions, question_started_at, question_duration_s',
+          'id, code, mode, subject, host_id, host_name, status, current_index, questions, question_started_at, question_duration_s',
         )
         .eq('code', code)
+        .in('subject', deploymentSubjectIds())
         .maybeSingle(),
     );
 
@@ -316,6 +320,7 @@ async function join(req: VercelRequest, res: VercelResponse) {
       id: match.id,
       code: match.code,
       mode: match.mode,
+      subject: match.subject,
       status: match.status,
       host_id: match.host_id,
       host_name: match.host_name,
@@ -336,16 +341,16 @@ async function state(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  // state is polled frequently; auth is optional (anyone with the code can
-  // see public state) but identity is required to unmask correct_index.
-  const auth = await tryAuth(req);
-  const sub = auth?.sub ?? null;
   const code = (req.query.code as string)?.toUpperCase();
   if (!code) return jsonError(res, 400, 'bad_request', 'code required');
+  // State is public to room-code holders. Validate the code before performing
+  // optional remote authentication so malformed probes remain cheap.
+  const auth = await tryAuth(req);
+  const sub = auth?.sub ?? null;
 
   try {
     let { data: match, error: matchError } = await withTimeout(
-      supabase!.from('matches').select(STATE_COLUMNS).eq('code', code).maybeSingle(),
+      supabase!.from('matches').select(STATE_COLUMNS).eq('code', code).in('subject', deploymentSubjectIds()).maybeSingle(),
     );
 
     if (matchError) {
@@ -464,6 +469,7 @@ async function control(req: VercelRequest, res: VercelResponse) {
         .from('matches')
         .select('id, host_id, status, current_index, questions')
         .eq('code', code)
+        .in('subject', deploymentSubjectIds())
         .maybeSingle(),
     );
     if (matchError) return jsonError(res, 503, 'backend_unavailable', 'Match state is temporarily unavailable');
@@ -563,8 +569,9 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     const { data: match } = await withTimeout(
       supabase!
         .from('matches')
-        .select('id, mode, host_id, status, current_index, questions, question_started_at, question_duration_s')
+        .select('id, mode, subject, host_id, status, current_index, questions, question_started_at, question_duration_s')
         .eq('code', code)
+        .in('subject', deploymentSubjectIds())
         .maybeSingle(),
     );
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
@@ -727,7 +734,7 @@ async function distribution(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { data: match } = await withTimeout(
-      supabase!.from('matches').select('id, host_id').eq('code', code).maybeSingle(),
+      supabase!.from('matches').select('id, host_id').eq('code', code).in('subject', deploymentSubjectIds()).maybeSingle(),
     );
 
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
@@ -772,7 +779,7 @@ async function heartbeat(req: VercelRequest, res: VercelResponse) {
   const code = body.code.toUpperCase();
   try {
     const { data: match } = await withTimeout(
-      supabase!.from('matches').select('id, host_id, status').eq('code', code).maybeSingle(),
+      supabase!.from('matches').select('id, host_id, status').eq('code', code).in('subject', deploymentSubjectIds()).maybeSingle(),
     );
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
     if (match.host_id !== sub)

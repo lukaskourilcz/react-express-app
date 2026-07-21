@@ -8,7 +8,7 @@ import { PRODUCT_CATALOG, resolveCatalogProductId } from './product-catalog';
 import { TOPIC_LANDINGS } from './src/lib/topicCatalog';
 
 // `ANALYZE=true npm run build` emits a treemap of the bundle to
-// dist/bundle-stats.html (open it to inspect the MUI/router/app split) plus a
+// dist/bundle-stats.html (open it to inspect the design-system/router/app split) plus a
 // machine-readable dist/bundle-stats.json. No effect on a normal build.
 const analyze = process.env.ANALYZE === 'true';
 

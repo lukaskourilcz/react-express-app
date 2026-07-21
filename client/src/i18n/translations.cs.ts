@@ -85,9 +85,19 @@ export const cs: Record<TranslationKey, string> = {
   'home.chooseTopic': 'Vyber si téma',
   'home.signInGoogle': 'Přihlásit se přes Google',
   'home.statTracks': 'témat',
+  'home.statQuestions': 'otázek',
   'home.statLevels': 'řízených úrovní',
   'home.statPaths': 'kariérní cesty',
   'home.statForever': 'navždy',
+  'home.introAria': 'Úvod',
+  'home.topicBlurbLocalized': 'Téma {name} je rozdělené do krátkých lekcí, procvičování a kontrolních bodů.',
+  'home.levelLocalized': 'Úroveň {n}',
+  'home.sampleQuestionLocalized': 'Co obsahuje studijní cesta {name}?',
+  'home.sampleOptionFoundations': 'Základy',
+  'home.sampleOptionPractice': 'Řízené procvičování',
+  'home.sampleOptionReview': 'Kontrolní opakování',
+  'home.sampleOptionAll': 'Všechny možnosti',
+  'home.sampleExplanationLocalized': 'Cesta {name} spojuje základy, procvičování a kontrolní opakování.',
   'home.tryOne': 'Zkus jednu — bez registrace',
   'home.sampleChip': 'Úroveň 1 — {level}',
   'home.answerCorrect': 'Správně — paráda.',
@@ -112,7 +122,7 @@ export const cs: Record<TranslationKey, string> = {
   'home.stripDailyTitle': 'Denní výzva',
   'home.stripDailyText': 'Stejná sada otázek pro všechny, každý den — závoď o denní žebříček.',
   'home.stripLiveTitle': 'Živé zápasy a třída',
-  'home.stripLiveText': 'Závody pro všechny, souboje jeden na jednoho, nebo režim řízené třídy.',
+  'home.stripLiveText': 'Závody pro všechny nebo režim řízené třídy.',
   'home.stripXpTitle': 'XP, série a žebříčky',
   'home.stripXpText': 'Získávej XP za úrovně, drž si denní sérii a stoupej v globálních i tématických žebříčcích.',
 
@@ -263,7 +273,7 @@ export const cs: Record<TranslationKey, string> = {
 
   // Quiz, setup screen
   'quiz.title': 'Kvíz webového vývoje',
-  'quiz.subtitle': '1500+ otázek · podporovány klávesové zkratky',
+  'quiz.subtitle': 'Tisíce otázek · podporovány klávesové zkratky',
   'quiz.loadingQuote': 'Připravujeme otázky.',
   'quiz.tip1': 'Nevíš? Zkus napřed MDN, ne AI, číst dokumentaci je dovednost, kterou si trénuješ tímhle návykem.',
   'quiz.tip2': 'Než klikneš, řekni si odpověď nahlas. Když ji neumíš vysvětlit, tuhle si projdi po kvízu.',
@@ -286,6 +296,9 @@ export const cs: Record<TranslationKey, string> = {
   'quiz.difficultyAria': 'Obtížnost: {label}',
   'quiz.startQuiz': 'Spustit kvíz',
   'quiz.selectCategoryError': 'Pro start vyber alespoň jednu kategorii.',
+  'quiz.practiceMode': 'Tréninkový režim',
+  'quiz.practiceModeHint': 'Uč se bez změn XP, série nebo výsledků v žebříčku.',
+  'quiz.practiceComplete': 'Trénink dokončen — výsledek se nehodnotil ani nepřidal k postupu.',
 
   // Difficulty modes
   'difficulty.basics': 'Základy',

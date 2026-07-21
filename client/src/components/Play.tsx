@@ -41,7 +41,7 @@ import { useLanguage, useT } from '../i18n/LanguageContext';
 import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { useGameConfig } from '../lib/gameConfig';
 import './DeepEndScreens.css';
-import { BookIcon, TargetIcon, UsersIcon } from './ui/icons';
+import { BookIcon, TargetIcon } from './ui/icons';
 import { capture } from '../lib/analytics';
 
 const POLL_FALLBACK_MS = 4000;
@@ -63,13 +63,13 @@ export function PlayLanding() {
   const accent = useActiveSubject().accent;
   const { user, isAuthenticated, signInWithGoogle } = useAuth();
   const profile = getUserProfile(user);
-  const [mode, setMode] = useState<'ffa' | 'h2h' | 'classroom'>(() =>
+  const [mode, setMode] = useState<'ffa' | 'classroom'>(() =>
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'classroom'
       ? 'classroom'
       : 'ffa',
   );
-  const [count, setCount] = useState(10);
-  const [durationS, setDurationS] = useState(60);
+  const [count, setCount] = useState(() => config.play.countOptions[0] ?? 10);
+  const [durationS, setDurationS] = useState(() => config.play.defaultDurationS);
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
   const [joinCode, setJoinCode] = useState('');
 
@@ -212,7 +212,6 @@ export function PlayLanding() {
                 <div className="de-mode-list" role="radiogroup" aria-label={t('play.gameMode')}>
                   {([
                     ['ffa', <TargetIcon key="ffa" size={20} />, t('play.multiplayerFfa'), t('play.modeFfaBlurb')],
-                    ['h2h', <UsersIcon key="h2h" size={20} />, t('play.headToHead'), t('play.modeH2hBlurb')],
                     ['classroom', <BookIcon key="classroom" size={20} />, t('play.classroom'), t('play.modeClassroomBlurb')],
                   ] as const).map(([id, icon, name, blurb]) => (
                     <button key={id} type="button" className="de-mode-card" role="radio" aria-checked={mode === id} aria-pressed={mode === id} onClick={() => setMode(id)}>

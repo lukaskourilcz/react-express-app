@@ -87,6 +87,8 @@ function playableResponse(input: {
   lang: ReturnType<typeof normalizeLang>;
   byId: Map<string, Question>;
   difficulty?: number;
+  requiredLevelStart?: number;
+  requiredLevelEnd?: number;
 }) {
   const built = buildQuestions(input.ids, input.lang, input.byId);
   const subject = subjectForTopic(input.topic);
@@ -99,6 +101,9 @@ function playableResponse(input: {
     roadmapKind: input.kind,
     ref: input.ref,
     attemptId,
+    ...(input.requiredLevelStart !== undefined && input.requiredLevelEnd !== undefined
+      ? { requiredLevelStart: input.requiredLevelStart, requiredLevelEnd: input.requiredLevelEnd }
+      : {}),
   });
   return {
     kind: input.kind,
@@ -121,15 +126,9 @@ interface Entry {
 type TopicProgress = { levels: Record<string, Entry>; checkpoints: Record<string, Entry> };
 type ProgressBlob = Record<string, TopicProgress>;
 
-// Skill-check unlocks, the token wallets, and the shop inventories all live in
-// this "extra" blob alongside roadmap progress so a single sync round-trip
-// covers everything the learner has earned or bought. Wallets and inventories
-// are keyed PER SUBJECT (platform); the un-keyed `wallet`/`inventory` fields
-// are the legacy pre-split shape, still sanitized so old stored rows (and old
-// clients) round-trip until they migrate. Balance is a max-merge client-side
-// (tokens can only grow across devices — no one gets refunded twice), owned
-// items are a set union (a cosmetic bought on one device stays owned on all),
-// and doubleXp charges are a max-merge (grant on any device applies).
+// Skill-check unlocks are server-authoritative. Legacy wallet/inventory fields
+// remain readable so existing accounts do not break, but browser PUTs may not
+// mint balances, inventory, or learning unlocks.
 interface InventoryBlob {
   owned: string[];
   ring: string | null;
@@ -292,34 +291,14 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  // PUT persists cosmetic/account extras only. Learning progress is updated by
-  // complete_verified_roadmap_attempt after server-observed answers; accepting
-  // a browser-computed progress blob here would let clients unlock paths/XP.
-  const body = (req.body || {}) as Record<string, unknown>;
-  const cleanExtra = sanitizeExtra(body.extra);
+  // Learning progress and all stored extras are authoritative. The client may
+  // request a sync, but it cannot write entitlements or currency snapshots.
   const current = await withTimeout(
     supabase.from(PROGRESS_TABLE).select('data,extra').eq('user_id', userId).maybeSingle(),
   );
   if (current.error) return jsonError(res, 500, 'db_error', 'Could not load progress');
   const authoritative = sanitize(current.data?.data);
-  const authoritativeExtra = {
-    ...cleanExtra,
-    unlocked: sanitizeExtra(current.data?.extra).unlocked,
-  };
-  const { error } = await withTimeout(
-    supabase
-      .from(PROGRESS_TABLE)
-      .upsert(
-        {
-          user_id: userId,
-          data: authoritative,
-          extra: authoritativeExtra,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' },
-      ),
-  );
-  if (error) return jsonError(res, 500, 'db_error', 'Could not save progress');
+  const authoritativeExtra = sanitizeExtra(current.data?.extra);
   return res.json({ ok: true, data: authoritative, extra: authoritativeExtra });
 }
 
@@ -394,7 +373,7 @@ async function ensureAttempt(
   const existing = await withTimeout(
     supabase!
       .from('roadmap_attempts')
-      .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,completed_at')
+      .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,required_level_start,required_level_end,completed_at')
       .eq('attempt_id', session.attemptId!)
       .maybeSingle(),
   );
@@ -413,9 +392,11 @@ async function ensureAttempt(
           ref: session.ref,
           total_questions: session.questions.length,
           pass_pct: passPct,
+          required_level_start: session.requiredLevelStart ?? null,
+          required_level_end: session.requiredLevelEnd ?? null,
           expires_at: new Date(Date.now() + 2 * 60 * 60_000).toISOString(),
         })
-        .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,completed_at')
+        .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,required_level_start,required_level_end,completed_at')
         .single(),
     );
     if (!inserted.error) return inserted;
@@ -424,7 +405,7 @@ async function ensureAttempt(
     const raced = await withTimeout(
       supabase!
         .from('roadmap_attempts')
-        .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,completed_at')
+        .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,required_level_start,required_level_end,completed_at')
         .eq('attempt_id', session.attemptId!)
         .maybeSingle(),
     );
@@ -445,6 +426,8 @@ function attemptMatches(
     attempt.kind === session.roadmapKind &&
     Number(attempt.ref) === session.ref &&
     Number(attempt.total_questions) === session.questions.length
+    && (attempt.required_level_start == null ? undefined : Number(attempt.required_level_start)) === session.requiredLevelStart
+    && (attempt.required_level_end == null ? undefined : Number(attempt.required_level_end)) === session.requiredLevelEnd
   );
 }
 
@@ -477,40 +460,31 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   }
 
   const selectedIndex = Number(body.selectedIndex);
-  const isCorrect = selectedIndex === sessionQuestion.correctAnswer;
-  const stored = await withTimeout(
-    supabase
-      .from('roadmap_attempt_answers')
-      .upsert(
-        {
-          attempt_id: session.attemptId,
-          question_id: body.questionId,
-          selected_index: selectedIndex,
-          correct_index: sessionQuestion.correctAnswer,
-          is_correct: isCorrect,
-        },
-        { onConflict: 'attempt_id,question_id', ignoreDuplicates: true },
-      ),
-  );
-  if (stored.error) return jsonError(res, 500, 'db_error', 'Could not record the answer');
   const saved = await withTimeout(
-    supabase
-      .from('roadmap_attempt_answers')
-      .select('selected_index,correct_index,is_correct')
-      .eq('attempt_id', session.attemptId!)
-      .eq('question_id', body.questionId)
-      .single(),
+    supabase.rpc('record_roadmap_answer', {
+      p_attempt_id: session.attemptId,
+      p_user_id: userId,
+      p_question_id: body.questionId,
+      p_selected_index: selectedIndex,
+      p_correct_index: sessionQuestion.correctAnswer,
+    }),
   );
-  if (saved.error || !saved.data) return jsonError(res, 500, 'db_error', 'Could not load the recorded answer');
+  if (saved.error || !saved.data || typeof saved.data !== 'object') {
+    if (isRpcMissing(saved.error)) {
+      return jsonError(res, 503, 'migration_required', 'Verified learning migration 023 is not installed');
+    }
+    return jsonError(res, 500, 'db_error', 'Could not record the answer');
+  }
+  const stored = saved.data as { selectedIndex?: unknown; correctAnswer?: unknown; isCorrect?: unknown };
 
-  const questions = await getEffectiveQuestionsById();
+  const questions = await getEffectiveQuestionsById(session.subject, normalizeLang(body.lang) === 'cs');
   const base = questions.get(body.questionId);
   const explanation = base ? localizeQuestion(base, normalizeLang(body.lang)).explanation : '';
   res.setHeader('Cache-Control', 'private, no-store');
   return res.json({
-    selectedIndex: Number(saved.data.selected_index),
-    correctAnswer: Number(saved.data.correct_index),
-    isCorrect: saved.data.is_correct === true,
+    selectedIndex: Number(stored.selectedIndex),
+    correctAnswer: Number(stored.correctAnswer),
+    isCorrect: stored.isCorrect === true,
     explanation,
   });
 }
@@ -556,6 +530,12 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     if (completed.error) {
       if (isRpcMissing(completed.error)) {
         return jsonError(res, 503, 'migration_required', 'Verified learning migration is not installed');
+      }
+      if (/incomplete_roadmap_attempt/i.test(completed.error.message ?? '')) {
+        return jsonError(res, 409, 'incomplete_attempt', 'Answer every question before completing this lesson');
+      }
+      if (/roadmap_prerequisite_not_met/i.test(completed.error.message ?? '')) {
+        return jsonError(res, 409, 'prerequisite_not_met', 'Complete the preceding learning steps first');
       }
       return jsonError(res, 500, 'db_error', 'Could not save learning progress');
     }
@@ -626,14 +606,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const checkpointRaw = req.query.checkpoint as string | undefined;
   const testRaw = req.query.test as string | undefined;
 
-  // The live question set drives both the structure and a level's questions, so
-  // hiding a question in /dev re-syncs the path automatically (fewer/relevelled
-  // levels). One read per request; the underlying set is cached in the store.
-  const byId = await getEffectiveQuestionsById();
-  const exists = (id: string) => byId.has(id);
-
   // No topic → return the whole map so the client can render the path.
   if (!topicRaw && levelRaw === undefined && checkpointRaw === undefined && testRaw === undefined) {
+    const byId = await getEffectiveQuestionsById(undefined, false);
+    const exists = (id: string) => byId.has(id);
     const topics = deploymentSubjectIds().flatMap((subject) => [...SUBJECT_SCOPE_CATALOG[subject].topics]);
     const topicSet = new Set<string>(topics);
     const structure = Object.fromEntries(
@@ -649,6 +625,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
   const topic: RoadmapTopic = topicRaw;
   const lang = normalizeLang(req.query.lang);
+  const subject = subjectForTopic(topic)!;
+  const byId = await getEffectiveQuestionsById(subject, lang === 'cs');
+  const exists = (id: string) => byId.has(id);
   const live = buildLiveTopic(topic, exists);
 
   // ── Part test (a focused exam over one of the topic's 3 parts) ────────────
@@ -668,6 +647,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const playable = playableResponse({
       kind: 'checkpoint', topic, ref: part, title: `Part ${part}`,
       passPct: PART_TEST_PASS, ids, lang, byId,
+      requiredLevelStart: range.startLevel,
+      requiredLevelEnd: range.endLevel,
     });
     if (!playable || playable.questions.length === 0) return jsonError(res, 404, 'no_questions', 'No questions for this test');
 
@@ -692,6 +673,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const playable = playableResponse({
       kind: 'checkpoint', topic, ref: meta.checkpoint, title: meta.title,
       passPct: meta.passPct, ids, lang, byId,
+      requiredLevelStart: firstLevel,
+      requiredLevelEnd: firstLevel + LEVELS_PER_CHECKPOINT - 1,
     });
     if (!playable || playable.questions.length === 0) {
       return jsonError(res, 404, 'no_questions', 'No questions for this checkpoint');
@@ -712,6 +695,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     kind: 'level', topic, ref: meta.level, title: meta.title,
     difficulty: meta.difficulty, passPct: LEVEL_PASS,
     ids: live.levelIds[level - 1] ?? [], lang, byId,
+    ...(level > 1 ? { requiredLevelStart: level - 1, requiredLevelEnd: level - 1 } : {}),
   });
   if (!playable || playable.questions.length === 0) {
     return jsonError(res, 404, 'no_questions', 'No questions for this level');

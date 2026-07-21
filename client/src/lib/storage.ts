@@ -39,3 +39,12 @@ export function writeString(key: string, value: string): void {
     // ignore — storage is best-effort
   }
 }
+
+/** Remove a persisted value, ignoring unavailable-storage failures. */
+export function removeStored(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // ignore — storage is best-effort
+  }
+}

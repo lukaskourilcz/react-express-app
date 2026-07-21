@@ -51,19 +51,24 @@ a slow healing poll while connected.
 
 1. Take and verify a backup using `docs/backup-restore.md`.
 2. Apply migrations 001–020 if the environment does not already contain them.
-3. Apply `supabase-schema-021.sql`, then `supabase-schema-022.sql`, in one
+3. Apply `supabase-schema-021.sql`, `supabase-schema-022.sql`, then
+   `supabase-schema-023.sql`, in one
    controlled release window.
 4. Confirm `quiz_attempts`, `question_explanations`, `user_question_history`,
    `verified_activity_awards`, `roadmap_attempts`, `roadmap_attempt_answers`,
    `verified_skill_checks`,
-   `question_quality_suggestions`, and `ai_generation_budget` exist.
+   `question_quality_suggestions`, `ai_generation_budget`, and
+   `quiz_submissions` exist. Confirm `matches` and `flashcards` have a valid
+   `subject` column.
 5. Confirm `record_verified_quiz_result_v2`, `record_verified_activity_xp`,
    `complete_verified_roadmap_attempt`, `apply_verified_skill_check`, `daily_leaderboard_v2`,
-   `claim_ai_generation_budget`, and `delete_user_data` exist.
+   `claim_ai_generation_budget`, `claim_quiz_submission`,
+   `record_roadmap_answer`, `purge_expired_learning_data`, and
+   `delete_user_data` exist.
 6. Confirm browser roles cannot mutate protected stats, multiplayer answer-key,
    reports, flashcard, roadmap, streak, or XP tables directly.
 
-Migrations 021 and 022 are idempotent. Legacy daily/challenge rows are assigned
+Migrations 021–023 are idempotent. Legacy daily/challenge rows are assigned
 to `webdev`; no existing progress is deleted. Do not casually restore removed browser write
 policies during rollback: they are the controls that prevent client-authored
 scores and answer-key access.
@@ -107,8 +112,9 @@ Test in English and Czech, desktop and a narrow mobile viewport:
    the active subject and repeated completion cannot award XP twice.
 7. Sign into `/dev` as an allowed admin and confirm a normal user is rejected.
 8. Delete a disposable account and verify auth identity plus owned rows are gone.
-9. Request `/api/health`; production must return 200 only when its database check
-   succeeds. Configure an uptime monitor to alert on 503.
+9. Request `/api/health`; production must return 200 only when its public
+   database check and service-role migration-023 check succeed. Confirm the
+   response reports distributed rate limiting as configured and alert on 503.
 10. If Support is enabled, verify the public target, costs, received amount,
     carry, provider, and separate StudyShark/devShark explanation are truthful.
 
@@ -123,7 +129,7 @@ access tokens, emails, answer tokens, or submitted answer text in logs.
 ## Rollback
 
 For a client/API regression, roll Vercel back to the prior known-good deployment
-and keep migrations 021 and 022 in place. The schema changes are backward-compatible,
+and keep migrations 021–023 in place. The schema changes are backward-compatible,
 while its revoked policies are security-critical. If an older release depends
 on a removed direct browser write, forward-fix that release or deploy the
 current API; do not reopen the table as an emergency shortcut.

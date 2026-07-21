@@ -78,8 +78,8 @@ async function main() {
 
   const run = createChallengeRun();
   assert.equal(decodeChallengeRun(run.runToken)?.runId, run.runId);
-  const proof = encodeAnswerProof('q-1', true);
-  assert.deepEqual(decodeAnswerProof(proof), { questionId: 'q-1', isCorrect: true });
+  const proof = encodeAnswerProof('q-1', 'geography', true);
+  assert.deepEqual(decodeAnswerProof(proof), { questionId: 'q-1', subject: 'geography', isCorrect: true });
   const receipt = encodeQuizResultReceipt({
     userId: 'user-0001', correct: 1, total: 2,
     breakdown: { capitals: { correct: 1, total: 2 } },
@@ -170,6 +170,15 @@ async function main() {
   assert.match(migration, /claim_ai_generation_budget/);
   assert.match(migration, /'math'.*'chess'.*'poker'/);
   assert.doesNotMatch(migration, /'mathematics'|'physics'|'chemistry'/);
+
+  const hardening = readFileSync(join(process.cwd(), 'supabase-schema-023.sql'), 'utf8');
+  assert.match(hardening, /CREATE TABLE IF NOT EXISTS public\.quiz_submissions/);
+  assert.match(hardening, /claim_quiz_submission/);
+  assert.match(hardening, /record_roadmap_answer/);
+  assert.match(hardening, /incomplete_roadmap_attempt/);
+  assert.match(hardening, /ADD COLUMN IF NOT EXISTS subject TEXT/);
+  assert.match(hardening, /REVOKE ALL ON FUNCTION public\.match_question_distribution/);
+  assert.match(hardening, /purge_expired_learning_data/);
 
   const rateReq = { headers: { 'x-forwarded-for': `contract-${Date.now()}` }, socket: {} } as never;
   const rateRes = mockResponse();

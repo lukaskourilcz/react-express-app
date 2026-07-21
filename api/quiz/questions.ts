@@ -83,7 +83,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  const allQuestions = await getEffectiveQuestions();
+  const lang = normalizeLang(req.query.lang);
+  const allQuestions = await getEffectiveQuestions(scope.subject, lang === 'cs');
   const categoryFiltered = allQuestions.filter((q) => selectedCategories.includes(q.category));
   if (categoryFiltered.length === 0) {
     return jsonError(res, 404, 'no_questions', 'No questions match those filters');
@@ -182,8 +183,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     logEvent({ status: 404, reason: 'empty_after_difficulty', difficulty: difficultyMode, latency_ms: Date.now() - started });
     return jsonError(res, 404, 'no_questions', 'No questions match those filters');
   }
-
-  const lang = normalizeLang(req.query.lang);
 
   const sessionData: { questionId: string; correctAnswer: number }[] = [];
   const questionsWithShuffledOptions = selected.map((base) => {

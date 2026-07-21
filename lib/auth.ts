@@ -106,9 +106,10 @@ export async function requireAuth(req: VercelRequest): Promise<AuthResult> {
  * routes that have both authenticated and unauthenticated branches.
  */
 export async function tryAuth(req: VercelRequest): Promise<AuthResult | null> {
-  try {
-    return await requireAuth(req);
-  } catch {
-    return null;
-  }
+  // A genuinely anonymous request has no credentials and is allowed to take
+  // the public branch. Presented-but-invalid credentials are not anonymous:
+  // propagate the typed 401/503 so callers never pretend a broken session was
+  // a successful guest action and then lose the learner's progress.
+  if (!getBearer(req)) return null;
+  return requireAuth(req);
 }

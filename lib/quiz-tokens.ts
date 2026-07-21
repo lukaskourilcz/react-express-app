@@ -26,6 +26,8 @@ interface SessionPayload {
   roadmapKind?: 'level' | 'checkpoint';
   ref?: number;
   attemptId?: string;
+  requiredLevelStart?: number;
+  requiredLevelEnd?: number;
   iat: number;
   exp: number;
 }
@@ -43,6 +45,7 @@ interface ScoreProofPayload {
   kind: 'score-proof';
   runId: string;
   questionId: string;
+  subject: ScopeSubjectId;
   isCorrect: boolean;
   iat: number;
   exp: number;
@@ -67,6 +70,7 @@ interface QuizResultReceiptPayload {
 interface AnswerProofPayload {
   kind: 'answer-proof';
   questionId: string;
+  subject: ScopeSubjectId;
   isCorrect: boolean;
   iat: number;
   exp: number;
@@ -112,7 +116,16 @@ type SessionContext =
   | { scope: 'challenge'; runId: string; subject: ScopeSubjectId }
   | { scope: 'daily'; date: string; subject: ScopeSubjectId }
   | { scope: 'assessment'; subject: ScopeSubjectId }
-  | { scope: 'roadmap'; subject: ScopeSubjectId; topic: string; roadmapKind: 'level' | 'checkpoint'; ref: number; attemptId?: string };
+  | {
+      scope: 'roadmap';
+      subject: ScopeSubjectId;
+      topic: string;
+      roadmapKind: 'level' | 'checkpoint';
+      ref: number;
+      attemptId?: string;
+      requiredLevelStart?: number;
+      requiredLevelEnd?: number;
+    };
 
 export interface DecodedQuizSession {
   questions: { questionId: string; correctAnswer: number }[];
@@ -124,6 +137,8 @@ export interface DecodedQuizSession {
   roadmapKind?: 'level' | 'checkpoint';
   ref?: number;
   attemptId?: string;
+  requiredLevelStart?: number;
+  requiredLevelEnd?: number;
   issuedAt: number;
 }
 
@@ -161,8 +176,19 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
     return { ...base, scope: 'assessment' };
   }
   if (payload.scope === 'roadmap') {
-    if (!payload.subject || typeof payload.topic !== 'string' || (payload.roadmapKind !== 'level' && payload.roadmapKind !== 'checkpoint') || !Number.isInteger(payload.ref) || (payload.ref ?? 0) < 1 || (payload.attemptId !== undefined && !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId))) return null;
-    return { ...base, scope: 'roadmap', topic: payload.topic, roadmapKind: payload.roadmapKind, ref: payload.ref, attemptId: payload.attemptId };
+    const requiredStart = payload.requiredLevelStart;
+    const requiredEnd = payload.requiredLevelEnd;
+    const hasRequiredRange = requiredStart !== undefined || requiredEnd !== undefined;
+    if (!payload.subject || typeof payload.topic !== 'string' || (payload.roadmapKind !== 'level' && payload.roadmapKind !== 'checkpoint') || !Number.isInteger(payload.ref) || (payload.ref ?? 0) < 1 || (payload.attemptId !== undefined && !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId)) || (hasRequiredRange && (!Number.isInteger(requiredStart) || !Number.isInteger(requiredEnd) || requiredStart! < 1 || requiredEnd! < requiredStart! || requiredEnd! > 100))) return null;
+    return {
+      ...base,
+      scope: 'roadmap',
+      topic: payload.topic,
+      roadmapKind: payload.roadmapKind,
+      ref: payload.ref,
+      attemptId: payload.attemptId,
+      ...(hasRequiredRange ? { requiredLevelStart: requiredStart, requiredLevelEnd: requiredEnd } : {}),
+    };
   }
   return base;
 }
@@ -181,15 +207,15 @@ export function decodeChallengeRun(token: string): { runId: string; ranked: bool
   return { runId: payload.runId, ranked: payload.ranked, subject: payload.subject };
 }
 
-export function encodeScoreProof(runId: string, questionId: string, isCorrect: boolean): string {
+export function encodeScoreProof(runId: string, questionId: string, subject: ScopeSubjectId, isCorrect: boolean): string {
   const now = Date.now();
-  return sealToken({ kind: 'score-proof', runId, questionId, isCorrect, iat: now, exp: now + CHALLENGE_TTL_MS });
+  return sealToken({ kind: 'score-proof', runId, questionId, subject, isCorrect, iat: now, exp: now + CHALLENGE_TTL_MS });
 }
 
-export function decodeScoreProof(token: string): { runId: string; questionId: string; isCorrect: boolean } | null {
+export function decodeScoreProof(token: string): { runId: string; questionId: string; subject: ScopeSubjectId; isCorrect: boolean } | null {
   const payload = openToken(token) as Partial<ScoreProofPayload> | null;
-  if (!payload || payload.kind !== 'score-proof' || !validLifetime(payload, CHALLENGE_TTL_MS) || typeof payload.runId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.runId) || typeof payload.questionId !== 'string' || payload.questionId.length === 0 || payload.questionId.length > 64 || typeof payload.isCorrect !== 'boolean') return null;
-  return { runId: payload.runId, questionId: payload.questionId, isCorrect: payload.isCorrect };
+  if (!payload || payload.kind !== 'score-proof' || !validLifetime(payload, CHALLENGE_TTL_MS) || typeof payload.runId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.runId) || typeof payload.questionId !== 'string' || payload.questionId.length === 0 || payload.questionId.length > 64 || !isScopeSubject(payload.subject) || typeof payload.isCorrect !== 'boolean') return null;
+  return { runId: payload.runId, questionId: payload.questionId, subject: payload.subject, isCorrect: payload.isCorrect };
 }
 
 export interface QuizResultReceipt {
@@ -232,13 +258,13 @@ export function decodeQuizResultReceipt(token: string): QuizResultReceipt | null
   return { attemptId: payload.attemptId, userId: payload.userId, correct: payload.correct!, total: payload.total!, breakdown, outcomes, subject: payload.subject, questXp: payload.questXp!, purpose: payload.purpose!, ...(payload.daily ? { daily: payload.daily } : {}) };
 }
 
-export function encodeAnswerProof(questionId: string, isCorrect: boolean): string {
+export function encodeAnswerProof(questionId: string, subject: ScopeSubjectId, isCorrect: boolean): string {
   const now = Date.now();
-  return sealToken({ kind: 'answer-proof', questionId, isCorrect, iat: now, exp: now + TOKEN_TTL_MS });
+  return sealToken({ kind: 'answer-proof', questionId, subject, isCorrect, iat: now, exp: now + TOKEN_TTL_MS });
 }
 
-export function decodeAnswerProof(token: string): { questionId: string; isCorrect: boolean } | null {
+export function decodeAnswerProof(token: string): { questionId: string; subject: ScopeSubjectId; isCorrect: boolean } | null {
   const payload = openToken(token) as Partial<AnswerProofPayload> | null;
-  if (!payload || payload.kind !== 'answer-proof' || !validLifetime(payload, TOKEN_TTL_MS) || typeof payload.questionId !== 'string' || payload.questionId.length === 0 || payload.questionId.length > 64 || typeof payload.isCorrect !== 'boolean') return null;
-  return { questionId: payload.questionId, isCorrect: payload.isCorrect };
+  if (!payload || payload.kind !== 'answer-proof' || !validLifetime(payload, TOKEN_TTL_MS) || typeof payload.questionId !== 'string' || payload.questionId.length === 0 || payload.questionId.length > 64 || !isScopeSubject(payload.subject) || typeof payload.isCorrect !== 'boolean') return null;
+  return { questionId: payload.questionId, subject: payload.subject, isCorrect: payload.isCorrect };
 }

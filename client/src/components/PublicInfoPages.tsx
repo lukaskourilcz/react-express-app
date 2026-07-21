@@ -35,7 +35,7 @@ const COPY = {
       ['Availability and accounts', 'The service may change or experience downtime. Accounts used for abuse may be restricted. You may request deletion of your account and associated user-facing data.'],
       ['Legal review', 'These general terms require Czech legal and accounting review before production activation of financial-support links.'],
     ],
-    classroomTitle: 'Run a focused classroom challenge.', classroomLead: 'Create a host-led room, share one link or QR code, and let learners join the same subject session.', classroomCta: 'Create a classroom', classroomJoin: 'Join with a room code',
+    classroomTitle: 'Run a focused classroom challenge.', classroomLead: 'Create a host-led room, share one link or QR code, and let signed-in learners join the same subject session.', classroomCta: 'Create a classroom', classroomJoin: 'Join with a room code', classroomNote: 'Participants sign in, open the room link, and the host controls question progress.',
     notFoundTitle: 'That page is out of the water.', notFoundLead: 'The address may be old or incomplete. Your learning progress is safe.', home: 'Go home', back: 'Go back',
   },
   cs: {
@@ -64,7 +64,7 @@ const COPY = {
       ['Dostupnost a účty', 'Služba se může měnit nebo mít výpadky. Účty zneužívající službu mohou být omezeny. Můžete požádat o smazání účtu a souvisejících uživatelských dat.'],
       ['Právní kontrola', 'Tyto obecné podmínky vyžadují českou právní a účetní kontrolu před zapnutím finanční podpory v produkci.'],
     ],
-    classroomTitle: 'Uspořádej soustředěnou výzvu pro třídu.', classroomLead: 'Vytvoř místnost vedenou hostitelem, sdílej jeden odkaz nebo QR kód a nech studenty připojit se ke stejnému předmětu.', classroomCta: 'Vytvořit třídu', classroomJoin: 'Připojit se kódem',
+    classroomTitle: 'Uspořádej soustředěnou výzvu pro třídu.', classroomLead: 'Vytvoř místnost vedenou hostitelem, sdílej jeden odkaz nebo QR kód a nech přihlášené studenty připojit se ke stejnému předmětu.', classroomCta: 'Vytvořit třídu', classroomJoin: 'Připojit se kódem', classroomNote: 'Účastníci se přihlásí, otevřou odkaz místnosti a hostitel řídí postup otázkami.',
     notFoundTitle: 'Tahle stránka odplavala.', notFoundLead: 'Adresa může být stará nebo neúplná. Tvůj studijní postup je v bezpečí.', home: 'Domů', back: 'Zpět',
   },
 } as const;
@@ -95,7 +95,7 @@ export function SupportPage() {
   return <Page kicker={c.supportKicker} title={c.supportTitle} lead={explanation}>
     <section className="ss-info-card"><h2>{c.costs}</h2><p>{c.fairness}</p>
       {support.enabled ? <>
-        <div className="ss-cost-meter" aria-label={`${percentage}%`}><span style={{ width: `${percentage}%` }} /></div>
+        <div className="ss-cost-meter" role="progressbar" aria-label={`${c.covered}: ${percentage}%`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage}><span style={{ width: `${percentage}%` }} /></div>
         <dl className="ss-cost-grid"><div><dt>{c.target}</dt><dd>{formatter.format(target)}</dd></div><div><dt>{c.covered}</dt><dd>{formatter.format(Math.min(covered, target || covered))}</dd></div><div><dt>{c.carry}</dt><dd>{formatter.format(carry)}</dd></div><div><dt>{c.updated}</dt><dd>{support.lastUpdatedAt || '—'}</dd></div></dl>
         {support.costBreakdown.length > 0 && <ul className="ss-cost-list">{support.costBreakdown.map((row) => <li key={row.label}><span>{row.label}</span><strong>{formatter.format(row.amount)}</strong></li>)}</ul>}
         <div className="ss-info-actions">{support.kofiUrl && <a className="ss-link-button" href={support.kofiUrl} target="_blank" rel="noopener noreferrer" onClick={() => capture('support_provider_opened', { provider: 'kofi', product: CURRENT_PRODUCT.id })}>{c.kofi}</a>}{support.githubSponsorsUrl && <a className="ss-link-button ss-link-button--secondary" href={support.githubSponsorsUrl} target="_blank" rel="noopener noreferrer" onClick={() => capture('support_provider_opened', { provider: 'github', product: CURRENT_PRODUCT.id })}>{c.github}</a>}</div>
@@ -117,7 +117,7 @@ export const TermsPage = () => <LegalPage kind="terms" />;
 
 export function ClassroomPage() {
   const { lang } = useLanguage(); const c = COPY[lang]; const navigate = useNavigate();
-  return <Page title={c.classroomTitle} lead={c.classroomLead}><section className="ss-info-card"><div className="ss-info-actions"><Button variant="primary" label={c.classroomCta} onClick={() => navigate('/play?mode=classroom')} /><Button variant="secondary" label={c.classroomJoin} onClick={() => navigate('/play')} /></div><p>{CURRENT_PRODUCT.brand} keeps classroom joining lightweight; participants use the room link and the host controls question progress.</p></section></Page>;
+  return <Page title={c.classroomTitle} lead={c.classroomLead}><section className="ss-info-card"><div className="ss-info-actions"><Button variant="primary" label={c.classroomCta} onClick={() => navigate('/play?mode=classroom')} /><Button variant="secondary" label={c.classroomJoin} onClick={() => navigate('/play')} /></div><p>{c.classroomNote}</p></section></Page>;
 }
 
 export function NotFoundPage() {

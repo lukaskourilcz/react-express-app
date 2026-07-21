@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { TextArea } from '@astryxdesign/core/TextArea';
@@ -209,10 +209,11 @@ function SelectField({
   style?: React.CSSProperties;
   children: ReactNode;
 }) {
+  const id = useId();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, ...style }}>
-      <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{label}</label>
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
+      <label htmlFor={id} style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{label}</label>
+      <select id={id} value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
         {children}
       </select>
       {helperText && <span style={captionStyle}>{helperText}</span>}
@@ -344,17 +345,11 @@ export default function DevSettings() {
           {CATEGORY_OPTIONS.filter((cat) => activeSubject.categories.includes(cat.value)).map((cat) => {
             const selected = form.quizDefaultCategoryIds.includes(cat.value);
             return (
-              <span
+              <button
                 key={cat.value}
-                role="button"
-                tabIndex={0}
+                type="button"
+                aria-pressed={selected}
                 onClick={() => toggleDefaultCategory(cat.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    toggleDefaultCategory(cat.value);
-                  }
-                }}
                 style={{
                   cursor: 'pointer',
                   display: 'inline-flex',
@@ -371,7 +366,7 @@ export default function DevSettings() {
                 }}
               >
                 {cat.label}
-              </span>
+              </button>
             );
           })}
         </div>

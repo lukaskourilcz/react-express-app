@@ -9,7 +9,7 @@ import {
 } from '../../lib/quiz-tokens';
 import { localizeQuestion, normalizeLang } from '../../lib/quiz-runtime';
 import { AuthError, tryAuth } from '../../lib/auth';
-import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext } from '../../lib/http';
+import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext, isRpcMissing } from '../../lib/http';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import {
@@ -19,12 +19,57 @@ import {
   type ExplanationContent,
 } from '../../lib/ai-provider';
 import { subjectForCategory } from '../../shared/subject-catalog';
+import { deploymentSubjectIds } from '../../lib/product-scope';
 
 const MAX_ANSWERS = 50;
 
 const logEvent = createLogger('quiz/submit');
 const reportLogger = createLogger('quiz/report');
 const serviceSupabase = createServiceClient();
+const localSubmissionClaims = new Map<string, { answerHash: string; subject: string; userId: string | null }>();
+
+async function claimSubmission(input: {
+  gradeKey: string;
+  attemptId: string;
+  answerHash: string;
+  subject: string;
+  userId: string | null;
+}): Promise<'claimed' | 'replay' | 'conflict' | 'unavailable'> {
+  if (!serviceSupabase) {
+    const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+    if (isProduction) return 'unavailable';
+    const previous = localSubmissionClaims.get(input.gradeKey);
+    if (!previous) {
+      localSubmissionClaims.set(input.gradeKey, {
+        answerHash: input.answerHash,
+        subject: input.subject,
+        userId: input.userId,
+      });
+      return 'claimed';
+    }
+    return previous.answerHash === input.answerHash &&
+      previous.subject === input.subject &&
+      previous.userId === input.userId
+      ? 'replay'
+      : 'conflict';
+  }
+  const result = await withTimeout(
+    serviceSupabase.rpc('claim_quiz_submission', {
+      p_grade_key: input.gradeKey,
+      p_attempt_id: input.attemptId,
+      p_user_id: input.userId,
+      p_subject: input.subject,
+      p_answer_hash: input.answerHash,
+    }),
+  );
+  if (result.error) {
+    if (isRpcMissing(result.error)) return 'unavailable';
+    throw new Error('quiz_submission_claim_failed');
+  }
+  return result.data === 'claimed' || result.data === 'replay' || result.data === 'conflict'
+    ? result.data
+    : 'unavailable';
+}
 
 // Question-report reasons. 'needs-review' is the lightweight red-flag from the
 // learning path; the rest come from the full report dialog in the solo quiz.
@@ -95,8 +140,41 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (session.scope !== 'challenge' && validated.length !== session.questions.length) {
     return jsonError(res, 400, 'incomplete_answers', 'Answer every question before submitting');
   }
+  if (session.scope === 'challenge' && validated.length !== 1) {
+    return jsonError(res, 400, 'bad_request', 'Challenge answers must be submitted one at a time');
+  }
+  const subject = session.subject;
+  if (!subject || !deploymentSubjectIds().includes(subject)) {
+    return jsonError(res, 400, 'invalid_session', 'Quiz session belongs to another product deployment');
+  }
+
+  let auth;
+  try {
+    auth = await tryAuth(req);
+  } catch (error) {
+    if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
+    throw error;
+  }
+  const canonicalAnswers = [...validated].sort((a, b) => a.questionId.localeCompare(b.questionId));
+  const answerHash = createHash('sha256').update(JSON.stringify(canonicalAnswers)).digest('hex');
+  const gradeKey = session.scope === 'challenge'
+    ? `${session.attemptId}:${validated[0].questionId}`
+    : session.attemptId;
+  const claim = await claimSubmission({
+    gradeKey,
+    attemptId: session.attemptId,
+    answerHash,
+    subject,
+    userId: auth?.sub ?? null,
+  });
+  if (claim === 'unavailable') {
+    return jsonError(res, 503, 'migration_required', 'One-time quiz grading is not configured');
+  }
+  if (claim === 'conflict') {
+    return jsonError(res, 409, 'attempt_already_graded', 'This answer has already been graded and cannot be changed');
+  }
   // Effective question set (base + /dev overrides) for localized explanations.
-  const questionsById = await getEffectiveQuestionsById();
+  const questionsById = await getEffectiveQuestionsById(subject, lang === 'cs');
 
   let correct = 0;
   const results = validated.map(({ questionId, selectedIndex }) => {
@@ -110,21 +188,16 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       correctAnswer: sessionQ?.correctAnswer ?? -1,
       isCorrect,
       explanation: q ? localizeQuestion(q, lang).explanation : '',
-      answerProof: sessionQ ? encodeAnswerProof(questionId, isCorrect) : undefined,
+      answerProof: sessionQ ? encodeAnswerProof(questionId, subject, isCorrect) : undefined,
     };
     return session.scope === 'challenge' && session.runId && sessionQ
-      ? { ...result, scoreProof: encodeScoreProof(session.runId, questionId, isCorrect) }
+      ? { ...result, scoreProof: encodeScoreProof(session.runId, questionId, subject, isCorrect) }
       : result;
   });
 
   const total = validated.length;
   const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
-  const auth = await tryAuth(req);
   const breakdown: Record<string, { correct: number; total: number }> = {};
-  const subject = session.subject;
-  if (!subject) {
-    return jsonError(res, 400, 'invalid_session', 'Quiz session is missing its product scope');
-  }
   let questXp = 0;
   for (const result of results) {
     const question = questionsById.get(result.questionId);
@@ -208,9 +281,12 @@ async function handleExplanation(req: VercelRequest, res: VercelResponse) {
   }
   const proof = decodeAnswerProof(body.answerProof);
   if (!proof) return jsonError(res, 400, 'invalid_proof', 'Answer proof expired or invalid');
+  if (!deploymentSubjectIds().includes(proof.subject)) {
+    return jsonError(res, 400, 'invalid_proof', 'Answer proof belongs to another product deployment');
+  }
 
   const lang = normalizeLang(body.lang);
-  const questions = await getEffectiveQuestionsById();
+  const questions = await getEffectiveQuestionsById(proof.subject, lang === 'cs');
   const base = questions.get(proof.questionId);
   if (!base) return jsonError(res, 404, 'not_found', 'Question not found');
   const q = localizeQuestion(base, lang);

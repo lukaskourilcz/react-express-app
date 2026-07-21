@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { Table, TableHeader, TableBody, TableRow, TableCell, TableHeaderCell } from '@astryxdesign/core/Table';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { Button } from '@astryxdesign/core/Button';
@@ -75,10 +75,11 @@ function SelectField({
   style?: React.CSSProperties;
   children: ReactNode;
 }) {
+  const id = useId();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, ...style }}>
-      {label && <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{label}</label>}
-      <select value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
+      {label && <label htmlFor={id} style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{label}</label>}
+      <select id={id} aria-label={label || 'Filter'} value={value} onChange={(e) => onChange(e.target.value)} style={selectStyle}>
         {children}
       </select>
     </div>
@@ -509,7 +510,7 @@ export default function DevQuestions() {
           width: '100%',
           border: '1px solid var(--color-border)',
           borderRadius: 'var(--radius-container)',
-          overflow: 'hidden',
+          overflowX: 'auto',
           background: 'var(--color-background-surface)',
         }}
       >

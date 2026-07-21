@@ -9,11 +9,11 @@ import {
 } from '../../lib/quiz-runtime';
 import { encodeSession, createChallengeRun, decodeChallengeRun, decodeScoreProof } from '../../lib/quiz-tokens';
 import { jsonError, createLogger, createServiceClient, withTimeout, isRpcMissing, withRequestContext } from '../../lib/http';
-import { tryAuth } from '../../lib/auth';
+import { AuthError, tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getChallengeLeaderboard, recordChallengeScore } from '../../lib/challenge-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
-import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/product-scope';
+import { defaultDeploymentCategories, deploymentSubjectIds, validateCategoryScope } from '../../lib/product-scope';
 import { ASSESSMENT_QUESTION_COUNT } from '../../shared/assessment';
 
 // Biggest Shark Challenge: a single function serving every challenge resource
@@ -111,7 +111,8 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
   const runToken = assessment ? '' : suppliedRunToken || (run && 'runToken' in run ? run.runToken : '');
   const catSet = new Set(scope.categories);
 
-  const all = await getEffectiveQuestions();
+  const lang = normalizeLang(req.query.lang);
+  const all = await getEffectiveQuestions(scope.subject, lang === 'cs');
   const pool = all.filter(
     (q) =>
       !PRIVATE_CATEGORIES.includes(q.category) &&
@@ -126,7 +127,6 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
   const batchSize = assessment ? ASSESSMENT_QUESTION_COUNT : BATCH_SIZE;
   const selected = weightedSample(pool, Math.min(batchSize, pool.length), weight);
 
-  const lang = normalizeLang(req.query.lang);
   const sessionData: { questionId: string; correctAnswer: number }[] = [];
   const questions = selected.map((base) => {
     const q = localizeQuestion(base, lang);
@@ -165,7 +165,9 @@ async function handleSubmitScore(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'bad_request', 'runToken is required');
   }
   const run = decodeChallengeRun(body.runToken);
-  if (!run) return jsonError(res, 400, 'invalid_run', 'Challenge run expired or invalid');
+  if (!run || !deploymentSubjectIds().includes(run.subject)) {
+    return jsonError(res, 400, 'invalid_run', 'Challenge run expired, invalid, or belongs to another product');
+  }
   if (!run.ranked) return jsonError(res, 400, 'practice_run', 'Practice-pace runs are not ranked');
   if (!Array.isArray(body.proofs) || body.proofs.length > MAX_SCORE) {
     return jsonError(res, 400, 'bad_request', 'proofs must be an array');
@@ -176,7 +178,7 @@ async function handleSubmitScore(req: VercelRequest, res: VercelResponse) {
   for (const value of body.proofs) {
     if (typeof value !== 'string') return jsonError(res, 400, 'invalid_proof', 'Invalid score proof');
     const proof = decodeScoreProof(value);
-    if (!proof || proof.runId !== run.runId) {
+    if (!proof || proof.runId !== run.runId || proof.subject !== run.subject) {
       return jsonError(res, 400, 'invalid_proof', 'Invalid score proof');
     }
     if (seen.has(proof.questionId)) continue;
@@ -186,7 +188,13 @@ async function handleSubmitScore(req: VercelRequest, res: VercelResponse) {
 
   // Optional auth — when signed in, attribute the run so later dedupe is possible.
   // Anonymous submissions still land on the board.
-  const auth = await tryAuth(req);
+  let auth;
+  try {
+    auth = await tryAuth(req);
+  } catch (error) {
+    if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
+    throw error;
+  }
   const userId = auth?.sub ?? null;
 
   try {
@@ -208,20 +216,28 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'bad_request', 'Run token and proofs are required');
   }
   const run = decodeChallengeRun(body.runToken);
-  if (!run) return jsonError(res, 400, 'invalid_run', 'Challenge run expired or invalid');
+  if (!run || !deploymentSubjectIds().includes(run.subject)) {
+    return jsonError(res, 400, 'invalid_run', 'Challenge run expired, invalid, or belongs to another product');
+  }
 
   const seen = new Set<string>();
   let score = 0;
   for (const value of body.proofs) {
     if (typeof value !== 'string') return jsonError(res, 400, 'invalid_proof', 'Invalid score proof');
     const proof = decodeScoreProof(value);
-    if (!proof || proof.runId !== run.runId) return jsonError(res, 400, 'invalid_proof', 'Invalid score proof');
+    if (!proof || proof.runId !== run.runId || proof.subject !== run.subject) return jsonError(res, 400, 'invalid_proof', 'Invalid score proof');
     if (seen.has(proof.questionId)) continue;
     seen.add(proof.questionId);
     if (proof.isCorrect) score++;
   }
 
-  const auth = await tryAuth(req);
+  let auth;
+  try {
+    auth = await tryAuth(req);
+  } catch (error) {
+    if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
+    throw error;
+  }
   if (!auth) return res.json({ ok: true, awarded: false, score });
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account progress is not configured');
   // Only server-proven correct answers earn XP. Merely creating/ending a run

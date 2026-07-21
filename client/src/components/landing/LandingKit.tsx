@@ -56,14 +56,14 @@ export function StatItem({ value, label, pos, size, accent }: StatSpec & { accen
 
 /** A CTA whose fin fades in on hover (no drift — see DESIGN_RULES §3). */
 export function FadeFinCta({
-  label, primary, onClick, finLeft, finSize, accent,
+  label, primary, onClick, finLeft, finSize, accent, disabled,
 }: {
-  label: string; primary?: boolean; onClick: () => void; finLeft: string; finSize: number; accent: string;
+  label: string; primary?: boolean; onClick: () => void; finLeft: string; finSize: number; accent: string; disabled?: boolean;
 }) {
   const [hover, setHover] = useState(false);
   return (
     <button
-      type="button" onClick={onClick}
+      type="button" onClick={onClick} disabled={disabled}
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       style={{
         position: 'relative', overflow: 'hidden', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -71,7 +71,7 @@ export function FadeFinCta({
         color: primary ? '#fff' : 'var(--color-text-primary)',
         border: primary ? 'none' : '1px solid var(--ss-card-edge)',
         borderRadius: 'var(--radius-element)', padding: '12px 22px',
-        fontFamily: 'var(--font-family-body)', fontWeight: 600, fontSize: '1rem', cursor: 'pointer',
+        fontFamily: 'var(--font-family-body)', fontWeight: 600, fontSize: '1rem', cursor: disabled ? 'wait' : 'pointer', opacity: disabled ? 0.62 : 1,
         filter: hover && primary ? 'brightness(0.92)' : 'none',
         transition: 'filter 0.2s ease, background 0.2s ease',
         backgroundColor: hover && !primary ? 'var(--color-background-muted)' : undefined,
@@ -170,7 +170,7 @@ export function SampleCard({ chip, question }: { chip: string; question: SampleQ
         })}
       </div>
       {answered && (
-        <div style={{
+        <div role="status" aria-live="polite" style={{
           borderRadius: 'var(--radius-element)', padding: '12px 14px',
           background: right ? 'var(--ss-success-soft)' : 'var(--ss-error-soft)',
           border: `1px solid ${right ? 'var(--ss-success)' : 'var(--ss-error)'}`,
@@ -191,12 +191,12 @@ export function SampleCard({ chip, question }: { chip: string; question: SampleQ
 export function CheckpointNode({ label }: { label: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 110, flexShrink: 0 }}>
-      <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'rgba(245,166,35,0.14)', color: '#c77f00', border: '2px solid rgba(245,166,35,0.5)' }}>
+      <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'rgba(245,166,35,0.14)', color: '#8a5700', border: '2px solid rgba(138,87,0,0.5)' }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
           <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
         </svg>
       </span>
-      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#c77f00', whiteSpace: 'nowrap' }}>{label}</span>
+      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8a5700', whiteSpace: 'nowrap' }}>{label}</span>
     </div>
   );
 }

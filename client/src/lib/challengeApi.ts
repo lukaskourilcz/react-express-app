@@ -20,7 +20,6 @@ export interface ChallengeScore {
   name: string;
   score: number;
   createdAt: string;
-  userId: string | null;
 }
 
 export interface ChallengeLeaderboard {

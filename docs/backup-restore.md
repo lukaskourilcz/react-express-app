@@ -1,6 +1,6 @@
 # Supabase backup, restore, and recovery drill
 
-This procedure protects the web launch database. Run it before migrations 021/022,
+This procedure protects the web launch database. Run it before migrations 021–023,
 before destructive maintenance, and on a regular schedule appropriate to the
 Supabase plan and recovery-point objective.
 
@@ -35,7 +35,7 @@ Never test a restore over the production database.
    `record_verified_activity_xp`, `complete_verified_roadmap_attempt`,
    `apply_verified_skill_check`,
    `claim_ai_generation_budget`, `delete_user_data`, RLS enablement, and revoked
-   browser writes from migrations 021/022.
+   browser writes from migrations 021–023.
 6. Point a private preview deployment at recovery, run `npm run test:launch`,
    then execute the launch smoke test without using real-user credentials.
 7. Record recovery time and achieved recovery point. Fix the procedure if

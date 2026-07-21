@@ -2,30 +2,37 @@
  * localized, and persistence concerns out of this module. */
 export const SUBJECT_SCOPE_CATALOG = {
   webdev: {
+    questionCount: 3609,
     topics: ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git', 'dsa', 'algorithms', 'abbreviations', 'general', 'internet', 'ai', 'rhf-zod', 'databases', 'system-design', 'testing', 'devops', 'security'],
     categories: ['html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'git', 'dsa', 'algorithms', 'abbreviations', 'general', 'internet', 'ai', 'rhf-zod', 'cool-stuff', 'databases', 'system-design', 'testing', 'devops', 'security', 'dev-world', 'code-snippets'],
   },
   geography: {
+    questionCount: 1000,
     topics: ['continents', 'capitals', 'flags', 'landforms', 'climate', 'population', 'political', 'economic', 'cartography', 'earth', 'geomorphology', 'oceanography', 'biogeography', 'geopolitics', 'gis'],
     categories: ['continents', 'capitals', 'flags', 'landforms', 'climate', 'population', 'political', 'economic', 'cartography', 'earth', 'geomorphology', 'oceanography', 'biogeography', 'geopolitics', 'gis'],
   },
   math: {
+    questionCount: 1000,
     topics: ['arithmetic', 'fractions', 'prealgebra', 'algebra', 'geometry', 'trigonometry', 'statistics', 'precalculus', 'calculus', 'linear-algebra', 'discrete-math', 'number-theory', 'multivariable-calculus', 'differential-equations', 'real-analysis'],
     categories: ['arithmetic', 'fractions', 'prealgebra', 'algebra', 'geometry', 'trigonometry', 'statistics', 'precalculus', 'calculus', 'linear-algebra', 'discrete-math', 'number-theory', 'multivariable-calculus', 'differential-equations', 'real-analysis'],
   },
   history: {
+    questionCount: 1000,
     topics: ['prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern', 'historiography', 'history-of-science', 'economic-history', 'intellectual-history', 'military-history'],
     categories: ['prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern', 'historiography', 'history-of-science', 'economic-history', 'intellectual-history', 'military-history'],
   },
   chess: {
+    questionCount: 600,
     topics: ['openings', 'tactics', 'strategy', 'endgames', 'combinations', 'opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history'],
     categories: ['openings', 'tactics', 'strategy', 'endgames', 'combinations', 'opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history'],
   },
   biology: {
+    questionCount: 400,
     topics: ['cell-biology', 'skeletal-system', 'muscular-system', 'nervous-system', 'endocrine-system', 'cardiovascular-system', 'respiratory-system', 'digestive-system', 'immune-system', 'reproductive-system'],
     categories: ['cell-biology', 'skeletal-system', 'muscular-system', 'nervous-system', 'endocrine-system', 'cardiovascular-system', 'respiratory-system', 'digestive-system', 'immune-system', 'reproductive-system'],
   },
   poker: {
+    questionCount: 320,
     topics: ['positions', 'starting-hands', 'pot-odds', 'betting-strategy', 'postflop', 'tournament-play', 'psychology', 'gto-advanced'],
     categories: ['positions', 'starting-hands', 'pot-odds', 'betting-strategy', 'postflop', 'tournament-play', 'psychology', 'gto-advanced'],
   },

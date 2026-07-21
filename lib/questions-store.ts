@@ -7,9 +7,10 @@
 // always falling back to the unmodified base set if the DB is unavailable.
 
 import type { Question, CategoryType, QuestionTranslation } from './quiz-data';
-import { loadDeploymentQuestionBank } from './question-bank-loader';
+import { loadDeploymentQuestionBank, loadSubjectQuestionBank } from './question-bank-loader';
 import { createServiceClient, withTimeout } from './http';
 import { computeImportance, clampImportance } from './importance';
+import { subjectForCategory, type ScopeSubjectId } from '../shared/subject-catalog';
 
 const supabase = createServiceClient();
 
@@ -201,19 +202,36 @@ function withImportance(q: Question): Question {
   return q.importance != null ? q : { ...q, importance: computeImportance(q) };
 }
 
+let overrideCache: { at: number; value: Map<string, QuestionEditRow> | null } | null = null;
+let overrideInflight: Promise<Map<string, QuestionEditRow> | null> | null = null;
+
 async function loadOverrides(): Promise<Map<string, QuestionEditRow> | null> {
+  if (overrideCache && Date.now() - overrideCache.at < CACHE_TTL_MS) return overrideCache.value;
+  if (overrideInflight) return overrideInflight;
   if (!supabase) return null;
-  try {
-    const { data, error } = await withTimeout(supabase.from(TABLE).select('*'), 4000);
-    if (error || !data) return null;
-    return new Map((data as QuestionEditRow[]).map((r) => [r.question_id, r]));
-  } catch {
-    // Table missing (migration not run), timeout, etc. — fall back to base.
-    return null;
-  }
+  overrideInflight = (async () => {
+    try {
+      const { data, error } = await withTimeout(supabase.from(TABLE).select('*'), 4000);
+      const value = error || !data
+        ? null
+        : new Map((data as QuestionEditRow[]).map((r) => [r.question_id, r]));
+      overrideCache = { at: Date.now(), value };
+      return value;
+    } catch {
+      overrideCache = { at: Date.now(), value: null };
+      return null;
+    } finally {
+      overrideInflight = null;
+    }
+  })();
+  return overrideInflight;
 }
 
-function buildEffective(baseQuestions: Question[], overrides: Map<string, QuestionEditRow>): Question[] {
+function buildEffective(
+  baseQuestions: Question[],
+  overrides: Map<string, QuestionEditRow>,
+  subject?: ScopeSubjectId,
+): Question[] {
   const list: Question[] = [];
   for (const base of baseQuestions) {
     const ov = overrides.get(base.id);
@@ -221,41 +239,60 @@ function buildEffective(baseQuestions: Question[], overrides: Map<string, Questi
     list.push(ov ? mergeRow(ov, base) : withImportance(base));
   }
   for (const ov of overrides.values()) {
-    if (ov.is_custom && !ov.deleted) list.push(mergeRow(ov));
+    if (ov.is_custom && !ov.deleted) {
+      const merged = mergeRow(ov);
+      if (!subject || subjectForCategory(merged.category) === subject) list.push(merged);
+    }
   }
   return list;
 }
 
-let cache: { at: number; list: Question[]; byId: Map<string, Question> } | null = null;
+type EffectiveCache = { at: number; list: Question[]; byId: Map<string, Question> };
+const caches = new Map<string, EffectiveCache>();
+const inflight = new Map<string, Promise<EffectiveCache>>();
 
-async function effective(): Promise<{ list: Question[]; byId: Map<string, Question> }> {
-  if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache;
-  const bank = await loadDeploymentQuestionBank();
-  const baseQuestions = bank.questions.map((question) => ({
-    ...question,
-    csTranslation: bank.translations[question.id] ?? null,
-  }));
-  const overrides = await loadOverrides();
-  // No DB / overrides: still attach a resolved importance to every base question.
-  const list = overrides ? buildEffective(baseQuestions, overrides) : baseQuestions.map(withImportance);
-  const byId = new Map(list.map((q) => [q.id, q]));
-  cache = { at: Date.now(), list, byId };
-  return cache;
+async function effective(subject?: ScopeSubjectId, includeCzech = true): Promise<EffectiveCache> {
+  const key = `${subject ?? 'deployment'}:${includeCzech ? 'cs' : 'en'}`;
+  const cached = caches.get(key);
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached;
+  const active = inflight.get(key);
+  if (active) return active;
+  const loading = (async () => {
+    const bank = subject
+      ? await loadSubjectQuestionBank(subject, includeCzech)
+      : await loadDeploymentQuestionBank(includeCzech);
+    const baseQuestions = bank.questions.map((question) => ({
+      ...question,
+      csTranslation: bank.translations[question.id] ?? null,
+    }));
+    const overrides = await loadOverrides();
+    const list = overrides
+      ? buildEffective(baseQuestions, overrides, subject)
+      : baseQuestions.map(withImportance);
+    const value = { at: Date.now(), list, byId: new Map(list.map((q) => [q.id, q])) };
+    caches.set(key, value);
+    return value;
+  })().finally(() => inflight.delete(key));
+  inflight.set(key, loading);
+  return loading;
 }
 
 /** The live question set (base + overrides), used by the quiz/play endpoints. */
-export async function getEffectiveQuestions(): Promise<Question[]> {
-  return (await effective()).list;
+export async function getEffectiveQuestions(subject?: ScopeSubjectId, includeCzech = true): Promise<Question[]> {
+  return (await effective(subject, includeCzech)).list;
 }
 
 /** Same set as a lookup map, for grading and explanation lookups. */
-export async function getEffectiveQuestionsById(): Promise<Map<string, Question>> {
-  return (await effective()).byId;
+export async function getEffectiveQuestionsById(subject?: ScopeSubjectId, includeCzech = true): Promise<Map<string, Question>> {
+  return (await effective(subject, includeCzech)).byId;
 }
 
 /** Clear the serving cache so the next request re-reads overrides. */
 export function invalidateQuestionsCache() {
-  cache = null;
+  caches.clear();
+  inflight.clear();
+  overrideCache = null;
+  overrideInflight = null;
 }
 
 /**

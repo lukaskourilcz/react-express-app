@@ -30,7 +30,6 @@ function MenuAction({ label, onClick }: { label: string; onClick: () => void }) 
   return (
     <button
       type="button"
-      role="menuitem"
       onClick={onClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -132,7 +131,7 @@ function AuthButton() {
       width={168}
       label={t('auth.accountMenu', { name: displayName })}
       content={
-        <div role="menu" style={{ display: 'flex', flexDirection: 'column', minWidth: 168 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 168 }}>
           <MenuAction label={t('auth.profile')} onClick={handleProfile} />
           <MenuAction label={t('auth.logOut')} onClick={handleLogout} />
         </div>
@@ -140,7 +139,7 @@ function AuthButton() {
     >
       <button
         type="button"
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={t('auth.accountMenu', { name: displayName })}
         style={{

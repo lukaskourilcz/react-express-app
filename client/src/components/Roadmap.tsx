@@ -1022,7 +1022,7 @@ function LessonRunner({
     if (finished || showIntro) return;
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      if (target?.closest('input, textarea, select, button, a, [contenteditable="true"], [role="textbox"], [role="radio"], [role="checkbox"]')) return;
       if (!revealed && /^[1-9]$/.test(e.key)) {
         const idx = parseInt(e.key, 10) - 1;
         if (idx < question.options.length) {
@@ -1217,7 +1217,7 @@ function LessonRunner({
       </div>
 
       {/* Options — anchored toward the bottom, labelled by the question. */}
-      <div role="group" aria-labelledby="lesson-question" style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0, marginTop: 'auto', marginBottom: isMobile ? 50 : 0 }}>
+      <div role="radiogroup" aria-labelledby="lesson-question" style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0, marginTop: 'auto', marginBottom: isMobile ? 50 : 0 }}>
         {question.options.map((option, index) => {
           const isCorrect = index === grade?.correctAnswer;
           const isPicked = index === selected;
@@ -1237,7 +1237,9 @@ function LessonRunner({
               className={`rm-option${cls ? ` ${cls}` : ''}`}
               onClick={() => void choose(index)}
               disabled={revealed || grading}
-              aria-pressed={isPicked}
+              role="radio"
+              aria-checked={isPicked}
+              tabIndex={isPicked || (selected === null && index === 0) ? 0 : -1}
               style={{ ['--rm-accent']: accent, ...overrides } as CSSProperties}
             >
               <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 4, fontSize: '0.75rem', fontWeight: 800, backgroundColor: 'var(--color-background-muted)', color: 'var(--color-text-secondary)', flexShrink: 0 }}>
@@ -1558,7 +1560,7 @@ function SkillCheckRunner({
 
       <div id="skillcheck-question" style={{ fontWeight: 500, marginBottom: 16 }}>{renderQuestion(current.question)}</div>
 
-      <div role="group" aria-labelledby="skillcheck-question" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div role="radiogroup" aria-labelledby="skillcheck-question" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {current.options.map((option, idx) => {
           const picked = answers[current.id] === idx;
           return (
@@ -1567,7 +1569,9 @@ function SkillCheckRunner({
               type="button"
               className="rm-option"
               onClick={() => handlePick(idx)}
-              aria-pressed={picked}
+              role="radio"
+              aria-checked={picked}
+              tabIndex={picked || (answers[current.id] === undefined && idx === 0) ? 0 : -1}
               style={{
                 ['--rm-accent']: 'var(--brand-accent)',
                 ...(picked ? { borderColor: 'var(--brand-accent)', backgroundColor: 'rgba(45,122,45,0.07)' } : {}),
