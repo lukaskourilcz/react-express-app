@@ -6,6 +6,7 @@ import {
   withTimeout,
   isRpcMissing,
   STATS_CATEGORIES,
+  withRequestContext,
 } from '../lib/http';
 import {
   defaultDeploymentCategories,
@@ -17,7 +18,7 @@ const supabase = createAnonClient();
 
 const logEvent = createLogger('leaderboard');
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
@@ -92,21 +93,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
         return jsonError(res, 400, 'bad_request', 'date must be YYYY-MM-DD');
       }
+      const catRaw = typeof req.query.categories === 'string' ? req.query.categories : '';
+      const requested = catRaw
+        ? catRaw.split(',').map((value) => value.trim()).filter(Boolean)
+        : defaultDeploymentCategories();
+      const scope = validateCategoryScope(requested.slice(0, 64));
+      if (!scope.ok) {
+        return jsonError(res, 400, 'invalid_subject_scope', 'Categories must belong to this deployment and one subject');
+      }
       const { data, error } = await withTimeout(
-        supabase.rpc('daily_leaderboard', {
+        supabase.rpc('daily_leaderboard_v2', {
           p_date: dateParam,
+          p_subject: scope.subject,
           p_limit: limit,
         }),
       );
       if (error) {
         if (isRpcMissing(error)) {
-          return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-004.sql to enable leaderboards');
+          return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-022.sql to enable subject-scoped daily leaderboards');
         }
         logEvent({ status: 500, error: error.message });
         return jsonError(res, 500, 'db_error', 'Could not load daily leaderboard');
       }
       res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
-      return res.json({ period: 'daily', date: dateParam, entries: data });
+      return res.json({ period: 'daily', date: dateParam, subject: scope.subject, entries: data });
     }
 
     return jsonError(res, 400, 'bad_request', 'period must be "global", "daily", or "category"');
@@ -115,4 +125,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     logEvent({ status: 500, error: message });
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
+}
+
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return withRequestContext(req, res, () => routeHandler(req, res));
 }

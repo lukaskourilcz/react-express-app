@@ -6,12 +6,13 @@ import {
   isRpcMissing,
   requireAuthSub,
   logEvent as emit,
-  STATS_CATEGORIES,
+  withRequestContext,
 } from '../../lib/http';
 import { requireAuth } from '../../lib/auth';
 import { recordAuthEvent } from '../../lib/auth-events-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
-import { decodeQuizResultReceipt } from '../../lib/quiz-data';
+import { decodeQuizResultReceipt } from '../../lib/quiz-tokens';
+import { subjectForCategory } from '../../shared/subject-catalog';
 
 const supabase = createServiceClient();
 
@@ -23,7 +24,7 @@ const MAX_STR = 512;
 // Log under a `user/<op>` route so stats and category-stats are distinguishable.
 const logEvent = (op: string, event: Record<string, unknown>) => emit(`user/${op}`, event);
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
 
   const op = String(req.query.op || '').toLowerCase();
@@ -42,6 +43,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (op === 'authevent') return authEvent(req, res);
   if (op === 'delete-account') return deleteAccount(req, res);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
+}
+
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return withRequestContext(req, res, () => routeHandler(req, res));
 }
 
 async function deleteAccount(req: VercelRequest, res: VercelResponse) {
@@ -180,80 +185,19 @@ async function xp(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'PUT') {
-      const body = (req.body || {}) as { quest_xp?: unknown; by_subject?: unknown };
-      const incomingTotal = clampXp(body.quest_xp);
-      const incomingMap = sanitizeBySubject(body.by_subject);
-
-      const atomic = await withTimeout(
-        supabase!.rpc('merge_user_xp', {
-          p_user_id: userId,
-          p_quest_xp: incomingTotal,
-          p_by_subject: incomingMap,
-        }),
+      return jsonError(
+        res,
+        409,
+        'verified_result_required',
+        'XP is awarded only from server-verified quiz and learning results',
       );
-      if (!atomic.error && Array.isArray(atomic.data) && atomic.data[0]) {
-        const result = atomic.data[0] as { quest_xp?: unknown; by_subject?: unknown };
-        return res.json({
-          ok: true,
-          data: {
-            quest_xp: clampXp(result.quest_xp),
-            by_subject: sanitizeBySubject(result.by_subject),
-          },
-        });
-      }
-      if (atomic.error && !isRpcMissing(atomic.error)) {
-        return jsonError(res, 500, 'db_error', 'Could not save XP');
-      }
-
-      // Backward-compatible path until schema 021 is applied. The RPC above is
-      // the race-free production path; this keeps previews on older schemas usable.
-      const row = await readXpRow(userId);
-      if (!row.ok) return jsonError(res, 500, 'db_error', 'Could not load XP');
-
-      const mergedMap: Record<string, number> = { ...row.bySubject };
-      for (const [k, v] of Object.entries(incomingMap)) {
-        mergedMap[k] = Math.max(mergedMap[k] ?? 0, v);
-      }
-      const mapSum = clampXp(Object.values(mergedMap).reduce((acc, v) => acc + v, 0));
-      const mergedTotal = Math.max(row.questXp, incomingTotal, mapSum);
-
-      const record: Record<string, unknown> = {
-        user_id: userId,
-        quest_xp: mergedTotal,
-        updated_at: new Date().toISOString(),
-      };
-      if (row.hasBySubjectColumn) record.quest_xp_by_subject = mergedMap;
-
-      const { error } = await withTimeout(
-        supabase!.from('user_xp').upsert(record, { onConflict: 'user_id' }),
-      );
-      if (error) return jsonError(res, 500, 'db_error', 'Could not save XP');
-      return res.json({ ok: true, data: { quest_xp: mergedTotal, by_subject: row.hasBySubjectColumn ? mergedMap : {} } });
     }
 
-    res.setHeader('Allow', 'GET, PUT');
+    res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   } catch {
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
-}
-
-// Daily activity map (date → lessons completed) backing the streak garden.
-// Kept on the existing user function so we don't add a Vercel Hobby function.
-function sanitizeDays(input: unknown): Record<string, number> {
-  const out: Record<string, number> = {};
-  if (!input || typeof input !== 'object') return out;
-  let n = 0;
-  for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
-    if (n >= 500) break; // bound stored size (~16 months of dates)
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(k)) continue;
-    const num = typeof v === 'number' && Number.isFinite(v) ? Math.min(50, Math.max(0, Math.round(v))) : 0;
-    if (num > 0) {
-      out[k] = num;
-      n++;
-    }
-  }
-  return out;
 }
 
 async function streak(req: VercelRequest, res: VercelResponse) {
@@ -269,15 +213,12 @@ async function streak(req: VercelRequest, res: VercelResponse) {
     }
 
     if (req.method === 'PUT') {
-      const body = (req.body || {}) as { days?: unknown };
-      const days = sanitizeDays(body.days);
-      const { error } = await withTimeout(
-        supabase!
-          .from('user_streak')
-          .upsert({ user_id: userId, days, updated_at: new Date().toISOString() }, { onConflict: 'user_id' }),
+      return jsonError(
+        res,
+        409,
+        'verified_result_required',
+        'Activity streaks are updated only from server-verified learning results',
       );
-      if (error) return jsonError(res, 500, 'db_error', 'Could not save streak');
-      return res.json({ ok: true });
     }
 
     res.setHeader('Allow', 'GET, PUT');
@@ -322,6 +263,15 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         if (!receipt || receipt.userId !== user_id) {
           return jsonError(res, 400, 'invalid_receipt', 'Quiz result receipt expired or invalid');
         }
+        if (receipt.purpose !== 'quiz' && receipt.purpose !== 'daily') {
+          return jsonError(res, 400, 'invalid_receipt', 'This result does not update quiz statistics');
+        }
+        if (Object.keys(receipt.breakdown).some((category) => subjectForCategory(category) !== receipt.subject)) {
+          return jsonError(res, 400, 'invalid_receipt', 'Quiz result receipt has mixed product scope');
+        }
+        if (receipt.outcomes.some((outcome) => subjectForCategory(outcome.category) !== receipt.subject)) {
+          return jsonError(res, 400, 'invalid_receipt', 'Quiz result receipt has mixed question scope');
+        }
         const rawProfile = body.profile && typeof body.profile === 'object'
           ? body.profile as Record<string, unknown>
           : {};
@@ -331,12 +281,17 @@ async function stats(req: VercelRequest, res: VercelResponse) {
             : null;
 
         const { data, error } = await withTimeout(
-          supabase!.rpc('record_verified_quiz_result', {
+          supabase!.rpc('record_verified_quiz_result_v2', {
             p_user_id: user_id,
             p_attempt_id: receipt.attemptId,
             p_correct: receipt.correct,
             p_total: receipt.total,
             p_breakdown: receipt.breakdown,
+            p_outcomes: receipt.outcomes,
+            p_subject: receipt.subject,
+            p_quest_xp: receipt.questXp,
+            p_daily_date: receipt.daily?.date ?? null,
+            p_duration_ms: receipt.daily?.durationMs ?? null,
             p_email: typeof rawProfile.email === 'string' && rawProfile.email.length <= MAX_STR ? rawProfile.email : null,
             p_name: typeof rawProfile.name === 'string' && rawProfile.name.length <= MAX_STR ? rawProfile.name : null,
             p_picture: safePicture,
@@ -353,11 +308,12 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         }
 
         logEvent('stats', { status: 200, op: 'submit', latency_ms: Date.now() - started });
-        const row = await withTimeout(
-          supabase!.from('user_stats').select(STATS_FIELDS).eq('user_id', user_id).maybeSingle(),
-        );
-        if (row.error) return jsonError(res, 500, 'db_error', 'Result saved but statistics could not be loaded');
-        return res.json({ data: row.data, applied: data === true });
+        const [row, xpRow] = await Promise.all([
+          withTimeout(supabase!.from('user_stats').select(STATS_FIELDS).eq('user_id', user_id).maybeSingle()),
+          withTimeout(supabase!.from('user_xp').select('quest_xp, quest_xp_by_subject').eq('user_id', user_id).maybeSingle()),
+        ]);
+        if (row.error || xpRow.error) return jsonError(res, 500, 'db_error', 'Result saved but account progress could not be loaded');
+        return res.json({ data: row.data, xp: xpRow.data, applied: data === true });
       }
 
       const picture =
@@ -407,49 +363,10 @@ async function categoryStats(req: VercelRequest, res: VercelResponse) {
 
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
-
-  const body = (req.body || {}) as { by_category?: unknown };
-  if (!body.by_category || typeof body.by_category !== 'object' || Array.isArray(body.by_category)) {
-    return jsonError(res, 400, 'bad_request', 'by_category must be an object');
-  }
-
-  const cleaned: Record<string, { correct: number; total: number }> = {};
-  for (const [cat, raw] of Object.entries(body.by_category as Record<string, unknown>)) {
-    if (!STATS_CATEGORIES.has(cat)) continue;
-    if (!raw || typeof raw !== 'object') continue;
-    const r = raw as { correct?: unknown; total?: unknown };
-    if (
-      typeof r.correct !== 'number' ||
-      typeof r.total !== 'number' ||
-      !Number.isInteger(r.correct) ||
-      !Number.isInteger(r.total) ||
-      r.correct < 0 ||
-      r.total <= 0 ||
-      r.correct > r.total ||
-      r.total > 100
-    ) {
-      continue;
-    }
-    cleaned[cat] = { correct: r.correct, total: r.total };
-  }
-
-  if (Object.keys(cleaned).length === 0) {
-    return res.json({ ok: true, applied: 0 });
-  }
-
-  const { error } = await withTimeout(
-    supabase!.rpc('record_category_stats', {
-      p_user_id: userId,
-      p_breakdown: cleaned,
-    }),
+  return jsonError(
+    res,
+    409,
+    'verified_result_required',
+    'Category statistics are recorded only from a server-verified quiz result',
   );
-
-  if (error) {
-    if (isRpcMissing(error)) {
-      return res.json({ ok: true, applied: 0, warning: 'rpc_missing' });
-    }
-    return jsonError(res, 500, 'db_error', 'Could not record category stats');
-  }
-
-  return res.json({ ok: true, applied: Object.keys(cleaned).length });
 }

@@ -6,8 +6,11 @@
 // here so there is a single source of truth.
 
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
+import { AsyncLocalStorage } from 'node:async_hooks';
+import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { AuthError, requireAuth } from './auth';
+import { SUBJECT_SCOPE_CATALOG } from '../shared/subject-catalog';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -17,6 +20,26 @@ const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || ANON_KEY;
 
 // No browser session to persist or refresh in a serverless function.
 const SERVER_SIDE_AUTH = { auth: { persistSession: false, autoRefreshToken: false } } as const;
+const requestContext = new AsyncLocalStorage<{ requestId: string }>();
+
+function incomingRequestId(req: VercelRequest): string {
+  const raw = req.headers['x-request-id'] ?? req.headers['x-vercel-id'];
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  return typeof value === 'string' && /^[A-Za-z0-9._:/-]{6,128}$/.test(value)
+    ? value
+    : randomUUID();
+}
+
+/** Give every handler/log/error a correlation id without logging request bodies. */
+export function withRequestContext<T>(
+  req: VercelRequest,
+  res: VercelResponse,
+  run: () => T,
+): T {
+  const requestId = incomingRequestId(req);
+  res.setHeader('X-Request-Id', requestId);
+  return requestContext.run({ requestId }, run);
+}
 
 /**
  * Client for endpoints that read/write a user's own private rows. Prefers the
@@ -40,12 +63,19 @@ export function createAnonClient(): SupabaseClient | null {
 
 /** Send the app's standard `{ error: { code, message } }` JSON error response. */
 export function jsonError(res: VercelResponse, status: number, code: string, message: string) {
-  return res.status(status).json({ error: { code, message } });
+  return res.status(status).json({
+    error: { code, message, ...(requestContext.getStore()?.requestId ? { requestId: requestContext.getStore()!.requestId } : {}) },
+  });
 }
 
 /** Emit one structured single-line JSON log entry (Vercel ingests this natively). */
 export function logEvent(route: string, event: Record<string, unknown>) {
-  console.log(JSON.stringify({ ts: new Date().toISOString(), route, ...event }));
+  console.log(JSON.stringify({
+    ts: new Date().toISOString(),
+    route,
+    ...(requestContext.getStore()?.requestId ? { request_id: requestContext.getStore()!.requestId } : {}),
+    ...event,
+  }));
 }
 
 /** A logEvent bound to a fixed route, e.g. `const log = createLogger('quiz/submit')`. */
@@ -100,71 +130,6 @@ export async function requireAuthSub(
 }
 
 // Categories that count toward stats and leaderboards.
-export const STATS_CATEGORIES = new Set([
-  'html',
-  'css',
-  'javascript',
-  'typescript',
-  'react',
-  'nodejs',
-  'nextjs',
-  'git',
-  'dsa',
-  'algorithms',
-  'abbreviations',
-  'general',
-  'dev-world',
-  'code-snippets',
-  // Geography
-  'continents', 'capitals', 'flags', 'landforms', 'climate', 'population', 'political', 'economic', 'cartography', 'earth',
-  // Math
-  'arithmetic', 'fractions', 'prealgebra', 'algebra', 'geometry', 'trigonometry', 'statistics', 'precalculus', 'calculus', 'linear-algebra',
-  // History
-  'prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern',
-  // Chess
-  'openings', 'tactics', 'strategy', 'endgames', 'combinations',
-  // Math (advanced)
-  'discrete-math',
-  'number-theory',
-  'multivariable-calculus',
-  'differential-equations',
-  'real-analysis',
-  // Geography (advanced)
-  'geomorphology',
-  'oceanography',
-  'biogeography',
-  'geopolitics',
-  'gis',
-  // History (thematic)
-  'historiography',
-  'history-of-science',
-  'economic-history',
-  'intellectual-history',
-  'military-history',
-  // Human Biology
-  'cell-biology',
-  'skeletal-system',
-  'muscular-system',
-  'nervous-system',
-  'endocrine-system',
-  'cardiovascular-system',
-  'respiratory-system',
-  'digestive-system',
-  'immune-system',
-  'reproductive-system',
-  // Chess (advanced)
-  'opening-theory',
-  'middlegame',
-  'pawn-structures',
-  'endgame-technique',
-  'chess-history',
-  // Poker
-  'positions',
-  'starting-hands',
-  'pot-odds',
-  'betting-strategy',
-  'postflop',
-  'tournament-play',
-  'psychology',
-  'gto-advanced',
-]);
+export const STATS_CATEGORIES: ReadonlySet<string> = new Set(
+  Object.values(SUBJECT_SCOPE_CATALOG).flatMap((subject) => [...subject.categories]),
+);

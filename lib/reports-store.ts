@@ -9,15 +9,9 @@
 
 import { createServiceClient, withTimeout } from './http';
 import { getEffectiveQuestionsById } from './questions-store';
-import { questions as baseQuestions } from './quiz-data';
 
 const supabase = createServiceClient();
 const TABLE = 'question_reports';
-
-// Base bank covers every built-in question (including ones soft-hidden via an
-// override, which stay in the base array), so a flag still shows its text after
-// the owner hides it. Custom (dev-*) questions are resolved from the live set.
-const baseById = new Map(baseQuestions.map((q) => [q.id, q]));
 
 const summarize = (text: string): string => {
   const beforeCode = text.split('```')[0].replace(/\s+/g, ' ').trim();
@@ -59,7 +53,7 @@ export async function listReports(limit = 300): Promise<AdminReport[]> {
 
   const effective = await getEffectiveQuestionsById();
   const summaryFor = (id: string): string | null => {
-    const q = baseById.get(id) ?? effective.get(id);
+    const q = effective.get(id);
     return q ? summarize(q.question) : null;
   };
 

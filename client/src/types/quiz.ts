@@ -16,6 +16,7 @@ export interface QuizResult {
   totalQuestions: number;
   correctAnswers: number;
   percentage: number;
+  questXp: number;
   resultReceipt?: string;
   results: {
     questionId: string;
@@ -72,16 +73,14 @@ export interface RoadmapStructure {
   structure: Record<RoadmapTopic, RoadmapTopicStructure>;
 }
 
-// A playable roadmap question. Unlike the competitive quiz, the learning path
-// ships the correct answer + explanation so the client can grade instantly.
+// A playable roadmap question. Correct answers stay server-side until this
+// specific question has been submitted.
 export interface RoadmapQuestion {
   id: string;
   tags: string[];
   introduction: string;
   question: string;
   options: string[];
-  correctAnswer: number;
-  explanation: string;
   category: CategoryType;
   difficulty: 1 | 2 | 3 | 4 | 5;
 }
@@ -95,5 +94,25 @@ export interface RoadmapPlayable {
   title: string;
   difficulty?: 1 | 2 | 3 | 4 | 5;
   passPct: number;
+  sessionId: string;
   questions: RoadmapQuestion[];
+}
+
+export interface RoadmapAnswerResult {
+  selectedIndex: number;
+  correctAnswer: number;
+  isCorrect: boolean;
+  explanation: string;
+}
+
+export interface RoadmapCompletionResult {
+  correctAnswers: number;
+  totalQuestions: number;
+  percentage: number;
+  passed: boolean;
+  applied: boolean;
+  progress?: Partial<Record<RoadmapTopic, {
+    levels: Record<string, { passed: boolean; bestPct: number }>;
+    checkpoints: Record<string, { passed: boolean; bestPct: number }>;
+  }>>;
 }

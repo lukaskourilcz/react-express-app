@@ -6,7 +6,7 @@ One web codebase powers two deliberately separate products: **StudyShark** for g
 >
 > 💰 For hosting tiers, current costs, and a scaling analysis, see **[`stack-and-scaling.md`](./stack-and-scaling.md)**.
 
-The operational source of truth is the [launch runbook](./docs/launch-runbook.md). It includes the deployment matrix, required migration, smoke tests, rollback steps, support/AI gates, and exact preflight command. See [backup and restore](./docs/backup-restore.md) and [privacy-conscious growth measurement](./docs/growth-metrics.md) for the adjacent procedures.
+The operational source of truth is the [launch runbook](./docs/launch-runbook.md). It includes the deployment matrix, required migrations, smoke tests, rollback steps, support/AI gates, and exact preflight command. See [product architecture](./docs/product-architecture.md), [backup and restore](./docs/backup-restore.md), and [privacy-conscious growth measurement](./docs/growth-metrics.md) for the adjacent procedures.
 
 ---
 
@@ -47,7 +47,10 @@ The operational source of truth is the [launch runbook](./docs/launch-runbook.md
 
 ### Career / skill roadmap
 - A guided **learning roadmap** (`/roadmap`) with topic tracks, levels, and unlocks.
-- A **skill-check** assessment that can grant extra topic unlocks; progress + unlocks sync to Supabase (`roadmap_progress`, including a JSONB `extra` for unlocks).
+- Level/checkpoint answer keys remain in encrypted server envelopes; the first
+  answer is recorded server-side and account progress is completed atomically.
+- A **skill-check** assessment can grant extra topic unlocks; legacy extras stay
+  compatible in `roadmap_progress.extra` while scored completion is verified.
 
 ### Daily challenge
 - A **deterministic question set per UTC date**, the same for every user, so daily leaderboards are comparable (seeded shuffle).
@@ -68,13 +71,13 @@ The operational source of truth is the [launch runbook](./docs/launch-runbook.md
 - Save questions as **per-user flashcards** (`flashcards` table) to revisit later.
 
 ### Leaderboards
-- **Global all-time** (by total correct), **daily** (by the daily challenge), and **per-category** (by accuracy, with a min-attempts threshold to filter noise).
+- **Subject all-time**, **subject daily**, and **per-category** rankings. devShark and StudyShark subjects never share a competitive leaderboard.
 - 60 s edge cache + 5-minute stale-while-revalidate, so leaderboard traffic barely touches the DB.
 
 ### Profile, stats & progression
 - Total quizzes, total correct, accuracy, current/longest streak.
 - **UTC-anchored streaks** updated atomically in Postgres (no client timezone drift).
-- **XP & leveling** (`user_xp`) and **achievements**.
+- **Subject-scoped XP & leveling** (`user_xp`) and **achievements**, awarded from server-verified result receipts.
 - A simple **shop** for spending earned currency on cosmetic/profile items.
 - **Bookmarks** for questions to revisit (client-side).
 
@@ -83,7 +86,8 @@ The operational source of truth is the [launch runbook](./docs/launch-runbook.md
 - **Questions** — grouped by category, searchable by text/tag/id, with **edit**, **hide** (restorable soft-delete), **bulk-hide by importance**, **revert**, and **create**. Edits are stored as *overrides* in Supabase (`question_edits`) and merged onto the static bank at serve time; if the DB is unavailable the app falls back to the static bank unchanged.
 - **Bilingual editing** — English + Čeština tabs per question (question, options, intro, explanation). Czech options stay parallel to English so grading remains correct; blank Czech fields fall back to English.
 - **Importance editing** — set each question's resolved importance (1–10), which drives weighted selection.
-- **Reports triage** and an **auth-events log** view.
+- **Reports triage**, an **auth-events log**, and deterministic **Quality** checks
+  for ambiguity, distractors, duplicates, freshness, importance, and EN/CS parity.
 - **Settings** — edit quiz/daily/play counts, time limits, option lists, feature toggles, and owner email (`app_settings`). The public `/api/settings` endpoint lets the client hide disabled features.
 - **Security note:** legacy shared-password access is development-only unless explicitly re-enabled. Production should use identity-based admin roles.
 
@@ -252,6 +256,11 @@ The `VITE_` prefix exposes a variable to the client bundle at build time; the re
 | `VITE_SENTRY_DSN` | optional | client | Enables Sentry error/perf monitoring; omit to disable (the SDK is then tree-shaken out). |
 | `VITE_LOCK_SUBJECT` | optional | client | Standalone single-subject mode. Set to a subject id (`webdev`, `geography`, `math`, `history`, `chess`, `biology`, `poker`) to lock the whole app to it — no picker/switcher, standalone wordmark (e.g. devShark). Unset on the umbrella StudyShark deploy. |
 | `VITE_SIBLING_URL` | optional | client | URL of the umbrella StudyShark site. When set (typically on a locked deploy) the Profile shows an "Explore the other Shark platforms" link. |
+| `VITE_STUDYSHARK_URL`, `VITE_DEVSHARK_URL`, `VITE_GEOSHARK_URL`, `VITE_MATHSHARK_URL`, `VITE_HISTORYSHARK_URL`, `VITE_BIOSHARK_URL`, `VITE_CHESSSHARK_URL`, `VITE_POKERSHARK_URL` | optional | client | Canonical sibling URLs. Empty product URLs render as “Coming soon,” never dead links. |
+| `SUPPORT_ENABLED` + `SUPPORT_*` | optional | server | Enables truthful voluntary-support copy/cost meter. Disabled by default; never changes access or scores. |
+| `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | recommended | server | Distributed endpoint-specific rate limiting; bounded in-memory fallback otherwise. |
+| `AI_EXPLANATIONS_ENABLED`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `AI_DAILY_GENERATION_LIMIT` | optional | server | Post-answer cached explanations. All four gates are required; the daily generation limit is claimed atomically. |
+| `QUESTION_QUALITY_ASSISTANT_ENABLED` | optional | server | Allows admins to store deterministic quality/parity findings separately from live content. |
 
 > Note: there is **no Auth0** in this project. Identity is handled entirely by Supabase Auth; older Auth0 references have been removed.
 
@@ -259,7 +268,7 @@ The `VITE_` prefix exposes a variable to the client bundle at build time; the re
 
 ## Database setup
 
-Apply the SQL files **in order** in the Supabase SQL Editor — `supabase-schema.sql` (baseline) then `supabase-schema-002.sql` … `supabase-schema-019.sql`. They use `IF NOT EXISTS` / guarded blocks so re-running is safe, but **order matters** (later migrations add columns to earlier tables).
+Apply the SQL files **in order** in the Supabase SQL Editor — `supabase-schema.sql` (baseline) then `supabase-schema-002.sql` … `supabase-schema-022.sql`. They use idempotent definitions where possible, but **order matters** (later migrations add columns and functions to earlier tables). Back up first and follow the launch runbook.
 
 Quick map of what each migration adds:
 
@@ -283,6 +292,9 @@ Quick map of what each migration adds:
 | 016–017 | indexes / RLS / function refinements |
 | 018 | `challenge_scores` |
 | 019 | `roadmap_progress.extra` JSONB (skill-check unlocks) |
+| 020 | subject-scoped XP and leaderboard RPC |
+| 021 | verified quiz receipts, explanation cache, hardened browser writes, account erasure |
+| 022 | verified XP/daily/roadmap/skill-check progression, per-question history/review, AI budget, quality suggestions |
 
 Then enable **Realtime** on `matches`, `match_participants`, and `match_answers` (Supabase Studio → Database → Replication / the `supabase_realtime` publication), or live multiplayer won't update.
 
@@ -311,13 +323,13 @@ All endpoints return JSON; errors come back as `{ "error": { "code": "string", "
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | `GET` | `/api/health` | none | Liveness + Supabase reachability. |
-| `GET` | `/api/quiz/questions?category=&difficulty=&count=` | none | N importance-weighted, shuffled questions + opaque session token. `private, no-store`. |
+| `GET` | `/api/quiz/questions?categories=&difficulty=&count=` | none/required for `resource=review` | N importance-weighted, shuffled questions + opaque session token; deterministic weak-area review when authenticated. `private, no-store`. |
 | `POST` | `/api/quiz/submit` | none (session-bound) | `{ sessionId, answers: { [questionId]: index }, lang? }` — verifies the authenticated envelope; returns per-question results + explanations. |
 | `POST` | `/api/quiz/submit?resource=report` | optional | `{ question_id, reason, detail? }` — flag a question (the report endpoint is folded in here to stay under the 12-function cap). |
 | `GET` | `/api/quiz/daily?date=YYYY-MM-DD` | none | Daily challenge for the date (default today). `private, max-age=300`. |
 | `GET`/`POST` | `/api/quiz/challenge` | mixed | Challenge-mode questions / scoreboard. Public reads `s-maxage=15` SWR; writes are auth'd + `no-store`. |
-| `GET`/`POST` | `/api/quiz/roadmap` | mixed | Roadmap structure (`public, max-age=60`) and authenticated progress sync (`private, no-store`). |
-| `GET`/`POST` | `/api/user/[op]` | required | `stats`, `category-stats`, `xp`, `streak`, profile — subject comes from the verified JWT. |
+| `GET`/`POST`/`PUT` | `/api/quiz/roadmap` | mixed | Roadmap structure plus server-verified answer/completion actions and authenticated progress/extras sync. |
+| `GET`/`POST`/`DELETE` | `/api/user/[op]` | required | `stats`, `xp`, `streak`, auth events, and account deletion; score/XP mutations require a server receipt. |
 | `GET` | `/api/leaderboard?period=global\|daily\|category&…` | none | Public leaderboards. `s-maxage=60` + SWR 300. |
 | `*` | `/api/flashcards` | required | Manage per-user flashcards. |
 | `POST` | `/api/play/[action]` (`create`/`join`/`control`/`answer`/`heartbeat`) | required | Create/join/run a match; server computes the speed bonus and guards against double-advance. |
@@ -325,7 +337,7 @@ All endpoints return JSON; errors come back as `{ "error": { "code": "string", "
 | `GET` | `/api/settings` | none | Public read-only game config (counts, time options, feature flags). `s-maxage=15` + SWR. |
 | `GET`/`POST` | `/api/admin/[op]` | admin bearer token | `questions`/`save`/`delete`/`bulkhide`/`reset`/`reports`/`logs`/`settings` — gated by verified role/email. |
 
-Every Supabase call is wrapped in a 5-second timeout so a hung Postgres can't burn the full 10-second Vercel function slot.
+External calls use short, operation-specific deadlines so a hung dependency does not consume the full serverless invocation.
 
 ---
 
@@ -361,13 +373,13 @@ Every Supabase call is wrapped in a 5-second timeout so a hung Postgres can't bu
 - **Idempotent answer writes** — `match_answers` is unique on `(match_id, sub, question_idx)`; the API upserts so retries replace rather than duplicate.
 - **Conditional state transitions** — match `control` updates only if `(status, current_index)` are unchanged since the read, avoiding double-advance on concurrent host clicks.
 - **Stale-match auto-finish** — `state` flips `running → finished` when the last heartbeat is older than ~5 minutes.
-- **Structured logs** — single-line `console.log(JSON.stringify({ ts, route, … }))` from every handler, queryable in Vercel's log explorer.
+- **Structured logs** — single-line JSON events include a propagated/generated request ID and sanitized route/action context, queryable in Vercel's log explorer.
 - **Realtime → polling fallback** — the client falls back to periodic polling when Realtime isn't pushing updates.
 - **Error monitoring** — `@sentry/react` is wired in the client (opt-in via `VITE_SENTRY_DSN`, 10% trace sampling). Server handlers currently log to Vercel only.
 - **`ErrorBoundary`** wraps the app shell; unhandled component errors render a recovery screen instead of a blank page.
 - **`/api/health`** for uptime monitors.
 
-Known gaps (intentional, see roadmap): no app-layer rate limiting; no server-side error aggregation; `/api/health` returns `200` even when Supabase is down (should return `503`).
+`/api/health` returns `503` when the required Supabase check fails. Server-side error aggregation remains Vercel-log based; client monitoring is optional through Sentry.
 
 ---
 
@@ -379,13 +391,10 @@ In place:
 - **CDN caching** on public reads (leaderboards `s-maxage=60`+SWR; settings/challenge `s-maxage=15`+SWR) so they barely touch the DB.
 - **O(1) question lookup** in `/api/quiz/submit` via a precomputed `Map`.
 - **Concurrent Supabase reads** in match `state`.
-- **In-memory caches** for the question bank and settings on warm serverless instances.
-
-Documented follow-ups (in `SETUP_AND_RECOMMENDATIONS.md`):
-- `react-syntax-highlighter` ships ~280 KB gzip of Prism languages though only ~8 are used → switch to `prism-light` + `registerLanguage` (~200 KB gzip saved).
-- The ~2 MB question bank is **re-parsed on every cold start** → emit a build-time JSON asset and lazy-load the Czech bank only when `lang=cs`.
-- Add `Cache-Control: public, max-age=31536000, immutable` for hashed `/assets/*`.
-- Convert the non-atomic XP read-modify-write and the JS-side report counting to RPCs.
+- **Deployment-aware question chunks** load only allowed subjects and stay cached
+  on warm instances; answer keys remain server-only.
+- **Prism light** registers only the languages used by current content.
+- **In-memory caches** cover effective questions and settings on warm instances.
 
 ---
 
@@ -429,14 +438,14 @@ Today the app runs on free tiers (Vercel Hobby + Supabase Free + opt-in Sentry) 
 
 ## Roadmap / known gaps
 
-Flagged in the codebase / audit docs and not yet wired:
-
-- **Rate limiting** — Upstash + `@upstash/ratelimit` on the anonymous report endpoint and mutating routes.
-- **Multiplayer transport** — replace HTTP polling with Supabase Realtime subscriptions (+ `s-maxage=1` on `play/state`).
-- **Cold-start cost** — precompile the question bank to JSON; lazy-load the Czech bank.
-- **Lighter syntax highlighter** — `prism-light` / `registerLanguage` to save ~200 KB gzip.
-- **Atomic writes** — convert XP updates and report counts to RPCs.
-- **Health endpoint** — return `503` when Supabase is down so uptime monitors detect outages.
+- Production must apply migrations 021/022 before verified progression and AI
+  generation can be enabled.
+- The quality assistant is deliberately deterministic in v1; human approval is
+  required before any live question edit.
+- Legal/accounting review, production domains/provider accounts, and hosting-plan
+  suitability remain owner actions before voluntary support is activated.
+- The client still has opportunities for further route/vendor chunk tuning; use
+  measured bundle changes rather than an uncontrolled dependency upgrade.
 
 ---
 

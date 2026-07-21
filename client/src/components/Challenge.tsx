@@ -15,6 +15,7 @@ import { AppToast } from './ui/AppToast';
 import { apiFetch, friendlyError } from '../lib/api';
 import {
   fetchChallengeBatch,
+  completeChallengeRun,
   submitChallengeScore,
   type ChallengeLeaderboard,
 } from '../lib/challengeApi';
@@ -34,7 +35,7 @@ import { MotionPop } from '../lib/motion';
 import { SharkFin } from './SharkFin';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
-import { awardQuestXp } from '../lib/xp';
+import { awardQuestXp, syncXpWithServer } from '../lib/xp';
 import { challengeRunXp } from '../lib/leveling';
 import { SwimCta } from './landing/LandingKit';
 import './DeepEndScreens.css';
@@ -351,12 +352,18 @@ export default function Challenge() {
     if (phase === 'gameover' && !awardedRef.current) {
       awardedRef.current = true;
       awardQuestXp(challengeRunXp(score), 'quiz');
+      if (user && runTokenRef.current) {
+        void completeChallengeRun({
+          runToken: runTokenRef.current,
+          proofs: scoreProofsRef.current,
+        }).then(() => syncXpWithServer()).catch(() => {});
+      }
     }
     // Announce the run's end to AT by moving focus to the game-over heading.
     if (phase === 'gameover') {
       requestAnimationFrame(() => gameOverHeadingRef.current?.focus());
     }
-  }, [phase, score]);
+  }, [phase, score, user]);
 
   /* ─── keyboard during play ──────────────────────────────────── */
 

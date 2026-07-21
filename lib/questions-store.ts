@@ -6,8 +6,8 @@
 // overrides onto the static base so the live quiz reflects admin edits, while
 // always falling back to the unmodified base set if the DB is unavailable.
 
-import { questions as baseQuestions, type Question, type CategoryType, type QuestionTranslation } from './quiz-data';
-import { questionTranslationsCs } from './quiz-data.cs';
+import type { Question, CategoryType, QuestionTranslation } from './quiz-data';
+import { loadDeploymentQuestionBank } from './question-bank-loader';
 import { createServiceClient, withTimeout } from './http';
 import { computeImportance, clampImportance } from './importance';
 
@@ -178,7 +178,7 @@ function mergeRow(row: QuestionEditRow, base?: Question): Question {
     ? csOverride
     : hasEnglishEdit(row)
       ? null
-      : undefined;
+      : base?.csTranslation ?? null;
   const merged: Question = {
     id: row.question_id,
     tags: row.tags ?? base?.tags ?? [],
@@ -213,7 +213,7 @@ async function loadOverrides(): Promise<Map<string, QuestionEditRow> | null> {
   }
 }
 
-function buildEffective(overrides: Map<string, QuestionEditRow>): Question[] {
+function buildEffective(baseQuestions: Question[], overrides: Map<string, QuestionEditRow>): Question[] {
   const list: Question[] = [];
   for (const base of baseQuestions) {
     const ov = overrides.get(base.id);
@@ -230,9 +230,14 @@ let cache: { at: number; list: Question[]; byId: Map<string, Question> } | null 
 
 async function effective(): Promise<{ list: Question[]; byId: Map<string, Question> }> {
   if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache;
+  const bank = await loadDeploymentQuestionBank();
+  const baseQuestions = bank.questions.map((question) => ({
+    ...question,
+    csTranslation: bank.translations[question.id] ?? null,
+  }));
   const overrides = await loadOverrides();
   // No DB / overrides: still attach a resolved importance to every base question.
-  const list = overrides ? buildEffective(overrides) : baseQuestions.map(withImportance);
+  const list = overrides ? buildEffective(baseQuestions, overrides) : baseQuestions.map(withImportance);
   const byId = new Map(list.map((q) => [q.id, q]));
   cache = { at: Date.now(), list, byId };
   return cache;
@@ -261,7 +266,7 @@ export function invalidateQuestionsCache() {
 // The Czech text to pre-fill the editor with: the db override if present, else
 // the static cs bank, with options aligned to the current English option count.
 function csFieldsFor(q: Question, row?: QuestionEditRow): CsFields {
-  const tr = (row && csOverrideFromRow(row)) ?? questionTranslationsCs[q.id] ?? {};
+  const tr = (row && csOverrideFromRow(row)) ?? q.csTranslation ?? {};
   return {
     question: tr.question ?? '',
     options: q.options.map((_, i) => tr.options?.[i] ?? ''),
@@ -271,6 +276,11 @@ function csFieldsFor(q: Question, row?: QuestionEditRow): CsFields {
 }
 
 export async function listAdminQuestions(): Promise<AdminQuestion[]> {
+  const bank = await loadDeploymentQuestionBank();
+  const baseQuestions = bank.questions.map((question) => ({
+    ...question,
+    csTranslation: bank.translations[question.id] ?? null,
+  }));
   const overrides = (await loadOverrides()) ?? new Map<string, QuestionEditRow>();
   const out: AdminQuestion[] = [];
   for (const base of baseQuestions) {

@@ -28,7 +28,7 @@ export interface ChallengeLeaderboard {
   champion: ChallengeScore | null;
 }
 
-export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string; runToken?: string; ranked?: boolean } = {}): Promise<ChallengeBatch> {
+export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string; runToken?: string; ranked?: boolean; assessment?: boolean } = {}): Promise<ChallengeBatch> {
   const params = new URLSearchParams();
   if (opts.exclude && opts.exclude.length > 0) {
     // Cap the exclude payload — the server caps too, but no need to send more.
@@ -37,6 +37,7 @@ export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string; r
   if (opts.lang) params.set('lang', opts.lang);
   if (opts.runToken) params.set('runToken', opts.runToken);
   if (opts.ranked === false) params.set('ranked', '0');
+  if (opts.assessment) params.set('resource', 'assessment');
   // Scope the challenge mix to the active subject so a Geography challenge never
   // surfaces a Chess question.
   params.set('categories', categoriesForSubject(getSubject()).join(','));
@@ -45,11 +46,22 @@ export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string; r
 }
 
 export function getChallengeLeaderboard(): Promise<ChallengeLeaderboard> {
-  return apiFetch<ChallengeLeaderboard>('/api/quiz/challenge?resource=leaderboard');
+  const params = new URLSearchParams({
+    resource: 'leaderboard',
+    categories: categoriesForSubject(getSubject()).join(','),
+  });
+  return apiFetch<ChallengeLeaderboard>(`/api/quiz/challenge?${params}`);
 }
 
 export function submitChallengeScore(input: { name: string; runToken: string; proofs: string[] }): Promise<{ ok: true; record: ChallengeScore | null }> {
   return apiFetch<{ ok: true; record: ChallengeScore | null }>('/api/quiz/challenge', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+export function completeChallengeRun(input: { runToken: string; proofs: string[] }): Promise<{ ok: true; awarded: boolean; score: number; xp?: number }> {
+  return apiFetch('/api/quiz/challenge?resource=complete', {
     method: 'POST',
     body: JSON.stringify(input),
   });

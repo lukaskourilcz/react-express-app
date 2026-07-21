@@ -40,8 +40,7 @@ import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useSettings, playCorrect, playComplete } from '../lib/settings';
 import { recordPerfectQuiz } from '../lib/achievements';
-import { awardQuestXp } from '../lib/xp';
-import { computeQuizXp, CHALLENGE_MIN_XP } from '../lib/leveling';
+import { announceVerifiedQuestXp, awardQuestXp, syncXpWithServer } from '../lib/xp';
 import { useGameConfig } from '../lib/gameConfig';
 import { ReportDialog } from './ReportDialog';
 import { capture } from '../lib/analytics';
@@ -50,15 +49,21 @@ import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { CategoryGlyph } from './ui/techIcons';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { createResultShareFile, downloadShareFile } from '../lib/shareCard';
+import {
+  SUPPORT_PROMPT_KEY,
+  disableSupportPrompt,
+  dismissSupportPrompt,
+  recordSupportMilestone,
+  type SupportPromptPreference,
+} from '../lib/supportPrompt';
 import './Quiz.css';
 
-type QuizMode = 'standard' | 'daily';
+type QuizMode = 'standard' | 'daily' | 'review';
+type ReviewWeakArea = { category: CategoryType; accuracyPct: number; answered: number; focusTags: string[] };
 
 const DIFFICULTY_VALUES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
 const PROGRESS_KEY = 'devquiz:in-progress';
-const SUPPORT_PROMPT_KEY = 'studyshark:support-prompt';
-const SUPPORT_PROMPT_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 const SETUP_KEY = 'devquiz:quiz-setup:v1';
 
 
@@ -185,15 +190,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const { ids: bookmarks } = useBookmarks();
   const [snack, setSnack] = useState<string | null>(null);
   const [mode, setMode] = useState<QuizMode>('standard');
+  const [reviewPlan, setReviewPlan] = useState<ReviewWeakArea[]>([]);
   const [reportTarget, setReportTarget] = useState<string | null>(null);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
-  const [supportCompletions, setSupportCompletions] = useState(() =>
-    readJSON<{ completions?: number }>(SUPPORT_PROMPT_KEY, {}).completions ?? 0,
-  );
-  const [supportPromptDismissed, setSupportPromptDismissed] = useState(() => {
-    const state = readJSON<{ dismissedUntil?: number }>(SUPPORT_PROMPT_KEY, {});
-    return (state.dismissedUntil ?? 0) > Date.now();
-  });
+  const [showSupportPrompt, setShowSupportPrompt] = useState(false);
   const [settings] = useSettings();
 
   const resultHeadingRef = useRef<HTMLDivElement | null>(null);
@@ -316,6 +316,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         setSessionId(data.sessionId);
         setQuestions(data.questions);
         setAnswers({});
+        setReviewPlan([]);
         setCurrentIndex(0);
         setMode('standard');
         setState('in-progress');
@@ -352,6 +353,45 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setState('error');
     }
   }, [lang, t]);
+
+  const startPersonalizedReview = useCallback(async () => {
+    fetchAbortRef.current?.abort();
+    const controller = new AbortController();
+    fetchAbortRef.current = controller;
+    setState('loading');
+    setError(null);
+    const startedAt = Date.now();
+    try {
+      const categories = visibleCategoryOptions.map((option) => option.value);
+      const params = new URLSearchParams({
+        resource: 'review',
+        count: String(Math.min(10, config.quiz.maxCount)),
+        difficulty: 'mixed',
+        categories: categories.join(','),
+        lang,
+      });
+      const data = await apiFetch<{
+        sessionId: string;
+        questions: Question[];
+        reviewPlan?: ReviewWeakArea[];
+      }>(`/api/quiz/questions?${params}`, { signal: controller.signal });
+      await holdLoadingScreen(startedAt);
+      if (controller.signal.aborted) return;
+      if (!data.questions?.length) throw new Error(t('quiz.noQuestions'));
+      setSessionId(data.sessionId);
+      setQuestions(data.questions);
+      setAnswers({});
+      setReviewPlan(data.reviewPlan ?? []);
+      setCurrentIndex(0);
+      setMode('review');
+      capture('quiz_started', { mode: 'review', question_count: data.questions.length });
+      setState('in-progress');
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setError(friendlyError(error));
+      setState('error');
+    }
+  }, [config.quiz.maxCount, lang, t, visibleCategoryOptions]);
 
   const handleStart = () => {
     setAttemptedStart(true);
@@ -441,46 +481,44 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         correct: data.correctAnswers,
         total: data.totalQuestions,
       });
-      const supportState = readJSON<{ completions?: number; dismissedUntil?: number }>(SUPPORT_PROMPT_KEY, {});
-      const nextCompletions = Math.min(1000, (supportState.completions ?? 0) + 1);
-      writeJSON(SUPPORT_PROMPT_KEY, { ...supportState, completions: nextCompletions });
-      setSupportCompletions(nextCompletions);
-      if (data.percentage === 100) recordPerfectQuiz();
-
-      // Award quest XP for the quiz, scaled by each correct answer's difficulty.
-      // Local-first: XP accrues even when signed out and syncs on sign-in.
-      const diffById = new Map(questions.map((q) => [q.id, q.difficulty]));
-      const gained = computeQuizXp(
-        data.results.map((r) => ({ difficulty: diffById.get(r.questionId) ?? 1, correct: r.isCorrect })),
+      const supportState = readJSON<SupportPromptPreference>(SUPPORT_PROMPT_KEY, {});
+      const supportMilestone = recordSupportMilestone(
+        supportState,
+        data.percentage,
+        config.support.enabled,
       );
-      // The daily challenge always pays out at least a floor (XP + tokens) so
-      // finishing it is never empty-handed; a normal quiz rewards only what was
-      // earned from correct answers.
-      const award = mode === 'daily' ? Math.max(gained, CHALLENGE_MIN_XP) : gained;
-      if (award > 0) awardQuestXp(award, 'quiz');
+      writeJSON(SUPPORT_PROMPT_KEY, supportMilestone.state);
+      setShowSupportPrompt(supportMilestone.show);
+      if (data.percentage === 100) recordPerfectQuiz();
 
       if (isAuthenticated && user?.id) {
         if (!data.resultReceipt) {
           setSnack(t('quiz.streakWarning'));
         } else {
           try {
-            await recordQuizResult(data.resultReceipt, {
+            const saved = await recordQuizResult(data.resultReceipt, {
               email: profile.email,
               name: profile.name,
               picture: profile.picture,
             });
+            await syncXpWithServer();
+            if (saved.applied) announceVerifiedQuestXp(data.questXp);
           } catch (writeError) {
             console.error('Stat write failed:', writeError);
             setSnack(t('quiz.streakWarning'));
           }
         }
+      } else if (data.questXp > 0) {
+        // Anonymous progress remains local. Signing in replaces it with the
+        // account's verified balance rather than uploading a client total.
+        awardQuestXp(data.questXp, 'quiz');
       }
     } catch (err) {
       setError(friendlyError(err));
     } finally {
       setSubmitting(false);
     }
-  }, [answers, clearProgress, isAuthenticated, sessionId, submitting, user, lang, t, questions, mode]);
+  }, [answers, clearProgress, config.support.enabled, isAuthenticated, sessionId, submitting, user, lang, t, questions, mode]);
 
   const handleRestart = () => {
     clearProgress();
@@ -490,6 +528,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     setAnswers({});
     setCurrentIndex(0);
     setMode('standard');
+    setReviewPlan([]);
     setError(null);
   };
 
@@ -742,6 +781,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         {/* Quick entries into the daily challenge — kept as quiet links. */}
         <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 16 }}>
           <button type="button" onClick={startDailyChallenge} style={linkBtn}>{t('quiz.todaysChallenge')}</button>
+          {isAuthenticated && (
+            <button type="button" onClick={() => void startPersonalizedReview()} style={linkBtn}>{t('quiz.reviewWeakAreas')}</button>
+          )}
           <button type="button" onClick={() => navigate('/challenge')} style={linkBtn}>{t('challenge.cta')}</button>
         </div>
 
@@ -793,6 +835,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               </Text>
             )}
 
+            {mode === 'review' && reviewPlan.length > 0 && (
+              <div style={{ position: 'relative', width: '100%', maxWidth: 520, textAlign: 'left' }}>
+                <Text weight="bold">{t('quiz.reviewPlanTitle')}</Text>
+                <Text type="supporting" size="sm" color="secondary">
+                  {reviewPlan.map((area) => `${t(categoryLabelKey(area.category))} ${area.accuracyPct}%`).join(' · ')}
+                </Text>
+              </div>
+            )}
+
             <HStack gap={1.5} justify="center" wrap="wrap" style={{ position: 'relative', marginTop: 4 }}>
               <Button variant="primary" label={t('quiz.newQuiz')} onClick={handleRestart} />
               <Button
@@ -813,7 +864,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           </div>
         </div>
 
-        {config.support.enabled && supportCompletions >= 3 && !supportPromptDismissed && (
+        {config.support.enabled && showSupportPrompt && (
           <Card variant="muted" padding={3} width="100%" className="quiz-support-prompt">
             <VStack gap={1.5}>
               <Text weight="bold">{t('quiz.supportTitle')}</Text>
@@ -825,6 +876,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   label={t('quiz.supportCta')}
                   onClick={() => {
                     capture('support_prompt_opened', { product: CURRENT_PRODUCT.id });
+                    setShowSupportPrompt(false);
                     navigate('/support');
                   }}
                 />
@@ -833,9 +885,19 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   size="sm"
                   label={t('quiz.supportDismiss')}
                   onClick={() => {
-                    const state = readJSON<{ completions?: number }>(SUPPORT_PROMPT_KEY, {});
-                    writeJSON(SUPPORT_PROMPT_KEY, { ...state, dismissedUntil: Date.now() + SUPPORT_PROMPT_COOLDOWN_MS });
-                    setSupportPromptDismissed(true);
+                    const state = readJSON<SupportPromptPreference>(SUPPORT_PROMPT_KEY, {});
+                    writeJSON(SUPPORT_PROMPT_KEY, dismissSupportPrompt(state));
+                    setShowSupportPrompt(false);
+                  }}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  label={t('quiz.supportNever')}
+                  onClick={() => {
+                    const state = readJSON<SupportPromptPreference>(SUPPORT_PROMPT_KEY, {});
+                    writeJSON(SUPPORT_PROMPT_KEY, disableSupportPrompt(state));
+                    setShowSupportPrompt(false);
                   }}
                 />
               </HStack>

@@ -1,6 +1,6 @@
 # Supabase backup, restore, and recovery drill
 
-This procedure protects the web launch database. Run it before migration 021,
+This procedure protects the web launch database. Run it before migrations 021/022,
 before destructive maintenance, and on a regular schedule appropriate to the
 Supabase plan and recovery-point objective.
 
@@ -27,11 +27,15 @@ Never test a restore over the production database.
 2. Restore the managed snapshot or logical dump using the documented Supabase
    restore mechanism for that backup type.
 3. Apply only migrations newer than the backup, in numeric order.
-4. Compare row counts for user stats, category stats, roadmap progress,
-   flashcards, matches, challenge scores, attempts, reports, and settings.
-5. Verify functions and privileges, especially `record_verified_quiz_result`,
-   `merge_user_xp`, `delete_user_data`, RLS enablement, and revoked browser
-   writes from migration 021.
+4. Compare row counts for user stats, category stats, per-question history,
+   roadmap progress/attempts, flashcards, matches, challenge/daily scores,
+   verified award/quiz ledgers, explanation caches, AI budget, reports, quality
+   suggestions, and settings.
+5. Verify functions and privileges, especially `record_verified_quiz_result_v2`,
+   `record_verified_activity_xp`, `complete_verified_roadmap_attempt`,
+   `apply_verified_skill_check`,
+   `claim_ai_generation_budget`, `delete_user_data`, RLS enablement, and revoked
+   browser writes from migrations 021/022.
 6. Point a private preview deployment at recovery, run `npm run test:launch`,
    then execute the launch smoke test without using real-user credentials.
 7. Record recovery time and achieved recovery point. Fix the procedure if

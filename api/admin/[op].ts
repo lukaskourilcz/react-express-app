@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
-import { jsonError, createLogger } from '../../lib/http';
+import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext } from '../../lib/http';
 import { requireAdmin } from '../../lib/admin-auth';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import {
@@ -13,8 +13,10 @@ import {
 import { listReports, dismissReport, reportCounts } from '../../lib/reports-store';
 import { listAuthEvents } from '../../lib/auth-events-store';
 import { getGameSettings, saveGameSettings } from '../../lib/settings-store';
+import { inspectQuestionQuality } from '../../lib/question-quality';
 
 const log = createLogger('admin');
+const supabase = createServiceClient();
 
 const MAX_TEXT = 4000;
 const MAX_OPTION = 2000;
@@ -26,7 +28,7 @@ const MIN_OPTIONS = 2;
 const boundedString = (v: unknown, max: number): string | null =>
   typeof v === 'string' && v.length > 0 && v.length <= max ? v : null;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // Anti-brute-force: at most ~1 auth attempt per second per IP, small burst.
   // Runs before password check so wrong guesses count toward the budget.
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.admin))) return;
@@ -53,6 +55,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return await logsOp(req, res);
       case 'settings':
         return await settingsOp(req, res);
+      case 'quality':
+        return await qualityOp(req, res);
       default:
         return jsonError(res, 404, 'unknown_op', `Unknown admin op: ${op}`);
     }
@@ -64,6 +68,56 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
+}
+
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return withRequestContext(req, res, () => routeHandler(req, res));
+}
+
+async function qualityOp(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  }
+  const rawCategories = typeof req.query.categories === 'string'
+    ? req.query.categories.split(',').map((value) => value.trim()).filter(Boolean)
+    : [];
+  const categorySet = new Set(rawCategories.filter((value) => (KNOWN_CATEGORIES as string[]).includes(value)));
+  const questions = (await listAdminQuestions()).filter((question) => categorySet.size === 0 || categorySet.has(question.category));
+  const issues = inspectQuestionQuality(questions);
+  const enabled = process.env.QUESTION_QUALITY_ASSISTANT_ENABLED === 'true';
+
+  if (req.method === 'POST') {
+    if (!enabled) {
+      return jsonError(res, 409, 'feature_disabled', 'Enable QUESTION_QUALITY_ASSISTANT_ENABLED to store suggestions');
+    }
+    if (!supabase) return jsonError(res, 503, 'not_configured', 'Suggestion storage is not configured');
+    let stored = 0;
+    for (let offset = 0; offset < issues.length; offset += 250) {
+      const batch = issues.slice(offset, offset + 250).map((issue) => ({
+        question_id: issue.questionId,
+        question_hash: issue.questionHash,
+        source: 'deterministic',
+        kind: issue.kind,
+        content: { severity: issue.severity, message: issue.message, suggestion: issue.suggestion },
+        status: 'pending',
+      }));
+      const result = await withTimeout(
+        supabase.from('question_quality_suggestions').upsert(batch, {
+          onConflict: 'question_id,question_hash,source,kind',
+          ignoreDuplicates: true,
+        }),
+        5000,
+      );
+      if (result.error) return jsonError(res, 500, 'db_error', 'Could not store quality suggestions');
+      stored += batch.length;
+    }
+    log({ op: 'quality', status: 200, scanned: questions.length, issues: issues.length, stored });
+    return res.json({ enabled, scanned: questions.length, issues, stored });
+  }
+
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json({ enabled, scanned: questions.length, issues });
 }
 
 async function listQuestions(req: VercelRequest, res: VercelResponse) {

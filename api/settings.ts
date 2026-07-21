@@ -1,11 +1,12 @@
 import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
-import { jsonError } from '../lib/http';
+import { jsonError, withRequestContext } from '../lib/http';
 import { getGameSettings } from '../lib/settings-store';
+import { isAiExplanationConfigured } from '../lib/ai-provider';
 
 // Public, read-only subset of the game settings, so the client can render the
 // configured count/time options and hide disabled features. Deliberately omits
 // server-only fields (e.g. ownerEmail). Falls back to defaults if the DB is down.
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
@@ -32,10 +33,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     shop: s.shop,
     support: s.support,
     ai: {
-      explanationsEnabled:
-        process.env.AI_EXPLANATIONS_ENABLED === 'true' &&
-        Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL),
+      explanationsEnabled: isAiExplanationConfigured(),
     },
     devTips: s.devTips,
   });
+}
+
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return withRequestContext(req, res, () => routeHandler(req, res));
 }

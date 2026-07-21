@@ -47,15 +47,15 @@ export async function createOrUpdateUserStats(
 export async function recordQuizResult(
   resultReceipt: string,
   profile: { email?: string; name?: string; picture?: string },
-): Promise<UserStats | null> {
-  const { data } = await apiFetch<{ data: UserStats | null }>('/api/user/stats', {
+): Promise<{ data: UserStats | null; applied: boolean }> {
+  const result = await apiFetch<{ data: UserStats | null; applied: boolean }>('/api/user/stats', {
     method: 'POST',
     body: JSON.stringify({
       result_receipt: resultReceipt,
       profile,
     }),
   });
-  return data;
+  return result;
 }
 
 export interface DailyChallenge {

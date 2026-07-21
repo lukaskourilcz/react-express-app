@@ -1,0 +1,87 @@
+# Product, brand, and deployment architecture
+
+The web repository implements separate public products on shared technology:
+
+```text
+devShark
+└── developer learning (`webdev` only)
+
+StudyShark
+├── geoShark (`geography`)
+├── mathShark (`math`)
+├── historyShark (`history`)
+├── bioShark (`biology`)
+├── chessShark (`chess`)
+└── pokerShark (`poker`)
+```
+
+devShark is a sibling product, not a StudyShark subject. The StudyShark picker
+therefore never includes `webdev`. Authentication and infrastructure may be
+shared, while every scored server flow validates one deployment and subject
+scope before selecting questions or writing progress.
+
+## Sources of truth
+
+- `client/product-catalog.ts` owns product names, relationships, localized SEO
+  copy, support variant, brand ordering, and deterministic product resolution.
+- `client/src/lib/products.ts` attaches deployment URLs and presentation data to
+  that catalog. Footer and cross-brand discovery render this registry rather
+  than maintaining separate brand lists.
+- `shared/subject-catalog.ts` owns the security-sensitive subject-to-topic and
+  subject-to-category mapping shared by browser and server code.
+- `client/src/lib/subjects.ts` adds subject presentation tokens and persisted
+  selection behavior without redefining category ownership.
+- `lib/product-scope.ts` resolves the server deployment allow-list from
+  `PRODUCT_ID`/`PRODUCT_SUBJECT` (with build-variable fallbacks).
+
+Do not introduce another brand array, URL map, category ownership map, or footer
+list. Extend these sources instead.
+
+## Deployment matrix
+
+| Deployment | Identity | Subjects | Footer |
+|---|---|---|---|
+| devShark | devShark | webdev only | All Shark brands |
+| StudyShark | StudyShark | all non-development subjects | All Shark brands |
+| geoShark | geoShark | geography only | All Shark brands |
+| mathShark | mathShark | math only | All Shark brands |
+| historyShark | historyShark | history only | All Shark brands |
+| bioShark | bioShark | biology only | All Shark brands |
+| chessShark | chessShark | chess only | All Shark brands |
+| pokerShark | pokerShark | poker only | All Shark brands |
+
+Set matching client and server identity values on every deployment. For
+devShark, use `VITE_PRODUCT=devshark`, `VITE_LOCK_SUBJECT=webdev`,
+`PRODUCT_ID=devshark`, and `PRODUCT_SUBJECT=webdev`. For the StudyShark portal,
+use `studyshark` product values and leave both subject locks unset. A locked
+general brand uses its subject in both lock variables and its product id in both
+product variables.
+
+All sibling URLs come from `VITE_*SHARK_URL`. An empty URL intentionally renders
+“Coming soon” without a dead link. Every deployment includes all seven Shark
+brands in the shared footer, marks the active brand accessibly, and links back
+to StudyShark where appropriate.
+
+## Adding a future subject
+
+1. Add the subject's unique topics/categories to `shared/subject-catalog.ts`.
+2. Add presentation metadata to `client/src/lib/subjects.ts` and product metadata
+   to `client/product-catalog.ts`.
+3. Add its environment-backed URL in `client/src/lib/products.ts`, its question
+   chunk in `lib/question-bank-loader.ts`, and its localized UI labels.
+4. Extend the database subject checks in a new forward migration; never rewrite
+   previously applied migration files in production.
+5. Add resolver, picker, footer, scope, leaderboard, roadmap, and build tests.
+
+The shared footer, picker, product resolver, metadata generator, and backend
+scope guard then consume the registries automatically; unrelated components do
+not need new product conditionals.
+
+## Compatibility and rollback
+
+Existing DevQuiz/web-development records remain `webdev`. Migration 022 assigns
+that subject to legacy daily and challenge rows, while keeping legacy total XP
+alongside the subject map. Server-verified receipts and attempts make new
+progress idempotent. Rolling application code back should leave migrations
+021/022 in place: their new columns are backward-compatible and their revoked
+browser writes are security controls.

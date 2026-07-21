@@ -7,13 +7,15 @@ import DevTriage from './DevTriage';
 import DevReports from './DevReports';
 import DevLogs from './DevLogs';
 import DevSettings from './DevSettings';
+import DevQuality from './DevQuality';
 import './DevConsole.css';
 
-type Tab = 'questions' | 'triage' | 'flags' | 'logs' | 'settings';
+type Tab = 'questions' | 'triage' | 'quality' | 'flags' | 'logs' | 'settings';
 
 const NAV: { id: Tab; label: string; description: string; icon: string }[] = [
   { id: 'questions', label: 'Question bank', description: 'Create, filter and edit', icon: '◫' },
   { id: 'triage', label: 'Quality triage', description: 'Find content to improve', icon: '◇' },
+  { id: 'quality', label: 'Parity & quality', description: 'Validate EN/CS and wording', icon: '◎' },
   { id: 'flags', label: 'Learner flags', description: 'Review reported questions', icon: '⚑' },
   { id: 'logs', label: 'Activity log', description: 'Track authentication events', icon: '≋' },
   { id: 'settings', label: 'App settings', description: 'Tune features and balance', icon: '⚙' },
@@ -89,7 +91,7 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
           </div>
 
           <section className="dev-workspace" aria-label={activeNav.label}>
-            {tab === 'questions' ? <DevQuestions /> : tab === 'triage' ? <DevTriage /> : tab === 'flags' ? <DevReports /> : tab === 'logs' ? <DevLogs /> : <DevSettings />}
+            {tab === 'questions' ? <DevQuestions /> : tab === 'triage' ? <DevTriage /> : tab === 'quality' ? <DevQuality /> : tab === 'flags' ? <DevReports /> : tab === 'logs' ? <DevLogs /> : <DevSettings />}
           </section>
         </div>
       </main>

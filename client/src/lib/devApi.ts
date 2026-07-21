@@ -177,3 +177,24 @@ export const listReports = () => adminFetch<{ reports: AdminReport[] }>('reports
 
 export const dismissReport = (id: string) =>
   adminFetch<{ ok: true }>('reports', { method: 'POST', body: { id } });
+
+export interface QuestionQualityIssue {
+  questionId: string;
+  questionHash: string;
+  kind: 'missing_translation' | 'translation_parity' | 'weak_distractor' | 'duplicate' | 'ambiguous_wording' | 'freshness_review' | 'importance_mismatch';
+  severity: 'high' | 'medium' | 'low';
+  message: string;
+  suggestion: string;
+}
+
+export interface QuestionQualityScan {
+  enabled: boolean;
+  scanned: number;
+  issues: QuestionQualityIssue[];
+  stored?: number;
+}
+
+export const scanQuestionQuality = (categories: readonly string[], store = false) =>
+  adminFetch<QuestionQualityScan>(`quality?categories=${encodeURIComponent(categories.join(','))}`, {
+    method: store ? 'POST' : 'GET',
+  });

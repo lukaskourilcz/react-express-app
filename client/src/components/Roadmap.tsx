@@ -14,15 +14,19 @@ import type {
   RoadmapLevelMeta,
   RoadmapPlayable,
   RoadmapQuestion,
+  RoadmapAnswerResult,
   RoadmapStructure,
   Question,
+  QuizResult,
 } from '../types/quiz';
 import {
   fetchRoadmapLevel,
   fetchRoadmapPartTest,
+  submitRoadmapAnswer,
+  completeRoadmapAttempt,
+  applySkillCheckReceipt,
   recordLevelResult,
   recordPartTestResult,
-  pushProgressToServer,
   syncProgressWithServer,
   useRoadmapProgress,
   isLevelPassed,
@@ -203,25 +207,14 @@ function variedConnector(x1: number, y1: number, x2: number, y2: number, index: 
   return `M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`;
 }
 
-// Build the order a lesson is shown in: both the question sequence and each
-// question's answer options are shuffled so nothing is memorisable by position.
-// `prev` (the previous presentation, on replay) is avoided so every run differs
-// from the one before — answers never stay in the same slot two plays running.
+// The server already shuffles answer options and seals their accepted indices.
+// We may vary question order locally without changing those protected indices.
 function presentQuestions(questions: RoadmapQuestion[], prev?: RoadmapQuestion[]): RoadmapQuestion[] {
-  // Reorder questions, avoiding the previous sequence (or the source order on the
-  // first play). The reference must be the same objects in the order to avoid.
   const byId = new Map(questions.map((q) => [q.id, q]));
   const reference = (prev ?? questions).map((q) => byId.get(q.id)).filter((q): q is RoadmapQuestion => !!q);
-  const ordered = reference.length === questions.length ? shuffleDifferentFrom(questions, reference) : shuffleDifferentFrom(questions, questions);
-
-  const prevOptionsById = new Map((prev ?? []).map((q) => [q.id, q.options]));
-  return ordered.map((q) => {
-    const correctText = q.options[q.correctAnswer];
-    const avoid = prevOptionsById.get(q.id) ?? q.options;
-    const options = shuffleDifferentFrom(q.options, avoid);
-    const correctAnswer = options.indexOf(correctText);
-    return { ...q, options, correctAnswer: correctAnswer >= 0 ? correctAnswer : q.correctAnswer };
-  });
+  return reference.length === questions.length
+    ? shuffleDifferentFrom(questions, reference)
+    : shuffleDifferentFrom(questions, questions);
 }
 
 // What to play after finishing `a`, within the active topic's part ranges: the
@@ -296,6 +289,7 @@ function Roadmap() {
   const [loadingLesson, setLoadingLesson] = useState(false);
   const [lessonError, setLessonError] = useState<string | null>(null);
   const lessonAbortRef = useRef<AbortController | null>(null);
+  const learningXpBeforeAttemptRef = useRef(0);
 
   // Skill check (assessment) state. `open` controls the modal; the runner
   // owns its own in-progress state until the result screen reports back.
@@ -353,8 +347,8 @@ function Roadmap() {
   };
 
   const onSkillCheckFinished = useCallback(
-    (correct: number) => {
-      const granted = topicsFromAssessment(correct);
+    (correct: number, verifiedUnlocks?: RoadmapTopic[]) => {
+      const granted = verifiedUnlocks ?? topicsFromAssessment(correct);
       const added = unlockExtraTopics(granted);
       setSkillCheckOpen(false);
       if (added.length === 0) {
@@ -363,13 +357,12 @@ function Roadmap() {
         const labels = added.map((c) => t(categoryLabelKey(c))).join(', ');
         setUnlockSnack(t('roadmap.skillCheckUnlocked', { topics: labels }));
       }
-      // Persist to the user's account so unlocks follow them across devices.
-      if (isAuthenticated && added.length > 0) pushProgressToServer().catch(() => {});
     },
-    [t, isAuthenticated],
+    [t],
   );
 
   const open = (a: Active) => {
+    learningXpBeforeAttemptRef.current = computeLearningXp(getRoadmapProgress());
     lessonAbortRef.current?.abort();
     const controller = new AbortController();
     lessonAbortRef.current = controller;
@@ -421,11 +414,10 @@ function Roadmap() {
     if (!active || !playable) return;
     // Learning XP is derived from progress, so measure it across the record to
     // reward only a NEW pass; replays/fails fall back to a small practice grant.
-    const before = computeLearningXp(getRoadmapProgress());
+    const before = learningXpBeforeAttemptRef.current;
     if (active.kind === 'level') recordLevelResult(topic, active.ref, pct, playable.passPct);
     else recordPartTestResult(topic, active.ref, pct, playable.passPct);
     awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before);
-    if (isAuthenticated) pushProgressToServer().catch(() => {});
   };
 
   // Lay the whole topic out as a serpentine: nodes flow left→right and gently
@@ -491,6 +483,7 @@ function Roadmap() {
     return (
       <SkillCheckRunner
         lang={lang}
+        isAuthenticated={isAuthenticated}
         onCancel={() => setSkillCheckOpen(false)}
         onFinished={onSkillCheckFinished}
         t={t}
@@ -524,6 +517,7 @@ function Roadmap() {
         onExit={exitLesson}
         onFinished={handleFinished}
         onNext={() => next && openNext(next)}
+        onReplay={() => open(active)}
         t={t}
         lang={lang}
       />
@@ -915,10 +909,11 @@ function HeartMeter({ mistakes, max, hit, t }: { mistakes: number; max: number; 
 }
 
 function LessonRunner({
-  playable, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, t, lang,
+  playable, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t, lang,
 }: {
   playable: RoadmapPlayable; topicColor: string; hasNext: boolean; nextLabel: string;
-  onExit: () => void; onFinished: (pct: number) => void; onNext: () => void; t: TFn; lang: string;
+  onExit: () => void; onFinished: (pct: number) => void; onNext: () => void;
+  onReplay: () => void; t: TFn; lang: string;
 }) {
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -931,11 +926,15 @@ function LessonRunner({
   const [showIntro, setShowIntro] = useState<boolean>(() => !!intro);
   // Question sequence + answer order are shuffled on every play (and re-shuffled
   // on replay, avoiding the previous layout) so positions stay unmemorisable.
-  const [presented, setPresented] = useState<RoadmapQuestion[]>(() => presentQuestions(playable.questions));
+  const [presented] = useState<RoadmapQuestion[]>(() => presentQuestions(playable.questions));
   const total = presented.length;
   const [qIndex, setQIndex] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
   const [revealed, setRevealed] = useState(false);
+  const [grade, setGrade] = useState<RoadmapAnswerResult | null>(null);
+  const [grading, setGrading] = useState(false);
+  const [answerError, setAnswerError] = useState<string | null>(null);
+  const [completing, setCompleting] = useState(false);
   const [correctCount, setCorrectCount] = useState(0);
   const [finished, setFinished] = useState(false);
   // Hearts apply to levels only; checkpoints keep the percent-based pass rule.
@@ -950,48 +949,68 @@ function LessonRunner({
   const outOfHearts = !isCheckpoint && mistakes >= MAX_HEARTS;
 
   const choose = useCallback(
-    (index: number) => {
-      if (revealed) return;
+    async (index: number) => {
+      if (revealed || grading) return;
+      setGrading(true);
+      setAnswerError(null);
       setSelected(index);
-      setRevealed(true);
-      if (index === question.correctAnswer) {
-        setCorrectCount((c) => c + 1);
-      } else if (!isCheckpoint) {
-        setMistakes((m) => m + 1);
-        setHeartHit(true);
-        window.setTimeout(() => setHeartHit(false), 500);
+      try {
+        const result = await submitRoadmapAnswer(playable.sessionId, question.id, index, lang);
+        setSelected(result.selectedIndex);
+        setGrade(result);
+        setRevealed(true);
+        if (result.isCorrect) {
+          setCorrectCount((count) => count + 1);
+        } else if (!isCheckpoint) {
+          setMistakes((mistakeCount) => mistakeCount + 1);
+          setHeartHit(true);
+          window.setTimeout(() => setHeartHit(false), 500);
+        }
+      } catch (error) {
+        setAnswerError(friendlyError(error));
+      } finally {
+        setGrading(false);
       }
     },
-    [revealed, question, isCheckpoint],
+    [revealed, grading, playable.sessionId, question.id, lang, isCheckpoint],
   );
 
-  const advance = useCallback(() => {
-    const pct = Math.round((correctCount / total) * 100);
+  const advance = useCallback(async () => {
     if (outOfHearts) {
-      onFinished(pct);
-      setDead(true);
-      setFinished(true);
+      setCompleting(true);
+      setAnswerError(null);
+      try {
+        const result = await completeRoadmapAttempt(playable.sessionId);
+        setCorrectCount(result.correctAnswers);
+        onFinished(result.percentage);
+        setDead(true);
+        setFinished(true);
+      } catch (error) {
+        setAnswerError(friendlyError(error));
+      } finally {
+        setCompleting(false);
+      }
     } else if (qIndex < total - 1) {
       setQIndex((i) => i + 1);
       setSelected(null);
       setRevealed(false);
+      setGrade(null);
+      setAnswerError(null);
     } else {
-      onFinished(pct);
-      setFinished(true);
+      setCompleting(true);
+      setAnswerError(null);
+      try {
+        const result = await completeRoadmapAttempt(playable.sessionId);
+        setCorrectCount(result.correctAnswers);
+        onFinished(result.percentage);
+        setFinished(true);
+      } catch (error) {
+        setAnswerError(friendlyError(error));
+      } finally {
+        setCompleting(false);
+      }
     }
-  }, [correctCount, total, outOfHearts, qIndex, onFinished]);
-
-  const replay = () => {
-    // Re-shuffle, avoiding the layout just played, so the retry isn't identical.
-    setPresented((prev) => presentQuestions(playable.questions, prev));
-    setFinished(false);
-    setDead(false);
-    setMistakes(0);
-    setQIndex(0);
-    setSelected(null);
-    setRevealed(false);
-    setCorrectCount(0);
-  };
+  }, [total, outOfHearts, qIndex, onFinished, playable.sessionId]);
 
   const submitFlag = async (detail?: string) => {
     await reportQuestion({ questionId: question.id, reason: 'needs-review', detail, reporterSub: user?.id });
@@ -1008,11 +1027,11 @@ function LessonRunner({
         const idx = parseInt(e.key, 10) - 1;
         if (idx < question.options.length) {
           e.preventDefault();
-          choose(idx);
+          void choose(idx);
         }
       } else if (revealed && e.key === 'Enter') {
         e.preventDefault();
-        advance();
+        void advance();
       }
     };
     window.addEventListener('keydown', handler);
@@ -1128,7 +1147,7 @@ function LessonRunner({
               {nextLabel}
             </button>
           )}
-          <button type="button" className={passed ? 'rm-outline-btn' : 'rm-accent-btn'} onClick={replay} style={passed ? undefined : { backgroundColor: accent }}>
+          <button type="button" className={passed ? 'rm-outline-btn' : 'rm-accent-btn'} onClick={onReplay} style={passed ? undefined : { backgroundColor: accent }}>
             {t('roadmap.retryLevel')}
           </button>
           <button type="button" className="rm-text-btn" onClick={onExit}>
@@ -1140,7 +1159,7 @@ function LessonRunner({
   }
 
   const progressPct = ((qIndex + (revealed ? 1 : 0)) / total) * 100;
-  const isRight = selected === question.correctAnswer;
+  const isRight = grade?.isCorrect === true;
 
   return (
     // One-viewport lesson layout matching the Quiz card geometry: 560px
@@ -1200,7 +1219,7 @@ function LessonRunner({
       {/* Options — anchored toward the bottom, labelled by the question. */}
       <div role="group" aria-labelledby="lesson-question" style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0, marginTop: 'auto', marginBottom: isMobile ? 50 : 0 }}>
         {question.options.map((option, index) => {
-          const isCorrect = index === question.correctAnswer;
+          const isCorrect = index === grade?.correctAnswer;
           const isPicked = index === selected;
           const overrides: CSSProperties = {};
           let cls: string | undefined;
@@ -1216,8 +1235,8 @@ function LessonRunner({
               key={index}
               type="button"
               className={`rm-option${cls ? ` ${cls}` : ''}`}
-              onClick={() => choose(index)}
-              disabled={revealed}
+              onClick={() => void choose(index)}
+              disabled={revealed || grading}
               aria-pressed={isPicked}
               style={{ ['--rm-accent']: accent, ...overrides } as CSSProperties}
             >
@@ -1231,7 +1250,7 @@ function LessonRunner({
         })}
       </div>
 
-      {!revealed && (
+      {!revealed && !answerError && (
         <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: isMobile ? 'none' : 'block', marginTop: 12, flexShrink: 0 }}>
           {t('roadmap.keyboardTip', { max: question.options.length })}
         </div>
@@ -1240,7 +1259,7 @@ function LessonRunner({
       {/* Feedback OVERLAYS the answer options — a solid card floating over
           the bottom of the lesson viewport, so the anchored options don't get
           shoved around when the grade lands. Live region keeps AT informed. */}
-      {revealed && (
+      {(revealed || answerError) && (
         <div
           aria-live="polite"
           style={{
@@ -1263,20 +1282,38 @@ function LessonRunner({
               overflowY: 'auto',
             }}
           >
-            <div style={{ fontWeight: 800, color: isRight ? '#1b5e20' : '#c62828', marginBottom: 4 }}>
-              {isRight ? t('roadmap.correct') : t('roadmap.incorrect')}
-            </div>
-            <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
-              {question.explanation}
-            </div>
-            <button
-              type="button"
-              className="rm-accent-btn"
-              onClick={advance}
-              style={{ marginTop: 16, width: '100%', backgroundColor: accent }}
-            >
-              {outOfHearts ? t('roadmap.seeResult') : qIndex < total - 1 ? t('roadmap.continue') : t('roadmap.finish')}
-            </button>
+            {answerError ? (
+              <>
+                <div role="alert" style={{ fontWeight: 700, color: '#c62828' }}>{answerError}</div>
+                <button
+                  type="button"
+                  className="rm-accent-btn"
+                  onClick={() => revealed ? void advance() : selected !== null ? void choose(selected) : undefined}
+                  disabled={grading || completing || (!revealed && selected === null)}
+                  style={{ marginTop: 16, width: '100%', backgroundColor: accent }}
+                >
+                  {t('roadmap.retry')}
+                </button>
+              </>
+            ) : grade ? (
+              <>
+                <div style={{ fontWeight: 800, color: isRight ? '#1b5e20' : '#c62828', marginBottom: 4 }}>
+                  {isRight ? t('roadmap.correct') : t('roadmap.incorrect')}
+                </div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                  {grade.explanation}
+                </div>
+                <button
+                  type="button"
+                  className="rm-accent-btn"
+                  onClick={() => void advance()}
+                  disabled={completing}
+                  style={{ marginTop: 16, width: '100%', backgroundColor: accent }}
+                >
+                  {outOfHearts ? t('roadmap.seeResult') : qIndex < total - 1 ? t('roadmap.continue') : t('roadmap.finish')}
+                </button>
+              </>
+            ) : null}
           </div>
         </div>
       )}
@@ -1331,13 +1368,15 @@ type SkillPhase = 'intro' | 'loading' | 'playing' | 'submitting' | 'result' | 'e
 
 function SkillCheckRunner({
   lang,
+  isAuthenticated,
   onCancel,
   onFinished,
   t,
 }: {
   lang: string;
+  isAuthenticated: boolean;
   onCancel: () => void;
-  onFinished: (correct: number) => void;
+  onFinished: (correct: number, verifiedUnlocks?: RoadmapTopic[]) => void;
   t: TFn;
 }) {
   const [phase, setPhase] = useState<SkillPhase>('intro');
@@ -1347,19 +1386,21 @@ function SkillCheckRunner({
   const [qIndex, setQIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [correct, setCorrect] = useState(0);
+  const [verifiedUnlocks, setVerifiedUnlocks] = useState<RoadmapTopic[] | undefined>();
 
   const start = useCallback(async () => {
     setPhase('loading');
     setError(null);
     const startedAt = Date.now();
     try {
-      const batch = await fetchChallengeBatch({ lang });
+      const batch = await fetchChallengeBatch({ lang, assessment: true, ranked: false });
       const trimmed = batch.questions.slice(0, ASSESSMENT_QUESTION_COUNT);
       if (trimmed.length === 0) throw new Error(t('challenge.noQuestions'));
       await holdLoadingScreen(startedAt);
       setSessionId(batch.sessionId);
       setQuestions(trimmed);
       setAnswers({});
+      setVerifiedUnlocks(undefined);
       setQIndex(0);
       setPhase('playing');
     } catch (err) {
@@ -1385,17 +1426,22 @@ function SkillCheckRunner({
     setPhase('submitting');
     setError(null);
     try {
-      const res = await apiFetch<{ correctAnswers: number }>('/api/quiz/submit', {
+      const res = await apiFetch<Pick<QuizResult, 'correctAnswers' | 'resultReceipt'>>('/api/quiz/submit', {
         method: 'POST',
         body: JSON.stringify({ sessionId, answers, lang }),
       });
+      if (isAuthenticated) {
+        if (!res.resultReceipt) throw new Error(t('roadmap.error'));
+        const verified = await applySkillCheckReceipt(res.resultReceipt);
+        setVerifiedUnlocks(verified.unlocked);
+      }
       setCorrect(res.correctAnswers);
       setPhase('result');
     } catch (err) {
       setError(friendlyError(err));
       setPhase('error');
     }
-  }, [sessionId, answers, lang]);
+  }, [sessionId, answers, lang, isAuthenticated, t]);
 
   const answered = current ? answers[current.id] != null : false;
   const allAnswered = total > 0 && questions.every((q) => answers[q.id] != null);
@@ -1454,7 +1500,7 @@ function SkillCheckRunner({
           <Text color="secondary">{t(tier as TranslationKey)}</Text>
         </div>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <AxButton variant="primary" label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct)} />
+          <AxButton variant="primary" label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct, verifiedUnlocks)} />
           <AxButton variant="secondary" label={t('roadmap.skillCheckRetry')} onClick={() => void start()} />
         </div>
       </div>

@@ -134,10 +134,12 @@ export const fetchLeaderboard = (
   const qs = new URLSearchParams({ period });
   if (options.date && period === 'daily') qs.set('date', options.date);
   if (options.category && period === 'category') qs.set('category', options.category);
-  // Scope the all-time board to one subject (platform): the server sums the
-  // per-category stats of exactly these categories. Subjects' categories are
-  // disjoint, so this is an exact per-platform board.
-  if (options.categories?.length && period === 'global') qs.set('categories', options.categories.join(','));
+  // Scope both cumulative and daily boards to the active subject. Subjects'
+  // categories are disjoint, so the server can validate a single owner and
+  // never blend results from two products.
+  if (options.categories?.length && (period === 'global' || period === 'daily')) {
+    qs.set('categories', options.categories.join(','));
+  }
   return apiFetch<{
     period: string;
     date?: string;
@@ -150,9 +152,3 @@ export const fetchDistribution = (code: string, questionIdx: number, hostId: str
   apiFetch<{ buckets: DistributionBucket[] }>(
     `/api/play/distribution?code=${encodeURIComponent(code)}&q=${questionIdx}&user_id=${encodeURIComponent(hostId)}`,
   );
-
-export const recordCategoryStats = (user_id: string, by_category: Record<string, { correct: number; total: number }>) =>
-  apiFetch<{ ok: true; applied: number }>('/api/user/category-stats', {
-    method: 'POST',
-    body: JSON.stringify({ user_id, by_category }),
-  });

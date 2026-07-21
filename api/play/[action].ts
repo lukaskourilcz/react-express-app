@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
-import { secureShuffle, localizeQuestion, normalizeLang } from '../../lib/quiz-data';
+import { secureShuffle, localizeQuestion, normalizeLang } from '../../lib/quiz-runtime';
 import {
   supabase,
   jsonError,
@@ -8,7 +8,7 @@ import {
   generateMatchCode,
   withTimeout,
 } from '../../lib/play-helpers';
-import { requireAuthSub, isRpcMissing } from '../../lib/http';
+import { requireAuthSub, isRpcMissing, withRequestContext } from '../../lib/http';
 import { tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
@@ -96,7 +96,7 @@ async function tryAdvance(match: {
   return data && data.length > 0 ? (data[0] as Record<string, unknown>) : null;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Match backend is not configured');
 
   const action = String(req.query.action || '').toLowerCase();
@@ -127,6 +127,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     default:
       return jsonError(res, 404, 'unknown_action', `Unknown play action: ${action}`);
   }
+}
+
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return withRequestContext(req, res, () => routeHandler(req, res));
 }
 
 async function create(req: VercelRequest, res: VercelResponse) {

@@ -25,7 +25,7 @@ and enough original teaching value to stand alone.
 - Multiplayer room links are explicit invitations. Do not publish room codes or
   participant names to analytics.
 - Support prompts appear only after repeated completed quizzes, are dismissible,
-  stay hidden for 30 days, and appear only while truthful support configuration
+  stay hidden for at least 90 days, can be disabled permanently, and appear only while truthful support configuration
   is enabled. Payment never changes learning access or scores.
 - Sibling-brand clicks explain the product relationship and respect “coming
   soon” states instead of leading to empty domains.

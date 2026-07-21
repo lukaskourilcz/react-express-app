@@ -14,7 +14,7 @@
 import { apiFetch } from './api';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
-import { useRoadmapProgress, getRoadmapProgress, getCachedAccessTokenForBeacon } from './roadmap';
+import { useRoadmapProgress, getRoadmapProgress } from './roadmap';
 import {
   computeLearningXp,
   levelForXp,
@@ -35,7 +35,6 @@ const QUEST_KEY = 'devquiz:xp:quest:v2';
 const RANK_SEEN_KEY_LEGACY = 'devquiz:xp:rank-seen:v1';
 const RANK_SEEN_KEY = 'devquiz:xp:rank-seen:v2';
 const XP_GET = '/api/user/xp';
-const XP_PUT = '/api/user/xp';
 
 const MAX_XP = 100_000_000;
 const clampXp = (n: number): number => (Number.isFinite(n) && n > 0 ? Math.min(MAX_XP, Math.round(n)) : 0);
@@ -87,9 +86,6 @@ function writeQuestMap(map: QuestMap): void {
   writeJSON(QUEST_KEY, sanitizeQuestMap(map));
   questStore.emit();
 }
-
-const sumQuest = (map: QuestMap): number =>
-  clampXp(Object.values(map).reduce<number>((acc, v) => acc + (v ?? 0), 0));
 
 /* ──── total + rank (per subject) ───────────────────────────────────────── */
 
@@ -183,7 +179,15 @@ export function awardQuestXp(amount: number, source: 'quiz' | 'practice'): void 
   awardTokens(tokensFromXp(add));
   emitToast({ kind: 'gain', amount: add, source });
   reconcileRank(true);
-  scheduleSync();
+}
+
+/** Announce an award already committed by the verified server mutation. */
+export function announceVerifiedQuestXp(amount: number): void {
+  const verified = clampXp(amount);
+  if (verified <= 0) return;
+  awardTokens(tokensFromXp(verified));
+  emitToast({ kind: 'gain', amount: verified, source: 'quiz' });
+  reconcileRank(true);
 }
 
 /**
@@ -207,26 +211,9 @@ export function awardLearningOutcome(deltaLearningXp: number): void {
 
 /* ──── account sync ─────────────────────────────────────────────────────── */
 
-let syncTimer: ReturnType<typeof setTimeout> | null = null;
-
-function scheduleSync(): void {
-  if (syncTimer) clearTimeout(syncTimer);
-  syncTimer = setTimeout(() => {
-    syncTimer = null;
-    pushQuestXpToServer().catch(() => {});
-  }, 1500);
-}
-
-// The PUT carries the whole per-subject map plus the legacy total (sum) so an
-// old server / old client pair still max-merges something sensible.
-function questPutBody(): string {
-  const map = readQuestMap();
-  return JSON.stringify({ quest_xp: sumQuest(map), by_subject: map });
-}
-
-/** PUT the local per-subject quest XP to the account (server keeps per-subject max). */
+/** @deprecated Account XP is server-authoritative; retained for old imports. */
 export async function pushQuestXpToServer(): Promise<void> {
-  await apiFetch(XP_PUT, { method: 'PUT', body: questPutBody() });
+  await syncXpWithServer();
 }
 
 /**
@@ -235,30 +222,11 @@ export async function pushQuestXpToServer(): Promise<void> {
  * if nothing is queued.
  */
 export function flushQuestXpBeacon(): void {
-  if (!syncTimer) return;
-  clearTimeout(syncTimer);
-  syncTimer = null;
-  try {
-    const token = getCachedAccessTokenForBeacon();
-    if (!token) return;
-    void fetch(XP_PUT, {
-      method: 'PUT',
-      keepalive: true,
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: questPutBody(),
-    });
-  } catch {
-    /* best-effort */
-  }
+  // Verified result receipts write account XP before the page can unload.
 }
 
-// On sign-in: pull the account's per-subject quest XP, keep the larger of
-// local/server for each subject (XP only grows), store it, reconcile the rank
-// marker, and push back. A legacy account blob (one pre-split total, no
+// On sign-in: pull the authoritative account XP and replace the optimistic
+// browser cache. A legacy account blob (one pre-split total, no
 // per-subject map) is attributed to the active subject, matching the local
 // migration rule so the max-merge never double-counts.
 export async function syncXpWithServer(): Promise<void> {
@@ -273,18 +241,8 @@ export async function syncXpWithServer(): Promise<void> {
   } catch {
     return; // not signed in or offline — keep local only
   }
-  const local = readQuestMap();
-  const merged: QuestMap = { ...local };
-  for (const [k, v] of Object.entries(serverMap) as [SubjectId, number][]) {
-    merged[k] = Math.max(local[k] ?? 0, v);
-  }
-  writeQuestMap(merged);
-  reconcileRank(false); // adopt the merged rank silently on sign-in
-  try {
-    await pushQuestXpToServer();
-  } catch {
-    // best-effort; local is already updated
-  }
+  writeQuestMap(serverMap);
+  reconcileRank(false);
 }
 
 /**

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
-import { createAnonClient, jsonError, withTimeout, logEvent } from '../lib/http';
+import { createAnonClient, jsonError, withTimeout, logEvent, withRequestContext } from '../lib/http';
 
 const supabase = createAnonClient();
 
@@ -19,7 +19,7 @@ const supabase = createAnonClient();
  * Previously this always returned 200, so downtime looked healthy — the whole
  * point of pointing a monitor here was defeated.
  */
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
@@ -51,4 +51,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     dependencies: { database: supabaseStatus === 'ok' ? 'ok' : 'unavailable' },
     ts: new Date().toISOString(),
   });
+}
+
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return withRequestContext(req, res, () => routeHandler(req, res));
 }

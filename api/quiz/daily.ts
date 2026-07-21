@@ -1,7 +1,8 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
-import { encodeSession, localizeQuestion, normalizeLang, PRIVATE_CATEGORIES, type Question } from '../../lib/quiz-data';
+import { encodeSession } from '../../lib/quiz-tokens';
+import { localizeQuestion, normalizeLang, PRIVATE_CATEGORIES, type Question } from '../../lib/quiz-runtime';
 import { createHash } from 'node:crypto';
-import { jsonError } from '../../lib/http';
+import { jsonError, withRequestContext } from '../../lib/http';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
@@ -30,7 +31,7 @@ function seededShuffle<T>(arr: T[], seed: string): T[] {
   return out;
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
@@ -107,7 +108,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
   });
 
-  const sessionId = encodeSession(sessionData);
+  const sessionId = encodeSession(sessionData, {
+    scope: 'daily',
+    date: dateParam,
+    subject: scope.subject,
+  });
 
   // The response embeds an opaque, authenticated session token. Keep it out of
   // shared caches so a daily session remains bound to the requesting browser.
@@ -117,4 +122,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     sessionId,
     questions: dailyQuestions,
   });
+}
+
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return withRequestContext(req, res, () => routeHandler(req, res));
 }

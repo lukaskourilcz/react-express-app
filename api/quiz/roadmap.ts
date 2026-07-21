@@ -1,10 +1,28 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
-import { localizeQuestion, normalizeLang, secureShuffle, type Question } from '../../lib/quiz-data';
-import { jsonError, createLogger, createServiceClient, withTimeout, requireAuthSub } from '../../lib/http';
+import { randomBytes } from 'node:crypto';
+import {
+  localizeQuestion,
+  normalizeLang,
+  secureShuffle,
+  type Question,
+} from '../../lib/quiz-runtime';
+import { decodeQuizResultReceipt, decodeSessionEnvelope, encodeSession } from '../../lib/quiz-tokens';
+import {
+  jsonError,
+  createLogger,
+  createServiceClient,
+  withTimeout,
+  requireAuthSub,
+  isRpcMissing,
+  withRequestContext,
+} from '../../lib/http';
+import { AuthError, tryAuth } from '../../lib/auth';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
+import { subjectForCategory, subjectForTopic } from '../../shared/subject-catalog';
+import { assessmentUnlocks, ASSESSMENT_QUESTION_COUNT } from '../../shared/assessment';
 import {
   buildLiveTopic,
   liveRoadmapStructure,
@@ -27,35 +45,71 @@ import {
 //   GET  /api/quiz/roadmap?topic=&level=           → an 8-question level lesson
 //   GET  /api/quiz/roadmap?topic=&checkpoint=      → a 40-question checkpoint exam
 //   GET  /api/quiz/roadmap?resource=progress       → the signed-in user's progress
-//   PUT  /api/quiz/roadmap                         → save the user's progress
+//   POST /api/quiz/roadmap?resource=answer         → grade one first answer
+//   POST /api/quiz/roadmap?resource=complete       → atomically record progress
+//   PUT  /api/quiz/roadmap                         → save non-progression account extras
 const logEvent = createLogger('quiz/roadmap');
 const supabase = createServiceClient();
 const PROGRESS_TABLE = 'roadmap_progress';
 
-// Build the playable, instant-feedback question payload for a set of ids. Unlike
-// the competitive quiz, the roadmap is an unscored learning mode, so each
-// question is returned WITH its correct answer and explanation (the client
-// grades locally). Options are shuffled per request so the answer slot varies.
+// Build a playable payload without answer keys. Options are shuffled on the
+// server and the answer indices are kept only inside the encrypted session.
 function buildQuestions(ids: string[], lang: ReturnType<typeof normalizeLang>, byId: Map<string, Question>) {
-  return ids
+  const answerKey: { questionId: string; correctAnswer: number }[] = [];
+  const questions = ids
     .map((id) => byId.get(id))
     .filter((q): q is NonNullable<typeof q> => Boolean(q))
     .map((base) => {
       const q = localizeQuestion(base, lang);
       const correctText = q.options[base.correctAnswer];
       const options = secureShuffle(q.options);
+      answerKey.push({ questionId: q.id, correctAnswer: options.indexOf(correctText) });
       return {
         id: q.id,
         tags: q.tags,
         introduction: q.introduction,
         question: q.question,
         options,
-        correctAnswer: options.indexOf(correctText),
-        explanation: q.explanation,
         category: q.category,
         difficulty: q.difficulty,
       };
     });
+  return { questions, answerKey };
+}
+
+function playableResponse(input: {
+  kind: 'level' | 'checkpoint';
+  topic: RoadmapTopic;
+  ref: number;
+  title: string;
+  passPct: number;
+  ids: string[];
+  lang: ReturnType<typeof normalizeLang>;
+  byId: Map<string, Question>;
+  difficulty?: number;
+}) {
+  const built = buildQuestions(input.ids, input.lang, input.byId);
+  const subject = subjectForTopic(input.topic);
+  if (!subject) return null;
+  const attemptId = randomBytes(18).toString('base64url');
+  const sessionId = encodeSession(built.answerKey, {
+    scope: 'roadmap',
+    subject,
+    topic: input.topic,
+    roadmapKind: input.kind,
+    ref: input.ref,
+    attemptId,
+  });
+  return {
+    kind: input.kind,
+    topic: input.topic,
+    ref: input.ref,
+    title: input.title,
+    ...(input.difficulty ? { difficulty: input.difficulty } : {}),
+    passPct: input.passPct,
+    sessionId,
+    questions: built.questions,
+  };
 }
 
 /* ──── per-user progress (GET ?resource=progress, PUT) ──────────────────── */
@@ -238,31 +292,319 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  // PUT — accept either { data, extra } or a bare progress blob for back-compat.
+  // PUT persists cosmetic/account extras only. Learning progress is updated by
+  // complete_verified_roadmap_attempt after server-observed answers; accepting
+  // a browser-computed progress blob here would let clients unlock paths/XP.
   const body = (req.body || {}) as Record<string, unknown>;
-  const clean = sanitize(body.data);
   const cleanExtra = sanitizeExtra(body.extra);
+  const current = await withTimeout(
+    supabase.from(PROGRESS_TABLE).select('data,extra').eq('user_id', userId).maybeSingle(),
+  );
+  if (current.error) return jsonError(res, 500, 'db_error', 'Could not load progress');
+  const authoritative = sanitize(current.data?.data);
+  const authoritativeExtra = {
+    ...cleanExtra,
+    unlocked: sanitizeExtra(current.data?.extra).unlocked,
+  };
   const { error } = await withTimeout(
     supabase
       .from(PROGRESS_TABLE)
       .upsert(
         {
           user_id: userId,
-          data: clean,
-          extra: cleanExtra,
+          data: authoritative,
+          extra: authoritativeExtra,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' },
       ),
   );
   if (error) return jsonError(res, 500, 'db_error', 'Could not save progress');
-  return res.json({ ok: true, data: clean, extra: cleanExtra });
+  return res.json({ ok: true, data: authoritative, extra: authoritativeExtra });
+}
+
+async function handleSkillCheck(req: VercelRequest, res: VercelResponse) {
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.roadmapComplete))) return;
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning progress is not configured');
+  const userId = await requireAuthSub(req, res);
+  if (!userId) return;
+  const body = (req.body || {}) as { resultReceipt?: unknown };
+  if (typeof body.resultReceipt !== 'string') {
+    return jsonError(res, 400, 'bad_request', 'A verified assessment receipt is required');
+  }
+  const receipt = decodeQuizResultReceipt(body.resultReceipt);
+  if (
+    !receipt || receipt.userId !== userId || receipt.purpose !== 'assessment' ||
+    receipt.total !== ASSESSMENT_QUESTION_COUNT || receipt.outcomes.length !== receipt.total ||
+    !deploymentSubjectIds().includes(receipt.subject) ||
+    receipt.outcomes.some((outcome) => subjectForCategory(outcome.category) !== receipt.subject)
+  ) {
+    return jsonError(res, 400, 'invalid_receipt', 'Assessment receipt expired or invalid');
+  }
+
+  const unlocked = assessmentUnlocks(receipt.subject, receipt.correct, receipt.total);
+  const applied = await withTimeout(
+    supabase.rpc('apply_verified_skill_check', {
+      p_user_id: userId,
+      p_attempt_id: receipt.attemptId,
+      p_subject: receipt.subject,
+      p_correct: receipt.correct,
+      p_total: receipt.total,
+      p_unlocked: unlocked,
+    }),
+  );
+  if (applied.error) {
+    if (isRpcMissing(applied.error)) {
+      return jsonError(res, 503, 'migration_required', 'Verified assessment migration is not installed');
+    }
+    return jsonError(res, 500, 'db_error', 'Could not apply assessment unlocks');
+  }
+  logEvent({ status: 200, kind: 'skill_check', subject: receipt.subject, correct: receipt.correct, applied: applied.data === true });
+  return res.json({ applied: applied.data === true, unlocked });
+}
+
+async function optionalAuthSub(req: VercelRequest, res: VercelResponse): Promise<string | null | undefined> {
+  try {
+    return (await tryAuth(req))?.sub ?? null;
+  } catch (error) {
+    if (error instanceof AuthError) {
+      jsonError(res, error.status, error.code, error.message);
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+function roadmapSession(raw: unknown) {
+  if (typeof raw !== 'string' || raw.length === 0 || raw.length > 16_384) return null;
+  const session = decodeSessionEnvelope(raw);
+  if (
+    !session || session.scope !== 'roadmap' || !session.subject || !session.topic ||
+    !session.roadmapKind || !session.ref || !session.attemptId ||
+    !isRoadmapTopic(session.topic) || !isDeploymentTopic(session.topic) ||
+    subjectForTopic(session.topic) !== session.subject
+  ) return null;
+  return session;
+}
+
+async function ensureAttempt(
+  session: NonNullable<ReturnType<typeof roadmapSession>>,
+  userId: string | null,
+) {
+  const existing = await withTimeout(
+    supabase!
+      .from('roadmap_attempts')
+      .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,completed_at')
+      .eq('attempt_id', session.attemptId!)
+      .maybeSingle(),
+  );
+  if (existing.error) return { error: existing.error, data: null };
+  if (!existing.data) {
+    const passPct = session.roadmapKind === 'level' ? LEVEL_PASS : PART_TEST_PASS;
+    const inserted = await withTimeout(
+      supabase!
+        .from('roadmap_attempts')
+        .insert({
+          attempt_id: session.attemptId,
+          user_id: userId,
+          subject: session.subject,
+          topic: session.topic,
+          kind: session.roadmapKind,
+          ref: session.ref,
+          total_questions: session.questions.length,
+          pass_pct: passPct,
+          expires_at: new Date(Date.now() + 2 * 60 * 60_000).toISOString(),
+        })
+        .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,completed_at')
+        .single(),
+    );
+    if (!inserted.error) return inserted;
+    // A simultaneous first answer can win the insert. Re-read the row and
+    // verify it below instead of turning a harmless race into a failed lesson.
+    const raced = await withTimeout(
+      supabase!
+        .from('roadmap_attempts')
+        .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,completed_at')
+        .eq('attempt_id', session.attemptId!)
+        .maybeSingle(),
+    );
+    return raced;
+  }
+  return existing;
+}
+
+function attemptMatches(
+  attempt: Record<string, unknown>,
+  session: NonNullable<ReturnType<typeof roadmapSession>>,
+  userId: string | null,
+): boolean {
+  return (
+    (attempt.user_id ?? null) === userId &&
+    attempt.subject === session.subject &&
+    attempt.topic === session.topic &&
+    attempt.kind === session.roadmapKind &&
+    Number(attempt.ref) === session.ref &&
+    Number(attempt.total_questions) === session.questions.length
+  );
+}
+
+async function handleAnswer(req: VercelRequest, res: VercelResponse) {
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.roadmapAnswer))) return;
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning progress is not configured');
+  const body = (req.body || {}) as {
+    sessionId?: unknown; questionId?: unknown; selectedIndex?: unknown; lang?: unknown;
+  };
+  const session = roadmapSession(body.sessionId);
+  if (!session) return jsonError(res, 400, 'invalid_session', 'Learning session expired or invalid');
+  if (
+    typeof body.questionId !== 'string' || body.questionId.length > 64 ||
+    !Number.isInteger(body.selectedIndex) || Number(body.selectedIndex) < 0 || Number(body.selectedIndex) > 25
+  ) return jsonError(res, 400, 'bad_request', 'Question and selected answer are required');
+  const sessionQuestion = session.questions.find((question) => question.questionId === body.questionId);
+  if (!sessionQuestion) return jsonError(res, 400, 'bad_request', 'Question is not part of this learning session');
+  const userId = await optionalAuthSub(req, res);
+  if (userId === undefined) return;
+
+  const attemptResult = await ensureAttempt(session, userId);
+  if (attemptResult.error || !attemptResult.data) {
+    if (isRpcMissing(attemptResult.error)) {
+      return jsonError(res, 503, 'migration_required', 'Verified learning migration is not installed');
+    }
+    return jsonError(res, 500, 'db_error', 'Could not start the learning attempt');
+  }
+  if (!attemptMatches(attemptResult.data as Record<string, unknown>, session, userId)) {
+    return jsonError(res, 409, 'attempt_conflict', 'This learning attempt belongs to another session');
+  }
+
+  const selectedIndex = Number(body.selectedIndex);
+  const isCorrect = selectedIndex === sessionQuestion.correctAnswer;
+  const stored = await withTimeout(
+    supabase
+      .from('roadmap_attempt_answers')
+      .upsert(
+        {
+          attempt_id: session.attemptId,
+          question_id: body.questionId,
+          selected_index: selectedIndex,
+          correct_index: sessionQuestion.correctAnswer,
+          is_correct: isCorrect,
+        },
+        { onConflict: 'attempt_id,question_id', ignoreDuplicates: true },
+      ),
+  );
+  if (stored.error) return jsonError(res, 500, 'db_error', 'Could not record the answer');
+  const saved = await withTimeout(
+    supabase
+      .from('roadmap_attempt_answers')
+      .select('selected_index,correct_index,is_correct')
+      .eq('attempt_id', session.attemptId!)
+      .eq('question_id', body.questionId)
+      .single(),
+  );
+  if (saved.error || !saved.data) return jsonError(res, 500, 'db_error', 'Could not load the recorded answer');
+
+  const questions = await getEffectiveQuestionsById();
+  const base = questions.get(body.questionId);
+  const explanation = base ? localizeQuestion(base, normalizeLang(body.lang)).explanation : '';
+  res.setHeader('Cache-Control', 'private, no-store');
+  return res.json({
+    selectedIndex: Number(saved.data.selected_index),
+    correctAnswer: Number(saved.data.correct_index),
+    isCorrect: saved.data.is_correct === true,
+    explanation,
+  });
+}
+
+async function handleComplete(req: VercelRequest, res: VercelResponse) {
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.roadmapComplete))) return;
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning progress is not configured');
+  const body = (req.body || {}) as { sessionId?: unknown };
+  const session = roadmapSession(body.sessionId);
+  if (!session) return jsonError(res, 400, 'invalid_session', 'Learning session expired or invalid');
+  const userId = await optionalAuthSub(req, res);
+  if (userId === undefined) return;
+  const attemptResult = await ensureAttempt(session, userId);
+  if (attemptResult.error || !attemptResult.data) {
+    if (isRpcMissing(attemptResult.error)) {
+      return jsonError(res, 503, 'migration_required', 'Verified learning migration is not installed');
+    }
+    return jsonError(res, 500, 'db_error', 'Could not load the learning attempt');
+  }
+  const attempt = attemptResult.data as Record<string, unknown>;
+  if (!attemptMatches(attempt, session, userId)) {
+    return jsonError(res, 409, 'attempt_conflict', 'This learning attempt belongs to another session');
+  }
+  const answers = await withTimeout(
+    supabase.from('roadmap_attempt_answers').select('is_correct').eq('attempt_id', session.attemptId!),
+  );
+  if (answers.error) return jsonError(res, 500, 'db_error', 'Could not grade the learning attempt');
+  const correctAnswers = (answers.data ?? []).filter((answer) => answer.is_correct === true).length;
+  const totalQuestions = session.questions.length;
+  const percentage = Math.round((correctAnswers / totalQuestions) * 100);
+  const passPct = Number(attempt.pass_pct);
+  const passed = percentage >= passPct;
+
+  let progress: unknown;
+  let applied = false;
+  if (userId) {
+    const completed = await withTimeout(
+      supabase.rpc('complete_verified_roadmap_attempt', {
+        p_user_id: userId,
+        p_attempt_id: session.attemptId,
+      }),
+    );
+    if (completed.error) {
+      if (isRpcMissing(completed.error)) {
+        return jsonError(res, 503, 'migration_required', 'Verified learning migration is not installed');
+      }
+      return jsonError(res, 500, 'db_error', 'Could not save learning progress');
+    }
+    applied = completed.data === true;
+    const row = await withTimeout(
+      supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle(),
+    );
+    if (row.error) return jsonError(res, 500, 'db_error', 'Progress saved but could not be reloaded');
+    progress = sanitize(row.data?.data);
+  } else if (!attempt.completed_at) {
+    await withTimeout(
+      supabase.from('roadmap_attempts').update({ completed_at: new Date().toISOString() }).eq('attempt_id', session.attemptId!),
+    );
+    applied = true;
+  }
+
+  logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId });
+  return res.json({ correctAnswers, totalQuestions, percentage, passed, applied, ...(progress ? { progress } : {}) });
 }
 
 /* ──── handler ──────────────────────────────────────────────────────────── */
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
+
+  if (req.method === 'POST' && req.query.resource === 'answer') {
+    try {
+      return await handleAnswer(req, res);
+    } catch (error) {
+      logEvent({ status: 500, kind: 'answer_error', category: error instanceof Error ? error.name : 'unknown' });
+      return jsonError(res, 500, 'internal_error', 'Could not record the answer');
+    }
+  }
+  if (req.method === 'POST' && req.query.resource === 'complete') {
+    try {
+      return await handleComplete(req, res);
+    } catch (error) {
+      logEvent({ status: 500, kind: 'complete_error', category: error instanceof Error ? error.name : 'unknown' });
+      return jsonError(res, 500, 'internal_error', 'Could not complete the learning attempt');
+    }
+  }
+  if (req.method === 'POST' && req.query.resource === 'skill-check') {
+    try {
+      return await handleSkillCheck(req, res);
+    } catch (error) {
+      logEvent({ status: 500, kind: 'skill_check_error', category: error instanceof Error ? error.name : 'unknown' });
+      return jsonError(res, 500, 'internal_error', 'Could not apply assessment unlocks');
+    }
+  }
 
   // Per-user progress sub-resource (auth-gated): GET ?resource=progress, or PUT.
   if (req.method === 'PUT' || (req.method === 'GET' && req.query.resource === 'progress')) {
@@ -275,7 +617,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET, PUT');
+    res.setHeader('Allow', 'GET, POST, PUT');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 
@@ -323,19 +665,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       pool.push(...(live.levelIds[l - 1] ?? []));
     }
     const ids = secureShuffle(pool).slice(0, PART_TEST_SIZE);
-    const questions = buildQuestions(ids, lang, byId);
-    if (questions.length === 0) return jsonError(res, 404, 'no_questions', 'No questions for this test');
+    const playable = playableResponse({
+      kind: 'checkpoint', topic, ref: part, title: `Part ${part}`,
+      passPct: PART_TEST_PASS, ids, lang, byId,
+    });
+    if (!playable || playable.questions.length === 0) return jsonError(res, 404, 'no_questions', 'No questions for this test');
 
     res.setHeader('Cache-Control', 'private, no-store');
-    logEvent({ status: 200, kind: 'test', topic, part, count: questions.length, latency_ms: Date.now() - started });
+    logEvent({ status: 200, kind: 'test', topic, part, count: playable.questions.length, latency_ms: Date.now() - started });
     return res.json({
-      // Reuse the client's exam (progress-bar, no-hearts) runner.
-      kind: 'checkpoint',
-      topic,
-      ref: part,
-      title: `Part ${part}`,
-      passPct: PART_TEST_PASS,
-      questions,
+      ...playable,
     });
   }
 
@@ -350,19 +689,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (let l = firstLevel; l < firstLevel + LEVELS_PER_CHECKPOINT; l++) {
       ids.push(...(live.levelIds[l - 1] ?? []));
     }
-    const questions = buildQuestions(ids, lang, byId);
-    if (questions.length === 0) {
+    const playable = playableResponse({
+      kind: 'checkpoint', topic, ref: meta.checkpoint, title: meta.title,
+      passPct: meta.passPct, ids, lang, byId,
+    });
+    if (!playable || playable.questions.length === 0) {
       return jsonError(res, 404, 'no_questions', 'No questions for this checkpoint');
     }
     res.setHeader('Cache-Control', 'private, no-store');
-    logEvent({ status: 200, kind: 'checkpoint', topic, checkpoint, count: questions.length, latency_ms: Date.now() - started });
+    logEvent({ status: 200, kind: 'checkpoint', topic, checkpoint, count: playable.questions.length, latency_ms: Date.now() - started });
     return res.json({
-      kind: 'checkpoint',
-      topic,
-      ref: meta.checkpoint,
-      title: meta.title,
-      passPct: meta.passPct,
-      questions,
+      ...playable,
     });
   }
 
@@ -371,20 +708,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const meta = live.levels.find((l) => l.level === level);
   if (!meta) return jsonError(res, 400, 'bad_request', 'Invalid level');
 
-  const questions = buildQuestions(live.levelIds[level - 1] ?? [], lang, byId);
-  if (questions.length === 0) {
+  const playable = playableResponse({
+    kind: 'level', topic, ref: meta.level, title: meta.title,
+    difficulty: meta.difficulty, passPct: LEVEL_PASS,
+    ids: live.levelIds[level - 1] ?? [], lang, byId,
+  });
+  if (!playable || playable.questions.length === 0) {
     return jsonError(res, 404, 'no_questions', 'No questions for this level');
   }
 
   res.setHeader('Cache-Control', 'private, no-store');
-  logEvent({ status: 200, kind: 'level', topic, level, count: questions.length, latency_ms: Date.now() - started });
+  logEvent({ status: 200, kind: 'level', topic, level, count: playable.questions.length, latency_ms: Date.now() - started });
   return res.json({
-    kind: 'level',
-    topic,
-    ref: meta.level,
-    title: meta.title,
-    difficulty: meta.difficulty,
-    passPct: LEVEL_PASS,
-    questions,
+    ...playable,
   });
+}
+
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return withRequestContext(req, res, () => routeHandler(req, res));
 }

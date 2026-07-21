@@ -6,7 +6,14 @@ import { apiFetch } from './api';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import { getSubject } from './subjects';
-import type { RoadmapStructure, RoadmapPlayable, RoadmapTopic } from '../types/quiz';
+import { assessmentUnlocks, ASSESSMENT_QUESTION_COUNT } from '../../../shared/assessment';
+import type {
+  RoadmapAnswerResult,
+  RoadmapCompletionResult,
+  RoadmapStructure,
+  RoadmapPlayable,
+  RoadmapTopic,
+} from '../types/quiz';
 
 // Pass thresholds (must match lib/roadmap.ts on the server).
 export const LEVEL_PASS = 75;
@@ -154,37 +161,12 @@ export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
   'gto-advanced': ['pot-odds'],
 };
 
-// Unlock tiers granted by the skill-check assessment. Each correct-answer band
-// merges the listed topics into `extraUnlocked` so the learner can skip prereqs.
-export const ASSESSMENT_QUESTION_COUNT = 20;
-const ASSESSMENT_TIERS: { minCorrect: number; unlocks: RoadmapTopic[] }[] = [
-  {
-    minCorrect: 18,
-    unlocks: [
-      'typescript', 'abbreviations', 'general', 'git', 'dsa', 'algorithms',
-      'nodejs', 'testing', 'ai', 'security',
-      'react', 'nextjs', 'rhf-zod',
-      'databases', 'system-design', 'devops',
-    ],
-  },
-  {
-    minCorrect: 14,
-    unlocks: [
-      'typescript', 'abbreviations', 'general', 'git', 'dsa', 'algorithms',
-      'nodejs', 'testing', 'ai', 'react',
-    ],
-  },
-  {
-    minCorrect: 10,
-    unlocks: ['typescript', 'abbreviations', 'general', 'git'],
-  },
-];
-
 /** Topics granted by an assessment scoring `correct` out of `total`. */
 export function topicsFromAssessment(correct: number): RoadmapTopic[] {
-  const tier = ASSESSMENT_TIERS.find((t) => correct >= t.minCorrect);
-  return tier ? tier.unlocks : [];
+  return assessmentUnlocks(getSubject(), correct, ASSESSMENT_QUESTION_COUNT) as RoadmapTopic[];
 }
+
+export { ASSESSMENT_QUESTION_COUNT };
 
 const PROGRESS_KEY = 'devquiz:roadmap:v2';
 const UNLOCKS_KEY = 'devquiz:roadmap:unlocks:v1';
@@ -219,6 +201,34 @@ export function fetchRoadmapLevel(topic: RoadmapTopic, level: number, lang: stri
 export function fetchRoadmapCheckpoint(topic: RoadmapTopic, checkpoint: number, lang: string, signal?: AbortSignal): Promise<RoadmapPlayable> {
   const params = new URLSearchParams({ topic, checkpoint: String(checkpoint), lang });
   return apiFetch<RoadmapPlayable>(`/api/quiz/roadmap?${params}`, { signal });
+}
+
+export function submitRoadmapAnswer(
+  sessionId: string,
+  questionId: string,
+  selectedIndex: number,
+  lang: string,
+): Promise<RoadmapAnswerResult> {
+  return apiFetch<RoadmapAnswerResult>('/api/quiz/roadmap?resource=answer', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId, questionId, selectedIndex, lang }),
+  });
+}
+
+export async function completeRoadmapAttempt(sessionId: string): Promise<RoadmapCompletionResult> {
+  const result = await apiFetch<RoadmapCompletionResult>('/api/quiz/roadmap?resource=complete', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId }),
+  });
+  if (result.progress) writeProgress(result.progress);
+  return result;
+}
+
+export function applySkillCheckReceipt(resultReceipt: string): Promise<{ applied: boolean; unlocked: RoadmapTopic[] }> {
+  return apiFetch('/api/quiz/roadmap?resource=skill-check', {
+    method: 'POST',
+    body: JSON.stringify({ resultReceipt }),
+  });
 }
 
 /* ──── Progress store (localStorage-backed) ─────────────────────────────── */
@@ -686,8 +696,10 @@ export async function syncProgressWithServer(): Promise<void> {
   } catch {
     return; // not signed in or offline — keep local only
   }
-  const mergedProgress = mergeProgress(readProgress(), serverProgress);
-  writeProgress(mergedProgress);
+  // Signed-in progress is server-authoritative. Legacy server rows are retained
+  // by migration; unverified browser-only values cannot unlock account XP.
+  const mergedProgress = serverProgress;
+  writeProgress(serverProgress);
 
   const serverUnlocked = (serverExtras.unlocked ?? []).filter((id): id is RoadmapTopic =>
     (Object.keys(TOPIC_PREREQS) as string[]).includes(id),

@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
-import { createServiceClient, jsonError, withTimeout, requireAuthSub } from '../lib/http';
+import { createServiceClient, jsonError, withTimeout, requireAuthSub, withRequestContext } from '../lib/http';
 import { enforceRateLimit, RATE_LIMITS } from '../lib/rate-limit';
 
 const supabase = createServiceClient();
@@ -10,7 +10,7 @@ const MAX = { id: 64, short: 128, text: 4000, answer: 2000 };
 const str = (v: unknown, max: number): string | null =>
   typeof v === 'string' && v.length > 0 && v.length <= max ? v : null;
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
 
   const userId = await requireAuthSub(req, res);
@@ -71,4 +71,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch {
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
+}
+
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return withRequestContext(req, res, () => routeHandler(req, res));
 }

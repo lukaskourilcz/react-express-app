@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import {
-  encodeSession,
   secureShuffle,
   weightedSample,
   localizeQuestion,
@@ -9,23 +8,27 @@ import {
   type DifficultyMode,
   type CategoryType,
   type Question,
-} from '../../lib/quiz-data';
+} from '../../lib/quiz-runtime';
+import { encodeSession } from '../../lib/quiz-tokens';
 import { tryAuth } from '../../lib/auth';
-import { jsonError, createLogger } from '../../lib/http';
+import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext } from '../../lib/http';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
 import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/product-scope';
+import { selectPersonalizedReview } from '../../lib/review-selection';
 
 const ALL_CATEGORIES = Object.values(SUBJECT_SCOPE_CATALOG)
   .flatMap((subject) => [...subject.categories]) as CategoryType[];
 const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
 const logEvent = createLogger('quiz/questions');
+const supabase = createServiceClient();
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
+  const resource = typeof req.query.resource === 'string' ? req.query.resource : '';
 
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -64,7 +67,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Private categories (custom, apt) are served only to the owner. Verifying
   // the token costs a round-trip, so only do it when one is actually requested.
   if (selectedCategories.some((c) => PRIVATE_CATEGORIES.includes(c))) {
-    const auth = await tryAuth(req);
+    let auth;
+    try {
+      auth = await tryAuth(req);
+    } catch {
+      return jsonError(res, 401, 'unauthorized', 'Invalid sign-in session');
+    }
     const emailClaim = auth?.payload?.email;
     const email = typeof emailClaim === 'string' ? emailClaim.toLowerCase() : null;
     if (email !== ownerEmail) {
@@ -94,8 +102,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // far less often than the essentials.
   const weight = (q: Question) => q.importance ?? 5;
   let selected: Question[];
+  let reviewPlan: ReturnType<typeof selectPersonalizedReview>['weakAreas'] | undefined;
 
-  if (difficultyMode === 'easy') {
+  if (resource === 'review') {
+    let auth;
+    try {
+      auth = await tryAuth(req);
+    } catch {
+      return jsonError(res, 401, 'unauthorized', 'Invalid sign-in session');
+    }
+    if (!auth) return jsonError(res, 401, 'unauthorized', 'Sign in to build a personalized review');
+    if (!supabase) return jsonError(res, 503, 'not_configured', 'Personalized review is not configured');
+    const [stats, history] = await Promise.all([
+      withTimeout(
+        supabase
+          .from('user_category_stats')
+          .select('category,total_correct,total_questions')
+          .eq('user_id', auth.sub)
+          .in('category', scope.categories),
+      ),
+      withTimeout(
+        supabase
+          .from('user_question_history')
+          .select('question_id,category,times_seen,times_missed,last_seen_at,last_missed_at')
+          .eq('user_id', auth.sub)
+          .eq('subject', scope.subject)
+          .order('last_missed_at', { ascending: false, nullsFirst: false })
+          .limit(500),
+      ),
+    ]);
+    if (stats.error || history.error) {
+      const migrationMissing = history.error?.message?.includes('user_question_history');
+      return jsonError(
+        res,
+        migrationMissing ? 503 : 500,
+        migrationMissing ? 'migration_required' : 'db_error',
+        migrationMissing ? 'Run supabase-schema-022.sql to enable personalized review' : 'Could not build personalized review',
+      );
+    }
+    const plan = selectPersonalizedReview(pool, stats.data ?? [], history.data ?? [], count);
+    selected = plan.questions;
+    reviewPlan = plan.weakAreas;
+  } else if (resource) {
+    return jsonError(res, 404, 'unknown_resource', 'Unknown quiz question resource');
+  } else if (difficultyMode === 'easy') {
     selected = weightedSample(pool.filter((q) => q.difficulty <= 2), count, weight);
   } else if (difficultyMode === 'advanced') {
     selected = weightedSample(pool.filter((q) => q.difficulty >= 3), count, weight);
@@ -154,11 +204,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
   });
 
-  const sessionId = encodeSession(sessionData);
+  const sessionId = encodeSession(sessionData, { subject: scope.subject });
 
   // Per-request shuffle differs, so don't CDN-cache the response itself.
   res.setHeader('Cache-Control', 'private, no-store');
   logEvent({ status: 200, count: selected.length, difficulty: difficultyMode, latency_ms: Date.now() - started });
 
-  res.json({ sessionId, questions: questionsWithShuffledOptions });
+  res.json({ sessionId, questions: questionsWithShuffledOptions, ...(reviewPlan ? { reviewPlan } : {}) });
+}
+
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return withRequestContext(req, res, () => routeHandler(req, res));
 }

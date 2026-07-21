@@ -10,6 +10,7 @@ import { fetchLeaderboard } from './play';
 import { getUserStats, createOrUpdateUserStats, type UserStats } from './supabase';
 import { listFlashcards } from './flashcards';
 import { getChallengeLeaderboard } from './challengeApi';
+import { useSubject } from './subjects';
 
 type LeaderboardPeriod = 'global' | 'daily' | 'category';
 
@@ -32,7 +33,7 @@ export function useLeaderboard(period: LeaderboardPeriod, date: string, category
       period,
       period === 'daily' ? date : null,
       period === 'category' ? category : null,
-      period === 'global' ? categories.join(',') : null,
+      period === 'global' || period === 'daily' ? categories.join(',') : null,
     ],
     queryFn: () => fetchLeaderboard(period, { date, category, categories }),
     staleTime: 30_000,
@@ -66,8 +67,9 @@ export function useFlashcards(enabled: boolean) {
 
 /** The Biggest Shark Challenge leaderboard (best-effort; never throws to the UI). */
 export function useChallengeLeaderboard() {
+  const [subject] = useSubject();
   return useQuery({
-    queryKey: ['challenge', 'leaderboard'],
+    queryKey: ['challenge', 'leaderboard', subject],
     queryFn: getChallengeLeaderboard,
     staleTime: 30_000,
   });

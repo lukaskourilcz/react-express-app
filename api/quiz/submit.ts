@@ -6,21 +6,25 @@ import {
   encodeScoreProof,
   encodeQuizResultReceipt,
   encodeAnswerProof,
-  localizeQuestion,
-  normalizeLang,
-} from '../../lib/quiz-data';
+} from '../../lib/quiz-tokens';
+import { localizeQuestion, normalizeLang } from '../../lib/quiz-runtime';
 import { AuthError, tryAuth } from '../../lib/auth';
-import { createAnonClient, createServiceClient, jsonError, createLogger, withTimeout } from '../../lib/http';
+import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext } from '../../lib/http';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
-import { generateExplanation, isAiExplanationConfigured, type ExplanationContent } from '../../lib/ai-provider';
+import {
+  aiDailyGenerationLimit,
+  generateExplanation,
+  isAiExplanationConfigured,
+  type ExplanationContent,
+} from '../../lib/ai-provider';
+import { subjectForCategory } from '../../shared/subject-catalog';
 
 const MAX_ANSWERS = 50;
 
 const logEvent = createLogger('quiz/submit');
 const reportLogger = createLogger('quiz/report');
-const supabase = createAnonClient();
-const aiSupabase = createServiceClient();
+const serviceSupabase = createServiceClient();
 
 // Question-report reasons. 'needs-review' is the lightweight red-flag from the
 // learning path; the rest come from the full report dialog in the solo quiz.
@@ -29,7 +33,7 @@ const REPORT_REASONS = [
 ] as const;
 type ReportReason = (typeof REPORT_REASONS)[number];
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
 
   // Question-report sub-resource shares this function so we stay within the
@@ -79,12 +83,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const session = decodeSessionEnvelope(body.sessionId);
-  if (!session) {
+  if (!session || !session.attemptId) {
     logEvent({ status: 400, reason: 'invalid_session', latency_ms: Date.now() - started });
     return jsonError(res, 400, 'invalid_session', 'Quiz session expired or invalid');
   }
 
   const sessionById = new Map(session.questions.map((q) => [q.questionId, q]));
+  if (validated.some(({ questionId }) => !sessionById.has(questionId))) {
+    return jsonError(res, 400, 'bad_request', 'Answers contain a question outside this session');
+  }
+  if (session.scope !== 'challenge' && validated.length !== session.questions.length) {
+    return jsonError(res, 400, 'incomplete_answers', 'Answer every question before submitting');
+  }
   // Effective question set (base + /dev overrides) for localized explanations.
   const questionsById = await getEffectiveQuestionsById();
 
@@ -111,16 +121,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
   const auth = await tryAuth(req);
   const breakdown: Record<string, { correct: number; total: number }> = {};
+  const subject = session.subject;
+  if (!subject) {
+    return jsonError(res, 400, 'invalid_session', 'Quiz session is missing its product scope');
+  }
+  let questXp = 0;
   for (const result of results) {
-    const category = questionsById.get(result.questionId)?.category;
+    const question = questionsById.get(result.questionId);
+    const category = question?.category;
     if (!category) continue;
+    if (subjectForCategory(category) !== subject) {
+      return jsonError(res, 400, 'invalid_session', 'Quiz session contains mixed product scope');
+    }
     const bucket = breakdown[category] ?? { correct: 0, total: 0 };
     bucket.total++;
     if (result.isCorrect) bucket.correct++;
     breakdown[category] = bucket;
+    if (result.isCorrect && question) questXp += 2 + 2 * question.difficulty;
   }
-  const resultReceipt = auth
-    ? encodeQuizResultReceipt({ userId: auth.sub, correct, total, breakdown })
+  if (session.scope === 'daily') questXp = Math.max(20, questXp);
+  const resultReceipt = auth && session.scope !== 'challenge'
+      ? encodeQuizResultReceipt({
+        attemptId: session.attemptId,
+        userId: auth.sub,
+        correct,
+        total,
+        breakdown,
+        outcomes: results.flatMap((result) => {
+          const category = questionsById.get(result.questionId)?.category;
+          return category ? [{ questionId: result.questionId, category, isCorrect: result.isCorrect }] : [];
+        }),
+        subject,
+        questXp,
+        purpose: session.scope === 'assessment'
+          ? 'assessment'
+          : session.scope === 'daily'
+            ? 'daily'
+            : 'quiz',
+        ...(session.scope === 'daily' && session.date
+          ? { daily: { date: session.date, durationMs: Math.max(0, Date.now() - session.issuedAt) } }
+          : {}),
+      })
     : undefined;
 
   logEvent({ status: 200, total, correct, percentage, latency_ms: Date.now() - started });
@@ -129,9 +170,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     totalQuestions: total,
     correctAnswers: correct,
     percentage,
+    questXp,
     results,
     ...(resultReceipt ? { resultReceipt } : {}),
   });
+}
+
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  return withRequestContext(req, res, () => routeHandler(req, res));
 }
 
 function explanationHash(value: unknown): string {
@@ -182,10 +228,10 @@ async function handleExplanation(req: VercelRequest, res: VercelResponse) {
   });
   const selectedHash = explanationHash(selectedAnswer);
 
-  if (aiSupabase) {
+  if (serviceSupabase) {
     try {
       const cached = await withTimeout(
-        aiSupabase
+        serviceSupabase
           .from('question_explanations')
           .select('content, model, prompt_version')
           .eq('question_id', q.id)
@@ -205,11 +251,27 @@ async function handleExplanation(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  if (!isAiExplanationConfigured()) {
+  if (!isAiExplanationConfigured() || !serviceSupabase) {
     return res.json({ available: false, fallback: q.explanation });
   }
 
   try {
+    const budget = await withTimeout(
+      serviceSupabase.rpc('claim_ai_generation_budget', {
+        p_date: new Date().toISOString().slice(0, 10),
+        p_limit: aiDailyGenerationLimit(),
+      }),
+      1200,
+    );
+    if (budget.error || budget.data !== true) {
+      logEvent({
+        status: 200,
+        kind: 'ai_explanation',
+        available: false,
+        reason: budget.error ? 'budget_unavailable' : 'daily_budget_reached',
+      });
+      return res.json({ available: false, fallback: q.explanation });
+    }
     const generated = await generateExplanation({
       locale: lang,
       question: q.question,
@@ -218,8 +280,8 @@ async function handleExplanation(req: VercelRequest, res: VercelResponse) {
       selectedAnswer,
       curatedExplanation: q.explanation,
     });
-    if (aiSupabase) {
-      void aiSupabase.from('question_explanations').upsert(
+    if (serviceSupabase) {
+      void serviceSupabase.from('question_explanations').upsert(
         {
           question_id: q.id,
           question_hash: questionHash,
@@ -254,7 +316,7 @@ async function handleReport(req: VercelRequest, res: VercelResponse) {
   // Anonymous inserts allowed, so throttle per-IP against spam.
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.questionReport))) return;
 
-  if (!supabase) {
+  if (!serviceSupabase) {
     return jsonError(res, 503, 'not_configured', 'Reporting backend is not configured');
   }
 
@@ -285,7 +347,7 @@ async function handleReport(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { error } = await withTimeout(
-      supabase.from('question_reports').insert({
+      serviceSupabase.from('question_reports').insert({
         question_id: body.question_id,
         reason: body.reason,
         detail,

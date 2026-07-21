@@ -27,10 +27,16 @@ export interface GeneratedExplanation {
 const PROMPT_VERSION = 'explanation-v1';
 const MAX_FIELD = 1200;
 
+export function aiDailyGenerationLimit(): number {
+  const value = Number.parseInt(process.env.AI_DAILY_GENERATION_LIMIT ?? '', 10);
+  return Number.isInteger(value) && value > 0 && value <= 100_000 ? value : 0;
+}
+
 export function isAiExplanationConfigured(): boolean {
   return (
     process.env.AI_EXPLANATIONS_ENABLED === 'true' &&
-    Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL)
+    Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL) &&
+    aiDailyGenerationLimit() > 0
   );
 }
 
