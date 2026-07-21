@@ -184,6 +184,8 @@ async function main() {
       hardening.indexOf('REVOKE ALL ON FUNCTION public.subject_leaderboard'),
     'Migration 023 must create subject_leaderboard before revoking its privileges',
   );
+  assert.match(hardening, /REVOKE ALL ON FUNCTION public\.global_leaderboard\(INTEGER\)/);
+  assert.match(hardening, /REVOKE ALL ON FUNCTION public\.daily_leaderboard\(DATE, INTEGER\)/);
   const multiplayerMigration = readFileSync(join(process.cwd(), 'supabase-schema-005.sql'), 'utf8');
   assert.match(multiplayerMigration, /DROP FUNCTION IF EXISTS public\.match_scoreboard\(UUID\)/);
 

@@ -220,6 +220,23 @@ GRANT EXECUTE ON FUNCTION public.subject_leaderboard(TEXT[], INTEGER) TO service
 GRANT EXECUTE ON FUNCTION public.category_leaderboard(TEXT, INTEGER, INTEGER) TO service_role;
 GRANT EXECUTE ON FUNCTION public.daily_leaderboard_v2(DATE, TEXT, INTEGER) TO service_role;
 
+-- Retire the unscoped legacy leaderboards from the public Data API. They are
+-- retained for rollback compatibility, but the current API uses only the
+-- subject-scoped service-role functions above. Guard the revokes so this
+-- migration also works on installations where a legacy RPC never existed.
+DO $$
+BEGIN
+  IF to_regprocedure('public.global_leaderboard(integer)') IS NOT NULL THEN
+    EXECUTE 'REVOKE ALL ON FUNCTION public.global_leaderboard(INTEGER) FROM PUBLIC, anon, authenticated';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.global_leaderboard(INTEGER) TO service_role';
+  END IF;
+  IF to_regprocedure('public.daily_leaderboard(date,integer)') IS NOT NULL THEN
+    EXECUTE 'REVOKE ALL ON FUNCTION public.daily_leaderboard(DATE, INTEGER) FROM PUBLIC, anon, authenticated';
+    EXECUTE 'GRANT EXECUTE ON FUNCTION public.daily_leaderboard(DATE, INTEGER) TO service_role';
+  END IF;
+END;
+$$;
+
 -- Learn answer recording is one transaction and returns the immutable first
 -- result. This replaces API read/upsert/read amplification and keeps retries
 -- idempotent under concurrent tabs.

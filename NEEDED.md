@@ -2,12 +2,14 @@
 
 The repository implementation is complete for the current web brief. This file lists only work that requires your accounts, credentials, legal decisions, production data, or external services. Importance uses `[imp:1–5]`; `[imp:5]` blocks a safe public launch.
 
+Production database migrations through `supabase-schema-023.sql` were applied and verified on 2026-07-21.
+
 ## Before production launch
 
-- [ ] **Back up Supabase and apply `supabase-schema-023.sql`** after all earlier migrations. Confirm the new tables/functions and revoked browser grants with the launch-runbook checks. `[imp:5]` `[owner:me]`
 - [ ] **Configure both Vercel projects and domains.** StudyShark: `VITE_PRODUCT=studyshark`, `PRODUCT_ID=studyshark`, no subject lock. devShark: `VITE_PRODUCT=devshark`, `PRODUCT_ID=devshark`, `VITE_LOCK_SUBJECT=webdev`, `PRODUCT_SUBJECT=webdev`. Set all canonical sibling URLs. `[imp:5]` `[owner:me]`
 - [ ] **Add production secrets** in Vercel: Supabase URL/anon key, service-role key, a unique 32+ byte `SESSION_SECRET`, and `ADMIN_EMAILS` or an admin app-metadata role. Never expose service/OpenAI/Upstash secrets through `VITE_` variables. `[imp:5]` `[owner:me]`
 - [ ] **Configure Google OAuth** for every production and preview origin/callback you intend to support, then test sign-in and account deletion with a disposable account. `[imp:5]` `[owner:me]`
+- [ ] **Resolve the Supabase Auth password warning.** If email/password sign-in remains enabled, turn on leaked-password protection in Auth settings; otherwise disable password sign-ups and keep Google OAuth as the supported login method. `[imp:4]` `[owner:me]`
 - [ ] **Complete legal/privacy review.** Add the real controller/operator identity and contact, retention periods, lawful bases, processor/transfer disclosures, age policy, analytics consent behavior, and Czech terms. Keep support, analytics, replay, and AI disabled until the disclosure matches production. `[imp:5]` `[owner:me]`
 - [ ] **Run the signed-in production smoke test** in English/Czech and desktop/mobile: Learn completion, Quiz replay rejection, Daily/Challenge idempotency, Flashcards, two-session Play/Classroom, leaderboards, `/dev`, and deletion. `[imp:4]` `[owner:me]`
 
