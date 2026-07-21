@@ -10,3 +10,4 @@ client/vite.config.d.ts
 # tsc must never emit this: it would silently shadow vite.config.ts
 client/vite.config.js
 .vercel
+/.env.local
