@@ -4,7 +4,7 @@ Last reviewed: **21 July 2026**. Vendor prices change; the linked official prici
 
 ## Current architecture
 
-- React 19 + TypeScript + Vite SPA on Vercel.
+- React 19 + TypeScript + Vite SPA deployed from one repository to two Vercel projects: multi-subject StudyShark and web-development-only devShark.
 - Twelve Vercel Node functions for quizzes, verified learning, multiplayer/classroom, flashcards, leaderboards, user data, settings, health, and `/dev`.
 - Supabase Postgres/Auth/Realtime with RLS, service-only RPCs, one-time submission claims, encrypted answer sessions, subject-scoped data, and atomic progression/scoring.
 - Upstash Redis is supported for distributed rate limiting; local/preview can fall back to bounded instance memory.
@@ -37,6 +37,8 @@ Vercel Hobby + Supabase Free + Upstash Free, with analytics, replay, Sentry, sup
 - Domain and tax are extra.
 
 That $45 baseline is the sensible operating assumption once the product is commercial or needs non-pausing database service and backups.
+
+The second Vercel project does not by itself double this baseline: the estimate assumes one Pro developer seat plus metered usage across the two deployments. It does increase build frequency and creates two sets of function traffic, so monitor usage by project as adoption grows.
 
 ## Growth scenarios
 

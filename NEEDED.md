@@ -2,12 +2,11 @@
 
 The repository implementation is complete for the current web brief. This file lists only work that requires your accounts, credentials, legal decisions, production data, or external services. Importance uses `[imp:1–5]`; `[imp:5]` blocks a safe public launch.
 
-Production database migrations through `supabase-schema-023.sql` were applied and verified on 2026-07-21.
+Production database migrations through `supabase-schema-023.sql` were applied and verified on 2026-07-21. The two production Vercel projects, product scopes, canonical cross-links, Supabase credentials, and session secrets are configured; both `/api/health` probes and both Learn scopes were verified on 2026-07-21.
 
 ## Before production launch
 
-- [ ] **Configure the two Vercel projects and domains.** StudyShark: `VITE_PRODUCT=studyshark`, `PRODUCT_ID=studyshark`, no subject lock; all six general subjects live here. devShark: `VITE_PRODUCT=devshark`, `PRODUCT_ID=devshark`, `VITE_LOCK_SUBJECT=webdev`, `PRODUCT_SUBJECT=webdev`. Set only the StudyShark and devShark canonical URLs. `[imp:5]` `[owner:me]`
-- [ ] **Add and verify production secrets** in Vercel: Supabase URL/anon key, the actual service-role key (Learn grading cannot use the anon key), a unique 32+ byte `SESSION_SECRET`, and `ADMIN_EMAILS` or an admin app-metadata role. Confirm `/api/health` reports `serviceRole: ok`. Never expose service/OpenAI/Upstash secrets through `VITE_` variables. `[imp:5]` `[owner:me]`
+- [ ] **Authorize production admins** with `ADMIN_EMAILS` or Supabase `app_metadata.role=admin`, then verify `/dev` access with an admin and a non-admin account. Supabase URL/anon/service-role credentials and unique session secrets are already configured on both Vercel projects. `[imp:5]` `[owner:me]`
 - [ ] **Configure Google OAuth** for every production and preview origin/callback you intend to support, then test sign-in and account deletion with a disposable account. `[imp:5]` `[owner:me]`
 - [ ] **Resolve the Supabase Auth password warning.** If email/password sign-in remains enabled, turn on leaked-password protection in Auth settings; otherwise disable password sign-ups and keep Google OAuth as the supported login method. `[imp:4]` `[owner:me]`
 - [ ] **Complete legal/privacy review.** Add the real controller/operator identity and contact, retention periods, lawful bases, processor/transfer disclosures, age policy, analytics consent behavior, and Czech terms. Keep support, analytics, replay, and AI disabled until the disclosure matches production. `[imp:5]` `[owner:me]`
@@ -23,6 +22,7 @@ Production database migrations through `supabase-schema-023.sql` were applied an
 
 ## Brand and launch assets
 
+- [ ] **Attach your preferred custom StudyShark domain, if wanted.** StudyShark is live at `https://studyshark-app.vercel.app`; devShark remains at `https://devshark.app`. After adding a custom domain, update `VITE_STUDYSHARK_URL` on both projects plus OAuth origins/callbacks, then redeploy both. `[imp:3]` `[owner:me]`
 - [ ] **Replace placeholder icons and social artwork** (`client/public/icon.svg`, Apple/PWA icons, and `og-image.png`) with final licensed Shark-family assets and verify metadata on both domains. `[imp:3]` `[owner:me]`
 - [ ] **Run Lighthouse/PageSpeed on both deployed products** at mobile and desktop widths; save the baseline Core Web Vitals before making traffic-driven optimization decisions. `[imp:2]` `[owner:me]`
 

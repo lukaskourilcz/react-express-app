@@ -2,6 +2,8 @@
 
 StudyShark is a free, bilingual learning platform for geography, mathematics, history, human biology, chess, and poker. devShark is the separate, web-development-focused product built from the same repository. Product identity, public navigation, question delivery, progression, leaderboards, flashcards, multiplayer rooms, and API access are scoped so StudyShark never exposes the developer bank and devShark never exposes StudyShark subjects.
 
+Production: [StudyShark](https://studyshark-app.vercel.app) hosts all six general subjects on one domain; [devShark](https://devshark.app) is the standalone web-development platform. Both deploy from `main` into separate Vercel projects with independent product scopes and shared Supabase data infrastructure.
+
 The web experience uses the Deep End shark identity across the landing pages, Learn, Quiz, Challenge, Play, Profile, Flashcards, the career roadmap, dialogs, progress indicators, and the `/dev` control room. It supports English and Czech, light and dark themes, keyboard navigation, reduced motion, and responsive mobile/desktop layouts.
 
 Current content: **7,929 authored questions** — 3,609 web development, 1,000 geography, 1,000 mathematics, 1,000 history, 600 chess, 400 human biology, and 320 poker.
