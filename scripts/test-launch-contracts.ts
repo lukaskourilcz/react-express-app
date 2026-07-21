@@ -179,6 +179,13 @@ async function main() {
   assert.match(hardening, /ADD COLUMN IF NOT EXISTS subject TEXT/);
   assert.match(hardening, /REVOKE ALL ON FUNCTION public\.match_question_distribution/);
   assert.match(hardening, /purge_expired_learning_data/);
+  assert.ok(
+    hardening.indexOf('CREATE OR REPLACE FUNCTION public.subject_leaderboard') <
+      hardening.indexOf('REVOKE ALL ON FUNCTION public.subject_leaderboard'),
+    'Migration 023 must create subject_leaderboard before revoking its privileges',
+  );
+  const multiplayerMigration = readFileSync(join(process.cwd(), 'supabase-schema-005.sql'), 'utf8');
+  assert.match(multiplayerMigration, /DROP FUNCTION IF EXISTS public\.match_scoreboard\(UUID\)/);
 
   const rateReq = { headers: { 'x-forwarded-for': `contract-${Date.now()}` }, socket: {} } as never;
   const rateRes = mockResponse();

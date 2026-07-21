@@ -5,6 +5,12 @@
 DROP POLICY IF EXISTS "Users can read own stats"   ON user_stats;
 DROP POLICY IF EXISTS "Users can insert own stats" ON user_stats;
 DROP POLICY IF EXISTS "Users can update own stats" ON user_stats;
+-- The current base schema already uses the hardened policy names. Dropping
+-- them here keeps this historical migration safe for a brand-new install as
+-- well as databases created from the original permissive base schema.
+DROP POLICY IF EXISTS "stats_select_own" ON user_stats;
+DROP POLICY IF EXISTS "stats_insert_own" ON user_stats;
+DROP POLICY IF EXISTS "stats_update_own" ON user_stats;
 
 -- 2. Re-create policies that filter by the Supabase user id --------------
 -- `auth.uid()` is the authenticated Supabase user's id (auth.users.id).

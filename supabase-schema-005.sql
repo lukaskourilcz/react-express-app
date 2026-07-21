@@ -111,6 +111,10 @@ ALTER TABLE matches ADD COLUMN IF NOT EXISTS question_duration_s INTEGER NOT NUL
 ALTER TABLE match_answers ADD COLUMN IF NOT EXISTS speed_bonus INTEGER NOT NULL DEFAULT 0;
 
 -- Replacement scoreboard RPC that uses correct + speed_bonus.
+-- PostgreSQL cannot CREATE OR REPLACE a function when its RETURNS TABLE shape
+-- changes, so remove the schema-004 version before introducing the score field.
+DROP FUNCTION IF EXISTS public.match_scoreboard(UUID);
+
 CREATE OR REPLACE FUNCTION public.match_scoreboard(p_match_id UUID)
 RETURNS TABLE (user_id TEXT, display_name TEXT, correct INTEGER, score INTEGER, total_ms BIGINT)
 LANGUAGE sql

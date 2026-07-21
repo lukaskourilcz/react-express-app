@@ -117,16 +117,6 @@ GRANT EXECUTE ON FUNCTION public.match_scoreboard(UUID)
 DROP POLICY IF EXISTS "challenge_scores_read" ON public.challenge_scores;
 REVOKE ALL ON public.challenge_scores FROM anon, authenticated;
 
-REVOKE ALL ON FUNCTION public.subject_leaderboard(TEXT[], INTEGER)
-  FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.category_leaderboard(TEXT, INTEGER, INTEGER)
-  FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.daily_leaderboard_v2(DATE, TEXT, INTEGER)
-  FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.subject_leaderboard(TEXT[], INTEGER) TO service_role;
-GRANT EXECUTE ON FUNCTION public.category_leaderboard(TEXT, INTEGER, INTEGER) TO service_role;
-GRANT EXECUTE ON FUNCTION public.daily_leaderboard_v2(DATE, TEXT, INTEGER) TO service_role;
-
 -- Public rankings never infer a public identity from the private email local
 -- part. A learner may explicitly set a profile display name; otherwise a
 -- neutral label is used.
