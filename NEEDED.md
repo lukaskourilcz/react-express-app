@@ -11,13 +11,13 @@ tasks by that priority.
 
 ## Tasks
 
-- [ ] **Smoke-test the redesigned signed-in screens after deploy** — Roadmap, Profile, Play, Challenge, and Flashcards render their main state only with the backend + a signed-in user, which the sandbox couldn't run. `[imp:3]`
-- [ ] **Generate real web icons + OG share image** — `client/public/icon.svg`, `apple-touch-icon.png`, `icon-192/512.png`, `og-image.png` all ship as brand-green placeholders. `[imp:3]`
-- [ ] **Add an uptime monitor on `/api/health`** — it now returns 503 on real downtime; nothing watches it yet. `[imp:3]`
-- [ ] **Enable the Upstash distributed rate limiter** — add `UPSTASH_REDIS_REST_URL` + `_TOKEN`; in-memory limiting isn't shared across serverless instances today. `[imp:2]`
-- [ ] **Launch standalone devShark as a second Vercel project** — same repo, `VITE_LOCK_SUBJECT=webdev` + `VITE_SIBLING_URL`; a no-op on StudyShark. `[imp:2]`
-- [ ] **Run PageSpeed / DebugBear on the deployed URL** — measure Core Web Vitals before spending effort on perf tweaks. `[imp:2]`
-- [ ] **Offload endpoints to Cloudflare Workers if you outgrow Vercel's 12-function cap** — only relevant when you add more endpoints (and Pages allows commercial use on its free tier). `[imp:1]`
+- [ ] **Smoke-test the redesigned signed-in screens after deploy** — Roadmap, Profile, Play, Challenge, and Flashcards render their main state only with the backend + a signed-in user, which the sandbox couldn't run. `[imp:3]` `[owner:me]`
+- [ ] **Generate real web icons + OG share image** — `client/public/icon.svg`, `apple-touch-icon.png`, `icon-192/512.png`, `og-image.png` all ship as brand-green placeholders. `[imp:3]` `[owner:me]`
+- [ ] **Add an uptime monitor on `/api/health`** — it now returns 503 on real downtime; nothing watches it yet. `[imp:3]` `[owner:me]`
+- [ ] **Enable the Upstash distributed rate limiter** — add `UPSTASH_REDIS_REST_URL` + `_TOKEN`; in-memory limiting isn't shared across serverless instances today. `[imp:2]` `[owner:me]`
+- [ ] **Launch standalone devShark as a second Vercel project** — same repo, `VITE_LOCK_SUBJECT=webdev` + `VITE_SIBLING_URL`; a no-op on StudyShark. `[imp:2]` `[owner:me]`
+- [ ] **Run PageSpeed / DebugBear on the deployed URL** — measure Core Web Vitals before spending effort on perf tweaks. `[imp:2]` `[owner:me]`
+- [ ] **Offload endpoints to Cloudflare Workers if you outgrow Vercel's 12-function cap** — only relevant when you add more endpoints (and Pages allows commercial use on its free tier). `[imp:1]` `[owner:me]`
 
 ## Details
 
