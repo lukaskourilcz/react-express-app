@@ -166,7 +166,7 @@ async function xp(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// Daily activity map (date → lessons completed) backing the mobile streak garden.
+// Daily activity map (date → lessons completed) backing the streak garden.
 // Kept on the existing user function so we don't add a Vercel Hobby function.
 function sanitizeDays(input: unknown): Record<string, number> {
   const out: Record<string, number> = {};

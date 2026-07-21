@@ -2,10 +2,10 @@
 // Generate PLACEHOLDER raster assets (app icons, splash, OG image) as valid
 // solid-colour PNGs, with no external dependencies (pure Node zlib).
 //
-// Why this exists: the iOS/PWA/OG pipeline needs real PNG files at specific
-// paths and sizes, but the actual artwork (the StudyShark mascot) comes from
+// Why this exists: the PWA/OG pipeline needs real PNG files at specific paths
+// and sizes, but the actual artwork (the StudyShark mascot) comes from
 // Recraft/Ideogram — see NEEDED.md. These placeholders make every path resolve
-// so the app builds, EAS doesn't choke on missing icons, and links don't 404.
+// so the web app builds and links don't 404.
 // Replace each file in place with the real artwork; keep the filenames.
 //
 // Run:  node scripts/gen-placeholder-assets.mjs
@@ -69,11 +69,6 @@ const targets = [
   ['client/public/icon-192.png', 192, 192],
   ['client/public/icon-512.png', 512, 512],
   ['client/public/og-image.png', 1200, 630],
-  // Expo native (mobile/assets)
-  ['mobile/assets/icon.png', 1024, 1024],
-  ['mobile/assets/adaptive-icon.png', 1024, 1024],
-  ['mobile/assets/splash.png', 1284, 1284],
-  ['mobile/assets/favicon.png', 48, 48],
 ];
 
 for (const [path, w, h] of targets) {

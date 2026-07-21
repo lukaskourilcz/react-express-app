@@ -1,13 +1,12 @@
 # DevQuiz — Setup & Recommendations
 
 A practical, current guide to (1) what you need to make the **website** fully
-operational, (2) how to set up the **iOS** app for launch, and (3) prioritized
-**performance / scalability / reliability** improvements from a full pass over
-the app.
+operational and (2) prioritized **performance / scalability / reliability**
+improvements from a full pass over the app.
 
 > This complements the exhaustive `LAUNCH.md` (a one-time launch audit). This doc
 > reflects the **current** state of the repo after the latest changes
-> (importance system, three new learning paths, iOS parity, DB migrations applied,
+> (importance system, three new learning paths, DB migrations applied,
 > `/dev` password set to `autobus`). Where `LAUNCH.md` and this doc overlap, this
 > one is newer.
 
@@ -18,14 +17,11 @@ the app.
 - **Question bank:** 3,110 questions. 15 learning paths including the new
   **AI & LLMs**, **React Hook Form + Zod**, and **Cool Stuff** paths.
 - **Importance system:** every question has a resolved importance (1–10); the
-  quiz (web + the mobile online path + the mobile offline fallback) is
-  importance-weighted; `/dev` can edit scores, bulk-hide fillers, and shows flag
-  counts.
+  quiz is importance-weighted; `/dev` can edit scores, bulk-hide fillers, and
+  shows flag counts.
 - **Database:** base schema + migrations `002`–`014` are applied to the live
   Supabase project (verified), `user_streak` (012) created, and Realtime enabled
   for the multiplayer tables. Re-verify anytime with the query in §3.3.
-- **iOS parity:** the mobile app now knows all 15 topics + their labels/colors,
-  and its offline bundle (`mobile/src/data/offline-data.ts`) was regenerated.
 - **`/dev` password:** default is now `autobus` (was `react123`). **Override it
   in production** with the `DEV_PASSWORD` env var (see §1).
 
@@ -50,17 +46,6 @@ README mentions.
 | `OWNER_EMAIL` | optional | Email whose private categories (custom/apt) are visible; defaults to `kouril.lukas@gmail.com`. |
 
 Generate a session secret with: `openssl rand -base64 48`.
-
-### 1.2 Mobile (Expo / EAS)
-
-Read in `mobile/src/lib/config.ts` from `EXPO_PUBLIC_*` env or `app.json` →
-`expo.extra`:
-
-| Variable / field | Purpose |
-|---|---|
-| `EXPO_PUBLIC_SUPABASE_URL` / `extra.supabaseUrl` | Supabase URL. |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` / `extra.supabaseAnonKey` | Supabase anon key (currently **empty** in `app.json` — fill it). |
-| `EXPO_PUBLIC_API_BASE_URL` / `extra.apiBaseUrl` | Your deployed Vercel URL (e.g. `https://devquiz.vercel.app`). Empty today → all network calls fail until set. |
 
 ---
 
@@ -110,11 +95,9 @@ table, key column, function, RLS flag, Realtime publication, and the
 Replication / `supabase_realtime` publication) or live multiplayer won't update.
 
 ### 3.4 After changing questions/roadmap
-Regenerate the mobile offline bundle and re-run integrity checks:
+Re-run the integrity check:
 ```bash
 npx ts-node scripts/validate-roadmap.ts          # bank/level integrity
-npx ts-node scripts/generate-mobile-offline.ts   # rewrites mobile/src/data/offline-data.ts
-npx ts-node scripts/test-offline-data.ts         # offline bundle integrity
 ```
 
 ---
@@ -232,69 +215,17 @@ update.
 
 ---
 
-## 5. iOS launch
-
-The mobile app (Expo SDK 52 / RN 0.76) is feature-complete and offline-capable;
-the gap to the App Store is mostly assets, identifiers, and credentials. Full
-checklist is in `LAUNCH.md` §C — the essentials:
-
-1. **Apple Developer Program** ($99/yr); note the Team ID.
-2. **Real bundle ID** — replace `com.yourcompany.devquiz` in `mobile/app.json`
-   (bundle id + App Group) and the widget target files.
-3. **Fill config:** `app.json` → `extra.supabaseAnonKey` + `extra.apiBaseUrl`
-   (your Vercel URL), or the `EXPO_PUBLIC_*` equivalents for the EAS `production`
-   profile; and `eas.json` submit creds (`appleId`, `ascAppId`, `appleTeamId`).
-4. **Assets:** 1024×1024 marketing icon, `icon.png`, `splash.png`,
-   `adaptive-icon.png`; configure `expo-splash-screen`.
-5. **Sign in with Apple** — required by App Store Guideline 4.8 since Google login
-   is offered. Add `expo-apple-authentication` + a button in `AccountScreen.tsx` +
-   `supabase.auth.signInWithIdToken({ provider: 'apple', … })`.
-6. **Privacy manifest** (`PrivacyInfo.xcprivacy`) and
-   `ITSAppUsesNonExemptEncryption: false`, `CFBundleLocalizations: ["en","cs"]`.
-7. **Widget:** either implement the missing `DevquizWidgetModule.swift` or remove
-   `mobile/modules/devquiz-widget/` before an EAS production build.
-8. **Add Supabase OAuth redirect** `devquiz://auth-callback` to Supabase Auth +
-   Google OAuth client.
-9. **Regenerate the offline bundle** (§3.4) so the shipped app includes the latest
-   questions/paths, then `eas build -p ios --profile production` → TestFlight →
-   submit.
-
-> **Parity note:** the `/dev` console features (editable importance, bulk-hide,
-> flag triage) are owner/admin web-only and intentionally have no mobile UI. The
-> mobile **online** quiz already gets importance-weighting from the server, and
-> the **offline** fallback now mirrors it locally. Mobile has no user-facing
-> "report question" feature — that's a pre-existing gap worth adding if you want
-> full parity (a single POST to `api/quiz/report`).
-
----
-
-## 6. Compliance & legal (App Store + website)
+## 6. Compliance & legal (website)
 
 > General engineering guidance, **not legal advice** — confirm specifics for your
 > jurisdiction(s). DevQuiz collects: account **email** + display name/avatar (via
 > Google), **quiz results/progress**, and a Supabase **user id**. It runs **no
 > ads and no cross-site tracking** today.
 
-### 6.1 Apple App Store — required controls
-
-| Requirement | Needed | Notes / action |
-|---|---|---|
-| Apple Developer Program | ✅ | $99/yr; provides the Team ID for signing & submission. |
-| **Privacy policy URL** | ✅ (Guideline 5.1.1) | Public URL set in App Store Connect **and** linked in-app. Describe what you collect, why, retention, and how to delete. |
-| **App Privacy "nutrition label"** | ✅ | In App Store Connect declare: Contact info → email; User content → quiz data; Identifiers → user id. **"Used to track you" = No.** |
-| **In-app account deletion** | ✅ (5.1.1(v)) | Apps with sign-up **must** let users delete their account *inside the app* (not "email us"). **Missing today → build it** (see 6.3). Common rejection. |
-| **Sign in with Apple (or equivalent)** | ✅ (Guideline 4.8) | Because you offer Google login, you must also offer an *equivalent private* login: data limited to name+email, option to hide email, no tracking. Google doesn't qualify → add **Sign in with Apple**; revoke its token via Apple's REST API on account deletion. |
-| **Privacy Manifest** `PrivacyInfo.xcprivacy` | ✅ (since May 2024) | Declare "required-reason" APIs (AsyncStorage→UserDefaults, file timestamp, disk space, boot time) + `NSPrivacyTracking=false`. Bundled Expo/RN SDKs ship their own; your app needs the top-level manifest. Missing → rejection. |
-| **Export compliance (encryption)** | ✅ (1 line) | Set `ITSAppUsesNonExemptEncryption=false` in `app.json` infoPlist (standard HTTPS only) to skip the questionnaire every submit. |
-| Age rating | ✅ | Complete the questionnaire; category Education. |
-| Reviewer sign-in access | ✅ | Reviewers must be able to log in — ship Sign in with Apple and/or put a demo account in the review notes, or review fails. |
-| App Tracking Transparency (ATT) | ❌ today | Only if you add cross-app/-site tracking or ad SDKs. |
-| 3rd-party AI data-sharing disclosure | ❌ today | New 2025 rule: disclose + consent if you ever send personal data to a third-party AI. N/A now. |
-
 ### 6.2 Website — privacy, cookies, terms
 
 - **Privacy policy — required, do it first.** GDPR, CCPA, *and* Google's OAuth
-  terms each require one. It's the single artifact Apple, Google and EU/UK law all
+  terms each require one. It's the single artifact Google and EU/UK law all
   demand.
 - **Cookie consent banner — how important, honestly?** For **DevQuiz as built
   today, a consent banner is _not legally required_.** The only browser storage is
@@ -313,8 +244,7 @@ checklist is in `LAUNCH.md` §C — the essentials:
 - **Terms of Service — recommended.** You have accounts, public display names and
   leaderboards (user content); ToS sets acceptable-use and limits liability.
 - **Data-subject rights (GDPR/CCPA).** Offer account **deletion** (and ideally
-  data **export**). Build deletion once → it satisfies *both* Apple 5.1.1(v) and
-  GDPR/CCPA erasure (6.3).
+  data **export**). Build deletion once → it satisfies GDPR/CCPA erasure (6.3).
 - **Google OAuth consent screen.** Configure in Google Cloud (app name, logo,
   **privacy-policy + terms URLs**, authorized domains) and **publish** it (out of
   "Testing"). Basic `email`/`profile` scopes are non-sensitive, so you avoid
@@ -325,37 +255,31 @@ checklist is in `LAUNCH.md` §C — the essentials:
 
 ### 6.3 The one code gap this reveals: in-app account deletion
 
-Required by **Apple and GDPR/CCPA**, currently missing. Build once, expose on web
-(Profile) and iOS (Account):
+Required by **GDPR/CCPA**, currently missing. Build once, expose on the web
+(Profile):
 
 1. An authed delete op on `api/user/[op].ts` (no new Vercel function) that, for the
    verified user, removes their rows (`user_stats`, `user_category_stats`,
    `flashcards`, `roadmap_progress`, `user_streak`, `user_xp`, `daily_attempts`,
    `match_*`, `auth_events`) then deletes the auth user via
    `supabase.auth.admin.deleteUser(sub)`.
-2. A confirm dialog in the web Profile and the mobile Account screen.
-3. If Sign in with Apple is enabled, revoke its token via Apple's REST API.
+2. A confirm dialog in the web Profile.
 
 > Tip: generate a privacy policy + ToS with a reputable tool (Termly / iubenda /
 > TermsFeed), host them as two static routes, and make sure they list Supabase,
 > Google sign-in, and exactly what you store.
 
-**Sources:** Apple [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/),
-[account-deletion requirement](https://developer.apple.com/news/?id=mdkbobfo),
-[Sign in with Apple / 4.8](https://developer.apple.com/news/?id=j9zukcr6),
-[Privacy manifests](https://developer.apple.com/documentation/bundleresources/privacy-manifest-files);
-[GDPR.eu cookies](https://gdpr.eu/cookies/).
+**Sources:** [GDPR.eu cookies](https://gdpr.eu/cookies/).
 
 ---
 
 ## 7. Suggested "next 1–2 days" order
 
-1. **Privacy policy + ToS live, and in-app account deletion** — required by Apple
-   5.1.1(v) + GDPR/CCPA (§6). Highest-leverage compliance item.
+1. **Privacy policy + ToS live, and in-app account deletion** — required by
+   GDPR/CCPA (§6). Highest-leverage compliance item.
 2. Set a strong `DEV_PASSWORD`; confirm all prod env vars (§1).
 3. Prism light build + immutable asset caching (§4.1.1, §4.1.5) — biggest, safest
    perf win.
 4. Rate-limit the report + mutating endpoints (§4.2.2).
 5. `reportCounts` + XP atomic RPCs (§4.2.3–4).
 6. `play/state` resilience + per-route error boundaries + health 503 (§4.3).
-7. iOS: bundle ID, assets, Sign in with Apple, Privacy Manifest, EAS creds (§5, §6.1).

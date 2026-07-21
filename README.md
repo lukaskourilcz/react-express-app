@@ -1,8 +1,8 @@
 # DevQuiz
 
-A developer-knowledge quiz & learning app covering HTML, CSS, JavaScript, TypeScript, React, Node.js, Next.js, Git, DSA/algorithms, databases, DevOps, security, system design, testing, and AI/LLMs. **~3,100 hand-curated questions** across **15 learning paths**, importance-weighted from beginner to expert. Solo practice, a guided skill roadmap, daily challenges, live multiplayer/classroom matches, flashcards, XP/leveling, and leaderboards — on the web **and** iOS.
+A developer-knowledge quiz & learning app covering HTML, CSS, JavaScript, TypeScript, React, Node.js, Next.js, Git, DSA/algorithms, databases, DevOps, security, system design, testing, and AI/LLMs. **~3,100 hand-curated questions** across **15 learning paths**, importance-weighted from beginner to expert. Solo practice, a guided skill roadmap, daily challenges, live multiplayer/classroom matches, flashcards, XP/leveling, and leaderboards.
 
-> **Stack:** React 18 + Vite + MUI (TanStack Query) on the client · Vercel serverless functions in TypeScript on the backend · Supabase (Postgres + Auth + Realtime) for persistence, identity, and live matches · an Expo (React Native) iOS app sharing the same API. Identity is **Supabase Auth (Google OAuth)**.
+> **Stack:** React 18 + Vite + MUI (TanStack Query) on the client · Vercel serverless functions in TypeScript on the backend · Supabase (Postgres + Auth + Realtime) for persistence, identity, and live matches. Identity is **Supabase Auth (Google OAuth)**.
 >
 > 💰 For hosting tiers, current costs, and a scaling analysis, see **[`stack-and-scaling.md`](./stack-and-scaling.md)**.
 
@@ -20,7 +20,6 @@ A developer-knowledge quiz & learning app covering HTML, CSS, JavaScript, TypeSc
 - [Authentication (Supabase Auth)](#authentication-supabase-auth)
 - [API reference](#api-reference)
 - [Quiz data & importance](#quiz-data--importance)
-- [Mobile app (iOS / Expo)](#mobile-app-ios--expo)
 - [Security model](#security-model)
 - [Reliability & observability](#reliability--observability)
 - [Performance notes](#performance-notes)
@@ -59,7 +58,7 @@ A developer-knowledge quiz & learning app covering HTML, CSS, JavaScript, TypeSc
 - **Classroom** — host advances each question manually and sees a live per-question answer-distribution histogram.
 - **Configurable per-question time limit** (or no limit), set by the host at creation.
 - **Short, human-readable match codes** (Crockford base32).
-- Real-time updates over **Supabase Realtime** broadcast channels, with a **polling fallback** (4 s on web, 2 s on mobile) when the socket isn't available.
+- Real-time updates over **Supabase Realtime** broadcast channels, with a **polling fallback** (4 s) when the socket isn't available.
 - **Host heartbeats**; matches go stale and auto-finish after ~5 minutes without one.
 - **Speed bonus** is computed server-side from the question-start timestamp with a 1 s ping-grace window, so client clock skew can't game the scoreboard.
 
@@ -114,9 +113,6 @@ A developer-knowledge quiz & learning app covering HTML, CSS, JavaScript, TypeSc
 - **HMAC-signed session tokens** (`node:crypto`) as the answer-key proof.
 - In-memory caches (short TTL) for the question bank and settings on warm instances.
 
-### Mobile (`mobile/`)
-- **Expo SDK 52 / React Native 0.76**, **expo-router**, an offline question bundle, and a native iOS widget target. Talks to the same Vercel API and Supabase project.
-
 ### Hosting
 - **Vercel** for the SPA + serverless functions (edge CDN, security headers, SPA rewrites).
 - **Supabase** for Postgres (RLS-enforced), Auth (Google OAuth), and Realtime.
@@ -128,9 +124,9 @@ A developer-knowledge quiz & learning app covering HTML, CSS, JavaScript, TypeSc
 ```
 ┌─────────────────────────────┐         ┌──────────────────────────────┐
 │  Web (React + MUI + RQuery) │ ──────▶ │  Vercel serverless (api/*)   │
-│  iOS  (Expo / React Native) │  HTTPS  │   - Verify Supabase JWT      │
-│   - Supabase Auth (Google)  │  Bearer │     (auth.getUser)           │
-│   - apiFetch w/ access token │        │   - Validate + sanitize      │
+│   - Supabase Auth (Google)  │  Bearer │   - Verify Supabase JWT      │
+│   - apiFetch w/ access token │        │     (auth.getUser)           │
+│                             │         │   - Validate + sanitize      │
 └─────────┬───────────────────┘         │   - Service-role writes      │
           │                             └─────────┬────────────────────┘
           │ WebSocket (Realtime)                  │ Postgres + RPC
@@ -194,11 +190,9 @@ react-express-app/
 │       ├── i18n/                 # English + Czech translations
 │       └── theme/                # MUI theme + ColorMode context
 │
-├── mobile/                       # Expo SDK 52 / React Native 0.76 iOS app (+ offline bundle, widget)
-│
 ├── supabase-schema.sql           # baseline: user_stats + RLS
 ├── supabase-schema-0NN.sql       # migrations 002 … 019 (see Database setup)
-├── scripts/                      # roadmap validation + mobile offline-bundle generation + tests
+├── scripts/                      # roadmap validation + tests
 ├── vercel.json                   # function config + security headers + CSP + SPA rewrites
 ├── stack-and-scaling.md          # tech stack, current costs, and scaling analysis
 └── package.json
@@ -256,8 +250,6 @@ The `VITE_` prefix exposes a variable to the client bundle at build time; the re
 | `VITE_LOCK_SUBJECT` | optional | client | Standalone single-subject mode. Set to a subject id (`webdev`, `geography`, `math`, `history`, `chess`, `biology`, `poker`) to lock the whole app to it — no picker/switcher, standalone wordmark (e.g. devShark). Unset on the umbrella StudyShark deploy. |
 | `VITE_SIBLING_URL` | optional | client | URL of the umbrella StudyShark site. When set (typically on a locked deploy) the Profile shows an "Explore the other Shark platforms" link. |
 
-**Mobile (`mobile/`)** uses `EXPO_PUBLIC_*` vars (inlined at build) or `app.json` → `expo.extra`: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_BASE_URL` (your deployed Vercel URL). Use only public/anon values — never secrets.
-
 > Note: there is **no Auth0** in this project. Identity is handled entirely by Supabase Auth; older Auth0 references have been removed.
 
 ---
@@ -303,7 +295,7 @@ Then enable **Realtime** on `matches`, `match_participants`, and `match_answers`
 Identity is **Supabase Auth with the Google provider** (no Auth0, no custom JWT infra):
 
 1. In Supabase → **Authentication → Providers → Google**, enable Google and configure the OAuth client.
-2. Add your site URL and the `…/auth/callback` redirect to **both** Supabase and the Google Cloud OAuth client. For the mobile app, also add `devquiz://auth-callback`.
+2. Add your site URL and the `…/auth/callback` redirect to **both** Supabase and the Google Cloud OAuth client.
 3. The browser client signs in via Supabase and stores the session in `localStorage`; `apiFetch` attaches the access token as a `Bearer` header.
 4. On the server, `lib/auth.ts` verifies each token with `supabase.auth.getUser(token)` and uses the returned user id as the canonical subject. After verification, user-scoped writes use the service-role key (bypassing RLS safely because the subject is already trusted).
 
@@ -338,18 +330,10 @@ Every Supabase call is wrapped in a 5-second timeout so a hung Postgres can't bu
 
 - **Source of truth:** `lib/quiz-data.ts` (+ `lib/quiz-data.cs.ts` for Czech) and the per-track `lib/roadmap-questions-*.ts` files, assembled into a single bank of **~3,100 questions**.
 - Each question has an `id`, `tags`, optional `introduction`, `question` (Markdown with optional fenced code), `options`, `correctAnswer` (index), `category`, `explanation`, a `difficulty`, and a resolved **importance (1–10)**.
-- **Importance-weighted selection** is applied on web, the mobile online path, and the mobile offline fallback, so high-value questions appear more often.
+- **Importance-weighted selection** is applied so high-value questions appear more often.
 - `/dev` edits are stored as **overrides** (`question_edits`) and merged onto the static bank at serve time (cached briefly); the live quiz reflects changes within seconds, and the app falls back to the static bank if the DB is unavailable.
 - **Session tokens** are `base64url(payload) + "." + base64url(HMAC-SHA256(payload, SESSION_SECRET))` with a short TTL, carrying the generated questions + answer key so submit can verify without trusting the client.
 - The bank lives in **code**, not the database — keep that in mind for cold-start parse cost (see [Performance notes](#performance-notes)).
-
----
-
-## Mobile app (iOS / Expo)
-
-`mobile/` is an **Expo SDK 52 / React Native 0.76** app (expo-router) that reuses the same Vercel API and Supabase project, with an **offline question bundle** (`mobile/src/data/offline-data.ts`, regenerated by `scripts/generate-mobile-offline.ts`) and a native iOS **widget** target.
-
-It is feature-complete but pre-launch: `mobile/app.json` still has a placeholder bundle id and empty Supabase/API config. App Store prerequisites (Apple Developer Program, Sign in with Apple, privacy manifest, in-app account deletion, real bundle id, EAS submit credentials) are tracked in `SETUP_AND_RECOMMENDATIONS.md` §5–6 and `LAUNCH.md`.
 
 ---
 
@@ -450,7 +434,6 @@ Flagged in the codebase / audit docs and not yet wired:
 - **Lighter syntax highlighter** — `prism-light` / `registerLanguage` to save ~200 KB gzip.
 - **Atomic writes** — convert XP updates and report counts to RPCs.
 - **Health endpoint** — return `503` when Supabase is down so uptime monitors detect outages.
-- **iOS launch** — Sign in with Apple, privacy manifest, in-app account deletion, real bundle id + EAS credentials.
 
 ---
 
