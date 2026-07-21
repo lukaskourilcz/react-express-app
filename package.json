@@ -1,7 +1,7 @@
 {
   "name": "react-express-quiz-app",
   "version": "1.0.0",
-  "type": "module",
+  "type": "commonjs",
   "description": "StudyShark and devShark bilingual learning platform with React, Vercel, and Supabase",
   "engines": {
     "node": ">=22 <25"
