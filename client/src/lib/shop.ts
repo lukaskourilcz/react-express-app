@@ -31,8 +31,8 @@ export interface Product {
   id: string;
   kind: ProductKind;
   price: number;
-  /** Emoji shown on the product card (and, for flairs, the equipped flair). */
-  emoji: string;
+  /** Compact typographic marker shown on the product card and equipped flair. */
+  marker: string;
   /** Ring colour (rings only), or the topic accent (paths). */
   color?: string;
   /** For `path` products: the roadmap topic this unlocks. */
@@ -45,15 +45,15 @@ export interface Product {
 // and client/src/lib/gameConfig.ts; these are the static fallbacks). The live
 // price is resolved per purchase/display via priceOf() from the game config.
 const STATIC_CATALOGUE: Product[] = [
-  { id: 'double-xp', kind: 'booster', price: 75, emoji: '⚡' },
+  { id: 'double-xp', kind: 'booster', price: 75, marker: '2×' },
 
-  { id: 'ring-emerald', kind: 'ring', price: 200, emoji: '⬤', color: '#10b981' },
-  { id: 'ring-gold', kind: 'ring', price: 250, emoji: '⬤', color: '#d4af37' },
-  { id: 'ring-violet', kind: 'ring', price: 375, emoji: '⬤', color: '#8b5cf6' },
+  { id: 'ring-emerald', kind: 'ring', price: 200, marker: '⬤', color: '#10b981' },
+  { id: 'ring-gold', kind: 'ring', price: 250, marker: '⬤', color: '#d4af37' },
+  { id: 'ring-violet', kind: 'ring', price: 375, marker: '⬤', color: '#8b5cf6' },
 
-  { id: 'flair-rocket', kind: 'flair', price: 150, emoji: '🚀' },
-  { id: 'flair-flame', kind: 'flair', price: 300, emoji: '🔥' },
-  { id: 'flair-crown', kind: 'flair', price: 500, emoji: '👑' },
+  { id: 'flair-rocket', kind: 'flair', price: 150, marker: '↑' },
+  { id: 'flair-flame', kind: 'flair', price: 300, marker: '◆' },
+  { id: 'flair-crown', kind: 'flair', price: 500, marker: 'Ⅰ' },
 ];
 
 /** Default tokens to instantly unlock one learning path the user hasn't earned. */
@@ -70,7 +70,7 @@ const PATH_PRODUCTS: Product[] = SUBJECT_ORDER.flatMap((subject) =>
       id: `path-${topic}`,
       kind: 'path',
       price: PATH_UNLOCK_PRICE,
-      emoji: '🗺️',
+      marker: '→',
       color: getCategoryHexColor(topic),
       topic,
       subject,
@@ -283,8 +283,8 @@ export function useEquippedRingColor(): string | null {
   return inv.ring ? byId.get(inv.ring)?.color ?? null : null;
 }
 
-/** Emoji of the active subject's equipped title flair, or null. */
+/** Typographic marker for the active subject's equipped title flair, or null. */
 export function useEquippedFlair(): string | null {
   const inv = useInventory();
-  return inv.flair ? byId.get(inv.flair)?.emoji ?? null : null;
+  return inv.flair ? byId.get(inv.flair)?.marker ?? null : null;
 }

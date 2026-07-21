@@ -2,14 +2,19 @@
   "name": "react-express-quiz-app",
   "version": "1.0.0",
   "description": "Quiz app with React, TypeScript, and MaterialUI",
+  "engines": {
+    "node": ">=22 <25"
+  },
   "scripts": {
     "dev": "vercel dev --listen 3000",
     "build": "cd client && npm run build",
+    "typecheck:api": "tsc --noEmit",
+    "test:launch": "client/node_modules/.bin/esbuild scripts/test-launch-contracts.ts --bundle --platform=node --format=esm --outfile=/tmp/shark-launch-contracts.mjs && node /tmp/shark-launch-contracts.mjs",
     "preview": "vercel dev --listen 3000",
     "install:all": "npm install && cd client && npm install"
   },
   "devDependencies": {
-    "@vercel/node": "^3.0.0",
+    "@types/node": "^25.9.5",
     "typescript": "^5.9.3"
   },
   "dependencies": {

@@ -10560,20 +10560,31 @@ export const questions: Question[] = [
 ];
 
 
-// HMAC-signed session token. SESSION_SECRET MUST be set in production
-// (Vercel project env). In development we allow a fallback so local dev runs.
-import { createHmac, timingSafeEqual, randomInt } from 'node:crypto';
+// Opaque authenticated tokens. SESSION_SECRET MUST be set in production
+// (Vercel project env). AES-GCM keeps answer keys confidential as well as
+// tamper-proof; the previous HMAC-only envelope exposed the JSON payload to
+// anyone who base64-decoded it in the browser.
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+  randomInt,
+} from 'node:crypto';
 
 const SECRET = process.env.SESSION_SECRET;
 const IS_PROD = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
 
-if (IS_PROD && !SECRET) {
-  // Fail closed: do not start the function with an unsigned/forgeable secret in prod.
-  throw new Error('SESSION_SECRET is required in production');
+if (IS_PROD && (!SECRET || SECRET.length < 32)) {
+  // Fail closed: short secrets are not suitable key material in production.
+  throw new Error('SESSION_SECRET must be at least 32 characters in production');
 }
 
 const RESOLVED_SECRET = SECRET || 'dev-only-not-for-production';
 const TOKEN_TTL_MS = 60 * 60 * 1000; // 1h
+const CHALLENGE_TTL_MS = 3 * 60 * 60 * 1000; // long enough for an excellent run
+const TOKEN_AAD = Buffer.from('shark-quiz-token:v2');
+const TOKEN_KEY = createHash('sha256').update(RESOLVED_SECRET, 'utf8').digest();
 
 function b64url(buf: Buffer): string {
   return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -10585,48 +10596,233 @@ function fromB64url(s: string): Buffer {
 }
 
 interface SessionPayload {
+  kind: 'quiz-session';
   questions: { questionId: string; correctAnswer: number }[];
+  scope?: 'challenge';
+  runId?: string;
   iat: number;
   exp: number;
 }
 
-export function encodeSession(data: { questionId: string; correctAnswer: number }[]): string {
-  const now = Date.now();
-  const payload: SessionPayload = {
-    questions: data,
-    iat: now,
-    exp: now + TOKEN_TTL_MS,
-  };
-  const encoded = b64url(Buffer.from(JSON.stringify(payload)));
-  const signature = b64url(createHmac('sha256', RESOLVED_SECRET).update(encoded).digest());
-  return `${encoded}.${signature}`;
+interface ChallengeRunPayload {
+  kind: 'challenge-run';
+  runId: string;
+  ranked: boolean;
+  iat: number;
+  exp: number;
 }
 
-export function decodeSession(
-  token: string,
-): { questionId: string; correctAnswer: number }[] | null {
-  if (typeof token !== 'string' || !token.includes('.')) return null;
-  const [encoded, signature] = token.split('.');
-  if (!encoded || !signature) return null;
+interface ScoreProofPayload {
+  kind: 'score-proof';
+  runId: string;
+  questionId: string;
+  isCorrect: boolean;
+  iat: number;
+  exp: number;
+}
+
+interface QuizResultReceiptPayload {
+  kind: 'quiz-result';
+  attemptId: string;
+  userId: string;
+  correct: number;
+  total: number;
+  breakdown: Record<string, { correct: number; total: number }>;
+  iat: number;
+  exp: number;
+}
+
+interface AnswerProofPayload {
+  kind: 'answer-proof';
+  questionId: string;
+  isCorrect: boolean;
+  iat: number;
+  exp: number;
+}
+
+export interface DecodedQuizSession {
+  questions: { questionId: string; correctAnswer: number }[];
+  scope?: 'challenge';
+  runId?: string;
+}
+
+function sealToken(payload: SessionPayload | ChallengeRunPayload | ScoreProofPayload | QuizResultReceiptPayload | AnswerProofPayload): string {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv('aes-256-gcm', TOKEN_KEY, iv);
+  cipher.setAAD(TOKEN_AAD);
+  const ciphertext = Buffer.concat([
+    cipher.update(JSON.stringify(payload), 'utf8'),
+    cipher.final(),
+  ]);
+  const tag = cipher.getAuthTag();
+  return `v2.${b64url(iv)}.${b64url(ciphertext)}.${b64url(tag)}`;
+}
+
+function openToken(token: string): unknown | null {
+  if (typeof token !== 'string' || token.length > 16_384) return null;
+  const parts = token.split('.');
+  if (parts.length !== 4 || parts[0] !== 'v2') return null;
 
   try {
-    const expected = createHmac('sha256', RESOLVED_SECRET).update(encoded).digest();
-    const provided = fromB64url(signature);
-    if (provided.length !== expected.length) return null;
-    // Node's Buffer extends Uint8Array, but @types/node@22's generic
-    // Uint8Array<ArrayBufferLike> trips strict checks for timingSafeEqual,
-    // which expects ArrayBufferView<ArrayBuffer>. Cast through Uint8Array
-    // — the runtime call is identical.
-    if (!timingSafeEqual(provided as unknown as Uint8Array, expected as unknown as Uint8Array)) return null;
-
-    const payload = JSON.parse(fromB64url(encoded).toString('utf-8')) as SessionPayload;
-    if (!payload || typeof payload !== 'object') return null;
-    if (!Array.isArray(payload.questions)) return null;
-    if (typeof payload.exp !== 'number' || Date.now() > payload.exp) return null;
-    return payload.questions;
+    const iv = fromB64url(parts[1]);
+    const ciphertext = fromB64url(parts[2]);
+    const tag = fromB64url(parts[3]);
+    if (iv.length !== 12 || tag.length !== 16 || ciphertext.length === 0) return null;
+    const decipher = createDecipheriv('aes-256-gcm', TOKEN_KEY, iv);
+    decipher.setAAD(TOKEN_AAD);
+    decipher.setAuthTag(tag);
+    const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
+    return JSON.parse(plaintext.toString('utf8')) as unknown;
   } catch {
     return null;
   }
+}
+
+function validLifetime(payload: { iat?: unknown; exp?: unknown }, maxTtl: number): boolean {
+  const now = Date.now();
+  return (
+    typeof payload.iat === 'number' &&
+    typeof payload.exp === 'number' &&
+    payload.iat <= now + 60_000 &&
+    payload.exp >= now &&
+    payload.exp - payload.iat > 0 &&
+    payload.exp - payload.iat <= maxTtl
+  );
+}
+
+export function encodeSession(
+  data: { questionId: string; correctAnswer: number }[],
+  context?: { scope: 'challenge'; runId: string },
+): string {
+  const now = Date.now();
+  const payload: SessionPayload = {
+    kind: 'quiz-session',
+    questions: data,
+    ...(context ? { scope: context.scope, runId: context.runId } : {}),
+    iat: now,
+    exp: now + TOKEN_TTL_MS,
+  };
+  return sealToken(payload);
+}
+
+export function decodeSessionEnvelope(token: string): DecodedQuizSession | null {
+  const payload = openToken(token) as Partial<SessionPayload> | null;
+  if (!payload || payload.kind !== 'quiz-session' || !validLifetime(payload, TOKEN_TTL_MS)) return null;
+  if (!Array.isArray(payload.questions) || payload.questions.length === 0 || payload.questions.length > 50) return null;
+  const validQuestions = payload.questions.every(
+    (q) =>
+      q &&
+      typeof q.questionId === 'string' &&
+      q.questionId.length > 0 &&
+      q.questionId.length <= 64 &&
+      Number.isInteger(q.correctAnswer) &&
+      q.correctAnswer >= 0 &&
+      q.correctAnswer <= 25,
+  );
+  if (!validQuestions) return null;
+  if (payload.scope === 'challenge') {
+    if (typeof payload.runId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.runId)) return null;
+    return { questions: payload.questions, scope: 'challenge', runId: payload.runId };
+  }
+  return { questions: payload.questions };
+}
+
+export function decodeSession(token: string): { questionId: string; correctAnswer: number }[] | null {
+  return decodeSessionEnvelope(token)?.questions ?? null;
+}
+
+export function createChallengeRun(ranked = true): { runId: string; runToken: string; ranked: boolean } {
+  const now = Date.now();
+  const runId = b64url(randomBytes(18));
+  return {
+    runId,
+    ranked,
+    runToken: sealToken({ kind: 'challenge-run', runId, ranked, iat: now, exp: now + CHALLENGE_TTL_MS }),
+  };
+}
+
+export function decodeChallengeRun(token: string): { runId: string; ranked: boolean } | null {
+  const payload = openToken(token) as Partial<ChallengeRunPayload> | null;
+  if (!payload || payload.kind !== 'challenge-run' || !validLifetime(payload, CHALLENGE_TTL_MS)) return null;
+  if (typeof payload.runId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.runId)) return null;
+  if (typeof payload.ranked !== 'boolean') return null;
+  return { runId: payload.runId, ranked: payload.ranked };
+}
+
+export function encodeScoreProof(runId: string, questionId: string, isCorrect: boolean): string {
+  const now = Date.now();
+  return sealToken({
+    kind: 'score-proof',
+    runId,
+    questionId,
+    isCorrect,
+    iat: now,
+    exp: now + CHALLENGE_TTL_MS,
+  });
+}
+
+export function decodeScoreProof(token: string): { runId: string; questionId: string; isCorrect: boolean } | null {
+  const payload = openToken(token) as Partial<ScoreProofPayload> | null;
+  if (!payload || payload.kind !== 'score-proof' || !validLifetime(payload, CHALLENGE_TTL_MS)) return null;
+  if (typeof payload.runId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.runId)) return null;
+  if (typeof payload.questionId !== 'string' || payload.questionId.length === 0 || payload.questionId.length > 64) return null;
+  if (typeof payload.isCorrect !== 'boolean') return null;
+  return { runId: payload.runId, questionId: payload.questionId, isCorrect: payload.isCorrect };
+}
+
+export interface QuizResultReceipt {
+  attemptId: string;
+  userId: string;
+  correct: number;
+  total: number;
+  breakdown: Record<string, { correct: number; total: number }>;
+}
+
+export function encodeQuizResultReceipt(input: Omit<QuizResultReceipt, 'attemptId'>): string {
+  const now = Date.now();
+  return sealToken({
+    kind: 'quiz-result',
+    attemptId: b64url(randomBytes(18)),
+    ...input,
+    iat: now,
+    exp: now + TOKEN_TTL_MS,
+  });
+}
+
+export function decodeQuizResultReceipt(token: string): QuizResultReceipt | null {
+  const payload = openToken(token) as Partial<QuizResultReceiptPayload> | null;
+  if (!payload || payload.kind !== 'quiz-result' || !validLifetime(payload, TOKEN_TTL_MS)) return null;
+  if (typeof payload.attemptId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId)) return null;
+  if (typeof payload.userId !== 'string' || payload.userId.length === 0 || payload.userId.length > 128) return null;
+  if (!Number.isInteger(payload.correct) || !Number.isInteger(payload.total) || payload.total! <= 0 || payload.total! > 50 || payload.correct! < 0 || payload.correct! > payload.total!) return null;
+  if (!payload.breakdown || typeof payload.breakdown !== 'object' || Array.isArray(payload.breakdown)) return null;
+  const clean: Record<string, { correct: number; total: number }> = {};
+  for (const [category, value] of Object.entries(payload.breakdown)) {
+    if (!/^[a-z0-9-]{1,50}$/.test(category) || !value || typeof value !== 'object') return null;
+    const item = value as { correct?: unknown; total?: unknown };
+    if (!Number.isInteger(item.correct) || !Number.isInteger(item.total) || (item.total as number) <= 0 || (item.total as number) > 50 || (item.correct as number) < 0 || (item.correct as number) > (item.total as number)) return null;
+    clean[category] = { correct: item.correct as number, total: item.total as number };
+  }
+  return {
+    attemptId: payload.attemptId,
+    userId: payload.userId,
+    correct: payload.correct as number,
+    total: payload.total as number,
+    breakdown: clean,
+  };
+}
+
+export function encodeAnswerProof(questionId: string, isCorrect: boolean): string {
+  const now = Date.now();
+  return sealToken({ kind: 'answer-proof', questionId, isCorrect, iat: now, exp: now + TOKEN_TTL_MS });
+}
+
+export function decodeAnswerProof(token: string): { questionId: string; isCorrect: boolean } | null {
+  const payload = openToken(token) as Partial<AnswerProofPayload> | null;
+  if (!payload || payload.kind !== 'answer-proof' || !validLifetime(payload, TOKEN_TTL_MS)) return null;
+  if (typeof payload.questionId !== 'string' || payload.questionId.length === 0 || payload.questionId.length > 64) return null;
+  if (typeof payload.isCorrect !== 'boolean') return null;
+  return { questionId: payload.questionId, isCorrect: payload.isCorrect };
 }
 
 // Cryptographically-strong shuffle (replaces Math.random in shuffleArray).

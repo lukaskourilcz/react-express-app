@@ -50,6 +50,14 @@ interface FormState {
   featMulti: boolean;
   featLeader: boolean;
   featFlash: boolean;
+  supportEnabled: boolean;
+  supportKofiUrl: string;
+  supportGithubUrl: string;
+  supportMonthlyTarget: string;
+  supportAmountCovered: string;
+  supportLastUpdatedAt: string;
+  supportCostBreakdown: string;
+  supportPublicThanks: boolean;
   /** XP threshold per career rank, kept as raw strings while editing. */
   levelThresholds: string[];
   /** Token price per shop product id, kept as raw strings while editing. */
@@ -90,6 +98,14 @@ const toForm = (s: GameSettings): FormState => ({
   featMulti: s.features.multiplayer,
   featLeader: s.features.leaderboard,
   featFlash: s.features.flashcards,
+  supportEnabled: s.support.enabled,
+  supportKofiUrl: s.support.kofiUrl,
+  supportGithubUrl: s.support.githubSponsorsUrl,
+  supportMonthlyTarget: String(s.support.monthlyTarget),
+  supportAmountCovered: String(s.support.amountCovered),
+  supportLastUpdatedAt: s.support.lastUpdatedAt,
+  supportCostBreakdown: s.support.costBreakdown.map((row) => `${row.label}: ${row.amount}`).join('\n'),
+  supportPublicThanks: s.support.publicThanksEnabled,
   levelThresholds: s.leveling.rankThresholds.map(String),
   shopPrices: Object.fromEntries(Object.entries(s.shop.prices).map(([k, v]) => [k, String(v)])),
   shopPathUnlock: String(s.shop.pathUnlockPrice),
@@ -103,6 +119,15 @@ const parseTips = (s: string): string[] =>
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
+
+const parseCosts = (s: string): Array<{ label: string; amount: number }> =>
+  s.split('\n').flatMap((line) => {
+    const separator = line.lastIndexOf(':');
+    if (separator < 1) return [];
+    const label = line.slice(0, separator).trim();
+    const amount = Number(line.slice(separator + 1).trim());
+    return label && Number.isFinite(amount) ? [{ label, amount }] : [];
+  });
 
 const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
   quiz: {
@@ -136,6 +161,16 @@ const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
       Object.keys(base.shop.prices).map((k) => [k, parseNum(f.shopPrices[k] ?? '', base.shop.prices[k])]),
     ),
     pathUnlockPrice: parseNum(f.shopPathUnlock, base.shop.pathUnlockPrice),
+  },
+  support: {
+    enabled: f.supportEnabled,
+    kofiUrl: f.supportKofiUrl.trim(),
+    githubSponsorsUrl: f.supportGithubUrl.trim(),
+    monthlyTarget: parseNum(f.supportMonthlyTarget, base.support.monthlyTarget),
+    amountCovered: parseNum(f.supportAmountCovered, base.support.amountCovered),
+    lastUpdatedAt: f.supportLastUpdatedAt.trim(),
+    costBreakdown: parseCosts(f.supportCostBreakdown),
+    publicThanksEnabled: f.supportPublicThanks,
   },
   devTips: parseTips(f.devTips),
   ownerEmail: f.ownerEmail.trim(),
@@ -375,6 +410,27 @@ export default function DevSettings() {
         <Switch label="Multiplayer / Play" value={form.featMulti} onChange={(c) => set('featMulti', c)} />
         <Switch label="Leaderboard" value={form.featLeader} onChange={(c) => set('featLeader', c)} />
         <Switch label="Flashcards" value={form.featFlash} onChange={(c) => set('featFlash', c)} />
+      </Section>
+
+      <Section title="Voluntary support (disabled by default)">
+        <span style={{ ...captionStyle, width: '100%', marginBottom: 4 }}>
+          Enabling this only reveals transparent external support links. It never unlocks learning, XP, ranks, or other benefits.
+        </span>
+        <Switch label="Enable public support links" value={form.supportEnabled} onChange={(c) => set('supportEnabled', c)} />
+        <Switch label="Show public thank-you section" value={form.supportPublicThanks} onChange={(c) => set('supportPublicThanks', c)} />
+        <TextInput label="Ko-fi HTTPS URL" value={form.supportKofiUrl} onChange={(v) => set('supportKofiUrl', v)} size="sm" style={{ flex: 1, minWidth: 260 }} />
+        <TextInput label="GitHub Sponsors HTTPS URL" value={form.supportGithubUrl} onChange={(v) => set('supportGithubUrl', v)} size="sm" style={{ flex: 1, minWidth: 260 }} />
+        {num('supportMonthlyTarget', 'Monthly target')}
+        {num('supportAmountCovered', 'Net amount covered')}
+        <TextInput label="Last updated (YYYY-MM-DD)" value={form.supportLastUpdatedAt} onChange={(v) => set('supportLastUpdatedAt', v)} size="sm" style={{ width: 220 }} />
+        <TextArea
+          label="Cost breakdown (Label: amount, one per line)"
+          rows={4}
+          size="sm"
+          value={form.supportCostBreakdown}
+          onChange={(v) => set('supportCostBreakdown', v)}
+          style={{ width: '100%' }}
+        />
       </Section>
 
       <Section title="Career levels — total XP to reach each rank">

@@ -3,7 +3,8 @@
 // Persists finished runs to `challenge_scores`. Reads return the global top
 // 10 plus a "champion" pointer used by the home-page badge. Falls back to an
 // empty list if Supabase isn't configured or the table hasn't been migrated
-// yet, so the feature degrades gracefully.
+// yet. Callers decide whether a read may degrade; writes never report success
+// unless the row was actually persisted.
 
 import { createServiceClient, withTimeout } from './http';
 
@@ -23,6 +24,8 @@ export interface ChallengeLeaderboard {
   champion: ChallengeScore | null;
 }
 
+export class ChallengeStoreError extends Error {}
+
 const MAX_NAME = 40;
 const MAX_SCORE = 100_000;
 
@@ -37,7 +40,7 @@ function rowToScore(row: Record<string, unknown>): ChallengeScore {
 }
 
 export async function getChallengeLeaderboard(limit = 10): Promise<ChallengeLeaderboard> {
-  if (!supabase) return { top: [], champion: null };
+  if (!supabase) throw new ChallengeStoreError('Challenge storage is not configured');
   try {
     const { data, error } = await withTimeout(
       supabase
@@ -48,20 +51,22 @@ export async function getChallengeLeaderboard(limit = 10): Promise<ChallengeLead
         .limit(limit),
       4000,
     );
-    if (error || !Array.isArray(data)) return { top: [], champion: null };
+    if (error || !Array.isArray(data)) throw new ChallengeStoreError(error?.message || 'Could not load leaderboard');
     const top = data.map(rowToScore);
     return { top, champion: top[0] ?? null };
-  } catch {
-    return { top: [], champion: null };
+  } catch (error) {
+    if (error instanceof ChallengeStoreError) throw error;
+    throw new ChallengeStoreError(error instanceof Error ? error.message : 'Could not load leaderboard');
   }
 }
 
 export async function recordChallengeScore(input: {
   name: string;
   score: number;
+  runId: string;
   userId?: string | null;
 }): Promise<ChallengeScore | null> {
-  if (!supabase) return null;
+  if (!supabase) throw new ChallengeStoreError('Challenge storage is not configured');
   const cleanName = (input.name ?? '').trim().slice(0, MAX_NAME);
   if (!cleanName) return null;
   const cleanScore =
@@ -69,21 +74,36 @@ export async function recordChallengeScore(input: {
       ? Math.min(Math.floor(input.score), MAX_SCORE)
       : 0;
   try {
-    const { data, error } = await withTimeout(
+    let result = await withTimeout(
       supabase
         .from(TABLE)
         .insert({
           name: cleanName,
           score: cleanScore,
+          run_id: input.runId,
           user_id: input.userId ?? null,
         })
         .select('id, name, score, created_at, user_id')
         .single(),
       5000,
     );
-    if (error || !data) return null;
+    // Backward-compatible deploy order: schema 021 adds run_id. Until it is
+    // applied, keep verified scoring available (without DB-level retry dedupe).
+    if (result.error?.message?.includes('run_id')) {
+      result = await withTimeout(
+        supabase
+          .from(TABLE)
+          .insert({ name: cleanName, score: cleanScore, user_id: input.userId ?? null })
+          .select('id, name, score, created_at, user_id')
+          .single(),
+        5000,
+      );
+    }
+    const { data, error } = result;
+    if (error || !data) throw new ChallengeStoreError(error?.message || 'Could not save score');
     return rowToScore(data as Record<string, unknown>);
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof ChallengeStoreError) throw error;
+    throw new ChallengeStoreError(error instanceof Error ? error.message : 'Could not save score');
   }
 }

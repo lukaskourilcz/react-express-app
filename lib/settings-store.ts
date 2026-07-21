@@ -62,6 +62,17 @@ export interface GameSettings {
     /** Token price to instantly unlock any one learning path. */
     pathUnlockPrice: number;
   };
+  support: {
+    /** Hard production guard: provider links stay hidden unless explicitly enabled. */
+    enabled: boolean;
+    kofiUrl: string;
+    githubSponsorsUrl: string;
+    monthlyTarget: number;
+    amountCovered: number;
+    lastUpdatedAt: string;
+    costBreakdown: Array<{ label: string; amount: number }>;
+    publicThanksEnabled: boolean;
+  };
   /**
    * One-liner "dev tips" surfaced on the full-page loading screen (under the
    * swimming shark) on longer loads. Editable from /dev → Settings. An empty
@@ -148,6 +159,16 @@ export const DEFAULT_SETTINGS: GameSettings = {
   },
   leveling: { rankThresholds: DEFAULT_RANK_THRESHOLDS },
   shop: { prices: { ...DEFAULT_SHOP_PRICES }, pathUnlockPrice: DEFAULT_PATH_UNLOCK_PRICE },
+  support: {
+    enabled: false,
+    kofiUrl: '',
+    githubSponsorsUrl: '',
+    monthlyTarget: 0,
+    amountCovered: 0,
+    lastUpdatedAt: '',
+    costBreakdown: [],
+    publicThanksEnabled: false,
+  },
   devTips: [...DEFAULT_DEV_TIPS],
   ownerEmail: (process.env.OWNER_EMAIL || 'kouril.lukas@gmail.com').toLowerCase(),
 };
@@ -169,6 +190,29 @@ const cleanIntList = (v: unknown, min: number, max: number, fallback: number[]):
 };
 
 const bool = (v: unknown, fallback: boolean): boolean => (typeof v === 'boolean' ? v : fallback);
+
+const cleanPublicUrl = (v: unknown): string => {
+  if (typeof v !== 'string' || !v.trim()) return '';
+  try {
+    const url = new URL(v.trim());
+    return url.protocol === 'https:' ? url.toString() : '';
+  } catch {
+    return '';
+  }
+};
+
+const cleanCostBreakdown = (v: unknown): Array<{ label: string; amount: number }> => {
+  if (!Array.isArray(v)) return [];
+  return v.slice(0, 12).flatMap((item) => {
+    if (!item || typeof item !== 'object') return [];
+    const row = item as Record<string, unknown>;
+    const label = typeof row.label === 'string' ? row.label.trim().slice(0, 80) : '';
+    const amount = typeof row.amount === 'number' && Number.isFinite(row.amount)
+      ? Math.max(0, Math.min(1_000_000, Math.round(row.amount * 100) / 100))
+      : 0;
+    return label ? [{ label, amount }] : [];
+  });
+};
 
 // Category-id list: strings only, de-duplicated, capped at 40 entries. We don't
 // hard-validate ids here so a renamed category in the bank doesn't lock out the
@@ -243,6 +287,7 @@ export function normalizeSettings(raw: unknown): GameSettings {
   const daily = (r.daily ?? {}) as Record<string, unknown>;
   const play = (r.play ?? {}) as Record<string, unknown>;
   const features = (r.features ?? {}) as Record<string, unknown>;
+  const support = (r.support ?? {}) as Record<string, unknown>;
   const d = DEFAULT_SETTINGS;
 
   return {
@@ -285,6 +330,19 @@ export function normalizeSettings(raw: unknown): GameSettings {
         1_000_000,
         d.shop.pathUnlockPrice,
       ),
+    },
+    support: {
+      enabled: bool(support.enabled, d.support.enabled),
+      kofiUrl: cleanPublicUrl(support.kofiUrl),
+      githubSponsorsUrl: cleanPublicUrl(support.githubSponsorsUrl),
+      monthlyTarget: clampInt(support.monthlyTarget, 0, 1_000_000, d.support.monthlyTarget),
+      amountCovered: clampInt(support.amountCovered, 0, 1_000_000, d.support.amountCovered),
+      lastUpdatedAt:
+        typeof support.lastUpdatedAt === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(support.lastUpdatedAt)
+          ? support.lastUpdatedAt
+          : '',
+      costBreakdown: cleanCostBreakdown(support.costBreakdown),
+      publicThanksEnabled: bool(support.publicThanksEnabled, d.support.publicThanksEnabled),
     },
     devTips: cleanTips(r.devTips, d.devTips),
     ownerEmail:

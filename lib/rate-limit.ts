@@ -19,7 +19,7 @@
 // Callers should prefer `await enforceRateLimit(...)`; `checkRateLimit()` stays
 // exported for the fallback path and any sync call site.
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import { jsonError } from './http';
 
 interface Bucket {
@@ -36,6 +36,22 @@ export interface RateLimitConfig {
   /** Namespace so different endpoints don't share buckets. */
   key: string;
 }
+
+export const RATE_LIMITS = {
+  admin: { key: 'admin_gate', capacity: 5, refillPerSecond: 1 },
+  quizSession: { key: 'quiz_session', capacity: 20, refillPerSecond: 20 / 60 },
+  quizSubmit: { key: 'quiz_submit', capacity: 12, refillPerSecond: 12 / 60 },
+  challengeScore: { key: 'challenge_score', capacity: 3, refillPerSecond: 10 / 3600 },
+  questionReport: { key: 'question_report', capacity: 3, refillPerSecond: 20 / 3600 },
+  userMutation: { key: 'user_mutation', capacity: 20, refillPerSecond: 20 / 60 },
+  flashcardMutation: { key: 'flashcard_mutation', capacity: 20, refillPerSecond: 20 / 60 },
+  roadmapMutation: { key: 'roadmap_mutation', capacity: 20, refillPerSecond: 20 / 60 },
+  playCreate: { key: 'play_create', capacity: 5, refillPerSecond: 5 / 60 },
+  playJoin: { key: 'play_join', capacity: 12, refillPerSecond: 12 / 60 },
+  playMutation: { key: 'play_mutation', capacity: 30, refillPerSecond: 30 / 60 },
+  accountDelete: { key: 'account_delete', capacity: 2, refillPerSecond: 2 / 3600 },
+  aiExplanation: { key: 'ai_explanation', capacity: 3, refillPerSecond: 5 / 3600 },
+} satisfies Record<string, RateLimitConfig>;
 
 const buckets = new Map<string, Bucket>();
 
@@ -155,6 +171,20 @@ async function getUpstashLimiter(config: RateLimitConfig): Promise<UpstashLimite
   }
 }
 
+async function withLimiterDeadline<T>(promise: Promise<T>, timeoutMs = 500): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('rate_limit_timeout')), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 /**
  * Enforce a rate limit, preferring the distributed Upstash backend and falling
  * back to the in-memory token bucket. Returns true if the request may proceed,
@@ -172,7 +202,7 @@ export async function enforceRateLimit(
 
   try {
     const id = clientIp(req);
-    const { success, reset } = await limiter.limit(id);
+    const { success, reset } = await withLimiterDeadline(limiter.limit(id));
     if (success) return true;
 
     const retryAfter = Math.max(1, Math.ceil((reset - Date.now()) / 1000));

@@ -62,10 +62,9 @@ const TokenIcon = ({ size = 24 }: { size?: number }) => (
   </svg>
 );
 
-// A tinted rounded tile holding the product's emoji artwork, coloured by the
-// product's accent (path topics) or the brand accent otherwise. Product emojis
-// are item art (data), not chrome — they stay.
-function EmojiTile({ emoji, color, size = 46 }: { emoji: string; color?: string; size?: number }) {
+// A tinted rounded tile holding a controlled typographic marker. This avoids
+// platform-dependent emoji artwork while keeping each product recognizable.
+function MarkerTile({ marker, color, size = 46 }: { marker: string; color?: string; size?: number }) {
   const accent = color ?? 'var(--brand-accent)';
   return (
     <div
@@ -74,12 +73,14 @@ function EmojiTile({ emoji, color, size = 46 }: { emoji: string; color?: string;
       style={{
         width: size,
         height: size,
-        fontSize: size * 0.5,
+        fontSize: size * 0.34,
+        fontWeight: 800,
+        fontFamily: 'var(--font-family-mono, ui-monospace, monospace)',
         background: `color-mix(in srgb, ${accent} 12%, transparent)`,
         boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${accent} 30%, transparent)`,
       }}
     >
-      {emoji}
+      {marker}
     </div>
   );
 }
@@ -301,7 +302,7 @@ function ProductCard({ product, price, owned, equipped, charges, canAfford, onBu
       <Card padding={3} width="100%">
         <VStack gap={2} height="100%" justify="between">
           <HStack gap={1.5} align="center">
-            <EmojiTile emoji={product.emoji} color={product.color} size={44} />
+            <MarkerTile marker={product.marker} color={product.color} size={44} />
             <VStack gap={0.5}>
               <Text weight="bold">{name}</Text>
               <Text type="supporting" color="secondary">

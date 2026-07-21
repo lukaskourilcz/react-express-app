@@ -9,6 +9,7 @@ type Listener<T = unknown> = (payload: T) => void;
 export interface RealtimeChannel {
   send: (event: string, payload: unknown) => Promise<void>;
   subscribe: <T = unknown>(event: string, fn: Listener<T>) => () => void;
+  onStatus: (fn: Listener<string>) => () => void;
   unsubscribe: () => void;
 }
 
@@ -19,6 +20,10 @@ export function joinMatchChannel(code: string): RealtimeChannel {
     return {
       send: async () => undefined,
       subscribe: () => noop,
+      onStatus: (fn) => {
+        fn('DISCONNECTED');
+        return noop;
+      },
       unsubscribe: noop,
     };
   }
@@ -28,7 +33,12 @@ export function joinMatchChannel(code: string): RealtimeChannel {
     config: { broadcast: { self: true } },
   });
 
-  channel.subscribe();
+  let currentStatus = 'CONNECTING';
+  const statusListeners = new Set<Listener<string>>();
+  channel.subscribe((status) => {
+    currentStatus = status;
+    statusListeners.forEach((listener) => listener(status));
+  });
 
   return {
     send: async (event, payload) => {
@@ -41,7 +51,13 @@ export function joinMatchChannel(code: string): RealtimeChannel {
         /* channel-wide unsubscribe via unsubscribe() below */
       };
     },
+    onStatus: (fn) => {
+      statusListeners.add(fn);
+      fn(currentStatus);
+      return () => statusListeners.delete(fn);
+    },
     unsubscribe: () => {
+      statusListeners.clear();
       client.removeChannel(channel);
     },
   };

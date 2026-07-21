@@ -7,11 +7,12 @@ import { getDevPassword, clearDevPassword, verifyPassword } from '../../lib/devA
 type Phase = 'checking' | 'login' | 'ready';
 
 /**
- * Entry point for the password-gated /dev admin console. Verifies any stored
- * password on mount; otherwise shows the login form.
+ * Entry point for the authenticated /dev admin console. The API checks the
+ * current Supabase session first and may allow an explicitly configured legacy
+ * password during migration.
  */
 export default function DevPage() {
-  const [phase, setPhase] = useState<Phase>(() => (getDevPassword() ? 'checking' : 'login'));
+  const [phase, setPhase] = useState<Phase>('checking');
 
   useEffect(() => {
     if (phase !== 'checking') return;

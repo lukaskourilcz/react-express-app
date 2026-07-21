@@ -1,5 +1,9 @@
 # DevQuiz — Setup & Recommendations
 
+> Historical setup notes. Use [`client/.env.example`](./client/.env.example) and
+> [`docs/launch-runbook.md`](./docs/launch-runbook.md) for the current StudyShark
+> + devShark deployment, admin authorization, support, AI, and migration contract.
+
 A practical, current guide to (1) what you need to make the **website** fully
 operational and (2) prioritized **performance / scalability / reliability**
 improvements from a full pass over the app.

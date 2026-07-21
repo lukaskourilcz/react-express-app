@@ -1,6 +1,9 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import {
   encodeSession,
+  createChallengeRun,
+  decodeChallengeRun,
+  decodeScoreProof,
   secureShuffle,
   weightedSample,
   localizeQuestion,
@@ -12,7 +15,8 @@ import { jsonError, createLogger } from '../../lib/http';
 import { tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getChallengeLeaderboard, recordChallengeScore } from '../../lib/challenge-store';
-import { enforceRateLimit } from '../../lib/rate-limit';
+import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/product-scope';
 
 // Biggest Shark Challenge: a single function serving every challenge resource
 // so we stay within Vercel's 12-function Hobby limit. Routing:
@@ -21,7 +25,7 @@ import { enforceRateLimit } from '../../lib/rate-limit';
 //   POST /api/quiz/challenge                       → submit a finished run's score
 //
 // The question batch is importance-weighted across every public category and
-// difficulty; the sessionId is the same signed token /api/quiz/submit grades.
+// difficulty; session and run tokens are opaque authenticated envelopes.
 // `exclude` lets the client request a batch that doesn't repeat seen ids.
 
 const BATCH_SIZE = 25;
@@ -46,9 +50,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // ── GET ?resource=leaderboard: top scores + champion ──
   if (resource === 'leaderboard') {
-    const board = await getChallengeLeaderboard(10);
-    res.setHeader('Cache-Control', 'public, s-maxage=15, stale-while-revalidate=60');
-    return res.json(board);
+    try {
+      const board = await getChallengeLeaderboard(10);
+      res.setHeader('Cache-Control', 'public, s-maxage=15, stale-while-revalidate=60');
+      return res.json(board);
+    } catch {
+      return jsonError(res, 503, 'leaderboard_unavailable', 'Challenge leaderboard is temporarily unavailable');
+    }
   }
 
   // ── GET: question batch ──
@@ -56,6 +64,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+  const suppliedRunToken = typeof req.query.runToken === 'string' ? req.query.runToken : '';
+  const ranked = req.query.ranked !== '0';
+  const run = suppliedRunToken ? decodeChallengeRun(suppliedRunToken) : createChallengeRun(ranked);
+  if (!run) return jsonError(res, 400, 'invalid_run', 'Challenge run expired or invalid');
+  if (suppliedRunToken && run.ranked !== ranked) {
+    return jsonError(res, 400, 'invalid_run_mode', 'Challenge run mode cannot change');
+  }
+  const runToken = suppliedRunToken || ('runToken' in run ? run.runToken : '');
   const excludeRaw = typeof req.query.exclude === 'string' ? req.query.exclude : '';
   const excludeSet = new Set(
     excludeRaw
@@ -66,16 +83,24 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
   );
 
   // Optional subject scoping: the client sends the active subject's categories
-  // so a challenge never mixes subjects. Absent/empty → all public categories.
+  // so a challenge never mixes subjects. Old clients default to the
+  // deployment's first subject rather than spanning the shared question bank.
   const catRaw = typeof req.query.categories === 'string' ? req.query.categories : '';
-  const catSet = new Set(catRaw.split(',').map((s) => s.trim()).filter(Boolean));
+  const requested = catRaw
+    ? catRaw.split(',').map((s) => s.trim()).filter(Boolean)
+    : defaultDeploymentCategories();
+  const scope = validateCategoryScope(requested);
+  if (!scope.ok) {
+    return jsonError(res, 400, 'invalid_subject_scope', 'Categories must belong to this deployment and one subject');
+  }
+  const catSet = new Set(scope.categories);
 
   const all = await getEffectiveQuestions();
   const pool = all.filter(
     (q) =>
       !PRIVATE_CATEGORIES.includes(q.category) &&
       !excludeSet.has(q.id) &&
-      (catSet.size === 0 || catSet.has(q.category)),
+      catSet.has(q.category),
   );
   if (pool.length === 0) {
     return jsonError(res, 404, 'no_questions', 'No challenge questions available');
@@ -102,34 +127,55 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
     };
   });
 
-  const sessionId = encodeSession(sessionData);
+  const sessionId = encodeSession(sessionData, { scope: 'challenge', runId: run.runId });
   res.setHeader('Cache-Control', 'private, no-store');
   logEvent({ status: 200, kind: 'batch', count: questions.length, excluded: excludeSet.size });
-  res.json({ sessionId, questions });
+  res.json({ sessionId, runToken, questions });
 }
 
 async function handleSubmitScore(req: VercelRequest, res: VercelResponse) {
   // Per-IP throttle so a script can't flood the Hall of Fame. Legit humans
   // finish ~90s runs, so 10 posts / hour with a small burst is generous.
-  if (!(await enforceRateLimit(req, res, { key: 'challenge_score', capacity: 3, refillPerSecond: 10 / 3600 }))) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.challengeScore))) return;
 
-  const body = (req.body || {}) as { name?: unknown; score?: unknown };
+  const body = (req.body || {}) as { name?: unknown; runToken?: unknown; proofs?: unknown };
   const name = typeof body.name === 'string' ? body.name.trim().slice(0, MAX_NAME) : '';
   if (!name) return jsonError(res, 400, 'bad_request', 'name is required');
 
-  const score =
-    typeof body.score === 'number' && Number.isFinite(body.score) && body.score >= 0
-      ? Math.floor(body.score)
-      : -1;
-  if (score < 0) return jsonError(res, 400, 'bad_request', 'score must be a non-negative integer');
-  if (score > MAX_SCORE) return jsonError(res, 400, 'bad_request', 'score is implausibly high');
+  if (typeof body.runToken !== 'string') {
+    return jsonError(res, 400, 'bad_request', 'runToken is required');
+  }
+  const run = decodeChallengeRun(body.runToken);
+  if (!run) return jsonError(res, 400, 'invalid_run', 'Challenge run expired or invalid');
+  if (!run.ranked) return jsonError(res, 400, 'practice_run', 'Practice-pace runs are not ranked');
+  if (!Array.isArray(body.proofs) || body.proofs.length > MAX_SCORE) {
+    return jsonError(res, 400, 'bad_request', 'proofs must be an array');
+  }
+
+  const seen = new Set<string>();
+  let score = 0;
+  for (const value of body.proofs) {
+    if (typeof value !== 'string') return jsonError(res, 400, 'invalid_proof', 'Invalid score proof');
+    const proof = decodeScoreProof(value);
+    if (!proof || proof.runId !== run.runId) {
+      return jsonError(res, 400, 'invalid_proof', 'Invalid score proof');
+    }
+    if (seen.has(proof.questionId)) continue;
+    seen.add(proof.questionId);
+    if (proof.isCorrect) score++;
+  }
 
   // Optional auth — when signed in, attribute the run so later dedupe is possible.
   // Anonymous submissions still land on the board.
   const auth = await tryAuth(req);
   const userId = auth?.sub ?? null;
 
-  const record = await recordChallengeScore({ name, score, userId });
-  logEvent({ status: 200, kind: 'submit', score, hasUser: !!userId });
-  return res.json({ ok: true, record });
+  try {
+    const record = await recordChallengeScore({ name, score, runId: run.runId, userId });
+    if (!record) return jsonError(res, 500, 'db_error', 'Could not save score');
+    logEvent({ status: 200, kind: 'submit', score, hasUser: !!userId });
+    return res.json({ ok: true, record });
+  } catch {
+    return jsonError(res, 503, 'leaderboard_unavailable', 'Could not save the score right now');
+  }
 }

@@ -24,6 +24,17 @@ export interface GameConfig {
   leveling: { rankThresholds: number[] };
   /** Token prices for the shop — per-product overrides + the path-unlock price. */
   shop: { prices: Record<string, number>; pathUnlockPrice: number };
+  support: {
+    enabled: boolean;
+    kofiUrl: string;
+    githubSponsorsUrl: string;
+    monthlyTarget: number;
+    amountCovered: number;
+    lastUpdatedAt: string;
+    costBreakdown: Array<{ label: string; amount: number }>;
+    publicThanksEnabled: boolean;
+  };
+  ai: { explanationsEnabled: boolean };
   /** One-liner dev tips shown on the full-page loading screen; empty = none. */
   devTips: string[];
 }
@@ -101,6 +112,17 @@ export const DEFAULT_CONFIG: GameConfig = {
   features: { dailyChallenge: true, multiplayer: true, leaderboard: true, flashcards: true },
   leveling: { rankThresholds: DEFAULT_RANK_THRESHOLDS },
   shop: { prices: { ...DEFAULT_SHOP_PRICES }, pathUnlockPrice: DEFAULT_PATH_UNLOCK_PRICE },
+  support: {
+    enabled: false,
+    kofiUrl: '',
+    githubSponsorsUrl: '',
+    monthlyTarget: 0,
+    amountCovered: 0,
+    lastUpdatedAt: '',
+    costBreakdown: [],
+    publicThanksEnabled: false,
+  },
+  ai: { explanationsEnabled: false },
   devTips: [...DEFAULT_DEV_TIPS],
 };
 
@@ -111,7 +133,13 @@ async function fetchConfig(): Promise<GameConfig> {
   // Apply the configured career-rank thresholds to the leveling module.
   setRankThresholds(c.leveling?.rankThresholds);
   // Defensively fill in any section an older server might omit (e.g. shop).
-  return { ...DEFAULT_CONFIG, ...c, shop: c.shop ?? DEFAULT_CONFIG.shop };
+  return {
+    ...DEFAULT_CONFIG,
+    ...c,
+    shop: c.shop ?? DEFAULT_CONFIG.shop,
+    support: c.support ?? DEFAULT_CONFIG.support,
+    ai: c.ai ?? DEFAULT_CONFIG.ai,
+  };
 }
 
 export function useGameConfig(): GameConfig {

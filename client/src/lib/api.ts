@@ -97,6 +97,7 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   cancelled: 'error.cancelled',
   too_few_questions: 'error.tooFewQuestions',
   finished: 'error.matchFinished',
+  rate_limited: 'error.rateLimited',
 };
 
 // not_found spans several endpoints whose English server messages are more

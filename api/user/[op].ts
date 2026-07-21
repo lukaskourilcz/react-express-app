@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import {
   createServiceClient,
   jsonError,
@@ -10,6 +10,8 @@ import {
 } from '../../lib/http';
 import { requireAuth } from '../../lib/auth';
 import { recordAuthEvent } from '../../lib/auth-events-store';
+import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { decodeQuizResultReceipt } from '../../lib/quiz-data';
 
 const supabase = createServiceClient();
 
@@ -25,12 +27,61 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
 
   const op = String(req.query.op || '').toLowerCase();
+  if (
+    req.method !== 'GET' &&
+    !(await enforceRateLimit(
+      req,
+      res,
+      op === 'delete-account' ? RATE_LIMITS.accountDelete : RATE_LIMITS.userMutation,
+    ))
+  ) return;
   if (op === 'stats') return stats(req, res);
   if (op === 'category-stats') return categoryStats(req, res);
   if (op === 'streak') return streak(req, res);
   if (op === 'xp') return xp(req, res);
   if (op === 'authevent') return authEvent(req, res);
+  if (op === 'delete-account') return deleteAccount(req, res);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
+}
+
+async function deleteAccount(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'DELETE') {
+    res.setHeader('Allow', 'DELETE');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  }
+
+  const auth = await requireAuth(req);
+  const body = (req.body || {}) as { confirmation?: unknown };
+  if (body.confirmation !== 'DELETE') {
+    return jsonError(res, 400, 'confirmation_required', 'Account deletion must be confirmed');
+  }
+
+  try {
+    const cleanup = await withTimeout(
+      supabase!.rpc('delete_user_data', { p_user_id: auth.sub }),
+      8000,
+    );
+    if (cleanup.error) {
+      if (isRpcMissing(cleanup.error)) {
+        return jsonError(res, 503, 'migration_required', 'Account deletion is not configured yet');
+      }
+      logEvent('delete-account', { status: 500, reason: 'cleanup_failed', error: cleanup.error.message });
+      return jsonError(res, 500, 'db_error', 'Could not delete account data');
+    }
+
+    const { error } = await withTimeout(supabase!.auth.admin.deleteUser(auth.sub), 8000);
+    if (error) {
+      logEvent('delete-account', { status: 500, reason: 'auth_delete_failed', error: error.message });
+      return jsonError(res, 500, 'auth_delete_failed', 'Account data was removed, but the sign-in identity could not be deleted');
+    }
+
+    logEvent('delete-account', { status: 200, user_id: auth.sub });
+    return res.json({ ok: true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'unknown';
+    logEvent('delete-account', { status: 504, reason: 'timeout', error: message });
+    return jsonError(res, 504, 'upstream_timeout', 'Account deletion timed out; please try again');
+  }
 }
 
 // Record a sign-in for the /dev "Logs" tab. The client calls this once per
@@ -133,8 +184,29 @@ async function xp(req: VercelRequest, res: VercelResponse) {
       const incomingTotal = clampXp(body.quest_xp);
       const incomingMap = sanitizeBySubject(body.by_subject);
 
-      // XP only grows: never let a stale device lower a stored value — merge
-      // per subject with max, and keep the legacy total monotone too.
+      const atomic = await withTimeout(
+        supabase!.rpc('merge_user_xp', {
+          p_user_id: userId,
+          p_quest_xp: incomingTotal,
+          p_by_subject: incomingMap,
+        }),
+      );
+      if (!atomic.error && Array.isArray(atomic.data) && atomic.data[0]) {
+        const result = atomic.data[0] as { quest_xp?: unknown; by_subject?: unknown };
+        return res.json({
+          ok: true,
+          data: {
+            quest_xp: clampXp(result.quest_xp),
+            by_subject: sanitizeBySubject(result.by_subject),
+          },
+        });
+      }
+      if (atomic.error && !isRpcMissing(atomic.error)) {
+        return jsonError(res, 500, 'db_error', 'Could not save XP');
+      }
+
+      // Backward-compatible path until schema 021 is applied. The RPC above is
+      // the race-free production path; this keeps previews on older schemas usable.
       const row = await readXpRow(userId);
       if (!row.ok) return jsonError(res, 500, 'db_error', 'Could not load XP');
 
@@ -238,45 +310,54 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         email?: unknown;
         name?: unknown;
         picture?: unknown;
-        quiz_result?: unknown;
+        result_receipt?: unknown;
+        profile?: unknown;
       };
 
-      if (body.quiz_result !== undefined) {
-        const qr = body.quiz_result as { correct?: unknown; total?: unknown };
-        if (
-          typeof qr !== 'object' ||
-          qr === null ||
-          typeof qr.correct !== 'number' ||
-          typeof qr.total !== 'number' ||
-          !Number.isInteger(qr.correct) ||
-          !Number.isInteger(qr.total) ||
-          qr.correct < 0 ||
-          qr.total <= 0 ||
-          qr.correct > qr.total ||
-          qr.total > 50
-        ) {
-          return jsonError(res, 400, 'bad_request', 'Invalid quiz_result');
+      if (body.result_receipt !== undefined) {
+        if (typeof body.result_receipt !== 'string') {
+          return jsonError(res, 400, 'bad_request', 'Invalid result receipt');
         }
+        const receipt = decodeQuizResultReceipt(body.result_receipt);
+        if (!receipt || receipt.userId !== user_id) {
+          return jsonError(res, 400, 'invalid_receipt', 'Quiz result receipt expired or invalid');
+        }
+        const rawProfile = body.profile && typeof body.profile === 'object'
+          ? body.profile as Record<string, unknown>
+          : {};
+        const safePicture =
+          typeof rawProfile.picture === 'string' && rawProfile.picture.length <= 2048 && /^https:\/\//i.test(rawProfile.picture)
+            ? rawProfile.picture
+            : null;
 
         const { data, error } = await withTimeout(
-          supabase!.rpc('record_quiz_result', {
+          supabase!.rpc('record_verified_quiz_result', {
             p_user_id: user_id,
-            p_correct: qr.correct,
-            p_total: qr.total,
+            p_attempt_id: receipt.attemptId,
+            p_correct: receipt.correct,
+            p_total: receipt.total,
+            p_breakdown: receipt.breakdown,
+            p_email: typeof rawProfile.email === 'string' && rawProfile.email.length <= MAX_STR ? rawProfile.email : null,
+            p_name: typeof rawProfile.name === 'string' && rawProfile.name.length <= MAX_STR ? rawProfile.name : null,
+            p_picture: safePicture,
           }),
         );
 
         if (error) {
           if (isRpcMissing(error)) {
             logEvent('stats', { status: 200, op: 'submit_fallback', warn: 'rpc_missing' });
-            return res.json({ data: null, warning: 'rpc_missing' });
+            return jsonError(res, 503, 'migration_required', 'Verified statistics migration is not installed');
           }
           logEvent('stats', { status: 500, reason: 'rpc_failed', error: error.message });
           return jsonError(res, 500, 'db_error', 'Could not record quiz result');
         }
 
         logEvent('stats', { status: 200, op: 'submit', latency_ms: Date.now() - started });
-        return res.json({ data });
+        const row = await withTimeout(
+          supabase!.from('user_stats').select(STATS_FIELDS).eq('user_id', user_id).maybeSingle(),
+        );
+        if (row.error) return jsonError(res, 500, 'db_error', 'Result saved but statistics could not be loaded');
+        return res.json({ data: row.data, applied: data === true });
       }
 
       const picture =

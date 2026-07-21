@@ -23,6 +23,8 @@ import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
 import { useSettings } from './lib/settings';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m } from './lib/motion';
+import BrandFooter from './components/BrandFooter';
+import { CURRENT_PRODUCT, productText } from './lib/products';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
 // modules — heavy for the initial bundle. Lazy-load it so the app shell
@@ -42,6 +44,12 @@ const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default:
 const Challenge = lazy(() => import('./components/Challenge'));
 const DevPage = lazy(() => import('./components/dev/DevPage'));
 const SubjectPicker = lazy(() => import('./components/SubjectPicker'));
+const SupportPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.SupportPage })));
+const PrivacyPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.PrivacyPage })));
+const TermsPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.TermsPage })));
+const ClassroomPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.ClassroomPage })));
+const TopicLandingPage = lazy(() => import('./components/TopicLandingPage'));
+const NotFoundPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.NotFoundPage })));
 
 // The landing gate: show the subject picker until the learner has chosen a
 // subject, then the normal home. Both are lazy and render inside the shared
@@ -72,6 +80,12 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/shop': 'title.shop',
   '/play': 'title.play',
   '/challenge': 'title.challenge',
+  '/subjects': 'title.subjects',
+  '/support': 'title.support',
+  '/privacy': 'title.privacy',
+  '/terms': 'title.terms',
+  '/classroom': 'title.classroom',
+  '/dev': 'title.dev',
 };
 
 const SunIcon = () => (
@@ -194,7 +208,7 @@ function HeaderBrand() {
         style={{ padding: 0, color: subject.accent }}
       >
         <SwimmingFin size={22} />
-        {subject.standaloneBrand ?? subject.label}
+        {CURRENT_PRODUCT.brand}
       </Link>
     );
   }
@@ -208,7 +222,7 @@ function HeaderBrand() {
       >
         <span className="ss-brand-full" style={{ alignItems: 'center', gap: 6 }}>
           <SwimmingFin size={22} />
-          StudyShark
+          {CURRENT_PRODUCT.brand}
         </span>
         <span className="ss-brand-compact" style={{ alignItems: 'center', gap: 4, color: subject.accent, whiteSpace: 'nowrap' }}>
           <SharkFin size={20} />
@@ -227,7 +241,7 @@ function HeaderBrand() {
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { t, setLang } = useLanguage();
+  const { t, setLang, lang } = useLanguage();
   const config = useGameConfig();
   const [quizActive, setQuizActive] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
@@ -289,7 +303,7 @@ function App() {
   // sign-out). No-op unless PostHog is configured.
   useEffect(() => {
     if (user?.id) {
-      identifyUser(user.id, { email: user.email ?? undefined });
+      identifyUser(user.id);
       analyticsIdentified.current = true;
     } else if (analyticsIdentified.current) {
       resetAnalytics();
@@ -335,11 +349,23 @@ function App() {
 
   useEffect(() => {
     const titleKey = ROUTE_TITLE_KEYS[location.pathname];
-    document.title = titleKey
+    const translatedTitle = titleKey
       ? t(titleKey)
       : location.pathname.startsWith('/play/')
         ? t('title.playMatch')
-        : t('title.default');
+        : t('title.notFound');
+    document.title = location.pathname === '/'
+      ? productText(CURRENT_PRODUCT.title, lang)
+      : translatedTitle.split('StudyShark').join(CURRENT_PRODUCT.brand);
+    const description = productText(CURRENT_PRODUCT.description, lang);
+    const setMeta = (selector: string, value: string) => {
+      document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', value);
+    };
+    setMeta('meta[name="description"]', description);
+    setMeta('meta[property="og:title"]', document.title);
+    setMeta('meta[property="og:description"]', description);
+    setMeta('meta[name="twitter:title"]', document.title);
+    setMeta('meta[name="twitter:description"]', description);
     // Move focus after the route fade-in settles, so AT reads the new
     // route's content rather than the previous tree.
     const timer = window.setTimeout(() => {
@@ -349,7 +375,7 @@ function App() {
     // PostHog is configured.
     capturePageview(location.pathname);
     return () => window.clearTimeout(timer);
-  }, [location.pathname, t]);
+  }, [location.pathname, t, lang]);
 
   // The /dev console is a standalone admin surface — no app chrome, full width.
   const isDev = location.pathname.startsWith('/dev');
@@ -369,6 +395,10 @@ function App() {
     location.pathname === '/profile' ||
     location.pathname === '/leaderboard' ||
     location.pathname === '/shop' ||
+    location.pathname === '/support' ||
+    location.pathname === '/privacy' ||
+    location.pathname === '/terms' ||
+    location.pathname === '/classroom' ||
     location.pathname.startsWith('/play');
   const contentMaxWidth = isDev ? 'none' : isHome ? 1000 : isWide ? 1200 : 800;
 
@@ -651,10 +681,17 @@ function App() {
                 <Route path="/play" element={<PlayLanding />} />
                 <Route path="/play/:code" element={<PlayMatch />} />
                 <Route path="/challenge" element={<Challenge />} />
+                <Route path="/support" element={<SupportPage />} />
+                <Route path="/privacy" element={<PrivacyPage />} />
+                <Route path="/terms" element={<TermsPage />} />
+                <Route path="/classroom" element={<ClassroomPage />} />
+                <Route path="/topics/:slug" element={<TopicLandingPage />} />
                 <Route path="/dev" element={<DevPage />} />
+                <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </Suspense>
           </m.div>
+          {showChrome && <BrandFooter />}
         </div>
       </main>
 
@@ -662,7 +699,7 @@ function App() {
           waterline + surfacing fins are visible on every page, always. Hidden
           only in the /dev admin console. */}
       {!isDev && (
-        <footer
+        <div
           aria-hidden
           // Transparent overlay pinned to the shell bottom (not a layout band):
           // the wave + fins float over whatever is behind them, so there is no
@@ -693,7 +730,7 @@ function App() {
               </div>
             </div>
           ))}
-        </footer>
+        </div>
       )}
 
       <XpToaster />

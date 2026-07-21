@@ -21,10 +21,10 @@ export function RotatingTip({ tips, intervalMs = 8000, className, style }: Props
   const reduce = useReducedMotion();
 
   useEffect(() => {
-    if (tips.length < 2) return;
+    if (tips.length < 2 || reduce) return;
     const id = setInterval(() => setI((n) => (n + 1) % tips.length), intervalMs);
     return () => clearInterval(id);
-  }, [tips.length, intervalMs]);
+  }, [tips.length, intervalMs, reduce]);
 
   const current = tips[i] ?? '';
   if (!current) return null;

@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
 import { jsonError } from '../lib/http';
 import { getGameSettings } from '../lib/settings-store';
 
@@ -30,6 +30,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     features: s.features,
     leveling: s.leveling,
     shop: s.shop,
+    support: s.support,
+    ai: {
+      explanationsEnabled:
+        process.env.AI_EXPLANATIONS_ENABLED === 'true' &&
+        Boolean(process.env.OPENAI_API_KEY && process.env.OPENAI_MODEL),
+    },
     devTips: s.devTips,
   });
 }

@@ -27,11 +27,9 @@ import {
 import { readJSON, writeJSON } from '../lib/storage';
 import {
   recordQuizResult,
-  createOrUpdateUserStats,
   getDailyChallenge,
   reportQuestion,
 } from '../lib/supabase';
-import { recordCategoryStats } from '../lib/play';
 import { apiFetch, friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
@@ -50,6 +48,8 @@ import { capture } from '../lib/analytics';
 import { MotionPop, MotionItem } from '../lib/motion';
 import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { CategoryGlyph } from './ui/techIcons';
+import { CURRENT_PRODUCT } from '../lib/products';
+import { createResultShareFile, downloadShareFile } from '../lib/shareCard';
 import './Quiz.css';
 
 type QuizMode = 'standard' | 'daily';
@@ -57,6 +57,8 @@ type QuizMode = 'standard' | 'daily';
 const DIFFICULTY_VALUES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
 const PROGRESS_KEY = 'devquiz:in-progress';
+const SUPPORT_PROMPT_KEY = 'studyshark:support-prompt';
+const SUPPORT_PROMPT_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000;
 const SETUP_KEY = 'devquiz:quiz-setup:v1';
 
 
@@ -167,9 +169,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     return saved.difficulty && DIFFICULTY_VALUES.includes(saved.difficulty) ? saved.difficulty : 'zero-to-hero';
   });
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>(() => {
+    const linkedCategory = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('category')
+      : null;
+    const known = new Set(CATEGORY_OPTIONS.map((c) => c.value));
+    if (linkedCategory && known.has(linkedCategory as CategoryType)) {
+      return [linkedCategory as CategoryType];
+    }
     const saved = readJSON<SavedSetup>(SETUP_KEY, {});
     if (!Array.isArray(saved.categories)) return [];
-    const known = new Set(CATEGORY_OPTIONS.map((c) => c.value));
     return saved.categories.filter((c): c is CategoryType => known.has(c as CategoryType));
   });
   const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
@@ -179,6 +187,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [mode, setMode] = useState<QuizMode>('standard');
   const [reportTarget, setReportTarget] = useState<string | null>(null);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [supportCompletions, setSupportCompletions] = useState(() =>
+    readJSON<{ completions?: number }>(SUPPORT_PROMPT_KEY, {}).completions ?? 0,
+  );
+  const [supportPromptDismissed, setSupportPromptDismissed] = useState(() => {
+    const state = readJSON<{ dismissedUntil?: number }>(SUPPORT_PROMPT_KEY, {});
+    return (state.dismissedUntil ?? 0) > Date.now();
+  });
   const [settings] = useSettings();
 
   const resultHeadingRef = useRef<HTMLDivElement | null>(null);
@@ -426,6 +441,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         correct: data.correctAnswers,
         total: data.totalQuestions,
       });
+      const supportState = readJSON<{ completions?: number; dismissedUntil?: number }>(SUPPORT_PROMPT_KEY, {});
+      const nextCompletions = Math.min(1000, (supportState.completions ?? 0) + 1);
+      writeJSON(SUPPORT_PROMPT_KEY, { ...supportState, completions: nextCompletions });
+      setSupportCompletions(nextCompletions);
       if (data.percentage === 100) recordPerfectQuiz();
 
       // Award quest XP for the quiz, scaled by each correct answer's difficulty.
@@ -441,37 +460,19 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       if (award > 0) awardQuestXp(award, 'quiz');
 
       if (isAuthenticated && user?.id) {
-        // Pre-build category breakdown once.
-        const resultsByIdLocal = new Map(data.results.map((r) => [r.questionId, r]));
-        const byCategory: Record<string, { correct: number; total: number }> = {};
-        for (const q of questions) {
-          const r = resultsByIdLocal.get(q.id);
-          if (!r) continue;
-          const bucket = byCategory[q.category] ?? { correct: 0, total: 0 };
-          bucket.total += 1;
-          if (r.isCorrect) bucket.correct += 1;
-          byCategory[q.category] = bucket;
-        }
-
-        // All three writes are independent rows; run them concurrently.
-        const writes: Promise<unknown>[] = [
-          createOrUpdateUserStats(user.id, {
-            email: profile.email,
-            name: profile.name,
-            picture: profile.picture,
-          }),
-          recordQuizResult(user.id, data.correctAnswers, data.totalQuestions),
-        ];
-        if (Object.keys(byCategory).length > 0) {
-          writes.push(recordCategoryStats(user.id, byCategory));
-        }
-        const settled = await Promise.allSettled(writes);
-        const failures = settled.filter((r) => r.status === 'rejected');
-        if (failures.length > 0) {
-          for (const f of failures) {
-            console.error('Stat write failed:', (f as PromiseRejectedResult).reason);
-          }
+        if (!data.resultReceipt) {
           setSnack(t('quiz.streakWarning'));
+        } else {
+          try {
+            await recordQuizResult(data.resultReceipt, {
+              email: profile.email,
+              name: profile.name,
+              picture: profile.picture,
+            });
+          } catch (writeError) {
+            console.error('Stat write failed:', writeError);
+            setSnack(t('quiz.streakWarning'));
+          }
         }
       }
     } catch (err) {
@@ -532,14 +533,32 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       correct: result.correctAnswers,
       total: result.totalQuestions,
     });
-    const shareData = { title: 'StudyShark', text, url: window.location.origin };
+    const brandedText = text.split('StudyShark').join(CURRENT_PRODUCT.brand);
+    const shareData = { title: CURRENT_PRODUCT.brand, text: brandedText, url: window.location.origin };
     try {
+      capture('share_initiated', { kind: mode === 'daily' ? 'daily_result' : 'quiz_result' });
+      const accent = getComputedStyle(document.documentElement).getPropertyValue('--brand-accent').trim();
+      const file = await createResultShareFile({
+        brand: CURRENT_PRODUCT.brand,
+        label: mode === 'daily' ? t('home.stripDailyTitle') : t('quiz.shareCardTitle'),
+        score: result.correctAnswers,
+        total: result.totalQuestions,
+        percentage: result.percentage,
+        date: new Intl.DateTimeFormat(lang, { dateStyle: 'long' }).format(new Date()),
+        accent,
+      });
       if (navigator.share) {
-        await navigator.share(shareData);
+        const withFile = file ? { ...shareData, files: [file] } : shareData;
+        await navigator.share(file && navigator.canShare?.(withFile) ? withFile : shareData);
         return;
       }
-      await navigator.clipboard.writeText(`${text} ${window.location.origin}`);
-      setSnack(t('quiz.shareCopied'));
+      await navigator.clipboard.writeText(`${brandedText} ${window.location.origin}`);
+      if (file) {
+        downloadShareFile(file);
+        setSnack(t('quiz.shareSaved'));
+      } else {
+        setSnack(t('quiz.shareCopied'));
+      }
     } catch (err) {
       if (err instanceof Error && err.name === 'AbortError') return;
       setSnack(t('quiz.shareFailed'));
@@ -794,6 +813,36 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           </div>
         </div>
 
+        {config.support.enabled && supportCompletions >= 3 && !supportPromptDismissed && (
+          <Card variant="muted" padding={3} width="100%" className="quiz-support-prompt">
+            <VStack gap={1.5}>
+              <Text weight="bold">{t('quiz.supportTitle')}</Text>
+              <Text type="supporting" size="sm" color="secondary">{t('quiz.supportBody')}</Text>
+              <HStack gap={1} wrap="wrap">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  label={t('quiz.supportCta')}
+                  onClick={() => {
+                    capture('support_prompt_opened', { product: CURRENT_PRODUCT.id });
+                    navigate('/support');
+                  }}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  label={t('quiz.supportDismiss')}
+                  onClick={() => {
+                    const state = readJSON<{ completions?: number }>(SUPPORT_PROMPT_KEY, {});
+                    writeJSON(SUPPORT_PROMPT_KEY, { ...state, dismissedUntil: Date.now() + SUPPORT_PROMPT_COOLDOWN_MS });
+                    setSupportPromptDismissed(true);
+                  }}
+                />
+              </HStack>
+            </VStack>
+          </Card>
+        )}
+
         <h3 id="quiz-review" className="quiz-review-header">
           {t('quiz.reviewYourAnswers', { count: questions.length })}
         </h3>
@@ -873,6 +922,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                         {questionResult.explanation}
                       </Text>
                     </div>
+                  )}
+                  {config.ai.explanationsEnabled && questionResult?.answerProof && (
+                    <AiExplanationPanel
+                      answerProof={questionResult.answerProof}
+                      selectedAnswer={question.options[questionResult.selectedIndex] ?? ''}
+                      lang={lang}
+                      onReport={() => setReportTarget(question.id)}
+                    />
                   )}
                 </VStack>
               </Card>
@@ -1167,6 +1224,85 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         onAction={confirmAbandon}
         width="min(460px, calc(100vw - 32px))"
       />
+    </div>
+  );
+}
+
+interface AiExplanationContent {
+  whyCorrect: string;
+  whySelected: string;
+  misconception: string;
+  relatedConcept: string;
+}
+
+function AiExplanationPanel({
+  answerProof,
+  selectedAnswer,
+  lang,
+  onReport,
+}: {
+  answerProof: string;
+  selectedAnswer: string;
+  lang: string;
+  onReport: () => void;
+}) {
+  const t = useT();
+  const [content, setContent] = useState<AiExplanationContent | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [unavailable, setUnavailable] = useState(false);
+
+  const load = async () => {
+    if (loading || content) return;
+    setLoading(true);
+    setUnavailable(false);
+    try {
+      const response = await apiFetch<{
+        available: boolean;
+        content?: AiExplanationContent;
+      }>('/api/quiz/submit?resource=explanation', {
+        method: 'POST',
+        body: JSON.stringify({ answerProof, selectedAnswer, lang }),
+        timeoutMs: 10_000,
+      });
+      if (response.available && response.content) setContent(response.content);
+      else setUnavailable(true);
+    } catch {
+      setUnavailable(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!content) {
+    return (
+      <VStack gap={1} align="start">
+        <Button
+          variant="secondary"
+          size="sm"
+          label={loading ? t('quiz.aiLoading') : t('quiz.aiExplain')}
+          isLoading={loading}
+          isDisabled={loading}
+          onClick={() => void load()}
+        />
+        {unavailable && (
+          <Text type="supporting" size="xsm" color="secondary">{t('quiz.aiUnavailable')}</Text>
+        )}
+      </VStack>
+    );
+  }
+
+  return (
+    <div className="quiz-ai-explanation">
+      <VStack gap={1}>
+        <HStack justify="between" align="center" gap={1} wrap="wrap">
+          <Text weight="bold" size="sm">{t('quiz.aiTitle')}</Text>
+          <Button variant="ghost" size="sm" label={t('quiz.aiReport')} onClick={onReport} />
+        </HStack>
+        <Text type="body" size="sm"><strong>{t('quiz.aiWhyCorrect')}</strong> {content.whyCorrect}</Text>
+        {content.whySelected && <Text type="body" size="sm"><strong>{t('quiz.aiWhySelected')}</strong> {content.whySelected}</Text>}
+        {content.misconception && <Text type="body" size="sm"><strong>{t('quiz.aiMisconception')}</strong> {content.misconception}</Text>}
+        <Text type="body" size="sm"><strong>{t('quiz.aiRelated')}</strong> {content.relatedConcept}</Text>
+      </VStack>
     </div>
   );
 }

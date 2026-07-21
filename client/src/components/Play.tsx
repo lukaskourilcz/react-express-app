@@ -42,8 +42,10 @@ import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { useGameConfig } from '../lib/gameConfig';
 import './DeepEndScreens.css';
 import { BookIcon, TargetIcon, UsersIcon } from './ui/icons';
+import { capture } from '../lib/analytics';
 
 const POLL_FALLBACK_MS = 4000;
+const REALTIME_HEALING_POLL_MS = 30_000;
 const DEFAULT_DURATION_S = 60;
 
 // Human-readable label for a per-question time limit (0 = no limit).
@@ -61,7 +63,11 @@ export function PlayLanding() {
   const accent = useActiveSubject().accent;
   const { user, isAuthenticated, signInWithGoogle } = useAuth();
   const profile = getUserProfile(user);
-  const [mode, setMode] = useState<'ffa' | 'h2h' | 'classroom'>('ffa');
+  const [mode, setMode] = useState<'ffa' | 'h2h' | 'classroom'>(() =>
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'classroom'
+      ? 'classroom'
+      : 'ffa',
+  );
   const [count, setCount] = useState(10);
   const [durationS, setDurationS] = useState(60);
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>([]);
@@ -129,6 +135,7 @@ export function PlayLanding() {
         duration_s: durationS,
         lang,
       });
+      capture(mode === 'classroom' ? 'classroom_created' : 'multiplayer_created', { question_count: count });
       navigate(`/play/${m.code}`);
     } catch (err) {
       setError(friendlyError(err));
@@ -152,6 +159,7 @@ export function PlayLanding() {
         user_id: user.id,
         display_name: displayNameFromProfile(profile, t('play.playerFallback')),
       });
+      capture('classroom_or_match_joined');
       navigate(`/play/${code}`);
     } catch (err) {
       setError(friendlyError(err));
@@ -391,7 +399,7 @@ export function PlayMatch() {
   const code = (codeParam || '').toUpperCase();
   const navigate = useNavigate();
   const t = useT();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
   const profile = getUserProfile(user);
 
   const [match, setMatch] = useState<Match | null>(null);
@@ -460,18 +468,26 @@ export function PlayMatch() {
     if (!code || !user?.id) return;
     const channel = joinMatchChannel(code);
     channelRef.current = channel;
+    let realtimeReady = false;
 
     channel.subscribe('participant_joined', refresh);
     channel.subscribe('match_updated', refresh);
+    const stopStatus = channel.onStatus((status) => {
+      realtimeReady = status === 'SUBSCRIBED';
+      if (realtimeReady) void channel.send('participant_joined', { sub: user.id });
+    });
 
-    // Send our own presence event after we've registered.
-    channel.send('participant_joined', { sub: user.id });
-
-    // Polling fallback for environments without Supabase Realtime enabled.
-    const interval = window.setInterval(refresh, POLL_FALLBACK_MS);
+    // Fast polling only while Realtime is unavailable. A slow healing poll is
+    // retained while connected in case a broadcast is dropped.
+    const healing = window.setInterval(() => void refresh(), REALTIME_HEALING_POLL_MS);
+    const fallback = window.setInterval(() => {
+      if (!realtimeReady) void refresh();
+    }, POLL_FALLBACK_MS);
 
     return () => {
-      window.clearInterval(interval);
+      window.clearInterval(healing);
+      window.clearInterval(fallback);
+      stopStatus();
       channel.unsubscribe();
     };
   }, [code, user?.id, refresh]);
@@ -588,6 +604,30 @@ export function PlayMatch() {
       setError(friendlyError(err));
     }
   };
+
+  if (authLoading) {
+    return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+        <Card padding={6} width="100%">
+          <VStack gap={2} align="center">
+            <Heading level={2} justify="center">{t('play.signInTitle')}</Heading>
+            <Text color="secondary" justify="center">{t('play.signInBody')}</Text>
+            <Button
+              variant="primary"
+              size="lg"
+              label={t('auth.logIn')}
+              onClick={() => void signInWithGoogle().catch((err) => setError(friendlyError(err)))}
+            />
+            {error && <Text type="supporting" color="secondary" justify="center">{error}</Text>}
+          </VStack>
+        </Card>
+      </div>
+    );
+  }
 
   if (joining) {
     // Same loading look as the other study modes, but no artificial minimum
@@ -714,8 +754,22 @@ function Lobby({
 }) {
   const t = useT();
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/play/${match.code}` : '';
+  const [qrUrl, setQrUrl] = useState('');
+  useEffect(() => {
+    let active = true;
+    void import('qrcode')
+      .then(({ toDataURL }) => toDataURL(shareUrl, {
+        width: 220,
+        margin: 1,
+        color: { dark: '#17272eff', light: '#ffffffff' },
+        errorCorrectionLevel: 'M',
+      }))
+      .then((url) => { if (active) setQrUrl(url); })
+      .catch(() => {});
+    return () => { active = false; };
+  }, [shareUrl]);
   return (
-    <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
+    <div className="ss-raised ss-pop play-invite" style={{ display: 'flex', width: '100%' }}>
     <Card padding={4} width="100%">
       <VStack gap={3}>
         <VStack gap={1}>
@@ -745,6 +799,16 @@ function Lobby({
           </Text>
         </VStack>
 
+        {qrUrl && (
+          <div className="play-invite__qr">
+            <img src={qrUrl} alt={t('play.qrAlt', { code: match.code })} width={164} height={164} />
+            <VStack gap={0.5}>
+              <Text weight="bold">{t('play.scanToJoin')}</Text>
+              <Text type="supporting" size="xsm" color="secondary">{shareUrl}</Text>
+            </VStack>
+          </div>
+        )}
+
         <VStack gap={1}>
           {participants.map((p, i) => (
             <div
@@ -773,11 +837,14 @@ function Lobby({
         </VStack>
 
         <HStack gap={1.5} wrap="wrap" justify="between">
-          <Button
-            variant="secondary"
-            label={t('play.copyLink')}
-            onClick={() => navigator.clipboard.writeText(shareUrl)}
-          />
+          <HStack gap={1} wrap="wrap">
+            <Button
+              variant="secondary"
+              label={t('play.copyLink')}
+              onClick={() => navigator.clipboard.writeText(shareUrl)}
+            />
+            <Button variant="ghost" label={t('play.printInvite')} onClick={() => window.print()} />
+          </HStack>
           {isHost && (
             <Button
               variant="primary"

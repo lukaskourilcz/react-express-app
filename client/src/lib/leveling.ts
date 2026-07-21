@@ -103,116 +103,80 @@ export interface CareerRank {
   title: string;
   /** Total XP required to reach this rank. */
   minXp: number;
-  emoji: string;
 }
 
-// 10 ranks, Superjunior → Software Architect. Titles/emojis are fixed; the XP
+// 10 ranks, Superjunior → Software Architect. Titles are fixed; the XP
 // thresholds are configurable from /dev → Settings (defaults below).
-const RANK_META: ReadonlyArray<{ title: string; emoji: string }> = [
-  { title: 'Superjunior Developer', emoji: '🌱' },
-  { title: 'Junior Developer', emoji: '🧑‍💻' },
-  { title: 'Associate Developer', emoji: '💻' },
-  { title: 'Developer', emoji: '⚙️' },
-  { title: 'Mid-Level Developer', emoji: '🛠️' },
-  { title: 'Senior Developer', emoji: '🚀' },
-  { title: 'Staff Engineer', emoji: '⭐' },
-  { title: 'Principal Engineer', emoji: '🎖️' },
-  { title: 'Distinguished Engineer', emoji: '🏅' },
-  { title: 'Software Architect', emoji: '🏛️' },
+const RANK_META: ReadonlyArray<{ title: string }> = [
+  { title: 'Superjunior Developer' },
+  { title: 'Junior Developer' },
+  { title: 'Associate Developer' },
+  { title: 'Developer' },
+  { title: 'Mid-Level Developer' },
+  { title: 'Senior Developer' },
+  { title: 'Staff Engineer' },
+  { title: 'Principal Engineer' },
+  { title: 'Distinguished Engineer' },
+  { title: 'Software Architect' },
 ];
 
 /** Rank titles in order — used to label the dev configuration UI. */
 export const RANK_TITLES: string[] = RANK_META.map((r) => r.title);
 
 // Per-subject rank ladders, index-aligned with RANK_META (same 10 XP tiers,
-// subject-appropriate titles + emojis). Web Dev keeps RANK_META and composes
+// subject-appropriate titles). Web Dev keeps RANK_META and composes
 // the track specialization on top; every other subject uses its own complete
 // titles (no specialization). See rankLabelKeyFor() in tracks.ts.
-const SUBJECT_RANK_LADDER: Record<SubjectId, ReadonlyArray<{ title: string; emoji: string }>> = {
+const SUBJECT_RANK_LADDER: Record<SubjectId, ReadonlyArray<{ title: string }>> = {
   webdev: RANK_META,
   geography: [
-    { title: 'Wanderer', emoji: '🌱' },
-    { title: 'Junior Explorer', emoji: '🧭' },
-    { title: 'Explorer', emoji: '🗺️' },
-    { title: 'Navigator', emoji: '⛰️' },
-    { title: 'Cartographer', emoji: '🌍' },
-    { title: 'Senior Geographer', emoji: '🚩' },
-    { title: 'Regional Expert', emoji: '🏔️' },
-    { title: 'Continental Scholar', emoji: '🌐' },
-    { title: 'World Authority', emoji: '🏅' },
-    { title: 'Master Geographer', emoji: '🌟' },
+    { title: 'Wanderer' }, { title: 'Junior Explorer' }, { title: 'Explorer' },
+    { title: 'Navigator' }, { title: 'Cartographer' }, { title: 'Senior Geographer' },
+    { title: 'Regional Expert' }, { title: 'Continental Scholar' },
+    { title: 'World Authority' }, { title: 'Master Geographer' },
   ],
   math: [
-    { title: 'Counter', emoji: '🌱' },
-    { title: 'Junior Mathematician', emoji: '➕' },
-    { title: 'Student Mathematician', emoji: '➗' },
-    { title: 'Mathematician', emoji: '📐' },
-    { title: 'Problem Solver', emoji: '📊' },
-    { title: 'Senior Mathematician', emoji: '🚀' },
-    { title: 'Analyst', emoji: '🔢' },
-    { title: 'Theorist', emoji: '🧮' },
-    { title: 'Distinguished Mathematician', emoji: '🏅' },
-    { title: 'Master Mathematician', emoji: '🧠' },
+    { title: 'Counter' }, { title: 'Junior Mathematician' },
+    { title: 'Student Mathematician' }, { title: 'Mathematician' },
+    { title: 'Problem Solver' }, { title: 'Senior Mathematician' },
+    { title: 'Analyst' }, { title: 'Theorist' },
+    { title: 'Distinguished Mathematician' }, { title: 'Master Mathematician' },
   ],
   history: [
-    { title: 'Novice', emoji: '🌱' },
-    { title: 'Junior Historian', emoji: '📜' },
-    { title: 'Student of History', emoji: '🏺' },
-    { title: 'Historian', emoji: '📖' },
-    { title: 'Chronicler', emoji: '🏛️' },
-    { title: 'Senior Historian', emoji: '🚀' },
-    { title: 'Scholar', emoji: '🎓' },
-    { title: 'Distinguished Historian', emoji: '📚' },
-    { title: 'Master Historian', emoji: '🏅' },
-    { title: 'Sage', emoji: '🦉' },
+    { title: 'Novice' }, { title: 'Junior Historian' }, { title: 'Student of History' },
+    { title: 'Historian' }, { title: 'Chronicler' }, { title: 'Senior Historian' },
+    { title: 'Scholar' }, { title: 'Distinguished Historian' },
+    { title: 'Master Historian' }, { title: 'Sage' },
   ],
   chess: [
-    { title: 'Beginner', emoji: '🌱' },
-    { title: 'Novice', emoji: '♟️' },
-    { title: 'Casual Player', emoji: '♙' },
-    { title: 'Club Player', emoji: '♞' },
-    { title: 'Intermediate', emoji: '♝' },
-    { title: 'Advanced', emoji: '♜' },
-    { title: 'Expert', emoji: '♛' },
-    { title: 'Candidate Master', emoji: '🎖️' },
-    { title: 'Master', emoji: '🏅' },
-    { title: 'Grandmaster', emoji: '👑' },
+    { title: 'Beginner' }, { title: 'Novice' }, { title: 'Casual Player' },
+    { title: 'Club Player' }, { title: 'Intermediate' }, { title: 'Advanced' },
+    { title: 'Expert' }, { title: 'Candidate Master' }, { title: 'Master' },
+    { title: 'Grandmaster' },
   ],
   biology: [
-    { title: 'Student', emoji: '🌱' },
-    { title: 'Junior Biologist', emoji: '🔬' },
-    { title: 'Biology Student', emoji: '🧫' },
-    { title: 'Biologist', emoji: '🧬' },
-    { title: 'Physiologist', emoji: '🩺' },
-    { title: 'Senior Biologist', emoji: '🚀' },
-    { title: 'Anatomist', emoji: '🧠' },
-    { title: 'Researcher', emoji: '🏥' },
-    { title: 'Distinguished Biologist', emoji: '🏅' },
-    { title: 'Master Biologist', emoji: '👨‍🔬' },
+    { title: 'Student' }, { title: 'Junior Biologist' }, { title: 'Biology Student' },
+    { title: 'Biologist' }, { title: 'Physiologist' }, { title: 'Senior Biologist' },
+    { title: 'Anatomist' }, { title: 'Researcher' },
+    { title: 'Distinguished Biologist' }, { title: 'Master Biologist' },
   ],
   poker: [
-    { title: 'Beginner', emoji: '🌱' },
-    { title: 'Novice', emoji: '🃏' },
-    { title: 'Casual Player', emoji: '♠️' },
-    { title: 'Amateur', emoji: '🎲' },
-    { title: 'Regular', emoji: '💵' },
-    { title: 'Winning Player', emoji: '🚀' },
-    { title: 'Shark', emoji: '🦈' },
-    { title: 'Pro', emoji: '🏆' },
-    { title: 'High Roller', emoji: '🏅' },
-    { title: 'Poker Master', emoji: '👑' },
+    { title: 'Beginner' }, { title: 'Novice' }, { title: 'Casual Player' },
+    { title: 'Amateur' }, { title: 'Regular' }, { title: 'Winning Player' },
+    { title: 'Shark' }, { title: 'Pro' }, { title: 'High Roller' },
+    { title: 'Poker Master' },
   ],
 };
 
 /**
- * The subject-appropriate label ({title, emoji}) for a rank index. Falls back
+ * The subject-appropriate title for a rank index. Falls back
  * to the Web Dev ladder for an out-of-range index. Track specialization (for
  * Web Dev) is composed separately by rankLabelKeyFor() in tracks.ts.
  */
-export function subjectRankLabel(subjectId: SubjectId, index: number): { title: string; emoji: string } {
+export function subjectRankLabel(subjectId: SubjectId, index: number): { title: string } {
   const ladder = SUBJECT_RANK_LADDER[subjectId] ?? RANK_META;
   const entry = ladder[index] ?? RANK_META[index] ?? RANK_META[0];
-  return { title: entry.title, emoji: entry.emoji };
+  return { title: entry.title };
 }
 
 export const MAX_RANK = RANK_META.length;
@@ -244,9 +208,9 @@ export function setRankThresholds(values: number[] | null | undefined): void {
   activeThresholds = cleaned;
 }
 
-/** The active career ladder: fixed titles/emojis with the current thresholds. */
+/** The active career ladder: fixed titles with the current thresholds. */
 export function getCareerRanks(): CareerRank[] {
-  return RANK_META.map((m, i) => ({ title: m.title, emoji: m.emoji, minXp: activeThresholds[i] }));
+  return RANK_META.map((m, i) => ({ title: m.title, minXp: activeThresholds[i] }));
 }
 
 export interface LevelInfo {

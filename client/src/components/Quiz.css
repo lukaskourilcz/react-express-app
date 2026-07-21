@@ -65,3 +65,10 @@
 @media (max-width: 820px) {
   .quiz-review-grid { grid-template-columns: 1fr; gap: 14px; }
 }
+.quiz-ai-explanation {
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 32%, var(--color-border));
+  border-radius: var(--radius-element);
+  background: color-mix(in srgb, var(--brand-accent) 7%, var(--color-background-card));
+}
+.quiz-support-prompt { max-width: 680px; margin: 18px auto 0; }

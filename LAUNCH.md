@@ -1,5 +1,10 @@
 # DevQuiz — Launch Plan
 
+> Historical audit snapshot. The implemented ecosystem release and current
+> operator procedure are documented in [`docs/launch-runbook.md`](./docs/launch-runbook.md).
+> Do not use the old password, HMAC, or outstanding-work statements below as
+> current production configuration.
+
 Status as of 2026-06-20. Web target: Vercel + Supabase.
 
 ---

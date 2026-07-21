@@ -1,4 +1,4 @@
-import type { VercelRequest } from '@vercel/node';
+import type { VercelRequest } from './vercel-types.js';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -39,6 +39,20 @@ function getBearer(req: VercelRequest): string | null {
   return m ? m[1].trim() : null;
 }
 
+async function withAuthDeadline<T>(promise: Promise<T>, timeoutMs = 3000): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new AuthError(504, 'auth_timeout', 'Authentication service timed out')), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 /**
  * Verify the caller's Supabase access token and return the verified subject
  * (the Supabase user id / UUID).
@@ -53,8 +67,12 @@ export async function requireAuth(req: VercelRequest): Promise<AuthResult> {
 
   if (authClient) {
     if (!token) throw new AuthError(401, 'missing_token', 'Missing Bearer token');
-    const { data, error } = await authClient.auth.getUser(token);
+    const { data, error } = await withAuthDeadline(authClient.auth.getUser(token));
     if (error || !data?.user?.id) {
+      const status = typeof error?.status === 'number' ? error.status : 401;
+      if (status >= 500) {
+        throw new AuthError(503, 'auth_unavailable', 'Authentication service is unavailable');
+      }
       throw new AuthError(401, 'invalid_token', 'Token verification failed');
     }
     return { sub: data.user.id, payload: data.user as unknown as Record<string, unknown> };

@@ -1,9 +1,11 @@
-import { readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { PurgeCSS } from 'purgecss';
+import { PRODUCT_CATALOG, resolveCatalogProductId } from './product-catalog';
+import { TOPIC_LANDINGS } from './src/lib/topicCatalog';
 
 // `ANALYZE=true npm run build` emits a treemap of the bundle to
 // dist/bundle-stats.html (open it to inspect the MUI/router/app split) plus a
@@ -57,8 +59,80 @@ function purgeAstryxCss(): Plugin {
   };
 }
 
-export default defineConfig({
+function productMetadata(env: Record<string, string>): Plugin {
+  const id = resolveCatalogProductId({ lockSubject: env.VITE_LOCK_SUBJECT, product: env.VITE_PRODUCT });
+  const product = PRODUCT_CATALOG[id];
+  const title = product.title.en;
+  const description = product.description.en;
+  const manifest = JSON.stringify({
+    name: product.brand,
+    short_name: product.brand,
+    description,
+    start_url: '/',
+    scope: '/',
+    display: 'standalone',
+    orientation: 'portrait',
+    background_color: '#ffffff',
+    theme_color: '#2d7a2d',
+    icons: [
+      { src: '/icon.svg', type: 'image/svg+xml', sizes: 'any', purpose: 'any' },
+      { src: '/icon-192.png', type: 'image/png', sizes: '192x192', purpose: 'any maskable' },
+      { src: '/icon-512.png', type: 'image/png', sizes: '512x512', purpose: 'any maskable' },
+    ],
+  }, null, 2);
+  const renderHtml = (html: string) => html
+    .split('__PRODUCT_NAME__').join(product.brand)
+    .split('__PRODUCT_TITLE__').join(title)
+    .split('__PRODUCT_DESCRIPTION__').join(description);
+
+  return {
+    name: 'product-metadata',
+    transformIndexHtml: renderHtml,
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url?.split('?')[0] !== '/manifest.webmanifest') return next();
+        res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+        res.end(manifest);
+      });
+    },
+    generateBundle(_options, bundle) {
+      const asset = bundle['manifest.webmanifest'];
+      if (asset?.type === 'asset') asset.source = manifest;
+    },
+    async writeBundle() {
+      const outDir = path.resolve(__dirname, 'dist');
+      await writeFile(path.join(outDir, 'manifest.webmanifest'), manifest);
+
+      // Emit a metadata-specific HTML shell for each public topic. React still
+      // hydrates the shared application, but crawlers receive a useful title
+      // and description without exposing any scored-session question data.
+      const indexHtml = await readFile(path.join(outDir, 'index.html'), 'utf8');
+      const topics = TOPIC_LANDINGS.filter((topic) =>
+        id === 'studyshark' ? topic.subject !== 'webdev' : topic.subject === product.subjectId,
+      );
+      for (const topic of topics) {
+        const topicTitle = `${topic.title.en} · ${product.brand}`;
+        const topicDescription = topic.description.en;
+        const html = indexHtml
+          .replace(/<title>[^<]*<\/title>/, `<title>${topicTitle}</title>`)
+          .replace(/(<meta name="description" content=")[^"]*(" \/>)/, `$1${topicDescription}$2`)
+          .replace(/(<meta property="og:title" content=")[^"]*(" \/>)/, `$1${topicTitle}$2`)
+          .replace(/(<meta property="og:description" content=")[^"]*(" \/>)/, `$1${topicDescription}$2`)
+          .replace(/(<meta name="twitter:title" content=")[^"]*(" \/>)/, `$1${topicTitle}$2`)
+          .replace(/(<meta name="twitter:description" content=")[^"]*(" \/>)/, `$1${topicDescription}$2`);
+        const topicDir = path.join(outDir, 'topics', topic.slug);
+        await mkdir(topicDir, { recursive: true });
+        await writeFile(path.join(topicDir, 'index.html'), html);
+      }
+    },
+  };
+}
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '');
+  return {
   plugins: [
+    productMetadata(env),
     react(),
     purgeAstryxCss(),
     ...(analyze
@@ -103,4 +177,5 @@ export default defineConfig({
       },
     },
   },
+  };
 });

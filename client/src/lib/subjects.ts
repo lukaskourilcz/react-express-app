@@ -12,6 +12,7 @@ import type { CategoryType, RoadmapTopic } from '../types/quiz';
 import type { TranslationKey } from '../i18n/translations';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
+import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 
 /**
  * i18n keys for a subject's display name / blurb — the registry's `label` and
@@ -23,14 +24,15 @@ export const subjectBlurbKey = (id: SubjectId): TranslationKey => `subject.${id}
 
 export type SubjectId = 'webdev' | 'geography' | 'math' | 'history' | 'chess' | 'biology' | 'poker';
 export const SUBJECT_ORDER: SubjectId[] = ['webdev', 'geography', 'math', 'history', 'chess', 'biology', 'poker'];
+/** Subjects that belong to the StudyShark portal. Developer learning is a
+ * sibling product (devShark), never a StudyShark subject card. */
+export const STUDYSHARK_SUBJECT_ORDER: SubjectId[] = SUBJECT_ORDER.filter((id) => id !== 'webdev');
 
 export interface SubjectDef {
   id: SubjectId;
   label: string;
   /** One-line pitch shown on the subject picker card. */
   blurb: string;
-  /** Emoji glyph for the picker card / subject switcher. */
-  emoji: string;
   /** Primary accent (light mode) — drives the MUI primary palette per subject. */
   accent: string;
   /** Legible accent for small text on dark surfaces. */
@@ -52,91 +54,74 @@ export const SUBJECTS: Record<SubjectId, SubjectDef> = {
     label: 'Web Dev',
     standaloneBrand: 'devShark',
     blurb: 'Frontend, backend and fullstack: the languages and tools of the modern web.',
-    emoji: '💻',
     accent: '#2d7a2d',
     accentBright: '#4caf50',
-    topics: [
-      'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
-      'html', 'css', 'git', 'dsa', 'algorithms',
-      'abbreviations', 'general', 'internet', 'ai', 'rhf-zod',
-      'databases', 'system-design', 'testing', 'devops', 'security',
-    ],
-    categories: [
-      'html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
-      'git', 'dsa', 'algorithms', 'abbreviations', 'general', 'internet', 'ai',
-      'rhf-zod', 'cool-stuff', 'databases', 'system-design', 'testing', 'devops',
-      'security', 'dev-world', 'code-snippets',
-    ],
+    topics: [...SUBJECT_SCOPE_CATALOG.webdev.topics] as RoadmapTopic[],
+    categories: [...SUBJECT_SCOPE_CATALOG.webdev.categories] as CategoryType[],
   },
   geography: {
     id: 'geography',
     label: 'Geography',
     standaloneBrand: 'geoShark',
     blurb: 'The whole world: continents, countries, capitals, climate and the Earth itself.',
-    emoji: '🌍',
     // orange-700: white "on-accent" text on primary buttons passes 4.5:1
     // (the previous #ea580c sat at 3.56:1 in light mode).
     accent: '#c2410c',
     accentBright: '#fb923c',
-    topics: ['continents', 'capitals', 'flags', 'landforms', 'climate', 'population', 'political', 'economic', 'cartography', 'earth', 'geomorphology', 'oceanography', 'biogeography', 'geopolitics', 'gis'],
-    categories: ['continents', 'capitals', 'flags', 'landforms', 'climate', 'population', 'political', 'economic', 'cartography', 'earth', 'geomorphology', 'oceanography', 'biogeography', 'geopolitics', 'gis'],
+    topics: [...SUBJECT_SCOPE_CATALOG.geography.topics] as RoadmapTopic[],
+    categories: [...SUBJECT_SCOPE_CATALOG.geography.categories] as CategoryType[],
   },
   math: {
     id: 'math',
     label: 'Math',
     standaloneBrand: 'mathShark',
     blurb: 'From basic arithmetic all the way to university-level math, one level at a time.',
-    emoji: '➗',
     accent: '#1565c0',
     accentBright: '#42a5f5',
-    topics: ['arithmetic', 'fractions', 'prealgebra', 'algebra', 'geometry', 'trigonometry', 'statistics', 'precalculus', 'calculus', 'linear-algebra', 'discrete-math', 'number-theory', 'multivariable-calculus', 'differential-equations', 'real-analysis'],
-    categories: ['arithmetic', 'fractions', 'prealgebra', 'algebra', 'geometry', 'trigonometry', 'statistics', 'precalculus', 'calculus', 'linear-algebra', 'discrete-math', 'number-theory', 'multivariable-calculus', 'differential-equations', 'real-analysis'],
+    topics: [...SUBJECT_SCOPE_CATALOG.math.topics] as RoadmapTopic[],
+    categories: [...SUBJECT_SCOPE_CATALOG.math.categories] as CategoryType[],
   },
   history: {
     id: 'history',
     label: 'History',
     standaloneBrand: 'historyShark',
     blurb: 'The human story from prehistory to the modern era, age by age.',
-    emoji: '📜',
     accent: '#4b5563',
     accentBright: '#9ca3af',
-    topics: ['prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern', 'historiography', 'history-of-science', 'economic-history', 'intellectual-history', 'military-history'],
-    categories: ['prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern', 'historiography', 'history-of-science', 'economic-history', 'intellectual-history', 'military-history'],
+    topics: [...SUBJECT_SCOPE_CATALOG.history.topics] as RoadmapTopic[],
+    categories: [...SUBJECT_SCOPE_CATALOG.history.categories] as CategoryType[],
   },
   chess: {
     id: 'chess',
     label: 'Chess',
     standaloneBrand: 'chessShark',
     blurb: 'For players who know the rules: openings, tactics, strategy, endgames and advanced theory.',
-    emoji: '♟️',
     accent: '#7b4b2a',
     accentBright: '#c8935f',
-    topics: ['openings', 'tactics', 'strategy', 'endgames', 'combinations', 'opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history'],
-    categories: ['openings', 'tactics', 'strategy', 'endgames', 'combinations', 'opening-theory', 'middlegame', 'pawn-structures', 'endgame-technique', 'chess-history'],
+    topics: [...SUBJECT_SCOPE_CATALOG.chess.topics] as RoadmapTopic[],
+    categories: [...SUBJECT_SCOPE_CATALOG.chess.categories] as CategoryType[],
   },
   biology: {
     id: 'biology',
     label: 'Human Biology',
     standaloneBrand: 'bioShark',
     blurb: 'The human body from cells to whole systems: anatomy and physiology, step by step.',
-    emoji: '🧬',
     // teal-700: white "on-accent" text on primary buttons passes 4.5:1
     // (the previous #0d9488 sat at 3.74:1 in light mode).
     accent: '#0f766e',
     accentBright: '#2dd4bf',
-    topics: ['cell-biology', 'skeletal-system', 'muscular-system', 'nervous-system', 'endocrine-system', 'cardiovascular-system', 'respiratory-system', 'digestive-system', 'immune-system', 'reproductive-system'],
-    categories: ['cell-biology', 'skeletal-system', 'muscular-system', 'nervous-system', 'endocrine-system', 'cardiovascular-system', 'respiratory-system', 'digestive-system', 'immune-system', 'reproductive-system'],
+    topics: [...SUBJECT_SCOPE_CATALOG.biology.topics] as RoadmapTopic[],
+    categories: [...SUBJECT_SCOPE_CATALOG.biology.categories] as CategoryType[],
   },
   poker: {
     id: 'poker',
     label: 'Poker',
     standaloneBrand: 'pokerShark',
     blurb: "Get good at no-limit Texas Hold'em, from position and pot odds to advanced strategy.",
-    emoji: '♠️',
     accent: '#b91c1c',
     accentBright: '#ef4444',
-    topics: ['positions', 'starting-hands', 'pot-odds', 'betting-strategy', 'postflop', 'tournament-play', 'psychology', 'gto-advanced'],
-    categories: ['positions', 'starting-hands', 'pot-odds', 'betting-strategy', 'postflop', 'tournament-play', 'psychology', 'gto-advanced'],
+    topics: [...SUBJECT_SCOPE_CATALOG.poker.topics] as RoadmapTopic[],
+    categories: [...SUBJECT_SCOPE_CATALOG.poker.categories] as CategoryType[],
   },
 };
 
@@ -184,6 +169,11 @@ const rawLock = ((import.meta.env.VITE_LOCK_SUBJECT as string | undefined) ?? ''
 export const LOCKED_SUBJECT: SubjectId | null = isSubject(rawLock) ? rawLock : null;
 /** True when this deploy is a single-subject standalone site. */
 export const isSubjectLocked = (): boolean => LOCKED_SUBJECT !== null;
+/** The subjects this public deployment may offer. Admin tooling deliberately
+ * keeps using SUBJECT_ORDER so it can manage the shared bank in one place. */
+export const AVAILABLE_SUBJECT_ORDER: SubjectId[] = LOCKED_SUBJECT
+  ? [LOCKED_SUBJECT]
+  : STUDYSHARK_SUBJECT_ORDER;
 /** URL of the umbrella StudyShark site, surfaced on standalone deploys. Empty when unset. */
 export const SIBLING_PLATFORMS_URL = ((import.meta.env.VITE_SIBLING_URL as string | undefined) ?? '').trim();
 
@@ -197,8 +187,11 @@ const SUBJECT_CHOSEN_KEY = 'studyshark:subject:chosen';
 const readSubject = (): SubjectId => {
   // A locked deploy always resolves to its one subject, ignoring any stored value.
   if (LOCKED_SUBJECT) return LOCKED_SUBJECT;
-  const saved = readJSON<string>(SUBJECT_KEY, 'webdev');
-  return isSubject(saved) ? saved : 'webdev';
+  const saved = readJSON<string>(SUBJECT_KEY, 'geography');
+  // Existing devShark learners keep all webdev data. On the StudyShark portal,
+  // an old shared-browser `webdev` selection is simply mapped to the first
+  // general subject instead of exposing developer content as a subject.
+  return isSubject(saved) && STUDYSHARK_SUBJECT_ORDER.includes(saved) ? saved : 'geography';
 };
 // Locked deploys have nothing to choose, so the landing gate is always satisfied.
 const readChosen = (): boolean => LOCKED_SUBJECT !== null || readJSON<boolean>(SUBJECT_CHOSEN_KEY, false) === true;

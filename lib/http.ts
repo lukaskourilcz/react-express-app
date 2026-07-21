@@ -5,7 +5,7 @@
 // guard and auth check used to be copy-pasted into each file. They now live
 // here so there is a single source of truth.
 
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { AuthError, requireAuth } from './auth';
 

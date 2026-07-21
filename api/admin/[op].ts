@@ -1,7 +1,7 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { jsonError, createLogger } from '../../lib/http';
-import { requireDevPassword } from '../../lib/admin-auth';
-import { enforceRateLimit } from '../../lib/rate-limit';
+import { requireAdmin } from '../../lib/admin-auth';
+import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import {
   listAdminQuestions,
   saveQuestion,
@@ -29,9 +29,10 @@ const boundedString = (v: unknown, max: number): string | null =>
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Anti-brute-force: at most ~1 auth attempt per second per IP, small burst.
   // Runs before password check so wrong guesses count toward the budget.
-  if (!(await enforceRateLimit(req, res, { key: 'admin_gate', capacity: 5, refillPerSecond: 1 }))) return;
-  // Every admin op is password-gated.
-  if (!requireDevPassword(req, res)) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.admin))) return;
+  // Prefer a verified Supabase admin/allowlist identity. The old shared
+  // password is available in production only when explicitly enabled.
+  if (!(await requireAdmin(req, res))) return;
 
   const op = String(req.query.op || '').toLowerCase();
   try {

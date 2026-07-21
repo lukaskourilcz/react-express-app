@@ -1,7 +1,10 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { localizeQuestion, normalizeLang, secureShuffle, type Question } from '../../lib/quiz-data';
 import { jsonError, createLogger, createServiceClient, withTimeout, requireAuthSub } from '../../lib/http';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
+import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
+import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
 import {
   buildLiveTopic,
   liveRoadmapStructure,
@@ -264,6 +267,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Per-user progress sub-resource (auth-gated): GET ?resource=progress, or PUT.
   if (req.method === 'PUT' || (req.method === 'GET' && req.query.resource === 'progress')) {
     try {
+      if (req.method === 'PUT' && !(await enforceRateLimit(req, res, RATE_LIMITS.roadmapMutation))) return;
       return await handleProgress(req, res);
     } catch {
       return jsonError(res, 500, 'internal_error', 'Internal error');
@@ -288,12 +292,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // No topic → return the whole map so the client can render the path.
   if (!topicRaw && levelRaw === undefined && checkpointRaw === undefined && testRaw === undefined) {
+    const topics = deploymentSubjectIds().flatMap((subject) => [...SUBJECT_SCOPE_CATALOG[subject].topics]);
+    const topicSet = new Set<string>(topics);
+    const structure = Object.fromEntries(
+      Object.entries(liveRoadmapStructure(exists)).filter(([topic]) => topicSet.has(topic)),
+    );
     res.setHeader('Cache-Control', 'public, max-age=60');
     logEvent({ status: 200, kind: 'structure', latency_ms: Date.now() - started });
-    return res.json({ topics: ROADMAP_TOPICS, structure: liveRoadmapStructure(exists) });
+    return res.json({ topics, structure });
   }
 
-  if (!isRoadmapTopic(topicRaw)) {
+  if (!isRoadmapTopic(topicRaw) || !isDeploymentTopic(topicRaw)) {
     return jsonError(res, 400, 'bad_request', 'Unknown topic');
   }
   const topic: RoadmapTopic = topicRaw;

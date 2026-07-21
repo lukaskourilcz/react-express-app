@@ -16,12 +16,15 @@ export interface QuizResult {
   totalQuestions: number;
   correctAnswers: number;
   percentage: number;
+  resultReceipt?: string;
   results: {
     questionId: string;
     selectedIndex: number;
     correctAnswer: number;
     isCorrect: boolean;
     explanation: string;
+    scoreProof?: string;
+    answerProof?: string;
   }[];
 }
 

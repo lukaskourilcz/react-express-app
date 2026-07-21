@@ -50,6 +50,7 @@ type Phase = 'intro' | 'loading' | 'playing' | 'gameover' | 'error';
 const MAX_LIVES = 3;
 const LOW_BATCH_THRESHOLD = 4; // top up the buffer when this few remain
 const TIME_LIMIT_S = 90; // each question is capped at 90 seconds
+const RELAXED_TIME_LIMIT_S = 180; // accessibility practice pace; never ranked
 const LOW_TIME_S = 15; // highlight + pulse the clock under this many seconds
 
 /** Seconds → "m:ss" (e.g. 90 → "1:30"). Clamps negatives to 0. */
@@ -83,6 +84,8 @@ export default function Challenge() {
 
   const [phase, setPhase] = useState<Phase>('intro');
   const [error, setError] = useState<string | null>(null);
+  const [relaxedPace, setRelaxedPace] = useState(false);
+  const timeLimitS = relaxedPace ? RELAXED_TIME_LIMIT_S : TIME_LIMIT_S;
 
   // Leaderboard preview (intro screen + game-over) via TanStack Query.
   const boardQuery = useChallengeLeaderboard();
@@ -102,11 +105,13 @@ export default function Challenge() {
   const [snack, setSnack] = useState<string | null>(null);
   // Seconds remaining on the current question; reset to TIME_LIMIT_S each time
   // a new question is shown, and the countdown effect drives it down.
-  const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_S);
+  const [timeLeft, setTimeLeft] = useState(timeLimitS);
 
   // Buffered question batches: we always keep one round of questions ready so
   // the next question appears instantly after each grade.
   const buffer = useRef<BufferState | null>(null);
+  const runTokenRef = useRef('');
+  const scoreProofsRef = useRef<string[]>([]);
   const topupInFlight = useRef<Promise<void> | null>(null);
   // Guards the once-per-run XP/token payout on game over.
   const awardedRef = useRef(false);
@@ -133,7 +138,13 @@ export default function Challenge() {
       if (topupInFlight.current) return topupInFlight.current;
       const p = (async () => {
         try {
-          const batch = await fetchChallengeBatch({ exclude: excluded, lang });
+          const batch = await fetchChallengeBatch({
+            exclude: excluded,
+            lang,
+            runToken: runTokenRef.current || undefined,
+            ranked: !relaxedPace,
+          });
+          runTokenRef.current = batch.runToken;
           // First batch or a refill — replace queue (the previous one was drained).
           buffer.current = { sessionId: batch.sessionId, queue: [...batch.questions] };
         } catch (err) {
@@ -151,7 +162,7 @@ export default function Challenge() {
         topupInFlight.current = null;
       }
     },
-    [lang],
+    [lang, relaxedPace],
   );
 
   const popNext = useCallback((): Question | null => {
@@ -171,8 +182,10 @@ export default function Challenge() {
     setSelected(null);
     setLastResult(null);
     setSubmittedScore(false);
-    setTimeLeft(TIME_LIMIT_S);
+    setTimeLeft(timeLimitS);
     awardedRef.current = false;
+    runTokenRef.current = '';
+    scoreProofsRef.current = [];
     buffer.current = null;
     const startedAt = Date.now();
     await ensureBufferTopUp([]);
@@ -187,7 +200,7 @@ export default function Challenge() {
     setCurrent(next);
     setSeenIds([next.id]);
     setPhase('playing');
-  }, [ensureBufferTopUp, popNext, t]);
+  }, [ensureBufferTopUp, popNext, t, timeLimitS]);
 
   const advance = useCallback(
     async (becameGameOver: boolean) => {
@@ -221,9 +234,9 @@ export default function Challenge() {
       setSelected(null);
       setLastResult(null);
       // Fresh question, fresh clock.
-      setTimeLeft(TIME_LIMIT_S);
+      setTimeLeft(timeLimitS);
     },
-    [ensureBufferTopUp, popNext, seenIds, t],
+    [ensureBufferTopUp, popNext, seenIds, t, timeLimitS],
   );
 
   const submitAnswer = useCallback(async () => {
@@ -253,6 +266,7 @@ export default function Challenge() {
       } else {
         setLivesLost((l) => l + 1);
       }
+      if (r?.scoreProof) scoreProofsRef.current.push(r.scoreProof);
     } catch (err) {
       setSnack(friendlyError(err));
     } finally {
@@ -296,7 +310,12 @@ export default function Challenge() {
     }
     setScoreSubmitting(true);
     try {
-      await submitChallengeScore({ name: cleaned, score });
+      if (!runTokenRef.current) throw new Error('Challenge run expired');
+      await submitChallengeScore({
+        name: cleaned,
+        runToken: runTokenRef.current,
+        proofs: scoreProofsRef.current,
+      });
       setSubmittedScore(true);
       setSnack(t('challenge.scoreSubmitted'));
       void refreshLeaderboard();
@@ -305,7 +324,7 @@ export default function Challenge() {
     } finally {
       setScoreSubmitting(false);
     }
-  }, [name, score, refreshLeaderboard, t, scoreSubmitting]);
+  }, [name, refreshLeaderboard, t, scoreSubmitting]);
 
   /* ─── countdown clock ───────────────────────────────────────── */
 
@@ -402,8 +421,19 @@ export default function Challenge() {
             <div className="de-stat-row">
               <div className="de-stat"><strong>{today}</strong><span>{t('challenge.todaySet')}</span></div>
               <div className="de-stat"><strong>{MAX_LIVES}</strong><span>{t('challenge.finsStat')}</span></div>
-              <div className="de-stat"><strong>{TIME_LIMIT_S} s</strong><span>{t('challenge.perQuestion')}</span></div>
+              <div className="de-stat"><strong>{timeLimitS} s</strong><span>{t('challenge.perQuestion')}</span></div>
             </div>
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={relaxedPace}
+              className={`de-track-card${relaxedPace ? ' is-selected' : ''}`}
+              onClick={() => setRelaxedPace((value) => !value)}
+              style={{ textAlign: 'left' }}
+            >
+              <strong>{t('challenge.relaxedPace')}</strong>
+              <span>{t('challenge.relaxedHint')}</span>
+            </button>
             <HStack gap={2} align="center" wrap="wrap">
               <SwimCta label={t('challenge.startButton')} dir={-1} onClick={() => void startRun()} />
               <span className="de-gold-pill">{t('challenge.fairRace')}</span>
@@ -467,7 +497,9 @@ export default function Challenge() {
 
             <ChampionBadge champion={champion} loading={boardLoading} dim={beatChampion} />
 
-            {!submittedScore ? (
+            {relaxedPace ? (
+              <Banner status="info" title={t('challenge.practiceScore')} />
+            ) : !submittedScore ? (
               <div className="ss-panel" style={{ padding: 16 }}>
                 <VStack gap={1.5}>
                   <Text type="body" size="sm">
@@ -534,7 +566,7 @@ export default function Challenge() {
   if (!current) return null;
 
   const low = timeLeft <= LOW_TIME_S;
-  const timePct = (Math.max(0, timeLeft) / TIME_LIMIT_S) * 100;
+  const timePct = (Math.max(0, timeLeft) / timeLimitS) * 100;
 
   return (
     // One-viewport layout matching the Quiz card geometry: ~560px column,

@@ -1,10 +1,12 @@
-# DevQuiz
+# StudyShark + devShark learning ecosystem
 
-A developer-knowledge quiz & learning app covering HTML, CSS, JavaScript, TypeScript, React, Node.js, Next.js, Git, DSA/algorithms, databases, DevOps, security, system design, testing, and AI/LLMs. **~3,100 hand-curated questions** across **15 learning paths**, importance-weighted from beginner to expert. Solo practice, a guided skill roadmap, daily challenges, live multiplayer/classroom matches, flashcards, XP/leveling, and leaderboards.
+One web codebase powers two deliberately separate products: **StudyShark** for general subjects and **devShark** for web development. StudyShark never exposes web-development topics; devShark is a locked developer-learning deployment. Individual subject brands keep their own colors and identity while shared interaction patterns, bilingual copy, security controls, and the Shark family footer remain consistent.
 
-> **Stack:** React 18 + Vite + MUI (TanStack Query) on the client · Vercel serverless functions in TypeScript on the backend · Supabase (Postgres + Auth + Realtime) for persistence, identity, and live matches. Identity is **Supabase Auth (Google OAuth)**.
+> **Current stack:** React 19 + Vite + Astryx Design (TanStack Query) · 12 Vercel TypeScript functions · Supabase Postgres, Auth, and Realtime. Identity is Supabase Auth with Google OAuth.
 >
 > 💰 For hosting tiers, current costs, and a scaling analysis, see **[`stack-and-scaling.md`](./stack-and-scaling.md)**.
+
+The operational source of truth is the [launch runbook](./docs/launch-runbook.md). It includes the deployment matrix, required migration, smoke tests, rollback steps, support/AI gates, and exact preflight command. See [backup and restore](./docs/backup-restore.md) and [privacy-conscious growth measurement](./docs/growth-metrics.md) for the adjacent procedures.
 
 ---
 
@@ -36,7 +38,7 @@ A developer-knowledge quiz & learning app covering HTML, CSS, JavaScript, TypeSc
 ### Solo quiz
 - **~3,100 questions** across **15 learning paths** (HTML, CSS, JavaScript, TypeScript, React, Node.js, Next.js, Git, DSA, algorithms, databases, DevOps, security, system design, testing, AI & LLMs, plus general/abbreviations/"cool stuff").
 - Pick your **categories**, **question count**, and **difficulty band** — selection is **importance-weighted** so the most consequential questions surface more often.
-- **Server-side answer key** — the correct answer never reaches the client until after submit. Answers are HMAC-signed into a session token, so the server verifies exactly what it generated for the user.
+- **Server-side answer key** — the correct answer never reaches the client until after submit. AES-256-GCM authenticated envelopes keep answer keys confidential and tamper-evident.
 - **Per-question option shuffle** at request time; the answer key is rewritten to match the shuffled order.
 - **Detailed review** screen with explanations, tags, and per-question results.
 - **Practice mode** — quiz without writing to your stats.
@@ -49,7 +51,7 @@ A developer-knowledge quiz & learning app covering HTML, CSS, JavaScript, TypeSc
 
 ### Daily challenge
 - A **deterministic question set per UTC date**, the same for every user, so daily leaderboards are comparable (seeded shuffle).
-- Cached privately per browser; no shared CDN caching, to avoid leaking the signed answer-key token.
+- Cached privately per browser; session envelopes are never placed in a shared CDN cache.
 - A separate **challenge scoreboard** (`challenge_scores`) tracks challenge runs.
 
 ### Live multiplayer & classroom
@@ -77,13 +79,13 @@ A developer-knowledge quiz & learning app covering HTML, CSS, JavaScript, TypeSc
 - **Bookmarks** for questions to revisit (client-side).
 
 ### Admin console (`/dev`)
-- A password-gated console (password from `DEV_PASSWORD`, **default `autobus`** — change it in prod) with no app chrome.
+- A role-gated console using a verified Supabase session plus admin app metadata or the `ADMIN_EMAILS` server allow-list.
 - **Questions** — grouped by category, searchable by text/tag/id, with **edit**, **hide** (restorable soft-delete), **bulk-hide by importance**, **revert**, and **create**. Edits are stored as *overrides* in Supabase (`question_edits`) and merged onto the static bank at serve time; if the DB is unavailable the app falls back to the static bank unchanged.
 - **Bilingual editing** — English + Čeština tabs per question (question, options, intro, explanation). Czech options stay parallel to English so grading remains correct; blank Czech fields fall back to English.
 - **Importance editing** — set each question's resolved importance (1–10), which drives weighted selection.
 - **Reports triage** and an **auth-events log** view.
 - **Settings** — edit quiz/daily/play counts, time limits, option lists, feature toggles, and owner email (`app_settings`). The public `/api/settings` endpoint lets the client hide disabled features.
-- **Security note:** the gate is a single shared password and the admin API exposes answer keys — set a strong `DEV_PASSWORD` in production.
+- **Security note:** legacy shared-password access is development-only unless explicitly re-enabled. Production should use identity-based admin roles.
 
 ### App-wide
 - **Light / dark mode** persisted locally.
@@ -96,9 +98,9 @@ A developer-knowledge quiz & learning app covering HTML, CSS, JavaScript, TypeSc
 ## Tech stack
 
 ### Client (`client/`)
-- **React 18** with Suspense and `React.lazy` for non-default routes.
+- **React 19** with Suspense and `React.lazy` for non-default routes.
 - **Vite 5** + **TypeScript 5**.
-- **MUI 5** (Material UI) + Emotion, with a custom theme (`client/src/theme/MuiTheme.ts`).
+- **Astryx Design** primitives and neutral theme, with product/subject tokens layered in the app shell.
 - **TanStack React Query 5** for server-state/caching.
 - **React Router v7**.
 - **`@supabase/supabase-js`** — browser client for the Auth session and Realtime channels.
@@ -106,11 +108,11 @@ A developer-knowledge quiz & learning app covering HTML, CSS, JavaScript, TypeSc
 - **react-syntax-highlighter** (Prism, lazy) for code blocks.
 
 ### Backend (`api/` + `lib/`)
-- **Vercel serverless functions** (`api/**/*.ts`) using `@vercel/node` — **12 handlers**, the Vercel Hobby cap.
+- **Vercel Node serverless functions** (`api/**/*.ts`) — **12 handlers**, the Vercel Hobby cap.
 - **`@supabase/supabase-js`** server-side (anon client for public reads / token verification; service-role client for trusted user-scoped writes after the caller is verified).
 - **Supabase Postgres** for all persistence (RLS + atomic RPCs).
 - **Supabase Realtime** for live match channels.
-- **HMAC-signed session tokens** (`node:crypto`) as the answer-key proof.
+- **AES-256-GCM authenticated session envelopes** (`node:crypto`) as confidential answer-key proof.
 - In-memory caches (short TTL) for the question bank and settings on warm instances.
 
 ### Hosting
@@ -144,7 +146,7 @@ A developer-knowledge quiz & learning app covering HTML, CSS, JavaScript, TypeSc
 
 **Design principles:**
 
-1. **Server is the source of truth.** The client never knows the correct answer for an unanswered question. Answers travel in an HMAC-signed session token created by `/api/quiz/questions` and verified on submit.
+1. **Server is the source of truth.** The client never knows the correct answer for an unanswered question. Answers travel in an encrypted, authenticated session envelope created by `/api/quiz/questions` and verified on submit.
 2. **All identity through Supabase Auth.** Every protected endpoint reads `Authorization: Bearer <access_token>`, verifies it with `supabase.auth.getUser(jwt)`, and uses the verified user id (`sub`). Client-supplied ids are ignored in production.
 3. **Atomic mutations via Postgres RPCs.** Streak/score updates and match-state transitions use server-side functions with row locks, not read-modify-write at the API layer.
 4. **Graceful degradation.** Realtime falls back to polling; missing Supabase env → API returns `503` with a clear code; the question bank and settings fall back to in-code defaults when the DB is down.
@@ -162,7 +164,7 @@ react-express-app/
 │   ├── flashcards.ts             #   per-user flashcards CRUD
 │   ├── play/[action].ts          #   create | join | state | control | answer | distribution | heartbeat
 │   ├── quiz/
-│   │   ├── questions.ts          #   GET  N importance-weighted questions + signed session
+│   │   ├── questions.ts          #   GET  N importance-weighted questions + opaque session
 │   │   ├── submit.ts             #   POST verify answers (also ?resource=report to flag a question)
 │   │   ├── daily.ts              #   GET  daily challenge questions + session
 │   │   ├── challenge.ts          #   challenge mode questions / scoreboard
@@ -172,9 +174,9 @@ react-express-app/
 │
 ├── lib/                          # Shared server-side helpers (importable from api/*)
 │   ├── auth.ts                   #   Supabase access-token verification (auth.getUser)
-│   ├── admin-auth.ts             #   x-dev-password gate (DEV_PASSWORD, default 'autobus')
+│   ├── admin-auth.ts             #   verified admin role / email allow-list
 │   ├── http.ts                   #   Supabase clients, JSON errors, logging, withTimeout
-│   ├── quiz-data.ts / .cs.ts     #   Question bank + HMAC session encode/decode + localization
+│   ├── quiz-data.ts / .cs.ts     #   Question bank + encrypted session envelopes + localization
 │   ├── roadmap-questions-*.ts    #   Per-track question sets that build the bank
 │   ├── questions-store.ts        #   Effective bank = static + /dev overrides (cached)
 │   ├── settings-store.ts         #   Game settings (cached, with in-code defaults)
@@ -203,7 +205,7 @@ react-express-app/
 ## Local development
 
 ### Prerequisites
-- **Node.js 20+** (LTS).
+- **Node.js 22** (the runtime required by the current Supabase SDK).
 - **Vercel CLI** for the dev server: `npm i -g vercel`.
 - A **Supabase** project (free tier is plenty) with the **Google** auth provider enabled.
 
@@ -243,8 +245,9 @@ The `VITE_` prefix exposes a variable to the client bundle at build time; the re
 | `SUPABASE_URL` | alt | server | Non-`VITE_` server-side fallback. |
 | `SUPABASE_ANON_KEY` | alt | server | Non-`VITE_` server-side fallback. |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ (prod) | server | Lets the API bypass RLS for user-scoped writes **after** verifying the caller. Never expose to the client. |
-| `SESSION_SECRET` | ✅ (prod) | server | ≥32-byte random string; HMAC-signs quiz session tokens. Generate with `openssl rand -base64 48`. |
-| `DEV_PASSWORD` | ⚠️ recommended | server | Gates the `/dev` console + `/api/admin` (via `x-dev-password`). **Defaults to `autobus` — set a strong value in prod**, the admin API exposes answer keys. |
+| `SESSION_SECRET` | ✅ (prod) | server | ≥32-byte random string used to derive the AES-GCM token key. Generate with `openssl rand -base64 48`. |
+| `ADMIN_EMAILS` | ✅ for `/dev` | server | Comma-separated admin email allow-list; app-metadata role `admin` is also accepted. |
+| `PRODUCT_ID` / `PRODUCT_SUBJECT` | ✅ per deploy | server | Mirrors the built product identity and enforces API-side subject isolation. |
 | `OWNER_EMAIL` | optional | server | Email whose private categories are visible; defaults to `kouril.lukas@gmail.com`. |
 | `VITE_SENTRY_DSN` | optional | client | Enables Sentry error/perf monitoring; omit to disable (the SDK is then tree-shaken out). |
 | `VITE_LOCK_SUBJECT` | optional | client | Standalone single-subject mode. Set to a subject id (`webdev`, `geography`, `math`, `history`, `chess`, `biology`, `poker`) to lock the whole app to it — no picker/switcher, standalone wordmark (e.g. devShark). Unset on the umbrella StudyShark deploy. |
@@ -308,8 +311,8 @@ All endpoints return JSON; errors come back as `{ "error": { "code": "string", "
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | `GET` | `/api/health` | none | Liveness + Supabase reachability. |
-| `GET` | `/api/quiz/questions?category=&difficulty=&count=` | none | N importance-weighted, shuffled questions + signed session token. `private, no-store`. |
-| `POST` | `/api/quiz/submit` | none (session-bound) | `{ sessionId, answers: { [questionId]: index }, lang? }` — verifies via HMAC; returns per-question results + explanations. |
+| `GET` | `/api/quiz/questions?category=&difficulty=&count=` | none | N importance-weighted, shuffled questions + opaque session token. `private, no-store`. |
+| `POST` | `/api/quiz/submit` | none (session-bound) | `{ sessionId, answers: { [questionId]: index }, lang? }` — verifies the authenticated envelope; returns per-question results + explanations. |
 | `POST` | `/api/quiz/submit?resource=report` | optional | `{ question_id, reason, detail? }` — flag a question (the report endpoint is folded in here to stay under the 12-function cap). |
 | `GET` | `/api/quiz/daily?date=YYYY-MM-DD` | none | Daily challenge for the date (default today). `private, max-age=300`. |
 | `GET`/`POST` | `/api/quiz/challenge` | mixed | Challenge-mode questions / scoreboard. Public reads `s-maxage=15` SWR; writes are auth'd + `no-store`. |
@@ -320,7 +323,7 @@ All endpoints return JSON; errors come back as `{ "error": { "code": "string", "
 | `POST` | `/api/play/[action]` (`create`/`join`/`control`/`answer`/`heartbeat`) | required | Create/join/run a match; server computes the speed bonus and guards against double-advance. |
 | `GET` | `/api/play/[action]` (`state`/`distribution`) | optional/host | Match state (answer keys stripped unless host or finished); per-option distribution is host-only. `no-store`. |
 | `GET` | `/api/settings` | none | Public read-only game config (counts, time options, feature flags). `s-maxage=15` + SWR. |
-| `GET`/`POST` | `/api/admin/[op]` | dev password | `questions`/`save`/`delete`/`bulkhide`/`reset`/`reports`/`logs`/`settings` — gated by `x-dev-password`. |
+| `GET`/`POST` | `/api/admin/[op]` | admin bearer token | `questions`/`save`/`delete`/`bulkhide`/`reset`/`reports`/`logs`/`settings` — gated by verified role/email. |
 
 Every Supabase call is wrapped in a 5-second timeout so a hung Postgres can't burn the full 10-second Vercel function slot.
 
@@ -332,7 +335,7 @@ Every Supabase call is wrapped in a 5-second timeout so a hung Postgres can't bu
 - Each question has an `id`, `tags`, optional `introduction`, `question` (Markdown with optional fenced code), `options`, `correctAnswer` (index), `category`, `explanation`, a `difficulty`, and a resolved **importance (1–10)**.
 - **Importance-weighted selection** is applied so high-value questions appear more often.
 - `/dev` edits are stored as **overrides** (`question_edits`) and merged onto the static bank at serve time (cached briefly); the live quiz reflects changes within seconds, and the app falls back to the static bank if the DB is unavailable.
-- **Session tokens** are `base64url(payload) + "." + base64url(HMAC-SHA256(payload, SESSION_SECRET))` with a short TTL, carrying the generated questions + answer key so submit can verify without trusting the client.
+- **Session tokens** are versioned AES-256-GCM envelopes with a random nonce, authenticated metadata, strict shape checks, and short TTL. The answer payload cannot be base64-decoded by the browser.
 - The bank lives in **code**, not the database — keep that in mind for cold-start parse cost (see [Performance notes](#performance-notes)).
 
 ---
@@ -342,13 +345,13 @@ Every Supabase call is wrapped in a 5-second timeout so a hung Postgres can't bu
 | Layer | Control |
 |---|---|
 | **Identity** | Every protected endpoint verifies the Supabase access token via `auth.getUser()`; the returned user id is the canonical subject. Client-supplied ids are ignored in production. |
-| **Quiz answer integrity** | Correct answers never leave the server before submit. Sessions are HMAC-SHA256-signed and compared in constant time (`timingSafeEqual`). |
+| **Quiz answer integrity** | Correct answers never leave the server before submit. AES-GCM provides confidentiality and authenticated tamper detection. |
 | **RLS** | User rows are RLS-scoped; write RPCs are revoked from `anon` (migration 007). The service-role key is used server-side only, after the caller is verified. |
-| **Admin gate** | `/dev` + `/api/admin` require the `x-dev-password` header (`DEV_PASSWORD`), checked in constant time. |
+| **Admin gate** | `/dev` + `/api/admin` require a verified Supabase user with admin app metadata or an allow-listed email. Legacy password mode is off in production by default. |
 | **CSP** | Strict `default-src 'self'` with allowlisted `connect-src` (Supabase HTTPS + WSS) and Google Fonts; `frame-ancestors 'none'`. |
 | **Headers** | `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` locking down camera/mic/geo/FLoC, HSTS with preload. |
 | **Input validation** | Every body field is type-checked and bounded; categories are allowlisted; answer/option counts are capped. |
-| **Rate limiting** | ⚠️ **Not yet enabled at the app layer** — the anonymous report insert and mutating routes rely on platform limits. Upstash + `@upstash/ratelimit` is the recommended next step. |
+| **Rate limiting** | Endpoint-specific limits use Upstash when configured, with a bounded in-memory fallback and `429`/`Retry-After` responses. |
 
 ---
 

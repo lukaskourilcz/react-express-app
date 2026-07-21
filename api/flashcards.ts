@@ -1,5 +1,6 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
 import { createServiceClient, jsonError, withTimeout, requireAuthSub } from '../lib/http';
+import { enforceRateLimit, RATE_LIMITS } from '../lib/rate-limit';
 
 const supabase = createServiceClient();
 
@@ -14,6 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
+  if (req.method !== 'GET' && !(await enforceRateLimit(req, res, RATE_LIMITS.flashcardMutation))) return;
 
   try {
     if (req.method === 'GET') {

@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
 import {
   createAnonClient,
   jsonError,
@@ -7,6 +7,11 @@ import {
   isRpcMissing,
   STATS_CATEGORIES,
 } from '../lib/http';
+import {
+  defaultDeploymentCategories,
+  isDeploymentCategory,
+  validateCategoryScope,
+} from '../lib/product-scope';
 
 const supabase = createAnonClient();
 
@@ -33,44 +38,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // sends the active subject's category set; subjects are disjoint, so the
       // result is that platform's own all-time board.
       const catRaw = typeof req.query.categories === 'string' ? req.query.categories : '';
-      const cats = Array.from(
-        new Set(catRaw.split(',').map((s) => s.trim()).filter((c) => STATS_CATEGORIES.has(c))),
-      ).slice(0, 64);
-
-      if (cats.length > 0) {
-        const { data, error } = await withTimeout(
-          supabase.rpc('subject_leaderboard', { p_categories: cats, p_limit: limit }),
-        );
-        if (error) {
-          if (isRpcMissing(error)) {
-            return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-020.sql to enable per-subject leaderboards');
-          }
-          logEvent({ status: 500, error: error.message });
-          return jsonError(res, 500, 'db_error', 'Could not load leaderboard');
-        }
-        res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
-        return res.json({ period: 'global', categories: cats, entries: data });
+      const requested = catRaw
+        ? catRaw.split(',').map((s) => s.trim()).filter(Boolean)
+        : defaultDeploymentCategories();
+      const scope = validateCategoryScope(requested.slice(0, 64));
+      if (!scope.ok) {
+        return jsonError(res, 400, 'invalid_subject_scope', 'Categories must belong to this deployment and one subject');
       }
-
-      // No categories → the legacy all-platform board (kept for old clients).
+      const cats = scope.categories.filter((category) => STATS_CATEGORIES.has(category));
+      if (cats.length === 0) return jsonError(res, 400, 'bad_request', 'Invalid categories');
       const { data, error } = await withTimeout(
-        supabase.rpc('global_leaderboard', { p_limit: limit }),
+        supabase.rpc('subject_leaderboard', { p_categories: cats, p_limit: limit }),
       );
       if (error) {
         if (isRpcMissing(error)) {
-          return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-004.sql to enable leaderboards');
+          return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-020.sql to enable per-subject leaderboards');
         }
         logEvent({ status: 500, error: error.message });
         return jsonError(res, 500, 'db_error', 'Could not load leaderboard');
       }
-      // 60s SWR — leaderboards are eventually-consistent.
       res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
-      return res.json({ period: 'global', entries: data });
+      return res.json({ period: 'global', categories: cats, entries: data });
     }
 
     if (period === 'category') {
       const category = (req.query.category as string) || '';
-      if (!STATS_CATEGORIES.has(category)) {
+      if (!STATS_CATEGORIES.has(category) || !isDeploymentCategory(category)) {
         return jsonError(res, 400, 'bad_request', 'Invalid category');
       }
       const minParam = parseInt(req.query.min_attempts as string, 10);

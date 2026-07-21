@@ -29,7 +29,7 @@ import { getCategoryHexColor, categoryLabelKey, onCategoryColorText } from '../l
 import { useQuestXp, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp, levelForXp, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
-import { friendlyError } from '../lib/api';
+import { apiFetch, friendlyError } from '../lib/api';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
 import { computeAchievements, readPerfectQuizCount, type Achievement } from '../lib/achievements';
 import { renderQuestion } from './CodeBlock';
@@ -43,6 +43,7 @@ import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { SwimmingFin } from './SharkFin';
 import { FlameIcon, BoltIcon, TrophyIcon } from './ui/icons';
+import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import './DeepEndScreens.css';
 
 const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
@@ -360,6 +361,8 @@ function ProfileBody({
             )}
 
             <PreferencesCard />
+
+            <AccountDeletionCard />
           </VStack>
         </Grid>
 
@@ -781,6 +784,71 @@ function PreferencesCard() {
       </VStack>
     </Card>
     </Lift>
+  );
+}
+
+function clearDeletedAccountState() {
+  const clear = (storage: Storage) => {
+    const keys = Array.from({ length: storage.length }, (_, i) => storage.key(i)).filter(
+      (key): key is string => Boolean(key),
+    );
+    for (const key of keys) {
+      if (key.startsWith('devquiz:') || key.startsWith('studyshark:') || key.startsWith('shark:')) {
+        storage.removeItem(key);
+      }
+    }
+  };
+  try { clear(localStorage); } catch { /* storage may be disabled */ }
+  try { clear(sessionStorage); } catch { /* storage may be disabled */ }
+}
+
+function AccountDeletionCard() {
+  const t = useT();
+  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const requestDeletion = () => {
+    setConfirm({
+      title: t('profile.deleteTitle'),
+      description: t('profile.deleteConfirm'),
+      actionLabel: t('profile.deleteAction'),
+      destructive: true,
+      onConfirm: async () => {
+        try {
+          await apiFetch<{ ok: true }>('/api/user/delete-account', {
+            method: 'DELETE',
+            body: JSON.stringify({ confirmation: 'DELETE' }),
+            timeoutMs: 20_000,
+          });
+          clearDeletedAccountState();
+          await signOut().catch(() => undefined);
+          navigate('/', { replace: true });
+        } catch (error) {
+          setMessage(friendlyError(error));
+        }
+      },
+    });
+  };
+
+  return (
+    <>
+      <Lift>
+        <Card variant="muted" padding={3} width="100%">
+          <VStack gap={1.5}>
+            <SectionLabel>{t('profile.account')}</SectionLabel>
+            <Text weight="semibold">{t('profile.deleteTitle')}</Text>
+            <Text type="supporting" size="xsm" color="secondary">{t('profile.deleteDescription')}</Text>
+            <HStack justify="end">
+              <Button variant="destructive" size="sm" label={t('profile.deleteAction')} onClick={requestDeletion} />
+            </HStack>
+          </VStack>
+        </Card>
+      </Lift>
+      <BrandedConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
+      <AppToast open={!!message} message={message} onClose={() => setMessage(null)} severity="error" autoHideDuration={null} />
+    </>
   );
 }
 

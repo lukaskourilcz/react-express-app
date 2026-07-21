@@ -1,15 +1,26 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { decodeSession, localizeQuestion, normalizeLang } from '../../lib/quiz-data';
+import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
+import { createHash } from 'node:crypto';
+import {
+  decodeAnswerProof,
+  decodeSessionEnvelope,
+  encodeScoreProof,
+  encodeQuizResultReceipt,
+  encodeAnswerProof,
+  localizeQuestion,
+  normalizeLang,
+} from '../../lib/quiz-data';
 import { AuthError, tryAuth } from '../../lib/auth';
-import { createAnonClient, jsonError, createLogger, withTimeout } from '../../lib/http';
+import { createAnonClient, createServiceClient, jsonError, createLogger, withTimeout } from '../../lib/http';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
-import { enforceRateLimit } from '../../lib/rate-limit';
+import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { generateExplanation, isAiExplanationConfigured, type ExplanationContent } from '../../lib/ai-provider';
 
 const MAX_ANSWERS = 50;
 
 const logEvent = createLogger('quiz/submit');
 const reportLogger = createLogger('quiz/report');
 const supabase = createAnonClient();
+const aiSupabase = createServiceClient();
 
 // Question-report reasons. 'needs-review' is the lightweight red-flag from the
 // learning path; the rest come from the full report dialog in the solo quiz.
@@ -26,18 +37,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'POST' && req.query.resource === 'report') {
     return handleReport(req, res);
   }
+  if (req.method === 'POST' && req.query.resource === 'explanation') {
+    return handleExplanation(req, res);
+  }
 
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSubmit))) return;
 
   const body = req.body as { sessionId?: unknown; answers?: unknown; lang?: unknown };
   const lang = normalizeLang((body as { lang?: unknown })?.lang);
   if (!body || typeof body !== 'object') {
     return jsonError(res, 400, 'bad_request', 'Body must be JSON');
   }
-  if (typeof body.sessionId !== 'string' || body.sessionId.length === 0 || body.sessionId.length > 4096) {
+  if (typeof body.sessionId !== 'string' || body.sessionId.length === 0 || body.sessionId.length > 16_384) {
     return jsonError(res, 400, 'bad_request', 'sessionId is required');
   }
   if (!body.answers || typeof body.answers !== 'object' || Array.isArray(body.answers)) {
@@ -63,13 +78,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     validated.push({ questionId: qid, selectedIndex: idx });
   }
 
-  const sessionData = decodeSession(body.sessionId);
-  if (!sessionData) {
+  const session = decodeSessionEnvelope(body.sessionId);
+  if (!session) {
     logEvent({ status: 400, reason: 'invalid_session', latency_ms: Date.now() - started });
     return jsonError(res, 400, 'invalid_session', 'Quiz session expired or invalid');
   }
 
-  const sessionById = new Map(sessionData.map((q) => [q.questionId, q]));
+  const sessionById = new Map(session.questions.map((q) => [q.questionId, q]));
   // Effective question set (base + /dev overrides) for localized explanations.
   const questionsById = await getEffectiveQuestionsById();
 
@@ -79,17 +94,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const q = questionsById.get(questionId);
     const isCorrect = sessionQ?.correctAnswer === selectedIndex;
     if (isCorrect) correct++;
-    return {
+    const result = {
       questionId,
       selectedIndex,
       correctAnswer: sessionQ?.correctAnswer ?? -1,
       isCorrect,
       explanation: q ? localizeQuestion(q, lang).explanation : '',
+      answerProof: sessionQ ? encodeAnswerProof(questionId, isCorrect) : undefined,
     };
+    return session.scope === 'challenge' && session.runId && sessionQ
+      ? { ...result, scoreProof: encodeScoreProof(session.runId, questionId, isCorrect) }
+      : result;
   });
 
   const total = validated.length;
   const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+  const auth = await tryAuth(req);
+  const breakdown: Record<string, { correct: number; total: number }> = {};
+  for (const result of results) {
+    const category = questionsById.get(result.questionId)?.category;
+    if (!category) continue;
+    const bucket = breakdown[category] ?? { correct: 0, total: 0 };
+    bucket.total++;
+    if (result.isCorrect) bucket.correct++;
+    breakdown[category] = bucket;
+  }
+  const resultReceipt = auth
+    ? encodeQuizResultReceipt({ userId: auth.sub, correct, total, breakdown })
+    : undefined;
 
   logEvent({ status: 200, total, correct, percentage, latency_ms: Date.now() - started });
 
@@ -98,7 +130,121 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     correctAnswers: correct,
     percentage,
     results,
+    ...(resultReceipt ? { resultReceipt } : {}),
   });
+}
+
+function explanationHash(value: unknown): string {
+  return createHash('sha256').update(JSON.stringify(value)).digest('hex');
+}
+
+function cleanCachedContent(value: unknown): ExplanationContent | null {
+  if (!value || typeof value !== 'object') return null;
+  const record = value as Record<string, unknown>;
+  const read = (key: string) => typeof record[key] === 'string' ? record[key].trim() : '';
+  const result = {
+    whyCorrect: read('whyCorrect'),
+    whySelected: read('whySelected'),
+    misconception: read('misconception'),
+    relatedConcept: read('relatedConcept'),
+  };
+  return result.whyCorrect && result.relatedConcept ? result : null;
+}
+
+async function handleExplanation(req: VercelRequest, res: VercelResponse) {
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.aiExplanation))) return;
+  const body = (req.body || {}) as { answerProof?: unknown; selectedAnswer?: unknown; lang?: unknown };
+  if (typeof body.answerProof !== 'string' || typeof body.selectedAnswer !== 'string') {
+    return jsonError(res, 400, 'bad_request', 'Answer proof and selected answer are required');
+  }
+  if (body.answerProof.length > 4096 || body.selectedAnswer.length > 5000) {
+    return jsonError(res, 400, 'bad_request', 'Explanation request is too large');
+  }
+  const proof = decodeAnswerProof(body.answerProof);
+  if (!proof) return jsonError(res, 400, 'invalid_proof', 'Answer proof expired or invalid');
+
+  const lang = normalizeLang(body.lang);
+  const questions = await getEffectiveQuestionsById();
+  const base = questions.get(proof.questionId);
+  if (!base) return jsonError(res, 404, 'not_found', 'Question not found');
+  const q = localizeQuestion(base, lang);
+  const selectedAnswer = body.selectedAnswer.trim();
+  if (!q.options.includes(selectedAnswer)) {
+    return jsonError(res, 400, 'bad_request', 'Selected answer does not match this question');
+  }
+
+  const acceptedAnswer = q.options[base.correctAnswer] ?? '';
+  const questionHash = explanationHash({
+    question: q.question,
+    options: q.options,
+    acceptedAnswer,
+    explanation: q.explanation,
+  });
+  const selectedHash = explanationHash(selectedAnswer);
+
+  if (aiSupabase) {
+    try {
+      const cached = await withTimeout(
+        aiSupabase
+          .from('question_explanations')
+          .select('content, model, prompt_version')
+          .eq('question_id', q.id)
+          .eq('question_hash', questionHash)
+          .eq('locale', lang)
+          .eq('selected_answer_hash', selectedHash)
+          .in('status', ['generated', 'reviewed'])
+          .maybeSingle(),
+        1200,
+      );
+      const content = cleanCachedContent(cached.data?.content);
+      if (!cached.error && content) {
+        return res.json({ available: true, cached: true, content });
+      }
+    } catch {
+      // Cache is optional; generation still has a bounded timeout below.
+    }
+  }
+
+  if (!isAiExplanationConfigured()) {
+    return res.json({ available: false, fallback: q.explanation });
+  }
+
+  try {
+    const generated = await generateExplanation({
+      locale: lang,
+      question: q.question,
+      options: q.options,
+      acceptedAnswer,
+      selectedAnswer,
+      curatedExplanation: q.explanation,
+    });
+    if (aiSupabase) {
+      void aiSupabase.from('question_explanations').upsert(
+        {
+          question_id: q.id,
+          question_hash: questionHash,
+          locale: lang,
+          selected_answer_hash: selectedHash,
+          model: generated.model,
+          prompt_version: generated.promptVersion,
+          content: generated.content,
+          status: 'generated',
+        },
+        { onConflict: 'question_id,question_hash,locale,selected_answer_hash' },
+      ).then(({ error }) => {
+        if (error) logEvent({ status: 200, kind: 'ai_cache_write_failed', category: 'cache' });
+      });
+    }
+    logEvent({ status: 200, kind: 'ai_explanation', cached: false, locale: lang });
+    return res.json({ available: true, cached: false, content: generated.content });
+  } catch (error) {
+    logEvent({
+      status: 200,
+      kind: 'ai_fallback',
+      category: error instanceof Error ? error.message.slice(0, 80) : 'unknown',
+    });
+    return res.json({ available: false, fallback: q.explanation });
+  }
 }
 
 // POST /api/quiz/submit?resource=report — log a learner's question report.
@@ -106,7 +252,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 // recorded so reporter_sub can't be forged.
 async function handleReport(req: VercelRequest, res: VercelResponse) {
   // Anonymous inserts allowed, so throttle per-IP against spam.
-  if (!(await enforceRateLimit(req, res, { key: 'question_report', capacity: 3, refillPerSecond: 20 / 3600 }))) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.questionReport))) return;
 
   if (!supabase) {
     return jsonError(res, 503, 'not_configured', 'Reporting backend is not configured');

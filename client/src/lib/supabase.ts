@@ -45,15 +45,14 @@ export async function createOrUpdateUserStats(
 }
 
 export async function recordQuizResult(
-  userId: string,
-  correct: number,
-  total: number,
+  resultReceipt: string,
+  profile: { email?: string; name?: string; picture?: string },
 ): Promise<UserStats | null> {
   const { data } = await apiFetch<{ data: UserStats | null }>('/api/user/stats', {
     method: 'POST',
     body: JSON.stringify({
-      user_id: userId,
-      quiz_result: { correct, total },
+      result_receipt: resultReceipt,
+      profile,
     }),
   });
   return data;

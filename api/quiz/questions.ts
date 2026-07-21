@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import {
   encodeSession,
   secureShuffle,
@@ -14,71 +14,12 @@ import { tryAuth } from '../../lib/auth';
 import { jsonError, createLogger } from '../../lib/http';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
+import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
+import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/product-scope';
 
-const ALL_CATEGORIES: CategoryType[] = [
-  'html',
-  'css',
-  'javascript',
-  'typescript',
-  'react',
-  'git',
-  'nodejs',
-  'ai',
-  'dev-world',
-  'code-snippets',
-  // Geography
-  'continents', 'capitals', 'flags', 'landforms', 'climate', 'population', 'political', 'economic', 'cartography', 'earth',
-  // Math
-  'arithmetic', 'fractions', 'prealgebra', 'algebra', 'geometry', 'trigonometry', 'statistics', 'precalculus', 'calculus', 'linear-algebra',
-  // History
-  'prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern',
-  // Chess
-  'openings', 'tactics', 'strategy', 'endgames', 'combinations',
-  // Math (advanced)
-  'discrete-math',
-  'number-theory',
-  'multivariable-calculus',
-  'differential-equations',
-  'real-analysis',
-  // Geography (advanced)
-  'geomorphology',
-  'oceanography',
-  'biogeography',
-  'geopolitics',
-  'gis',
-  // History (thematic)
-  'historiography',
-  'history-of-science',
-  'economic-history',
-  'intellectual-history',
-  'military-history',
-  // Human Biology
-  'cell-biology',
-  'skeletal-system',
-  'muscular-system',
-  'nervous-system',
-  'endocrine-system',
-  'cardiovascular-system',
-  'respiratory-system',
-  'digestive-system',
-  'immune-system',
-  'reproductive-system',
-  // Chess (advanced)
-  'opening-theory',
-  'middlegame',
-  'pawn-structures',
-  'endgame-technique',
-  'chess-history',
-  // Poker
-  'positions',
-  'starting-hands',
-  'pot-odds',
-  'betting-strategy',
-  'postflop',
-  'tournament-play',
-  'psychology',
-  'gto-advanced',
-];
+const ALL_CATEGORIES = Object.values(SUBJECT_SCOPE_CATALOG)
+  .flatMap((subject) => [...subject.categories]) as CategoryType[];
 const ALL_DIFFICULTIES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
 
 const logEvent = createLogger('quiz/questions');
@@ -90,6 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
 
   const settings = await getGameSettings();
   const ownerEmail = settings.ownerEmail;
@@ -106,13 +48,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const difficultyMode = difficultyRaw as DifficultyMode;
 
   const categoriesParam = (req.query.categories as string) || '';
-  const requested = categoriesParam ? categoriesParam.split(',') : ALL_CATEGORIES;
+  const requested = categoriesParam ? categoriesParam.split(',') : defaultDeploymentCategories();
   let selectedCategories = requested.filter((c): c is CategoryType =>
     ALL_CATEGORIES.includes(c as CategoryType),
   );
   if (selectedCategories.length === 0) {
     return jsonError(res, 400, 'bad_request', 'Select at least one category');
   }
+  const scope = validateCategoryScope(selectedCategories);
+  if (!scope.ok) {
+    return jsonError(res, 400, 'invalid_subject_scope', 'Categories must belong to this deployment and one subject');
+  }
+  selectedCategories = scope.categories as CategoryType[];
 
   // Private categories (custom, apt) are served only to the owner. Verifying
   // the token costs a round-trip, so only do it when one is actually requested.

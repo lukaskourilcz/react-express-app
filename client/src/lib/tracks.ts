@@ -7,7 +7,7 @@
 import type { RoadmapTopic } from '../types/quiz';
 import type { TranslationKey } from '../i18n/translations';
 import type { Specialization, CareerRank } from './leveling';
-import { subjectRankLabel, rankTitleKey, RANK_TITLES } from './leveling';
+import { rankTitleKey, RANK_TITLES } from './leveling';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import type { SubjectId } from './subjects';
@@ -441,7 +441,7 @@ export const specializationForTrack = (track: Track): Specialization => TRACK_SP
 
 /**
  * The learner-rank label for the ACTIVE subject as an i18n key +
- * interpolation vars + emoji: components render `t(key, vars)` so rank
+ * interpolation vars: components render `t(key, vars)` so rank
  * titles localize. Web Dev keeps the developer ladder with the track
  * specialization composed in via the {spec} var ("Junior Full-Stack
  * Developer" — "Frontend"/"Backend"/"Full-Stack" are industry loanwords,
@@ -452,14 +452,13 @@ export const specializationForTrack = (track: Track): Specialization => TRACK_SP
 export function rankLabelKeyFor(
   rank: CareerRank,
   track: Track,
-): { key: TranslationKey; vars: Record<string, string>; emoji: string } {
+): { key: TranslationKey; vars: Record<string, string> } {
   const subject = getSubject();
   const rawIdx = RANK_TITLES.indexOf(rank.title);
   const idx = rawIdx >= 0 ? rawIdx : 0;
   return {
     key: rankTitleKey(subject, idx),
     vars: { spec: specializationForTrack(track) },
-    emoji: subject === 'webdev' ? rank.emoji : subjectRankLabel(subject, idx).emoji,
   };
 }
 

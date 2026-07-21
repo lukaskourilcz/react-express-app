@@ -11,6 +11,7 @@ import { getSubject, categoriesForSubject } from './subjects';
 
 export interface ChallengeBatch {
   sessionId: string;
+  runToken: string;
   questions: Question[];
 }
 
@@ -27,13 +28,15 @@ export interface ChallengeLeaderboard {
   champion: ChallengeScore | null;
 }
 
-export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string } = {}): Promise<ChallengeBatch> {
+export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string; runToken?: string; ranked?: boolean } = {}): Promise<ChallengeBatch> {
   const params = new URLSearchParams();
   if (opts.exclude && opts.exclude.length > 0) {
     // Cap the exclude payload — the server caps too, but no need to send more.
     params.set('exclude', opts.exclude.slice(0, 400).join(','));
   }
   if (opts.lang) params.set('lang', opts.lang);
+  if (opts.runToken) params.set('runToken', opts.runToken);
+  if (opts.ranked === false) params.set('ranked', '0');
   // Scope the challenge mix to the active subject so a Geography challenge never
   // surfaces a Chess question.
   params.set('categories', categoriesForSubject(getSubject()).join(','));
@@ -45,7 +48,7 @@ export function getChallengeLeaderboard(): Promise<ChallengeLeaderboard> {
   return apiFetch<ChallengeLeaderboard>('/api/quiz/challenge?resource=leaderboard');
 }
 
-export function submitChallengeScore(input: { name: string; score: number }): Promise<{ ok: true; record: ChallengeScore | null }> {
+export function submitChallengeScore(input: { name: string; runToken: string; proofs: string[] }): Promise<{ ok: true; record: ChallengeScore | null }> {
   return apiFetch<{ ok: true; record: ChallengeScore | null }>('/api/quiz/challenge', {
     method: 'POST',
     body: JSON.stringify(input),

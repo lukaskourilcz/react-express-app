@@ -13,7 +13,7 @@ import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import {
-  SUBJECTS, SUBJECT_ORDER, useSubject, setSubjectValue,
+  SUBJECTS, AVAILABLE_SUBJECT_ORDER, useSubject, setSubjectValue,
   subjectNameKey, subjectBlurbKey, type SubjectId,
 } from '../lib/subjects';
 import { LANDING_TOPICS } from '../lib/landingTopics';
@@ -21,6 +21,7 @@ import {
   Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, CheckpointNode, pathWave, type StatSpec,
 } from './landing/LandingKit';
 import { AppToast } from './ui/AppToast';
+import SubjectGlyph from './ui/SubjectGlyph';
 
 // A soft tint / accent override for a subject, so the sample card + roadmap
 // preview re-skin to whichever subject is selected.
@@ -57,8 +58,8 @@ function SubjectCard({
         transition: 'transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease, border-color 0.2s ease',
       }}
     >
-      <span aria-hidden style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: 'var(--radius-inner)', fontSize: '1.35rem', lineHeight: 1, background: `${s.accent}14`, flexShrink: 0 }}>
-        {s.emoji}
+      <span aria-hidden style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: 'var(--radius-inner)', color: s.accent, lineHeight: 1, background: `${s.accent}14`, flexShrink: 0 }}>
+        <SubjectGlyph id={id} size={22} />
       </span>
       <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <span style={{ fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em', color: accentText }}>
@@ -158,11 +159,11 @@ export default function SubjectPicker() {
   const sel = SUBJECTS[selectedId];
   const featured = LANDING_TOPICS[selectedId]?.[0];
 
-  const totalTopics = SUBJECT_ORDER.reduce((sum, id) => sum + SUBJECTS[id].topics.length, 0);
+  const totalTopics = AVAILABLE_SUBJECT_ORDER.reduce((sum, id) => sum + SUBJECTS[id].topics.length, 0);
   const stats: StatSpec[] = [
     { value: `${totalTopics * 25}+`, label: t('home.statLevels'), pos: 'right top', size: 40 },
     { value: String(totalTopics), label: t('home.statTracks'), pos: 'left bottom', size: 34 },
-    { value: String(SUBJECT_ORDER.length), label: t('subject.statSubjects'), pos: 'center top', size: 32 },
+    { value: String(AVAILABLE_SUBJECT_ORDER.length), label: t('subject.statSubjects'), pos: 'center top', size: 32 },
     { value: '$0', label: t('home.statForever'), pos: 'right bottom', size: 38 },
   ];
 
@@ -181,7 +182,7 @@ export default function SubjectPicker() {
     { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: '#c77f00', to: '/leaderboard', icon: stripIcon(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
   ];
 
-  const brand = 'studyShark';
+  const brand = 'StudyShark';
 
   return (
     <div className="ss-pop" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 56 }}>
@@ -221,7 +222,7 @@ export default function SubjectPicker() {
           </h2>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(230px,1fr))', gap: 14 }}>
-          {SUBJECT_ORDER.map((id) => (
+          {AVAILABLE_SUBJECT_ORDER.map((id) => (
             <SubjectCard key={id} id={id} selected={id === selectedId} onSelect={() => setSelectedId(id)} />
           ))}
         </div>

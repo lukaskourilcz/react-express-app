@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { secureShuffle, localizeQuestion, normalizeLang } from '../../lib/quiz-data';
 import {
   supabase,
@@ -12,6 +12,8 @@ import { requireAuthSub, isRpcMissing } from '../../lib/http';
 import { tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
+import { enforceRateLimit, RATE_LIMITS, type RateLimitConfig } from '../../lib/rate-limit';
+import { validateCategoryScope } from '../../lib/product-scope';
 
 const PING_GRACE_MS = 1000;
 const STALE_MATCH_MS = 5 * 60 * 1000;
@@ -98,6 +100,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Match backend is not configured');
 
   const action = String(req.query.action || '').toLowerCase();
+  if (req.method !== 'GET') {
+    const policy: RateLimitConfig = action === 'create'
+      ? RATE_LIMITS.playCreate
+      : action === 'join'
+        ? RATE_LIMITS.playJoin
+        : RATE_LIMITS.playMutation;
+    if (!(await enforceRateLimit(req, res, policy))) return;
+  }
 
   switch (action) {
     case 'create':
@@ -150,7 +160,7 @@ async function create(req: VercelRequest, res: VercelResponse) {
     typeof body.duration_s === 'number' && playSettings.durationOptionsS.includes(body.duration_s)
       ? body.duration_s
       : playSettings.defaultDurationS;
-  const categories = Array.isArray(body.categories)
+  let categories = Array.isArray(body.categories)
     ? body.categories.filter((c): c is string => typeof c === 'string')
     : [];
   // Match questions are snapshotted into the row in the host's language so
@@ -164,6 +174,11 @@ async function create(req: VercelRequest, res: VercelResponse) {
   if (categories.length === 0) {
     return jsonError(res, 400, 'bad_request', 'No topics selected — refresh the page and try again');
   }
+  const scope = validateCategoryScope(categories);
+  if (!scope.ok) {
+    return jsonError(res, 400, 'invalid_subject_scope', 'Topics must belong to this deployment and one subject');
+  }
+  categories = scope.categories;
 
   const allQuestions = await getEffectiveQuestions();
   const pool = allQuestions.filter((q) => categories.includes(q.category));
@@ -220,11 +235,16 @@ async function create(req: VercelRequest, res: VercelResponse) {
       return jsonError(res, 500, 'db_error', 'Could not create match');
     }
 
-    await withTimeout(
+    const hostInsert = await withTimeout(
       supabase!
         .from('match_participants')
         .insert({ match_id: data.id, user_id: hostSub, display_name: hostName }),
     );
+    if (hostInsert.error) {
+      await withTimeout(supabase!.from('matches').delete().eq('id', data.id)).catch(() => undefined);
+      logEvent('play/create', { status: 500, category: 'participant_insert', error: hostInsert.error.message });
+      return jsonError(res, 500, 'db_error', 'Could not create match participant');
+    }
 
     logEvent('play/create', { status: 200, code, mode, count });
     return res.json({
@@ -274,12 +294,16 @@ async function join(req: VercelRequest, res: VercelResponse) {
     if (!match) return jsonError(res, 404, 'not_found', 'No match with that code');
     if (match.status === 'finished') return jsonError(res, 410, 'finished', 'Match is over');
 
-    await withTimeout(
+    const participantInsert = await withTimeout(
       supabase!.from('match_participants').upsert(
         { match_id: match.id, user_id: sub, display_name: body.display_name },
         { onConflict: 'match_id,user_id' },
       ),
     );
+    if (participantInsert.error) {
+      logEvent('play/join', { status: 500, category: 'participant_upsert', error: participantInsert.error.message });
+      return jsonError(res, 500, 'db_error', 'Could not join match');
+    }
 
     const sanitized = sanitizeQuestions(match, sub);
 
@@ -316,9 +340,14 @@ async function state(req: VercelRequest, res: VercelResponse) {
   if (!code) return jsonError(res, 400, 'bad_request', 'code required');
 
   try {
-    let { data: match } = await withTimeout(
+    let { data: match, error: matchError } = await withTimeout(
       supabase!.from('matches').select(STATE_COLUMNS).eq('code', code).maybeSingle(),
     );
+
+    if (matchError) {
+      logEvent('play/state', { status: 503, category: 'match_read', error: matchError.message });
+      return jsonError(res, 503, 'backend_unavailable', 'Match state is temporarily unavailable');
+    }
 
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
 
@@ -368,6 +397,16 @@ async function state(req: VercelRequest, res: VercelResponse) {
           )
         : Promise.resolve(null),
     ]);
+    if (participantsRes.error || scoreboardRes.error || answersCountRes?.error) {
+      logEvent('play/state', {
+        status: 503,
+        category: 'state_dependencies',
+        participants: participantsRes.error?.message,
+        scoreboard: scoreboardRes.error?.message,
+        answers: answersCountRes?.error?.message,
+      });
+      return jsonError(res, 503, 'backend_unavailable', 'Match state is temporarily unavailable');
+    }
 
     if (runningMultiplayer) {
       const startedMs = match.question_started_at
@@ -416,13 +455,14 @@ async function control(req: VercelRequest, res: VercelResponse) {
   const code = body.code.toUpperCase();
 
   try {
-    const { data: match } = await withTimeout(
+    const { data: match, error: matchError } = await withTimeout(
       supabase!
         .from('matches')
         .select('id, host_id, status, current_index, questions')
         .eq('code', code)
         .maybeSingle(),
     );
+    if (matchError) return jsonError(res, 503, 'backend_unavailable', 'Match state is temporarily unavailable');
 
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
     if (match.host_id !== sub)
@@ -535,9 +575,10 @@ async function answer(req: VercelRequest, res: VercelResponse) {
 
     // Only players who joined the lobby may answer — otherwise anyone with
     // the code could inject rows that count toward the all-answered advance.
-    const { data: participantRows } = await withTimeout(
+    const { data: participantRows, error: participantError } = await withTimeout(
       supabase!.from('match_participants').select('user_id').eq('match_id', match.id),
     );
+    if (participantError) return jsonError(res, 503, 'backend_unavailable', 'Could not verify match membership');
     const participantIds = (participantRows ?? []).map((r: { user_id: string }) => r.user_id);
     if (!participantIds.includes(sub)) {
       return jsonError(res, 403, 'not_participant', 'Join the match before answering');
@@ -546,7 +587,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     // An answer is final. A duplicate submit (network retry, double click)
     // replays the recorded result instead of re-grading, so a player can't
     // keep swapping options after seeing is_correct.
-    const { data: existing } = await withTimeout(
+    const { data: existing, error: existingError } = await withTimeout(
       supabase!
         .from('match_answers')
         .select('is_correct, speed_bonus')
@@ -555,6 +596,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
         .eq('question_idx', body.question_idx)
         .maybeSingle(),
     );
+    if (existingError) return jsonError(res, 503, 'backend_unavailable', 'Could not verify existing answer');
     if (existing) {
       return res.json({
         ok: true,
@@ -589,10 +631,10 @@ async function answer(req: VercelRequest, res: VercelResponse) {
       ? computeSpeedBonus(serverElapsedMs, durationS, playSettings.maxSpeedBonus)
       : 0;
 
-    // Use the natural per-player-per-question primary key so retries replace
-    // the existing answer rather than inserting a duplicate.
+    // Insert-only makes the first answer final even when two tabs submit at
+    // the same time. A unique-key conflict replays the recorded first answer.
     const { error } = await withTimeout(
-      supabase!.from('match_answers').upsert(
+      supabase!.from('match_answers').insert(
         {
           match_id: match.id,
           user_id: sub,
@@ -603,11 +645,29 @@ async function answer(req: VercelRequest, res: VercelResponse) {
           duration_ms: serverElapsedMs,
           speed_bonus: speedBonus,
         },
-        { onConflict: 'match_id,user_id,question_idx' },
       ),
     );
 
     if (error) {
+      if (error.code === '23505') {
+        const replay = await withTimeout(
+          supabase!
+            .from('match_answers')
+            .select('is_correct, speed_bonus')
+            .eq('match_id', match.id)
+            .eq('user_id', sub)
+            .eq('question_idx', body.question_idx)
+            .single(),
+        );
+        if (!replay.error && replay.data) {
+          return res.json({
+            ok: true,
+            is_correct: replay.data.is_correct,
+            speed_bonus: replay.data.speed_bonus,
+            advanced: false,
+          });
+        }
+      }
       logEvent('play/answer', { status: 500, error: error.message });
       return jsonError(res, 500, 'db_error', 'Could not record answer');
     }

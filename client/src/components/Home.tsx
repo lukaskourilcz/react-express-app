@@ -3,7 +3,7 @@
 // interactive sample question wired to a real Level-1 question, a topic picker
 // whose cards host schools of shark fins on hover, a live "Inside <Topic>"
 // roadmap preview, the everything-else feature strip, the free pledge, and the
-// studyShark family line. The whole page re-skins per active subject from
+// shared product-family footer. The whole page re-skins per active subject from
 // var(--brand-accent) + lib/subjects.ts — layout identical, accent + topic set
 // swap. The app shell (App.tsx) supplies the header and the ocean footer.
 //
@@ -14,17 +14,16 @@ import { useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { SharkFin, Waterline } from './SharkFin';
 import { CategoryGlyph } from './ui/techIcons';
+import SubjectGlyph from './ui/SubjectGlyph';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
-import {
-  useActiveSubject, useSubject, subjectNameKey, subjectBlurbKey,
-  isSubjectLocked, SIBLING_PLATFORMS_URL, SUBJECT_ORDER, SUBJECTS, type SubjectId,
-} from '../lib/subjects';
+import { useActiveSubject, subjectNameKey, subjectBlurbKey, type SubjectId } from '../lib/subjects';
 import { TRACK_ORDER } from '../lib/tracks';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
 import { AppToast } from './ui/AppToast';
 import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, type StatSpec } from './landing/LandingKit';
+import { CURRENT_PRODUCT } from '../lib/products';
 
 // ─────────────────────────────── Topic card ───────────────────────────────
 
@@ -37,8 +36,8 @@ function TopicIcon({ topic, subjectId }: { topic: LandingTopic; subjectId: Subje
     );
   }
   return (
-    <span className="ss-float" aria-hidden style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', flexShrink: 0, fontSize: '1.5rem', lineHeight: 1 }}>
-      {topic.emoji}
+    <span className="ss-float" aria-hidden style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', flexShrink: 0, color: 'var(--brand-accent)', lineHeight: 1 }}>
+      <SubjectGlyph id={subjectId} size={28} />
     </span>
   );
 }
@@ -184,7 +183,6 @@ export default function Home() {
   const t = useT();
   const navigate = useNavigate();
   const subject = useActiveSubject();
-  const [, setSubject] = useSubject();
   const { isAuthenticated, signInWithGoogle } = useAuth();
   const [authError, setAuthError] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
@@ -195,7 +193,7 @@ export default function Home() {
   const selected = featured.find((x) => x.id === selectedId) ?? featured[0];
 
   const subjectName = t(subjectNameKey(subject.id));
-  const brand = subject.standaloneBrand ?? subjectName;
+  const brand = CURRENT_PRODUCT.brand;
   const heroTitle = subject.id === 'webdev' ? t('home.title') : t('home.titleSubject', { label: subjectName });
   const heroSubtitle = subject.id === 'webdev' ? t('home.subtitle') : t(subjectBlurbKey(subject.id));
   const moreCount = subject.topics.length - featured.length;
@@ -226,10 +224,6 @@ export default function Home() {
     { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', color: '#0e7490', to: '/play', icon: STRIP_ICON(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
     { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: '#c77f00', to: '/leaderboard', icon: STRIP_ICON(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
   ];
-
-  // Sibling subjects for the studyShark family line (umbrella app switches the
-  // active subject; a locked deploy links out to the umbrella site instead).
-  const siblings = SUBJECT_ORDER.filter((id) => id !== subject.id);
 
   return (
     <div className="ss-pop" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 56 }}>
@@ -331,29 +325,6 @@ export default function Home() {
           {t('home.pledge')}
         </p>
         <SwimCta label={t('home.startFree')} onClick={scrollToTopics} dir={1} />
-      </section>
-
-      {/* ── studyShark family line ── */}
-      <section aria-label="studyShark family" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '8px 0 4px', borderTop: '1px solid var(--ss-header-border)' }}>
-        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', textAlign: 'center', paddingTop: 12 }}>
-          {brand} {t('home.familyLine')}{' '}
-          {isSubjectLocked() ? (
-            SIBLING_PLATFORMS_URL && <a href={SIBLING_PLATFORMS_URL} style={{ fontWeight: 600 }}>studyShark</a>
-          ) : (
-            siblings.map((id, i) => (
-              <span key={id}>
-                <button
-                  type="button"
-                  onClick={() => setSubject(id)}
-                  style={{ color: SUBJECTS[id].accent, fontWeight: 600, background: 'none', border: 'none', padding: 0, margin: '0 5px', cursor: 'pointer', font: 'inherit' }}
-                >
-                  {SUBJECTS[id].standaloneBrand ?? SUBJECTS[id].label}
-                </button>
-                {i < siblings.length - 1 ? '·' : ''}
-              </span>
-            ))
-          )}
-        </span>
       </section>
 
       <AppToast open={!!authError} onClose={() => setAuthError(null)} severity="error" message={authError} autoHideDuration={5000} />

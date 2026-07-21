@@ -61,11 +61,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      cachedAccessToken = session?.access_token ?? null;
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-    });
+    void supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        cachedAccessToken = session?.access_token ?? null;
+        setUser(session?.user ?? null);
+      })
+      .catch(() => {
+        cachedAccessToken = null;
+        setUser(null);
+      })
+      .finally(() => setIsLoading(false));
 
     const {
       data: { subscription },
@@ -101,7 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     if (!supabase) return;
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   };
 
   return (

@@ -6,3 +6,32 @@
 .de-profile-identity:after{content:"";position:absolute;right:-5%;bottom:-75px;width:240px;height:240px;opacity:.035;background:var(--ss-fin) no-repeat center/contain;pointer-events:none}.de-track-card{flex:1 1 220px;max-width:320px}.de-stage--finish{align-items:center}.de-stage--finish .de-stage__body{padding-bottom:0}
 @media(max-width:820px){.de-challenge-grid{grid-template-columns:1fr}.de-page{padding-top:0}.de-hero-panel,.de-ladder{padding:20px}.de-card-grid{grid-template-columns:1fr}.de-mode-card{padding:14px}.de-stat-row{gap:16px}}
 @media(prefers-reduced-motion:reduce){.de-flashcard__answer{transform:none}.de-mode-card,.de-flashcard__answer{transition:none}}
+/* Classroom/multiplayer invite: compact on screen, isolated as a printable
+   handout so a teacher can put one code/QR on a wall or projector. */
+.play-invite__qr {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-container);
+  background: var(--color-background-muted);
+  overflow-wrap: anywhere;
+}
+
+.play-invite__qr img {
+  flex: 0 0 auto;
+  border-radius: 12px;
+}
+
+@media (max-width: 520px) {
+  .play-invite__qr { flex-direction: column; text-align: center; }
+}
+
+@media print {
+  body * { visibility: hidden !important; }
+  .play-invite, .play-invite * { visibility: visible !important; }
+  .play-invite { position: fixed; inset: 24px; box-shadow: none !important; }
+  .play-invite button { display: none !important; }
+  .play-invite__qr img { width: 240px; height: 240px; }
+}

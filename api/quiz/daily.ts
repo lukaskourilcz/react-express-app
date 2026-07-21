@@ -1,9 +1,11 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { encodeSession, localizeQuestion, normalizeLang, PRIVATE_CATEGORIES, type Question } from '../../lib/quiz-data';
 import { createHash } from 'node:crypto';
 import { jsonError } from '../../lib/http';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
+import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/product-scope';
 
 // Daily challenge: deterministic per-UTC-date selection (one question per
 // difficulty bucket). Same set for every user on the same day, so leaderboards
@@ -33,6 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
 
   const dailyCount = (await getGameSettings()).daily.count;
   const today = dateString();
@@ -52,9 +55,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   // Pick one question per difficulty bucket, deterministically per date.
   // Optional subject scoping: the client sends the active subject's categories
-  // so the daily mix stays within one subject. Absent/empty → all categories.
+  // so the daily mix stays within one subject. Old clients default to the
+  // deployment's first subject; they never fall through to another product.
   const catRaw = typeof req.query.categories === 'string' ? req.query.categories : '';
-  const catSet = new Set(catRaw.split(',').map((s) => s.trim()).filter(Boolean));
+  const requested = catRaw
+    ? catRaw.split(',').map((s) => s.trim()).filter(Boolean)
+    : defaultDeploymentCategories();
+  const scope = validateCategoryScope(requested);
+  if (!scope.ok) {
+    return jsonError(res, 400, 'invalid_subject_scope', 'Categories must belong to this deployment and one subject');
+  }
+  const catSet = new Set(scope.categories);
 
   const allQuestions = await getEffectiveQuestions();
   const selected: Question[] = [];
@@ -64,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       (q) =>
         q.difficulty === diff &&
         !PRIVATE_CATEGORIES.includes(q.category) &&
-        (catSet.size === 0 || catSet.has(q.category)),
+        catSet.has(q.category),
     );
     if (pool.length === 0) continue;
     // Keep the daily out of "filler" territory: prefer importance ≥ 4 when there
@@ -98,9 +109,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const sessionId = encodeSession(sessionData);
 
-  // The response embeds a signed session token that is a usable answer-key
-  // proof. Anything cached by a shared CDN is then a replay token for every
-  // visitor. Use `private` so only the requesting browser caches.
+  // The response embeds an opaque, authenticated session token. Keep it out of
+  // shared caches so a daily session remains bound to the requesting browser.
   res.setHeader('Cache-Control', 'private, max-age=300');
   res.json({
     date: dateParam,

@@ -1,6 +1,6 @@
-// Client for the password-gated /api/admin endpoints used by the /dev console.
-// The password the user types is kept in sessionStorage (cleared on lock/close)
-// and sent with every request in the x-dev-password header.
+// Client for authenticated /api/admin endpoints. apiFetch always attaches the
+// current Supabase token; a legacy password can additionally be kept in
+// sessionStorage when that migration fallback is explicitly enabled server-side.
 
 import { apiFetch, ApiError } from './api';
 
@@ -103,6 +103,16 @@ export interface GameSettings {
   features: { dailyChallenge: boolean; multiplayer: boolean; leaderboard: boolean; flashcards: boolean };
   leveling: { rankThresholds: number[] };
   shop: { prices: Record<string, number>; pathUnlockPrice: number };
+  support: {
+    enabled: boolean;
+    kofiUrl: string;
+    githubSponsorsUrl: string;
+    monthlyTarget: number;
+    amountCovered: number;
+    lastUpdatedAt: string;
+    costBreakdown: Array<{ label: string; amount: number }>;
+    publicThanksEnabled: boolean;
+  };
   /** One-liner dev tips shown on the loading screen (empty = none). */
   devTips: string[];
   ownerEmail: string;
