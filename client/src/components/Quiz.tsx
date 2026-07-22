@@ -213,7 +213,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [showSupportPrompt, setShowSupportPrompt] = useState(false);
   const [settings] = useSettings();
 
-  const resultHeadingRef = useRef<HTMLDivElement | null>(null);
+  const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
 
   const { isAuthenticated, user } = useAuth();
@@ -742,13 +742,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   if (state === 'ready') {
     const labelStyle: CSSProperties = { fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '0.95rem' };
-    const linkBtn: CSSProperties = { background: 'none', border: 'none', padding: 0, color: 'var(--brand-accent)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'var(--font-family-body)' };
+    const linkBtn: CSSProperties = { display: 'inline-flex', alignItems: 'center', minHeight: 44, background: 'none', border: 'none', padding: '4px 2px', color: 'var(--brand-accent)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'var(--font-family-body)' };
     const pill = (on: boolean): CSSProperties => ({
       display: 'inline-flex', alignItems: 'center', gap: 6,
       background: on ? 'var(--brand-accent-soft)' : 'var(--ss-card-bg)',
       color: on ? 'var(--brand-accent)' : 'var(--color-text-primary)',
       border: `1px solid ${on ? 'var(--brand-accent)' : 'var(--ss-card-line)'}`,
-      borderRadius: 999, padding: '7px 14px', fontFamily: 'var(--font-family-body)',
+      borderRadius: 999, padding: '7px 14px', minHeight: 44, width: 'auto', fontFamily: 'var(--font-family-body)',
       fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
       transition: 'border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease',
     });
@@ -801,29 +801,29 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 20, position: 'relative' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <span id="quiz-count-label" style={labelStyle}>{t('quiz.questionsLegend')}</span>
-              <div role="radiogroup" aria-labelledby="quiz-count-label" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {config.quiz.countOptions.map((count) => (
-                  <button key={count} type="button" role="radio" aria-checked={questionCount === count} aria-label={t('quiz.countQuestionsAria', { count })} onClick={() => setQuestionCount(count)} style={{ ...pill(questionCount === count), minWidth: 48, justifyContent: 'center' }}>
+              <RadioCardGroup value={questionCount} onChange={(value) => setQuestionCount(Number(value))} labelledBy="quiz-count-label" orientation="horizontal" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {config.quiz.countOptions.map((count, index) => (
+                  <RadioCard key={count} value={count} index={index} label={t('quiz.countQuestionsAria', { count })} style={{ ...pill(questionCount === count), minWidth: 48, justifyContent: 'center' }}>
                     {count}
-                  </button>
+                  </RadioCard>
                 ))}
-              </div>
+              </RadioCardGroup>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <span id="quiz-difficulty-label" style={labelStyle}>{t('quiz.difficulty')}</span>
-              <div role="radiogroup" aria-labelledby="quiz-difficulty-label" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {DIFFICULTY_VALUES.map((value) => {
+              <RadioCardGroup value={difficultyMode} onChange={(value) => setDifficultyMode(value as DifficultyMode)} labelledBy="quiz-difficulty-label" orientation="horizontal" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {DIFFICULTY_VALUES.map((value, index) => {
                   const label = t(`difficulty.${value}` as TranslationKey);
                   const tip = t(`difficulty.${value}.tip` as TranslationKey);
                   return (
                     <Tooltip key={value} content={tip} placement="above">
-                      <button type="button" role="radio" aria-checked={difficultyMode === value} aria-label={t('quiz.difficultyAria', { label })} onClick={() => setDifficultyMode(value)} style={pill(difficultyMode === value)}>
+                      <RadioCard value={value} index={index} label={t('quiz.difficultyAria', { label })} style={pill(difficultyMode === value)}>
                         {label}
-                      </button>
+                      </RadioCard>
                     </Tooltip>
                   );
                 })}
-              </div>
+              </RadioCardGroup>
             </div>
           </div>
 
@@ -896,17 +896,16 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </div>
             <span className="ss-kicker ss-kicker--center" style={{ position: 'relative' }}>{t('quiz.complete')}</span>
             <MotionPop>
-              <div
+              <h1
                 id="quiz-result-heading"
                 ref={resultHeadingRef}
                 tabIndex={-1}
-                role="status"
                 aria-live="polite"
                 aria-label={t('quiz.scoreOutOf', { correct: result.correctAnswers, total: result.totalQuestions })}
-                style={{ position: 'relative', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '3rem', lineHeight: 1, letterSpacing: '-0.02em', color: 'var(--brand-accent)' }}
+                style={{ position: 'relative', margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '3rem', lineHeight: 1, letterSpacing: '-0.02em', color: 'var(--brand-accent)' }}
               >
                 {result.correctAnswers} / {result.totalQuestions}
-              </div>
+              </h1>
             </MotionPop>
             <span style={{ position: 'relative', fontSize: '0.95rem', color: 'var(--color-text-secondary)' }}>
               {t('quiz.scoreOutOf', { correct: result.correctAnswers, total: result.totalQuestions })} · {result.percentage}%

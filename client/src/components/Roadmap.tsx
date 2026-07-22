@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties }
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
+import { Banner } from '@astryxdesign/core/Banner';
 import { Button as AxButton } from '@astryxdesign/core/Button';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
@@ -69,7 +70,6 @@ import { shuffleDifferentFrom } from '../lib/shuffle';
 import { readString, writeString } from '../lib/storage';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
-import { SplitText } from './reactbits/SplitText';
 import { RedFlagDialog } from './RedFlagDialog';
 import { IconTile, BoltIcon, CloseIcon, FlagIcon } from './ui/icons';
 import { CategoryGlyph } from './ui/techIcons';
@@ -547,23 +547,18 @@ function Roadmap() {
           announces "N of M selected" correctly. */}
       {/* Only unlocked topics appear — locked ones are hidden entirely, so
           the strip stays focused on what the learner can actually start. */}
-      <div role="radiogroup" aria-label={t('roadmap.topicsAria')} className="rm-topic-rail">
-        {TOPICS.map((value) => {
-          const selected = topic === value;
+      <RadioCardGroup value={topic} onChange={(value) => selectTopic(value as RoadmapTopic)} label={t('roadmap.topicsAria')} orientation="horizontal" className="rm-topic-rail">
+        {TOPICS.map((value, index) => {
           const unlocked = isUnlocked(value);
           const color = getCategoryHexColor(value);
           return (
-            <button
+            <RadioCard
               key={value}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              aria-disabled={!unlocked}
+              value={value}
+              index={index}
               disabled={!unlocked}
               className="rm-topic-pill"
-              data-selected={selected}
-              data-locked={!unlocked}
-              onClick={() => unlocked && selectTopic(value)}
+              padding={2.5}
               style={{ ['--rm-accent']: color, ['--rm-on-accent']: onCategoryColorText(value) } as CSSProperties}
             >
               {/* Constant white chip under the logo: the selected pill fills
@@ -578,10 +573,10 @@ function Roadmap() {
                   {t('roadmap.progress', { done: passedLevelCount(progress, value), total: structure?.structure[value]?.levels.length ?? 0 })}
                 </span>
               </span>
-            </button>
+            </RadioCard>
           );
         })}
-      </div>
+      </RadioCardGroup>
 
       {loadingStructure ? (
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 24, marginTop: 16 }}>
@@ -591,8 +586,12 @@ function Roadmap() {
         </div>
       ) : structureError ? (
         <div style={{ textAlign: 'center', marginTop: 32 }}>
-          <div style={{ marginBottom: 16, color: '#dc2626' }} role="alert">{structureError}</div>
+          <div style={{ marginBottom: 16, color: 'var(--ss-error)' }} role="alert">{structureError}</div>
           <AxButton variant="secondary" label={t('roadmap.retry')} onClick={() => structureQuery.refetch()} />
+        </div>
+      ) : levels.length === 0 ? (
+        <div style={{ maxWidth: 620, margin: '32px auto 0' }}>
+          <Banner status="info" title={t('roadmap.noLevels')} description={t('roadmap.noLevelsBody')} />
         </div>
       ) : (
         <>
@@ -896,7 +895,7 @@ function HeartMeter({ mistakes, max, hit, t }: { mistakes: number; max: number; 
   const frac = remaining / max;
   return (
     <div
-      className={hit ? 'rm-shake' : undefined}
+      className={`rm-heart${hit ? ' rm-shake' : ''}`}
       role="img"
       aria-label={t('roadmap.heartsLeft', { n: remaining, max })}
       style={{ position: 'relative', width: 30, height: 30, flexShrink: 0 }}
@@ -944,6 +943,7 @@ function LessonRunner({
   const [heartHit, setHeartHit] = useState(false);
   const [flagOpen, setFlagOpen] = useState(false);
   const [flagSnack, setFlagSnack] = useState(false);
+  const resultHeadingRef = useRef<HTMLHeadingElement>(null);
 
   const question = presented[qIndex];
   // Out of hearts once this answer is revealed and it pushed mistakes to the max.
@@ -1039,6 +1039,10 @@ function LessonRunner({
     return () => window.removeEventListener('keydown', handler);
   }, [finished, showIntro, revealed, question, choose, advance]);
 
+  useEffect(() => {
+    if (finished) resultHeadingRef.current?.focus({ preventScroll: true });
+  }, [finished]);
+
   if (showIntro && intro) {
     return (
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
@@ -1091,8 +1095,7 @@ function LessonRunner({
         : isCheckpoint ? t('roadmap.checkpointFailed') : t('roadmap.levelFailed');
     return (
       // Center vertically in the lesson viewport (celebration deserves the
-      // stage). The mount `key` on SplitText forces a re-play whenever the
-      // learner replays the lesson.
+      // stage) and move focus to the outcome heading when grading completes.
       <div
         style={{
           flex: 1,
@@ -1118,11 +1121,7 @@ function LessonRunner({
             </IconTile>
           </div>
         )}
-        <SplitText
-          as="h2"
-          text={title}
-          className="rm-finish-title"
-        />
+        <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">{title}</h1>
         {dead ? (
           <div style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>
             {t('roadmap.outOfHeartsBody', { max: MAX_HEARTS })}
@@ -1291,7 +1290,7 @@ function LessonRunner({
           >
             {answerError ? (
               <>
-                <div role="alert" style={{ fontWeight: 700, color: '#c62828' }}>{answerError}</div>
+                <div role="alert" style={{ fontWeight: 700, color: 'var(--ss-error)' }}>{answerError}</div>
                 <button
                   type="button"
                   className="rm-accent-btn"
@@ -1304,7 +1303,7 @@ function LessonRunner({
               </>
             ) : grade ? (
               <>
-                <div style={{ fontWeight: 800, color: isRight ? '#1b5e20' : '#c62828', marginBottom: 4 }}>
+                <div style={{ fontWeight: 800, color: isRight ? 'var(--ss-success)' : 'var(--ss-error)', marginBottom: 4 }}>
                   {isRight ? t('roadmap.correct') : t('roadmap.incorrect')}
                 </div>
                 <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
@@ -1360,7 +1359,7 @@ function Confetti({ color }: { color: string }) {
 function LessonError({ message, onRetry, onExit, t }: { message: string; onRetry: () => void; onExit: () => void; t: TFn }) {
   return (
     <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', marginTop: 32 }}>
-      <div style={{ color: '#dc2626', marginBottom: 16 }} role="alert">{message}</div>
+      <div style={{ color: 'var(--ss-error)', marginBottom: 16 }} role="alert">{message}</div>
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
         <AxButton variant="primary" label={t('roadmap.retry')} onClick={onRetry} />
         <AxButton variant="secondary" label={t('roadmap.backToPath')} onClick={onExit} />
@@ -1394,6 +1393,11 @@ function SkillCheckRunner({
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [correct, setCorrect] = useState(0);
   const [verifiedUnlocks, setVerifiedUnlocks] = useState<RoadmapTopic[] | undefined>();
+  const resultHeadingRef = useRef<HTMLHeadingElement>(null);
+
+  useEffect(() => {
+    if (phase === 'result') resultHeadingRef.current?.focus({ preventScroll: true });
+  }, [phase]);
 
   const start = useCallback(async () => {
     setPhase('loading');
@@ -1502,7 +1506,9 @@ function SkillCheckRunner({
             <BoltIcon size={24} />
           </IconTile>
         </div>
-        <Heading level={2} justify="center">{t('roadmap.skillCheckResult', { correct, total })}</Heading>
+        <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">
+          {t('roadmap.skillCheckResult', { correct, total })}
+        </h1>
         <div style={{ marginTop: 8, marginBottom: 24 }}>
           <Text color="secondary">{t(tier as TranslationKey)}</Text>
         </div>

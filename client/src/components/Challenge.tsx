@@ -135,8 +135,9 @@ export default function Challenge() {
       })
       .catch(() => {
         // Keep the signed run for a later online retry.
+        setSnack(t('challenge.rewardPending'));
       });
-  }, [user?.id]);
+  }, [t, user?.id]);
   // Focus target when the run ends, so AT users hear the transition.
   const gameOverHeadingRef = useRef<HTMLDivElement | null>(null);
   const [scoreSubmitting, setScoreSubmitting] = useState(false);
@@ -448,7 +449,7 @@ export default function Challenge() {
       >
         {Array.from({ length: MAX_LIVES }).map((_, i) => (
           <span key={i} style={{ display: 'inline-flex', opacity: i < livesLeft ? 1 : 0.2 }}>
-            <SharkFin size={20} color={i < livesLeft ? 'var(--brand-accent)' : '#888'} />
+            <SharkFin size={20} color={i < livesLeft ? 'var(--brand-accent)' : 'var(--color-text-disabled)'} />
           </span>
         ))}
       </div>
@@ -720,7 +721,7 @@ export default function Challenge() {
           border: '1px solid var(--color-border)',
           borderTop: `4px solid ${accent}`,
           borderRadius: 16,
-          overflow: 'hidden',
+          overflow: 'auto',
         }}
       >
         <div
@@ -729,7 +730,7 @@ export default function Challenge() {
             minHeight: 0,
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'hidden',
+            overflow: 'visible',
             padding: 'clamp(1rem, 3.5vw, 1.5rem)',
           }}
         >

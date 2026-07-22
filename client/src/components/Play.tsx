@@ -43,6 +43,7 @@ import { useGameConfig } from '../lib/gameConfig';
 import './DeepEndScreens.css';
 import { BookIcon, TargetIcon } from './ui/icons';
 import { capture } from '../lib/analytics';
+import { visuallyHidden } from '../theme/MuiTheme';
 
 const POLL_FALLBACK_MS = 4000;
 const REALTIME_HEALING_POLL_MS = 30_000;
@@ -53,6 +54,24 @@ function formatDuration(n: number, t: ReturnType<typeof useT>): string {
   if (n <= 0) return t('play.timeLimitNone');
   if (n < 60) return t('play.timeLimitSeconds', { n });
   return t('play.timeLimitMinutes', { n: n / 60 });
+}
+
+async function copyText(value: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(value);
+    return true;
+  } catch {
+    const field = document.createElement('textarea');
+    field.value = value;
+    field.setAttribute('readonly', '');
+    field.style.position = 'fixed';
+    field.style.opacity = '0';
+    document.body.appendChild(field);
+    field.select();
+    const copied = document.execCommand('copy');
+    field.remove();
+    return copied;
+  }
 }
 
 export function PlayLanding() {
@@ -105,16 +124,12 @@ export function PlayLanding() {
                   try {
                     await signInWithGoogle();
                   } catch (err) {
-                    setError(err instanceof Error ? err.message : friendlyError(err));
+                    setError(friendlyError(err));
                   }
                 }}
               />
             </div>
-            {error && (
-              <Text type="supporting" color="secondary" justify="center">
-                {error}
-              </Text>
-            )}
+            {error && <Banner status="error" title={error} />}
           </VStack>
         </Card>
       </div>
@@ -213,18 +228,18 @@ export function PlayLanding() {
             <VStack gap={3}>
               <VStack gap={2}>
                 <span className="ss-kicker">{t('play.hostGame')}</span>
-                <div className="de-mode-list" role="radiogroup" aria-label={t('play.gameMode')}>
+                <RadioCardGroup className="de-mode-list" value={mode} onChange={(value) => setMode(value as 'ffa' | 'classroom')} label={t('play.gameMode')}>
                   {([
                     ['ffa', <TargetIcon key="ffa" size={20} />, t('play.multiplayerFfa'), t('play.modeFfaBlurb')],
                     ['classroom', <BookIcon key="classroom" size={20} />, t('play.classroom'), t('play.modeClassroomBlurb')],
                   ] as const).map(([id, icon, name, blurb]) => (
-                    <button key={id} type="button" className="de-mode-card" role="radio" aria-checked={mode === id} aria-pressed={mode === id} onClick={() => setMode(id)}>
+                    <RadioCard key={id} value={id} index={id === 'ffa' ? 0 : 1} className="de-mode-card" padding={4}>
                       <span className="de-mode-card__icon" aria-hidden>{icon}</span>
                       <span className="de-mode-card__copy"><strong>{name}</strong><span>{blurb}</span></span>
-                      <span className="de-mode-card__check" aria-hidden>✓</span>
-                    </button>
+                      <span className="de-mode-card__check" aria-hidden style={{ opacity: mode === id ? 1 : 0 }}>✓</span>
+                    </RadioCard>
                   ))}
-                </div>
+                </RadioCardGroup>
               </VStack>
 
               <VStack gap={1}>
@@ -412,6 +427,7 @@ export function PlayMatch() {
   const [joining, setJoining] = useState(true);
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [controlPending, setControlPending] = useState(false);
   const [questionShownAt, setQuestionShownAt] = useState<number>(Date.now());
   const [connectionState, setConnectionState] = useState<'live' | 'polling' | 'stale'>('polling');
   const refreshFailures = useRef(0);
@@ -538,35 +554,22 @@ export function PlayMatch() {
     channelRef.current?.send('match_updated', { at: Date.now() });
   };
 
-  const startMatch = async () => {
-    if (!user?.id || !match) return;
+  const runHostControl = async (action: 'start' | 'advance' | 'finish') => {
+    if (!user?.id || !match || controlPending) return;
+    setControlPending(true);
     try {
-      await controlMatch({ code, host_id: user.id, action: 'start' });
+      await controlMatch({ code, host_id: user.id, action });
       broadcastUpdate();
     } catch (err) {
       setError(friendlyError(err));
+    } finally {
+      setControlPending(false);
     }
   };
 
-  const advance = async () => {
-    if (!user?.id) return;
-    try {
-      await controlMatch({ code, host_id: user.id, action: 'advance' });
-      broadcastUpdate();
-    } catch (err) {
-      setError(friendlyError(err));
-    }
-  };
-
-  const finish = async () => {
-    if (!user?.id) return;
-    try {
-      await controlMatch({ code, host_id: user.id, action: 'finish' });
-      broadcastUpdate();
-    } catch (err) {
-      setError(friendlyError(err));
-    }
-  };
+  const startMatch = () => void runHostControl('start');
+  const advance = () => void runHostControl('advance');
+  const finish = () => void runHostControl('finish');
 
   // Selection is only mutable until the first submit locks it in.
   const selectOption = (i: number) => {
@@ -651,9 +654,10 @@ export function PlayMatch() {
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
         <VStack gap={2}>
           <Banner status="error" title={error} />
-          <div>
+          <HStack gap={1} wrap="wrap">
+            <Button variant="primary" label={t('error.tryAgain')} onClick={() => void refresh()} />
             <Button variant="secondary" label={t('common.back')} onClick={() => navigate('/play')} />
-          </div>
+          </HStack>
         </VStack>
       </div>
     );
@@ -701,6 +705,7 @@ export function PlayMatch() {
             participants={participants}
             isHost={isHost}
             onStart={startMatch}
+            startPending={controlPending}
           />
         )}
 
@@ -718,6 +723,7 @@ export function PlayMatch() {
             onAnswer={submitAnswer}
             onAdvance={advance}
             onFinish={finish}
+            controlPending={controlPending}
             scoreboard={scoreboard}
             participants={participants}
             hostSub={user?.id}
@@ -736,24 +742,27 @@ export function PlayMatch() {
 const CodeBadge = ({ code }: { code: string }) => {
   const t = useT();
   const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
+  const status = copyFailed ? t('play.copyFailed') : copied ? t('play.copied') : t('play.copy');
   return (
     <Button
       variant="secondary"
       size="sm"
-      label={`${code} — ${copied ? t('play.copied') : t('play.copy')}`}
+      label={`${code} — ${status}`}
       onClick={() => {
-        navigator.clipboard.writeText(code).then(
-          () => {
-            setCopied(true);
-            setTimeout(() => setCopied(false), 1200);
-          },
-          () => {},
-        );
+        void copyText(code).then((ok) => {
+          setCopied(ok);
+          setCopyFailed(!ok);
+          setTimeout(() => {
+            setCopied(false);
+            setCopyFailed(false);
+          }, 1600);
+        });
       }}
     >
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
         <span style={{ fontFamily: 'monospace', letterSpacing: '0.2em', fontWeight: 700 }}>{code}</span>
-        <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{copied ? t('play.copied') : t('play.copy')}</span>
+        <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>{status}</span>
       </span>
     </Button>
   );
@@ -764,15 +773,18 @@ function Lobby({
   participants,
   isHost,
   onStart,
+  startPending,
 }: {
   match: Match;
   participants: Participant[];
   isHost: boolean;
   onStart: () => void;
+  startPending: boolean;
 }) {
   const t = useT();
   const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/play/${match.code}` : '';
   const [qrUrl, setQrUrl] = useState('');
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
   useEffect(() => {
     let active = true;
     void import('qrcode')
@@ -858,8 +870,13 @@ function Lobby({
           <HStack gap={1} wrap="wrap">
             <Button
               variant="secondary"
-              label={t('play.copyLink')}
-              onClick={() => navigator.clipboard.writeText(shareUrl)}
+              label={copyStatus === 'copied' ? t('play.copied') : copyStatus === 'failed' ? t('play.copyFailed') : t('play.copyLink')}
+              onClick={() => {
+                void copyText(shareUrl).then((ok) => {
+                  setCopyStatus(ok ? 'copied' : 'failed');
+                  setTimeout(() => setCopyStatus('idle'), 1600);
+                });
+              }}
             />
             <Button variant="ghost" label={t('play.printInvite')} onClick={() => window.print()} />
           </HStack>
@@ -868,7 +885,7 @@ function Lobby({
               variant="primary"
               size="lg"
               label={t('play.startWithCount', { count: match.questions.length })}
-              isDisabled={participants.length < 1}
+              isDisabled={participants.length < 1 || startPending}
               onClick={onStart}
             />
           )}
@@ -892,6 +909,7 @@ function RunningQuestion({
   onAnswer,
   onAdvance,
   onFinish,
+  controlPending,
   scoreboard,
   participants,
   hostSub,
@@ -909,6 +927,7 @@ function RunningQuestion({
   onAnswer: (i: number) => void;
   onAdvance: () => void;
   onFinish: () => void;
+  controlPending: boolean;
   scoreboard: ScoreboardEntry[];
   participants: Participant[];
   hostSub?: string;
@@ -920,11 +939,13 @@ function RunningQuestion({
   // sees the answer key. Only a classroom host presents instead of playing.
   const isPlayer = mode === 'multiplayer' || !isHost;
   const isPresenter = isHost && mode === 'classroom';
+  const questionLabelId = `play-question-${q.id}`;
 
   // Presenter view polls the per-question answer distribution; the same
   // buckets drive both the histogram and the "answers received" count (the
   // cumulative scoreboard can't say who answered the CURRENT question).
   const [buckets, setBuckets] = useState<DistributionBucket[]>([]);
+  const [distributionStale, setDistributionStale] = useState(false);
   useEffect(() => {
     if (!isPresenter || !hostSub) return;
     let cancelled = false;
@@ -932,10 +953,13 @@ function RunningQuestion({
     const load = () => {
       fetchDistribution(code, questionIdx, hostSub)
         .then((r) => {
-          if (!cancelled) setBuckets(r.buckets);
+          if (!cancelled) {
+            setBuckets(r.buckets);
+            setDistributionStale(false);
+          }
         })
         .catch(() => {
-          /* ignore — UI keeps last known state */
+          if (!cancelled) setDistributionStale(true);
         });
     };
     load();
@@ -961,7 +985,9 @@ function RunningQuestion({
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (noLimit) return;
-    const id = window.setInterval(() => setNow(Date.now()), 250);
+    // The visible timer changes once per second; a 250 ms full subtree render
+    // added churn without conveying more useful information.
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, [noLimit]);
   const remainingMs = noLimit
@@ -985,7 +1011,7 @@ function RunningQuestion({
     : remainingS <= 5
       ? 'var(--ss-error)'
       : remainingS <= 10
-        ? '#c47f00'
+        ? 'var(--ss-warning)'
         : 'var(--astryx-color-text-secondary, currentColor)';
 
   return (
@@ -1001,6 +1027,9 @@ function RunningQuestion({
               difficulty: q.difficulty,
             })}
           </Text>
+          <span style={visuallyHidden} aria-live="polite">
+            {!noLimit && remainingS === 10 ? t('play.timeWarning') : ''}
+          </span>
           <span
             style={{
               display: 'inline-flex',
@@ -1017,8 +1046,8 @@ function RunningQuestion({
                   ? 'color-mix(in srgb, var(--ss-error) 15%, transparent)'
                   : 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
             }}
-            aria-live="polite"
-            aria-atomic="true"
+            role="timer"
+            aria-label={noLimit ? t('play.timeLimitNone') : t('play.timeRemaining', { n: remainingS })}
           >
             {noLimit ? '∞' : `${remainingS}s`}
           </span>
@@ -1031,7 +1060,7 @@ function RunningQuestion({
           variant={!noLimit && remainingS <= 5 ? 'error' : 'accent'}
         />
 
-        <div>{renderQuestion(q.question)}</div>
+        <div id={questionLabelId}>{renderQuestion(q.question)}</div>
 
         <RadioCardGroup
           value={selected}
@@ -1041,7 +1070,7 @@ function RunningQuestion({
           onActivate={(v) => {
             if (isPlayer && !submitted) onAnswer(v as number);
           }}
-          label={t('play.answersAria')}
+          labelledBy={questionLabelId}
         >
           <VStack gap={1}>
             {q.options.map((opt, i) => {
@@ -1086,11 +1115,12 @@ function RunningQuestion({
             no-limit match mid-question) or end the match early. */}
         {isHost && mode === 'multiplayer' && (
           <HStack gap={1} justify="between">
-            <Button variant="ghost" size="sm" label={t('play.endMatch')} onClick={onFinish} />
+            <Button variant="ghost" size="sm" label={t('play.endMatch')} isDisabled={controlPending} onClick={onFinish} />
             <Button
               variant="ghost"
               size="sm"
               label={lastQuestion ? t('play.showResults') : t('play.skipQuestion')}
+              isDisabled={controlPending}
               onClick={onAdvance}
             />
           </HStack>
@@ -1104,11 +1134,14 @@ function RunningQuestion({
 
             <DistributionChart options={q.options} buckets={buckets} correctIndex={q.correct_index} />
 
+            {distributionStale && <Banner status="warning" title={t('play.distributionUnavailable')} />}
+
             <HStack gap={1} justify="between">
-              <Button variant="secondary" label={t('play.endMatch')} onClick={onFinish} />
+              <Button variant="secondary" label={t('play.endMatch')} isDisabled={controlPending} onClick={onFinish} />
               <Button
                 variant="primary"
                 label={lastQuestion ? t('play.showResults') : t('play.nextQuestion')}
+                isDisabled={controlPending}
                 onClick={onAdvance}
               />
             </HStack>
@@ -1131,9 +1164,12 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
       <Text type="label" weight="bold" color="secondary">
         {t('play.liveScoreboard')}
       </Text>
-      <VStack gap={0.5}>
+      <ol
+        aria-label={t('play.liveScoreboard')}
+        style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: 0, padding: 0, listStyle: 'none' }}
+      >
         {scoreboard.map((s, i) => (
-          <div
+          <li
             key={s.user_id}
             style={{
               display: 'flex',
@@ -1162,9 +1198,9 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
             <span style={{ fontSize: '0.75rem', opacity: 0.65, whiteSpace: 'nowrap', flexShrink: 0 }}>
               {s.score != null ? `${s.correct} ${t('play.correctShort')} · ` : ''}{(s.total_ms / 1000).toFixed(1)} s
             </span>
-          </div>
+          </li>
         ))}
-      </VStack>
+      </ol>
     </VStack>
   );
 }

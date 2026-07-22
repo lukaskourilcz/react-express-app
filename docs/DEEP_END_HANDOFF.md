@@ -48,23 +48,40 @@ The handoff commit containing this file finishes these changes:
 - the responsive harness covers the route inventory and 360/390/430/768/1024/1280/1440 widths, supports route/width filters, and writes temporary failure artifacts outside the repository;
 - concise root instructions, five project skills, four specialist agents, and six real workflow commands replace stale React/MUI/Express-era agent guidance.
 
+### 4. Interaction, accessibility, and recovery hardening
+
+The continuation commit after `96ff1c6` completes the highest-impact findings from the UX, accessibility, and performance sweep:
+
+- StudyShark topic pages now reject `webdev`, devShark topic pages reject general subjects, and a valid topic switches StudyShark into its owning subject before quiz navigation;
+- Quiz setup, Play mode selection, and Learn topic selection use the shared roving-tabindex radio-card pattern, including disabled-option skipping and 44px targets;
+- active Quiz, Play, and sample questions expose a semantic question/answer relationship; quiz and Learn outcomes move focus to an `h1`; mobile leaderboard and live scoreboard rows are native lists;
+- Play exposes copy failures, polling/stale states, distribution failure, a one-shot timer warning, retry for failed direct-room loading, and duplicate-safe host controls;
+- challenge and roadmap reflow no longer clip long content, roadmap dark-mode feedback uses semantic colors, and reduced motion disables custom landing/path movement;
+- the cosmetic shop hydrates account state before purchases, and an equipped item is honestly labelled “Unequip” when its action removes it;
+- Career Roadmap handles structure loading/failure, stale devShark copy is corrected in EN/CS, and `/dev` declares the language of its intentionally English operational UI;
+- single-question triage deletion now requires the existing branded destructive confirmation;
+- route focus no longer jumps merely because the locale changes, and all new copy has English/Czech parity.
+
 ## Validation completed
 
-- Baseline before the overhaul: `npm run typecheck:api`, `npm run test:launch`, `npm run build`, and `git diff --check` passed.
-- After shared-foundation changes: launch contracts and `git diff --check` passed; focused browser-target esbuild compilation passed.
-- After the fairness pass: `npm run test:launch` passed and reported product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, and the twelve-function budget. Focused esbuild compilation of the changed client modules passed.
-- The final `npm run build` was started but intentionally interrupted when the CLI restart was requested; do not mark the current head build as passed until rerun.
-- The environment was using Node 20 although `package.json` requires Node 22–24. Supabase printed its Node 20 deprecation warning, and the updated responsive harness intentionally requires Node 22.
+Final validation for the current handoff used `/opt/homebrew/bin/node` 23.1.0 (the default shell still resolves Node 20, so keep the PATH override):
+
+- `PATH=/opt/homebrew/bin:$PATH npm run typecheck:api` — passed;
+- `PATH=/opt/homebrew/bin:$PATH npm run test:launch` — passed product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, and the twelve-function budget;
+- `PATH=/opt/homebrew/bin:$PATH npm run build` — passed; Vite reported only the existing static/dynamic import chunk warnings;
+- `PATH=/opt/homebrew/bin:$PATH npm run check:responsive` — 133 route/viewport probes, zero overflow or containment issues across 360, 390, 430, 768, 1024, 1280, and 1440 widths;
+- `npm audit --omit=dev` and `npm audit --omit=dev --prefix client` — zero vulnerabilities;
+- browser rendering inspected the StudyShark landing, mobile Quiz setup, signed-out `/dev`, and allowed/blocked topic pages at mobile and desktop widths; no console errors were recorded in the checked state;
+- every `.claude/skills/*` package passed `quick_validate.py`;
+- `git diff --check` passed and `find api -type f -name '*.ts'` returned exactly twelve handlers.
 
 ## Continue in this order
 
-1. Use Node 22–24, run `npm ci` and `npm ci --prefix client` if dependencies are not already trustworthy, then run the full release contract.
-2. Run `python3 /Users/lukasbarsinbars/.codex/skills/.system/skill-creator/scripts/quick_validate.py` for each new `.claude/skills/*` directory and correct any metadata issue.
-3. Build and preview both product configurations. Execute the responsive/browser matrix in `docs/design/visual-qa-checklist.md`; record only real coverage.
-4. Continue route-by-route refinement, prioritizing active Quiz/review, Learn, Challenge, Play/live room, Profile, Leaderboards, Flashcards, and `/dev`. Preserve the foundation changes rather than replacing them.
-5. Recheck natural EN/CS copy, every non-happy path, dark/light contrast, keyboard/focus, reduced motion, 400% reflow, and fixed-waterline clearance.
-6. Run dependency audits, repository-wide stale-brand/duplicate-registry/security searches, and final documentation reconciliation.
-7. Create additional coherent commits rather than amending the existing history, then provide the complete final implementation report requested in the original specification.
+1. Use Node 22–24 (`PATH=/opt/homebrew/bin:$PATH` on this machine). Dependencies and the StudyShark production build are currently validated; reinstall only if the restarted environment requires it.
+2. Build and visually inspect the devShark product configuration as well as signed-in deterministic fixtures for active Quiz/review, a live/classroom room, Profile, Shop inventory, and the authenticated `/dev` console. Do not claim those states were browser-verified from this handoff.
+3. Continue lower-priority sweep findings: Challenge result-leaderboard partial error, DevSettings unsaved-change protection, flashcard undo, profile preference-save failure, live-room timing accommodation documentation, and performance work that can be proved safe (auth loading and roadmap intro chunking were not changed here).
+4. Recheck Czech copy, both themes, keyboard/focus, reduced motion, 400% reflow, and fixed-waterline clearance in those authenticated/deterministic states.
+5. Run the full release contract again after further edits, reconcile documentation, and create coherent new commits rather than amending existing history.
 
 ## Known technical limitation to keep visible
 
@@ -72,7 +89,18 @@ Challenge proof collection is materially stronger, but without a server-side app
 
 ## Deferred Higgsfield AI tasks
 
-Higgsfield was unavailable and the user explicitly deferred all related research, prompts, generation, selection, and integration. Do not substitute another generator or create placeholder media. When the MCP is available, reassess and produce only approved high-value assets: refined family mark studies, StudyShark and devShark Open Graph/launch art, optional subject chapter plates, limited classroom/empty-state editorial media, and campaign crops. Authentic product UI must remain deterministic. Update `docs/design/generated-media-manifest.md` with real provenance only after generation.
+Higgsfield was unavailable and the user explicitly deferred all research, prompt work, generation, selection, and integration. No substitute generator, fake UI, placeholder raster, or speculative asset reference was added. When the MCP becomes available, evaluate and produce these items only where the real interface still benefits:
+
+1. Shark-family fin-and-waterline mark studies for favicon/PWA/social-avatar refinement; convert the selected geometry into reviewed deterministic SVG rather than shipping a raw raster.
+2. StudyShark Open Graph/launch composition representing geography, math, history, biology, chess, and poker with text-safe negative space; place through product-aware metadata and overlay real EN/CS text deterministically.
+3. devShark Open Graph/launch composition using authentic system/code structure without generated code or terminal text; place through the same product-aware metadata path.
+4. Seven optional subject chapter plates for geography, mathematics, history, biology, chess, poker, and web development; integrate only in existing `SubjectPlate`/landing hooks, with responsive still crops and decorative alt treatment.
+5. One restrained classroom promotional composition for the public classroom page, using a deterministic capture of the real interface if UI appears in the artwork.
+6. A small reusable empty/onboarding editorial set (not one image per card) for genuinely emotional empty states such as no flashcards or no progress.
+7. StudyShark and devShark campaign crops in landscape, portrait, and square formats; EN/CS messaging must be real overlay text, never generated text.
+8. Optional motion studies only after stills succeed: a subtle water/current or fin pass for public landings, with optimized WebM/MP4, poster still, reduced-motion fallback, and no loading in core learning/admin bundles.
+
+For every accepted asset, record the actual tool/workflow, prompts, rejected variants, crop behavior, optimization, provenance, accessibility classification, output path, and regeneration steps in `docs/design/generated-media-manifest.md`. Do not create output directories or references until a production asset actually exists.
 
 ## Pre-existing unrelated work
 

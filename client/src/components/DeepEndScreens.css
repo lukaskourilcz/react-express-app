@@ -35,3 +35,13 @@
   .play-invite button { display: none !important; }
   .play-invite__qr img { width: 240px; height: 240px; }
 }
+
+/* Shared radio cards expose selection through data-selected. These overrides
+   keep legacy Deep End mode-card styling aligned with the accessible control. */
+.de-mode-card[data-selected='true'] {
+  border-color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+  box-shadow: inset 0 0 0 1px var(--brand-accent);
+}
+.de-mode-card[data-selected='true'] .de-mode-card__check { opacity: 1; }
+.de-gold-pill { background: var(--ss-warning-soft); color: var(--ss-warning); }

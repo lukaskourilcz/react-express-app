@@ -9,6 +9,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { useT } from '../../i18n/LanguageContext';
+import { useReducedMotion } from '../../lib/motion';
 
 // The fin glyph path, base at y=18 in a 24-unit box (see DESIGN_RULES §1).
 export const FIN_PATH = 'M3 18 Q 6 6 15 3 Q 17 11 21 18 Z';
@@ -36,14 +37,15 @@ export interface StatSpec { value: string; label: string; pos: string; size: num
 /** A hero stat with a ghost-fin relief + subtle lift on hover. */
 export function StatItem({ value, label, pos, size, accent }: StatSpec & { accent: string }) {
   const [hover, setHover] = useState(false);
+  const reduce = useReducedMotion();
   return (
     <div
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
         display: 'flex', flexDirection: 'column', cursor: 'default',
-        transition: 'transform 0.35s cubic-bezier(0.16,1,0.3,1)',
-        transform: hover ? 'translateY(-2px)' : 'none',
+        transition: reduce ? 'none' : 'transform 0.35s cubic-bezier(0.16,1,0.3,1)',
+        transform: hover && !reduce ? 'translateY(-2px)' : 'none',
         backgroundImage: hover ? finBg(accent, 0.14) : 'none',
         backgroundRepeat: 'no-repeat', backgroundPosition: pos, backgroundSize: `${size}px ${size}px`,
       }}
@@ -61,6 +63,7 @@ export function FadeFinCta({
   label: string; primary?: boolean; onClick: () => void; finLeft: string; finSize: number; accent: string; disabled?: boolean;
 }) {
   const [hover, setHover] = useState(false);
+  const reduce = useReducedMotion();
   return (
     <button
       type="button" onClick={onClick} disabled={disabled}
@@ -73,11 +76,11 @@ export function FadeFinCta({
         borderRadius: 'var(--radius-element)', padding: '12px 22px',
         fontFamily: 'var(--font-family-body)', fontWeight: 600, fontSize: '1rem', cursor: disabled ? 'wait' : 'pointer', opacity: disabled ? 0.62 : 1,
         filter: hover && primary ? 'brightness(0.92)' : 'none',
-        transition: 'filter 0.2s ease, background 0.2s ease',
+        transition: reduce ? 'none' : 'filter 0.2s ease, background 0.2s ease',
         backgroundColor: hover && !primary ? 'var(--color-background-muted)' : undefined,
       }}
     >
-      <span aria-hidden style={{ position: 'absolute', left: finLeft, bottom: Math.round(finSize * -0.25) + 'px', lineHeight: 0, opacity: hover ? 1 : 0, transition: 'opacity 0.35s ease', pointerEvents: 'none' }}>
+      <span aria-hidden style={{ position: 'absolute', left: finLeft, bottom: Math.round(finSize * -0.25) + 'px', lineHeight: 0, opacity: hover ? 1 : 0, transition: reduce ? 'none' : 'opacity 0.35s ease', pointerEvents: 'none' }}>
         <Fin size={finSize} color={primary ? 'var(--brand-on-accent)' : accent} opacity={primary ? 0.35 : 0.22} />
       </span>
       <span style={{ position: 'relative' }}>{label}</span>
@@ -88,6 +91,7 @@ export function FadeFinCta({
 /** A CTA whose fin swims the full width on hover (see DESIGN_RULES §3). */
 export function SwimCta({ label, onClick, dir, disabled, size = 'md' }: { label: string; onClick: () => void; dir: 1 | -1; disabled?: boolean; size?: 'md' | 'lg' }) {
   const [hover, setHover] = useState(false);
+  const reduce = useReducedMotion();
   const distance = 260;
   const active = hover && !disabled;
   return (
@@ -100,7 +104,7 @@ export function SwimCta({ label, onClick, dir, disabled, size = 'md' }: { label:
         borderRadius: 'var(--radius-element)', padding: size === 'lg' ? '13px 26px' : '10px 18px',
         fontFamily: 'var(--font-family-body)', fontWeight: 600, fontSize: size === 'lg' ? '1rem' : '0.95rem',
         cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
-        filter: active ? 'brightness(0.92)' : 'none', transition: 'filter 0.2s ease, opacity 0.2s ease',
+        filter: active ? 'brightness(0.92)' : 'none', transition: reduce ? 'none' : 'filter 0.2s ease, opacity 0.2s ease',
       }}
     >
       <span
@@ -108,8 +112,10 @@ export function SwimCta({ label, onClick, dir, disabled, size = 'md' }: { label:
         style={{
           position: 'absolute', left: dir === 1 ? '0' : '100%', right: dir === -1 ? undefined : '100%',
           bottom: -8, lineHeight: 0, opacity: active ? 1 : 0,
-          transform: `translateX(${active ? dir * distance : 0}px)${dir === 1 ? ' scaleX(-1)' : ''}`,
-          transition: `transform ${dir === 1 ? 3.8 : 2.6}s ease-in-out, opacity 0.4s ease`, pointerEvents: 'none',
+          transform: reduce
+            ? (dir === 1 ? 'scaleX(-1)' : 'none')
+            : `translateX(${active ? dir * distance : 0}px)${dir === 1 ? ' scaleX(-1)' : ''}`,
+          transition: reduce ? 'none' : `transform ${dir === 1 ? 3.8 : 2.6}s ease-in-out, opacity 0.4s ease`, pointerEvents: 'none',
         }}
       >
         <Fin size={38} color="var(--brand-on-accent)" opacity={0.28} />
@@ -139,11 +145,12 @@ export function SampleCard({ chip, question }: { chip: string; question: SampleQ
         <span style={{ borderRadius: 999, padding: '3px 10px', background: 'var(--brand-accent-soft)', color: 'var(--brand-accent)', fontSize: '0.75rem', fontWeight: 600 }}>{chip}</span>
         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginLeft: 'auto' }}>{t('home.tryOne')}</span>
       </div>
-      <p style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1.15rem', letterSpacing: '-0.01em' }}>{question.text}</p>
-      {question.code && (
-        <pre style={{ margin: 0, background: 'var(--color-background-muted)', border: '1px solid var(--ss-card-line)', borderRadius: 'var(--radius-inner)', padding: '10px 14px', fontFamily: 'ui-monospace,SFMono-Regular,Menlo,monospace', fontSize: '0.9rem', color: 'var(--color-text-primary)', overflowX: 'auto' }}>{question.code}</pre>
-      )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <fieldset style={{ margin: 0, padding: 0, border: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <legend style={{ margin: 0, padding: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1.15rem', letterSpacing: '-0.01em' }}>{question.text}</legend>
+        {question.code && (
+          <pre aria-label={t('home.codeSample')} style={{ margin: 0, background: 'var(--color-background-muted)', border: '1px solid var(--ss-card-line)', borderRadius: 'var(--radius-inner)', padding: '10px 14px', fontFamily: 'ui-monospace,SFMono-Regular,Menlo,monospace', fontSize: '0.9rem', color: 'var(--color-text-primary)', overflowX: 'auto' }}>{question.code}</pre>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {question.opts.map((label, i) => {
           const isCorrect = answered && i === correct;
           const isWrong = answered && i === picked && picked !== correct;
@@ -168,7 +175,8 @@ export function SampleCard({ chip, question }: { chip: string; question: SampleQ
             </button>
           );
         })}
-      </div>
+        </div>
+      </fieldset>
       {answered && (
         <div role="status" aria-live="polite" style={{
           borderRadius: 'var(--radius-element)', padding: '12px 14px',

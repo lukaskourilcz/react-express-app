@@ -7,7 +7,7 @@
 // purchasable items rendered as Cards in a responsive Grid.
 // The shared app toast provides purchase feedback.
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { AppToast } from './ui/AppToast';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -18,6 +18,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
+import { Banner } from '@astryxdesign/core/Banner';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useTokens } from '../lib/tokens';
@@ -25,6 +26,7 @@ import { CATALOGUE, purchase, priceOf, equip, useInventory, useEquippedRingColor
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useActiveSubject, subjectNameKey } from '../lib/subjects';
 import { IconTile, SparkleIcon } from './ui/icons';
+import { syncProgressWithServer } from '../lib/roadmap';
 
 const TokenIcon = ({ size = 24 }: { size?: number }) => (
   <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -76,9 +78,26 @@ function Shop() {
   const t = useT();
   const tokens = useTokens();
   const inv = useInventory();
+  const { isAuthenticated } = useAuth();
   // The shop is per subject: tokens and cosmetics stay with that context.
   const subject = useActiveSubject();
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [syncing, setSyncing] = useState(isAuthenticated);
+
+  // Hydrate the subject wallet and cosmetic inventory before purchases are
+  // enabled, so a fresh device does not briefly present a zero balance.
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setSyncing(false);
+      return;
+    }
+    let active = true;
+    setSyncing(true);
+    void syncProgressWithServer().finally(() => {
+      if (active) setSyncing(false);
+    });
+    return () => { active = false; };
+  }, [isAuthenticated, subject.id]);
 
   const handleBuy = (p: Product) => {
     const res = purchase(p.id);
@@ -133,6 +152,8 @@ function Shop() {
         </Card>
       </div>
 
+      {syncing && <Banner status="info" title={t('shop.syncing')} />}
+
       {SECTIONS.map(({ key, kinds, icon }) => (
         <VStack key={key} gap={2}>
           <VStack gap={0.5}>
@@ -156,7 +177,7 @@ function Shop() {
                     price={price}
                     owned={inv.owned.includes(p.id)}
                     equipped={inv.ring === p.id || inv.flair === p.id}
-                    canAfford={tokens >= price}
+                    canAfford={!syncing && tokens >= price}
                     onBuy={() => handleBuy(p)}
                     onEquip={() => equip(p.id)}
                   />
@@ -223,7 +244,7 @@ function ProductCard({ product, price, owned, equipped, canAfford, onBuy, onEqui
       <Button
         size="sm"
         variant={equipped ? 'primary' : 'secondary'}
-        label={equipped ? t('shop.equipped') : t('shop.equip')}
+        label={equipped ? t('shop.unequip') : t('shop.equip')}
         onClick={onEquip}
       />
     );

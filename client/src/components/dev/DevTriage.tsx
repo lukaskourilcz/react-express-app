@@ -142,10 +142,10 @@ export default function DevTriage() {
   const rangeFrom = filtered.length === 0 ? 0 : pageStart + 1;
   const rangeTo = Math.min(pageStart + rowsPerPage, filtered.length);
 
-  // One click = gone. The row is filtered out instantly (optimistic) and the
-  // question is deleted on the server so it's gone everywhere on reload too.
-  // No confirm, no restore. On a server error the row is put back.
-  const remove = (r: Row) => {
+  // The confirmed row is filtered out instantly (optimistic) and the question
+  // is deleted on the server so it is gone everywhere on reload too. On a
+  // server error the row is restored locally.
+  const removeConfirmed = (r: Row) => {
     setRemoved((prev) => new Set(prev).add(r.q.id));
     setQuestionDeleted(r.q.id, true)
       .then(() => setSnack(`Deleted ${r.q.id}`))
@@ -157,6 +157,15 @@ export default function DevTriage() {
         });
         setSnack(friendlyError(err));
       });
+  };
+
+  const requestRemove = (r: Row) => {
+    setConfirm({
+      title: `Delete ${r.q.id}?`,
+      description: 'This permanently removes the question from the bank and cannot be undone.',
+      actionLabel: 'Delete permanently',
+      onConfirm: () => removeConfirmed(r),
+    });
   };
 
   // Bulk-delete every row matching the current filters (kept behind a confirm
@@ -192,7 +201,7 @@ export default function DevTriage() {
       <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: '0 0 12px' }}>
         Pre-computed triage of the question bank — gates (binary cut) kept separate from the 1–5 scores
         (R relevance · D discrimination · F difficulty-fit · C clarity). Default rule:{' '}
-        <code>{triageQuery.data?.meta.keepRule}</code>. Delete removes a question from the bank for good — one click, no undo.
+        <code>{triageQuery.data?.meta.keepRule}</code>. Delete permanently removes a question after confirmation.
       </p>
 
       {/* Summary */}
@@ -311,7 +320,7 @@ export default function DevTriage() {
                 </TableCell>
 
                 <TableCell style={{ textAlign: 'right' }}>
-                  <Button size="sm" variant="destructive" isDisabled={busy} onClick={() => remove({ q, v })} label="Delete" />
+                  <Button size="sm" variant="destructive" isDisabled={busy} onClick={() => requestRemove({ q, v })} label="Delete" />
                 </TableCell>
               </TableRow>
             ))}

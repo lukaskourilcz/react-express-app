@@ -386,11 +386,16 @@ function CareerCard() {
   const t = useT();
   const progress = useRoadmapProgress();
   const questXp = useQuestXp();
+  const [syncWarning, setSyncWarning] = useState(false);
 
-  // Sync progress then XP so the card is accurate even if Profile is the first
-  // screen opened on a fresh device (learning XP derives from synced progress).
+  // These independent subject-scoped reads can run together. Keep the current
+  // local snapshot useful if either service is temporarily unavailable.
   useEffect(() => {
-    syncProgressWithServer().then(() => syncXpWithServer()).catch(() => {});
+    let active = true;
+    Promise.all([syncProgressWithServer(), syncXpWithServer()])
+      .then(() => { if (active) setSyncWarning(false); })
+      .catch(() => { if (active) setSyncWarning(true); });
+    return () => { active = false; };
   }, []);
 
   const [track] = useTrack();
@@ -416,6 +421,7 @@ function CareerCard() {
     <Card variant="default" padding={3} width="100%">
       <VStack gap={2}>
         <SectionLabel>{t('profile.career')}</SectionLabel>
+        {syncWarning && <Banner status="warning" title={t('profile.syncUnavailable')} />}
 
         <HStack gap={2} align="center">
           {/* The learner's earned rank icon (data, not chrome) in a quiet tile. */}

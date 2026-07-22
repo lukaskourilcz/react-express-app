@@ -43,7 +43,7 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
   };
 
   return (
-    <div className="dev-shell">
+    <div className="dev-shell" lang="en">
       <aside className="dev-sidebar" aria-label="Developer console">
         <div className="dev-brand"><span className="dev-brand-fin" aria-hidden="true" /><div><strong>{CURRENT_PRODUCT.brand}</strong><span>Control room</span></div></div>
 

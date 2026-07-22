@@ -38,6 +38,8 @@ import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
 import { levelForXp, getCareerRanks } from '../lib/leveling';
 import RoadmapTree from './RoadmapTree';
+import LoadingScreen from './LoadingScreen';
+import ErrorRetry from './ErrorRetry';
 import './DeepEndScreens.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
@@ -123,7 +125,8 @@ export default function CareerRoadmap() {
   const progress = useRoadmapProgress();
   const totalXp = useTotalXp();
   // Shared (cached, de-duped with /learn) roadmap structure for level counts.
-  const structure = useRoadmapStructure().data ?? null;
+  const structureQuery = useRoadmapStructure();
+  const structure = structureQuery.data ?? null;
   // The chosen track drives this whole page — map, pillars and headline %.
   const [track, setTrack] = useTrack();
   // Subject scopes the tracks, pillars and (web-dev-only) career framing.
@@ -166,6 +169,11 @@ export default function CareerRoadmap() {
   const seniorRank = getCareerRanks().find((r) => r.title === SENIOR_RANK_TITLE);
   const reachedSenior = seniorRank ? totalXp >= seniorRank.minXp : false;
   const xpToSenior = seniorRank ? Math.max(0, seniorRank.minXp - totalXp) : 0;
+
+  if (structureQuery.isPending) return <LoadingScreen label={t('common.loading')} />;
+  if (structureQuery.error && !structure) {
+    return <ErrorRetry message={t('roadmap.error')} onRetry={() => void structureQuery.refetch()} />;
+  }
 
   return (
     <div style={{ width: '100%', maxWidth: 780, margin: '0 auto' }}>

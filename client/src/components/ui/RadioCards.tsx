@@ -27,7 +27,7 @@ interface RadioCtx {
   selected: RadioValue | null;
   select: (value: RadioValue) => void;
   activate: (value: RadioValue) => void;
-  register: (index: number, value: RadioValue, el: HTMLButtonElement | null) => () => void;
+  register: (index: number, value: RadioValue, el: HTMLButtonElement | null, disabled: boolean) => () => void;
   onKeyNav: (e: KeyboardEvent, index: number) => void;
 }
 
@@ -61,7 +61,7 @@ export function RadioCardGroup({ value, onChange, onActivate, label, labelledBy,
   // Options register themselves under their `index` prop, so navigation order
   // is explicit and stable even when options render inside wrappers
   // (tooltips, motion items) that would obscure DOM order.
-  const items = useRef(new Map<number, { value: RadioValue; el: HTMLButtonElement }>());
+  const items = useRef(new Map<number, { value: RadioValue; el: HTMLButtonElement; disabled: boolean }>());
   const valueRef = useRef(value);
   valueRef.current = value;
   const onChangeRef = useRef(onChange);
@@ -74,8 +74,8 @@ export function RadioCardGroup({ value, onChange, onActivate, label, labelledBy,
       selected: value,
       select: (v) => onChangeRef.current(v),
       activate: (v) => onActivateRef.current?.(v),
-      register: (index, v, el) => {
-        if (el) items.current.set(index, { value: v, el });
+      register: (index, v, el, disabled) => {
+        if (el) items.current.set(index, { value: v, el, disabled });
         return () => {
           items.current.delete(index);
         };
@@ -83,7 +83,10 @@ export function RadioCardGroup({ value, onChange, onActivate, label, labelledBy,
       onKeyNav: (e, index) => {
         const [nextKey, prevKey] =
           orientation === 'horizontal' ? (['ArrowRight', 'ArrowLeft'] as const) : (['ArrowDown', 'ArrowUp'] as const);
-        const order = [...items.current.keys()].sort((a, b) => a - b);
+        const order = [...items.current.entries()]
+          .filter(([, item]) => !item.disabled)
+          .map(([itemIndex]) => itemIndex)
+          .sort((a, b) => a - b);
         if (order.length === 0) return;
         const pos = order.indexOf(index);
         let nextPos: number | null = null;
@@ -189,7 +192,7 @@ export function RadioCard({ value, index, label, padding = 3, disabled, tone = '
   if (!ctx) throw new Error('RadioCard must render inside RadioCardGroup');
   const { selected, select, activate, register, onKeyNav } = ctx;
 
-  useEffect(() => register(index, value, ref.current), [index, value, register]);
+  useEffect(() => register(index, value, ref.current, !!disabled), [disabled, index, value, register]);
 
   const isSelected = selected === value;
   // Roving tabindex: the selected option is the group's single Tab stop; with

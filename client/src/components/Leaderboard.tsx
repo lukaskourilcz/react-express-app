@@ -122,9 +122,9 @@ function Leaderboard() {
               fontWeight: 700,
               fontSize: '0.8125rem',
               lineHeight: 1.2,
-              color: subject.accent,
-              border: `1px solid ${subject.accent}`,
-              background: `${subject.accent}14`,
+              color: 'var(--brand-accent)',
+              border: '1px solid var(--brand-accent)',
+              background: 'var(--brand-accent-soft)',
             }}
           >
             {t(subjectNameKey(subject.id))}
@@ -157,6 +157,7 @@ function Leaderboard() {
                     cursor: 'pointer',
                     display: 'inline-flex',
                     alignItems: 'center',
+                    minHeight: 44,
                     padding: '8px 14px',
                     borderRadius: 999,
                     fontSize: '0.8125rem',
@@ -221,9 +222,12 @@ function Leaderboard() {
         )}
 
         {hasRows && isMobile && (
-          <VStack gap={1.5} width="100%">
+          <ol
+            aria-label={t('leaderboard.title')}
+            style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', margin: 0, padding: 0, listStyle: 'none' }}
+          >
             {rows.map((row) => (
-              <div key={row.rank} className="ss-raised" style={{ display: 'flex', width: '100%' }}>
+              <li key={row.rank} className="ss-raised" style={{ display: 'flex', width: '100%' }}>
                 <Card variant={row.medal ? 'muted' : 'default'} padding={3} width="100%">
                   <HStack gap={2} align="center">
                     <RankMedal rank={row.rank} medal={row.medal} />
@@ -246,9 +250,9 @@ function Leaderboard() {
                     </div>
                   </HStack>
                 </Card>
-              </div>
+              </li>
             ))}
-          </VStack>
+          </ol>
         )}
 
         {hasRows && !isMobile && (

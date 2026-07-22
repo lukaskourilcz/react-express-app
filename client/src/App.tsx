@@ -370,8 +370,11 @@ function App() {
     setMeta('meta[property="og:description"]', description);
     setMeta('meta[name="twitter:title"]', document.title);
     setMeta('meta[name="twitter:description"]', description);
-    // Move focus after the route fade-in settles, so AT reads the new
-    // route's content rather than the previous tree.
+  }, [location.pathname, t, lang]);
+
+  useEffect(() => {
+    // Route focus is intentionally pathname-only: changing language updates
+    // metadata, but must not pull focus away from the language control.
     const timer = window.setTimeout(() => {
       document.getElementById('main-content')?.focus({ preventScroll: true });
     }, 230);
@@ -379,7 +382,7 @@ function App() {
     // PostHog is configured.
     capturePageview(location.pathname);
     return () => window.clearTimeout(timer);
-  }, [location.pathname, t, lang]);
+  }, [location.pathname]);
 
   // The /dev console is a standalone admin surface — no app chrome, full width.
   const isDev = location.pathname.startsWith('/dev');
