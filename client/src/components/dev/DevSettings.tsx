@@ -63,7 +63,6 @@ interface FormState {
   /** Token price per shop product id, kept as raw strings while editing. */
   shopPrices: Record<string, string>;
   /** Token price to unlock any one learning path. */
-  shopPathUnlock: string;
   /** One-liner loading-screen dev tips, one per line while editing. */
   devTips: string;
   ownerEmail: string;
@@ -108,7 +107,6 @@ const toForm = (s: GameSettings): FormState => ({
   supportPublicThanks: s.support.publicThanksEnabled,
   levelThresholds: s.leveling.rankThresholds.map(String),
   shopPrices: Object.fromEntries(Object.entries(s.shop.prices).map(([k, v]) => [k, String(v)])),
-  shopPathUnlock: String(s.shop.pathUnlockPrice),
   devTips: s.devTips.join('\n'),
   ownerEmail: s.ownerEmail,
 });
@@ -160,7 +158,7 @@ const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
     prices: Object.fromEntries(
       Object.keys(base.shop.prices).map((k) => [k, parseNum(f.shopPrices[k] ?? '', base.shop.prices[k])]),
     ),
-    pathUnlockPrice: parseNum(f.shopPathUnlock, base.shop.pathUnlockPrice),
+    pathUnlockPrice: base.shop.pathUnlockPrice,
   },
   support: {
     enabled: f.supportEnabled,
@@ -448,7 +446,7 @@ export default function DevSettings() {
 
       <Section title="Shop — token prices">
         <span style={{ ...captionStyle, width: '100%', marginBottom: 4 }}>
-          Token cost of each shop item. The path-unlock price applies to every learning-path unlock. 0 makes an item free.
+          Token cost of each cosmetic shop item. Shop purchases never affect learning access, XP, or scores. 0 makes an item free.
         </span>
         {Object.keys(base.shop.prices).map((id) => (
           <TextInput
@@ -460,13 +458,6 @@ export default function DevSettings() {
             style={{ width: 190 }}
           />
         ))}
-        <TextInput
-          label="Path unlock (each)"
-          value={form.shopPathUnlock}
-          onChange={(v) => set('shopPathUnlock', v)}
-          size="sm"
-          style={{ width: 190 }}
-        />
       </Section>
 
       <Section title="Loading-screen dev tips">

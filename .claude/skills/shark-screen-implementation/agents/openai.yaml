@@ -1,0 +1,4 @@
+interface:
+  display_name: "Shark Screen Implementation"
+  short_description: "Implement one complete Shark product screen"
+  default_prompt: "Use $shark-screen-implementation to inspect, implement, and validate this StudyShark or devShark screen."

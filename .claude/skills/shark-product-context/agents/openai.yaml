@@ -1,0 +1,4 @@
+interface:
+  display_name: "Shark Product Context"
+  short_description: "StudyShark and devShark product guardrails"
+  default_prompt: "Use $shark-product-context to check this change against product, scope, integrity, and localization rules."

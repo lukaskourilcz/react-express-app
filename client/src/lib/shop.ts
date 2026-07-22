@@ -2,28 +2,16 @@
 // tokens never bypass learning prerequisites or alter ranked progression.
 //
 // The shop is PER SUBJECT (platform): purchases are paid from the active
-// subject's wallet and land in the active subject's inventory, so boosters and
-// cosmetics bought on one platform belong to that platform. Path products are
-// generated for every subject; the Shop page shows only the active subject's.
-//
-// Cosmetics + boosters are localStorage-backed; path unlocks route through
-// the roadmap store so they participate in the cross-device account sync.
+// subject's wallet and land in the active subject's inventory. Every item is
+// cosmetic: purchases never alter XP, scores, streaks, access, or progression.
 
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import { spendTokens, getTokens } from './tokens';
-import type { RoadmapTopic } from '../types/quiz';
-import {
-  STARTER_TOPICS,
-  getExtraUnlocks,
-  getRoadmapProgress,
-  isTopicUnlocked,
-  unlockExtraTopics,
-} from './roadmap';
 import { getGameConfig, type GameConfig } from './gameConfig';
 import { getSubject, useSubject, isSubjectId, type SubjectId } from './subjects';
 
-export type ProductKind = 'booster' | 'ring' | 'flair' | 'path';
+export type ProductKind = 'ring' | 'flair';
 
 export interface Product {
   id: string;
@@ -31,12 +19,8 @@ export interface Product {
   price: number;
   /** Compact typographic marker shown on the product card and equipped flair. */
   marker: string;
-  /** Ring colour (rings only), or the topic accent (paths). */
+  /** Ring colour (rings only). */
   color?: string;
-  /** For `path` products: the roadmap topic this unlocks. */
-  topic?: RoadmapTopic;
-  /** For `path` products: the subject that topic belongs to. */
-  subject?: SubjectId;
 }
 
 // Default token prices (the configurable defaults live in lib/settings-store.ts
@@ -52,29 +36,16 @@ const STATIC_CATALOGUE: Product[] = [
   { id: 'flair-crown', kind: 'flair', price: 500, marker: 'Ⅰ' },
 ];
 
-/** Default tokens to instantly unlock one learning path the user hasn't earned. */
-export const PATH_UNLOCK_PRICE = 200;
-
 // Each product resolves its display copy from i18n keys derived from the id:
-// `shop.item.<id>.name` and `shop.item.<id>.desc` (paths use a shared template
-// with the topic label interpolated in).
+// `shop.item.<id>.name` and `shop.item.<id>.desc`.
 export const CATALOGUE: readonly Product[] = STATIC_CATALOGUE;
 
 const byId = new Map(CATALOGUE.map((p) => [p.id, p]));
 export const productById = (id: string): Product | undefined => byId.get(id);
 
-/** The live token price of a product, resolved from the game config (per-product
- *  override for catalogue items, the shared path-unlock price for paths), falling
- *  back to the product's static base price. */
+/** The live token price of a cosmetic, resolved from the game config. */
 export function priceOf(product: Product, config: GameConfig = getGameConfig()): number {
-  if (product.kind === 'path') return config.shop.pathUnlockPrice;
   return config.shop.prices[product.id] ?? product.price;
-}
-
-/** True if the path's topic is already accessible (starter / prereq met / bought). */
-export function isPathAlreadyUnlocked(topic: RoadmapTopic): boolean {
-  if (STARTER_TOPICS.includes(topic)) return true;
-  return isTopicUnlocked(getRoadmapProgress(), topic, new Set(getExtraUnlocks()));
 }
 
 interface Inventory {
@@ -84,7 +55,7 @@ interface Inventory {
   ring: string | null;
   /** Equipped title flair id (must be owned), or null. */
   flair: string | null;
-  /** Remaining Double-XP charges (one consumed per quiz). */
+  /** Retired legacy field kept at zero for backwards-compatible account sync. */
   doubleXp: number;
 }
 
@@ -98,12 +69,11 @@ type InventoryMap = Partial<Record<SubjectId, Inventory>>;
 function sanitizeInventory(raw: unknown): Inventory {
   if (!raw || typeof raw !== 'object') return { ...EMPTY, owned: [] };
   const rec = raw as Partial<Inventory>;
-  const doubleXp = Number(rec.doubleXp);
   return {
     owned: Array.isArray(rec.owned) ? rec.owned.filter((x): x is string => typeof x === 'string') : [],
     ring: typeof rec.ring === 'string' ? rec.ring : null,
     flair: typeof rec.flair === 'string' ? rec.flair : null,
-    doubleXp: Number.isFinite(doubleXp) && doubleXp > 0 ? Math.floor(doubleXp) : 0,
+    doubleXp: 0,
   };
 }
 
@@ -152,7 +122,7 @@ function writeInventory(subject: SubjectId, next: Inventory): void {
 /**
  * Merge authoritative per-subject inventories from the account sync: per
  * subject, owned is a set union, equipped is server-wins (if valid, else
- * local), and doubleXp charges are a max — never revoke anything on sync.
+ * local). The retired doubleXp field is always cleared to preserve fairness.
  */
 export function mergeInventoriesFromServer(server: Record<string, Inventory>): void {
   const local = readInventories();
@@ -166,7 +136,7 @@ export function mergeInventoriesFromServer(server: Record<string, Inventory>): v
       owned: ownedUnion,
       ring: ownedUnion.includes(theirs.ring ?? '') ? theirs.ring : mine.ring,
       flair: ownedUnion.includes(theirs.flair ?? '') ? theirs.flair : mine.flair,
-      doubleXp: Math.max(mine.doubleXp, theirs.doubleXp),
+      doubleXp: 0,
     };
   }
   writeJSON(INVENTORY_KEY, merged);
@@ -200,35 +170,20 @@ export type PurchaseResult = 'ok' | 'insufficient' | 'owned' | 'unknown';
 
 /**
  * Buy a product: spend its price from the active subject's wallet, then grant
- * it into the active subject's inventory. Cosmetics are a one-time purchase;
- * the Double-XP booster adds a stackable charge; a Learn path routes through
- * the roadmap-unlock store. Returns a status the caller can surface.
+ * it into the active subject's inventory. Cosmetics are a one-time purchase.
  */
 export function purchase(id: string): PurchaseResult {
   const product = byId.get(id);
   if (!product) return 'unknown';
   const price = priceOf(product);
 
-  if (product.kind === 'path') {
-    if (!product.topic) return 'unknown';
-    if (isPathAlreadyUnlocked(product.topic)) return 'owned';
-    if (getTokens() < price) return 'insufficient';
-    if (!spendTokens(price)) return 'insufficient';
-    unlockExtraTopics([product.topic]);
-    return 'ok';
-  }
-
   const subject = getSubject();
   const inv = readInventory(subject);
-  if (product.kind !== 'booster' && inv.owned.includes(id)) return 'owned';
+  if (inv.owned.includes(id)) return 'owned';
   if (getTokens() < price) return 'insufficient';
   if (!spendTokens(price)) return 'insufficient';
 
-  if (product.kind === 'booster') {
-    writeInventory(subject, { ...inv, doubleXp: inv.doubleXp + 1 });
-  } else {
-    writeInventory(subject, { ...inv, owned: [...inv.owned, id] });
-  }
+  writeInventory(subject, { ...inv, owned: [...inv.owned, id], doubleXp: 0 });
   return 'ok';
 }
 
@@ -244,15 +199,6 @@ export function equip(id: string): void {
   } else if (product.kind === 'flair') {
     writeInventory(subject, { ...inv, flair: inv.flair === id ? null : id });
   }
-}
-
-/** Consume one of the active subject's Double-XP charges if any are armed. */
-export function consumeDoubleXpCharge(): boolean {
-  const subject = getSubject();
-  const inv = readInventory(subject);
-  if (inv.doubleXp <= 0) return false;
-  writeInventory(subject, { ...inv, doubleXp: inv.doubleXp - 1 });
-  return true;
 }
 
 /** Colour of the active subject's equipped avatar ring, or null. */

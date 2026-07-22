@@ -1,0 +1,4 @@
+interface:
+  display_name: "Deep End Design System"
+  short_description: "Deep End tokens, components, and visual rules"
+  default_prompt: "Use $deep-end-design-system to implement this interface with the existing Astryx and Deep End foundations."

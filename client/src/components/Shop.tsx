@@ -21,25 +21,7 @@ import { Card } from '@astryxdesign/core/Card';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useTokens } from '../lib/tokens';
-import {
-  CATALOGUE,
-  purchase,
-  priceOf,
-  equip,
-  useInventory,
-  isPathAlreadyUnlocked,
-  useEquippedRingColor,
-  useEquippedFlair,
-  type Product,
-  type ProductKind,
-} from '../lib/shop';
-import { useGameConfig } from '../lib/gameConfig';
-import {
-  pushProgressToServer,
-  useExtraUnlocks,
-  useRoadmapProgress,
-} from '../lib/roadmap';
-import { categoryLabelKey } from '../lib/categories';
+import { CATALOGUE, purchase, priceOf, equip, useInventory, useEquippedRingColor, useEquippedFlair, type Product, type ProductKind } from '../lib/shop';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useActiveSubject, subjectNameKey } from '../lib/subjects';
 import { IconTile, SparkleIcon } from './ui/icons';
@@ -47,7 +29,7 @@ import { IconTile, SparkleIcon } from './ui/icons';
 const TokenIcon = ({ size = 24 }: { size?: number }) => (
   <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="12" r="10" fill={'var(--brand-accent)'} />
-    <circle cx="12" cy="12" r="7" fill="none" stroke="#fff" strokeWidth="1.5" opacity="0.4" />
+    <circle cx="12" cy="12" r="7" fill="none" stroke="var(--brand-on-accent)" strokeWidth="1.5" opacity="0.4" />
     <text
       x="12"
       y="16"
@@ -55,7 +37,7 @@ const TokenIcon = ({ size = 24 }: { size?: number }) => (
       fontSize="11"
       fontFamily="-apple-system, sans-serif"
       fontWeight="700"
-      fill="#fff"
+      fill="var(--brand-on-accent)"
     >
       T
     </text>
@@ -94,29 +76,17 @@ function Shop() {
   const t = useT();
   const tokens = useTokens();
   const inv = useInventory();
-  const config = useGameConfig();
-  // The shop is per platform: tokens, inventory and the path list all belong
-  // to the active subject.
+  // The shop is per subject: tokens and cosmetics stay with that context.
   const subject = useActiveSubject();
-  const { isAuthenticated } = useAuth();
-  // Subscribe so the "Unlocked" badge updates the moment a buy lands.
-  useRoadmapProgress();
-  useExtraUnlocks();
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   const handleBuy = (p: Product) => {
     const res = purchase(p.id);
-    const displayName =
-      p.kind === 'path' && p.topic ? t(categoryLabelKey(p.topic)) : t(`shop.item.${p.id}.name` as TranslationKey);
+    const displayName = t(`shop.item.${p.id}.name` as TranslationKey);
     if (res === 'ok') {
       setToast({ msg: t('shop.purchased', { name: displayName }), ok: true });
-      // Path purchases live in the synced roadmap blob — push immediately so
-      // the unlock follows the learner across devices.
-      if (p.kind === 'path' && isAuthenticated) {
-        pushProgressToServer().catch(() => {});
-      }
     } else if (res === 'owned') {
-      setToast({ msg: p.kind === 'path' ? t('shop.pathAlreadyUnlocked') : t('shop.alreadyOwned'), ok: false });
+      setToast({ msg: t('shop.alreadyOwned'), ok: false });
     } else {
       setToast({ msg: t('shop.insufficient'), ok: false });
     }
@@ -170,11 +140,6 @@ function Shop() {
               <IconTile size={32}>{icon}</IconTile>
               <Heading level={3}>{t(key)}</Heading>
             </HStack>
-            {kinds.includes('path') && (
-              <Text type="supporting" color="secondary">
-                {t('shop.section.pathsHint', { price: config.shop.pathUnlockPrice })}
-              </Text>
-            )}
           </VStack>
           {/* Style section: a live preview of YOUR avatar + name with the
               currently equipped ring/flair, so cosmetics are tangible before
@@ -182,19 +147,15 @@ function Shop() {
           {kinds.includes('ring') && <StylePreview />}
           <Grid columns={{ minWidth: 260, max: 3 }} gap={2} width="100%">
             {CATALOGUE.filter((p) => kinds.includes(p.kind))
-              // Path products exist for every subject; show only the active one's.
-              .filter((p) => p.kind !== 'path' || p.subject === subject.id)
               .map((p) => {
-                const ownedPath = p.kind === 'path' && p.topic ? isPathAlreadyUnlocked(p.topic) : false;
-                const price = priceOf(p, config);
+                const price = priceOf(p);
                 return (
                   <ProductCard
                     key={p.id}
                     product={p}
                     price={price}
-                    owned={p.kind === 'path' ? ownedPath : inv.owned.includes(p.id)}
+                    owned={inv.owned.includes(p.id)}
                     equipped={inv.ring === p.id || inv.flair === p.id}
-                    charges={p.kind === 'booster' ? inv.doubleXp : 0}
                     canAfford={tokens >= price}
                     onBuy={() => handleBuy(p)}
                     onEquip={() => equip(p.id)}
@@ -221,25 +182,17 @@ interface ProductCardProps {
   price: number;
   owned: boolean;
   equipped: boolean;
-  charges: number;
   canAfford: boolean;
   onBuy: () => void;
   onEquip: () => void;
 }
 
-function ProductCard({ product, price, owned, equipped, charges, canAfford, onBuy, onEquip }: ProductCardProps) {
+function ProductCard({ product, price, owned, equipped, canAfford, onBuy, onEquip }: ProductCardProps) {
   const t = useT();
-  const isBooster = product.kind === 'booster';
-  const isPath = product.kind === 'path';
-  const name = isPath && product.topic
-    ? t('shop.path.name', { topic: t(categoryLabelKey(product.topic)) })
-    : t(`shop.item.${product.id}.name` as TranslationKey);
-  const desc = isPath
-    ? t('shop.path.desc')
-    : t(`shop.item.${product.id}.desc` as TranslationKey);
+  const name = t(`shop.item.${product.id}.name` as TranslationKey);
+  const desc = t(`shop.item.${product.id}.desc` as TranslationKey);
 
-  // Accent-tinted price pill with a mini token coin — reads as "spend me",
-  // coloured by the product's own accent (path topics) or the brand accent.
+  // Accent-tinted price badge keeps cost visible without implying performance.
   const accent = product.color ?? 'var(--brand-accent)';
   const priceBadge = (
     <span
@@ -264,13 +217,7 @@ function ProductCard({ product, price, owned, equipped, charges, canAfford, onBu
 
   // The action shown in the card footer depends on the product kind + state.
   let action;
-  if (isPath) {
-    action = owned ? (
-      <Badge variant="success" label={t('shop.pathUnlocked')} />
-    ) : (
-      <Button size="sm" variant="primary" label={t('shop.unlockPath')} isDisabled={!canAfford} onClick={onBuy} />
-    );
-  } else if (!isBooster && owned) {
+  if (owned) {
     // Ring / flair the learner already owns: toggle equip (idempotent).
     action = (
       <Button
@@ -283,11 +230,6 @@ function ProductCard({ product, price, owned, equipped, charges, canAfford, onBu
   } else {
     action = (
       <HStack gap={1} align="center">
-        {isBooster && charges > 0 && (
-          <Text type="supporting" color="accent" weight="bold" textWrap="nowrap">
-            {t('shop.armed', { count: charges })}
-          </Text>
-        )}
         <Button size="sm" variant="primary" label={t('shop.buy')} isDisabled={!canAfford} onClick={onBuy} />
       </HStack>
     );

@@ -24,7 +24,6 @@ import {
 import { rankLabelKeyFor, getTrack } from './tracks';
 import type { TranslationKey } from '../i18n/translations';
 import { awardTokens, tokensFromXp } from './tokens';
-import { consumeDoubleXpCharge } from './shop';
 import { getSubject, useSubject, isSubjectId, topicSetForSubject, type SubjectId } from './subjects';
 
 // v1 held ONE global accumulator shared by every subject; v2 keys XP by subject.
@@ -170,10 +169,6 @@ function reconcileRank(announce: boolean): LevelInfo {
 export function awardQuestXp(amount: number, source: 'quiz' | 'practice'): void {
   let add = clampXp(amount);
   if (add <= 0) return;
-  // A Double-XP booster bought in this subject's Shop doubles the next quiz's reward.
-  if (source === 'quiz' && consumeDoubleXpCharge()) {
-    add = clampXp(add * 2);
-  }
   const subject = getSubject();
   writeQuest(subject, readQuest(subject) + add);
   awardTokens(tokensFromXp(add));

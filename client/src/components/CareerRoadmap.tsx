@@ -1,7 +1,7 @@
 // "Roadmap" — an honest, market-grounded picture of what it takes to become a
 // senior full-stack engineer, wired to the learner's actual progress on the
-// StudyShark learning path. It deliberately separates "what StudyShark can teach
-// you" (the four knowledge pillars, with live completion %) from "what only the
+// devShark learning path. It deliberately separates "what devShark can teach
+// you" (the five knowledge pillars, with live completion %) from "what only the
 // real world can" (the Beyond list) so the page never over-promises.
 //
 // Redesigned on the Astryx design system: Astryx typography, tinted Cards, a
@@ -38,17 +38,15 @@ import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
 import { levelForXp, getCareerRanks } from '../lib/leveling';
 import RoadmapTree from './RoadmapTree';
-import { SwimCta } from './landing/LandingKit';
 import './DeepEndScreens.css';
-import { TrophyIcon } from './ui/icons';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
 // Tinted Card variants cycle across the pillars so each knowledge area reads as
 // its own category — adapts to light/dark automatically. The tint alone is the
 // differentiator; pillar titles stay clean text.
-type CardVariant = 'green' | 'blue' | 'purple' | 'teal' | 'orange';
-const PILLAR_VARIANTS: CardVariant[] = ['green', 'blue', 'purple', 'teal', 'orange'];
+type CardVariant = 'green' | 'blue' | 'teal' | 'orange';
+const PILLAR_VARIANTS: CardVariant[] = ['green', 'blue', 'teal', 'orange', 'green'];
 
 interface Area {
   topic: RoadmapTopic;
@@ -169,66 +167,6 @@ export default function CareerRoadmap() {
   const reachedSenior = seniorRank ? totalXp >= seniorRank.minXp : false;
   const xpToSenior = seniorRank ? Math.max(0, seniorRank.minXp - totalXp) : 0;
 
-  const selectedTrack = tracksForSubject(subject)[track];
-  const ladderStages = selectedTrack.stages.map((stage, index) => {
-    const topics = stage.topics;
-    const total = topics.reduce((sum, topic) => sum + levelsFor(topic), 0);
-    const passed = topics.reduce((sum, topic) => sum + Math.min(passedLevelCount(progress, topic), levelsFor(topic)), 0);
-    const completion = pct(passed, total);
-    return { index, topics, completion, done: completion === 100, current: completion > 0 && completion < 100 };
-  });
-
-  if (ladderStages.length >= 0) {
-    return (
-      <div className="de-page">
-        <VStack gap={3}>
-          <div className="ss-pop">
-            <VStack gap={1}>
-              <span className="ss-kicker">{kicker}</span>
-              <Heading level={1} type="display-3">{t('careerRoadmap.editorialTitle')}</Heading>
-              <Text type="large" color="secondary">{t('careerRoadmap.editorialBody')}</Text>
-            </VStack>
-          </div>
-          <div className="de-track-cards" role="radiogroup" aria-label={t('careerRoadmap.chooseTrack')}>
-            {TRACK_ORDER.map((trackId) => (
-              <button key={trackId} type="button" className="de-track-card" role="radio" aria-checked={track === trackId} aria-pressed={track === trackId} onClick={() => setTrack(trackId)}>
-                <strong>{t(trackLabelKey(subject, trackId))}</strong>
-                <span>{t(trackBlurbKey(subject, trackId))}</span>
-              </button>
-            ))}
-          </div>
-          <section className="de-ladder" aria-label={t(trackLabelKey(subject, track))}>
-            {ladderStages.map((stage, index) => (
-              <div key={index} className={`de-stage${stage.done ? ' is-done' : stage.current || (index === 0 && stage.completion === 0) ? ' is-current' : ''}`}>
-                <div className="de-stage__rail">
-                  <span className="de-stage__node">{stage.done ? '✓' : index + 1}</span>
-                  {index < ladderStages.length - 1 && <span className="de-stage__line" />}
-                </div>
-                <div className="de-stage__body">
-                  <div className="de-stage__head">
-                    <strong>{t(stageTitleKey(subject, track, index))}</strong>
-                    <span className="de-stage__tag">{stage.done ? t('careerRoadmap.stageDone') : stage.current ? t('careerRoadmap.stageCurrent') : t('careerRoadmap.stageAhead')}</span>
-                  </div>
-                  <div className="de-stage__chips">
-                    {stage.topics.map((topic) => <span key={topic}>{t(categoryLabelKey(topic))}</span>)}
-                  </div>
-                </div>
-              </div>
-            ))}
-            <div className="de-stage de-stage--finish">
-              <div className="de-stage__rail"><span className="de-stage__node"><TrophyIcon size={18} /></span></div>
-              <div className="de-stage__body">
-                <div className="de-stage__head"><strong style={{ color: '#c77f00' }}>{t('careerRoadmap.seniorReady')}</strong></div>
-                <Text type="supporting" color="secondary">{t('careerRoadmap.skillCheckLead')}</Text>
-              </div>
-              <SwimCta label={t('roadmap.skillCheckCta')} dir={-1} onClick={() => navigate('/learn')} />
-            </div>
-          </section>
-        </VStack>
-      </div>
-    );
-  }
-
   return (
     <div style={{ width: '100%', maxWidth: 780, margin: '0 auto' }}>
       <VStack gap={4}>
@@ -279,7 +217,7 @@ export default function CareerRoadmap() {
         {/* Where you are now — the headline stat for the chosen track. */}
         <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
         <div style={{ position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-container)', width: '100%' }}>
-        <Card variant="muted" padding={5} width="100%">
+          <Card variant="muted" padding={5} width="100%">
           <VStack gap={2}>
             <HStack justify="between" align="center" gap={1} wrap="wrap">
               <Text type="label" color="secondary">

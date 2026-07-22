@@ -669,7 +669,7 @@ export function installProgressSyncFlusher(): void {
 // merge each with whatever is on this device (progress: latch pass + max
 // score; unlocks: union; balances: per-subject max — tokens can only grow;
 // owned items: per-subject union; equipped items: server wins if valid,
-// otherwise local; doubleXp charges: per-subject max), store the union
+// otherwise local; retired doubleXp data is cleared), store the union
 // locally, and push it back so both sides agree. A legacy account blob (one
 // pre-split wallet/inventory, no per-subject maps) is attributed to the
 // active subject — the same rule the local stores use when migrating.

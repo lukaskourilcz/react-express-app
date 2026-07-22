@@ -168,8 +168,9 @@ function sanitizeInventory(input: unknown): InventoryBlob {
     : [];
   const ring = isSafeId(inv.ring) && owned.includes(inv.ring) ? inv.ring : null;
   const flair = isSafeId(inv.flair) && owned.includes(inv.flair) ? inv.flair : null;
-  const dx = typeof inv.doubleXp === 'number' && Number.isFinite(inv.doubleXp) ? Math.max(0, Math.floor(inv.doubleXp)) : 0;
-  return { owned, ring, flair, doubleXp: Math.min(1000, dx) };
+  // Retained in the wire shape for old clients, but boosters are retired:
+  // shop purchases may never alter XP, scores, access, or ranking fairness.
+  return { owned, ring, flair, doubleXp: 0 };
 }
 
 // Rebuild a clean extras blob from untrusted input: only known topic ids,

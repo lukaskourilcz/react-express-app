@@ -43,7 +43,7 @@ import('./lib/roadmap').then(({ registerAccountExtras, installProgressSyncFlushe
       }),
       (server) => {
         // Per subject: max-merge balances; union owned; server-wins on
-        // equipped (if valid), max on doubleXp charges — never revoke on sync.
+        // equipped cosmetics remain valid; retired booster data is cleared.
         tok.mergeBalancesFromServer(server.wallets);
         sh.mergeInventoriesFromServer(server.inventories);
       },

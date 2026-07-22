@@ -1,0 +1,4 @@
+interface:
+  display_name: "Shark Release Validation"
+  short_description: "Validate scope, integrity, build, tests, and Git"
+  default_prompt: "Use $shark-release-validation to run the real release contract and report only checks that executed."

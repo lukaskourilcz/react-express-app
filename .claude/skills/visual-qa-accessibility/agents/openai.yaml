@@ -1,0 +1,4 @@
+interface:
+  display_name: "Visual QA and Accessibility"
+  short_description: "Responsive, theme, locale, and WCAG review"
+  default_prompt: "Use $visual-qa-accessibility to verify this route group across widths, themes, locales, keyboard, and assistive states."

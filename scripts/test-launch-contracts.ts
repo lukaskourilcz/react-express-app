@@ -20,6 +20,7 @@ import {
   encodeQuizResultReceipt,
   encodeSession,
   createChallengeRun,
+  stableAttemptId,
 } from '../lib/quiz-tokens';
 import { checkRateLimit, isDistributedRateLimitEnabled } from '../lib/rate-limit';
 import healthHandler from '../api/health';
@@ -83,6 +84,17 @@ async function main() {
   const middle = Math.floor(parts[2].length / 2);
   parts[2] = `${parts[2].slice(0, middle)}${parts[2][middle] === 'A' ? 'B' : 'A'}${parts[2].slice(middle + 1)}`;
   assert.equal(decodeSession(parts.join('.')), null, 'tampered token must fail closed');
+
+  const dailyAttempt = stableAttemptId('daily', 'user-0001', 'geography', '2026-07-21');
+  assert.match(dailyAttempt, /^[A-Za-z0-9_-]{32}$/);
+  assert.equal(
+    stableAttemptId('daily', 'user-0001', 'geography', '2026-07-21'),
+    dailyAttempt,
+    'the same server-defined daily attempt must receive the same claim id',
+  );
+  assert.notEqual(stableAttemptId('daily', 'user-0002', 'geography', '2026-07-21'), dailyAttempt);
+  assert.notEqual(stableAttemptId('daily', 'user-0001', 'geography', '2026-07-22'), dailyAttempt);
+  assert.notEqual(stableAttemptId('daily', 'user-0001', 'math', '2026-07-21'), dailyAttempt);
 
   const run = createChallengeRun();
   assert.equal(decodeChallengeRun(run.runToken)?.runId, run.runId);
@@ -197,6 +209,15 @@ async function main() {
   const multiplayerMigration = readFileSync(join(process.cwd(), 'supabase-schema-005.sql'), 'utf8');
   assert.match(multiplayerMigration, /DROP FUNCTION IF EXISTS public\.match_scoreboard\(UUID\)/);
 
+  const shopSource = readFileSync(join(process.cwd(), 'client/src/lib/shop.ts'), 'utf8');
+  const catalogueSource = shopSource.match(/const STATIC_CATALOGUE:[^=]+= \[([\s\S]*?)\n\];/)?.[1];
+  assert.ok(catalogueSource, 'shop catalogue must remain statically inspectable');
+  assert.match(shopSource, /type ProductKind = 'ring' \| 'flair'/);
+  assert.doesNotMatch(catalogueSource, /kind:\s*['"](?:path|booster|boost|xp)['"]/, 'shop catalogue must remain cosmetic-only');
+  assert.doesNotMatch(shopSource, /\bconsumeDoubleXpCharge\b/, 'shop must never influence XP awards');
+  const xpSource = readFileSync(join(process.cwd(), 'client/src/lib/xp.ts'), 'utf8');
+  assert.doesNotMatch(xpSource, /\bconsumeDoubleXpCharge\b/, 'XP awards must remain independent of shop inventory');
+
   const rateReq = { headers: { 'x-forwarded-for': `contract-${Date.now()}` }, socket: {} } as never;
   const rateRes = mockResponse();
   const policy = { key: `contract-${Date.now()}`, capacity: 2, refillPerSecond: 0.0001 };
@@ -237,7 +258,7 @@ async function main() {
     assert.ok(lesson.questions?.every((question) => !('correctAnswer' in question)));
   }
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, rate limiting, health, and 12-function budget.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, and 12-function budget.');
 }
 
 void main().catch((error) => {
