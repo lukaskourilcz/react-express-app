@@ -1,6 +1,6 @@
 ---
 name: higgsfield-production
-description: Audit, generate, select, optimize, integrate, and document production media through the Higgsfield MCP for StudyShark, devShark, subject campaigns, Open Graph art, launch assets, chapter plates, empty states, or restrained motion.
+description: Audit, research providers, generate, select, optimize, integrate, and document StudyShark/devShark production media through Higgsfield or a verified cheap/free alternative when Higgsfield is unavailable, restricted, expensive, or unsuitable.
 ---
 
 # Higgsfield Production
@@ -22,7 +22,11 @@ Use this skill with `shark-product-context` and `deep-end-design-system`. Read `
 4. Obtain caller authorization before an expensive generation when the request did not already authorize production spending.
 5. Never buy credits, start a subscription, enable auto-refill, or change a plan without explicit user authorization.
 
-If generation returns a plan/trial restriction, retry at most once after confirming workspace selection. Record the exact error and request ID, keep the repository free of fake outputs, and continue only the non-generation preparation that remains useful.
+If generation returns a plan/trial restriction, retry at most once after confirming workspace selection. Record the exact error and request ID, then perform current web research into at least three cheap/free alternatives before deciding to wait.
+
+Use official pricing, license/terms, privacy/data-use, retention/training and model documentation. Compare commercial rights, real cost for the required batch, account/card requirements, watermarks, export resolution/formats, aspect ratios, style/no-text reliability, reference support and website/API/MCP availability. Record dated sources in `docs/design/higgsfield-opportunity-audit.md`. Do not use affiliate roundups as authority.
+
+Never create an account, accept paid terms, purchase credits, change plans, enable auto-refill, expose credentials or upload sensitive material without explicit owner authorization. When the safest free option is website-only, provide exact prompts and filenames for owner generation, then inspect the uploaded originals.
 
 ## Generate and select
 
@@ -45,4 +49,4 @@ If generation returns a plan/trial restriction, retry at most once after confirm
 
 Inspect the integrated result in StudyShark and devShark, EN/CS, light/dark, reduced motion, and relevant widths from 360 through 1440. Measure output bytes and verify lazy/preload behavior, crop stability, contrast behind deterministic text, and lack of layout shift.
 
-Update `docs/design/generated-media-manifest.md` with the actual tool/model, cost, complete prompt, negative prompt, references, job IDs, three reviewed directions, rejection reasons, selected variant, dimensions, crops, output paths, optimization, alt classification, fallback, provenance, restrictions, and regeneration steps. Never record credentials or claim a generation/check that did not succeed.
+Update `docs/design/generated-media-manifest.md` with the provider, model/version, dated official pricing/license/privacy sources, actual tool/workflow, cost, complete prompt, negative prompt, references, job IDs, three reviewed directions, rejection reasons, selected variant, dimensions, crops, output paths, optimization, alt classification, fallback, provenance, restrictions, and regeneration steps. Never record credentials or claim a generation/check that did not succeed.

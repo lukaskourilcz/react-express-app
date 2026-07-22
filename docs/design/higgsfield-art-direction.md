@@ -53,17 +53,17 @@ Use burnt-orange contours, clear-blue measured geometry, graphite archival strat
 
 Use the devShark green sparingly against ocean ink and off-white paper. Any code, syntax, labels or UI shown in final campaign compositions must come from deterministic HTML/SVG or authentic application captures.
 
-## Live MCP workflow
+## Provider-neutral production workflow
 
-1. Discover and select the intended workspace with `list_workspaces` and `select_workspace`.
-2. Check credits with `balance`.
-3. Call `models_explore` with `recommend`, then `get` when constraints need confirmation.
-4. Preflight with `get_cost: true`; do not assume model parameters.
-5. Generate the three directions separately and poll each job through `job_display`.
+1. Try the connected Higgsfield workflow with a bounded capability and cost check.
+2. If Higgsfield is unavailable, trial-restricted, too expensive or unsuitable, perform the mandatory current alternative-provider research in `higgsfield-opportunity-audit.md` before waiting.
+3. Select a provider only after verifying official pricing, commercial-use rights, privacy/data use, watermarking, export quality and required aspect ratios. Do not perform signup, purchase or billing changes without owner authorization.
+4. For Higgsfield, discover/select the workspace, check credits, use `models_explore`, preflight with `get_cost: true`, generate separately and poll through `job_display`.
+5. For another provider, record the exact service, model/version, website/API workflow, dated official sources and any usage restrictions before generation.
 6. Inspect, reject, refine, generate 16:9 and 9:16 finals, and derive the square crop only after crop safety is verified.
 7. Download selected results only, overlay real typography/UI deterministically, optimize to WebP/AVIF, integrate, render and update the manifest.
 
-On 22 July 2026 this workflow reached cost preflight but submission was blocked by the active trial. Do not retry repeatedly or substitute another generator; resume after the workspace permits MCP generation.
+On 22 July 2026 the Higgsfield workflow reached cost preflight but submission was blocked by the active trial. Do not retry it repeatedly. Research current cheap/free alternatives and either use a verified owner-authorized option or provide prompts for manual website generation and uploaded originals.
 
 ## Motion language
 

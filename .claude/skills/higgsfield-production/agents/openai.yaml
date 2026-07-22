@@ -1,4 +1,4 @@
 interface:
-  display_name: "Higgsfield Production"
-  short_description: "Produce verified Shark-family brand media"
-  default_prompt: "Use $higgsfield-production to audit, generate, select, optimize, integrate, and document one Shark-family media asset."
+  display_name: "Shark Media Production"
+  short_description: "Compare generators and produce verified media"
+  default_prompt: "Use $higgsfield-production to compare Higgsfield with current cheap/free alternatives, then produce and document one verified Shark-family media asset."

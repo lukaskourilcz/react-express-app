@@ -2,7 +2,7 @@
 
 Updated: 22 July 2026.
 
-No generated production media has been accepted. The Higgsfield MCP is connected, but the selected Plus workspace remains in an active trial that permits generation only on the Higgsfield website. MCP generation submissions were rejected before a job was created. No substitute generator or fake output was used.
+No generated production media has been accepted. The Higgsfield MCP is connected, but the selected Plus workspace remains in an active trial that permits generation only on the Higgsfield website. MCP generation submissions were rejected before a job was created. No alternative provider has yet been selected; the next agent must complete the dated provider comparison required by `higgsfield-opportunity-audit.md` before using one.
 
 ## Live MCP execution record
 
@@ -29,12 +29,13 @@ The attempted StudyShark compositions were Charted Archipelago, Field Cabinet an
 
 ## Required production continuation
 
-1. Activate a paid, non-trial Higgsfield workspace for MCP use; do not change billing automatically.
-2. Re-run the three StudyShark and three devShark directions in `higgsfield-art-direction.md` at review resolution.
-3. Inspect every output and record visual rejection reasons. Do not select the first merely usable result.
-4. Refine one direction per product, generate 16:9 and 9:16 finals, verify a square crop, and create deterministic EN/CS typography and authentic-UI composites.
-5. Optimize selected stills, integrate product-aware metadata without hard-coded deployment URLs, validate the matrix, then replace this continuation section with accepted asset records.
+1. Research at least three current cheap/free alternatives from official pricing, license, privacy and model documentation; record the dated comparison and source links in `higgsfield-opportunity-audit.md`.
+2. Recommend Higgsfield, a verified alternative, or manual owner generation based on cost, commercial rights, privacy, watermark-free export and output quality. Do not sign up, purchase or alter billing automatically.
+3. Run the three StudyShark and three devShark directions in `higgsfield-art-direction.md` at review resolution using the owner-authorized provider, or give the owner exact website prompts and inspect the uploaded originals.
+4. Inspect every output and record visual rejection reasons. Do not select the first merely usable result.
+5. Refine one direction per product, generate 16:9 and 9:16 finals, verify a square crop, and create deterministic EN/CS typography and authentic-UI composites.
+6. Optimize selected stills, integrate product-aware metadata without hard-coded deployment URLs, validate the matrix, then replace this continuation section with accepted asset records.
 
 ## Accepted generated asset record format
 
-Every accepted entry must include: asset ID, purpose, product, subject, placement, workflow/tool and version, complete prompt, negative prompt, references, three reviewed variants, selected variant, rejection reasons, dimensions/crops, output paths, optimization, alt classification, motion poster/fallback, provenance, usage restrictions, and exact regeneration steps. API credentials are never recorded.
+Every accepted entry must include: asset ID, purpose, product, subject, placement, provider, model/version, dated official pricing/license/privacy sources, workflow/tool, complete prompt, negative prompt, references, three reviewed variants, selected variant, rejection reasons, dimensions/crops, output paths, optimization, alt classification, motion poster/fallback, provenance, usage restrictions, and exact regeneration steps. API credentials are never recorded.

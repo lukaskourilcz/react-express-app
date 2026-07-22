@@ -91,7 +91,9 @@ Challenge proof collection is materially stronger, but without a server-side app
 
 The Higgsfield MCP became available after restart and its real workspace, balance, model discovery and cost-preflight tools were exercised. The private Plus workspace was selected and reports 10 credits, but it remains in an active trial. `recraft_v4_1` and `z_image` reject MCP submissions with `only_website_usage_on_trial_is_available`; `soul_location` also failed before creating a job. No credits were consumed, no substitute generator or fake asset was used, and the existing solid-green OG fallback was not misrepresented as launch art.
 
-The repository now includes the `higgsfield-production` skill, `higgsfield-art-director` specialist and `generate-shark-media` command. `docs/design/higgsfield-opportunity-audit.md`, `higgsfield-art-direction.md` and `generated-media-manifest.md` contain the verified capability state, six product direction briefs, exact failed request IDs and the production continuation workflow. Resume generation only after the owner activates a paid non-trial workspace that permits MCP use; do not change billing automatically.
+The repository now includes the `higgsfield-production` skill, `higgsfield-art-director` specialist and `generate-shark-media` command. `docs/design/higgsfield-opportunity-audit.md`, `higgsfield-art-direction.md` and `generated-media-manifest.md` contain the verified capability state, six product direction briefs, exact failed request IDs and the production continuation workflow.
+
+The next agent must not simply wait for a paid Higgsfield workspace. It must first perform current web research into at least three cheap or free image-generation alternatives, using official pricing, licensing, commercial-use, privacy, retention/training, watermark, output-resolution, aspect-ratio, export and API/MCP documentation. Record dated findings and source links in `docs/design/higgsfield-opportunity-audit.md`, recommend the lowest-risk viable path, and provide website prompts when manual owner generation is the best free route. Do not register accounts, accept paid terms, purchase credits, enable auto-refill, upload sensitive material or switch providers through a state-changing action without explicit owner authorization.
 
 Produce these items only where the real interface still benefits:
 
@@ -104,7 +106,7 @@ Produce these items only where the real interface still benefits:
 7. StudyShark and devShark campaign crops in landscape, portrait, and square formats; EN/CS messaging must be real overlay text, never generated text.
 8. Optional motion studies only after stills succeed: a subtle water/current or fin pass for public landings, with optimized WebM/MP4, poster still, reduced-motion fallback, and no loading in core learning/admin bundles.
 
-For every accepted asset, record the actual tool/workflow, prompts, job IDs, rejected variants, crop behavior, optimization, provenance, accessibility classification, output path, and regeneration steps in `docs/design/generated-media-manifest.md`. Do not create output directories or runtime references until a production asset actually exists.
+For every accepted asset, record the provider, model/version, dated pricing/license sources, actual tool/workflow, prompts, job IDs, rejected variants, crop behavior, optimization, provenance, accessibility classification, output path, usage restrictions and regeneration steps in `docs/design/generated-media-manifest.md`. Do not create output directories or runtime references until a production asset actually exists.
 
 ## Pre-existing unrelated work
 

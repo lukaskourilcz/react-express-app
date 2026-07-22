@@ -8,7 +8,25 @@ The Higgsfield MCP is connected and its live tool catalog was verified on 22 Jul
 
 Production generation is nevertheless blocked by account state: the workspace is in an active trial and the image backends reject MCP submissions. `recraft_v4_1` and `z_image` return `only_website_usage_on_trial_is_available`; `soul_location` returns a generic provider failure. Selecting the workspace explicitly and retrying did not change the result. No output job was created, no credit was consumed, and no generated asset is claimed. Exact attempts and request IDs are recorded in `generated-media-manifest.md`.
 
-The next generation run requires a paid, non-trial workspace that permits MCP generation. Agents must not buy a plan, enable auto-refill or change billing without explicit owner authorization. Until then, keep deterministic SVG marks, CSS/SVG subject plates and authentic interface captures; do not replace the blocked assets with another generator or a fake placeholder.
+The next agent must not treat a paid Higgsfield upgrade as the only path. Because pricing, free tiers, licenses and model availability change frequently, it must browse current official sources and compare at least three cheap or free image-generation services before deciding whether to wait for Higgsfield, use an alternative, or ask the owner to generate manually on a website. Agents must not buy a plan, create an external account, accept paid terms, enable auto-refill, expose credentials or upload sensitive material without explicit owner authorization. Keep deterministic SVG marks, CSS/SVG subject plates and authentic interface captures regardless of provider; never use a fake placeholder.
+
+## Mandatory alternative-provider research
+
+Update this section with a dated comparison before the next generation attempt. Use official provider pricing, terms/license, privacy/data-use, retention/training and model documentation; do not rely on affiliate roundups or stale remembered pricing.
+
+Compare at least three providers on:
+
+- genuinely free allowance or estimated cost for six review images plus two finals;
+- commercial-use and redistribution rights for generated outputs;
+- whether prompts/uploads may be retained or used for training, and available opt-outs;
+- account, credit-card and regional requirements;
+- watermarking and original-file export;
+- 16:9 and 9:16 support, output resolution, upscale/outpaint support and file formats;
+- style adherence, no-text reliability and reference-image support;
+- website-only, API, MCP or automation availability;
+- provenance information that can be recorded in the media manifest.
+
+Prefer a no-card free tier or low capped cost with clear commercial rights and clean original exports. If the best option requires manual website use, give the owner exact prompts and filenames, then inspect the uploaded originals. A free service is not acceptable when its license, privacy posture, watermark or output quality conflicts with the product.
 
 ## Opportunity classification
 
