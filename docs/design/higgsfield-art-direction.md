@@ -33,7 +33,38 @@ Avoid central floating objects on gradients, symmetric stock-poster composition,
 9. Optimization, loading, alt classification and static fallback.
 10. Manifest/provenance update and in-context QA.
 
+## Prepared product directions
+
+These are composition briefs, not accepted outputs. Generate each as a separate direction so the review compares real alternatives rather than three seeds of one prompt.
+
+### StudyShark
+
+1. **Charted archipelago** — six abstract subject fragments form one connected field-journal landscape on the right; a thin waterline and baseline-correct fin unify them; the left 42% remains text-safe.
+2. **Field cabinet** — six cropped paper tabs behave like a restrained museum specimen cabinet over ocean-ink stock; the left 45% is quiet negative space.
+3. **Coastal transect** — one sweeping horizontal paper transect transitions through the six subject languages above a lower-quarter waterline; avoid a six-card collage.
+
+Use burnt-orange contours, clear-blue measured geometry, graphite archival strata, teal specimen linework, warm-brown board geometry and restrained deep-red probability arcs. None may present factual content.
+
+### devShark
+
+1. **System bathymetry** — modular architecture nodes and dependency currents descend like a measured ocean-depth diagram on the right; no terminal or readable code.
+2. **Build ledger** — tactile paper modules, test marks and deployment-flow geometry form a rigorous engineering notebook composition; no fake product dashboard.
+3. **Architecture current** — one continuous technical flow crosses layered ocean-ink paper like a system diagram carried by a current; keep a strong text-safe left region.
+
+Use the devShark green sparingly against ocean ink and off-white paper. Any code, syntax, labels or UI shown in final campaign compositions must come from deterministic HTML/SVG or authentic application captures.
+
+## Live MCP workflow
+
+1. Discover and select the intended workspace with `list_workspaces` and `select_workspace`.
+2. Check credits with `balance`.
+3. Call `models_explore` with `recommend`, then `get` when constraints need confirmation.
+4. Preflight with `get_cost: true`; do not assume model parameters.
+5. Generate the three directions separately and poll each job through `job_display`.
+6. Inspect, reject, refine, generate 16:9 and 9:16 finals, and derive the square crop only after crop safety is verified.
+7. Download selected results only, overlay real typography/UI deterministically, optimize to WebP/AVIF, integrate, render and update the manifest.
+
+On 22 July 2026 this workflow reached cost preflight but submission was blocked by the active trial. Do not retry repeatedly or substitute another generator; resume after the workspace permits MCP generation.
+
 ## Motion language
 
 If justified: slow current, subtle paper parallax, gentle wave, or a fin crossing a waterline. Never use rapid camera movement, zoom tunnels, energetic gaming effects or a loop that competes with reading. Always provide a poster and freeze under reduced motion.
-

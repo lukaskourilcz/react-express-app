@@ -6,7 +6,7 @@ StudyShark contains the six general-learning subjects. devShark is the standalon
 
 All learning remains free. Support and cosmetics are fairness-neutral. The server remains authoritative for answers, grading, scores, XP, subject/product scope, roles, and claims. Keep Supabase/RLS/service-role isolation and exactly twelve physical TypeScript handlers under `api/`. Do not add native/Expo code.
 
-Extend Astryx and Deep End v2 through `client/src/styles/astryx-theme.css`, `client/src/styles/app-shell.css`, `DESIGN_RULES.md`, `client/src/components/ui/`, and existing Shark/landing primitives. Do not add another UI, icon, dialog, toast, localization, state, product, or subject system. Avoid generic AI visual language; Higgsfield work is deferred until its MCP is available.
+Extend Astryx and Deep End v2 through `client/src/styles/astryx-theme.css`, `client/src/styles/app-shell.css`, `DESIGN_RULES.md`, `client/src/components/ui/`, and existing Shark/landing primitives. Do not add another UI, icon, dialog, toast, localization, state, product, or subject system. Use `.claude/skills/higgsfield-production/SKILL.md` for meaningful media; keep authentic UI and factual visuals deterministic, review three directions, record provenance, and never alter billing without explicit owner authorization.
 
 Every screen change covers relevant loading, empty, error, offline, auth/permission, disabled, success, destructive, stale/expired, long-content, and narrow states. Validate focus/keyboard, names/errors/status, non-color cues, reduced motion, touch targets, zoom/reflow, light/dark, EN/CS, and widths 360 through 1440.
 

@@ -44,9 +44,8 @@
 - `npm run typecheck:api`
 - `npm run test:launch`
 - `npm run build`
-- `npm run test:responsive` when a browser is available
+- `npm run check:responsive` against a running build preview
 - `git diff --check`
 - Root and client production dependency audits
 
 The responsive harness reports viewport overflow, escaping children, missing route headings and browser console errors. Screenshots are artifacts for failed probes or explicit review runs, not committed production data.
-

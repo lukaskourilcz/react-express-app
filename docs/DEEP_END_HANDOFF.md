@@ -87,9 +87,13 @@ Final validation for the current handoff used `/opt/homebrew/bin/node` 23.1.0 (t
 
 Challenge proof collection is materially stronger, but without a server-side append-only attempt ledger a determined client may still omit earlier proof batches. Do not claim cryptographic completeness. A complete fix must fit an existing typed handler and preserve the twelve-function limit.
 
-## Deferred Higgsfield AI tasks
+## Higgsfield production continuation
 
-Higgsfield was unavailable and the user explicitly deferred all research, prompt work, generation, selection, and integration. No substitute generator, fake UI, placeholder raster, or speculative asset reference was added. When the MCP becomes available, evaluate and produce these items only where the real interface still benefits:
+The Higgsfield MCP became available after restart and its real workspace, balance, model discovery and cost-preflight tools were exercised. The private Plus workspace was selected and reports 10 credits, but it remains in an active trial. `recraft_v4_1` and `z_image` reject MCP submissions with `only_website_usage_on_trial_is_available`; `soul_location` also failed before creating a job. No credits were consumed, no substitute generator or fake asset was used, and the existing solid-green OG fallback was not misrepresented as launch art.
+
+The repository now includes the `higgsfield-production` skill, `higgsfield-art-director` specialist and `generate-shark-media` command. `docs/design/higgsfield-opportunity-audit.md`, `higgsfield-art-direction.md` and `generated-media-manifest.md` contain the verified capability state, six product direction briefs, exact failed request IDs and the production continuation workflow. Resume generation only after the owner activates a paid non-trial workspace that permits MCP use; do not change billing automatically.
+
+Produce these items only where the real interface still benefits:
 
 1. Shark-family fin-and-waterline mark studies for favicon/PWA/social-avatar refinement; convert the selected geometry into reviewed deterministic SVG rather than shipping a raw raster.
 2. StudyShark Open Graph/launch composition representing geography, math, history, biology, chess, and poker with text-safe negative space; place through product-aware metadata and overlay real EN/CS text deterministically.
@@ -100,7 +104,7 @@ Higgsfield was unavailable and the user explicitly deferred all research, prompt
 7. StudyShark and devShark campaign crops in landscape, portrait, and square formats; EN/CS messaging must be real overlay text, never generated text.
 8. Optional motion studies only after stills succeed: a subtle water/current or fin pass for public landings, with optimized WebM/MP4, poster still, reduced-motion fallback, and no loading in core learning/admin bundles.
 
-For every accepted asset, record the actual tool/workflow, prompts, rejected variants, crop behavior, optimization, provenance, accessibility classification, output path, and regeneration steps in `docs/design/generated-media-manifest.md`. Do not create output directories or references until a production asset actually exists.
+For every accepted asset, record the actual tool/workflow, prompts, job IDs, rejected variants, crop behavior, optimization, provenance, accessibility classification, output path, and regeneration steps in `docs/design/generated-media-manifest.md`. Do not create output directories or runtime references until a production asset actually exists.
 
 ## Pre-existing unrelated work
 

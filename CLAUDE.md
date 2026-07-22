@@ -22,7 +22,7 @@ Search before creating. Reuse Astryx, existing `client/src/components/ui/`, land
 
 Handle relevant loading, empty, error, offline/reconnect, auth/permission, disabled, success, destructive, expired/stale, long-content, and narrow states. Validate keyboard/focus, non-color status, reduced motion, 44px targets, zoom/reflow, fixed-shell clearance, light/dark, EN/CS, and representative widths.
 
-Higgsfield production is deferred until its MCP exists. Never replace authentic UI with generated fake UI or add filler assets.
+Higgsfield production uses `.claude/skills/higgsfield-production/SKILL.md` and the three authoritative media documents under `docs/design/`. Generate only accepted high-value opportunities, discover live models/costs, review three real directions, preserve authentic UI and deterministic text, and record exact provenance. Never add filler, fake UI, or alter Higgsfield billing without explicit owner authorization.
 
 ## Working map
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Higgsfield Production"
+  short_description: "Produce verified Shark-family brand media"
+  default_prompt: "Use $higgsfield-production to audit, generate, select, optimize, integrate, and document one Shark-family media asset."
