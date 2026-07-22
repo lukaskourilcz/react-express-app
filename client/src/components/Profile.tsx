@@ -203,7 +203,7 @@ function ProfileBody({
                   <Avatar src={user.picture} name={user.name} alt="" size={64} />
                 </div>
                 <VStack gap={0.5}>
-                  <Heading level={3} maxLines={1}>
+                  <Heading level={1} maxLines={1}>
                     {flair ? `${flair} ` : ''}{user.name}
                   </Heading>
                   <Text type="supporting" color="secondary" maxLines={1}>

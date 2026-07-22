@@ -68,7 +68,7 @@ export function FadeFinCta({
       style={{
         position: 'relative', overflow: 'hidden', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         background: primary ? 'var(--brand-accent)' : 'var(--color-background-surface)',
-        color: primary ? '#fff' : 'var(--color-text-primary)',
+        color: primary ? 'var(--brand-on-accent)' : 'var(--color-text-primary)',
         border: primary ? 'none' : '1px solid var(--ss-card-edge)',
         borderRadius: 'var(--radius-element)', padding: '12px 22px',
         fontFamily: 'var(--font-family-body)', fontWeight: 600, fontSize: '1rem', cursor: disabled ? 'wait' : 'pointer', opacity: disabled ? 0.62 : 1,
@@ -78,7 +78,7 @@ export function FadeFinCta({
       }}
     >
       <span aria-hidden style={{ position: 'absolute', left: finLeft, bottom: Math.round(finSize * -0.25) + 'px', lineHeight: 0, opacity: hover ? 1 : 0, transition: 'opacity 0.35s ease', pointerEvents: 'none' }}>
-        <Fin size={finSize} color={primary ? '#fff' : accent} opacity={primary ? 0.35 : 0.22} />
+        <Fin size={finSize} color={primary ? 'var(--brand-on-accent)' : accent} opacity={primary ? 0.35 : 0.22} />
       </span>
       <span style={{ position: 'relative' }}>{label}</span>
     </button>
@@ -96,7 +96,7 @@ export function SwimCta({ label, onClick, dir, disabled, size = 'md' }: { label:
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       style={{
         position: 'relative', overflow: 'hidden', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        background: 'var(--brand-accent)', color: '#fff', border: 'none',
+        background: 'var(--brand-accent)', color: 'var(--brand-on-accent)', border: 'none',
         borderRadius: 'var(--radius-element)', padding: size === 'lg' ? '13px 26px' : '10px 18px',
         fontFamily: 'var(--font-family-body)', fontWeight: 600, fontSize: size === 'lg' ? '1rem' : '0.95rem',
         cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
@@ -112,7 +112,7 @@ export function SwimCta({ label, onClick, dir, disabled, size = 'md' }: { label:
           transition: `transform ${dir === 1 ? 3.8 : 2.6}s ease-in-out, opacity 0.4s ease`, pointerEvents: 'none',
         }}
       >
-        <Fin size={38} color="#fff" opacity={0.28} />
+        <Fin size={38} color="var(--brand-on-accent)" opacity={0.28} />
       </span>
       <span style={{ position: 'relative' }}>{label}</span>
     </button>
@@ -191,12 +191,12 @@ export function SampleCard({ chip, question }: { chip: string; question: SampleQ
 export function CheckpointNode({ label }: { label: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 110, flexShrink: 0 }}>
-      <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'rgba(245,166,35,0.14)', color: '#8a5700', border: '2px solid rgba(138,87,0,0.5)' }}>
+      <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'var(--ss-warning-soft)', color: 'var(--ss-warning)', border: '2px solid color-mix(in srgb, var(--ss-warning) 50%, transparent)' }}>
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
           <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
         </svg>
       </span>
-      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8a5700', whiteSpace: 'nowrap' }}>{label}</span>
+      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{label}</span>
     </div>
   );
 }

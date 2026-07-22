@@ -9,6 +9,7 @@ import DevLogs from './DevLogs';
 import DevSettings from './DevSettings';
 import DevQuality from './DevQuality';
 import './DevConsole.css';
+import { CURRENT_PRODUCT } from '../../lib/products';
 
 type Tab = 'questions' | 'triage' | 'quality' | 'flags' | 'logs' | 'settings';
 
@@ -44,7 +45,7 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
   return (
     <div className="dev-shell">
       <aside className="dev-sidebar" aria-label="Developer console">
-        <div className="dev-brand"><span className="dev-brand-fin" aria-hidden="true" /><div><strong>StudyShark</strong><span>Control room</span></div></div>
+        <div className="dev-brand"><span className="dev-brand-fin" aria-hidden="true" /><div><strong>{CURRENT_PRODUCT.brand}</strong><span>Control room</span></div></div>
 
         <div className="dev-context-card">
           <span className="dev-eyebrow">App context</span>

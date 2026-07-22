@@ -834,7 +834,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               gap: 12,
               padding: '14px 16px',
               border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-card)',
+              borderRadius: 'var(--radius-container)',
               background: practiceMode ? 'var(--ss-success-soft)' : 'var(--color-background-muted)',
               cursor: 'pointer',
               position: 'relative',
@@ -1145,10 +1145,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           maxHeight: '82%',
           display: 'flex',
           flexDirection: 'column',
-          background: 'var(--color-background-card)',
+          background: 'var(--color-background-surface)',
           border: '1px solid var(--color-border)',
           borderRadius: 16,
-          overflow: 'hidden',
+          overflowY: 'auto',
+          overscrollBehavior: 'contain',
         }}
       >
         <div
@@ -1157,7 +1158,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             minHeight: 0,
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'hidden',
+            overflow: 'visible',
             padding: 'clamp(1.25rem, 4vw, 1.75rem)',
           }}
         >

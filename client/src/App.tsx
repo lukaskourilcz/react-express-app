@@ -25,6 +25,8 @@ import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m } from './lib/motion';
 import BrandFooter from './components/BrandFooter';
 import { CURRENT_PRODUCT, productText } from './lib/products';
+import { CloseIcon } from './components/ui/icons';
+import ConnectionStatus from './components/ui/ConnectionStatus';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
 // modules — heavy for the initial bundle. Lazy-load it so the app shell
@@ -154,8 +156,10 @@ const NAV_ITEMS: {
   { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard' },
   { to: '/cards', key: 'nav.cards', isActive: (p) => p === '/cards', feature: 'flashcards' },
   { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop' },
-  // Roadmap sits last in the nav, after the day-to-day learning links.
-  { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap' },
+  // A developer career roadmap belongs only to the standalone devShark product.
+  ...(CURRENT_PRODUCT.id === 'devshark'
+    ? [{ to: '/roadmap', key: 'nav.roadmap' as TranslationKey, isActive: (p: string) => p === '/roadmap' }]
+    : []),
 ];
 
 const RouteLoader = () => {
@@ -558,6 +562,17 @@ function App() {
               tabIndex={-1}
               onClick={() => setMobileNavOpen(false)}
             >
+              <button
+                type="button"
+                className="ss-drawer-close"
+                aria-label={t('common.dismiss')}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setMobileNavOpen(false);
+                }}
+              >
+                <CloseIcon size={20} />
+              </button>
               {/* Drawer header shows the platform the learner is on, and tapping
                   it opens the subject picker to switch. */}
               <Link
@@ -636,7 +651,6 @@ function App() {
               ? (mobile ? '0.75rem' : '1rem 1.5rem')
               : (mobile ? '1rem' : '1.5rem'),
           boxSizing: 'border-box',
-          outline: 'none',
         }}
       >
         {/* minHeight 100% + flex column: normal pages take their natural height
@@ -685,7 +699,7 @@ function App() {
                 <Route path="/subjects" element={isSubjectLocked() ? <Navigate to="/" replace /> : <SubjectPicker />} />
                 <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
                 <Route path="/learn" element={<Roadmap />} />
-                <Route path="/roadmap" element={<CareerRoadmap />} />
+                <Route path="/roadmap" element={CURRENT_PRODUCT.id === 'devshark' ? <CareerRoadmap /> : <Navigate to="/learn" replace />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/cards" element={<Flashcards />} />
@@ -746,13 +760,14 @@ function App() {
       )}
 
       <XpToaster />
+      <ConnectionStatus />
       <RegisterPromptSnackbar />
       <AppToast
         open={signupBonusOpen}
         onClose={() => setSignupBonusOpen(false)}
         severity="success"
         autoHideDuration={6000}
-        message={t('auth.signupBonusToast', { tokens: SIGNUP_BONUS_TOKENS })}
+        message={t('auth.signupBonusToast', { tokens: SIGNUP_BONUS_TOKENS, brand: CURRENT_PRODUCT.brand })}
       />
     </div>
   );

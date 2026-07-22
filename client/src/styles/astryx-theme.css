@@ -29,10 +29,13 @@
   --ss-ink: light-dark(#17272e, #e8eef0);
   --color-text-primary: light-dark(#17272e, #e8eef0);
   --color-text-secondary: light-dark(#4f6570, #9db3bc);
+  --color-text-disabled: light-dark(#788990, #71838b);
   --color-background-body: light-dark(#f3f6f5, #0b141b);
   --color-background-surface: light-dark(#ffffff, #101c24);
+  --color-background-elevated: light-dark(#ffffff, #14232c);
   --color-background-muted: light-dark(#edf2f1, #16242d);
   --color-border: light-dark(rgba(23, 39, 46, 0.12), rgba(232, 238, 240, 0.1));
+  --color-border-strong: light-dark(rgba(23, 39, 46, 0.3), rgba(232, 238, 240, 0.28));
   --ss-card-line: light-dark(rgba(23, 39, 46, 0.1), rgba(232, 238, 240, 0.08));
   --ss-card-edge: light-dark(rgba(23, 39, 46, 0.16), rgba(0, 0, 0, 0.55));
 
@@ -42,6 +45,11 @@
   --color-icon-accent: var(--brand-accent, #2d7a2d);
   --color-text-accent: var(--brand-accent, #2d7a2d);
   --color-border-accent: var(--brand-accent, #2d7a2d);
+  /* ColorModeContext selects the readable foreground for each accent/theme. */
+  --brand-on-accent: #ffffff;
+  --ss-focus: color-mix(in srgb, var(--brand-accent) 72%, var(--ss-ink));
+  --ss-selected: var(--brand-accent-soft, rgba(45, 122, 45, 0.12));
+  --ss-overlay: light-dark(rgba(23, 39, 46, 0.58), rgba(3, 8, 12, 0.74));
 
   /* — Brand assets: paper grain (tiled noise) + the waterline (mask) — */
   --ss-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3CfeComponentTransfer%3E%3CfeFuncA type='linear' slope='0.045'/%3E%3C/feComponentTransfer%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -54,6 +62,10 @@
   --ss-success-soft: light-dark(rgba(22, 128, 60, 0.08), rgba(74, 222, 128, 0.12));
   --ss-error: light-dark(#dc2626, #f87171);
   --ss-error-soft: light-dark(rgba(220, 38, 38, 0.07), rgba(248, 113, 113, 0.12));
+  --ss-warning: light-dark(#8a5700, #fbbf24);
+  --ss-warning-soft: light-dark(rgba(138, 87, 0, 0.09), rgba(251, 191, 36, 0.12));
+  --ss-info: light-dark(#0e7490, #67e8f9);
+  --ss-info-soft: light-dark(rgba(14, 116, 144, 0.09), rgba(103, 232, 249, 0.12));
 
   /* — Type: confident geometric display + highly-legible body — */
   --font-family-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -89,6 +101,7 @@
 }
 
 :root[data-theme='dark'] {
+  --brand-on-accent: #0b141b;
   --ss-app-bg:
     var(--ss-grain),
     linear-gradient(180deg, #0c161e 0%, #0a1219 100%);

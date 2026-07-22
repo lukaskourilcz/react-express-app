@@ -125,6 +125,22 @@
   flex-direction: column;
   overflow-y: auto;
 }
+.ss-drawer-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: var(--radius-element);
+  background: transparent;
+  color: var(--color-text-primary);
+  cursor: pointer;
+}
+.ss-drawer-close:hover { background: var(--color-background-muted); }
 .ss-drawer-link {
   display: block;
   width: 100%;
@@ -168,6 +184,11 @@
   text-decoration: none;
 }
 .ss-skip-link:focus { left: 8px; }
+#main-content:focus { outline: none; }
+#main-content:focus-visible {
+  outline: 3px solid var(--ss-focus);
+  outline-offset: -4px;
+}
 
 /* Drawer brand header. */
 .ss-drawer-brand {
@@ -316,8 +337,8 @@
 .ss-cost-list { list-style: none; padding: 0; margin: 1rem 0; }
 .ss-cost-list li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.55rem 0; border-bottom: 1px solid var(--ss-card-line); }
 .ss-info-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
-.ss-link-button { display: inline-flex; min-height: 42px; align-items: center; padding: 0 1rem; border-radius: var(--radius-element); background: var(--brand-accent); color: white; font-weight: 750; text-decoration: none; }
+.ss-link-button { display: inline-flex; min-height: 44px; align-items: center; padding: 0 1rem; border-radius: var(--radius-element); background: var(--brand-accent); color: var(--brand-on-accent); font-weight: 750; text-decoration: none; }
 .ss-link-button--secondary { background: var(--color-background-muted); color: var(--color-text-primary); border: 1px solid var(--color-border); }
 @media (max-width: 700px) { .ss-info-sections { grid-template-columns: 1fr; } .ss-cost-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
 @media (prefers-reduced-motion: reduce) { .ss-cost-meter span { transition: none; } }
-.ss-language-toggle{min-width:38px;height:38px;padding:0 8px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-background-surface);color:var(--color-text-primary);font:700 .75rem var(--font-family-body);cursor:pointer}.ss-language-toggle:hover{background:var(--color-background-muted)}.ss-language-toggle:focus-visible{outline:3px solid color-mix(in srgb,var(--brand-accent) 48%,transparent);outline-offset:2px}
+.ss-language-toggle{min-width:44px;height:44px;padding:0 8px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-background-surface);color:var(--color-text-primary);font:700 .75rem var(--font-family-body);cursor:pointer}.ss-language-toggle:hover{background:var(--color-background-muted)}.ss-language-toggle:focus-visible{outline:3px solid var(--ss-focus);outline-offset:2px}

@@ -179,10 +179,11 @@ interface CardProps {
   tone?: 'default' | 'success';
   width?: number | string;
   style?: CSSProperties;
+  className?: string;
   children: ReactNode;
 }
 
-export function RadioCard({ value, index, label, padding = 3, disabled, tone = 'default', width, style, children }: CardProps) {
+export function RadioCard({ value, index, label, padding = 3, disabled, tone = 'default', width, style, className, children }: CardProps) {
   const ctx = useContext(Ctx);
   const ref = useRef<HTMLButtonElement>(null);
   if (!ctx) throw new Error('RadioCard must render inside RadioCardGroup');
@@ -204,7 +205,7 @@ export function RadioCard({ value, index, label, padding = 3, disabled, tone = '
       aria-label={label}
       disabled={disabled}
       tabIndex={tabbable ? 0 : -1}
-      className="ss-radio-card"
+      className={className ? `ss-radio-card ${className}` : 'ss-radio-card'}
       data-selected={isSelected}
       data-tone={tone}
       // A pointer click (or Enter/Space on the focused card) both selects and

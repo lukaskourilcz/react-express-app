@@ -31,7 +31,7 @@ export function SplitText({
   const words = text.split(/(\s+)/); // keep spaces so kerning stays natural
 
   if (reduce) {
-    const Tag = as as 'h2';
+    const Tag = as;
     return (
       <Tag className={className}>
         {text}
@@ -40,9 +40,10 @@ export function SplitText({
     );
   }
 
+  const Tag = as;
   return (
-    <m.div
-      className={className}
+    <Tag className={className}>
+    <m.span
       initial="hidden"
       animate="visible"
       variants={{
@@ -70,7 +71,8 @@ export function SplitText({
           </m.span>
         ),
       )}
-      {children}
-    </m.div>
+    </m.span>
+    {children}
+    </Tag>
   );
 }

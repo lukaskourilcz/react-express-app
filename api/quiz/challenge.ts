@@ -146,7 +146,14 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
 
   const sessionId = assessment
     ? encodeSession(sessionData, { scope: 'assessment', subject: scope.subject })
-    : encodeSession(sessionData, { scope: 'challenge', runId: run!.runId, subject: scope.subject });
+    : encodeSession(sessionData, {
+        scope: 'challenge',
+        runId: run!.runId,
+        subject: scope.subject,
+        // All batches in a run share one claim namespace, preventing the same
+        // question from being re-graded through a freshly issued batch.
+        attemptId: run!.runId,
+      });
   res.setHeader('Cache-Control', 'private, no-store');
   logEvent({ status: 200, kind: assessment ? 'assessment' : 'batch', count: questions.length, excluded: excludeSet.size });
   res.json({ sessionId, runToken, questions });
@@ -175,6 +182,7 @@ async function handleSubmitScore(req: VercelRequest, res: VercelResponse) {
 
   const seen = new Set<string>();
   let score = 0;
+  let failures = 0;
   for (const value of body.proofs) {
     if (typeof value !== 'string') return jsonError(res, 400, 'invalid_proof', 'Invalid score proof');
     const proof = decodeScoreProof(value);
@@ -184,6 +192,10 @@ async function handleSubmitScore(req: VercelRequest, res: VercelResponse) {
     if (seen.has(proof.questionId)) continue;
     seen.add(proof.questionId);
     if (proof.isCorrect) score++;
+    else failures++;
+  }
+  if (failures !== 3) {
+    return jsonError(res, 400, 'incomplete_run', 'A ranked run must include its three terminal strikes');
   }
 
   // Optional auth — when signed in, attribute the run so later dedupe is possible.
@@ -222,6 +234,7 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
 
   const seen = new Set<string>();
   let score = 0;
+  let failures = 0;
   for (const value of body.proofs) {
     if (typeof value !== 'string') return jsonError(res, 400, 'invalid_proof', 'Invalid score proof');
     const proof = decodeScoreProof(value);
@@ -229,6 +242,10 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
     if (seen.has(proof.questionId)) continue;
     seen.add(proof.questionId);
     if (proof.isCorrect) score++;
+    else failures++;
+  }
+  if (failures !== 3) {
+    return jsonError(res, 400, 'incomplete_run', 'A completed run must include its three terminal strikes');
   }
 
   let auth;

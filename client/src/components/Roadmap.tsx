@@ -8,6 +8,7 @@ import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { AppToast } from './ui/AppToast';
+import { RadioCard, RadioCardGroup } from './ui/RadioCards';
 import { useIsMobile } from '../lib/useMediaQuery';
 import type {
   RoadmapTopic,
@@ -1217,40 +1218,44 @@ function LessonRunner({
       </div>
 
       {/* Options — anchored toward the bottom, labelled by the question. */}
-      <div role="radiogroup" aria-labelledby="lesson-question" style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0, marginTop: 'auto', marginBottom: isMobile ? 50 : 0 }}>
+      <RadioCardGroup
+        value={selected}
+        onChange={(value) => setSelected(Number(value))}
+        onActivate={(value) => void choose(Number(value))}
+        labelledBy="lesson-question"
+        style={{ display: 'flex', flexDirection: 'column', gap: 10, flexShrink: 0, marginTop: 'auto', marginBottom: isMobile ? 50 : 0 }}
+      >
         {question.options.map((option, index) => {
           const isCorrect = index === grade?.correctAnswer;
           const isPicked = index === selected;
           const overrides: CSSProperties = {};
           let cls: string | undefined;
           if (revealed && isCorrect) {
-            overrides.borderColor = '#2e7d32'; overrides.backgroundColor = 'rgba(46,125,50,0.12)'; overrides.color = '#2e7d32'; cls = 'rm-correct-pop';
+            overrides.borderColor = 'var(--ss-success)'; overrides.backgroundColor = 'var(--ss-success-soft)'; overrides.color = 'var(--ss-success)'; cls = 'rm-correct-pop';
           } else if (revealed && isPicked && !isCorrect) {
-            overrides.borderColor = '#c62828'; overrides.backgroundColor = 'rgba(198,40,40,0.12)'; overrides.color = '#c62828'; cls = 'rm-shake';
+            overrides.borderColor = 'var(--ss-error)'; overrides.backgroundColor = 'var(--ss-error-soft)'; overrides.color = 'var(--ss-error)'; cls = 'rm-shake';
           } else if (isPicked) {
             overrides.borderColor = accent;
           }
           return (
-            <button
+            <RadioCard
               key={index}
-              type="button"
+              value={index}
+              index={index}
               className={`rm-option${cls ? ` ${cls}` : ''}`}
-              onClick={() => void choose(index)}
               disabled={revealed || grading}
-              role="radio"
-              aria-checked={isPicked}
-              tabIndex={isPicked || (selected === null && index === 0) ? 0 : -1}
+              tone={revealed && isCorrect ? 'success' : 'default'}
               style={{ ['--rm-accent']: accent, ...overrides } as CSSProperties}
             >
               <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, borderRadius: 4, fontSize: '0.75rem', fontWeight: 800, backgroundColor: 'var(--color-background-muted)', color: 'var(--color-text-secondary)', flexShrink: 0 }}>
                 {index + 1}
               </span>
               <span style={{ flex: 1 }}>{option}</span>
-              {revealed && isCorrect && <span style={{ color: '#2e7d32', display: 'inline-flex' }}><CheckIcon size={18} /></span>}
-            </button>
+              {revealed && isCorrect && <span style={{ color: 'var(--ss-success)', display: 'inline-flex' }}><CheckIcon size={18} /></span>}
+            </RadioCard>
           );
         })}
-      </div>
+      </RadioCardGroup>
 
       {!revealed && !answerError && (
         <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', display: isMobile ? 'none' : 'block', marginTop: 12, flexShrink: 0 }}>
@@ -1277,7 +1282,7 @@ function LessonRunner({
             style={{
               padding: 16,
               borderRadius: 8,
-              borderLeft: `4px solid ${isRight ? '#1b5e20' : '#c62828'}`,
+              borderLeft: `4px solid ${isRight ? 'var(--ss-success)' : 'var(--ss-error)'}`,
               backgroundColor: 'var(--color-background-surface)',
               boxShadow: '0 10px 40px rgba(0, 0, 0, 0.35)',
               maxHeight: '48vh',
@@ -1560,21 +1565,23 @@ function SkillCheckRunner({
 
       <div id="skillcheck-question" style={{ fontWeight: 500, marginBottom: 16 }}>{renderQuestion(current.question)}</div>
 
-      <div role="radiogroup" aria-labelledby="skillcheck-question" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <RadioCardGroup
+        value={answers[current.id] ?? null}
+        onChange={(value) => handlePick(Number(value))}
+        labelledBy="skillcheck-question"
+        style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
+      >
         {current.options.map((option, idx) => {
           const picked = answers[current.id] === idx;
           return (
-            <button
+            <RadioCard
               key={idx}
-              type="button"
+              value={idx}
+              index={idx}
               className="rm-option"
-              onClick={() => handlePick(idx)}
-              role="radio"
-              aria-checked={picked}
-              tabIndex={picked || (answers[current.id] === undefined && idx === 0) ? 0 : -1}
               style={{
                 ['--rm-accent']: 'var(--brand-accent)',
-                ...(picked ? { borderColor: 'var(--brand-accent)', backgroundColor: 'rgba(45,122,45,0.07)' } : {}),
+                ...(picked ? { borderColor: 'var(--brand-accent)', backgroundColor: 'var(--brand-accent-soft)' } : {}),
               } as CSSProperties}
             >
               <span
@@ -1595,10 +1602,10 @@ function SkillCheckRunner({
                 {idx + 1}
               </span>
               <span style={{ flex: 1 }}>{option}</span>
-            </button>
+            </RadioCard>
           );
         })}
-      </div>
+      </RadioCardGroup>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
         <AxButton variant="ghost" label={t('roadmap.skillCheckCancel')} onClick={onCancel} />

@@ -133,6 +133,7 @@ export const cs: Record<TranslationKey, string> = {
   'subject.statSubjects': 'předmětů',
   'subject.pickTitle': 'Vyber si předmět — kdykoli ho změníš.',
   'subject.topicsCount': '{count} témat',
+  'subject.catalogCounts': '{questions} otázek · {topics} témat',
   'subject.andMoreTopics': '…a dalších {n} témat',
   'subject.roadmapNote': 'Úrovně se odemykají, jak procházíš kontrolními body. Pokrok se ukládá k tvému účtu.',
   'subject.stripCardsTitle': 'Kartičky',
@@ -265,7 +266,8 @@ export const cs: Record<TranslationKey, string> = {
   'auth.logIn': 'Přihlásit se',
   'auth.logOut': 'Odhlásit se',
   'auth.signInFailed': 'Přihlášení se nezdařilo. Zkuste to prosím znovu.',
-  'auth.signupBonusToast': '+{tokens} žetonů · vítejte ve StudySharku',
+  'auth.signOutFailed': 'Odhlášení se nezdařilo. Zkontrolujte připojení a zkuste to znovu.',
+  'auth.signupBonusToast': '+{tokens} žetonů · vítejte v {brand}',
   'auth.profile': 'Profil',
   'auth.account': 'Účet',
   'auth.loadingAccount': 'Načítání účtu',
@@ -372,6 +374,8 @@ export const cs: Record<TranslationKey, string> = {
   'flag.failed': 'Označení se nepodařilo odeslat',
 
   'common.cancel': 'Zrušit',
+  'common.offline': 'Jste offline. Tato obrazovka zůstává dostupná; akce se obnoví po návratu připojení.',
+  'common.backOnline': 'Připojení bylo obnoveno.',
 
   // Leaderboard
   'leaderboard.title': 'Žebříček',
@@ -519,6 +523,8 @@ export const cs: Record<TranslationKey, string> = {
   'play.questionMeta': 'Otázka {idx} z {total} · {category} · obtížnost {difficulty}',
   'play.tapToLock': 'Kliknutím odpověď rovnou uzamkneš — platí první volba.',
   'play.tooLate': 'Čas vypršel dřív, než tvoje odpověď dorazila — nepočítá se.',
+  'play.connectionPolling': 'Živé aktualizace se znovu připojují. Místnost se průběžně obnovuje dotazováním.',
+  'play.connectionStale': 'Místnost se nepodařilo obnovit. Před odpovědí zkontrolujte připojení.',
   'play.skipQuestion': 'Přeskočit otázku →',
   'play.answerLocked': 'Odpověď potvrzena. Čeká se, až {who} postoupí dál…',
   'play.answerLockedVs': 'Odpověď potvrzena. Čeká se na ostatní hráče…',
@@ -745,6 +751,7 @@ export const cs: Record<TranslationKey, string> = {
   'challenge.rule4': 'Skóre = počet správných odpovědí. Překonej nejvyšší skóre a získej titul šampiona.',
   'challenge.currentChampion': 'Aktuální šampion',
   'challenge.noChampion': 'Skóre ještě nikdo nemá. Buď první.',
+  'challenge.boardUnavailable': 'Dnešní žebříček se nepodařilo načíst. Výzva je stále dostupná.',
   'challenge.hallOfFame': 'Síň slávy',
   'challenge.startButton': 'Vstoupit do výzvy',
   'challenge.score': 'Skóre',

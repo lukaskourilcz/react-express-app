@@ -1,4 +1,4 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from 'node:crypto';
 import { isScopeSubject, type ScopeSubjectId } from '../shared/subject-catalog';
 
 const SECRET = process.env.SESSION_SECRET;
@@ -113,8 +113,8 @@ function validLifetime(payload: { iat?: unknown; exp?: unknown }, maxTtl: number
 
 type SessionContext =
   | { subject: ScopeSubjectId }
-  | { scope: 'challenge'; runId: string; subject: ScopeSubjectId }
-  | { scope: 'daily'; date: string; subject: ScopeSubjectId }
+  | { scope: 'challenge'; runId: string; subject: ScopeSubjectId; attemptId?: string }
+  | { scope: 'daily'; date: string; subject: ScopeSubjectId; attemptId?: string }
   | { scope: 'assessment'; subject: ScopeSubjectId }
   | {
       scope: 'roadmap';
@@ -194,6 +194,11 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
 }
 
 export const decodeSession = (token: string) => decodeSessionEnvelope(token)?.questions ?? null;
+
+/** Stable opaque claim id for one server-defined attempt; never exposes the source identifiers. */
+export function stableAttemptId(...parts: string[]): string {
+  return createHmac('sha256', TOKEN_KEY).update(parts.join('\u001f'), 'utf8').digest('base64url').slice(0, 32);
+}
 
 export function createChallengeRun(ranked = true, subject: ScopeSubjectId = 'webdev') {
   const now = Date.now();

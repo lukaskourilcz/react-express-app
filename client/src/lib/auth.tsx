@@ -13,6 +13,17 @@ registerAccessTokenReader(() => cachedAccessToken);
 // per browser tab session, so page refreshes (which re-emit SIGNED_IN) don't log
 // repeatedly. The server verifies the token and classifies register vs login.
 const AUTH_REPORTED_KEY = 'devquiz:auth-reported';
+const AUTH_BOOT_TIMEOUT_MS = 8_000;
+
+function withDeadline<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = window.setTimeout(() => reject(new Error('Authentication timed out')), timeoutMs);
+    promise.then(
+      (value) => { window.clearTimeout(timer); resolve(value); },
+      (error) => { window.clearTimeout(timer); reject(error); },
+    );
+  });
+}
 function reportSignIn(): void {
   try {
     if (sessionStorage.getItem(AUTH_REPORTED_KEY)) return;
@@ -61,7 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    void supabase.auth.getSession()
+    void withDeadline(supabase.auth.getSession(), AUTH_BOOT_TIMEOUT_MS)
       .then(({ data: { session } }) => {
         cachedAccessToken = session?.access_token ?? null;
         setUser(session?.user ?? null);
@@ -89,9 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     if (!supabase) {
-      throw new Error(
-        'Sign-in is not available: Supabase is not configured (VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY).',
-      );
+      throw new Error('Sign-in is not available in this deployment.');
     }
     // On success supabase-js redirects to Google; on failure (e.g. the Google
     // provider isn't enabled, or the redirect URL isn't allow-listed) it
@@ -126,10 +135,22 @@ export function useAuth() {
 // Display fields from a Supabase user. Google populates user_metadata.
 export function getUserProfile(user: User | null) {
   const meta = user?.user_metadata ?? {};
+  const rawPicture = (meta.avatar_url || meta.picture) as string | undefined;
+  let picture: string | undefined;
+  if (rawPicture) {
+    try {
+      const url = new URL(rawPicture);
+      if (url.protocol === 'https:' && (url.hostname === 'googleusercontent.com' || url.hostname.endsWith('.googleusercontent.com'))) {
+        picture = url.toString();
+      }
+    } catch {
+      // Untrusted metadata is rendered as initials instead of loading a tracker.
+    }
+  }
   return {
     name: (meta.full_name || meta.name || user?.email) as string | undefined,
     email: user?.email,
-    picture: (meta.avatar_url || meta.picture) as string | undefined,
+    picture,
   };
 }
 

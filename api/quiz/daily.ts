@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
-import { encodeSession } from '../../lib/quiz-tokens';
+import { encodeSession, stableAttemptId } from '../../lib/quiz-tokens';
 import { localizeQuestion, normalizeLang, PRIVATE_CATEGORIES, type Question } from '../../lib/quiz-runtime';
 import { createHash } from 'node:crypto';
 import { jsonError, withRequestContext } from '../../lib/http';
@@ -7,6 +7,7 @@ import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/product-scope';
+import { AuthError, tryAuth } from '../../lib/auth';
 
 // Daily challenge: deterministic per-UTC-date selection (one question per
 // difficulty bucket). Same set for every user on the same day, so leaderboards
@@ -73,6 +74,13 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const catSet = new Set(scope.categories);
 
   const lang = normalizeLang(req.query.lang);
+  let auth;
+  try {
+    auth = await tryAuth(req);
+  } catch (error) {
+    if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
+    throw error;
+  }
   const allQuestions = await getEffectiveQuestions(scope.subject, lang === 'cs');
   const selected: Question[] = [];
   for (const diff of DAILY_DIFFICULTIES) {
@@ -115,6 +123,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     scope: 'daily',
     date: dateParam,
     subject: scope.subject,
+    // A signed-in learner gets one claim for this subject/day even if they
+    // refetch the deterministic questions. Anonymous practice stays useful
+    // but never receives a ranked receipt in quiz/submit.
+    ...(auth ? { attemptId: stableAttemptId('daily', auth.sub, scope.subject, dateParam) } : {}),
   });
 
   // The response embeds an opaque, authenticated session token. Keep it out of

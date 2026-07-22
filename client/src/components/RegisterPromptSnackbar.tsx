@@ -9,6 +9,7 @@
 
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useLocation } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { Text } from '@astryxdesign/core/Text';
 import { m, AnimatePresence } from '../lib/motion';
@@ -48,15 +49,19 @@ function RegisterPromptSnackbar() {
   const { isAuthenticated, isLoading, signInWithGoogle } = useAuth();
   const t = useT();
   const isMobile = useIsMobile();
+  const location = useLocation();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isLoading || isAuthenticated) return;
+    if (location.pathname !== '/' || isLoading || isAuthenticated) {
+      setOpen(false);
+      return;
+    }
     if (readDismissed()) return;
     const timer = setTimeout(() => setOpen(true), SHOW_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [isLoading, isAuthenticated]);
+  }, [location.pathname, isLoading, isAuthenticated]);
 
   // Auto-hide the error toast (was the Snackbar's autoHideDuration).
   useEffect(() => {
@@ -73,8 +78,8 @@ function RegisterPromptSnackbar() {
   const handleSignIn = async () => {
     try {
       await signInWithGoogle();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t('auth.signInFailed'));
+    } catch {
+      setError(t('auth.signInFailed'));
     }
   };
 
@@ -140,9 +145,11 @@ function RegisterPromptSnackbar() {
                 appearance: 'none',
                 border: 'none',
                 background: 'transparent',
-                color: 'rgba(0, 0, 0, 0.6)',
+                color: 'var(--color-text-secondary)',
                 cursor: 'pointer',
-                padding: 4,
+                padding: 0,
+                width: 44,
+                height: 44,
                 lineHeight: 0,
               }}
             >
@@ -172,16 +179,18 @@ function RegisterPromptSnackbar() {
         {error && (
           <m.div
             key="register-error"
+            role="alert"
+            aria-live="assertive"
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 40 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
             style={{
               pointerEvents: 'auto',
-              backgroundColor: '#fee2e2',
-              color: '#7f1d1d',
-              border: '1px solid #fecaca',
-              borderRadius: 8,
+              backgroundColor: 'var(--ss-error-soft)',
+              color: 'var(--ss-error)',
+              border: '1px solid color-mix(in srgb, var(--ss-error) 28%, transparent)',
+              borderRadius: 'var(--radius-element)',
               padding: '10px 16px',
               fontSize: '0.85rem',
               maxWidth: 320,

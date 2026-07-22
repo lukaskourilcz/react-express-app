@@ -9,8 +9,6 @@ import { Badge } from '@astryxdesign/core/Badge';
 import { Banner } from '@astryxdesign/core/Banner';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { TextInput } from '@astryxdesign/core/TextInput';
-import { SelectableCard } from '@astryxdesign/core/SelectableCard';
-import type { CardVariant } from '@astryxdesign/core/Card';
 import { AppToast } from './ui/AppToast';
 import { apiFetch, friendlyError } from '../lib/api';
 import {
@@ -40,6 +38,7 @@ import { challengeRunXp } from '../lib/leveling';
 import { SwimCta } from './landing/LandingKit';
 import { readJSON, writeJSON, removeStored } from '../lib/storage';
 import './DeepEndScreens.css';
+import { RadioCard, RadioCardGroup } from './ui/RadioCards';
 
 // Biggest Shark Challenge: answer as many questions as you can until you
 // collect three strikes. Each question carries its own 90-second clock —
@@ -146,8 +145,7 @@ export default function Challenge() {
 
   /* ─── leaderboard ───────────────────────────────────────────── */
 
-  // Leaderboard is best-effort (the query never surfaces errors to the UI);
-  // refetch it after a score is submitted.
+  // Refetch the subject-scoped board after a score is submitted.
   const refreshLeaderboard = boardQuery.refetch;
 
   useEffect(() => {
@@ -305,22 +303,34 @@ export default function Challenge() {
   // The per-question clock ran out before an answer was locked in. That costs a
   // fin, exactly like a wrong answer; the graded feedback card then lets the
   // learner continue (or ends the run if it was the third strike).
-  const handleTimeout = useCallback(() => {
-    if (!current || lastResult) return; // already graded — nothing to time out
-    setLivesLost((l) => l + 1);
-    // No answer was locked in, so there's no selection to highlight (-1). Kept
-    // free of `selected` so the once-per-second tick effect isn't reset every
-    // time the learner changes their pick.
-    setLastResult({
-      questionId: current.id,
-      selectedIndex: -1,
-      correctAnswer: -1,
-      isCorrect: false,
-      explanation: '',
-      question: current,
-      timedOut: true,
-    });
-  }, [current, lastResult]);
+  const handleTimeout = useCallback(async () => {
+    if (!current || !buffer.current || lastResult || submitting) return;
+    setSubmitting(true);
+    try {
+      // A timeout is graded as an explicit server-proven strike. This prevents
+      // ranked clients from omitting timeouts from the final proof set.
+      const result = await apiFetch<QuizResult>('/api/quiz/submit', {
+        method: 'POST',
+        body: JSON.stringify({ sessionId: buffer.current.sessionId, answers: { [current.id]: -1 }, lang }),
+      });
+      const graded = result.results[0];
+      setLivesLost((l) => l + 1);
+      setLastResult({
+        questionId: current.id,
+        selectedIndex: -1,
+        correctAnswer: graded?.correctAnswer ?? -1,
+        isCorrect: false,
+        explanation: graded?.explanation ?? '',
+        question: current,
+        timedOut: true,
+      });
+      if (graded?.scoreProof) scoreProofsRef.current.push(graded.scoreProof);
+    } catch (err) {
+      setSnack(friendlyError(err));
+    } finally {
+      setSubmitting(false);
+    }
+  }, [current, lastResult, submitting, lang]);
 
   /* ─── leaderboard submit on game over ───────────────────────── */
 
@@ -358,7 +368,7 @@ export default function Challenge() {
   useEffect(() => {
     if (phase !== 'playing' || lastResult) return;
     if (timeLeft <= 0) {
-      handleTimeout();
+      void handleTimeout();
       return;
     }
     const id = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
@@ -482,7 +492,18 @@ export default function Challenge() {
         <aside className="ss-panel" style={{ padding: 20 }}>
           <VStack gap={1.5}>
             <Heading level={3}>{t('challenge.todayBoard')}</Heading>
-            {boardLoading ? <Text color="secondary">…</Text> : board && board.top.length > 0 ? <LeaderboardList board={{ ...board, top: board.top.slice(0, 5) }} /> : <Text type="supporting" color="secondary">{t('challenge.noChampion')}</Text>}
+            {boardLoading ? (
+              <Text color="secondary">…</Text>
+            ) : boardQuery.isError ? (
+              <VStack gap={1}>
+                <Banner status="warning" title={t('challenge.boardUnavailable')} />
+                <Button variant="ghost" size="sm" label={t('quiz.retry')} onClick={() => void boardQuery.refetch()} />
+              </VStack>
+            ) : board && board.top.length > 0 ? (
+              <LeaderboardList board={{ ...board, top: board.top.slice(0, 5) }} />
+            ) : (
+              <Text type="supporting" color="secondary">{t('challenge.noChampion')}</Text>
+            )}
             <Text type="supporting" size="xsm" color="secondary">{t('challenge.boardHint')}</Text>
           </VStack>
         </aside>
@@ -695,14 +716,14 @@ export default function Challenge() {
           maxHeight: isMobile ? undefined : '80%',
           display: 'flex',
           flexDirection: 'column',
-          background: 'var(--color-background-card)',
+          background: 'var(--color-background-surface)',
           border: '1px solid var(--color-border)',
           borderTop: `4px solid ${accent}`,
           borderRadius: 16,
           overflow: 'hidden',
         }}
       >
-        <li
+        <div
           style={{
             flex: 1,
             minHeight: 0,
@@ -722,31 +743,36 @@ export default function Challenge() {
             {renderQuestion(current.question)}
           </div>
 
-          {/* Answer options as SelectableCards. Raise the anchored answers ~50px
+          {/* Single-choice answers use the shared roving-tabindex radio pattern. Raise them ~50px
               off the wave on phones. */}
-          <div
-            role="radiogroup"
-            aria-labelledby="challenge-question"
+          <RadioCardGroup
+            value={selected}
+            onChange={(value) => { if (!lastResult) setSelected(Number(value)); }}
+            labelledBy="challenge-question"
             style={{ flexShrink: 0, marginTop: 'auto', marginBottom: isMobile ? 50 : 0 }}
           >
-            <VStack gap={1}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {current.options.map((opt, idx) => {
                 const isSel = selected === idx;
                 const graded = !!lastResult;
                 const isCorrectOpt = graded && idx === lastResult!.correctAnswer;
                 const isWrongPick =
                   graded && idx === lastResult!.selectedIndex && !lastResult!.isCorrect;
-                const variant: CardVariant = isCorrectOpt ? 'green' : isWrongPick ? 'red' : 'default';
                 return (
-                  <SelectableCard
+                  <RadioCard
                     key={idx}
+                    value={idx}
+                    index={idx}
                     label={opt}
-                    isSelected={graded ? isCorrectOpt || isWrongPick : isSel}
-                    isDisabled={graded}
-                    variant={variant}
+                    disabled={graded}
+                    tone={isCorrectOpt ? 'success' : 'default'}
                     padding={2}
-                    onChange={() => {
-                      if (!lastResult) setSelected(idx);
+                    style={{
+                      ...(isWrongPick ? {
+                        borderColor: 'var(--ss-error)',
+                        background: 'var(--ss-error-soft)',
+                        color: 'var(--ss-error)',
+                      } : {}),
                     }}
                   >
                     <HStack gap={2} align="center">
@@ -771,12 +797,12 @@ export default function Challenge() {
                         {opt}
                       </Text>
                     </HStack>
-                  </SelectableCard>
+                  </RadioCard>
                 );
               })}
-            </VStack>
-          </div>
-        </li>
+            </div>
+          </RadioCardGroup>
+        </div>
       </div>
 
       {/* Feedback overlay: a floating card that sits over the answer options
@@ -931,7 +957,7 @@ function LeaderboardList({ board }: { board: ChallengeLeaderboard }) {
   return (
     <ol role="list" style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column' }}>
       {board.top.map((row, i) => (
-        <div
+        <li
           key={row.id}
           style={{
             display: 'flex',
@@ -956,7 +982,7 @@ function LeaderboardList({ board }: { board: ChallengeLeaderboard }) {
           <Text type="body" size="sm" weight="bold" color={i === 0 ? 'accent' : 'primary'}>
             {row.score}
           </Text>
-        </div>
+        </li>
       ))}
     </ol>
   );

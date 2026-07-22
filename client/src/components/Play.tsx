@@ -61,7 +61,7 @@ export function PlayLanding() {
   const config = useGameConfig();
   const isDesktop = useMediaQuery('(min-width: 900px)');
   const accent = useActiveSubject().accent;
-  const { user, isAuthenticated, signInWithGoogle } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
   const profile = getUserProfile(user);
   const [mode, setMode] = useState<'ffa' | 'classroom'>(() =>
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'classroom'
@@ -80,6 +80,10 @@ export function PlayLanding() {
     );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<'create' | 'join' | null>(null);
+
+  if (authLoading) {
+    return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
+  }
 
   if (!isAuthenticated) {
     return (
@@ -409,6 +413,8 @@ export function PlayMatch() {
   const [selected, setSelected] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [questionShownAt, setQuestionShownAt] = useState<number>(Date.now());
+  const [connectionState, setConnectionState] = useState<'live' | 'polling' | 'stale'>('polling');
+  const refreshFailures = useRef(0);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const isHost = !!(user?.id && match?.host_id === user.id);
@@ -457,8 +463,10 @@ export function PlayMatch() {
       setMatch(state.match);
       setParticipants(state.participants);
       setScoreboard(state.scoreboard);
+      refreshFailures.current = 0;
     } catch {
-      /* ignore — UI keeps last known state */
+      refreshFailures.current += 1;
+      setConnectionState(refreshFailures.current >= 3 ? 'stale' : 'polling');
     }
   }, [code, user?.id]);
 
@@ -473,7 +481,11 @@ export function PlayMatch() {
     channel.subscribe('match_updated', refresh);
     const stopStatus = channel.onStatus((status) => {
       realtimeReady = status === 'SUBSCRIBED';
-      if (realtimeReady) void channel.send('participant_joined', { sub: user.id });
+      setConnectionState(realtimeReady ? 'live' : 'polling');
+      if (realtimeReady) {
+        refreshFailures.current = 0;
+        void channel.send('participant_joined', { sub: user.id });
+      }
     });
 
     // Fast polling only while Realtime is unavailable. A slow healing poll is
@@ -673,6 +685,13 @@ export function PlayMatch() {
             title={error}
             isDismissable
             onDismiss={() => setError(null)}
+          />
+        )}
+
+        {connectionState !== 'live' && (
+          <Banner
+            status={connectionState === 'stale' ? 'warning' : 'info'}
+            title={connectionState === 'stale' ? t('play.connectionStale') : t('play.connectionPolling')}
           />
         )}
 

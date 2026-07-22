@@ -1,42 +1,14 @@
-import { useEffect, useState, type CSSProperties } from 'react';
+import { useEffect, useState } from 'react';
 import { Text } from '@astryxdesign/core/Text';
 import { visuallyHidden } from '../theme/MuiTheme';
 import { SwimmingShark } from './SharkFin';
+import { sxToStyle, type SxLike } from '../lib/styleProps';
 
 /**
  * Style object accepted by `LoadingScreen`. Mirrors the small slice of MUI `sx`
  * callers actually pass (real CSS properties plus the `p*`/`m*` spacing
  * shorthands, whose numeric values are ×8px), merged onto the centring wrapper.
  */
-type SxLike = CSSProperties & Partial<Record<SpacingKey, number | string>>;
-
-type SpacingKey =
-  | 'p' | 'px' | 'py' | 'pt' | 'pr' | 'pb' | 'pl'
-  | 'm' | 'mx' | 'my' | 'mt' | 'mr' | 'mb' | 'ml';
-
-const SPACING_MAP: Record<SpacingKey, Array<keyof CSSProperties>> = {
-  p: ['padding'], px: ['paddingLeft', 'paddingRight'], py: ['paddingTop', 'paddingBottom'],
-  pt: ['paddingTop'], pr: ['paddingRight'], pb: ['paddingBottom'], pl: ['paddingLeft'],
-  m: ['margin'], mx: ['marginLeft', 'marginRight'], my: ['marginTop', 'marginBottom'],
-  mt: ['marginTop'], mr: ['marginRight'], mb: ['marginBottom'], ml: ['marginLeft'],
-};
-
-/** Expand MUI `sx` spacing shorthands (unit ×8px) into real CSS properties. */
-function sxToStyle(sx?: SxLike): CSSProperties {
-  if (!sx) return {};
-  const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(sx)) {
-    const targets = SPACING_MAP[key as SpacingKey];
-    if (targets) {
-      const resolved = typeof value === 'number' ? value * 8 : value;
-      for (const prop of targets) out[prop as string] = resolved;
-    } else {
-      out[key] = value;
-    }
-  }
-  return out as CSSProperties;
-}
-
 interface Props {
   /** Screen-reader announcement describing what is loading. */
   label: string;

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
+import { useT } from '../../i18n/LanguageContext';
 
 export interface ConfirmRequest {
   title: string;
@@ -11,6 +12,7 @@ export interface ConfirmRequest {
 
 /** Shared confirmation behavior; visual identity comes from the global Deep End dialog surface. */
 export function BrandedConfirmDialog({ request, onClose }: { request: ConfirmRequest | null; onClose: () => void }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
 
   const confirm = async () => {
@@ -31,8 +33,8 @@ export function BrandedConfirmDialog({ request, onClose }: { request: ConfirmReq
       onOpenChange={(open) => { if (!open && !busy) onClose(); }}
       title={request?.title ?? ''}
       description={request?.description ?? ''}
-      cancelLabel="Cancel"
-      actionLabel={request?.actionLabel ?? 'Confirm'}
+      cancelLabel={t('common.cancel')}
+      actionLabel={request?.actionLabel ?? ''}
       actionVariant={request?.destructive === false ? 'primary' : 'destructive'}
       isActionLoading={busy}
       onAction={confirm}

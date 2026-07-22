@@ -121,7 +121,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     if (typeof qid !== 'string' || qid.length === 0 || qid.length > 64) {
       return jsonError(res, 400, 'bad_request', 'Invalid question id');
     }
-    if (typeof idx !== 'number' || !Number.isInteger(idx) || idx < 0 || idx > 25) {
+    if (typeof idx !== 'number' || !Number.isInteger(idx) || idx < -1 || idx > 25) {
       return jsonError(res, 400, 'bad_request', 'Invalid answer index');
     }
     validated.push({ questionId: qid, selectedIndex: idx });
@@ -142,6 +142,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
   if (session.scope === 'challenge' && validated.length !== 1) {
     return jsonError(res, 400, 'bad_request', 'Challenge answers must be submitted one at a time');
+  }
+  if (session.scope !== 'challenge' && validated.some(({ selectedIndex }) => selectedIndex < 0)) {
+    return jsonError(res, 400, 'bad_request', 'Invalid answer index');
   }
   const subject = session.subject;
   if (!subject || !deploymentSubjectIds().includes(subject)) {

@@ -14,8 +14,8 @@ export type ToastSeverity = 'success' | 'error' | 'info';
 
 const STYLES: Record<ToastSeverity, { accent: string }> = {
   success: { accent: 'var(--brand-accent, #2d7a2d)' },
-  error: { accent: '#dc2626' },
-  info: { accent: 'var(--brand-accent, #2d7a2d)' },
+  error: { accent: 'var(--ss-error)' },
+  info: { accent: 'var(--ss-info)' },
 };
 
 export function AppToast({
@@ -58,8 +58,8 @@ export function AppToast({
       <AnimatePresence>
         {open && (
           <m.div
-            role="status"
-            aria-live="polite"
+            role={severity === 'error' ? 'alert' : 'status'}
+            aria-live={severity === 'error' ? 'assertive' : 'polite'}
             initial={{ opacity: 0, y: 16, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.98 }}
@@ -95,8 +95,8 @@ export function AppToast({
                 color: 'inherit',
                 cursor: 'pointer',
                 opacity: 0.75,
-                width: 34,
-                height: 34,
+                width: 44,
+                height: 44,
                 display: 'grid',
                 placeItems: 'center',
                 padding: 0,

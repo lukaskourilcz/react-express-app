@@ -22,7 +22,10 @@ type Options = RequestInit & { timeoutMs?: number; signal?: AbortSignal };
 async function getAccessToken(): Promise<string | null> {
   if (!supabase) return null;
   try {
-    const { data } = await supabase.auth.getSession();
+    const { data } = await Promise.race([
+      supabase.auth.getSession(),
+      new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('auth_timeout')), 4_000)),
+    ]);
     return data.session?.access_token ?? null;
   } catch {
     return null;

@@ -24,6 +24,7 @@ import {
 import { AppToast } from './ui/AppToast';
 import SubjectGlyph from './ui/SubjectGlyph';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
+import SubjectPlate from './ui/SubjectPlate';
 
 // A soft tint / accent override for a subject, so the sample card + roadmap
 // preview re-skin to whichever subject is selected.
@@ -47,25 +48,27 @@ function SubjectCard({
       aria-label={t('subject.study', { subject: t(subjectNameKey(id)) })}
       aria-pressed={selected}
       style={{
-        display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
+        display: 'grid', gridTemplateColumns: '88px minmax(0,1fr) auto', alignItems: 'center', gap: 12, textAlign: 'left',
         background: selected ? `${s.accent}14` : 'var(--ss-card-bg)',
         border: `1px solid ${selected ? s.accent : 'var(--ss-card-line)'}`,
         borderBottom: '2px solid var(--ss-card-edge)',
         boxShadow: selected ? `inset 0 0 0 1px ${s.accent}` : '0 2px 10px light-dark(rgba(23,39,46,0.06), rgba(0,0,0,0.4))',
-        borderRadius: 'var(--radius-container)', padding: '14px 16px', cursor: 'pointer',
+        borderRadius: 'var(--radius-container)', padding: '14px 16px', cursor: 'pointer', minHeight: 132,
         transition: 'box-shadow 0.15s ease, background 0.2s ease, border-color 0.2s ease',
       }}
     >
-      <span aria-hidden style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: 'var(--radius-inner)', color: s.accent, lineHeight: 1, background: `${s.accent}14`, flexShrink: 0 }}>
-        <SubjectGlyph id={id} size={22} />
+      <span aria-hidden style={{ display: 'grid', placeItems: 'center', alignSelf: 'stretch', overflow: 'hidden', borderRadius: 'var(--radius-inner)', color: s.accent, lineHeight: 1, background: `${s.accent}14`, ...accentVars(s.accent) }}>
+        <SubjectPlate id={id} compact />
       </span>
-      <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+      <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
         <span style={{ fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em', color: accentText }}>
+          <span aria-hidden style={{ display: 'inline-flex', marginRight: 6, verticalAlign: 'middle' }}><SubjectGlyph id={id} size={17} /></span>
           {t(subjectNameKey(id))}
         </span>
         <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>
-          {t('subject.topicsCount', { count: s.topics.length })}
+          {t('subject.catalogCounts', { questions: SUBJECT_SCOPE_CATALOG[id].questionCount.toLocaleString(), topics: s.topics.length })}
         </span>
+        <span style={{ fontSize: '0.78rem', lineHeight: 1.4, color: 'var(--color-text-secondary)' }}>{t(subjectBlurbKey(id))}</span>
       </span>
       <span style={{ marginLeft: 'auto', fontSize: '0.9rem', fontWeight: 700, color: accentText, opacity: selected ? 1 : 0 }}>✓</span>
     </button>
@@ -108,7 +111,7 @@ function SubjectPreview({ id, onStart }: { id: SubjectId; onStart: () => void })
                 <span style={{
                   display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%',
                   background: first ? 'var(--brand-accent)' : 'var(--brand-accent-soft)',
-                  color: first ? '#fff' : 'var(--brand-accent)',
+                  color: first ? 'var(--brand-on-accent)' : 'var(--brand-accent)',
                   border: `2px solid ${first ? 'var(--brand-accent)' : 'transparent'}`,
                   fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '0.95rem',
                 }}>{i + 1}</span>
@@ -180,14 +183,14 @@ export default function SubjectPicker() {
   const handleSignIn = async () => {
     setSigningIn(true);
     try { await signInWithGoogle(); }
-    catch (err) { setAuthError(err instanceof Error ? err.message : t('auth.signInFailed')); setSigningIn(false); }
+    catch { setAuthError(t('auth.signInFailed')); setSigningIn(false); }
   };
 
   const strip: StripItem[] = [
-    { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', color: '#1565c0', to: '/challenge', icon: stripIcon(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
-    { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', color: '#0e7490', to: '/play', icon: stripIcon(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
-    { titleKey: 'subject.stripCardsTitle', textKey: 'subject.stripCardsText', color: '#7c3aed', to: '/cards', icon: stripIcon(<><rect x="3" y="6" width="13" height="15" rx="2" /><path d="M8 3h11a2 2 0 0 1 2 2v13" /></>) },
-    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: '#8a5700', to: '/leaderboard', icon: stripIcon(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
+    { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', color: 'var(--brand-accent)', to: '/challenge', icon: stripIcon(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
+    { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', color: 'var(--ss-info)', to: '/play', icon: stripIcon(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
+    { titleKey: 'subject.stripCardsTitle', textKey: 'subject.stripCardsText', color: 'var(--brand-accent)', to: '/cards', icon: stripIcon(<><rect x="3" y="6" width="13" height="15" rx="2" /><path d="M8 3h11a2 2 0 0 1 2 2v13" /></>) },
+    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: 'var(--ss-warning)', to: '/leaderboard', icon: stripIcon(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
   ];
 
   const brand = 'StudyShark';

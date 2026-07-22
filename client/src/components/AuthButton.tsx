@@ -77,8 +77,8 @@ function AuthButton() {
   const handleLogin = async () => {
     try {
       await signInWithGoogle();
-    } catch (err) {
-      setAuthError(err instanceof Error ? err.message : t('auth.signInFailed'));
+    } catch {
+      setAuthError(t('auth.signInFailed'));
     }
   };
 
@@ -88,7 +88,7 @@ function AuthButton() {
   };
   const handleLogout = () => {
     setMenuOpen(false);
-    signOut();
+    void signOut().catch(() => setAuthError(t('auth.signOutFailed')));
   };
 
   if (isLoading) {
@@ -123,6 +123,7 @@ function AuthButton() {
   const displayName = profile.name?.split(' ')[0] || profile.email?.split('@')[0] || t('auth.account');
 
   return (
+    <>
     <Popover
       isOpen={menuOpen}
       onOpenChange={setMenuOpen}
@@ -220,6 +221,8 @@ function AuthButton() {
         </div>
       </button>
     </Popover>
+    <AppToast open={!!authError} onClose={() => setAuthError(null)} severity="error" message={authError} autoHideDuration={8000} />
+    </>
   );
 }
 

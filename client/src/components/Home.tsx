@@ -26,6 +26,7 @@ import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, type StatSpec } from
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
+import SubjectPlate from './ui/SubjectPlate';
 
 // ─────────────────────────────── Topic card ───────────────────────────────
 
@@ -108,6 +109,7 @@ function TopicCard({
 
 function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () => void }) {
   const t = useT();
+  const subject = useActiveSubject();
   return (
     <section
       aria-label={t('home.insideTopic', { name: topic.name })}
@@ -116,6 +118,9 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
     >
       <div aria-hidden style={{ position: 'absolute', right: '-4%', bottom: '-42%', opacity: 0.04, transform: 'rotate(-8deg)', pointerEvents: 'none', color: 'var(--ss-ink)' }}>
         <SharkFin size={420} color="currentColor" />
+      </div>
+      <div aria-hidden style={{ position: 'absolute', right: 18, top: 12, opacity: 0.18, pointerEvents: 'none' }}>
+        <SubjectPlate id={subject.id} />
       </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', position: 'relative' }}>
         <h2 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.015em' }}>
@@ -142,7 +147,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
                 <span style={{
                   display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%',
                   background: first ? 'var(--brand-accent)' : 'var(--brand-accent-soft)',
-                  color: first ? '#fff' : 'var(--brand-accent)',
+                  color: first ? 'var(--brand-on-accent)' : 'var(--brand-accent)',
                   border: `2px solid ${first ? 'var(--brand-accent)' : 'transparent'}`,
                   fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '0.95rem',
                 }}>{i + 1}</span>
@@ -156,12 +161,12 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
         })}
         {/* Gold checkpoint node. */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 110, flexShrink: 0 }}>
-          <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'rgba(245,166,35,0.14)', color: '#8a5700', border: '2px solid rgba(138,87,0,0.5)' }}>
+          <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'var(--ss-warning-soft)', color: 'var(--ss-warning)', border: '2px solid color-mix(in srgb, var(--ss-warning) 50%, transparent)' }}>
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
               <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
             </svg>
           </span>
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#8a5700', whiteSpace: 'nowrap' }}>{t('home.checkpoint')}</span>
+          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{t('home.checkpoint')}</span>
         </div>
       </div>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
@@ -212,8 +217,8 @@ export default function Home() {
     setSigningIn(true);
     try {
       await signInWithGoogle();
-    } catch (err) {
-      setAuthError(err instanceof Error ? err.message : t('auth.signInFailed'));
+    } catch {
+      setAuthError(t('auth.signInFailed'));
       setSigningIn(false);
     }
   };
@@ -221,10 +226,12 @@ export default function Home() {
   const scrollToTopics = () => topicsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   const strip: StripItem[] = [
-    { titleKey: 'home.stripCareerTitle', textKey: 'home.stripCareerText', color: '#7c3aed', to: '/roadmap', icon: STRIP_ICON(<><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></>) },
-    { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', color: '#1565c0', to: '/challenge', icon: STRIP_ICON(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
-    { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', color: '#0e7490', to: '/play', icon: STRIP_ICON(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
-    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: '#8a5700', to: '/leaderboard', icon: STRIP_ICON(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
+    ...(subject.id === 'webdev'
+      ? [{ titleKey: 'home.stripCareerTitle' as TranslationKey, textKey: 'home.stripCareerText' as TranslationKey, color: 'var(--brand-accent)', to: '/roadmap', icon: STRIP_ICON(<><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></>) }]
+      : [{ titleKey: 'subject.stripCardsTitle' as TranslationKey, textKey: 'subject.stripCardsText' as TranslationKey, color: 'var(--brand-accent)', to: '/cards', icon: STRIP_ICON(<><rect x="3" y="6" width="13" height="15" rx="2" /><path d="M8 3h11a2 2 0 0 1 2 2v13" /></>) }]),
+    { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', color: 'var(--brand-accent)', to: '/challenge', icon: STRIP_ICON(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
+    { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', color: 'var(--ss-info)', to: '/play', icon: STRIP_ICON(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
+    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: 'var(--ss-warning)', to: '/leaderboard', icon: STRIP_ICON(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
   ];
 
   return (

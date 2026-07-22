@@ -3,9 +3,9 @@
 // The parent (Home) handles applying + autosaving the choice; this component
 // only presents the options and reports the selection.
 //
-// Redesigned on the Astryx design system: an Astryx Dialog whose options are
-// SelectableCards. Selecting a card reports the choice immediately (the parent
-// applies + closes), and the currently-applied track carries a "current" Badge.
+// Redesigned on the Astryx design system: an Astryx Dialog whose options use
+// the shared radio-card pattern. Activating a card applies + closes; arrow keys
+// can browse the exclusive options without unexpectedly closing the dialog.
 
 import { useEffect, useState } from 'react';
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
@@ -14,10 +14,10 @@ import { HStack } from '@astryxdesign/core/HStack';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
-import { SelectableCard } from '@astryxdesign/core/SelectableCard';
 import { trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tracks';
 import { useSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
+import { RadioCard, RadioCardGroup } from './ui/RadioCards';
 
 export default function PathPickerDialog({
   open,
@@ -56,20 +56,23 @@ export default function PathPickerDialog({
           if (!next) onClose();
         }}
       />
-      <VStack gap={1.5} padding={4} width="100%">
+      <RadioCardGroup
+        value={active}
+        onChange={(value) => setActive(value as Track)}
+        onActivate={(value) => onChoose(value as Track)}
+        label={t('home.pathDialogSubtitle')}
+        style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, width: '100%' }}
+      >
         {TRACK_ORDER.map((tk) => {
           const selected = tk === active;
           return (
-            <SelectableCard
+            <RadioCard
               key={tk}
+              value={tk}
+              index={TRACK_ORDER.indexOf(tk)}
               label={t(trackLabelKey(subject, tk))}
-              isSelected={selected}
-              variant={selected ? 'muted' : 'default'}
               width="100%"
-              onChange={() => {
-                setActive(tk);
-                onChoose(tk);
-              }}
+              style={selected ? { background: 'var(--brand-accent-soft)' } : undefined}
             >
               <VStack gap={0.5}>
                 <HStack gap={1} align="center" justify="between">
@@ -80,10 +83,10 @@ export default function PathPickerDialog({
                   {t(trackBlurbKey(subject, tk))}
                 </Text>
               </VStack>
-            </SelectableCard>
+            </RadioCard>
           );
         })}
-      </VStack>
+      </RadioCardGroup>
     </Dialog>
   );
 }

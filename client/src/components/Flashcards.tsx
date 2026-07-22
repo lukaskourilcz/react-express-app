@@ -88,8 +88,9 @@ function Flashcards() {
           <Heading level={2} justify="center">{t('card.signInTitle')}</Heading>
           <Text type="body" color="secondary" justify="center">{t('card.signInBody')}</Text>
           <div style={{ marginTop: '0.5rem' }}>
-            <Button variant="primary" label={t('auth.logIn')} onClick={() => signInWithGoogle().catch(() => {})} />
+            <Button variant="primary" label={t('auth.logIn')} onClick={() => void signInWithGoogle().catch((err) => setActionError(friendlyError(err)))} />
           </div>
+          {actionError && <ErrorRetry message={actionError} onRetry={() => void signInWithGoogle().catch((err) => setActionError(friendlyError(err)))} />}
         </VStack>
       </Card>
       </div>

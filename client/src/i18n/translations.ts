@@ -132,6 +132,7 @@ export const en = {
   'subject.statSubjects': 'subjects',
   'subject.pickTitle': 'Pick a subject — switch any time.',
   'subject.topicsCount': '{count} topics',
+  'subject.catalogCounts': '{questions} questions · {topics} topics',
   'subject.andMoreTopics': '…and {n} more topics',
   'subject.roadmapNote': 'Levels unlock as you pass checkpoints. Progress syncs to your account.',
   'subject.stripCardsTitle': 'Flashcards',
@@ -264,7 +265,8 @@ export const en = {
   'auth.logIn': 'Log in',
   'auth.logOut': 'Log out',
   'auth.signInFailed': 'Sign-in failed. Please try again.',
-  'auth.signupBonusToast': '+{tokens} tokens · welcome to StudyShark',
+  'auth.signOutFailed': 'Sign-out failed. Check your connection and try again.',
+  'auth.signupBonusToast': '+{tokens} tokens · welcome to {brand}',
   'auth.profile': 'Profile',
   'auth.account': 'Account',
   'auth.loadingAccount': 'Loading account',
@@ -371,6 +373,8 @@ export const en = {
   'flag.failed': 'Could not send flag',
 
   'common.cancel': 'Cancel',
+  'common.offline': 'You’re offline. This screen stays available; actions resume when the connection returns.',
+  'common.backOnline': 'Connection restored.',
 
   // Leaderboard
   'leaderboard.title': 'Leaderboard',
@@ -518,6 +522,8 @@ export const en = {
   'play.questionMeta': 'Question {idx} of {total} · {category} · difficulty {difficulty}',
   'play.tapToLock': 'Click an answer to lock it in — the first click counts.',
   'play.tooLate': 'Time ran out before your answer landed — it didn’t count.',
+  'play.connectionPolling': 'Live updates are reconnecting. The room is staying current through polling.',
+  'play.connectionStale': 'The room could not refresh. Check your connection before answering.',
   'play.skipQuestion': 'Skip question →',
   'play.answerLocked': 'Answer locked. Waiting for {who} to advance…',
   'play.answerLockedVs': 'Answer locked. Waiting for the other players…',
@@ -744,6 +750,7 @@ export const en = {
   'challenge.rule4': 'Score = correct answers. Beat the top score to claim the championship.',
   'challenge.currentChampion': 'Current champion',
   'challenge.noChampion': 'No one has set a score yet. Be the first.',
+  'challenge.boardUnavailable': 'Today’s board could not be loaded. Your challenge is still available.',
   'challenge.hallOfFame': 'Hall of Fame',
   'challenge.startButton': 'Enter the challenge',
   'challenge.score': 'Score',
