@@ -15,7 +15,7 @@ Commit `382ef13` (`Document Shark product and design direction`) added the autho
 - Deep End v2 thesis, brand system, and practical design system;
 - targeted Refero/Collect UI research converted into product decisions;
 - visual QA checklist;
-- Higgsfield opportunity/art-direction/manifest documents explicitly recording that generation did not occur.
+- generated-media opportunity, art-direction, and manifest documents explicitly recording that no production asset has been accepted.
 
 The audit confirmed React 19/Vite, Vercel functions + Supabase (no Express backend), central product/subject registries, bilingual dictionaries, Astryx/Deep End primitives, and exactly twelve API handlers.
 
@@ -87,13 +87,13 @@ Final validation for the current handoff used `/opt/homebrew/bin/node` 23.1.0 (t
 
 Challenge proof collection is materially stronger, but without a server-side append-only attempt ledger a determined client may still omit earlier proof batches. Do not claim cryptographic completeness. A complete fix must fit an existing typed handler and preserve the twelve-function limit.
 
-## Higgsfield production continuation
+## Generated-media production continuation
 
-The Higgsfield MCP became available after restart and its real workspace, balance, model discovery and cost-preflight tools were exercised. The private Plus workspace was selected and reports 10 credits, but it remains in an active trial. `recraft_v4_1` and `z_image` reject MCP submissions with `only_website_usage_on_trial_is_available`; `soul_location` also failed before creating a job. No credits were consumed, no substitute generator or fake asset was used, and the existing solid-green OG fallback was not misrepresented as launch art.
+No generated production asset has been accepted. The existing solid-green OG image remains a deterministic fallback and must not be presented as finished launch art.
 
-The repository now includes the `higgsfield-production` skill, `higgsfield-art-director` specialist and `generate-shark-media` command. `docs/design/higgsfield-opportunity-audit.md`, `higgsfield-art-direction.md` and `generated-media-manifest.md` contain the verified capability state, six product direction briefs, exact failed request IDs and the production continuation workflow.
+The repository includes the `generated-media-production` skill, `generated-media-art-director` specialist and `generate-shark-media` command. `docs/design/generated-media-opportunity-audit.md`, `generated-media-art-direction.md` and `generated-media-manifest.md` contain the provider-neutral research requirements, six product direction briefs, acceptance criteria and continuation workflow.
 
-The next agent must not simply wait for a paid Higgsfield workspace. It must first perform current web research into at least three cheap or free image-generation alternatives, using official pricing, licensing, commercial-use, privacy, retention/training, watermark, output-resolution, aspect-ratio, export and API/MCP documentation. Record dated findings and source links in `docs/design/higgsfield-opportunity-audit.md`, recommend the lowest-risk viable path, and provide website prompts when manual owner generation is the best free route. Do not register accounts, accept paid terms, purchase credits, enable auto-refill, upload sensitive material or switch providers through a state-changing action without explicit owner authorization.
+Before recommending or using a generator, the next agent must perform current web research into at least three cheap or free image-generation services using official pricing, licensing, commercial-use, privacy, retention/training, watermark, output-resolution, aspect-ratio, export and API documentation. Record dated findings and source links in `docs/design/generated-media-opportunity-audit.md`, recommend the lowest-risk viable path, and provide website prompts when manual owner generation is the best free route. Do not register accounts, accept paid terms, purchase credits, enable auto-refill, upload sensitive material or switch providers through a state-changing action without explicit owner authorization.
 
 Produce these items only where the real interface still benefits:
 

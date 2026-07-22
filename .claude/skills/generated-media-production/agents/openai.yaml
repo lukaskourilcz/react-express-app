@@ -1,0 +1,4 @@
+interface:
+  display_name: "Shark Media Production"
+  short_description: "Compare generators and produce verified media"
+  default_prompt: "Use $generated-media-production to compare current cheap/free generators, then produce and document one verified Shark-family media asset."
