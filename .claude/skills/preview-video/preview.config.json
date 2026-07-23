@@ -1,0 +1,19 @@
+{
+  "url": "https://devshark.app/",
+  "devServer": null,
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "deviceScaleFactor": 2,
+  "fps": 30,
+  "scrollSeconds": "auto",
+  "holdFrames": 20,
+  "scrollSelector": "main",
+  "hideSelectors": [
+    ".ss-register-prompt"
+  ],
+  "extraCss": "",
+  "waitAfterLoadMs": 1200,
+  "gif": false
+}
