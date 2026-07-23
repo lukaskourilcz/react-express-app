@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Grid } from '@astryxdesign/core/Grid';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -38,6 +38,7 @@ import type { Lang } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
 import { SIBLING_PLATFORMS_URL, useActiveSubject, topicSetForSubject } from '../lib/subjects';
+import { CURRENT_PRODUCT } from '../lib/products';
 import { savePreferredLanguage } from '../lib/languagePref';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
@@ -46,15 +47,13 @@ import { FlameIcon, BoltIcon, TrophyIcon } from './ui/icons';
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import './DeepEndScreens.css';
 
-const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' });
-
 // Astryx Card colour variants used for the tinted stat / streak tiles.
 type CardVariant = 'default' | 'muted' | 'blue' | 'cyan' | 'gray' | 'green' | 'orange' | 'pink' | 'purple' | 'red' | 'teal' | 'yellow';
 
 // Section opener in the brand's editorial voice: uppercase accent kicker with
 // the waterline tick beneath (the "dive marker" that starts every section).
 function SectionLabel({ children }: { children: ReactNode }) {
-  return <span className="ss-kicker">{children}</span>;
+  return <h2 className="ss-kicker">{children}</h2>;
 }
 
 // Accent-tinted rounded meta pill. `color` sets both the text and (via
@@ -98,7 +97,7 @@ function Profile() {
 
   // Redirect signed-out visitors home once auth has resolved.
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) navigate('/');
+    if (!authLoading && !isAuthenticated) navigate('/', { replace: true });
   }, [authLoading, isAuthenticated, navigate]);
 
   const enabled = isAuthenticated && !!user?.id;
@@ -117,7 +116,7 @@ function Profile() {
 
   if (!isAuthenticated || !user) {
     return (
-      <div style={{ textAlign: 'center', marginTop: '3rem' }}>
+      <div role="status" style={{ textAlign: 'center', marginTop: '3rem' }}>
         <Text type="supporting" color="secondary">
           {t('profile.redirecting')}
         </Text>
@@ -125,8 +124,16 @@ function Profile() {
     );
   }
 
-  if (error) {
-    return <ErrorRetry message={error} onRetry={() => statsQuery.refetch()} />;
+  if (error && !stats) {
+    return (
+      <div className="de-page" style={{ maxWidth: 1000 }}>
+        <VStack gap={2}>
+          <Heading level={1}>{t('nav.profile')}</Heading>
+          <StreakCard stats={null} unavailable />
+          <ErrorRetry message={error} onRetry={() => statsQuery.refetch()} />
+        </VStack>
+      </div>
+    );
   }
 
   const totalQuizzes = stats?.total_quizzes ?? 0;
@@ -147,6 +154,8 @@ function Profile() {
       averageScore={averageScore}
       isFirstTime={isFirstTime}
       navigate={navigate}
+      statsWarning={error}
+      onRetryStats={() => statsQuery.refetch()}
     />
   );
 }
@@ -160,6 +169,8 @@ interface ProfileBodyProps {
   averageScore: number;
   isFirstTime: boolean;
   navigate: (path: string) => void;
+  statsWarning: string | null;
+  onRetryStats: () => void;
 }
 
 function ProfileBody({
@@ -171,6 +182,8 @@ function ProfileBody({
   averageScore,
   isFirstTime,
   navigate,
+  statsWarning,
+  onRetryStats,
 }: ProfileBodyProps) {
   const t = useT();
   const ringColor = useEquippedRingColor();
@@ -181,6 +194,7 @@ function ProfileBody({
     bookmarkCount: bookmarkedQuestions.length,
     perfectQuizzes: readPerfectQuizCount(),
   });
+  const currentStreak = currentStreakForDisplay(stats);
 
   return (
     <div className="de-page" style={{ maxWidth: 1000 }}>
@@ -203,6 +217,7 @@ function ProfileBody({
                   <Avatar src={user.picture} name={user.name} alt="" size={64} />
                 </div>
                 <VStack gap={0.5}>
+                  <span className="ss-kicker">{t('nav.profile')}</span>
                   <Heading level={1} maxLines={1}>
                     {flair ? `${flair} ` : ''}{user.name}
                   </Heading>
@@ -214,6 +229,26 @@ function ProfileBody({
             </Card>
           </div>
         </div>
+
+        {statsWarning && (
+          <Banner
+            status="warning"
+            title={t('profile.statsRefreshFailed')}
+            description={statsWarning}
+            endContent={<Button variant="ghost" size="sm" label={t('quiz.retry')} onClick={onRetryStats} />}
+          />
+        )}
+
+        {/* Keep the streak in the first scan path for both products, including
+            a useful zero state. It must not be buried below track/stat cards. */}
+        <StreakCard stats={stats} />
+
+        <ConsistencyTip
+          title={t(currentStreak > 0 ? 'profile.streakActiveTipTitle' : 'profile.streakStartTipTitle')}
+          body={t(currentStreak > 0 ? 'profile.streakActiveTipBody' : 'profile.streakStartTipBody')}
+          actionLabel={isFirstTime ? t('profile.streakAction') : undefined}
+          onAction={isFirstTime ? () => navigate('/quiz') : undefined}
+        />
 
         {/* On a standalone deploy (e.g. devShark) point learners at the umbrella
             site so they can discover the other Shark platforms. Hidden when
@@ -242,16 +277,6 @@ function ProfileBody({
           </a>
         )}
 
-        {isFirstTime && (
-          <Banner
-            status="info"
-            title={t('profile.noQuizzes')}
-            endContent={
-              <Button variant="ghost" size="sm" label={t('profile.firstQuizCta')} onClick={() => navigate('/quiz')} />
-            }
-          />
-        )}
-
         {/* On desktop the cards split into two columns so the profile lands close
             to one viewport instead of one long scroll. On mobile they stack. */}
         <Grid columns={{ minWidth: 360, max: 2 }} gap={2} align="start" width="100%">
@@ -259,48 +284,6 @@ function ProfileBody({
             <CareerCard />
 
             <LearningTrackCard />
-
-            <Lift>
-            <Card variant="default" padding={3} width="100%">
-              <VStack gap={2}>
-                <SectionLabel>{t('profile.streaks')}</SectionLabel>
-
-                <Grid columns={2} gap={2}>
-                  <div style={{ display: 'flex', width: '100%' }}>
-                    <Card variant="orange" padding={3} width="100%">
-                      <VStack gap={0.5} align="center">
-                        <span aria-hidden style={{ color: '#f97316', display: 'inline-flex' }}><FlameIcon size={24} /></span>
-                        <Text size="4xl" weight="bold">{stats?.current_streak || 0}</Text>
-                        <Text type="supporting" color="secondary" justify="center">
-                          {t('profile.currentStreak')}
-                        </Text>
-                        <MetaPill color="#f97316">{t('profile.days')}</MetaPill>
-                      </VStack>
-                    </Card>
-                  </div>
-
-                  <div style={{ display: 'flex', width: '100%' }}>
-                    <Card variant="cyan" padding={3} width="100%">
-                      <VStack gap={0.5} align="center">
-                        <span aria-hidden style={{ color: '#0ea5e9', display: 'inline-flex' }}><BoltIcon size={24} /></span>
-                        <Text size="4xl" weight="bold" color="accent">{stats?.longest_streak || 0}</Text>
-                        <Text type="supporting" color="secondary" justify="center">
-                          {t('profile.longestStreak')}
-                        </Text>
-                        <MetaPill color="#0ea5e9">{t('profile.days')}</MetaPill>
-                      </VStack>
-                    </Card>
-                  </div>
-                </Grid>
-
-                {stats?.last_quiz_date && (
-                  <Text type="supporting" size="xsm" color="secondary" justify="center">
-                    {t('profile.lastQuiz', { date: dateFormatter.format(new Date(stats.last_quiz_date)) })}
-                  </Text>
-                )}
-              </VStack>
-            </Card>
-            </Lift>
           </VStack>
 
           <VStack gap={2}>
@@ -322,6 +305,11 @@ function ProfileBody({
               </VStack>
             </Card>
             </Lift>
+
+            <ConsistencyTip
+              title={t('profile.reviewTipTitle')}
+              body={t('profile.reviewTipBody')}
+            />
 
             <AchievementsCard achievements={achievements} />
 
@@ -366,16 +354,142 @@ function ProfileBody({
           </VStack>
         </Grid>
 
-        <HStack justify="center">
+        {/* The standalone developer product keeps its compact return action.
+            StudyShark's profile is an overview, so it no longer ends with a
+            contextless "Back to quiz" button. First-time guidance already has
+            a clear quiz action beside the always-visible streak. */}
+        {CURRENT_PRODUCT.id === 'devshark' && !isFirstTime && <HStack justify="center">
           <Button
             variant="ghost"
             size="sm"
-            label={isFirstTime ? t('profile.startQuiz') : t('profile.backToQuiz')}
+            label={t('profile.backToQuiz')}
             onClick={() => navigate('/quiz')}
           />
-        </HStack>
+        </HStack>}
       </VStack>
     </div>
+  );
+}
+
+function currentStreakForDisplay(stats: UserStats | null, now = new Date()): number {
+  if (!stats?.last_quiz_date || stats.current_streak <= 0) return 0;
+  const lastQuiz = new Date(stats.last_quiz_date);
+  if (Number.isNaN(lastQuiz.getTime())) return 0;
+
+  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const lastQuizUtc = Date.UTC(
+    lastQuiz.getUTCFullYear(),
+    lastQuiz.getUTCMonth(),
+    lastQuiz.getUTCDate(),
+  );
+  const daysSinceQuiz = Math.floor((todayUtc - lastQuizUtc) / 86_400_000);
+  return daysSinceQuiz === 0 || daysSinceQuiz === 1 ? stats.current_streak : 0;
+}
+
+function StreakCard({ stats, unavailable = false }: { stats: UserStats | null; unavailable?: boolean }) {
+  const { t, lang } = useLanguage();
+  const currentLabelId = useId();
+  const longestLabelId = useId();
+  const currentStreak = currentStreakForDisplay(stats);
+  const longestStreak = stats?.longest_streak ?? 0;
+  const currentStreakDisplay = unavailable ? '—' : currentStreak;
+  const longestStreakDisplay = unavailable ? '—' : longestStreak;
+  const dateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(lang === 'cs' ? 'cs-CZ' : 'en', { dateStyle: 'medium', timeZone: 'UTC' }),
+    [lang],
+  );
+  const dayUnit = (value: number) => {
+    if (lang === 'en') return t(value === 1 ? 'profile.day' : 'profile.days');
+    if (value === 1) return t('profile.day');
+    if (value >= 2 && value <= 4) return t('profile.daysFew');
+    return t('profile.days');
+  };
+
+  return (
+    <Lift>
+      <Card variant="default" padding={3} width="100%">
+        <VStack gap={2}>
+          <SectionLabel>{t('profile.streaks')}</SectionLabel>
+
+          <Grid columns={{ minWidth: 150, max: 2 }} gap={2}>
+            <div role="group" aria-labelledby={currentLabelId} style={{ display: 'flex', width: '100%' }}>
+              <Card variant="orange" padding={3} width="100%">
+                <VStack gap={0.5} align="center">
+                  <span aria-hidden style={{ color: 'var(--ss-warning)', display: 'inline-flex' }}><FlameIcon size={24} /></span>
+                  <Text
+                    size="4xl"
+                    weight="bold"
+                    aria-label={unavailable ? t('profile.streakValueUnavailable') : undefined}
+                  >
+                    {currentStreakDisplay}
+                  </Text>
+                  <Text id={currentLabelId} type="supporting" color="primary" weight="semibold" justify="center">
+                    {t('profile.currentStreak')}
+                  </Text>
+                  {!unavailable && <MetaPill color="var(--ss-warning)">{dayUnit(currentStreak)}</MetaPill>}
+                </VStack>
+              </Card>
+            </div>
+
+            <div role="group" aria-labelledby={longestLabelId} style={{ display: 'flex', width: '100%' }}>
+              <Card variant="cyan" padding={3} width="100%">
+                <VStack gap={0.5} align="center">
+                  <span aria-hidden style={{ color: 'var(--ss-info)', display: 'inline-flex' }}><BoltIcon size={24} /></span>
+                  <Text
+                    size="4xl"
+                    weight="bold"
+                    color="accent"
+                    aria-label={unavailable ? t('profile.streakValueUnavailable') : undefined}
+                  >
+                    {longestStreakDisplay}
+                  </Text>
+                  <Text id={longestLabelId} type="supporting" color="primary" weight="semibold" justify="center">
+                    {t('profile.longestStreak')}
+                  </Text>
+                  {!unavailable && <MetaPill color="var(--ss-info)">{dayUnit(longestStreak)}</MetaPill>}
+                </VStack>
+              </Card>
+            </div>
+          </Grid>
+
+          {stats?.last_quiz_date && (
+            <Text type="supporting" size="xsm" color="secondary" justify="center">
+              {t('profile.lastQuiz', { date: dateFormatter.format(new Date(stats.last_quiz_date)) })}
+            </Text>
+          )}
+          {unavailable && (
+            <Text type="supporting" size="xsm" color="secondary" justify="center">
+              {t('profile.streakUnavailable')}
+            </Text>
+          )}
+        </VStack>
+      </Card>
+    </Lift>
+  );
+}
+
+interface ConsistencyTipProps {
+  title: string;
+  body: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}
+
+function ConsistencyTip({ title, body, actionLabel, onAction }: ConsistencyTipProps) {
+  const t = useT();
+  const titleId = useId();
+
+  return (
+    <aside className="de-profile-guidance" aria-labelledby={titleId}>
+      <VStack gap={0.5} width="100%">
+        <span className="de-profile-guidance__label">{t('profile.consistencyTip')}</span>
+        <h2 id={titleId} className="de-profile-guidance__title">{title}</h2>
+        <Text type="supporting" size="xsm" color="secondary">{body}</Text>
+      </VStack>
+      {actionLabel && onAction && (
+        <Button variant="secondary" size="sm" label={actionLabel} onClick={onAction} />
+      )}
+    </aside>
   );
 }
 
@@ -439,7 +553,7 @@ function CareerCard() {
             <TrophyIcon size={25} />
           </div>
           <VStack gap={0} width="100%">
-            <Heading level={4} maxLines={1}>{title}</Heading>
+            <Heading level={3} maxLines={1}>{title}</Heading>
             <Text type="supporting" size="xsm" color="secondary">
               {t('profile.careerLevelOf', { level: info.level, max: MAX_RANK })}
             </Text>
@@ -536,7 +650,8 @@ function LearningTrackCard() {
                     fontWeight: 600,
                     fontSize: '0.8125rem',
                     lineHeight: 1.4,
-                    padding: '4px 12px',
+                    minHeight: 44,
+                    padding: '8px 12px',
                     borderRadius: 999,
                     border: `1px solid ${color}`,
                     backgroundColor: unlocked ? color : 'transparent',
@@ -661,11 +776,6 @@ function AchievementBadge({ achievement }: { achievement: Achievement }) {
   return (
     <div
       className="ss-lift"
-      aria-label={t('profile.achievementAria', {
-        label,
-        state: earned ? t('profile.earned') : t('profile.locked'),
-        description,
-      })}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -675,7 +785,6 @@ function AchievementBadge({ achievement }: { achievement: Achievement }) {
         borderColor: earned ? `${accent}66` : 'var(--astryx-border, rgba(0,0,0,0.12))',
         borderRadius: 12,
         backgroundColor: earned ? `${accent}14` : 'transparent',
-        opacity: earned ? 1 : 0.55,
       }}
     >
       <div style={{ position: 'relative', flexShrink: 0 }}>
@@ -717,11 +826,14 @@ function AchievementBadge({ achievement }: { achievement: Achievement }) {
       </div>
 
       <div style={{ minWidth: 0 }}>
-        <Text weight="bold" color={earned ? 'primary' : 'secondary'}>
+        <Text weight="bold" color="primary">
           {label}
         </Text>
         <Text type="supporting" size="xsm" color="secondary" display="block">
           {description}
+        </Text>
+        <Text type="supporting" size="xsm" color={earned ? 'accent' : 'secondary'} weight="semibold" display="block">
+          {earned ? t('profile.earned') : t('profile.locked')}
         </Text>
       </div>
     </div>
@@ -744,11 +856,13 @@ function AchievementsCard({ achievements }: { achievements: Achievement[] }) {
           <Badge variant={pct === 100 ? 'success' : 'neutral'} label={`${pct}%`} />
         </HStack>
         <ProgressBar label={t('profile.achievements', { earned: earnedCount, total: achievements.length })} value={pct} isLabelHidden />
-        <Grid columns={{ minWidth: 200, max: 2 }} gap={1.5}>
+        <ul className="de-achievement-list">
           {achievements.map((a) => (
-            <AchievementBadge key={a.id} achievement={a} />
+            <li key={a.id}>
+              <AchievementBadge achievement={a} />
+            </li>
           ))}
-        </Grid>
+        </ul>
       </VStack>
     </Card>
     </Lift>
@@ -863,7 +977,7 @@ const StatTile = ({ label, value, variant }: { label: string; value: number | st
     <Card variant={variant} padding={3} width="100%">
       <VStack gap={0.5}>
         <Text size="4xl" weight="bold">{value}</Text>
-        <Text type="supporting" size="xsm" color="secondary">{label}</Text>
+        <Text type="supporting" size="xsm" color="primary" weight="semibold">{label}</Text>
       </VStack>
     </Card>
   </div>

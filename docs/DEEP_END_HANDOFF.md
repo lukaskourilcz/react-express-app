@@ -1,6 +1,6 @@
 # Deep End overhaul handoff
 
-Updated: 2026-07-22
+Updated: 2026-07-23
 Branch: `codex/deep-end-handoff`
 
 This file is the continuation point for the interrupted autonomous StudyShark/devShark overhaul. Read it with `CLAUDE.md`, `AGENTS.md`, `DESIGN_RULES.md`, and `docs/design/` before editing.
@@ -62,14 +62,21 @@ The continuation commit after `96ff1c6` completes the highest-impact findings fr
 - single-question triage deletion now requires the existing branded destructive confirmation;
 - route focus no longer jumps merely because the locale changes, and all new copy has English/Czech parity.
 
+### 5. Cross-product Profile continuity guidance
+
+The latest Profile milestone keeps the streak in the first scan path for both StudyShark and devShark, including honest zero, stale, loading-error, and cached-refresh states. Verified quiz writes refresh the shared Profile query cache immediately, and an expired stored streak is displayed as zero using the same UTC-day boundary as the server.
+
+Two concise EN/CS consistency notes now sit between meaningful Profile sections. They encourage repeatable routines and spaced review without guilt, artificial urgency, or streak-loss pressure. StudyShark no longer ends a populated Profile with “Back to quiz”; the standalone devShark product keeps that contextual return action. The milestone also improves section headings, streak metric labelling, plural day units, achievement list/state semantics, contrast, and touch targets.
+
 ## Validation completed
 
 Final validation for the current handoff used `/opt/homebrew/bin/node` 23.1.0 (the default shell still resolves Node 20, so keep the PATH override):
 
 - `PATH=/opt/homebrew/bin:$PATH npm run typecheck:api` — passed;
 - `PATH=/opt/homebrew/bin:$PATH npm run test:launch` — passed product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, and the twelve-function budget;
-- `PATH=/opt/homebrew/bin:$PATH npm run build` — passed; Vite reported only the existing static/dynamic import chunk warnings;
+- `PATH=/opt/homebrew/bin:$PATH npm run build` and `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev PATH=/opt/homebrew/bin:$PATH npm run build` — both product configurations passed; Vite reported only the existing static/dynamic import chunk warnings;
 - `PATH=/opt/homebrew/bin:$PATH npm run check:responsive` — 133 route/viewport probes, zero overflow or containment issues across 360, 390, 430, 768, 1024, 1280, and 1440 widths;
+- a later targeted `/profile` probe at the same seven widths correctly redirected the unauthenticated harness to `/`; the new signed-in Profile state was therefore source-reviewed and contract-tested, but must not be described as authenticated browser-verified;
 - `npm audit --omit=dev` and `npm audit --omit=dev --prefix client` — zero vulnerabilities;
 - browser rendering inspected the StudyShark landing, mobile Quiz setup, signed-out `/dev`, and allowed/blocked topic pages at mobile and desktop widths; no console errors were recorded in the checked state;
 - every `.claude/skills/*` package passed `quick_validate.py`;

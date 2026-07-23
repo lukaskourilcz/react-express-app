@@ -49,6 +49,8 @@ import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { CategoryGlyph } from './ui/techIcons';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { createResultShareFile, downloadShareFile } from '../lib/shareCard';
+import { queryClient } from '../lib/queryClient';
+import { profileStatsQueryKey } from '../lib/queries';
 import {
   SUPPORT_PROMPT_KEY,
   disableSupportPrompt,
@@ -254,7 +256,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     const pending = readJSON<PendingReceipt | null>(PENDING_RECEIPT_KEY, null);
     if (!pending || pending.userId !== user.id) return;
     void recordQuizResult(pending.receipt, pending.profile)
-      .then(() => {
+      .then((saved) => {
+        if (saved.data) queryClient.setQueryData(profileStatsQueryKey(user.id), saved.data);
         removeStored(PENDING_RECEIPT_KEY);
         return syncXpWithServer();
       })
@@ -551,6 +554,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           writeJSON(PENDING_RECEIPT_KEY, pending);
           try {
             const saved = await recordQuizResult(pending.receipt, pending.profile);
+            if (saved.data) queryClient.setQueryData(profileStatsQueryKey(user.id), saved.data);
             removeStored(PENDING_RECEIPT_KEY);
             await syncXpWithServer();
             if (saved.applied) announceVerifiedQuestXp(data.questXp);
