@@ -1,6 +1,6 @@
 # Deep End overhaul handoff
 
-Updated: 2026-07-22
+Updated: 2026-07-23
 Branch: `codex/deep-end-handoff`
 
 This file is the continuation point for the interrupted autonomous StudyShark/devShark overhaul. Read it with `CLAUDE.md`, `AGENTS.md`, `DESIGN_RULES.md`, and `docs/design/` before editing.
@@ -15,7 +15,7 @@ Commit `382ef13` (`Document Shark product and design direction`) added the autho
 - Deep End v2 thesis, brand system, and practical design system;
 - targeted Refero/Collect UI research converted into product decisions;
 - visual QA checklist;
-- Higgsfield opportunity/art-direction/manifest documents explicitly recording that generation did not occur.
+- generated-media opportunity, art-direction, and manifest documents explicitly recording that no production asset has been accepted.
 
 The audit confirmed React 19/Vite, Vercel functions + Supabase (no Express backend), central product/subject registries, bilingual dictionaries, Astryx/Deep End primitives, and exactly twelve API handlers.
 
@@ -62,14 +62,21 @@ The continuation commit after `96ff1c6` completes the highest-impact findings fr
 - single-question triage deletion now requires the existing branded destructive confirmation;
 - route focus no longer jumps merely because the locale changes, and all new copy has English/Czech parity.
 
+### 5. Cross-product Profile continuity guidance
+
+The latest Profile milestone keeps the streak in the first scan path for both StudyShark and devShark, including honest zero, stale, loading-error, and cached-refresh states. Verified quiz writes refresh the shared Profile query cache immediately, and an expired stored streak is displayed as zero using the same UTC-day boundary as the server.
+
+Two concise EN/CS consistency notes now sit between meaningful Profile sections. They encourage repeatable routines and spaced review without guilt, artificial urgency, or streak-loss pressure. StudyShark no longer ends a populated Profile with “Back to quiz”; the standalone devShark product keeps that contextual return action. The milestone also improves section headings, streak metric labelling, plural day units, achievement list/state semantics, contrast, and touch targets.
+
 ## Validation completed
 
 Final validation for the current handoff used `/opt/homebrew/bin/node` 23.1.0 (the default shell still resolves Node 20, so keep the PATH override):
 
 - `PATH=/opt/homebrew/bin:$PATH npm run typecheck:api` — passed;
 - `PATH=/opt/homebrew/bin:$PATH npm run test:launch` — passed product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, and the twelve-function budget;
-- `PATH=/opt/homebrew/bin:$PATH npm run build` — passed; Vite reported only the existing static/dynamic import chunk warnings;
+- `PATH=/opt/homebrew/bin:$PATH npm run build` and `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev PATH=/opt/homebrew/bin:$PATH npm run build` — both product configurations passed; Vite reported only the existing static/dynamic import chunk warnings;
 - `PATH=/opt/homebrew/bin:$PATH npm run check:responsive` — 133 route/viewport probes, zero overflow or containment issues across 360, 390, 430, 768, 1024, 1280, and 1440 widths;
+- a later targeted `/profile` probe at the same seven widths correctly redirected the unauthenticated harness to `/`; the new signed-in Profile state was therefore source-reviewed and contract-tested, but must not be described as authenticated browser-verified;
 - `npm audit --omit=dev` and `npm audit --omit=dev --prefix client` — zero vulnerabilities;
 - browser rendering inspected the StudyShark landing, mobile Quiz setup, signed-out `/dev`, and allowed/blocked topic pages at mobile and desktop widths; no console errors were recorded in the checked state;
 - every `.claude/skills/*` package passed `quick_validate.py`;
@@ -87,9 +94,15 @@ Final validation for the current handoff used `/opt/homebrew/bin/node` 23.1.0 (t
 
 Challenge proof collection is materially stronger, but without a server-side append-only attempt ledger a determined client may still omit earlier proof batches. Do not claim cryptographic completeness. A complete fix must fit an existing typed handler and preserve the twelve-function limit.
 
-## Deferred Higgsfield AI tasks
+## Generated-media production continuation
 
-Higgsfield was unavailable and the user explicitly deferred all research, prompt work, generation, selection, and integration. No substitute generator, fake UI, placeholder raster, or speculative asset reference was added. When the MCP becomes available, evaluate and produce these items only where the real interface still benefits:
+No generated production asset has been accepted. The existing solid-green OG image remains a deterministic fallback and must not be presented as finished launch art.
+
+The repository includes the `generated-media-production` skill, `generated-media-art-director` specialist and `generate-shark-media` command. `docs/design/generated-media-opportunity-audit.md`, `generated-media-art-direction.md` and `generated-media-manifest.md` contain the provider-neutral research requirements, six product direction briefs, acceptance criteria and continuation workflow.
+
+Before recommending or using a generator, the next agent must perform current web research into at least three cheap or free image-generation services using official pricing, licensing, commercial-use, privacy, retention/training, watermark, output-resolution, aspect-ratio, export and API documentation. Record dated findings and source links in `docs/design/generated-media-opportunity-audit.md`, recommend the lowest-risk viable path, and provide website prompts when manual owner generation is the best free route. Do not register accounts, accept paid terms, purchase credits, enable auto-refill, upload sensitive material or switch providers through a state-changing action without explicit owner authorization.
+
+Produce these items only where the real interface still benefits:
 
 1. Shark-family fin-and-waterline mark studies for favicon/PWA/social-avatar refinement; convert the selected geometry into reviewed deterministic SVG rather than shipping a raw raster.
 2. StudyShark Open Graph/launch composition representing geography, math, history, biology, chess, and poker with text-safe negative space; place through product-aware metadata and overlay real EN/CS text deterministically.
@@ -100,7 +113,7 @@ Higgsfield was unavailable and the user explicitly deferred all research, prompt
 7. StudyShark and devShark campaign crops in landscape, portrait, and square formats; EN/CS messaging must be real overlay text, never generated text.
 8. Optional motion studies only after stills succeed: a subtle water/current or fin pass for public landings, with optimized WebM/MP4, poster still, reduced-motion fallback, and no loading in core learning/admin bundles.
 
-For every accepted asset, record the actual tool/workflow, prompts, rejected variants, crop behavior, optimization, provenance, accessibility classification, output path, and regeneration steps in `docs/design/generated-media-manifest.md`. Do not create output directories or references until a production asset actually exists.
+For every accepted asset, record the provider, model/version, dated pricing/license sources, actual tool/workflow, prompts, job IDs, rejected variants, crop behavior, optimization, provenance, accessibility classification, output path, usage restrictions and regeneration steps in `docs/design/generated-media-manifest.md`. Do not create output directories or runtime references until a production asset actually exists.
 
 ## Pre-existing unrelated work
 

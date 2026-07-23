@@ -218,6 +218,24 @@ async function main() {
   const xpSource = readFileSync(join(process.cwd(), 'client/src/lib/xp.ts'), 'utf8');
   assert.doesNotMatch(xpSource, /\bconsumeDoubleXpCharge\b/, 'XP awards must remain independent of shop inventory');
 
+  const profileSource = readFileSync(join(process.cwd(), 'client/src/components/Profile.tsx'), 'utf8');
+  const profileStreakIndex = profileSource.indexOf('<StreakCard stats={stats} />');
+  const profileSectionsIndex = profileSource.indexOf('<Grid columns={{ minWidth: 360, max: 2 }}');
+  assert.ok(
+    profileStreakIndex >= 0 && profileSectionsIndex >= 0 && profileStreakIndex < profileSectionsIndex,
+    'Profile must keep the streak ahead of the secondary progress sections',
+  );
+  assert.match(
+    profileSource,
+    /CURRENT_PRODUCT\.id === 'devshark' && !isFirstTime/,
+    'Only devShark keeps the populated-profile Back to quiz action',
+  );
+  assert.equal(
+    profileSource.match(/<ConsistencyTip/g)?.length,
+    2,
+    'Profile should keep exactly two concise cross-product consistency tips',
+  );
+
   const rateReq = { headers: { 'x-forwarded-for': `contract-${Date.now()}` }, socket: {} } as never;
   const rateRes = mockResponse();
   const policy = { key: `contract-${Date.now()}`, capacity: 2, refillPerSecond: 0.0001 };

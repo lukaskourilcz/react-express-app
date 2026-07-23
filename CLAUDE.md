@@ -22,7 +22,7 @@ Search before creating. Reuse Astryx, existing `client/src/components/ui/`, land
 
 Handle relevant loading, empty, error, offline/reconnect, auth/permission, disabled, success, destructive, expired/stale, long-content, and narrow states. Validate keyboard/focus, non-color status, reduced motion, 44px targets, zoom/reflow, fixed-shell clearance, light/dark, EN/CS, and representative widths.
 
-Higgsfield production is deferred until its MCP exists. Never replace authentic UI with generated fake UI or add filler assets.
+Generative-media production uses `.claude/skills/generated-media-production/SKILL.md` and the three authoritative media documents under `docs/design/`. Generate only accepted high-value opportunities, review three real directions, preserve authentic UI and deterministic text, and record exact provenance. Before recommending or using a generator, perform fresh web research into at least three cheap or free services using official pricing, commercial-license, privacy, retention/training, watermark, resolution, export, and API documentation. Never add filler or fake UI, buy a plan, accept paid terms, enable auto-refill, or upload sensitive material without explicit owner authorization.
 
 ## Working map
 

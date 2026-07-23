@@ -40,6 +40,9 @@ export function useLeaderboard(period: LeaderboardPeriod, date: string, category
   });
 }
 
+export const profileStatsQueryKey = (userId: string | undefined) =>
+  ['profile-stats', userId] as const;
+
 /** The signed-in user's profile stats, creating the row on first visit. */
 export function useProfileStats(
   userId: string | undefined,
@@ -47,7 +50,7 @@ export function useProfileStats(
   enabled: boolean,
 ) {
   return useQuery({
-    queryKey: ['profile-stats', userId],
+    queryKey: profileStatsQueryKey(userId),
     enabled: enabled && !!userId,
     queryFn: async (): Promise<UserStats | null> => {
       const loaded = await getUserStats(userId!);
