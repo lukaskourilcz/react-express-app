@@ -376,3 +376,105 @@
 @media (prefers-reduced-motion: reduce) {
   .rm-track-in { animation: none; }
 }
+
+/* ── Mastery legend — the key for the white / amber / green node states.
+   Each swatch pairs its colour with a glyph so status is never colour-only. */
+.rm-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  margin: -6px 0 16px;
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+}
+.rm-legend-title {
+  font-weight: 750;
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.rm-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.rm-legend-swatch {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  background: var(--color-background-muted);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+.rm-legend-swatch--cleared { border-color: var(--ss-warning); background: var(--ss-warning-soft); color: var(--ss-warning); }
+.rm-legend-swatch--mastered { border-color: var(--ss-success); background: var(--ss-success-soft); color: var(--ss-success); }
+.rm-legend-swatch--due { border-color: var(--ss-info); background: var(--ss-info-soft); color: var(--ss-info); }
+
+/* Due-for-review marker riding the top-right of a cleared level node. */
+.rm-due-marker {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-background-surface);
+  border: 1.5px solid var(--ss-info);
+  color: var(--ss-info);
+  box-shadow: 0 1px 3px rgba(23, 39, 46, 0.22);
+}
+
+/* ── Adaptive placement: stepping-up / stepping-down feedback banner. */
+.rm-step-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--brand-accent);
+  border-radius: var(--radius-element);
+  background: var(--brand-accent-soft);
+  font-size: 0.85rem;
+}
+.rm-step-banner[data-dir='up'] { border-left-color: var(--ss-success); background: var(--ss-success-soft); }
+.rm-step-banner[data-dir='down'] { border-left-color: var(--ss-warning); background: var(--ss-warning-soft); }
+.rm-step-banner__glyph { display: inline-flex; line-height: 0; }
+.rm-step-banner[data-dir='up'] .rm-step-banner__glyph { color: var(--ss-success); }
+.rm-step-banner[data-dir='down'] .rm-step-banner__glyph { color: var(--ss-warning); }
+.rm-step-banner__hint { color: var(--color-text-secondary); }
+
+/* "I don't know yet" — a dashed, honest opt-out that reads distinct from the
+   answer options and gets a solid fill when selected. */
+.rm-idk-btn {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 10px;
+  padding: 11px 16px;
+  border-radius: 8px;
+  border: 2px dashed var(--color-border);
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-weight: 650;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+}
+.rm-idk-btn:hover { border-color: var(--brand-accent); background: var(--color-background-muted); }
+.rm-idk-btn[data-selected='true'] {
+  border-style: solid;
+  border-color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+  color: var(--color-text-primary);
+}
+.rm-idk-hint {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}
