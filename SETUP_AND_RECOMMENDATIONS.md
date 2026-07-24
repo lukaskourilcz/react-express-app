@@ -75,8 +75,8 @@ Generate a session secret with: `openssl rand -base64 48`.
 ## 3. Database setup (Supabase / Postgres)
 
 ### 3.1 Fresh project
-Run, in order, in the SQL Editor: `supabase-schema.sql` (base), then
-`supabase-schema-002.sql` … `supabase-schema-014.sql`. They are idempotent-ish
+Run, in order, in the SQL Editor: `supabase/supabase-schema.sql` (base), then
+`supabase/supabase-schema-002.sql` … `supabase/supabase-schema-014.sql`. They are idempotent-ish
 (use `IF NOT EXISTS`) but **order matters** (e.g. 010/014 add columns to the
 `question_edits` table created in 009).
 

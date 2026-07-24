@@ -56,7 +56,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       );
       if (error) {
         if (isRpcMissing(error)) {
-          return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-020.sql to enable per-subject leaderboards');
+          return jsonError(res, 503, 'rpc_missing', 'Run supabase/supabase-schema-020.sql to enable per-subject leaderboards');
         }
         logEvent({ status: 500, error: error.message });
         return jsonError(res, 500, 'db_error', 'Could not load leaderboard');
@@ -83,7 +83,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       );
       if (error) {
         if (isRpcMissing(error)) {
-          return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-005.sql');
+          return jsonError(res, 503, 'rpc_missing', 'Run supabase/supabase-schema-005.sql');
         }
         logEvent({ status: 500, error: error.message });
         return jsonError(res, 500, 'db_error', 'Could not load category leaderboard');
@@ -113,7 +113,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       );
       if (error) {
         if (isRpcMissing(error)) {
-          return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-022.sql to enable subject-scoped daily leaderboards');
+          return jsonError(res, 503, 'rpc_missing', 'Run supabase/supabase-schema-022.sql to enable subject-scoped daily leaderboards');
         }
         logEvent({ status: 500, error: error.message });
         return jsonError(res, 500, 'db_error', 'Could not load daily leaderboard');

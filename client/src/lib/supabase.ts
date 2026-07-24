@@ -24,7 +24,7 @@ export interface UserStats {
 
 // Reads/writes go through the API route which is the authorized boundary.
 // Direct anon-key writes were removed; client RLS is "USING (true)" today
-// and therefore not safe (see supabase-schema-002.sql for the fix).
+// and therefore not safe (see supabase/supabase-schema-002.sql for the fix).
 
 export async function getUserStats(userId: string): Promise<UserStats | null> {
   const { data } = await apiFetch<{ data: UserStats | null }>(

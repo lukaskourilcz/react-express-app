@@ -46,7 +46,7 @@ product or subject scope. Their shared sources of truth are `shared/mastery.ts`
 server-verifiable badge catalog), and `shared/cards.ts` (a finite per-subject
 collectible catalog with deterministic packs). Every new endpoint is a
 `resource=`/`op=` branch inside an existing handler, so the twelve-handler budget
-is unchanged, and all new storage lives in `supabase-schema-024.sql` (additive,
+is unchanged, and all new storage lives in `supabase/supabase-schema-024.sql` (additive,
 idempotent; see `NEEDED.md` to apply it). Cards, freezes, and badges are cosmetic
 retention only and never affect access, content, XP, scores, streaks, ranks, or
 AI availability.

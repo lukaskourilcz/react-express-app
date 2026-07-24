@@ -52,8 +52,8 @@ a slow healing poll while connected.
 
 1. Take and verify a backup using `docs/backup-restore.md`.
 2. Apply migrations 001–020 if the environment does not already contain them.
-3. Apply `supabase-schema-021.sql`, `supabase-schema-022.sql`,
-   `supabase-schema-023.sql`, then `supabase-schema-024.sql`, in one
+3. Apply `supabase/supabase-schema-021.sql`, `supabase/supabase-schema-022.sql`,
+   `supabase/supabase-schema-023.sql`, then `supabase/supabase-schema-024.sql`, in one
    controlled release window.
 4. Confirm `quiz_attempts`, `question_explanations`, `user_question_history`,
    `verified_activity_awards`, `roadmap_attempts`, `roadmap_attempt_answers`,

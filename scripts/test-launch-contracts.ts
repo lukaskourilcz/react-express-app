@@ -181,7 +181,7 @@ async function main() {
   assert.ok(qualityIssues.some((issue) => issue.kind === 'weak_distractor'));
   assert.ok(qualityIssues.some((issue) => issue.kind === 'missing_translation'));
 
-  const migration = readFileSync(join(process.cwd(), 'supabase-schema-022.sql'), 'utf8');
+  const migration = readFileSync(join(process.cwd(), 'supabase', 'supabase-schema-022.sql'), 'utf8');
   assert.match(migration, /record_verified_quiz_result_v2/);
   assert.match(migration, /complete_verified_roadmap_attempt/);
   assert.match(migration, /apply_verified_skill_check/);
@@ -191,7 +191,7 @@ async function main() {
   assert.match(migration, /'math'.*'chess'.*'poker'/);
   assert.doesNotMatch(migration, /'mathematics'|'physics'|'chemistry'/);
 
-  const hardening = readFileSync(join(process.cwd(), 'supabase-schema-023.sql'), 'utf8');
+  const hardening = readFileSync(join(process.cwd(), 'supabase', 'supabase-schema-023.sql'), 'utf8');
   assert.match(hardening, /CREATE TABLE IF NOT EXISTS public\.quiz_submissions/);
   assert.match(hardening, /claim_quiz_submission/);
   assert.match(hardening, /record_roadmap_answer/);
@@ -206,7 +206,7 @@ async function main() {
   );
   assert.match(hardening, /REVOKE ALL ON FUNCTION public\.global_leaderboard\(INTEGER\)/);
   assert.match(hardening, /REVOKE ALL ON FUNCTION public\.daily_leaderboard\(DATE, INTEGER\)/);
-  const multiplayerMigration = readFileSync(join(process.cwd(), 'supabase-schema-005.sql'), 'utf8');
+  const multiplayerMigration = readFileSync(join(process.cwd(), 'supabase', 'supabase-schema-005.sql'), 'utf8');
   assert.match(multiplayerMigration, /DROP FUNCTION IF EXISTS public\.match_scoreboard\(UUID\)/);
 
   const shopSource = readFileSync(join(process.cwd(), 'client/src/lib/shop.ts'), 'utf8');
