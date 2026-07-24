@@ -47,6 +47,8 @@ import { capture } from '../lib/analytics';
 import { MotionPop, MotionItem } from '../lib/motion';
 import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { CategoryGlyph } from './ui/techIcons';
+import Sharkira, { type SharkiraStatus } from './Sharkira';
+import { requestHint, type HintResponse } from '../lib/sharkira';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { createResultShareFile, downloadShareFile } from '../lib/shareCard';
 import { queryClient } from '../lib/queryClient';
@@ -214,9 +216,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [showSupportPrompt, setShowSupportPrompt] = useState(false);
   const [settings] = useSettings();
+  // Sharkira (optional Socratic hint). Presentational state only — the server
+  // owns the guardrail and the content.
+  const [hintStatus, setHintStatus] = useState<SharkiraStatus>('idle');
+  const [hintResponse, setHintResponse] = useState<HintResponse | null>(null);
 
   const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
+  const hintAbortRef = useRef<AbortController | null>(null);
 
   const { isAuthenticated, user } = useAuth();
   const profile = getUserProfile(user);
@@ -661,6 +668,46 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   const currentQuestion = questions[currentIndex];
 
+  // ── Sharkira: optional Socratic hint ──────────────────────────────────
+  // Pre-answer help offered only on plain-quiz and review sessions. The daily
+  // challenge is scope 'daily' server-side (hints disabled), so we never even
+  // show the affordance there. The server is still authoritative — a stray
+  // disabled response collapses to Sharkira's "sitting this one out" note.
+  const sharkiraEligible = mode !== 'daily' && !!sessionId && !!currentQuestion;
+
+  const askSharkira = useCallback(() => {
+    if (!sessionId || !currentQuestion) return;
+    // One request in flight at a time; a re-ask/retry cancels the previous.
+    hintAbortRef.current?.abort();
+    const controller = new AbortController();
+    hintAbortRef.current = controller;
+    setHintResponse(null);
+    setHintStatus('thinking');
+    void requestHint(sessionId, currentQuestion.id, lang, controller.signal).then((res) => {
+      if (controller.signal.aborted) return;
+      setHintResponse(res);
+      setHintStatus('result');
+    });
+  }, [sessionId, currentQuestion, lang]);
+
+  const closeSharkira = useCallback(() => {
+    hintAbortRef.current?.abort();
+    hintAbortRef.current = null;
+    setHintStatus('idle');
+    setHintResponse(null);
+  }, []);
+
+  // A new question cancels any in-flight hint and closes Sharkira, so one
+  // question's guidance never bleeds into the next. Answering is untouched.
+  useEffect(() => {
+    hintAbortRef.current?.abort();
+    hintAbortRef.current = null;
+    setHintStatus('idle');
+    setHintResponse(null);
+  }, [currentQuestion?.id]);
+
+  useEffect(() => () => hintAbortRef.current?.abort(), []);
+
   // Move focus to result heading + announce
   useEffect(() => {
     if (state === 'submitted' && resultHeadingRef.current) {
@@ -673,7 +720,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     if (state !== 'in-progress' || !currentQuestion) return;
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, button, a, [contenteditable="true"], [role="textbox"], [role="radio"], [role="checkbox"]')) return;
+      if (target?.closest('input, textarea, select, button, a, [contenteditable="true"], [role="textbox"], [role="radio"], [role="checkbox"], .sharkira-panel')) return;
 
       if (e.key === 'ArrowRight') {
         e.preventDefault();
@@ -1254,6 +1301,21 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 <ReportFlagIcon />
               </button>
             </div>
+
+            {/* Optional Socratic hint. Sits above the answers, which stay
+                anchored to the bottom (marginTop:auto on the radio group) so
+                asking never shifts an answer under the learner's finger. */}
+            {sharkiraEligible && (
+              <div style={{ flexShrink: 0, marginTop: 12 }}>
+                <Sharkira
+                  status={hintStatus}
+                  response={hintResponse}
+                  onAsk={askSharkira}
+                  onRetry={askSharkira}
+                  onClose={closeSharkira}
+                />
+              </div>
+            )}
 
             {/* Answer options as radio cards (one Tab stop, arrow keys move +
                 select). Raised off the wave on phones so they sit mid-lower

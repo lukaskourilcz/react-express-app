@@ -1,0 +1,219 @@
+/* Shark Cards album (route /collection). Deep End v2: tactile card stock, ocean
+ * ink neutrals, the subject accent reserved for identity moments, restrained
+ * motion. Every card face is procedural (a hue gradient + a rarity glyph); no
+ * raster art. Rarity is communicated by the rarity LABEL text — the colour
+ * accents below are decoration, never the only signal. */
+
+.sc-page {
+  width: 100%;
+}
+
+.sc-loading {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+/* Signed-out / empty call — a calm centred panel with a fin. */
+.sc-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  padding: 28px 20px;
+  background: var(--ss-card-bg);
+  border: 1px solid var(--ss-card-line);
+  border-bottom: 2px solid var(--ss-card-edge);
+  border-radius: var(--radius-container);
+  box-shadow: 0 2px 10px light-dark(rgba(23, 39, 46, 0.06), rgba(0, 0, 0, 0.4));
+}
+
+.sc-note {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-container);
+  background: var(--color-background-muted);
+}
+
+/* Pack-ready banner — accent-edged, matching the profile guidance strip. */
+.sc-pack-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 18px;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 30%, var(--color-border));
+  border-left: 3px solid var(--brand-accent);
+  border-radius: var(--radius-container);
+  background: color-mix(in srgb, var(--brand-accent-soft) 72%, var(--color-background-surface));
+}
+.sc-pack-banner__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+/* ─────────────────────────── Album grid ─────────────────────────── */
+.sc-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 14px;
+}
+.sc-grid__cell {
+  min-width: 0;
+}
+
+/* One card: card stock with a procedural face on top and a neutral body below. */
+.sc-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  border: 1px solid var(--ss-card-line);
+  border-bottom: 2px solid var(--ss-card-edge);
+  background: var(--color-background-surface);
+  overflow: hidden;
+  box-shadow: 0 2px 8px light-dark(rgba(23, 39, 46, 0.06), rgba(0, 0, 0, 0.4));
+}
+.sc-card__face {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.sc-card__face--reveal {
+  aspect-ratio: 3 / 4;
+}
+/* Locked: a hatched paper silhouette, no colour, no name. */
+.sc-card.is-locked .sc-card__face {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      transparent 0 10px,
+      color-mix(in srgb, var(--color-text-secondary) 7%, transparent) 10px 20px
+    ),
+    var(--color-background-muted);
+  color: var(--color-text-disabled);
+}
+.sc-card__glyph {
+  font-size: 2.6rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.28));
+}
+.sc-card.is-locked .sc-card__lockmark {
+  opacity: 0.5;
+}
+.sc-card__dup {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: rgba(0, 0, 0, 0.34);
+  color: #fff;
+}
+.sc-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 10px;
+  border-top: 1px solid var(--ss-card-line);
+}
+.sc-card__name {
+  font-family: var(--font-family-heading);
+  font-weight: 700;
+  font-size: 0.86rem;
+  line-height: 1.25;
+  color: var(--color-text-primary);
+}
+.sc-card.is-locked .sc-card__name {
+  color: var(--color-text-secondary);
+  font-weight: 600;
+  font-style: italic;
+}
+.sc-card__rarity {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.sc-card__earned {
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+}
+
+/* Rarity accents — decorative only (the rarity label text is the real signal). */
+.sc-card--rare .sc-card__rarity { color: #2563eb; }
+.sc-card--epic .sc-card__rarity { color: #7c3aed; }
+.sc-card--legendary .sc-card__rarity { color: #c77f00; }
+.sc-card--rare { border-bottom-color: #2563eb; }
+.sc-card--epic { border-bottom-color: #7c3aed; }
+.sc-card--legendary { border-bottom-color: #c77f00; }
+/* Locked slots stay neutral regardless of rarity (higher specificity wins). */
+.sc-card.is-locked { border-bottom-color: var(--ss-card-edge); }
+
+/* ─────────────────────────── Pack reveal ─────────────────────────── */
+.sc-reveal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid color-mix(in srgb, var(--brand-accent) 26%, var(--color-border));
+  border-radius: var(--radius-container);
+  background: color-mix(in srgb, var(--brand-accent-soft) 60%, var(--color-background-surface));
+}
+.sc-reveal:focus { outline: none; }
+.sc-reveal:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
+.sc-reveal__cards {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+}
+.sc-reveal__item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 150px;
+  animation: scReveal 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes scReveal {
+  from { opacity: 0; transform: translateY(10px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+.sc-tag {
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.sc-tag--new {
+  background: var(--brand-accent);
+  color: var(--brand-on-accent, #fff);
+}
+.sc-tag--dup {
+  background: var(--color-background-muted);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+}
+
+/* Motion freezes for users who opt out — cards simply appear. */
+@media (prefers-reduced-motion: reduce) {
+  .sc-reveal__item { animation: none; }
+}

@@ -6,18 +6,19 @@ Production: [StudyShark](https://studyshark-app.vercel.app) hosts all six genera
 
 The web experience uses the Deep End shark identity across the landing pages, Learn, Quiz, Challenge, Play, Profile, Flashcards, the career roadmap, dialogs, progress indicators, and the `/dev` control room. It supports English and Czech, light and dark themes, keyboard navigation, reduced motion, and responsive mobile/desktop layouts.
 
-Current content: **7,929 authored questions** — 3,609 web development, 1,000 geography, 1,000 mathematics, 1,000 history, 600 chess, 400 human biology, and 320 poker.
+Current content: **7,953 authored questions** — 3,633 web development, 1,000 geography, 1,000 mathematics, 1,000 history, 600 chess, 400 human biology, and 320 poker.
 
 ## What the app can do
 
-- Guided Learn paths with short levels, checkpoints, skill checks, prerequisites, saved progress, and server-observed grading.
-- Configurable solo quizzes with category, difficulty, and question-count selection; weighted sampling; shuffled answers; hints; bookmarks; question reporting; keyboard controls; and a two-column desktop review.
+- Guided Learn paths with short levels, checkpoints, adaptive skill checks, prerequisites, saved progress, and server-observed grading — plus spaced mastery (a level goes cleared → mastered over three separate days) and an auto-composed "Today" queue that folds unfinished work, due-for-review levels, and new material into one daily plan.
+- Configurable solo quizzes with category, difficulty, and question-count selection; weighted sampling; shuffled answers; an optional Socratic "Sharkira" hint coach; bookmarks; question reporting; keyboard controls; and a two-column desktop review.
 - A deterministic daily challenge and the timed Biggest Shark Challenge with subject-specific leaderboards.
 - Live free-for-all matches and host-led classroom rooms using Supabase Realtime with polling recovery, server-side timing, QR sharing, and subject-scoped question sets.
-- Subject-scoped all-time, daily, and category leaderboards; streaks; verified XP; ranks; achievements; and a fairness-neutral cosmetic token shop.
+- Subject-scoped all-time, daily, and category leaderboards; forgiving streaks (configurable off-days plus two monthly freezes); verified XP; ranks; server-synced badges shown alongside their next goals; collectible cosmetic Shark Cards earned by finishing the Today queue; and a fairness-neutral cosmetic token shop.
+- A read-only study advisor that names weakest areas and a suggested week from your own results, and a devShark touch-typing racer (accuracy-gated, WPM earns stars, private on-device best).
 - Per-user, per-subject flashcards with optimistic updates and offline-safe query caching.
 - Google sign-in through Supabase Auth, cross-device progress, profile settings, language preference, and permanent account deletion.
-- Optional voluntary support, post-answer AI explanations, Sentry monitoring, and PostHog analytics. Every optional integration is gated and disabled by default.
+- Optional voluntary support, post-answer AI explanations, Socratic Sharkira hints, Sentry monitoring, and PostHog analytics. Every optional integration is gated and disabled by default.
 - A role-gated `/dev` control room for question CRUD/overrides, EN/CS editing, importance tuning, quality and parity checks, report triage, auth logs, feature settings, support disclosure, and app-context switching.
 - Two deployments from one source tree: one multi-subject StudyShark domain and one locked devShark domain, with a central subject/product registry and shared Shark-family footer.
 
@@ -66,7 +67,7 @@ api/                         12 Vercel handlers
 client/src/                  React application, design system, stores, i18n
 lib/                         server auth, tokens, bank loaders, stores, rate limits
 shared/                      product/subject ownership registry
-supabase-schema*.sql         baseline plus migrations through 023
+supabase-schema*.sql         baseline plus migrations through 024
 docs/                        launch, architecture, backup, growth, content sources
 scripts/test-launch-contracts.ts
 ```
@@ -109,7 +110,7 @@ Production requires:
 - `VITE_STUDYSHARK_URL` and `VITE_DEVSHARK_URL`; general subject brands use internal StudyShark links.
 - `ADMIN_EMAILS` or Supabase `app_metadata.role=admin` for `/dev`.
 - Google OAuth origins and callback URLs for every production domain.
-- All migrations through **`supabase-schema-023.sql`**.
+- All migrations through **`supabase-schema-024.sql`**.
 
 Strongly recommended for a public deployment:
 
@@ -126,31 +127,31 @@ The twelve physical handlers multiplex related operations to stay within the dep
 | Handler | Purpose |
 |---|---|
 | `/api/quiz/questions` | Standard/review question sessions |
-| `/api/quiz/submit` | One-time grading, result proofs, reports, optional explanations |
+| `/api/quiz/submit` | One-time grading, result proofs, reports, and optional AI explanations and Socratic Sharkira hints |
 | `/api/quiz/daily` | UTC daily session |
 | `/api/quiz/challenge` | Challenge batches, scoring, completion, leaderboard |
-| `/api/quiz/roadmap` | Structure, attempts, answers, completion, skill checks, progress |
+| `/api/quiz/roadmap` | Structure, attempts, answers, completion, adaptive placement, progress |
 | `/api/play/[action]` | Multiplayer and classroom lifecycle |
 | `/api/leaderboard` | Subject, daily, and category boards |
 | `/api/flashcards` | Subject-scoped flashcard CRUD |
-| `/api/user/[op]` | Stats, category stats, XP, streaks, auth events, deletion |
+| `/api/user/[op]` | Stats, category stats, XP, streaks, badges, streak freezes, Shark Cards, study advisor, auth events, deletion |
 | `/api/admin/[op]` | Role-gated control-room operations |
 | `/api/settings` | Public safe configuration |
 | `/api/health` | Database, service-role migration, and limiter readiness |
 
 ## Database and operations
 
-Apply `supabase-schema.sql`, then numbered migrations in order through 023. Migration 023 adds the one-time submission ledger, subject-scopes multiplayer and flashcards, hardens service-only functions and leaderboard identity, makes roadmap answer recording atomic, enforces complete attempts/prerequisites, adds retention helpers, and adds production indexes.
+Apply `supabase-schema.sql`, then numbered migrations in order through 024. Migration 023 adds the one-time submission ledger, subject-scopes multiplayer and flashcards, hardens service-only functions and leaderboard identity, makes roadmap answer recording atomic, enforces complete attempts/prerequisites, adds retention helpers, and adds production indexes. Migration 024 adds the daily-habit backing — spaced-mastery pass tracking inside verified roadmap completion, freeze-aware streaks, server-synced badges, Shark Cards, and the Sharkira hint cache — additively and idempotently.
 
 After deployment, schedule `public.purge_expired_learning_data()` with Supabase Cron or another owner-controlled job. Back up before migrations and follow [docs/backup-restore.md](./docs/backup-restore.md).
 
-Operational instructions are in [docs/launch-runbook.md](./docs/launch-runbook.md). Owner actions only are tracked in [NEEDED.md](./NEEDED.md). Current and projected infrastructure costs are in [stack-and-scaling.md](./stack-and-scaling.md).
+Operational instructions are in [docs/launch-runbook.md](./docs/launch-runbook.md). Owner actions only are tracked in [NEEDED.md](./NEEDED.md). Current and projected infrastructure costs are in [scaling.md](./scaling.md).
 
 ## Product principles
 
-- Learning, quizzes, explanations, challenges, multiplayer, and progression are free. Support never buys access or rank.
+- Learning, quizzes, explanations, hints, challenges, multiplayer, and progression are free. Support never buys access or rank, and cosmetic Shark Cards, badges, and streak freezes never change access, content, XP, scores, streaks, ranks, or AI availability.
 - StudyShark and devShark are separate public contexts even though they share code and infrastructure.
 - The server owns answers, scoring, progression, and public identity labels.
 - Anonymous local learning remains useful; account-backed competitive and classroom features require sign-in.
-- AI is a capped, cached, post-answer enhancement. Curated content remains authoritative.
+- AI is a capped, cached enhancement — post-answer explanations and pre-answer Socratic hints. Curated content stays authoritative, and hints never reveal the answer.
 - Native mobile work is intentionally deferred until the web release is stable.

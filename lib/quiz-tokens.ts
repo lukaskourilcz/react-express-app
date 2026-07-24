@@ -76,7 +76,40 @@ interface AnswerProofPayload {
   exp: number;
 }
 
-type TokenPayload = SessionPayload | ChallengeRunPayload | ScoreProofPayload | QuizResultReceiptPayload | AnswerProofPayload;
+// A single adaptive-placement round in flight. `history` carries the
+// server-graded outcomes of every prior round and `items` the (hidden) answer
+// key of the round currently being answered. The whole payload is sealed, so
+// the browser can neither read the keys nor forge the running score; the server
+// re-derives the score from `history` alone when it finalizes the placement.
+interface PlacementOutcome {
+  questionId: string;
+  category: string;
+  isCorrect: boolean;
+}
+interface PlacementItem {
+  questionId: string;
+  correctAnswer: number;
+  category: string;
+}
+interface PlacementRunPayload {
+  kind: 'placement-run';
+  subject: ScopeSubjectId;
+  attemptId: string;
+  round: number;
+  difficulty: number;
+  history: PlacementOutcome[];
+  items: PlacementItem[];
+  iat: number;
+  exp: number;
+}
+
+type TokenPayload =
+  | SessionPayload
+  | ChallengeRunPayload
+  | ScoreProofPayload
+  | QuizResultReceiptPayload
+  | AnswerProofPayload
+  | PlacementRunPayload;
 
 function sealToken(payload: TokenPayload): string {
   const iv = randomBytes(12);
@@ -261,6 +294,69 @@ export function decodeQuizResultReceipt(token: string): QuizResultReceipt | null
     outcomes.push({ questionId: value.questionId, category: value.category, isCorrect: value.isCorrect });
   }
   return { attemptId: payload.attemptId, userId: payload.userId, correct: payload.correct!, total: payload.total!, breakdown, outcomes, subject: payload.subject, questXp: payload.questXp!, purpose: payload.purpose!, ...(payload.daily ? { daily: payload.daily } : {}) };
+}
+
+export interface PlacementRunState {
+  subject: ScopeSubjectId;
+  attemptId: string;
+  round: number;
+  difficulty: number;
+  history: PlacementOutcome[];
+  items: PlacementItem[];
+}
+
+function sanitizePlacementOutcomes(input: unknown, limit: number): PlacementOutcome[] | null {
+  if (!Array.isArray(input) || input.length > limit) return null;
+  const out: PlacementOutcome[] = [];
+  for (const value of input) {
+    if (!value || typeof value !== 'object') return null;
+    const o = value as Record<string, unknown>;
+    if (typeof o.questionId !== 'string' || o.questionId.length === 0 || o.questionId.length > 64) return null;
+    if (typeof o.category !== 'string' || !/^[a-z0-9-]{1,50}$/.test(o.category)) return null;
+    if (typeof o.isCorrect !== 'boolean') return null;
+    out.push({ questionId: o.questionId, category: o.category, isCorrect: o.isCorrect });
+  }
+  return out;
+}
+
+function sanitizePlacementItems(input: unknown, limit: number): PlacementItem[] | null {
+  if (!Array.isArray(input) || input.length === 0 || input.length > limit) return null;
+  const out: PlacementItem[] = [];
+  for (const value of input) {
+    if (!value || typeof value !== 'object') return null;
+    const o = value as Record<string, unknown>;
+    if (typeof o.questionId !== 'string' || o.questionId.length === 0 || o.questionId.length > 64) return null;
+    if (!Number.isInteger(o.correctAnswer) || (o.correctAnswer as number) < 0 || (o.correctAnswer as number) > 25) return null;
+    if (typeof o.category !== 'string' || !/^[a-z0-9-]{1,50}$/.test(o.category)) return null;
+    out.push({ questionId: o.questionId, correctAnswer: o.correctAnswer as number, category: o.category });
+  }
+  return out;
+}
+
+export function encodePlacementRun(state: PlacementRunState): string {
+  const now = Date.now();
+  return sealToken({ kind: 'placement-run', ...state, iat: now, exp: now + TOKEN_TTL_MS });
+}
+
+export function decodePlacementRun(token: string): PlacementRunState | null {
+  const payload = openToken(token) as Partial<PlacementRunPayload> | null;
+  if (!payload || payload.kind !== 'placement-run' || !validLifetime(payload, TOKEN_TTL_MS)) return null;
+  if (!isScopeSubject(payload.subject)) return null;
+  if (typeof payload.attemptId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId)) return null;
+  if (!Number.isInteger(payload.round) || payload.round! < 1 || payload.round! > 12) return null;
+  if (!Number.isInteger(payload.difficulty) || payload.difficulty! < 1 || payload.difficulty! > 5) return null;
+  const history = sanitizePlacementOutcomes(payload.history, 50);
+  if (history === null) return null;
+  const items = sanitizePlacementItems(payload.items, 20);
+  if (items === null) return null;
+  return {
+    subject: payload.subject,
+    attemptId: payload.attemptId,
+    round: payload.round!,
+    difficulty: payload.difficulty!,
+    history,
+    items,
+  };
 }
 
 export function encodeAnswerProof(questionId: string, subject: ScopeSubjectId, isCorrect: boolean): string {

@@ -1,0 +1,226 @@
+/*
+ * devShark typing racer — the parts that need pseudo-classes inline styles
+ * can't express. The shark racer itself is the shared <WaterlineProgress>
+ * (already reduced-motion aware), so no bespoke keyframes live here.
+ */
+
+.ss-typing {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: 100%;
+}
+
+/* The snippet the learner reproduces, with live per-character state. Wraps
+   (never scrolls the page) and keeps whitespace exact for code. */
+.ss-typing__guide {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.05rem;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--color-background-muted);
+  border: 1px solid var(--ss-card-line);
+  border-radius: var(--radius-inner);
+  padding: 14px 16px;
+}
+.ss-typing__ch--pending { color: var(--color-text-disabled); }
+.ss-typing__ch--done { color: var(--color-text-primary); }
+.ss-typing__ch--error {
+  color: var(--ss-error);
+  background: var(--ss-error-soft);
+  border-radius: 3px;
+  /* underline, so an error is not signalled by colour alone */
+  text-decoration: underline;
+  text-decoration-color: var(--ss-error);
+  text-underline-offset: 3px;
+}
+.ss-typing__ch--current {
+  color: var(--color-text-primary);
+  box-shadow: inset 0 -2px 0 0 var(--brand-accent);
+  border-radius: 2px;
+}
+
+/* The real input — a normal text field so mobile keyboards appear and screen
+   readers announce typing. Code-friendly: no autocorrect/-capitalise. */
+.ss-typing__input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 52px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.05rem;
+  color: var(--color-text-primary);
+  background: var(--color-background-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-element);
+  padding: 12px 14px;
+  transition: border-color 0.12s ease;
+}
+.ss-typing__input:focus-visible {
+  outline: 3px solid var(--ss-focus);
+  outline-offset: 2px;
+  border-color: transparent;
+}
+/* Read-only (finished) — visibly inert but still focusable, so re-focusing on
+   "Race again" reliably reopens the mobile keyboard. */
+.ss-typing__input[readonly] {
+  opacity: 0.75;
+  cursor: default;
+  background: var(--color-background-muted);
+}
+
+/* Stat chips (progress, accuracy, gate). */
+.ss-typing__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: center;
+}
+.ss-typing__stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+.ss-typing__stat b {
+  font-family: var(--font-family-heading);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.ss-typing__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  background: var(--color-background-muted);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+}
+.ss-typing__badge--fail {
+  color: var(--ss-warning);
+  background: var(--ss-warning-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ss-warning) 34%, transparent);
+}
+
+/* Race track with a finish flag riding the far edge. */
+.ss-typing__track {
+  position: relative;
+  padding-right: 14px;
+}
+.ss-typing__flag {
+  position: absolute;
+  right: -4px;
+  top: -1px;
+  color: var(--color-text-secondary);
+  line-height: 0;
+}
+
+/* Buttons. Every target is at least 44px. */
+.ss-typing__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+.ss-typing__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 20px;
+  border: none;
+  border-radius: var(--radius-element);
+  font-family: var(--font-family-body);
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background: var(--brand-accent);
+  color: var(--brand-on-accent);
+  transition: filter 0.15s ease;
+}
+.ss-typing__btn:hover { filter: brightness(0.93); }
+.ss-typing__btn:focus-visible {
+  outline: 3px solid var(--ss-focus);
+  outline-offset: 2px;
+}
+.ss-typing__btn--secondary {
+  background: var(--color-background-surface);
+  color: var(--color-text-primary);
+  box-shadow: inset 0 0 0 1px var(--ss-card-edge);
+}
+.ss-typing__btn--secondary:hover { background: var(--color-background-muted); filter: none; }
+@media (prefers-reduced-motion: reduce) {
+  .ss-typing__btn,
+  .ss-typing__input { transition: none; }
+}
+
+/* Result — WPM headline + star reward (stars are decorative: the WPM/accuracy
+   text carries the accessible result). */
+.ss-typing__result {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: var(--radius-container);
+  border: 1px solid var(--ss-card-line);
+  border-bottom: 2px solid var(--ss-card-edge);
+  background: var(--ss-card-bg);
+}
+.ss-typing__wpm {
+  font-family: var(--font-family-heading);
+  font-weight: 800;
+  font-size: clamp(2.2rem, 7vw, 3rem);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+.ss-typing__stars {
+  display: inline-flex;
+  gap: 6px;
+}
+.ss-typing__star--on { color: var(--ss-warning); }
+.ss-typing__star--off { color: var(--color-text-disabled); opacity: 0.55; }
+.ss-typing__resultline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+.ss-typing__resultline--pass { color: var(--ss-success); }
+.ss-typing__resultline--fail { color: var(--ss-warning); }
+.ss-typing__best {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+.ss-typing__newbest {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--brand-accent);
+  background: var(--brand-accent-soft, color-mix(in srgb, var(--brand-accent) 12%, transparent));
+}
+
+/* Loading / empty fallbacks keep a stable, centred layout. */
+.ss-typing__fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 0;
+  color: var(--color-text-secondary);
+  text-align: center;
+}

@@ -19,7 +19,6 @@ import type {
   RoadmapAnswerResult,
   RoadmapStructure,
   Question,
-  QuizResult,
 } from '../types/quiz';
 import {
   fetchRoadmapLevel,
@@ -49,13 +48,18 @@ import {
   useExtraUnlocks,
   getExtraUnlocks,
   topicsFromAssessment,
-  ASSESSMENT_QUESTION_COUNT,
   type PartRange,
 } from '../lib/roadmap';
-import { useSubject, topicsForSubject } from '../lib/subjects';
+import { useSubject, topicsForSubject, type SubjectId } from '../lib/subjects';
+import {
+  masteryState,
+  isDueForReview,
+  distinctPassDays,
+  type MasteryState,
+  type LevelMasteryEntry,
+} from '../../../shared/mastery';
 import { levelIntro, preloadLevelIntros } from '../lib/levelIntros';
 import { useRoadmapStructure } from '../lib/queries';
-import { fetchChallengeBatch } from '../lib/challengeApi';
 import { apiFetch } from '../lib/api';
 import { awardLearningOutcome, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp } from '../lib/leveling';
@@ -135,6 +139,12 @@ interface PlacedNode {
   passed: boolean;
   isCurrent: boolean;
   best: number;
+  /** Spaced-mastery state of a level node (white / amber / green). */
+  mastery?: MasteryState;
+  /** Cleared-but-unmastered level whose spaced review is due. */
+  due?: boolean;
+  /** Distinct UTC days this level has been passed on (for the mastery tooltip). */
+  masteryDays?: number;
   level?: RoadmapLevelMeta;
   /** Local 1-based number within the part (what the node displays). */
   displayNum?: number;
@@ -180,6 +190,27 @@ const TrophyIcon = ({ size = 26 }: { size?: number }) => (
   <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" />
     <path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
+  </svg>
+);
+// Mastered levels carry a filled star; cleared-but-due levels carry a small
+// review (circular-arrow) marker. Both pair the mastery colour with a distinct
+// shape so status never rides on colour alone.
+const StarIcon = ({ size = 20 }: { size?: number }) => (
+  <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2.6l2.82 6.1 6.68.78-4.94 4.53 1.32 6.59L12 17.9l-5.9 3.31 1.32-6.59L2.5 10.09l6.68-.78L12 2.6z" />
+  </svg>
+);
+const ReviewIcon = ({ size = 12 }: { size?: number }) => (
+  <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="21 4 21 9 16 9" />
+    <path d="M20.4 13.5A8.5 8.5 0 1 1 18 6.3L21 9" />
+  </svg>
+);
+const StepArrowIcon = ({ dir, size = 15 }: { dir: 'up' | 'down' | 'hold'; size?: number }) => (
+  <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+    {dir === 'up' && <><polyline points="6 14 12 8 18 14" /></>}
+    {dir === 'down' && <><polyline points="6 10 12 16 18 10" /></>}
+    {dir === 'hold' && <><line x1="6" y1="12" x2="18" y2="12" /></>}
   </svg>
 );
 // Build one part's ordered path: its levels, then a single end-of-part test.
@@ -391,6 +422,33 @@ function Roadmap() {
       });
   };
 
+  // Deep link from the Today plan (/learn?topic=…&level=…) opens that level's
+  // lesson directly once the structure is known. Runs once per mount; when the
+  // level isn't unlocked yet it just lands on the level's part instead of
+  // opening it, so a stale link degrades gracefully.
+  const autoOpenedRef = useRef(false);
+  useEffect(() => {
+    if (autoOpenedRef.current || !structure) return;
+    const params = new URLSearchParams(window.location.search);
+    const levelRaw = params.get('level');
+    if (!levelRaw) return;
+    autoOpenedRef.current = true;
+    // If the requested topic was locked, `topic` fell back to the starter — never
+    // open a level that belongs to a different topic than the one on screen.
+    const urlTopic = params.get('topic');
+    if (urlTopic && urlTopic !== topic) return;
+    const lvl = parseInt(levelRaw, 10);
+    if (!Number.isInteger(lvl) || lvl < 1) return;
+    const lvls = structure.structure[topic]?.levels ?? [];
+    const range = partRanges(lvls.length).find((r) => lvl >= r.startLevel && lvl <= r.endLevel);
+    if (!range) return;
+    setPart(range.part);
+    writeString(PART_KEY, String(range.part));
+    if (isPartLevelUnlocked(progress, topic, range, lvl)) {
+      open({ kind: 'level', ref: lvl });
+    }
+  }, [structure, topic]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Open the next item; when it lives in the next part, switch parts too.
   const openNext = (a: Active) => {
     if (a.kind === 'level') {
@@ -460,12 +518,18 @@ function Roadmap() {
       const passed = isLevelPassed(progress, topic, meta.level);
       const unlocked = isPartLevelUnlocked(progress, topic, nodeRange, meta.level);
       const isCurrent = unlocked && !passed;
+      // Spaced mastery reads the stored level entry (migration-024 fields are
+      // additive; older/guest rows without passDays resolve to "cleared").
+      const entry = progress[topic]?.levels?.[String(meta.level)] as LevelMasteryEntry | undefined;
       return {
         i, kind: 'level', key: `lvl-${meta.level}`, cx, cy, half: isCurrent ? 23 : 20,
         accent: band.solid, grad: band.grad, level: meta,
         displayNum: meta.level,
         unlocked, passed, isCurrent: unlocked && !passed,
         best: levelBestPct(progress, topic, meta.level),
+        mastery: masteryState(entry),
+        due: isDueForReview(entry),
+        masteryDays: distinctPassDays(entry),
       };
     });
     const rows = Math.ceil(nodes.length / cols);
@@ -484,6 +548,7 @@ function Roadmap() {
     return (
       <SkillCheckRunner
         lang={lang}
+        subject={subject}
         isAuthenticated={isAuthenticated}
         onCancel={() => setSkillCheckOpen(false)}
         onFinished={onSkillCheckFinished}
@@ -650,6 +715,10 @@ function Roadmap() {
             </div>
           </div>
 
+          {/* Reads the node colours: white = not started, amber = cleared,
+              green = mastered, plus the due-for-review marker. */}
+          <MasteryLegend t={t} />
+
           {/* The path — a serpentine ribbon flowing left→right and gently down,
               then wrapping back, drawn through node centres with an SVG. */}
           <div className="rm-path-scroll">
@@ -704,6 +773,9 @@ function Roadmap() {
                           passed={n.passed}
                           best={n.best}
                           isCurrent={n.isCurrent}
+                          mastery={n.mastery ?? 'notStarted'}
+                          due={n.due ?? false}
+                          masteryDays={n.masteryDays ?? 0}
                           cellW={layout.cellW}
                           onClick={() => open({ kind: 'level', ref: n.level!.level })}
                           t={t}
@@ -742,20 +814,65 @@ function Roadmap() {
   );
 }
 
+/* ──── mastery legend ───────────────────────────────────────────────────── */
+
+// A compact key for the three spaced-mastery node states plus the due marker.
+// Each swatch pairs its colour with a glyph so the legend is legible without
+// relying on colour perception.
+function MasteryLegend({ t }: { t: TFn }) {
+  return (
+    <div className="rm-legend" role="group" aria-label={t('mastery.legendTitle')}>
+      <span className="rm-legend-title">{t('mastery.legendTitle')}</span>
+      <span className="rm-legend-item">
+        <span className="rm-legend-swatch" aria-hidden="true" />
+        {t('mastery.notStarted')}
+      </span>
+      <span className="rm-legend-item">
+        <span className="rm-legend-swatch rm-legend-swatch--cleared" aria-hidden="true"><CheckIcon size={11} /></span>
+        {t('mastery.cleared')}
+      </span>
+      <span className="rm-legend-item">
+        <span className="rm-legend-swatch rm-legend-swatch--mastered" aria-hidden="true"><StarIcon size={11} /></span>
+        {t('mastery.mastered')}
+      </span>
+      <span className="rm-legend-item">
+        <span className="rm-legend-swatch rm-legend-swatch--due" aria-hidden="true"><ReviewIcon size={10} /></span>
+        {t('mastery.dueForReview')}
+      </span>
+    </div>
+  );
+}
+
 /* ──── level node ───────────────────────────────────────────────────────── */
 
 function LevelNode({
-  meta, displayNum, accent, unlocked, passed, best, isCurrent, onClick, t, cellW,
+  meta, displayNum, accent, unlocked, passed, best, isCurrent, mastery, due, masteryDays, onClick, t, cellW,
 }: {
   meta: RoadmapLevelMeta; displayNum: number; accent: string;
   unlocked: boolean; passed: boolean; best: number; isCurrent: boolean;
+  mastery: MasteryState; due: boolean; masteryDays: number;
   onClick: () => void; t: TFn; cellW: number;
 }) {
   // Within a shown part levels gate sequentially; the first level of a part is
   // gated by the previous part's test at the part selector, never here.
   const lockedHint = t('roadmap.lockedHint');
+  // Spaced mastery: a passed level is "cleared" (amber) until it is mastered
+  // (green). Soft fill + strong border/icon mirror the quiz feedback tokens so
+  // contrast holds in light and dark; the glyph (check vs star) and the aria
+  // text carry the status without relying on colour.
+  const mastered = passed && mastery === 'mastered';
+  const passedLine = mastered ? 'var(--ss-success)' : 'var(--ss-warning)';
+  const passedFill = mastered ? 'var(--ss-success-soft)' : 'var(--ss-warning-soft)';
+  const masteryText = mastered ? t('mastery.mastered') : t('mastery.cleared');
+  const tip = !unlocked
+    ? lockedHint
+    : mastered
+      ? t('mastery.masteredTooltip', { days: masteryDays })
+      : passed
+        ? (due ? t('mastery.dueTooltip') : t('mastery.clearedTooltip'))
+        : '';
   const label = unlocked
-    ? `${t('roadmap.levelLabel', { n: displayNum })}: ${meta.title}${passed ? `, ${t('roadmap.passed')} ${best}%` : ''}`
+    ? `${t('roadmap.levelLabel', { n: displayNum })}: ${meta.title}${passed ? `, ${masteryText}${due ? `, ${t('mastery.dueForReview')}` : ''}, ${best}%` : ''}`
     : `${t('roadmap.levelLabel', { n: displayNum })}: ${t('roadmap.locked')}`;
   const labelWidth = Math.max(72, Math.min(150, cellW - 10));
 
@@ -763,8 +880,8 @@ function LevelNode({
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <div className={isCurrent ? 'rm-bob' : undefined}>
         {/* span wrapper: disabled buttons swallow pointer events, so the
-            locked-hint tooltip needs an enabled element to attach to. */}
-        <Tooltip content={lockedHint} placement="above" isEnabled={!unlocked}>
+            hint tooltip needs an enabled element to attach to. */}
+        <Tooltip content={tip} placement="above" isEnabled={tip !== ''}>
           <span style={{ display: 'inline-block' }}>
           <button
             type="button"
@@ -774,9 +891,9 @@ function LevelNode({
             aria-label={label}
             style={{
               position: 'relative', width: isCurrent ? 46 : 40, height: isCurrent ? 46 : 40, borderRadius: '50%',
-              border: `2px solid ${passed || isCurrent ? accent : 'transparent'}`,
-              background: passed ? accent : isCurrent ? 'var(--brand-accent-soft)' : 'var(--color-background-muted)',
-              color: passed ? '#fff' : unlocked ? accent : 'var(--color-text-disabled)',
+              border: `2px solid ${passed ? passedLine : isCurrent ? accent : 'transparent'}`,
+              background: passed ? passedFill : isCurrent ? 'var(--brand-accent-soft)' : 'var(--color-background-muted)',
+              color: passed ? passedLine : unlocked ? accent : 'var(--color-text-disabled)',
               cursor: unlocked ? 'pointer' : 'not-allowed',
               display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '0.86rem',
               boxShadow: isCurrent ? `0 0 0 5px ${accent}1f` : 'none',
@@ -784,8 +901,9 @@ function LevelNode({
               fontFamily: 'inherit',
             }}
           >
-            {passed ? <CheckIcon /> : unlocked ? displayNum : <LockIcon />}
+            {passed ? (mastered ? <StarIcon size={20} /> : <CheckIcon />) : unlocked ? displayNum : <LockIcon />}
             {isCurrent && <span className="rm-current-fin" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M3 18 Q 6 6 15 3 Q 17 11 21 18 Z" fill={accent} /></svg></span>}
+            {due && <span className="rm-due-marker" aria-hidden="true"><ReviewIcon size={10} /></span>}
           </button>
           </span>
         </Tooltip>
@@ -1368,26 +1486,66 @@ function LessonError({ message, onRetry, onExit, t }: { message: string; onRetry
   );
 }
 
-/* ──── skill-check runner ───────────────────────────────────────────────── */
+/* ──── adaptive placement runner ────────────────────────────────────────── */
 
-type SkillPhase = 'intro' | 'loading' | 'playing' | 'submitting' | 'result' | 'error';
+// The skill-check is an adaptive placement: the server serves short rounds and
+// steps difficulty up on a strong round, down on a weak one, converging on the
+// learner's level over ~4 rounds. Grading and topic unlocks stay
+// server-authoritative — this component only relays answers and applies the
+// verified receipt. An answer of IDK_INDEX (-1), the "I don't know yet" option,
+// is sent as an explicit miss.
+type PlacementPhase = 'intro' | 'loading' | 'playing' | 'submitting' | 'result' | 'error';
+type StepDir = 'up' | 'down' | 'hold';
+
+const IDK_INDEX = -1;
+
+interface PlacementRound {
+  done: false;
+  round: number;
+  totalRounds: number;
+  difficulty: number;
+  asked: number;
+  total: number;
+  idkCountsAsMiss: boolean;
+  placementToken: string;
+  questions: Question[];
+  lastRoundCorrect?: number;
+  lastRoundSize?: number;
+}
+interface PlacementDone {
+  done: true;
+  correct: number;
+  total: number;
+  difficulty: number;
+  unlockedPreview: string[];
+  resultReceipt?: string;
+}
+type PlacementResponse = PlacementRound | PlacementDone;
 
 function SkillCheckRunner({
   lang,
+  subject,
   isAuthenticated,
   onCancel,
   onFinished,
   t,
 }: {
   lang: string;
+  subject: SubjectId;
   isAuthenticated: boolean;
   onCancel: () => void;
   onFinished: (correct: number, verifiedUnlocks?: RoadmapTopic[]) => void;
   t: TFn;
 }) {
-  const [phase, setPhase] = useState<SkillPhase>('intro');
+  const [phase, setPhase] = useState<PlacementPhase>('intro');
   const [error, setError] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [round, setRound] = useState(1);
+  const [totalRounds, setTotalRounds] = useState(4);
+  const [total, setTotal] = useState(20);
+  const [asked, setAsked] = useState(0);
+  const [difficulty, setDifficulty] = useState(3);
+  const [step, setStep] = useState<StepDir | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [qIndex, setQIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -1399,90 +1557,123 @@ function SkillCheckRunner({
     if (phase === 'result') resultHeadingRef.current?.focus({ preventScroll: true });
   }, [phase]);
 
+  // Swap in a fetched round and reset the per-round answer sheet. `dir` drives
+  // the stepping-up / stepping-down banner (null on the opening round).
+  const applyRound = useCallback((res: PlacementRound, dir: StepDir | null) => {
+    setToken(res.placementToken);
+    setRound(res.round);
+    setTotalRounds(res.totalRounds);
+    setTotal(res.total);
+    setAsked(res.asked);
+    setDifficulty(res.difficulty);
+    setQuestions(res.questions);
+    setQIndex(0);
+    setAnswers({});
+    setStep(dir);
+    setPhase('playing');
+  }, []);
+
+  // Apply the server-verified result. Grading + unlocks live on the server; the
+  // receipt is only applied when signed in — guests get the local unlock tier
+  // from `correct` back in the parent's onSkillCheckFinished.
+  const finishFrom = useCallback(async (res: PlacementDone) => {
+    setCorrect(res.correct);
+    let verified: RoadmapTopic[] | undefined;
+    if (isAuthenticated && res.resultReceipt) {
+      try {
+        const applied = await applySkillCheckReceipt(res.resultReceipt);
+        verified = applied.unlocked;
+      } catch {
+        // The receipt is the server's authority; if applying it fails we still
+        // show the score and fall back to the local unlock tier in onFinished.
+        verified = undefined;
+      }
+    }
+    setVerifiedUnlocks(verified);
+    setPhase('result');
+  }, [isAuthenticated]);
+
   const start = useCallback(async () => {
     setPhase('loading');
     setError(null);
+    setVerifiedUnlocks(undefined);
     const startedAt = Date.now();
     try {
-      const batch = await fetchChallengeBatch({ lang, assessment: true, ranked: false });
-      const trimmed = batch.questions.slice(0, ASSESSMENT_QUESTION_COUNT);
-      if (trimmed.length === 0) throw new Error(t('challenge.noQuestions'));
+      const params = new URLSearchParams({ resource: 'placement', subject, lang });
+      const res = await apiFetch<PlacementResponse>(`/api/quiz/roadmap?${params}`);
       await holdLoadingScreen(startedAt);
-      setSessionId(batch.sessionId);
-      setQuestions(trimmed);
-      setAnswers({});
-      setVerifiedUnlocks(undefined);
-      setQIndex(0);
-      setPhase('playing');
+      if (res.done) await finishFrom(res);
+      else applyRound(res, null);
     } catch (err) {
       setError(friendlyError(err));
       setPhase('error');
     }
-  }, [lang, t]);
+  }, [subject, lang, applyRound, finishFrom]);
 
-  const total = questions.length;
-  const current = questions[qIndex];
-
-  const handlePick = (idx: number) => {
-    if (!current) return;
-    setAnswers((prev) => ({ ...prev, [current.id]: idx }));
-  };
-
-  const goNext = () => {
-    if (qIndex < total - 1) setQIndex((i) => i + 1);
-  };
-
-  const finish = useCallback(async () => {
-    if (!sessionId) return;
+  const submitRound = useCallback(async () => {
+    if (!token) return;
     setPhase('submitting');
     setError(null);
     try {
-      const res = await apiFetch<Pick<QuizResult, 'correctAnswers' | 'resultReceipt'>>('/api/quiz/submit', {
+      const res = await apiFetch<PlacementResponse>('/api/quiz/roadmap?resource=placement', {
         method: 'POST',
-        body: JSON.stringify({ sessionId, answers, lang }),
+        body: JSON.stringify({ placementToken: token, answers, lang }),
       });
-      if (isAuthenticated) {
-        if (!res.resultReceipt) throw new Error(t('roadmap.error'));
-        const verified = await applySkillCheckReceipt(res.resultReceipt);
-        setVerifiedUnlocks(verified.unlocked);
+      if (res.done) {
+        await finishFrom(res);
+      } else {
+        const dir: StepDir = res.difficulty > difficulty ? 'up' : res.difficulty < difficulty ? 'down' : 'hold';
+        applyRound(res, dir);
       }
-      setCorrect(res.correctAnswers);
-      setPhase('result');
     } catch (err) {
       setError(friendlyError(err));
       setPhase('error');
     }
-  }, [sessionId, answers, lang, isAuthenticated, t]);
+  }, [token, answers, lang, difficulty, applyRound, finishFrom]);
 
+  const current: Question | undefined = questions[qIndex];
+  const roundSize = questions.length;
   const answered = current ? answers[current.id] != null : false;
-  const allAnswered = total > 0 && questions.every((q) => answers[q.id] != null);
+  const roundComplete = roundSize > 0 && questions.every((q) => answers[q.id] != null);
+  const isLastInRound = qIndex >= roundSize - 1;
+
+  const pick = (idx: number) => {
+    if (!current) return;
+    setAnswers((prev) => ({ ...prev, [current.id]: idx }));
+  };
+  const goNext = () => {
+    if (qIndex < roundSize - 1) setQIndex((i) => i + 1);
+  };
 
   if (phase === 'intro') {
     return (
       <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center', marginTop: 16 }}>
-        <Heading level={2} justify="center">{t('roadmap.skillCheckTitle')}</Heading>
+        <span className="ss-kicker ss-kicker--center">{t('placement.kicker')}</span>
+        <div style={{ marginTop: 10 }}>
+          <Heading level={2} justify="center">{t('placement.title')}</Heading>
+        </div>
         <div style={{ marginTop: 8 }}>
-          <Text color="secondary">{t('roadmap.skillCheckIntro')}</Text>
+          <Text color="secondary">{t('placement.subtitle')}</Text>
         </div>
         <div style={{ marginTop: 12, marginBottom: 24 }}>
-          <Text type="supporting" color="secondary">{t('roadmap.skillCheckBands')}</Text>
+          <Text type="supporting" color="secondary">{t('placement.idkCounts')}</Text>
         </div>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
-          <AxButton variant="primary" label={t('roadmap.skillCheckStart')} onClick={() => void start()} />
-          <AxButton variant="secondary" label={t('roadmap.skillCheckCancel')} onClick={onCancel} />
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+          <AxButton variant="primary" label={t('placement.start')} onClick={() => void start()} />
+          <AxButton variant="secondary" label={t('placement.cancel')} onClick={onCancel} />
         </div>
       </div>
     );
   }
 
   if (phase === 'loading' || phase === 'submitting') {
-    return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('roadmap.skillCheckLoading')} />;
+    return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('placement.loading')} />;
   }
 
   if (phase === 'error') {
     return (
       <LessonError
-        message={error ?? t('roadmap.error')}
+        message={error ?? t('placement.error')}
         onRetry={() => void start()}
         onExit={onCancel}
         t={t}
@@ -1507,14 +1698,20 @@ function SkillCheckRunner({
           </IconTile>
         </div>
         <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">
-          {t('roadmap.skillCheckResult', { correct, total })}
+          {t('placement.done')}
         </h1>
-        <div style={{ marginTop: 8, marginBottom: 24 }}>
+        <div style={{ marginTop: 4 }}>
+          <Text color="secondary" weight="bold">{t('roadmap.skillCheckResult', { correct, total })}</Text>
+        </div>
+        <div style={{ marginTop: 8, marginBottom: 8 }}>
           <Text color="secondary">{t(tier as TranslationKey)}</Text>
+        </div>
+        <div style={{ marginBottom: 24 }}>
+          <Text type="supporting" color="secondary">{t('placement.doneBody')}</Text>
         </div>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           <AxButton variant="primary" label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct, verifiedUnlocks)} />
-          <AxButton variant="secondary" label={t('roadmap.skillCheckRetry')} onClick={() => void start()} />
+          <AxButton variant="secondary" label={t('placement.retry')} onClick={() => void start()} />
         </div>
       </div>
     );
@@ -1522,7 +1719,17 @@ function SkillCheckRunner({
 
   /* ── playing ── */
   if (!current) return null;
-  const progressPct = ((qIndex + (answered ? 1 : 0)) / total) * 100;
+  // Overall progress across every round (asked = questions answered in prior
+  // rounds), so the bar advances steadily toward the 20-question total.
+  const answeredSoFar = asked + qIndex + (answered ? 1 : 0);
+  const progressPct = total > 0 ? (answeredSoFar / total) * 100 : 0;
+  const stepLabel = step === 'up' ? t('placement.steppingUp') : step === 'down' ? t('placement.steppingDown') : t('placement.holding');
+  const stepHint = step === 'up' ? t('placement.steppingUpHint') : step === 'down' ? t('placement.steppingDownHint') : t('placement.converging');
+  const primaryLabel = isLastInRound && round >= totalRounds ? t('placement.finish') : t('placement.next');
+  const primaryDisabled = isLastInRound ? !roundComplete : !answered;
+  const onPrimary = isLastInRound ? () => void submitRound() : goNext;
+  const optionValue = answered && answers[current.id] >= 0 ? answers[current.id] : null;
+
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
@@ -1531,21 +1738,29 @@ function SkillCheckRunner({
           icon={<CloseIcon size={18} />}
           variant="ghost"
           size="sm"
-          label={t('roadmap.skillCheckCancel')}
+          label={t('placement.cancel')}
           onClick={onCancel}
         />
         <div style={{ flex: 1 }}>
           <ProgressBar
-            label={t('roadmap.skillCheckQuestion', { current: qIndex + 1, total })}
+            label={t('placement.roundOf', { n: round, total: totalRounds })}
             value={progressPct}
             isLabelHidden
             variant="accent"
           />
         </div>
-        <Text type="supporting" color="secondary" weight="bold">
-          {qIndex + 1}/{total}
-        </Text>
+        <Badge variant="neutral" label={t('placement.roundOf', { n: round, total: totalRounds })} />
       </div>
+
+      {/* Between-round feedback: which way the difficulty just moved. role=status
+          so assistive tech announces the shift when the round loads. */}
+      {step && qIndex === 0 && (
+        <div className="rm-step-banner" data-dir={step} role="status">
+          <span className="rm-step-banner__glyph" aria-hidden="true"><StepArrowIcon dir={step} /></span>
+          <strong>{stepLabel}</strong>
+          <span className="rm-step-banner__hint">{stepHint}</span>
+        </div>
+      )}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <span
@@ -1561,20 +1776,19 @@ function SkillCheckRunner({
         >
           {t(categoryLabelKey(current.category))}
         </span>
-        <Badge variant="neutral" label={t('common.levelShort', { n: current.difficulty })} />
         <div style={{ marginLeft: 'auto' }}>
           <Text type="supporting" color="secondary">
-            {t('roadmap.skillCheckQuestion', { current: qIndex + 1, total })}
+            {qIndex + 1}/{roundSize}
           </Text>
         </div>
       </div>
 
-      <div id="skillcheck-question" style={{ fontWeight: 500, marginBottom: 16 }}>{renderQuestion(current.question)}</div>
+      <div id="placement-question" style={{ fontWeight: 500, marginBottom: 16 }}>{renderQuestion(current.question)}</div>
 
       <RadioCardGroup
-        value={answers[current.id] ?? null}
-        onChange={(value) => handlePick(Number(value))}
-        labelledBy="skillcheck-question"
+        value={optionValue}
+        onChange={(value) => pick(Number(value))}
+        labelledBy="placement-question"
         style={{ display: 'flex', flexDirection: 'column', gap: 10 }}
       >
         {current.options.map((option, idx) => {
@@ -1613,13 +1827,23 @@ function SkillCheckRunner({
         })}
       </RadioCardGroup>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16 }}>
-        <AxButton variant="ghost" label={t('roadmap.skillCheckCancel')} onClick={onCancel} />
-        {qIndex < total - 1 ? (
-          <AxButton variant="primary" label={t('roadmap.skillCheckNext')} onClick={goNext} isDisabled={!answered} />
-        ) : (
-          <AxButton variant="primary" label={t('roadmap.skillCheckFinish')} onClick={() => void finish()} isDisabled={!allAnswered} />
-        )}
+      {/* "I don't know yet" — an explicit miss (index -1), so an honest skip is
+          offered instead of forcing a blind guess. Selecting it clears any
+          option pick for this question. */}
+      <button
+        type="button"
+        className="rm-idk-btn"
+        data-selected={answers[current.id] === IDK_INDEX}
+        aria-pressed={answers[current.id] === IDK_INDEX}
+        onClick={() => pick(IDK_INDEX)}
+      >
+        {t('placement.idkYet')}
+      </button>
+      <div className="rm-idk-hint">{t('placement.idkYetHint')}</div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 16, gap: 12 }}>
+        <AxButton variant="ghost" label={t('placement.cancel')} onClick={onCancel} />
+        <AxButton variant="primary" label={primaryLabel} onClick={onPrimary} isDisabled={primaryDisabled} />
       </div>
     </div>
   );

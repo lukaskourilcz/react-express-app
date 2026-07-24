@@ -6,11 +6,12 @@ Production database migrations through `supabase-schema-023.sql` were applied an
 
 ## Before production launch
 
+- [ ] **Apply `supabase-schema-024.sql`** in the Supabase SQL editor (after 001–023). It is additive and idempotent, and adds the daily-habit backing: spaced-mastery pass tracking inside the verified roadmap completion, freeze-aware streaks (`user_streak_config`, `user_streak_freezes`), server-synced badges (`user_badges`), Shark Cards (`user_cards`, `daily_queue_completions`), and the Sharkira hint cache (`question_hints`). It replaces the `record_verified_quiz_result_v2` and `complete_verified_roadmap_attempt` function bodies (behaviour preserved; freeze/mastery logic added) and extends `delete_user_data`. Until it is applied the new endpoints degrade to `503 migration_required` and the rest of the app is unaffected. Re-verify `/api/health` afterward. `[imp:5]` `[owner:me]` `[time:15m]` `[kind:deploy]`
 - [ ] **Authorize production admins** with `ADMIN_EMAILS` or Supabase `app_metadata.role=admin`, then verify `/dev` access with an admin and a non-admin account. Supabase URL/anon/service-role credentials and unique session secrets are already configured on both Vercel projects. `[imp:5]` `[owner:me]` `[time:1h]` `[kind:deploy]`
 - [ ] **Configure Google OAuth** for every production and preview origin/callback you intend to support, then test sign-in and account deletion with a disposable account. `[imp:5]` `[owner:me]` `[time:1h]` `[kind:deploy]`
 - [ ] **Resolve the Supabase Auth password warning.** If email/password sign-in remains enabled, turn on leaked-password protection in Auth settings; otherwise disable password sign-ups and keep Google OAuth as the supported login method. `[imp:4]` `[owner:me]` `[time:20m]` `[kind:setup]`
 - [ ] **Complete legal/privacy review.** Add the real controller/operator identity and contact, retention periods, lawful bases, processor/transfer disclosures, age policy, analytics consent behavior, and Czech terms. Keep support, analytics, replay, and AI disabled until the disclosure matches production. `[imp:5]` `[owner:me]` `[time:2h]` `[kind:legal]`
-- [ ] **Run the signed-in production smoke test** in English/Czech and desktop/mobile: Learn completion, Quiz replay rejection, Daily/Challenge idempotency, Flashcards, two-session Play/Classroom, leaderboards, `/dev`, and deletion. `[imp:4]` `[owner:me]` `[time:1h]` `[kind:deploy]`
+- [ ] **Run the signed-in production smoke test** in English/Czech and desktop/mobile: Learn completion, Quiz replay rejection, Daily/Challenge idempotency, Flashcards, two-session Play/Classroom, leaderboards, `/dev`, deletion, and the daily-habit additions — the Today queue and its once-per-day Shark Card pack grant, a level going cleared→mastered over separate days, a streak freeze bridging a missed school day, badge sync, the read-only advisor, adaptive placement (including the "I don't know yet" option), a Sharkira hint (curated with AI off), and the devShark typing racer. `[imp:4]` `[owner:me]` `[time:1h]` `[kind:deploy]`
 
 ## Production reliability
 
@@ -30,10 +31,11 @@ Production database migrations through `supabase-schema-023.sql` were applied an
 
 - [ ] **Voluntary support:** set `SUPPORT_ENABLED=true` only after legal/accounting review, then enter truthful provider URLs, target, amount covered, cost breakdown, update date, and public-thanks policy through `/dev`. Support remains unrelated to access or ranking. `[imp:3]` `[owner:me]` `[time:2h]` `[kind:legal]`
 - [ ] **AI explanations:** choose a provider model and budget, then set `AI_EXPLANATIONS_ENABLED`, `OPENAI_API_KEY`, `OPENAI_MODEL`, and `AI_DAILY_GENERATION_LIMIT`. Start with a low daily cap and monitor cached versus generated usage. `[imp:2]` `[owner:me]` `[time:1h]` `[kind:deploy]`
+- [ ] **AI Sharkira hints (Socratic pre-answer coach):** optional and independent of explanations. Set `AI_HINTS_ENABLED=true` (plus the shared `OPENAI_API_KEY`, `OPENAI_MODEL`, and `AI_DAILY_GENERATION_LIMIT`, which also governs the hint budget). When off — the default — Sharkira still works from the curated question context, so the feature degrades gracefully. Hints never reach the client with the answer and are cached in `question_hints`; they are hidden during placement, the daily challenge, and the survival Challenge. Start with a low daily cap and monitor generated versus cached usage. `[imp:2]` `[owner:me]` `[time:1h]` `[kind:deploy]`
 
 ## When usage grows
 
-- [ ] Review [stack-and-scaling.md](./stack-and-scaling.md) monthly once traffic is meaningful. Upgrade Supabase compute before sustained saturation, add retention/partitioning for event tables, and redesign multiplayer fan-out before large classrooms or high concurrent-room counts. `[imp:1]` `[owner:me]` `[time:20m]` `[kind:setup]`
+- [ ] Review [scaling.md](./scaling.md) monthly once traffic is meaningful. Upgrade Supabase compute before sustained saturation, add retention/partitioning for event tables, and redesign multiplayer fan-out before large classrooms or high concurrent-room counts. `[imp:1]` `[owner:me]` `[time:20m]` `[kind:setup]`
 
 Native iOS/Android work remains intentionally deferred; it is not a missing item for this web release.
 

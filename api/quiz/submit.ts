@@ -15,8 +15,11 @@ import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import {
   aiDailyGenerationLimit,
   generateExplanation,
+  generateHint,
   isAiExplanationConfigured,
+  isAiHintConfigured,
   type ExplanationContent,
+  type HintContent,
 } from '../../lib/ai-provider';
 import { subjectForCategory } from '../../shared/subject-catalog';
 import { deploymentSubjectIds } from '../../lib/product-scope';
@@ -88,6 +91,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
   if (req.method === 'POST' && req.query.resource === 'explanation') {
     return handleExplanation(req, res);
+  }
+  if (req.method === 'POST' && req.query.resource === 'hint') {
+    return handleHint(req, res);
   }
 
   if (req.method !== 'POST') {
@@ -385,6 +391,167 @@ async function handleExplanation(req: VercelRequest, res: VercelResponse) {
       category: error instanceof Error ? error.message.slice(0, 80) : 'unknown',
     });
     return res.json({ available: false, fallback: q.explanation });
+  }
+}
+
+// A curated Socratic fallback that is always available, even with AI off. It
+// points the learner back to the safe context (the shown introduction) or to a
+// generic reasoning strategy, and NEVER echoes an option, so it cannot leak the
+// accepted answer. The post-answer explanation is intentionally not used here —
+// it may reveal the answer.
+function curatedHint(lang: ReturnType<typeof normalizeLang>, hasIntroduction: boolean): HintContent {
+  if (lang === 'cs') {
+    return {
+      hint: hasIntroduction
+        ? 'Vrať se k úvodu nad otázkou. Který jediný údaj v něm rozhoduje mezi možnostmi?'
+        : 'Rozděl otázku na menší část: na co přesně se ptá a které slovo je klíčové?',
+      nudge: 'Nejdřív vyluč možnosti, které jsou zjevně mimo, a pak porovnej, co zbude.',
+    };
+  }
+  return {
+    hint: hasIntroduction
+      ? 'Look back at the setup above the question. Which single detail there decides between the options?'
+      : 'Break the question into a smaller piece: what exactly is it asking, and which word is the key?',
+    nudge: 'First rule out the options that are clearly off, then compare what is left.',
+  };
+}
+
+function cleanHint(value: unknown): HintContent | null {
+  if (!value || typeof value !== 'object') return null;
+  const record = value as Record<string, unknown>;
+  const read = (key: string) => (typeof record[key] === 'string' ? record[key].trim() : '');
+  const hint = read('hint');
+  const nudge = read('nudge');
+  return hint && nudge ? { hint, nudge } : null;
+}
+
+// POST /api/quiz/submit?resource=hint — Sharkira's optional Socratic pre-answer
+// hint. It guides toward the correct option without ever naming it, is hidden
+// during placement/daily/challenge, and always has a curated fallback.
+async function handleHint(req: VercelRequest, res: VercelResponse) {
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.aiExplanation))) return;
+  const body = (req.body || {}) as { sessionId?: unknown; questionId?: unknown; lang?: unknown };
+  if (typeof body.sessionId !== 'string' || body.sessionId.length === 0 || body.sessionId.length > 16_384) {
+    return jsonError(res, 400, 'bad_request', 'sessionId is required');
+  }
+  if (typeof body.questionId !== 'string' || body.questionId.length === 0 || body.questionId.length > 64) {
+    return jsonError(res, 400, 'bad_request', 'questionId is required');
+  }
+  const lang = normalizeLang(body.lang);
+
+  const session = decodeSessionEnvelope(body.sessionId);
+  if (!session) return jsonError(res, 400, 'invalid_session', 'Quiz session expired or invalid');
+  const sessionQ = session.questions.find((q) => q.questionId === body.questionId);
+  if (!sessionQ) return jsonError(res, 400, 'bad_request', 'Question is not part of this session');
+
+  // Guardrail: no coaching during a skill-check, daily challenge, or ranked run.
+  if (session.scope === 'assessment' || session.scope === 'daily' || session.scope === 'challenge') {
+    return res.json({ available: false, disabled: true });
+  }
+
+  const subject = session.subject;
+  if (!subject || !deploymentSubjectIds().includes(subject)) {
+    return jsonError(res, 400, 'invalid_session', 'Quiz session belongs to another product deployment');
+  }
+
+  const questions = await getEffectiveQuestionsById(subject, lang === 'cs');
+  const base = questions.get(body.questionId);
+  if (!base) return jsonError(res, 404, 'not_found', 'Question not found');
+  const q = localizeQuestion(base, lang);
+  // The accepted option text is derived server-side from the canonical (unshuffled)
+  // question, and is used only to steer generation and to post-check the output.
+  const acceptedAnswer = (q.options[base.correctAnswer] ?? '').trim();
+  const hasIntroduction = typeof q.introduction === 'string' && q.introduction.trim().length > 0;
+  const curated = curatedHint(lang, hasIntroduction);
+
+  const revealsAnswer = (content: HintContent): boolean => {
+    if (acceptedAnswer.length < 3) return false;
+    const needle = acceptedAnswer.toLowerCase();
+    return content.hint.toLowerCase().includes(needle) || content.nudge.toLowerCase().includes(needle);
+  };
+
+  // The hint is pre-answer content, cached per question + locale (never per
+  // selected answer). Order-independent so a shuffled session still hits cache.
+  const questionHash = explanationHash({
+    question: q.question,
+    options: [...q.options].sort(),
+    introduction: q.introduction,
+    acceptedAnswer,
+  });
+
+  if (serviceSupabase) {
+    try {
+      const cached = await withTimeout(
+        serviceSupabase
+          .from('question_hints')
+          .select('content')
+          .eq('question_id', q.id)
+          .eq('question_hash', questionHash)
+          .eq('locale', lang)
+          .in('status', ['generated', 'reviewed'])
+          .maybeSingle(),
+        1200,
+      );
+      const content = cleanHint(cached.data?.content);
+      if (!cached.error && content && !revealsAnswer(content)) {
+        return res.json({ available: true, source: 'ai', cached: true, hint: content.hint, nudge: content.nudge });
+      }
+    } catch {
+      // Cache is optional; fall through to generation or the curated nudge.
+    }
+  }
+
+  if (!isAiHintConfigured() || !serviceSupabase) {
+    return res.json({ available: true, source: 'curated', hint: curated.hint, nudge: curated.nudge });
+  }
+
+  try {
+    const budget = await withTimeout(
+      serviceSupabase.rpc('claim_ai_generation_budget', {
+        p_date: new Date().toISOString().slice(0, 10),
+        p_limit: aiDailyGenerationLimit(),
+      }),
+      1200,
+    );
+    if (budget.error || budget.data !== true) {
+      logEvent({ status: 200, kind: 'ai_hint', available: true, source: 'curated', reason: budget.error ? 'budget_unavailable' : 'daily_budget_reached' });
+      return res.json({ available: true, source: 'curated', hint: curated.hint, nudge: curated.nudge });
+    }
+    const generated = await generateHint({
+      locale: lang,
+      question: q.question,
+      options: q.options,
+      acceptedAnswer,
+      introduction: q.introduction,
+      category: q.category,
+    });
+    // Post-check: if the model leaked the accepted option text, discard it.
+    if (revealsAnswer(generated.content)) {
+      logEvent({ status: 200, kind: 'ai_hint_rejected', reason: 'reveals_answer' });
+      return res.json({ available: true, source: 'curated', hint: curated.hint, nudge: curated.nudge });
+    }
+    void serviceSupabase
+      .from('question_hints')
+      .upsert(
+        {
+          question_id: q.id,
+          question_hash: questionHash,
+          locale: lang,
+          model: generated.model,
+          prompt_version: generated.promptVersion,
+          content: generated.content,
+          status: 'generated',
+        },
+        { onConflict: 'question_id,question_hash,locale' },
+      )
+      .then(({ error }) => {
+        if (error) logEvent({ status: 200, kind: 'ai_hint_cache_write_failed', category: 'cache' });
+      });
+    logEvent({ status: 200, kind: 'ai_hint', cached: false, locale: lang });
+    return res.json({ available: true, source: 'ai', cached: false, hint: generated.content.hint, nudge: generated.content.nudge });
+  } catch (error) {
+    logEvent({ status: 200, kind: 'ai_hint_fallback', category: error instanceof Error ? error.message.slice(0, 80) : 'unknown' });
+    return res.json({ available: true, source: 'curated', hint: curated.hint, nudge: curated.nudge });
   }
 }
 
