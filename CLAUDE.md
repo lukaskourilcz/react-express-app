@@ -30,7 +30,7 @@ Generative-media production uses `.claude/skills/generated-media-production/SKIL
 - Tokens/shell: `client/src/styles/astryx-theme.css`, `client/src/styles/app-shell.css`
 - Localization: `client/src/i18n/translations.ts`, `client/src/i18n/translations.cs.ts`
 - API: `api/`, `lib/`, `shared/`
-- Supabase: `supabase-schema*.sql`
+- Supabase: `supabase/supabase-schema*.sql`
 - Design guidance: `docs/design/`
 - Skills: `.claude/skills/`
 - Agents: `.claude/agents/`

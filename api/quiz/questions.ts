@@ -138,7 +138,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
         res,
         migrationMissing ? 503 : 500,
         migrationMissing ? 'migration_required' : 'db_error',
-        migrationMissing ? 'Run supabase-schema-022.sql to enable personalized review' : 'Could not build personalized review',
+        migrationMissing ? 'Run supabase/supabase-schema-022.sql to enable personalized review' : 'Could not build personalized review',
       );
     }
     const plan = selectPersonalizedReview(pool, stats.data ?? [], history.data ?? [], count);

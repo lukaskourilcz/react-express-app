@@ -751,7 +751,7 @@ async function distribution(req: VercelRequest, res: VercelResponse) {
 
     if (error) {
       if (isRpcMissing(error)) {
-        return jsonError(res, 503, 'rpc_missing', 'Run supabase-schema-005.sql');
+        return jsonError(res, 503, 'rpc_missing', 'Run supabase/supabase-schema-005.sql');
       }
       return jsonError(res, 500, 'db_error', 'Could not load distribution');
     }

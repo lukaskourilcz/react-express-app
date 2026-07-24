@@ -16,7 +16,7 @@ DevQuiz is functionally complete and the happy paths work end-to-end. **The web 
 1. **Two critical security holes** — the `/dev` admin panel ships with a literal default password `'react123'` documented in the README, and the daily-quiz session token is replayable for an hour to inflate stats / leaderboard rank.
 2. **Missing operational guardrails** — no error tracking, no rate limiting, an always-200 health endpoint, no CI gate, JWT validated by an outbound `auth.getUser` round-trip on every protected request, no per-route error boundaries.
 
-The Supabase database also has one P0 of its own: `supabase-schema-009.sql` (`question_edits` + `app_settings`) is **not applied live** — I confirmed via SQL that both tables are missing — so the `/dev` admin console's persistence layer is broken in prod (writes silently no-op).
+The Supabase database also has one P0 of its own: `supabase/supabase-schema-009.sql` (`question_edits` + `app_settings`) is **not applied live** — I confirmed via SQL that both tables are missing — so the `/dev` admin console's persistence layer is broken in prod (writes silently no-op).
 
 ### Go / No-Go
 
@@ -46,7 +46,7 @@ Severity legend: **P0** = blocks launch · **P1** = ship-but-fix-soon · **P2** 
 
 7. **No rate limiting on any endpoint** — `api/quiz/report.ts`, `api/user/[op].ts`, `api/play/[action].ts`, `api/admin/[op].ts`. Anonymous report spam, leaderboard scraping, admin brute-force, match-creation abuse all open. → Vercel Edge Middleware + Upstash sliding-window for mutating routes; minimum: require auth on `quiz/report`.
 
-8. **`question_reports` INSERT policy is `WITH CHECK (true)`** — `supabase-schema-003.sql:20-22`. Anyone with the anon key can `POST /rest/v1/question_reports` and flood the table without going through `/api/quiz/report`. → `REVOKE INSERT ON public.question_reports FROM anon, authenticated` + `DROP POLICY report_insert_any`; service-role server path still works (defense-in-depth, zero UX impact).
+8. **`question_reports` INSERT policy is `WITH CHECK (true)`** — `supabase/supabase-schema-003.sql:20-22`. Anyone with the anon key can `POST /rest/v1/question_reports` and flood the table without going through `/api/quiz/report`. → `REVOKE INSERT ON public.question_reports FROM anon, authenticated` + `DROP POLICY report_insert_any`; service-role server path still works (defense-in-depth, zero UX impact).
 
 9. **react-router-dom 7.13.0 has 5 CVEs** — `client/package.json:18`. RSC RCE (GHSA-49rj-9fvp-4h2h, not exploitable in SPA mode), CSRF (GHSA-84g9-w2xq-vcv6), XSS (GHSA-8646-j5j9-6r82, GHSA-f22v-gfqf-p8f3), open redirect (GHSA-2j2x-hqr9-3h42). → `npm i react-router-dom@^7.15.1` in `client/`.
 
@@ -68,12 +68,12 @@ Severity legend: **P0** = blocks launch · **P1** = ship-but-fix-soon · **P2** 
 - **No per-route React error boundaries** — `client/src/App.tsx:239-250`. A crash inside `<Quiz>` blows away the whole shell. → Wrap each `<Route element>` in its own `ErrorBoundary` (especially `<PlayMatch>`).
 - **Match host can vanish from `lobby` indefinitely** — `api/play/[action].ts:270-283` only auto-finishes `running` matches; `lobby` matches with a missing heartbeat keep guests on a permanent spinner. → Extend the stale check to `lobby`.
 - **`play/state` leaks `correct_index`** — `api/play/[action].ts:299-303` skips sanitization once `status === 'finished'` and the endpoint uses `tryAuth`, not `requireAuth`. Anyone with the code gets the answer key. → After finish, only unmask for verified participants.
-- **`record_category_stats` callable by anon if 007 not re-applied** — `supabase-schema-005.sql:69` GRANTs to anon; `supabase-schema-007.sql:34` REVOKEs. Order is load-bearing. → Move the `auth.uid()` check inside the function body so correctness doesn't depend on GRANT state.
-- **`SECURITY DEFINER` leaderboards leak email local-part** — `supabase-schema-004.sql:118,146`, `005.sql:32`, `006.sql:32`. `COALESCE(name, split_part(email,'@',1), 'Anonymous')` exposes email prefixes of users with no display name. → `COALESCE(name, 'Anonymous')`.
-- **24 RLS policies re-evaluate `auth.uid()` per row** — confirmed by Supabase performance advisor across `user_stats`, `daily_attempts`, `matches`, `match_participants`, `match_answers`, `user_category_stats`, `flashcards`, `roadmap_progress`, `user_xp`. → Apply the rewritten policy block from the DB section below as `supabase-schema-014.sql`.
+- **`record_category_stats` callable by anon if 007 not re-applied** — `supabase/supabase-schema-005.sql:69` GRANTs to anon; `supabase/supabase-schema-007.sql:34` REVOKEs. Order is load-bearing. → Move the `auth.uid()` check inside the function body so correctness doesn't depend on GRANT state.
+- **`SECURITY DEFINER` leaderboards leak email local-part** — `supabase/supabase-schema-004.sql:118,146`, `005.sql:32`, `006.sql:32`. `COALESCE(name, split_part(email,'@',1), 'Anonymous')` exposes email prefixes of users with no display name. → `COALESCE(name, 'Anonymous')`.
+- **24 RLS policies re-evaluate `auth.uid()` per row** — confirmed by Supabase performance advisor across `user_stats`, `daily_attempts`, `matches`, `match_participants`, `match_answers`, `user_category_stats`, `flashcards`, `roadmap_progress`, `user_xp`. → Apply the rewritten policy block from the DB section below as `supabase/supabase-schema-014.sql`.
 - **Duplicate index on `match_answers`** — `match_answers_match_sub_qidx_uniq` shadows the PK. → `DROP INDEX public.match_answers_match_sub_qidx_uniq`.
 - **Missing CHECK constraints** — `match_answers.duration_ms`, `match_answers.speed_bonus`, `daily_attempts.correct/total`, `matches.questions` (no JSONB size guard). Hostile clients can post negatives / huge values to skew totals. → Add CHECKs as documented in the DB section.
-- **`user_stats.total_*` columns lack NOT NULL** — base `supabase-schema.sql` defaults to 0 but allows explicit NULL → downstream arithmetic crashes. → `ALTER COLUMN ... SET NOT NULL`.
+- **`user_stats.total_*` columns lack NOT NULL** — base `supabase/supabase-schema.sql` defaults to 0 but allows explicit NULL → downstream arithmetic crashes. → `ALTER COLUMN ... SET NOT NULL`.
 - **Streak is timezone-blind** — `record_quiz_result` computes "today" in UTC. A user in UTC+12 quizzing at 11 PM local credits the next UTC day, breaking streaks. → Accept client local date, validate `±1 day` of server UTC.
 - **Idempotency: quiz result POST has no submission ID** — `api/user/[op].ts:172`. Network retry on a flaky connection = double-counted quiz. → Add `submission_id UUID`, track in a small table.
 - **`question_edits` SELECT has no LIMIT** — `lib/questions-store.ts:140`. Grows O(edits). → Add `LIMIT` + `deleted = false`.
@@ -102,15 +102,15 @@ Severity legend: **P0** = blocks launch · **P1** = ship-but-fix-soon · **P2** 
 
 ### Database (Supabase) — P0
 
-1. **`supabase-schema-009.sql` not applied to live DB** — CONFIRMED via SQL: `SELECT FROM information_schema.tables WHERE table_name IN ('question_edits','app_settings')` returns 0 rows. The `/dev` admin console persistence is silently broken in prod (writes no-op). → Apply 009 + 010 (010 adds `cs_*` columns to `question_edits` and depends on 009).
+1. **`supabase/supabase-schema-009.sql` not applied to live DB** — CONFIRMED via SQL: `SELECT FROM information_schema.tables WHERE table_name IN ('question_edits','app_settings')` returns 0 rows. The `/dev` admin console persistence is silently broken in prod (writes no-op). → Apply 009 + 010 (010 adds `cs_*` columns to `question_edits` and depends on 009).
 2. **`question_reports` anon-INSERT** — covered above (P0 #8 under Web).
 3. **`record_category_stats` callable by anon** — covered above (P1 under Web).
 
 ### Database — P1
 
-- **24 RLS policies use `auth.uid()` directly** — apply the rewrite block below as `supabase-schema-014.sql` (also patch source files at the lines noted so fresh applies are clean: 002:14-25, 003:44-50, 004:56-81, 005:20-31, 008:24-39, 011:26-37, 013:20-31).
+- **24 RLS policies use `auth.uid()` directly** — apply the rewrite block below as `supabase/supabase-schema-014.sql` (also patch source files at the lines noted so fresh applies are clean: 002:14-25, 003:44-50, 004:56-81, 005:20-31, 008:24-39, 011:26-37, 013:20-31).
 - **Duplicate index on `match_answers`** — `DROP INDEX public.match_answers_match_sub_qidx_uniq;`
-- **`user_streak` table from `supabase-schema-012.sql` not applied live** — confirm whether the streak garden is meant to sync. Either apply 012 or remove the API path in `api/user/[op].ts:98-127`.
+- **`user_streak` table from `supabase/supabase-schema-012.sql` not applied live** — confirm whether the streak garden is meant to sync. Either apply 012 or remove the API path in `api/user/[op].ts:98-127`.
 - **Migration tracking drift** — only 5 migrations in `supabase_migrations.schema_migrations`; live tables include 008/011/013 (applied via SQL editor without CLI). → Backfill `schema_migrations` rows so future `supabase db push` doesn't try to re-apply.
 - **Missing CHECK / NOT NULL** — see "Web P1" entries above.
 - **`matches.questions` is unbounded JSONB read on every state poll** — store only IDs in the match row; fetch content from the in-process cache.
@@ -170,10 +170,10 @@ Severity legend: **P0** = blocks launch · **P1** = ship-but-fix-soon · **P2** 
 
 Apply in this order, then re-run the security + performance advisors to confirm a clean board.
 
-1. **Apply `supabase-schema-009.sql`** (creates `question_edits` + `app_settings`).
-2. **Apply `supabase-schema-010.sql`** (adds `cs_*` columns to `question_edits` — depends on 009).
-3. **Decide on `supabase-schema-012.sql`** (`user_streak`): apply if the streak garden is in scope, otherwise remove the API path.
-4. **Apply `supabase-schema-014.sql`** (new) — RLS auth.uid() rewrite + `question_reports` REVOKE + duplicate-index drop + CHECK constraints + NOT NULL fills. Sketch:
+1. **Apply `supabase/supabase-schema-009.sql`** (creates `question_edits` + `app_settings`).
+2. **Apply `supabase/supabase-schema-010.sql`** (adds `cs_*` columns to `question_edits` — depends on 009).
+3. **Decide on `supabase/supabase-schema-012.sql`** (`user_streak`): apply if the streak garden is in scope, otherwise remove the API path.
+4. **Apply `supabase/supabase-schema-014.sql`** (new) — RLS auth.uid() rewrite + `question_reports` REVOKE + duplicate-index drop + CHECK constraints + NOT NULL fills. Sketch:
 
 ```sql
 BEGIN;
@@ -184,7 +184,7 @@ BEGIN;
 DROP POLICY IF EXISTS stats_select_own ON user_stats;
 CREATE POLICY stats_select_own ON user_stats FOR SELECT
   USING (user_id = (select auth.uid())::text);
--- ... (repeat pattern for all 25 policies — see supabase-schema-014.sql) ...
+-- ... (repeat pattern for all 25 policies — see supabase/supabase-schema-014.sql) ...
 
 -- 2) question_reports anon-INSERT lockdown (defense-in-depth; server uses service-role).
 REVOKE INSERT, SELECT, UPDATE, DELETE ON public.question_reports FROM anon, authenticated;

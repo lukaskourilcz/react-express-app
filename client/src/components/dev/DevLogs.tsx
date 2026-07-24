@@ -108,7 +108,7 @@ export default function DevLogs() {
                 <TableCell colSpan={4}>
                   <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', textAlign: 'center', padding: '32px 0' }}>
                     No auth events yet. They appear here once people sign in (requires the auth_events
-                    table — supabase-schema-015.sql).
+                    table — supabase/supabase-schema-015.sql).
                   </div>
                 </TableCell>
               </TableRow>
