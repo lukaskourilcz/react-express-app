@@ -27,6 +27,8 @@ import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 import SubjectPlate from './ui/SubjectPlate';
+import ComparisonTable from './landing/ComparisonTable';
+import FounderNote from './landing/FounderNote';
 
 // ─────────────────────────────── Topic card ───────────────────────────────
 
@@ -326,6 +328,10 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {/* ── Free vs typically-paid comparison + founder note ── */}
+      <ComparisonTable onStart={scrollToTopics} />
+      <FounderNote />
 
       {/* ── Free pledge ── */}
       <section aria-label={t('home.pledge')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '8px 0 0' }}>
