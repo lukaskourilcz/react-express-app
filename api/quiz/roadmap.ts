@@ -6,7 +6,14 @@ import {
   secureShuffle,
   type Question,
 } from '../../lib/quiz-runtime';
-import { decodeQuizResultReceipt, decodeSessionEnvelope, encodeSession } from '../../lib/quiz-tokens';
+import {
+  decodeQuizResultReceipt,
+  decodeSessionEnvelope,
+  encodeSession,
+  encodeQuizResultReceipt,
+  encodePlacementRun,
+  decodePlacementRun,
+} from '../../lib/quiz-tokens';
 import {
   jsonError,
   createLogger,
@@ -21,8 +28,17 @@ import { getEffectiveQuestionsById } from '../../lib/questions-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
-import { subjectForCategory, subjectForTopic } from '../../shared/subject-catalog';
-import { assessmentUnlocks, ASSESSMENT_QUESTION_COUNT } from '../../shared/assessment';
+import { subjectForCategory, subjectForTopic, isScopeSubject, type ScopeSubjectId } from '../../shared/subject-catalog';
+import {
+  assessmentUnlocks,
+  ASSESSMENT_QUESTION_COUNT,
+  PLACEMENT_ROUND_SIZE,
+  PLACEMENT_ROUNDS,
+  PLACEMENT_TOTAL,
+  PLACEMENT_START_DIFFICULTY,
+  PLACEMENT_STEP_UP,
+  PLACEMENT_STEP_DOWN,
+} from '../../shared/assessment';
 import {
   buildLiveTopic,
   liveRoadmapStructure,
@@ -355,6 +371,208 @@ async function optionalAuthSub(req: VercelRequest, res: VercelResponse): Promise
   }
 }
 
+/* ──── adaptive placement (GET/POST ?resource=placement) ────────────────────── */
+// A subject-level skill-check delivered as short adaptive rounds. Difficulty
+// steps up after a strong round and down after a weak one; "I don't know yet"
+// (a missing answer or index -1) counts as a miss. Every round is graded
+// server-side against answer keys sealed inside the placement token, and the
+// running score is re-derived from that sealed history — the browser can neither
+// read the keys nor inflate the score. The run always totals exactly
+// PLACEMENT_TOTAL questions, so the final result reuses the existing verified
+// 20-question skill-check receipt + `assessmentUnlocks` for the actual unlock,
+// keeping unlocks server-authoritative and idempotent (by the run's attemptId).
+
+type PlacementOutcome = { questionId: string; category: string; isCorrect: boolean };
+
+function poolForSubject(byId: Map<string, Question>, subject: ScopeSubjectId): Question[] {
+  const cats = new Set<string>(SUBJECT_SCOPE_CATALOG[subject].categories);
+  return [...byId.values()].filter((q) => cats.has(q.category));
+}
+
+// Pick `count` unseen questions nearest the target difficulty, shuffled within
+// each difficulty band so a re-take never yields the same set.
+function pickPlacementIds(pool: Question[], difficulty: number, count: number, seen: Set<string>): string[] {
+  const banded = new Map<number, Question[]>();
+  for (const q of pool) {
+    if (seen.has(q.id)) continue;
+    const dist = Math.abs(q.difficulty - difficulty);
+    const band = banded.get(dist) ?? [];
+    band.push(q);
+    banded.set(dist, band);
+  }
+  const ids: string[] = [];
+  for (let dist = 0; dist <= 4 && ids.length < count; dist++) {
+    const band = secureShuffle(banded.get(dist) ?? []);
+    for (const q of band) {
+      if (ids.length >= count) break;
+      ids.push(q.id);
+    }
+  }
+  return ids;
+}
+
+function stepDifficulty(current: number, correct: number, size: number): number {
+  const ratio = size > 0 ? correct / size : 0;
+  if (ratio >= PLACEMENT_STEP_UP) return Math.min(5, current + 1);
+  if (ratio <= PLACEMENT_STEP_DOWN) return Math.max(1, current - 1);
+  return current;
+}
+
+// Build one playable round (no answer keys leave the server) plus a fresh
+// placement token carrying the sealed answer key and the graded history so far.
+function placementRoundResponse(input: {
+  subject: ScopeSubjectId;
+  attemptId: string;
+  round: number;
+  difficulty: number;
+  history: PlacementOutcome[];
+  pool: Question[];
+  byId: Map<string, Question>;
+  lang: ReturnType<typeof normalizeLang>;
+}): Record<string, unknown> | null {
+  const seen = new Set<string>(input.history.map((h) => h.questionId));
+  const ids = pickPlacementIds(input.pool, input.difficulty, PLACEMENT_ROUND_SIZE, seen);
+  if (ids.length === 0) return null;
+  const built = buildQuestions(ids, input.lang, input.byId);
+  if (built.questions.length === 0) return null;
+  const items = built.answerKey.map((k) => ({
+    questionId: k.questionId,
+    correctAnswer: k.correctAnswer,
+    category: input.byId.get(k.questionId)!.category,
+  }));
+  const placementToken = encodePlacementRun({
+    subject: input.subject,
+    attemptId: input.attemptId,
+    round: input.round,
+    difficulty: input.difficulty,
+    history: input.history,
+    items,
+  });
+  return {
+    done: false,
+    round: input.round,
+    totalRounds: PLACEMENT_ROUNDS,
+    difficulty: input.difficulty,
+    asked: input.history.length,
+    total: PLACEMENT_TOTAL,
+    idkCountsAsMiss: true,
+    placementToken,
+    questions: built.questions,
+  };
+}
+
+async function handlePlacementStart(req: VercelRequest, res: VercelResponse) {
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+  const rawSubject = req.query.subject;
+  if (!isScopeSubject(rawSubject) || !deploymentSubjectIds().includes(rawSubject)) {
+    return jsonError(res, 400, 'invalid_subject_scope', 'A subject from this deployment is required');
+  }
+  const subject = rawSubject;
+  const lang = normalizeLang(req.query.lang);
+  const byId = await getEffectiveQuestionsById(subject, lang === 'cs');
+  const pool = poolForSubject(byId, subject);
+  const attemptId = randomBytes(18).toString('base64url');
+  const response = placementRoundResponse({
+    subject, attemptId, round: 1, difficulty: PLACEMENT_START_DIFFICULTY, history: [], pool, byId, lang,
+  });
+  if (!response) return jsonError(res, 404, 'no_questions', 'No placement questions available');
+  res.setHeader('Cache-Control', 'private, no-store');
+  logEvent({ status: 200, kind: 'placement_start', subject });
+  return res.json(response);
+}
+
+async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.roadmapAnswer))) return;
+  const body = (req.body || {}) as { placementToken?: unknown; answers?: unknown; lang?: unknown };
+  if (typeof body.placementToken !== 'string') {
+    return jsonError(res, 400, 'invalid_session', 'Placement session expired or invalid');
+  }
+  const state = decodePlacementRun(body.placementToken);
+  if (!state || !deploymentSubjectIds().includes(state.subject)) {
+    return jsonError(res, 400, 'invalid_session', 'Placement session expired or invalid');
+  }
+  if (!body.answers || typeof body.answers !== 'object' || Array.isArray(body.answers)) {
+    return jsonError(res, 400, 'bad_request', 'answers must be an object');
+  }
+  const answerMap = body.answers as Record<string, unknown>;
+
+  const roundOutcomes: PlacementOutcome[] = [];
+  let roundCorrect = 0;
+  for (const item of state.items) {
+    const raw = answerMap[item.questionId];
+    if (raw !== undefined && (typeof raw !== 'number' || !Number.isInteger(raw) || raw < -1 || raw > 25)) {
+      return jsonError(res, 400, 'bad_request', 'Invalid answer index');
+    }
+    // A missing answer or -1 is the "I don't know yet" option and counts as a miss.
+    const selected = typeof raw === 'number' ? raw : -1;
+    const isCorrect = selected >= 0 && selected === item.correctAnswer;
+    if (isCorrect) roundCorrect++;
+    roundOutcomes.push({ questionId: item.questionId, category: item.category, isCorrect });
+  }
+
+  const history = [...state.history, ...roundOutcomes];
+  const nextDifficulty = stepDifficulty(state.difficulty, roundCorrect, state.items.length);
+  const finished = state.round >= PLACEMENT_ROUNDS || history.length >= PLACEMENT_TOTAL;
+
+  if (finished) {
+    const userId = await optionalAuthSub(req, res);
+    if (userId === undefined) return;
+    const correct = history.filter((h) => h.isCorrect).length;
+    const total = history.length;
+    const breakdown: Record<string, { correct: number; total: number }> = {};
+    for (const h of history) {
+      const bucket = breakdown[h.category] ?? { correct: 0, total: 0 };
+      bucket.total++;
+      if (h.isCorrect) bucket.correct++;
+      breakdown[h.category] = bucket;
+    }
+    const response: Record<string, unknown> = {
+      done: true,
+      correct,
+      total,
+      difficulty: nextDifficulty,
+      unlockedPreview: assessmentUnlocks(state.subject, correct, total),
+    };
+    // The final unlock stays on the verified 20-question skill-check path: only a
+    // signed-in run that reached the full budget mints a receipt to apply it.
+    if (userId && total === ASSESSMENT_QUESTION_COUNT) {
+      response.resultReceipt = encodeQuizResultReceipt({
+        attemptId: state.attemptId,
+        userId,
+        correct,
+        total,
+        breakdown,
+        outcomes: history,
+        subject: state.subject,
+        questXp: 0,
+        purpose: 'assessment',
+      });
+    }
+    logEvent({ status: 200, kind: 'placement_done', subject: state.subject, correct, total });
+    return res.json(response);
+  }
+
+  const lang = normalizeLang(body.lang);
+  const byId = await getEffectiveQuestionsById(state.subject, lang === 'cs');
+  const pool = poolForSubject(byId, state.subject);
+  const response = placementRoundResponse({
+    subject: state.subject,
+    attemptId: state.attemptId,
+    round: state.round + 1,
+    difficulty: nextDifficulty,
+    history,
+    pool,
+    byId,
+    lang,
+  });
+  if (!response) return jsonError(res, 404, 'no_questions', 'No placement questions available');
+  response.lastRoundCorrect = roundCorrect;
+  response.lastRoundSize = state.items.length;
+  res.setHeader('Cache-Control', 'private, no-store');
+  logEvent({ status: 200, kind: 'placement_round', subject: state.subject, round: state.round + 1, difficulty: nextDifficulty });
+  return res.json(response);
+}
+
 function roadmapSession(raw: unknown) {
   if (typeof raw !== 'string' || raw.length === 0 || raw.length > 16_384) return null;
   const session = decodeSessionEnvelope(raw);
@@ -585,6 +803,26 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       logEvent({ status: 500, kind: 'skill_check_error', category: error instanceof Error ? error.name : 'unknown' });
       return jsonError(res, 500, 'internal_error', 'Could not apply assessment unlocks');
     }
+  }
+  if (req.query.resource === 'placement') {
+    if (req.method === 'GET') {
+      try {
+        return await handlePlacementStart(req, res);
+      } catch (error) {
+        logEvent({ status: 500, kind: 'placement_start_error', category: error instanceof Error ? error.name : 'unknown' });
+        return jsonError(res, 500, 'internal_error', 'Could not start placement');
+      }
+    }
+    if (req.method === 'POST') {
+      try {
+        return await handlePlacementRound(req, res);
+      } catch (error) {
+        logEvent({ status: 500, kind: 'placement_round_error', category: error instanceof Error ? error.name : 'unknown' });
+        return jsonError(res, 500, 'internal_error', 'Could not grade the placement round');
+      }
+    }
+    res.setHeader('Allow', 'GET, POST');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 
   // Per-user progress sub-resource (auth-gated): GET ?resource=progress, or PUT.
