@@ -51,6 +51,9 @@ const PrivacyPage = lazy(() => import('./components/PublicInfoPages').then((m) =
 const TermsPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.TermsPage })));
 const ClassroomPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.ClassroomPage })));
 const TopicLandingPage = lazy(() => import('./components/TopicLandingPage'));
+const Today = lazy(() => import('./components/Today'));
+const SharkCards = lazy(() => import('./components/Cards'));
+const TypingRacer = lazy(() => import('./components/TypingRacer'));
 const NotFoundPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.NotFoundPage })));
 
 // The landing gate: show the subject picker until the learner has chosen a
@@ -79,6 +82,9 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/profile': 'title.profile',
   '/leaderboard': 'title.leaderboard',
   '/cards': 'title.cards',
+  '/today': 'title.today',
+  '/collection': 'title.collection',
+  '/typing': 'title.typing',
   '/shop': 'title.shop',
   '/play': 'title.play',
   '/challenge': 'title.challenge',
@@ -149,6 +155,7 @@ const NAV_ITEMS: {
   isActive: (path: string) => boolean;
   feature?: keyof GameConfig['features'];
 }[] = [
+  { to: '/today', key: 'nav.today', isActive: (p) => p === '/today' },
   { to: '/quiz', key: 'nav.quiz', isActive: (p) => p === '/quiz' },
   { to: '/learn', key: 'nav.learn', isActive: (p) => p.startsWith('/learn') },
   { to: '/challenge', key: 'nav.challenge', isActive: (p) => p.startsWith('/challenge') },
@@ -400,6 +407,7 @@ function App() {
   // 800px column on purpose; only content-light overview pages go wide.
   const isWide =
     location.pathname === '/profile' ||
+    location.pathname === '/collection' ||
     location.pathname === '/leaderboard' ||
     location.pathname === '/shop' ||
     location.pathname === '/support' ||
@@ -702,6 +710,9 @@ function App() {
                 <Route path="/subjects" element={isSubjectLocked() ? <Navigate to="/" replace /> : <SubjectPicker />} />
                 <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
                 <Route path="/learn" element={<Roadmap />} />
+                <Route path="/today" element={<Today />} />
+                <Route path="/collection" element={<SharkCards />} />
+                <Route path="/typing" element={<TypingRacer />} />
                 <Route path="/roadmap" element={CURRENT_PRODUCT.id === 'devshark' ? <CareerRoadmap /> : <Navigate to="/learn" replace />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />

@@ -10,14 +10,15 @@ Current content: **7,929 authored questions** — 3,609 web development, 1,000 g
 
 ## What the app can do
 
-- Guided Learn paths with short levels, checkpoints, skill checks, prerequisites, saved progress, and server-observed grading.
-- Configurable solo quizzes with category, difficulty, and question-count selection; weighted sampling; shuffled answers; hints; bookmarks; question reporting; keyboard controls; and a two-column desktop review.
+- Guided Learn paths with short levels, checkpoints, adaptive skill checks, prerequisites, saved progress, and server-observed grading — plus spaced mastery (a level goes cleared → mastered over three separate days) and an auto-composed "Today" queue that folds unfinished work, due-for-review levels, and new material into one daily plan.
+- Configurable solo quizzes with category, difficulty, and question-count selection; weighted sampling; shuffled answers; an optional Socratic "Sharkira" hint coach; bookmarks; question reporting; keyboard controls; and a two-column desktop review.
 - A deterministic daily challenge and the timed Biggest Shark Challenge with subject-specific leaderboards.
 - Live free-for-all matches and host-led classroom rooms using Supabase Realtime with polling recovery, server-side timing, QR sharing, and subject-scoped question sets.
-- Subject-scoped all-time, daily, and category leaderboards; streaks; verified XP; ranks; achievements; and a fairness-neutral cosmetic token shop.
+- Subject-scoped all-time, daily, and category leaderboards; forgiving streaks (configurable off-days plus two monthly freezes); verified XP; ranks; server-synced badges shown alongside their next goals; collectible cosmetic Shark Cards earned by finishing the Today queue; and a fairness-neutral cosmetic token shop.
+- A read-only study advisor that names weakest areas and a suggested week from your own results, and a devShark touch-typing racer (accuracy-gated, WPM earns stars, private on-device best).
 - Per-user, per-subject flashcards with optimistic updates and offline-safe query caching.
 - Google sign-in through Supabase Auth, cross-device progress, profile settings, language preference, and permanent account deletion.
-- Optional voluntary support, post-answer AI explanations, Sentry monitoring, and PostHog analytics. Every optional integration is gated and disabled by default.
+- Optional voluntary support, post-answer AI explanations, Socratic Sharkira hints, Sentry monitoring, and PostHog analytics. Every optional integration is gated and disabled by default.
 - A role-gated `/dev` control room for question CRUD/overrides, EN/CS editing, importance tuning, quality and parity checks, report triage, auth logs, feature settings, support disclosure, and app-context switching.
 - Two deployments from one source tree: one multi-subject StudyShark domain and one locked devShark domain, with a central subject/product registry and shared Shark-family footer.
 
@@ -126,14 +127,14 @@ The twelve physical handlers multiplex related operations to stay within the dep
 | Handler | Purpose |
 |---|---|
 | `/api/quiz/questions` | Standard/review question sessions |
-| `/api/quiz/submit` | One-time grading, result proofs, reports, optional explanations |
+| `/api/quiz/submit` | One-time grading, result proofs, reports, and optional AI explanations and Socratic Sharkira hints |
 | `/api/quiz/daily` | UTC daily session |
 | `/api/quiz/challenge` | Challenge batches, scoring, completion, leaderboard |
-| `/api/quiz/roadmap` | Structure, attempts, answers, completion, skill checks, progress |
+| `/api/quiz/roadmap` | Structure, attempts, answers, completion, adaptive placement, progress |
 | `/api/play/[action]` | Multiplayer and classroom lifecycle |
 | `/api/leaderboard` | Subject, daily, and category boards |
 | `/api/flashcards` | Subject-scoped flashcard CRUD |
-| `/api/user/[op]` | Stats, category stats, XP, streaks, auth events, deletion |
+| `/api/user/[op]` | Stats, category stats, XP, streaks, badges, streak freezes, Shark Cards, study advisor, auth events, deletion |
 | `/api/admin/[op]` | Role-gated control-room operations |
 | `/api/settings` | Public safe configuration |
 | `/api/health` | Database, service-role migration, and limiter readiness |
@@ -148,9 +149,9 @@ Operational instructions are in [docs/launch-runbook.md](./docs/launch-runbook.m
 
 ## Product principles
 
-- Learning, quizzes, explanations, challenges, multiplayer, and progression are free. Support never buys access or rank.
+- Learning, quizzes, explanations, hints, challenges, multiplayer, and progression are free. Support never buys access or rank, and cosmetic Shark Cards, badges, and streak freezes never change access, content, XP, scores, streaks, ranks, or AI availability.
 - StudyShark and devShark are separate public contexts even though they share code and infrastructure.
 - The server owns answers, scoring, progression, and public identity labels.
 - Anonymous local learning remains useful; account-backed competitive and classroom features require sign-in.
-- AI is a capped, cached, post-answer enhancement. Curated content remains authoritative.
+- AI is a capped, cached enhancement — post-answer explanations and pre-answer Socratic hints. Curated content stays authoritative, and hints never reveal the answer.
 - Native mobile work is intentionally deferred until the web release is stable.
