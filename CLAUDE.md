@@ -9,7 +9,7 @@ Read [the product architecture](docs/product-architecture.md), [the design contr
 
 ## Protected behavior
 
-- All learning is free. Support and cosmetic shop items never change access, content, explanations, paths, XP, scores, streaks, ranks, leaderboards, matchmaking, or AI availability.
+- All learning is free. Support, cosmetic shop items, collectible Shark Cards, badges, and streak freezes never change access, content, explanations, paths, XP, scores, streaks, ranks, leaderboards, matchmaking, or AI availability. Sharkira hints follow the AI rules: off by default, capped/cached, and never reveal the answer.
 - The server owns answers, grading, score/XP, product scope, subject scope, admin roles, and one-time claims. Correct answers never reach the client before submission.
 - Keep exactly twelve physical TypeScript handlers under `api/`; preserve validation, auth, authorization, rate limits, request IDs, safe errors, RLS, and service-role isolation.
 - Keep devShark out of StudyShark discovery and preserve the all-family footer.

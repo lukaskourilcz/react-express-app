@@ -37,6 +37,20 @@ scope before selecting questions or writing progress.
 Do not introduce another brand array, URL map, category ownership map, or footer
 list. Extend these sources instead.
 
+## Daily-habit layer
+
+The spaced-mastery, Today queue, forgiving-streak, Sharkira-hint, badge, Shark
+Card, study-advisor, and adaptive-placement additions are additive and change no
+product or subject scope. Their shared sources of truth are `shared/mastery.ts`
+(cleared/mastered state and spaced-review scheduling), `shared/badges.ts` (the
+server-verifiable badge catalog), and `shared/cards.ts` (a finite per-subject
+collectible catalog with deterministic packs). Every new endpoint is a
+`resource=`/`op=` branch inside an existing handler, so the twelve-handler budget
+is unchanged, and all new storage lives in `supabase-schema-024.sql` (additive,
+idempotent; see `NEEDED.md` to apply it). Cards, freezes, and badges are cosmetic
+retention only and never affect access, content, XP, scores, streaks, ranks, or
+AI availability.
+
 ## Deployment matrix
 
 | Deployment | Identity | Subjects | Footer |

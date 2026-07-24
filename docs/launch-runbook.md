@@ -52,19 +52,22 @@ a slow healing poll while connected.
 
 1. Take and verify a backup using `docs/backup-restore.md`.
 2. Apply migrations 001–020 if the environment does not already contain them.
-3. Apply `supabase-schema-021.sql`, `supabase-schema-022.sql`, then
-   `supabase-schema-023.sql`, in one
+3. Apply `supabase-schema-021.sql`, `supabase-schema-022.sql`,
+   `supabase-schema-023.sql`, then `supabase-schema-024.sql`, in one
    controlled release window.
 4. Confirm `quiz_attempts`, `question_explanations`, `user_question_history`,
    `verified_activity_awards`, `roadmap_attempts`, `roadmap_attempt_answers`,
    `verified_skill_checks`,
    `question_quality_suggestions`, `ai_generation_budget`, and
-   `quiz_submissions` exist. Confirm `matches` and `flashcards` have a valid
-   `subject` column.
+   `quiz_submissions` exist. Confirm the migration-024 tables
+   `user_streak_config`, `user_streak_freezes`, `user_badges`, `user_cards`,
+   `daily_queue_completions`, and `question_hints` exist. Confirm `matches` and
+   `flashcards` have a valid `subject` column.
 5. Confirm `record_verified_quiz_result_v2`, `record_verified_activity_xp`,
    `complete_verified_roadmap_attempt`, `apply_verified_skill_check`, `daily_leaderboard_v2`,
    `claim_ai_generation_budget`, `claim_quiz_submission`,
-   `record_roadmap_answer`, `purge_expired_learning_data`, and
+   `record_roadmap_answer`, `purge_expired_learning_data`,
+   `refresh_streak_freezes`, `sync_user_badges`, `grant_daily_queue_cards`, and
    `delete_user_data` exist.
 6. Confirm browser roles cannot mutate protected stats, multiplayer answer-key,
    reports, flashcard, roadmap, streak, or XP tables directly.

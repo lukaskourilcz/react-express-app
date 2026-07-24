@@ -6,7 +6,7 @@ Production: [StudyShark](https://studyshark-app.vercel.app) hosts all six genera
 
 The web experience uses the Deep End shark identity across the landing pages, Learn, Quiz, Challenge, Play, Profile, Flashcards, the career roadmap, dialogs, progress indicators, and the `/dev` control room. It supports English and Czech, light and dark themes, keyboard navigation, reduced motion, and responsive mobile/desktop layouts.
 
-Current content: **7,929 authored questions** — 3,609 web development, 1,000 geography, 1,000 mathematics, 1,000 history, 600 chess, 400 human biology, and 320 poker.
+Current content: **7,953 authored questions** — 3,633 web development, 1,000 geography, 1,000 mathematics, 1,000 history, 600 chess, 400 human biology, and 320 poker.
 
 ## What the app can do
 
@@ -67,7 +67,7 @@ api/                         12 Vercel handlers
 client/src/                  React application, design system, stores, i18n
 lib/                         server auth, tokens, bank loaders, stores, rate limits
 shared/                      product/subject ownership registry
-supabase-schema*.sql         baseline plus migrations through 023
+supabase-schema*.sql         baseline plus migrations through 024
 docs/                        launch, architecture, backup, growth, content sources
 scripts/test-launch-contracts.ts
 ```
@@ -110,7 +110,7 @@ Production requires:
 - `VITE_STUDYSHARK_URL` and `VITE_DEVSHARK_URL`; general subject brands use internal StudyShark links.
 - `ADMIN_EMAILS` or Supabase `app_metadata.role=admin` for `/dev`.
 - Google OAuth origins and callback URLs for every production domain.
-- All migrations through **`supabase-schema-023.sql`**.
+- All migrations through **`supabase-schema-024.sql`**.
 
 Strongly recommended for a public deployment:
 
@@ -141,7 +141,7 @@ The twelve physical handlers multiplex related operations to stay within the dep
 
 ## Database and operations
 
-Apply `supabase-schema.sql`, then numbered migrations in order through 023. Migration 023 adds the one-time submission ledger, subject-scopes multiplayer and flashcards, hardens service-only functions and leaderboard identity, makes roadmap answer recording atomic, enforces complete attempts/prerequisites, adds retention helpers, and adds production indexes.
+Apply `supabase-schema.sql`, then numbered migrations in order through 024. Migration 023 adds the one-time submission ledger, subject-scopes multiplayer and flashcards, hardens service-only functions and leaderboard identity, makes roadmap answer recording atomic, enforces complete attempts/prerequisites, adds retention helpers, and adds production indexes. Migration 024 adds the daily-habit backing — spaced-mastery pass tracking inside verified roadmap completion, freeze-aware streaks, server-synced badges, Shark Cards, and the Sharkira hint cache — additively and idempotently.
 
 After deployment, schedule `public.purge_expired_learning_data()` with Supabase Cron or another owner-controlled job. Back up before migrations and follow [docs/backup-restore.md](./docs/backup-restore.md).
 
