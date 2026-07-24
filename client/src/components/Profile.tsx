@@ -1,5 +1,5 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Grid } from '@astryxdesign/core/Grid';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -31,7 +31,11 @@ import { computeLearningXp, levelForXp, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { apiFetch, friendlyError } from '../lib/api';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
-import { computeAchievements, readPerfectQuizCount, type Achievement } from '../lib/achievements';
+import { readPerfectQuizCount } from '../lib/achievements';
+import { getFreezes, setOffDays, sanitizeOffDays, type FreezeState } from '../lib/streakFreezes';
+import { syncBadges, mergeBadges, type BadgeView } from '../lib/badges';
+import { getAdvice, advisorCategoryKey, advisorFocusKey, type Advice } from '../lib/advisor';
+import { getCollection, subjectCardCount } from '../lib/cards';
 import { renderQuestion } from './CodeBlock';
 import { useT, useLanguage } from '../i18n/LanguageContext';
 import type { Lang } from '../i18n/LanguageContext';
@@ -43,7 +47,7 @@ import { savePreferredLanguage } from '../lib/languagePref';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { SwimmingFin } from './SharkFin';
-import { FlameIcon, BoltIcon, TrophyIcon } from './ui/icons';
+import { FlameIcon, BoltIcon, TrophyIcon, CardsIcon, TargetIcon } from './ui/icons';
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import './DeepEndScreens.css';
 
@@ -189,11 +193,6 @@ function ProfileBody({
   const ringColor = useEquippedRingColor();
   const flair = useEquippedFlair();
   const { questions: bookmarkedQuestions } = useBookmarks();
-  const achievements = computeAchievements({
-    stats,
-    bookmarkCount: bookmarkedQuestions.length,
-    perfectQuizzes: readPerfectQuizCount(),
-  });
   const currentStreak = currentStreakForDisplay(stats);
 
   return (
@@ -250,6 +249,11 @@ function ProfileBody({
           onAction={isFirstTime ? () => navigate('/quiz') : undefined}
         />
 
+        {/* Streak protection sits directly beneath the streak so the two read as
+            one story: here is your streak, here is how a missed day is bridged.
+            Freezes are free and never a shop item. */}
+        <StreakFreezeCard />
+
         {/* On a standalone deploy (e.g. devShark) point learners at the umbrella
             site so they can discover the other Shark platforms. Hidden when
             VITE_SIBLING_URL is unset (i.e. on StudyShark itself). */}
@@ -284,6 +288,10 @@ function ProfileBody({
             <CareerCard />
 
             <LearningTrackCard />
+
+            <AdvisorCard />
+
+            <SharkCardsEntry />
           </VStack>
 
           <VStack gap={2}>
@@ -311,7 +319,7 @@ function ProfileBody({
               body={t('profile.reviewTipBody')}
             />
 
-            <AchievementsCard achievements={achievements} />
+            <BadgesCard bookmarkCount={bookmarkedQuestions.length} />
 
             {bookmarkedQuestions.length > 0 && (
               <Lift>
@@ -682,125 +690,231 @@ function LearningTrackCard() {
   );
 }
 
-// Per-achievement accent colour for the earned medallion. Locked badges are
-// neutral grey regardless.
-const ACHIEVEMENT_ACCENT: Record<string, string> = {
-  'first-quiz': '#2d7a2d',
-  'ten-quizzes': '#0ea5e9',
-  'fifty-quizzes': '#f59e0b',
-  'streak-3': '#f97316',
-  'streak-7': '#ef4444',
-  'streak-30': '#8b5cf6',
-  'avg-70': '#3b82f6',
-  'avg-90': '#6366f1',
-  perfect: '#eab308',
-  bookmarker: '#14b8a6',
-};
+// ─────────────────────────── Streak freezes ───────────────────────────
+// Forgiving-streak controls: the monthly freeze budget that bridges a missed
+// school day, plus the learner's configurable off-days. Freezes are free and
+// never a shop item; off-days are the only user-writable field. Reads degrade to
+// a safe empty state (streakFreezes.getFreezes never throws); saving off-days is
+// an explicit action with saving / saved / error feedback.
 
-// Dev-flavoured line icons (terminal, trending-up, flame, bolt, gem, target,
-// open book, star, bookmark, award) keyed by achievement id — far crisper than
-// the old emoji tiles and consistent with the app's inline-SVG style.
-const ACHIEVEMENT_ICON: Record<string, ReactNode> = {
-  'first-quiz': (
-    <>
-      <polyline points="4 17 10 11 4 5" />
-      <line x1="12" y1="19" x2="20" y2="19" />
-    </>
-  ),
-  'ten-quizzes': (
-    <>
-      <polyline points="23 6 13.5 16.5 8.5 11.5 1 19" />
-      <polyline points="17 6 23 6 23 12" />
-    </>
-  ),
-  'fifty-quizzes': (
-    <>
-      <circle cx="12" cy="8" r="6" />
-      <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88" />
-    </>
-  ),
-  'streak-3': (
-    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z" />
-  ),
-  'streak-7': <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />,
-  'streak-30': (
-    <>
-      <path d="M6 3h12l4 6-10 13L2 9z" />
-      <path d="M11 3 8 9l4 13 4-13-3-6" />
-      <path d="M2 9h20" />
-    </>
-  ),
-  'avg-70': (
-    <>
-      <circle cx="12" cy="12" r="10" />
-      <circle cx="12" cy="12" r="6" />
-      <circle cx="12" cy="12" r="2" />
-    </>
-  ),
-  'avg-90': (
-    <>
-      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
-      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
-    </>
-  ),
-  perfect: (
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-  ),
-  bookmarker: <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />,
-};
+const dayShortKey = (d: number): TranslationKey => `freezes.day.${d}` as TranslationKey;
+const dayFullKey = (d: number): TranslationKey => `freezes.dayFull.${d}` as TranslationKey;
+// Render the week Monday-first (Czech + most EU locales); values stay 0=Sun..6=Sat.
+const OFF_DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
-function AchievementIcon({ id }: { id: string }) {
+// Shield-with-check: "your streak is protected". A single decorative one-off in
+// the app's inline-SVG idiom (no new icon family).
+function ShieldIcon({ size = 22 }: { size?: number }) {
   return (
-    <svg
-      aria-hidden
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      style={{ width: 22, height: 22, display: 'block' }}
-    >
-      {ACHIEVEMENT_ICON[id] ?? ACHIEVEMENT_ICON['first-quiz']}
+    <svg aria-hidden viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M9 12l2 2 4-4" />
     </svg>
   );
 }
 
-function AchievementBadge({ achievement }: { achievement: Achievement }) {
+function StreakFreezeCard() {
   const t = useT();
-  const { id, earned } = achievement;
-  const label = t(`achievement.${id}.label` as TranslationKey);
-  const description = t(`achievement.${id}.description` as TranslationKey);
-  const accent = ACHIEVEMENT_ACCENT[id] ?? 'var(--brand-accent)';
+  const [state, setState] = useState<FreezeState | null>(null);
+  const [draft, setDraft] = useState<number[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    getFreezes().then((s) => {
+      if (!active) return;
+      setState(s);
+      setDraft(s.offDays);
+    });
+    return () => { active = false; };
+  }, []);
+
+  const toggleDay = (d: number) => {
+    setDraft((prev) => sanitizeOffDays(prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
+  };
+
+  const dirty = useMemo(() => {
+    if (!state) return false;
+    const a = sanitizeOffDays(draft);
+    const b = sanitizeOffDays(state.offDays);
+    return a.length !== b.length || a.some((v, i) => v !== b[i]);
+  }, [draft, state]);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const next = await setOffDays(draft);
+      setState(next);
+      setDraft(next.offDays);
+      setToast({ message: t('freezes.saved'), severity: 'success' });
+    } catch {
+      // setOffDays throws on failure so the save handler can surface it; the
+      // draft is kept so the learner can simply retry.
+      setToast({ message: t('freezes.saveError'), severity: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Lift>
+      <Card variant="default" padding={3} width="100%">
+        <VStack gap={2}>
+          <VStack gap={0.5}>
+            <SectionLabel>{t('freezes.title')}</SectionLabel>
+            <Text type="supporting" color="secondary">{t('freezes.subtitle')}</Text>
+          </VStack>
+
+          {!state ? (
+            <div role="status" aria-live="polite" style={{ padding: '6px 0' }}>
+              <Text type="supporting" size="xsm" color="secondary">{t('freezes.loading')}</Text>
+            </div>
+          ) : (
+            <>
+              <HStack gap={1.5} align="center">
+                <div aria-hidden className="ss-tile" style={{ width: 44, height: 44, color: 'var(--brand-accent)', background: 'var(--brand-accent-soft)' }}>
+                  <ShieldIcon />
+                </div>
+                <VStack gap={0}>
+                  <Text weight="bold">
+                    {state.remaining > 0 ? t('freezes.remaining', { n: state.remaining }) : t('freezes.none')}
+                  </Text>
+                  <Text type="supporting" size="xsm" color="secondary">
+                    {state.remaining > 0 ? t('freezes.explainer') : t('freezes.noneHint')}
+                  </Text>
+                  {state.used.length > 0 && (
+                    <Text type="supporting" size="xsm" color="secondary">{t('freezes.used', { n: state.used.length })}</Text>
+                  )}
+                </VStack>
+              </HStack>
+
+              {/* Protected behaviour: freezes are part of learning, never a
+                  purchasable item. Say so plainly. */}
+              <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-element)', background: 'var(--color-background-muted)', padding: '10px 12px' }}>
+                <Text weight="semibold" size="sm">{t('freezes.notShopTitle')}</Text>
+                <Text type="supporting" size="xsm" color="secondary" display="block">{t('freezes.notShopBody')}</Text>
+              </div>
+
+              <VStack gap={1}>
+                <VStack gap={0.5}>
+                  <Text weight="semibold">{t('freezes.offDaysTitle')}</Text>
+                  <Text type="supporting" size="xsm" color="secondary">{t('freezes.offDaysHint')}</Text>
+                </VStack>
+                <div role="group" aria-label={t('freezes.offDaysTitle')} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {OFF_DAY_ORDER.map((d) => {
+                    const sel = draft.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        aria-pressed={sel}
+                        aria-label={t(dayFullKey(d))}
+                        onClick={() => toggleDay(d)}
+                        style={{
+                          cursor: 'pointer',
+                          minWidth: 46,
+                          minHeight: 44,
+                          padding: '0 12px',
+                          borderRadius: 999,
+                          fontWeight: 700,
+                          fontSize: '0.8125rem',
+                          border: `1px solid ${sel ? 'var(--brand-accent)' : 'var(--color-border-strong)'}`,
+                          background: sel ? 'var(--brand-accent-soft)' : 'transparent',
+                          color: sel ? 'var(--brand-accent)' : 'var(--color-text-secondary)',
+                          display: 'inline-grid',
+                          placeItems: 'center',
+                        }}
+                      >
+                        <span aria-hidden>{t(dayShortKey(d))}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <Text type="supporting" size="xsm" color="secondary">{t('freezes.weekendHint')}</Text>
+                <HStack justify="end">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    label={saving ? t('freezes.saving') : t('freezes.saveOffDays')}
+                    isDisabled={saving || !dirty}
+                    onClick={save}
+                  />
+                </HStack>
+              </VStack>
+            </>
+          )}
+        </VStack>
+
+        <AppToast
+          open={!!toast}
+          onClose={() => setToast(null)}
+          severity={toast?.severity ?? 'info'}
+          message={toast?.message ?? ''}
+          autoHideDuration={toast?.severity === 'error' ? null : 3000}
+        />
+      </Card>
+    </Lift>
+  );
+}
+
+// ───────────────────────────── Badges ─────────────────────────────
+// Server-synced achievements. The server owns eligibility (recomputed from
+// verified stats + mastery) and a stable earned date; the client only decorates
+// it and layers the two display-only client signals (perfect quiz, bookmarker).
+// If the endpoint is unavailable, the earned set is empty and every badge simply
+// renders as a locked goal (the client-only signals still evaluate locally).
+
+// Badge-tier metals — genuinely art-directed, not a subject palette, so they
+// stay local. Chosen for legible white glyph contrast on the earned medallion.
+const TIER_ACCENT: Record<BadgeView['tier'], string> = {
+  bronze: '#a16207',
+  silver: '#64748b',
+  gold: '#c77f00',
+};
+const tierLabelKey = (tier: BadgeView['tier']): TranslationKey =>
+  tier === 'gold' ? 'badges.tierGold' : tier === 'silver' ? 'badges.tierSilver' : 'badges.tierBronze';
+
+function BadgeMedal({ badge, dateFormatter }: { badge: BadgeView; dateFormatter: Intl.DateTimeFormat }) {
+  const t = useT();
+  const { earned, glyph, tier, earnedAt } = badge;
+  const accent = TIER_ACCENT[tier];
+  const status = earned
+    ? earnedAt
+      ? t('badges.earnedOn', { date: dateFormatter.format(new Date(earnedAt)) })
+      : t('badges.earned')
+    : t('badges.goal');
 
   return (
     <div
-      className="ss-lift"
       style={{
         display: 'flex',
         alignItems: 'center',
         gap: 10,
         padding: 10,
         border: '1px solid',
-        borderColor: earned ? `${accent}66` : 'var(--astryx-border, rgba(0,0,0,0.12))',
+        borderColor: earned ? `${accent}66` : 'var(--color-border)',
         borderRadius: 12,
-        backgroundColor: earned ? `${accent}14` : 'transparent',
+        background: earned ? `${accent}14` : 'transparent',
       }}
     >
       <div style={{ position: 'relative', flexShrink: 0 }}>
         <div
+          aria-hidden
           style={{
             width: 44,
             height: 44,
             borderRadius: '50%',
             display: 'grid',
             placeItems: 'center',
-            backgroundColor: earned ? accent : 'rgba(128,128,128,0.16)',
-            color: earned ? '#fff' : 'rgba(128,128,128,0.7)',
-            boxShadow: earned ? `0 2px 8px ${accent}59` : 'none',
+            fontSize: '1.35rem',
+            lineHeight: 1,
+            background: earned ? accent : 'var(--color-background-muted)',
+            color: earned ? '#fff' : 'var(--color-text-disabled)',
+            boxShadow: earned ? `0 2px 8px ${accent}59` : 'inset 0 0 0 1px var(--color-border)',
           }}
         >
-          <AchievementIcon id={id} />
+          {glyph}
         </div>
         {earned && (
           <div
@@ -812,8 +926,8 @@ function AchievementBadge({ achievement }: { achievement: Achievement }) {
               width: 17,
               height: 17,
               borderRadius: '50%',
-              backgroundColor: 'var(--brand-accent)',
-              border: '2px solid var(--astryx-surface, #fff)',
+              background: 'var(--brand-accent)',
+              border: '2px solid var(--color-background-surface)',
               display: 'grid',
               placeItems: 'center',
             }}
@@ -826,46 +940,240 @@ function AchievementBadge({ achievement }: { achievement: Achievement }) {
       </div>
 
       <div style={{ minWidth: 0 }}>
-        <Text weight="bold" color="primary">
-          {label}
-        </Text>
-        <Text type="supporting" size="xsm" color="secondary" display="block">
-          {description}
-        </Text>
-        <Text type="supporting" size="xsm" color={earned ? 'accent' : 'secondary'} weight="semibold" display="block">
-          {earned ? t('profile.earned') : t('profile.locked')}
-        </Text>
+        <HStack gap={0.5} align="center" wrap="wrap">
+          <Text weight="bold" color="primary">{t(badge.labelKey)}</Text>
+          <MetaPill color={earned ? accent : 'var(--color-text-secondary)'}>{t(tierLabelKey(tier))}</MetaPill>
+        </HStack>
+        <Text type="supporting" size="xsm" color="secondary" display="block">{t(badge.descKey)}</Text>
+        <Text type="supporting" size="xsm" color={earned ? 'accent' : 'secondary'} weight="semibold" display="block">{status}</Text>
       </div>
     </div>
   );
 }
 
-// The trophy case: dev-themed achievement badges with an earned/locked state and
-// an overall-progress bar, so the section reads as a goal list, not emoji tiles.
-function AchievementsCard({ achievements }: { achievements: Achievement[] }) {
-  const t = useT();
-  const earnedCount = achievements.filter((a) => a.earned).length;
-  const pct = achievements.length > 0 ? Math.round((earnedCount / achievements.length) * 100) : 0;
+function BadgesCard({ bookmarkCount }: { bookmarkCount: number }) {
+  const { t, lang } = useLanguage();
+  const subject = useActiveSubject();
+  const [badges, setBadges] = useState<BadgeView[] | null>(null);
+  const dateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(lang === 'cs' ? 'cs-CZ' : 'en', { dateStyle: 'medium' }),
+    [lang],
+  );
+
+  useEffect(() => {
+    let active = true;
+    setBadges(null);
+    // syncBadges never throws; a 503/offline resolves to an empty earned set so
+    // every server badge renders as a locked goal and the client-only signals
+    // still evaluate.
+    syncBadges(subject.id).then((res) => {
+      if (!active) return;
+      setBadges(mergeBadges(res.earned, { perfectQuizzes: readPerfectQuizCount(), bookmarkCount }));
+    });
+    return () => { active = false; };
+  }, [subject.id, bookmarkCount]);
+
+  const earnedCount = badges ? badges.filter((b) => b.earned).length : 0;
+  const total = badges?.length ?? 0;
+  const pct = total > 0 ? Math.round((earnedCount / total) * 100) : 0;
 
   return (
     <Lift>
-    <Card variant="default" padding={3} width="100%">
-      <VStack gap={2}>
-        <HStack align="center" justify="between" gap={1} wrap="wrap">
-          <SectionLabel>{t('profile.achievements', { earned: earnedCount, total: achievements.length })}</SectionLabel>
-          <Badge variant={pct === 100 ? 'success' : 'neutral'} label={`${pct}%`} />
-        </HStack>
-        <ProgressBar label={t('profile.achievements', { earned: earnedCount, total: achievements.length })} value={pct} isLabelHidden />
-        <ul className="de-achievement-list">
-          {achievements.map((a) => (
-            <li key={a.id}>
-              <AchievementBadge achievement={a} />
-            </li>
-          ))}
-        </ul>
-      </VStack>
-    </Card>
+      <Card variant="default" padding={3} width="100%">
+        <VStack gap={2}>
+          <HStack align="center" justify="between" gap={1} wrap="wrap">
+            <SectionLabel>{t('badges.title')}</SectionLabel>
+            {badges && (
+              <Badge
+                variant={total > 0 && earnedCount === total ? 'success' : 'neutral'}
+                label={t('badges.count', { earned: earnedCount, total })}
+              />
+            )}
+          </HStack>
+
+          {!badges ? (
+            <div role="status" aria-live="polite" style={{ padding: '6px 0' }}>
+              <Text type="supporting" size="xsm" color="secondary">{t('badges.loading')}</Text>
+            </div>
+          ) : (
+            <>
+              <ProgressBar label={t('badges.count', { earned: earnedCount, total })} value={pct} isLabelHidden />
+              {earnedCount === 0 && (
+                <Text type="supporting" size="xsm" color="secondary">{t('badges.empty')}</Text>
+              )}
+              <ul className="de-achievement-list">
+                {badges.map((b) => (
+                  <li key={b.id}>
+                    <BadgeMedal badge={b} dateFormatter={dateFormatter} />
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </VStack>
+      </Card>
     </Lift>
+  );
+}
+
+// ───────────────────────────── Advisor ─────────────────────────────
+// Read-only "where to focus" panel built from the learner's own verified
+// per-category accuracy. It never diagnoses and offers no actions — just the
+// weakest areas and a gentle suggested week from the server's deterministic S5.
+function AdvisorCard() {
+  const { t, lang } = useLanguage();
+  const subject = useActiveSubject();
+  const [advice, setAdvice] = useState<Advice | null>(null);
+  const dateFormatter = useMemo(
+    () => new Intl.DateTimeFormat(lang === 'cs' ? 'cs-CZ' : 'en', { dateStyle: 'medium' }),
+    [lang],
+  );
+
+  useEffect(() => {
+    let active = true;
+    setAdvice(null);
+    getAdvice(subject.id).then((a) => { if (active) setAdvice(a); });
+    return () => { active = false; };
+  }, [subject.id]);
+
+  const hasData = !!advice && (advice.weakAreas.length > 0 || advice.suggestedWeek.length > 0);
+
+  return (
+    <Lift>
+      <Card variant="default" padding={3} width="100%">
+        <VStack gap={2}>
+          <HStack gap={1.5} align="center">
+            <div aria-hidden className="ss-tile" style={{ width: 40, height: 40, color: 'var(--brand-accent)', background: 'var(--brand-accent-soft)' }}>
+              <TargetIcon size={20} />
+            </div>
+            <VStack gap={0}>
+              <SectionLabel>{t('advisor.title')}</SectionLabel>
+              <Text type="supporting" size="xsm" color="secondary">{t('advisor.subtitle')}</Text>
+            </VStack>
+          </HStack>
+
+          {!advice ? (
+            <div role="status" aria-live="polite" style={{ padding: '6px 0' }}>
+              <Text type="supporting" size="xsm" color="secondary">{t('advisor.loading')}</Text>
+            </div>
+          ) : !hasData ? (
+            <div style={{ padding: '2px 0' }}>
+              <Text weight="semibold">{t('advisor.empty')}</Text>
+              <Text type="supporting" size="xsm" color="secondary" display="block">{t('advisor.emptyBody')}</Text>
+            </div>
+          ) : (
+            <>
+              <VStack gap={1}>
+                <Text weight="semibold">{t('advisor.weakest')}</Text>
+                {advice.weakAreas.length === 0 ? (
+                  <Text type="supporting" size="xsm" color="secondary">{t('advisor.allStrong')}</Text>
+                ) : (
+                  <VStack gap={1}>
+                    {advice.weakAreas.map((w) => (
+                      <div key={w.category}>
+                        <HStack justify="between" align="center" gap={1} wrap="wrap">
+                          <Text weight="semibold" size="sm">{t(advisorCategoryKey(w.category))}</Text>
+                          <Text type="supporting" size="xsm" color="secondary">
+                            {t('advisor.accuracy', { pct: w.accuracyPct })} · {t('advisor.answered', { n: w.answered })}
+                          </Text>
+                        </HStack>
+                        <div aria-hidden style={{ marginTop: 4, height: 6, borderRadius: 999, background: 'var(--color-background-muted)', overflow: 'hidden' }}>
+                          <div style={{ width: `${Math.max(0, Math.min(100, w.accuracyPct))}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 999 }} />
+                        </div>
+                      </div>
+                    ))}
+                  </VStack>
+                )}
+              </VStack>
+
+              {advice.suggestedWeek.length > 0 && (
+                <VStack gap={1}>
+                  <VStack gap={0.5}>
+                    <Text weight="semibold">{t('advisor.suggestedWeek')}</Text>
+                    <Text type="supporting" size="xsm" color="secondary">{t('advisor.suggestedWeekHint')}</Text>
+                  </VStack>
+                  <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {advice.suggestedWeek.map((d) => (
+                      <li
+                        key={d.day}
+                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-element)', background: 'var(--color-background-muted)' }}
+                      >
+                        <MetaPill color="var(--color-text-secondary)">{t('advisor.day', { n: d.day })}</MetaPill>
+                        <Text weight="semibold" size="sm">{t(advisorCategoryKey(d.category))}</Text>
+                        <span style={{ marginLeft: 'auto' }}>
+                          <MetaPill>{t(advisorFocusKey(d.focus))}</MetaPill>
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                </VStack>
+              )}
+
+              <Text type="supporting" size="xsm" color="secondary">{t('advisor.disclaimer')}</Text>
+              {advice.generatedAt && (
+                <Text type="supporting" size="xsm" color="secondary">
+                  {t('advisor.generatedAt', { date: dateFormatter.format(new Date(advice.generatedAt)) })}
+                </Text>
+              )}
+            </>
+          )}
+        </VStack>
+      </Card>
+    </Lift>
+  );
+}
+
+// ─────────────────────── Shark Cards entry point ───────────────────────
+// A quiet teaser into the cosmetic album (route /collection): how much of this
+// subject's album is collected, with a "pack ready" flag when today's plan is
+// done. Cards never affect access, XP, scores, streaks, ranks, or AI.
+function SharkCardsEntry() {
+  const t = useT();
+  const subject = useActiveSubject();
+  const [state, setState] = useState<{ owned: number; total: number; packAvailable: boolean } | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    setState(null);
+    getCollection(subject.id).then((res) => {
+      if (!active) return;
+      setState({ owned: res.cards.length, total: res.total, packAvailable: res.packAvailable });
+    });
+    return () => { active = false; };
+  }, [subject.id]);
+
+  const total = state?.total ?? subjectCardCount(subject.id);
+  const owned = state?.owned ?? 0;
+
+  return (
+    <Link
+      to="/collection"
+      style={{ textDecoration: 'none', color: 'inherit', display: 'flex', width: '100%', borderRadius: 'var(--radius-container)' }}
+    >
+      <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
+        <Card variant="default" padding={3} width="100%">
+          <HStack gap={1.5} align="center" justify="between">
+            <HStack gap={1.5} align="center">
+              <div aria-hidden className="ss-tile" style={{ width: 44, height: 44, color: 'var(--brand-accent)', background: 'var(--brand-accent-soft)' }}>
+                <CardsIcon size={22} />
+              </div>
+              <VStack gap={0}>
+                <Text weight="bold">{t('cards.title')}</Text>
+                <Text type="supporting" size="xsm" color="secondary">
+                  {state ? t('cards.count', { owned, total }) : t('cards.loading')}
+                </Text>
+                {state?.packAvailable && (
+                  <span style={{ marginTop: 4 }}>
+                    <Badge variant="success" label={t('cards.packReady')} />
+                  </span>
+                )}
+              </VStack>
+            </HStack>
+            <span aria-hidden style={{ color: 'var(--brand-accent)', fontWeight: 800, fontSize: '1.25rem', flexShrink: 0 }}>→</span>
+          </HStack>
+        </Card>
+      </div>
+    </Link>
   );
 }
 
