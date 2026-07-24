@@ -145,7 +145,7 @@ Apply `supabase-schema.sql`, then numbered migrations in order through 024. Migr
 
 After deployment, schedule `public.purge_expired_learning_data()` with Supabase Cron or another owner-controlled job. Back up before migrations and follow [docs/backup-restore.md](./docs/backup-restore.md).
 
-Operational instructions are in [docs/launch-runbook.md](./docs/launch-runbook.md). Owner actions only are tracked in [NEEDED.md](./NEEDED.md). Current and projected infrastructure costs are in [stack-and-scaling.md](./stack-and-scaling.md).
+Operational instructions are in [docs/launch-runbook.md](./docs/launch-runbook.md). Owner actions only are tracked in [NEEDED.md](./NEEDED.md). Current and projected infrastructure costs are in [scaling.md](./scaling.md).
 
 ## Product principles
 

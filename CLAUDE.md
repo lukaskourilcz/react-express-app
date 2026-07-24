@@ -41,3 +41,25 @@ Generative-media production uses `.claude/skills/generated-media-production/SKIL
 Use the actual scripts: `npm run typecheck:api`, `npm run test:launch`, `npm run build`, `npm run check:responsive`, both production dependency audits, and `git diff --check`. Do not report unexecuted checks as passing. Preserve unrelated work, stage deliberately, and create coherent incremental commits for large tasks. See `.claude/skills/shark-release-validation/SKILL.md` and `docs/DEEP_END_HANDOFF.md`.
 
 Definition of done: implementation, EN/CS copy, states, responsive/accessibility behavior, tests, documentation, and Git history agree with the product architecture and all relevant checks have real results.
+
+
+## Session routine & markdown conventions
+
+This repo follows a shared markdown contract (see the `session-start`,
+`session-end`, and `markdown-checkup` skills under `.claude/skills/`):
+
+- **`NEEDED.md`** — owner/agent action items. Each task:
+  `- [ ] **Title** — desc. [imp:1-5] [owner:me|ai] [time:30m] [kind:K]`, where
+  `[kind:K]` is one of `setup` `deploy` `legal` `content` `decision`.
+- **`about-project.md`** — project summary + the tech stack.
+- **`scaling.md`** — cost & scaling only (renamed from `stack-and-scaling.md`).
+- **`monetization.md`** — how the project could earn (options table).
+
+At session start, check `NEEDED.md` for `[owner:ai]` tasks that can now be done;
+at session end, update `NEEDED.md` (finished + newly-needed owner items).
+
+## Git workflow (every session)
+
+- **Commit frequently** in small, coherent steps — never batch a whole session into one commit.
+- **At the end of every session, push and merge to `main`** so the change redeploys immediately (this project auto-deploys from `main` on Vercel).
+- **Delete the merged / old branch** (local and remote) after merging, to keep the repo clean. Never leave stale branches behind.
