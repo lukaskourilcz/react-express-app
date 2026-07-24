@@ -14,12 +14,36 @@ export interface AchievementContext {
   perfectQuizzes: number;
 }
 
-const rules: ReadonlyArray<{
+export interface BadgeRule {
   id: string;
   label: string;
   description: string;
   check: (ctx: AchievementContext) => boolean;
-}> = [
+}
+
+/**
+ * Purely-cosmetic, client-only badges that are NOT server-verified. They are
+ * evaluated from local signals (a perfect quiz, bookmark count) and layered on
+ * top of the server-synced badge set by `lib/badges.ts` as display-only goals.
+ * Exported separately so the badge screen can merge them with SERVER_BADGES
+ * while `computeAchievements` below keeps its original, unchanged output.
+ */
+export const CLIENT_ONLY_BADGES: ReadonlyArray<BadgeRule> = [
+  {
+    id: 'perfect',
+    label: 'Flawless',
+    description: 'Score 100% on a quiz',
+    check: ({ perfectQuizzes }) => perfectQuizzes >= 1,
+  },
+  {
+    id: 'bookmarker',
+    label: 'Curator',
+    description: 'Bookmark 5 questions',
+    check: ({ bookmarkCount }) => bookmarkCount >= 5,
+  },
+];
+
+const rules: ReadonlyArray<BadgeRule> = [
   {
     id: 'first-quiz',
     label: 'First steps',
@@ -74,18 +98,7 @@ const rules: ReadonlyArray<{
       return stats.total_correct / stats.total_questions >= 0.9;
     },
   },
-  {
-    id: 'perfect',
-    label: 'Flawless',
-    description: 'Score 100% on a quiz',
-    check: ({ perfectQuizzes }) => perfectQuizzes >= 1,
-  },
-  {
-    id: 'bookmarker',
-    label: 'Curator',
-    description: 'Bookmark 5 questions',
-    check: ({ bookmarkCount }) => bookmarkCount >= 5,
-  },
+  ...CLIENT_ONLY_BADGES,
 ];
 
 export function computeAchievements(ctx: AchievementContext): Achievement[] {
