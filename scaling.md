@@ -2,16 +2,6 @@
 
 Last reviewed: **21 July 2026**. Vendor prices change; the linked official pricing pages are the source of truth. All projections below are planning estimates, not quotes, and exclude VAT, domain registration, contractor/content costs, refunds, and unusually heavy AI or Realtime usage.
 
-## Current architecture
-
-- React 19 + TypeScript + Vite SPA deployed from one repository to two Vercel projects: multi-subject StudyShark and web-development-only devShark.
-- Twelve Vercel Node functions for quizzes, verified learning, multiplayer/classroom, flashcards, leaderboards, user data, settings, health, and `/dev`.
-- Supabase Postgres/Auth/Realtime with RLS, service-only RPCs, one-time submission claims, encrypted answer sessions, subject-scoped data, and atomic progression/scoring.
-- Upstash Redis is supported for distributed rate limiting; local/preview can fall back to bounded instance memory.
-- Optional PostHog, Sentry, and OpenAI-compatible post-answer explanations.
-
-The authored bank contains 7,929 questions. It is split by subject and Czech content is loaded on demand, so a cold function does not need to parse the entire ecosystem for every request.
-
 ## Vendor pricing used in this model
 
 | Service | Free/current entry point | Paid starting point and meaningful usage prices |
