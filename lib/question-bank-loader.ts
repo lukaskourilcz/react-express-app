@@ -5,7 +5,16 @@ import type { ScopeSubjectId } from '../shared/subject-catalog';
 export type BankBundle = { questions: Question[]; translations: Record<string, QuestionTranslation> };
 
 const questionLoaders: Record<ScopeSubjectId, () => Promise<Question[]>> = {
-  webdev: async () => (await import('./quiz-data')).questions,
+  // webdev = core bank + roadmap Learn banks (from quiz-data) plus the
+  // "fix the failing test" set, which lives in the `testing` category pool
+  // (served via daily/challenge/practice) without touching the Learn path.
+  webdev: async () => {
+    const [core, fixTheTest] = await Promise.all([
+      import('./quiz-data'),
+      import('./roadmap-questions-fix-the-test'),
+    ]);
+    return [...core.questions, ...fixTheTest.fixTheTestQuestions];
+  },
   geography: async () => (await import('./roadmap-questions.geography')).allRoadmapGeographyQuestions,
   math: async () => (await import('./roadmap-questions.math')).allRoadmapMathQuestions,
   history: async () => (await import('./roadmap-questions.history')).allRoadmapHistoryQuestions,
@@ -15,7 +24,13 @@ const questionLoaders: Record<ScopeSubjectId, () => Promise<Question[]>> = {
 };
 
 const translationLoaders: Record<ScopeSubjectId, () => Promise<Record<string, QuestionTranslation>>> = {
-  webdev: async () => (await import('./quiz-data.cs')).questionTranslationsCs,
+  webdev: async () => {
+    const [core, fixTheTest] = await Promise.all([
+      import('./quiz-data.cs'),
+      import('./roadmap-questions-fix-the-test.cs'),
+    ]);
+    return { ...core.questionTranslationsCs, ...fixTheTest.fixTheTestTranslationsCs };
+  },
   geography: async () => (await import('./roadmap-questions.geography.cs')).geographyTranslationsCs,
   math: async () => (await import('./roadmap-questions.math.cs')).mathTranslationsCs,
   history: async () => (await import('./roadmap-questions.history.cs')).historyTranslationsCs,
