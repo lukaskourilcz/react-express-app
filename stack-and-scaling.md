@@ -1,6 +1,6 @@
 # Stack, current cost, and scaling model
 
-Last reviewed: **21 July 2026**. Vendor prices change; the linked official pricing pages are the source of truth. All projections below are planning estimates, not quotes, and exclude VAT, domain registration, contractor/content costs, refunds, and unusually heavy AI or Realtime usage.
+Last reviewed: **24 July 2026**. Vendor prices change; the linked official pricing pages are the source of truth. All projections below are planning estimates, not quotes, and exclude VAT, domain registration, contractor/content costs, refunds, and unusually heavy AI or Realtime usage.
 
 ## Current architecture
 
@@ -8,9 +8,10 @@ Last reviewed: **21 July 2026**. Vendor prices change; the linked official prici
 - Twelve Vercel Node functions for quizzes, verified learning, multiplayer/classroom, flashcards, leaderboards, user data, settings, health, and `/dev`.
 - Supabase Postgres/Auth/Realtime with RLS, service-only RPCs, one-time submission claims, encrypted answer sessions, subject-scoped data, and atomic progression/scoring.
 - Upstash Redis is supported for distributed rate limiting; local/preview can fall back to bounded instance memory.
-- Optional PostHog, Sentry, and OpenAI-compatible post-answer explanations.
+- Optional PostHog, Sentry, and OpenAI-compatible post-answer explanations and Socratic pre-answer "Sharkira" hints (both off by default, sharing one daily generation budget and a per-key cache).
+- Daily-habit layer (migration 024): spaced mastery (cleared → mastered over distinct days), an auto-composed "Today" queue, forgiving streaks (off-days + two monthly freezes), server-synced badges, cosmetic Shark Cards earned by finishing the Today queue, a read-only study advisor, and a devShark typing racer. These reuse the existing verified-write RPCs and add only small, mostly per-user tables (`user_streak_config`, `user_streak_freezes`, `user_badges`, `user_cards`, `daily_queue_completions`) plus one shared content cache (`question_hints`); they add **no new serverless functions** (all new endpoints are `resource=`/`op=` branches inside the existing twelve handlers).
 
-The authored bank contains 7,929 questions. It is split by subject and Czech content is loaded on demand, so a cold function does not need to parse the entire ecosystem for every request.
+The authored bank contains 7,953 questions (added a webdev "fix the failing test" set under the testing category). It is split by subject and Czech content is loaded on demand, so a cold function does not need to parse the entire ecosystem for every request.
 
 ## Vendor pricing used in this model
 
@@ -54,6 +55,8 @@ These ranges assume ordinary quiz sessions and small multiplayer rooms. Session 
 ### AI example
 
 Using Luna pricing, an explanation with roughly 1,000 input tokens and 500 output tokens costs about **$0.004**. A hard cap of 25 newly generated explanations/day is therefore roughly **$3/month** before cache hits. Terra at the same token shape is about $0.01 per generation, or roughly $7.50/month at that cap. The database daily claim and explanation cache should stay enabled regardless of provider.
+
+Sharkira hints are the same shape and, crucially, draw from the **same** `AI_DAILY_GENERATION_LIMIT` ledger as explanations rather than a second budget — enabling both features does not double the ceiling, it shares it. A Socratic hint is a similar ~1,000-in/150-out generation (roughly **$0.002** on Luna), cached per question+locale in `question_hints`, so at the same 25/day cap the combined AI line stays about **$3–$8/month** before cache hits, and $0 while the flags are off (the curated fallback needs no provider). Set the cap to the total daily generations you are willing to fund across both features.
 
 ## First scaling constraints
 
