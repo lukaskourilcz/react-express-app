@@ -47,6 +47,12 @@ deployed site was unreachable from the session that produced it.
 
 Native iOS/Android work remains intentionally deferred; it is not a missing item for this web release.
 
+## UI fixes (2026-07-27)
+
+- [ ] **Decide what happens to `claude/favicon-sharkfin-q3z4ot`.** It shares no history with `main` (no merge base, separate root commit) and its tip predates `main` by two weeks. Its namesake shark-fin favicon is already on `main` byte-for-byte, and `main` is a strict superset of its features — Sharkira does not exist on that branch at all, nor do Shark Cards, streak freezes, the advisor, or the subject umbrella. The only content `main` lacks is a 79-file Expo app under `mobile/` plus two offline-data scripts, which the architecture puts out of scope. Merging it would rewrite 565 files and revert twelve days of work, so it is left untouched pending your call: delete it, or say you want the Expo app ported as an additive commit. `[imp:2]` `[owner:me]` `[time:15m]` `[kind:decision]`
+- [ ] **Check the two high-severity `react-router` advisories** (GHSA-qwww-vcr4-c8h2, RSC-mode CSRF bypass). They predate this change, and the only `npm audit fix` is a breaking downgrade to 7.11.0. This app is a Vite SPA that does not use RSC mode, so the advisory looks inapplicable — confirm that reading, then either pin deliberately or wait for a non-breaking patch. `[imp:3]` `[owner:me]` `[time:30m]` `[kind:decision]`
+- [ ] **Give `scripts/check-responsive.mjs` a portable browser launch.** `CHROME_BIN` still defaults to a macOS-only path, and the spawn passes no `--no-sandbox`, so the script cannot run in a Linux container without a wrapper script. `[imp:2]` `[owner:ai]` `[time:20m]` `[kind:setup]`
+
 ## Developer tooling
 
 - [ ] **Install and initialize RTK (`rtk-ai/rtk`)** — RTK could not be set up from the Claude Code web session because its GitHub download host is outside the session's network allowlist (`github.com/rtk-ai/rtk` and its release binaries return HTTP 403). Set it up locally at home with the commands below, then enable it for this repository following `rtk --help` / the RTK docs (the exact per-repo command isn't documented here because the tool wouldn't install in the sandbox). `[imp:2]` `[owner:me]` `[time:20m]` `[kind:setup]`
