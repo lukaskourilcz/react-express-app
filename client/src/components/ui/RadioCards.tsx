@@ -183,10 +183,13 @@ interface CardProps {
   width?: number | string;
   style?: CSSProperties;
   className?: string;
+  /** Marks the card as gated content so stylesheets can style it distinctly
+   *  from a merely inert `:disabled` card. */
+  'data-locked'?: boolean;
   children: ReactNode;
 }
 
-export function RadioCard({ value, index, label, padding = 3, disabled, tone = 'default', width, style, className, children }: CardProps) {
+export function RadioCard({ value, index, label, padding = 3, disabled, tone = 'default', width, style, className, 'data-locked': dataLocked, children }: CardProps) {
   const ctx = useContext(Ctx);
   const ref = useRef<HTMLButtonElement>(null);
   if (!ctx) throw new Error('RadioCard must render inside RadioCardGroup');
@@ -211,6 +214,7 @@ export function RadioCard({ value, index, label, padding = 3, disabled, tone = '
       className={className ? `ss-radio-card ${className}` : 'ss-radio-card'}
       data-selected={isSelected}
       data-tone={tone}
+      data-locked={dataLocked || undefined}
       // A pointer click (or Enter/Space on the focused card) both selects and
       // activates; arrow-key browsing in onKeyNav only selects.
       onClick={() => {

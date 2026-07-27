@@ -333,6 +333,12 @@ function Roadmap() {
     (tpc: RoadmapTopic) => isTopicUnlocked(progress, tpc, extraUnlocksSet),
     [progress, extraUnlocksSet],
   );
+  // How many of the subject's paths are still closed — surfaced under the rail
+  // so the dimmed pills read as content to earn, not as broken buttons.
+  const lockedTopicCount = useMemo(
+    () => TOPICS.filter((value) => !isUnlocked(value)).length,
+    [TOPICS, isUnlocked],
+  );
   // The topic's full (global) level list, split into progression checkpoints.
   const levels: RoadmapLevelMeta[] = structure?.structure[topic]?.levels ?? [];
   const ranges = useMemo(() => partRanges(levels.length), [levels.length]);
@@ -606,25 +612,27 @@ function Roadmap() {
         </div>
       </div>
 
-      {/* Topic selector — locked topics stay visible (dimmed + lock icon) so the
-          path from starter → expert is legible without overwhelming. */}
+      {/* Topic selector — every topic in the subject is listed so the breadth of
+          the map is obvious on a first visit. Locked ones stay in place, dimmed
+          and marked with a lock, and the note below counts them. */}
       {/* Radiogroup semantics (not tabs — there is no tabpanel wiring), so AT
           announces "N of M selected" correctly. */}
-      {/* Only unlocked topics appear — locked ones are hidden entirely, so
-          the strip stays focused on what the learner can actually start. */}
       <RadioCardGroup value={topic} onChange={(value) => selectTopic(value as RoadmapTopic)} label={t('roadmap.topicsAria')} orientation="horizontal" className="rm-topic-rail">
         {TOPICS.map((value, index) => {
           const unlocked = isUnlocked(value);
           const color = getCategoryHexColor(value);
+          const label = t(categoryLabelKey(value));
           return (
             <RadioCard
               key={value}
               value={value}
               index={index}
               disabled={!unlocked}
+              label={unlocked ? label : `${label} — ${t('roadmap.locked')}`}
               className="rm-topic-pill"
               padding={2.5}
               style={{ ['--rm-accent']: color, ['--rm-on-accent']: onCategoryColorText(value) } as CSSProperties}
+              data-locked={!unlocked}
             >
               {/* Constant white chip under the logo: the selected pill fills
                   with the topic's own colour, which used to swallow a
@@ -632,16 +640,29 @@ function Roadmap() {
               <span className="rm-topic-glyph">
                 <CategoryGlyph category={value} color={color} size={20} />
               </span>
-              <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                <span>{t(categoryLabelKey(value))}</span>
+              <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
+                <span>{label}</span>
                 <span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.72 }}>
-                  {t('roadmap.progress', { done: passedLevelCount(progress, value), total: structure?.structure[value]?.levels.length ?? 0 })}
+                  {unlocked
+                    ? t('roadmap.progress', { done: passedLevelCount(progress, value), total: structure?.structure[value]?.levels.length ?? 0 })
+                    : t('roadmap.locked')}
                 </span>
               </span>
+              {!unlocked && <span className="rm-topic-lock" aria-hidden><LockIcon size={13} /></span>}
             </RadioCard>
           );
         })}
       </RadioCardGroup>
+
+      {/* How much of the map is still closed, and how to open it. Without this
+          the dimmed pills read as decoration rather than as earned content. */}
+      {lockedTopicCount > 0 && (
+        <p className="rm-topic-locked-note">
+          <LockIcon size={13} />
+          <span>{t('roadmap.topicsLockedCount', { locked: lockedTopicCount, total: TOPICS.length })}</span>
+          <span>{t('roadmap.topicsLockedHowTo')}</span>
+        </p>
+      )}
 
       {loadingStructure ? (
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 24, marginTop: 16 }}>
