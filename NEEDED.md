@@ -27,6 +27,14 @@ Production database migrations through `supabase/supabase-schema-023.sql` were a
 - [ ] **Replace placeholder icons and social artwork** (`client/public/icon.svg`, Apple/PWA icons, and `og-image.png`) with final licensed Shark-family assets and verify metadata on both domains. `[imp:3]` `[owner:me]` `[time:2h]` `[kind:legal]`
 - [ ] **Run Lighthouse/PageSpeed on both deployed products** at mobile and desktop widths; save the baseline Core Web Vitals before making traffic-driven optimization decisions. `[imp:2]` `[owner:me]` `[time:1h]` `[kind:deploy]`
 
+## Portfolio thumbnail (2026-07-27)
+
+The devShark thumbnail on lukaskouril.dev was re-recorded from the redesigned
+landing page. It had to be captured from a locally-run client, because the
+deployed site was unreachable from the session that produced it.
+
+- [ ] **Compare the committed preview against the live site** — open `media/preview-poster.png` next to devshark.app and confirm the local build matched production. devShark is a locked deployment of the shared client, so a capture taken without `VITE_LOCK_SUBJECT=webdev` silently renders StudyShark's landing page under devShark branding; the procedure and the check are in `.claude/skills/preview-video/SKILL.md`. `[imp:3]` `[owner:me]` `[time:20m]` `[kind:content]`
+
 ## Optional features
 
 - [ ] **Voluntary support:** set `SUPPORT_ENABLED=true` only after legal/accounting review, then enter truthful provider URLs, target, amount covered, cost breakdown, update date, and public-thanks policy through `/dev`. Support remains unrelated to access or ranking. `[imp:3]` `[owner:me]` `[time:2h]` `[kind:legal]`
