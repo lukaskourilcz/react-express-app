@@ -14,3 +14,6 @@ client/vite.config.js
 
 # claude code: task-observer session log stays local
 .claude/observations/
+
+# claude code: ui-ux-pro-max search script bytecode
+__pycache__/

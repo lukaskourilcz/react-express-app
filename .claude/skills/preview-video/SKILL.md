@@ -80,3 +80,18 @@ under ~600 KB. Raise the webm CRF from 34 toward 38 if the clip runs over.
 Record only surfaces a logged-out visitor can reach, so no private data is
 filmed. See `nxt-portfolio/.claude/skills/preview-video/SKILL.md` for the full
 ingestion procedure.
+
+## Capturing devShark locally
+
+`preview.config.json` points at the deployed site, which is the right default.
+When the deployment is unreachable, run the client instead — but devShark is a
+locked deployment of the same client, so the lock has to be set or the capture
+comes out as the StudyShark landing page wearing a devShark header:
+
+```sh
+cd client && VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run dev -- --port 5174
+```
+
+Then set `"url": "http://localhost:5174/"` for the run. Check the poster before
+committing: the hero must read "Become a developer, one level at a time" over
+the green devShark palette, not the orange StudyShark one.
