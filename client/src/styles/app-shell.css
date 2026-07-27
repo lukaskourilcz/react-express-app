@@ -184,8 +184,15 @@
   text-decoration: none;
 }
 .ss-skip-link:focus { left: 8px; }
-#main-content:focus { outline: none; }
-#main-content:focus-visible {
+/* <main> is focused programmatically on every route change so screen readers
+   announce the new page. It is NOT keyboard-reachable via Tab, so it must never
+   paint a ring on that programmatic focus — Firefox matches :focus-visible for
+   scripted focus on tabindex="-1" elements, which drew a full-viewport accent
+   rectangle around the whole page on load. The ring is opt-in instead, set only
+   when the learner actually jumped here with the skip link. */
+#main-content:focus,
+#main-content:focus-visible { outline: none; }
+#main-content[data-skip-target='true']:focus {
   outline: 3px solid var(--ss-focus);
   outline-offset: -4px;
 }
