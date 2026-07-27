@@ -11,3 +11,6 @@ client/vite.config.d.ts
 client/vite.config.js
 .vercel
 /.env.local
+
+# claude code: task-observer session log stays local
+.claude/observations/
