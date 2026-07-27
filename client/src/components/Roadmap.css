@@ -54,14 +54,16 @@
 
 /* Deep End journey shell. */
 .rm-journey-heading { margin-bottom: 18px; }
+/* Every topic is visible from the first visit. This was a one-line horizontal
+   scroller, but .ss-radio-card sizes cards to width:100%, so each pill filled
+   the whole rail and 19 of the 20 topics sat off-screen — the page looked like
+   it only taught JavaScript. A wrapping grid shows the real breadth instead. */
 .rm-topic-rail {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
   gap: 10px;
-  margin: 0 -4px 20px;
-  padding: 4px 4px 8px;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scroll-snap-type: x proximity;
+  margin: 0 -4px 12px;
+  padding: 4px;
 }
 .rm-overview-card {
   position: relative;
@@ -197,6 +199,9 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
+  /* Beats .ss-radio-card's width:100% so the grid, not the card, sets the size. */
+  width: auto;
+  min-width: 0;
 }
 /* The logo sits on its own constant white chip, so it stays sharp whether the
    pill is idle (surface) or selected (filled with the topic colour). */
@@ -214,19 +219,16 @@
   text-transform: none;
   font-weight: 600;
   font-size: 0.8125rem;
-  min-width: 154px;
   padding: 10px 12px;
   border-radius: var(--radius-element);
   line-height: 1.3;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
   border: 1px solid var(--color-border);
   border-bottom-width: 2px;
   background-color: var(--color-background-surface);
   color: var(--color-text-secondary);
   cursor: pointer;
   font-family: inherit;
-  scroll-snap-align: start;
-  flex: 0 0 auto;
 }
 .rm-topic-pill:hover {
   border-color: var(--rm-accent);
@@ -242,13 +244,35 @@
   background-color: color-mix(in srgb, var(--rm-accent) 12%, var(--color-background-surface));
   border-color: var(--rm-accent);
 }
-.rm-topic-pill[data-locked='true'] { opacity: .52; cursor: not-allowed; }
+/* Locked topics stay listed so the breadth of the map is visible, but read as
+   unavailable through three non-colour cues: dimming, a dashed edge and the
+   lock glyph the pill renders inline. */
+.rm-topic-pill[data-locked='true'] {
+  opacity: 0.6;
+  cursor: not-allowed;
+  border-style: dashed;
+  background-color: var(--color-background-muted);
+}
+.rm-topic-pill[data-locked='true'] .rm-topic-glyph { filter: grayscale(1); }
+.rm-topic-lock { display: inline-grid; place-items: center; margin-left: auto; flex-shrink: 0; color: var(--color-text-secondary); }
+
+/* Count of paths still locked, sitting under the rail. */
+.rm-topic-locked-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 4px 20px;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+}
+.rm-topic-locked-note svg { flex-shrink: 0; }
 
 @media (max-width: 700px) {
   .rm-overview-card { align-items: flex-start; flex-direction: column; padding: 17px; gap: 14px; }
   .rm-overview-actions { width: 100%; justify-content: space-between; }
   .rm-overview-progress { width: 38%; }
-  .rm-topic-pill { min-width: 142px; }
+  .rm-topic-rail { grid-template-columns: repeat(auto-fill, minmax(142px, 1fr)); }
   .rm-skillcheck-row { align-items: flex-start; flex-direction: column; }
 }
 

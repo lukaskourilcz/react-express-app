@@ -383,7 +383,11 @@ function App() {
     // Route focus is intentionally pathname-only: changing language updates
     // metadata, but must not pull focus away from the language control.
     const timer = window.setTimeout(() => {
-      document.getElementById('main-content')?.focus({ preventScroll: true });
+      const main = document.getElementById('main-content');
+      // Silent focus: clear the skip-link flag first so this move never paints
+      // the page-wide ring (see #main-content rules in app-shell.css).
+      main?.removeAttribute('data-skip-target');
+      main?.focus({ preventScroll: true });
     }, 230);
     // Manual SPA pageview (capture_pageview is off in the SDK). No-op unless
     // PostHog is configured.
@@ -480,7 +484,14 @@ function App() {
     // INSIDE <main>, so the header and the ocean footer (waterline + fins) are
     // always visible. `dvh` tracks the collapsing mobile URL bar.
     <div className="ss-app-root">
-      <a href="#main-content" className="ss-skip-link">
+      <a
+        href="#main-content"
+        className="ss-skip-link"
+        // Arriving by skip link is the one case where <main> should show a focus
+        // ring; route-change focus (below) clears the flag so the ring never
+        // appears on plain page loads.
+        onClick={() => document.getElementById('main-content')?.setAttribute('data-skip-target', 'true')}
+      >
         {t('common.skipToContent')}
       </a>
 
@@ -643,6 +654,7 @@ function App() {
       <main
         id="main-content"
         tabIndex={-1}
+        onBlur={(e) => e.currentTarget.removeAttribute('data-skip-target')}
         style={{
           // The ONLY scroll container in the app: pages taller than the
           // viewport scroll here, keeping the chrome + ocean footer in place.
