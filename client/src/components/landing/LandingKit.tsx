@@ -70,14 +70,19 @@ export function FadeFinCta({
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       style={{
         position: 'relative', overflow: 'hidden', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-        background: primary ? 'var(--brand-accent)' : 'var(--color-background-surface)',
+        // One longhand only. Pairing the `background` shorthand with a
+        // `backgroundColor` longhand in the same object made React clear the
+        // shorthand's colour on re-render, so the primary CTA rendered on the
+        // UA's default grey under its white label — unreadable.
+        backgroundColor: primary
+          ? 'var(--brand-accent)'
+          : hover ? 'var(--color-background-muted)' : 'var(--color-background-surface)',
         color: primary ? 'var(--brand-on-accent)' : 'var(--color-text-primary)',
         border: primary ? 'none' : '1px solid var(--ss-card-edge)',
-        borderRadius: 'var(--radius-element)', padding: '12px 22px',
+        borderRadius: 'var(--radius-element)', padding: '12px 22px', minHeight: 44,
         fontFamily: 'var(--font-family-body)', fontWeight: 600, fontSize: '1rem', cursor: disabled ? 'wait' : 'pointer', opacity: disabled ? 0.62 : 1,
         filter: hover && primary ? 'brightness(0.92)' : 'none',
-        transition: reduce ? 'none' : 'filter 0.2s ease, background 0.2s ease',
-        backgroundColor: hover && !primary ? 'var(--color-background-muted)' : undefined,
+        transition: reduce ? 'none' : 'filter 0.2s ease, background-color 0.2s ease',
       }}
     >
       <span aria-hidden style={{ position: 'absolute', left: finLeft, bottom: Math.round(finSize * -0.25) + 'px', lineHeight: 0, opacity: hover ? 1 : 0, transition: reduce ? 'none' : 'opacity 0.35s ease', pointerEvents: 'none' }}>
@@ -101,7 +106,7 @@ export function SwimCta({ label, onClick, dir, disabled, size = 'md' }: { label:
       style={{
         position: 'relative', overflow: 'hidden', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
         background: 'var(--brand-accent)', color: 'var(--brand-on-accent)', border: 'none',
-        borderRadius: 'var(--radius-element)', padding: size === 'lg' ? '13px 26px' : '10px 18px',
+        borderRadius: 'var(--radius-element)', padding: size === 'lg' ? '13px 26px' : '10px 18px', minHeight: 44,
         fontFamily: 'var(--font-family-body)', fontWeight: 600, fontSize: size === 'lg' ? '1rem' : '0.95rem',
         cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
         filter: active ? 'brightness(0.92)' : 'none', transition: reduce ? 'none' : 'filter 0.2s ease, opacity 0.2s ease',
@@ -146,7 +151,10 @@ export function SampleCard({ chip, question }: { chip: string; question: SampleQ
         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginLeft: 'auto' }}>{t('home.tryOne')}</span>
       </div>
       <fieldset style={{ margin: 0, padding: 0, border: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <legend style={{ margin: 0, padding: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1.15rem', letterSpacing: '-0.01em' }}>{question.text}</legend>
+        {/* A <legend> is laid out by the fieldset itself, not as a flex item, so
+            the fieldset's `gap` never applies beneath it — the question text sat
+            flush against the first answer. Space it explicitly. */}
+        <legend style={{ margin: '0 0 14px', padding: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1.15rem', letterSpacing: '-0.01em', lineHeight: 1.35 }}>{question.text}</legend>
         {question.code && (
           <pre aria-label={t('home.codeSample')} style={{ margin: 0, background: 'var(--color-background-muted)', border: '1px solid var(--ss-card-line)', borderRadius: 'var(--radius-inner)', padding: '10px 14px', fontFamily: 'ui-monospace,SFMono-Regular,Menlo,monospace', fontSize: '0.9rem', color: 'var(--color-text-primary)', overflowX: 'auto' }}>{question.code}</pre>
         )}
