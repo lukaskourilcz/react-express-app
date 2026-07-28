@@ -47,11 +47,10 @@ deployed site was unreachable from the session that produced it.
 
 Native iOS/Android work remains intentionally deferred; it is not a missing item for this web release.
 
-## UI fixes (2026-07-27)
+## Recorded decisions (2026-07-28)
 
-- [ ] **Decide what happens to `claude/favicon-sharkfin-q3z4ot`.** It shares no history with `main` (no merge base, separate root commit) and its tip predates `main` by two weeks. Its namesake shark-fin favicon is already on `main` byte-for-byte, and `main` is a strict superset of its features — Sharkira does not exist on that branch at all, nor do Shark Cards, streak freezes, the advisor, or the subject umbrella. The only content `main` lacks is a 79-file Expo app under `mobile/` plus two offline-data scripts, which the architecture puts out of scope. Merging it would rewrite 565 files and revert twelve days of work, so it is left untouched pending your call: delete it, or say you want the Expo app ported as an additive commit. `[imp:2]` `[owner:me]` `[time:15m]` `[kind:decision]`
-- [ ] **Check the two high-severity `react-router` advisories** (GHSA-qwww-vcr4-c8h2, RSC-mode CSRF bypass). They predate this change, and the only `npm audit fix` is a breaking downgrade to 7.11.0. This app is a Vite SPA that does not use RSC mode, so the advisory looks inapplicable — confirm that reading, then either pin deliberately or wait for a non-breaking patch. `[imp:3]` `[owner:me]` `[time:30m]` `[kind:decision]`
-- [ ] **Give `scripts/check-responsive.mjs` a portable browser launch.** `CHROME_BIN` still defaults to a macOS-only path, and the spawn passes no `--no-sandbox`, so the script cannot run in a Linux container without a wrapper script. `[imp:2]` `[owner:ai]` `[time:20m]` `[kind:setup]`
+- **`claude/favicon-sharkfin-q3z4ot` deleted** — Expo-only branch; mobile app was shut down. PR #91 closed, remote branch removed.
+- **`react-router-dom` 7.18.1 kept** — advisories GHSA-qwww-vcr4-c8h2 and RSC-mode CSRF bypass are RSC-mode only. This app is a Vite SPA with no server components (no `renderToPipeableStream`, `react-server-dom`, `createStaticHandler`, or `@react-router/server` usage). Advisories do not apply; no downgrade needed.
 
 ## Developer tooling
 

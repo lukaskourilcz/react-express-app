@@ -10,11 +10,33 @@
 // Env:   RESPONSIVE_ROUTES=/learn,/challenge RESPONSIVE_WIDTHS=360,768
 
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { tmpdir, platform } from 'node:os';
 import path from 'node:path';
 
-const CHROME = process.env.CHROME_BIN || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const CHROME_CANDIDATES = [
+  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  '/Applications/Chromium.app/Contents/MacOS/Chromium',
+  '/usr/bin/google-chrome',
+  '/usr/bin/google-chrome-stable',
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
+  '/snap/bin/chromium',
+  'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+  'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+];
+
+function resolveChrome() {
+  if (process.env.CHROME_BIN) return process.env.CHROME_BIN;
+  const found = CHROME_CANDIDATES.find((p) => existsSync(p));
+  if (found) return found;
+  throw new Error(
+    'No Chrome/Chromium binary found. Set CHROME_BIN to a headless-capable browser.',
+  );
+}
+
+const CHROME = resolveChrome();
+const IS_LINUX = platform() === 'linux';
 const DEFAULT_BASE = 'http://localhost:4173';
 const DEFAULT_ROUTES = [
   '/',
@@ -249,7 +271,7 @@ async function main() {
   mkdirSync(outDir, { recursive: true });
   const userData = mkdtempSync(path.join(tmpdir(), 'shark-responsive-profile-'));
   const debugPort = Number.parseInt(process.env.RESPONSIVE_DEBUG_PORT ?? '', 10) || 9300 + (process.pid % 500);
-  const chrome = spawn(CHROME, [
+  const chromeArgs = [
     '--headless=new',
     '--disable-gpu',
     '--no-first-run',
@@ -257,7 +279,9 @@ async function main() {
     `--remote-debugging-port=${debugPort}`,
     `--user-data-dir=${userData}`,
     'about:blank',
-  ], { stdio: ['ignore', 'pipe', 'pipe'] });
+  ];
+  if (IS_LINUX) chromeArgs.unshift('--no-sandbox', '--disable-dev-shm-usage');
+  const chrome = spawn(CHROME, chromeArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
 
   let cleaned = false;
   const cleanup = () => {
