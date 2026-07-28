@@ -11,7 +11,6 @@ Production database migrations through `supabase/supabase-schema-024.sql` were a
 ## Production reliability
 
 - [ ] **Monitor `/api/health` externally** and alert on non-2xx. The probe now verifies public DB access, service-role access to migration 023, and reports whether distributed rate limiting is configured. `[imp:4]` `[owner:me]` `[time:1h]` `[kind:deploy]`
-- [ ] **Schedule `select public.purge_expired_learning_data();`** daily with Supabase Cron or an equivalent owner job; choose and document retention periods before changing its defaults. `[imp:4]` `[owner:me]` `[time:30m]` `[kind:decision]`
 - [ ] **Configure verified backups and a restore drill** using `docs/backup-restore.md`; record the recovery point/time objectives you accept. `[imp:4]` `[owner:me]` `[time:1h]` `[kind:deploy]`
 - [ ] **Confirm Sentry + PostHog capture no PII in production.** Both are configured with EU regions, `sendDefaultPii: false` (Sentry), and `respect_dnt` + `identified_only` + reverse-proxied `/ingest` (PostHog). Reproduce a client error and a routine pageview signed in, then inspect the payloads in each dashboard — no submitted answer, answer proof, token, or email should be present. `[imp:3]` `[owner:me]` `[time:1h]` `[kind:legal]`
 
@@ -19,7 +18,8 @@ Production database migrations through `supabase/supabase-schema-024.sql` were a
 
 - [ ] **Attach your preferred custom StudyShark domain, if wanted.** StudyShark is live at `https://studyshark-app.vercel.app`; devShark remains at `https://devshark.app`. After adding a custom domain, update `VITE_STUDYSHARK_URL` on both projects plus OAuth origins/callbacks, then redeploy both. `[imp:3]` `[owner:me]` `[time:1h]` `[kind:deploy]`
 - [ ] **Replace placeholder icons and social artwork** (`client/public/icon.svg`, Apple/PWA icons, and `og-image.png`) with final licensed Shark-family assets and verify metadata on both domains. `[imp:3]` `[owner:me]` `[time:2h]` `[kind:legal]`
-- [ ] **Run Lighthouse/PageSpeed on both deployed products** at mobile and desktop widths; save the baseline Core Web Vitals before making traffic-driven optimization decisions. `[imp:2]` `[owner:me]` `[time:1h]` `[kind:deploy]`
+- [ ] **Investigate the desktop CLS of ~0.96 on both products.** Lighthouse baseline (2026-07-28, `docs/perf/lighthouse-baseline-2026-07-28/`) scored a 45/33 desktop Performance because Cumulative Layout Shift on the landing route is far outside the ≤ 0.1 target. Mobile CLS is 0. The likely culprit is a hero/animation element sized only after its resource loads at desktop widths. Not launch-blocking (mobile is fine), but the desktop score will hurt PageSpeed once you promote the domain publicly. `[imp:3]` `[owner:me]` `[time:2h]` `[kind:deploy]`
+- [ ] **Improve mobile LCP (~5.2–5.7 s) on the landing route** — same baseline. The largest paint arrives well after the "poor" threshold (4 s). Common wins: preload the hero image, defer the non-critical scripts, and shrink the above-the-fold bundle. `[imp:3]` `[owner:me]` `[time:2h]` `[kind:deploy]`
 
 ## Portfolio thumbnail (2026-07-27)
 
@@ -60,6 +60,8 @@ Native iOS/Android work remains intentionally deferred; it is not a missing item
 - **Google OAuth enabled** — provider is configured in Supabase Authentication → Providers and sign-in works end-to-end. The Google consent screen currently reads "to continue to rvlybcjdpafwyeuojvhl.supabase.co" because Google shows the domain of the redirect_uri, which is Supabase's callback host. Changing that string to `devshark.app` needs a Supabase Custom Domain (paid tier), documented separately below.
 - **Admin ACL verification dropped from the tracked list** — env vars are wired (`ADMIN_EMAILS=kouril.lukas@gmail.com`, `OWNER_EMAIL=kouril.lukas@gmail.com`); owner will confirm end-to-end during normal use rather than as a launch gate.
 - **Legal / privacy review dropped from the tracked list** — owner chose not to gate launch on it. Left as an implicit obligation: the terms/privacy page must eventually name Supabase, Vercel, Upstash, Sentry (EU), and PostHog (EU) with their retention, and reflect any consent mode chosen. Not enforced by this file going forward.
+- **Daily retention purge scheduled** — `pg_cron` extension enabled; job `purge_expired_learning_data_daily` runs `SELECT public.purge_expired_learning_data();` at `07 03 * * *` UTC. Uses the function's default retention (delete `roadmap_attempts` with `expires_at` older than 90 days and `quiz_submissions` older than 90 days). Reschedule or change retention via `cron.alter_job` / `cron.unschedule` when the policy changes.
+- **Lighthouse baseline captured** — `docs/perf/lighthouse-baseline-2026-07-28/` holds HTML + JSON for both products at mobile + desktop preset plus a `README.md` summary. Category scores: A11y 96, Best Practices 96, SEO 91 across the board. Performance: 66–68 mobile, 33–45 desktop. The two follow-up items above (desktop CLS ≈ 0.96, mobile LCP > 5 s) are the concrete regressions found and are now tracked in the launch-assets list.
 
 ## Developer tooling
 

@@ -36,17 +36,11 @@ Pick one:
 
 Notify channel: email works; Slack/Telegram integration is optional.
 
-### 3. Schedule daily purge (NEEDED #20) — **delegated to me (Supabase MCP is authenticated)**
-
-The retention decision is yours first: how many days should soft-deleted quiz attempts, expired play sessions, etc. survive? Read `supabase/supabase-schema-024.sql` for the current defaults inside `purge_expired_learning_data()`.
-
-→ **tell me** your retention policy (or "use current defaults") and I'll schedule it via pg_cron.
-
-### 4. Verified backups + restore drill (NEEDED #21)
+### 3. Verified backups + restore drill (NEEDED #21)
 
 Follow `docs/backup-restore.md`. Choose your RPO/RTO (e.g. "≤ 24h data loss, ≤ 1h restore") and record them at the top of that file. Do one restore drill into a Supabase branch database (not production) to confirm the runbook works end-to-end.
 
-### 5. Confirm Sentry + PostHog capture no PII (NEEDED #22)
+### 4. Confirm Sentry + PostHog capture no PII (NEEDED #22)
 
 Both are already wired with privacy-forward defaults:
 - **Sentry**: EU region (Germany DSN), `sendDefaultPii: false`, 10% trace sampling, no Session Replay.
@@ -60,7 +54,7 @@ Reproduce one client error (e.g. throw from the console in prod) and one routine
 
 ## imp:3 — brand / launch assets
 
-### 6. Rebrand the Google consent screen (currently reads "to continue to rvlybcjdpafwyeuojvhl.supabase.co")
+### 5. Rebrand the Google consent screen (currently reads "to continue to rvlybcjdpafwyeuojvhl.supabase.co")
 
 The domain string on Google's "Sign in — to continue to X" screen comes from the OAuth callback host, which is Supabase's default `<ref>.supabase.co`. Two ways to change it:
 
@@ -68,7 +62,7 @@ The domain string on Google's "Sign in — to continue to X" screen comes from t
 Google Cloud Console → APIs & Services → OAuth consent screen → Edit App:
 - App name: `devShark` (or `StudyShark`, whichever is your primary brand)
 - User support email: your gmail
-- App logo: upload the same asset used in step 8
+- App logo: upload the same asset used in step 7
 - Application home page: `https://devshark.app`
 - Application privacy policy: link to your privacy page once written
 - Application terms of service: link to your terms page once written
@@ -86,7 +80,7 @@ Requires Supabase Pro tier or higher. Custom Domains lets you serve Supabase Aut
 
 Not worth doing pre-launch unless the current Supabase-domain string is a real blocker.
 
-### 7. Custom StudyShark domain (NEEDED #26)
+### 6. Custom StudyShark domain (NEEDED #26)
 
 If you want one instead of the current `studyshark-app.vercel.app`:
 1. Buy / point the DNS at Vercel.
@@ -96,7 +90,7 @@ If you want one instead of the current `studyshark-app.vercel.app`:
 5. Redeploy both.
 6. Verify cross-links in the shared footer point at the new domain.
 
-### 8. Replace placeholder icons + social artwork (NEEDED #27)
+### 7. Replace placeholder icons + social artwork (NEEDED #27)
 
 Files to swap: `client/public/icon.svg`, `client/public/apple-touch-icon.png`, `client/public/pwa-*.png`, `client/public/og-image.png`. Use **licensed** Shark-family assets (I cannot generate these without confirmed rights per CLAUDE.md).
 
@@ -104,13 +98,13 @@ Verify: `/` on both domains → view page source → `og:image` resolves; iOS "A
 
 → **tell me** the licensed source and I can drop them in + verify metadata.
 
-### 9. Compare committed portfolio preview to live devShark (NEEDED #36)
+### 8. Compare committed portfolio preview to live devShark (NEEDED #36)
 
 Open `media/preview-poster.png` (in the repo) and `https://devshark.app` (live) side by side. Confirm they match. If they don't, re-record per `.claude/skills/preview-video/SKILL.md` — specifically, make sure `VITE_LOCK_SUBJECT=webdev` is set before capture; without it the client silently renders the StudyShark landing under devShark branding.
 
 → **tell me** the outcome. If mismatched I can re-record from a local run.
 
-### 10. Voluntary support toggle (NEEDED #40)
+### 9. Voluntary support toggle (NEEDED #40)
 
 Set `SUPPORT_ENABLED=true` on both projects, then use `/dev` to enter provider URLs, target, amount covered, cost breakdown, update date, and public-thanks policy. Support has no effect on access or ranking — that constraint is server-owned. Make sure your legal/terms page reflects the third-party providers before this ships publicly.
 
@@ -118,7 +112,7 @@ Set `SUPPORT_ENABLED=true` on both projects, then use `/dev` to enter provider U
 
 ## imp:2 — tooling / optional features
 
-### 11. Install RTK (NEEDED #58)
+### 10. Install RTK (NEEDED #58)
 
 At home (not from the sandbox — sandbox can't reach the RTK release host):
 
@@ -129,7 +123,7 @@ rtk init --global
 
 Then follow `rtk --help` for the per-repo enable command. → **tell me** what enabling it changes in the repo and I can review.
 
-### 12. Enable Vercel Web Analytics (NEEDED #59)
+### 11. Enable Vercel Web Analytics (NEEDED #59)
 
 Vercel → each project → Analytics → **Enable Web Analytics**. Nothing else to change; the client already sends signals if the project has analytics on. This makes OwnDashboard's project Overview show visitors + page views.
 
@@ -137,7 +131,7 @@ Vercel → each project → Analytics → **Enable Web Analytics**. Nothing else
 
 ## imp:1 — after usage grows
 
-### 13. Monthly scaling review (NEEDED #46)
+### 12. Monthly scaling review (NEEDED #46)
 
 Once traffic is meaningful (>1k daily active), reread `scaling.md` monthly. Watch Supabase compute utilization; add retention/partitioning for event tables before they get big; redesign multiplayer fan-out before large classrooms or high concurrent-room counts.
 
@@ -145,8 +139,9 @@ Once traffic is meaningful (>1k daily active), reread `scaling.md` monthly. Watc
 
 ## What I need from you to keep unblocking things
 
-1. Decide step 3 retention (or say "use current defaults") and I'll schedule the cron.
-2. Tell me the outcome of step 1 (production smoke test), step 5 (Sentry + PostHog PII inspection), and step 9 (poster vs. live).
-3. Decide steps 6 (consent-screen upgrade path) and 7 (custom domain), and provide licensed assets for step 8 if you want me to install them.
+1. Tell me the outcome of step 1 (production smoke test), step 4 (Sentry + PostHog PII inspection), and step 8 (poster vs. live).
+2. Decide steps 5 (consent-screen upgrade path) and 6 (custom domain), and provide licensed assets for step 7 if you want me to install them.
+
+Say "look into the desktop CLS" (or the mobile LCP) and I can profile the landing route from the Lighthouse baseline in `docs/perf/lighthouse-baseline-2026-07-28/` and propose fixes — those aren't owner-only, they're just not on this list because they're implementation work.
 
 AI features (post-answer explanations, Sharkira Socratic hints) are intentionally not on this list — no paid model API is provisioned. Client wiring stays in the repo so they can be turned on later without new plumbing. Admin-ACL end-to-end verification and legal/privacy review are also off this list per owner decision; see NEEDED.md.
