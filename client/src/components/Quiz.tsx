@@ -673,7 +673,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   // challenge is scope 'daily' server-side (hints disabled), so we never even
   // show the affordance there. The server is still authoritative — a stray
   // disabled response collapses to Sharkira's "sitting this one out" note.
-  const sharkiraEligible = mode !== 'daily' && !!sessionId && !!currentQuestion;
+  //
+  // Temporarily hidden by owner. Drop the leading `false &&` to restore.
+  const sharkiraEligible = false && mode !== 'daily' && !!sessionId && !!currentQuestion;
 
   const askSharkira = useCallback(() => {
     if (!sessionId || !currentQuestion) return;
