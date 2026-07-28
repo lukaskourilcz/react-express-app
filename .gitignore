@@ -15,5 +15,8 @@ client/vite.config.js
 # claude code: task-observer session log stays local
 .claude/observations/
 
+# claude code: per-machine permission allowlist stays local
+.claude/settings.local.json
+
 # claude code: ui-ux-pro-max search script bytecode
 __pycache__/
