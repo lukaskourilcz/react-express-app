@@ -6,8 +6,6 @@ Production database migrations through `supabase/supabase-schema-024.sql` were a
 
 ## Before production launch
 
-- [ ] **Verify admin ACL end-to-end.** `ADMIN_EMAILS=kouril.lukas@gmail.com` is set on both projects × Production + Preview. Sign in with that account and confirm `/dev` loads; sign in with a second account and confirm `/dev` returns 403. `[imp:5]` `[owner:me]` `[time:15m]` `[kind:deploy]`
-- [ ] **Complete legal/privacy review.** Add the real controller/operator identity and contact, retention periods, lawful bases, processor/transfer disclosures, age policy, analytics consent behavior, and Czech terms. Sentry and PostHog are now live in production; the disclosure text must name them (processor, region, retention) before the terms page is truthful. Keep support disabled until the disclosure matches production. `[imp:5]` `[owner:me]` `[time:2h]` `[kind:legal]`
 - [ ] **Run the signed-in production smoke test** in English/Czech and desktop/mobile: Learn completion, Quiz replay rejection, Daily/Challenge idempotency, Flashcards, two-session Play/Classroom, leaderboards, `/dev`, deletion, and the daily-habit additions — the Today queue and its once-per-day Shark Card pack grant, a level going cleared→mastered over separate days, a streak freeze bridging a missed school day, badge sync, the read-only advisor, adaptive placement (including the "I don't know yet" option), and the devShark typing racer. `[imp:4]` `[owner:me]` `[time:1h]` `[kind:deploy]`
 
 ## Production reliability
@@ -60,6 +58,8 @@ Native iOS/Android work remains intentionally deferred; it is not a missing item
 - **Migration 024 applied** — `schema_024_daily_habit_freeze_badges_cards` recorded at `20260728211046`. Six new tables live (`user_streak_config`, `user_streak_freezes`, `user_badges`, `user_cards`, `daily_queue_completions`, `question_hints`), the freeze-aware `record_verified_quiz_result_v2` and spaced-mastery `complete_verified_roadmap_attempt` bodies replaced, `delete_user_data` extended to cover the new tables. Both `/api/health` return HTTP 200 with `rateLimiter: configured`.
 - **Supabase Auth redirect allowlist fixed** — Site URL set to `https://devshark.app`; Redirect URLs list includes both product domains and `http://localhost:5173/**`. Signing in on either product now lands the user back on the same domain (the client's `redirectTo: window.location.origin` is respected).
 - **Google OAuth enabled** — provider is configured in Supabase Authentication → Providers and sign-in works end-to-end. The Google consent screen currently reads "to continue to rvlybcjdpafwyeuojvhl.supabase.co" because Google shows the domain of the redirect_uri, which is Supabase's callback host. Changing that string to `devshark.app` needs a Supabase Custom Domain (paid tier), documented separately below.
+- **Admin ACL verification dropped from the tracked list** — env vars are wired (`ADMIN_EMAILS=kouril.lukas@gmail.com`, `OWNER_EMAIL=kouril.lukas@gmail.com`); owner will confirm end-to-end during normal use rather than as a launch gate.
+- **Legal / privacy review dropped from the tracked list** — owner chose not to gate launch on it. Left as an implicit obligation: the terms/privacy page must eventually name Supabase, Vercel, Upstash, Sentry (EU), and PostHog (EU) with their retention, and reflect any consent mode chosen. Not enforced by this file going forward.
 
 ## Developer tooling
 
