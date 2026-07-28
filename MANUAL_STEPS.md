@@ -5,25 +5,25 @@ Each step is owner-only (accounts, credentials, legal, licensing, or a physical 
 Supabase project ref: `rvlybcjdpafwyeuojvhl`
 Vercel projects: StudyShark at `https://studyshark-app.vercel.app`, devShark at `https://devshark.app`
 
+Resolved on 2026-07-28 (do not repeat): Upstash Redis provisioned and wired, admin ACL env vars set on both projects, Sentry + PostHog live on both projects with EU regions and privacy-forward defaults, Supabase leaked-password protection enabled. See the "Recorded decisions (2026-07-28)" section in `NEEDED.md` for the full list.
+
 ---
 
 ## imp:5 — production launch prerequisites
 
-### 1. Apply migration 024 (NEEDED #9) — **can be delegated to me once Supabase MCP is authenticated**
+### 1. Apply migration 024 (NEEDED #9) — **can be delegated to me: Supabase MCP is authenticated**
 
 If you'd rather do it by hand: open Supabase Studio → SQL Editor → paste the contents of `supabase/supabase-schema-024.sql` → Run. It is additive and idempotent. Then hit `https://studyshark-app.vercel.app/api/health` and `https://devshark.app/api/health` — both must return 200 and the response should no longer say `migration_required`.
 
-→ **tell me** when the MCP is authenticated (`claude /mcp` in a regular terminal) and I'll do it and verify.
+→ **tell me** "apply 024" and I'll do it through the MCP and verify both `/api/health` responses.
 
-### 2. Authorize production admins (NEEDED #10)
+### 2. Verify admin ACL end-to-end (NEEDED, launch prerequisites)
 
-Two options; pick one:
+Env vars are already set: `ADMIN_EMAILS=kouril.lukas@gmail.com` and `OWNER_EMAIL=kouril.lukas@gmail.com` on both projects × Production + Preview. Redeployment is not required (next deploy picks them up; the current deploy may still be pre-set).
 
-**Option A — env var (fastest).** Vercel → each project → Settings → Environment Variables. Add `ADMIN_EMAILS` = comma-separated list of admin emails. Set on **Production** + **Preview**. Redeploy each project (Vercel → Deployments → ⋯ → Redeploy).
+Sign in with `kouril.lukas@gmail.com` on one product → `/dev` should load. Sign in with any other Google account on the same product → `/dev` should return 403. Repeat on the other product.
 
-**Option B — Supabase metadata (best for changing admins later).** Supabase → Authentication → Users → find each admin → Edit user → set `app_metadata` to `{"role":"admin"}`. No redeploy needed.
-
-**Verify:** log in with an admin account → `/dev` loads. Log in with a non-admin account → `/dev` returns 403.
+If you want a second admin, add their email to `ADMIN_EMAILS` (comma-separated) or set their Supabase user `app_metadata.role = "admin"`.
 
 ### 3. Configure Google OAuth (NEEDED #11)
 
@@ -50,7 +50,7 @@ Edit these files with your real details (do not leave placeholder text):
 
 Must include: controller/operator identity + contact, retention periods (align with the purge cron below), lawful bases, processor/transfer disclosures, age policy, analytics consent behavior, Czech version.
 
-Keep support, analytics, replay, and AI **disabled** until this file matches production reality (SUPPORT_ENABLED, PostHog/Sentry, `AI_EXPLANATIONS_ENABLED`, `AI_HINTS_ENABLED`).
+Sentry and PostHog are now live in production — the disclosure text must name them (processor, region, retention) before the terms page is truthful. Keep support and AI features disabled until this file matches production reality (`SUPPORT_ENABLED`, `AI_EXPLANATIONS_ENABLED`, `AI_HINTS_ENABLED`).
 
 → **tell me** when it's drafted and I can review for consistency with product behavior + EN/CS parity.
 
@@ -66,7 +66,8 @@ Do this last, after 1–4. Run it in **EN and CS**, on **desktop and a phone**, 
 - Leaderboards render.
 - `/dev` accessible as admin, denied as non-admin.
 - Account deletion from Profile.
-- New from migration 024: Today queue + once-per-day Shark Card pack grant, a level going cleared → mastered across separate days, a streak freeze bridging a missed day, badge sync, read-only advisor, adaptive placement (with "I don't know yet"), a Sharkira hint (AI off, curated only), devShark typing racer.
+- New from migration 024: Today queue + once-per-day Shark Card pack grant, a level going cleared → mastered across separate days, a streak freeze bridging a missed day, badge sync, read-only advisor, adaptive placement (with "I don't know yet"), devShark typing racer.
+- Sharkira hint: currently UI-hidden by design — the affordance should not appear.
 
 → **tell me** any failure and I'll fix. If everything passes, tell me and I'll clear this from NEEDED.md.
 
@@ -74,15 +75,7 @@ Do this last, after 1–4. Run it in **EN and CS**, on **desktop and a phone**, 
 
 ## imp:4 — production reliability
 
-### 6. Upstash Redis for distributed rate limiting (NEEDED #18)
-
-Sign up at `https://console.upstash.com` → Create Database → Redis → **choose EU region** (matches user base + privacy) → copy `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
-
-Vercel → both projects → Settings → Environment Variables → add both, Production + Preview → redeploy.
-
-**Verify:** `/api/health` response should now report distributed rate limiting = configured. Hit any rate-limited endpoint quickly (e.g. quiz submit) 20× and confirm the 429s are enforced.
-
-### 7. External `/api/health` monitor (NEEDED #19)
+### 6. External `/api/health` monitor (NEEDED #19)
 
 Pick one:
 - **Uptime Robot** (free, 5-min intervals): add HTTP monitors for both `/api/health` URLs, alert on non-200.
@@ -90,29 +83,31 @@ Pick one:
 
 Notify channel: email works; Slack/Telegram integration is optional.
 
-### 8. Schedule daily purge (NEEDED #20) — **delegated to me once MCP is authenticated**
+### 7. Schedule daily purge (NEEDED #20) — **delegated to me (Supabase MCP is authenticated)**
 
 The retention decision is yours first: how many days should soft-deleted quiz attempts, expired play sessions, etc. survive? Read `supabase/supabase-schema-024.sql` for the current defaults inside `purge_expired_learning_data()`.
 
 → **tell me** your retention policy (or "use current defaults") and I'll schedule it via pg_cron.
 
-### 9. Verified backups + restore drill (NEEDED #21)
+### 8. Verified backups + restore drill (NEEDED #21)
 
 Follow `docs/backup-restore.md`. Choose your RPO/RTO (e.g. "≤ 24h data loss, ≤ 1h restore") and record them at the top of that file. Do one restore drill into a Supabase branch database (not production) to confirm the runbook works end-to-end.
 
-### 10. Sentry and/or PostHog (NEEDED #22) — optional
+### 9. Confirm Sentry + PostHog capture no PII (NEEDED #22)
 
-Only enable if you actually want them. If yes:
-- Sentry: create project → paste DSN in `SENTRY_DSN` env var → enable EU region → **verify the scrub config** so no tokens, emails, submitted answers, or answer proofs are captured. Add breadcrumb ignore-list for `/api/quiz/*` request/response bodies.
-- PostHog: same principle; EU cloud; scrub sensitive properties; capture only non-PII events.
+Both are already wired with privacy-forward defaults:
+- **Sentry**: EU region (Germany DSN), `sendDefaultPii: false`, 10% trace sampling, no Session Replay.
+- **PostHog**: EU Cloud, reverse-proxied through same-origin `/ingest`, `respect_dnt: true`, `person_profiles: 'identified_only'`, no autocapture of sensitive fields.
 
-Legal disclosure must match (see step 4).
+Reproduce one client error (e.g. throw from the console in prod) and one routine pageview signed in, then inspect the received events in each dashboard. Confirm no submitted answer, no answer proof, no auth token, and no email appears in the payload. If any does, tell me which field and I'll add a scrub.
+
+→ **tell me** the result. If clean, I'll clear this from NEEDED.md.
 
 ---
 
 ## imp:3 — brand / launch assets
 
-### 11. Custom StudyShark domain (NEEDED #26)
+### 10. Custom StudyShark domain (NEEDED #26)
 
 If you want one instead of the current `studyshark-app.vercel.app`:
 1. Buy / point the DNS at Vercel.
@@ -122,7 +117,7 @@ If you want one instead of the current `studyshark-app.vercel.app`:
 5. Redeploy both.
 6. Verify cross-links in the shared footer point at the new domain.
 
-### 12. Replace placeholder icons + social artwork (NEEDED #27)
+### 11. Replace placeholder icons + social artwork (NEEDED #27)
 
 Files to swap: `client/public/icon.svg`, `client/public/apple-touch-icon.png`, `client/public/pwa-*.png`, `client/public/og-image.png`. Use **licensed** Shark-family assets (I cannot generate these without confirmed rights per CLAUDE.md).
 
@@ -130,21 +125,21 @@ Verify: `/` on both domains → view page source → `og:image` resolves; iOS "A
 
 → **tell me** the licensed source and I can drop them in + verify metadata.
 
-### 13. Compare committed portfolio preview to live devShark (NEEDED #36)
+### 12. Compare committed portfolio preview to live devShark (NEEDED #36)
 
 Open `media/preview-poster.png` (in the repo) and `https://devshark.app` (live) side by side. Confirm they match. If they don't, re-record per `.claude/skills/preview-video/SKILL.md` — specifically, make sure `VITE_LOCK_SUBJECT=webdev` is set before capture; without it the client silently renders the StudyShark landing under devShark branding.
 
 → **tell me** the outcome. If mismatched I can re-record from a local run.
 
-### 14. Voluntary support toggle (NEEDED #40)
+### 13. Voluntary support toggle (NEEDED #40)
 
-Only after legal/accounting review. Set `SUPPORT_ENABLED=true` on both projects, then use `/dev` to enter provider URLs, target, amount covered, cost breakdown, update date, and public-thanks policy. Support has no effect on access or ranking — that constraint is server-owned.
+Only after legal/accounting review (step 4). Set `SUPPORT_ENABLED=true` on both projects, then use `/dev` to enter provider URLs, target, amount covered, cost breakdown, update date, and public-thanks policy. Support has no effect on access or ranking — that constraint is server-owned.
 
 ---
 
 ## imp:2 — tooling / optional features
 
-### 15. AI explanations (NEEDED #41) — optional
+### 14. AI explanations (NEEDED #41) — optional
 
 Pick provider (OpenAI most likely) and daily spend cap. Set on both projects:
 - `AI_EXPLANATIONS_ENABLED=true`
@@ -154,15 +149,16 @@ Pick provider (OpenAI most likely) and daily spend cap. Set on both projects:
 
 Monitor Supabase logs for cached vs generated usage over a week before raising the cap.
 
-### 16. AI Sharkira hints (NEEDED #42) — optional, independent of #15
+### 15. AI Sharkira hints (NEEDED #42) — optional, currently hidden in UI
 
-Same env pattern:
-- `AI_HINTS_ENABLED=true`
-- Reuses `OPENAI_API_KEY`, `OPENAI_MODEL`, `AI_DAILY_GENERATION_LIMIT` (shared budget with #15).
+The entry point is intentionally hidden today: `sharkiraEligible` in `client/src/components/Quiz.tsx` starts with `false &&`. To restore:
 
-Off is the default. When off, Sharkira degrades to curated question-context hints only. Hints are cached in `question_hints` (added by migration 024) so budget is spent once per question. Hints are hidden during placement, daily challenge, and survival Challenge.
+1. Drop the leading `false &&` in that expression.
+2. Optionally set `AI_HINTS_ENABLED=true` on both projects to add live generation (reuses `OPENAI_API_KEY`, `OPENAI_MODEL`, and `AI_DAILY_GENERATION_LIMIT` — shared budget with #14). When left off, Sharkira degrades to curated question-context hints only.
 
-### 17. Install RTK (NEEDED #58)
+Hints are cached in `question_hints` (added by migration 024) so live budget is spent once per question. Hints are hidden during placement, daily challenge, and survival Challenge regardless of the toggle.
+
+### 16. Install RTK (NEEDED #58)
 
 At home (not from the sandbox — sandbox can't reach the RTK release host):
 
@@ -173,23 +169,15 @@ rtk init --global
 
 Then follow `rtk --help` for the per-repo enable command. → **tell me** what enabling it changes in the repo and I can review.
 
-### 18. Enable Vercel Web Analytics (NEEDED #59)
+### 17. Enable Vercel Web Analytics (NEEDED #59)
 
 Vercel → each project → Analytics → **Enable Web Analytics**. Nothing else to change; the client already sends signals if the project has analytics on. This makes OwnDashboard's project Overview show visitors + page views.
-
-### 19. Resolve Supabase Auth password warning (NEEDED #12) — **delegated to me once MCP is authenticated**
-
-Only two right answers:
-- **A.** Turn on leaked-password protection in Auth settings (keep password sign-ups).
-- **B.** Disable password sign-ups entirely; Google OAuth becomes the only login.
-
-→ **tell me** A or B and I'll flip the setting through the MCP.
 
 ---
 
 ## imp:1 — after usage grows
 
-### 20. Monthly scaling review (NEEDED #46)
+### 18. Monthly scaling review (NEEDED #46)
 
 Once traffic is meaningful (>1k daily active), reread `scaling.md` monthly. Watch Supabase compute utilization; add retention/partitioning for event tables before they get big; redesign multiplayer fan-out before large classrooms or high concurrent-room counts.
 
@@ -197,7 +185,7 @@ Once traffic is meaningful (>1k daily active), reread `scaling.md` monthly. Watc
 
 ## What I need from you to keep unblocking things
 
-1. Authenticate Supabase MCP: run `claude /mcp` in a **regular terminal** (not the IDE), pick supabase, complete OAuth. This unlocks steps 1, 8, 19 for me to do directly.
-2. Decide step 19 (A or B) and step 8 retention.
-3. Tell me the outcome of step 13 (poster vs. live).
-4. Decide steps 11 (custom domain), 15/16 (AI enable), and provide licensed assets for step 12 if you want me to install them.
+1. Say "apply 024" and I'll do step 1 through the MCP.
+2. Decide step 7 retention (or say "use current defaults") and I'll schedule the cron.
+3. Tell me the outcome of step 2 (admin ACL login test), step 9 (Sentry + PostHog PII inspection), and step 12 (poster vs. live).
+4. Decide steps 10 (custom domain), 14/15 (AI enable), and provide licensed assets for step 11 if you want me to install them.
