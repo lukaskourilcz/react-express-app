@@ -42,6 +42,24 @@ Then Supabase → Authentication → Providers → Google → paste the Client I
 
 **Verify:** sign in with a **disposable** Google account on both products, then request account deletion from Profile → Delete Account. Delete the account from Google after.
 
+### 3a. Fix the Supabase Auth redirect allowlist (NEEDED, launch prerequisites)
+
+Symptom: signing in on `devshark.app` lands you on `https://react-express-app-five.vercel.app/#` (or any other Vercel alias of the same project). The client already sets `redirectTo: window.location.origin` in `client/src/lib/auth.tsx`, but Supabase discards that value when the URL isn't in its allowlist, and then uses Site URL as the fallback.
+
+Open `https://supabase.com/dashboard/project/rvlybcjdpafwyeuojvhl/auth/url-configuration`.
+
+Set **Site URL** to:
+- `https://devshark.app`
+
+Add to **Redirect URLs**:
+- `https://devshark.app`
+- `https://devshark.app/**`
+- `https://studyshark-app.vercel.app`
+- `https://studyshark-app.vercel.app/**`
+- `http://localhost:5173/**`
+
+Save. Sign out, sign back in from each product, and confirm you land back on the same domain both times.
+
 ### 4. Legal / privacy review (NEEDED #13)
 
 Edit these files with your real details (do not leave placeholder text):
