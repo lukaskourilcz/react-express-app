@@ -9,6 +9,7 @@ import {
   type CategoryType,
   type Question,
 } from '../../lib/quiz-runtime';
+import { hasFencedCode } from '../../shared/hooks/metadata';
 import { encodeSession } from '../../lib/quiz-tokens';
 import { tryAuth } from '../../lib/auth';
 import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext } from '../../lib/http';
@@ -200,6 +201,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       options: shuffled,
       category: q.category,
       difficulty: q.difficulty,
+      // Gate metadata for the hook line above the question. Both fields are derived from `base`,
+      // the un-localized question, because both are facts about the question rather than about
+      // its translation: a Czech rendering can drop a code fence, and `questionStartsWith` is
+      // bound to canonical English upstream. The client cannot recover either from `q`.
+      hasCode: hasFencedCode(base),
+      ...(lang === 'en' ? {} : { questionEn: base.question }),
     };
   });
 

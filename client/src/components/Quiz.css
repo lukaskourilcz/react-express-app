@@ -7,6 +7,18 @@
   line-height: 1.6;
 }
 
+/* The hook line. Set below the question in size and weight on purpose: it opens the gap, the
+   question is the thing being asked, and a hook that competes with the question for attention
+   is a hook that cost a swipe rather than earning one. One line, never wrapped to three. */
+.quiz-hook-line {
+  margin: 0 0 0.5rem;
+  font-size: clamp(0.8rem, 2.4vw, 0.875rem);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--color-text-secondary);
+  text-wrap: balance;
+}
+
 .quiz-result-card {
   text-align: center;
   padding: clamp(2rem, 5vw, 3rem) clamp(1.25rem, 4vw, 2rem);

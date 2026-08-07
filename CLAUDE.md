@@ -30,15 +30,38 @@ Generative-media production uses `.claude/skills/generated-media-production/SKIL
 - Tokens/shell: `client/src/styles/astryx-theme.css`, `client/src/styles/app-shell.css`
 - Localization: `client/src/i18n/translations.ts`, `client/src/i18n/translations.cs.ts`
 - API: `api/`, `lib/`, `shared/`
+- Hooks: `shared/hooks/` (selector), `client/src/lib/hooks.ts` (state), `lib/hooks/` (delivered, read-only)
 - Supabase: `supabase/supabase-schema*.sql`
 - Design guidance: `docs/design/`
 - Skills: `.claude/skills/`
 - Agents: `.claude/agents/`
 - Commands: `.claude/commands/`
 
+## Hook copy is delivered, not written here
+
+Hook copy for this app is delivered from the quorum repo (Carousel Studio / Hook Brain) and is
+never edited here. Before writing, editing or reviewing anything hook-related, read
+`docs/hooks/README.md` in quorum and the file it routes you to. Hooks ship only with a mechanism,
+a tagged citation, a falsifiable prediction and a `falsifiedIf` condition. Never invent a
+statistic and never claim anything a gate doesn't license.
+
+What that means in practice:
+
+- `lib/hooks/quiz.hooks.json` and `lib/hooks/hooks.predicates.spec.json` arrive as a bounded
+  `hook-library/1` delivery, hash-receipted. Nothing in this repository may write them. A local
+  edit is overwritten by the next delivery, so a wrong string is reported upstream instead.
+- This repo owns **selection mechanics and per-user state** and nothing else:
+  `shared/hooks/` (types, evaluator, selector) and `client/src/lib/hooks.ts` (storage, rendering).
+- The conformance vectors are the drift guard. `npm run test:hooks` runs this repo's evaluator
+  against them; if they and this implementation disagree, **this implementation is wrong**.
+  `questionStartsWith` is bound to canonical English upstream — do not re-decide it here.
+- A gate licenses a claim. Never feed the evaluator a defaulted `difficulty`, `category`,
+  `hasCode` or question text: a wrong field silently makes a hook dishonest. A question whose
+  metadata is unavailable renders no hook, which is the correct outcome.
+
 ## Validation and Git
 
-Use the actual scripts: `npm run typecheck:api`, `npm run test:launch`, `npm run build`, `npm run check:responsive`, both production dependency audits, and `git diff --check`. Do not report unexecuted checks as passing. Preserve unrelated work, stage deliberately, and create coherent incremental commits for large tasks. See `.claude/skills/shark-release-validation/SKILL.md` and `docs/DEEP_END_HANDOFF.md`.
+Use the actual scripts: `npm run typecheck:api`, `npm run test:launch`, `npm run test:hooks`, `npm run build`, `npm run check:responsive`, both production dependency audits, and `git diff --check`. Do not report unexecuted checks as passing. Preserve unrelated work, stage deliberately, and create coherent incremental commits for large tasks. See `.claude/skills/shark-release-validation/SKILL.md` and `docs/DEEP_END_HANDOFF.md`.
 
 Definition of done: implementation, EN/CS copy, states, responsive/accessibility behavior, tests, documentation, and Git history agree with the product architecture and all relevant checks have real results.
 

@@ -13,7 +13,8 @@
     "test:launch": "client/node_modules/.bin/esbuild scripts/test-launch-contracts.ts --bundle --platform=node --format=esm --outfile=/tmp/shark-launch-contracts.mjs && node /tmp/shark-launch-contracts.mjs",
     "check:responsive": "node scripts/check-responsive.mjs",
     "preview": "vercel dev --listen 3000",
-    "install:all": "npm install && cd client && npm install"
+    "install:all": "npm install && cd client && npm install",
+    "test:hooks": "client/node_modules/.bin/esbuild scripts/test-hook-contracts.ts --bundle --platform=node --format=esm --outfile=/tmp/shark-hook-contracts.mjs && node /tmp/shark-hook-contracts.mjs"
   },
   "devDependencies": {
     "@types/node": "^25.9.5",

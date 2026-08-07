@@ -8,6 +8,22 @@ export interface Question {
   options: string[];
   category: CategoryType;
   difficulty: 1 | 2 | 3 | 4 | 5;
+  /**
+   * Gate metadata for the hook line, computed server-side from the English source.
+   *
+   * Optional because only `/api/quiz/questions` sends it today — the daily, challenge and roadmap
+   * endpoints do not, and a question from one of those renders without a hook rather than with a
+   * guessed one. `hasCode` cannot be recomputed here: the client only ever receives the localized
+   * text, and a translation can drop a code fence.
+   */
+  hasCode?: boolean;
+  /**
+   * The canonical English question text, sent only to readers who are not on English.
+   *
+   * `questionStartsWith` is bound to canonical English upstream and pinned by the conformance
+   * vectors, so a Czech card still needs the English to evaluate that gate.
+   */
+  questionEn?: string;
 }
 
 export type DifficultyMode = 'basics' | 'easy' | 'zero-to-hero' | 'advanced' | 'mixed';

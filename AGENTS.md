@@ -10,6 +10,8 @@ Extend Astryx and Deep End v2 through `client/src/styles/astryx-theme.css`, `cli
 
 Every screen change covers relevant loading, empty, error, offline, auth/permission, disabled, success, destructive, stale/expired, long-content, and narrow states. Validate focus/keyboard, names/errors/status, non-color cues, reduced motion, touch targets, zoom/reflow, light/dark, EN/CS, and widths 360 through 1440.
 
+Hook copy is delivered from the quorum repo (Carousel Studio / Hook Brain) into `lib/hooks/` and is never edited here — a local edit is overwritten by the next delivery, so report a wrong string upstream. Read `docs/hooks/README.md` in quorum before touching anything hook-related. This repo owns selection mechanics and per-user state only (`shared/hooks/`, `client/src/lib/hooks.ts`). The delivered conformance vectors are the drift guard: if they and this implementation disagree, this implementation is wrong. Never feed the evaluator a defaulted difficulty, category, `hasCode` or question text — a wrong field silently makes a hook dishonest, and a question without metadata correctly renders no hook.
+
 Authoritative references:
 
 - `docs/product-architecture.md`
@@ -20,4 +22,4 @@ Authoritative references:
 - `.claude/commands/`
 - `docs/DEEP_END_HANDOFF.md`
 
-Release commands are `npm run typecheck:api`, `npm run test:launch`, `npm run build`, `npm run check:responsive`, `npm audit --omit=dev`, `npm audit --omit=dev --prefix client`, and `git diff --check`. Record actual outcomes. Stage only coherent intended files, leave unrelated work untouched, and commit incrementally.
+Release commands are `npm run typecheck:api`, `npm run test:launch`, `npm run test:hooks`, `npm run build`, `npm run check:responsive`, `npm audit --omit=dev`, `npm audit --omit=dev --prefix client`, and `git diff --check`. Record actual outcomes. Stage only coherent intended files, leave unrelated work untouched, and commit incrementally.

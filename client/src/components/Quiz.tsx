@@ -32,6 +32,16 @@ import {
 } from '../lib/supabase';
 import { apiFetch, friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
+import {
+  HOOK_LIBRARY_VERSION,
+  HOOK_VERTICAL,
+  noteHookDay,
+  pickHookFor,
+  startHookSession,
+  topicLabel,
+  type RenderedHook,
+} from '../lib/hooks';
+import { hookContextFrom } from '../../../shared/hooks/metadata';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { RotatingTip } from './reactbits/RotatingTip';
 import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
@@ -484,6 +494,21 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     displayedCategoryIds.every((c) => selectedCategories.includes(c));
 
   const handleAnswer = (questionId: string, answerIndex: number) => {
+    // The primary metric. The studio measures swipe-through: hook+question card → answer card.
+    // This UI has no swipe — the reader answers on the card the hook fronts — so the equivalent
+    // through-action is the first answer on that question. Only the first: changing a pick is
+    // not a second engagement, and counting it would inflate the numerator against a per-question
+    // impression denominator.
+    const hookForQuestion = hooksByQuestion[`${questionId}:${lang}`];
+    if (hookForQuestion && !(questionId in answers)) {
+      capture('hook_engaged', {
+        hook_id: hookForQuestion.id,
+        vertical: HOOK_VERTICAL,
+        lang,
+        library_version: HOOK_LIBRARY_VERSION,
+        question_id: questionId,
+      });
+    }
     setAnswers((prev) => ({ ...prev, [questionId]: answerIndex }));
     if (settings.soundEffects) {
       // soft confirmation tone on each pick — no correctness reveal until submit.
@@ -534,6 +559,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         percentage: data.percentage,
         correct: data.correctAnswers,
         total: data.totalQuestions,
+        // Completion guardrail. A hook that wins the answer and loses the run is net-negative,
+        // so the share of the run that carried a hook travels with the completion figure.
+        hooked_questions: Object.values(hooksByQuestion).filter(Boolean).length,
+        answered_questions: Object.keys(answers).length,
+        library_version: HOOK_LIBRARY_VERSION,
       });
       if (mode !== 'practice') {
         const supportState = readJSON<SupportPromptPreference>(SUPPORT_PROMPT_KEY, {});
@@ -667,6 +697,74 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   };
 
   const currentQuestion = questions[currentIndex];
+
+  // ── Hook line ─────────────────────────────────────────────────────────
+  // The one line above the question, assigned per reader per question from the delivered
+  // library. Copy is never written here — see docs/hooks/README.md in the quorum repo.
+  //
+  // Resolved once per question and kept, because picking has side effects: it spends the hook's
+  // per-user cooldown and its session slot, so re-picking on every render would burn the pool at
+  // the rate React re-renders rather than the rate the reader answers.
+  // Keyed by question AND language: a reader who switches language mid-quiz must see the hook's
+  // own Czech line, not the English one it was first rendered with. The library carries both, so
+  // leaving the stale string up would show copy the delivery never intended for that reader.
+  const [hooksByQuestion, setHooksByQuestion] = useState<Record<string, RenderedHook | null>>({});
+  const hookKey = currentQuestion ? `${currentQuestion.id}:${lang}` : null;
+  const activeHook = hookKey ? hooksByQuestion[hookKey] ?? null : null;
+
+  // A new run is a new hook session, whichever entry point started it — plain quiz, daily,
+  // review or a resumed setup all mint a fresh sessionId. Cooldown is per user and survives;
+  // session memory is per sitting and is what stops a line coming round twice in one quiz.
+  useEffect(() => {
+    startHookSession();
+    setHooksByQuestion({});
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!currentQuestion || !hookKey) return;
+    if (hookKey in hooksByQuestion) return;
+    // No gate metadata means this question came from an endpoint that does not send it yet
+    // (daily, challenge, roadmap). Rendering no hook is the honest outcome: a guessed
+    // `hasCode` or a Czech string read as English would license a claim nothing verified.
+    if (typeof currentQuestion.hasCode !== 'boolean') {
+      setHooksByQuestion((prev) => ({ ...prev, [hookKey]: null }));
+      return;
+    }
+    const picked = pickHookFor({
+      subject: hookContextFrom({
+        question: currentQuestion.question,
+        options: currentQuestion.options,
+        category: currentQuestion.category,
+        difficulty: currentQuestion.difficulty,
+        hasCode: currentQuestion.hasCode,
+        ...(currentQuestion.questionEn ? { questionEn: currentQuestion.questionEn } : {}),
+      }),
+      vertical: HOOK_VERTICAL,
+      lang,
+      topic: topicLabel(currentQuestion.category),
+    });
+    setHooksByQuestion((prev) => ({ ...prev, [hookKey]: picked }));
+    if (picked) {
+      // Once per reader per day, so the return guardrail is a per-reader series rather than a
+      // per-question one.
+      const day = noteHookDay();
+      if (day) capture('hook_day_start', { days_since_last: day.daysSinceLastHookDay, lang, library_version: HOOK_LIBRARY_VERSION });
+      // The impression. Sliced by language because effects are per-language and CS and EN are
+      // never pooled; `libraryVersion` because thirteen ids survived the 16 → 49 rebuild with
+      // new strings, so the id alone cannot tell an old row from a new one.
+      capture('hook_impression', {
+        hook_id: picked.id,
+        vertical: HOOK_VERTICAL,
+        lang,
+        difficulty: currentQuestion.difficulty,
+        category: currentQuestion.category,
+        eligible_count: picked.eligibleCount,
+        pick_reason: picked.reason,
+        library_version: HOOK_LIBRARY_VERSION,
+        question_id: currentQuestion.id,
+      });
+    }
+  }, [currentQuestion, hookKey, hooksByQuestion, lang]);
 
   // ── Sharkira: optional Socratic hint ──────────────────────────────────
   // Pre-answer help offered only on plain-quiz and review sessions. The daily
@@ -1251,6 +1349,20 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             <legend style={visuallyHidden}>
               {t('quiz.questionOf', { current: currentIndex + 1, total: questions.length })}
             </legend>
+
+            {/* The hook. One line, above the question, on the same card — it opens the gap the
+                question closes, so it must not read as part of the question itself. Presentation
+                only: `aria-hidden` keeps it out of the accessible name of the question, which
+                `aria-describedby` already points at the question text. */}
+            {activeHook && (
+              <p
+                aria-hidden="true"
+                className="quiz-hook-line"
+                data-hook-id={activeHook.id}
+              >
+                {activeHook.text}
+              </p>
+            )}
 
             {/* Only the question text scrolls when long — the answers below
                 keep their anchored position. */}
