@@ -155,3 +155,26 @@ Operational instructions are in [docs/launch-runbook.md](./docs/launch-runbook.m
 - Anonymous local learning remains useful; account-backed competitive and classroom features require sign-in.
 - AI is a capped, cached enhancement — post-answer explanations and pre-answer Socratic hints. Curated content stays authoritative, and hints never reveal the answer.
 - Native mobile work is intentionally deferred until the web release is stable.
+
+## Marketing (external, read-only)
+
+devShark is marketed by **marketingShark**, a project inside BoardlessAI
+(`lukaskourilcz/quorum`). One meeting a day there picks a single question out of this
+repository's bank and writes it up as a five-slide carousel in Czech and again in English,
+answer included, with devShark named once at the end.
+
+What that means for this repository, precisely:
+
+- **Nothing here changes.** No handler, catalog, client file or migration is touched by it. The
+  question bank is consumed read-only as a pinned snapshot, and the source commit is recorded in
+  the snapshot's envelope on the quorum side.
+- **The answer is published with the question.** That is the point of the format — the carousel
+  gives a reader the real question and the real answer rather than a teaser. The bank already
+  lives in a public repository, so nothing becomes public that was not.
+- **Which questions have been used is recorded** in `state/marketingshark/ledger.json` in quorum.
+  Every question is served once before any repeats.
+- **Nothing is posted automatically.** Each carousel is stored as a draft behind an approval
+  queue; marketingShark owns no social account and has no publishing path.
+
+Re-importing the bank after it grows is one command on the quorum side and does not disturb which
+questions have already been used.
