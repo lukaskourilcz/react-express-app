@@ -2746,45 +2746,6 @@ export const questionTranslationsCs: Record<string, QuestionTranslation> = {
     question: 'Který hook ti dá přístup k search/query parametrům?\n\n```jsx\n// URL: /search?q=react\nconst [searchParams, setSearchParams] = use???();\nconst query = searchParams.get("q"); // "react"\n```',
     explanation: 'useSearchParams vrací aktuální URL search params a funkci pro jejich aktualizaci. Funguje jako useState, ale synchronizuje se s URL query stringem.',
   },
-  '34': {
-    introduction: 'React Hook Form je populární knihovna pro práci s formuláři v Reactu. Poskytuje několik hooků pro různé účely.',
-    question: 'Který hook je hlavní vstupní bod React Hook Form?\n\n```jsx\nconst { register, handleSubmit, formState } = use???();\n```',
-    explanation: 'useForm je primární hook, který vrací metody jako register, handleSubmit a formState. Spravuje celý stav formuláře a validaci.',
-  },
-  '35': {
-    introduction: 'React Hook Form poskytuje jednoduché API pro registraci inputů pomocí spread syntaxe pro propojení formulářových polí.',
-    question: 'Jak zaregistruješ input s React Hook Form?\n\n```jsx\nconst { register } = useForm();\nreturn <input ??? />;\n```',
-    explanation: 'Spreadni register funkci na svůj input: {...register("fieldName")}. To přidá potřebný ref a onChange handlery pro sledování inputu.',
-  },
-  '36': {
-    introduction: 'React Hook Form poskytuje wrapper, který nejdřív spustí validaci a zavolá tvůj submit handler, jen když je formulář validní.',
-    question: 'Která funkce zpracovává odeslání formuláře v React Hook Form?\n\n```jsx\nconst { handleSubmit } = useForm();\nconst onSubmit = (data) => console.log(data);\n\nreturn <form onSubmit={???(onSubmit)}>...</form>;\n```',
-    explanation: 'handleSubmit obalí tvůj submit handler, nejdřív zvaliduje formulář a zavolá tvou funkci jen pokud validace projde. Použij ho jako onSubmit={handleSubmit(onSubmit)}.',
-  },
-  '37': {
-    introduction: 'React Hook Form vystavuje výsledky validace jednotlivých polí přes objekt formState, takže UI může vykreslit chybové zprávy.',
-    question: 'Jak přistupuješ k chybám formuláře v React Hook Form?\n\n```jsx\nconst { formState: { errors } } = useForm();\n// How to access email field error?\n```',
-    options: ['Objekt errors z useForm', 'formState.errors', 'getErrors()', 'useErrors()'],
-    explanation: 'K chybám přistupuj přes formState.errors z hooku useForm. Chyba každého pole je dostupná jako formState.errors.fieldName s vlastnostmi message a type.',
-  },
-  '38': {
-    introduction: 'React Hook Form umožní přihlásit se k odběru změn hodnot inputů, aniž bys zvedal hodnoty do stavu komponenty.',
-    question: 'Co dělá funkce watch v React Hook Form?\n\n```jsx\nconst { watch } = useForm();\nconst emailValue = watch("email");\n// What does emailValue contain?\n```',
-    options: ['Validuje inputy', 'Sleduje odeslání formuláře', 'Přihlásí se k odběru změn inputů', 'Resetuje formulář'],
-    explanation: 'watch se přihlásí k odběru změn inputů a vrátí jejich hodnoty. Použij ho pro podmíněné vykreslování podle hodnot formuláře nebo pro reakci na změny konkrétních polí.',
-  },
-  '39': {
-    introduction: 'Naplnění React Hook Form počátečními hodnotami používá konkrétní config pole, které je zároveň základem, na který se reset() vrací.',
-    question: 'Jak nastavíš výchozí hodnoty v React Hook Form?\n\n```jsx\nconst { register } = useForm({\n  ???: { name: "John", email: "" }\n});\n```',
-    options: ['Prop defaultValue', 'defaultValues v useForm', 'Prop initial', 'Prop value'],
-    explanation: 'Předej defaultValues do useForm: useForm({ defaultValues: { name: "John" } }). To nastaví počáteční hodnoty a použije se při volání reset().',
-  },
-  '40': {
-    introduction: 'React Hook Form poskytuje programový způsob, jak vymazat hodnoty a chyby zpět do výchozího stavu formuláře.',
-    question: 'Co dělá reset() v React Hook Form?\n\n```jsx\nconst { reset } = useForm();\nreset(); // What happens?\n```',
-    options: ['Vymaže jen chyby', 'Resetuje formulář na výchozí hodnoty', 'Odešle formulář', 'Zvaliduje všechna pole'],
-    explanation: 'reset() obnoví formulář na jeho výchozí hodnoty a vymaže všechny chyby. Můžeš také předat nové výchozí hodnoty pro reset na konkrétní hodnoty.',
-  },
   '41': {
     introduction: 'React.memo je higher-order komponenta, která přeskočí překreslení, když jsou její props mělce rovny předchozímu renderu.',
     question: 'K čemu slouží React.memo?',
