@@ -35,6 +35,10 @@ deployed site was unreachable from the session that produced it.
 
 AI-driven features (post-answer explanations, Sharkira Socratic hints) are intentionally not listed. The client wiring stays in the repo so they can be enabled later, but no paid model API is provisioned now.
 
+## Repository housekeeping
+
+- [ ] **Delete the merged `claude/remove-forms-unlock-system-design-br6l74` branch on GitHub.** It is fully merged into `main` (commit `2333bd0`) and the local copy is gone, but this session's git proxy rejects delete-ref pushes, so the remote branch is still listed. One click in the GitHub branches view. `[imp:1]` `[owner:me]` `[time:5m]` `[kind:setup]`
+
 ## When usage grows
 
 - [ ] Review [scaling.md](./scaling.md) monthly once traffic is meaningful. Upgrade Supabase compute before sustained saturation, add retention/partitioning for event tables, and redesign multiplayer fan-out before large classrooms or high concurrent-room counts. `[imp:1]` `[owner:me]` `[time:20m]` `[kind:setup]`
