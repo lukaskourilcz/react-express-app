@@ -20,10 +20,13 @@ import {
   createServiceClient,
   withTimeout,
   requireAuthSub,
+  requireAuthResult,
   isRpcMissing,
   withRequestContext,
 } from '../../lib/http';
 import { AuthError, tryAuth } from '../../lib/auth';
+import { getGameSettings } from '../../lib/settings-store';
+import { withGrantedTopics } from '../../lib/topic-grants';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
@@ -294,8 +297,21 @@ export function sanitize(input: unknown): ProgressBlob {
 async function handleProgress(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
 
-  const userId = await requireAuthSub(req, res);
-  if (!userId) return;
+  // One token verification serves both the row lookup and the email claim the
+  // account grants below are keyed on.
+  const auth = await requireAuthResult(req, res);
+  if (!auth) return;
+  const userId = auth.sub;
+  const emailClaim = auth.payload.email;
+  const email = typeof emailClaim === 'string' ? emailClaim : null;
+
+  // Paths granted to a named account (see lib/topic-grants.ts) are resolved
+  // here rather than stored, so they stay server-owned and survive a progress
+  // reset. Everything else in `extra` still comes from the row.
+  const grantExtra = async (extra: ReturnType<typeof sanitizeExtra>) => {
+    const { ownerEmail } = await getGameSettings();
+    return { ...extra, unlocked: withGrantedTopics(extra.unlocked, email, ownerEmail) };
+  };
 
   if (req.method === 'GET') {
     const { data, error } = await withTimeout(
@@ -304,7 +320,7 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
     if (error) return jsonError(res, 500, 'db_error', 'Could not load progress');
     return res.json({
       data: (data?.data as ProgressBlob) ?? {},
-      extra: sanitizeExtra(data?.extra),
+      extra: await grantExtra(sanitizeExtra(data?.extra)),
     });
   }
 
@@ -315,7 +331,7 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
   );
   if (current.error) return jsonError(res, 500, 'db_error', 'Could not load progress');
   const authoritative = sanitize(current.data?.data);
-  const authoritativeExtra = sanitizeExtra(current.data?.extra);
+  const authoritativeExtra = await grantExtra(sanitizeExtra(current.data?.extra));
   return res.json({ ok: true, data: authoritative, extra: authoritativeExtra });
 }
 

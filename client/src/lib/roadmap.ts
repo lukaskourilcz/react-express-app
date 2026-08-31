@@ -46,8 +46,6 @@ export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
   html: [],
   css: [],
   javascript: [],
-  // Foundational concept paths anyone can start cold — no prereqs.
-  internet: [],
   // Tier 2 — anything that builds directly on JS fundamentals.
   typescript: ['javascript'],
   abbreviations: ['javascript'],
@@ -64,7 +62,6 @@ export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
   react: ['javascript', 'html', 'css'],
   // Topics that build on React or Node.
   nextjs: ['react'],
-  'rhf-zod': ['react'],
   databases: ['nodejs'],
   'system-design': ['nodejs'],
   devops: ['nodejs'],

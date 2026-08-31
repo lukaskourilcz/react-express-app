@@ -9,7 +9,7 @@ import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { AuthError, requireAuth } from './auth';
+import { AuthError, requireAuth, type AuthResult } from './auth';
 import { SUBJECT_SCOPE_CATALOG } from '../shared/subject-catalog';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -141,6 +141,28 @@ export function isRpcMissing(error: { message?: string } | null | undefined): bo
 }
 
 /**
+ * Verify the caller and return the whole verified result (subject id plus the
+ * token claims). Use this instead of `requireAuthSub` when the handler also
+ * needs a claim such as the email, so the token is only verified once. On
+ * failure this sends the error response itself and returns null.
+ */
+export async function requireAuthResult(
+  req: VercelRequest,
+  res: VercelResponse,
+): Promise<AuthResult | null> {
+  try {
+    return await requireAuth(req);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      jsonError(res, err.status, err.code, err.message);
+      return null;
+    }
+    jsonError(res, 500, 'internal_error', 'Auth failed');
+    return null;
+  }
+}
+
+/**
  * Verify the caller and return their subject id (Supabase user id). On failure
  * this sends the error response itself and returns null, so handlers can write:
  *
@@ -151,17 +173,7 @@ export async function requireAuthSub(
   req: VercelRequest,
   res: VercelResponse,
 ): Promise<string | null> {
-  try {
-    const auth = await requireAuth(req);
-    return auth.sub;
-  } catch (err) {
-    if (err instanceof AuthError) {
-      jsonError(res, err.status, err.code, err.message);
-      return null;
-    }
-    jsonError(res, 500, 'internal_error', 'Auth failed');
-    return null;
-  }
+  return (await requireAuthResult(req, res))?.sub ?? null;
 }
 
 // Categories that count toward stats and leaderboards.

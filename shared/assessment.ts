@@ -23,7 +23,7 @@ const DEV_TIERS: { minCorrect: number; unlocks: string[] }[] = [
     minCorrect: 18,
     unlocks: [
       'typescript', 'abbreviations', 'general', 'git', 'dsa', 'algorithms',
-      'nodejs', 'testing', 'ai', 'security', 'react', 'nextjs', 'rhf-zod',
+      'nodejs', 'testing', 'ai', 'security', 'react', 'nextjs',
       'databases', 'system-design', 'devops',
     ],
   },

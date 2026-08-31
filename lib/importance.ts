@@ -12,7 +12,7 @@ import { QUESTION_IMPORTANCE } from './question-importance';
 
 const CATEGORY_WEIGHT: Record<string, number> = {
   javascript: 9, react: 9, typescript: 8, html: 7, css: 7, nodejs: 7, nextjs: 7,
-  git: 7, general: 6, internet: 6, ai: 7, 'code-snippets': 6, dsa: 5,
+  git: 7, general: 6, ai: 7, 'code-snippets': 6, dsa: 5,
   'dev-world': 4, algorithms: 3, abbreviations: 3,
 };
 const DEFAULT_CATEGORY_WEIGHT = 5;
