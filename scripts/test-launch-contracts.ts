@@ -29,6 +29,7 @@ import { selectPersonalizedReview } from '../lib/review-selection';
 import { aiDailyGenerationLimit, isAiExplanationConfigured } from '../lib/ai-provider';
 import { inspectQuestionQuality } from '../lib/question-quality';
 import { assessmentUnlocks } from '../shared/assessment';
+import { grantedTopicsFor, withGrantedTopics } from '../lib/topic-grants';
 import { ROADMAP_TOPICS } from '../lib/roadmap';
 import {
   disableSupportPrompt,
@@ -163,6 +164,20 @@ async function main() {
     assert.ok(!assessmentUnlocks('webdev', 20).includes(retired));
   }
 
+  // Named-account path grants: the owner's address gets them, nobody else does.
+  const owner = 'owner@example.com';
+  assert.deepEqual(grantedTopicsFor('learner@example.com', owner), []);
+  assert.deepEqual(grantedTopicsFor(null, owner), []);
+  assert.deepEqual(grantedTopicsFor('', owner), []);
+  assert.ok(grantedTopicsFor('OWNER@Example.com', owner).includes('system-design'), 'grants are case-insensitive');
+  assert.ok(grantedTopicsFor(owner, owner).every((topic) => ROADMAP_TOPICS.includes(topic)));
+  assert.deepEqual(withGrantedTopics(['git'], 'learner@example.com', owner), ['git']);
+  assert.deepEqual(withGrantedTopics(['git'], owner, owner), ['git', 'system-design']);
+  assert.deepEqual(
+    withGrantedTopics(['system-design'], owner, owner),
+    ['system-design'],
+    'an already-unlocked grant must not be duplicated',
+  );
 
   const savedAiEnv = {
     enabled: process.env.AI_EXPLANATIONS_ENABLED,
