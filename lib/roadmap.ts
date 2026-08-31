@@ -18,7 +18,7 @@ import { QUESTIONS_PER_LEVEL, ROADMAP_LEVELS, difficultyForLevel } from './roadm
 export type RoadmapTopic =
   | 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs'
   | 'html' | 'css' | 'git' | 'dsa' | 'algorithms'
-  | 'abbreviations' | 'general' | 'internet' | 'ai' | 'rhf-zod' | 'cool-stuff'
+  | 'abbreviations' | 'general' | 'ai' | 'cool-stuff'
   | 'databases' | 'system-design' | 'testing' | 'devops' | 'security'
   // Geography
   | 'continents' | 'capitals' | 'flags' | 'landforms' | 'climate' | 'population' | 'political' | 'economic' | 'cartography' | 'earth'
@@ -44,7 +44,7 @@ export type RoadmapTopic =
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
   'html', 'css', 'git', 'dsa', 'algorithms',
-  'abbreviations', 'general', 'internet', 'ai', 'rhf-zod', 'cool-stuff',
+  'abbreviations', 'general', 'ai', 'cool-stuff',
   'databases', 'system-design', 'testing', 'devops', 'security',
   // Geography
   'continents', 'capitals', 'flags', 'landforms', 'climate', 'population', 'political', 'economic', 'cartography', 'earth',
@@ -92,9 +92,7 @@ const ID_PREFIX: Record<RoadmapTopic, string> = {
   algorithms: 'rm-algorithms',
   abbreviations: 'rm-abbr',
   general: 'rm-general',
-  internet: 'rm-internet',
   ai: 'rm-ai',
-  'rhf-zod': 'rm-rhf',
   'cool-stuff': 'rm-cool',
   databases: 'rm-db',
   'system-design': 'rm-sysdesign',
@@ -250,20 +248,11 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'How Browsers Render', 'How Code Runs', 'How Frameworks Work', 'Frontend vs Backend', 'APIs & Communication',
     'Caching & CDNs', 'Authentication Basics', 'Databases Overview', 'Deployment & Hosting', 'Performance & Optimization',
   ],
-  internet: [
-    'What is the Internet?', 'IP Addresses', 'DNS — The Internet’s Phonebook', 'Packets & Routing', 'TCP & UDP',
-    'The Protocol Stack (TCP/IP)', 'The Web over HTTP', 'Ports, NAT & Firewalls', 'ISPs & Physical Connections', 'Security, HTTPS & Encryption',
-  ],
   ai: [
     'What is AI?', 'Machine Learning Basics', 'Neural Networks', 'What is an LLM?', 'Tokens & Tokenization',
     'Training Data & Datasets', 'Transformers & Attention', 'Prompting Basics', 'Context Windows', 'Embeddings & Vectors',
     'Sampling & Temperature', 'Hallucinations & Limitations', 'Fine-tuning & RAG', 'Using AI APIs', 'Chat Assistants & System Prompts',
     'Multimodal Models', 'AI Safety & Alignment', 'Bias & Ethics', 'AI Agents & Tool Use', 'The Modern AI Landscape',
-  ],
-  'rhf-zod': [
-    'Forms in React', 'useForm & register', 'handleSubmit & onSubmit', 'formState & Errors', 'Built-in Validation Rules',
-    'Zod: Primitives & parse', 'Zod: Objects & infer', 'Zod: safeParse & Errors', 'Zod: Refinements & Coercion', 'Connecting Zod (zodResolver)',
-    'Controller & Controlled Inputs', 'watch, setValue & reset', 'useFieldArray', 'Zod: Refine, Unions & Transform', 'Integration & Mastery',
   ],
   'cool-stuff': [
     'JavaScript: Birth & Names', 'JavaScript: Weird Parts', 'Birth of the Web', 'Internet Firsts', 'Famous Software Disasters',

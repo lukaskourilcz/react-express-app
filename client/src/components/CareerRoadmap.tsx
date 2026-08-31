@@ -77,8 +77,8 @@ function webdevPillars(t: TFn): Pillar[] {
   });
   return [
     p('foundations', [area('html'), area('css'), area('javascript'), area('typescript')]),
-    p('frameworks', [area('react'), area('nextjs'), area('rhf-zod')]),
-    p('backend', [area('nodejs'), area('general'), area('internet')]),
+    p('frameworks', [area('react'), area('nextjs')]),
+    p('backend', [area('nodejs'), area('general')]),
     p('cs', [area('dsa'), area('algorithms')]),
     p('production', [area('databases'), area('system-design'), area('testing'), area('devops'), area('security')]),
   ];

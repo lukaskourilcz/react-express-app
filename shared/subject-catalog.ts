@@ -2,9 +2,9 @@
  * localized, and persistence concerns out of this module. */
 export const SUBJECT_SCOPE_CATALOG = {
   webdev: {
-    questionCount: 3609,
-    topics: ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git', 'dsa', 'algorithms', 'abbreviations', 'general', 'internet', 'ai', 'rhf-zod', 'databases', 'system-design', 'testing', 'devops', 'security'],
-    categories: ['html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'git', 'dsa', 'algorithms', 'abbreviations', 'general', 'internet', 'ai', 'rhf-zod', 'cool-stuff', 'databases', 'system-design', 'testing', 'devops', 'security', 'dev-world', 'code-snippets'],
+    questionCount: 3409,
+    topics: ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git', 'dsa', 'algorithms', 'abbreviations', 'general', 'ai', 'databases', 'system-design', 'testing', 'devops', 'security'],
+    categories: ['html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'git', 'dsa', 'algorithms', 'abbreviations', 'general', 'ai', 'cool-stuff', 'databases', 'system-design', 'testing', 'devops', 'security', 'dev-world', 'code-snippets'],
   },
   geography: {
     questionCount: 1000,
