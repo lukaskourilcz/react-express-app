@@ -23,6 +23,7 @@ import { rollPack, subjectCardCount } from '../../shared/cards';
 import { eligibleServerBadges, type BadgeStatsSummary } from '../../shared/badges';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
 import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
+import { handleGithub } from '../../lib/github-handlers';
 
 const supabase = createServiceClient();
 
@@ -58,6 +59,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'advisor') return advisor(req, res);
   if (op === 'coding-progress') return handleCodingProgress(req, res, supabase);
   if (op === 'coding-draft') return handleCodingDraft(req, res, supabase);
+  if (op.startsWith('github-')) return handleGithub(op, req, res, supabase);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
 }
 

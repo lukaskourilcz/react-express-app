@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
@@ -71,7 +71,7 @@ import { useAuth } from '../lib/auth';
 import { friendlyError } from '../lib/api';
 import { reportQuestion } from '../lib/supabase';
 import { shuffleDifferentFrom } from '../lib/shuffle';
-import { readString, writeString } from '../lib/storage';
+import { readString, removeStored, writeString } from '../lib/storage';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { RedFlagDialog } from './RedFlagDialog';
@@ -80,6 +80,11 @@ import { CategoryGlyph } from './ui/techIcons';
 import { SwimCta } from './landing/LandingKit';
 import './Roadmap.css';
 import './DeepEndScreens.css';
+
+// The coding workbench pulls the editor and the runner in; keep it out of the
+// Learn chunk until a devShark level actually reaches its coding phase.
+const CodingWorkbench = lazy(() => import('../coding/CodingWorkbench').then((m) => ({ default: m.CodingWorkbench })));
+const codingDraftKey = (id: string) => `devshark:coding:draft:${id}`;
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 // `ref` is the GLOBAL level number for a level, or the part number for a test.
@@ -1083,6 +1088,14 @@ function LessonRunner({
   const [flagOpen, setFlagOpen] = useState(false);
   const [flagSnack, setFlagSnack] = useState(false);
   const resultHeadingRef = useRef<HTMLHeadingElement>(null);
+  // devShark code levels end with coding tasks. The level passes only when the
+  // server has a passed verdict for every one of them (the ids are sealed in
+  // the level session), so the finish screen reads the server's answer.
+  const codingTasks = useMemo(() => (playable.kind === 'level' ? playable.coding ?? [] : []), [playable]);
+  const [codingPhase, setCodingPhase] = useState(false);
+  const [codingIndex, setCodingIndex] = useState(0);
+  const [codingPassed, setCodingPassed] = useState<string[]>([]);
+  const [codingPending, setCodingPending] = useState<string[]>([]);
 
   const question = presented[qIndex];
   // Out of hearts once this answer is revealed and it pushed mistakes to the max.
@@ -1115,6 +1128,26 @@ function LessonRunner({
     [revealed, grading, playable.sessionId, question.id, lang, isCheckpoint],
   );
 
+  const complete = useCallback(async () => {
+    setCompleting(true);
+    setAnswerError(null);
+    try {
+      const result = await completeRoadmapAttempt(playable.sessionId);
+      setCorrectCount(result.correctAnswers);
+      setCodingPending(result.codingPending ?? []);
+      // A level that fails its coding gate is recorded as not passed even with
+      // a full question score; report the percentage the server computed but
+      // keep the local pass record honest.
+      onFinished((result.codingPending?.length ?? 0) > 0 ? Math.min(result.percentage, playable.passPct - 1) : result.percentage);
+      setCodingPhase(false);
+      setFinished(true);
+    } catch (error) {
+      setAnswerError(friendlyError(error));
+    } finally {
+      setCompleting(false);
+    }
+  }, [onFinished, playable.passPct, playable.sessionId]);
+
   const advance = useCallback(async () => {
     if (outOfHearts) {
       setCompleting(true);
@@ -1136,21 +1169,16 @@ function LessonRunner({
       setRevealed(false);
       setGrade(null);
       setAnswerError(null);
-    } else {
-      setCompleting(true);
+    } else if (codingTasks.length > 0) {
+      // Questions done: the coding phase decides the rest of the level.
+      setRevealed(false);
+      setGrade(null);
       setAnswerError(null);
-      try {
-        const result = await completeRoadmapAttempt(playable.sessionId);
-        setCorrectCount(result.correctAnswers);
-        onFinished(result.percentage);
-        setFinished(true);
-      } catch (error) {
-        setAnswerError(friendlyError(error));
-      } finally {
-        setCompleting(false);
-      }
+      setCodingPhase(true);
+    } else {
+      await complete();
     }
-  }, [total, outOfHearts, qIndex, onFinished, playable.sessionId]);
+  }, [total, outOfHearts, qIndex, onFinished, playable.sessionId, codingTasks.length, complete]);
 
   const submitFlag = async (detail?: string) => {
     await reportQuestion({ questionId: question.id, reason: 'needs-review', detail, reporterSub: user?.id });
@@ -1159,7 +1187,7 @@ function LessonRunner({
   };
 
   useEffect(() => {
-    if (finished || showIntro) return;
+    if (finished || showIntro || codingPhase) return;
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
       if (target?.closest('input, textarea, select, button, a, [contenteditable="true"], [role="textbox"], [role="radio"], [role="checkbox"]')) return;
@@ -1176,7 +1204,7 @@ function LessonRunner({
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [finished, showIntro, revealed, question, choose, advance]);
+  }, [finished, showIntro, codingPhase, revealed, question, choose, advance]);
 
   useEffect(() => {
     if (finished) resultHeadingRef.current?.focus({ preventScroll: true });
@@ -1211,6 +1239,12 @@ function LessonRunner({
           <div style={{ fontSize: '1.02rem', lineHeight: 1.6, marginTop: 4, marginBottom: 4 }}>
             {intro}
           </div>
+          {codingTasks.length > 0 && (
+            <div style={{ marginTop: 12, fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
+              <span style={{ fontWeight: 700 }}>{t('coding.lesson.kicker')}: </span>
+              {codingTasks.map(({ task }) => task.title[lang === 'cs' ? 'cs' : 'en'] || task.title.en).join(' · ')}
+            </div>
+          )}
         </div>
         <button
           type="button"
@@ -1224,9 +1258,51 @@ function LessonRunner({
     );
   }
 
+  if (codingPhase && codingTasks[codingIndex]) {
+    const current = codingTasks[codingIndex];
+    const title = current.task.title[lang === 'cs' ? 'cs' : 'en'] || current.task.title.en;
+    return (
+      <div className="cd-page" style={{ flex: 1, minHeight: 0, overflowY: 'auto', gap: 12, paddingBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="sm" label={t('roadmap.exit')} onClick={onExit} />
+          <span style={{ fontWeight: 700, backgroundColor: `${accent}22`, color: 'var(--color-text-primary)', borderRadius: 999, padding: '2px 10px', fontSize: '0.8125rem', display: 'inline-block' }}>
+            {`${t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
+          </span>
+          <span className="ss-kicker" style={{ marginLeft: 'auto' }}>{t('coding.lesson.kicker')} · {t('coding.lesson.counter', { n: codingIndex + 1, total: codingTasks.length })}</span>
+        </div>
+        <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>{t('coding.lesson.intro')} {t('coding.lesson.giveUpNote')}</p>
+        {answerError && <div role="alert" className="cd-note cd-note--error">{answerError}</div>}
+        <Suspense fallback={<div className="cd-note" role="status">{t('common.loading')}</div>}>
+          <CodingWorkbench
+            key={current.task.id}
+            task={current.task}
+            session={current.session}
+            locked={null}
+            signedIn={Boolean(user)}
+            initialCode={readString(codingDraftKey(current.task.id))}
+            mode="lesson"
+            onDraft={(code) => writeString(codingDraftKey(current.task.id), code)}
+            onVerdict={(verdict) => {
+              if (verdict.verdict === 'passed') {
+                removeStored(codingDraftKey(current.task.id));
+                setCodingPassed((prev) => (prev.includes(current.task.id) ? prev : [...prev, current.task.id]));
+              }
+            }}
+            onRevealed={() => void complete()}
+            onContinue={() => {
+              if (codingIndex < codingTasks.length - 1) setCodingIndex((i) => i + 1);
+              else void complete();
+            }}
+          />
+        </Suspense>
+        <span className="cd-visually-hidden" aria-live="polite">{t('coding.lesson.pending', { n: codingTasks.length - codingPassed.length })}: {title}</span>
+      </div>
+    );
+  }
+
   if (finished) {
     const pct = Math.round((correctCount / total) * 100);
-    const passed = !dead && pct >= playable.passPct;
+    const passed = !dead && pct >= playable.passPct && codingPending.length === 0;
     const title = dead
       ? t('roadmap.outOfHeartsTitle')
       : passed
@@ -1273,7 +1349,12 @@ function LessonRunner({
             <div style={{ color: 'var(--color-text-secondary)', marginBottom: 8 }}>
               {t('roadmap.scoreLine', { correct: correctCount, total })}
             </div>
-            {!passed && (
+            {codingTasks.length > 0 && (
+              <div style={{ fontSize: '0.9rem', color: codingPending.length === 0 ? 'var(--ss-success-strong, var(--ss-success))' : 'var(--ss-warning)', fontWeight: 600, marginBottom: 8 }}>
+                {codingPending.length === 0 ? t('coding.lesson.allPassed') : t('coding.lesson.pending', { n: codingPending.length })}
+              </div>
+            )}
+            {!passed && pct < playable.passPct && (
               <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', marginBottom: 16 }}>
                 {t('roadmap.passNeeded', { pct: playable.passPct })}
               </div>

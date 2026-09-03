@@ -96,6 +96,9 @@ CREATE TABLE IF NOT EXISTS public.github_commits (
   user_id     TEXT NOT NULL,
   task_id     TEXT NOT NULL CHECK (task_id ~ '^[a-z0-9-]{3,64}$'),
   path        TEXT NOT NULL CHECK (char_length(path) <= 255),
+  -- The file exactly as it will be committed, so a retry needs nothing else.
+  content     TEXT NOT NULL DEFAULT '' CHECK (octet_length(content) <= 32768),
+  message     TEXT NOT NULL DEFAULT '' CHECK (char_length(message) <= 200),
   status      TEXT NOT NULL DEFAULT 'queued' CHECK (status IN ('queued', 'committed', 'failed', 'skipped')),
   commit_sha  TEXT CHECK (commit_sha IS NULL OR commit_sha ~ '^[0-9a-f]{7,64}$'),
   attempts    INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
