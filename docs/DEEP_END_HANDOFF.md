@@ -79,6 +79,7 @@ Run in the remote session container (Node 22.22, Chromium from the Playwright bu
 - `npm run typecheck:api` — passed;
 - `npm run test:launch` — passed product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, and the twelve-function budget, plus the coding contracts (sandbox limits, sealed coding sessions, design grading, ladder, garden paths, badge metadata, coding resources refused outside devShark);
 - `npm run test:coding` (strict) — 245 tasks, every solution proven under Node and jsdom, payloads answer-free, Czech overlays complete;
+- `npm run test:harness` — 23 assertions against the built sandbox in Chromium; it found that a production React ships no `act`, which made every React suite throw on its first `render()`, so the sandbox is now built separately against the development React (see `client/vite.sandbox.config.ts`);
 - `npm run build` and `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build` — both passed; the coding worker and the sandbox page are emitted;
 - `npm run check:responsive` on both product builds — 175 route/viewport probes each, zero overflow or containment issues across 360, 390, 430, 768, 1024, 1280, and 1440 widths, with the five coding routes and `/settings/github` in the default set;
 - `npm audit --omit=dev` at the root and in `client/` — zero vulnerabilities (react-router 7.18.3 and dompurify 3.4.14 clear the two advisories that were open on `main`);

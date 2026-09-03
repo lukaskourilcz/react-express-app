@@ -169,11 +169,11 @@ export default defineConfig(({ mode }) => {
     sourcemap: 'hidden',
     chunkSizeWarningLimit: 500,
     rollupOptions: {
-      // Two pages: the app and the coding sandbox that hosts React tasks in a
-      // sandboxed iframe under its own policy (see vercel.json).
+      // The coding sandbox that hosts React tasks is a second, separate build
+      // (vite.sandbox.config.ts): it needs the development React so Testing
+      // Library has `React.act`, which the app itself must not ship.
       input: {
         main: path.resolve(__dirname, 'index.html'),
-        sandbox: path.resolve(__dirname, 'sandbox/index.html'),
       },
       output: {
         manualChunks: {

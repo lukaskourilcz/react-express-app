@@ -33,7 +33,12 @@ type Outgoing =
 
 const post = (message: Outgoing) => window.parent.postMessage(message, '*');
 
-(window as unknown as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = true;
+// Testing Library wants this while a suite runs; React warns about unwrapped
+// updates when it is left on, so the preview render turns it off again.
+const actEnvironment = (on: boolean) => {
+  (window as unknown as Record<string, unknown>).IS_REACT_ACT_ENVIRONMENT = on;
+};
+actEnvironment(false);
 
 // Suites and the preview share this fetch stub: the sandbox has no network.
 // eslint-disable-next-line no-new-func -- fixtures authored in the repository, not learner input
@@ -100,6 +105,19 @@ function unmountPreview() {
 }
 
 async function run(message: RunMessage) {
+  // Whatever happens below, the parent gets exactly one answer. An unhandled
+  // throw here would leave it waiting out its timeout with no verdict, which
+  // is the failure mode this harness exists to rule out.
+  try {
+    await runInner(message);
+  } catch (error) {
+    if (currentToken !== message.token) return;
+    post({ type: 'preview-error', token: message.token, message: `harness: ${String((error as Error)?.message ?? error).split('\n')[0]}` });
+    post({ type: 'done', token: message.token, passed: 0, failed: 0, total: 0, ran: false });
+  }
+}
+
+async function runInner(message: RunMessage) {
   currentToken = message.token;
   unmountPreview();
   RTL.cleanup();
@@ -123,6 +141,7 @@ async function run(message: RunMessage) {
   let failed = 0;
   let total = 0;
   if (message.tests && typeof files['/App.test.js'] === 'string') {
+    actEnvironment(true);
     const jest = createMiniJest();
     try {
       makeRequire(files, jest.globals)('./App.test.js');
@@ -146,6 +165,7 @@ async function run(message: RunMessage) {
       }
     }
     RTL.cleanup();
+    actEnvironment(false);
   }
   if (currentToken !== message.token) return;
 

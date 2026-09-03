@@ -337,6 +337,22 @@ async function main() {
     const text = readFileSync(join(process.cwd(), 'client', 'src', file), 'utf8');
     assert.doesNotMatch(text, /lib\/coding/, `client/src/${file} must not import lib/coding`);
   }
+  // The sandbox frame has an opaque origin, so its module script is a CORS
+  // load: without Access-Control-Allow-Origin on its assets the harness never
+  // starts, and no React task can run. Keep the header rule in vercel.json.
+  const vercelConfig = JSON.parse(readFileSync(join(process.cwd(), 'vercel.json'), 'utf8')) as {
+    headers: { source: string; headers: { key: string; value: string }[] }[];
+  };
+  const allowsOrigin = (source: string) =>
+    vercelConfig.headers.some((rule) =>
+      rule.source === source && rule.headers.some((header) => header.key === 'Access-Control-Allow-Origin'));
+  assert.ok(allowsOrigin('/sandbox/(.*)'), 'the sandbox frame needs Access-Control-Allow-Origin on /sandbox/');
+  const sandboxCsp = vercelConfig.headers
+    .find((rule) => rule.source === '/sandbox/(.*)')?.headers
+    .find((header) => header.key === 'Content-Security-Policy')?.value ?? '';
+  assert.match(sandboxCsp, /script-src [^;]*'unsafe-eval'/, 'the sandbox compiles and runs code with new Function');
+  assert.match(sandboxCsp, /default-src 'none'/, 'the sandbox frame stays network-less');
+
   const sandboxDir = join(process.cwd(), 'client', 'sandbox');
   if (statSync(sandboxDir, { throwIfNoEntry: false })?.isDirectory()) {
     for (const file of readdirSync(sandboxDir, { recursive: true }) as string[]) {

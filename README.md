@@ -76,6 +76,7 @@ supabase/supabase-schema*.sql         baseline plus migrations through 025
 docs/                        launch, architecture, backup, growth, content sources, coding integration plan
 scripts/test-launch-contracts.ts
 scripts/test-coding-content.ts        content contract: solutions proven, payloads answer-free
+scripts/test-harness.ts               React sandbox protocol check, driven in a real browser
 scripts/import-interview-prepper-progress.ts   one-time owner import
 ```
 
@@ -149,6 +150,8 @@ The twelve physical handlers multiplex related operations to stay within the dep
 ## Database and operations
 
 Apply `supabase/supabase-schema.sql`, then numbered migrations in order through 025. Migration 023 adds the one-time submission ledger, subject-scopes multiplayer and flashcards, hardens service-only functions and leaderboard identity, makes roadmap answer recording atomic, enforces complete attempts/prerequisites, adds retention helpers, and adds production indexes. Migration 024 adds the daily-habit backing — spaced-mastery pass tracking inside verified roadmap completion, freeze-aware streaks, server-synced badges, Shark Cards, and the Sharkira hint cache — additively and idempotently. Migration 025 adds coding progress, attempts, drafts, the per-level coding gate, and the GitHub garden connection and commit queue, with the service-only `record_coding_verdict` and `record_coding_reveal` functions.
+
+`npm run test:harness` drives the built React sandbox in headless Chromium and asserts the postMessage contract the workbench depends on: one `ready`, one `done` per run, tokens that keep a superseded run from settling, compile and render errors reported as such, and the fetch stub answering in place of the network. It needs an existing client build and a Chromium (set `CHROME_BIN` if it is not on a usual path); with no browser available it prints a notice and exits 0.
 
 The one-time import of interview-prepper history is `npm run import:interview-prepper -- --input export.json --user-id <id> [--apply]`; it reads a Firestore export, maps the old challenge ids to devShark task ids, and writes passed tasks and attempts without XP or scheduled reviews.
 
