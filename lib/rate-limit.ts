@@ -55,6 +55,11 @@ export const RATE_LIMITS = {
   playMutation: { key: 'play_mutation', capacity: 30, refillPerSecond: 30 / 60 },
   accountDelete: { key: 'account_delete', capacity: 2, refillPerSecond: 2 / 3600 },
   aiExplanation: { key: 'ai_explanation', capacity: 3, refillPerSecond: 5 / 3600 },
+  codingRun: { key: 'coding_run', capacity: 30, refillPerSecond: 30 / 600 },
+  codingDraft: { key: 'coding_draft', capacity: 60, refillPerSecond: 60 / 600 },
+  codingReveal: { key: 'coding_reveal', capacity: 10, refillPerSecond: 10 / 3600 },
+  githubConnect: { key: 'github_connect', capacity: 10, refillPerSecond: 10 / 3600 },
+  githubSync: { key: 'github_sync', capacity: 6, refillPerSecond: 6 / 3600 },
 } satisfies Record<string, RateLimitConfig>;
 
 const buckets = new Map<string, Bucket>();
