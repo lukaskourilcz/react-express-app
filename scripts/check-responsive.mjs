@@ -55,6 +55,7 @@ const DEFAULT_ROUTES = [
   '/coding/javascript/js-double-numbers',
   '/coding/system-design',
   '/coding/review',
+  '/settings/github',
   '/profile',
   '/support',
   '/privacy',

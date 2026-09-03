@@ -58,6 +58,7 @@ const CodingHome = lazy(() => import('./components/coding/CodingSection').then((
 const CodingTrackScreen = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.CodingTrackScreen })));
 const CodingTaskScreen = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.CodingTaskScreen })));
 const CodingReviewScreen = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.CodingReviewScreen })));
+const GithubSettingsPage = lazy(() => import('./components/coding/GithubSettingsPage').then((m) => ({ default: m.GithubSettingsPage })));
 const NotFoundPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.NotFoundPage })));
 
 // The landing gate: show the subject picker until the learner has chosen a
@@ -91,6 +92,7 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/typing': 'title.typing',
   '/coding': 'title.coding',
   '/coding/review': 'title.coding',
+  '/settings/github': 'title.github',
   '/shop': 'title.shop',
   '/play': 'title.play',
   '/challenge': 'title.challenge',
@@ -744,6 +746,7 @@ function App() {
                 <Route path="/coding/:track" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingTrackScreen /> : <Navigate to="/learn" replace />} />
                 <Route path="/coding/:track/:taskId" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingTaskScreen /> : <Navigate to="/learn" replace />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/settings/github" element={CURRENT_PRODUCT.id === 'devshark' ? <GithubSettingsPage /> : <Navigate to="/profile" replace />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/cards" element={<Flashcards />} />
                 <Route path="/shop" element={<Shop />} />
