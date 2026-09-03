@@ -33,7 +33,8 @@ import { solutionFor } from '../lib/coding/solutions';
 import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
 import { runInSandbox } from '../lib/coding/sandbox';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
-import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP } from '../shared/coding-catalog';
+import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS } from '../shared/coding-catalog';
+import { CODING_BADGES } from '../shared/badges';
 import { CODING_INDEX } from '../shared/coding-index';
 import { inspectQuestionQuality } from '../lib/question-quality';
 import { assessmentUnlocks } from '../shared/assessment';
@@ -267,6 +268,7 @@ async function main() {
   assert.equal(tierUnlocked({ ...ladderBase, tier: 3, javascriptLevelsCleared: 10 }), true, 'the Learn foundations open tier 3');
   assert.equal(tierUnlocked({ ...ladderBase, track: 'system-design', tier: 5 }), true, 'system design has no ladder');
   assert.deepEqual(eligibleCodingBadges(new Set(), CODING_INDEX), []);
+  assert.deepEqual(CODING_BADGES.map((badge) => badge.id), [...CODING_BADGE_IDS], 'every coding badge has display metadata');
   assert.ok(CODING_TASK_XP[1] < CODING_TASK_XP[5]);
 
   // Coding resources are devShark-only: the StudyShark scope this test runs in refuses them.

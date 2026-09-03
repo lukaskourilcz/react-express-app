@@ -7,6 +7,8 @@
  * the threshold predicates. Purely-cosmetic client-only signals (a perfect quiz,
  * bookmarks) are layered on in the client and are intentionally not here. */
 
+import type { CodingBadgeId } from './coding-catalog';
+
 export interface BadgeStatsSummary {
   totalQuizzes: number;
   longestStreak: number;
@@ -17,6 +19,16 @@ export interface BadgeStatsSummary {
 }
 
 export type BadgeTier = 'bronze' | 'silver' | 'gold';
+
+/** devShark coding badges. Eligibility comes from passed coding tasks (see
+ * `eligibleCodingBadges` in coding-catalog); this list owns tier and glyph. */
+export const CODING_BADGES: readonly { id: CodingBadgeId; tier: BadgeTier; glyph: string }[] = [
+  { id: 'loop-shark', tier: 'bronze', glyph: '↻' },
+  { id: 'method-shark', tier: 'bronze', glyph: '⊞' },
+  { id: 'typed-shark', tier: 'silver', glyph: '◬' },
+  { id: 'hooked-shark', tier: 'silver', glyph: '⊕' },
+  { id: 'capstone-shark', tier: 'gold', glyph: '▣' },
+];
 
 export interface BadgeDef {
   id: string;

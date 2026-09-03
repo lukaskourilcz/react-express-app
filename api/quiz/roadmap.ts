@@ -31,6 +31,7 @@ import { getEffectiveQuestionsById } from '../../lib/questions-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
 import { levelCodingTasks, playable as playableCodingTask } from '../../lib/coding/catalog';
+import type { RoadmapTopicStructure } from '../../lib/roadmap';
 import { handleCodingReveal, handleCodingReport, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
 import { encodeCodingSession } from '../../lib/quiz-tokens';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
@@ -71,6 +72,22 @@ import {
 //   POST /api/quiz/roadmap?resource=complete       → atomically record progress
 //   PUT  /api/quiz/roadmap                         → save non-progression account extras
 const logEvent = createLogger('quiz/roadmap');
+
+/** The level map marks devShark code levels that end with coding tasks, so the
+ * learner sees the extra work before opening the level. Counts only; the task
+ * ids stay sealed in the level session. */
+const isCodeTopic = (topic: string): topic is 'javascript' | 'typescript' | 'react' =>
+  topic === 'javascript' || topic === 'typescript' || topic === 'react';
+function withCodingCounts(topic: string, live: RoadmapTopicStructure): RoadmapTopicStructure {
+  if (!isCodeTopic(topic) || !deploymentSubjectIds().includes('webdev')) return live;
+  return {
+    ...live,
+    levels: live.levels.map((level) => {
+      const count = levelCodingTasks(topic, level.level).length;
+      return count > 0 ? { ...level, codingTasks: count } : level;
+    }),
+  };
+}
 const supabase = createServiceClient();
 const PROGRESS_TABLE = 'roadmap_progress';
 
@@ -919,7 +936,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const topics = deploymentSubjectIds().flatMap((subject) => [...SUBJECT_SCOPE_CATALOG[subject].topics]);
     const topicSet = new Set<string>(topics);
     const structure = Object.fromEntries(
-      Object.entries(liveRoadmapStructure(exists)).filter(([topic]) => topicSet.has(topic)),
+      Object.entries(liveRoadmapStructure(exists))
+        .filter(([topic]) => topicSet.has(topic))
+        .map(([topic, live]) => [topic, withCodingCounts(topic, live)]),
     );
     res.setHeader('Cache-Control', 'public, max-age=60');
     logEvent({ status: 200, kind: 'structure', latency_ms: Date.now() - started });

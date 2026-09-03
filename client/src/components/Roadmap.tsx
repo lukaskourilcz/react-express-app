@@ -211,6 +211,12 @@ const ReviewIcon = ({ size = 12 }: { size?: number }) => (
     <path d="M20.4 13.5A8.5 8.5 0 1 1 18 6.3L21 9" />
   </svg>
 );
+const CodeIcon = ({ size = 10 }: { size?: number }) => (
+  <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="16 18 22 12 16 6" />
+    <polyline points="8 6 2 12 8 18" />
+  </svg>
+);
 const StepArrowIcon = ({ dir, size = 15 }: { dir: 'up' | 'down' | 'hold'; size?: number }) => (
   <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
     {dir === 'up' && <><polyline points="6 14 12 8 18 14" /></>}
@@ -897,8 +903,9 @@ function LevelNode({
       : passed
         ? (due ? t('mastery.dueTooltip') : t('mastery.clearedTooltip'))
         : '';
+  const coding = (meta.codingTasks ?? 0) > 0;
   const label = unlocked
-    ? `${t('roadmap.levelLabel', { n: displayNum })}: ${meta.title}${passed ? `, ${masteryText}${due ? `, ${t('mastery.dueForReview')}` : ''}, ${best}%` : ''}`
+    ? `${t('roadmap.levelLabel', { n: displayNum })}: ${meta.title}${passed ? `, ${masteryText}${due ? `, ${t('mastery.dueForReview')}` : ''}, ${best}%` : ''}${coding ? `, ${t('coding.lesson.mapGlyph')}` : ''}`
     : `${t('roadmap.levelLabel', { n: displayNum })}: ${t('roadmap.locked')}`;
   const labelWidth = Math.max(72, Math.min(150, cellW - 10));
 
@@ -930,6 +937,7 @@ function LevelNode({
             {passed ? (mastered ? <StarIcon size={20} /> : <CheckIcon />) : unlocked ? displayNum : <LockIcon />}
             {isCurrent && <span className="rm-current-fin" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M3 18 Q 6 6 15 3 Q 17 11 21 18 Z" fill={accent} /></svg></span>}
             {due && <span className="rm-due-marker" aria-hidden="true"><ReviewIcon size={10} /></span>}
+            {coding && unlocked && <span className="rm-code-marker" aria-hidden="true"><CodeIcon size={9} /></span>}
           </button>
           </span>
         </Tooltip>
