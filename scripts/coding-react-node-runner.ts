@@ -5,7 +5,7 @@
 // Test-only: production grading of React tasks happens in the browser harness.
 import { createRequire } from 'node:module';
 import { transformSync } from 'esbuild';
-import { asRunnableModule, FETCH_STUB_SOURCE } from '../lib/coding/react-support';
+import { asRunnableModule, FETCH_STUB_SOURCE } from '../shared/coding-react-support';
 import { createMiniJest, type MiniJestRun } from '../shared/coding-mini-jest';
 
 const nodeRequire = createRequire(import.meta.url);

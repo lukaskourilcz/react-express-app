@@ -103,13 +103,49 @@ interface PlacementRunPayload {
   exp: number;
 }
 
+// One coding task in play. The attempt id is minted here so the verdict RPC
+// can make a replayed submit a no-op; for system-design tasks the sealed key
+// carries the shuffled answer positions the server grades against.
+export interface CodingDesignKey {
+  /** Guided walkthrough: the correct option index per step, after shuffling. */
+  steps?: number[];
+  /** Drill: the correct option index (tradeoff/bottleneck) after shuffling. */
+  correct?: number;
+  /** Drill: the accepted estimate band. */
+  band?: { min: number; max: number; answer: number };
+  /** Drill: the correct order as indices into the shuffled step list. */
+  order?: number[];
+}
+interface CodingSessionPayload {
+  kind: 'coding-session';
+  taskId: string;
+  track: 'javascript' | 'typescript' | 'react' | 'system-design';
+  attemptId: string;
+  userId: string | null;
+  roadmapAttemptId?: string;
+  key?: CodingDesignKey;
+  iat: number;
+  exp: number;
+}
+
+// The GitHub App installation round trip. Bound to the user id so a callback
+// cannot attach an installation to another account.
+interface GithubConnectStatePayload {
+  kind: 'github-connect';
+  userId: string;
+  iat: number;
+  exp: number;
+}
+
 type TokenPayload =
   | SessionPayload
   | ChallengeRunPayload
   | ScoreProofPayload
   | QuizResultReceiptPayload
   | AnswerProofPayload
-  | PlacementRunPayload;
+  | PlacementRunPayload
+  | CodingSessionPayload
+  | GithubConnectStatePayload;
 
 function sealToken(payload: TokenPayload): string {
   const iv = randomBytes(12);
@@ -368,4 +404,82 @@ export function decodeAnswerProof(token: string): { questionId: string; subject:
   const payload = openToken(token) as Partial<AnswerProofPayload> | null;
   if (!payload || payload.kind !== 'answer-proof' || !validLifetime(payload, TOKEN_TTL_MS) || typeof payload.questionId !== 'string' || payload.questionId.length === 0 || payload.questionId.length > 64 || !isScopeSubject(payload.subject) || typeof payload.isCorrect !== 'boolean') return null;
   return { questionId: payload.questionId, subject: payload.subject, isCorrect: payload.isCorrect };
+}
+
+/* ── coding sessions ───────────────────────────────────────────────────── */
+
+const CODING_TTL_MS = 3 * 60 * 60 * 1000;
+const GITHUB_CONNECT_TTL_MS = 10 * 60 * 1000;
+
+export interface CodingSession {
+  taskId: string;
+  track: CodingSessionPayload['track'];
+  attemptId: string;
+  userId: string | null;
+  roadmapAttemptId?: string;
+  key?: CodingDesignKey;
+  issuedAt: number;
+}
+
+export function encodeCodingSession(input: Omit<CodingSession, 'attemptId' | 'issuedAt'> & { attemptId?: string }): string {
+  const now = Date.now();
+  return sealToken({
+    kind: 'coding-session',
+    taskId: input.taskId,
+    track: input.track,
+    attemptId: input.attemptId ?? b64url(randomBytes(18)),
+    userId: input.userId,
+    ...(input.roadmapAttemptId ? { roadmapAttemptId: input.roadmapAttemptId } : {}),
+    ...(input.key ? { key: input.key } : {}),
+    iat: now,
+    exp: now + CODING_TTL_MS,
+  });
+}
+
+const isIndexList = (value: unknown, max: number): value is number[] =>
+  Array.isArray(value) && value.length <= max && value.every((n) => Number.isInteger(n) && n >= 0 && n <= 25);
+
+export function decodeCodingSession(token: string): CodingSession | null {
+  const payload = openToken(token) as Partial<CodingSessionPayload> | null;
+  if (!payload || payload.kind !== 'coding-session' || !validLifetime(payload, CODING_TTL_MS) || typeof payload.iat !== 'number') return null;
+  if (typeof payload.taskId !== 'string' || !/^[a-z0-9-]{3,64}$/.test(payload.taskId)) return null;
+  if (!['javascript', 'typescript', 'react', 'system-design'].includes(payload.track ?? '')) return null;
+  if (typeof payload.attemptId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId)) return null;
+  if (payload.userId !== null && (typeof payload.userId !== 'string' || payload.userId.length === 0 || payload.userId.length > 128)) return null;
+  if (payload.roadmapAttemptId !== undefined && (typeof payload.roadmapAttemptId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.roadmapAttemptId))) return null;
+  let key: CodingDesignKey | undefined;
+  if (payload.key !== undefined) {
+    const k = payload.key as Record<string, unknown>;
+    if (!k || typeof k !== 'object') return null;
+    key = {};
+    if (k.steps !== undefined) { if (!isIndexList(k.steps, 10)) return null; key.steps = k.steps; }
+    if (k.correct !== undefined) { if (!Number.isInteger(k.correct) || (k.correct as number) < 0 || (k.correct as number) > 25) return null; key.correct = k.correct as number; }
+    if (k.order !== undefined) { if (!isIndexList(k.order, 12)) return null; key.order = k.order; }
+    if (k.band !== undefined) {
+      const b = k.band as Record<string, unknown>;
+      if (!b || typeof b.min !== 'number' || typeof b.max !== 'number' || typeof b.answer !== 'number' || !Number.isFinite(b.min) || !Number.isFinite(b.max) || !Number.isFinite(b.answer)) return null;
+      key.band = { min: b.min, max: b.max, answer: b.answer };
+    }
+  }
+  return {
+    taskId: payload.taskId,
+    track: payload.track!,
+    attemptId: payload.attemptId,
+    userId: payload.userId ?? null,
+    ...(payload.roadmapAttemptId ? { roadmapAttemptId: payload.roadmapAttemptId } : {}),
+    ...(key ? { key } : {}),
+    issuedAt: payload.iat,
+  };
+}
+
+export function encodeGithubConnectState(userId: string): string {
+  const now = Date.now();
+  return sealToken({ kind: 'github-connect', userId, iat: now, exp: now + GITHUB_CONNECT_TTL_MS });
+}
+
+export function decodeGithubConnectState(token: string): { userId: string } | null {
+  const payload = openToken(token) as Partial<GithubConnectStatePayload> | null;
+  if (!payload || payload.kind !== 'github-connect' || !validLifetime(payload, GITHUB_CONNECT_TTL_MS)) return null;
+  if (typeof payload.userId !== 'string' || payload.userId.length === 0 || payload.userId.length > 128) return null;
+  return { userId: payload.userId };
 }
