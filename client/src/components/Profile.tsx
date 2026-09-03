@@ -44,10 +44,12 @@ import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
 import { SIBLING_PLATFORMS_URL, useActiveSubject, topicSetForSubject } from '../lib/subjects';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { savePreferredLanguage } from '../lib/languagePref';
+import { useColorMode } from '../theme/ColorModeContext';
+import { useSettings } from '../lib/settings';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { SwimmingFin } from './SharkFin';
-import { FlameIcon, BoltIcon, TrophyIcon, CardsIcon, TargetIcon } from './ui/icons';
+import { FlameIcon, BoltIcon, TrophyIcon, CardsIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, SoundOffIcon } from './ui/icons';
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import './DeepEndScreens.css';
@@ -1180,10 +1182,28 @@ function SharkCardsEntry() {
   );
 }
 
-// Account preferences. The language choice is applied live and persisted to the
-// account (Supabase user_metadata) so it loads automatically on the next sign-in.
+// One row of the preferences card: what the setting is, and its control.
+function PreferenceRow({ title, help, children }: { title: string; help: string; children: ReactNode }) {
+  return (
+    <HStack justify="between" align="center" gap={2} wrap="wrap">
+      <VStack gap={0}>
+        <Text weight="semibold">{title}</Text>
+        <Text type="supporting" size="xsm" color="secondary">{help}</Text>
+      </VStack>
+      {children}
+    </HStack>
+  );
+}
+
+// Account preferences: language, appearance and sound. These used to sit as
+// icons in the toolbar; they are settings, not navigation, so they live here.
+// The language choice is applied live and persisted to the account (Supabase
+// user_metadata) so it loads automatically on the next sign-in; appearance and
+// sound stay on the device.
 function PreferencesCard() {
   const { t, lang, setLang } = useLanguage();
+  const { mode, toggle } = useColorMode();
+  const [settings, updateSettings] = useSettings();
 
   const handleLang = (next: string | null) => {
     if (!next || next === lang) return;
@@ -1196,22 +1216,36 @@ function PreferencesCard() {
     <Card variant="default" padding={3} width="100%">
       <VStack gap={2}>
         <SectionLabel>{t('profile.preferences')}</SectionLabel>
-        <HStack justify="between" align="center" gap={2} wrap="wrap">
-          <VStack gap={0}>
-            <Text weight="semibold">{t('profile.language')}</Text>
-            <Text type="supporting" size="xsm" color="secondary">{t('profile.languageHelp')}</Text>
-          </VStack>
-          <ToggleButtonGroup
-            label={t('profile.language')}
-            type="single"
-            size="sm"
-            value={lang}
-            onChange={handleLang}
-          >
+        <PreferenceRow title={t('profile.language')} help={t('profile.languageHelp')}>
+          <ToggleButtonGroup label={t('profile.language')} type="single" size="sm" value={lang} onChange={handleLang}>
             <ToggleButton value="en" label="EN" />
             <ToggleButton value="cs" label="CS" />
           </ToggleButtonGroup>
-        </HStack>
+        </PreferenceRow>
+        <PreferenceRow title={t('profile.appearance')} help={t('profile.appearanceHelp')}>
+          <ToggleButtonGroup
+            label={t('profile.appearance')}
+            type="single"
+            size="sm"
+            value={mode}
+            onChange={(next) => { if ((next === 'light' || next === 'dark') && next !== mode) toggle(); }}
+          >
+            <ToggleButton value="light" label={t('common.lightMode')} icon={<SunIcon size={16} />} />
+            <ToggleButton value="dark" label={t('common.darkMode')} icon={<MoonIcon size={16} />} />
+          </ToggleButtonGroup>
+        </PreferenceRow>
+        <PreferenceRow title={t('profile.sound')} help={t('profile.soundHelp')}>
+          <ToggleButtonGroup
+            label={t('profile.sound')}
+            type="single"
+            size="sm"
+            value={settings.soundEffects ? 'on' : 'off'}
+            onChange={(next) => { if (next) updateSettings({ soundEffects: next === 'on' }); }}
+          >
+            <ToggleButton value="on" label={t('common.soundOn')} icon={<SoundOnIcon size={16} />} />
+            <ToggleButton value="off" label={t('common.soundOff')} icon={<SoundOffIcon size={16} />} />
+          </ToggleButtonGroup>
+        </PreferenceRow>
       </VStack>
     </Card>
     </Lift>

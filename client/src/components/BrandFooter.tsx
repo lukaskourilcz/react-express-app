@@ -1,11 +1,18 @@
 import { Link } from 'react-router-dom';
-import { useT } from '../i18n/LanguageContext';
+import { useLanguage, useT } from '../i18n/LanguageContext';
+import type { Lang } from '../i18n/LanguageContext';
 import { CURRENT_PRODUCT, PRODUCTS, SHARK_BRANDS, productUrl } from '../lib/products';
 import { capture } from '../lib/analytics';
 import { useSubject } from '../lib/subjects';
+import { useColorMode } from '../theme/ColorModeContext';
+import { useSettings } from '../lib/settings';
+import { savePreferredLanguage } from '../lib/languagePref';
 
 export default function BrandFooter() {
   const t = useT();
+  const { lang, setLang } = useLanguage();
+  const { mode, toggle } = useColorMode();
+  const [settings, updateSettings] = useSettings();
   const [activeSubject] = useSubject();
   const studySharkUrl = productUrl(PRODUCTS.studyshark);
 
@@ -69,6 +76,33 @@ export default function BrandFooter() {
           <Link to="/privacy">{t('footer.privacy')}</Link>
           <Link to="/terms">{t('footer.terms')}</Link>
         </nav>
+        {/* The full versions of these live in Profile → Preferences. A visitor
+            who has not signed in still needs to read the site in their own
+            language and in a comfortable contrast, so the same three settings
+            stay reachable here. */}
+        <div className="ss-footer-settings" role="group" aria-label={t('profile.preferences')}>
+          <button
+            type="button"
+            onClick={() => {
+              const next: Lang = lang === 'en' ? 'cs' : 'en';
+              setLang(next);
+              void savePreferredLanguage(next);
+            }}
+            aria-label={t(lang === 'en' ? 'lang.switchToCzech' : 'lang.switchToEnglish')}
+          >
+            {lang === 'en' ? 'CS' : 'EN'}
+          </button>
+          <button type="button" onClick={toggle} aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
+            {mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
+          </button>
+          <button
+            type="button"
+            onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
+            aria-label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
+          >
+            {settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
+          </button>
+        </div>
       </div>
     </footer>
   );

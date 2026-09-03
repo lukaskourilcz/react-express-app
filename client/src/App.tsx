@@ -7,7 +7,6 @@ import { useIsMobile } from './lib/useMediaQuery';
 import './styles/app-shell.css';
 import LoadingScreen from './components/LoadingScreen';
 import { SharkFin, SwimmingFin, Waterline } from './components/SharkFin';
-import { useColorMode } from './theme/ColorModeContext';
 import { useT, useLanguage } from './i18n/LanguageContext';
 import { preferredLanguageOf } from './lib/languagePref';
 import { preferredTrackOf } from './lib/trackPref';
@@ -20,7 +19,6 @@ import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import { useAuth } from './lib/auth';
 import { useHasChosenSubject, useActiveSubject, isSubjectLocked, subjectNameKey } from './lib/subjects';
 import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
-import { useSettings } from './lib/settings';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m } from './lib/motion';
 import BrandFooter from './components/BrandFooter';
@@ -103,34 +101,6 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/classroom': 'title.classroom',
   '/dev': 'title.dev',
 };
-
-const SunIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="4" />
-    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
-  </svg>
-);
-
-const MoonIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-  </svg>
-);
-
-const SoundOnIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 5 6 9H2v6h4l5 4V5z" />
-    <path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14" />
-  </svg>
-);
-
-const SoundOffIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 5 6 9H2v6h4l5 4V5z" />
-    <line x1="23" y1="9" x2="17" y2="15" />
-    <line x1="17" y1="9" x2="23" y2="15" />
-  </svg>
-);
 
 const MenuIcon = () => (
   <svg aria-hidden="true" focusable="false" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -270,8 +240,6 @@ function App() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const activeSubject = useActiveSubject();
-  const { mode, toggle } = useColorMode();
-  const [settings, updateSettings] = useSettings();
   const { user } = useAuth();
   const [signupBonusOpen, setSignupBonusOpen] = useState(false);
   const mobile = useIsMobile();
@@ -462,38 +430,6 @@ function App() {
   }, []);
   const showChrome = !isDev && !(quizActive && isQuiz);
 
-  // Sound + theme toggles. On desktop/tablet they sit in the toolbar's profile
-  // section (next to the account widget); on mobile they live in the nav drawer.
-  const utilityToggles = (
-    <>
-      <button
-        type="button"
-        onClick={() => setLang(lang === 'en' ? 'cs' : 'en')}
-        aria-label={t(lang === 'en' ? 'lang.switchToCzech' : 'lang.switchToEnglish')}
-        title={t(lang === 'en' ? 'lang.switchToCzech' : 'lang.switchToEnglish')}
-        className="ss-language-toggle"
-      >
-        {lang === 'en' ? 'CS' : 'EN'}
-      </button>
-      <AxIconButton
-        variant="ghost"
-        size="md"
-        onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
-        label={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
-        tooltip={settings.soundEffects ? t('common.soundOff') : t('common.soundOn')}
-        icon={settings.soundEffects ? <SoundOnIcon /> : <SoundOffIcon />}
-      />
-      <AxIconButton
-        variant="ghost"
-        size="md"
-        onClick={toggle}
-        label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
-        tooltip={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
-        icon={mode === 'light' ? <MoonIcon /> : <SunIcon />}
-      />
-    </>
-  );
-
   return (
     // One-screen shell: the app is exactly one viewport tall. Pages scroll
     // INSIDE <main>, so the header and the ocean footer (waterline + fins) are
@@ -573,12 +509,6 @@ function App() {
                   icon={<ShopNavIcon />}
                 />
               </span>
-              {/* Sound + theme toggles, grouped into the profile section on
-                  desktop/tablet. Hidden below `sm` — the nav drawer covers
-                  them there. */}
-              <span className="ss-toggles">
-                {utilityToggles}
-              </span>
               {/* Fallback reserves the avatar footprint so the toolbar
                   doesn't reflow when the chunk lands. */}
               <Suspense fallback={<span aria-hidden style={{ width: 56, height: 56, flexShrink: 0 }} />}>
@@ -647,18 +577,6 @@ function App() {
                     {t(item.key)}
                   </Link>
                 ))}
-              </div>
-              <div style={{ height: 1, background: 'var(--color-border)' }} />
-              {/* Sound + theme toggles live here on mobile. stopPropagation keeps
-                  the drawer open so you can flip both without it closing. */}
-              <div
-                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '12px 16px' }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {utilityToggles}
-                <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
-                  {t('nav.soundAndTheme')}
-                </span>
               </div>
             </div>
           </div>
