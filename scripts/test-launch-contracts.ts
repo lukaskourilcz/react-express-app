@@ -27,6 +27,7 @@ import healthHandler from '../api/health';
 import roadmapHandler from '../api/quiz/roadmap';
 import { selectPersonalizedReview } from '../lib/review-selection';
 import { aiDailyGenerationLimit, isAiExplanationConfigured } from '../lib/ai-provider';
+import { aiFeaturesAllowed } from '../lib/product-scope';
 import { inspectQuestionQuality } from '../lib/question-quality';
 import { assessmentUnlocks } from '../shared/assessment';
 import { grantedTopicsFor, withGrantedTopics } from '../lib/topic-grants';
@@ -198,6 +199,10 @@ async function main() {
     if (value === undefined) delete process.env[envKey];
     else process.env[envKey] = value;
   }
+
+  assert.equal(aiFeaturesAllowed({ PRODUCT_ID: 'devshark' }), false, 'devShark ships no AI feature');
+  assert.equal(aiFeaturesAllowed({ VITE_LOCK_SUBJECT: 'webdev' }), false);
+  assert.equal(aiFeaturesAllowed({ VITE_PRODUCT: 'studyshark' }), true);
 
   const qualityIssues = inspectQuestionQuality([{
     ...reviewQuestions[0],

@@ -94,3 +94,7 @@ alongside the subject map. Server-verified receipts and attempts make new
 progress idempotent. Rolling application code back should leave migrations
 021/022 in place: their new columns are backward-compatible and their revoked
 browser writes are security controls.
+
+## AI features by product
+
+StudyShark keeps the dormant AI wiring (deeper explanations, Sharkira hints) behind the provider and budget gates in `lib/ai-provider.ts`. devShark ships none of it: `aiFeaturesAllowed()` in `lib/product-scope.ts` is false for the `webdev` deployment, so `api/quiz/submit.ts` refuses the `explanation` and `hint` resources with `feature_disabled`, `api/settings.ts` reports explanations as unavailable, and the quiz never renders the affordances. Coding-challenge hints are authored content whose last rung before the reference solution is a documentation link (`shared/coding-docs.ts`).
