@@ -28,6 +28,8 @@ interface SessionPayload {
   attemptId?: string;
   requiredLevelStart?: number;
   requiredLevelEnd?: number;
+  /** Learn levels with coding tasks: the ids the completion gate checks. */
+  codingTaskIds?: string[];
   iat: number;
   exp: number;
 }
@@ -194,6 +196,7 @@ type SessionContext =
       attemptId?: string;
       requiredLevelStart?: number;
       requiredLevelEnd?: number;
+      codingTaskIds?: string[];
     };
 
 export interface DecodedQuizSession {
@@ -208,6 +211,7 @@ export interface DecodedQuizSession {
   attemptId?: string;
   requiredLevelStart?: number;
   requiredLevelEnd?: number;
+  codingTaskIds?: string[];
   issuedAt: number;
 }
 
@@ -249,6 +253,8 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
     const requiredEnd = payload.requiredLevelEnd;
     const hasRequiredRange = requiredStart !== undefined || requiredEnd !== undefined;
     if (!payload.subject || typeof payload.topic !== 'string' || (payload.roadmapKind !== 'level' && payload.roadmapKind !== 'checkpoint') || !Number.isInteger(payload.ref) || (payload.ref ?? 0) < 1 || (payload.attemptId !== undefined && !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId)) || (hasRequiredRange && (!Number.isInteger(requiredStart) || !Number.isInteger(requiredEnd) || requiredStart! < 1 || requiredEnd! < requiredStart! || requiredEnd! > 100))) return null;
+    const codingIds = payload.codingTaskIds;
+    if (codingIds !== undefined && (!Array.isArray(codingIds) || codingIds.length > 5 || !codingIds.every((id) => typeof id === 'string' && /^[a-z0-9-]{3,64}$/.test(id)))) return null;
     return {
       ...base,
       scope: 'roadmap',
@@ -257,6 +263,7 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
       ref: payload.ref,
       attemptId: payload.attemptId,
       ...(hasRequiredRange ? { requiredLevelStart: requiredStart, requiredLevelEnd: requiredEnd } : {}),
+      ...(codingIds && codingIds.length > 0 ? { codingTaskIds: codingIds } : {}),
     };
   }
   return base;

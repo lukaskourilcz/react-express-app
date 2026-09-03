@@ -2,7 +2,7 @@
  * in `lib/coding/handlers.ts` produce these shapes; `client/src/coding/api.ts`
  * consumes them. Answers never appear here: results, not keys. */
 
-import type { CodingTrack, PlayableCodingTask } from './coding-catalog';
+import type { CodingTrack, Localized, PlayableCodingTask } from './coding-catalog';
 import type { CallOutcome } from './coding-evaluate';
 import type { TypeCheckResult } from './coding-ts-check';
 
@@ -64,8 +64,9 @@ export interface CodingVerdictResponse {
   codeError: string | null;
   /** System design: per step or drill, with the explanation once answered. */
   design: DesignStepVerdict[] | null;
-  designReference: string | null;
-  progress: CodingTaskProgress;
+  designReference: Localized | null;
+  /** null for an anonymous run: nothing was recorded. */
+  progress: CodingTaskProgress | null;
   firstPass: boolean;
   xpAwarded: number;
   applied: boolean;
@@ -78,7 +79,7 @@ export interface DesignStepVerdict {
   correctIndex?: number;
   correctOrder?: number[];
   acceptedRange?: { min: number; max: number; answer: number };
-  explanation: string;
+  explanation: Localized;
 }
 
 /** POST ?resource=coding-report (React: the browser harness result) */
@@ -99,8 +100,10 @@ export interface CodingRevealRequest {
   hintsUsed: number;
 }
 export interface CodingRevealResponse {
+  /** Code for the code tracks; the reference answer for system design. */
   solution: string;
-  progress: CodingTaskProgress;
+  reference: Localized | null;
+  progress: CodingTaskProgress | null;
 }
 
 /** GET /api/user/[op]?op=coding-progress */

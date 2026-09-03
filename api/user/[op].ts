@@ -22,6 +22,7 @@ import { deploymentSubjectIds } from '../../lib/product-scope';
 import { rollPack, subjectCardCount } from '../../shared/cards';
 import { eligibleServerBadges, type BadgeStatsSummary } from '../../shared/badges';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
+import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
 
 const supabase = createServiceClient();
 
@@ -55,6 +56,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'badges') return badges(req, res);
   if (op === 'freezes') return freezes(req, res);
   if (op === 'advisor') return advisor(req, res);
+  if (op === 'coding-progress') return handleCodingProgress(req, res, supabase);
+  if (op === 'coding-draft') return handleCodingDraft(req, res, supabase);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
 }
 

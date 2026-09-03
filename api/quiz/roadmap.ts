@@ -30,6 +30,9 @@ import { withGrantedTopics } from '../../lib/topic-grants';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
+import { levelCodingTasks, playable as playableCodingTask } from '../../lib/coding/catalog';
+import { handleCodingReveal, handleCodingReport, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
+import { encodeCodingSession } from '../../lib/quiz-tokens';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
 import { subjectForCategory, subjectForTopic, isScopeSubject, type ScopeSubjectId } from '../../shared/subject-catalog';
 import {
@@ -113,6 +116,13 @@ function playableResponse(input: {
   const subject = subjectForTopic(input.topic);
   if (!subject) return null;
   const attemptId = randomBytes(18).toString('base64url');
+  // devShark Learn levels of the code topics carry coding tasks. Their ids are
+  // sealed into the session so completion can insist on every one passing;
+  // each task gets its own coding session bound to this level attempt.
+  const codingTasks = input.kind === 'level' && subject === 'webdev' &&
+    (input.topic === 'javascript' || input.topic === 'typescript' || input.topic === 'react')
+    ? levelCodingTasks(input.topic, input.ref)
+    : [];
   const sessionId = encodeSession(built.answerKey, {
     scope: 'roadmap',
     subject,
@@ -123,6 +133,7 @@ function playableResponse(input: {
     ...(input.requiredLevelStart !== undefined && input.requiredLevelEnd !== undefined
       ? { requiredLevelStart: input.requiredLevelStart, requiredLevelEnd: input.requiredLevelEnd }
       : {}),
+    ...(codingTasks.length > 0 ? { codingTaskIds: codingTasks.map((task) => task.id) } : {}),
   });
   return {
     kind: input.kind,
@@ -133,6 +144,14 @@ function playableResponse(input: {
     passPct: input.passPct,
     sessionId,
     questions: built.questions,
+    ...(codingTasks.length > 0
+      ? {
+          coding: codingTasks.map((task) => ({
+            task: playableCodingTask(task),
+            session: encodeCodingSession({ taskId: task.id, track: task.track, userId: null, roadmapAttemptId: attemptId }),
+          })),
+        }
+      : {}),
   };
 }
 
@@ -751,7 +770,18 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   const totalQuestions = session.questions.length;
   const percentage = Math.round((correctAnswers / totalQuestions) * 100);
   const passPct = Number(attempt.pass_pct);
-  const passed = percentage >= passPct;
+  let passed = percentage >= passPct;
+  // A level with coding tasks passes only when every one of them passed.
+  let codingPending: string[] = [];
+  if (passed && session.codingTaskIds && session.codingTaskIds.length > 0) {
+    const codingRows = await withTimeout(
+      supabase.from('roadmap_attempt_coding').select('task_id,passed').eq('attempt_id', session.attemptId!),
+    );
+    if (codingRows.error) return jsonError(res, 500, 'db_error', 'Could not grade the coding tasks');
+    const passedIds = new Set((codingRows.data ?? []).filter((row) => row.passed === true).map((row) => String(row.task_id)));
+    codingPending = session.codingTaskIds.filter((id) => !passedIds.has(id));
+    if (codingPending.length > 0) passed = false;
+  }
 
   let progress: unknown;
   let applied = false;
@@ -760,6 +790,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       supabase.rpc('complete_verified_roadmap_attempt', {
         p_user_id: userId,
         p_attempt_id: session.attemptId,
+        p_coding_task_ids: session.codingTaskIds ?? null,
       }),
     );
     if (completed.error) {
@@ -787,14 +818,34 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     applied = true;
   }
 
-  logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId });
-  return res.json({ correctAnswers, totalQuestions, percentage, passed, applied, ...(progress ? { progress } : {}) });
+  logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length });
+  return res.json({ correctAnswers, totalQuestions, percentage, passed, applied, codingPending, ...(progress ? { progress } : {}) });
 }
 
 /* ──── handler ──────────────────────────────────────────────────────────── */
 
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
+
+  // Coding challenges share this function (twelve-function budget):
+  //   GET  ?resource=coding-task&id=     → a playable task with its sealed session
+  //   POST ?resource=coding-submit       → server grading (JavaScript, TypeScript, system design)
+  //   POST ?resource=coding-report       → the browser harness verdict (React)
+  //   POST ?resource=coding-reveal       → the reference solution after a pass or give-up
+  const resource = typeof req.query.resource === 'string' ? req.query.resource : '';
+  if (resource.startsWith('coding-')) {
+    try {
+      if (resource === 'coding-task' && req.method === 'GET') return await handleCodingTask(req, res, supabase);
+      if (resource === 'coding-submit' && req.method === 'POST') return await handleCodingSubmit(req, res, supabase);
+      if (resource === 'coding-report' && req.method === 'POST') return await handleCodingReport(req, res, supabase);
+      if (resource === 'coding-reveal' && req.method === 'POST') return await handleCodingReveal(req, res, supabase);
+      res.setHeader('Allow', resource === 'coding-task' ? 'GET' : 'POST');
+      return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+    } catch (error) {
+      logEvent({ status: 500, kind: 'coding_error', resource, category: error instanceof Error ? error.name : 'unknown' });
+      return jsonError(res, 500, 'internal_error', 'Could not handle the coding request');
+    }
+  }
 
   if (req.method === 'POST' && req.query.resource === 'answer') {
     try {
