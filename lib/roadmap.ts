@@ -555,6 +555,8 @@ export interface RoadmapLevelMeta {
   title: string;
   difficulty: 1 | 2 | 3 | 4 | 5;
   questionCount: number;
+  /** devShark code topics only: how many coding tasks close this level. */
+  codingTasks?: number;
 }
 
 export interface RoadmapCheckpointMeta {

@@ -22,11 +22,20 @@ import {
   createChallengeRun,
   stableAttemptId,
 } from '../lib/quiz-tokens';
-import { checkRateLimit, isDistributedRateLimitEnabled } from '../lib/rate-limit';
+import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS } from '../lib/rate-limit';
 import healthHandler from '../api/health';
 import roadmapHandler from '../api/quiz/roadmap';
 import { selectPersonalizedReview } from '../lib/review-selection';
 import { aiDailyGenerationLimit, isAiExplanationConfigured } from '../lib/ai-provider';
+import { aiFeaturesAllowed } from '../lib/product-scope';
+import { codingTaskById, levelCodingTasks, playable as playableCodingTask, CODING_TASKS } from '../lib/coding/catalog';
+import { solutionFor } from '../lib/coding/solutions';
+import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
+import { runInSandbox } from '../lib/coding/sandbox';
+import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
+import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS } from '../shared/coding-catalog';
+import { CODING_BADGES } from '../shared/badges';
+import { CODING_INDEX } from '../shared/coding-index';
 import { inspectQuestionQuality } from '../lib/question-quality';
 import { assessmentUnlocks } from '../shared/assessment';
 import { grantedTopicsFor, withGrantedTopics } from '../lib/topic-grants';
@@ -199,6 +208,74 @@ async function main() {
     else process.env[envKey] = value;
   }
 
+  assert.equal(aiFeaturesAllowed({ PRODUCT_ID: 'devshark' }), false, 'devShark ships no AI feature');
+  assert.equal(aiFeaturesAllowed({ VITE_LOCK_SUBJECT: 'webdev' }), false);
+  assert.equal(aiFeaturesAllowed({ VITE_PRODUCT: 'studyshark' }), true);
+
+  // Coding challenges: sealed sessions, answer-free payloads, server grading.
+  const codingSession = encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: 'user-0001', roadmapAttemptId: 'attempt-0123456789abcd' });
+  assert.match(codingSession, /^v2\./);
+  assert.ok(!codingSession.includes('js-double-numbers'), 'coding session must not expose the task id in clear');
+  const decodedCoding = decodeCodingSession(codingSession);
+  assert.equal(decodedCoding?.taskId, 'js-double-numbers');
+  assert.equal(decodedCoding?.roadmapAttemptId, 'attempt-0123456789abcd');
+  assert.match(decodedCoding?.attemptId ?? '', /^[A-Za-z0-9_-]{16,64}$/);
+  assert.equal(decodeCodingSession(codingSession.replace(/.$/, (c) => (c === 'A' ? 'B' : 'A'))), null, 'tampered coding session must fail closed');
+  assert.equal(decodeSession(codingSession), null, 'a coding session is never a quiz session');
+  const connectState = encodeGithubConnectState('user-0001');
+  assert.equal(decodeGithubConnectState(connectState)?.userId, 'user-0001');
+  assert.equal(decodeCodingSession(connectState), null);
+
+  const doubleTask = codingTaskById('js-double-numbers');
+  assert.ok(doubleTask && doubleTask.tests && doubleTask.tests.length >= 4);
+  const doubleSolution = solutionFor('js-double-numbers');
+  assert.ok(doubleSolution?.solution.includes('double'));
+  const playableDouble = JSON.stringify(playableCodingTask(doubleTask!));
+  assert.ok(!playableDouble.includes(doubleSolution!.solution.trim().slice(0, 30)), 'playable task must not carry the solution');
+  const graded = await runInSandbox({ code: doubleSolution!.solution, calls: doubleTask!.tests!.map((t) => t.call), expectations: doubleTask!.tests!.map((t) => t.expected) });
+  assert.equal(codeOutcome({ visible: graded, hidden: null, check: null }), 'passed', 'the reference solution passes in the sandbox');
+  const wrong = await runInSandbox({ code: 'const double = ns => ns;', calls: doubleTask!.tests!.map((t) => t.call), expectations: doubleTask!.tests!.map((t) => t.expected) });
+  assert.equal(codeOutcome({ visible: wrong, hidden: null, check: null }), 'failed');
+  const hung = await runInSandbox({ code: 'const double = () => { while (true) {} };', calls: ['double([1])'], expectations: [[2]], deadlineMs: 300 });
+  assert.equal(hung.timedOut, true, 'an infinite loop is cut off by the deadline');
+  const escaped = await runInSandbox({ code: 'const peek = () => typeof process + typeof require + typeof fetch + typeof globalThis.Deno;', calls: ['peek()'], expectations: ['undefinedundefinedundefinedundefined'] });
+  assert.equal(escaped.results[0]?.pass, true, 'the sandbox exposes no host globals');
+
+  const designTask = CODING_TASKS.find((task) => task.verify === 'guided');
+  assert.ok(designTask?.design, 'a guided design task exists');
+  const prepared = prepareDesign(designTask!, (list) => [...list].reverse());
+  assert.ok(prepared.key.steps?.length === 5);
+  const shuffledPlayable = JSON.stringify({ ...playableCodingTask(designTask!), design: { steps: prepared.design!.steps.map((step) => ({ options: step.options })) } });
+  assert.ok(!shuffledPlayable.includes('"correct"'), 'the shuffled design payload carries no answer');
+  const allRight = gradeDesign(designTask!, prepared.key, prepared.key.steps!);
+  assert.equal(allRight.outcome, 'passed');
+  assert.equal(gradeDesign(designTask!, prepared.key, prepared.key.steps!.map((i) => (i + 1) % 3)).outcome, 'failed');
+  const drillTask = CODING_TASKS.find((task) => task.drill?.format === 'sequence');
+  const preparedDrill = prepareDesign(drillTask!, (list) => [...list].reverse());
+  assert.equal(gradeDesign(drillTask!, preparedDrill.key, [preparedDrill.key.order!]).outcome, 'passed', 'a sequence drill grades the shuffled order');
+  assert.equal(gradeDesign(drillTask!, preparedDrill.key, [[...preparedDrill.key.order!].reverse()]).outcome, 'failed');
+  assert.equal(giveUpAfter(ladderLength(doubleTask!)), Math.min(Math.max(2, Math.ceil(ladderLength(doubleTask!) / 2)), ladderLength(doubleTask!)));
+
+  assert.ok(levelCodingTasks('javascript', 6).length >= 1, 'javascript level 6 carries a coding task');
+  assert.ok(levelCodingTasks('javascript', 6).length <= 2);
+  assert.equal(gardenPathFor({ id: 'js-double-numbers', track: 'javascript', level: 6 }), 'javascript/06-double-numbers.js');
+  assert.equal(gardenPathFor({ id: 'dd-requests-per-second', track: 'system-design', level: 0 }), 'system-design/00-requests-per-second.md');
+  assert.ok(CODING_INDEX.length > 0, 'the browser index exists (freshness is enforced by npm run test:coding)');
+  assert.ok(CODING_INDEX.every((row) => !('tests' in row) && !('prompt' in row)), 'the browser index carries no task bodies');
+  const ladderBase = { track: 'javascript' as const, progress: { passed: new Set<string>() }, tasks: CODING_INDEX, javascriptLevelsCleared: 0 };
+  assert.equal(tierUnlocked({ ...ladderBase, tier: 1 }), true);
+  assert.equal(tierUnlocked({ ...ladderBase, tier: 3 }), false);
+  assert.equal(tierUnlocked({ ...ladderBase, tier: 3, javascriptLevelsCleared: 10 }), true, 'the Learn foundations open tier 3');
+  assert.equal(tierUnlocked({ ...ladderBase, track: 'system-design', tier: 5 }), true, 'system design has no ladder');
+  assert.deepEqual(eligibleCodingBadges(new Set(), CODING_INDEX), []);
+  assert.deepEqual(CODING_BADGES.map((badge) => badge.id), [...CODING_BADGE_IDS], 'every coding badge has display metadata');
+  assert.ok(CODING_TASK_XP[1] < CODING_TASK_XP[5]);
+
+  // Coding resources are devShark-only: the StudyShark scope this test runs in refuses them.
+  const codingRes = mockResponse();
+  await roadmapHandler({ method: 'GET', headers: {}, query: { resource: 'coding-task', id: 'js-double-numbers' } } as never, codingRes as never);
+  assert.equal(codingRes.statusCode, 404, 'coding tasks are not served outside devShark');
+
   const qualityIssues = inspectQuestionQuality([{
     ...reviewQuestions[0],
     source: 'base', deleted: false,
@@ -235,6 +312,43 @@ async function main() {
   assert.match(hardening, /REVOKE ALL ON FUNCTION public\.daily_leaderboard\(DATE, INTEGER\)/);
   const multiplayerMigration = readFileSync(join(process.cwd(), 'supabase', 'supabase-schema-005.sql'), 'utf8');
   assert.match(multiplayerMigration, /DROP FUNCTION IF EXISTS public\.match_scoreboard\(UUID\)/);
+
+  const coding = readFileSync(join(process.cwd(), 'supabase', 'supabase-schema-025.sql'), 'utf8');
+  for (const table of ['coding_progress', 'coding_attempts', 'coding_drafts', 'roadmap_attempt_coding', 'github_connections', 'github_commits']) {
+    assert.match(coding, new RegExp(`CREATE TABLE IF NOT EXISTS public\\.${table}`), `migration 025 must create ${table}`);
+    assert.match(coding, new RegExp(`ALTER TABLE public\\.${table} ENABLE ROW LEVEL SECURITY`), `${table} needs RLS`);
+  }
+  for (const fn of ['record_coding_verdict', 'record_coding_reveal', 'save_coding_draft', 'complete_verified_roadmap_attempt', 'delete_user_data', 'purge_expired_learning_data']) {
+    assert.match(coding, new RegExp(`CREATE OR REPLACE FUNCTION public\\.${fn}\\(`), `migration 025 must define ${fn}`);
+    assert.match(coding, new RegExp(`REVOKE ALL ON FUNCTION public\\.${fn}\\(`), `${fn} must be service-role only`);
+  }
+  assert.match(coding, /p_coding_task_ids JSONB DEFAULT NULL/, 'level completion must accept the sealed coding task ids');
+  assert.match(coding, /DROP FUNCTION IF EXISTS public\.complete_verified_roadmap_attempt\(TEXT, TEXT\)/);
+  assert.match(coding, /'coding:' \|\| p_task_id/, 'coding XP must go through the verified-activity ledger once per task');
+  assert.match(coding, /DELETE FROM public\.coding_progress WHERE user_id = p_user_id/);
+  assert.match(coding, /DELETE FROM public\.github_connections WHERE user_id = p_user_id/);
+  assert.doesNotMatch(coding, /access_token|refresh_token|provider_token/, 'the garden must never store a user token');
+
+  // Reference solutions and hidden tests never ship: nothing under client/
+  // may import lib/coding, and the catalogue keeps solutions in their own module.
+  const clientFiles = readdirSync(join(process.cwd(), 'client', 'src'), { recursive: true }) as string[];
+  for (const file of clientFiles) {
+    if (!/\.(ts|tsx)$/.test(file)) continue;
+    const text = readFileSync(join(process.cwd(), 'client', 'src', file), 'utf8');
+    assert.doesNotMatch(text, /lib\/coding/, `client/src/${file} must not import lib/coding`);
+  }
+  const sandboxDir = join(process.cwd(), 'client', 'sandbox');
+  if (statSync(sandboxDir, { throwIfNoEntry: false })?.isDirectory()) {
+    for (const file of readdirSync(sandboxDir, { recursive: true }) as string[]) {
+      if (!/\.(ts|tsx)$/.test(file)) continue;
+      assert.doesNotMatch(readFileSync(join(sandboxDir, file), 'utf8'), /lib\/coding/, `client/sandbox/${file} must not import lib/coding`);
+    }
+  }
+  const catalogSource = readFileSync(join(process.cwd(), 'lib/coding/catalog.ts'), 'utf8');
+  assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue loader must not import the solutions');
+  for (const key of ['codingRun', 'codingDraft', 'codingReveal', 'githubConnect', 'githubSync']) {
+    assert.ok(key in RATE_LIMITS, `rate limit ${key} must exist`);
+  }
 
   const shopSource = readFileSync(join(process.cwd(), 'client/src/lib/shop.ts'), 'utf8');
   const catalogueSource = shopSource.match(/const STATIC_CATALOGUE:[^=]+= \[([\s\S]*?)\n\];/)?.[1];

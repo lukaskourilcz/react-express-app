@@ -674,8 +674,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   // show the affordance there. The server is still authoritative — a stray
   // disabled response collapses to Sharkira's "sitting this one out" note.
   //
-  // Temporarily hidden by owner. Drop the leading `false &&` to restore.
-  const sharkiraEligible = false && mode !== 'daily' && !!sessionId && !!currentQuestion;
+  // Temporarily hidden by owner. Drop the leading `false &&` to restore on
+  // StudyShark; devShark never shows it (the product ships no AI feature).
+  const sharkiraEligible = false && CURRENT_PRODUCT.id !== 'devshark' && mode !== 'daily' && !!sessionId && !!currentQuestion;
 
   const askSharkira = useCallback(() => {
     if (!sessionId || !currentQuestion) return;
@@ -1126,7 +1127,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       </Text>
                     </div>
                   )}
-                  {config.ai.explanationsEnabled && questionResult?.answerProof && (
+                  {CURRENT_PRODUCT.id !== 'devshark' && config.ai.explanationsEnabled && questionResult?.answerProof && (
                     <AiExplanationPanel
                       answerProof={questionResult.answerProof}
                       selectedAnswer={question.options[questionResult.selectedIndex] ?? ''}

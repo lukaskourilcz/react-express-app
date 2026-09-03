@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { Suspense, lazy, useMemo, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
@@ -16,11 +16,17 @@ import { masteryDayKey, type LevelMasteryEntry } from '../../../shared/mastery';
 import { getCategoryHexColor } from '../lib/categories';
 import { CategoryGlyph } from './ui/techIcons';
 import { SharkFin } from './SharkFin';
+import { CURRENT_PRODUCT } from '../lib/products';
+import { useAuth } from '../lib/auth';
 import type { RoadmapTopic, RoadmapStructure } from '../types/quiz';
 import './Today.css';
 import './DeepEndScreens.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
+
+// devShark only: coding tasks due for a second pass. Lazy so the coding index
+// stays out of the StudyShark bundle.
+const CodingDueSection = lazy(() => import('./coding/CodingDueSection').then((m) => ({ default: m.CodingDueSection })));
 
 // The plan is priority-ordered; render it grouped under these headings.
 const SECTION_ORDER: TodayKind[] = ['unfinished', 'review', 'new'];
@@ -78,6 +84,7 @@ function doneToday(progress: RoadmapProgress, subject: SubjectId, target: number
 
 export default function Today() {
   const { t } = useLanguage();
+  const { isAuthenticated } = useAuth();
   const [subject] = useSubject();
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
@@ -167,6 +174,12 @@ export default function Today() {
       ) : !completedToday ? (
         <EmptyState t={t} />
       ) : null}
+
+      {CURRENT_PRODUCT.id === 'devshark' && isAuthenticated && (
+        <Suspense fallback={null}>
+          <CodingDueSection />
+        </Suspense>
+      )}
     </TodayShell>
   );
 }

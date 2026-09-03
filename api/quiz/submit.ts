@@ -22,7 +22,7 @@ import {
   type HintContent,
 } from '../../lib/ai-provider';
 import { subjectForCategory } from '../../shared/subject-catalog';
-import { deploymentSubjectIds } from '../../lib/product-scope';
+import { aiFeaturesAllowed, deploymentSubjectIds } from '../../lib/product-scope';
 
 const MAX_ANSWERS = 50;
 
@@ -280,6 +280,7 @@ function cleanCachedContent(value: unknown): ExplanationContent | null {
 }
 
 async function handleExplanation(req: VercelRequest, res: VercelResponse) {
+  if (!aiFeaturesAllowed()) return jsonError(res, 403, 'feature_disabled', 'AI explanations are not part of this product');
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.aiExplanation))) return;
   const body = (req.body || {}) as { answerProof?: unknown; selectedAnswer?: unknown; lang?: unknown };
   if (typeof body.answerProof !== 'string' || typeof body.selectedAnswer !== 'string') {
@@ -429,6 +430,7 @@ function cleanHint(value: unknown): HintContent | null {
 // hint. It guides toward the correct option without ever naming it, is hidden
 // during placement/daily/challenge, and always has a curated fallback.
 async function handleHint(req: VercelRequest, res: VercelResponse) {
+  if (!aiFeaturesAllowed()) return jsonError(res, 403, 'feature_disabled', 'Hints are not part of this product');
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.aiExplanation))) return;
   const body = (req.body || {}) as { sessionId?: unknown; questionId?: unknown; lang?: unknown };
   if (typeof body.sessionId !== 'string' || body.sessionId.length === 0 || body.sessionId.length > 16_384) {

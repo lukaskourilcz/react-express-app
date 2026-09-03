@@ -54,6 +54,11 @@ const TopicLandingPage = lazy(() => import('./components/TopicLandingPage'));
 const Today = lazy(() => import('./components/Today'));
 const SharkCards = lazy(() => import('./components/Cards'));
 const TypingRacer = lazy(() => import('./components/TypingRacer'));
+const CodingHome = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.CodingHome })));
+const CodingTrackScreen = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.CodingTrackScreen })));
+const CodingTaskScreen = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.CodingTaskScreen })));
+const CodingReviewScreen = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.CodingReviewScreen })));
+const GithubSettingsPage = lazy(() => import('./components/coding/GithubSettingsPage').then((m) => ({ default: m.GithubSettingsPage })));
 const NotFoundPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.NotFoundPage })));
 
 // The landing gate: show the subject picker until the learner has chosen a
@@ -85,6 +90,9 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/today': 'title.today',
   '/collection': 'title.collection',
   '/typing': 'title.typing',
+  '/coding': 'title.coding',
+  '/coding/review': 'title.coding',
+  '/settings/github': 'title.github',
   '/shop': 'title.shop',
   '/play': 'title.play',
   '/challenge': 'title.challenge',
@@ -163,9 +171,13 @@ const NAV_ITEMS: {
   { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard' },
   { to: '/cards', key: 'nav.cards', isActive: (p) => p === '/cards', feature: 'flashcards' },
   { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop' },
-  // A developer career roadmap belongs only to the standalone devShark product.
+  // Coding challenges and the developer career roadmap belong only to the
+  // standalone devShark product.
   ...(CURRENT_PRODUCT.id === 'devshark'
-    ? [{ to: '/roadmap', key: 'nav.roadmap' as TranslationKey, isActive: (p: string) => p === '/roadmap' }]
+    ? [
+        { to: '/coding', key: 'nav.coding' as TranslationKey, isActive: (p: string) => p.startsWith('/coding') },
+        { to: '/roadmap', key: 'nav.roadmap' as TranslationKey, isActive: (p: string) => p === '/roadmap' },
+      ]
     : []),
 ];
 
@@ -364,7 +376,9 @@ function App() {
       ? t(titleKey)
       : location.pathname.startsWith('/play/')
         ? t('title.playMatch')
-        : t('title.notFound');
+        : location.pathname.startsWith('/coding/')
+          ? t('title.coding')
+          : t('title.notFound');
     document.title = location.pathname === '/'
       ? productText(CURRENT_PRODUCT.title, lang)
       : translatedTitle.split('StudyShark').join(CURRENT_PRODUCT.brand);
@@ -418,6 +432,7 @@ function App() {
     location.pathname === '/privacy' ||
     location.pathname === '/terms' ||
     location.pathname === '/classroom' ||
+    location.pathname.startsWith('/coding') ||
     location.pathname.startsWith('/play');
   const contentMaxWidth = isDev ? 'none' : isHome ? 1000 : isWide ? 1200 : 800;
 
@@ -726,7 +741,12 @@ function App() {
                 <Route path="/collection" element={<SharkCards />} />
                 <Route path="/typing" element={<TypingRacer />} />
                 <Route path="/roadmap" element={CURRENT_PRODUCT.id === 'devshark' ? <CareerRoadmap /> : <Navigate to="/learn" replace />} />
+                <Route path="/coding" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingHome /> : <Navigate to="/learn" replace />} />
+                <Route path="/coding/review" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingReviewScreen /> : <Navigate to="/learn" replace />} />
+                <Route path="/coding/:track" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingTrackScreen /> : <Navigate to="/learn" replace />} />
+                <Route path="/coding/:track/:taskId" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingTaskScreen /> : <Navigate to="/learn" replace />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/settings/github" element={CURRENT_PRODUCT.id === 'devshark' ? <GithubSettingsPage /> : <Navigate to="/profile" replace />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/cards" element={<Flashcards />} />
                 <Route path="/shop" element={<Shop />} />

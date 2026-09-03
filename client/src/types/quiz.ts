@@ -1,3 +1,4 @@
+import type { PlayableCodingTask } from '../../../shared/coding-catalog';
 export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets' | 'continents' | 'capitals' | 'flags' | 'landforms' | 'climate' | 'population' | 'political' | 'economic' | 'cartography' | 'earth' | 'arithmetic' | 'fractions' | 'prealgebra' | 'algebra' | 'geometry' | 'trigonometry' | 'statistics' | 'precalculus' | 'calculus' | 'linear-algebra' | 'prehistory' | 'ancient' | 'classical' | 'medieval' | 'renaissance' | 'earlymodern' | 'industrial' | 'worldwars' | 'coldwar' | 'modern' | 'openings' | 'tactics' | 'strategy' | 'endgames' | 'combinations' | 'discrete-math' | 'number-theory' | 'multivariable-calculus' | 'differential-equations' | 'real-analysis' | 'geomorphology' | 'oceanography' | 'biogeography' | 'geopolitics' | 'gis' | 'historiography' | 'history-of-science' | 'economic-history' | 'intellectual-history' | 'military-history' | 'cell-biology' | 'skeletal-system' | 'muscular-system' | 'nervous-system' | 'endocrine-system' | 'cardiovascular-system' | 'respiratory-system' | 'digestive-system' | 'immune-system' | 'reproductive-system' | 'opening-theory' | 'middlegame' | 'pawn-structures' | 'endgame-technique' | 'chess-history' | 'positions' | 'starting-hands' | 'pot-odds' | 'betting-strategy' | 'postflop' | 'tournament-play' | 'psychology' | 'gto-advanced';
 
 export interface Question {
@@ -52,6 +53,8 @@ export interface RoadmapLevelMeta {
   title: string;
   difficulty: 1 | 2 | 3 | 4 | 5;
   questionCount: number;
+  /** devShark code topics only: how many coding tasks close this level. */
+  codingTasks?: number;
 }
 
 export interface RoadmapCheckpointMeta {
@@ -96,6 +99,8 @@ export interface RoadmapPlayable {
   passPct: number;
   sessionId: string;
   questions: RoadmapQuestion[];
+  /** devShark code topics: the level's coding tasks, each with its own sealed session. */
+  coding?: { task: PlayableCodingTask; session: string }[];
 }
 
 export interface RoadmapAnswerResult {
@@ -111,6 +116,8 @@ export interface RoadmapCompletionResult {
   percentage: number;
   passed: boolean;
   applied: boolean;
+  /** Coding task ids the level still needs before it passes. */
+  codingPending?: string[];
   progress?: Partial<Record<RoadmapTopic, {
     levels: Record<string, { passed: boolean; bestPct: number }>;
     checkpoints: Record<string, { passed: boolean; bestPct: number }>;

@@ -44,7 +44,7 @@ function purgeAstryxCss(): Plugin {
           keyframes: false, // all @keyframes kept (some are toggled at runtime)
           fontFace: false, // all @font-face kept
           safelist: {
-            standard: [/^ss-/, /^rm-/, /^quiz-/, /^devshark/, 'html', 'body'],
+            standard: [/^ss-/, /^rm-/, /^quiz-/, /^devshark/, /^cd-/, /^cm-/, 'html', 'body'],
             // Attribute/state selectors composed at runtime.
             greedy: [/data-theme/, /data-color-mode/, /data-selected/, /data-active/, /data-tone/, /data-locked/, /data-complete/],
           },
@@ -148,6 +148,19 @@ export default defineConfig(({ mode }) => {
     // client + api/ routes together. Plain `vite` is fine if you don't need
     // the API.
   },
+  // The coding runner worker is a separate bundle. Its files live under one
+  // directory so vercel.json can serve them with their own policy (`new
+  // Function` is allowed there and nowhere else on the page).
+  worker: {
+    format: 'es',
+    rollupOptions: {
+      output: {
+        entryFileNames: 'assets/coding-worker/[name]-[hash].js',
+        chunkFileNames: 'assets/coding-worker/[name]-[hash].js',
+        assetFileNames: 'assets/coding-worker/[name]-[hash][extname]',
+      },
+    },
+  },
   build: {
     target: 'es2020',
     // 'hidden' still emits .map files (for Sentry/source-map tooling) but
@@ -156,6 +169,12 @@ export default defineConfig(({ mode }) => {
     sourcemap: 'hidden',
     chunkSizeWarningLimit: 500,
     rollupOptions: {
+      // Two pages: the app and the coding sandbox that hosts React tasks in a
+      // sandboxed iframe under its own policy (see vercel.json).
+      input: {
+        main: path.resolve(__dirname, 'index.html'),
+        sandbox: path.resolve(__dirname, 'sandbox/index.html'),
+      },
       output: {
         manualChunks: {
           // React core in its own long-lived chunk. (The app is now MUI-free —

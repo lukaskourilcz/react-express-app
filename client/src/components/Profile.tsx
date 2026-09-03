@@ -49,6 +49,7 @@ import ErrorRetry from './ErrorRetry';
 import { SwimmingFin } from './SharkFin';
 import { FlameIcon, BoltIcon, TrophyIcon, CardsIcon, TargetIcon } from './ui/icons';
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
+import { GithubGardenCard } from './coding/GithubGardenCard';
 import './DeepEndScreens.css';
 
 // Astryx Card colour variants used for the tinted stat / streak tiles.
@@ -357,6 +358,8 @@ function ProfileBody({
             )}
 
             <PreferencesCard />
+
+            {CURRENT_PRODUCT.id === 'devshark' && <GithubGardenCard />}
 
             <AccountDeletionCard />
           </VStack>

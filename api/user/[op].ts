@@ -21,7 +21,11 @@ import {
 import { deploymentSubjectIds } from '../../lib/product-scope';
 import { rollPack, subjectCardCount } from '../../shared/cards';
 import { eligibleServerBadges, type BadgeStatsSummary } from '../../shared/badges';
+import { eligibleCodingBadges } from '../../shared/coding-catalog';
+import { CODING_SUMMARIES } from '../../lib/coding/catalog';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
+import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
+import { handleGithub } from '../../lib/github-handlers';
 
 const supabase = createServiceClient();
 
@@ -55,6 +59,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'badges') return badges(req, res);
   if (op === 'freezes') return freezes(req, res);
   if (op === 'advisor') return advisor(req, res);
+  if (op === 'coding-progress') return handleCodingProgress(req, res, supabase);
+  if (op === 'coding-draft') return handleCodingDraft(req, res, supabase);
+  if (op.startsWith('github-')) return handleGithub(op, req, res, supabase);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
 }
 
@@ -517,13 +524,18 @@ async function badges(req: VercelRequest, res: VercelResponse) {
   if (!subject) return jsonError(res, 400, 'invalid_subject_scope', 'A subject from this deployment is required');
 
   try {
-    const [statsRow, progressRow] = await Promise.all([
+    const [statsRow, progressRow, codingRows] = await Promise.all([
       withTimeout(
         supabase!.from('user_stats').select('total_quizzes, total_correct, total_questions, longest_streak').eq('user_id', userId).maybeSingle(),
       ),
       withTimeout(supabase!.from('roadmap_progress').select('data').eq('user_id', userId).maybeSingle()),
+      // devShark coding badges come from passed coding tasks; the other
+      // products have no coding progress to read.
+      subject === 'webdev'
+        ? withTimeout(supabase!.from('coding_progress').select('task_id').eq('user_id', userId).eq('status', 'passed'))
+        : Promise.resolve({ data: [] as { task_id: string }[], error: null }),
     ]);
-    if (statsRow.error || progressRow.error) return jsonError(res, 500, 'db_error', 'Could not load badge stats');
+    if (statsRow.error || progressRow.error || codingRows.error) return jsonError(res, 500, 'db_error', 'Could not load badge stats');
 
     const s = statsRow.data;
     const masteredLevels = countMasteredLevels(progressRow.data?.data, subject);
@@ -534,7 +546,11 @@ async function badges(req: VercelRequest, res: VercelResponse) {
       totalQuestions: Number(s?.total_questions ?? 0),
       masteredLevels,
     };
-    const eligible = eligibleServerBadges(summary);
+    const passedCoding = new Set(((codingRows.data ?? []) as { task_id: string }[]).map((row) => row.task_id));
+    const eligible = [
+      ...eligibleServerBadges(summary),
+      ...(subject === 'webdev' ? eligibleCodingBadges(passedCoding, CODING_SUMMARIES) : []),
+    ];
 
     const synced = await withTimeout(
       supabase!.rpc('sync_user_badges', { p_user_id: userId, p_subject: subject, p_badge_ids: eligible }),

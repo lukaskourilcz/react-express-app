@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
 import { jsonError, withRequestContext } from '../lib/http';
 import { getGameSettings } from '../lib/settings-store';
 import { isAiExplanationConfigured } from '../lib/ai-provider';
+import { aiFeaturesAllowed } from '../lib/product-scope';
 
 // Public, read-only subset of the game settings, so the client can render the
 // configured count/time options and hide disabled features. Deliberately omits
@@ -46,7 +47,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     shop: s.shop,
     support: publicSupport,
     ai: {
-      explanationsEnabled: isAiExplanationConfigured(),
+      // devShark carries no AI feature, whatever the provider configuration says.
+      explanationsEnabled: aiFeaturesAllowed() && isAiExplanationConfigured(),
     },
     devTips: s.devTips,
   });

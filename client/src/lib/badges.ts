@@ -6,7 +6,8 @@
 // earned date; we only decorate that with catalog metadata and i18n KEYS.
 
 import { apiFetch } from './api';
-import { SERVER_BADGES, type BadgeTier } from '../../../shared/badges';
+import { CODING_BADGES, SERVER_BADGES, type BadgeTier } from '../../../shared/badges';
+import { CURRENT_PRODUCT } from './products';
 import { CLIENT_ONLY_BADGES, type AchievementContext } from './achievements';
 import type { SubjectId } from './subjects';
 import type { TranslationKey } from '../i18n/translations';
@@ -103,6 +104,21 @@ export function mergeBadges(
     descKey: badgeDescKey(b.id),
   }));
 
+  // devShark adds the coding badges after the shared set; StudyShark has no
+  // coding track, so the ids never appear in its earned set either.
+  const codingViews: BadgeView[] = CURRENT_PRODUCT.id === 'devshark'
+    ? CODING_BADGES.map((b) => ({
+      id: b.id,
+      tier: b.tier,
+      glyph: b.glyph,
+      earned: earnedMap.has(b.id),
+      earnedAt: earnedMap.get(b.id) ?? null,
+      clientOnly: false,
+      labelKey: badgeLabelKey(b.id),
+      descKey: badgeDescKey(b.id),
+    }))
+    : [];
+
   const ctx: AchievementContext = {
     stats: null,
     bookmarkCount: clientCtx.bookmarkCount,
@@ -122,5 +138,5 @@ export function mergeBadges(
     };
   });
 
-  return [...serverViews, ...clientViews];
+  return [...serverViews, ...codingViews, ...clientViews];
 }
