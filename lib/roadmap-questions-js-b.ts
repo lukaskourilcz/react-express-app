@@ -7,33 +7,33 @@ import type { Seed } from './roadmap-build';
 
 export const jsSeedsB: Seed[] = [
   // ── Level 1 — Values & Math ────────────────────────────────────────────
-  { q: 'What does this return?\n\n```js\nMath.floor(4.7);\n```', opts: ['4', '5', '4.7', '3'], a: 0, e: 'Math.floor rounds down to the nearest integer, giving 4.', tags: ['Numbers', 'Math'] },
-  { q: 'What is the result?\n\n```js\n7 / 2;\n```', opts: ['3', '3.5', '4', '2'], a: 1, e: 'JavaScript division produces a floating-point result: 3.5.', tags: ['Numbers'] },
-  { q: 'What does this return?\n\n```js\nMath.round(2.5);\n```', opts: ['2', '3', '2.5', '4'], a: 1, e: 'Math.round rounds half up, so 2.5 becomes 3.', tags: ['Numbers', 'Math'] },
+  { q: 'Math.floor moves toward negative infinity. What does this return?\n\n```js\nMath.floor(-4.2);\n```', opts: ['-5', '-4', '-4.2', '5'], a: 0, e: 'The next integer at or below -4.2 is -5. floor does not simply remove the decimal part.', tags: ['Numbers', 'Math'] },
+  { q: 'What is the result, including its type?\n\n```js\n(7 / 2).toFixed(1);\n```', opts: ['3.5', '"3.5"', '"3"', '4'], a: 1, e: '7 / 2 is 3.5, and toFixed returns the formatted value as the string "3.5".', tags: ['Numbers'] },
+  { q: 'JavaScript rounds a half toward positive infinity. What does this return?\n\n```js\nMath.round(-2.5);\n```', opts: ['-3', '-2', '-2.5', '3'], a: 1, e: 'For a value exactly halfway between integers, Math.round chooses the integer toward positive infinity, so -2.5 becomes -2.', tags: ['Numbers', 'Math'] },
   { q: 'What is the result?\n\n```js\ntypeof NaN;\n```', opts: ['"NaN"', '"number"', '"undefined"', '"object"'], a: 1, e: 'NaN ("not a number") is paradoxically of type "number".', tags: ['typeof', 'Gotchas'] },
 
   // ── Level 2 — Strings ──────────────────────────────────────────────────
-  { q: 'What does this return?\n\n```js\n"hello".charAt(0);\n```', opts: ['"h"', '"e"', '"hello"', '0'], a: 0, e: 'charAt(0) returns the first character, "h".', tags: ['Strings', 'Methods'] },
-  { q: 'What is the result?\n\n```js\n"abc".indexOf("b");\n```', opts: ['0', '1', '2', '-1'], a: 1, e: '"b" is at index 1.', tags: ['Strings', 'Methods'] },
-  { q: 'What does this return?\n\n```js\n"  hi  ".trim();\n```', opts: ['"  hi  "', '"hi"', '"hi  "', '"  hi"'], a: 1, e: 'trim removes whitespace from both ends, leaving "hi".', tags: ['Strings', 'Methods'] },
-  { q: 'What is the result?\n\n```js\n"ab".repeat(3);\n```', opts: ['"ababab"', '"ab3"', '"ab ab ab"', '"abababab"'], a: 0, e: 'repeat(3) concatenates the string three times: "ababab".', tags: ['Strings', 'Methods'] },
+  { q: 'What does charAt return for an index equal to the string length?\n\n```js\n"hello".charAt(5);\n```', opts: ['""', 'undefined', '"o"', 'Error'], a: 0, e: 'Index 5 is outside a five-character string. charAt returns an empty string for an out-of-range index.', tags: ['Strings', 'Methods'] },
+  { q: 'The second argument sets the starting position. What is the result?\n\n```js\n"ababa".indexOf("b", 2);\n```', opts: ['1', '3', '2', '-1'], a: 1, e: 'The match at index 1 is before the starting position, so indexOf finds the next "b" at index 3.', tags: ['Strings', 'Methods'] },
+  { q: 'trim removes only leading and trailing whitespace. What does this return?\n\n```js\n"  a b  ".trim();\n```', opts: ['"ab"', '"a b"', '"a b  "', '"  a b"'], a: 1, e: 'trim removes whitespace from both ends but keeps the space between a and b.', tags: ['Strings', 'Methods'] },
+  { q: 'What is returned after repeating and slicing?\n\n```js\n"ab".repeat(3).slice(1, 5);\n```', opts: ['"baba"', '"abab"', '"ababab"', '"ba"'], a: 0, e: 'repeat creates "ababab". The slice from index 1 up to 5 is "baba".', tags: ['Strings', 'Methods'] },
 
   // ── Level 3 — Booleans & Comparison ────────────────────────────────────
   { q: 'What does this return?\n\n```js\n2 != "2";\n```', opts: ['true', 'false', 'undefined', 'Error'], a: 1, e: 'Loose != coerces "2" to 2, so they are equal and != is false.', tags: ['Comparison', 'Coercion'] },
   { q: 'What does this return?\n\n```js\nnull == undefined;\n```', opts: ['true', 'false', 'Error', 'undefined'], a: 0, e: 'With loose equality, null and undefined are considered equal.', tags: ['Comparison'] },
-  { q: 'What does this evaluate to?\n\n```js\n"a" < "b";\n```', opts: ['true', 'false', '0', 'Error'], a: 0, e: 'Strings compare lexicographically; "a" comes before "b".', tags: ['Comparison', 'Strings'] },
-  { q: 'What is the result?\n\n```js\n10 >= 10;\n```', opts: ['true', 'false', 'undefined', 'Error'], a: 0, e: '>= is true when the values are equal, so 10 >= 10 is true.', tags: ['Comparison'] },
+  { q: 'Both operands are strings, so comparison is lexicographic. What is the result?\n\n```js\n"10" < "2";\n```', opts: ['true', 'false', '0', 'TypeError'], a: 0, e: 'String comparison starts with the first character. "1" comes before "2", so the expression is true.', tags: ['Comparison', 'Strings'] },
+  { q: 'The relational operator coerces the numeric string. What is the result?\n\n```js\n10 >= "10";\n```', opts: ['true', 'false', 'undefined', 'TypeError'], a: 0, e: 'For this comparison, "10" is converted to the number 10. Equal values satisfy >=.', tags: ['Comparison'] },
 
   // ── Level 4 — Arrays: Basics ───────────────────────────────────────────
-  { q: 'What does this return?\n\n```js\n[1, 2, 3].slice(1);\n```', opts: ['[2, 3]', '[1, 2]', '[1]', '[2]'], a: 0, e: 'slice(1) returns elements from index 1 to the end: [2, 3].', tags: ['Arrays', 'Methods'] },
-  { q: 'What is the result?\n\n```js\n[1, 2, 3].concat([4, 5]);\n```', opts: ['[1, 2, 3, 4, 5]', '[[1, 2, 3], [4, 5]]', '[5, 7]', '[1, 2, 3]'], a: 0, e: 'concat joins the arrays into one: [1, 2, 3, 4, 5].', tags: ['Arrays', 'Methods'] },
+  { q: 'What does a negative start index select?\n\n```js\n[1, 2, 3].slice(-2);\n```', opts: ['[2, 3]', '[1, 2]', '[1]', '[3, 2]'], a: 0, e: 'A negative index counts back from the end. -2 starts at the second-to-last item, producing [2, 3].', tags: ['Arrays', 'Methods'] },
+  { q: 'concat returns a new array. What are a and b afterwards?\n\n```js\nconst a = [1, 2];\nconst b = a.concat(3);\n[a, b];\n```', opts: ['[[1, 2], [1, 2, 3]]', '[[1, 2, 3], [1, 2, 3]]', '[[1, 2], [3]]', '[1, 2, 3]'], a: 0, e: 'concat does not mutate a. It returns a new array for b, so a stays [1, 2] while b is [1, 2, 3].', tags: ['Arrays', 'Methods'] },
   { q: 'What does this return?\n\n```js\n[1, 2, 3].reverse();\n```', opts: ['[1, 2, 3]', '[3, 2, 1]', '[2, 1, 3]', '[1, 3, 2]'], a: 1, e: 'reverse flips the order in place: [3, 2, 1].', tags: ['Arrays', 'Methods'] },
   { q: 'What is the result?\n\n```js\n[1, 2, 3].at(-1);\n```', opts: ['1', '3', '-1', 'undefined'], a: 1, e: 'at(-1) reads the last element, 3.', tags: ['Arrays', 'Methods'] },
 
   // ── Level 5 — Objects: Basics ──────────────────────────────────────────
   { q: 'What does this return?\n\n```js\nconst o = { a: 1 };\n"a" in o;\n```', opts: ['true', 'false', '1', 'undefined'], a: 0, e: 'The in operator checks whether the key exists: "a" is a key, so true.', tags: ['Objects'] },
   { q: 'What is the result?\n\n```js\nconst o = { a: 1, b: 2 };\ndelete o.a;\nObject.keys(o);\n```', opts: ['["a", "b"]', '["b"]', '["a"]', '[]'], a: 1, e: 'delete removes the a property, leaving only ["b"].', tags: ['Objects'] },
-  { q: 'What does o.b return?\n\n```js\nconst o = { a: 1 };\no.b = 2;\no.b;\n```', opts: ['undefined', '2', '1', 'Error'], a: 1, e: 'You can add new properties to an object; o.b is now 2.', tags: ['Objects'] },
+  { q: 'What keys remain after the update and delete?\n\n```js\nconst o = { a: 1 };\no.b = 2;\ndelete o.a;\nObject.keys(o);\n```', opts: ['["a"]', '["b"]', '["a", "b"]', '[]'], a: 1, e: 'The assignment adds b, and delete removes a, leaving only the key "b".', tags: ['Objects'] },
   { q: 'What does this return?\n\n```js\nObject.entries({ a: 1 });\n```', opts: ['[["a", 1]]', '["a", 1]', '{ a: 1 }', '["a:1"]'], a: 0, e: 'entries returns an array of [key, value] pairs: [["a", 1]].', tags: ['Objects', 'Methods'] },
 
   // ── Level 6 — Array Iteration ──────────────────────────────────────────

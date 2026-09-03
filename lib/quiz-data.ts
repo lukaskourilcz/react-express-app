@@ -12,7 +12,6 @@ import {
   roadmapAbbreviationsQuestions,
   roadmapGeneralQuestions,
   roadmapAiQuestions,
-  roadmapCoolStuffQuestions,
   roadmapDatabasesQuestions,
   roadmapSystemDesignQuestions,
   roadmapTestingQuestions,
@@ -5575,7 +5574,7 @@ const coreQuestions: Question[] = [
     options: ['"", "[object Object]", "[object Object]"', '"", "[object Object]", 0', '"undefined", "NaN", "NaN"', '"[], {}, 0"'],
     correctAnswer: 0,
     category: 'code-snippets',
-    explanation: 'When arrays/objects are used with +, they are converted to strings. [] becomes "" and {} becomes "[object Object]". Inside console.log(...), each expression is evaluated in expression context, so {} is an object literal (not a block statement). Therefore [] + [] = "", [] + {} = "[object Object]", and {} + [] = "[object Object]" + "" = "[object Object]".',
+    explanation: 'With `+`, both arrays and objects are converted to primitives. `[]` becomes the empty string, while a plain object becomes "[object Object]". Because these values appear inside `console.log(...)`, `{}` is parsed as an object literal. The three results are therefore "", "[object Object]", and "[object Object]".',
     difficulty: 4,
   },
   {
@@ -5592,7 +5591,7 @@ const coreQuestions: Question[] = [
   {
     id: '527',
     tags: ["Code Snippets","JavaScript","Promises"],
-    introduction: 'Understanding the order of execution with Promises and microtasks vs macrotasks is essential for async JavaScript.',
+    introduction: 'Separate the synchronous statements, promise microtask, and timer task before ordering them.',
     question: 'What is the output order?\n\n```javascript\nconsole.log("A");\nsetTimeout(() => console.log("B"), 0);\nPromise.resolve().then(() => console.log("C"));\nconsole.log("D");\n```',
     options: ['A, B, C, D', 'A, D, B, C', 'A, D, C, B', 'A, C, D, B'],
     correctAnswer: 2,
@@ -5691,7 +5690,7 @@ const coreQuestions: Question[] = [
   {
     id: '536',
     tags: ["Code Snippets","JavaScript","Async/Await"],
-    introduction: 'Understanding how async functions interact with regular synchronous code is key to mastering JavaScript asynchrony.',
+    introduction: 'Trace the synchronous part of the async function, then continue after the awaited promise settles.',
     question: 'What does this code output?\n\n```javascript\nasync function foo() {\n  console.log("1");\n  const result = await Promise.resolve("2");\n  console.log(result);\n  console.log("3");\n}\nconsole.log("4");\nfoo();\nconsole.log("5");\n```',
     options: ['4, 1, 2, 3, 5', '4, 1, 5, 2, 3', '1, 2, 3, 4, 5', '4, 5, 1, 2, 3'],
     correctAnswer: 1,
@@ -5707,7 +5706,7 @@ const coreQuestions: Question[] = [
     options: ['true, false, false, false, true', 'true, true, true, false, false', 'false, false, false, false, false', 'true, false, true, false, true'],
     correctAnswer: 0,
     category: 'code-snippets',
-    explanation: 'null == undefined is true by spec (they are loosely equal to each other and nothing else). null === undefined is false (different types). null == 0 is false (null only equals undefined with ==). null > 0 is false (null converts to 0, 0 > 0 is false). null >= 0 is true (null converts to 0, 0 >= 0 is true). The inconsistency between == and >= is a well-known JavaScript quirk.',
+    explanation: '`null == undefined` is true by a special loose-equality rule, while strict equality is false because their types differ. `null == 0` is false. Relational comparison follows different coercion rules: null becomes 0, so `null > 0` is false and `null >= 0` is true.',
     difficulty: 4,
   },
   {
@@ -5856,7 +5855,7 @@ const coreQuestions: Question[] = [
   {
     id: '551',
     tags: ["Code Snippets","JavaScript","Scope"],
-    introduction: 'Understanding nested function scope combined with var hoisting reveals how JavaScript resolves names.',
+    introduction: 'Identify which `a` belongs to each function before evaluating the increment.',
     question: 'What does this code output?\n\n```javascript\nvar a = 1;\nfunction outer() {\n  var a = 2;\n  function inner() {\n    a++;\n    var a = 3;\n    console.log(a);\n  }\n  inner();\n  console.log(a);\n}\nouter();\nconsole.log(a);\n```',
     options: ['3, 2, 1', '3, 3, 1', '4, 2, 1', 'NaN, 2, 1'],
     correctAnswer: 0,
@@ -10437,12 +10436,16 @@ const coreQuestions: Question[] = [
   },
 ];
 
-// The full question bank: the core set plus the roadmap ("Learn") questions for
-// JavaScript, TypeScript, React, Next.js, Node.js, Git, HTML, CSS, DSA and Algorithms. The roadmap sets carry the
-// same Question shape, so they flow through the quiz/play endpoints, /dev
-// overrides, and grading exactly like the core questions.
+// Keep the executable code-reading questions from the original bank. The rest
+// of that bank duplicated the newer roadmap curriculum and relied heavily on
+// unrelated distractors, so it is no longer placed in learner rotation.
+const codeReadingQuestions = coreQuestions.filter((question) => question.category === 'code-snippets');
+
+// The active bank combines focused code-reading practice with the roadmap
+// curriculum. "Cool Stuff" trivia is deliberately excluded: devShark should
+// test programming and engineering judgment, not product-history recall.
 export const questions: Question[] = [
-  ...coreQuestions,
+  ...codeReadingQuestions,
   ...roadmapJsQuestions,
   ...roadmapTsQuestions,
   ...roadmapReactQuestions,
@@ -10456,7 +10459,6 @@ export const questions: Question[] = [
   ...roadmapAbbreviationsQuestions,
   ...roadmapGeneralQuestions,
   ...roadmapAiQuestions,
-  ...roadmapCoolStuffQuestions,
   ...roadmapDatabasesQuestions,
   ...roadmapSystemDesignQuestions,
   ...roadmapTestingQuestions,

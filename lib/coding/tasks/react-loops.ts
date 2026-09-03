@@ -383,7 +383,7 @@ test('leaves the seed array untouched for the next mount', () => {
     tier: 2,
     focus: ["useState", "slice", "spread"],
     title: "Insert and reorder",
-    prompt: "Render the `initialStops` declared in the starter as an OL where every LI shows the stop name in a span and three buttons: “Insert after”, “Up” and “Down”. Insert after places a new stop named “Stop <n>” (n being the current length plus one) directly after that item; Up swaps the item with the one above, Down with the one below, and nothing happens at the edges. Build every next array from `slice` and spread without mutating the previous one, so Insert after on Reef gives Harbour, Reef, Stop 4, Lighthouse.",
+    prompt: "Render `initialStops` as an OL. Each LI shows the stop name in a span and three buttons: “Insert after”, “Up”, and “Down”. Insert a new “Stop <n>”, using the next length, directly after the selected item. Up and Down swap with a neighbour and do nothing at the edges. Build new arrays with `slice` and spread; never mutate the previous state. Inserting after Reef should give Harbour, Reef, Stop 4, Lighthouse.",
     starter: `${STARTER_IMPORT}
 
 const initialStops = [
@@ -990,7 +990,7 @@ test('the last page holds the remainder and disables Next', () => {
     tier: 3,
     focus: ["lists-keys", "splice", "useState"],
     title: "Reorder with stable keys",
-    prompt: "Render the `initialSteps` declared in the starter as an OL where each LI shows the label in a span plus Up and Down buttons; Up is disabled on the first item and Down on the last. A move copies the array, takes the item out with `splice`, puts it back one position over with a second `splice`, and stores the copy. Key every LI by the step's `id`, so when Build moves down the same LI element travels with it instead of being re-labelled, and the order reads Plan, Test, Build, Ship.",
+    prompt: "Render `initialSteps` as an OL. Each LI shows the label plus Up and Down buttons; disable Up on the first item and Down on the last. For a move, copy the array, remove the item with `splice`, insert it one position over with another `splice`, and store the copy. Key each LI by the step’s `id`. Moving Build down should produce Plan, Test, Build, Ship while preserving the same LI element.",
     starter: `${STARTER_IMPORT}
 
 const initialSteps = [

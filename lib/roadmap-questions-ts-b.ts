@@ -7,7 +7,7 @@ import type { Seed } from './roadmap-build';
 export const tsSeedsB: Seed[] = [
   // ── Level 1 — Basic Types ──────────────────────────────────────────────
   { q: 'What happens?\n\n```ts\nlet x: string;\nx = 42;\n```', opts: ['Compiles', 'Type error', 'x is 42', 'Runtime error'], a: 1, e: 'A number is not assignable to a string variable.', tags: ['Types', 'Errors'] },
-  { q: 'What type is n?\n\n```ts\nconst n: number = 3.14;\n```', opts: ['number', '3.14', 'float', 'any'], a: 0, e: 'There is no float type; all numbers are number.', tags: ['Types'] },
+  { q: 'Which declaration compiles with TypeScript’s built-in numeric type?\n\n```ts\n// Choose one\n```', opts: ['const n: number = 3.14;', 'const n: float = 3.14;', 'const n: integer = 3;', 'const n: decimal = 3.14;'], a: 0, e: 'TypeScript uses number for ordinary floating-point and integer values; float, integer, and decimal are not built-in types.', tags: ['Types'] },
   { q: 'What happens?\n\n```ts\nlet u: undefined = undefined;\n```', opts: ['Type error', 'Compiles', 'u is null', 'Runtime error'], a: 1, e: 'undefined is a valid value for the undefined type.', tags: ['Types'] },
   { q: 'What happens?\n\n```ts\nlet x: null = 0;\n```', opts: ['Compiles', 'Type error', 'x is 0', 'null'], a: 1, e: '0 is not assignable to the null type.', tags: ['Types', 'Errors'] },
 
@@ -19,7 +19,7 @@ export const tsSeedsB: Seed[] = [
 
   // ── Level 3 — Function Types ───────────────────────────────────────────
   { q: 'What happens?\n\n```ts\nconst f: () => void = () => 5;\n```', opts: ['Type error', 'Compiles', 'Runtime error', 'f returns 5'], a: 1, e: 'A function returning a value is assignable to a () => void type; the result is just ignored.', tags: ['Functions', 'void'] },
-  { q: 'What return type does cb expect?\n\n```ts\nfunction run(cb: (n: number) => number) {}\n```', opts: ['void', 'number', 'any', 'string'], a: 1, e: 'The callback type declares it must return a number.', tags: ['Functions'] },
+  { q: 'Which callback satisfies run’s parameter type?\n\n```ts\nfunction run(cb: (n: number) => number) {}\n```', opts: ['n => console.log(n)', 'n => n * 2', 'n => String(n)', '(n: string) => n.length'], a: 1, e: 'run requires a callback that accepts a number and returns a number. n => n * 2 matches both parts.', tags: ['Functions'] },
   { q: 'What is the inferred return type?\n\n```ts\nconst g = (a: number, b: number) => a > b;\n```', opts: ['number', 'boolean', 'void', 'any'], a: 1, e: 'A comparison returns a boolean.', tags: ['Functions', 'Inference'] },
   { q: 'What does f(1, 2, 3) return?\n\n```ts\nfunction f(...nums: number[]): number {\n  return nums.length;\n}\nf(1, 2, 3);\n```', opts: ['3', 'a number', '[1, 2, 3]', 'Error'], a: 0, e: 'The rest parameter collects 3 arguments, so length is 3.', tags: ['Functions', 'Rest'] },
 

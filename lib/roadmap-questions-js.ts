@@ -6,38 +6,38 @@ import type { Seed } from './roadmap-build';
 
 export const jsSeedsA: Seed[] = [
   // ── Level 1 — Values & Math ────────────────────────────────────────────
-  { q: 'What does this return?\n\n```js\n2 ** 3;\n```', opts: ['6', '8', '9', '5'], a: 1, e: 'The ** operator is exponentiation: 2 to the power of 3 is 8.', tags: ['Numbers', 'Operators'] },
-  { q: 'What is the result?\n\n```js\n10 % 3;\n```', opts: ['0', '1', '3', '3.33'], a: 1, e: 'The % (modulo) operator returns the remainder of 10 / 3, which is 1.', tags: ['Numbers', 'Operators'] },
+  { q: 'What is the result after exponentiation runs before addition?\n\n```js\n2 ** 3 + 1;\n```', opts: ['16', '9', '7', '6'], a: 1, e: '** raises 2 to the third power first, giving 8, and then + 1 gives 9.', tags: ['Numbers', 'Operators'] },
+  { q: 'A grid has 17 items and 5 columns. Which value is the number of items in the final incomplete row?\n\n```js\n17 % 5;\n```', opts: ['3', '2', '5', '3.4'], a: 1, e: '% returns the remainder after division. 17 leaves a remainder of 2 when divided by 5.', tags: ['Numbers', 'Operators'] },
   { q: 'What does this evaluate to?\n\n```js\ntypeof 42;\n```', opts: ['"number"', '"integer"', '"42"', '"NaN"'], a: 0, e: 'typeof returns a string naming the type. All JS numbers are of type "number".', tags: ['typeof', 'Numbers'] },
-  { q: 'What is returned?\n\n```js\nMath.max(1, 5, 3);\n```', opts: ['1', '3', '5', '9'], a: 2, e: 'Math.max returns the largest of its arguments, which is 5.', tags: ['Math', 'Numbers'] },
+  { q: 'What is returned when spread passes the array items as separate arguments?\n\n```js\nMath.max(...[1, 5, 3]);\n```', opts: ['1', '3', '5', 'NaN'], a: 2, e: 'Spread turns the array into three arguments, so Math.max compares 1, 5, and 3 and returns 5.', tags: ['Math', 'Numbers'] },
 
   // ── Level 2 — Strings ──────────────────────────────────────────────────
-  { q: 'What is the value?\n\n```js\n"hello".length;\n```', opts: ['4', '5', '6', 'undefined'], a: 1, e: 'String length counts characters: "hello" has 5.', tags: ['Strings'] },
-  { q: 'What does this return?\n\n```js\n"abc".toUpperCase();\n```', opts: ['"abc"', '"ABC"', '"Abc"', 'Error'], a: 1, e: 'toUpperCase returns a new string with every letter capitalized.', tags: ['Strings', 'Methods'] },
+  { q: 'What is the value after removing the first character?\n\n```js\n"hello".slice(1).length;\n```', opts: ['3', '4', '5', '6'], a: 1, e: 'slice(1) returns "ello", whose length is 4.', tags: ['Strings'] },
+  { q: 'What does the method chain return?\n\n```js\n"Abc".toUpperCase().slice(1);\n```', opts: ['"bc"', '"BC"', '"ABC"', '"Bc"'], a: 1, e: 'toUpperCase creates "ABC"; slice(1) then returns "BC".', tags: ['Strings', 'Methods'] },
   { q: 'What is the result?\n\n```js\n"hello".slice(1, 3);\n```', opts: ['"he"', '"ell"', '"el"', '"llo"'], a: 2, e: 'slice(1, 3) takes characters from index 1 up to (not including) index 3: "el".', tags: ['Strings', 'Methods'] },
-  { q: 'What does this return?\n\n```js\n"a,b,c".split(",");\n```', opts: ['["a","b","c"]', '"abc"', '["a,b,c"]', '["a", "b", "c", ""]'], a: 0, e: 'split(",") breaks the string at each comma into an array of three items.', tags: ['Strings', 'Arrays'] },
+  { q: 'How does split represent the missing value between two commas?\n\n```js\n"a,,c".split(",");\n```', opts: ['["a", "", "c"]', '["a", "c"]', '["a,,c"]', '["a", null, "c"]'], a: 0, e: 'Each comma is a separator, so the text between the adjacent commas becomes an empty string.', tags: ['Strings', 'Arrays'] },
 
   // ── Level 3 — Booleans & Comparison ────────────────────────────────────
   { q: 'What does this return?\n\n```js\n1 === "1";\n```', opts: ['true', 'false', 'undefined', 'Error'], a: 1, e: '=== is strict equality and does not convert types. A number and a string are never strictly equal.', tags: ['Comparison', 'Equality'] },
   { q: 'What does this return?\n\n```js\n1 == "1";\n```', opts: ['true', 'false', 'undefined', 'Error'], a: 0, e: '== performs type coercion, converting "1" to the number 1 before comparing, so it is true.', tags: ['Comparison', 'Coercion'] },
   { q: 'What does this evaluate to?\n\n```js\n3 > 2 > 1;\n```', opts: ['true', 'false', '1', 'Error'], a: 1, e: 'It evaluates left to right: (3 > 2) is true, then true > 1 becomes 1 > 1, which is false.', tags: ['Comparison', 'Gotchas'] },
-  { q: 'What is returned?\n\n```js\nBoolean(0);\n```', opts: ['true', 'false', '0', 'undefined'], a: 1, e: '0 is a falsy value, so Boolean(0) is false.', tags: ['Booleans', 'Coercion'] },
+  { q: 'What is returned after the failed number conversion?\n\n```js\nBoolean(Number("not a number"));\n```', opts: ['true', 'false', 'NaN', 'undefined'], a: 1, e: 'Number returns NaN for this text. NaN is falsy, so Boolean(NaN) returns false.', tags: ['Booleans', 'Coercion'] },
 
   // ── Level 4 — Arrays: Basics ───────────────────────────────────────────
-  { q: 'What is the value?\n\n```js\n[1, 2, 3].length;\n```', opts: ['2', '3', '4', 'undefined'], a: 1, e: 'The array has three elements, so length is 3.', tags: ['Arrays'] },
-  { q: 'What does this return?\n\n```js\n[1, 2, 3].indexOf(2);\n```', opts: ['0', '1', '2', '-1'], a: 1, e: 'indexOf returns the index of the first match. The value 2 is at index 1.', tags: ['Arrays', 'Methods'] },
-  { q: 'What does this return?\n\n```js\n[1, 2, 3].includes(4);\n```', opts: ['true', 'false', 'undefined', '-1'], a: 1, e: 'includes checks membership. 4 is not in the array, so it returns false.', tags: ['Arrays', 'Methods'] },
-  { q: 'What is the result?\n\n```js\n["a", "b"].join("-");\n```', opts: ['"ab"', '"a-b"', '"a, b"', '["a-b"]'], a: 1, e: 'join glues the elements together using the given separator: "a-b".', tags: ['Arrays', 'Methods'] },
+  { q: 'What is the array length after assigning index 2?\n\n```js\nconst items = [];\nitems[2] = "x";\nitems.length;\n```', opts: ['2', '3', '1', 'undefined'], a: 1, e: 'Assigning index 2 creates a sparse array whose highest index is 2, so length is 3.', tags: ['Arrays'] },
+  { q: 'What does indexOf return when the value has a different type?\n\n```js\n[1, 2, 3].indexOf("2");\n```', opts: ['1', '-1', '2', 'undefined'], a: 1, e: 'indexOf uses strict equality. The string "2" does not match the number 2, so it returns -1.', tags: ['Arrays', 'Methods'] },
+  { q: 'What does includes return when the value has a different type?\n\n```js\n[1, 2, 3].includes("2");\n```', opts: ['true', 'false', '-1', 'undefined'], a: 1, e: 'includes does not coerce the searched value. The string "2" is not one of the numeric items.', tags: ['Arrays', 'Methods'] },
+  { q: 'What does join place between null and its neighbors?\n\n```js\n["a", null, "b"].join("-");\n```', opts: ['"a-null-b"', '"a--b"', '"a-b"', '["a", "b"]'], a: 1, e: 'join converts null and undefined array items to empty text, so both separators remain and the result is "a--b".', tags: ['Arrays', 'Methods'] },
 
   // ── Level 5 — Objects: Basics ──────────────────────────────────────────
-  { q: 'What does this return?\n\n```js\nconst o = { a: 1 };\no.a;\n```', opts: ['1', 'undefined', '"a"', 'Error'], a: 0, e: 'o.a reads the value stored under key "a", which is 1.', tags: ['Objects'] },
+  { q: 'What does the computed property access return?\n\n```js\nconst key = "a";\nconst o = { a: 1 };\no[key];\n```', opts: ['1', 'undefined', '"a"', 'Error'], a: 0, e: 'Bracket notation evaluates key to "a" and reads the value stored at that property.', tags: ['Objects'] },
   { q: 'What does this return?\n\n```js\nObject.keys({ a: 1, b: 2 });\n```', opts: ['["a", "b"]', '[1, 2]', '["a:1", "b:2"]', '2'], a: 0, e: 'Object.keys returns an array of the object’s property names.', tags: ['Objects', 'Methods'] },
   { q: 'What is the result?\n\n```js\nconst o = {};\no.x;\n```', opts: ['null', 'undefined', 'Error', '0'], a: 1, e: 'Reading a property that does not exist returns undefined (it does not throw).', tags: ['Objects'] },
   { q: 'What does this return?\n\n```js\nObject.values({ a: 1, b: 2 });\n```', opts: ['["a", "b"]', '[1, 2]', '{ a: 1, b: 2 }', '2'], a: 1, e: 'Object.values returns an array of the property values: [1, 2].', tags: ['Objects', 'Methods'] },
 
   // ── Level 6 — Array Iteration (map/forEach) ────────────────────────────
   { q: 'What does this return?\n\n```js\n[1, 2, 3].map(x => x * 2);\n```', opts: ['[1, 2, 3]', '[2, 4, 6]', '6', '[1, 4, 9]'], a: 1, e: 'map builds a new array by applying the function to each element: each doubled.', tags: ['Arrays', 'map'] },
-  { q: 'What is the result?\n\n```js\n[1, 2, 3].map(x => x * x);\n```', opts: ['[1, 4, 9]', '[2, 4, 6]', '[1, 2, 3]', '14'], a: 0, e: 'Each element is squared: 1, 4, 9.', tags: ['Arrays', 'map'] },
+  { q: 'map passes both the value and index. What is the result?\n\n```js\n[1, 2, 3].map((value, index) => value + index);\n```', opts: ['[1, 3, 5]', '[1, 2, 3]', '[0, 1, 2]', '[2, 4, 6]'], a: 0, e: 'The callback adds indexes 0, 1, and 2 to the corresponding values, producing [1, 3, 5].', tags: ['Arrays', 'map'] },
   { q: 'What is the value of r?\n\n```js\nconst r = [1, 2].forEach(x => x);\nr;\n```', opts: ['[1, 2]', 'undefined', '2', '[undefined, undefined]'], a: 1, e: 'forEach always returns undefined; it is used for side effects, not for building a value.', tags: ['Arrays', 'forEach'] },
   { q: 'What does this return?\n\n```js\n["a", "b", "c"].map((x, i) => i);\n```', opts: ['[0, 1, 2]', '["a", "b", "c"]', '[1, 2, 3]', '3'], a: 0, e: 'The second map argument is the index, so it returns each element’s index.', tags: ['Arrays', 'map'] },
 
