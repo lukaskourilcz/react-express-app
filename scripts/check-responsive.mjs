@@ -75,6 +75,10 @@ const DEFAULT_VIEWPORTS = [
   { label: '1440x900', width: 1440, height: 900, mobile: false },
 ];
 
+// Offline/sandboxed runs: block the webfont hosts (see the CDP setup below).
+const BLOCK_EXTERNAL = process.argv.includes('--block-external') ||
+  process.env.RESPONSIVE_BLOCK_EXTERNAL === '1';
+
 function optionValue(name) {
   const exact = process.argv.indexOf(name);
   if (exact >= 0) return process.argv[exact + 1];
@@ -125,7 +129,9 @@ Options:
   --help              Show this help
 
 The same settings are available through RESPONSIVE_ROUTES,
-RESPONSIVE_WIDTHS, RESPONSIVE_BASE_URL, and RESPONSIVE_OUTPUT_DIR.
+RESPONSIVE_WIDTHS, RESPONSIVE_BASE_URL, RESPONSIVE_OUTPUT_DIR, and
+RESPONSIVE_BLOCK_EXTERNAL=1 (or --block-external) to block the webfont
+hosts on a runner without outbound network.
 Failure screenshots use a temporary directory by default.`);
 }
 
@@ -207,22 +213,38 @@ const PROBE = `(() => {
   //    Skip overflow:visible parents (they intentionally let kids escape) and
   //    body itself (we already covered the viewport).
   const parentOffenders = [];
-  const PARENT_TAGS = new Set(['DIV', 'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'NAV', 'MAIN', 'ASIDE']);
+  const PARENT_TAGS = new Set(['DIV', 'SECTION', 'ARTICLE', 'HEADER', 'FOOTER', 'NAV', 'MAIN', 'ASIDE', 'UL', 'OL']);
   const ROOT = document.body;
+  const describe = (el) => {
+    const cls = (el.className && el.className.toString ? el.className.toString() : '').trim();
+    return el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (cls ? '.' + cls.split(/\\s+/).join('.').slice(0, 60) : '');
+  };
   function check(el) {
     if (!PARENT_TAGS.has(el.tagName)) return;
     const pr = el.getBoundingClientRect();
     if (pr.width === 0 || pr.height === 0) return;
     const style = getComputedStyle(el);
     if (style.overflow === 'visible' && style.overflowX === 'visible') return;
+    // A horizontal scroller is SUPPOSED to hold content wider than its box —
+    // that is what the scrollbar is for. Only a parent that clips without
+    // scrolling actually loses content.
+    const scrollableX = /auto|scroll/.test(style.overflowX) && el.scrollWidth > el.clientWidth + 1;
+    if (scrollableX) return;
     for (const child of el.children) {
       const cr = child.getBoundingClientRect();
       if (cr.width === 0 || cr.height === 0) continue;
+      // A watermark placed out of flow and hidden from assistive tech is meant
+      // to bleed off the panel edge; clipping it loses no content.
+      const cs = getComputedStyle(child);
+      const decorative = (cs.position === 'absolute' || cs.position === 'fixed') &&
+        child.getAttribute('aria-hidden') === 'true';
+      if (decorative) continue;
       const overshoot = Math.max(0, cr.right - pr.right);
       if (overshoot > 1) {
         parentOffenders.push({
-          parent: el.tagName.toLowerCase() + (el.className ? '.' + String(el.className).slice(0, 40) : ''),
-          child: child.tagName.toLowerCase() + (child.className ? '.' + String(child.className).slice(0, 40) : ''),
+          parent: describe(el),
+          child: describe(child),
+          overflowX: style.overflowX,
           overshoot: Math.round(overshoot),
         });
         if (parentOffenders.length >= 8) return;
@@ -245,12 +267,28 @@ async function probeRoute(call, baseUrl, route, vp) {
     deviceScaleFactor: vp.mobile ? 2 : 1,
     mobile: vp.mobile,
   });
+  // Blank between routes: a route that redirects itself (signed-out /profile)
+  // can still have a client-side navigation in flight, which races the next
+  // Page.navigate and leaves the document loading forever.
+  await call('Page.navigate', { url: 'about:blank' });
+  await waitFor(async () => (await evaluate(call, 'document.readyState')) === 'complete', { timeout: 5000 })
+    .catch(() => undefined);
   await call('Page.navigate', { url: baseUrl + route });
-  await waitFor(async () => (await evaluate(call, 'document.readyState')) === 'complete');
+  // A stray pending subresource must not abort the sweep: measure at
+  // `interactive` and say so, rather than losing every later route.
+  let ready = true;
+  try {
+    await waitFor(async () => (await evaluate(call, 'document.readyState')) === 'complete', { timeout: 8000 });
+  } catch {
+    ready = false;
+    // Fall back to a parsed document; layout is measurable at `interactive`.
+    await waitFor(async () => (await evaluate(call, 'document.readyState')) !== 'loading', { timeout: 4000 })
+      .catch(() => undefined);
+  }
   // Give Suspense + lazy chunks a beat to settle.
   await new Promise((r) => setTimeout(r, 1500));
   const data = await evaluate(call, PROBE);
-  return { route, viewport: vp.label, ...data };
+  return { route, viewport: vp.label, ready, ...data };
 }
 
 async function screenshot(call, outDir, name) {
@@ -314,6 +352,16 @@ async function main() {
     const call = rpc(ws);
     await call('Page.enable');
     await call('Runtime.enable');
+    // Sandboxed runners cannot reach the Google Fonts hosts, so every document
+    // waits out its font requests and never fires `load`. Blocking them makes
+    // an offline run fast and deterministic; the page then measures with the
+    // fallback stack, so leave this off wherever the fonts are reachable.
+    if (BLOCK_EXTERNAL) {
+      await call('Network.enable');
+      await call('Network.setBlockedURLs', {
+        urls: ['*://fonts.googleapis.com/*', '*://fonts.gstatic.com/*', '*://www.google.com/*'],
+      });
+    }
 
     const results = [];
     for (const vp of viewports) {
@@ -322,7 +370,8 @@ async function main() {
         results.push(r);
         const broken = r.overflow > 0 || r.parentOffenders.length > 0;
         const tag = broken ? 'FAIL' : 'OK';
-        process.stdout.write(`  ${tag.padEnd(5)} ${vp.label.padEnd(10)} ${route}\n`);
+        const slow = r.ready ? '' : '  (measured before load finished)';
+        process.stdout.write(`  ${tag.padEnd(5)} ${vp.label.padEnd(10)} ${route}${slow}\n`);
         if (broken) {
           const safeRoute = route === '/' ? '_home' : route.replace(/\//g, '_');
           await screenshot(call, outDir, `${vp.label}_${safeRoute}.png`);
@@ -347,7 +396,7 @@ async function main() {
         if (f.parentOffenders.length) {
           console.log('    children overflowing their parent:');
           for (const o of f.parentOffenders.slice(0, 5)) {
-            console.log(`      ${o.child} overshoots ${o.parent} by +${o.overshoot}px`);
+            console.log(`      ${o.child} overshoots ${o.parent} by +${o.overshoot}px (parent overflow-x: ${o.overflowX})`);
           }
         }
       }

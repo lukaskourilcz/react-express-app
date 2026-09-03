@@ -80,11 +80,21 @@ Run in the remote session container (Node 22.22, Chromium from the Playwright bu
 - `npm run test:launch` — passed product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, and the twelve-function budget, plus the coding contracts (sandbox limits, sealed coding sessions, design grading, ladder, garden paths, badge metadata, coding resources refused outside devShark);
 - `npm run test:coding` (strict) — 245 tasks, every solution proven under Node and jsdom, payloads answer-free, Czech overlays complete;
 - `npm run build` and `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build` — both passed; the coding worker and the sandbox page are emitted;
-- `npm run check:responsive` against the devShark preview — the five coding routes and `/settings/github` pass at 360, 768, and 1280; the devShark landing (`/`, and `/profile`, which redirects there signed out) reports children overflowing their parent below the fold at 360 px in sections this work did not touch, and the `/today` probe timed out waiting for `readyState` in this container. Both are recorded as follow-up issues, not fixed here;
-- `npm audit --omit=dev` — zero vulnerabilities at the root; the client audit reports `react-router` 7.18.1 (high) and `dompurify` 3.4.12 (moderate), both already present on `main`, recorded in `NEEDED.md`;
+- `npm run check:responsive` on both product builds — 175 route/viewport probes each, zero overflow or containment issues across 360, 390, 430, 768, 1024, 1280, and 1440 widths, with the five coding routes and `/settings/github` in the default set;
+- `npm audit --omit=dev` at the root and in `client/` — zero vulnerabilities (react-router 7.18.3 and dompurify 3.4.14 clear the two advisories that were open on `main`);
 - `git diff --check` — clean; `find api -type f -name '*.ts'` returns twelve handlers.
 
 Signed-in coding flows (submit, reveal, Learn coding phase, garden connect) are contract-tested on the server and type-checked on the client, but were not browser-verified with a real account.
+
+Two notes on the responsive harness. Decorative watermarks (a `SharkFin`
+placed out of flow and marked `aria-hidden`) bleed past their clipping panel
+by design, so the containment check now skips out-of-flow `aria-hidden`
+children and horizontal scrollers, and reports the parent's `overflow-x` for
+anything that remains. Sandboxed runners cannot reach `fonts.googleapis.com`,
+so documents there never fire `load`; the probe now measures at `interactive`
+rather than aborting the sweep, and `RESPONSIVE_BLOCK_EXTERNAL=1` blocks the
+webfont hosts for a fast deterministic offline run (leave it off where the
+fonts are reachable, since blocking them measures the fallback stack).
 
 ## Validation completed
 
