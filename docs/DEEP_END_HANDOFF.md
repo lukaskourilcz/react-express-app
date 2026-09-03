@@ -68,6 +68,24 @@ The latest Profile milestone keeps the streak in the first scan path for both St
 
 Two concise EN/CS consistency notes now sit between meaningful Profile sections. They encourage repeatable routines and spaced review without guilt, artificial urgency, or streak-loss pressure. StudyShark no longer ends a populated Profile with “Back to quiz”; the standalone devShark product keeps that contextual return action. The milestone also improves section headings, streak metric labelling, plural day units, achievement list/state semantics, contrast, and touch targets.
 
+### 6. Coding section, Learn coding phase, and GitHub garden (2026-09-03)
+
+The interview-prepper catalogue now lives in `lib/coding/` (245 tasks with Czech overlays, solutions server-only, a content contract in `npm run test:coding`). devShark gained the `/coding` section with the CodeMirror workbench, the module-worker runner, the self-hosted React harness, the system-design runner, the review queue, coding tasks inside the JavaScript, TypeScript, and React Learn levels, the tier ladder, five coding badges, a Today section for due reviews, a level-map marker, and the GitHub garden (App JWT, installation tokens, one file per passed task, queue and sync, profile card, `/settings/github` callback, privacy notice). Grading is server-owned for JavaScript, TypeScript, and system design; React verdicts are browser-graded and recorded unverified. devShark ships no AI feature. Migration 025 adds the storage; `npm run import:interview-prepper` is the one-time owner import. `docs/coding-integration-plan.md` section 13 lists the deviations from the issue text.
+
+## Validation completed (coding integration, 2026-09-03)
+
+Run in the remote session container (Node 22.22, Chromium from the Playwright bundle):
+
+- `npm run typecheck:api` — passed;
+- `npm run test:launch` — passed product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, and the twelve-function budget, plus the coding contracts (sandbox limits, sealed coding sessions, design grading, ladder, garden paths, badge metadata, coding resources refused outside devShark);
+- `npm run test:coding` (strict) — 245 tasks, every solution proven under Node and jsdom, payloads answer-free, Czech overlays complete;
+- `npm run build` and `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build` — both passed; the coding worker and the sandbox page are emitted;
+- `npm run check:responsive` against the devShark preview — the five coding routes and `/settings/github` pass at 360, 768, and 1280; the devShark landing (`/`, and `/profile`, which redirects there signed out) reports children overflowing their parent below the fold at 360 px in sections this work did not touch, and the `/today` probe timed out waiting for `readyState` in this container. Both are recorded as follow-up issues, not fixed here;
+- `npm audit --omit=dev` — zero vulnerabilities at the root; the client audit reports `react-router` 7.18.1 (high) and `dompurify` 3.4.12 (moderate), both already present on `main`, recorded in `NEEDED.md`;
+- `git diff --check` — clean; `find api -type f -name '*.ts'` returns twelve handlers.
+
+Signed-in coding flows (submit, reveal, Learn coding phase, garden connect) are contract-tested on the server and type-checked on the client, but were not browser-verified with a real account.
+
 ## Validation completed
 
 Final validation for the current handoff used `/opt/homebrew/bin/node` 23.1.0 (the default shell still resolves Node 20, so keep the PATH override):
@@ -93,6 +111,8 @@ Final validation for the current handoff used `/opt/homebrew/bin/node` 23.1.0 (t
 ## Known technical limitation to keep visible
 
 Challenge proof collection is materially stronger, but without a server-side append-only attempt ledger a determined client may still omit earlier proof batches. Do not claim cryptographic completeness. A complete fix must fit an existing typed handler and preserve the twelve-function limit.
+
+React coding tasks are graded in the browser harness and recorded with `verified=false`: the server accepts the reported verdict for XP and progress. Treat React passes as self-reported until a server-side React grader exists; the JavaScript, TypeScript, and system-design verdicts are server-graded.
 
 ## Generated-media production continuation
 
