@@ -44,7 +44,7 @@ function purgeAstryxCss(): Plugin {
           keyframes: false, // all @keyframes kept (some are toggled at runtime)
           fontFace: false, // all @font-face kept
           safelist: {
-            standard: [/^ss-/, /^rm-/, /^quiz-/, /^devshark/, 'html', 'body'],
+            standard: [/^ss-/, /^rm-/, /^quiz-/, /^devshark/, /^cd-/, /^cm-/, 'html', 'body'],
             // Attribute/state selectors composed at runtime.
             greedy: [/data-theme/, /data-color-mode/, /data-selected/, /data-active/, /data-tone/, /data-locked/, /data-complete/],
           },

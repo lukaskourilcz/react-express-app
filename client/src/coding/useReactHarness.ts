@@ -30,6 +30,8 @@ export interface HarnessHandle {
   start: (files: Record<string, string>, options: { tests: boolean; preview: boolean }) => Promise<HarnessRun>;
   reload: () => void;
   iframeRef: (node: HTMLIFrameElement | null) => void;
+  /** Changes on reload; use it as the iframe's React key so the frame remounts. */
+  frameKey: number;
 }
 
 const newToken = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -142,6 +144,5 @@ export function useReactHarness(): HarnessHandle {
     if (!node) setReady(false);
   }, []);
 
-  // A remount of the frame (reload) needs a fresh `src`; expose the key through the ref callback's identity.
-  return useMemo(() => ({ ready, run, start, reload, iframeRef: Object.assign(iframeRef, { key: frameKey }) }), [ready, run, start, reload, iframeRef, frameKey]);
+  return useMemo(() => ({ ready, run, start, reload, iframeRef, frameKey }), [ready, run, start, reload, iframeRef, frameKey]);
 }
