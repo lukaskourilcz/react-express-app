@@ -41,14 +41,13 @@ const BROAD_TAGS = new Set([
   'devops', 'security', 'testing', 'general', 'web', 'frontend', 'backend',
 ]);
 
-const GENERIC_HINT = "Focus on the core idea being tested and rule out the options that clearly don't fit.";
+const GENERIC_HINT = 'Name the requirement or behavior first, then compare the options against it.';
 
 /**
  * A short, non-spoiling "little push" derived from a question's shape, so every
- * question shows a relevant hint on how to approach it instead of one generic
- * line repeated across the whole bank. Code questions get a tracing nudge;
- * "which / what is" questions get an elimination / recall nudge, etc. We also
- * name the most specific tag when there is one ("…Think about closures.").
+ * question shows a relevant hint on how to reason about the concept. Hints
+ * should help learners recall or trace the material; they must not teach
+ * test-taking tricks such as choosing the only option that sounds technical.
  */
 function hintFor(seed: Seed): string {
   const lower = seed.q.toLowerCase();
@@ -56,22 +55,22 @@ function hintFor(seed: Seed): string {
 
   let base: string;
   if (hasCode && /(return|output|print|log|console|result|evaluate|value|what does|what will|what is)/.test(lower)) {
-    base = 'Trace the code line by line, tracking how each value changes, then match your result to an option.';
+    base = 'Trace the code one line at a time. Write down each value before choosing.';
   } else if (hasCode) {
-    base = 'Read the code slowly and run it in your head before scanning the answers.';
+    base = 'Read the code once for control flow, then again for the values that change.';
   } else if (/^\s*which\b/.test(lower) || lower.includes('which of')) {
-    base = "Eliminate the options you can rule out first — the answer is often what's left.";
+    base = 'Identify the requirement or failure mode first, then compare the trade-offs.';
   } else if (lower.includes('true or false') || /^\s*(is|are|does|do|can|will|should|has|have)\b/.test(lower)) {
-    base = 'Decide whether it holds in general, and watch for the edge cases.';
+    base = 'Check the statement against the normal case and one likely edge case.';
   } else if (/(what is|what does|purpose of|used for|meaning of|stands? for|difference between|when (to|should))/.test(lower)) {
-    base = 'Recall what the concept is for, then pick the option that matches its purpose.';
+    base = 'Explain the term in your own words, including when you would use it.';
   } else {
     base = GENERIC_HINT;
   }
 
   // Name the most specific (non-broad) tag for a topic nudge, if any.
   const specific = [...seed.tags].reverse().find((tg) => !BROAD_TAGS.has(tg.toLowerCase().trim()));
-  return specific ? `${base} Think about ${specific}.` : base;
+  return specific ? `${base} Focus on ${specific}.` : base;
 }
 
 export function levelForIndex(i: number): number {

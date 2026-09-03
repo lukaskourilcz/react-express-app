@@ -5,11 +5,11 @@ import type { Seed } from './roadmap-build';
 
 export const htmlSeeds: Seed[] = [
   // ── Level 1 — HTML Basics ──────────────────────────────────────────────
-  { q: 'What does HTML stand for?', opts: ['HyperText Markup Language', 'Hyperlink Text Mode Language', 'High-level Text Markup', 'Home Tool Markup Language'], a: 0, e: 'HTML is HyperText Markup Language — the markup that structures web pages.', tags: ['HTML', 'Basics'] },
+  { q: 'Which language gives headings, links, forms, and articles their structure and meaning in a web document?', opts: ['HTML', 'CSS', 'JavaScript', 'HTTP'], a: 0, e: 'HTML means HyperText Markup Language. It marks up the structure and semantics of a web document.', tags: ['HTML', 'Basics'] },
   { q: 'What is HTML used for?', opts: ['Styling pages', 'Structuring the content of web pages', 'Adding interactivity', 'Querying databases'], a: 1, e: 'HTML defines the structure and meaning of content; CSS styles it and JavaScript adds behavior.', tags: ['HTML', 'Basics'] },
   { q: 'How is a typical HTML element written?', opts: ['{tag}', '<tag>content</tag>', '[tag]', 'tag()'], a: 1, e: 'Most elements have an opening tag, content, and a closing tag: <tag>content</tag>.', tags: ['HTML', 'Basics'] },
   { q: 'Which is a valid HTML comment?', opts: ['// comment', '/* comment */', '<!-- comment -->', '# comment'], a: 2, e: 'HTML comments are written as <!-- ... --> and are not rendered.', tags: ['HTML', 'Basics'] },
-  { q: 'What extension do HTML files usually have?', opts: ['.htm5', '.html', '.web', '.page'], a: 1, e: 'HTML files use the .html (or .htm) extension.', tags: ['HTML', 'Basics'] },
+  { q: 'Which file would a static server normally send with the text/html media type?', opts: ['styles.css', 'index.html', 'app.js', 'data.json'], a: 1, e: 'An .html file contains an HTML document and is normally served as text/html.', tags: ['HTML', 'Basics'] },
   { q: 'Tags with no content or closing tag (like `<br>`) are called:', opts: ['Block elements', 'Void (empty) elements', 'Inline scripts', 'Comments'], a: 1, e: 'Void elements such as <br>, <img>, and <input> have no closing tag.', tags: ['HTML', 'Basics'] },
   { q: 'What reads HTML and displays the page?', opts: ['A compiler', 'A web browser (rendering engine)', 'A database', 'A server only'], a: 1, e: 'The browser’s rendering engine parses HTML and paints the page.', tags: ['HTML', 'Basics'] },
   { q: 'HTML primarily describes a page’s:', opts: ['Exact pixels', 'Structure and meaning, not exact appearance', 'Server logic', 'Database schema'], a: 1, e: 'HTML conveys structure and semantics; appearance is the job of CSS.', tags: ['HTML', 'Basics'] },
@@ -22,12 +22,12 @@ export const htmlSeeds: Seed[] = [
   { q: 'What does `<title>` set?', opts: ['A heading on the page', 'The text shown in the browser tab/title bar', 'A paragraph', 'A link'], a: 1, e: 'The title appears in the browser tab and bookmarks, not on the page itself.', tags: ['HTML', 'Structure'] },
   { q: 'Which nesting is correct?', opts: ['<body> contains <html>', '<head> contains <body>', '<html> contains <head> and <body>', '<title> contains <html>'], a: 2, e: 'The <html> element contains both <head> and <body>.', tags: ['HTML', 'Structure'] },
   { q: 'What does `<meta charset="UTF-8">` set?', opts: ['The language', 'The character encoding', 'The title', 'The author'], a: 1, e: 'It declares the document’s character encoding so text renders correctly.', tags: ['HTML', 'Structure'] },
-  { q: 'Where does `<title>` belong?', opts: ['Inside <body>', 'Inside <head>', 'Before <!DOCTYPE>', 'Inside <footer>'], a: 1, e: 'The <title> element is placed inside <head>.', tags: ['HTML', 'Structure'] },
+  { q: 'A page title should appear in the browser tab and document metadata, not as visible body content. Where does `<title>` belong?', opts: ['Inside <body>', 'Inside <head>', 'Inside <header>', 'Inside the first <h1>'], a: 1, e: 'The title element is document metadata, so it belongs in head. A visible page heading uses h1 in the body.', tags: ['HTML', 'Structure'] },
 
   // ── Level 3 — Text Elements ────────────────────────────────────────────
   { q: 'What are `<h1>`–`<h6>`?', opts: ['Horizontal rules', 'Headings, from most to least important', 'Highlights', 'Links'], a: 1, e: '<h1> is the top-level heading and <h6> the lowest; they convey document hierarchy.', tags: ['HTML', 'Text'] },
-  { q: 'What does `<p>` define?', opts: ['A page', 'A paragraph', 'A panel', 'A placeholder'], a: 1, e: '<p> marks a paragraph of text.', tags: ['HTML', 'Text'] },
-  { q: 'What does `<br>` do?', opts: ['A bold run', 'A line break', 'A border', 'A bullet'], a: 1, e: '<br> inserts a single line break within text.', tags: ['HTML', 'Text'] },
+  { q: 'Which element gives this block of prose paragraph semantics instead of acting as a generic container?', opts: ['<div>', '<p>', '<span>', '<section>'], a: 1, e: 'p represents a paragraph. div and span are generic containers, while section groups a thematic part of a document.', tags: ['HTML', 'Text'] },
+  { q: 'A postal address needs a line break without starting a separate paragraph. Which element fits?', opts: ['<strong>', '<br>', '<hr>', '<li>'], a: 1, e: 'br creates a line break within content where the break itself is meaningful, such as an address or poem.', tags: ['HTML', 'Text'] },
   { q: 'What does `<strong>` convey?', opts: ['Italic emphasis', 'Strong importance (typically bold)', 'Strikethrough', 'Small text'], a: 1, e: '<strong> marks content as strongly important; browsers usually render it bold.', tags: ['HTML', 'Text'] },
   { q: 'What does `<em>` convey?', opts: ['Bold', 'Emphasis (typically italic)', 'Underline', 'Code'], a: 1, e: '<em> stresses emphasis; browsers usually render it italic.', tags: ['HTML', 'Text'] },
   { q: 'What does `<hr>` represent?', opts: ['A header', 'A thematic break (horizontal rule)', 'A hyperlink', 'A table row'], a: 1, e: '<hr> denotes a thematic break between sections.', tags: ['HTML', 'Text'] },
@@ -45,9 +45,9 @@ export const htmlSeeds: Seed[] = [
   { q: 'For a purely decorative image, good alt text is:', opts: ['A long description', 'Empty (alt="")', '"image"', 'The file name'], a: 1, e: 'alt="" tells assistive tech to skip a decorative image.', tags: ['HTML', 'Images'] },
 
   // ── Level 5 — Lists ────────────────────────────────────────────────────
-  { q: 'What is `<ul>`?', opts: ['An ordered list', 'An unordered (bulleted) list', 'A table', 'A link list'], a: 1, e: '<ul> is an unordered list, rendered with bullets by default.', tags: ['HTML', 'Lists'] },
-  { q: 'What is `<ol>`?', opts: ['Unordered', 'An ordered (numbered) list', 'An outline only', 'An optional list'], a: 1, e: '<ol> is an ordered list, numbered by default.', tags: ['HTML', 'Lists'] },
-  { q: 'Which tag is a list item?', opts: ['<item>', '<li>', '<list>', '<l>'], a: 1, e: '<li> holds each item inside <ul> or <ol>.', tags: ['HTML', 'Lists'] },
+  { q: 'The order of a navigation menu’s links does not change their meaning. Which list element best represents them?', opts: ['<ol>', '<ul>', '<table>', '<dl>'], a: 1, e: 'ul represents a list whose order is not significant. CSS can change the visual markers without changing the semantics.', tags: ['HTML', 'Lists'] },
+  { q: 'A recipe must keep its steps in sequence. Which list element communicates that order?', opts: ['<ul>', '<ol>', '<dl>', '<nav>'], a: 1, e: 'ol represents an ordered list, so assistive technology and the document structure retain the sequence.', tags: ['HTML', 'Lists'] },
+  { q: 'Which structure uses valid list-item markup?', opts: ['<ul><item>Tea</item></ul>', '<ul><li>Tea</li></ul>', '<list><li>Tea</li></list>', '<ul><p>Tea</p></ul>'], a: 1, e: 'li represents an item inside ul or ol. Invented elements or a bare paragraph do not provide list-item semantics.', tags: ['HTML', 'Lists'] },
   { q: 'What does `<ol start="3">` do?', opts: ['Creates 3 items', 'Starts the numbering at 3', 'Indents 3 times', 'Reverses the list'], a: 1, e: 'The start attribute sets the first number of an ordered list.', tags: ['HTML', 'Lists'] },
   { q: 'A description list uses:', opts: ['<ul>', '<dl> with <dt> and <dd>', '<table>', '<ol>'], a: 1, e: '<dl> pairs terms (<dt>) with descriptions (<dd>).', tags: ['HTML', 'Lists'] },
   { q: 'Can lists be nested?', opts: ['No', 'Yes — a list can go inside an <li>', 'Only two levels', 'Only with tables'], a: 1, e: 'You nest a <ul>/<ol> inside an <li> to make sub-lists.', tags: ['HTML', 'Lists'] },
@@ -105,9 +105,9 @@ export const htmlSeeds: Seed[] = [
   { q: 'Why use semantic tags instead of plain `<div>`s?', opts: ['They look different', 'Better accessibility, SEO, and readability', 'They’re faster to type', 'They’re required by the browser'], a: 1, e: 'Semantics give meaning that assistive tech and search engines understand.', tags: ['HTML', 'Semantics'] },
 
   // ── Level 11 — Media ───────────────────────────────────────────────────
-  { q: 'What does `<img>` embed?', opts: ['Audio', 'An image', 'A video', 'A page'], a: 1, e: '<img> embeds an image.', tags: ['HTML', 'Media'] },
+  { q: 'Which element embeds an image and requires useful alternative text when that image conveys meaning?', opts: ['<video>', '<img>', '<picture-source>', '<object-url>'], a: 1, e: 'img embeds an image. Meaningful images need an alt description; decorative images normally use an empty alt attribute.', tags: ['HTML', 'Media'] },
   { q: 'What does the `controls` attribute on `<video>` do?', opts: ['Autoplays only', 'Shows the play/pause/volume UI', 'Hides the video', 'Loops it'], a: 1, e: 'controls displays the browser’s default playback controls.', tags: ['HTML', 'Media'] },
-  { q: 'What does `<audio>` embed?', opts: ['An image', 'Sound/audio content', 'A subtitle', 'A canvas'], a: 1, e: '<audio> embeds playable audio.', tags: ['HTML', 'Media'] },
+  { q: 'Which element gives the browser native playback controls for a podcast file?', opts: ['<video>', '<audio>', '<track>', '<canvas>'], a: 1, e: 'audio embeds sound resources and can expose the browser’s native controls with the controls attribute.', tags: ['HTML', 'Media'] },
   { q: 'What is `<source>` inside `<video>` for?', opts: ['The poster image', 'Offering alternative media files/formats', 'Captions', 'A fallback image'], a: 1, e: 'Multiple <source> elements let the browser pick a format it supports.', tags: ['HTML', 'Media'] },
   { q: 'What does `<iframe>` embed?', opts: ['An image', 'Another HTML page/document inside the page', 'Audio', 'A form'], a: 1, e: 'An <iframe> nests another browsing context (page) within the current one.', tags: ['HTML', 'Media'] },
   { q: 'What does the `<picture>` element do?', opts: ['Plays video', 'Serves different images for different conditions (responsive art direction)', 'Embeds audio', 'Is just a frame'], a: 1, e: '<picture> with <source> serves alternative images by viewport/format.', tags: ['HTML', 'Media'] },
@@ -140,9 +140,9 @@ export const htmlSeeds: Seed[] = [
   { q: 'Which is a non-breaking space?', opts: ['&space;', '&nbsp;', '&sp;', '&blank;'], a: 1, e: '&nbsp; inserts a space where the line won’t break.', tags: ['HTML', 'Entities'] },
   { q: 'How are HTML comments written?', opts: ['// ...', '<!-- ... -->', '/* ... */', '# ...'], a: 1, e: 'HTML comments use <!-- ... --> and are ignored by the browser.', tags: ['HTML', 'Entities'] },
   { q: 'What are `data-*` attributes for?', opts: ['Styling only', 'Storing custom data on elements (read via JS/CSS)', 'Validation', 'Metadata in the head'], a: 1, e: 'data-* attributes attach custom data to elements, e.g. data-id="42".', tags: ['HTML', 'Entities'] },
-  { q: 'What does `&copy;` render?', opts: ['(c)', '©', 'the word copyright', '&c'], a: 1, e: '&copy; renders the © copyright symbol.', tags: ['HTML', 'Entities'] },
+  { q: 'Which source text renders as “Copyright © 2026” while keeping the symbol encoded as an HTML named character reference?', opts: ['Copyright (c) 2026', 'Copyright &copy; 2026', 'Copyright &c; 2026', 'Copyright copy; 2026'], a: 1, e: '&copy; is the named character reference for the copyright symbol.', tags: ['HTML', 'Entities'] },
   { q: 'Why use entities like `&lt;`?', opts: ['To style text', 'To display reserved characters literally', 'To add spaces only', 'For SEO'], a: 1, e: 'Entities let you show characters (like < > &) that otherwise have special meaning.', tags: ['HTML', 'Entities'] },
-  { q: 'What does `&quot;` represent?', opts: ['A single quote', 'A double quote (")', 'A backtick', 'An apostrophe'], a: 1, e: '&quot; is the double-quotation-mark entity.', tags: ['HTML', 'Entities'] },
+  { q: 'An HTML attribute value is delimited by double quotes and must include a literal double-quote character. Which reference can encode it?', opts: ['&apos;', '&quot;', '&grave;', '&copy;'], a: 1, e: '&quot; represents a double quotation mark. It can avoid confusing the quote with an attribute delimiter.', tags: ['HTML', 'Entities'] },
 
   // ── Level 15 — Advanced / Mixed ────────────────────────────────────────
   { q: 'Block vs inline: which is correct?', opts: ['Both are inline', '<div> is block-level; <span> is inline', 'Both are block', '<div> is inline, <span> is block'], a: 1, e: '<div> is a block container; <span> is an inline container.', tags: ['HTML', 'Mastery'] },

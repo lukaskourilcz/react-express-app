@@ -6,7 +6,7 @@ import type { Seed } from './roadmap-build';
 
 export const tsSeedsA: Seed[] = [
   // ── Level 1 — Basic Types ──────────────────────────────────────────────
-  { q: 'What is the type of x?\n\n```ts\nlet x: number = 5;\n```', opts: ['number', 'string', 'any', '5'], a: 0, e: 'The annotation : number declares x as the number type.', tags: ['Types'] },
+  { q: 'What happens when the later assignment is checked?\n\n```ts\nlet x = 5;\nx = "5";\n```', opts: ['A type error, because x was inferred as number', 'x changes to the string type', 'x becomes number | string', 'x is inferred as any'], a: 0, e: 'TypeScript infers number from the first assignment. Assigning a string later is therefore a type error.', tags: ['Types'] },
   { q: 'What type is name.length?\n\n```ts\nconst name: string = "Ada";\nname.length;\n```', opts: ['string', 'number', 'any', '3'], a: 1, e: 'String length is always a number, even though its value here is 3.', tags: ['Types', 'Strings'] },
   { q: 'What happens?\n\n```ts\nlet flag: boolean = true;\nflag = "yes";\n```', opts: ['Compiles fine', 'Type error', 'Runtime error', 'flag becomes "yes"'], a: 1, e: 'A string is not assignable to a boolean variable, so the compiler reports a type error.', tags: ['Types', 'Errors'] },
   { q: 'What happens?\n\n```ts\nlet value: any = 5;\nvalue = "now a string";\n```', opts: ['Type error', 'Compiles fine', 'Runtime error', 'any is invalid'], a: 1, e: 'The any type opts out of checking, so reassigning to any type compiles.', tags: ['any'] },
@@ -18,8 +18,8 @@ export const tsSeedsA: Seed[] = [
   { q: 'What is the inferred return type?\n\n```ts\nconst greet = () => "hello";\n```', opts: ['void', 'string', '"hello"', 'any'], a: 1, e: 'The function returns a string, so the inferred return type is string.', tags: ['Inference', 'Functions'] },
 
   // ── Level 3 — Function Types ───────────────────────────────────────────
-  { q: 'What is the return type of add?\n\n```ts\nfunction add(a: number, b: number): number {\n  return a + b;\n}\n```', opts: ['number', 'void', 'any', 'string'], a: 0, e: 'The annotation : number after the parameters declares the return type.', tags: ['Functions', 'Types'] },
-  { q: 'What is the return type of log?\n\n```ts\nfunction log(msg: string): void {\n  console.log(msg);\n}\n```', opts: ['void', 'undefined', 'string', 'never'], a: 0, e: 'void marks a function that returns no useful value.', tags: ['Functions', 'void'] },
+  { q: 'What return type does TypeScript infer?\n\n```ts\nfunction add(a: number, b: number) {\n  return a + b;\n}\n```', opts: ['number', 'void', 'any', 'string'], a: 0, e: 'Both parameters are numbers and + returns a number here, so TypeScript infers a number return type.', tags: ['Functions', 'Types'] },
+  { q: 'Which return type best describes a function that cannot finish normally?\n\n```ts\nfunction fail(message: string) {\n  throw new Error(message);\n}\n```', opts: ['never', 'void', 'undefined', 'Error'], a: 0, e: 'The function always throws, so it never produces a value or reaches its end. Its inferred return type is never.', tags: ['Functions', 'void'] },
   { q: 'What does multiply(2, 3) return?\n\n```ts\nconst multiply: (a: number, b: number) => number = (a, b) => a * b;\nmultiply(2, 3);\n```', opts: ['6', 'number', '"6"', 'Error'], a: 0, e: 'The typed function multiplies its arguments: 2 * 3 = 6.', tags: ['Functions'] },
   { q: 'What does greet() return?\n\n```ts\nfunction greet(name?: string) {\n  return name ?? "Guest";\n}\ngreet();\n```', opts: ['undefined', '"Guest"', 'Error', 'null'], a: 1, e: 'The optional name is undefined, so ?? falls back to "Guest".', tags: ['Functions', 'Optional'] },
 
@@ -30,13 +30,13 @@ export const tsSeedsA: Seed[] = [
   { q: 'What happens?\n\n```ts\nconst point: readonly [number, number] = [1, 2];\npoint[0] = 5;\n```', opts: ['Compiles', 'Type error', 'Sets to 5', 'Runtime error'], a: 1, e: 'A readonly tuple cannot be reassigned element-by-element, so this is a type error.', tags: ['Tuples', 'readonly'] },
 
   // ── Level 5 — Object Types ─────────────────────────────────────────────
-  { q: 'What type is user.age?\n\n```ts\nconst user: { name: string; age: number } = { name: "Sam", age: 5 };\nuser.age;\n```', opts: ['string', 'number', 'any', '{ age: number }'], a: 1, e: 'age is declared as number in the object type.', tags: ['Objects'] },
+  { q: 'What is the type of age inside the if block?\n\n```ts\nconst user: { age: number | null } = { age: 5 };\nif (typeof user.age === "number") {\n  const age = user.age;\n}\n```', opts: ['number | null', 'number', 'any', 'never'], a: 1, e: 'The typeof check narrows user.age from number | null to number inside the block.', tags: ['Objects'] },
   { q: 'What happens?\n\n```ts\ntype Point = { x: number; y: number };\nconst p: Point = { x: 1 };\n```', opts: ['Compiles', 'Type error', 'y is undefined', 'Runtime error'], a: 1, e: 'Point requires both x and y; omitting y is a type error.', tags: ['Objects', 'Errors'] },
   { q: 'What happens?\n\n```ts\ntype Config = { debug?: boolean };\nconst c: Config = {};\n```', opts: ['Type error', 'Compiles', 'debug is required', 'Runtime error'], a: 1, e: 'debug is optional (?), so an empty object satisfies Config.', tags: ['Objects', 'Optional'] },
   { q: 'What happens?\n\n```ts\ntype T = { a: number };\nconst x: T = { a: 1, b: 2 };\n```', opts: ['Compiles', 'Type error', 'b is ignored', 'Runtime error'], a: 1, e: 'Object literals get excess-property checks; the unknown b triggers a type error.', tags: ['Objects', 'Excess properties'] },
 
   // ── Level 6 — Interfaces ───────────────────────────────────────────────
-  { q: 'What type is dog.name?\n\n```ts\ninterface Animal {\n  name: string;\n}\nconst dog: Animal = { name: "Rex" };\ndog.name;\n```', opts: ['string', 'number', 'Animal', 'any'], a: 0, e: 'The interface declares name as string.', tags: ['Interfaces'] },
+  { q: 'Which value satisfies the interface without a type assertion?\n\n```ts\ninterface Animal {\n  name: string;\n  age?: number;\n}\n```', opts: ['{ name: "Rex" }', '{ age: 4 }', '{ name: 7 }', '{ name: "Rex", age: "4" }'], a: 0, e: 'name is required and must be a string. age is optional, but if present it must be a number.', tags: ['Interfaces'] },
   { q: 'What happens?\n\n```ts\ninterface A {\n  x: number;\n}\ninterface B extends A {\n  y: number;\n}\nconst b: B = { x: 1, y: 2 };\n```', opts: ['Type error', 'Compiles', 'y missing', 'x missing'], a: 1, e: 'B extends A, so it needs both x and y, which are present.', tags: ['Interfaces', 'extends'] },
   { q: 'What does g.greet() return?\n\n```ts\ninterface Greeter {\n  greet(): string;\n}\nconst g: Greeter = { greet: () => "hi" };\ng.greet();\n```', opts: ['"hi"', '"HI"', 'undefined', 'A type error occurs'], a: 0, e: 'greet is an arrow function that returns the string "hi", satisfying the Greeter interface.', tags: ['Interfaces', 'Methods'] },
   { q: 'What happens?\n\n```ts\ninterface Box {\n  value: number;\n}\nconst b: Box = {};\n```', opts: ['Compiles', 'Type error', 'value is 0', 'undefined'], a: 1, e: 'Box requires value, so the empty object is a type error.', tags: ['Interfaces', 'Errors'] },
