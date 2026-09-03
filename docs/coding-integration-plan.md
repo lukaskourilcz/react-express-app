@@ -9,6 +9,8 @@ interview-prepper (Vite + React 18 + Firebase) becomes part of devShark (this re
 1. A new devShark-only **Coding** section at `/coding` with every coding challenge, organised by track and by technique, with a difficulty ladder that opens up as the learner clears the Learn foundations.
 2. **Coding tasks inside Learn levels** for the `javascript`, `typescript`, and `react` topics. Each level keeps its eight questions and gains one to three coding tasks on the same topic. A level passes only when the questions reach the pass mark and every coding task passes.
 
+A third, optional surface: a **GitHub garden**. A learner connects a repository they own, and every completed coding task is committed there as one file, one folder per subject (section 4.3).
+
 Firebase is retired. Supabase becomes the only database; the owner's existing progress is imported once. The interview-prepper repository is archived after the import.
 
 Out of scope for this plan, pending an owner decision: the system-design guided sessions and drills, the mock/runs mode, and the AI coach. The deterministic hint ladder ships; the AI coach can return later behind the existing `lib/ai-provider.ts` gates.
@@ -159,6 +161,31 @@ Review queue: after a pass, the task returns at 4 h, then 24 h, then 48 h; two c
 
 Nav: `nav.coding` ("Coding" / "Kódování"), route titles under `title.coding.*`, a Home strip link next to Learn and Typing.
 
+### 4.3 GitHub garden: one commit per completed challenge
+
+Opt-in. A learner connects a GitHub repository they own, and every first pass of a coding task commits one file into it, so their contribution graph turns green for each day they finish a challenge. Re-passing a task with changed code updates the file; identical code commits nothing.
+
+Connection through a GitHub App (the owner registers it; permission `contents: write`, installed by the learner on the repositories they choose). No user OAuth token is stored: the server mints short-lived installation tokens from the app's private key. Flow: Settings → "Connect GitHub" → `op=github-connect-start` returns `https://github.com/apps/<slug>/installations/new?state=<sealed>` → GitHub → setup URL `/settings/github?installation_id=…&state=…` → `op=github-connect-finish` verifies the sealed state (bound to the user id, ten minutes), reads the installation with an app JWT, lists its repositories with an installation token, and stores `github_connections`. If the installation covers several repositories the learner picks one. Organisation installations are refused in v1; the repository must belong to the learner's account.
+
+Attribution: commits are authored as `<id>+<login>@users.noreply.github.com`, an address GitHub already associates with the account, so they count toward the graph; the committer is the app.
+
+Layout in the learner's repository, one folder per subject and one file per passed task:
+
+```
+README.md                                  created once
+javascript/04-queue-with-push-shift.js
+typescript/14-chunk-generic.ts
+react/09-todo-immutable-remove.jsx
+```
+
+File name: `<level, two digits>-<slug>.<ext>` so the folder sorts by curriculum. File content: a header comment (title, track, level name, tier, pass date, tests passed, devShark link) and the learner's code. Prompts and tests are not copied.
+
+Commit: `Complete "Queue with push/shift" (JavaScript, level 4)` through the Contents API (`PUT /repos/{owner}/{repo}/contents/{path}`) on the default branch, with the file's blob sha when it already exists.
+
+Pipeline: `record_coding_verdict` reports whether the pass is the first or the code changed; the handler writes a `github_commits` row (`queued`) and tries the commit inline, inside the function budget. A failure stays queued with the error; `op=github-sync` (a button in Settings and in the pass toast) retries, and the next pass retries older queued rows. A 404 or 401 from GitHub marks the connection `broken` (repository deleted or app uninstalled) and the UI offers reconnect. GitHub API errors never fail the submit itself.
+
+Privacy: the server stores the installation id, account login and id, repository name, default branch, and the commit log, nothing else. Disconnect deletes them (`delete_user_data` covers both tables); the learner uninstalls the app on GitHub. The feature is hidden when `GITHUB_APP_ID` is unset. Cosmetic by definition: it never changes XP, ranks, or access.
+
 ## 5. Workbench and runner
 
 ### 5.1 Editor and layout
@@ -265,7 +292,37 @@ create table roadmap_attempt_coding (
 );
 ```
 
-RLS: owners read their own rows; all writes go through service-role RPCs. New RPCs: `record_coding_verdict(user, task, outcome, verified, attempt_id)` (idempotent per attempt, updates progress and review scheduling, awards XP through `record_verified_activity_xp` only when `verified`), `save_coding_draft`, `schedule_coding_review`. `complete_verified_roadmap_attempt` checks `roadmap_attempt_coding`. `delete_user_data` and `purge_expired_learning_data` cover the four tables (attempts after 180 days, drafts after 90 idle days). Rate limits in `lib/rate-limit.ts`: `codingRun` 30 per 10 min, `codingDraft` 60 per 10 min, `codingReveal` 10 per hour. `scripts/test-launch-contracts.ts` asserts the migration content.
+Two more tables for the GitHub garden:
+
+```sql
+create table github_connections (
+  user_id uuid primary key references auth.users on delete cascade,
+  installation_id bigint not null,
+  account_login text not null,
+  account_id bigint not null,
+  repo_full_name text,
+  default_branch text,
+  status text not null check (status in ('pending_repo', 'active', 'broken')),
+  last_error text,
+  connected_at timestamptz not null default now(),
+  last_commit_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+create table github_commits (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users on delete cascade,
+  task_id text not null,
+  path text not null,
+  status text not null check (status in ('queued', 'committed', 'failed', 'skipped')),
+  commit_sha text,
+  attempts int not null default 0,
+  last_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+```
+
+RLS: owners read their own rows; all writes go through service-role RPCs. New RPCs: `record_coding_verdict(user, task, outcome, verified, attempt_id)` (idempotent per attempt, updates progress and review scheduling, awards XP through `record_verified_activity_xp` only when `verified`), `save_coding_draft`, `schedule_coding_review`. `complete_verified_roadmap_attempt` checks `roadmap_attempt_coding`. `delete_user_data` and `purge_expired_learning_data` cover the four tables (attempts after 180 days, drafts after 90 idle days). Rate limits in `lib/rate-limit.ts`: `codingRun` 30 per 10 min, `codingDraft` 60 per 10 min, `codingReveal` 10 per hour, `githubConnect` 10 per hour, `githubSync` 6 per hour. `purge_expired_learning_data` also drops `github_commits` rows older than 180 days. `scripts/test-launch-contracts.ts` asserts the migration content.
 
 API surface (twelve handlers unchanged):
 
@@ -276,6 +333,8 @@ API surface (twelve handlers unchanged):
 | `api/quiz/roadmap.ts` | `coding-report` | Client verdict for React tasks (`verified = false`) |
 | `api/quiz/roadmap.ts` | `coding-reveal` | Solution after pass or give-up; records the reveal |
 | `api/user/[op].ts` | `coding-progress`, `coding-draft` | Progress list, review queue, drafts |
+| `api/user/[op].ts` | `github-connect-start`, `github-connect-finish`, `github-connection`, `github-repo`, `github-sync`, `github-disconnect` | GitHub garden connection and retries |
+| — | `lib/github-app.ts` | App JWT, installation tokens, Contents API, file and commit-message builders |
 
 ## 8. Owner progress import and Firebase retirement
 
@@ -307,8 +366,9 @@ react-express-app, in the order Opus should take them:
 8. Server grading, coding API resources, sealed coding sessions, rate limits, reveal.
 9. The `/coding` section: routes, nav, home, track and task screens, review queue.
 10. Coding tasks inside Learn levels.
-11. Difficulty ladder, badges, Today integration.
-12. Owner progress import, Firebase retirement, documentation sweep.
+11. GitHub garden: connection, commit pipeline, settings UI.
+12. Difficulty ladder, badges, Today integration.
+13. Owner progress import, Firebase retirement, documentation sweep.
 
 interview-prepper:
 
@@ -324,3 +384,5 @@ Recorded in `NEEDED.md`:
 - Accepting client-graded React tasks with the documented limitation until a server DOM runner exists.
 - Applying migration 025 in production and running the one-time import.
 - Deleting the Firebase and Vercel projects once the import is verified.
+- Registering the GitHub App for the garden, setting its environment variables, and updating the privacy notice.
+- Whether client-graded React passes also commit to the garden (default: yes, it is the learner's own repository).
