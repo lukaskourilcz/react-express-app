@@ -18,7 +18,7 @@ export const reactSeedsB: Seed[] = [
   { q: 'What renders?\n\n```jsx\nfunction App() {\n  return (\n    <div>\n      <Header />\n      <Main />\n    </div>\n  );\n}\n```', opts: ['only the div', 'Header and Main inside a div', 'nothing', 'an error'], a: 1, e: 'Both child components render inside the wrapping div.', tags: ['Components'] },
 
   // ── Level 3 — Props ────────────────────────────────────────────────────
-  { q: 'What is rendered?\n\n```jsx\nfunction B({ a, b }) {\n  return <p>{a + b}</p>;\n}\n<B a={2} b={3} />;\n```', opts: ['"5"', '"23"', '5', 'an error'], a: 0, e: 'Numeric props add: 2 + 3 = 5.', tags: ['Props'] },
+  { q: 'What value is passed to the p element as its child before React renders it?\n\n```jsx\nfunction B({ a, b }) {\n  return <p>{a + b}</p>;\n}\n<B a={2} b={3} />;\n```', opts: ['The number 5', 'The string "23"', 'The string "5"', 'A TypeError'], a: 0, e: 'The props are numbers, so a + b evaluates to the number 5. React then displays that number as text in the paragraph.', tags: ['Props'] },
   { q: 'In React, props are:', opts: ['mutable by the component', 'read-only', 'always optional', 'global'], a: 1, e: 'A component must treat its props as read-only and never mutate them.', tags: ['Props'] },
   { q: 'What is the value of disabled?\n\n```jsx\n<Btn label="Save" disabled />;\n```', opts: ['"disabled"', 'true', 'false', 'undefined'], a: 1, e: 'A bare prop (shorthand) passes the boolean true.', tags: ['Props'] },
   { q: 'What does spreading props do?\n\n```jsx\n<Input {...props} />;\n```', opts: ['passes all of props’ keys as props', 'passes none', 'clones Input', 'an error'], a: 0, e: 'Spreading an object passes each of its properties as an individual prop.', tags: ['Props', 'Spread'] },

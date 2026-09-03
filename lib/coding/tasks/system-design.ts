@@ -14,7 +14,7 @@ export const SYSTEM_DESIGN_TASKS: CodingTaskSource[] = [
     tier: 2,
     focus: ["scoping", "data-model", "request-flow", "failure", "scale"],
     title: "URL shortener",
-    prompt: "Your team wants short links for the company newsletter, so that a long tracking URL becomes something like ex.co/spring. You are building the service that hands out those short codes and sends people on to the real address. There are only two things this has to do: make a short code for a long address, and send whoever follows that code to the right place. Nearly all the traffic is the second one, because a link is created once and clicked thousands of times. These five questions walk the same path an interviewer walks — what you are building, what you store, what happens on one click, what happens when something is wrong, and what breaks first as it grows.",
+    prompt: "Design a service that creates a short code for a long URL and redirects visitors to the destination. A link is usually created once and followed many times. Work through the requirements, data model, redirect path, failures, and the first likely scaling step.",
     starter: "",
     hints: [
       "A link is created once and followed thousands of times. Design the following, and let the creating be slow.",
@@ -23,7 +23,7 @@ export const SYSTEM_DESIGN_TASKS: CodingTaskSource[] = [
     estimatedMinutes: 10,
     design: {
       scenario: "Your team wants short links for the company newsletter, so that a long tracking URL becomes something like ex.co/spring. You are building the service that hands out those short codes and sends people on to the real address.",
-      brief: "There are only two things this has to do: make a short code for a long address, and send whoever follows that code to the right place. Nearly all the traffic is the second one, because a link is created once and clicked thousands of times. These five questions walk the same path an interviewer walks — what you are building, what you store, what happens on one click, what happens when something is wrong, and what breaks first as it grows.",
+      brief: "Create short links and resolve them quickly. Because redirects greatly outnumber creations, keep the read path small and make failures explicit.",
       steps: [
         {
           key: "requirements",
@@ -31,12 +31,12 @@ export const SYSTEM_DESIGN_TASKS: CodingTaskSource[] = [
           prompt: "Before designing anything, what is the most useful thing to find out about how this service gets used?",
           options: [
             "That links are followed far more often than they are created, so the redirect is the part that matters",
-            "Which programming language the team prefers",
-            "How many people work at the company",
-            "Whether the short codes should be uppercase or lowercase",
+            "Whether customers need custom aliases for some links",
+            "How quickly click analytics must become visible",
+            "How long expired links and their codes must be retained",
           ],
           correct: 0,
-          explanation: "Almost every design decision follows from the balance of reads and writes. One link created and thousands of clicks means the click path is the product: you keep it simple, you put a cache in front of it, and you happily accept that creating a link is slower. If it were the other way round you would design something completely different. Language and team size do not change the shape of the system, and the case of the codes is a detail you settle in a sentence.",
+          explanation: "The read/write ratio shapes the hot path and the first scaling choices. If one link is created and followed thousands of times, redirect latency and cacheability dominate. Custom aliases, analytics freshness, and retention are valid follow-up requirements, but they do not replace the traffic estimate.",
         },
         {
           key: "data",
@@ -44,12 +44,12 @@ export const SYSTEM_DESIGN_TASKS: CodingTaskSource[] = [
           prompt: "What does one row in the links table need to hold?",
           options: [
             "The short code, the full destination address, who created it, and when",
-            "Only the short code and the destination",
-            "The short code, the destination, and a copy of the destination page",
-            "A new table for every link, named after its code",
+            "A numeric id and destination, with the short code derived from the destination on every read",
+            "The short code and destination in one table, with ownership stored only in application logs",
+            "The short code and owner in one table, with destinations kept only in the cache",
           ],
           correct: 0,
-          explanation: "The code and the destination are what the redirect needs. The owner and the creation date are what everything else needs — showing somebody their links, deleting them, or working out what is old. Adding those two columns costs nothing now and saves a migration later. Storing a copy of the destination page is a different product. A table per link is not a data model at all: you cannot ask a question across links, and databases are not designed for thousands of tables.",
+          explanation: "The redirect needs a stable code-to-destination mapping. Ownership and creation time support listing, deletion, authorization, and retention. A derived code may collide or change when a destination changes; logs are not an ownership store; and a cache cannot be the only durable home for destinations.",
         },
         {
           key: "design",
@@ -70,9 +70,9 @@ export const SYSTEM_DESIGN_TASKS: CodingTaskSource[] = [
           prompt: "Someone follows a code that does not exist, because it was mistyped or deleted. What should happen?",
           options: [
             "Answer 404 with a short page explaining the link is not valid",
-            "Answer 500, because the lookup did not find anything",
-            "Redirect them to the homepage as if nothing happened",
-            "Answer 200 with an empty page",
+            "Answer 410 for every miss, even when the code may never have existed",
+            "Redirect to a search page with a 302 response",
+            "Answer 204 so the browser treats the lookup as successful",
           ],
           correct: 0,
           explanation: "A 404 means \"there is nothing here\", which is exactly what happened, and a human-readable page tells the person what to do next. A 500 says your server broke and will wake somebody up for a mistyped link. Silently redirecting to the homepage is confusing — people think the link worked and wonder why the content is wrong. An empty 200 tells both the browser and your monitoring that everything is fine, which will hide a broken campaign until somebody complains.",
@@ -83,12 +83,12 @@ export const SYSTEM_DESIGN_TASKS: CodingTaskSource[] = [
           prompt: "The newsletter goes out and thousands of people click the same link within a minute. What is the first thing you would do?",
           options: [
             "Keep the popular codes in a cache, so most clicks never reach the database",
-            "Split the links table across several databases",
-            "Add more storage to the database",
-            "Rewrite the service in a faster language",
+            "Add a read replica and send every lookup to it",
+            "Shard all links by the first character of the code",
+            "Generate longer codes so the lookup index has fewer collisions",
           ],
           correct: 0,
-          explanation: "Thousands of people following the same handful of links is the easiest case a cache ever gets: a few entries in memory serve nearly all the traffic and the database barely notices. Reach for that first — it is a small change with a large effect. Splitting the table across machines is a big, expensive move that answers a different problem, namely one machine no longer holding the data. Storage is not what is under pressure, and the language is almost never the reason something is slow.",
+          explanation: "A burst aimed at a few popular codes produces a high cache-hit rate, so a small cache removes most database reads. A read replica can help broader read load, and sharding can help data or write scale, but both add more machinery than this hotspot needs. Code length does not reduce lookup work.",
         },
       ],
       reference: `What we are building
@@ -123,7 +123,7 @@ Not the redirects. A newsletter drives thousands of clicks to a handful of codes
     tier: 2,
     focus: ["scoping", "data-model", "request-flow", "failure", "scale"],
     title: "To-do list API",
-    prompt: "A small team wants a shared to-do app. You are building the API behind it: people sign in, add tasks, tick them off, and see only their own list. The web and mobile clients will both talk to it. This is the most ordinary system there is, which is exactly why it is worth walking through carefully. Everything an interviewer wants to see lives here in miniature: what the endpoints are, what a row looks like, how one request is served, what happens when somebody asks for something that is not theirs, and what starts to hurt as lists grow. Get this shape right and most CRUD systems are the same conversation with different nouns.",
+    prompt: "Design the API for a to-do app used by web and mobile clients. People sign in, manage tasks, and must see only their own data. Work through ownership, the table shape, request authorization, failure responses, and pagination.",
     starter: "",
     hints: [
       "Every task belongs to somebody. Decide how the server knows who is asking before you design anything else.",
@@ -132,7 +132,7 @@ Not the redirects. A newsletter drives thousands of clicks to a handful of codes
     estimatedMinutes: 10,
     design: {
       scenario: "A small team wants a shared to-do app. You are building the API behind it: people sign in, add tasks, tick them off, and see only their own list. The web and mobile clients will both talk to it.",
-      brief: "This is the most ordinary system there is, which is exactly why it is worth walking through carefully. Everything an interviewer wants to see lives here in miniature: what the endpoints are, what a row looks like, how one request is served, what happens when somebody asks for something that is not theirs, and what starts to hurt as lists grow. Get this shape right and most CRUD systems are the same conversation with different nouns.",
+      brief: "Treat ownership as a server-enforced rule. Model each task as a row, authorize inside the query, and keep large lists bounded.",
       steps: [
         {
           key: "requirements",
@@ -140,12 +140,12 @@ Not the redirects. A newsletter drives thousands of clicks to a handful of codes
           prompt: "What is the most important thing to agree on before designing the API?",
           options: [
             "That every task belongs to one person, and nobody may see anybody else’s",
-            "Whether the buttons should be blue or green",
-            "How the mobile app will animate the tick",
-            "Which cloud provider it will be hosted on",
+            "Whether completed tasks can be restored after deletion",
+            "Whether users can share selected tasks with collaborators",
+            "Whether changes must sync to another device in real time",
           ],
           correct: 0,
-          explanation: "Ownership is the rule the whole design has to enforce, and it shows up everywhere: a column on the table, a condition on every query, a check on every endpoint. Establishing it early is what stops you building something where changing a number in a URL shows you somebody else’s tasks — one of the most common real security holes there is. Colours and animations belong to the client, and the hosting choice does not change the design.",
+          explanation: "Private ownership is the baseline rule: it becomes a user_id column, an authorization condition in every query, and a test on every endpoint. Sharing, restore behavior, and real-time sync are meaningful extensions, but each depends on first defining who may access a task.",
         },
         {
           key: "data",
@@ -176,7 +176,7 @@ Not the redirects. A newsletter drives thousands of clicks to a handful of codes
         {
           key: "deepdive",
           title: "When things go wrong",
-          prompt: "Someone requests a task id that exists but belongs to another person. What should the API answer?",
+          prompt: "The API must not reveal whether another user’s task id exists. What should it return when a user requests one?",
           options: [
             "A 404, as if the task did not exist",
             "A 403, saying it belongs to someone else",
@@ -184,7 +184,7 @@ Not the redirects. A newsletter drives thousands of clicks to a handful of codes
             "A 500, because the ownership check failed",
           ],
           correct: 0,
-          explanation: "Answering 403 confirms the task exists, which lets somebody probe for valid ids and learn about data they cannot see. Answering 404 tells them nothing they did not already know. Both are defensible and you should say why you chose one — 403 is friendlier inside a trusted system where a colleague might genuinely have mistyped. Returning the task is the security hole the ownership rule exists to prevent, and 500 means \"we broke\", when in fact everything worked correctly.",
+          explanation: "Under this policy, 404 avoids confirming that the id belongs to another account. A trusted internal API might choose 403 instead, but that would not meet the stated requirement. Returning the task leaks data, while 500 incorrectly reports a server failure.",
         },
         {
           key: "scale",
@@ -232,27 +232,27 @@ Not the number of users, which is the intuitive answer — the app servers scale
     tier: 2,
     focus: ["scoping", "data-model", "request-flow", "failure", "scale"],
     title: "Photo sharing",
-    prompt: "A hobby club wants members to upload photos from their events and browse them afterwards. Photos come off phones at several megabytes each, and members want to scroll a gallery page without waiting. The whole lesson here is that a photo is two different things: a large lump of bytes, and a small set of facts about it — who took it, when, which event. Those two want completely different homes, and almost every mistake in a system like this comes from putting them in the same one. The five questions follow that split through the design, from what you agree up front to what falls over once the club has ten thousand photos.",
+    prompt: "Design photo upload and gallery browsing for a club. Each image is several megabytes, while its owner, event, dimensions, and upload time are small searchable fields. Decide where both kinds of data live, how a gallery loads, how partial uploads fail, and where resizing belongs.",
     starter: "",
     hints: ["A photo is two things: a big lump of bytes and a few small facts. They want different homes."],
     verify: "guided",
     estimatedMinutes: 10,
     design: {
       scenario: "A hobby club wants members to upload photos from their events and browse them afterwards. Photos come off phones at several megabytes each, and members want to scroll a gallery page without waiting.",
-      brief: "The whole lesson here is that a photo is two different things: a large lump of bytes, and a small set of facts about it — who took it, when, which event. Those two want completely different homes, and almost every mistake in a system like this comes from putting them in the same one. The five questions follow that split through the design, from what you agree up front to what falls over once the club has ten thousand photos.",
+      brief: "Separate image bytes from searchable metadata. Keep large transfers away from the API path and move CPU-heavy resizing out of upload requests.",
       steps: [
         {
           key: "requirements",
           title: "What are we building",
-          prompt: "What should you find out first about the photos themselves?",
+          prompt: "Which measurement most directly decides whether the image bytes belong in object storage?",
           options: [
-            "How large a typical photo is, because that decides where the bytes can live",
-            "Which camera brands members use",
-            "What the gallery page should be called",
-            "Whether photos should have rounded corners",
+            "The typical and maximum file size",
+            "How long the club must retain old events",
+            "Which metadata fields users need to search",
+            "How many thumbnails each gallery card displays",
           ],
           correct: 0,
-          explanation: "Size decides the design. A few kilobytes each and you could reasonably keep them anywhere; several megabytes each and they have to go somewhere built for files, served directly to browsers, never passing through your application on the way out. Asking for the number early is what separates a considered answer from a guess. Camera brands, page names and corner radius are real product questions but none of them changes a single box in the diagram.",
+          explanation: "File size determines whether image bytes can move cheaply through normal application and database paths. Retention, search, and thumbnail needs also matter, but they answer later capacity and access-pattern questions.",
         },
         {
           key: "data",
@@ -265,7 +265,7 @@ Not the number of users, which is the intuitive answer — the app servers scale
             "The file in object storage, with owner and date written into the file name",
           ],
           correct: 0,
-          explanation: "Object storage is a service built to hold files cheaply and hand them straight to browsers. The database keeps the small facts you actually search and sort on, plus a pointer to where the bytes went. Putting megabytes into database rows makes every query and every backup drag them around. The web server’s own disk breaks as soon as there is a second server with a different disk. Facts in file names cannot be queried — you could not list this month’s photos without inspecting every file.",
+          explanation: "Object storage handles large files cheaply and can serve them directly. The database keeps searchable metadata plus the storage key. Database blobs make queries and backups heavier, while a web server’s local disk is not shared across instances. File names are also a poor substitute for queryable fields.",
         },
         {
           key: "design",
@@ -278,7 +278,7 @@ Not the number of users, which is the intuitive answer — the app servers scale
             "The API sends every photo the club has, and the browser shows thirty",
           ],
           correct: 0,
-          explanation: "Your API answers with small JSON: thirty rows, each carrying a URL. The browser then fetches those images itself, straight from storage or a CDN — in parallel, cached by the browser afterwards, and never touching your servers. Reading the files and embedding them makes your API carry every megabyte. Routing each image through the API does the same thing more slowly. Sending every photo in the club is the mistake that only shows up once there are a lot of them.",
+          explanation: "Return small metadata rows with image URLs. The browser can fetch the files in parallel from object storage or a CDN and cache them. Embedding bytes or proxying every image through the API adds bandwidth and work to the application servers. Paginate rather than returning the whole library.",
         },
         {
           key: "deepdive",
@@ -291,7 +291,7 @@ Not the number of users, which is the intuitive answer — the app servers scale
             "Allow rows without files, and hide the broken ones in the gallery",
           ],
           correct: 0,
-          explanation: "Order the two writes so that a failure leaves the harmless state. A file with no row is invisible and wasted space, cleaned up by a periodic sweep. A row with no file is a broken image on the page, which people see. So the bytes go first and the row follows. Writing the row first to get an id is a real pattern, but then the row needs a status column saying it is not ready yet — which is fine, as long as you say so rather than leaving the gap unhandled.",
+          explanation: "Store the bytes first, then write the visible metadata row after storage confirms success. A failed second step leaves an invisible orphan that a cleanup job can remove. Creating the row first is also valid when it has an explicit pending state and cannot appear as a finished photo.",
         },
         {
           key: "scale",
@@ -304,7 +304,7 @@ Not the number of users, which is the intuitive answer — the app servers scale
             "Browsers refuse to display that many images",
           ],
           correct: 0,
-          explanation: "Resizing an image is heavy processor work, and doing it inside the request means it competes with everything else those servers are meant to be answering — so pages with no photos on them get slow too, which makes the cause hard to spot. Move it to a background worker: accept the upload, store the original, reply, and let a separate pool make the thumbnails and update the row when they are ready. Object storage grows without you planning for it, and the rows are tiny.",
+          explanation: "Image resizing is CPU-heavy. Doing it inside the upload request competes with ordinary API traffic and increases latency. Store the original, return promptly, and send a job to a separate worker pool that creates thumbnails and updates the photo record.",
         },
       ],
       reference: `What we are building
@@ -338,7 +338,7 @@ Resizing, if it is done inside the request. It is processor-heavy and it starves
     tier: 2,
     focus: ["scoping", "data-model", "request-flow", "failure", "scale"],
     title: "Accounts and login",
-    prompt: "A site currently has no accounts and needs them: register with an email and password, sign in, stay signed in, and sign out. It runs on two web servers behind a load balancer. Nearly every system needs this, and nearly every junior interview asks about some corner of it. The ideas are small and specific: passwords are never stored, being signed in is a fact the server holds rather than something the browser can claim, and two servers means anything kept in one machine’s memory is invisible to the other. These five questions cover the parts you are expected to know without hesitating.",
+    prompt: "Design email-and-password accounts for a site running on two web servers behind a load balancer. Cover credential storage, shared sessions, safe login errors, and protection against repeated password guesses.",
     starter: "",
     hints: [
       "The password is never stored. Everything else in this design follows from taking that seriously.",
@@ -347,20 +347,20 @@ Resizing, if it is done inside the request. It is processor-heavy and it starves
     estimatedMinutes: 10,
     design: {
       scenario: "A site currently has no accounts and needs them: register with an email and password, sign in, stay signed in, and sign out. It runs on two web servers behind a load balancer.",
-      brief: "Nearly every system needs this, and nearly every junior interview asks about some corner of it. The ideas are small and specific: passwords are never stored, being signed in is a fact the server holds rather than something the browser can claim, and two servers means anything kept in one machine’s memory is invisible to the other. These five questions cover the parts you are expected to know without hesitating.",
+      brief: "Never store readable passwords. The server owns identity decisions, and either web server must be able to validate the same session.",
       steps: [
         {
           key: "requirements",
           title: "What are we building",
-          prompt: "What is the one rule to agree on before anything else?",
+          prompt: "Which non-negotiable rule governs credential storage and logging?",
           options: [
             "The password is never stored or logged in a form anyone can read",
-            "People should pick a memorable password",
-            "The login form should be on its own page",
-            "Sign-in should work on mobile as well as desktop",
+            "Password hashes may use a fast general-purpose digest if each password is long",
+            "Passwords may be encrypted if the decryption key is kept on another server",
+            "Raw passwords may appear in short-lived debug logs during failed sign-ins",
           ],
           correct: 0,
-          explanation: "It is the rule that shapes the table, the code and the logging. You store a hash — a one-way transformation you can check against but never reverse — so a leaked backup exposes nobody, and you make sure the raw password never reaches a log file on its way past. The other three are real considerations, but none of them changes what you build, and none of them is what an interviewer is checking when they ask how you handle passwords.",
+          explanation: "Store a password hash produced by a password-specific algorithm, and never log the raw credential. Fast digests are cheap to guess, reversible encryption exposes every password if the key leaks, and short-lived debug logs are still readable copies.",
         },
         {
           key: "data",
@@ -447,7 +447,7 @@ Not capacity — this is a small amount of work per request. It is somebody gues
     tier: 2,
     focus: ["scoping", "data-model", "request-flow", "failure", "scale"],
     title: "Small online shop",
-    prompt: "A bakery sells a few dozen products online. Customers browse, add things to a basket, and pay by card through an outside payment provider. Stock is limited and they must not sell what they do not have. A shop pulls together nearly everything the other walkthroughs cover — reading a catalogue constantly, writing an order rarely, calling somebody else’s service, and one number that must not go wrong. It is also where the difference between \"reads that can be a little stale\" and \"writes that cannot be wrong\" becomes obvious. Five questions: what it does, what it stores, what happens when somebody pays, what happens when the payment provider misbehaves, and what breaks first on a busy morning.",
+    prompt: "Design a small shop with a read-heavy catalogue, limited stock, and card payments handled by an external provider. Protect stock and price history, make payment retries safe, and decide what can be cached.",
     starter: "",
     hints: [
       "Almost all of it is browsing, which is forgiving. One number is not, and that is the stock count.",
@@ -456,7 +456,7 @@ Not capacity — this is a small amount of work per request. It is somebody gues
     estimatedMinutes: 10,
     design: {
       scenario: "A bakery sells a few dozen products online. Customers browse, add things to a basket, and pay by card through an outside payment provider. Stock is limited and they must not sell what they do not have.",
-      brief: "A shop pulls together nearly everything the other walkthroughs cover — reading a catalogue constantly, writing an order rarely, calling somebody else’s service, and one number that must not go wrong. It is also where the difference between \"reads that can be a little stale\" and \"writes that cannot be wrong\" becomes obvious. Five questions: what it does, what it stores, what happens when somebody pays, what happens when the payment provider misbehaves, and what breaks first on a busy morning.",
+      brief: "Catalogue reads may be slightly stale; stock and payment state cannot. Separate those consistency needs and plan for failures between the database and payment provider.",
       steps: [
         {
           key: "requirements",
@@ -469,7 +469,7 @@ Not capacity — this is a small amount of work per request. It is somebody gues
             "The category menu, because it appears on every page",
           ],
           correct: 0,
-          explanation: "Most of a shop is forgiving. A slightly stale product description or a basket that loses an item is annoying and fixable. Selling the last loaf to two people is a phone call and a refund, and no amount of retrying fixes it afterwards — so that is the number the design has to protect, and saying so early shows you can tell the risky part from the busy part. Photos are just storage, and the menu is the easiest thing in the system to cache.",
+          explanation: "Catalogue details can tolerate brief staleness, but overselling creates refunds and customer support work. Protect the stock transition first. Product images are a storage problem, while menus and catalogue pages are straightforward cache candidates.",
         },
         {
           key: "data",
@@ -482,20 +482,20 @@ Not capacity — this is a small amount of work per request. It is somebody gues
             "Store a link to the product page as it looked that day",
           ],
           correct: 0,
-          explanation: "This is one of the few places where copying data is right. An order is a record of what happened, and what happened included a price. If you read the current price later, last year’s receipts silently change every time the bakery puts its prices up — which is wrong, and in most places illegal. Storing only a total loses what was actually bought. Products and prices stay in their own tables for browsing; the order keeps its own copy because it is history, not a view of the present.",
+          explanation: "An order records a historical event, including the price paid for each item. Reading the current product price later would rewrite old receipts. Keep current catalogue prices on products, and copy the purchase-time unit price onto each order line.",
         },
         {
           key: "design",
           title: "How a request flows",
-          prompt: "A customer clicks pay. What order do things happen in?",
+          prompt: "A customer clicks pay. Which flow handles concurrent stock changes and payment retries most safely?",
           options: [
-            "Check stock is still available, take the payment, then save the order and reduce the stock",
-            "Save the order, reduce the stock, then take the payment",
-            "Take the payment, then check whether the stock is still there",
-            "Reduce the stock, then take the payment, then save the order",
+            "Atomically reserve stock and create a pending order, charge with an idempotency key, then mark it paid or release the reservation",
+            "Read the current stock, charge the card, then insert the order and decrement stock in separate writes",
+            "Create a paid order first, then retry the payment until the provider accepts it",
+            "Charge the card, then use a cached stock count to decide whether to create the order",
           ],
           correct: 0,
-          explanation: "Check the thing you cannot undo before doing the thing you cannot undo. Confirming stock first means you rarely take money for something unavailable; taking payment before writing the order means you never record a sale that was not paid for. The database should also enforce that stock cannot go below zero, because two customers can pass the check at the same instant. Taking money first and checking after guarantees refunds, and reducing stock before payment loses inventory to abandoned checkouts.",
+          explanation: "A database transaction can reserve stock and create a pending order without overselling. The payment call uses an idempotency key so retries do not double-charge. Success marks the order paid; failure or expiry releases the reservation. No single transaction can include both your database and an external provider, so the states and recovery path must be explicit.",
         },
         {
           key: "deepdive",
@@ -508,7 +508,7 @@ Not capacity — this is a small amount of work per request. It is somebody gues
             "Refund any duplicate charges when a customer complains",
           ],
           correct: 0,
-          explanation: "A key generated for that one checkout lets the provider recognise the second request as a repeat of the first and return the original result instead of charging again. This is called idempotency, and it is the standard answer whenever a request can be retried. Matching on the amount and time rejects a customer legitimately buying the same thing twice. Disabling the button helps with double-clicks but does nothing for a refresh or a flaky connection. Refunding on complaint means only the customers who notice get their money back.",
+          explanation: "An idempotency key identifies one checkout. If the call is retried, the provider returns the original result instead of creating another charge. Matching only amount and time can confuse two legitimate purchases, while disabling the button does not cover refreshes or network retries.",
         },
         {
           key: "scale",
@@ -521,7 +521,7 @@ Not capacity — this is a small amount of work per request. It is somebody gues
             "Ask customers to check out at quieter times",
           ],
           correct: 0,
-          explanation: "Browsing is nearly all of the traffic and almost none of the risk, so it is exactly what should be served from a cache — the catalogue changes when the bakery updates it, not when somebody looks at it. The stock count is the one thing on those pages you should not cache for long, since a stale number is how you oversell; showing it fresh, or with a very short expiry, is the compromise. Splitting the orders table is a large move for a shop with a few dozen products.",
+          explanation: "The catalogue and menu are read often and change rarely, so caching removes substantial database load. Stock affects checkout correctness and should be fresh or very briefly cached. Database sharding would add complexity long before this small shop needs it.",
         },
       ],
       reference: `What we are building
@@ -538,10 +538,10 @@ How a request flows
                     |
                     +--------> [payment provider]
 
-Browsing reads from a cache. Checkout confirms stock, charges the card, then writes the order and decrements stock together in one transaction so we never have half a sale.
+Browsing reads from a cache. Checkout reserves stock and creates a pending order in one database transaction. It then charges the payment provider with an idempotency key. A successful charge marks the order paid; a failed or expired attempt releases the reservation.
 
 When things go wrong
-The payment call carries a key unique to that checkout, so a customer who refreshes after a timeout is not charged twice — the provider recognises the repeat and returns the first result. If the provider is unreachable we fail the checkout rather than recording an unpaid order. If the charge succeeds and our write then fails, that is the case worth naming out loud: we record it for a human, because money moved and the customer has nothing.
+The payment call carries a key unique to that checkout, so a customer who refreshes after a timeout is not charged twice — the provider recognises the repeat and returns the first result. If the provider is unreachable, the order stays pending until a retry or expires and releases its stock. If the charge succeeds but marking the order paid fails, a reconciliation job repairs the state from the provider reference without charging again.
 
 What breaks first
 The database, under reads, long before anything to do with orders — a few dozen products read thousands of times is a caching problem and nothing more. So the catalogue and menu are cached and the stock number is not, or is cached for seconds at most. The honest trade-off is there: cache the stock and the pages get faster and the overselling gets worse.`,

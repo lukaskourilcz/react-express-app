@@ -39,7 +39,7 @@ export const algorithmsSeeds: Seed[] = [
   { q: 'How many distinct 4-digit PINs are possible using digits 0–9 (repeats allowed)?', opts: ['5040', '4096', '10000', '40320'], a: 2, e: 'Each of 4 positions has 10 choices: 10⁴ = 10000.', tags: ['Algorithms', 'Combinatorics'] },
 
   // ── Level 4 — Probability ──────────────────────────────────────────────
-  { q: 'What is the probability of getting heads on a fair coin?', opts: ['1/2', '1/3', '1/4', '1'], a: 0, e: 'A fair coin has two equally likely outcomes, so P(heads) = 1/2.', tags: ['Algorithms', 'Probability'] },
+  { q: 'A randomized retry succeeds independently half the time. What is the probability that exactly the first of two attempts succeeds?', opts: ['1/4', '1/3', '1/2', '1'], a: 0, e: 'The required sequence is success then failure: 1/2 × 1/2 = 1/4.', tags: ['Algorithms', 'Probability'] },
   { q: 'A fair die is rolled. What is the probability of rolling an even number?', opts: ['1/6', '1/2', '1/3', '2/3'], a: 1, e: 'Even results {2,4,6} are 3 of 6 outcomes: 3/6 = 1/2.', tags: ['Algorithms', 'Probability'] },
   { q: 'Two fair coins are flipped. What is the probability of two heads?', opts: ['1/2', '1/3', '1/4', '3/4'], a: 2, e: 'P(HH) = 1/2 × 1/2 = 1/4.', tags: ['Algorithms', 'Probability'] },
   { q: 'A fair die is rolled. What is the probability of NOT rolling a 6?', opts: ['1/6', '1/2', '2/3', '5/6'], a: 3, e: 'Complement rule: 1 − 1/6 = 5/6.', tags: ['Algorithms', 'Probability'] },
@@ -59,14 +59,14 @@ export const algorithmsSeeds: Seed[] = [
   { q: 'What is the LCM of 12 and 15?', opts: ['60', '30', '45', '180'], a: 0, e: 'LCM = 12×15 / GCD(12,15) = 180 / 3 = 60.', tags: ['Algorithms', 'Divisibility'] },
 
   // ── Level 6 — Algebraic Thinking ──────────────────────────────────────
-  { q: 'Solve for x: x + 7 = 12', opts: ['4', '6', '5', '19'], a: 2, e: 'Subtract 7 from both sides: x = 12 − 7 = 5.', tags: ['Algorithms', 'Algebra'] },
-  { q: 'Solve for x: 3x = 21', opts: ['6', '8', '18', '7'], a: 3, e: 'Divide both sides by 3: x = 21 ÷ 3 = 7.', tags: ['Algorithms', 'Algebra'] },
-  { q: 'Solve for x: 3x + 7 = 22', opts: ['5', '3', '4', '6'], a: 0, e: '3x = 22 − 7 = 15, so x = 15 ÷ 3 = 5.', tags: ['Algorithms', 'Algebra'] },
-  { q: 'Solve for x: 2(x + 3) = 14', opts: ['2', '4', '5', '7'], a: 1, e: 'Divide by 2: x + 3 = 7, so x = 4.', tags: ['Algorithms', 'Algebra'] },
-  { q: 'Solve for x: 5x − 3 = 2x + 9', opts: ['3', '5', '4', '6'], a: 2, e: '5x − 2x = 9 + 3, so 3x = 12 and x = 4.', tags: ['Algorithms', 'Algebra'] },
-  { q: 'The sum of three consecutive integers is 72. What is the middle one?', opts: ['23', '25', '36', '24'], a: 3, e: 'The middle integer is the average: 72 ÷ 3 = 24.', tags: ['Algorithms', 'Algebra'] },
-  { q: 'A number doubled and then increased by 5 gives 17. What is the number?', opts: ['6', '5', '7', '11'], a: 0, e: '2n + 5 = 17 → 2n = 12 → n = 6.', tags: ['Algorithms', 'Algebra'] },
-  { q: 'If 4x + 1 = 3x + 6, what is x?', opts: ['3', '5', '7', '1'], a: 1, e: '4x − 3x = 6 − 1, so x = 5.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'How many times does the loop body run?\n\n```js\nfor (let i = 7; i < 12; i++) work();\n```', opts: ['4', '6', '5', '12'], a: 2, e: 'The loop runs for i = 7, 8, 9, 10, and 11: five iterations.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'A binary search halves a sorted set of 100 items after each comparison. What is the maximum number of comparisons needed?', opts: ['6', '8', '100', '7'], a: 3, e: 'ceil(log2(100)) is 7. After seven halvings, the remaining range has at most one item.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'How many values does this loop process?\n\n```js\nfor (let i = 7; i < 22; i += 3) work(i);\n```', opts: ['5', '3', '4', '6'], a: 0, e: 'The values are 7, 10, 13, 16, and 19, so the body runs five times.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'A batch uses 6 fixed slots plus 2 slots per worker. How many workers fit when the total is 14 slots?', opts: ['2', '4', '5', '7'], a: 1, e: 'Solve 6 + 2w = 14. The remaining 8 slots hold four workers.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'Algorithm A performs 5n − 3 operations; B performs 2n + 9. At which input size are the counts equal?', opts: ['3', '5', '4', '6'], a: 2, e: '5n − 3 = 2n + 9 gives 3n = 12, so n = 4.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'A worker pool divides 72 independent jobs evenly across three workers. How many jobs does each worker receive?', opts: ['23', '25', '36', '24'], a: 3, e: 'Even distribution gives 72 ÷ 3 = 24 jobs per worker.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'An encoded id is calculated as 2n + 5. Which n produced the encoded id 17?', opts: ['6', '5', '7', '11'], a: 0, e: '2n + 5 = 17, so 2n = 12 and n = 6.', tags: ['Algorithms', 'Algebra'] },
+  { q: 'Two implementations cost 4n + 1 and 3n + 6 operations. At which n do their estimated costs match?', opts: ['3', '5', '7', '1'], a: 1, e: '4n + 1 = 3n + 6 leaves n = 5.', tags: ['Algorithms', 'Algebra'] },
 
   // ── Level 7 — Bitwise Logic ───────────────────────────────────────────
   { q: 'What is the binary number 1011 in decimal?', opts: ['9', '13', '7', '11'], a: 3, e: '8 + 0 + 2 + 1 = 11.', tags: ['Algorithms', 'Bitwise'] },

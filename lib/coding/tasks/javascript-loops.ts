@@ -1920,7 +1920,7 @@ console.log(pairWithSum([1, 2, 4, 7, 11], 9));
 
   return null;
 };`,
-    hints: ["With one index at each end of a sorted array, a sum that is too small means the left index must move up and one that is too big means the right index must move down — the pair is found when they meet the target, and missing when the indexes cross."],
+    hints: ["Start at both ends. Move the left index when the sum is too small, the right when it is too large, and stop when they cross."],
     approach: [
       "Start one index at the first element and another at the last.",
       "While the left index is below the right one, add the two elements.",
