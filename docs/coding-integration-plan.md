@@ -13,11 +13,14 @@ A third, optional surface: a **GitHub garden**. A learner connects a repository 
 
 Firebase is retired. Supabase becomes the only database; the owner's existing progress is imported once. The interview-prepper repository is archived after the import.
 
-Out of scope for this plan, pending an owner decision: the system-design guided sessions and drills, the mock/runs mode, and the AI coach. The deterministic hint ladder ships; the AI coach can return later behind the existing `lib/ai-provider.ts` gates.
+A fourth surface follows: the **system-design track** (five guided walkthroughs and forty drills) joins the Coding section as its own track (section 4.4).
+
+Retired, by owner decision (2026-09-03): the mock/runs mode and the AI coach. devShark ships no AI feature at all: the hint ladder is authored content, and its last rung before the solution points the learner at the relevant MDN documentation. The Sharkira hint, the deeper AI explanation, and their endpoints are switched off for the devShark product scope (section 6a).
 
 ## 2. Product rules that bind this work
 
 - All learning stays free. Coding tasks never sit behind support, cosmetics, or cards.
+- No AI in devShark. No model calls, no AI copy, no AI settings in the devShark product scope; documentation links replace them.
 - The server owns grading, XP, scope, and one-time claims. Reference solutions never reach the client before a pass or an explicit give-up. Visible tests are not answers and may ship to the client; hidden tests stay on the server.
 - Exactly twelve physical handlers remain under `api/`. Coding endpoints are new `resource=` values on existing handlers, delegating to `lib/coding/`.
 - devShark stays out of StudyShark discovery. Every new route, nav item, and catalog entry is gated the same way `/typing` and `/roadmap` are today (`CURRENT_PRODUCT.id === 'devshark'`).
@@ -186,6 +189,15 @@ Pipeline: `record_coding_verdict` reports whether the pass is the first or the c
 
 Privacy: the server stores the installation id, account login and id, repository name, default branch, and the commit log, nothing else. Disconnect deletes them (`delete_user_data` covers both tables); the learner uninstalls the app on GitHub. The feature is hidden when `GITHUB_APP_ID` is unset. Cosmetic by definition: it never changes XP, ranks, or access.
 
+### 4.4 System design: guided walkthroughs and drills
+
+interview-prepper's system-design track moves as the fourth Coding track, `system-design`. It has no editor; it is answered by choosing.
+
+- **Guided walkthroughs** (`src/challenges/designs/guided.js`, five systems): a scenario and a brief, then five multiple-choice questions in the order an interviewer asks them (scope, data, request flow, failure, scale), each with an explanation, and a reference answer shown at the end. A walkthrough passes at four of five.
+- **Drills** (`src/challenges/designDrills.js`, forty): one question each in four formats: `estimate` (a number graded against an accepted band), `tradeoff` and `bottleneck` (one option), `sequence` (steps to order). Graded instantly with the explanation.
+
+Content lives in `lib/coding/tasks/system-design.ts` with the same `CodingTask` envelope (`track: 'system-design'`, `verify: 'guided' | 'drill'`, a `design` or `drill` payload) and EN/CS copy. Correct options, bands, and step orders are answers, so they stay on the server: `coding-task` returns the questions with shuffled options and a sealed answer key (the placement-run token pattern in `lib/quiz-tokens.ts`), `coding-submit` grades against it, and the explanation and reference come back with the verdict. Progress, review queue, XP, and the GitHub garden treat these tasks like any other; the garden file for a design task is a Markdown note with the learner's chosen answers and the reference (`system-design/<nn>-<slug>.md`). The workbench is replaced by a `DesignRunner` screen built from the existing `RadioCards` and quiz feedback patterns. Learn levels are not affected; the `system-design` Learn topic stays as it is.
+
 ## 5. Workbench and runner
 
 ### 5.1 Editor and layout
@@ -215,11 +227,11 @@ Fallback: if the harness is not ready in time, `@codesandbox/sandpack-react` can
 | --- | --- | --- | --- |
 | JavaScript | worker (instant feedback) and server (QuickJS-WASM) | server | `record_verified_activity_xp` |
 | TypeScript | worker and server (`typescript` compiler for `typeTests`, QuickJS for calls) | server | `record_verified_activity_xp` |
-| React | harness only | client report, stored with `verified = false` | the existing client-reported learning XP path (`merge_user_xp`), documented as a limitation |
+| React | harness in the browser | the harness result, recorded by the server through `coding-report` | the same XP amounts as the other tracks, awarded by the server when it records the pass |
 
 Server sandbox (`lib/coding/sandbox.ts`): `quickjs-emscripten` with a 64 MB memory limit, a 2 s interrupt deadline per call, a virtual clock, no host access. Submit sends the code and a sealed coding session; the server grades visible and hidden tests, writes `coding_attempts` and `coding_progress`, and awards XP once per task. Well under the 10 s function limit; the cold-start cost of the WASM module and the compiler is measured in the implementing issue and recorded in `docs/perf/`.
 
-The React limitation is recorded in `docs/DEEP_END_HANDOFF.md` under "Known technical limitation to keep visible", next to the existing entries, until a server-side DOM runner is proven.
+From the learner's side the three tracks behave the same: run, submit, verdict, XP, progress. The only difference is internal: a React verdict is stored with `verified = false` because the server did not execute the suite itself, and that flag is for audit only; no screen, badge, or XP rule reads it. The note stays in `docs/DEEP_END_HANDOFF.md` under "Known technical limitation to keep visible" until a server-side DOM runner exists.
 
 ## 6. Why interview-prepper's Submit needs a refresh
 
@@ -241,6 +253,16 @@ Rules for the port, so the same class of bug cannot return:
 - Timeouts are explicit states with a visible retry, not a silent restart.
 
 The interview-prepper issue for this bug carries a fix recipe against the current code for anyone who wants the old app usable meanwhile.
+
+## 6a. Retiring AI from devShark
+
+The devShark product scope carries no AI feature. Implementation, all gated on the product scope so StudyShark keeps its dormant wiring:
+
+- `client/src/components/Quiz.tsx`: Sharkira is not rendered and the deeper-explanation request is not offered when `CURRENT_PRODUCT.id === 'devshark'`.
+- `api/quiz/submit.ts`: `resource=hint` and `resource=explanation` answer `403 feature_disabled` under the devShark deployment scope before touching any provider or budget.
+- `api/settings.ts` and `/dev`: the AI settings block reports `available: false` for devShark and the toggle is hidden.
+- The coding hint ladder ends with a documentation rung: a link to the MDN page for the task's focus (`shared/coding-docs.ts` maps focus tags to MDN URLs), then the reference solution.
+- Copy: no AI wording in devShark screens; `docs/product-architecture.md` records the split.
 
 ## 7. Supabase migration 025
 
@@ -338,7 +360,7 @@ API surface (twelve handlers unchanged):
 
 ## 8. Owner progress import and Firebase retirement
 
-`scripts/import-interview-prepper-progress.ts` reads a JSON export of interview-prepper state (localStorage keys `foundation-done`, `foundation-points`, `attempt-log`, `attempt-outcomes`, `review-queue`; or the Firestore `progress/{uid}` document and its `attempts` subcollection) and writes `coding_progress` and `coding_attempts` for one Supabase user id, mapping `legacyId → id`. The owner runs it once locally with the service role and verifies the counts. Then: README pointer in interview-prepper, archive the repository, delete its Vercel project and Firebase project, and revoke its OpenAI key.
+`scripts/import-interview-prepper-progress.ts` reads a JSON export of the Firestore `progress/{uid}` document and its `attempts` subcollection (the localStorage keys are not needed) and writes `coding_progress` and `coding_attempts` for one Supabase user id, mapping `legacyId → id`. The owner runs it once locally with the service role and verifies the counts. Then: README pointer in interview-prepper, archive the repository, delete its Vercel project and Firebase project, and revoke its OpenAI key.
 
 ## 9. Design notes
 
@@ -369,6 +391,8 @@ react-express-app, in the order Opus should take them:
 11. GitHub garden: connection, commit pipeline, settings UI.
 12. Difficulty ladder, badges, Today integration.
 13. Owner progress import, Firebase retirement, documentation sweep.
+14. System-design track: guided walkthroughs and drills in the Coding section.
+15. Retire AI features from devShark (done with the first implementation pass).
 
 interview-prepper:
 
@@ -376,13 +400,8 @@ interview-prepper:
 2. Bug: `getDoc` is not imported, cloud sync never connects (fixed on the integration branch).
 3. Retirement: migrate to devShark, archive after import.
 
-## 12. Open decisions for the owner
+## 12. Decisions and owner steps
 
-Recorded in `NEEDED.md`:
+Recorded on 2026-09-03: the system-design track follows; the mock/runs mode and the AI coach are retired; devShark carries no AI feature; React tasks behave like the other tracks for the learner; the import reads the Firestore export only; the privacy notice covers the GitHub garden.
 
-- Whether system design (guided sessions, drills), mock/runs mode, and the AI coach should follow later.
-- Accepting client-graded React tasks with the documented limitation until a server DOM runner exists.
-- Applying migration 025 in production and running the one-time import.
-- Deleting the Firebase and Vercel projects once the import is verified.
-- Registering the GitHub App for the garden, setting its environment variables, and updating the privacy notice.
-- Whether client-graded React passes also commit to the garden (default: yes, it is the learner's own repository).
+Still with the owner, in `NEEDED.md`: applying migration 025 in production, registering the GitHub App and setting its environment variables, running the one-time import, and deleting the Firebase and Vercel projects once the import is verified.
