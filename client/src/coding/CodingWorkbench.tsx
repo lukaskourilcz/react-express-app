@@ -12,7 +12,7 @@ import { formatCode } from './runner/format';
 import { runCodeTests, runPassed, type RunOutcome, type RunPhase } from './runner/run-tests';
 import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness';
 import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, type LadderRung } from './hint-ladder';
-import { reportCoding, revealCoding, submitCoding } from './api';
+import { revealCoding, submitCoding } from './api';
 import { CODING_TIERS, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import type { CodingLockReason, CodingVerdictResponse } from '../../../shared/coding-api';
 import './Coding.css';
@@ -161,19 +161,18 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             setSubmitError(t('coding.checklist.note'));
             return;
           }
-          result = await reportCoding({ session, code, passed: true, cases: [], runCount, hintsUsed: taken, durationMs });
+          result = await submitCoding({ session, code, runCount, hintsUsed: taken, durationMs });
         } else {
+          // The frame runs the suite so the learner sees named cases and a
+          // fresh preview straight away; the verdict itself comes from the
+          // server, which runs the same suite where it cannot be edited.
           const outcome = await harness.start(files(), { tests: true, preview: true });
-          const passed = outcome.status === 'done' && outcome.total > 0 && outcome.failed === 0;
-          if (!passed) setFailedRun(true);
+          if (!(outcome.status === 'done' && outcome.total > 0 && outcome.failed === 0)) setFailedRun(true);
           setStale(false);
           setRunCount((n) => n + 1);
           setTab('results');
-          result = await reportCoding({
-            session, code, passed,
-            cases: outcome.cases.map((one) => ({ name: one.name, status: one.status, error: one.error })),
-            runCount: runCount + 1, hintsUsed: taken, durationMs,
-          });
+          result = await submitCoding({ session, code, runCount: runCount + 1, hintsUsed: taken, durationMs });
+          setServerChecked(true);
         }
       } else {
         setRunPhase('starting');

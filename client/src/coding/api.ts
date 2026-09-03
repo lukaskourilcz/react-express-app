@@ -7,7 +7,6 @@ import { getStoredLang } from '../i18n/LanguageContext';
 import type {
   CodingDraftResponse,
   CodingProgressResponse,
-  CodingReportRequest,
   CodingRevealRequest,
   CodingRevealResponse,
   CodingSubmitRequest,
@@ -33,14 +32,6 @@ export function fetchCodingTask(id: string, signal?: AbortSignal): Promise<Codin
 
 export function submitCoding(input: CodingSubmitRequest): Promise<CodingVerdictResponse> {
   return apiFetch<CodingVerdictResponse>(`${ROADMAP}?resource=coding-submit`, {
-    method: 'POST',
-    body: JSON.stringify({ ...input, lang: getStoredLang() }),
-    timeoutMs: 30_000,
-  });
-}
-
-export function reportCoding(input: CodingReportRequest): Promise<CodingVerdictResponse> {
-  return apiFetch<CodingVerdictResponse>(`${ROADMAP}?resource=coding-report`, {
     method: 'POST',
     body: JSON.stringify({ ...input, lang: getStoredLang() }),
     timeoutMs: 30_000,

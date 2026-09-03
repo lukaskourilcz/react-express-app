@@ -32,6 +32,7 @@ import { codingTaskById, levelCodingTasks, playable as playableCodingTask, CODIN
 import { solutionFor } from '../lib/coding/solutions';
 import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
 import { runInSandbox } from '../lib/coding/sandbox';
+import { runReactSuite } from '../lib/coding/react-runner';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS } from '../shared/coding-catalog';
 import { CODING_BADGES } from '../shared/badges';
@@ -270,6 +271,26 @@ async function main() {
   assert.deepEqual(eligibleCodingBadges(new Set(), CODING_INDEX), []);
   assert.deepEqual(CODING_BADGES.map((badge) => badge.id), [...CODING_BADGE_IDS], 'every coding badge has display metadata');
   assert.ok(CODING_TASK_XP[1] < CODING_TASK_XP[5]);
+
+  // React tasks are graded on the server like every other track: the reference
+  // solution passes, a component that renders nothing fails, and a case that
+  // never settles is a timeout rather than a hang. This runs with the same
+  // module the API loads, under whatever NODE_ENV the check runs in.
+  const reactTask = CODING_TASKS.find((one) => one.track === 'react' && one.verify === 'tests' && one.suite);
+  assert.ok(reactTask, 'the catalogue has a React task with a suite');
+  const reactSolution = solutionFor(reactTask!.id)?.solution;
+  assert.ok(reactSolution, 'that React task has a reference solution');
+  const reactPass = await runReactSuite({ suite: reactTask!.suite!, appSource: reactSolution! });
+  assert.equal(reactPass.failed, 0, 'the reference React solution passes on the server');
+  assert.ok(reactPass.total > 0, 'the React suite registered cases');
+  assert.equal(reactPass.compileError, null);
+  const reactFail = await runReactSuite({ suite: reactTask!.suite!, appSource: 'function App() { return null; }' });
+  assert.ok(reactFail.failed > 0, 'a component that renders nothing fails the suite');
+  const reactStuck = await runReactSuite({
+    suite: "test('never settles', async () => { await new Promise(() => {}); });",
+    appSource: 'function App() { return null; }',
+  });
+  assert.equal(reactStuck.timedOut, true, 'a case that never settles is reported as a timeout');
 
   // Coding resources are devShark-only: the StudyShark scope this test runs in refuses them.
   const codingRes = mockResponse();

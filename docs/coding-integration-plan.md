@@ -227,7 +227,7 @@ Fallback: if the harness is not ready in time, `@codesandbox/sandpack-react` can
 | --- | --- | --- | --- |
 | JavaScript | worker (instant feedback) and server (QuickJS-WASM) | server | `record_verified_activity_xp` |
 | TypeScript | worker and server (`typescript` compiler for `typeTests`, QuickJS for calls) | server | `record_verified_activity_xp` |
-| React | harness in the browser | the harness result, recorded by the server through `coding-report` | the same XP amounts as the other tracks, awarded by the server when it records the pass |
+| React | jsdom + Testing Library on the server (the browser harness stays for the preview and the Run button) | the server's own run of the task suite | the same XP amounts as the other tracks, awarded by the server when it records the pass |
 
 Server sandbox (`lib/coding/sandbox.ts`): `quickjs-emscripten` with a 64 MB memory limit, a 2 s interrupt deadline per call, a virtual clock, no host access. Submit sends the code and a sealed coding session; the server grades visible and hidden tests, writes `coding_attempts` and `coding_progress`, and awards XP once per task. Well under the 10 s function limit; the cold-start cost of the WASM module and the compiler is measured in the implementing issue and recorded in `docs/perf/`.
 
@@ -352,7 +352,6 @@ API surface (twelve handlers unchanged):
 | --- | --- | --- |
 | `api/quiz/roadmap.ts` | `coding-task` | Playable task with sealed coding session |
 | `api/quiz/roadmap.ts` | `coding-submit` | Server grading, verdict of record, XP |
-| `api/quiz/roadmap.ts` | `coding-report` | Client verdict for React tasks (`verified = false`) |
 | `api/quiz/roadmap.ts` | `coding-reveal` | Solution after pass or give-up; records the reveal |
 | `api/user/[op].ts` | `coding-progress`, `coding-draft` | Progress list, review queue, drafts |
 | `api/user/[op].ts` | `github-connect-start`, `github-connect-finish`, `github-connection`, `github-repo`, `github-sync`, `github-disconnect` | GitHub garden connection and retries |
@@ -411,7 +410,7 @@ Still with the owner, in `NEEDED.md`: applying migration 025 in production, regi
 Issues #106 to #117 are implemented on `claude/interview-prepper-integration-ogh4ph` in the order the epic lists. Deviations from the issue text worth knowing before review:
 
 - The catalogue holds 245 tasks (javascript 93, typescript 42, react 65, system-design 45): the loop and method set grew to 50 JavaScript and 22 TypeScript tasks because the per-level rows in the brief added up to more than the stated totals.
-- React tasks are graded in the self-hosted iframe and recorded through `coding-report` with `verified=false`; the learner sees no difference and XP is awarded the same way. A server-side React grader remains open.
+- React tasks were first graded in the self-hosted iframe and recorded unverified. They are now graded on the server (issue #119) by `lib/coding/react-runner.ts`, the same module the content contract uses to prove every reference solution, so every track's verdict is `verified`.
 - The GitHub garden writes its tables directly with the service role instead of through RPCs; the tables carry the queued file content so a sync can replay a commit without the original code.
 - The roadmap structure annotates code levels with `codingTasks` counts, and the level map shows a marker; Today lists due coding reviews for signed-in devShark learners.
 - The import script reads the Firestore export only and never awards XP or schedules reviews for imported passes.

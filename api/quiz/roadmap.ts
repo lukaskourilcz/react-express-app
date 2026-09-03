@@ -32,7 +32,7 @@ import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
 import { levelCodingTasks, playable as playableCodingTask } from '../../lib/coding/catalog';
 import type { RoadmapTopicStructure } from '../../lib/roadmap';
-import { handleCodingReveal, handleCodingReport, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
+import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
 import { encodeCodingSession } from '../../lib/quiz-tokens';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
 import { subjectForCategory, subjectForTopic, isScopeSubject, type ScopeSubjectId } from '../../shared/subject-catalog';
@@ -846,15 +846,13 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
 
   // Coding challenges share this function (twelve-function budget):
   //   GET  ?resource=coding-task&id=     → a playable task with its sealed session
-  //   POST ?resource=coding-submit       → server grading (JavaScript, TypeScript, system design)
-  //   POST ?resource=coding-report       → the browser harness verdict (React)
+  //   POST ?resource=coding-submit       → server grading (every track)
   //   POST ?resource=coding-reveal       → the reference solution after a pass or give-up
   const resource = typeof req.query.resource === 'string' ? req.query.resource : '';
   if (resource.startsWith('coding-')) {
     try {
       if (resource === 'coding-task' && req.method === 'GET') return await handleCodingTask(req, res, supabase);
       if (resource === 'coding-submit' && req.method === 'POST') return await handleCodingSubmit(req, res, supabase);
-      if (resource === 'coding-report' && req.method === 'POST') return await handleCodingReport(req, res, supabase);
       if (resource === 'coding-reveal' && req.method === 'POST') return await handleCodingReveal(req, res, supabase);
       res.setHeader('Allow', resource === 'coding-task' ? 'GET' : 'POST');
       return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');

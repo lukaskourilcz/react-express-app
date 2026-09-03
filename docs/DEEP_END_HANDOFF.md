@@ -70,7 +70,7 @@ Two concise EN/CS consistency notes now sit between meaningful Profile sections.
 
 ### 6. Coding section, Learn coding phase, and GitHub garden (2026-09-03)
 
-The interview-prepper catalogue now lives in `lib/coding/` (245 tasks with Czech overlays, solutions server-only, a content contract in `npm run test:coding`). devShark gained the `/coding` section with the CodeMirror workbench, the module-worker runner, the self-hosted React harness, the system-design runner, the review queue, coding tasks inside the JavaScript, TypeScript, and React Learn levels, the tier ladder, five coding badges, a Today section for due reviews, a level-map marker, and the GitHub garden (App JWT, installation tokens, one file per passed task, queue and sync, profile card, `/settings/github` callback, privacy notice). Grading is server-owned for JavaScript, TypeScript, and system design; React verdicts are browser-graded and recorded unverified. devShark ships no AI feature. Migration 025 adds the storage; `npm run import:interview-prepper` is the one-time owner import. `docs/coding-integration-plan.md` section 13 lists the deviations from the issue text.
+The interview-prepper catalogue now lives in `lib/coding/` (245 tasks with Czech overlays, solutions server-only, a content contract in `npm run test:coding`). devShark gained the `/coding` section with the CodeMirror workbench, the module-worker runner, the self-hosted React harness, the system-design runner, the review queue, coding tasks inside the JavaScript, TypeScript, and React Learn levels, the tier ladder, five coding badges, a Today section for due reviews, a level-map marker, and the GitHub garden (App JWT, installation tokens, one file per passed task, queue and sync, profile card, `/settings/github` callback, privacy notice). Grading is server-owned for every track: JavaScript and TypeScript in a QuickJS sandbox, system design against a sealed key, and React under jsdom with a development React (the only build that exports `act`). The browser frame stays for the preview and the Run button. devShark ships no AI feature. Migration 025 adds the storage; `npm run import:interview-prepper` is the one-time owner import. `docs/coding-integration-plan.md` section 13 lists the deviations from the issue text.
 
 ## Validation completed (coding integration, 2026-09-03)
 
@@ -79,6 +79,7 @@ Run in the remote session container (Node 22.22, Chromium from the Playwright bu
 - `npm run typecheck:api` — passed;
 - `npm run test:launch` — passed product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, and the twelve-function budget, plus the coding contracts (sandbox limits, sealed coding sessions, design grading, ladder, garden paths, badge metadata, coding resources refused outside devShark);
 - `npm run test:coding` (strict) — 245 tasks, every solution proven under Node and jsdom, payloads answer-free, Czech overlays complete;
+- `npm run test:coding` under `NODE_ENV=production` — the same 245 tasks, proving the server React runner works in the environment a serverless function actually runs in;
 - `npm run test:harness` — 23 assertions against the built sandbox in Chromium; it found that a production React ships no `act`, which made every React suite throw on its first `render()`, so the sandbox is now built separately against the development React (see `client/vite.sandbox.config.ts`);
 - `npm run build` and `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build` — both passed; the coding worker and the sandbox page are emitted;
 - `npm run check:responsive` on both product builds — 175 route/viewport probes each, zero overflow or containment issues across 360, 390, 430, 768, 1024, 1280, and 1440 widths, with the five coding routes and `/settings/github` in the default set;
@@ -122,8 +123,6 @@ Final validation for the current handoff used `/opt/homebrew/bin/node` 23.1.0 (t
 ## Known technical limitation to keep visible
 
 Challenge proof collection is materially stronger, but without a server-side append-only attempt ledger a determined client may still omit earlier proof batches. Do not claim cryptographic completeness. A complete fix must fit an existing typed handler and preserve the twelve-function limit.
-
-React coding tasks are graded in the browser harness and recorded with `verified=false`: the server accepts the reported verdict for XP and progress. Treat React passes as self-reported until a server-side React grader exists; the JavaScript, TypeScript, and system-design verdicts are server-graded.
 
 ## Generated-media production continuation
 

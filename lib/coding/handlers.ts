@@ -1,6 +1,6 @@
 /** Coding-challenge API resources. Mounted on the existing handlers to keep
  * the twelve-function budget: `api/quiz/roadmap.ts` serves coding-task,
- * coding-submit, coding-report and coding-reveal; `api/user/[op].ts` serves
+ * coding-submit and coding-reveal; `api/user/[op].ts` serves
  * coding-progress and coding-draft. The server grades JavaScript and
  * TypeScript in the QuickJS sandbox and system design against the sealed key;
  * React verdicts come from the browser harness and are recorded as such. */
@@ -32,7 +32,6 @@ import type {
   CodingGardenStatus,
   CodingOutcome,
   CodingProgressResponse,
-  CodingReportRequest,
   CodingRevealRequest,
   CodingRevealResponse,
   CodingSubmitRequest,
@@ -235,6 +234,47 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
   };
 }
 
+/**
+ * React tasks: render the component and run the task's Testing Library suite
+ * under jsdom. A task with no suite (`verify: 'checklist'`) has nothing to
+ * assert, so the learner's own confirmation stands; everything else is decided
+ * here from the code alone.
+ */
+async function gradeReact(task: CodingTask, code: string): Promise<Graded> {
+  if (task.verify === 'checklist' || !task.suite) {
+    return { verdict: 'passed', results: [], hidden: null, check: null, logs: [], codeError: null, design: null, designReference: null };
+  }
+  const { runReactSuite } = await import('./react-runner');
+  let run;
+  try {
+    run = await runReactSuite({ suite: task.suite, appSource: code });
+  } catch (error) {
+    // The runtime itself could not start; that is ours, not the learner's.
+    logEvent({ status: 500, kind: 'react_runtime', reason: error instanceof Error ? error.message : 'unknown' });
+    return {
+      verdict: 'error', results: [], hidden: null, check: null, logs: [],
+      codeError: 'The React runner could not start. Try again in a moment.',
+      design: null, designReference: null,
+    };
+  }
+  const results = run.cases.map((one) => ({ pass: one.status === 'pass', actual: null, error: one.error }));
+  const verdict: CodingOutcome = run.compileError
+    ? 'error'
+    : run.timedOut
+      ? 'timeout'
+      : run.failed === 0 && run.total > 0 ? 'passed' : 'failed';
+  return {
+    verdict,
+    results,
+    hidden: null,
+    check: null,
+    logs: [],
+    codeError: run.compileError,
+    design: null,
+    designReference: null,
+  };
+}
+
 function gradeDesignTask(task: CodingTask, session: CodingSession, answers: DesignAnswer[] | undefined): Graded {
   const graded = gradeDesign(task, session.key ?? {}, answers);
   return {
@@ -347,7 +387,6 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
   const task = codingTaskById(session.taskId);
   if (!task || task.track !== session.track) return jsonError(res, 400, 'invalid_session', 'Coding session does not match a task');
-  if (task.track === 'react') return jsonError(res, 400, 'bad_request', 'React tasks report their harness result through coding-report');
   const userId = await optionalUser(req, res);
   if (userId === undefined) return;
 
@@ -360,7 +399,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
     if (typeof body.code !== 'string' || body.code.length === 0) return jsonError(res, 400, 'bad_request', 'code is required');
     if (Buffer.byteLength(body.code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 413, 'too_large', 'Code is limited to 20 kB');
     code = body.code;
-    graded = await gradeCode(task, code);
+    graded = task.track === 'react' ? await gradeReact(task, code) : await gradeCode(task, code);
   }
 
   let recorded: Recorded | null = null;
@@ -383,53 +422,6 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
     }
   }
   logEvent({ status: 200, kind: 'submit', track: task.track, verdict: graded.verdict, hasUser: Boolean(userId) });
-  res.setHeader('Cache-Control', 'private, no-store');
-  return res.json(verdictBody(graded, recorded, github));
-}
-
-/* ── POST ?resource=coding-report (React) ─────────────────────────────── */
-
-export async function handleCodingReport(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
-  if (!codingAvailable()) return notAvailable(res);
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingRun))) return;
-  const body = (req.body || {}) as Partial<CodingReportRequest> & { lang?: unknown };
-  const session = sessionFrom(body.session);
-  if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
-  const task = codingTaskById(session.taskId);
-  if (!task || task.track !== 'react' || session.track !== 'react') return jsonError(res, 400, 'bad_request', 'Only React tasks report a harness result');
-  if (typeof body.passed !== 'boolean' || !Array.isArray(body.cases) || body.cases.length > 50) return jsonError(res, 400, 'bad_request', 'passed and cases are required');
-  if (typeof body.code !== 'string' || Buffer.byteLength(body.code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 400, 'bad_request', 'code is required');
-  const cases = body.cases.map((one) => ({
-    name: String((one as { name?: unknown })?.name ?? '').slice(0, 200),
-    status: (one as { status?: unknown })?.status === 'pass' ? 'pass' as const : 'fail' as const,
-    error: typeof (one as { error?: unknown })?.error === 'string' ? String((one as { error: string }).error).slice(0, 500) : null,
-  }));
-  const allPass = cases.length > 0 && cases.every((one) => one.status === 'pass');
-  const verdict: CodingOutcome = body.passed && allPass ? 'passed' : 'failed';
-  if (task.verify === 'checklist' && verdict !== 'passed' && body.passed) {
-    // A checklist task has no suite: the learner's confirmation is the verdict.
-  }
-  const graded: Graded = {
-    verdict: task.verify === 'checklist' && body.passed ? 'passed' : verdict,
-    results: cases.map((one) => ({ pass: one.status === 'pass', actual: null, error: one.error })),
-    hidden: null, check: null, logs: [], codeError: null, design: null, designReference: null,
-  };
-  const userId = await optionalUser(req, res);
-  if (userId === undefined) return;
-  let recorded: Recorded | null = null;
-  let github: CodingGardenStatus | null = null;
-  if (userId) {
-    if (!supabase) return jsonError(res, 503, 'not_configured', 'Coding progress is not configured');
-    recorded = await recordVerdict({ supabase, userId, task, session, verdict: graded.verdict, verified: false, code: body.code, runCount: body.runCount, hintsUsed: body.hintsUsed, durationMs: body.durationMs }, res);
-    if (!recorded) return;
-    if (graded.verdict === 'passed' && recorded.applied) {
-      github = await afterCodingPass(supabase, {
-        userId, task, code: body.code, passedCount: cases.filter((c) => c.status === 'pass').length, totalCount: cases.length,
-        locale: readLang(body.lang), firstPass: recorded.firstPass, codeChanged: recorded.codeChanged,
-      });
-    }
-  }
-  logEvent({ status: 200, kind: 'report', verdict: graded.verdict, hasUser: Boolean(userId) });
   res.setHeader('Cache-Control', 'private, no-store');
   return res.json(verdictBody(graded, recorded, github));
 }

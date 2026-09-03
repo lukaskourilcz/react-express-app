@@ -22,7 +22,7 @@ import {
 import { docsFor } from '../shared/coding-docs';
 import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
-import { runReactSuite } from './coding-react-node-runner';
+import { runReactSuite } from '../lib/coding/react-runner';
 import { renderCodingIndex } from './build-coding-index';
 
 const SKIP_CS = process.env.CODING_SKIP_CS === '1';

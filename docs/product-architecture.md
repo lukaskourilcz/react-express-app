@@ -65,9 +65,12 @@ TypeScript submissions run in a QuickJS WebAssembly sandbox inside
 `api/quiz/roadmap.ts` (`resource=coding-submit`) with a 2.5 s deadline and
 virtual timers, TypeScript type tests run through the real compiler, and
 system-design answers are graded against a key sealed in the coding session.
-React tasks run in the self-hosted `client/sandbox/` iframe and are recorded
-through `resource=coding-report` with `verified=false`; the learner experience
-and the XP award are the same. Reference solutions never leave the server:
+React tasks are graded the same way, in `lib/coding/react-runner.ts`: jsdom, a
+development React (the only build that exports `act`), and the task's Testing
+Library suite, loaded lazily so only a React submission pays for them. The
+self-hosted `client/sandbox/` iframe stays for the preview and for the Run
+button's immediate feedback, but the verdict of record is the server's.
+Reference solutions never leave the server:
 `resource=coding-reveal` returns one only after a pass or after the authored
 hint ladder is exhausted, and a reveal ends the current Learn level attempt.
 

@@ -82,17 +82,6 @@ export interface DesignStepVerdict {
   explanation: Localized;
 }
 
-/** POST ?resource=coding-report (React: the browser harness result) */
-export interface CodingReportRequest {
-  session: string;
-  code: string;
-  passed: boolean;
-  cases: { name: string; status: 'pass' | 'fail'; error: string | null }[];
-  runCount?: number;
-  hintsUsed?: number;
-  durationMs?: number;
-}
-
 /** POST ?resource=coding-reveal */
 export interface CodingRevealRequest {
   session: string;
