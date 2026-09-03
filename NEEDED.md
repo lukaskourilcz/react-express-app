@@ -39,6 +39,18 @@ AI-driven features (post-answer explanations, Sharkira Socratic hints) are inten
 
 - [ ] **Delete the merged `claude/remove-forms-unlock-system-design-br6l74` branch on GitHub.** It is fully merged into `main` (commit `2333bd0`) and the local copy is gone, but this session's git proxy rejects delete-ref pushes, so the remote branch is still listed. One click in the GitHub branches view. `[imp:1]` `[owner:me]` `[time:5m]` `[kind:setup]`
 
+## Coding integration (2026-09-03)
+
+The plan for folding interview-prepper into devShark is in `docs/coding-integration-plan.md`; the implementation issues live on GitHub (epic in this repository, three issues in `interview-prepper`). These items need you.
+
+- [ ] **Decide what else follows interview-prepper into devShark.** The plan ports the JavaScript, TypeScript, and React tracks only. Say whether the system-design sessions and drills, the mock/runs mode, and the AI coach should return later or stay retired. `[imp:3]` `[owner:me]` `[time:20m]` `[kind:decision]`
+- [ ] **Accept client-graded React coding tasks** as a documented limitation (JavaScript and TypeScript are graded on the server in a sandbox; React runs only in the browser harness and its verdicts are stored as unverified). The alternative is a server-side DOM runner, which the plan does not commit to. `[imp:3]` `[owner:me]` `[time:10m]` `[kind:decision]`
+- [ ] **Apply `supabase/supabase-schema-025.sql` in production** once its issue lands, then confirm `/api/health` still reports `database: ok` and `serviceRole: ok`. `[imp:4]` `[owner:me]` `[time:30m]` `[kind:deploy]`
+- [ ] **Export your interview-prepper progress and run the one-time import** (`scripts/import-interview-prepper-progress.ts`, once written) with your Supabase user id and the service role, locally. Export the localStorage keys from the app's browser profile or the Firestore `progress` document. `[imp:2]` `[owner:me]` `[time:30m]` `[kind:setup]`
+- [ ] **Retire interview-prepper after the import is verified:** archive the repository, delete its Vercel project and Firebase project, and revoke its OpenAI key. `[imp:2]` `[owner:me]` `[time:30m]` `[kind:deploy]`
+- [ ] **Merge `claude/interview-prepper-integration-ogh4ph` in both repositories** (this plan, the NEEDED entries, and the interview-prepper `getDoc` import fix), then delete the branch. The session that produced them was instructed to stay on that branch rather than merge. `[imp:2]` `[owner:me]` `[time:10m]` `[kind:setup]`
+- [ ] **Implement the coding integration issues in the order the epic lists.** Each issue is self-contained and names its validation. `[imp:3]` `[owner:ai]` `[time:12h]` `[kind:content]`
+
 ## When usage grows
 
 - [ ] Review [scaling.md](./scaling.md) monthly once traffic is meaningful. Upgrade Supabase compute before sustained saturation, add retention/partitioning for event tables, and redesign multiplayer fan-out before large classrooms or high concurrent-room counts. `[imp:1]` `[owner:me]` `[time:20m]` `[kind:setup]`
