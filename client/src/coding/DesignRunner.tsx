@@ -40,6 +40,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
   const [verdict, setVerdict] = useState<CodingVerdictResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [moved, setMoved] = useState('');
 
   const answered = useMemo(() => answers.filter((one) => one !== null).length, [answers]);
   const drillAnswer = useMemo((): DesignAnswer | null => {
@@ -76,6 +77,8 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
       if (to < 0 || to >= prev.length) return prev;
       const next = [...prev];
       [next[from], next[to]] = [next[to], next[from]];
+      // Reordering is silent otherwise: say what moved and where it landed.
+      setMoved(t('coding.design.moved', { step: L(drill!.steps![next[to]]), n: to + 1, total: next.length }));
       return next;
     });
   };
@@ -106,8 +109,9 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
     return (
       <div className="cd-design">
         <section className="cd-pane">
+          <span className="cd-visually-hidden" role="status" aria-live="polite">{t(`coding.verdict.${verdict.verdict}` as never)}</span>
           {header}
-          <section className={`cd-verdict cd-verdict--${verdict.verdict}`} aria-live="polite">
+          <section className={`cd-verdict cd-verdict--${verdict.verdict}`}>
             <h3 className="cd-verdict__title">
               <span>{t(`coding.verdict.${verdict.verdict}` as never)}</span>
               {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
@@ -209,6 +213,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
             {drill.format === 'sequence' && drill.steps && (
               <>
                 <p className="cd-editor-label">{t('coding.design.order')}</p>
+                <span className="cd-visually-hidden" role="status" aria-live="polite">{moved}</span>
                 <ol className="cd-sequence">
                   {order.map((original, position) => (
                     <li key={original}>

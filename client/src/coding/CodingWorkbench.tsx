@@ -254,12 +254,28 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     ? reactRun && reactRun.status === 'done' && reactRun.total > 0 ? `${reactRun.passed}/${reactRun.total}` : null
     : run && !run.codeError && run.results.length > 0 ? `${run.results.filter((r) => r.pass === true).length}/${run.results.length}` : null;
   const typesBadge = run?.check ? (run.check.codeErrors.length === 0 && run.check.typeTests.every((one) => one.pass) ? 'ok' : String(run.check.codeErrors.length + run.check.typeTests.filter((one) => !one.pass).length)) : null;
+  const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
   const tabs: { key: Tab; label: string; badge: string | null; good: boolean | null }[] = [
     { key: 'results', label: t('coding.tab.results'), badge: resultsBadge, good: isReact ? (reactRun ? reactRun.failed === 0 && reactRun.total > 0 : null) : localPassed },
     ...(isTypeScript ? [{ key: 'types' as Tab, label: t('coding.tab.types'), badge: typesBadge, good: typesBadge === 'ok' ? true : typesBadge ? false : null }] : []),
     { key: 'console', label: t('coding.tab.console'), badge: null, good: null },
     ...(isReact ? [{ key: 'preview' as Tab, label: t('coding.tab.preview'), badge: null, good: null }] : []),
   ];
+
+  // Arrow/Home/End across the tab strip, per the ARIA tabs pattern.
+  const onTabKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const keys: Record<string, number> = { ArrowRight: 1, ArrowLeft: -1 };
+    const index = tabs.findIndex((one) => one.key === tab);
+    let next = -1;
+    if (event.key in keys) next = (index + keys[event.key] + tabs.length) % tabs.length;
+    else if (event.key === 'Home') next = 0;
+    else if (event.key === 'End') next = tabs.length - 1;
+    if (next < 0) return;
+    event.preventDefault();
+    const key = tabs[next].key;
+    setTab(key);
+    tabRefs.current[key]?.focus();
+  };
 
   const renderResults = (): ReactNode => {
     if (isReact) {
@@ -380,7 +396,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   );
 
   const verdictCard = verdict && (
-    <section className={`cd-verdict cd-verdict--${verdict.verdict}`} aria-live="polite">
+    <section className={`cd-verdict cd-verdict--${verdict.verdict}`}>
       <h3 className="cd-verdict__title">
         <span>{t(`coding.verdict.${verdict.verdict}` as never)}</span>
         {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
@@ -406,8 +422,20 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     </section>
   );
 
+  // Announce what a run or a submission concluded. A live region has to be in
+  // the document BEFORE its text changes, so it lives here rather than on the
+  // verdict card, which mounts along with its own message.
+  const announcement = phase === 'running' || phase === 'submitting'
+    ? t('coding.status.working')
+    : verdict
+      ? t(`coding.verdict.${verdict.verdict}` as never)
+      : isReact
+        ? reactRun?.status === 'done' ? t('coding.results.passing', { passed: reactRun.passed, total: reactRun.total }) : ''
+        : run ? t('coding.results.passing', { passed: run.results.filter((one) => one.pass === true).length, total: run.results.length }) : '';
+
   return (
     <div className={`cd-workbench cd-workbench--${mode}`} onKeyDown={onKeyDown}>
+      <span className="cd-visually-hidden" role="status" aria-live="polite">{announcement}</span>
       <div className="cd-workbench__grid">
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
           <section className="cd-pane cd-pane--task" aria-labelledby={`${baseId}-title`}>
@@ -500,7 +528,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         </div>
 
         <section className="cd-pane cd-pane--output" aria-label={t('coding.tab.results')}>
-          <div className="cd-tabs" role="tablist">
+          <div className="cd-tabs" role="tablist" onKeyDown={onTabKeyDown}>
             {tabs.map((one) => (
               <button
                 key={one.key}
@@ -509,6 +537,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 id={`${baseId}-tab-${one.key}`}
                 aria-selected={tab === one.key}
                 aria-controls={`${baseId}-panel-${one.key}`}
+                // Roving tab stop: Tab reaches the strip once, arrows move
+                // within it, which is what `role="tab"` promises a reader.
+                tabIndex={tab === one.key ? 0 : -1}
+                ref={(node) => { tabRefs.current[one.key] = node; }}
                 className="cd-tab"
                 onClick={() => setTab(one.key)}
               >
@@ -518,7 +550,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             ))}
           </div>
           {tabs.map((one) => (
-            <div key={one.key} role="tabpanel" id={`${baseId}-panel-${one.key}`} aria-labelledby={`${baseId}-tab-${one.key}`} className="cd-panel" hidden={tab !== one.key}>
+            // The panel takes focus itself: its content is often plain text,
+            // so without this a keyboard user tabs straight past the results.
+            <div key={one.key} role="tabpanel" tabIndex={tab === one.key ? 0 : -1} id={`${baseId}-panel-${one.key}`} aria-labelledby={`${baseId}-tab-${one.key}`} className="cd-panel" hidden={tab !== one.key}>
               {one.key === 'results' && renderResults()}
               {one.key === 'types' && renderTypes()}
               {one.key === 'console' && renderConsole()}

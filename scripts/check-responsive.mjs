@@ -79,6 +79,15 @@ const DEFAULT_VIEWPORTS = [
 const BLOCK_EXTERNAL = process.argv.includes('--block-external') ||
   process.env.RESPONSIVE_BLOCK_EXTERNAL === '1';
 
+// The app reads both of these from local storage before it paints, so seeding
+// them lets one sweep cover dark mode and Czech as well as the widths.
+const THEME = process.env.RESPONSIVE_THEME ?? '';
+const LOCALE = process.env.RESPONSIVE_LOCALE ?? '';
+const SEED = [
+  THEME ? `try { localStorage.setItem('devquiz:color-mode', ${JSON.stringify(THEME)}); } catch (e) {}` : '',
+  LOCALE ? `try { localStorage.setItem('devquiz.lang', ${JSON.stringify(LOCALE)}); } catch (e) {}` : '',
+].filter(Boolean).join('\n');
+
 function optionValue(name) {
   const exact = process.argv.indexOf(name);
   if (exact >= 0) return process.argv[exact + 1];
@@ -129,9 +138,10 @@ Options:
   --help              Show this help
 
 The same settings are available through RESPONSIVE_ROUTES,
-RESPONSIVE_WIDTHS, RESPONSIVE_BASE_URL, RESPONSIVE_OUTPUT_DIR, and
+RESPONSIVE_WIDTHS, RESPONSIVE_BASE_URL, RESPONSIVE_OUTPUT_DIR,
 RESPONSIVE_BLOCK_EXTERNAL=1 (or --block-external) to block the webfont
-hosts on a runner without outbound network.
+hosts on a runner without outbound network, and RESPONSIVE_THEME=dark /
+RESPONSIVE_LOCALE=cs to sweep the other theme and the other language.
 Failure screenshots use a temporary directory by default.`);
 }
 
@@ -260,6 +270,63 @@ const PROBE = `(() => {
   return { winW, docW, overflow, horizOffenders, parentOffenders };
 })()`;
 
+// Scrolled to the end of a page, nothing readable may sit under the fixed
+// ocean footer. The shell reserves space for it; this proves the reserve is
+// still big enough, which is the one thing a horizontal-overflow probe cannot
+// see. The app scrolls inside <main>, not the window.
+const CLEARANCE = `(async () => {
+  const scroller = document.querySelector('main') || document.scrollingElement;
+  if (scroller) {
+    scroller.scrollTop = scroller.scrollHeight;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  // The decorative overlays: fixed or absolute, ignored by the pointer, and
+  // sitting against the bottom of the viewport.
+  const overlays = [];
+  for (const el of document.querySelectorAll('body *')) {
+    const style = getComputedStyle(el);
+    if (style.position !== 'fixed' && style.position !== 'absolute') continue;
+    if (style.pointerEvents !== 'none') continue;
+    const r = el.getBoundingClientRect();
+    if (r.height === 0 || r.width < window.innerWidth * 0.5) continue;
+    if (r.bottom < window.innerHeight - 4 || r.top > window.innerHeight) continue;
+    // A band along the bottom, not a page-height decorative layer: a tall
+    // layer covers the whole viewport by definition and would flag everything.
+    if (r.height > window.innerHeight * 0.35) continue;
+    overlays.push(r);
+  }
+  if (overlays.length === 0) return { covered: [], overlays: 0 };
+
+  const TEXTY = new Set(['A', 'BUTTON', 'P', 'SPAN', 'STRONG', 'LI', 'DD', 'DT', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LABEL', 'SMALL']);
+  const covered = [];
+  for (const el of document.querySelectorAll('body *')) {
+    if (!TEXTY.has(el.tagName)) continue;
+    if (el.closest('[aria-hidden="true"]')) continue;
+    if (!el.textContent || !el.textContent.trim()) continue;
+    const style = getComputedStyle(el);
+    if (style.visibility === 'hidden' || style.display === 'none' || Number(style.opacity) === 0) continue;
+    const r = el.getBoundingClientRect();
+    if (r.height === 0 || r.width === 0) continue;
+    if (r.top >= window.innerHeight || r.bottom <= 0) continue;
+    // Measured against each band in turn, on both axes.
+    let overlap = 0;
+    for (const band of overlays) {
+      const vertical = Math.min(r.bottom, band.bottom) - Math.max(r.top, band.top);
+      const horizontal = Math.min(r.right, band.right) - Math.max(r.left, band.left);
+      if (vertical > 0 && horizontal > 0) overlap = Math.max(overlap, vertical);
+    }
+    if (overlap > 2) {
+      covered.push({
+        tag: el.tagName.toLowerCase(),
+        text: el.textContent.trim().slice(0, 40),
+        overlap: Math.round(overlap),
+      });
+      if (covered.length >= 6) break;
+    }
+  }
+  return { covered, overlays: overlays.length };
+})()`;
+
 async function probeRoute(call, baseUrl, route, vp) {
   await call('Emulation.setDeviceMetricsOverride', {
     width: vp.width,
@@ -288,7 +355,11 @@ async function probeRoute(call, baseUrl, route, vp) {
   // Give Suspense + lazy chunks a beat to settle.
   await new Promise((r) => setTimeout(r, 1500));
   const data = await evaluate(call, PROBE);
-  return { route, viewport: vp.label, ready, ...data };
+  const clearance = await evaluate(call, CLEARANCE);
+  if (process.env.RESPONSIVE_DEBUG === '1') {
+    console.log(`  [debug] ${route} ${vp.label}: ${clearance.overlays} bottom overlay(s), ${clearance.covered.length} covered`);
+  }
+  return { route, viewport: vp.label, ready, covered: clearance.covered, ...data };
 }
 
 async function screenshot(call, outDir, name) {
@@ -352,6 +423,10 @@ async function main() {
     const call = rpc(ws);
     await call('Page.enable');
     await call('Runtime.enable');
+    if (SEED) {
+      await call('Page.addScriptToEvaluateOnNewDocument', { source: SEED });
+      console.log(`  seeded${THEME ? ` theme=${THEME}` : ''}${LOCALE ? ` locale=${LOCALE}` : ''}`);
+    }
     // Sandboxed runners cannot reach the Google Fonts hosts, so every document
     // waits out its font requests and never fires `load`. Blocking them makes
     // an offline run fast and deterministic; the page then measures with the
@@ -368,7 +443,7 @@ async function main() {
       for (const route of routes) {
         const r = await probeRoute(call, baseUrl, route, vp);
         results.push(r);
-        const broken = r.overflow > 0 || r.parentOffenders.length > 0;
+        const broken = r.overflow > 0 || r.parentOffenders.length > 0 || r.covered.length > 0;
         const tag = broken ? 'FAIL' : 'OK';
         const slow = r.ready ? '' : '  (measured before load finished)';
         process.stdout.write(`  ${tag.padEnd(5)} ${vp.label.padEnd(10)} ${route}${slow}\n`);
@@ -380,7 +455,7 @@ async function main() {
     }
     ws.close();
 
-    const fails = results.filter((r) => r.overflow > 0 || r.parentOffenders.length > 0);
+    const fails = results.filter((r) => r.overflow > 0 || r.parentOffenders.length > 0 || r.covered.length > 0);
     console.log(`\n${results.length} probes · ${fails.length} with issues`);
     if (fails.length) {
       console.log('\nDetails:');
@@ -399,11 +474,17 @@ async function main() {
             console.log(`      ${o.child} overshoots ${o.parent} by +${o.overshoot}px (parent overflow-x: ${o.overflowX})`);
           }
         }
+        if (f.covered.length) {
+          console.log('    content under the fixed ocean footer at the end of the page:');
+          for (const o of f.covered.slice(0, 5)) {
+            console.log(`      <${o.tag}> "${o.text}" covered by ${o.overlap}px`);
+          }
+        }
       }
       console.log(`\nFailure screenshots: ${outDir}`);
       process.exitCode = 1;
     } else {
-      console.log('\nAll clear — no horizontal overflow, no child escaping its parent.');
+      console.log('\nAll clear — no horizontal overflow, no child escaping its parent, nothing under the ocean footer.');
       if (!configuredOutput) rmSync(outDir, { recursive: true, force: true });
     }
   } finally {
