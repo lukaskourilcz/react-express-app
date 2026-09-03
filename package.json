@@ -15,7 +15,8 @@
     "preview": "vercel dev --listen 3000",
     "install:all": "npm install && cd client && npm install",
     "test:coding": "esbuild scripts/test-coding-content.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/coding-content.mjs --log-level=warning && node node_modules/.cache/shark/coding-content.mjs",
-    "build:coding-index": "esbuild scripts/build-coding-index.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/coding-index.mjs --log-level=warning && CODING_INDEX_WRITE=1 node node_modules/.cache/shark/coding-index.mjs"
+    "build:coding-index": "esbuild scripts/build-coding-index.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/coding-index.mjs --log-level=warning && CODING_INDEX_WRITE=1 node node_modules/.cache/shark/coding-index.mjs",
+    "import:interview-prepper": "esbuild scripts/import-interview-prepper-progress.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/import-progress.mjs --log-level=warning && node node_modules/.cache/shark/import-progress.mjs"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.1",

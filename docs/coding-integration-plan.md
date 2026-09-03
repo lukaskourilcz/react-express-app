@@ -405,3 +405,14 @@ interview-prepper:
 Recorded on 2026-09-03: the system-design track follows; the mock/runs mode and the AI coach are retired; devShark carries no AI feature; React tasks behave like the other tracks for the learner; the import reads the Firestore export only; the privacy notice covers the GitHub garden.
 
 Still with the owner, in `NEEDED.md`: applying migration 025 in production, registering the GitHub App and setting its environment variables, running the one-time import, and deleting the Firebase and Vercel projects once the import is verified.
+
+## 13. Implementation status (2026-09-03)
+
+Issues #106 to #117 are implemented on `claude/interview-prepper-integration-ogh4ph` in the order the epic lists. Deviations from the issue text worth knowing before review:
+
+- The catalogue holds 245 tasks (javascript 93, typescript 42, react 65, system-design 45): the loop and method set grew to 50 JavaScript and 22 TypeScript tasks because the per-level rows in the brief added up to more than the stated totals.
+- React tasks are graded in the self-hosted iframe and recorded through `coding-report` with `verified=false`; the learner sees no difference and XP is awarded the same way. A server-side React grader remains open.
+- The GitHub garden writes its tables directly with the service role instead of through RPCs; the tables carry the queued file content so a sync can replay a commit without the original code.
+- The roadmap structure annotates code levels with `codingTasks` counts, and the level map shows a marker; Today lists due coding reviews for signed-in devShark learners.
+- The import script reads the Firestore export only and never awards XP or schedules reviews for imported passes.
+- Sandpack is gone: the React harness is `client/sandbox/` with sucrase and a small Jest-compatible runner, so the "tests do not run until refresh" defect cannot recur.

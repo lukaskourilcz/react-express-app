@@ -16,6 +16,7 @@ Current content: **7,953 authored questions** — 3,633 web development, 1,000 g
 - Live free-for-all matches and host-led classroom rooms using Supabase Realtime with polling recovery, server-side timing, QR sharing, and subject-scoped question sets.
 - Subject-scoped all-time, daily, and category leaderboards; forgiving streaks (configurable off-days plus two monthly freezes); verified XP; ranks; server-synced badges shown alongside their next goals; collectible cosmetic Shark Cards earned by finishing the Today queue; and a fairness-neutral cosmetic token shop.
 - A read-only study advisor that names weakest areas and a suggested week from your own results, and a devShark touch-typing racer (accuracy-gated, WPM earns stars, private on-device best).
+- A devShark Coding section with 245 tasks across JavaScript, TypeScript, React, and system design: server-graded submissions (QuickJS sandbox, real TypeScript type tests, sealed design keys), authored hint ladders ending in documentation, coding tasks inside Learn levels, a short review ladder, coding badges, and an optional GitHub garden that commits every passed task to the learner's own repository.
 - Per-user, per-subject flashcards with optimistic updates and offline-safe query caching.
 - Google sign-in through Supabase Auth, cross-device progress, profile settings, language preference, and permanent account deletion.
 - Optional voluntary support, post-answer AI explanations, Socratic Sharkira hints, Sentry monitoring, and PostHog analytics. Every optional integration is gated and disabled by default.
@@ -62,14 +63,20 @@ The question bank is split by subject and Czech translations are loaded only whe
 api/                         12 Vercel handlers
   admin/[op].ts              admin question, report, log, quality, settings operations
   play/[action].ts           create/join/state/control/answer/distribution/heartbeat
-  quiz/*.ts                  questions, submit, daily, challenge, roadmap
-  user/[op].ts               stats, XP, streaks, auth events, account deletion
+  quiz/*.ts                  questions, submit, daily, challenge, roadmap (+ coding tasks)
+  user/[op].ts               stats, XP, streaks, auth events, account deletion, coding progress, GitHub garden
 client/src/                  React application, design system, stores, i18n
+client/src/coding/           coding workbench, editor, runner worker, React harness hook
+client/sandbox/              self-hosted React grading iframe
 lib/                         server auth, tokens, bank loaders, stores, rate limits
-shared/                      product/subject ownership registry
-supabase/supabase-schema*.sql         baseline plus migrations through 024
-docs/                        launch, architecture, backup, growth, content sources
+lib/coding/                  coding catalogue, solutions (server-only), sandbox, grading
+lib/github-app.ts            GitHub App JWT, installation tokens, garden commits
+shared/                      product/subject ownership registry, coding catalogue types and browser index
+supabase/supabase-schema*.sql         baseline plus migrations through 025
+docs/                        launch, architecture, backup, growth, content sources, coding integration plan
 scripts/test-launch-contracts.ts
+scripts/test-coding-content.ts        content contract: solutions proven, payloads answer-free
+scripts/import-interview-prepper-progress.ts   one-time owner import
 ```
 
 ## Local development
@@ -110,7 +117,7 @@ Production requires:
 - `VITE_STUDYSHARK_URL` and `VITE_DEVSHARK_URL`; general subject brands use internal StudyShark links.
 - `ADMIN_EMAILS` or Supabase `app_metadata.role=admin` for `/dev`.
 - Google OAuth origins and callback URLs for every production domain.
-- All migrations through **`supabase/supabase-schema-024.sql`**.
+- All migrations through **`supabase/supabase-schema-025.sql`**.
 
 Strongly recommended for a public deployment:
 
@@ -118,7 +125,7 @@ Strongly recommended for a public deployment:
 - An external monitor for `GET /api/health`.
 - `VITE_SENTRY_DSN` and/or `VITE_PUBLIC_POSTHOG_KEY` only after privacy configuration is approved.
 
-Optional support needs both `SUPPORT_ENABLED=true` and enabled, truthful values saved through `/dev`. Optional AI needs `AI_EXPLANATIONS_ENABLED=true`, `OPENAI_API_KEY`, `OPENAI_MODEL`, and a positive `AI_DAILY_GENERATION_LIMIT`.
+Optional support needs both `SUPPORT_ENABLED=true` and enabled, truthful values saved through `/dev`. Optional AI (StudyShark only) needs `AI_EXPLANATIONS_ENABLED=true`, `OPENAI_API_KEY`, `OPENAI_MODEL`, and a positive `AI_DAILY_GENERATION_LIMIT`. The devShark GitHub garden needs `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, and `GITHUB_APP_PRIVATE_KEY` (PEM or base64); without them the profile reports the garden as not enabled.
 
 ## API surface
 
@@ -130,18 +137,20 @@ The twelve physical handlers multiplex related operations to stay within the dep
 | `/api/quiz/submit` | One-time grading, result proofs, reports, and optional AI explanations and Socratic Sharkira hints |
 | `/api/quiz/daily` | UTC daily session |
 | `/api/quiz/challenge` | Challenge batches, scoring, completion, leaderboard |
-| `/api/quiz/roadmap` | Structure, attempts, answers, completion, adaptive placement, progress |
+| `/api/quiz/roadmap` | Structure, attempts, answers, completion, adaptive placement, progress; coding tasks, submissions, reports, and reveals |
 | `/api/play/[action]` | Multiplayer and classroom lifecycle |
 | `/api/leaderboard` | Subject, daily, and category boards |
 | `/api/flashcards` | Subject-scoped flashcard CRUD |
-| `/api/user/[op]` | Stats, category stats, XP, streaks, badges, streak freezes, Shark Cards, study advisor, auth events, deletion |
+| `/api/user/[op]` | Stats, category stats, XP, streaks, badges, streak freezes, Shark Cards, study advisor, auth events, deletion; coding progress and drafts; GitHub garden connection, repository, sync, disconnect |
 | `/api/admin/[op]` | Role-gated control-room operations |
 | `/api/settings` | Public safe configuration |
 | `/api/health` | Database, service-role migration, and limiter readiness |
 
 ## Database and operations
 
-Apply `supabase/supabase-schema.sql`, then numbered migrations in order through 024. Migration 023 adds the one-time submission ledger, subject-scopes multiplayer and flashcards, hardens service-only functions and leaderboard identity, makes roadmap answer recording atomic, enforces complete attempts/prerequisites, adds retention helpers, and adds production indexes. Migration 024 adds the daily-habit backing — spaced-mastery pass tracking inside verified roadmap completion, freeze-aware streaks, server-synced badges, Shark Cards, and the Sharkira hint cache — additively and idempotently.
+Apply `supabase/supabase-schema.sql`, then numbered migrations in order through 025. Migration 023 adds the one-time submission ledger, subject-scopes multiplayer and flashcards, hardens service-only functions and leaderboard identity, makes roadmap answer recording atomic, enforces complete attempts/prerequisites, adds retention helpers, and adds production indexes. Migration 024 adds the daily-habit backing — spaced-mastery pass tracking inside verified roadmap completion, freeze-aware streaks, server-synced badges, Shark Cards, and the Sharkira hint cache — additively and idempotently. Migration 025 adds coding progress, attempts, drafts, the per-level coding gate, and the GitHub garden connection and commit queue, with the service-only `record_coding_verdict` and `record_coding_reveal` functions.
+
+The one-time import of interview-prepper history is `npm run import:interview-prepper -- --input export.json --user-id <id> [--apply]`; it reads a Firestore export, maps the old challenge ids to devShark task ids, and writes passed tasks and attempts without XP or scheduled reviews.
 
 After deployment, schedule `public.purge_expired_learning_data()` with Supabase Cron or another owner-controlled job. Back up before migrations and follow [docs/backup-restore.md](./docs/backup-restore.md).
 
