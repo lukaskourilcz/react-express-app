@@ -66,7 +66,9 @@ The continuation commit after `96ff1c6` completes the highest-impact findings fr
 
 The latest Profile milestone keeps the streak in the first scan path for both StudyShark and devShark, including honest zero, stale, loading-error, and cached-refresh states. Verified quiz writes refresh the shared Profile query cache immediately, and an expired stored streak is displayed as zero using the same UTC-day boundary as the server.
 
-Two concise EN/CS consistency notes now sit between meaningful Profile sections. They encourage repeatable routines and spaced review without guilt, artificial urgency, or streak-loss pressure. StudyShark no longer ends a populated Profile with “Back to quiz”; the standalone devShark product keeps that contextual return action. The milestone also improves section headings, streak metric labelling, plural day units, achievement list/state semantics, contrast, and touch targets.
+One concise EN/CS consistency note sits under the streak, drawn per visit from a pool of four so the screen does not repeat itself. The notes encourage repeatable routines and spaced review without guilt, artificial urgency, or streak-loss pressure. Neither product ends a populated Profile with “Back to quiz” any more. The milestone also improves section headings, streak metric labelling, plural day units, achievement list/state semantics, contrast, and touch targets.
+
+Language, appearance and sound live in the identity banner as icon-only buttons rather than a Preferences card: three account switches in space the banner already had. Each states the action it performs as its accessible name and its tooltip, shows the state it switches to, and keeps a 44px target. The same three switches stay in the footer for signed-out visitors. The Profile no longer carries a badge section, and the study advisor shows weakest areas only — no suggested week, disclaimer line, or generated-at stamp.
 
 ### 6. Coding section, Learn coding phase, and GitHub garden (2026-09-03)
 

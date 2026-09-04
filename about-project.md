@@ -18,8 +18,8 @@ server owns answers, grading, scores, and XP.
   rooms; and subject-scoped leaderboards.
 - **Adaptive placement** that steps difficulty up and down over short rounds.
 - Retention layer: **forgiving streaks** (configurable off-days + two monthly
-  freezes), **server-synced badges** shown with their next goals, collectible
-  cosmetic **Shark Cards**, and a read-only **study advisor**.
+  freezes), collectible cosmetic **Shark Cards**, and a read-only **study
+  advisor**.
 - A devShark **typing racer** and per-subject flashcards.
 - A devShark **Coding** section: 245 tasks across JavaScript, TypeScript, React,
   and system design, graded on the server (QuickJS sandbox, TypeScript compiler,

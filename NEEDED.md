@@ -6,7 +6,8 @@ Production database migrations through `supabase/supabase-schema-024.sql` were a
 
 ## Before production launch
 
-- [ ] **Run the signed-in production smoke test** in English/Czech and desktop/mobile: Learn completion, Quiz replay rejection, Daily/Challenge idempotency, Flashcards, two-session Play/Classroom, leaderboards, `/dev`, deletion, and the daily-habit additions — the Today queue and its once-per-day Shark Card pack grant, a level going cleared→mastered over separate days, a streak freeze bridging a missed school day, badge sync, the read-only advisor, adaptive placement (including the "I don't know yet" option), and the devShark typing racer. `[imp:4]` `[owner:me]` `[time:1h]` `[kind:deploy]`
+- [ ] **Run the signed-in production smoke test** in English/Czech and desktop/mobile: Learn completion, Quiz replay rejection, Daily/Challenge idempotency, Flashcards, two-session Play/Classroom, leaderboards, `/dev`, deletion, and the daily-habit additions — the Today queue and its once-per-day Shark Card pack grant, a level going cleared→mastered over separate days, a streak freeze bridging a missed school day, the read-only advisor, adaptive placement (including the "I don't know yet" option), and the devShark typing racer. `[imp:4]` `[owner:me]` `[time:1h]` `[kind:deploy]`
+- [ ] **Check the two Profile/Learn changes of 2026-09-04 signed in.** Neither can be rendered in the build container: the responsive sweep only ever sees the signed-out `/profile` redirect, and no Supabase project is reachable to play a Learn level. (1) The identity banner now carries the language, appearance and sound switches — confirm the row wraps cleanly at 390 px, that each button reads its action to a screen reader, and that all three still persist (language to the account, the other two to the device). (2) Spend all three hearts in a Learn level before its last question and confirm the lesson ends on the out-of-hearts screen instead of "Answer every question before completing this lesson". `[imp:4]` `[owner:me]` `[time:20m]` `[kind:deploy]`
 
 ## Production reliability
 
@@ -37,6 +38,8 @@ AI-driven features (post-answer explanations, Sharkira Socratic hints) are inten
 
 ## Repository housekeeping
 
+- [ ] **Decide what happens to the badge feature.** The Profile badge section was removed on 2026-09-04 at your request, so nothing in the UI reads `/api/user/badges` any more. `client/src/lib/badges.ts`, the `sync_user_badges` RPC, and the `user_badges` table are all still in place and still work; `shared/badges.ts` stays either way, because the devShark coding badges use it. Say whether badges come back somewhere else or the client wrapper and the endpoint should go. `[imp:2]` `[owner:me]` `[time:10m]` `[kind:decision]`
+- [ ] **Bump `posthog-js` past the `fflate` advisory.** `npm audit --omit=dev` in `client/` reports one moderate finding: `fflate@0.4.8` (infinite loop on malformed ZIP64 archives, GHSA-px8p-9vwx-vf98) reached through `posthog-js@1.396.6`. The root audit is clean. Nothing in this app unzips untrusted archives, so it is not urgent, but the "both audits are clean" line recorded on 2026-09-03 is no longer true. `[imp:2]` `[owner:ai]` `[time:20m]` `[kind:deploy]`
 - [ ] **Delete the merged `claude/remove-forms-unlock-system-design-br6l74` branch on GitHub.** It is fully merged into `main` (commit `2333bd0`) and the local copy is gone, but this session's git proxy rejects delete-ref pushes, so the remote branch is still listed. One click in the GitHub branches view. `[imp:1]` `[owner:me]` `[time:5m]` `[kind:setup]`
 
 ## Coding integration (2026-09-03)

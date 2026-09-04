@@ -49,7 +49,9 @@ The spaced-mastery, Today queue, forgiving-streak, Sharkira-hint, badge, Shark
 Card, study-advisor, and adaptive-placement additions are additive and change no
 product or subject scope. Their shared sources of truth are `shared/mastery.ts`
 (cleared/mastered state and spaced-review scheduling), `shared/badges.ts` (the
-server-verifiable badge catalog), and `shared/cards.ts` (a finite per-subject
+server-verifiable badge catalog, kept for the API and the devShark coding
+badges after the Profile stopped displaying a badge section), and
+`shared/cards.ts` (a finite per-subject
 collectible catalog with deterministic packs). Every new endpoint is a
 `resource=`/`op=` branch inside an existing handler, so the twelve-handler budget
 is unchanged, and all new storage lives in `supabase/supabase-schema-024.sql` (additive,
