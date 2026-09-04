@@ -403,15 +403,20 @@ async function main() {
     profileStreakIndex >= 0 && profileSectionsIndex >= 0 && profileStreakIndex < profileSectionsIndex,
     'Profile must keep the streak ahead of the secondary progress sections',
   );
-  assert.match(
+  assert.doesNotMatch(
     profileSource,
-    /CURRENT_PRODUCT\.id === 'devshark' && !isFirstTime/,
-    'Only devShark keeps the populated-profile Back to quiz action',
+    /profile\.backToQuiz/,
+    'Profile is an overview and must not end with a contextless Back to quiz action',
   );
   assert.equal(
     profileSource.match(/<ConsistencyTip/g)?.length,
-    2,
-    'Profile should keep exactly two concise cross-product consistency tips',
+    1,
+    'Profile should keep exactly one consistency tip, drawn from the rotating pool',
+  );
+  assert.match(
+    profileSource,
+    /<IdentitySettings \/>/,
+    'Language, appearance and sound must stay reachable from the identity banner',
   );
 
   const rateReq = { headers: { 'x-forwarded-for': `contract-${Date.now()}` }, socket: {} } as never;

@@ -31,10 +31,8 @@ import { computeLearningXp, levelForXp, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { apiFetch, friendlyError } from '../lib/api';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
-import { readPerfectQuizCount } from '../lib/achievements';
 import { getFreezes, setOffDays, sanitizeOffDays, type FreezeState } from '../lib/streakFreezes';
-import { syncBadges, mergeBadges, type BadgeView } from '../lib/badges';
-import { getAdvice, advisorCategoryKey, advisorFocusKey, type Advice } from '../lib/advisor';
+import { getAdvice, advisorCategoryKey, type Advice } from '../lib/advisor';
 import { getCollection, subjectCardCount } from '../lib/cards';
 import { renderQuestion } from './CodeBlock';
 import { useT, useLanguage } from '../i18n/LanguageContext';
@@ -92,6 +90,54 @@ function Lift({ children }: { children: ReactNode }) {
   return (
     <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
       {children}
+    </div>
+  );
+}
+
+// Language, appearance and sound ride along in the identity banner. They are
+// the only account-wide switches on this screen and the banner had the room, so
+// they need no card, headings or help text of their own: each button states the
+// action it performs as its accessible name and its tooltip, and shows the state
+// it switches to (CS while reading English, the moon while in light mode).
+function IdentitySettings() {
+  const { t, lang, setLang } = useLanguage();
+  const { mode, toggle } = useColorMode();
+  const [settings, updateSettings] = useSettings();
+
+  const nextLang: Lang = lang === 'en' ? 'cs' : 'en';
+  const langLabel = t(lang === 'en' ? 'lang.switchToCzech' : 'lang.switchToEnglish');
+  const modeLabel = t(mode === 'light' ? 'common.darkMode' : 'common.lightMode');
+  const soundLabel = t(settings.soundEffects ? 'common.soundOff' : 'common.soundOn');
+
+  return (
+    <div className="de-identity-settings" role="group" aria-label={t('profile.preferences')}>
+      <button
+        type="button"
+        className="de-identity-settings__button"
+        onClick={() => { setLang(nextLang); void savePreferredLanguage(nextLang); }}
+        aria-label={langLabel}
+        title={langLabel}
+      >
+        <span aria-hidden="true">{nextLang.toUpperCase()}</span>
+      </button>
+      <button
+        type="button"
+        className="de-identity-settings__button"
+        onClick={toggle}
+        aria-label={modeLabel}
+        title={modeLabel}
+      >
+        {mode === 'light' ? <MoonIcon size={18} /> : <SunIcon size={18} />}
+      </button>
+      <button
+        type="button"
+        className="de-identity-settings__button"
+        onClick={() => updateSettings({ soundEffects: !settings.soundEffects })}
+        aria-label={soundLabel}
+        title={soundLabel}
+      >
+        {settings.soundEffects ? <SoundOffIcon size={18} /> : <SoundOnIcon size={18} />}
+      </button>
     </div>
   );
 }
@@ -197,37 +243,45 @@ function ProfileBody({
   const flair = useEquippedFlair();
   const { questions: bookmarkedQuestions } = useBookmarks();
   const currentStreak = currentStreakForDisplay(stats);
+  // Drawn once per mount so a stats refetch or a language switch cannot swap
+  // the tip out from under someone mid-sentence.
+  const [tipSeed] = useState(Math.random);
+  const tip = consistencyTipFor(tipSeed, currentStreak > 0);
 
   return (
     <div className="de-page" style={{ maxWidth: 1000 }}>
       <VStack gap={2}>
-        {/* Identity header — subject-accented top edge, avatar + name. */}
+        {/* Identity header — subject-accented top edge, avatar and name on the
+            left, the three account switches on the right. */}
         <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
           <div className="de-profile-identity" style={{ borderTop: '4px solid var(--brand-accent)', borderRadius: 'var(--radius-container)', width: '100%', position: 'relative', overflow: 'hidden' }}>
             <Card variant="default" padding={4} width="100%">
-              <HStack gap={2} align="center">
-                <div
-                  style={{
-                    flexShrink: 0,
-                    borderRadius: '50%',
-                    display: 'inline-flex',
-                    ...(ringColor
-                      ? { padding: 3, background: `${ringColor}33`, boxShadow: `0 0 0 2px ${ringColor}` }
-                      : null),
-                  }}
-                >
-                  <Avatar src={user.picture} name={user.name} alt="" size={64} />
-                </div>
-                <VStack gap={0.5}>
-                  <span className="ss-kicker">{t('nav.profile')}</span>
-                  <Heading level={1} maxLines={1}>
-                    {flair ? `${flair} ` : ''}{user.name}
-                  </Heading>
-                  <Text type="supporting" color="secondary" maxLines={1}>
-                    {user.email}
-                  </Text>
-                </VStack>
-              </HStack>
+              <div className="de-profile-identity__row">
+                <HStack gap={2} align="center">
+                  <div
+                    style={{
+                      flexShrink: 0,
+                      borderRadius: '50%',
+                      display: 'inline-flex',
+                      ...(ringColor
+                        ? { padding: 3, background: `${ringColor}33`, boxShadow: `0 0 0 2px ${ringColor}` }
+                        : null),
+                    }}
+                  >
+                    <Avatar src={user.picture} name={user.name} alt="" size={64} />
+                  </div>
+                  <VStack gap={0.5}>
+                    <span className="ss-kicker">{t('nav.profile')}</span>
+                    <Heading level={1} maxLines={1}>
+                      {flair ? `${flair} ` : ''}{user.name}
+                    </Heading>
+                    <Text type="supporting" color="secondary" maxLines={1}>
+                      {user.email}
+                    </Text>
+                  </VStack>
+                </HStack>
+                <IdentitySettings />
+              </div>
             </Card>
           </div>
         </div>
@@ -246,8 +300,8 @@ function ProfileBody({
         <StreakCard stats={stats} />
 
         <ConsistencyTip
-          title={t(currentStreak > 0 ? 'profile.streakActiveTipTitle' : 'profile.streakStartTipTitle')}
-          body={t(currentStreak > 0 ? 'profile.streakActiveTipBody' : 'profile.streakStartTipBody')}
+          title={t(tip.titleKey)}
+          body={t(tip.bodyKey)}
           actionLabel={isFirstTime ? t('profile.streakAction') : undefined}
           onAction={isFirstTime ? () => navigate('/quiz') : undefined}
         />
@@ -317,13 +371,6 @@ function ProfileBody({
             </Card>
             </Lift>
 
-            <ConsistencyTip
-              title={t('profile.reviewTipTitle')}
-              body={t('profile.reviewTipBody')}
-            />
-
-            <BadgesCard bookmarkCount={bookmarkedQuestions.length} />
-
             {bookmarkedQuestions.length > 0 && (
               <Lift>
               <Card variant="default" padding={3} width="100%">
@@ -359,26 +406,11 @@ function ProfileBody({
               </Lift>
             )}
 
-            <PreferencesCard />
-
             {CURRENT_PRODUCT.id === 'devshark' && <GithubGardenCard />}
 
             <AccountDeletionCard />
           </VStack>
         </Grid>
-
-        {/* The standalone developer product keeps its compact return action.
-            StudyShark's profile is an overview, so it no longer ends with a
-            contextless "Back to quiz" button. First-time guidance already has
-            a clear quiz action beside the always-visible streak. */}
-        {CURRENT_PRODUCT.id === 'devshark' && !isFirstTime && <HStack justify="center">
-          <Button
-            variant="ghost"
-            size="sm"
-            label={t('profile.backToQuiz')}
-            onClick={() => navigate('/quiz')}
-          />
-        </HStack>}
       </VStack>
     </div>
   );
@@ -479,6 +511,25 @@ function StreakCard({ stats, unavailable = false }: { stats: UserStats | null; u
       </Card>
     </Lift>
   );
+}
+
+// One tip is shown per visit, drawn from this pool, so the profile does not
+// open on the same sentence every time. The streak pair stays in the draw: it is
+// the only tip that reads the learner's current streak.
+const CONSISTENCY_TIPS: ReadonlyArray<{ titleKey: TranslationKey; bodyKey: TranslationKey }> = [
+  { titleKey: 'profile.reviewTipTitle', bodyKey: 'profile.reviewTipBody' },
+  { titleKey: 'profile.mixTipTitle', bodyKey: 'profile.mixTipBody' },
+  { titleKey: 'profile.recallTipTitle', bodyKey: 'profile.recallTipBody' },
+];
+
+function consistencyTipFor(seed: number, hasStreak: boolean) {
+  const pool = [
+    hasStreak
+      ? { titleKey: 'profile.streakActiveTipTitle' as TranslationKey, bodyKey: 'profile.streakActiveTipBody' as TranslationKey }
+      : { titleKey: 'profile.streakStartTipTitle' as TranslationKey, bodyKey: 'profile.streakStartTipBody' as TranslationKey },
+    ...CONSISTENCY_TIPS,
+  ];
+  return pool[Math.floor(seed * pool.length) % pool.length];
 }
 
 interface ConsistencyTipProps {
@@ -863,176 +914,14 @@ function StreakFreezeCard() {
   );
 }
 
-// ───────────────────────────── Badges ─────────────────────────────
-// Server-synced achievements. The server owns eligibility (recomputed from
-// verified stats + mastery) and a stable earned date; the client only decorates
-// it and layers the two display-only client signals (perfect quiz, bookmarker).
-// If the endpoint is unavailable, the earned set is empty and every badge simply
-// renders as a locked goal (the client-only signals still evaluate locally).
-
-// Badge-tier metals — genuinely art-directed, not a subject palette, so they
-// stay local. Chosen for legible white glyph contrast on the earned medallion.
-const TIER_ACCENT: Record<BadgeView['tier'], string> = {
-  bronze: '#a16207',
-  silver: '#64748b',
-  gold: '#c77f00',
-};
-const tierLabelKey = (tier: BadgeView['tier']): TranslationKey =>
-  tier === 'gold' ? 'badges.tierGold' : tier === 'silver' ? 'badges.tierSilver' : 'badges.tierBronze';
-
-function BadgeMedal({ badge, dateFormatter }: { badge: BadgeView; dateFormatter: Intl.DateTimeFormat }) {
-  const t = useT();
-  const { earned, glyph, tier, earnedAt } = badge;
-  const accent = TIER_ACCENT[tier];
-  const status = earned
-    ? earnedAt
-      ? t('badges.earnedOn', { date: dateFormatter.format(new Date(earnedAt)) })
-      : t('badges.earned')
-    : t('badges.goal');
-
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 10,
-        padding: 10,
-        border: '1px solid',
-        borderColor: earned ? `${accent}66` : 'var(--color-border)',
-        borderRadius: 12,
-        background: earned ? `${accent}14` : 'transparent',
-      }}
-    >
-      <div style={{ position: 'relative', flexShrink: 0 }}>
-        <div
-          aria-hidden
-          style={{
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            display: 'grid',
-            placeItems: 'center',
-            fontSize: '1.35rem',
-            lineHeight: 1,
-            background: earned ? accent : 'var(--color-background-muted)',
-            color: earned ? '#fff' : 'var(--color-text-disabled)',
-            boxShadow: earned ? `0 2px 8px ${accent}59` : 'inset 0 0 0 1px var(--color-border)',
-          }}
-        >
-          {glyph}
-        </div>
-        {earned && (
-          <div
-            aria-hidden
-            style={{
-              position: 'absolute',
-              right: -2,
-              bottom: -2,
-              width: 17,
-              height: 17,
-              borderRadius: '50%',
-              background: 'var(--brand-accent)',
-              border: '2px solid var(--color-background-surface)',
-              display: 'grid',
-              placeItems: 'center',
-            }}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={4} strokeLinecap="round" strokeLinejoin="round" style={{ width: 9, height: 9, display: 'block' }}>
-              <path d="M20 6 9 17l-5-5" />
-            </svg>
-          </div>
-        )}
-      </div>
-
-      <div style={{ minWidth: 0 }}>
-        <HStack gap={0.5} align="center" wrap="wrap">
-          <Text weight="bold" color="primary">{t(badge.labelKey)}</Text>
-          <MetaPill color={earned ? accent : 'var(--color-text-secondary)'}>{t(tierLabelKey(tier))}</MetaPill>
-        </HStack>
-        <Text type="supporting" size="xsm" color="secondary" display="block">{t(badge.descKey)}</Text>
-        <Text type="supporting" size="xsm" color={earned ? 'accent' : 'secondary'} weight="semibold" display="block">{status}</Text>
-      </div>
-    </div>
-  );
-}
-
-function BadgesCard({ bookmarkCount }: { bookmarkCount: number }) {
-  const { t, lang } = useLanguage();
-  const subject = useActiveSubject();
-  const [badges, setBadges] = useState<BadgeView[] | null>(null);
-  const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(lang === 'cs' ? 'cs-CZ' : 'en', { dateStyle: 'medium' }),
-    [lang],
-  );
-
-  useEffect(() => {
-    let active = true;
-    setBadges(null);
-    // syncBadges never throws; a 503/offline resolves to an empty earned set so
-    // every server badge renders as a locked goal and the client-only signals
-    // still evaluate.
-    syncBadges(subject.id).then((res) => {
-      if (!active) return;
-      setBadges(mergeBadges(res.earned, { perfectQuizzes: readPerfectQuizCount(), bookmarkCount }));
-    });
-    return () => { active = false; };
-  }, [subject.id, bookmarkCount]);
-
-  const earnedCount = badges ? badges.filter((b) => b.earned).length : 0;
-  const total = badges?.length ?? 0;
-  const pct = total > 0 ? Math.round((earnedCount / total) * 100) : 0;
-
-  return (
-    <Lift>
-      <Card variant="default" padding={3} width="100%">
-        <VStack gap={2}>
-          <HStack align="center" justify="between" gap={1} wrap="wrap">
-            <SectionLabel>{t('badges.title')}</SectionLabel>
-            {badges && (
-              <Badge
-                variant={total > 0 && earnedCount === total ? 'success' : 'neutral'}
-                label={t('badges.count', { earned: earnedCount, total })}
-              />
-            )}
-          </HStack>
-
-          {!badges ? (
-            <div role="status" aria-live="polite" style={{ padding: '6px 0' }}>
-              <Text type="supporting" size="xsm" color="secondary">{t('badges.loading')}</Text>
-            </div>
-          ) : (
-            <>
-              <ProgressBar label={t('badges.count', { earned: earnedCount, total })} value={pct} isLabelHidden />
-              {earnedCount === 0 && (
-                <Text type="supporting" size="xsm" color="secondary">{t('badges.empty')}</Text>
-              )}
-              <ul className="de-achievement-list">
-                {badges.map((b) => (
-                  <li key={b.id}>
-                    <BadgeMedal badge={b} dateFormatter={dateFormatter} />
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </VStack>
-      </Card>
-    </Lift>
-  );
-}
-
 // ───────────────────────────── Advisor ─────────────────────────────
 // Read-only "where to focus" panel built from the learner's own verified
 // per-category accuracy. It never diagnoses and offers no actions — just the
-// weakest areas and a gentle suggested week from the server's deterministic S5.
+// weakest areas from the server's deterministic S5.
 function AdvisorCard() {
-  const { t, lang } = useLanguage();
+  const t = useT();
   const subject = useActiveSubject();
   const [advice, setAdvice] = useState<Advice | null>(null);
-  const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(lang === 'cs' ? 'cs-CZ' : 'en', { dateStyle: 'medium' }),
-    [lang],
-  );
 
   useEffect(() => {
     let active = true;
@@ -1041,7 +930,7 @@ function AdvisorCard() {
     return () => { active = false; };
   }, [subject.id]);
 
-  const hasData = !!advice && (advice.weakAreas.length > 0 || advice.suggestedWeek.length > 0);
+  const hasData = !!advice && advice.weakAreas.length > 0;
 
   return (
     <Lift>
@@ -1067,60 +956,22 @@ function AdvisorCard() {
               <Text type="supporting" size="xsm" color="secondary" display="block">{t('advisor.emptyBody')}</Text>
             </div>
           ) : (
-            <>
-              <VStack gap={1}>
-                <Text weight="semibold">{t('advisor.weakest')}</Text>
-                {advice.weakAreas.length === 0 ? (
-                  <Text type="supporting" size="xsm" color="secondary">{t('advisor.allStrong')}</Text>
-                ) : (
-                  <VStack gap={1}>
-                    {advice.weakAreas.map((w) => (
-                      <div key={w.category}>
-                        <HStack justify="between" align="center" gap={1} wrap="wrap">
-                          <Text weight="semibold" size="sm">{t(advisorCategoryKey(w.category))}</Text>
-                          <Text type="supporting" size="xsm" color="secondary">
-                            {t('advisor.accuracy', { pct: w.accuracyPct })} · {t('advisor.answered', { n: w.answered })}
-                          </Text>
-                        </HStack>
-                        <div aria-hidden style={{ marginTop: 4, height: 6, borderRadius: 999, background: 'var(--color-background-muted)', overflow: 'hidden' }}>
-                          <div style={{ width: `${Math.max(0, Math.min(100, w.accuracyPct))}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 999 }} />
-                        </div>
-                      </div>
-                    ))}
-                  </VStack>
-                )}
-              </VStack>
-
-              {advice.suggestedWeek.length > 0 && (
-                <VStack gap={1}>
-                  <VStack gap={0.5}>
-                    <Text weight="semibold">{t('advisor.suggestedWeek')}</Text>
-                    <Text type="supporting" size="xsm" color="secondary">{t('advisor.suggestedWeekHint')}</Text>
-                  </VStack>
-                  <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {advice.suggestedWeek.map((d) => (
-                      <li
-                        key={d.day}
-                        style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-element)', background: 'var(--color-background-muted)' }}
-                      >
-                        <MetaPill color="var(--color-text-secondary)">{t('advisor.day', { n: d.day })}</MetaPill>
-                        <Text weight="semibold" size="sm">{t(advisorCategoryKey(d.category))}</Text>
-                        <span style={{ marginLeft: 'auto' }}>
-                          <MetaPill>{t(advisorFocusKey(d.focus))}</MetaPill>
-                        </span>
-                      </li>
-                    ))}
-                  </ol>
-                </VStack>
-              )}
-
-              <Text type="supporting" size="xsm" color="secondary">{t('advisor.disclaimer')}</Text>
-              {advice.generatedAt && (
-                <Text type="supporting" size="xsm" color="secondary">
-                  {t('advisor.generatedAt', { date: dateFormatter.format(new Date(advice.generatedAt)) })}
-                </Text>
-              )}
-            </>
+            <VStack gap={1}>
+              <Text weight="semibold">{t('advisor.weakest')}</Text>
+              {advice.weakAreas.map((w) => (
+                <div key={w.category}>
+                  <HStack justify="between" align="center" gap={1} wrap="wrap">
+                    <Text weight="semibold" size="sm">{t(advisorCategoryKey(w.category))}</Text>
+                    <Text type="supporting" size="xsm" color="secondary">
+                      {t('advisor.accuracy', { pct: w.accuracyPct })} · {t('advisor.answered', { n: w.answered })}
+                    </Text>
+                  </HStack>
+                  <div aria-hidden style={{ marginTop: 4, height: 6, borderRadius: 999, background: 'var(--color-background-muted)', overflow: 'hidden' }}>
+                    <div style={{ width: `${Math.max(0, Math.min(100, w.accuracyPct))}%`, height: '100%', background: 'var(--brand-accent)', borderRadius: 999 }} />
+                  </div>
+                </div>
+              ))}
+            </VStack>
           )}
         </VStack>
       </Card>
@@ -1179,76 +1030,6 @@ function SharkCardsEntry() {
         </Card>
       </div>
     </Link>
-  );
-}
-
-// One row of the preferences card: what the setting is, and its control.
-function PreferenceRow({ title, help, children }: { title: string; help: string; children: ReactNode }) {
-  return (
-    <HStack justify="between" align="center" gap={2} wrap="wrap">
-      <VStack gap={0}>
-        <Text weight="semibold">{title}</Text>
-        <Text type="supporting" size="xsm" color="secondary">{help}</Text>
-      </VStack>
-      {children}
-    </HStack>
-  );
-}
-
-// Account preferences: language, appearance and sound. These used to sit as
-// icons in the toolbar; they are settings, not navigation, so they live here.
-// The language choice is applied live and persisted to the account (Supabase
-// user_metadata) so it loads automatically on the next sign-in; appearance and
-// sound stay on the device.
-function PreferencesCard() {
-  const { t, lang, setLang } = useLanguage();
-  const { mode, toggle } = useColorMode();
-  const [settings, updateSettings] = useSettings();
-
-  const handleLang = (next: string | null) => {
-    if (!next || next === lang) return;
-    setLang(next as Lang);
-    void savePreferredLanguage(next as Lang);
-  };
-
-  return (
-    <Lift>
-    <Card variant="default" padding={3} width="100%">
-      <VStack gap={2}>
-        <SectionLabel>{t('profile.preferences')}</SectionLabel>
-        <PreferenceRow title={t('profile.language')} help={t('profile.languageHelp')}>
-          <ToggleButtonGroup label={t('profile.language')} type="single" size="sm" value={lang} onChange={handleLang}>
-            <ToggleButton value="en" label="EN" />
-            <ToggleButton value="cs" label="CS" />
-          </ToggleButtonGroup>
-        </PreferenceRow>
-        <PreferenceRow title={t('profile.appearance')} help={t('profile.appearanceHelp')}>
-          <ToggleButtonGroup
-            label={t('profile.appearance')}
-            type="single"
-            size="sm"
-            value={mode}
-            onChange={(next) => { if ((next === 'light' || next === 'dark') && next !== mode) toggle(); }}
-          >
-            <ToggleButton value="light" label={t('common.lightMode')} icon={<SunIcon size={16} />} />
-            <ToggleButton value="dark" label={t('common.darkMode')} icon={<MoonIcon size={16} />} />
-          </ToggleButtonGroup>
-        </PreferenceRow>
-        <PreferenceRow title={t('profile.sound')} help={t('profile.soundHelp')}>
-          <ToggleButtonGroup
-            label={t('profile.sound')}
-            type="single"
-            size="sm"
-            value={settings.soundEffects ? 'on' : 'off'}
-            onChange={(next) => { if (next) updateSettings({ soundEffects: next === 'on' }); }}
-          >
-            <ToggleButton value="on" label={t('common.soundOn')} icon={<SoundOnIcon size={16} />} />
-            <ToggleButton value="off" label={t('common.soundOff')} icon={<SoundOffIcon size={16} />} />
-          </ToggleButtonGroup>
-        </PreferenceRow>
-      </VStack>
-    </Card>
-    </Lift>
   );
 }
 
