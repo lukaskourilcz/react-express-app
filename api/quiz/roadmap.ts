@@ -45,6 +45,7 @@ import {
   PLACEMENT_START_DIFFICULTY,
   PLACEMENT_STEP_UP,
   PLACEMENT_STEP_DOWN,
+  roadmapEndedOnHearts,
 } from '../../shared/assessment';
 import {
   buildLiveTopic,
@@ -783,11 +784,24 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     supabase.from('roadmap_attempt_answers').select('is_correct').eq('attempt_id', session.attemptId!),
   );
   if (answers.error) return jsonError(res, 500, 'db_error', 'Could not grade the learning attempt');
-  const correctAnswers = (answers.data ?? []).filter((answer) => answer.is_correct === true).length;
+  const graded = answers.data ?? [];
+  const correctAnswers = graded.filter((answer) => answer.is_correct === true).length;
   const totalQuestions = session.questions.length;
   const percentage = Math.round((correctAnswers / totalQuestions) * 100);
   const passPct = Number(attempt.pass_pct);
   let passed = percentage >= passPct;
+  // A level ends the moment the learner spends their last heart, which normally
+  // leaves the remaining questions unanswered. That lesson is over and failed:
+  // the verified RPC only completes a full answer set, so this attempt is closed
+  // here instead — otherwise the learner is stuck on an error they cannot clear.
+  // The unanswered questions still count against the percentage.
+  const endedOnHearts = roadmapEndedOnHearts(
+    session.roadmapKind,
+    graded.length,
+    graded.filter((answer) => answer.is_correct === false).length,
+    totalQuestions,
+  );
+  if (endedOnHearts) passed = false;
   // A level with coding tasks passes only when every one of them passed.
   let codingPending: string[] = [];
   if (passed && session.codingTaskIds && session.codingTaskIds.length > 0) {
@@ -802,7 +816,18 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
 
   let progress: unknown;
   let applied = false;
-  if (userId) {
+  if (endedOnHearts) {
+    if (!attempt.completed_at) {
+      const closed = await withTimeout(
+        supabase
+          .from('roadmap_attempts')
+          .update({ completed_at: new Date().toISOString(), score_pct: percentage, passed: false })
+          .eq('attempt_id', session.attemptId!),
+      );
+      if (closed.error) return jsonError(res, 500, 'db_error', 'Could not close the learning attempt');
+      applied = true;
+    }
+  } else if (userId) {
     const completed = await withTimeout(
       supabase.rpc('complete_verified_roadmap_attempt', {
         p_user_id: userId,
@@ -835,7 +860,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     applied = true;
   }
 
-  logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length });
+  logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length, outOfHearts: endedOnHearts });
   return res.json({ correctAnswers, totalQuestions, percentage, passed, applied, codingPending, ...(progress ? { progress } : {}) });
 }
 

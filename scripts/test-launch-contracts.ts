@@ -38,7 +38,7 @@ import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODI
 import { CODING_BADGES } from '../shared/badges';
 import { CODING_INDEX } from '../shared/coding-index';
 import { inspectQuestionQuality } from '../lib/question-quality';
-import { assessmentUnlocks } from '../shared/assessment';
+import { assessmentUnlocks, roadmapEndedOnHearts, ROADMAP_MAX_HEARTS } from '../shared/assessment';
 import { grantedTopicsFor, withGrantedTopics } from '../lib/topic-grants';
 import { ROADMAP_TOPICS } from '../lib/roadmap';
 import {
@@ -417,6 +417,26 @@ async function main() {
     profileSource,
     /<IdentitySettings \/>/,
     'Language, appearance and sound must stay reachable from the identity banner',
+  );
+
+  // A Learn level ends on the third wrong answer, which normally leaves later
+  // questions unanswered. That attempt must still complete — as a fail — because
+  // the learner cannot answer questions the lesson stopped showing them.
+  assert.equal(roadmapEndedOnHearts('level', 5, ROADMAP_MAX_HEARTS, 8), true);
+  assert.equal(
+    roadmapEndedOnHearts('level', 8, ROADMAP_MAX_HEARTS, 8),
+    false,
+    'a full answer set still goes through the verified completion RPC',
+  );
+  assert.equal(
+    roadmapEndedOnHearts('level', 5, ROADMAP_MAX_HEARTS - 1, 8),
+    false,
+    'stopping short with hearts left is a real incomplete attempt',
+  );
+  assert.equal(
+    roadmapEndedOnHearts('test', 5, ROADMAP_MAX_HEARTS, 8),
+    false,
+    'checkpoints and part tests have no hearts',
   );
 
   const rateReq = { headers: { 'x-forwarded-for': `contract-${Date.now()}` }, socket: {} } as never;

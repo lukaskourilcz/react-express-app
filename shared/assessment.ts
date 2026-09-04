@@ -2,6 +2,30 @@ import { SUBJECT_SCOPE_CATALOG, type ScopeSubjectId } from './subject-catalog';
 
 export const ASSESSMENT_QUESTION_COUNT = 20;
 
+// ── Learn levels: hearts ─────────────────────────────────────────────────────
+// A Learn level gives the learner this many wrong answers before it ends. The
+// lesson stops on the last one, which usually leaves later questions
+// unanswered, so the API needs the same number to tell a level that ended on
+// hearts from a client that stopped short of the questions it was served.
+// Checkpoints and part tests have no hearts: they run to the end on percentage.
+export const ROADMAP_MAX_HEARTS = 3;
+
+/**
+ * True when a Learn attempt ended because the learner spent their last heart
+ * before the questions ran out. Such an attempt is finished and failed, so the
+ * API completes it rather than refusing it for the answers the lesson never
+ * asked for. A client that stops short with hearts still in hand is a real
+ * error and stays one.
+ */
+export function roadmapEndedOnHearts(
+  kind: string | undefined,
+  answered: number,
+  wrong: number,
+  totalQuestions: number,
+): boolean {
+  return kind === 'level' && answered < totalQuestions && wrong >= ROADMAP_MAX_HEARTS;
+}
+
 // ── Adaptive placement ───────────────────────────────────────────────────────
 // The placement skill-check is delivered as short adaptive rounds whose
 // difficulty steps up on a strong round and down on a weak one. The rounds are

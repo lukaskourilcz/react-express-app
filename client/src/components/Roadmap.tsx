@@ -58,6 +58,7 @@ import {
   type MasteryState,
   type LevelMasteryEntry,
 } from '../../../shared/mastery';
+import { ROADMAP_MAX_HEARTS } from '../../../shared/assessment';
 import { levelIntro, preloadLevelIntros } from '../lib/levelIntros';
 import { useRoadmapStructure } from '../lib/queries';
 import { apiFetch } from '../lib/api';
@@ -96,7 +97,8 @@ const TOPIC_KEY = 'devquiz:roadmap:topic';
 const PART_KEY = 'devquiz:roadmap:part';
 const CHECKPOINT_GOLD = BRAND.gold;
 // Lives for a level lesson: one heart that drains a third per wrong answer.
-const MAX_HEARTS = 3;
+// The API grades the same rule, so the number is shared.
+const MAX_HEARTS = ROADMAP_MAX_HEARTS;
 const HEART_COLOR = BRAND.coral;
 const CHECKPOINT_GRAD: [string, string] = ['#ffd54f', BRAND.gold];
 
@@ -1163,7 +1165,9 @@ function LessonRunner({
       try {
         const result = await completeRoadmapAttempt(playable.sessionId);
         setCorrectCount(result.correctAnswers);
-        onFinished(result.percentage);
+        // Out of hearts is a failed level however the percentage lands, so keep
+        // the local record below the pass mark and let the server decide.
+        onFinished(result.passed ? result.percentage : Math.min(result.percentage, playable.passPct - 1));
         setDead(true);
         setFinished(true);
       } catch (error) {
@@ -1186,7 +1190,7 @@ function LessonRunner({
     } else {
       await complete();
     }
-  }, [total, outOfHearts, qIndex, onFinished, playable.sessionId, codingTasks.length, complete]);
+  }, [total, outOfHearts, qIndex, onFinished, playable.passPct, playable.sessionId, codingTasks.length, complete]);
 
   const submitFlag = async (detail?: string) => {
     await reportQuestion({ questionId: question.id, reason: 'needs-review', detail, reporterSub: user?.id });
