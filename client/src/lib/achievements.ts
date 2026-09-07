@@ -24,7 +24,7 @@ export interface BadgeRule {
 /**
  * Purely-cosmetic, client-only badges that are NOT server-verified. They are
  * evaluated from local signals (a perfect quiz, bookmark count) and layered on
- * top of the server-synced badge set by `lib/badges.ts` as display-only goals.
+ * top of the shared badge catalog as display-only goals.
  * Exported separately so the badge screen can merge them with SERVER_BADGES
  * while `computeAchievements` below keeps its original, unchanged output.
  */
