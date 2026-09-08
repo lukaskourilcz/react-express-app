@@ -57,15 +57,33 @@ export default function RoadmapTree({ structure, track, plan }: {
     structure?.structure?.[family]?.levels.length ?? 0;
 
   if (plan?.personalized) {
+    const showPathHeadings = plan.paths.length > 1;
     return (
       <div key={`plan-${plan.profileVersion}`} className="rm-track-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: 12 }}>
         {plan.paths.map((path) => {
-          const open = path.stages.filter((stage) => stage.open);
-          const hidden = path.stages.length - open.length;
+          // A stage with nothing to draw is not drawn. That happens when a
+          // topic sits in two selected paths — `dsa` is in the Fullstack track
+          // and in DSA Foundations — and the response gives it to the path
+          // that owns its gate, so the other one is left empty. A stage whose
+          // content is still being written says so instead.
+          const open = path.stages.filter((stage) => stage.open && (stage.topics.length > 0 || stage.contentPending));
+          const hidden = path.stages.filter((stage) => !stage.open).length;
           const pending = open.filter((stage) => stage.contentPending);
+          // Nothing to show and nothing to promise: the path is fully covered
+          // by another one the learner is already reading.
+          if (open.length === 0 && hidden === 0) return null;
           return (
-            <section key={path.id} aria-labelledby={`rm-path-${path.id}`} style={{ width: '100%' }}>
-              {plan.paths.length > 1 && (
+            <section
+              key={path.id}
+              // With one path the heading is redundant on screen, so it is not
+              // rendered — and an aria-labelledby pointing at an id that does
+              // not exist leaves the region unnamed. Name it directly instead.
+              {...(showPathHeadings
+                ? { 'aria-labelledby': `rm-path-${path.id}` }
+                : { 'aria-label': t(pathLabelKey(path.id)) })}
+              style={{ width: '100%' }}
+            >
+              {showPathHeadings && (
                 <h3 id={`rm-path-${path.id}`} style={{ fontSize: '0.95rem', fontWeight: 800, textAlign: 'center', margin: '4px 0 12px' }}>
                   {t(pathLabelKey(path.id))}
                 </h3>

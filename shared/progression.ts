@@ -26,6 +26,7 @@
  * evaluate exactly the same graph. */
 
 import type { BaseTrack, LearnerProfile } from './learner-profile';
+import { SUBJECT_SCOPE_CATALOG } from './subject-catalog';
 
 export const PROGRESSION_GRAPH_VERSION = 1;
 
@@ -123,6 +124,26 @@ export const ALL_PROGRESSION_TOPICS: readonly string[] = Array.from(new Set([
   ...DSA_STAGES.flatMap((s) => [...s.topics]),
   ...FDE_BRIDGE_TOPICS,
 ]));
+
+/**
+ * Does the graph place this topic in a path?
+ *
+ * The Learn ladder is wider than any plan. `abbreviations` and `ai` are real
+ * devShark topics that sit outside every track, and the same roadmap endpoints
+ * serve every StudyShark subject, so a geography learner who also has a
+ * devShark plan asks about `capitals` here too. A topic the graph never places
+ * cannot be missing from a plan — there is no plan for it to be missing from —
+ * so nothing but its own level chain may gate it.
+ */
+export function graphGoverns(topic: string): boolean {
+  return ALL_PROGRESSION_TOPICS.includes(topic);
+}
+
+/** devShark Learn topics that sit outside every path, and are therefore always
+ * open. Named explicitly so the eligibility response lists them instead of
+ * letting the plan filter hide a topic the server would happily serve. */
+export const UNPLACED_TOPICS: readonly string[] = [...SUBJECT_SCOPE_CATALOG.webdev.topics]
+  .filter((topic) => !ALL_PROGRESSION_TOPICS.includes(topic));
 
 /* ── verified completions ────────────────────────────────────────────────── */
 
@@ -256,10 +277,35 @@ function stageOpen(stages: readonly ProgressionStage[], stageIndex: number, comp
 export function topicUnlocked(input: ProgressionInput, topic: string): boolean {
   const { profile, completions } = input;
   if (!profile) return false;
+  if (!graphGoverns(topic)) return true;
   if ((completions.visibleTopics ?? []).includes(topic)) return true;
   const placement = placements(profile).get(topic);
   if (!placement) return false;
   return stageOpen(placement.stages, placement.stageIndex, completions);
+}
+
+/**
+ * The step left inside one topic: the checkpoint that gates the next level, or
+ * the next level itself, or null when the topic is finished.
+ *
+ * The last checkpoint of a topic sits *after* its last level (a 25-level topic
+ * has five, the fifth being the Final Mastery Exam), so clearing every level is
+ * not the end of the topic — the final exam still is.
+ */
+function nextStepInTopic(
+  completions: VerifiedCompletions,
+  pathId: ProgressionPathId,
+  topic: string,
+  levelCount: number,
+): StepRef | null {
+  const cleared = clearedLevels(completions, topic);
+  const checkpointCount = Math.floor(levelCount / LEVELS_PER_CHECKPOINT);
+  const gate = Math.min(checkpointsBefore(cleared + 1), checkpointCount);
+  if (gate > 0 && !checkpointPassed(completions, topic, gate)) {
+    return { pathId, topic, kind: 'checkpoint', ref: gate };
+  }
+  if (cleared >= levelCount) return null;
+  return { pathId, topic, kind: 'level', ref: cleared + 1 };
 }
 
 /**
@@ -271,13 +317,22 @@ export function decideStep(input: ProgressionInput, step: Omit<StepRef, 'pathId'
   const { profile, completions, levelCounts } = input;
   if (!profile) return { allowed: false, reason: 'no_profile', suggestion: null };
 
-  const placement = placements(profile).get(step.topic);
-  const visible = (completions.visibleTopics ?? []).includes(step.topic);
-  if (!placement && !visible) return { allowed: false, reason: 'not_selected', suggestion: nextStep(input) };
-
   const levelCount = levelCounts[step.topic];
   if (!Number.isInteger(levelCount) || levelCount <= 0) {
     return { allowed: false, reason: 'unknown_topic', suggestion: nextStep(input) };
+  }
+
+  // Replaying something already passed is always fine; it changes nothing, and
+  // it must keep working after the learner edits their plan — a level they
+  // earned never becomes unplayable because its topic left the selection.
+  const passed = step.kind === 'checkpoint' ? completions.checkpoints : completions.levels;
+  if ((passed[step.topic] ?? []).includes(step.ref)) return { allowed: true, reason: null, suggestion: null };
+
+  const placement = placements(profile).get(step.topic);
+  const visible = (completions.visibleTopics ?? []).includes(step.topic);
+  const governed = graphGoverns(step.topic);
+  if (governed && !placement && !visible) {
+    return { allowed: false, reason: 'not_selected', suggestion: nextStep(input) };
   }
 
   if (placement && !visible && !stageOpen(placement.stages, placement.stageIndex, completions)) {
@@ -296,8 +351,6 @@ export function decideStep(input: ProgressionInput, step: Omit<StepRef, 'pathId'
   }
 
   if (step.ref < 1 || step.ref > levelCount) return { allowed: false, reason: 'out_of_range', suggestion: nextStep(input) };
-  // Replaying a level already passed is always fine; it changes nothing.
-  if ((completions.levels[step.topic] ?? []).includes(step.ref)) return { allowed: true, reason: null, suggestion: null };
   if (step.ref > cleared + 1) {
     return { allowed: false, reason: 'level_locked', suggestion: { pathId: placement?.pathId ?? 'fullstack', topic: step.topic, kind: 'level', ref: cleared + 1 } };
   }
@@ -318,13 +371,8 @@ export function nextStep(input: ProgressionInput): StepRef | null {
       for (const topic of path.stages[stageIndex].topics) {
         const levelCount = levelCounts[topic];
         if (!Number.isInteger(levelCount) || levelCount <= 0) continue;
-        const cleared = clearedLevels(completions, topic);
-        if (cleared >= levelCount) continue;
-        const gate = checkpointsBefore(cleared + 1);
-        if (gate > 0 && !checkpointPassed(completions, topic, gate)) {
-          return { pathId: path.id, topic, kind: 'checkpoint', ref: gate };
-        }
-        return { pathId: path.id, topic, kind: 'level', ref: cleared + 1 };
+        const step = nextStepInTopic(completions, path.id, topic, levelCount);
+        if (step) return step;
       }
     }
   }
@@ -381,7 +429,13 @@ export function buildEligibility(input: ProgressionInput): EligibilityResponse {
       next: null,
     };
   }
-  const unlocked = new Set<string>(completions.visibleTopics ?? []);
+  const unlocked = new Set<string>([...(completions.visibleTopics ?? []), ...UNPLACED_TOPICS]);
+  // A topic can appear in more than one selected path — `dsa` sits in the
+  // Fullstack track *and* in DSA Foundations. `placements()` gives its gate to
+  // the first path that claims it, so the response has to draw it exactly
+  // there too, or the Roadmap renders the same ladder twice and the progress
+  // totals count it twice.
+  const drawn = new Set<string>();
   const paths: PathEligibility[] = pathsForProfile(profile).map((path) => ({
     id: path.id,
     kind: path.kind,
@@ -390,25 +444,18 @@ export function buildEligibility(input: ProgressionInput): EligibilityResponse {
       const contentPending = (path.pendingStages ?? []).includes(stage.key);
       const topics = stage.topics
         .filter((topic) => Number.isInteger(levelCounts[topic]) && levelCounts[topic] > 0)
+        .filter((topic) => !drawn.has(topic))
         .map((topic): TopicEligibility => {
+          drawn.add(topic);
           if (open) unlocked.add(topic);
           const levelCount = levelCounts[topic];
-          const cleared = clearedLevels(completions, topic);
-          const decision = cleared >= levelCount
-            ? null
-            : (() => {
-              const gate = checkpointsBefore(cleared + 1);
-              return gate > 0 && !checkpointPassed(completions, topic, gate)
-                ? { pathId: path.id, topic, kind: 'checkpoint' as StepKind, ref: gate }
-                : { pathId: path.id, topic, kind: 'level' as StepKind, ref: cleared + 1 };
-            })();
           return {
             topic,
             pathId: path.id,
             stageKey: stage.key,
             levelsPassed: (completions.levels[topic] ?? []).length,
             levelCount,
-            nextStep: decision,
+            nextStep: nextStepInTopic(completions, path.id, topic, levelCount),
           };
         });
       return { key: stage.key, open, contentPending, topics };

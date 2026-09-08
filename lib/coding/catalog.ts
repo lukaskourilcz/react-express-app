@@ -54,9 +54,13 @@ export const codingTaskByLegacyId = (legacyId: string): CodingTask | undefined =
 export const tasksForTrack = (track: CodingTrack): CodingTask[] => CODING_TASKS.filter((task) => task.track === track);
 
 /** Tasks that belong to one Learn level, in catalogue order. Checklist tasks
- * cannot gate a level, so they are never part of one. */
+ * cannot gate a level, so they are never part of one. Neither can a repair
+ * exercise (issue #163): it is a Coding-section format, and letting one into
+ * the quota would silently change which task an existing level asks for. */
 export function tasksForLevel(topic: CodingTask['topic'], level: number): CodingTask[] {
-  return CODING_TASKS.filter((task) => task.topic === topic && task.level === level && task.verify !== 'checklist');
+  return CODING_TASKS.filter(
+    (task) => task.topic === topic && task.level === level && task.verify !== 'checklist' && task.debug !== true,
+  );
 }
 
 /** How many tasks a Learn level asks for: one for levels 1–5, two for 6–15,

@@ -65,9 +65,12 @@ import {
   completionsFromBlob,
   decideStep,
   fdePathFor,
+  graphGoverns,
   graphProblems,
   nextStep,
   pathsForProfile,
+  LEVELS_PER_CHECKPOINT,
+  UNPLACED_TOPICS,
   type VerifiedCompletions,
 } from '../shared/progression';
 import { topicLevelCounts } from '../lib/progression';
@@ -281,7 +284,12 @@ async function main() {
   assert.equal(decodedCoding?.taskId, 'js-double-numbers');
   assert.equal(decodedCoding?.roadmapAttemptId, 'attempt-0123456789abcd');
   assert.match(decodedCoding?.attemptId ?? '', /^[A-Za-z0-9_-]{16,64}$/);
-  assert.equal(decodeCodingSession(codingSession.replace(/.$/, (c) => (c === 'A' ? 'B' : 'A'))), null, 'tampered coding session must fail closed');
+  // Flip the first payload character, not the last: base64url's final character
+  // can carry padding bits only, so changing it sometimes decodes to the very
+  // same bytes and the assertion passes or fails at random.
+  const tamperedCoding = codingSession.replace(/^(v2\.)(.)/, (_m, prefix: string, c: string) => `${prefix}${c === 'A' ? 'B' : 'A'}`);
+  assert.notEqual(tamperedCoding, codingSession, 'the tamper must actually change the token');
+  assert.equal(decodeCodingSession(tamperedCoding), null, 'tampered coding session must fail closed');
   assert.equal(decodeSession(codingSession), null, 'a coding session is never a quiz session');
   const connectState = encodeGithubConnectState('user-0001');
   assert.equal(decodeGithubConnectState(connectState)?.userId, 'user-0001');
@@ -663,6 +671,55 @@ async function main() {
       }
     }
   }
+
+  // Topics the graph never places have no plan to be missing from: the two
+  // devShark Learn topics outside every track, and every other StudyShark
+  // subject the same roadmap endpoints serve. Plan membership cannot refuse
+  // them — only their own level chain can.
+  assert.deepEqual([...UNPLACED_TOPICS], ['abbreviations', 'ai'], 'devShark Learn is wider than the plan');
+  for (const outside of [...UNPLACED_TOPICS, 'capitals']) {
+    assert.equal(graphGoverns(outside), false, `${outside} sits outside every path`);
+    assert.equal(decideStep(input, { topic: outside, kind: 'level', ref: 1 }).allowed, true, `${outside} level 1 must stay open`);
+    assert.equal(decideStep(input, { topic: outside, kind: 'level', ref: 3 }).reason, 'level_locked', `${outside} still climbs one level at a time`);
+  }
+  const unplacedView = buildEligibility(input);
+  for (const outside of UNPLACED_TOPICS) {
+    assert.ok(unplacedView.unlockedTopics.includes(outside), `${outside} must not be hidden by the plan filter`);
+  }
+
+  // Editing a plan never takes back a level the learner already passed.
+  const switched = completeProfile({ ...answers, baseTrack: 'backend', dsa: false }, '2026-01-01T00:00:00.000Z')!;
+  const htmlPassed = completionsFromBlob({ html: { levels: { '1': { passed: true }, '2': { passed: true } }, checkpoints: {} } });
+  const afterSwitch = { profile: switched, completions: htmlPassed, levelCounts };
+  assert.equal(decideStep(afterSwitch, { topic: 'html', kind: 'level', ref: 2 }).allowed, true, 'a passed level survives a plan change');
+  assert.equal(decideStep(afterSwitch, { topic: 'html', kind: 'level', ref: 3 }).reason, 'not_selected', 'but the plan still bounds new levels');
+
+  // Clearing every level of a topic is not the end of it: the final exam sits
+  // after the last level, so it has to be both offered and accepted.
+  const gitCount = levelCounts.git;
+  const gitExams = Math.floor(gitCount / LEVELS_PER_CHECKPOINT);
+  const gitBlob = (exams: number) => completionsFromBlob({
+    git: {
+      levels: Object.fromEntries(Array.from({ length: gitCount }, (_, i) => [String(i + 1), { passed: true }])),
+      checkpoints: Object.fromEntries(Array.from({ length: exams }, (_, i) => [String(i + 1), { passed: true }])),
+    },
+  });
+  const beforeFinal = { profile: switched, completions: gitBlob(gitExams - 1), levelCounts };
+  const gitEntry = buildEligibility(beforeFinal).paths[0].stages[0].topics.find((one) => one.topic === 'git');
+  assert.deepEqual(gitEntry?.nextStep, { pathId: 'backend', topic: 'git', kind: 'checkpoint', ref: gitExams }, 'the final exam is a topic\'s last step');
+  assert.equal(decideStep(beforeFinal, { topic: 'git', kind: 'checkpoint', ref: gitExams }).allowed, true);
+  const afterFinal = { profile: switched, completions: gitBlob(gitExams), levelCounts };
+  const finishedEntry = buildEligibility(afterFinal).paths[0].stages[0].topics.find((one) => one.topic === 'git');
+  assert.equal(finishedEntry?.nextStep, null, 'and once it is passed the topic is done');
+
+  // `dsa` sits in the Fullstack track and in DSA Foundations. A learner in both
+  // sees one ladder drawn where its gate lives, so the plan total counts it once.
+  const bothDsa = completeProfile({ ...answers, baseTrack: 'fullstack', fde: false, dsa: true }, '2026-01-01T00:00:00.000Z')!;
+  const bothView = buildEligibility({ profile: bothDsa, completions: noCompletions, levelCounts });
+  const drawn = bothView.paths.flatMap((path) => path.stages.flatMap((stage) => stage.topics));
+  assert.equal(drawn.filter((one) => one.topic === 'dsa').length, 1, 'a shared topic is drawn once');
+  assert.equal(drawn.find((one) => one.topic === 'dsa')?.pathId, 'fullstack', 'and drawn where its gate lives');
+  assert.equal(new Set(drawn.map((one) => one.topic)).size, drawn.length, 'no topic is listed twice across paths');
 
   /* ── Coding no longer offers system design (#165) ──────────────────────── */
   assert.deepEqual([...CODING_SECTION_TRACKS], ['javascript', 'typescript', 'react']);
