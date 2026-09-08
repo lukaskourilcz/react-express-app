@@ -19,8 +19,7 @@ import {
 } from '../lib/subjects';
 import { LANDING_TOPICS } from '../lib/landingTopics';
 import {
-  Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, CheckpointNode, pathWave, type StatSpec,
-} from './landing/LandingKit';
+  Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, CheckpointNode, pathWave, type StatSpec, WaterlineRule } from './landing/LandingKit';
 import { AppToast } from './ui/AppToast';
 import SubjectGlyph from './ui/SubjectGlyph';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
@@ -262,7 +261,7 @@ export default function SubjectPicker() {
 
       {/* ── Free pledge ── */}
       <section aria-label={t('home.pledge')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '8px 0 0' }}>
-        <div className="ss-waterline-rule" style={{ width: 84 }} />
+        <WaterlineRule width={84} />
         <p style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1.25rem', letterSpacing: '-0.01em', textAlign: 'center', maxWidth: '34ch' }}>
           {t('home.pledge')}
         </p>

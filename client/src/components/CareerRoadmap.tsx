@@ -9,6 +9,7 @@
 // i18n preserved verbatim.
 
 import { lazy, Suspense, useEffect, useMemo } from 'react';
+import { Kicker } from './landing/LandingKit';
 import { useNavigate } from 'react-router-dom';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -182,7 +183,7 @@ export default function CareerRoadmap() {
         {/* Header */}
         <div className="ss-pop" style={{ width: '100%' }}>
           <VStack gap={1}>
-            <span className="ss-kicker">{kicker}</span>
+            <Kicker>{kicker}</Kicker>
             <Heading level={1} type="display-3">
               {pageTitle}
             </Heading>

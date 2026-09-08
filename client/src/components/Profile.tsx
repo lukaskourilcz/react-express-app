@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { Kicker } from './landing/LandingKit';
 import { Link, useNavigate } from 'react-router-dom';
 import { Grid } from '@astryxdesign/core/Grid';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -59,7 +60,7 @@ type CardVariant = 'default' | 'muted' | 'blue' | 'cyan' | 'gray' | 'green' | 'o
 // Section opener in the brand's editorial voice: uppercase accent kicker with
 // the waterline tick beneath (the "dive marker" that starts every section).
 function SectionLabel({ children }: { children: ReactNode }) {
-  return <h2 className="ss-kicker">{children}</h2>;
+  return <Kicker as="h2">{children}</Kicker>;
 }
 
 // Accent-tinted rounded meta pill. `color` sets both the text and (via
@@ -272,7 +273,7 @@ function ProfileBody({
                     <Avatar src={user.picture} name={user.name} alt="" size={64} />
                   </div>
                   <VStack gap={0.5}>
-                    <span className="ss-kicker">{t('nav.profile')}</span>
+                    <Kicker>{t('nav.profile')}</Kicker>
                     <Heading level={1} maxLines={1}>
                       {flair ? `${flair} ` : ''}{user.name}
                     </Heading>

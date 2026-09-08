@@ -22,7 +22,7 @@ import { useActiveSubject, subjectNameKey, subjectBlurbKey, type SubjectId } fro
 import { TRACK_ORDER } from '../lib/tracks';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
 import { AppToast } from './ui/AppToast';
-import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, type StatSpec } from './landing/LandingKit';
+import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, type StatSpec, WaterlineRule } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
@@ -341,7 +341,7 @@ export default function Home() {
 
       {/* ── Free pledge ── */}
       <section aria-label={t('home.pledge')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '8px 0 0' }}>
-        <div className="ss-waterline-rule" style={{ width: 84 }} />
+        <WaterlineRule width={84} />
         <p style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1.25rem', letterSpacing: '-0.01em', textAlign: 'center', maxWidth: '34ch' }}>
           {t('home.pledge')}
         </p>

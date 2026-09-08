@@ -174,7 +174,7 @@ function PracticeSessionPanel({ signedIn }: { signedIn: boolean }) {
 
   return (
     <section className="cd-session" aria-label={t('coding.session.title')}>
-      <h2 className="ss-kicker">{t('coding.session.title')}</h2>
+      <Kicker as="h2">{t('coding.session.title')}</Kicker>
       {active && currentTask ? (
         <div className="cd-session__active">
           <p>
@@ -248,7 +248,7 @@ function SavedPanel({ signedIn, statusOf }: { signedIn: boolean; statusOf: (task
 
   return (
     <section className="cd-saved" aria-labelledby="cd-saved-title">
-      <h2 id="cd-saved-title" className="ss-kicker">{t('coding.saved.title')}</h2>
+      <Kicker as="h2" id="cd-saved-title">{t('coding.saved.title')}</Kicker>
       {saved.length === 0 ? (
         <p className="cd-note">{t('coding.saved.empty')}</p>
       ) : (
@@ -351,7 +351,7 @@ export function CodingHome() {
         })}
       </section>
       <section aria-labelledby="cd-techniques">
-        <h2 id="cd-techniques" className="ss-kicker">{t('coding.techniques')}</h2>
+        <Kicker as="h2" id="cd-techniques">{t('coding.techniques')}</Kicker>
         <div className="cd-chips" style={{ marginTop: 10 }}>
           {GROUPS.map((group) => {
             const tags = CODING_TECHNIQUE_GROUPS[group] as readonly string[];

@@ -7,7 +7,8 @@
 // See DESIGN_RULES.md for the fin-baseline, fade-in-only and accent rules these
 // implement.
 
-import { useState, type ReactNode } from 'react';
+import { useState, type ComponentPropsWithoutRef, type ReactNode, type Ref } from 'react';
+import { useWaveVariant } from '../../lib/waveBank';
 import { useT } from '../../i18n/LanguageContext';
 import { useReducedMotion } from '../../lib/motion';
 
@@ -19,8 +20,48 @@ export const finBg = (hex: string, opacity: number): string =>
   `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='${FIN_PATH}' fill='${encodeURIComponent(hex)}' fill-opacity='${opacity}'/%3E%3C/svg%3E")`;
 
 /** Editorial kicker: uppercase accent label with a waterline tick beneath. */
-export function Kicker({ children, center }: { children: ReactNode; center?: boolean }) {
-  return <span className={`ss-kicker${center ? ' ss-kicker--center' : ''}`}>{children}</span>;
+/**
+ * The editorial kicker: a small uppercase label with its waterline tick.
+ *
+ * Every kicker in the product goes through here, which is what lets each one
+ * carry its own wave from the shared bank instead of the same tile repeated
+ * down the page. `variant` pins one for a preview or a test; `as` renders a
+ * heading where the kicker is one.
+ */
+export function Kicker({
+  children,
+  center,
+  as: Tag = 'span',
+  className,
+  variant,
+  elementRef,
+  ...rest
+}: {
+  children: ReactNode;
+  center?: boolean;
+  as?: 'span' | 'h2' | 'h3';
+  className?: string;
+  variant?: number;
+  /** Forwarded to the rendered element — the GitHub garden heading is a scroll
+   * anchor, so it needs one. */
+  elementRef?: Ref<HTMLElement>;
+} & Omit<ComponentPropsWithoutRef<'span'>, 'className' | 'children'>) {
+  const wave = useWaveVariant(variant);
+  return (
+    <Tag
+      ref={elementRef as never}
+      className={`ss-kicker ${wave}${center ? ' ss-kicker--center' : ''}${className ? ` ${className}` : ''}`}
+      {...rest}
+    >
+      {children}
+    </Tag>
+  );
+}
+
+/** The full-width waterline rule, with its own wave from the same bank. */
+export function WaterlineRule({ width, variant }: { width?: number | string; variant?: number }) {
+  const wave = useWaveVariant(variant);
+  return <div aria-hidden className={`ss-waterline-rule ${wave}`} style={width === undefined ? undefined : { width }} />;
 }
 
 /** A raw fin SVG (fades/swims as a positioned child). */

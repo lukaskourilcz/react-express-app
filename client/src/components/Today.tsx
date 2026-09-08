@@ -1,4 +1,5 @@
 import { Suspense, lazy, useMemo, type ReactNode } from 'react';
+import { Kicker } from './landing/LandingKit';
 import { Link } from 'react-router-dom';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
@@ -197,7 +198,7 @@ function TodayShell({ t, children }: { t: TFn; children: ReactNode }) {
   return (
     <div className="de-page today-page" style={{ maxWidth: 760 }}>
       <header className="today-heading">
-        <span className="ss-kicker">{t('today.kicker')}</span>
+        <Kicker>{t('today.kicker')}</Kicker>
         <Heading level={1}>{t('today.title')}</Heading>
         <div style={{ marginTop: 4 }}>
           <Text type="supporting" color="secondary">{t('today.subtitle')}</Text>
@@ -216,7 +217,7 @@ function ProgressPanel({ done, target, t }: { done: number; target: number; t: T
   return (
     <section className="today-progress ss-panel">
       <div className="today-progress__head">
-        <span className="ss-kicker">{t('today.targetLabel')}</span>
+        <Kicker>{t('today.targetLabel')}</Kicker>
         <span className="today-progress__count">{label}</span>
       </div>
       <div
@@ -241,7 +242,7 @@ function DonePanel({ t }: { t: TFn }) {
       <div className="today-done__intro">
         <span className="today-done__mark" aria-hidden="true"><CheckGlyph /></span>
         <div>
-          <span className="ss-kicker">{t('today.targetMet')}</span>
+          <Kicker>{t('today.targetMet')}</Kicker>
           <Heading level={2}>{t('today.done')}</Heading>
           <div style={{ marginTop: 4 }}>
             <Text type="supporting" color="secondary">{t('today.doneBody')}</Text>

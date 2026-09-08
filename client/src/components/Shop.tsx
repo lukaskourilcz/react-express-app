@@ -8,6 +8,7 @@
 // The shared app toast provides purchase feedback.
 
 import { useEffect, useState, type ReactNode } from 'react';
+import { Kicker } from './landing/LandingKit';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { AppToast } from './ui/AppToast';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -114,7 +115,7 @@ function Shop() {
   return (
     <VStack gap={5} width="100%" maxWidth={1080}>
       <VStack gap={1}>
-        <span className="ss-kicker">{t('shop.kicker')}</span>
+        <Kicker>{t('shop.kicker')}</Kicker>
         <Heading level={1} type="display-3">
           {t('shop.title')}
         </Heading>

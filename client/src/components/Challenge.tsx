@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Kicker } from './landing/LandingKit';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -464,7 +465,7 @@ export default function Challenge() {
         <section className="de-hero-panel">
           <VStack gap={3}>
             <VStack gap={1}>
-              <span className="ss-kicker">{t('challenge.title')}</span>
+              <Kicker>{t('challenge.title')}</Kicker>
               <Heading level={1} type="display-3">{t('challenge.editorialTitle')}</Heading>
               <Text type="large" color="secondary">{t('challenge.description')}</Text>
             </VStack>

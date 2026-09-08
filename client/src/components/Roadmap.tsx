@@ -1,4 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Kicker } from './landing/LandingKit';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
@@ -617,7 +618,7 @@ function Roadmap() {
     <div className="de-page" style={{ maxWidth: 1060 }}>
       <div className="rm-journey-heading">
         <div style={{ display: 'flex', marginBottom: 6 }}>
-          <span className="ss-kicker">{t('roadmap.title')}</span>
+          <Kicker>{t('roadmap.title')}</Kicker>
         </div>
         <Heading level={1}>{t('roadmap.journeyTitle')}</Heading>
         <div style={{ marginTop: 4 }}>
@@ -1280,7 +1281,7 @@ function LessonRunner({
           <span style={{ fontWeight: 700, backgroundColor: `${accent}22`, color: 'var(--color-text-primary)', borderRadius: 999, padding: '2px 10px', fontSize: '0.8125rem', display: 'inline-block' }}>
             {`${t('roadmap.levelLabel', { n: playable.ref })} · ${playable.title}`}
           </span>
-          <span className="ss-kicker" style={{ marginLeft: 'auto' }}>{t('coding.lesson.kicker')} · {t('coding.lesson.counter', { n: codingIndex + 1, total: codingTasks.length })}</span>
+          <Kicker style={{ marginLeft: 'auto' }}>{t('coding.lesson.kicker')} · {t('coding.lesson.counter', { n: codingIndex + 1, total: codingTasks.length })}</Kicker>
         </div>
         <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>{t('coding.lesson.intro')} {t('coding.lesson.giveUpNote')}</p>
         {answerError && <div role="alert" className="cd-note cd-note--error">{answerError}</div>}
@@ -1762,7 +1763,7 @@ function SkillCheckRunner({
   if (phase === 'intro') {
     return (
       <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center', marginTop: 16 }}>
-        <span className="ss-kicker ss-kicker--center">{t('placement.kicker')}</span>
+        <Kicker center>{t('placement.kicker')}</Kicker>
         <div style={{ marginTop: 10 }}>
           <Heading level={2} justify="center">{t('placement.title')}</Heading>
         </div>

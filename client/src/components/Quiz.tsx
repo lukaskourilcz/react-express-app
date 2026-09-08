@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, type CSSProperties } from 'react';
+import { Kicker } from './landing/LandingKit';
+import { useWaveVariant } from '../lib/waveBank';
 import { useNavigate } from 'react-router-dom';
 import { SwimCta } from './landing/LandingKit';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -164,6 +166,9 @@ const CategoryTag = ({ category }: { category: CategoryType }) => {
 };
 
 function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }) {
+  // Its own wave from the shared bank, so the review heading does not repeat
+  // the tile the kicker above it drew.
+  const reviewWave = useWaveVariant();
   const { lang, t } = useLanguage();
   const navigate = useNavigate();
   const config = useGameConfig();
@@ -810,7 +815,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       <div className="ss-pop" style={{ width: '100%', maxWidth: 680, margin: '0 auto' }}>
         {/* Editorial header: kicker + wave tick + Manrope title + subline. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-          <span className="ss-kicker">{t('quiz.kicker')}</span>
+          <Kicker>{t('quiz.kicker')}</Kicker>
           <h1 style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '2rem', letterSpacing: '-0.015em' }}>
             {t('quiz.buildTitle')}
           </h1>
@@ -948,7 +953,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             <div aria-hidden style={{ position: 'absolute', right: '-6%', bottom: '-40%', opacity: 0.04, transform: 'rotate(-8deg)', pointerEvents: 'none', color: 'var(--ss-ink)' }}>
               <SharkFin size={340} color="currentColor" />
             </div>
-            <span className="ss-kicker ss-kicker--center" style={{ position: 'relative' }}>{t('quiz.complete')}</span>
+            <Kicker center style={{ position: 'relative' }}>{t('quiz.complete')}</Kicker>
             <MotionPop>
               <h1
                 id="quiz-result-heading"
@@ -1047,7 +1052,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           </Card>
         )}
 
-        <h3 id="quiz-review" className="quiz-review-header">
+        <h3 id="quiz-review" className={`quiz-review-header ${reviewWave}`}>
           {t('quiz.reviewYourAnswers', { count: questions.length })}
         </h3>
         <div className="quiz-review-grid">

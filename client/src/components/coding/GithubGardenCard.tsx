@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Kicker } from '../landing/LandingKit';
 import { useQueryClient } from '@tanstack/react-query';
 import { Card } from '@astryxdesign/core/Card';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -231,7 +232,7 @@ export function GithubGardenCard() {
       <Raised>
         <Card variant="default" padding={3} width="100%">
           <VStack gap={1.5}>
-            <h2 className="ss-kicker" id="github-garden" ref={anchorRef} tabIndex={-1}>{t('github.title')}</h2>
+            <Kicker as="h2" id="github-garden" elementRef={anchorRef} tabIndex={-1}>{t('github.title')}</Kicker>
             <Text weight="semibold">{t('github.tagline')}</Text>
             {body}
           </VStack>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Kicker } from './landing/LandingKit';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useMediaQuery } from '../lib/useMediaQuery';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -194,7 +195,7 @@ export function PlayLanding() {
             Shop and the Career Roadmap. */}
         <div className="ss-pop" style={{ width: '100%' }}>
           <VStack gap={1}>
-            <span className="ss-kicker">{t('play.kicker')}</span>
+            <Kicker>{t('play.kicker')}</Kicker>
             <Heading level={1} type="display-3">
               {t('play.title')}
             </Heading>
@@ -227,7 +228,7 @@ export function PlayLanding() {
           <Card padding={4} width="100%">
             <VStack gap={3}>
               <VStack gap={2}>
-                <span className="ss-kicker">{t('play.hostGame')}</span>
+                <Kicker>{t('play.hostGame')}</Kicker>
                 <RadioCardGroup className="de-mode-list" value={mode} onChange={(value) => setMode(value as 'ffa' | 'classroom')} label={t('play.gameMode')}>
                   {([
                     ['ffa', <TargetIcon key="ffa" size={20} />, t('play.multiplayerFfa'), t('play.modeFfaBlurb')],
@@ -371,7 +372,7 @@ export function PlayLanding() {
             <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
             <Card padding={4} width="100%">
               <VStack gap={2}>
-                <span className="ss-kicker">{t('play.joinWithCode')}</span>
+                <Kicker>{t('play.joinWithCode')}</Kicker>
                 {/* Room code is the star of the join card: big, monospaced,
                     accent-ringed input so it reads like a ticket stub. */}
                 <div

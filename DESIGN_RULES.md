@@ -63,6 +63,41 @@ row of ticks: vary `amp` / `dir` / `wavelength` per segment so the path reads as
 living water, not a repeated stamp. (See the `pathLevels` wave generation in
 `Home.tsx` for the reference implementation.)
 
+### 4a. The waterline bank
+
+The short decorative underline — the tick under a kicker, the full-width rule,
+the line under a review heading — is one 24×6 tile, and it has **eight**
+variants rather than one. They share a bounding box, a stroke weight and a
+smooth style; only amplitude, phase and crest spacing differ. Variant 1 is the
+mark as it has always looked.
+
+- The tiles are `--ss-wave-1` … `--ss-wave-8` in `astryx-theme.css`, each with a
+  `.ss-wave-vN` class that sets `--ss-wave` **on that element**. `--ss-wave`
+  itself still defaults to variant 1, so anything that has not opted in is
+  unchanged and changing the global does not flatten every instance to one wave.
+- A variant is chosen per component **instance** by `useWaveVariant()`
+  (`client/src/lib/waveBank.ts`), from React's `useId`. That is stable across
+  rerenders, interactions and resizes, identical on both sides of hydration, and
+  contains no `Math.random`. Siblings get consecutive ids and the selector steps
+  by three, so neighbours never match and all eight are used before any repeat.
+  Pass a number to pin one for a preview or a test.
+- Render a kicker with `<Kicker>` and a rule with `<WaterlineRule>`
+  (`components/landing/LandingKit.tsx`). Do not write `className="ss-kicker"`
+  by hand: an instance that bypasses the component silently gets variant 1 and
+  the repetition comes back.
+
+**What the bank does not touch.** The animated fin waterline
+(`WaterlineProgress` in `SharkFin.tsx`) has its own geometry and its own
+motion. The roadmap and picker connectors (`pathWave`, `Home.tsx`,
+`SubjectPicker.tsx`) already vary per segment under rule 4 above. The dialog
+surface reads `--ss-wave` as a background texture rather than as an underline.
+None of the three is part of this bank, and none of them should be routed
+through it.
+
+The variants are decoration: no accessible name, no focus target, nothing read
+out, and no animation — so the reduced-motion rules in section 5 have nothing
+new to cover.
+
 ## 5. Motion respects `prefers-reduced-motion`
 
 All motion (fin drifts, swims, bobs, card lifts, pop-ins) must **freeze** under
@@ -81,7 +116,9 @@ plain clickable cards; don't combine it with a fin-school hover.)
 ## 7. Reuse the brand primitives
 
 - Fin glyph / swimming fin / waterline: `client/src/components/SharkFin.tsx`.
-- Kicker + waterline tick: the `.ss-kicker` utility class.
+- Kicker + waterline tick: the `<Kicker>` component (`landing/LandingKit.tsx`),
+  which applies `.ss-kicker` and one of the eight waves. The rule is
+  `<WaterlineRule>` from the same file.
 - Card stock (hairline border, 2px bottom edge, one ink shadow): `.ss-panel`
   / `.ss-raised` / `.ss-lift`.
 - Topic logos: `CategoryGlyph` in `components/ui/techIcons.tsx` (bundles only

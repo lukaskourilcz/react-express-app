@@ -5,6 +5,7 @@
 // and layout primitives, with the reveal ("flip") and bookmark logic preserved.
 
 import { useRef, useState } from 'react';
+import { Kicker } from './landing/LandingKit';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -130,7 +131,7 @@ function Flashcards() {
       <VStack gap={3} width="100%">
         <HStack justify="between" align="end" gap={2} width="100%" wrap="wrap">
           <VStack gap={0.5}>
-            <span className="ss-kicker">{t('card.kicker')}</span>
+            <Kicker>{t('card.kicker')}</Kicker>
             <Heading level={1}>{t('card.heading')}</Heading>
             <Text type="supporting" color="secondary">{t('card.subtitle')}</Text>
           </VStack>

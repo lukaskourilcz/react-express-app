@@ -10,6 +10,7 @@
 // real focusable input for mobile keyboards, and every string via t().
 
 import { type ChangeEvent, useCallback, useEffect, useId, useRef, useState } from 'react';
+import { Kicker } from './landing/LandingKit';
 import { useT } from '../i18n/LanguageContext';
 import { WaterlineProgress, SwimmingShark } from './SharkFin';
 import { readJSON, writeJSON } from '../lib/storage';
@@ -205,7 +206,7 @@ export default function TypingRacer() {
 
   const header = (
     <header style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <span className="ss-kicker">{t('typing.kicker')}</span>
+      <Kicker>{t('typing.kicker')}</Kicker>
       <h1 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: 'clamp(1.9rem, 4vw, 2.4rem)', letterSpacing: '-0.02em' }}>
         {t('typing.title')}
       </h1>

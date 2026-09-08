@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Kicker } from './landing/LandingKit';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -184,7 +185,7 @@ export default function Cards() {
 
   const header = (
     <VStack gap={0.5} width="100%">
-      <span className="ss-kicker">{t('cards.kicker')}</span>
+      <Kicker>{t('cards.kicker')}</Kicker>
       <HStack gap={1} align="center" wrap="wrap">
         <Heading level={1}>{t('cards.title')}</Heading>
         <SwimmingFin size={22} />

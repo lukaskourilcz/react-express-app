@@ -3,6 +3,7 @@
 // Answers are graded on the server against the key sealed in the session, so
 // the explanation and the correct option arrive with the verdict, never before.
 import { useCallback, useId, useMemo, useState } from 'react';
+import { Kicker } from '../components/landing/LandingKit';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { RadioCard, RadioCardGroup } from '../components/ui/RadioCards';
@@ -85,7 +86,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
 
   const header = (
     <div className="cd-pane__head">
-      <span className="ss-kicker">{t('coding.track.system-design')} · {design ? t('coding.design.step', { n: Math.min(stepIndex + 1, steps.length), total: steps.length }) : t(`coding.design.format.${drill?.format ?? 'tradeoff'}` as never)}</span>
+      <Kicker>{t('coding.track.system-design')} · {design ? t('coding.design.step', { n: Math.min(stepIndex + 1, steps.length), total: steps.length }) : t(`coding.design.format.${drill?.format ?? 'tradeoff'}` as never)}</Kicker>
       <h2>{L(task.title)}</h2>
       <div className="cd-pane__meta">
         <span>{t('coding.minutes', { n: task.estimatedMinutes })}</span>
