@@ -110,13 +110,13 @@ import {
   pathGuidedComplete,
   pathInventory,
 } from '../shared/learning-paths';
-import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS } from '../shared/coding-catalog';
+import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS, formatOf, isCodingSectionTrack } from '../shared/coding-catalog';
 import { CODING_BADGES } from '../shared/badges';
 import { CODING_INDEX } from '../shared/coding-index';
 import { inspectQuestionQuality } from '../lib/question-quality';
 import { assessmentUnlocks, roadmapEndedOnHearts, ROADMAP_MAX_HEARTS } from '../shared/assessment';
 import { grantedTopicsFor, withGrantedTopics } from '../lib/topic-grants';
-import { ROADMAP_TOPICS, isRoadmapTopic, topicLevelCount } from '../lib/roadmap';
+import { ROADMAP_TOPICS, isRoadmapTopic, topicLevelCount, ROADMAP_LEVELS } from '../lib/roadmap';
 import {
   disableSupportPrompt,
   dismissSupportPrompt,
@@ -347,6 +347,33 @@ async function main() {
 
   assert.ok(levelCodingTasks('javascript', 6).length >= 1, 'javascript level 6 carries a coding task');
   assert.ok(levelCodingTasks('javascript', 6).length <= 2);
+
+  // A repair task is a format a learner chooses, never a gate they must pass.
+  // It carries a `level` so it sorts into the Coding ladder, and the level quota
+  // takes the first N in catalogue order — so without this, adding a repair task
+  // silently REPLACES the implementation task its level was asking for. That is
+  // exactly what happened when they were added: javascript level 3 (quota 1)
+  // swapped js-fizz-values for js-debug-average, and level 10 dropped
+  // js-activate-user.
+  for (const codeTopic of ['javascript', 'typescript', 'react'] as const) {
+    for (let level = 1; level <= ROADMAP_LEVELS; level++) {
+      for (const task of levelCodingTasks(codeTopic, level)) {
+        assert.notEqual(
+          formatOf(task),
+          'debug',
+          `${codeTopic} level ${level} must not gate on the repair task ${task.id}`,
+        );
+      }
+    }
+  }
+  // And the fix must not be to delete them: they still exist and stay reachable
+  // through the Coding section, which is what made debugging discoverable.
+  const repairTasks = CODING_TASKS.filter((task) => formatOf(task) === 'debug');
+  assert.ok(repairTasks.length >= 4, 'the authored repair tasks are still in the catalogue');
+  assert.ok(
+    repairTasks.every((task) => isCodingSectionTrack(task.track)),
+    'every repair task stays reachable in the Coding section',
+  );
   assert.equal(gardenPathFor({ id: 'js-double-numbers', track: 'javascript', level: 6 }), 'javascript/06-double-numbers.js');
   assert.equal(gardenPathFor({ id: 'dd-requests-per-second', track: 'system-design', level: 0 }), 'system-design/00-requests-per-second.md');
   assert.ok(CODING_INDEX.length > 0, 'the browser index exists (freshness is enforced by npm run test:coding)');

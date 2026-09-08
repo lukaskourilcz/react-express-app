@@ -9,6 +9,7 @@ import type {
   CodingTrack,
   PlayableCodingTask,
 } from '../../shared/coding-catalog';
+import { formatOf } from '../../shared/coding-catalog';
 import { mergeTask, type CodingTaskCs, type CodingTaskSource } from './types';
 import { JAVASCRIPT_TASKS } from './tasks/javascript';
 import { JAVASCRIPT_TASKS_CS } from './tasks/javascript.cs';
@@ -54,9 +55,25 @@ export const codingTaskByLegacyId = (legacyId: string): CodingTask | undefined =
 export const tasksForTrack = (track: CodingTrack): CodingTask[] => CODING_TASKS.filter((task) => task.track === track);
 
 /** Tasks that belong to one Learn level, in catalogue order. Checklist tasks
- * cannot gate a level, so they are never part of one. */
+ * cannot gate a level, so they are never part of one.
+ *
+ * Neither can a repair task. A debug exercise carries a `level` so it sorts into
+ * the right place in the Coding section's ladder, but it is a format a learner
+ * chooses, not a gate they must pass: letting one into the quota silently
+ * *replaces* the implementation task the level was asking for, because the
+ * quota takes the first N in catalogue order. That is what happened when the
+ * repair tasks were added — JavaScript level 3, whose quota is one, swapped
+ * `js-fizz-values` for `js-debug-average`, and level 10 dropped
+ * `js-activate-user`. The launch contract now asserts no level can gate on one.
+ */
 export function tasksForLevel(topic: CodingTask['topic'], level: number): CodingTask[] {
-  return CODING_TASKS.filter((task) => task.topic === topic && task.level === level && task.verify !== 'checklist');
+  return CODING_TASKS.filter(
+    (task) =>
+      task.topic === topic &&
+      task.level === level &&
+      task.verify !== 'checklist' &&
+      formatOf(task) !== 'debug',
+  );
 }
 
 /** How many tasks a Learn level asks for: one for levels 1–5, two for 6–15,
