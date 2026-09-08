@@ -10,6 +10,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
 import { getTokens } from './tokens';
+import { CURRENT_PRODUCT } from './products';
 import type { ShopCatalogResponse } from '../../../shared/merchandise';
 import type { CreateOrderRequest, OrdersResponse, WalletResponse } from '../../../shared/rewards';
 
@@ -117,9 +118,12 @@ export function useEquipCosmetic() {
   });
 }
 
+/** The shop and the wallet exist on devShark only. */
+export const rewardsAvailable = (): boolean => CURRENT_PRODUCT.id === 'devshark';
+
 /** Does this learner wear the crown? Used by every avatar placement. */
 export function useCrownEquipped(enabled: boolean): boolean {
-  const cosmetics = useCosmetics(enabled);
+  const cosmetics = useCosmetics(enabled && rewardsAvailable());
   return cosmetics.data?.equipped === 'crown';
 }
 

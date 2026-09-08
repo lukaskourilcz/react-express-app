@@ -1,3 +1,9 @@
+// The shop.
+//
+// devShark's is server-owned (issues #168, #169, #170, #173); StudyShark keeps
+// the device-local cosmetic shop it had, in `shop/CosmeticShop.tsx`. This module
+// picks between them, so neither product's behaviour leaks into the other.
+//
 // The devShark shop (issues #168, #169, #170, #173).
 //
 // Four branded items and one avatar cosmetic. Nothing here is authoritative:
@@ -11,6 +17,8 @@
 // and flairs are no longer sold; accounts that own one keep it.
 
 import { useMemo, useState } from 'react';
+import { CURRENT_PRODUCT } from '../lib/products';
+import { CosmeticShop } from './shop/CosmeticShop';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Grid } from '@astryxdesign/core/Grid';
@@ -53,6 +61,13 @@ const TokenIcon = ({ size = 24 }: { size?: number }) => (
 const EMPTY_ADDRESS: ShippingAddress = { name: '', line1: '', city: '', postcode: '', country: '' };
 
 function Shop() {
+  // StudyShark's shop is unchanged; only devShark moved to server-owned
+  // merchandise and the crown.
+  if (CURRENT_PRODUCT.id !== 'devshark') return <CosmeticShop />;
+  return <MerchandiseShop />;
+}
+
+function MerchandiseShop() {
   const t = useT();
   const { lang } = useLanguage();
   const { isAuthenticated, user } = useAuth();

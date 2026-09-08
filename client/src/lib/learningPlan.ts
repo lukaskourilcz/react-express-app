@@ -8,6 +8,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
+import { CURRENT_PRODUCT } from './products';
 import type {
   LearnerProfileDraft,
   LearnerProfileFieldError,
@@ -39,11 +40,14 @@ export function fetchEligibility(signal?: AbortSignal): Promise<EligibilityRespo
   return apiFetch<EligibilityResponse>(`${USER}?op=eligibility`, { signal });
 }
 
+/** The learner plan is a devShark concept; StudyShark keeps its own pickers. */
+export const learningPlanAvailable = (): boolean => CURRENT_PRODUCT.id === 'devshark';
+
 /** The signed-in learner's profile; disabled for anonymous visitors. */
 export function useLearnerProfile(enabled: boolean) {
   return useQuery({
     queryKey: learningPlanKeys.profile(),
-    enabled,
+    enabled: enabled && learningPlanAvailable(),
     queryFn: ({ signal }) => fetchLearnerProfile(signal),
     staleTime: 60_000,
   });
@@ -53,7 +57,7 @@ export function useLearnerProfile(enabled: boolean) {
 export function useEligibility(enabled: boolean) {
   return useQuery({
     queryKey: learningPlanKeys.eligibility(),
-    enabled,
+    enabled: enabled && learningPlanAvailable(),
     queryFn: ({ signal }) => fetchEligibility(signal),
     staleTime: 30_000,
   });

@@ -1,16 +1,18 @@
-// The retired ring and flair inventory.
+// The ring and flair inventory.
 //
-// These cosmetics are no longer sold (issue #169): the shop now offers devShark
-// merchandise and the crown, both bought through the server-owned wallet in
-// `client/src/lib/rewards.ts`. What an account already owns stays owned and
-// keeps rendering, which is why the catalogue, the inventory and the account
-// sync all remain — a local claim of ownership is never converted into
-// redeemable value, and `purchase` refuses.
+// On devShark these cosmetics are no longer sold (issue #169): the shop offers
+// merchandise and the crown, bought through the server-owned wallet in
+// `client/src/lib/rewards.ts`, and `purchase` refuses here. StudyShark keeps the
+// shop it had, unchanged. Either way what an account already owns stays owned
+// and keeps rendering — a local claim of ownership is never converted into
+// redeemable value on devShark.
 //
 // The inventory is PER SUBJECT (platform). Every item is cosmetic: none of it
 // ever altered XP, scores, streaks, access, or progression.
 
 import { readJSON, writeJSON } from './storage';
+import { spendTokens, getTokens } from './tokens';
+import { CURRENT_PRODUCT } from './products';
 import { createStore, useStore } from './store';
 import { getGameConfig, type GameConfig } from './gameConfig';
 import { getSubject, useSubject, isSubjectId, type SubjectId } from './subjects';
@@ -173,15 +175,26 @@ export function useInventory(): Inventory {
 export type PurchaseResult = 'ok' | 'insufficient' | 'owned' | 'unknown' | 'retired';
 
 /**
- * Retired (issue #169). Rings and flairs are no longer for sale, and a browser
- * may not mint an entitlement for itself in any case — the shop's purchases go
- * through the server-owned wallet and the order service. Kept as a refusal
- * rather than deleted so any old caller fails loudly instead of silently
- * granting something.
+ * Buy a cosmetic from the device-local wallet.
+ *
+ * Retired on devShark (issue #169): its shop is server-owned, a browser may not
+ * mint an entitlement for itself there, and this refuses rather than silently
+ * granting one. StudyShark's shop is outside that change and behaves as before.
  */
 export function purchase(id: string): PurchaseResult {
-  if (!byId.has(id)) return 'unknown';
-  return 'retired';
+  const product = byId.get(id);
+  if (!product) return 'unknown';
+  if (CURRENT_PRODUCT.id === 'devshark') return 'retired';
+  const price = priceOf(product);
+
+  const subject = getSubject();
+  const inv = readInventory(subject);
+  if (inv.owned.includes(id)) return 'owned';
+  if (getTokens() < price) return 'insufficient';
+  if (!spendTokens(price)) return 'insufficient';
+
+  writeInventory(subject, { ...inv, owned: [...inv.owned, id], doubleXp: 0 });
+  return 'ok';
 }
 
 /** Equip (or, if already equipped, unequip) an owned ring/flair. No-op if unowned. */

@@ -875,9 +875,21 @@ async function main() {
   assert.ok('address' in goodAddress && goodAddress.address.country === 'CZ');
 
   /* ── the crown is a cosmetic, and rings are retired (#169, #173) ─────── */
+  // devShark's shop is server-owned, so the device-local purchase refuses there.
+  // StudyShark's shop is outside issue #169 and keeps the behaviour it had, so
+  // the refusal is scoped to the product rather than deleted.
   const retiredShop = readSource(join(process.cwd(), 'client/src/lib/shop.ts'), 'utf8');
-  assert.match(retiredShop, /return 'retired'/, 'local ring and flair purchases must be refused');
-  assert.doesNotMatch(retiredShop, /spendTokens/, 'the retired shop must not spend anything');
+  assert.match(
+    retiredShop,
+    /if \(CURRENT_PRODUCT\.id === 'devshark'\) return 'retired';/,
+    "devShark's local ring and flair purchases must be refused",
+  );
+  const shopEntry = readSource(join(process.cwd(), 'client/src/components/Shop.tsx'), 'utf8');
+  assert.match(
+    shopEntry,
+    /CURRENT_PRODUCT\.id !== 'devshark'\) return <CosmeticShop \/>;/,
+    'StudyShark must keep its own shop',
+  );
   const avatarSource = readSource(join(process.cwd(), 'client/src/components/ui/LearnerAvatar.tsx'), 'utf8');
   assert.match(avatarSource, /aria-hidden/, 'the crown mark itself is decorative');
   assert.match(avatarSource, /shop\.crown\.wearing/, 'the crown must be named in the accessible label');
