@@ -29,10 +29,13 @@ export type FailureCategory =
   /** The code did not finish in time. */
   | 'timeout'
   /** Visible tests pass; something the visible tests do not cover fails. */
-  | 'hidden-only';
+  | 'hidden-only'
+  /** A rendered expectation failed: the component works, it just does not do
+   * what the test asked for. There is no returned value to compare. */
+  | 'render';
 
 export const FAILURE_CATEGORIES: readonly FailureCategory[] = [
-  'boundary', 'mutation', 'types', 'output-shape', 'missing-return', 'threw', 'timeout', 'hidden-only',
+  'boundary', 'mutation', 'types', 'output-shape', 'missing-return', 'threw', 'timeout', 'hidden-only', 'render',
 ];
 
 export interface FailureAdvice {
@@ -65,6 +68,10 @@ export interface FailureSignals {
   shapeMismatch: boolean;
   /** A visible test observed its input changed in place. */
   mutated: boolean;
+  /** The grader can only say "an expectation failed" — there is no returned
+   * value to compare, as when a suite asserts against a rendered component.
+   * Guessing at a value-shaped cause from that is guessing. */
+  opaque?: boolean;
 }
 
 export const stageOf = (category: FailureCategory): FailureStage =>
@@ -79,6 +86,11 @@ export function classifyFailure(signals: FailureSignals): FailureCategory {
   if (signals.outcome === 'timeout') return 'timeout';
   if (signals.typeErrors > 0) return 'types';
   if (signals.threw) return 'threw';
+  if (signals.opaque) {
+    const opaqueVisible = signals.visible.filter((one) => one.pass === false);
+    if (opaqueVisible.length === 0 && signals.hidden && signals.hidden.passed < signals.hidden.total) return 'hidden-only';
+    return 'render';
+  }
   if (signals.allUndefined) return 'missing-return';
   if (signals.mutated) return 'mutation';
   if (signals.shapeMismatch) return 'output-shape';

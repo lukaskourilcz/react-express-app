@@ -14,7 +14,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createLogger, isRpcMissing, jsonError, withTimeout } from '../http';
+import { createLogger, isRpcMissing, isTableMissing, jsonError, withTimeout } from '../http';
 import { isPaymentConfigured, paymentConfig } from './config';
 
 const logEvent = createLogger('rewards/payment');
@@ -113,8 +113,11 @@ export function rawBodyOf(req: VercelRequest): string | null {
 /**
  * The webhook. Unauthenticated by nature — the signature is the credential —
  * and the only thing in the system that may move a cash order to `paid`.
- * Duplicate and out-of-order events are safe: `advance_reward_order` applies
- * one transition at most and reports when it changed nothing.
+ *
+ * Duplicate and out-of-order events are safe twice over: the provider's own
+ * event id is recorded before anything is applied, so a re-delivery is
+ * recognised and dropped, and `advance_reward_order` still applies at most one
+ * transition and reports when it changed nothing.
  */
 export async function handlePaymentWebhook(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (req.method !== 'POST') {
@@ -179,6 +182,25 @@ export async function handlePaymentWebhook(req: VercelRequest, res: VercelRespon
     if (event.currency !== null && order.data.currency !== null && event.currency !== order.data.currency) {
       return jsonError(res, 409, 'currency_mismatch', 'The paid currency does not match the order');
     }
+  }
+
+  // Providers retry until they get a 2xx, and a retry can arrive after an
+  // operator has already moved the order on by hand. Claiming the event id
+  // first — one insert, decided by the primary key — is what stops a second
+  // delivery of `refunded` from running a second refund.
+  const claimed = await withTimeout(
+    supabase
+      .from('reward_payment_events')
+      .upsert({ event_id: event.eventId, order_id: event.orderId, type: event.type }, { onConflict: 'event_id', ignoreDuplicates: true })
+      .select('event_id'),
+  );
+  if (claimed.error) {
+    if (isTableMissing(claimed.error)) return jsonError(res, 503, 'migration_required', 'Rewards migration 029 is not installed');
+    return jsonError(res, 500, 'db_error', 'Could not record that event');
+  }
+  if ((claimed.data ?? []).length === 0) {
+    logEvent({ status: 200, kind: 'webhook_replay', type: event.type });
+    return res.json({ received: true, applied: false, status: order.data.status });
   }
 
   const target = event.type === 'payment_succeeded' ? 'paid'

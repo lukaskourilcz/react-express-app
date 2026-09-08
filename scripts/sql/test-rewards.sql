@@ -190,6 +190,26 @@ BEGIN
   r := public.equip_reward_cosmetic(u, 'webdev', 'crown', FALSE);
   SELECT COUNT(*) INTO n FROM public.reward_inventory WHERE user_id = u AND equipped;
   ASSERT n = 0, 'unequipping leaves nothing worn';
+
+  -- 4. Buying a cosmetic grants it in the same transaction as the payment, and
+  --    cancelling hands it back: no free crown for a bought-then-cancelled order.
+  DELETE FROM public.reward_inventory WHERE user_id = u;
+  DELETE FROM public.reward_orders WHERE user_id = u;
+  PERFORM public.move_reward_tokens(u, 'webdev', 500, 'adjustment', 'test:cosmetic-seed');
+  PERFORM public.place_reward_order('ord-cosm-0001', u, 'webdev', 'tokens', 'crown', 1, NULL, NULL, 200,
+    '[{"sku":"crown","variantId":null,"quantity":1,"unitCashMinor":null,"unitTokens":200}]'::jsonb,
+    NULL, 'cosmetic-1', FALSE);
+  SELECT COUNT(*) INTO n FROM public.reward_inventory WHERE user_id = u AND sku = 'crown';
+  ASSERT n = 1, 'paying for a cosmetic grants it';
+  SELECT COUNT(*) INTO n FROM public.reward_orders WHERE order_id = 'ord-cosm-0001' AND physical IS FALSE;
+  ASSERT n = 1, 'and the order records that it does not ship';
+
+  r := public.advance_reward_order('ord-cosm-0001', 'cancelled', 'learner', NULL);
+  ASSERT (r->>'status') = 'cancelled', 'the order cancels';
+  SELECT COUNT(*) INTO n FROM public.reward_inventory WHERE user_id = u AND sku = 'crown';
+  ASSERT n = 0, 'and the entitlement goes back with the tokens';
+  SELECT balance INTO n FROM public.reward_wallets WHERE user_id = u AND subject = 'webdev';
+  ASSERT n = 500, format('the tokens are refunded in full, got %s', n);
   RAISE NOTICE 'cosmetics: ok';
 END $$;
 

@@ -78,6 +78,9 @@ CREATE TABLE IF NOT EXISTS public.reward_orders (
   provider_ref      TEXT,
   tracking_carrier  TEXT,
   tracking_code     TEXT,
+  -- A physical order reserves stock and ships; a cosmetic one grants an
+  -- entitlement instead, and has to hand it back if the order is undone.
+  physical          BOOLEAN NOT NULL DEFAULT TRUE,
   stock_released    BOOLEAN NOT NULL DEFAULT FALSE,
   refunded_at       TIMESTAMPTZ,
   dispatched_at     TIMESTAMPTZ,
@@ -85,6 +88,9 @@ CREATE TABLE IF NOT EXISTS public.reward_orders (
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (user_id, idempotency_key)
 );
+
+ALTER TABLE public.reward_orders
+  ADD COLUMN IF NOT EXISTS physical BOOLEAN NOT NULL DEFAULT TRUE;
 
 CREATE INDEX IF NOT EXISTS reward_orders_user_created_idx
   ON public.reward_orders (user_id, created_at DESC);
@@ -115,6 +121,20 @@ CREATE TABLE IF NOT EXISTS public.reward_order_events (
 CREATE INDEX IF NOT EXISTS reward_order_events_order_idx
   ON public.reward_order_events (order_id, created_at);
 
+-- Every payment event the provider has delivered, by the provider's own id.
+-- Providers retry until they get an answer, so the same event arrives more than
+-- once; the primary key is what makes the second delivery a no-op rather than a
+-- second refund. Rows are an operational audit trail, never learner-readable.
+CREATE TABLE IF NOT EXISTS public.reward_payment_events (
+  event_id    TEXT PRIMARY KEY CHECK (event_id ~ '^[A-Za-z0-9_.:-]{6,128}$'),
+  order_id    TEXT NOT NULL,
+  type        TEXT NOT NULL,
+  received_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS reward_payment_events_order_idx
+  ON public.reward_payment_events (order_id, received_at);
+
 -- ---------------------------------------------------------------------------
 -- 4. Row-level security: a learner reads their own rows; the service writes.
 -- ---------------------------------------------------------------------------
@@ -123,9 +143,11 @@ ALTER TABLE public.reward_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reward_inventory ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reward_orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reward_order_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reward_payment_events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.reward_stock ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.reward_wallets, public.reward_ledger, public.reward_inventory,
-  public.reward_orders, public.reward_order_events, public.reward_stock
+  public.reward_orders, public.reward_order_events, public.reward_payment_events,
+  public.reward_stock
   FROM anon, authenticated;
 
 DROP POLICY IF EXISTS "reward_wallets_select_own" ON public.reward_wallets;
@@ -326,15 +348,23 @@ BEGIN
 
   INSERT INTO public.reward_orders (
     order_id, user_id, subject, status, payment, currency,
-    total_cash_minor, total_tokens, lines, address, idempotency_key
+    total_cash_minor, total_tokens, lines, address, idempotency_key, physical
   ) VALUES (
     p_order_id, p_user_id, p_subject,
     CASE WHEN p_payment = 'tokens' THEN 'paid' ELSE 'pending' END,
-    p_payment, p_currency, p_total_cash_minor, p_total_tokens, p_lines, p_address, p_idempotency_key
+    p_payment, p_currency, p_total_cash_minor, p_total_tokens, p_lines, p_address, p_idempotency_key,
+    p_physical
   );
 
   INSERT INTO public.reward_order_events (order_id, from_status, to_status, actor)
   VALUES (p_order_id, NULL, CASE WHEN p_payment = 'tokens' THEN 'paid' ELSE 'pending' END, 'learner');
+
+  -- A cosmetic has nothing to ship, so paying for it is the delivery. Granting
+  -- it here keeps the entitlement and the payment in one transaction: the
+  -- learner can never be charged for a mark that failed to arrive.
+  IF NOT p_physical AND p_payment = 'tokens' THEN
+    PERFORM public.grant_reward_cosmetic(p_user_id, p_subject, p_sku);
+  END IF;
 
   RETURN jsonb_build_object(
     'orderId', p_order_id,
@@ -399,7 +429,7 @@ BEGIN
     FROM jsonb_array_elements(v_order.lines) AS line LIMIT 1;
 
   -- Stock goes back exactly once, and only for an order that reserved it.
-  IF p_to_status IN ('cancelled','refunded') AND NOT v_order.stock_released THEN
+  IF p_to_status IN ('cancelled','refunded') AND v_order.physical AND NOT v_order.stock_released THEN
     UPDATE public.reward_stock
        SET reserved = GREATEST(0, reserved - v_quantity), updated_at = NOW()
      WHERE sku = v_sku;
@@ -414,8 +444,15 @@ BEGIN
     );
   END IF;
 
+  -- A cosmetic order that is undone hands the mark back. Without this a
+  -- learner could buy the crown, cancel, take the tokens back and keep it.
+  IF p_to_status IN ('cancelled','refunded') AND NOT v_order.physical THEN
+    DELETE FROM public.reward_inventory
+     WHERE user_id = v_order.user_id AND subject = v_order.subject AND sku = v_sku;
+  END IF;
+
   -- Shipped consumes the reservation: the parcel has left.
-  IF p_to_status = 'shipped' AND NOT v_order.stock_released THEN
+  IF p_to_status = 'shipped' AND v_order.physical AND NOT v_order.stock_released THEN
     UPDATE public.reward_stock
        SET on_hand = GREATEST(0, on_hand - v_quantity),
            reserved = GREATEST(0, reserved - v_quantity),
@@ -515,6 +552,13 @@ BEGIN
   UPDATE public.reward_orders
      SET address = NULL, updated_at = NOW()
    WHERE user_id = p_user_id AND status IN ('paid','fulfilling','shipped');
+  -- The provider events for a closed order go with it. Replay protection is
+  -- not lost: an event for an order that no longer exists is dropped anyway.
+  DELETE FROM public.reward_payment_events
+   WHERE order_id IN (
+     SELECT order_id FROM public.reward_orders
+      WHERE user_id = p_user_id AND status IN ('pending','cancelled','refunded','delivered')
+   );
   DELETE FROM public.reward_orders
    WHERE user_id = p_user_id AND status IN ('pending','cancelled','refunded','delivered');
   DELETE FROM public.reward_inventory WHERE user_id = p_user_id;

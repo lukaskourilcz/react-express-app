@@ -273,7 +273,14 @@ async function gradeReact(task: CodingTask, code: string): Promise<Graded> {
       design: null, designReference: null,
     };
   }
-  const results = run.cases.map((one) => ({ pass: one.status === 'pass', actual: null, error: one.error }));
+  // `error` means "the code threw before the assertion could run" everywhere
+  // else in the grader, and the failure classifier reads it that way. A React
+  // case that simply failed an expectation is not that.
+  const results = run.cases.map((one) => ({
+    pass: one.status === 'pass',
+    actual: null,
+    error: one.assertion ? null : one.error,
+  }));
   const verdict: CodingOutcome = run.compileError
     ? 'error'
     : run.timedOut
@@ -420,6 +427,10 @@ function failureAdviceFor(task: CodingTask, graded: Graded): FailureAdvice | nul
     allUndefined,
     shapeMismatch,
     mutated,
+    // A React suite asserts against what is on the screen, so a failed case
+    // carries no returned value. Reading "missing return" or "wrong container"
+    // out of that would be inventing a cause.
+    opaque: task.track === 'react',
   };
   return adviceFor(task.id, classifyFailure(signals));
 }

@@ -47,8 +47,8 @@ import {
   useShopCatalog,
   useWallet,
 } from '../lib/rewards';
-import type { MerchListing } from '../../../shared/merchandise';
-import type { ShippingAddress } from '../../../shared/rewards';
+import { merchBySku, type MerchListing } from '../../../shared/merchandise';
+import { learnerMayCancel, type ShippingAddress } from '../../../shared/rewards';
 
 const TokenIcon = ({ size = 24 }: { size?: number }) => (
   <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -352,6 +352,17 @@ function AddressFields({ value, onChange, sku }: { value: ShippingAddress; onCha
   );
 }
 
+/** An order line as a person reads it: the product's own name and the variant
+ * they chose, not the SKU and variant id the server files it under. */
+function describeLine(line: import('../../../shared/rewards').OrderLine, lang: 'en' | 'cs'): string {
+  const product = merchBySku(line.sku);
+  const name = product?.name[lang] ?? line.sku;
+  const variant = line.variantId
+    ? product?.variants.find((one) => one.id === line.variantId)?.label[lang] ?? line.variantId
+    : null;
+  return `${line.quantity}× ${name}${variant ? ` (${variant})` : ''}`;
+}
+
 function OrderHistory({ lang, loading, error, orders, onCancel }: {
   lang: 'en' | 'cs';
   loading: boolean;
@@ -370,7 +381,7 @@ function OrderHistory({ lang, loading, error, orders, onCancel }: {
         <Card key={order.orderId} padding={3} width="100%">
           <VStack gap={1}>
             <HStack gap={1} align="center" wrap="wrap" justify="between">
-              <Text weight="bold">{order.lines.map((line) => `${line.quantity}× ${line.sku}${line.variantId ? ` (${line.variantId})` : ''}`).join(', ')}</Text>
+              <Text weight="bold">{order.lines.map((line) => describeLine(line, lang)).join(', ')}</Text>
               <Badge variant="neutral" label={t(`shop.status.${order.status}` as TranslationKey)} />
             </HStack>
             <Text type="supporting" size="xsm" color="secondary">
@@ -383,7 +394,7 @@ function OrderHistory({ lang, loading, error, orders, onCancel }: {
                 {t('shop.tracking', { carrier: order.trackingCarrier ?? '', code: order.trackingCode })}
               </Text>
             )}
-            {(order.status === 'pending' || order.status === 'paid') && (
+            {learnerMayCancel(order.status) && (
               <HStack>
                 <Button size="sm" variant="secondary" label={t('shop.cancelOrder')} onClick={() => onCancel(order.orderId)} />
               </HStack>

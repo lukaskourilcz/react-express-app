@@ -150,3 +150,14 @@ export const ORDER_TRANSITIONS: Record<OrderStatus, readonly OrderStatus[]> = {
 
 export const canTransition = (from: OrderStatus, to: OrderStatus): boolean =>
   ORDER_TRANSITIONS[from].includes(to);
+
+/**
+ * Which of those a learner may make themselves. The order service will still
+ * cancel an order that is already being packed — an operator has to be able to
+ * stop a parcel — but the learner cannot, because by then someone has printed
+ * a label against it. They ask support instead.
+ */
+export const LEARNER_CANCELLABLE: readonly OrderStatus[] = ['pending', 'paid'];
+
+export const learnerMayCancel = (status: OrderStatus): boolean =>
+  LEARNER_CANCELLABLE.includes(status);

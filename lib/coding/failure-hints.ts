@@ -42,6 +42,10 @@ const CATEGORY_ADVICE: Record<FailureCategory, Localized> = {
     en: 'The code did not finish in time, which usually means a loop never ends. Check that whatever the loop is waiting for actually changes inside it.',
     cs: 'Kód nedoběhl včas, což skoro vždy znamená nekonečný cyklus. Ověřte, že se to, na co cyklus čeká, uvnitř opravdu mění.',
   },
+  render: {
+    en: 'The component runs; it just does not do what the test asked for. The failing test\'s name says which behaviour is missing — check what the component shows in that state, and whether the event it listens for really updates the state it renders from.',
+    cs: 'Komponenta běží, jen nedělá to, co test chce. Název padajícího testu říká, které chování chybí — ověřte, co komponenta v tomto stavu zobrazuje a jestli událost, kterou poslouchá, opravdu mění stav, ze kterého se vykresluje.',
+  },
   'hidden-only': {
     en: 'Every visible test passes, and a further case does not. Re-read the prompt for a rule the shown tests do not exercise, and think about the inputs it would be easy to forget.',
     cs: 'Všechny viditelné testy prošly, další případ ne. Přečtěte si zadání a hledejte pravidlo, které ukázané testy nezkouší, a zamyslete se nad vstupy, na které se snadno zapomene.',

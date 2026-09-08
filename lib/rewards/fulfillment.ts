@@ -19,15 +19,12 @@
 
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createLogger, isRpcMissing, jsonError, withTimeout } from '../http';
+import { createLogger, isRpcMissing, isTableMissing as tableMissing, jsonError, withTimeout } from '../http';
 import { canTransition, type Order, type OrderStatus } from '../../shared/rewards';
 
 const logEvent = createLogger('admin/fulfilment');
 
 const FIELDS = 'order_id,user_id,status,payment,currency,total_cash_minor,total_tokens,lines,address,tracking_carrier,tracking_code,created_at,updated_at';
-
-const tableMissing = (error: { message?: string; code?: string } | null | undefined): boolean =>
-  !!error && (error.code === '42P01' || /relation .* does not exist/i.test(error.message ?? ''));
 
 const migrationError = (res: VercelResponse) =>
   jsonError(res, 503, 'migration_required', 'Rewards migration 029 is not installed');

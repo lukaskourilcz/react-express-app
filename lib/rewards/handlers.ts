@@ -17,7 +17,7 @@
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomBytes } from 'node:crypto';
-import { createLogger, isRpcMissing, jsonError, requireAuthSub, withTimeout } from '../http';
+import { createLogger, isRpcMissing, isTableMissing as tableMissing, jsonError, requireAuthSub, withTimeout } from '../http';
 import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { isPaymentConfigured, merchPricing, paymentConfig } from './config';
@@ -34,10 +34,12 @@ import {
   MAX_ORDER_QUANTITY,
   REGISTRATION_GRANT,
   TOKENS_PER_XP,
+  learnerMayCancel,
   validateAddress,
   type Order,
   type OrderLine,
   type OrdersResponse,
+  type OrderStatus,
   type WalletResponse,
 } from '../../shared/rewards';
 
@@ -46,9 +48,6 @@ const logEvent = createLogger('user/rewards');
 /** devShark is the `webdev` deployment; the wallet is scoped to that subject. */
 const SUBJECT = 'webdev';
 const available = () => deploymentSubjectIds().includes(SUBJECT);
-
-const tableMissing = (error: { message?: string; code?: string } | null | undefined): boolean =>
-  !!error && (error.code === '42P01' || /relation .* does not exist/i.test(error.message ?? ''));
 
 const migrationError = (res: VercelResponse) =>
   jsonError(res, 503, 'migration_required', 'Rewards migration 029 is not installed');
@@ -204,6 +203,11 @@ export async function handleOrders(req: VercelRequest, res: VercelResponse, supa
     const owned = await withTimeout(supabase.from('reward_orders').select('order_id,status').eq('user_id', userId).eq('order_id', orderId).maybeSingle());
     if (owned.error) { if (tableMissing(owned.error)) return migrationError(res); return jsonError(res, 500, 'db_error', 'Could not load that order'); }
     if (!owned.data) return jsonError(res, 404, 'not_found', 'No such order');
+    // The state machine still allows an operator to stop an order that is
+    // already being packed. The learner does not get that reach.
+    if (!learnerMayCancel(owned.data.status as OrderStatus)) {
+      return jsonError(res, 409, 'too_late_to_cancel', 'That order is already being prepared — contact support');
+    }
     const moved = await withTimeout(supabase.rpc('advance_reward_order', {
       p_order_id: orderId, p_to_status: 'cancelled', p_actor: 'learner', p_note: null,
     }));
@@ -289,14 +293,6 @@ export async function handleOrders(req: VercelRequest, res: VercelResponse, supa
   const result = (placed.data ?? {}) as { error?: string; orderId?: string; status?: string; created?: boolean };
   if (result.error) {
     return res.status(409).json({ error: { code: result.error, message: 'That order could not be placed' } });
-  }
-
-  // A cosmetic is granted the moment it is paid for: there is nothing to ship.
-  if (product.kind === 'cosmetic' && result.status === 'paid') {
-    const granted = await withTimeout(supabase.rpc('grant_reward_cosmetic', { p_user_id: userId, p_subject: SUBJECT, p_sku: product.sku }));
-    if (granted.error && !isRpcMissing(granted.error)) {
-      logEvent({ status: 500, kind: 'cosmetic_grant_failed' });
-    }
   }
 
   logEvent({ status: 200, kind: 'order_placed', payment, sku: product.sku, created: result.created === true });

@@ -320,6 +320,19 @@ async function main() {
   if (classifyFailure({ ...noVisible, outcome: 'failed', allUndefined: true, visible: [{ pass: false, edge: false }] }) !== 'missing-return') {
     fail('advice: an all-undefined failure must classify as missing-return');
   }
+  // A React suite asserts against the screen, so a failed case carries no
+  // returned value. The classifier must not read a value-shaped cause into it.
+  const opaqueFail = { ...noVisible, outcome: 'failed' as const, opaque: true, visible: [{ pass: false, edge: false }] };
+  if (classifyFailure(opaqueFail) !== 'render') fail('advice: a rendered expectation must classify as render');
+  if (classifyFailure({ ...opaqueFail, allUndefined: true, shapeMismatch: true, mutated: true }) !== 'render') {
+    fail('advice: value-shaped guesses must not survive an opaque failure');
+  }
+  if (classifyFailure({ ...opaqueFail, outcome: 'error', threw: true }) !== 'threw') {
+    fail('advice: a React runtime error is still a throw');
+  }
+  if (classifyFailure({ ...opaqueFail, visible: [{ pass: true, edge: false }], hidden: { passed: 1, total: 2 } }) !== 'hidden-only') {
+    fail('advice: an opaque hidden-only failure stays hidden-only');
+  }
 
   /* ── repair exercises and the library contract (issues #163, #157) ──── */
   const debugTasks = CODING_TASKS.filter((task) => task.debug === true);
