@@ -88,6 +88,7 @@ import { normalizeSettings } from '../lib/settings-store';
 import { taskResources, CODING_DOC_LINKS } from '../shared/coding-docs';
 import {
   everyPlanHasAFirstStep,
+  stepAlreadyPassed,
   isLevelUnlocked,
   isTopicInPlan,
   planTopics,
@@ -735,6 +736,31 @@ async function main() {
     `progression graph must be complete, acyclic and reachable: ${JSON.stringify(graphProblems)}`,
   );
   assert.deepEqual(everyPlanHasAFirstStep(), [], 'every plan needs a first step a new learner can take');
+
+  // Editing a plan narrows what is offered next; it never withdraws what was
+  // earned. A learner who passed Next.js levels on the frontend track and then
+  // moved to backend — where Next.js is not in the plan — must still be able to
+  // open the levels they already passed.
+  {
+    const backend = {
+      schemaVersion: 2, baseTrack: 'backend', specialization: null, skillPaths: [],
+      goals: ['job'], experience: 'some', studyTime: 15,
+    } as unknown as Parameters<typeof isTopicInPlan>[0];
+    assert.equal(isTopicInPlan(backend, 'webdev', 'nextjs'), false, 'the premise: backend does not plan nextjs');
+    const passedNext = { nextjs: { levels: { '1': { passed: true }, '2': { passed: true } } } };
+    // The carve-out stepRefusal applies before the plan check.
+    assert.equal(stepAlreadyPassed(passedNext, 'nextjs', { kind: 'level', level: 2 }), true,
+      'a level already passed is served whatever the plan now says');
+    assert.equal(stepAlreadyPassed(passedNext, 'nextjs', { kind: 'level', level: 3 }), false,
+      'a level never passed is still gated by the plan and its prerequisites');
+    const passedCheckpoint = { nextjs: { checkpoints: { '1': { passed: true } } } };
+    assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'checkpoint', checkpoint: 1 }), true);
+    assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'checkpoint', checkpoint: 2 }), false);
+    // A part test is gated by the levels it spans, not by a record of sitting
+    // it, so it never takes the carve-out.
+    assert.equal(stepAlreadyPassed(passedNext, 'nextjs', { kind: 'test', from: 1, to: 2 }), false,
+      'a part test is never "already passed"');
+  }
 
   // No plan may be empty, and every plan topic must belong to devShark.
   for (const track of Object.keys(WEBDEV_PLAN_STAGES) as BaseTrack[]) {

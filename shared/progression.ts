@@ -248,6 +248,35 @@ export const isCheckpointUnlocked = (progress: VerifiedProgress, topic: string, 
   isLevelPassed(progress, topic, checkpoint * LEVELS_PER_CHECKPOINT);
 
 /** A checkpoint needs every level it examines. */
+/** A step a learner can ask the server for. */
+export type ProgressStep =
+  | { kind: 'level'; level: number }
+  | { kind: 'checkpoint'; checkpoint: number }
+  | { kind: 'test'; from: number; to: number };
+
+/**
+ * Whether this exact step is already on the learner's record as passed.
+ *
+ * The server serves such a step whatever the current plan says, because editing
+ * a plan narrows what is offered next and must never withdraw what was earned:
+ * a learner who passed Next.js levels on the frontend track and then moved to
+ * backend would otherwise be told those very levels are not part of the plan
+ * they chose.
+ *
+ * A part test is deliberately never "already passed" here. What gates one is
+ * passing the levels it spans, not a record of having sat it, so it keeps the
+ * ordinary prerequisite check.
+ */
+export function stepAlreadyPassed(
+  progress: VerifiedProgress,
+  topic: string,
+  step: ProgressStep,
+): boolean {
+  if (step.kind === 'level') return isLevelPassed(progress, topic, step.level);
+  if (step.kind === 'checkpoint') return isCheckpointPassed(progress, topic, step.checkpoint);
+  return false;
+}
+
 export function areLevelsPassed(progress: VerifiedProgress, topic: string, from: number, to: number): boolean {
   for (let level = from; level <= to; level++) if (!isLevelPassed(progress, topic, level)) return false;
   return true;

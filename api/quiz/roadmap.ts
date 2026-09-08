@@ -31,6 +31,7 @@ import {
   isTopicInPlan,
   isTopicUnlocked as isTopicOpen,
   areLevelsPassed,
+  stepAlreadyPassed,
   eligibleTopics,
   nextEligibleStep,
   type VerifiedProgress,
@@ -523,6 +524,17 @@ function stepRefusal(
   topic: string,
   step: StepRequest,
 ): { code: string; message: string } | null {
+  // Work already done is served whatever the plan says now. Editing a plan
+  // narrows what is offered next; it does not withdraw what was earned. Without
+  // this, a learner who passed Next.js levels on the frontend track and then
+  // switched to backend — where Next.js is not in the plan — would be told
+  // those very levels are "not part of the learning plan you chose".
+  //
+  // Part tests are deliberately not covered: what gates a part test is passing
+  // the levels it spans, not a record of having sat it, so it keeps the
+  // ordinary check below.
+  if (stepAlreadyPassed(context.progress, topic, step)) return null;
+
   if (!isTopicInPlan(context.profile, subject, topic)) {
     return { code: 'not_in_plan', message: 'This topic is not part of the learning plan you chose' };
   }
