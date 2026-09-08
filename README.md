@@ -17,6 +17,7 @@ Current content: **7,953 authored questions** — 3,633 web development, 1,000 g
 - Subject-scoped all-time, daily, and category leaderboards; forgiving streaks (configurable off-days plus two monthly freezes); verified XP; ranks; collectible cosmetic Shark Cards earned by finishing the Today queue; and a fairness-neutral cosmetic token shop.
 - A read-only study advisor that names your weakest areas from your own results, and a devShark touch-typing racer (accuracy-gated, WPM earns stars, private on-device best).
 - A devShark Coding section with 245 tasks across JavaScript, TypeScript, React, and system design: server-graded submissions (QuickJS sandbox, real TypeScript type tests, sealed design keys), authored hint ladders ending in documentation, coding tasks inside Learn levels, a short review ladder, coding badges, and an optional GitHub garden that commits every passed task to the learner's own repository.
+- Two optional devShark learning paths, both graded through the existing server sandbox and both awarding no XP: the **Forward Deployed Engineer** role specialization (customer discovery, integration, bounded AI, evaluation, security, operations, handoff and a staged capstone) that sits on top of the chosen Fullstack/Frontend/Backend track, and **DSA Foundations** (growth classes, arrays, maps, stacks, queues, linked lists, recursion, search, sorting, trees) entered directly with no track, role or XP rank required. Verified checks stay visibly apart from self-reviewed writing, and neither path claims a certification.
 - Per-user, per-subject flashcards with optimistic updates and offline-safe query caching.
 - Google sign-in through Supabase Auth, cross-device progress, profile settings, language preference, and permanent account deletion.
 - Optional voluntary support, post-answer AI explanations, Socratic Sharkira hints, Sentry monitoring, and PostHog analytics. Every optional integration is gated and disabled by default.
@@ -118,13 +119,15 @@ Production requires:
 - `VITE_STUDYSHARK_URL` and `VITE_DEVSHARK_URL`; general subject brands use internal StudyShark links.
 - `ADMIN_EMAILS` or Supabase `app_metadata.role=admin` for `/dev`.
 - Google OAuth origins and callback URLs for every production domain.
-- All migrations through **`supabase/supabase-schema-025.sql`**.
+- All migrations through **`supabase/supabase-schema-026.sql`**.
 
 Strongly recommended for a public deployment:
 
 - `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
 - An external monitor for `GET /api/health`.
 - `VITE_SENTRY_DSN` and/or `VITE_PUBLIC_POSTHOG_KEY` only after privacy configuration is approved.
+
+The devShark learning paths are off unless the deployment says otherwise: `LEARNING_PATH_DSA_ENABLED=true` and `LEARNING_PATH_FDE_ENABLED=true` are independent, so either path can open while the other is still being written. A path opens only when its switch is on, its content validates and migration 026 is installed; anything else is previewable and says which of the three is missing.
 
 Optional support needs both `SUPPORT_ENABLED=true` and enabled, truthful values saved through `/dev`. Optional AI (StudyShark only) needs `AI_EXPLANATIONS_ENABLED=true`, `OPENAI_API_KEY`, `OPENAI_MODEL`, and a positive `AI_DAILY_GENERATION_LIMIT`. The devShark GitHub garden needs `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, and `GITHUB_APP_PRIVATE_KEY` (PEM or base64); without them the profile reports the garden as not enabled.
 
@@ -138,11 +141,11 @@ The twelve physical handlers multiplex related operations to stay within the dep
 | `/api/quiz/submit` | One-time grading, result proofs, reports, and optional AI explanations and Socratic Sharkira hints |
 | `/api/quiz/daily` | UTC daily session |
 | `/api/quiz/challenge` | Challenge batches, scoring, completion, leaderboard |
-| `/api/quiz/roadmap` | Structure, attempts, answers, completion, adaptive placement, progress; coding tasks, submissions, reports, and reveals |
+| `/api/quiz/roadmap` | Structure, attempts, answers, completion, adaptive placement, progress; coding tasks, submissions, reports, and reveals; learning-path catalogue, activity start and submit |
 | `/api/play/[action]` | Multiplayer and classroom lifecycle |
 | `/api/leaderboard` | Subject, daily, and category boards |
 | `/api/flashcards` | Subject-scoped flashcard CRUD |
-| `/api/user/[op]` | Stats, category stats, XP, streaks, badges, streak freezes, Shark Cards, study advisor, auth events, deletion; coding progress and drafts; GitHub garden connection, repository, sync, disconnect |
+| `/api/user/[op]` | Stats, category stats, XP, streaks, badges, streak freezes, Shark Cards, study advisor, auth events, deletion; coding progress and drafts; learning preference, path enrollment, progress and drafts; GitHub garden connection, repository, sync, disconnect |
 | `/api/admin/[op]` | Role-gated control-room operations |
 | `/api/settings` | Public safe configuration |
 | `/api/health` | Database, service-role migration, and limiter readiness |

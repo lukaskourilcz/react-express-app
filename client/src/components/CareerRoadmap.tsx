@@ -8,7 +8,7 @@
 // SegmentedControl track chooser, ProgressBars and Badges — all logic, hooks and
 // i18n preserved verbatim.
 
-import { useEffect, useMemo } from 'react';
+import { lazy, Suspense, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -38,6 +38,7 @@ import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
 import { levelForXp, getCareerRanks } from '../lib/leveling';
 import RoadmapTree from './RoadmapTree';
+const PathDiscovery = lazy(() => import('./paths/PathDiscovery'));
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import './DeepEndScreens.css';
@@ -294,6 +295,15 @@ export default function CareerRoadmap() {
           </VStack>
         </Card>
         </div>
+
+        {/* Optional paths, above the pillars because they answer a different
+            question: the pillars are "what is left in my track", these are
+            "what else could I take on". devShark only. */}
+        {isWebdev && (
+          <Suspense fallback={null}>
+            <PathDiscovery />
+          </Suspense>
+        )}
 
         {/* The pillars, filtered to the chosen track (empty pillars are hidden).
             One shared CTA up top instead of repeating it under every pillar. */}
