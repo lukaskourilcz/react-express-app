@@ -20,6 +20,10 @@ import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/pr
 import { selectPersonalizedReview } from '../../lib/review-selection';
 import { curationCoverage, itemReview } from '../../lib/curation';
 import { coverageClaim } from '../../shared/curation';
+import { loadReviewStates, dueFor, practisedCounts } from '../../lib/concept-review';
+import { conceptOf, conceptById } from '../../shared/concepts';
+import { estimatedMinutes } from '../../shared/spaced-practice';
+import { arrangePractice } from '../../shared/interleave';
 
 const ALL_CATEGORIES = Object.values(SUBJECT_SCOPE_CATALOG)
   .flatMap((subject) => [...subject.categories]) as CategoryType[];
@@ -77,6 +81,39 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
   selectedCategories = scope.categories as CategoryType[];
 
+  // What the learner owes, without selecting any of it. Answered here because
+  // it needs the subject scope and nothing else: no question bank is loaded and
+  // no session is issued, so Today can ask cheaply and often.
+  if (resource === 'due') {
+    let dueAuth;
+    try {
+      dueAuth = await tryAuth(req);
+    } catch {
+      return jsonError(res, 401, 'unauthorized', 'Invalid sign-in session');
+    }
+    // A signed-out visitor owes nothing, because nothing has been recorded for
+    // them. That is an empty list, not an error.
+    if (!dueAuth) {
+      res.setHeader('Cache-Control', 'private, no-store');
+      return res.json({ due: [], estimatedMinutes: 0 });
+    }
+    const states = await loadReviewStates(supabase, dueAuth.sub, scope.subject);
+    // Eligibility is the deployment scope the request already resolved: a
+    // concept whose topic is not being served here is not due here.
+    const servedTopics = new Set(selectedCategories as string[]);
+    const due = dueFor(
+      states,
+      (conceptId) => {
+        const concept = conceptById(conceptId);
+        return concept !== null && servedTopics.has(concept.topic);
+      },
+      Date.now(),
+    );
+    res.setHeader('Cache-Control', 'private, no-store');
+    logEvent({ status: 200, resource, count: due.length, latency_ms: Date.now() - started });
+    return res.json({ due, estimatedMinutes: estimatedMinutes(due.length) });
+  }
+
   // Private categories (custom, apt) are served only to the owner. Verifying
   // the token costs a round-trip, so only do it when one is actually requested.
   if (selectedCategories.some((c) => PRIVATE_CATEGORIES.includes(c))) {
@@ -117,6 +154,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const weight = (q: Question) => q.importance ?? 5;
   let selected: Question[];
   let reviewPlan: ReturnType<typeof selectPersonalizedReview>['weakAreas'] | undefined;
+  // Only set when the arrangement actually contrasts related concepts, which
+  // is the only case the learner is told anything about it.
+  let mixed = false;
+  let contrasted: string[] = [];
 
   if (resource === 'review') {
     let auth;
@@ -154,9 +195,43 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
         migrationMissing ? 'Run supabase/supabase-schema-022.sql to enable personalized review' : 'Could not build personalized review',
       );
     }
-    const plan = selectPersonalizedReview(pool, stats.data ?? [], history.data ?? [], count);
-    selected = plan.questions;
+    // Two policies, kept apart on purpose. Spaced practice says which concepts
+    // are *due*; the ranking below says which items serve them; interleaving
+    // says what order they arrive in. None of them widens the pool: `pool` is
+    // already scoped by the same eligibility and plan filters as everything
+    // else, so review can never unlock a level or resurrect retired material.
+    const states = await loadReviewStates(supabase, auth.sub, scope.subject);
+    const due = dueFor(states, () => true, Date.now());
+    const dueSet = new Set(due.map((one) => one.conceptId));
+    // Prefer a *different* item for a due concept than the one last used, so a
+    // review tests the objective rather than the memory of one question.
+    const lastItems = new Set(due.map((one) => one.lastItemId).filter(Boolean) as string[]);
+    const duePool = dueSet.size > 0
+      ? pool.filter((q) => {
+          const concept = conceptOf(q);
+          return concept !== null && dueSet.has(concept);
+        })
+      : [];
+    const fresher = duePool.filter((q) => !lastItems.has(q.id));
+    const dueFirst = [...fresher, ...duePool.filter((q) => lastItems.has(q.id))];
+
+    const plan = selectPersonalizedReview(
+      // With nothing due this is exactly the previous behaviour. With concepts
+      // due, they lead and the ranking fills the rest.
+      dueFirst.length > 0 ? [...dueFirst, ...pool.filter((q) => !dueFirst.includes(q))] : pool,
+      stats.data ?? [],
+      history.data ?? [],
+      count,
+    );
+    const arrangement = arrangePractice({
+      items: plan.questions.map((q) => ({ ...q, format: q.snippet?.subtype })),
+      practised: practisedCounts(states),
+      seed: plan.questions.length,
+    });
+    selected = arrangement.items;
     reviewPlan = plan.weakAreas;
+    mixed = arrangement.mixed;
+    contrasted = arrangement.contrasted;
   } else if (resource) {
     return jsonError(res, 404, 'unknown_resource', 'Unknown quiz question resource');
   } else if (difficultyMode === 'easy') {
@@ -226,7 +301,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'private, no-store');
   logEvent({ status: 200, count: selected.length, difficulty: difficultyMode, latency_ms: Date.now() - started });
 
-  res.json({ sessionId, questions: questionsWithShuffledOptions, ...(reviewPlan ? { reviewPlan } : {}) });
+  res.json({
+    sessionId,
+    questions: questionsWithShuffledOptions,
+    ...(reviewPlan ? { reviewPlan } : {}),
+    ...(mixed ? { interleaved: { contrasted } } : {}),
+  });
 }
 
 export default function handler(req: VercelRequest, res: VercelResponse) {

@@ -29,6 +29,9 @@ type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => stri
 // stays out of the StudyShark bundle.
 const CodingDueSection = lazy(() => import('./coding/CodingDueSection').then((m) => ({ default: m.CodingDueSection })));
 const PathResumeSection = lazy(() => import('./paths/PathResumeSection').then((m) => ({ default: m.PathResumeSection })));
+// Concepts whose spaced review is due. Lazy for the same reason: it fetches,
+// and Today must render without waiting for it.
+const ConceptDueSection = lazy(() => import('./ConceptDueSection').then((m) => ({ default: m.ConceptDueSection })));
 
 // The plan is priority-ordered; render it grouped under these headings.
 const SECTION_ORDER: TodayKind[] = ['unfinished', 'review', 'new'];
@@ -176,6 +179,12 @@ export default function Today() {
       ) : !completedToday ? (
         <EmptyState t={t} />
       ) : null}
+
+      {isAuthenticated && (
+        <Suspense fallback={null}>
+          <ConceptDueSection />
+        </Suspense>
+      )}
 
       {CURRENT_PRODUCT.id === 'devshark' && isAuthenticated && (
         <Suspense fallback={null}>

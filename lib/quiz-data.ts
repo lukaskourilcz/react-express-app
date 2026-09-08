@@ -1,3 +1,4 @@
+import type { SnippetMeta } from '../shared/snippet-format';
 import {
   roadmapJsQuestions,
   roadmapTsQuestions,
@@ -38,6 +39,11 @@ export interface Question {
   // Resolved importance (1–10): how essential this question is for a learner.
   // Attached by the questions store (DB override → hand-judged score → heuristic).
   importance?: number;
+  // Declared code-reading metadata (#178). Declared by the author, never
+  // inferred from the presence of a fenced block, and carried through to
+  // delivery so format variety in a session is a real signal rather than a
+  // guess about what the text looks like.
+  snippet?: SnippetMeta;
   // Resolved Czech translation for /dev-managed questions, set by the question
   // overrides layer:
   //   undefined → not resolved; fall back to the static cs bank (default)

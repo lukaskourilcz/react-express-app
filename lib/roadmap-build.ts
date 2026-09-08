@@ -100,6 +100,7 @@ export function buildRoadmap(prefix: string, category: CategoryType, seeds: Seed
       category,
       explanation: s.e,
       difficulty: difficultyForLevel(level),
+      ...(s.snippet ? { snippet: s.snippet } : {}),
     } satisfies Question;
   });
 }

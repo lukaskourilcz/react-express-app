@@ -55,6 +55,23 @@ import {
   type ReviewRecord,
 } from '../shared/curation';
 import { createHash } from 'node:crypto';
+import {
+  CONCEPT_IDS,
+  areContrastable,
+  conceptById,
+  conceptOf,
+  validateConcepts,
+} from '../shared/concepts';
+import {
+  DEFAULT_INTERVAL_HOURS,
+  RELEARN_HOURS,
+  RETRIEVAL_KINDS,
+  dueConcepts,
+  nextReviewState,
+  sessionSize,
+} from '../shared/spaced-practice';
+import { arrangePractice, arrangementProblems } from '../shared/interleave';
+import { questions } from '../lib/quiz-data';
 import { FAILURE_CATEGORIES, classifyFailure, failureHint } from '../shared/coding-failure';
 import { RETIRED_TOPIC_IDS, retirementOf } from '../shared/retired-content';
 import { GLOSSARY, termsIn } from '../shared/glossary';
@@ -1000,7 +1017,126 @@ async function main() {
     assert.equal(RELEVANCE_MARKERS.length * MARKER_MAX, RELEVANCE_MAX, 'five markers of two points make ten');
   }
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, and an unconfigured shop.');
+  // ── concepts, spacing and interleaving (#182, #184) ─────────────────────
+  {
+    assert.deepEqual(validateConcepts(), [], 'the concept groups must be structurally sound');
+
+    // Every authored concept must actually match questions in the live bank,
+    // or it is a group that can never be practised.
+    const bankByConcept = new Map<string, number>();
+    for (const question of questions) {
+      const concept = conceptOf(question);
+      if (concept) bankByConcept.set(concept, (bankByConcept.get(concept) ?? 0) + 1);
+    }
+    for (const id of CONCEPT_IDS) {
+      assert.ok((bankByConcept.get(id) ?? 0) > 0, `concept ${id} matches no question in the bank`);
+    }
+    // And a concept only ever resolves inside its own topic, so a mix can never
+    // reach across a product or into a topic the learner has not unlocked.
+    for (const question of questions) {
+      const concept = conceptOf(question);
+      if (!concept) continue;
+      assert.equal(conceptById(concept)?.topic, question.category, `${question.id} resolved outside its topic`);
+    }
+
+    // Spacing: only independent retrieval lengthens an interval.
+    const t0 = Date.UTC(2026, 0, 1);
+    const start = { conceptId: 'js-map', stage: 1, dueAt: null, streak: 1, lastItemId: null };
+    const hours = (state: { dueAt: string | null }) =>
+      state.dueAt ? Math.round((Date.parse(state.dueAt) - t0) / 3600_000) : null;
+
+    const independent = nextReviewState(start, { conceptId: 'js-map', correct: true, kind: 'independent', itemId: 'a' }, t0);
+    assert.equal(independent.stage, 2);
+    assert.equal(hours(independent), DEFAULT_INTERVAL_HOURS[2]);
+    for (const kind of ['hinted', 'revealed', 'assisted'] as const) {
+      const held = nextReviewState(start, { conceptId: 'js-map', correct: true, kind, itemId: 'a' }, t0);
+      assert.equal(held.stage, 1, `a ${kind} answer must not climb the ladder`);
+      assert.equal(held.streak, 1, `a ${kind} answer must not extend the streak`);
+    }
+    // Wrong is wrong whatever the kind, and comes back soon rather than never.
+    for (const kind of RETRIEVAL_KINDS) {
+      const failed = nextReviewState({ ...start, stage: 4 }, { conceptId: 'js-map', correct: false, kind, itemId: 'a' }, t0);
+      assert.equal(failed.stage, 0);
+      assert.equal(failed.streak, 0);
+      assert.equal(hours(failed), RELEARN_HOURS);
+    }
+    // The ladder is bounded at the top: nothing is pushed past its last rung.
+    let climbed = { ...start, stage: 0 };
+    for (let i = 0; i < 20; i++) {
+      climbed = nextReviewState(climbed, { conceptId: 'js-map', correct: true, kind: 'independent', itemId: `q${i}` }, t0);
+    }
+    assert.equal(climbed.stage, DEFAULT_INTERVAL_HOURS.length - 1);
+    assert.ok(DEFAULT_INTERVAL_HOURS.every((h, i) => i === 0 || h > DEFAULT_INTERVAL_HOURS[i - 1]), 'intervals must lengthen');
+
+    // Due selection: overdue first, capped, and never outside eligibility.
+    const states = [
+      { conceptId: 'js-map', stage: 1, dueAt: new Date(t0 - 50 * 3600_000).toISOString(), streak: 1, lastItemId: 'x' },
+      { conceptId: 'js-filter', stage: 2, dueAt: new Date(t0 - 2 * 3600_000).toISOString(), streak: 2, lastItemId: null },
+      { conceptId: 'js-reduce', stage: 0, dueAt: new Date(t0 + 5 * 3600_000).toISOString(), streak: 0, lastItemId: null },
+      { conceptId: 'css-grid', stage: 0, dueAt: new Date(t0 - 99 * 3600_000).toISOString(), streak: 0, lastItemId: null },
+    ];
+    const eligible = (id: string) => conceptById(id)?.topic === 'javascript';
+    const due = dueConcepts(states, eligible, t0);
+    assert.deepEqual(due.map((one) => one.conceptId), ['js-map', 'js-filter'], 'most overdue first, ineligible excluded');
+    assert.equal(dueConcepts(states, eligible, t0, 1).length, 1, 'the cap bounds the queue');
+    assert.equal(dueConcepts(states, () => true, t0, 0).length, 0);
+    // Nothing due, nothing owed — a fresh learner gets ordinary practice.
+    assert.deepEqual(dueConcepts([], () => true, t0), []);
+
+    // Interleaving: bounded runs, no duplicates, focused block for new material.
+    const item = (id: string, tags: string[], format?: string) =>
+      ({ id, category: 'javascript', tags, format });
+    const mixable = [
+      item('m1', ['map']), item('m2', ['map']), item('m3', ['map']), item('m4', ['map']),
+      item('f1', ['filter']), item('f2', ['filter']), item('f3', ['filter']), item('f4', ['filter']),
+      item('r1', ['reduce']), item('r2', ['reduce']), item('r3', ['reduce']), item('r4', ['reduce']),
+    ];
+    const practised = { 'js-map': 9, 'js-filter': 9, 'js-reduce': 9 };
+    const arranged = arrangePractice({ items: mixable, practised });
+    assert.equal(arranged.items.length, mixable.length, 'every item is placed exactly once');
+    assert.deepEqual(arrangementProblems(arranged.items), [], 'no duplicates and no long runs');
+    assert.equal(arranged.mixed, true);
+    assert.deepEqual(arranged.contrasted, ['js-filter', 'js-map', 'js-reduce']);
+    // Deterministic: the same input and seed always give the same order.
+    assert.deepEqual(
+      arrangePractice({ items: mixable, practised }).items.map((one) => one.id),
+      arranged.items.map((one) => one.id),
+    );
+    // Not so mechanical that the sequence itself is a hint: an A-B-A-B-A-B
+    // arrangement of three concepts would never repeat a concept at all.
+    const conceptSequence = arranged.items.map((one) => conceptOf(one));
+    assert.ok(
+      conceptSequence.some((concept, i) => i > 0 && concept === conceptSequence[i - 1]),
+      'runs of two are used, so the order is not a strict rotation',
+    );
+
+    // A concept the learner has barely met is taught in a block before it is
+    // mixed with anything.
+    const fresh = arrangePractice({ items: mixable, practised: { 'js-map': 9, 'js-filter': 9, 'js-reduce': 0 } });
+    const reduceRun = fresh.items.slice(0, 4).map((one) => conceptOf(one));
+    assert.deepEqual(reduceRun, ['js-reduce', 'js-reduce', 'js-reduce', 'js-reduce'], 'new material comes as a block');
+
+    // One eligible concept is ordinary focused practice, not a fake mix.
+    const single = arrangePractice({ items: mixable.slice(0, 4), practised });
+    assert.equal(single.mixed, false);
+    assert.deepEqual(single.contrasted, []);
+
+    // Items with no concept never block a mix and are never dropped.
+    const withLoose = arrangePractice({ items: [...mixable, item('x1', ['Hoisting'])], practised });
+    assert.equal(withLoose.items.length, mixable.length + 1);
+    assert.equal(withLoose.mixed, true);
+
+    // Contrast is only ever within a group: nothing pairs Flexbox with reduce.
+    assert.equal(areContrastable('css-flexbox', 'css-grid'), true);
+    assert.equal(areContrastable('css-flexbox', 'js-reduce'), false);
+    assert.equal(areContrastable('js-map', 'js-map'), false);
+
+    // Session sizing stays inside something a person will finish.
+    assert.equal(sessionSize(null), 8);
+    assert.ok(sessionSize(5) >= 4 && sessionSize(300) <= 20);
+  }
+
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, spaced practice, interleaving, and an unconfigured shop.');
 }
 
 void main().catch((error) => {

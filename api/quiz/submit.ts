@@ -23,6 +23,8 @@ import {
 } from '../../lib/ai-provider';
 import { subjectForCategory } from '../../shared/subject-catalog';
 import { aiFeaturesAllowed, deploymentSubjectIds } from '../../lib/product-scope';
+import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
+import { contentVersion } from '../../lib/curation';
 
 const MAX_ANSWERS = 50;
 
@@ -132,6 +134,18 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     }
     validated.push({ questionId: qid, selectedIndex: idx });
   }
+
+  // Which questions had a hint open. Client-reported, and safe to take as
+  // given because it can only make the outcome weaker: a hinted answer never
+  // lengthens an interval. Ids outside the session are ignored rather than
+  // rejected — a stale hint id is not worth failing a submit over.
+  const hintedIds = new Set(
+    Array.isArray((req.body as { hinted?: unknown }).hinted)
+      ? ((req.body as { hinted: unknown[] }).hinted.filter(
+          (id): id is string => typeof id === 'string' && id.length > 0 && id.length <= 64,
+        ) as string[])
+      : [],
+  );
 
   const session = decodeSessionEnvelope(body.sessionId);
   if (!session || !session.attemptId) {
@@ -245,6 +259,34 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
           : {}),
       })
     : undefined;
+
+  // Concept-level review state, from the server's own grading. One row per
+  // concept, idempotent on the attempt id, and never a source of XP: review
+  // reuses the existing reward rules and grants nothing of its own.
+  if (auth && session.scope !== 'challenge') {
+    const states = await loadReviewStates(serviceSupabase, auth.sub, subject);
+    await recordConceptReviews(
+      serviceSupabase,
+      {
+        userId: auth.sub,
+        subject,
+        eventId: session.attemptId,
+        items: results.flatMap((result) => {
+          const question = questionsById.get(result.questionId);
+          if (!question) return [];
+          return [{
+            itemId: result.questionId,
+            itemVersion: contentVersion(question),
+            category: question.category,
+            tags: question.tags,
+            correct: result.isCorrect,
+            kind: hintedIds.has(result.questionId) ? ('hinted' as const) : ('independent' as const),
+          }];
+        }),
+      },
+      states,
+    );
+  }
 
   logEvent({ status: 200, total, correct, percentage, latency_ms: Date.now() - started });
 

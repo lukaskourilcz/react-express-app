@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo, type CSSProperties } from 'react';
 import { Kicker } from './landing/LandingKit';
 import { useWaveVariant } from '../lib/waveBank';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SwimCta } from './landing/LandingKit';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -222,6 +222,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [snack, setSnack] = useState<string | null>(null);
   const [mode, setMode] = useState<QuizMode>('standard');
   const [reviewPlan, setReviewPlan] = useState<ReviewWeakArea[]>([]);
+  // Set only when the session actually mixes related concepts. One line,
+  // once, and never a learning-science tutorial nobody asked for.
+  const [interleaved, setInterleaved] = useState(false);
   // The item being reported, with the version of the wording that was on
   // screen, so a fix can be matched to what the learner actually saw.
   const [reportTarget, setReportTarget] = useState<{ id: string; version?: string } | null>(null);
@@ -437,6 +440,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         sessionId: string;
         questions: Question[];
         reviewPlan?: ReviewWeakArea[];
+        interleaved?: { contrasted: string[] };
       }>(`/api/quiz/questions?${params}`, { signal: controller.signal });
       await holdLoadingScreen(startedAt);
       if (controller.signal.aborted) return;
@@ -445,6 +449,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setQuestions(data.questions);
       setAnswers({});
       setReviewPlan(data.reviewPlan ?? []);
+      setInterleaved(Boolean(data.interleaved));
       setCurrentIndex(0);
       setMode('review');
       capture('quiz_started', { mode: 'review', question_count: data.questions.length });
@@ -455,6 +460,17 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setState('error');
     }
   }, [config.quiz.maxCount, lang, t, visibleCategoryOptions]);
+
+  // Today's review card links straight here. The parameter starts the same
+  // session the button does, once, and is then cleared so a reload does not
+  // silently restart it under the learner.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const reviewRequested = searchParams.get('mode') === 'review';
+  useEffect(() => {
+    if (!reviewRequested || !isAuthenticated) return;
+    setSearchParams({}, { replace: true });
+    void startPersonalizedReview();
+  }, [reviewRequested, isAuthenticated, setSearchParams, startPersonalizedReview]);
 
   const handleStart = () => {
     setAttemptedStart(true);
@@ -541,7 +557,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     try {
       const data = await apiFetch<QuizResult>('/api/quiz/submit', {
         method: 'POST',
-        body: JSON.stringify({ sessionId, answers, lang }),
+        // Which questions had a hint open. Reported so a hinted answer does not
+        // lengthen a review interval; it can only weaken the outcome, never
+        // strengthen it, which is why the server can take it as given.
+        body: JSON.stringify({
+          sessionId,
+          answers,
+          lang,
+          hinted: Object.entries(revealedHints).filter(([, open]) => open).map(([id]) => id),
+        }),
       });
       setResult(data);
       setState('submitted');
@@ -600,7 +624,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     } finally {
       setSubmitting(false);
     }
-  }, [answers, clearProgress, config.support.enabled, isAuthenticated, sessionId, submitting, user, lang, t, questions, mode]);
+  }, [answers, clearProgress, config.support.enabled, isAuthenticated, sessionId, submitting, user, lang, t, questions, mode, revealedHints]);
 
   const handleRestart = () => {
     clearProgress();
@@ -1293,6 +1317,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                     own metadata. The classic quiz has no level, so it carries
                     no objective line — that field is omitted rather than
                     filled with something plausible. */}
+                {mode === 'review' && interleaved && currentIndex === 0 && (
+                  <p style={{ margin: '10px 0 0', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                    {t('quiz.interleavedNote')}
+                  </p>
+                )}
                 <WhyThis
                   item={whyThisItem({
                     tags: currentQuestion.tags,
