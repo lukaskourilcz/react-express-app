@@ -466,7 +466,15 @@ export function CodingReviewScreen() {
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { statusOf } = useStatuses(progress.data);
-  const due = (progress.data?.due ?? []).map((id) => SECTION_INDEX.find((task) => task.id === id)).filter((task): task is CodingTaskSummary => Boolean(task));
+  const dueIds = progress.data?.due ?? [];
+  const due = dueIds.map((id) => SECTION_INDEX.find((task) => task.id === id)).filter((task): task is CodingTaskSummary => Boolean(task));
+  // Reviews the learner earned on the retired system-design track are still
+  // recorded, and this screen cannot open them. Saying "nothing due" to
+  // someone who has three would be a plain untruth, so it says where they went.
+  const retiredDue = dueIds.filter((id) => {
+    const task = CODING_INDEX.find((one) => one.id === id);
+    return Boolean(task) && !isCodingSectionTrack(task!.track);
+  }).length;
   return (
     <div className="cd-page ss-pop">
       <header>
@@ -477,8 +485,16 @@ export function CodingReviewScreen() {
       {!isAuthenticated && <p className="cd-note">{t('coding.signInHint')}</p>}
       {isAuthenticated && progress.isLoading && <p className="cd-note" role="status">{t('common.loading')}</p>}
       {isAuthenticated && progress.isError && <p className="cd-note cd-note--error" role="alert">{t('coding.loadError')}</p>}
-      {isAuthenticated && progress.data && due.length === 0 && <p className="cd-note">{t('coding.review.empty')}</p>}
+      {isAuthenticated && progress.data && due.length === 0 && retiredDue === 0 && <p className="cd-note">{t('coding.review.empty')}</p>}
       {due.length > 0 && <ul className="cd-rows">{due.map((task) => <TaskRow key={task.id} task={task} status={statusOf(task)} />)}</ul>}
+      {retiredDue > 0 && (
+        <p className="cd-note" role="status">
+          {t('coding.review.retired', { n: retiredDue })}{' '}
+          <Link className="cd-link" to={`/learn?topic=${encodeURIComponent(RETIRED_TRACK_LEARN_TOPIC['system-design'] ?? 'system-design')}`}>
+            {t('coding.retired.learn')}
+          </Link>
+        </p>
+      )}
     </div>
   );
 }
