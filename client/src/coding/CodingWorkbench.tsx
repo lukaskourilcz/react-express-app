@@ -14,6 +14,8 @@ import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness
 import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, type LadderRung } from './hint-ladder';
 import { taskResources } from '../../../shared/coding-docs';
 import { skipTask } from './practice';
+import { CodePuzzle } from './CodePuzzle';
+import { useIsNarrowForEditor } from '../lib/useMediaQuery';
 import { SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint } from '../../../shared/coding-failure';
 import { revealCoding, submitCoding, useCodingApproaches } from './api';
@@ -124,6 +126,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const startedAt = useRef(Date.now());
   const verdictRef = useRef<HTMLElement | null>(null);
   const harness = useReactHarness();
+  // What a narrow screen gets instead of an editor: the task's puzzle when it
+  // has one, and an honest pending state when it does not. Neither is a pass.
+  const narrow = useIsNarrowForEditor();
+  const puzzleMode = narrow && Boolean(task.puzzle) && mode === 'section';
+  const pendingOnDesktop = narrow && !task.puzzle;
 
   const rungs = useMemo(() => ladderRungs(task, lang), [task, lang]);
   const taken = Math.min(hintsTaken, rungs.length);
@@ -270,6 +277,26 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setFormatError(String((error as Error)?.message ?? error).split('\n')[0]);
     }
   }, [code, task.track]);
+
+  /** Send an arrangement. It goes through the same submit route as code, and
+   * the server grades it the same from any device — the viewport decided what
+   * to show, and nothing else. */
+  const submitOrder = useCallback(async (order: string[]) => {
+    if (!session || phase !== 'idle') return;
+    setPhase('submitting');
+    setSubmitError(null);
+    try {
+      const result = await submitCoding({
+        session, order, runCount, hintsUsed: taken, durationMs: Date.now() - startedAt.current,
+      });
+      setVerdict(result);
+      onVerdict?.(result);
+    } catch (error) {
+      setSubmitError(error instanceof ApiError ? error.message : t('coding.verdict.submitError'));
+    } finally {
+      setPhase('idle');
+    }
+  }, [session, phase, runCount, taken, onVerdict, t]);
 
   const reset = useCallback(() => {
     setCode(task.starter);
@@ -553,7 +580,16 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         <span>{t(`coding.verdict.${verdict.verdict}` as never)}</span>
         {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
       </h3>
-      {verdict.verdict === 'passed' && verdict.progress && <p className="cd-verdict__row">{verdict.firstPass ? t('coding.verdict.firstPass') : t('coding.verdict.again')}</p>}
+      {verdict.puzzle ? (
+        <>
+          <p className="cd-verdict__row">{t(verdict.puzzle.accepted ? 'coding.puzzle.accepted' : 'coding.puzzle.rejected')}</p>
+          {verdict.puzzle.accepted && (
+            <p className="cd-verdict__row">{verdict.puzzle.claim[lang] || verdict.puzzle.claim.en}</p>
+          )}
+        </>
+      ) : (
+        verdict.verdict === 'passed' && verdict.progress && <p className="cd-verdict__row">{verdict.firstPass ? t('coding.verdict.firstPass') : t('coding.verdict.again')}</p>
+      )}
       {verdict.verdict === 'passed' && verdict.progress?.nextReviewAt && <p className="cd-verdict__row">{t('coding.verdict.review', { when: relativeTime(verdict.progress.nextReviewAt, lang) })}</p>}
       {verdict.verdict === 'passed' && !verdict.progress && <p className="cd-verdict__row">{signedIn ? t('coding.verdict.notRecorded') : t('coding.verdict.signIn')}</p>}
       {verdict.github && verdict.github.status !== 'not_connected' && (
@@ -738,7 +774,23 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             </div>
           </section>
 
-          <section className="cd-pane cd-pane--editor">
+          {puzzleMode && task.puzzle && (
+            <section className="cd-pane cd-pane--editor">
+              <CodePuzzle puzzle={task.puzzle} busy={busy} onSubmit={(order) => void submitOrder(order)} />
+              {submitError && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
+            </section>
+          )}
+
+          {pendingOnDesktop && (
+            <section className="cd-pane cd-pane--editor">
+              {/* No editor, no puzzle, and no pass: the task waits. The draft is
+                  kept exactly as it is, and nothing about this marks it done. */}
+              <p className="cd-note cd-note--warn" role="status">{t('coding.pendingDesktop')}</p>
+              <p className="cd-shortcuts">{t('coding.pendingDesktopNote')}</p>
+            </section>
+          )}
+
+          <section className="cd-pane cd-pane--editor" hidden={puzzleMode || pendingOnDesktop}>
             <label className="cd-editor-label" htmlFor={`${baseId}-editor`}>{t('coding.editorLabel')}</label>
             <div id={`${baseId}-editor`}>
               <Editor value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} readOnly={Boolean(solution) && mode === 'lesson'} />

@@ -27,3 +27,16 @@ export function useMediaQuery(query: string): boolean {
 export function useIsMobile(): boolean {
   return useMediaQuery('(max-width: 599.95px)');
 }
+
+/**
+ * True where the coding workbench will not mount an editor: phones and
+ * tablets, up to the width at which the two-column workspace appears.
+ *
+ * This is a presentation decision and only ever that. The server neither reads
+ * a viewport nor believes one: it grades a code submission and an ordering
+ * submission the same from any device, and a puzzle can never stand in for an
+ * implementation a task actually requires.
+ */
+export function useIsNarrowForEditor(): boolean {
+  return useMediaQuery('(max-width: 1023.95px)');
+}

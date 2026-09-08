@@ -21,6 +21,8 @@ import {
 } from '../shared/coding-catalog';
 import { docsFor } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
+import { puzzleCoverage, puzzleFor } from '../lib/coding/puzzles';
+import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../shared/coding-puzzle';
 import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { runReactSuite } from '../lib/coding/react-runner';
@@ -228,6 +230,33 @@ async function main() {
       assert.ok(approach.code.trim().length > 0, `${id}: an approach needs code`);
       assert.ok(approach.time.length > 0 && approach.space.length > 0, `${id}: an approach must state its cost`);
     }
+  }
+
+  // ── code-ordering puzzles (#154) ───────────────────────────────────────
+  // Every covered id is a real task; every accepted order is a permutation of
+  // that puzzle's own lines; no puzzle is short enough to be guessed; and each
+  // one declares what arranging it demonstrates.
+  const puzzleIds = puzzleCoverage();
+  assert.ok(puzzleIds.length > 0, 'the puzzle manifest must cover something');
+  for (const id of puzzleIds) {
+    const task = CODING_TASKS.find((one) => one.id === id);
+    assert.ok(task, `puzzle ${id} must name a real task`);
+    const puzzle = puzzleFor(id)!;
+    assert.ok(puzzle.lines.length >= 5, `${id}: a puzzle of fewer than five lines is guesswork`);
+    assert.ok(puzzle.lines.length <= PUZZLE_MAX_LINES, `${id}: a puzzle over ${PUZZLE_MAX_LINES} lines is unusable on a phone`);
+    assert.equal(new Set(puzzle.lines.map((line) => line.id)).size, puzzle.lines.length, `${id}: line ids must be unique`);
+    assert.ok(puzzle.accepted.length > 0, `${id}: a puzzle needs at least one accepted order`);
+    for (const order of puzzle.accepted) {
+      assert.ok(isCompleteOrder(order, puzzle.lines), `${id}: every accepted order must use each line exactly once`);
+    }
+    assert.ok(isAcceptedOrder(puzzle.accepted[0], puzzle.accepted), `${id}: its own order must be accepted`);
+    // A wrong order is rejected — the check is not vacuous.
+    const wrong = [...puzzle.accepted[0]].reverse();
+    if (puzzle.lines.length > 1) {
+      assert.equal(isAcceptedOrder(wrong, puzzle.accepted), false, `${id}: a reversed order must not pass`);
+    }
+    assert.ok(puzzle.competencies.length > 0, `${id}: a puzzle must declare what it demonstrates`);
+    assert.ok(puzzle.claim.en.length > 0 && puzzle.claim.cs.length > 0, `${id}: the claim needs EN and CS`);
   }
 
   console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);

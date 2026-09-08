@@ -1,8 +1,8 @@
--- Migration 027: saved challenges, named collections, skip reasons and short
--- practice sessions.
+-- Migration 027: saved challenges, named collections, skip reasons, ordering
+-- evidence and short practice sessions.
 -- Apply after migrations 001-026. Safe to re-run.
 --
--- Four additive tables, all owner-scoped and none of them authority over
+-- Six additive tables, all owner-scoped and none of them authority over
 -- anything:
 --   * coding_bookmarks: a saved challenge. Saving one records interest, never
 --     access — an item the learner may not open yet stays in the list with an
@@ -12,6 +12,9 @@
 --   * coding_skips: why a learner passed on a task. Structured, minimal, and
 --     explicitly not a completion: a required task that was skipped stays
 --     required, and nothing here can unlock a level.
+--   * coding_puzzle_results: what a code-ordering puzzle established, kept
+--     apart from a code pass because arranging authored lines is not the same
+--     as writing them.
 --   * practice_sessions: a short session's queue and position, so closing the
 --     tab does not lose the learner's place. The queue is chosen server-side
 --     from what is already eligible; it never widens what is available.
@@ -69,6 +72,23 @@ CREATE TABLE IF NOT EXISTS public.coding_skips (
 CREATE INDEX IF NOT EXISTS coding_skips_user_idx
   ON public.coding_skips (user_id, created_at DESC);
 
+-- Ordering evidence, kept apart from a code pass on purpose. Arranging authored
+-- lines shows the learner knows the shape of a solution; it does not show they
+-- could have written it. Nothing in this table completes a task or unlocks a
+-- level — coding_progress is untouched by a puzzle.
+CREATE TABLE IF NOT EXISTS public.coding_puzzle_results (
+  user_id       TEXT NOT NULL,
+  task_id       TEXT NOT NULL CHECK (task_id ~ '^[a-z0-9-]{3,64}$'),
+  competencies  JSONB NOT NULL DEFAULT '[]'::jsonb
+                  CHECK (jsonb_typeof(competencies) = 'array' AND jsonb_array_length(competencies) <= 8),
+  attempts      INTEGER NOT NULL DEFAULT 1 CHECK (attempts BETWEEN 1 AND 9999),
+  first_pass_at TIMESTAMPTZ,
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, task_id)
+);
+CREATE INDEX IF NOT EXISTS coding_puzzle_results_user_idx
+  ON public.coding_puzzle_results (user_id, updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS public.practice_sessions (
   session_id  TEXT PRIMARY KEY CHECK (session_id ~ '^[A-Za-z0-9_-]{16,64}$'),
   user_id     TEXT NOT NULL,
@@ -96,6 +116,7 @@ ALTER TABLE public.coding_bookmarks        ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coding_collections      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coding_collection_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coding_skips            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.coding_puzzle_results   ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.practice_sessions       ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "coding_bookmarks_select_own" ON public.coding_bookmarks;
@@ -123,6 +144,11 @@ CREATE POLICY "coding_skips_select_own"
   ON public.coding_skips FOR SELECT TO authenticated
   USING (user_id = (SELECT auth.uid()::TEXT));
 
+DROP POLICY IF EXISTS "coding_puzzle_results_select_own" ON public.coding_puzzle_results;
+CREATE POLICY "coding_puzzle_results_select_own"
+  ON public.coding_puzzle_results FOR SELECT TO authenticated
+  USING (user_id = (SELECT auth.uid()::TEXT));
+
 DROP POLICY IF EXISTS "practice_sessions_select_own" ON public.practice_sessions;
 CREATE POLICY "practice_sessions_select_own"
   ON public.practice_sessions FOR SELECT TO authenticated
@@ -132,6 +158,7 @@ GRANT SELECT ON public.coding_bookmarks        TO authenticated;
 GRANT SELECT ON public.coding_collections      TO authenticated;
 GRANT SELECT ON public.coding_collection_items TO authenticated;
 GRANT SELECT ON public.coding_skips            TO authenticated;
+GRANT SELECT ON public.coding_puzzle_results   TO authenticated;
 GRANT SELECT ON public.practice_sessions       TO authenticated;
 
 -- ---------------------------------------------------------------------------
@@ -288,6 +315,35 @@ $$;
 REVOKE ALL ON FUNCTION public.record_coding_skip(TEXT, TEXT, TEXT, TEXT, INTEGER) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.record_coding_skip(TEXT, TEXT, TEXT, TEXT, INTEGER) TO service_role;
 
+-- A puzzle result is recorded on its own terms: the competencies the author
+-- declared, and when it was first arranged correctly. It writes nowhere else.
+CREATE OR REPLACE FUNCTION public.record_coding_puzzle(
+  p_user_id      TEXT,
+  p_task_id      TEXT,
+  p_competencies JSONB,
+  p_passed       BOOLEAN
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  INSERT INTO public.coding_puzzle_results (user_id, task_id, competencies, attempts, first_pass_at)
+  VALUES (
+    p_user_id, p_task_id, COALESCE(p_competencies, '[]'::jsonb), 1,
+    CASE WHEN p_passed THEN NOW() ELSE NULL END
+  )
+  ON CONFLICT (user_id, task_id) DO UPDATE
+    SET attempts = LEAST(public.coding_puzzle_results.attempts + 1, 9999),
+        competencies = EXCLUDED.competencies,
+        first_pass_at = COALESCE(public.coding_puzzle_results.first_pass_at, EXCLUDED.first_pass_at),
+        updated_at = NOW();
+END;
+$$;
+REVOKE ALL ON FUNCTION public.record_coding_puzzle(TEXT, TEXT, JSONB, BOOLEAN) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_coding_puzzle(TEXT, TEXT, JSONB, BOOLEAN) TO service_role;
+
 -- One active session per learner: starting a new one abandons the old rather
 -- than leaving two queues competing for the same place.
 CREATE OR REPLACE FUNCTION public.start_practice_session(
@@ -367,6 +423,7 @@ BEGIN
   DELETE FROM public.question_reports WHERE reporter_sub = p_user_id;
   DELETE FROM public.user_question_history WHERE user_id = p_user_id;
   DELETE FROM public.practice_sessions WHERE user_id = p_user_id;
+  DELETE FROM public.coding_puzzle_results WHERE user_id = p_user_id;
   DELETE FROM public.coding_skips WHERE user_id = p_user_id;
   DELETE FROM public.coding_collection_items
    WHERE collection_id IN (SELECT collection_id FROM public.coding_collections WHERE user_id = p_user_id);

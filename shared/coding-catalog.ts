@@ -8,6 +8,7 @@
  * rules, so every surface computes them the same way. */
 
 import type { FailureCategory } from './coding-failure';
+import type { PuzzleView } from './coding-puzzle';
 
 export type CodingTrack = 'javascript' | 'typescript' | 'react' | 'system-design';
 export type CodingTier = 1 | 2 | 3 | 4 | 5;
@@ -184,6 +185,9 @@ export interface PlayableCodingTask extends CodingTaskSummary {
    * not answer material: none of them names an input or an expected value. */
   failureHints?: Partial<Record<FailureCategory, Localized>>;
   pitfall?: FailureCategory;
+  /** The code-ordering puzzle for narrow screens, lines already shuffled. The
+   * accepted orders are not here and never leave the server. */
+  puzzle?: PuzzleView;
   design?: {
     scenario: Localized;
     brief: Localized;

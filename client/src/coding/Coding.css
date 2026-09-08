@@ -415,3 +415,32 @@
   .cd-approach dl { grid-template-columns: 1fr; gap: 2px; }
   .cd-approach dd { margin-bottom: 6px; }
 }
+
+/* Code-ordering puzzles. Every control clears 44px; the line list is one focus
+   stop with a roving tabindex, so a reader is not walked through fourteen
+   items to reach the button. */
+.cd-puzzle { display: flex; flex-direction: column; gap: 10px; }
+.cd-puzzle h3 { margin: 0; font-size: 1rem; }
+.cd-puzzle__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cd-puzzle__line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background-surface);
+  cursor: pointer;
+}
+.cd-puzzle__line code { font-family: var(--font-family-mono, ui-monospace, monospace); white-space: pre; overflow-x: auto; }
+.cd-puzzle__pos {
+  flex: none;
+  min-width: 22px;
+  text-align: right;
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+}
+/* Selected is marked by the border and the arrow, not by colour alone. */
+.cd-puzzle__line--on { border-color: var(--brand-accent); box-shadow: inset 3px 0 0 var(--brand-accent); }
+.cd-puzzle__line:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }

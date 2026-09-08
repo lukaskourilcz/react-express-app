@@ -22,6 +22,8 @@ import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } fr
 import { classifyFailure, failureHint, jsonKind } from '../../shared/coding-failure';
 import { afterCodingPass } from '../github-garden';
 import { approachesFor } from './approaches';
+import { puzzleFor } from './puzzles';
+import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../../shared/coding-puzzle';
 import {
   CODING_TASK_XP,
   isCodingTaskId,
@@ -157,6 +159,18 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   }
 
   const play = playable(task);
+  // The puzzle's lines go out shuffled, and the accepted orders stay here. The
+  // shuffle is per request, so reloading does not hand back the same start.
+  const authoredPuzzle = puzzleFor(task.id);
+  if (authoredPuzzle) {
+    play.puzzle = {
+      taskId: task.id,
+      variantId: 'v1',
+      lines: secureShuffle([...authoredPuzzle.lines]),
+      competencies: [...authoredPuzzle.competencies],
+      claim: authoredPuzzle.claim,
+    };
+  }
   let key: CodingSession['key'];
   if (task.track === 'system-design') {
     const prepared = prepareDesign(task, secureShuffle);
@@ -193,6 +207,7 @@ interface Graded {
   design: CodingVerdictResponse['design'];
   designReference: CodingVerdictResponse['designReference'];
   failureHint?: CodingVerdictResponse['failureHint'];
+  puzzle?: CodingVerdictResponse['puzzle'];
 }
 
 /** The authored hint for the way this attempt failed, or null.
@@ -400,6 +415,7 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     design: graded.design,
     designReference: graded.designReference,
     failureHint: graded.failureHint ?? null,
+    puzzle: graded.puzzle ?? null,
     progress: recorded?.progress ?? null,
     firstPass: recorded?.firstPass ?? false,
     xpAwarded: recorded?.xpAwarded ?? 0,
@@ -423,6 +439,40 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
 
   let graded: Graded;
   let code: string | null = null;
+  // A code-ordering submission. The server neither reads nor believes a
+  // viewport: it accepts an order from any device and grades it the same way,
+  // and what it produces is ordering evidence, never a code pass.
+  const puzzle = puzzleFor(task.id);
+  if (Array.isArray(body.order) && puzzle) {
+    const order = body.order.filter((id): id is string => typeof id === 'string').slice(0, PUZZLE_MAX_LINES);
+    if (!isCompleteOrder(order, puzzle.lines)) {
+      return jsonError(res, 400, 'bad_request', 'Arrange every line exactly once');
+    }
+    const accepted = isAcceptedOrder(order, puzzle.accepted);
+    if (userId && supabase) {
+      const written = await withTimeout(supabase.rpc('record_coding_puzzle', {
+        p_user_id: userId, p_task_id: task.id, p_competencies: puzzle.competencies, p_passed: accepted,
+      }));
+      if (written.error && isRpcMissing(written.error)) {
+        return jsonError(res, 503, 'migration_required', 'Practice migration 027 is not installed');
+      }
+    }
+    logEvent({ status: 200, kind: 'puzzle', track: task.track, accepted });
+    res.setHeader('Cache-Control', 'private, no-store');
+    // coding_progress is deliberately untouched: the task stays open for the
+    // implementation it actually asks for.
+    return res.json(verdictBody({
+      verdict: accepted ? 'passed' : 'failed',
+      results: [],
+      hidden: null,
+      check: null,
+      logs: [],
+      codeError: null,
+      design: null,
+      designReference: null,
+      puzzle: { accepted, competencies: puzzle.competencies, claim: puzzle.claim },
+    }, null, null));
+  }
   if (task.track === 'system-design') {
     if (!Array.isArray(body.answers) || body.answers.length > 12) return jsonError(res, 400, 'bad_request', 'answers must be an array');
     graded = gradeDesignTask(task, session, body.answers);

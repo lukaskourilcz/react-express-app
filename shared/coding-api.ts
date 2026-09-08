@@ -5,6 +5,7 @@
 import type { CodingTrack, Localized, PlayableCodingTask } from './coding-catalog';
 import type { CallOutcome } from './coding-evaluate';
 import type { FailureCategory } from './coding-failure';
+import type { PuzzleCompetency, PuzzleView } from './coding-puzzle';
 import type { TypeCheckResult } from './coding-ts-check';
 
 export type CodingOutcome = 'passed' | 'failed' | 'error' | 'timeout';
@@ -40,6 +41,9 @@ export interface CodingGardenStatus {
 
 /** POST ?resource=coding-submit (JavaScript, TypeScript, system design) */
 export interface CodingSubmitRequest {
+  /** A code-ordering submission: the puzzle's line ids in the arranged order.
+   * Present instead of `code` when the learner arranged rather than typed. */
+  order?: string[];
   session: string;
   /** Code tracks. */
   code?: string;
@@ -71,6 +75,10 @@ export interface CodingVerdictResponse {
    * checks did not pass" — the hint ladder answers that one. It never carries
    * a hidden input, an expected value or a raw error. */
   failureHint: { category: FailureCategory; body: Localized } | null;
+  /** Set when the submission was a code-ordering puzzle rather than code. It
+   * carries what the arrangement established, which is narrower than a code
+   * pass and never recorded as one. */
+  puzzle: PuzzleVerdict | null;
   /** null for an anonymous run: nothing was recorded. */
   progress: CodingTaskProgress | null;
   firstPass: boolean;
@@ -246,3 +254,17 @@ export interface CodingApproachesResponse {
   taskId: string;
   approaches: CuratedApproachView[];
 }
+
+/** The result of arranging a puzzle. `accepted` says the order is one the
+ * author accepts; `competencies` and `claim` say exactly what that shows, so
+ * nobody reads it as having written the code. */
+export interface PuzzleVerdict {
+  accepted: boolean;
+  competencies: PuzzleCompetency[];
+  claim: Localized;
+}
+
+/** The puzzle a task offers, if it has one. Present on the task payload so a
+ * narrow screen can decide what to mount without a second request; the accepted
+ * orders stay on the server. */
+export type CodingPuzzleView = PuzzleView;
