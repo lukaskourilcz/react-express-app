@@ -21,6 +21,8 @@ import { useRoadmapProgress } from '../lib/roadmap';
 import { computeLearningXp, levelForXp } from '../lib/leveling';
 import { useTrack, rankLabelKeyFor } from '../lib/tracks';
 import { useEquippedRingColor } from '../lib/shop';
+import { useWallet } from '../lib/rewards';
+import { CrownBadge } from './ui/Crown';
 import { useActiveSubject, topicSetForSubject } from '../lib/subjects';
 
 // A single row in the account dropdown — a full-width, left-aligned button that
@@ -64,6 +66,8 @@ function AuthButton() {
   const subject = useActiveSubject();
   const totalXp = computeLearningXp(progress, topicSetForSubject(subject.id)) + questXp;
   const ringColor = useEquippedRingColor();
+  const wallet = useWallet(true);
+  const wearsCrown = (wallet.data?.cosmetics ?? []).some((one) => one.id === 'crown' && one.equipped);
   const [track] = useTrack();
   const levelInfo = levelForXp(totalXp);
   const navigate = useNavigate();
@@ -161,12 +165,17 @@ function AuthButton() {
             display: 'flex',
             flexShrink: 0,
             borderRadius: '50%',
+            position: 'relative',
             ...(ringColor
               ? { padding: 2, background: `${ringColor}22`, boxShadow: `0 0 0 1.5px ${ringColor}` }
               : null),
           }}
         >
           <Avatar src={profile.picture} name={displayName} alt="" size="medium" />
+          {/* The crown sits on the avatar, and the avatar carries the name: the
+              crown itself is decorative, described once in the label below
+              rather than announced as a second thing. */}
+          {wearsCrown && <CrownBadge size={16} />}
         </div>
         {/* Name + rank are a wide-desktop luxury: below 1080px the widget is
             the avatar alone, so it can never crowd the centre nav. The rank

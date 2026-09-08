@@ -5,6 +5,7 @@
 
 import { createServiceClient, withTimeout } from './http';
 import type { DifficultyMode } from './quiz-data';
+import { DEFAULT_MERCH_SETTINGS, MERCH_SKUS, type MerchSettings } from '../shared/rewards';
 
 const supabase = createServiceClient();
 const TABLE = 'app_settings';
@@ -62,6 +63,11 @@ export interface GameSettings {
     /** Token price to instantly unlock any one learning path. */
     pathUnlockPrice: number;
   };
+  /** The merchandise shop. Every commercial figure here is owner-entered from a
+   * real supplier quote — there are no defaults, because a default price on a
+   * physical product is an invented one. An item with no pricing entry reports
+   * `unconfigured` and cannot be ordered through any route. */
+  merch: MerchSettings;
   support: {
     /** Hard production guard: provider links stay hidden unless explicitly enabled. */
     enabled: boolean;
@@ -159,6 +165,9 @@ export const DEFAULT_SETTINGS: GameSettings = {
   },
   leveling: { rankThresholds: DEFAULT_RANK_THRESHOLDS },
   shop: { prices: { ...DEFAULT_SHOP_PRICES }, pathUnlockPrice: DEFAULT_PATH_UNLOCK_PRICE },
+  // Nothing priced, nothing enabled, test mode on. Every figure here arrives
+  // from a real quote through /dev, or the item stays unavailable.
+  merch: { ...DEFAULT_MERCH_SETTINGS, pricing: {} },
   support: {
     enabled: false,
     kofiUrl: '',
@@ -279,6 +288,75 @@ const cleanShopPrices = (v: unknown, fallback: Record<string, number>): Record<s
   return out;
 };
 
+/**
+ * Read the merchandise configuration defensively.
+ *
+ * A pricing entry survives only if every commercial field is present and sane.
+ * Half a quote is not a quote: an entry missing its currency, its regions or
+ * its costs is dropped, and the item goes back to reporting `unconfigured`
+ * rather than being sold at a number nobody stands behind.
+ */
+function cleanMerch(raw: unknown, fallback: MerchSettings): MerchSettings {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const rawPricing = (r.pricing && typeof r.pricing === 'object' ? r.pricing : {}) as Record<string, unknown>;
+  const pricing: MerchSettings['pricing'] = {};
+  for (const sku of MERCH_SKUS) {
+    const entry = rawPricing[sku];
+    if (!entry || typeof entry !== 'object') continue;
+    const e = entry as Record<string, unknown>;
+    const minor = (key: string): number | null => {
+      const value = e[key];
+      return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100_000_000
+        ? Math.round(value)
+        : null;
+    };
+    const unitCostMinor = minor('unitCostMinor');
+    const printCostMinor = minor('printCostMinor');
+    const shippingCostMinor = minor('shippingCostMinor');
+    const packagingCostMinor = minor('packagingCostMinor');
+    const priceMinor = minor('priceMinor');
+    const currency = typeof e.currency === 'string' && /^[A-Z]{3}$/.test(e.currency) ? e.currency : null;
+    const regions = Array.isArray(e.regions)
+      ? Array.from(new Set(e.regions.filter((one): one is string => typeof one === 'string' && /^[A-Za-z]{2}$/.test(one))
+          .map((one) => one.toUpperCase())))
+      : [];
+    const vendor = typeof e.vendor === 'string' && e.vendor.trim().length > 0 ? e.vendor.trim().slice(0, 120) : null;
+    const effectiveFrom = typeof e.effectiveFrom === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.effectiveFrom)
+      ? e.effectiveFrom
+      : null;
+    if (
+      unitCostMinor === null || printCostMinor === null || shippingCostMinor === null
+      || packagingCostMinor === null || priceMinor === null || currency === null
+      || regions.length === 0 || vendor === null || effectiveFrom === null
+    ) continue;
+    const tokenPrice = typeof e.tokenPrice === 'number' && Number.isFinite(e.tokenPrice)
+      && e.tokenPrice > 0 && e.tokenPrice <= 1_000_000
+      ? Math.round(e.tokenPrice)
+      : undefined;
+    pricing[sku] = {
+      unitCostMinor, printCostMinor, shippingCostMinor, packagingCostMinor, priceMinor,
+      currency,
+      taxIncluded: e.taxIncluded === true,
+      ...(tokenPrice !== undefined ? { tokenPrice } : {}),
+      regions,
+      vendor,
+      effectiveFrom,
+    };
+  }
+  return {
+    enabled: r.enabled === true,
+    cashCheckoutEnabled: r.cashCheckoutEnabled === true,
+    // Test mode is the safe default: it takes an explicit false to leave it.
+    testMode: r.testMode !== false,
+    pricing,
+    crownTokenPrice: typeof r.crownTokenPrice === 'number' && Number.isFinite(r.crownTokenPrice)
+      && r.crownTokenPrice >= 0 && r.crownTokenPrice <= 1_000_000
+      ? Math.round(r.crownTokenPrice)
+      : fallback.crownTokenPrice,
+    policyUrl: cleanPublicUrl(r.policyUrl),
+  };
+}
+
 // Coerce arbitrary stored/posted JSON into a valid GameSettings, clamping every
 // field so a bad value can never break the endpoints that consume it.
 export function normalizeSettings(raw: unknown): GameSettings {
@@ -322,6 +400,7 @@ export function normalizeSettings(raw: unknown): GameSettings {
         d.leveling.rankThresholds,
       ),
     },
+    merch: cleanMerch(r.merch, d.merch),
     shop: {
       prices: cleanShopPrices((r.shop as Record<string, unknown> | undefined)?.prices, d.shop.prices),
       pathUnlockPrice: clampInt(

@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
+import { creditVerifiedXp } from '../../lib/rewards/handlers';
 import {
   secureShuffle,
   weightedSample,
@@ -272,6 +273,11 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
   if (error) {
     if (isRpcMissing(error)) return jsonError(res, 503, 'migration_required', 'Verified progression migration is not installed');
     return jsonError(res, 500, 'db_error', 'Could not record challenge progress');
+  }
+  // Tokens follow verified XP, keyed to the same award. A replay credits
+  // nothing, and a wallet that cannot be reached never fails the learning.
+  if (data === true) {
+    await creditVerifiedXp(supabase, { userId: auth.sub, awardId: `challenge:${run.runId}`, subject: run.subject, xp });
   }
   return res.json({ ok: true, awarded: data === true, score, xp });
 }

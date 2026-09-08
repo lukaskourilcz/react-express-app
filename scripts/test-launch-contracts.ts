@@ -37,6 +37,15 @@ import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, enc
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
 import { FAILURE_CATEGORIES, classifyFailure, failureHint } from '../shared/coding-failure';
+import {
+  DEFAULT_MERCH_SETTINGS,
+  MERCH_SKUS,
+  merchAvailability,
+  merchMarginMinor,
+  tokensForVerifiedXp,
+  validateAddress,
+} from '../shared/rewards';
+import { normalizeSettings } from '../lib/settings-store';
 import { taskResources, CODING_DOC_LINKS } from '../shared/coding-docs';
 import {
   everyPlanHasAFirstStep,
@@ -711,6 +720,60 @@ async function main() {
   assert.equal(fromV1?.specialization, 'fde');
   assert.equal(isLearnerProfileComplete(fromV1), false, 'a v1 preference still owes the newer answers');
 
+  // ── rewards (#167-#173) ────────────────────────────────────────────────
+  // The shop ships unconfigured and cannot be talked into selling anything.
+  // Nothing about a reward may reach a learning table, and the separation is
+  // asserted here rather than described in a comment.
+  const bareMerch = { ...DEFAULT_MERCH_SETTINGS, pricing: {} };
+  for (const sku of MERCH_SKUS) {
+    assert.equal(
+      merchAvailability({ sku, settings: bareMerch }),
+      'unconfigured',
+      `${sku} must be unconfigured until a real quote is entered`,
+    );
+  }
+  // Enabling the shop does not price anything: an item with no quote stays
+  // unconfigured however many switches are flipped.
+  assert.equal(
+    merchAvailability({ sku: 'mug', settings: { ...bareMerch, enabled: true, testMode: false } }),
+    'unconfigured',
+  );
+  const quoted = {
+    ...bareMerch,
+    enabled: true,
+    pricing: {
+      mug: {
+        unitCostMinor: 300, printCostMinor: 150, shippingCostMinor: 400, packagingCostMinor: 60,
+        priceMinor: 1400, currency: 'CZK', taxIncluded: true, regions: ['CZ'],
+        vendor: 'example', effectiveFrom: '2026-09-08',
+      },
+    },
+  };
+  assert.equal(merchAvailability({ sku: 'mug', settings: quoted, region: 'CZ', stock: 3 }), 'available');
+  assert.equal(merchAvailability({ sku: 'mug', settings: quoted, region: 'DE', stock: 3 }), 'out_of_region');
+  assert.equal(merchAvailability({ sku: 'mug', settings: quoted, region: 'CZ', stock: 0 }), 'out_of_stock');
+  assert.equal(merchMarginMinor(quoted.pricing.mug), 1400 - 300 - 150 - 400 - 60);
+
+  // A settings blob missing any commercial field is dropped rather than
+  // half-applied: half a quote is not a quote.
+  const halfQuote = normalizeSettings({
+    merch: { enabled: true, pricing: { mug: { priceMinor: 1400, currency: 'CZK' } } },
+  });
+  assert.equal(halfQuote.merch.pricing.mug, undefined, 'an incomplete quote must not price an item');
+  assert.equal(halfQuote.merch.testMode, true, 'test mode stays on unless explicitly turned off');
+
+  // Addresses: bounded, and refused when the obviously required parts are
+  // missing, before anything is charged.
+  assert.equal(validateAddress({}).ok, false);
+  assert.equal(validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country: 'zz' }).ok, true);
+  assert.equal(validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country: 'ZZZ' }).ok, false);
+  assert.equal(validateAddress({ name: 'x'.repeat(200), line1: 'B', city: 'C', postalCode: 'D', country: 'CZ' }).ok, false);
+
+  // Tokens follow verified XP only, and the rate is the documented one.
+  assert.equal(tokensForVerifiedXp(100), 10);
+  assert.equal(tokensForVerifiedXp(0), 0);
+  assert.equal(tokensForVerifiedXp(-5), 0);
+
   // ── task resources (#155) ───────────────────────────────────────────────
   // Every documented technique is a real reference page with a title, both
   // blurbs and a review date, and a task lists all of its techniques, not one.
@@ -767,7 +830,7 @@ async function main() {
     }
   }
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, and failure hints.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, and an unconfigured shop.');
 }
 
 void main().catch((error) => {

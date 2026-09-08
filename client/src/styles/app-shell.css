@@ -364,3 +364,50 @@
 .ss-link-button--secondary { background: var(--color-background-muted); color: var(--color-text-primary); border: 1px solid var(--color-border); }
 @media (max-width: 700px) { .ss-info-sections { grid-template-columns: 1fr; } .ss-cost-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
 @media (prefers-reduced-motion: reduce) { .ss-cost-meter span { transition: none; } }
+
+/* The crown, worn. It sits on the avatar rather than beside it, tilted very
+   slightly so it reads as placed rather than pasted. Decorative: the avatar
+   carries the name, and the crown is described there in one word. */
+.ss-crown {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-8deg);
+  pointer-events: none;
+  line-height: 0;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
+}
+
+/* Shop: the ledger under the balance, the order list, and the checkout
+   fields. Every control clears 44px on touch. */
+.ss-ledger { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ss-ledger li { display: flex; justify-content: space-between; gap: 12px; font-size: 0.82rem; }
+.ss-ledger__in { color: var(--ss-success); font-variant-numeric: tabular-nums; }
+.ss-ledger__out { color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+
+.ss-orders { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ss-orders li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  font-size: 0.85rem;
+}
+.ss-orders__items { font-weight: 650; }
+.ss-orders__state { color: var(--color-text-secondary); }
+
+.ss-field-label { display: block; font-size: 0.78rem; font-weight: 650; margin-bottom: 4px; }
+.ss-input, .ss-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+.ss-input:focus-visible, .ss-select:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }

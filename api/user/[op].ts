@@ -26,6 +26,7 @@ import { CODING_SUMMARIES } from '../../lib/coding/catalog';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
 import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
 import { handleCodingBookmarks, handleCodingSkip, handlePracticeSession } from '../../lib/coding/practice-handlers';
+import { creditVerifiedXp, handleCosmetic, handleFulfilment, handleOrders, handlePaymentWebhook, handleShopCatalogue, handleWallet } from '../../lib/rewards/handlers';
 import {
   handleEnrollment,
   handleLearningPreference,
@@ -71,6 +72,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'coding-bookmarks') return handleCodingBookmarks(req, res, supabase);
   if (op === 'coding-skip') return handleCodingSkip(req, res, supabase);
   if (op === 'practice-session') return handlePracticeSession(req, res, supabase);
+  if (op === 'wallet') return handleWallet(req, res, supabase);
+  if (op === 'shop') return handleShopCatalogue(req, res, supabase);
+  if (op === 'orders') return handleOrders(req, res, supabase);
+  if (op === 'cosmetic') return handleCosmetic(req, res, supabase);
+  if (op === 'payment-webhook') return handlePaymentWebhook(req, res, supabase);
+  if (op === 'fulfilment') return handleFulfilment(req, res, supabase);
   if (op === 'learning-preference') return handleLearningPreference(req, res, supabase);
   if (op === 'learning-path-enrollment') return handleEnrollment(req, res, supabase);
   if (op === 'learning-path-progress') return handlePathProgress(req, res, supabase);
@@ -345,6 +352,16 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         }
 
         logEvent('stats', { status: 200, op: 'submit', latency_ms: Date.now() - started });
+        // Tokens follow the XP the server just verified, keyed to the attempt
+        // so a replayed submission credits nothing.
+        if (data === true && receipt.questXp > 0) {
+          await creditVerifiedXp(supabase!, {
+            userId: user_id,
+            awardId: `quiz:${receipt.attemptId}`,
+            subject: receipt.subject,
+            xp: receipt.questXp,
+          });
+        }
         const [row, xpRow] = await Promise.all([
           withTimeout(supabase!.from('user_stats').select(STATS_FIELDS).eq('user_id', user_id).maybeSingle()),
           withTimeout(supabase!.from('user_xp').select('quest_xp, quest_xp_by_subject').eq('user_id', user_id).maybeSingle()),

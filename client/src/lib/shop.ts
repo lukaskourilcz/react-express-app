@@ -1,13 +1,19 @@
-// In-app token shop. The public catalogue is deliberately cosmetic-only:
-// tokens never bypass learning prerequisites or alter ranked progression.
+// The retired cosmetic inventory: the avatar rings and title flairs learners
+// bought before the shop sold anything real.
 //
-// The shop is PER SUBJECT (platform): purchases are paid from the active
-// subject's wallet and land in the active subject's inventory. Every item is
-// cosmetic: purchases never alter XP, scores, streaks, access, or progression.
+// Nothing here is for sale any more. The shop's catalogue is now four pieces of
+// merchandise and one crown, all priced, paid for and recorded on the server
+// (see client/src/lib/rewards.ts and lib/rewards/handlers.ts). What remains in
+// this module is the history: a ring somebody bought is still theirs and still
+// renders on their avatar.
+//
+// `purchase` is deliberately gone rather than disabled. These balances were
+// written by browsers and cannot be audited, so they were never converted into
+// anything redeemable — see docs/rewards-launch.md for why that decision was
+// made rather than quietly migrating the numbers into the new ledger.
 
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
-import { spendTokens, getTokens } from './tokens';
 import { getGameConfig, type GameConfig } from './gameConfig';
 import { getSubject, useSubject, isSubjectId, type SubjectId } from './subjects';
 
@@ -164,27 +170,6 @@ export function useInventory(): Inventory {
   const map = useStore(inventoryStore);
   const [subject] = useSubject();
   return map[subject] ?? EMPTY;
-}
-
-export type PurchaseResult = 'ok' | 'insufficient' | 'owned' | 'unknown';
-
-/**
- * Buy a product: spend its price from the active subject's wallet, then grant
- * it into the active subject's inventory. Cosmetics are a one-time purchase.
- */
-export function purchase(id: string): PurchaseResult {
-  const product = byId.get(id);
-  if (!product) return 'unknown';
-  const price = priceOf(product);
-
-  const subject = getSubject();
-  const inv = readInventory(subject);
-  if (inv.owned.includes(id)) return 'owned';
-  if (getTokens() < price) return 'insufficient';
-  if (!spendTokens(price)) return 'insufficient';
-
-  writeInventory(subject, { ...inv, owned: [...inv.owned, id], doubleXp: 0 });
-  return 'ok';
 }
 
 /** Equip (or, if already equipped, unequip) an owned ring/flair. No-op if unowned. */

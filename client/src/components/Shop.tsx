@@ -1,148 +1,205 @@
-// Token shop. Currency = tokens (separate from XP), earned passively as 10% of
-// every XP gain plus a one-time 200-token sign-up bonus. Spend them on a small
-// catalogue of avatar rings and title flairs. Purchases are cosmetic and never
-// bypass a learning prerequisite or influence competitive scoring.
+// The shop: four pieces of devShark merchandise and one crown.
 //
-// Redesigned on the Astryx design system: an accent-tinted wallet header, then
-// purchasable items rendered as Cards in a responsive Grid.
-// The shared app toast provides purchase feedback.
+// The rings and flairs are gone. What replaced them is real: a sticker set, a
+// mug, a T-shirt and a cap, which cost money to make and to post, plus an SVG
+// crown that costs tokens and ships nothing.
+//
+// The balance, the prices, the stock and the orders all come from the server.
+// Nothing on this page computes what anything costs, and nothing on this page
+// can spend anything — it asks, and the server decides and records. An item
+// whose supplier quote has not been entered says so plainly instead of showing
+// an invented price, and cannot be ordered through any route.
+//
+// Everything here is decoration and objects. No purchase changes access,
+// content, XP, scores, streaks, ranks, leaderboards or what is unlocked.
 
-import { useEffect, useState, type ReactNode } from 'react';
-import { Kicker } from './landing/LandingKit';
-import { Avatar } from '@astryxdesign/core/Avatar';
-import { AppToast } from './ui/AppToast';
+import { useMemo, useState } from 'react';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Grid } from '@astryxdesign/core/Grid';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
-import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Banner } from '@astryxdesign/core/Banner';
-import { useT } from '../i18n/LanguageContext';
+import { AppToast } from './ui/AppToast';
+import { Crown } from './ui/Crown';
+import { Kicker } from './landing/LandingKit';
+import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
-import { useTokens } from '../lib/tokens';
-import { CATALOGUE, purchase, priceOf, equip, useInventory, useEquippedRingColor, useEquippedFlair, type Product, type ProductKind } from '../lib/shop';
-import { useAuth, getUserProfile } from '../lib/auth';
+import { useAuth } from '../lib/auth';
 import { useActiveSubject, subjectNameKey } from '../lib/subjects';
-import { IconTile, SparkleIcon } from './ui/icons';
-import { syncProgressWithServer } from '../lib/roadmap';
+import { friendlyError } from '../lib/api';
+import {
+  formatMoney,
+  useCosmeticMutation,
+  useOrderMutation,
+  useOrders,
+  useShop,
+  useWallet,
+  type ShopItem,
+} from '../lib/rewards';
+import { SHIRT_SIZES, type MerchSku, type ShippingAddress } from '../../../shared/rewards';
 
 const TokenIcon = ({ size = 24 }: { size?: number }) => (
   <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none">
     <circle cx="12" cy="12" r="10" fill={'var(--brand-accent)'} />
     <circle cx="12" cy="12" r="7" fill="none" stroke="var(--brand-on-accent)" strokeWidth="1.5" opacity="0.4" />
-    <text
-      x="12"
-      y="16"
-      textAnchor="middle"
-      fontSize="11"
-      fontFamily="-apple-system, sans-serif"
-      fontWeight="700"
-      fill="var(--brand-on-accent)"
-    >
-      T
-    </text>
+    <text x="12" y="16" textAnchor="middle" fontSize="11" fontFamily="-apple-system, sans-serif" fontWeight="700" fill="var(--brand-on-accent)">T</text>
   </svg>
 );
 
-// A tinted rounded tile holding a controlled typographic marker. This avoids
-// platform-dependent emoji artwork while keeping each product recognizable.
-function MarkerTile({ marker, color, size = 46 }: { marker: string; color?: string; size?: number }) {
-  const accent = color ?? 'var(--brand-accent)';
+const skuNameKey = (sku: MerchSku) => `shop.merch.${sku}.name` as TranslationKey;
+const skuBlurbKey = (sku: MerchSku) => `shop.merch.${sku}.blurb` as TranslationKey;
+
+const EMPTY_ADDRESS: ShippingAddress = { name: '', line1: '', line2: '', city: '', postalCode: '', country: '' };
+
+/** One merchandise card. It shows a price only when a real quote produced one,
+ * and says why it cannot be ordered when it cannot. */
+function MerchCard({
+  item,
+  onOrder,
+  busy,
+}: {
+  item: ShopItem;
+  onOrder: (sku: MerchSku, variant: string) => void;
+  busy: boolean;
+}) {
+  const t = useT();
+  const { lang } = useLanguage();
+  const [variant, setVariant] = useState(item.variants[0] ?? '');
+  const orderable = item.availability === 'available';
+
   return (
-    <div
-      aria-hidden
-      className="ss-tile"
-      style={{
-        width: size,
-        height: size,
-        fontSize: size * 0.34,
-        fontWeight: 800,
-        fontFamily: 'var(--font-family-mono, ui-monospace, monospace)',
-        background: `color-mix(in srgb, ${accent} 12%, transparent)`,
-        boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${accent} 30%, transparent)`,
-      }}
-    >
-      {marker}
-    </div>
+    <Card variant="default" padding={3} width="100%">
+      <VStack gap={1.5}>
+        <HStack gap={1} align="center" justify="between">
+          <Heading level={4}>{t(skuNameKey(item.sku))}</Heading>
+          {!orderable && (
+            <Badge variant="neutral" label={t(`shop.availability.${item.availability}` as TranslationKey)} />
+          )}
+        </HStack>
+        <Text type="supporting" color="secondary">{t(skuBlurbKey(item.sku))}</Text>
+
+        {item.price ? (
+          <HStack gap={1} align="end" wrap="wrap">
+            <Text weight="bold">{formatMoney(item.price.minor, item.price.currency, lang)}</Text>
+            <Text type="supporting" size="xsm" color="secondary">
+              {t(item.price.taxIncluded ? 'shop.taxIncluded' : 'shop.taxExtra')}
+            </Text>
+            {item.price.tokenPrice !== null && (
+              <Text type="supporting" size="xsm" color="secondary">
+                {t('shop.orTokens', { n: item.price.tokenPrice })}
+              </Text>
+            )}
+          </HStack>
+        ) : (
+          <Text type="supporting" size="xsm" color="secondary">{t('shop.noPriceYet')}</Text>
+        )}
+
+        {item.variants.length > 0 && (
+          <>
+            <label className="ss-field-label" htmlFor={`size-${item.sku}`}>{t('shop.sizeLabel')}</label>
+            <select
+              id={`size-${item.sku}`}
+              className="ss-select"
+              value={variant}
+              disabled={!orderable}
+              onChange={(event) => setVariant(event.target.value)}
+            >
+              {item.variants.map((one) => {
+                const free = item.variantStock.find((row) => row.variant === one)?.free ?? 0;
+                return (
+                  <option key={one} value={one} disabled={free <= 0}>
+                    {one}{free <= 0 ? ` — ${t('shop.availability.out_of_stock')}` : ''}
+                  </option>
+                );
+              })}
+            </select>
+          </>
+        )}
+
+        <button
+          type="button"
+          className="lp-btn lp-btn--primary"
+          disabled={!orderable || busy}
+          onClick={() => onOrder(item.sku, variant)}
+        >
+          {t('shop.order')}
+        </button>
+      </VStack>
+    </Card>
   );
 }
 
-// One focused, fairness-neutral catalogue section.
-const SECTIONS: { key: TranslationKey; kinds: ProductKind[]; icon: ReactNode }[] = [
-  { key: 'shop.section.style', kinds: ['ring', 'flair'], icon: <SparkleIcon size={16} /> },
-];
-
 function Shop() {
   const t = useT();
-  const tokens = useTokens();
-  const inv = useInventory();
+  const { lang } = useLanguage();
   const { isAuthenticated } = useAuth();
-  // The shop is per subject: tokens and cosmetics stay with that context.
   const subject = useActiveSubject();
+  const shop = useShop();
+  const wallet = useWallet(isAuthenticated);
+  const orders = useOrders(isAuthenticated);
+  const cosmetic = useCosmeticMutation();
+  const order = useOrderMutation();
+
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
-  const [syncing, setSyncing] = useState(isAuthenticated);
+  const [checkout, setCheckout] = useState<{ sku: MerchSku; variant: string } | null>(null);
+  const [address, setAddress] = useState<ShippingAddress>(EMPTY_ADDRESS);
 
-  // Hydrate the subject wallet and cosmetic inventory before purchases are
-  // enabled, so a fresh device does not briefly present a zero balance.
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setSyncing(false);
-      return;
-    }
-    let active = true;
-    setSyncing(true);
-    void syncProgressWithServer().finally(() => {
-      if (active) setSyncing(false);
-    });
-    return () => { active = false; };
-  }, [isAuthenticated, subject.id]);
+  const balance = wallet.data?.balance ?? 0;
+  const ownsCrown = useMemo(
+    () => (wallet.data?.cosmetics ?? []).some((one) => one.id === 'crown'),
+    [wallet.data],
+  );
+  const wearingCrown = useMemo(
+    () => (wallet.data?.cosmetics ?? []).some((one) => one.id === 'crown' && one.equipped),
+    [wallet.data],
+  );
 
-  const handleBuy = (p: Product) => {
-    const res = purchase(p.id);
-    const displayName = t(`shop.item.${p.id}.name` as TranslationKey);
-    if (res === 'ok') {
-      setToast({ msg: t('shop.purchased', { name: displayName }), ok: true });
-    } else if (res === 'owned') {
-      setToast({ msg: t('shop.alreadyOwned'), ok: false });
-    } else {
-      setToast({ msg: t('shop.insufficient'), ok: false });
-    }
+  const submitOrder = (paymentKind: 'tokens' | 'cash') => {
+    if (!checkout) return;
+    order.mutate(
+      { items: [{ ...checkout, quantity: 1 }], address, paymentKind },
+      {
+        onSuccess: (result) => {
+          setCheckout(null);
+          setAddress(EMPTY_ADDRESS);
+          setToast({
+            msg: result.state === 'paid' ? t('shop.orderPlaced') : t('shop.orderAwaitingPayment'),
+            ok: true,
+          });
+        },
+        onError: (error) => setToast({ msg: friendlyError(error), ok: false }),
+      },
+    );
   };
 
   return (
     <VStack gap={5} width="100%" maxWidth={1080}>
       <VStack gap={1}>
         <Kicker>{t('shop.kicker')}</Kicker>
-        <Heading level={1} type="display-3">
-          {t('shop.title')}
-        </Heading>
-        <Text type="large" color="secondary">
-          {t('shop.subtitle')}
-        </Text>
+        <Heading level={1} type="display-3">{t('shop.title')}</Heading>
+        <Text type="large" color="secondary">{t('shop.subtitle')}</Text>
       </VStack>
 
-      {/* Wallet: the accent-tinted balance is the anchor of the page. */}
+      {shop.data?.testMode && <Banner status="warning" title={t('shop.testMode')} />}
+
+      {/* The wallet. The recent movements are shown beside the balance because
+          a balance nobody can account for is what this replaced. */}
       <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
         <Card variant="muted" padding={5} width="100%">
           <HStack gap={3} align="center" wrap="wrap">
             <TokenIcon size={48} />
             <VStack gap={0.5}>
-              <Text type="label" weight="bold" color="secondary">
-                {t('shop.balanceLabel')}
-              </Text>
+              <Text type="label" weight="bold" color="secondary">{t('shop.balanceLabel')}</Text>
               <HStack gap={1} align="end" wrap="wrap">
                 <Heading level={2} type="display-2" color="accent">
-                  {tokens.toLocaleString()}
+                  {isAuthenticated ? balance.toLocaleString() : '—'}
                 </Heading>
-                <Text type="large" weight="bold" color="accent">
-                  {t('shop.tokensUnit')}
-                </Text>
+                <Text type="large" weight="bold" color="accent">{t('shop.tokensUnit')}</Text>
               </HStack>
             </VStack>
-            {/* The wallet is per platform — make the scope visible. */}
             <div style={{ marginLeft: 'auto' }}>
               <HStack gap={1} align="center" wrap="wrap" justify="end">
                 <Badge variant="neutral" label={t(subjectNameKey(subject.id))} />
@@ -150,182 +207,171 @@ function Shop() {
               </HStack>
             </div>
           </HStack>
+          {!isAuthenticated && <Text type="supporting" color="secondary">{t('shop.signInForWallet')}</Text>}
+          {isAuthenticated && (wallet.data?.entries.length ?? 0) > 0 && (
+            <ul className="ss-ledger">
+              {wallet.data!.entries.slice(0, 5).map((entry) => (
+                <li key={entry.eventId}>
+                  <span>{t(`shop.reason.${entry.reason}` as TranslationKey)}</span>
+                  <span className={entry.amount > 0 ? 'ss-ledger__in' : 'ss-ledger__out'}>
+                    {entry.amount > 0 ? '+' : ''}{entry.amount.toLocaleString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
       </div>
 
-      {syncing && <Banner status="info" title={t('shop.syncing')} />}
+      {shop.isLoading && <Text type="supporting" color="secondary" role="status">{t('common.loading')}</Text>}
+      {shop.isError && <Banner status="warning" title={t('shop.loadError')} />}
 
-      {SECTIONS.map(({ key, kinds, icon }) => (
-        <VStack key={key} gap={2}>
-          <VStack gap={0.5}>
-            <HStack gap={1.5} align="center">
-              <IconTile size={32}>{icon}</IconTile>
-              <Heading level={3}>{t(key)}</Heading>
+      {/* The crown: cosmetic, token-priced, and nothing is posted. */}
+      {shop.data?.crown.available && (
+        <VStack gap={2}>
+          <Heading level={3}>{t('shop.crownSection')}</Heading>
+          <Card variant="default" padding={3} width="100%">
+            <HStack gap={2} align="center" wrap="wrap">
+              <Crown size={44} />
+              <VStack gap={0.5}>
+                <Heading level={4}>{t('shop.crownName')}</Heading>
+                <Text type="supporting" color="secondary">{t('shop.crownBlurb')}</Text>
+              </VStack>
+              <div style={{ marginLeft: 'auto' }}>
+                <HStack gap={1} align="center" wrap="wrap">
+                  {!ownsCrown && <Text weight="bold">{t('shop.tokenPrice', { n: shop.data.crown.tokenPrice })}</Text>}
+                  {ownsCrown ? (
+                    <button
+                      type="button"
+                      className="lp-btn"
+                      disabled={cosmetic.isPending}
+                      onClick={() => cosmetic.mutate({ op: wearingCrown ? 'unequip' : 'equip' })}
+                    >
+                      {t(wearingCrown ? 'shop.crownRemove' : 'shop.crownWear')}
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      className="lp-btn lp-btn--primary"
+                      disabled={!isAuthenticated || cosmetic.isPending || balance < shop.data.crown.tokenPrice}
+                      onClick={() => cosmetic.mutate({ op: 'buy' }, {
+                        onSuccess: () => setToast({ msg: t('shop.crownBought'), ok: true }),
+                        onError: (error) => setToast({ msg: friendlyError(error), ok: false }),
+                      })}
+                    >
+                      {t('shop.buy')}
+                    </button>
+                  )}
+                </HStack>
+              </div>
+            </HStack>
+          </Card>
+        </VStack>
+      )}
+
+      {/* Merchandise. */}
+      <VStack gap={2}>
+        <Heading level={3}>{t('shop.merchSection')}</Heading>
+        {!shop.data?.enabled && <Banner status="info" title={t('shop.merchClosed')} />}
+        <Grid columns={{ minWidth: 260, max: 3 }} gap={2} width="100%">
+          {(shop.data?.items ?? []).map((item) => (
+            <MerchCard
+              key={item.sku}
+              item={item}
+              busy={order.isPending}
+              onOrder={(sku, variant) => setCheckout({ sku, variant })}
+            />
+          ))}
+        </Grid>
+        {shop.data?.policyUrl && (
+          <a className="cd-link" href={shop.data.policyUrl} target="_blank" rel="noreferrer">
+            {t('shop.policyLink')}
+          </a>
+        )}
+      </VStack>
+
+      {/* Checkout. Only the fields a parcel needs, and nothing beyond them. */}
+      {checkout && (
+        <Card variant="muted" padding={3} width="100%">
+          <VStack gap={1.5}>
+            <Heading level={4}>{t('shop.checkoutTitle', { item: t(skuNameKey(checkout.sku)) })}</Heading>
+            {([
+              ['name', 'shop.address.name'],
+              ['line1', 'shop.address.line1'],
+              ['line2', 'shop.address.line2'],
+              ['city', 'shop.address.city'],
+              ['postalCode', 'shop.address.postalCode'],
+              ['country', 'shop.address.country'],
+            ] as const).map(([field, key]) => (
+              <div key={field}>
+                <label className="ss-field-label" htmlFor={`addr-${field}`}>{t(key)}</label>
+                <input
+                  id={`addr-${field}`}
+                  className="ss-input"
+                  autoComplete={field === 'country' ? 'country' : field === 'postalCode' ? 'postal-code' : 'off'}
+                  maxLength={field === 'country' ? 2 : 120}
+                  value={address[field] ?? ''}
+                  onChange={(event) => setAddress((current) => ({ ...current, [field]: event.target.value }))}
+                />
+              </div>
+            ))}
+            <Text type="supporting" size="xsm" color="secondary">{t('shop.addressNote')}</Text>
+            <HStack gap={1} wrap="wrap">
+              <button
+                type="button"
+                className="lp-btn lp-btn--primary"
+                disabled={order.isPending}
+                onClick={() => submitOrder('tokens')}
+              >
+                {t('shop.payWithTokens')}
+              </button>
+              {shop.data?.cashCheckoutEnabled && (
+                <button type="button" className="lp-btn" disabled={order.isPending} onClick={() => submitOrder('cash')}>
+                  {t('shop.payWithMoney')}
+                </button>
+              )}
+              <button type="button" className="lp-btn lp-btn--quiet" onClick={() => setCheckout(null)}>
+                {t('shop.cancelCheckout')}
+              </button>
             </HStack>
           </VStack>
-          {/* Style section: a live preview of YOUR avatar + name with the
-              currently equipped ring/flair, so cosmetics are tangible before
-              (and after) buying. */}
-          {kinds.includes('ring') && <StylePreview />}
-          <Grid columns={{ minWidth: 260, max: 3 }} gap={2} width="100%">
-            {CATALOGUE.filter((p) => kinds.includes(p.kind))
-              .map((p) => {
-                const price = priceOf(p);
-                return (
-                  <ProductCard
-                    key={p.id}
-                    product={p}
-                    price={price}
-                    owned={inv.owned.includes(p.id)}
-                    equipped={inv.ring === p.id || inv.flair === p.id}
-                    canAfford={!syncing && tokens >= price}
-                    onBuy={() => handleBuy(p)}
-                    onEquip={() => equip(p.id)}
-                  />
-                );
-              })}
-          </Grid>
+        </Card>
+      )}
+
+      {/* Orders. */}
+      {isAuthenticated && (orders.data?.orders.length ?? 0) > 0 && (
+        <VStack gap={2}>
+          <Heading level={3}>{t('shop.ordersSection')}</Heading>
+          <ul className="ss-orders">
+            {orders.data!.orders.map((one) => (
+              <li key={one.orderId}>
+                <span className="ss-orders__items">
+                  {one.items.map((line) => `${t(skuNameKey(line.sku as MerchSku))}${line.variant ? ` (${line.variant})` : ''} ×${line.quantity}`).join(', ')}
+                </span>
+                <span className="ss-orders__state">{t(`shop.state.${one.state}` as TranslationKey)}</span>
+                {one.totalMinor !== null && one.currency && (
+                  <span>{formatMoney(one.totalMinor, one.currency, lang)}</span>
+                )}
+                {one.trackingRef && <span>{one.carrier} · {one.trackingRef}</span>}
+                {one.testMode && <Badge variant="neutral" label={t('shop.testOrder')} />}
+              </li>
+            ))}
+          </ul>
         </VStack>
-      ))}
+      )}
+
+      <Text type="supporting" size="xsm" color="secondary">{t('shop.fairnessNote')}</Text>
 
       <AppToast
         open={!!toast}
         onClose={() => setToast(null)}
         severity={toast?.ok ? 'success' : 'info'}
-        autoHideDuration={3000}
+        autoHideDuration={4000}
         message={toast?.msg ?? ''}
       />
     </VStack>
   );
 }
 
-interface ProductCardProps {
-  product: Product;
-  price: number;
-  owned: boolean;
-  equipped: boolean;
-  canAfford: boolean;
-  onBuy: () => void;
-  onEquip: () => void;
-}
-
-function ProductCard({ product, price, owned, equipped, canAfford, onBuy, onEquip }: ProductCardProps) {
-  const t = useT();
-  const name = t(`shop.item.${product.id}.name` as TranslationKey);
-  const desc = t(`shop.item.${product.id}.desc` as TranslationKey);
-
-  // Accent-tinted price badge keeps cost visible without implying performance.
-  const accent = product.color ?? 'var(--brand-accent)';
-  const priceBadge = (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        padding: '4px 12px',
-        borderRadius: 999,
-        fontWeight: 700,
-        fontSize: '0.8125rem',
-        lineHeight: 1.2,
-        color: accent,
-        background: `color-mix(in srgb, ${accent} 14%, transparent)`,
-        boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${accent} 30%, transparent)`,
-      }}
-    >
-      <TokenIcon size={14} />
-      {price.toLocaleString()} {t('shop.tokensUnit')}
-    </span>
-  );
-
-  // The action shown in the card footer depends on the product kind + state.
-  let action;
-  if (owned) {
-    // Ring / flair the learner already owns: toggle equip (idempotent).
-    action = (
-      <Button
-        size="sm"
-        variant={equipped ? 'primary' : 'secondary'}
-        label={equipped ? t('shop.unequip') : t('shop.equip')}
-        onClick={onEquip}
-      />
-    );
-  } else {
-    action = (
-      <HStack gap={1} align="center">
-        <Button size="sm" variant="primary" label={t('shop.buy')} isDisabled={!canAfford} onClick={onBuy} />
-      </HStack>
-    );
-  }
-
-  return (
-    <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
-      <Card padding={3} width="100%">
-        <VStack gap={2} height="100%" justify="between">
-          <HStack gap={1.5} align="center">
-            <MarkerTile marker={product.marker} color={product.color} size={44} />
-            <VStack gap={0.5}>
-              <Text weight="bold">{name}</Text>
-              <Text type="supporting" color="secondary">
-                {desc}
-              </Text>
-            </VStack>
-          </HStack>
-
-          <HStack gap={1} align="center" justify="between" wrap="wrap">
-            {priceBadge}
-            {action}
-          </HStack>
-        </VStack>
-      </Card>
-    </div>
-  );
-}
-
-/**
- * Live "this is you" preview for the Style section: the learner's own avatar
- * and name rendered with whatever ring/flair is currently equipped, updating
- * the moment they equip something. Makes cosmetics tangible without any
- * marketing copy.
- */
-function StylePreview() {
-  const t = useT();
-  const { user } = useAuth();
-  const profile = getUserProfile(user);
-  const ringColor = useEquippedRingColor();
-  const flair = useEquippedFlair();
-  const displayName = profile.name?.split(' ')[0] || profile.email?.split('@')[0] || t('auth.account');
-
-  return (
-    <Card variant="muted" padding={2} width="fit-content">
-      <HStack gap={1.5} align="center">
-        <div
-          style={{
-            borderRadius: '50%',
-            display: 'inline-flex',
-            flexShrink: 0,
-            ...(ringColor
-              ? { boxShadow: `0 0 0 2px ${ringColor}, 0 0 0 3.5px ${ringColor}33` }
-              : null),
-          }}
-        >
-          <Avatar src={profile.picture} name={displayName} alt="" size="medium" />
-        </div>
-        <VStack gap={0.5}>
-          <Text type="label" color="secondary">
-            {t('shop.stylePreview')}
-          </Text>
-          <Text weight="semibold">
-            {displayName}
-            {flair && (
-              <span aria-hidden style={{ marginLeft: 4 }}>
-                {flair}
-              </span>
-            )}
-          </Text>
-        </VStack>
-      </HStack>
-    </Card>
-  );
-}
-
 export default Shop;
+export { SHIRT_SIZES };
