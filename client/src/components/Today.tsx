@@ -12,6 +12,7 @@ import { useRoadmapProgress, useExtraUnlocks, type RoadmapProgress } from '../li
 import { useRoadmapStructure } from '../lib/queries';
 import { ApiError } from '../lib/api';
 import { buildToday, type TodayItem, type TodayKind } from '../lib/today';
+import { useEligibility } from '../lib/learningPlan';
 import { masteryDayKey, type LevelMasteryEntry } from '../../../shared/mastery';
 import { getCategoryHexColor } from '../lib/categories';
 import { CategoryGlyph } from './ui/techIcons';
@@ -90,6 +91,10 @@ export default function Today() {
   const extraUnlocks = useExtraUnlocks();
   const structureQuery = useRoadmapStructure();
   const structure: RoadmapStructure | null = structureQuery.data ?? null;
+  // The learner's plan (issue #153). While it is personalised, Today only ever
+  // proposes a step the progression policy would actually let them start.
+  const eligibility = useEligibility(isAuthenticated);
+  const eligibleTopics = eligibility.data?.personalized ? eligibility.data.unlockedTopics : undefined;
 
   // buildToday is pure and offline: it reads local roadmap progress + the shared
   // spaced-mastery rules, so the plan renders even when the structure fetch
@@ -100,8 +105,9 @@ export default function Today() {
         today: masteryDayKey(),
         levelCounts: levelCountsFor(structure, subject),
         extraUnlocks,
+        ...(eligibleTopics ? { eligibleTopics } : {}),
       }),
-    [progress, subject, extraUnlocks, structure],
+    [progress, subject, extraUnlocks, structure, eligibleTopics],
   );
   const done = useMemo(() => doneToday(progress, subject, plan.target), [progress, subject, plan.target]);
 

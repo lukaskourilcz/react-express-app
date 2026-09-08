@@ -41,6 +41,7 @@ import type { TranslationKey } from '../i18n/translations';
 import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
 import { SIBLING_PLATFORMS_URL, useActiveSubject, topicSetForSubject } from '../lib/subjects';
 import { CURRENT_PRODUCT } from '../lib/products';
+import LearningPlanCard from './LearningPlanCard';
 import { savePreferredLanguage } from '../lib/languagePref';
 import { useColorMode } from '../theme/ColorModeContext';
 import { useSettings } from '../lib/settings';
@@ -344,7 +345,9 @@ function ProfileBody({
           <VStack gap={2}>
             <CareerCard />
 
-            <LearningTrackCard />
+            {/* devShark personalises from the versioned learner profile; the
+                other products keep the local track picker. */}
+            {CURRENT_PRODUCT.id === 'devshark' ? <LearningPlanCard /> : <LearningTrackCard />}
 
             <AdvisorCard />
 

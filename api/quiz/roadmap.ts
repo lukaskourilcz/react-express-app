@@ -33,6 +33,8 @@ import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope
 import { levelCodingTasks, playable as playableCodingTask } from '../../lib/coding/catalog';
 import type { RoadmapTopicStructure } from '../../lib/roadmap';
 import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
+import { decideStepFor, topicUnlockedFor } from '../../lib/progression';
+import { ProfileMigrationMissing } from '../../lib/learner-profile-store';
 import { encodeCodingSession } from '../../lib/quiz-tokens';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
 import { subjectForCategory, subjectForTopic, isScopeSubject, type ScopeSubjectId } from '../../shared/subject-catalog';
@@ -718,6 +720,7 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   const sessionQuestion = session.questions.find((question) => question.questionId === body.questionId);
   if (!sessionQuestion) return jsonError(res, 400, 'bad_request', 'Question is not part of this learning session');
   const userId = await optionalAuthSub(req, res);
+  if (userId !== undefined && !(await guardSessionStep(res, userId, session))) return;
   if (userId === undefined) return;
 
   const attemptResult = await ensureAttempt(session, userId);
@@ -761,6 +764,83 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   });
 }
 
+/**
+ * The progression gate (issue #152). Every level, checkpoint and part test a
+ * SIGNED-IN learner asks for is checked against the shared prerequisite graph
+ * before any question leaves the server, so a direct URL, a stale tab or a
+ * forged request cannot skip a higher level. Anonymous visitors keep the free
+ * sample: nothing they do is recorded, so there is no progression to bypass —
+ * their gate is that no completion is ever written for them.
+ *
+ * A learner with no profile yet has no plan to check against; they get the
+ * generic roadmap and are asked to finish their profile before personalised
+ * practice, which the client enforces and `?op=eligibility` reports.
+ */
+async function guardStep(
+  req: VercelRequest,
+  res: VercelResponse,
+  step: { topic: string; kind: 'level' | 'checkpoint'; ref: number },
+): Promise<boolean> {
+  if (!supabase) return true;
+  const userId = await optionalAuthSub(req, res);
+  if (userId === undefined) return false;
+  if (!userId) return true;
+  let decision;
+  try {
+    decision = await decideStepFor(supabase, userId, step);
+  } catch (error) {
+    // A learner whose profile row cannot be read yet is not blocked from
+    // learning; the ladder inside `complete_verified_roadmap_attempt` still
+    // refuses to record a level whose predecessor is unpassed.
+    if (error instanceof ProfileMigrationMissing) return true;
+    jsonError(res, 500, 'db_error', 'Could not check learning eligibility');
+    return false;
+  }
+  if (decision.allowed || decision.reason === 'no_profile') return true;
+  logEvent({ status: 403, kind: 'progression_locked', topic: step.topic, step: step.kind, ref: step.ref, reason: decision.reason });
+  res.status(403).json({
+    error: {
+      code: 'progression_locked',
+      message: 'Finish the earlier steps of this path first',
+      reason: decision.reason,
+      ...(decision.suggestion ? { suggestion: decision.suggestion } : {}),
+    },
+  });
+  return false;
+}
+
+/**
+ * The same gate at answer and completion time, for a learner already
+ * identified. A level checks the full chain; a checkpoint or part test checks
+ * plan membership here and carries its required level range into
+ * `complete_verified_roadmap_attempt`, which refuses the record itself.
+ */
+async function guardSessionStep(
+  res: VercelResponse,
+  userId: string | null,
+  session: NonNullable<ReturnType<typeof roadmapSession>>,
+): Promise<boolean> {
+  if (!supabase || !userId) return true;
+  try {
+    if (session.roadmapKind === 'level') {
+      const decision = await decideStepFor(supabase, userId, { topic: session.topic!, kind: 'level', ref: session.ref! });
+      if (decision.allowed || decision.reason === 'no_profile') return true;
+      logEvent({ status: 403, kind: 'progression_locked', topic: session.topic, step: 'level', ref: session.ref, reason: decision.reason });
+      res.status(403).json({ error: { code: 'progression_locked', message: 'Finish the earlier steps of this path first', reason: decision.reason } });
+      return false;
+    }
+    const { allowed, hasProfile } = await topicUnlockedFor(supabase, userId, session.topic!);
+    if (allowed || !hasProfile) return true;
+    logEvent({ status: 403, kind: 'progression_locked', topic: session.topic, step: session.roadmapKind, ref: session.ref, reason: 'stage_locked' });
+    res.status(403).json({ error: { code: 'progression_locked', message: 'Finish the earlier steps of this path first', reason: 'stage_locked' } });
+    return false;
+  } catch (error) {
+    if (error instanceof ProfileMigrationMissing) return true;
+    jsonError(res, 500, 'db_error', 'Could not check learning eligibility');
+    return false;
+  }
+}
+
 async function handleComplete(req: VercelRequest, res: VercelResponse) {
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.roadmapComplete))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning progress is not configured');
@@ -769,6 +849,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   if (!session) return jsonError(res, 400, 'invalid_session', 'Learning session expired or invalid');
   const userId = await optionalAuthSub(req, res);
   if (userId === undefined) return;
+  if (!(await guardSessionStep(res, userId, session))) return;
   const attemptResult = await ensureAttempt(session, userId);
   if (attemptResult.error || !attemptResult.data) {
     if (isRpcMissing(attemptResult.error)) {
@@ -986,6 +1067,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     if (!isValidPart(part)) return jsonError(res, 400, 'bad_request', 'Invalid test');
     const range = partRanges(live.levels.length).find((r) => r.part === part);
     if (!range || range.size <= 0) return jsonError(res, 400, 'bad_request', 'Invalid test');
+    if (!(await guardStep(req, res, { topic, kind: 'level', ref: range.startLevel }))) return;
 
     const pool: string[] = [];
     for (let l = range.startLevel; l <= range.endLevel; l++) {
@@ -1012,6 +1094,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const checkpoint = parseInt(checkpointRaw, 10);
     const meta = live.checkpoints.find((c) => c.checkpoint === checkpoint);
     if (!meta) return jsonError(res, 400, 'bad_request', 'Invalid checkpoint');
+    if (!(await guardStep(req, res, { topic, kind: 'checkpoint', ref: checkpoint }))) return;
 
     const firstLevel = (checkpoint - 1) * LEVELS_PER_CHECKPOINT + 1;
     const ids: string[] = [];
@@ -1038,6 +1121,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const level = parseInt(levelRaw ?? '', 10);
   const meta = live.levels.find((l) => l.level === level);
   if (!meta) return jsonError(res, 400, 'bad_request', 'Invalid level');
+  if (!(await guardStep(req, res, { topic, kind: 'level', ref: level }))) return;
 
   const playable = playableResponse({
     kind: 'level', topic, ref: meta.level, title: meta.title,

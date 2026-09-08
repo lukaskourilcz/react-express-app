@@ -38,6 +38,9 @@ import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
 import { levelForXp, getCareerRanks } from '../lib/leveling';
 import RoadmapTree from './RoadmapTree';
+import { useAuth } from '../lib/auth';
+import { useEligibility, useLearnerProfile, stepHref } from '../lib/learningPlan';
+import { useLearnerPlanSync } from './LearningPlanCard';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import './DeepEndScreens.css';
@@ -119,6 +122,61 @@ function pct(passed: number, total: number): number {
   return total > 0 ? Math.round((passed / total) * 100) : 0;
 }
 
+/**
+ * What the plan says right now: the next eligible step, one link into it, and
+ * a way back to Profile to change the answers. Signed-out visitors and
+ * learners who have not finished their profile see the general map instead
+ * (issue #153).
+ */
+function PlanSummary() {
+  const t = useT();
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const plan = useLearnerProfile(isAuthenticated);
+  const eligibility = useEligibility(isAuthenticated);
+
+  if (!isAuthenticated) return null;
+  if (plan.isLoading || eligibility.isLoading) {
+    return <Text type="supporting" color="secondary" role="status">{t('common.loading')}</Text>;
+  }
+  if (plan.data && !plan.data.complete) {
+    return (
+      <Banner
+        status="info"
+        title={t('learnerProfile.incompleteTitle')}
+        description={t('roadmap.genericNote')}
+        endContent={<Button variant="secondary" size="sm" label={t('learnerProfile.incompleteCta')} onClick={() => navigate('/profile')} />}
+      />
+    );
+  }
+  const data = eligibility.data;
+  if (!data?.personalized) return null;
+
+  const totals = data.paths.flatMap((path) => path.stages.filter((stage) => stage.open).flatMap((stage) => stage.topics));
+  const done = totals.reduce((sum, topic) => sum + topic.levelsPassed, 0);
+  const total = totals.reduce((sum, topic) => sum + topic.levelCount, 0);
+  const href = stepHref(data.next);
+  const nextLabel = data.next
+    ? t(data.next.kind === 'level' ? 'plan.nextStep' : 'plan.nextCheckpoint', {
+      topic: t(categoryLabelKey(data.next.topic as RoadmapTopic)),
+      n: data.next.ref,
+    })
+    : t('plan.nextNone');
+
+  return (
+    <VStack gap={1} width="100%">
+      <HStack gap={1} align="center" wrap="wrap" justify="between">
+        <Text type="supporting" color="secondary">{t('plan.progress', { done, total })}</Text>
+        <Text type="supporting" size="xsm" color="secondary">{nextLabel}</Text>
+      </HStack>
+      <HStack gap={1} wrap="wrap">
+        {href && <Button variant="primary" size="sm" label={t('plan.openStep')} onClick={() => navigate(href)} />}
+        <Button variant="secondary" size="sm" label={t('plan.editLink')} onClick={() => navigate('/profile')} />
+      </HStack>
+    </VStack>
+  );
+}
+
 export default function CareerRoadmap() {
   const t = useT();
   const navigate = useNavigate();
@@ -133,6 +191,11 @@ export default function CareerRoadmap() {
   const [subject] = useSubject();
   const isWebdev = subject === 'webdev';
   const pillars = useMemo(() => buildPillars(subject, t), [subject, t]);
+  // The learner's plan drives the map on devShark. Keeping the track store in
+  // step means the pillars below still read one answer, not two.
+  const { isAuthenticated } = useAuth();
+  useLearnerPlanSync();
+  const eligibility = useEligibility(isAuthenticated && isWebdev);
 
   // Header copy: Web Dev keeps its curated career framing; other subjects get a
   // clean, subject-branded header (the fullstack track blurb is the pitch).
@@ -290,7 +353,8 @@ export default function CareerRoadmap() {
                 {t('roadmapPage.treeIntro')}
               </Text>
             </VStack>
-            <RoadmapTree structure={structure} track={track} />
+            <PlanSummary />
+            <RoadmapTree structure={structure} track={track} plan={eligibility.data ?? null} />
           </VStack>
         </Card>
         </div>

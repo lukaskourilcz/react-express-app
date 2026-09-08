@@ -48,6 +48,35 @@ import {
   SUPPORT_PROMPT_DISMISS_MS,
 } from '../client/src/lib/supportPrompt';
 import type { Question } from '../lib/quiz-runtime';
+import {
+  BASE_TRACKS,
+  LEARNER_PROFILE_VERSION,
+  MAX_LEARNER_GOALS,
+  completeProfile,
+  learnerProfileState,
+  planChanged,
+  validateLearnerProfile,
+  type BaseTrack,
+  type LearnerProfile,
+} from '../shared/learner-profile';
+import {
+  BASE_PATH_STAGES,
+  buildEligibility,
+  completionsFromBlob,
+  decideStep,
+  fdePathFor,
+  graphProblems,
+  nextStep,
+  pathsForProfile,
+  type VerifiedCompletions,
+} from '../shared/progression';
+import { topicLevelCounts } from '../lib/progression';
+import {
+  CODING_SECTION_TRACKS,
+  codingSectionTasks,
+  isCodingSectionTrack,
+} from '../shared/coding-catalog';
+import { readFileSync as readSource } from 'node:fs';
 
 function apiFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -479,7 +508,142 @@ async function main() {
     assert.ok(lesson.questions?.every((question) => !('correctAnswer' in question)));
   }
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, and 12-function budget.');
+  /* ── the learner profile and the progression graph (#151, #152) ────────── */
+  const levelCounts = topicLevelCounts();
+
+  // Every selectable plan is a well-formed graph with a reachable first step.
+  assert.deepEqual(graphProblems(levelCounts), [], 'the progression graph must be acyclic and startable');
+  for (const track of BASE_TRACKS) {
+    assert.ok(BASE_PATH_STAGES[track].length > 0, `${track} must have stages`);
+    assert.ok(BASE_PATH_STAGES[track][0].topics.length > 0, `${track} must start somewhere`);
+    // The FDE bridge only asks for what the base track does not already cover.
+    const covered = new Set(BASE_PATH_STAGES[track].flatMap((stage) => [...stage.topics]));
+    const bridge = fdePathFor(track).stages.find((stage) => stage.key === 'fde-bridge');
+    for (const topic of bridge?.topics ?? []) {
+      assert.ok(!covered.has(topic), `${track}+FDE must not re-ask for ${topic}`);
+    }
+  }
+  // Frontend + FDE carries the explicit data/backend bridge; fullstack does not.
+  assert.ok((fdePathFor('frontend').stages.find((s) => s.key === 'fde-bridge')?.topics.length ?? 0) > 0);
+  assert.equal(fdePathFor('fullstack').stages.find((s) => s.key === 'fde-bridge'), undefined);
+
+  // Validation: only known answers survive, and a half profile stays a draft.
+  assert.equal(validateLearnerProfile({ baseTrack: 'wizard' }).errors[0]?.field, 'baseTrack');
+  assert.equal(validateLearnerProfile({ goals: [] }).errors[0]?.code, 'empty');
+  assert.equal(
+    validateLearnerProfile({ goals: ['first-job', 'interview', 'level-up', 'curiosity'] }).errors[0]?.code,
+    'too_many',
+    `no more than ${MAX_LEARNER_GOALS} goals`,
+  );
+  assert.equal(validateLearnerProfile({ studyMinutes: 7 }).errors[0]?.field, 'studyMinutes');
+  assert.equal(validateLearnerProfile({ baseTrack: 'frontend' }).complete, false);
+  assert.deepEqual(validateLearnerProfile({ nonsense: true, baseTrack: 'frontend' }).draft, { baseTrack: 'frontend' });
+
+  const answers = { baseTrack: 'frontend' as BaseTrack, goals: ['first-job' as const], experience: 'new' as const, studyMinutes: 10 as const, fde: false, dsa: true };
+  const profile = completeProfile(answers, '2026-01-01T00:00:00.000Z');
+  assert.ok(profile, 'a complete answer set becomes a profile');
+  assert.equal(profile!.version, LEARNER_PROFILE_VERSION);
+  assert.equal(completeProfile({ baseTrack: 'frontend' }, '2026-01-01T00:00:00.000Z'), null);
+  // Changing a goal is not a plan change; changing an enrolment is.
+  assert.equal(planChanged(profile, { ...profile!, goals: ['interview'] }), false);
+  assert.equal(planChanged(profile, { ...profile!, dsa: false }), true);
+  // A profile stored under an older contract is re-asked, and its answers kept.
+  const stale = learnerProfileState({ ...profile!, version: LEARNER_PROFILE_VERSION - 1 } as LearnerProfile);
+  assert.equal(stale.complete, false);
+  assert.equal(stale.draft.baseTrack, 'frontend');
+
+  const noCompletions: VerifiedCompletions = { levels: {}, checkpoints: {}, visibleTopics: [] };
+  const input = { profile: profile!, completions: noCompletions, levelCounts };
+
+  // DSA is selected here, so it is part of the plan; FDE is not.
+  assert.deepEqual(pathsForProfile(profile!).map((path) => path.id), ['frontend', 'dsa']);
+
+  // A fresh learner can start level 1 of a stage-1 topic and nothing beyond it.
+  assert.equal(decideStep(input, { topic: 'html', kind: 'level', ref: 1 }).allowed, true);
+  assert.equal(decideStep(input, { topic: 'html', kind: 'level', ref: 2 }).reason, 'level_locked');
+  assert.equal(decideStep(input, { topic: 'html', kind: 'level', ref: 9 }).reason, 'level_locked');
+  // A topic in a later stage is closed until the earlier stage has a pass.
+  assert.equal(decideStep(input, { topic: 'react', kind: 'level', ref: 1 }).reason, 'stage_locked');
+  // A topic outside the learner's plan is refused outright.
+  assert.equal(decideStep(input, { topic: 'databases', kind: 'level', ref: 1 }).reason, 'not_selected');
+  // A forged step number cannot walk off the ladder.
+  assert.equal(decideStep(input, { topic: 'html', kind: 'level', ref: 999 }).reason, 'out_of_range');
+  assert.equal(decideStep(input, { topic: 'html', kind: 'level', ref: 0 }).reason, 'out_of_range');
+  assert.equal(decideStep(input, { topic: 'html', kind: 'checkpoint', ref: 1 }).reason, 'level_locked');
+
+  // Level 6 needs checkpoint 1, not just level 5 — no skipping the exam.
+  const throughFive = completionsFromBlob({
+    html: { levels: Object.fromEntries([1, 2, 3, 4, 5].map((n) => [String(n), { passed: true }])), checkpoints: {} },
+  });
+  const afterFive = { profile: profile!, completions: throughFive, levelCounts };
+  assert.equal(decideStep(afterFive, { topic: 'html', kind: 'level', ref: 6 }).reason, 'checkpoint_locked');
+  assert.equal(decideStep(afterFive, { topic: 'html', kind: 'checkpoint', ref: 1 }).allowed, true);
+  // Replaying a level already passed is allowed and changes nothing.
+  assert.equal(decideStep(afterFive, { topic: 'html', kind: 'level', ref: 3 }).allowed, true);
+
+  // One pass in every stage-1 topic opens stage 2 — and only stage 2.
+  const stageOne = completionsFromBlob(Object.fromEntries(
+    ['html', 'css', 'javascript'].map((topic) => [topic, { levels: { '1': { passed: true } }, checkpoints: {} }]),
+  ));
+  const afterStageOne = { profile: profile!, completions: stageOne, levelCounts };
+  assert.equal(decideStep(afterStageOne, { topic: 'typescript', kind: 'level', ref: 1 }).allowed, true);
+  assert.equal(decideStep(afterStageOne, { topic: 'react', kind: 'level', ref: 1 }).reason, 'stage_locked');
+
+  // A diagnostic that made a topic visible still cannot open a higher level.
+  const diagnosed = completionsFromBlob({}, ['react']);
+  const afterDiagnostic = { profile: profile!, completions: diagnosed, levelCounts };
+  assert.equal(decideStep(afterDiagnostic, { topic: 'react', kind: 'level', ref: 1 }).allowed, true);
+  assert.equal(decideStep(afterDiagnostic, { topic: 'react', kind: 'level', ref: 4 }).reason, 'level_locked');
+
+  // Without a profile there is no plan to enforce; the generic roadmap applies.
+  const anonymous = { profile: null, completions: noCompletions, levelCounts };
+  assert.equal(decideStep(anonymous, { topic: 'html', kind: 'level', ref: 1 }).reason, 'no_profile');
+  assert.equal(buildEligibility(anonymous).personalized, false);
+  assert.equal(nextStep(anonymous), null);
+
+  // Every valid selection has a first step and hides nothing it has opened.
+  for (const track of BASE_TRACKS) {
+    for (const fde of [false, true]) {
+      for (const dsa of [false, true]) {
+        const candidate = completeProfile({ ...answers, baseTrack: track, fde, dsa }, '2026-01-01T00:00:00.000Z')!;
+        const view = buildEligibility({ profile: candidate, completions: noCompletions, levelCounts });
+        assert.ok(view.next, `${track} fde=${fde} dsa=${dsa} must have a reachable first step`);
+        assert.equal(decideStep({ profile: candidate, completions: noCompletions, levelCounts }, { topic: view.next!.topic, kind: view.next!.kind, ref: view.next!.ref }).allowed, true);
+        const openStages = view.paths.flatMap((path) => path.stages.filter((stage) => stage.open));
+        assert.ok(openStages.length > 0);
+        const openTopics = new Set(openStages.flatMap((stage) => stage.topics.map((one) => one.topic)));
+        for (const topic of openTopics) assert.ok(view.unlockedTopics.includes(topic));
+        // A closed stage never leaks a topic no open stage already offers.
+        for (const path of view.paths) {
+          for (const stage of path.stages.filter((one) => !one.open)) {
+            for (const entry of stage.topics) {
+              if (openTopics.has(entry.topic)) continue;
+              assert.ok(!view.unlockedTopics.includes(entry.topic), `${entry.topic} must stay hidden until its stage opens`);
+            }
+          }
+        }
+        assert.equal(view.paths.some((path) => path.id === 'dsa'), dsa, 'DSA appears only when enrolled');
+        assert.equal(view.paths.some((path) => path.id === 'fde'), fde, 'FDE appears only when enrolled');
+      }
+    }
+  }
+
+  /* ── Coding no longer offers system design (#165) ──────────────────────── */
+  assert.deepEqual([...CODING_SECTION_TRACKS], ['javascript', 'typescript', 'react']);
+  assert.equal(isCodingSectionTrack('system-design'), false);
+  assert.equal(codingSectionTasks(CODING_INDEX).some((task) => task.track === 'system-design'), false);
+  assert.ok(CODING_INDEX.some((task) => task.track === 'system-design'), 'design tasks stay in the catalogue');
+
+  /* ── devShark shows no sibling-brand promotion (#166) ──────────────────── */
+  const footerSource = readSource(join(process.cwd(), 'client/src/components/BrandFooter.tsx'), 'utf8');
+  assert.match(footerSource, /showFamily = CURRENT_PRODUCT\.id !== 'devshark'/);
+  assert.match(footerSource, /\{showFamily && \(\s*<div className="ss-brand-footer__heading">/);
+  assert.match(footerSource, /\{showFamily && \(\s*<ul className="ss-brand-footer__brands">/);
+  // The legal row and the site settings stay for both products.
+  assert.match(footerSource, /footer\.support/);
+  assert.match(footerSource, /ss-footer-settings/);
+
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, learner profile, progression graph, Coding tracks, devShark footer, and 12-function budget.');
 }
 
 void main().catch((error) => {
