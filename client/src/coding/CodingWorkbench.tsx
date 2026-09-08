@@ -12,6 +12,8 @@ import { formatCode } from './runner/format';
 import { runCodeTests, runPassed, type RunOutcome, type RunPhase } from './runner/run-tests';
 import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness';
 import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, type LadderRung } from './hint-ladder';
+import { taskResources } from '../../../shared/coding-docs';
+import { classifyFailure, failureHint } from '../../../shared/coding-failure';
 import { revealCoding, submitCoding } from './api';
 import { CODING_TIERS, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import type { CodingLockReason, CodingVerdictResponse } from '../../../shared/coding-api';
@@ -32,7 +34,7 @@ export interface CodingWorkbenchProps {
   onContinue?: () => void;
 }
 
-type Tab = 'results' | 'types' | 'console' | 'preview';
+type Tab = 'results' | 'types' | 'console' | 'preview' | 'resources';
 type Phase = 'idle' | 'running' | 'submitting';
 
 const DRAFT_DEBOUNCE_MS = 900;
@@ -255,11 +257,37 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     : run && !run.codeError && run.results.length > 0 ? `${run.results.filter((r) => r.pass === true).length}/${run.results.length}` : null;
   const typesBadge = run?.check ? (run.check.codeErrors.length === 0 && run.check.typeTests.every((one) => one.pass) ? 'ok' : String(run.check.codeErrors.length + run.check.typeTests.filter((one) => !one.pass).length)) : null;
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
+  const resources = useMemo(() => taskResources(task.focus), [task.focus]);
+
+  // What went wrong, said once, in the learner's language.
+  //
+  // The server's verdict wins when there is one: it classifies with the hidden
+  // tests and the expected kinds, which the browser deliberately never sees.
+  // Between submissions the Run button still gets a hint, from the narrower
+  // signals the browser does hold — same vocabulary, same authored text, so a
+  // learner is never told two different stories about one failure.
+  const localHint = useMemo(() => {
+    if (verdict || !run || runPassed(run)) return null;
+    const typesBroken = Boolean(run.check && (run.check.codeErrors.length > 0 || run.check.typeTests.some((one) => !one.pass)));
+    return failureHint(
+      classifyFailure({
+        threw: Boolean(run.codeError),
+        typeErrors: typesBroken,
+        results: run.results.map((one) => ({ pass: one.pass, actual: one.actual })),
+        pitfall: task.pitfall,
+      }),
+      task.failureHints,
+    );
+  }, [verdict, run, task.pitfall, task.failureHints]);
+  const shownHint = verdict?.failureHint ?? localHint;
   const tabs: { key: Tab; label: string; badge: string | null; good: boolean | null }[] = [
     { key: 'results', label: t('coding.tab.results'), badge: resultsBadge, good: isReact ? (reactRun ? reactRun.failed === 0 && reactRun.total > 0 : null) : localPassed },
     ...(isTypeScript ? [{ key: 'types' as Tab, label: t('coding.tab.types'), badge: typesBadge, good: typesBadge === 'ok' ? true : typesBadge ? false : null }] : []),
     { key: 'console', label: t('coding.tab.console'), badge: null, good: null },
     ...(isReact ? [{ key: 'preview' as Tab, label: t('coding.tab.preview'), badge: null, good: null }] : []),
+    // Reading the documentation is not asking for help: this tab is open from
+    // the moment the task loads, costs no hint rung, and needs no failed run.
+    { key: 'resources', label: t('coding.tab.resources'), badge: resources.length > 0 ? String(resources.length) : null, good: null },
   ];
 
   // Arrow/Home/End across the tab strip, per the ARIA tabs pattern.
@@ -275,6 +303,31 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     const key = tabs[next].key;
     setTab(key);
     tabRefs.current[key]?.focus();
+  };
+
+  /** Reference pages for every technique this task declares. No solutions, no
+   * hidden tests: these are the same public pages a working engineer opens. */
+  const renderResources = (): ReactNode => {
+    if (resources.length === 0) {
+      return <p className="cd-note">{t('coding.resources.empty')}</p>;
+    }
+    return (
+      <div className="cd-resources">
+        <p className="cd-shortcuts">{t('coding.resources.intro')}</p>
+        <ul>
+          {resources.map((entry) => (
+            <li key={entry.url}>
+              <a href={entry.url} target="_blank" rel="noreferrer">
+                {entry.title}
+              </a>
+              <span className="cd-resources__source">{entry.source}</span>
+              <span className="cd-resources__blurb">{entry.blurb[lang] || entry.blurb.en}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="cd-shortcuts">{t('coding.resources.reviewed', { date: resources[0].reviewed })}</p>
+      </div>
+    );
   };
 
   const renderResults = (): ReactNode => {
@@ -453,6 +506,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             {!signedIn && mode === 'section' && <p className="cd-note">{t('coding.signInHint')}</p>}
 
             <div className="cd-hints" aria-label={t('coding.hint')}>
+              {shownHint && (
+                <div className="cd-hint cd-hint--failure" role="status">
+                  <span className="cd-hint__label">
+                    {t(`coding.failure.${shownHint.category}` as never)}
+                  </span>
+                  <Prompt text={shownHint.body[lang] || shownHint.body.en} />
+                </div>
+              )}
               {rungs.slice(0, taken).map((rung, index) => (
                 <div key={index} className="cd-hint">
                   <span className="cd-hint__label">
@@ -557,6 +618,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               {one.key === 'types' && renderTypes()}
               {one.key === 'console' && renderConsole()}
               {one.key === 'preview' && renderPreview()}
+              {one.key === 'resources' && renderResources()}
             </div>
           ))}
           {verdictCard}

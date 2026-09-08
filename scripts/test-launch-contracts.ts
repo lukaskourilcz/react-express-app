@@ -36,6 +36,8 @@ import { runReactSuite } from '../lib/coding/react-runner';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
+import { FAILURE_CATEGORIES, classifyFailure, failureHint } from '../shared/coding-failure';
+import { taskResources, CODING_DOC_LINKS } from '../shared/coding-docs';
 import {
   everyPlanHasAFirstStep,
   isLevelUnlocked,
@@ -709,7 +711,63 @@ async function main() {
   assert.equal(fromV1?.specialization, 'fde');
   assert.equal(isLearnerProfileComplete(fromV1), false, 'a v1 preference still owes the newer answers');
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, and the progression graph.');
+  // ── task resources (#155) ───────────────────────────────────────────────
+  // Every documented technique is a real reference page with a title, both
+  // blurbs and a review date, and a task lists all of its techniques, not one.
+  for (const link of CODING_DOC_LINKS) {
+    assert.ok(link.url.startsWith('https://'), `${link.tag} must link over https`);
+    assert.ok(link.title.length > 0, `${link.tag} needs the page's title`);
+    assert.ok(link.blurb.en.length > 10 && link.blurb.cs.length > 10, `${link.tag} needs both blurbs`);
+    assert.match(link.reviewed, /^\d{4}-\d{2}-\d{2}$/, `${link.tag} needs a review date`);
+  }
+  assert.equal(taskResources(['map', 'filter', 'reduce']).length, 3, 'a task lists every technique it declares');
+  assert.deepEqual(taskResources(['not-a-technique']), [], 'an undocumented technique yields an empty panel, not a filler link');
+
+  // ── failure hints (#156) ────────────────────────────────────────────────
+  // The classifier sees only the learner's own output and facts about the
+  // task's shape, and returns a category name plus authored text. Nothing it
+  // returns may contain an input, an expected value or a raw error.
+  assert.equal(classifyFailure({ timedOut: true }), 'timeout');
+  assert.equal(classifyFailure({ typeErrors: true }), 'types');
+  assert.equal(classifyFailure({ threw: true }), 'runtime');
+  assert.equal(
+    classifyFailure({ results: [{ pass: false, actual: 'undefined' }, { pass: false, actual: 'undefined' }] }),
+    'missing-return',
+  );
+  assert.equal(
+    classifyFailure({
+      results: [{ pass: false, actual: '"abc"' }],
+      expectedKinds: ['array'],
+    }),
+    'output-shape',
+  );
+  assert.equal(
+    classifyFailure({
+      results: [{ pass: true, actual: '2' }, { pass: false, actual: '0' }],
+      edge: [false, true],
+      expectedKinds: ['number', 'number'],
+    }),
+    'boundary',
+  );
+  assert.equal(classifyFailure({ results: [{ pass: false, actual: '3' }], expectedKinds: ['number'] }), 'tests');
+  // A declared pitfall is used only when nothing more specific was proven.
+  assert.equal(classifyFailure({ results: [{ pass: false, actual: '3' }], pitfall: 'mutation' }), 'mutation');
+  assert.equal(classifyFailure({ timedOut: true, pitfall: 'mutation' }), 'timeout');
+  // Every category the classifier can return either has curated text or falls
+  // through to the ladder; none of that text mentions a value or a test.
+  for (const category of FAILURE_CATEGORIES) {
+    const hint = failureHint(category, undefined);
+    if (!hint) {
+      assert.equal(category, 'tests', 'only the generic category may fall through to the hint ladder');
+      continue;
+    }
+    for (const body of [hint.body.en, hint.body.cs]) {
+      assert.ok(body.length > 20, `${category} hint must say something`);
+      assert.ok(!/expected|hidden test|očekáv|skryt/i.test(body), `${category} hint must not mention expectations or hidden tests`);
+    }
+  }
+
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, and failure hints.');
 }
 
 void main().catch((error) => {

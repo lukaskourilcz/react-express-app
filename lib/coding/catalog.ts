@@ -96,6 +96,8 @@ export function playable(task: CodingTask): PlayableCodingTask {
     ...(task.suite ? { suite: task.suite } : {}),
     ...(task.checklist ? { checklist: task.checklist } : {}),
     ...(task.api ? { api: task.api } : {}),
+    ...(task.failureHints ? { failureHints: task.failureHints } : {}),
+    ...(task.pitfall ? { pitfall: task.pitfall } : {}),
   };
   if (task.design) {
     out.design = {

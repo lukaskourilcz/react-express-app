@@ -7,6 +7,8 @@
  * XP amounts, the difficulty ladder, the badge ids, and the GitHub garden path
  * rules, so every surface computes them the same way. */
 
+import type { FailureCategory } from './coding-failure';
+
 export type CodingTrack = 'javascript' | 'typescript' | 'react' | 'system-design';
 export type CodingTier = 1 | 2 | 3 | 4 | 5;
 export type CodingVerify = 'tests' | 'checklist' | 'guided' | 'drill';
@@ -139,6 +141,15 @@ export interface CodingTask {
   api?: CodingApiNote;
   design?: GuidedDesign;
   drill?: DesignDrill;
+  /** Authored hints for the way this task is usually got wrong, keyed by
+   * failure category (see `shared/coding-failure.ts`). They are shown after a
+   * failed run instead of the generic ladder rung, and they are versioned with
+   * the task because they are part of its content. A category left out falls
+   * back to the curated default for that category. */
+  failureHints?: Partial<Record<FailureCategory, Localized>>;
+  /** The mistake this task is built around, when there is one. Used only when
+   * the run proves nothing more specific — never to override evidence. */
+  pitfall?: FailureCategory;
   estimatedMinutes: number;
 }
 
@@ -168,6 +179,11 @@ export interface PlayableCodingTask extends CodingTaskSummary {
   suite?: string;
   checklist?: LocalizedList;
   api?: CodingApiNote;
+  /** The authored failure hints travel with the playable task so the Run
+   * button can show the same line the server would. They are teaching text,
+   * not answer material: none of them names an input or an expected value. */
+  failureHints?: Partial<Record<FailureCategory, Localized>>;
+  pitfall?: FailureCategory;
   design?: {
     scenario: Localized;
     brief: Localized;

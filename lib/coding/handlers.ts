@@ -19,6 +19,7 @@ import { solutionFor } from './solutions';
 import { runInSandbox } from './sandbox';
 import { nodeTypeScriptChecker } from './ts-check-node';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
+import { classifyFailure, failureHint, jsonKind } from '../../shared/coding-failure';
 import { afterCodingPass } from '../github-garden';
 import {
   CODING_TASK_XP,
@@ -189,6 +190,31 @@ interface Graded {
   codeError: string | null;
   design: CodingVerdictResponse['design'];
   designReference: CodingVerdictResponse['designReference'];
+  failureHint?: CodingVerdictResponse['failureHint'];
+}
+
+/** The authored hint for the way this attempt failed, or null.
+ *
+ * Everything the classifier sees is either the learner's own output or a fact
+ * about the task's shape — the kind of an expected value, never the value, and
+ * never anything from a hidden test. What comes back is a category name and
+ * authored text. */
+function hintForFailure(
+  task: CodingTask,
+  graded: Pick<Graded, 'verdict' | 'results' | 'check' | 'codeError'> & { timedOut?: boolean },
+): CodingVerdictResponse['failureHint'] {
+  if (graded.verdict === 'passed') return null;
+  const tests = task.tests ?? [];
+  const category = classifyFailure({
+    timedOut: graded.verdict === 'timeout' || graded.timedOut === true,
+    threw: Boolean(graded.codeError),
+    typeErrors: Boolean(graded.check && (graded.check.codeErrors.length > 0 || graded.check.typeTests.some((one) => !one.pass))),
+    results: graded.results.map((one) => ({ pass: one.pass, actual: one.actual })),
+    edge: tests.map((one) => one.edge === true),
+    expectedKinds: tests.map((one) => jsonKind(JSON.stringify(one.expected) ?? null)),
+    pitfall: task.pitfall,
+  });
+  return failureHint(category, task.failureHints);
 }
 
 async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
@@ -222,7 +248,7 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
   if (verdict === 'passed' && hiddenTypeFailures > 0) verdict = 'failed';
   const hiddenPassed = (hiddenRun?.results.filter((r) => r.pass === true).length ?? 0) + (hiddenTypeTotal - hiddenTypeFailures);
   const hiddenTotal = hiddenTests.length + hiddenTypeTotal;
-  return {
+  const graded: Graded = {
     verdict,
     results: visible.results,
     hidden: hiddenTotal > 0 ? { passed: hiddenPassed, total: hiddenTotal } : null,
@@ -232,6 +258,7 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
     design: null,
     designReference: null,
   };
+  return { ...graded, failureHint: hintForFailure(task, { ...graded, timedOut: run.timedOut }) };
 }
 
 /**
@@ -263,7 +290,7 @@ async function gradeReact(task: CodingTask, code: string): Promise<Graded> {
     : run.timedOut
       ? 'timeout'
       : run.failed === 0 && run.total > 0 ? 'passed' : 'failed';
-  return {
+  const graded: Graded = {
     verdict,
     results,
     hidden: null,
@@ -273,6 +300,7 @@ async function gradeReact(task: CodingTask, code: string): Promise<Graded> {
     design: null,
     designReference: null,
   };
+  return { ...graded, failureHint: hintForFailure(task, { ...graded, timedOut: run.timedOut }) };
 }
 
 function gradeDesignTask(task: CodingTask, session: CodingSession, answers: DesignAnswer[] | undefined): Graded {
@@ -369,6 +397,7 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     codeError: graded.codeError,
     design: graded.design,
     designReference: graded.designReference,
+    failureHint: graded.failureHint ?? null,
     progress: recorded?.progress ?? null,
     firstPass: recorded?.firstPass ?? false,
     xpAwarded: recorded?.xpAwarded ?? 0,

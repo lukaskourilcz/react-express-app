@@ -4,6 +4,7 @@
 
 import type { CodingTrack, Localized, PlayableCodingTask } from './coding-catalog';
 import type { CallOutcome } from './coding-evaluate';
+import type { FailureCategory } from './coding-failure';
 import type { TypeCheckResult } from './coding-ts-check';
 
 export type CodingOutcome = 'passed' | 'failed' | 'error' | 'timeout';
@@ -65,6 +66,11 @@ export interface CodingVerdictResponse {
   /** System design: per step or drill, with the explanation once answered. */
   design: DesignStepVerdict[] | null;
   designReference: Localized | null;
+  /** Why this attempt failed, and the authored line about that kind of
+   * mistake. Null on a pass, and null when the only honest answer is "some
+   * checks did not pass" — the hint ladder answers that one. It never carries
+   * a hidden input, an expected value or a raw error. */
+  failureHint: { category: FailureCategory; body: Localized } | null;
   /** null for an anonymous run: nothing was recorded. */
   progress: CodingTaskProgress | null;
   firstPass: boolean;

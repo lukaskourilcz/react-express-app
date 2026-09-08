@@ -298,3 +298,25 @@
   .cd-verdict { animation: cdRise 0.25s ease-out both; }
   @keyframes cdRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 }
+
+/* Task resources: reference pages, always open, never a hint. */
+.cd-resources ul { list-style: none; margin: 10px 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.cd-resources li { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; }
+.cd-resources li a { grid-column: 1; font-weight: 650; }
+.cd-resources__source {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.cd-resources__blurb { grid-column: 1 / -1; font-size: 0.82rem; color: var(--color-text-secondary); }
+
+/* The failure-specific hint. Marked by an accent edge and its own label, not
+   by colour alone: the label says which kind of failure it is. */
+.cd-hint--failure {
+  border-left: 3px solid var(--brand-accent);
+  background: color-mix(in srgb, var(--brand-accent) 7%, transparent);
+}
