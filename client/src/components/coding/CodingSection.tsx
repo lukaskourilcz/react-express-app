@@ -18,6 +18,7 @@ import {
   TIERS,
   applyCodingFilters,
   hasActiveFilters,
+  isBrowseOnly,
   readFilters,
   writeFilters,
   type CodingFilterState,
@@ -228,6 +229,8 @@ export function CodingTrackScreen() {
   if (!track) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p><Link className="cd-btn" to="/coding">{t('coding.verdict.back')}</Link></div>;
   const done = tasks.filter((task) => passed.has(task.id)).length;
   const active = hasActiveFilters(filters);
+  // A technique chip narrows the ladder; a search flattens it into results.
+  const flat = active && !isBrowseOnly(filters);
   const tiers = [1, 2, 3, 4, 5].filter((tier) => filtered.some((task) => task.tier === tier)) as CodingTier[];
 
   return (
@@ -265,7 +268,7 @@ export function CodingTrackScreen() {
         </p>
       )}
 
-      {active
+      {flat
         ? filtered.length > 0 && (
           <ul className="cd-rows" aria-label={t('coding.filter.results', { n: filtered.length })}>
             {filtered.map((task) => <TaskRow key={task.id} task={task} status={statusOf(task)} saved={savedIds.has(task.id)} />)}
@@ -321,7 +324,12 @@ function CodingFilterBar({
       </div>
 
       <div className="cd-chips" role="group" aria-label={t('coding.techniques')}>
-        <button type="button" className="cd-chip" aria-pressed={!filters.group} onClick={() => onChange({ group: null })}>{t('coding.techniques.all')}</button>
+        {/* Not a toggle: it clears the technique filter. `aria-pressed` on a
+            control that cannot be un-pressed by activating it tells a screen
+            reader something the control does not do. */}
+        <button type="button" className="cd-chip" disabled={filters.group === null} onClick={() => onChange({ group: null })}>
+          {t('coding.techniques.all')}
+        </button>
         {groups.map((g) => (
           <button key={g} type="button" className="cd-chip" aria-pressed={filters.group === g} onClick={() => onChange({ group: filters.group === g ? null : g })}>
             {t(`coding.group.${g}` as never)}
@@ -355,11 +363,18 @@ function CodingFilterBar({
 
       {signedIn && (
         <div className="cd-chips" role="group" aria-label={t('coding.filter.status')}>
-          {(['all', 'open', 'passed', 'due', 'saved'] as const).map((value) => (
-            <button key={value} type="button" className="cd-chip" aria-pressed={filters.status === value} onClick={() => onChange({ status: value })}>
-              {value === 'all' ? t('coding.filter.all')
-                : value === 'saved' ? t('coding.library.saved')
-                : t(`coding.status.${value}` as never)}
+          <button type="button" className="cd-chip" disabled={filters.status === 'all'} onClick={() => onChange({ status: 'all' })}>
+            {t('coding.filter.all')}
+          </button>
+          {(['open', 'passed', 'due', 'saved'] as const).map((value) => (
+            <button
+              key={value}
+              type="button"
+              className="cd-chip"
+              aria-pressed={filters.status === value}
+              onClick={() => onChange({ status: filters.status === value ? 'all' : value })}
+            >
+              {value === 'saved' ? t('coding.library.saved') : t(`coding.status.${value}` as never)}
             </button>
           ))}
         </div>

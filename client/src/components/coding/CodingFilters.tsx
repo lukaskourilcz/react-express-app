@@ -63,7 +63,10 @@ export function writeFilters(previous: URLSearchParams, next: CodingFilterState)
     if (value === null || value === '' || value === 'all') params.delete(key);
     else params.set(key, value);
   };
-  set('q', next.q.trim());
+  // Not trimmed: the space between two words is a keystroke like any other,
+  // and trimming it away as the learner types makes a two-word search
+  // impossible. A query that is only whitespace is no filter at all.
+  set('q', next.q.trim() === '' ? null : next.q);
   set('group', next.group);
   set('status', next.status);
   set('tier', next.tier === null ? null : String(next.tier));
@@ -77,6 +80,18 @@ export function writeFilters(previous: URLSearchParams, next: CodingFilterState)
 export const hasActiveFilters = (state: CodingFilterState): boolean =>
   state.q.trim() !== '' || state.group !== null || state.status !== 'all' || state.tier !== null ||
   state.duration !== null || state.format !== null || state.topic !== null || state.collection !== null;
+
+/**
+ * True when the only thing narrowing the list is which technique or track it
+ * covers. Those read the ladder in place — the tier sections and the sentence
+ * explaining why a tier is closed still belong on screen, and a locked task is
+ * still listed with its reason, exactly as it is with no filter at all.
+ * Everything else is the learner asking to be shown one task, which is a flat
+ * list of what they can actually start.
+ */
+export const isBrowseOnly = (state: CodingFilterState): boolean =>
+  hasActiveFilters(state) && state.q.trim() === '' && state.status === 'all' &&
+  state.tier === null && state.duration === null && state.format === null && state.collection === null;
 
 const durationOf = (minutes: number): CodingDurationFilter =>
   minutes <= 10 ? 'short' : minutes <= 20 ? 'medium' : 'long';
@@ -103,7 +118,7 @@ export interface CodingFilterInputs {
 export function applyCodingFilters(input: CodingFilterInputs): CodingTaskSummary[] {
   const { state, lang, groupTags, savedIds, collectionIds, debugIds, statusOf } = input;
   const needle = fold(state.q.trim());
-  const searching = needle !== '' || hasActiveFilters(state);
+  const searching = hasActiveFilters(state) && !isBrowseOnly(state);
   return input.tasks.filter((task) => {
     const status = statusOf(task);
     if (searching && status === 'locked') return false;

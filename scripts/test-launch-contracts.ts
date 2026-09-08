@@ -831,6 +831,16 @@ async function main() {
   assert.match(workbenchSource, /role="separator"/, 'the splitter must be a real separator');
   assert.match(workbenchSource, /aria-valuenow=\{layout\.split\}/, 'the splitter must report its position');
   assert.match(workbenchSource, /event\.key === 'ArrowLeft'/, 'the splitter must be keyboard operable');
+  // A col-resize cursor promises a drag; the separator has to answer one.
+  assert.match(workbenchSource, /onPointerDown=/, 'the splitter must be draggable');
+  assert.match(workbenchSource, /setPointerCapture/, 'a drag must survive the pointer running ahead of the separator');
+  const codingCss = readSource(join(process.cwd(), 'client/src/coding/Coding.css'), 'utf8');
+  assert.match(codingCss, /\.cd-pane\[hidden\] \{ display: none; \}/, 'focus mode must actually hide the brief');
+  assert.match(codingCss, /\.cd-splitter \{[^}]*width: 24px/, 'the splitter needs a pointer target, not a hairline');
+  assert.match(codingCss, /\.cd-panel--preview \{ max-height: none/, 'the live preview must not be trapped in a scroll box');
+  assert.doesNotMatch(codingCss, /data-focus/, 'focus mode must not move a split the separator still reports');
+  const mediaSource = readSource(join(process.cwd(), 'client/src/lib/useMediaQuery.ts'), 'utf8');
+  assert.match(mediaSource, /any-pointer: fine/, 'zooming a desktop page must not withhold the editor');
   assert.match(workbenchSource, /panelRefs\.current\[tab\]\?\.focus\(\)/, 'focus must land on the result after grading');
 
   /* ── the shop ships closed until it is configured (#167, #169, #171) ── */

@@ -137,6 +137,16 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const compact = useIsCompactPractice();
   const [layout, setLayout] = useState<WorkbenchLayout>(readLayout);
   useEffect(() => { writeJSON(LAYOUT_KEY, layout); }, [layout]);
+  // The splitter shows a col-resize cursor, so it has to answer a drag as well
+  // as the arrow keys. Pointer capture keeps the move and up events coming to
+  // the separator even when the pointer runs ahead of it.
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const dragTo = useCallback((clientX: number) => {
+    const box = gridRef.current?.getBoundingClientRect();
+    if (!box || box.width === 0) return;
+    setLayout((prev) => ({ ...prev, split: clampSplit(((clientX - box.left) / box.width) * 100) }));
+  }, []);
   // Saving is a reading-list action (issue #157): it keeps the challenge in the
   // learner's library and changes nothing about what they may start.
   const library = useCodingLibrary(signedIn);
@@ -587,8 +597,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         </button>
       </div>
       <div
+        ref={gridRef}
         className="cd-workbench__grid"
-        data-focus={layout.focus ? 'on' : undefined}
         style={{ ['--cd-split' as string]: `${layout.split}%` }}
       >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
@@ -762,7 +772,23 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           aria-valuenow={layout.split}
           aria-valuemin={MIN_SPLIT}
           aria-valuemax={MAX_SPLIT}
+          data-dragging={dragging ? 'on' : undefined}
           tabIndex={0}
+          onPointerDown={(event) => {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            setDragging(true);
+            dragTo(event.clientX);
+          }}
+          onPointerMove={(event) => { if (dragging) dragTo(event.clientX); }}
+          onPointerUp={(event) => {
+            if (!dragging) return;
+            setDragging(false);
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+          }}
+          onPointerCancel={() => setDragging(false)}
+          onDoubleClick={() => setLayout((prev) => ({ ...prev, split: DEFAULT_SPLIT }))}
           onKeyDown={(event) => {
             const step = event.key === 'ArrowLeft' ? -SPLIT_STEP : event.key === 'ArrowRight' ? SPLIT_STEP : 0;
             if (step !== 0) {
@@ -809,7 +835,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               ref={(node) => { panelRefs.current[one.key] = node; }}
               id={`${baseId}-panel-${one.key}`}
               aria-labelledby={`${baseId}-tab-${one.key}`}
-              className="cd-panel"
+              className={one.key === 'preview' ? 'cd-panel cd-panel--preview' : 'cd-panel'}
               hidden={tab !== one.key}
             >
               {one.key === 'results' && renderResults()}
