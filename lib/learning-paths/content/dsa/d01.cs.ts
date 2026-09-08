@@ -34,6 +34,10 @@ export const DSA_D01_CS: ModuleCs = {
         },
         { caption: 'Dva cykly za sebou: 2n kroků, což je pořád lineární rodina.' },
         {
+          caption: 'Dva průchody nad stejným seznamem, s kroky spočítanými místo změřenými.',
+          note: 'Zdvojnásob vstup a počet se zdvojnásobí: to je lineární růst. Změň seznamy a zkus, jestli to platí dál.',
+        },
+        {
           body:
             'Dva průchody za sebou stojí 2n kroků a 2n je konstantní násobek n, takže třída je O(n). Konstanty a členy nižšího řádu odpadají, protože s rostoucím n přestávají hrát roli: n² + 500n + 9000 je O(n²) a pro dost velké n je těch 500n zaokrouhlovací chyba vedle n².',
         },

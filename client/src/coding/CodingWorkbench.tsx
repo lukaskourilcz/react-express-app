@@ -19,7 +19,7 @@ import { useIsNarrowForEditor } from '../lib/useMediaQuery';
 import { SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint } from '../../../shared/coding-failure';
 import { revealCoding, submitCoding, useCodingApproaches } from './api';
-import { CODING_TIERS, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
+import { CODING_TIERS, formatOf, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import type { CodingLockReason, CodingVerdictResponse } from '../../../shared/coding-api';
 import './Coding.css';
 
@@ -655,10 +655,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               <h2 id={`${baseId}-title`}>{L(task.title)}</h2>
               <div className="cd-pane__meta">
                 <span>{t('coding.minutes', { n: task.estimatedMinutes })}</span>
+                {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
                 {task.focus.map((tag) => <span key={tag} className="cd-tag">{tag}</span>)}
               </div>
             </div>
             <Prompt className="cd-prompt" text={L(task.prompt)} />
+            {formatOf(task) === 'debug' && <p className="cd-note">{t('coding.format.debugHint')}</p>}
             {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{L(task.api.note)}</p>}
             {locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}
             {!signedIn && mode === 'section' && <p className="cd-note">{t('coding.signInHint')}</p>}

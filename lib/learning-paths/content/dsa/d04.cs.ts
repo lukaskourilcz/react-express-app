@@ -26,6 +26,10 @@ export const DSA_D04_CS: ModuleCs = {
         },
         { caption: 'Zásobník nad polem: `push` i `pop` pracují na konci a žádný další prvek se nehne.' },
         {
+          caption: 'Zásobník shora, prohnaný až k prázdnému případu.',
+          note: 'Změň, co pop vrátí u prázdného zásobníku, a rozhodni, kterou odpověď bys radši ladil ve tři ráno.',
+        },
+        {
           caption: 'Tři vložení a pak dvě odebrání. Buňky jdou zdola nahoru, takže nejpravější buňka je vrchol zásobníku.',
           notes: [
             'push(\'A\') vloží A do prázdného zásobníku. Je to jediná hodnota, takže je zároveň vrcholem.',

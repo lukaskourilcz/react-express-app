@@ -33,6 +33,9 @@ export type LessonSectionSource =
   | { kind: 'code'; language: string; code: string; caption: string }
   | { kind: 'table'; caption: string; headers: string[]; rows: string[][] }
   | { kind: 'trace'; caption: string; trace: TraceSource }
+  /** A snippet the learner may change and run. Exploration only: nothing about
+   * it is graded or recorded, which the note says in the learner's language. */
+  | { kind: 'example'; language: string; code: string; caption: string; note: string }
   | { kind: 'callout'; tone: 'note' | 'warning'; body: string };
 
 export interface TraceSource {
@@ -63,6 +66,8 @@ export interface LessonCs {
   sections: {
     body?: string;
     caption?: string;
+    /** The example's exploration note. */
+    note?: string;
     headers?: string[];
     rows?: string[][];
     notes?: string[];
@@ -320,6 +325,14 @@ export function mergeLessonSection(section: LessonSectionSource, cs: LessonCs['s
       return { kind: 'callout', tone: section.tone, body: loc(section.body, cs?.body) };
     case 'code':
       return { kind: 'code', language: section.language, code: section.code, caption: loc(section.caption, cs?.caption) };
+    case 'example':
+      return {
+        kind: 'example',
+        language: section.language,
+        code: section.code,
+        caption: loc(section.caption, cs?.caption),
+        note: loc(section.note, cs?.note),
+      };
     case 'table':
       return {
         kind: 'table',

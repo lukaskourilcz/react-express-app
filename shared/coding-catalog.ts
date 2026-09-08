@@ -14,6 +14,19 @@ export type CodingTrack = 'javascript' | 'typescript' | 'react' | 'system-design
 export type CodingTier = 1 | 2 | 3 | 4 | 5;
 export type CodingVerify = 'tests' | 'checklist' | 'guided' | 'drill';
 
+/** What the learner is asked to do, as opposed to how it is graded.
+ *
+ * `implement` writes code that is not there; `debug` starts from code that is
+ * there and wrong. Both are usually graded by tests, so this is a separate
+ * axis from `CodingVerify` — a filter, a label and an authoring decision, not a
+ * second grading path. Absent means `implement`, so every existing task keeps
+ * its meaning without being edited. */
+export const CODING_FORMATS = ['implement', 'debug'] as const;
+export type CodingFormat = (typeof CODING_FORMATS)[number];
+export const isCodingFormat = (value: unknown): value is CodingFormat =>
+  typeof value === 'string' && (CODING_FORMATS as readonly string[]).includes(value);
+export const formatOf = (task: { format?: CodingFormat }): CodingFormat => task.format ?? 'implement';
+
 export interface Localized {
   en: string;
   cs: string;
@@ -133,6 +146,8 @@ export interface CodingTask {
   hints: LocalizedList;
   approach?: LocalizedList;
   verify: CodingVerify;
+  /** What the learner does. Absent means `implement`. */
+  format?: CodingFormat;
   tests?: CallTest[];
   typeTests?: TypeTest[];
   /** React: Testing Library suite source for `/App.test.js`. */
@@ -164,6 +179,8 @@ export interface CodingTaskSummary {
   focus: string[];
   title: Localized;
   verify: CodingVerify;
+  /** Absent means `implement`; the section reads it to offer a format filter. */
+  format?: CodingFormat;
   estimatedMinutes: number;
 }
 

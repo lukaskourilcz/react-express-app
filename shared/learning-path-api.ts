@@ -152,6 +152,18 @@ export interface LessonBody {
 export type LessonSection =
   | { kind: 'prose'; body: Localized }
   | { kind: 'code'; language: string; code: string; caption: Localized }
+  /** A snippet the learner can change and run.
+   *
+   * Exploration, and labelled as such: nothing here is graded, nothing is
+   * recorded, and running it proves nothing. It exists because a paragraph
+   * about what a loop does is weaker than changing the loop and watching the
+   * output change. The code runs in the same bounded, isolated runner the
+   * Run button uses — never in the page, never on the server.
+   *
+   * On a narrow screen the editor is not offered: the snippet stays readable
+   * and runnable, and the typing waits for a keyboard, exactly as a coding
+   * task does. */
+  | { kind: 'example'; language: string; code: string; caption: Localized; note: Localized }
   | { kind: 'table'; caption: Localized; headers: LocalizedList; rows: LocalizedList[] }
   | { kind: 'trace'; caption: Localized; trace: TraceSpec }
   | { kind: 'callout'; tone: 'note' | 'warning'; body: Localized };

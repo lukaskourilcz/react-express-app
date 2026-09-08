@@ -103,6 +103,30 @@ export const DSA_D07: ModuleSource = {
           caption: 'The whole algorithm: read, compare, return on a match, and -1 when the walk runs out.',
         },
         {
+          kind: 'example',
+          language: 'javascript',
+          code: `const sorted = [1, 4, 7, 9, 12, 15, 21, 30, 44, 51];
+
+const binarySearch = (values, target) => {
+  let comparisons = 0;
+  let low = 0;
+  let high = values.length - 1;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    comparisons += 1;
+    if (values[mid] === target) return { index: mid, comparisons };
+    if (values[mid] < target) low = mid + 1;
+    else high = mid - 1;
+  }
+  return { index: -1, comparisons };
+};
+
+console.log("found 44:", binarySearch(sorted, 44));
+console.log("missing 43:", binarySearch(sorted, 43));`,
+          caption: 'Binary search over ten sorted values, counting the comparisons it actually makes.',
+          note: 'Double the length of the list and see how little the comparison count moves. Then unsort it and watch the answer stop being trustworthy.',
+        },
+        {
           kind: 'prose',
           body:
             'The `return` inside the loop is doing real work. Without it the scan reads every element on every call, which turns a lucky hit at index 0 into n reads. With it, the cost depends on where the target sits: one read when it is first, n reads when it is last or absent.',

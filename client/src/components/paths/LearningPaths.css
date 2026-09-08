@@ -539,3 +539,31 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+/* Interactive lesson examples. Exploration, not assessment: the note under
+   each one says so, and nothing about them is recorded. */
+.lp-example { display: flex; flex-direction: column; gap: 8px; }
+.lp-example__editor {
+  width: 100%;
+  min-height: 90px;
+  padding: 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background-surface);
+  color: var(--color-text-primary);
+  font: 0.85rem/1.5 var(--font-family-mono, ui-monospace, monospace);
+  resize: vertical;
+  tab-size: 2;
+}
+.lp-example__editor:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+.lp-example__actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.lp-example__output {
+  margin: 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--color-background-muted);
+  font: 0.82rem/1.5 var(--font-family-mono, ui-monospace, monospace);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+.lp-example__note { margin: 0; font-size: 0.78rem; color: var(--color-text-secondary); }

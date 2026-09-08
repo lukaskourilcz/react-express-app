@@ -8,6 +8,8 @@
 // a reduced-motion preference.
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { runCodeTests } from '../../coding/runner/run-tests';
+import { useIsNarrowForEditor } from '../../lib/useMediaQuery';
 import { useLanguage, useT } from '../../i18n/LanguageContext';
 import type { LessonBody as LessonBodyDto, LessonSection, TraceSpec } from '../../../../shared/learning-path-api';
 import type { Localized, LocalizedList } from '../../../../shared/learning-paths';
@@ -241,7 +243,85 @@ function Section({ section }: { section: LessonSection }) {
     }
     case 'trace':
       return <TracePlayer trace={section.trace} caption={loc(section.caption)} />;
+    case 'example':
+      return <InteractiveExample section={section} />;
   }
+}
+
+/**
+ * A snippet the learner can change and run.
+ *
+ * Exploration, and it says so: nothing is graded, nothing is recorded, and
+ * running it proves nothing about mastery. It exists because changing a loop
+ * and watching the output change teaches more than a paragraph about loops.
+ *
+ * The code runs in the same bounded, isolated worker the Run button uses —
+ * never in the page itself and never on the server. On a narrow screen the
+ * editor is not offered at all: the snippet stays readable and runnable, and
+ * the typing waits for a keyboard, the same policy a coding task follows.
+ */
+function InteractiveExample({ section }: { section: Extract<LessonSection, { kind: 'example' }> }) {
+  const t = useT();
+  const loc = useLocalized();
+  const narrow = useIsNarrowForEditor();
+  const [code, setCode] = useState(section.code);
+  const [output, setOutput] = useState<string[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
+  const labelId = useId();
+
+  const run = useCallback(async () => {
+    setRunning(true);
+    setError(null);
+    try {
+      const outcome = await runCodeTests({ track: 'javascript', code, tests: [], grade: false });
+      setOutput(outcome.logs);
+      setError(outcome.codeError);
+    } finally {
+      setRunning(false);
+    }
+  }, [code]);
+
+  return (
+    <figure className="lp-figure lp-example">
+      <figcaption id={labelId}>{loc(section.caption)}</figcaption>
+      {narrow ? (
+        <pre className="lp-code"><code>{code}</code></pre>
+      ) : (
+        <>
+          <label className="lp-visually-hidden" htmlFor={`${labelId}-editor`}>{loc(section.caption)}</label>
+          <textarea
+            id={`${labelId}-editor`}
+            className="lp-example__editor"
+            spellCheck={false}
+            rows={Math.min(16, code.split('\n').length + 1)}
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+          />
+        </>
+      )}
+      <div className="lp-example__actions">
+        <button type="button" className="lp-btn" disabled={running} onClick={() => void run()}>
+          {running ? t('paths.example.running') : t('paths.example.run')}
+        </button>
+        <button
+          type="button"
+          className="lp-btn lp-btn--quiet"
+          disabled={running || code === section.code}
+          onClick={() => { setCode(section.code); setOutput(null); setError(null); }}
+        >
+          {t('paths.example.reset')}
+        </button>
+      </div>
+      {error && <p className="lp-notice lp-notice--error" role="alert">{error}</p>}
+      {output !== null && !error && (
+        <pre className="lp-example__output" role="status" aria-live="polite">
+          {output.length > 0 ? output.join('\n') : t('paths.example.noOutput')}
+        </pre>
+      )}
+      <p className="lp-example__note">{loc(section.note)}</p>
+    </figure>
+  );
 }
 
 export function LessonView({ lesson }: { lesson: LessonBodyDto }) {

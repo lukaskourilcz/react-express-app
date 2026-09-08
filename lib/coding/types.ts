@@ -7,11 +7,13 @@ import type {
   CodingTask,
   CodingTier,
   CodingTrack,
+  CodingFormat,
   CodingVerify,
   DesignDrillFormat,
   Localized,
   LocalizedList,
 } from '../../shared/coding-catalog';
+import type { FailureCategory } from '../../shared/coding-failure';
 
 export interface SourceCallTest {
   call: string;
@@ -64,6 +66,15 @@ export interface CodingTaskSource {
   hints: string[];
   approach?: string[];
   verify: CodingVerify;
+  /** What the learner does. Absent means `implement`. */
+  format?: CodingFormat;
+  /** Authored hints for the way this task is usually got wrong. Written here
+   * in both languages, because a hint about a misconception rarely translates
+   * word for word from an English source line. */
+  failureHints?: Partial<Record<FailureCategory, Localized>>;
+  /** The mistake this task is built around, used only when a run proves
+   * nothing more specific. */
+  pitfall?: FailureCategory;
   tests?: SourceCallTest[];
   typeTests?: SourceTypeTest[];
   suite?: string;
@@ -133,6 +144,9 @@ export function mergeTask(source: CodingTaskSource, cs: CodingTaskCs | undefined
     hints: { en: source.hints, cs: cs?.hints ?? [] },
     ...(source.approach ? { approach: locList(source.approach, cs?.approach) } : {}),
     verify: source.verify,
+    ...(source.format ? { format: source.format } : {}),
+    ...(source.failureHints ? { failureHints: source.failureHints } : {}),
+    ...(source.pitfall ? { pitfall: source.pitfall } : {}),
     estimatedMinutes: source.estimatedMinutes,
   };
   if (source.tests) {

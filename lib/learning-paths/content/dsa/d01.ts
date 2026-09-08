@@ -82,6 +82,31 @@ export const DSA_D01: ModuleSource = {
           caption: 'Two loops, one after the other: 2n steps, which is still the linear family.',
         },
         {
+          kind: 'example',
+          language: 'javascript',
+          code: `// Count the steps rather than timing them.
+let steps = 0;
+const sumAndMax = values => {
+  let total = 0;
+  for (const value of values) { steps++; total += value; }
+
+  let largest = values[0];
+  for (const value of values) { steps++; if (value > largest) largest = value; }
+
+  return { total, largest };
+};
+
+sumAndMax([3, 9, 4, 1, 7]);
+console.log("n = 5 costs", steps, "steps");
+
+// Change the list below and watch the count follow it.
+steps = 0;
+sumAndMax([3, 9, 4, 1, 7, 2, 8, 6, 5, 0]);
+console.log("n = 10 costs", steps, "steps");`,
+          caption: 'Two passes over the same list, with the steps counted rather than timed.',
+          note: 'Double the input and the count doubles: that is what linear means. Change the lists and see whether it keeps holding.',
+        },
+        {
           kind: 'prose',
           body:
             'Two sequential passes cost 2n steps, and 2n is a constant multiple of n, so the class is O(n). Constants and lower-order terms fall away because they stop mattering as n grows: n² + 500n + 9000 is O(n²), and for a large enough n the 500n is a rounding error next to the n².',

@@ -21,6 +21,8 @@ import {
 } from '../shared/coding-catalog';
 import { docsFor } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
+import { formatOf } from '../shared/coding-catalog';
+import { runInSandbox } from '../lib/coding/sandbox';
 import { puzzleCoverage, puzzleFor } from '../lib/coding/puzzles';
 import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../shared/coding-puzzle';
 import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
@@ -257,6 +259,34 @@ async function main() {
     }
     assert.ok(puzzle.competencies.length > 0, `${id}: a puzzle must declare what it demonstrates`);
     assert.ok(puzzle.claim.en.length > 0 && puzzle.claim.cs.length > 0, `${id}: the claim needs EN and CS`);
+  }
+
+  // ── the debugging format (#163) ────────────────────────────────────────
+  // A debugging task must actually start from broken code: its starter has to
+  // fail its own visible tests, or the format is a label rather than an
+  // exercise. Each one also declares the misconception it is built around.
+  const debugTasks = CODING_TASKS.filter((task) => formatOf(task) === 'debug');
+  assert.ok(debugTasks.length >= 4, 'the debugging format needs an authored set, not one example');
+  for (const task of debugTasks) {
+    assert.equal(task.track, 'javascript', 'the first debugging set is JavaScript; extend this check when others land');
+    assert.ok((task.tests?.length ?? 0) >= 3, `${task.id}: a debugging task needs tests that pin the behaviour down`);
+    assert.ok(task.failureHints || task.pitfall, `${task.id}: a debugging task must name the misconception it teaches`);
+    for (const hint of Object.values(task.failureHints ?? {})) {
+      assert.ok(hint.en.length > 0 && hint.cs.length > 0, `${task.id}: failure hints need EN and CS`);
+    }
+    const solution = solutionFor(task.id);
+    assert.ok(solution, `${task.id}: a debugging task needs its reference repair`);
+    // The starter is wrong on purpose: running it against the task's own tests
+    // must fail. This is what separates a debugging task from a filled-in one.
+    const starterRun = await runInSandbox({
+      code: task.starter,
+      calls: (task.tests ?? []).map((one) => one.call),
+      expectations: (task.tests ?? []).map((one) => one.expected),
+    });
+    const starterPasses = !starterRun.codeError
+      && starterRun.results.length > 0
+      && starterRun.results.every((one) => one.pass === true);
+    assert.equal(starterPasses, false, `${task.id}: the broken starter must fail its own tests`);
   }
 
   console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);

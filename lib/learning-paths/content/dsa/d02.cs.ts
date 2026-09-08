@@ -31,6 +31,10 @@ export const DSA_D02_CS: ModuleCs = {
         },
         { caption: 'Dvě funkce, které vypíšou stejná čísla a o vstupu slibují pravý opak.' },
         {
+          caption: 'Totéž zdvojnásobení oběma způsoby, s výpisem toho, co se stane s předaným polem.',
+          note: 'Prohoď obě volání a uvidíš, jak druhé začíná tam, kde první skončilo.',
+        },
+        {
           body:
             'Pojmenuj, kterou z nich jsi napsal. `sortInPlace` a `sortedCopy` nestojí nic navíc a ušetří každému dalšímu čtenáři otevírání těla funkce. Funkce, která mění svůj argument, ho podle zvyklosti taky vrací — přesně to dělá `Array.prototype.reverse` i `Array.prototype.sort` — takže návratová hodnota je pohodlí, ne kopie.',
         },

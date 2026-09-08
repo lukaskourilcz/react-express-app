@@ -89,6 +89,26 @@ export const DSA_D02: ModuleSource = {
           caption: 'Two routines that print the same numbers and make opposite promises about the input.',
         },
         {
+          kind: 'example',
+          language: 'javascript',
+          code: `const source = [1, 2, 3];
+
+const doubleInPlace = values => {
+  for (let i = 0; i < values.length; i += 1) values[i] = values[i] * 2;
+  return values;
+};
+const doubled = values => values.map(value => value * 2);
+
+const copy = doubled(source);
+console.log("after copying, source is", source);
+
+const same = doubleInPlace(source);
+console.log("after in place, source is", source);
+console.log("and the returned array is the same object:", same === source);`,
+          caption: 'The same doubling done both ways, printing what happens to the array that was passed in.',
+          note: 'Reorder the two calls and see how the second one starts from what the first left behind.',
+        },
+        {
           kind: 'callout',
           tone: 'note',
           body:

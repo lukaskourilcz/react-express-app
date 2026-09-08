@@ -444,3 +444,6 @@
 /* Selected is marked by the border and the arrow, not by colour alone. */
 .cd-puzzle__line--on { border-color: var(--brand-accent); box-shadow: inset 3px 0 0 var(--brand-accent); }
 .cd-puzzle__line:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+/* The format tag reads differently from a technique tag: it says what you are
+   being asked to do, not what the task is about. */
+.cd-tag--format { border-color: var(--brand-accent); color: var(--brand-accent); }

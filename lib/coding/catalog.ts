@@ -24,10 +24,13 @@ import { TYPESCRIPT_LOOP_TASKS } from './tasks/typescript-loops';
 import { TYPESCRIPT_LOOP_TASKS_CS } from './tasks/typescript-loops.cs';
 import { REACT_LOOP_TASKS } from './tasks/react-loops';
 import { REACT_LOOP_TASKS_CS } from './tasks/react-loops.cs';
+import { JAVASCRIPT_DEBUG_TASKS } from './tasks/javascript-debug';
+import { JAVASCRIPT_DEBUG_TASKS_CS } from './tasks/javascript-debug.cs';
 
 const sources: { tasks: CodingTaskSource[]; cs: Record<string, CodingTaskCs> }[] = [
   { tasks: JAVASCRIPT_TASKS, cs: JAVASCRIPT_TASKS_CS },
   { tasks: JAVASCRIPT_LOOP_TASKS, cs: JAVASCRIPT_LOOP_TASKS_CS },
+  { tasks: JAVASCRIPT_DEBUG_TASKS, cs: JAVASCRIPT_DEBUG_TASKS_CS },
   { tasks: TYPESCRIPT_TASKS, cs: TYPESCRIPT_TASKS_CS },
   { tasks: TYPESCRIPT_LOOP_TASKS, cs: TYPESCRIPT_LOOP_TASKS_CS },
   { tasks: REACT_TASKS, cs: REACT_TASKS_CS },
@@ -76,6 +79,7 @@ export function summarize(task: CodingTask): CodingTaskSummary {
     focus: task.focus,
     title: task.title,
     verify: task.verify,
+    ...(task.format ? { format: task.format } : {}),
     estimatedMinutes: task.estimatedMinutes,
   };
 }

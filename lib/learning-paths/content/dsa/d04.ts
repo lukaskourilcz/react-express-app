@@ -103,6 +103,29 @@ export const DSA_D04: ModuleSource = {
           caption: 'A stack over an array: both `push` and `pop` work on the end, and no other element moves.',
         },
         {
+          kind: 'example',
+          language: 'javascript',
+          code: `const createStack = () => {
+  const items = [];
+  return {
+    push: value => { items.push(value); },
+    pop: () => (items.length === 0 ? null : items.pop()),
+    peek: () => (items.length === 0 ? null : items[items.length - 1]),
+    size: () => items.length,
+  };
+};
+
+const stack = createStack();
+stack.push("a");
+stack.push("b");
+console.log("peek", stack.peek(), "size", stack.size());
+console.log("pop", stack.pop());
+console.log("pop", stack.pop());
+console.log("pop on empty", stack.pop());`,
+          caption: 'The stack from above, driven far enough to reach the empty case.',
+          note: 'Change what pop returns when the stack is empty and decide which answer you would rather debug at three in the morning.',
+        },
+        {
           kind: 'trace',
           caption: 'Three pushes then two pops. Cells run bottom to top, so the rightmost cell is the top of the stack.',
           trace: {

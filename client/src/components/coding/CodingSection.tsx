@@ -19,6 +19,7 @@ import {
   CODING_SECTION_TRACKS,
   CODING_TECHNIQUE_GROUPS,
   CODING_TIERS,
+  formatOf,
   isCodingSectionTrack,
   isCodingTrack,
   isRetiredSectionTrack,
@@ -125,6 +126,7 @@ function TaskRow({ task, status, saved, onSave, saving }: {
       <span className="cd-row__meta">
         {task.level > 0 && <span>{t('coding.level', { n: task.level })}</span>}
         <span>{t('coding.minutes', { n: task.estimatedMinutes })}</span>
+        {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
         {task.focus.slice(0, 3).map((tag) => <span key={tag} className="cd-tag">{tag}</span>)}
       </span>
       <StatusText status={status} />
@@ -407,7 +409,10 @@ export function CodingTrackScreen() {
     if (duration === 'short' && task.estimatedMinutes > 10) return false;
     if (duration === 'medium' && (task.estimatedMinutes <= 10 || task.estimatedMinutes > 25)) return false;
     if (duration === 'long' && task.estimatedMinutes <= 25) return false;
-    if (format !== 'all' && task.verify !== format) return false;
+    // Format is what the learner does (write it, or fix it); verify is how it
+    // is graded. The filter offers both, because they answer different questions.
+    if (format === 'debug' && formatOf(task) !== 'debug') return false;
+    if (format !== 'all' && format !== 'debug' && task.verify !== format) return false;
     if (savedOnly && !savedIds.has(task.id)) return false;
     if (statusFilter === 'all') return true;
     const status = statusOf(task);

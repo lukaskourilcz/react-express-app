@@ -26,6 +26,10 @@ export const DSA_D07_CS: ModuleCs = {
         },
         { caption: 'Celý algoritmus: přečti, porovnej, při shodě vrať index a -1, když průchod dojde na konec.' },
         {
+          caption: 'Binární vyhledávání nad deseti seřazenými hodnotami, s počítáním skutečných porovnání.',
+          note: 'Zdvojnásob délku seznamu a uvidíš, jak málo se počet porovnání pohne. Pak ho rozházej a sleduj, jak odpověď přestane být spolehlivá.',
+        },
+        {
           body:
             '`return` uvnitř cyklu odvádí skutečnou práci. Bez něj přečte průchod při každém volání všechny prvky, takže se ze šťastného zásahu na indexu 0 stane n čtení. S ním závisí cena na tom, kde cíl leží: jedno čtení, když je první, a n čtení, když je poslední nebo tam vůbec není.',
         },
