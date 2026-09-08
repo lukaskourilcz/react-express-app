@@ -130,3 +130,47 @@ No XP was awarded or removed. No level completion was granted or revoked. No
 prerequisite became easier or harder to satisfy except where a plan stopped
 naming a retired topic and named its destination instead. Every learner's record
 is exactly what it was the day before.
+
+## HTML and CSS, rescoped rather than retired
+
+HTML and CSS are not going anywhere — but the two paths had grown into the same
+shape the retired sections had, for the same reason. HTML spent fifteen levels
+on tags, and CSS spent nine levels largely on one library's class vocabulary.
+Neither is what the browser actually decides.
+
+Both are now six levels of eight:
+
+| HTML | CSS |
+| --- | --- |
+| 1. Structure & Semantics | 1. Cascade, Inheritance & Selectors |
+| 2. Links, Buttons & Interaction | 2. Box Model, Flow & Overflow |
+| 3. Forms | 3. Flexbox |
+| 4. Images, Media & Responsive Delivery | 4. Grid & Responsive Layout |
+| 5. Real Content Structures | 5. Positioning & Stacking |
+| 6. Inspect & Repair | 6. Maintainable, Accessible Styling |
+
+Ninety-six authored questions, none carried over. The organising question in
+each is what the browser does with what you wrote: which element brings the
+keyboard behaviour, why the page jumps when an image lands, which rule won and
+why, what a stacking context is and what created one you did not ask for. Where
+a framework appears it appears as an example of a mechanism — the one Tailwind
+question is about `@theme` generating custom properties, not about class names.
+
+Accessibility is not a level. It is in the semantics level, the forms level, the
+media level, the tables level and the repair level, because that is where the
+decisions are made.
+
+The old `roadmap-questions-html.ts` and `roadmap-questions-css.ts` banks stay in
+the repository, unreferenced by any delivery path, until
+[#176](https://github.com/lukaskourilcz/react-express-app/issues/176)
+dispositions their items — the same treatment the retired banks got, and for the
+same reason.
+
+### A checkpoint that stopped lying
+
+A topic gets one checkpoint per five levels, and the last one was titled "Final
+Mastery Exam" whichever level it fell after. At six levels that put a "final"
+exam after level five with a level still to come. The title is now derived from
+whether the checkpoint actually ends the topic, which also corrects General —
+nineteen levels since the Testing Foundations levels joined it, with its last
+checkpoint after level fifteen.

@@ -14,8 +14,8 @@ import { reactSeedsB } from './roadmap-questions-react-b';
 import { nextSeeds } from './roadmap-questions-next';
 import { nodeSeeds } from './roadmap-questions-node';
 import { gitSeeds } from './roadmap-questions-git';
-import { htmlSeeds } from './roadmap-questions-html';
-import { cssSeeds } from './roadmap-questions-css';
+import { htmlCoreSeeds } from './roadmap-questions-html-core';
+import { cssCoreSeeds } from './roadmap-questions-css-core';
 import { dsaSeeds } from './roadmap-questions-dsa';
 import { algorithmsSeeds } from './roadmap-questions-algorithms';
 import { abbreviationsSeeds } from './roadmap-questions-abbreviations';
@@ -50,8 +50,12 @@ export const roadmapReactQuestions = buildRoadmap('rm-react', 'react', interleav
 export const roadmapNextQuestions = buildRoadmap('rm-next', 'nextjs', nextSeeds);
 export const roadmapNodeQuestions = buildRoadmap('rm-node', 'nodejs', nodeSeeds);
 export const roadmapGitQuestions = buildRoadmap('rm-git', 'git', gitSeeds);
-export const roadmapHtmlQuestions = buildRoadmap('rm-html', 'html', htmlSeeds);
-export const roadmapCssQuestions = buildRoadmap('rm-css', 'css', cssSeeds);
+// HTML and CSS were rescoped in #180: six levels each, aimed at what the
+// browser actually decides rather than at tag recall and one library's
+// vocabulary. The previous banks stay in the repository, unreferenced by any
+// delivery path, until the item-level audit (#176) dispositions them.
+export const roadmapHtmlQuestions = buildRoadmap('rm-html', 'html', htmlCoreSeeds);
+export const roadmapCssQuestions = buildRoadmap('rm-css', 'css', cssCoreSeeds);
 export const roadmapDsaQuestions = buildRoadmap('rm-dsa', 'dsa', dsaSeeds);
 export const roadmapAlgorithmsQuestions = buildRoadmap('rm-algorithms', 'algorithms', algorithmsSeeds);
 export const roadmapAbbreviationsQuestions = buildRoadmap('rm-abbr', 'abbreviations', abbreviationsSeeds);

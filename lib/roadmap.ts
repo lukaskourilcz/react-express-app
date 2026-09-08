@@ -222,15 +222,17 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'Branches', 'Merging', 'Remotes', 'Push & Pull', 'Undoing Changes',
     'Stashing', 'Rebasing', 'Tags & .gitignore', 'Collaboration & PRs', 'Advanced Git',
   ],
+  // Six levels each after #180. Accessibility runs through every HTML level
+  // rather than sitting at the end as a vocabulary test, and CSS spends its
+  // levels on the model the browser applies rather than on one library's
+  // vocabulary.
   html: [
-    'HTML Basics', 'Document Structure', 'Text Elements', 'Links & Images', 'Lists',
-    'Attributes', 'Forms: Inputs', 'Forms: Controls', 'Tables', 'Semantic HTML',
-    'Media', 'Metadata & Head', 'Accessibility', 'Entities & Special Characters', 'Advanced HTML',
+    'Structure & Semantics', 'Links, Buttons & Interaction', 'Forms',
+    'Images, Media & Responsive Delivery', 'Real Content Structures', 'Inspect & Repair',
   ],
   css: [
-    'How CSS Works', 'Selectors & Classes', 'The Box Model',
-    'Layout: Flexbox', 'Layout: Grid & Responsive', 'Custom Properties (--var)',
-    'Tailwind: Utility-First', 'Tailwind: Responsive & Custom', 'Tailwind vs CSS-in-JS',
+    'Cascade, Inheritance & Selectors', 'Box Model, Flow & Overflow', 'Flexbox',
+    'Grid & Responsive Layout', 'Positioning & Stacking', 'Maintainable, Accessible Styling',
   ],
   dsa: [
     'Complexity Basics', 'Big-O Notation', 'Arrays', 'Strings', 'Hash Tables',
@@ -618,11 +620,16 @@ export function topicLevels(topic: RoadmapTopic): RoadmapLevelMeta[] {
 /** Checkpoint metadata for one topic. */
 export function topicCheckpoints(topic: RoadmapTopic): RoadmapCheckpointMeta[] {
   const count = topicCheckpointCount(topic);
+  const levelCount = topicLevelCount(topic);
   return Array.from({ length: count }, (_, i) => {
     const n = i + 1;
+    const isFinal = n * LEVELS_PER_CHECKPOINT === levelCount;
     return {
       checkpoint: n,
-      title: n === count ? FINAL_CHECKPOINT_TITLE : CHECKPOINT_TITLES[i] ?? `Checkpoint ${n}`,
+      // "Final" only when the checkpoint really ends the topic. A topic whose
+      // level count is not a multiple of five has levels after its last
+      // checkpoint, and calling that one final would promise an end it is not.
+      title: isFinal ? FINAL_CHECKPOINT_TITLE : CHECKPOINT_TITLES[i] ?? `Checkpoint ${n}`,
       afterLevel: n * LEVELS_PER_CHECKPOINT,
       questionCount: QUESTIONS_PER_LEVEL * LEVELS_PER_CHECKPOINT, // 40
       passPct: CHECKPOINT_PASS,
@@ -691,13 +698,14 @@ export function buildLiveTopic(topic: RoadmapTopic, exists: (id: string) => bool
   const checkpoints: RoadmapCheckpointMeta[] = [];
   for (let n = 1; n <= checkpointCount; n++) {
     const afterLevel = n * LEVELS_PER_CHECKPOINT;
+    const isFinal = afterLevel === levelCount;
     let questionCount = 0;
     for (let l = afterLevel - LEVELS_PER_CHECKPOINT + 1; l <= afterLevel; l++) {
       questionCount += levelIds[l - 1].length;
     }
     checkpoints.push({
       checkpoint: n,
-      title: n === checkpointCount ? FINAL_CHECKPOINT_TITLE : CHECKPOINT_TITLES[n - 1] ?? `Checkpoint ${n}`,
+      title: isFinal ? FINAL_CHECKPOINT_TITLE : CHECKPOINT_TITLES[n - 1] ?? `Checkpoint ${n}`,
       afterLevel,
       questionCount,
       passPct: CHECKPOINT_PASS,
