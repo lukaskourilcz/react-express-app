@@ -320,3 +320,53 @@
   border-left: 3px solid var(--brand-accent);
   background: color-mix(in srgb, var(--brand-accent) 7%, transparent);
 }
+
+/* Saved challenges, collections, filters and short sessions. */
+.cd-row-item { display: flex; align-items: stretch; gap: 6px; }
+.cd-row-item .cd-row { flex: 1 1 auto; }
+.cd-save {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  align-self: center;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: 1.05rem;
+  cursor: pointer;
+}
+.cd-save:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
+.cd-save--on { color: var(--brand-accent); border-color: var(--brand-accent); }
+.cd-save:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+
+.cd-search { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 4px; }
+.cd-search input[type="search"] { flex: 1 1 220px; min-width: 0; }
+.cd-search input, .cd-search select {
+  min-height: 44px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+.cd-search input:focus-visible, .cd-search select:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+
+.cd-session, .cd-saved { margin: 18px 0; display: flex; flex-direction: column; gap: 8px; }
+.cd-saved__heading { margin: 12px 0 0; font-size: 0.95rem; }
+.cd-saved__row { display: flex; flex-direction: column; gap: 2px; }
+.cd-collections { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.cd-collections li { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.cd-collections__name { font-weight: 650; }
+.cd-collections__count { color: var(--color-text-secondary); font-size: 0.8rem; }
+.cd-skip-note {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 8px;
+  font: inherit;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}
+.cd-skip-note:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }

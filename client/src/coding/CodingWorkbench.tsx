@@ -13,6 +13,8 @@ import { runCodeTests, runPassed, type RunOutcome, type RunPhase } from './runne
 import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness';
 import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, type LadderRung } from './hint-ladder';
 import { taskResources } from '../../../shared/coding-docs';
+import { skipTask } from './practice';
+import { SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint } from '../../../shared/coding-failure';
 import { revealCoding, submitCoding } from './api';
 import { CODING_TIERS, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
@@ -97,6 +99,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const [solution, setSolution] = useState<string | null>(null);
   const [checked, setChecked] = useState<boolean[]>(() => (task.checklist?.en ?? []).map(() => false));
   const [formatError, setFormatError] = useState<string | null>(null);
+  const [skipping, setSkipping] = useState(false);
+  const [skipReason, setSkipReason] = useState<SkipReason>('later');
+  const [skipNote, setSkipNote] = useState('');
+  const [skipResult, setSkipResult] = useState<{ required: boolean; next: string | null } | null>(null);
+  const [skipError, setSkipError] = useState<string | null>(null);
   const startedAt = useRef(Date.now());
   const harness = useReactHarness();
 
@@ -533,7 +540,67 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                     {t('coding.giveUp')}
                   </button>
                 )}
+                {signedIn && mode === 'section' && !skipResult && (
+                  <button type="button" className="cd-btn cd-btn--quiet" onClick={() => setSkipping((open) => !open)} aria-expanded={skipping}>
+                    {t('coding.skip.action')}
+                  </button>
+                )}
               </div>
+
+              {/* Skipping records why, and nothing else. It is not a pass: a
+                  task the learner's level requires stays required and says so,
+                  and nothing here unlocks anything. */}
+              {skipping && !skipResult && (
+                <div className="cd-note" role="group" aria-label={t('coding.skip.title')}>
+                  <p style={{ margin: '0 0 8px', fontWeight: 650 }}>{t('coding.skip.title')}</p>
+                  <div className="cd-chips">
+                    {SKIP_REASONS.map((reason) => (
+                      <button
+                        key={reason}
+                        type="button"
+                        className="cd-chip"
+                        aria-pressed={skipReason === reason}
+                        onClick={() => setSkipReason(reason)}
+                      >
+                        {t(`coding.skip.${reason}` as never)}
+                      </button>
+                    ))}
+                  </div>
+                  <label className="cd-editor-label" htmlFor={`${baseId}-skip-note`}>{t('coding.skip.noteLabel')}</label>
+                  <textarea
+                    id={`${baseId}-skip-note`}
+                    className="cd-skip-note"
+                    maxLength={280}
+                    rows={2}
+                    value={skipNote}
+                    onChange={(event) => setSkipNote(event.target.value)}
+                  />
+                  <div className="cd-actions">
+                    <button
+                      type="button"
+                      className="cd-btn cd-btn--primary"
+                      onClick={() => {
+                        setSkipError(null);
+                        void skipTask({ taskId: task.id, reason: skipReason, note: skipNote.trim() || undefined })
+                          .then((answer) => { setSkipResult({ required: answer.required, next: answer.next }); setSkipping(false); })
+                          .catch(() => setSkipError(t('coding.skip.failed')));
+                      }}
+                    >
+                      {t('coding.skip.confirm')}
+                    </button>
+                    <button type="button" className="cd-btn" onClick={() => setSkipping(false)}>{t('coding.skip.cancel')}</button>
+                  </div>
+                  {skipError && <p className="cd-note cd-note--error" role="alert">{skipError}</p>}
+                </div>
+              )}
+              {skipResult && (
+                <div className="cd-note" role="status">
+                  <p style={{ margin: '0 0 8px' }}>{t(skipResult.required ? 'coding.skip.required' : 'coding.skip.optional')}</p>
+                  {skipResult.next && (
+                    <a className="cd-btn" href={`/coding/${task.track}/${skipResult.next}`}>{t('coding.skip.next')}</a>
+                  )}
+                </div>
+              )}
               <p id={`${baseId}-hint-note`} className="cd-shortcuts">
                 {!attemptReady && nextRung ? t('coding.hintLocked') : !canGiveUp(taken, rungs.length) && !solution ? t('coding.giveUpLocked', { n: giveUpAfter(rungs.length) }) : ''}
               </p>

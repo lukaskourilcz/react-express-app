@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { ApiError } from '../../lib/api';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
 import { readString, removeStored, writeString } from '../../lib/storage';
@@ -11,6 +12,8 @@ import { WaterlineProgress } from '../SharkFin';
 import { CodingWorkbench } from '../../coding/CodingWorkbench';
 import { DesignRunner } from '../../coding/DesignRunner';
 import { codingKeys, saveCodingDraft, useCodingProgress, useCodingTask } from '../../coding/api';
+import { useBookmarks, useSaveChallenge, usePracticeSession, useStartSession, useAdvanceSession } from '../../coding/practice';
+import { PRACTICE_SESSION_MINUTES } from '../../../../shared/coding-api';
 import { CODING_INDEX } from '../../../../shared/coding-index';
 import {
   CODING_SECTION_TRACKS,
@@ -87,7 +90,33 @@ function StatusText({ status }: { status: Status }) {
   return <span className={`cd-row__status cd-status--${status}`}><span aria-hidden>{glyph}</span>{t(`coding.status.${status}` as never)}</span>;
 }
 
-function TaskRow({ task, status }: { task: CodingTaskSummary; status: Status }) {
+/** A star that saves a challenge for later. Saving records interest, never
+ * access: a locked item stays in the list with its explanation and still
+ * refuses to open. */
+function SaveButton({ taskId, saved, onToggle, busy }: { taskId: string; saved: boolean; onToggle: (next: boolean) => void; busy: boolean }) {
+  const { t } = useLanguage();
+  return (
+    <button
+      type="button"
+      className={`cd-save${saved ? ' cd-save--on' : ''}`}
+      aria-pressed={saved}
+      disabled={busy}
+      title={t(saved ? 'coding.saved.remove' : 'coding.saved.add')}
+      onClick={(event) => { event.preventDefault(); event.stopPropagation(); onToggle(!saved); }}
+    >
+      <span aria-hidden>{saved ? '★' : '☆'}</span>
+      <span className="cd-visually-hidden">{t(saved ? 'coding.saved.remove' : 'coding.saved.add', { id: taskId })}</span>
+    </button>
+  );
+}
+
+function TaskRow({ task, status, saved, onSave, saving }: {
+  task: CodingTaskSummary;
+  status: Status;
+  saved?: boolean;
+  onSave?: (taskId: string, next: boolean) => void;
+  saving?: boolean;
+}) {
   const { t, lang } = useLanguage();
   const locked = status === 'locked';
   const inner = (
@@ -101,9 +130,180 @@ function TaskRow({ task, status }: { task: CodingTaskSummary; status: Status }) 
       <StatusText status={status} />
     </>
   );
-  return locked
-    ? <li><div className="cd-row" aria-disabled="true">{inner}</div></li>
-    : <li><Link className="cd-row" to={`/coding/${task.track}/${task.id}`}>{inner}</Link></li>;
+  const save = onSave
+    ? <SaveButton taskId={task.id} saved={saved === true} busy={saving === true} onToggle={(next) => onSave(task.id, next)} />
+    : null;
+  return (
+    <li className="cd-row-item">
+      {locked
+        ? <div className="cd-row" aria-disabled="true">{inner}</div>
+        : <Link className="cd-row" to={`/coding/${task.track}/${task.id}`}>{inner}</Link>}
+      {save}
+    </li>
+  );
+}
+
+
+/** A short session: pick how long you have, get a queue of work you can already
+ * open. The scheduler is the existing one — review that is due comes first,
+ * then new work — so this reorders practice rather than widening it. Times are
+ * estimates and the panel says so. */
+function PracticeSessionPanel({ signedIn }: { signedIn: boolean }) {
+  const { t, lang } = useLanguage();
+  const session = usePracticeSession(signedIn);
+  const start = useStartSession();
+  const advance = useAdvanceSession();
+  const active = session.data?.session ?? null;
+  const [error, setError] = useState<string | null>(null);
+
+  if (!signedIn) return null;
+
+  const current = active && active.position < active.queue.length ? active.queue[active.position] : null;
+  const currentTask = current ? CODING_INDEX.find((task) => task.id === current) : null;
+
+  const begin = (minutes: (typeof PRACTICE_SESSION_MINUTES)[number]) => {
+    setError(null);
+    start.mutate({ minutes }, {
+      onError: (cause) => setError(cause instanceof ApiError && cause.code === 'nothing_eligible'
+        ? t('coding.session.nothing')
+        : t('coding.session.failed')),
+    });
+  };
+
+  return (
+    <section className="cd-session" aria-label={t('coding.session.title')}>
+      <h2 className="ss-kicker">{t('coding.session.title')}</h2>
+      {active && currentTask ? (
+        <div className="cd-session__active">
+          <p>
+            {t('coding.session.progress', { done: active.position, total: active.queue.length })}
+            {' · '}
+            {t('coding.session.estimate', { n: active.estimatedMinutes })}
+          </p>
+          <div className="cd-actions">
+            <Link className="cd-btn cd-btn--primary" to={`/coding/${currentTask.track}/${currentTask.id}`}>
+              {t('coding.session.continue', { title: currentTask.title[lang] || currentTask.title.en })}
+            </Link>
+            <button
+              type="button"
+              className="cd-btn cd-btn--quiet"
+              disabled={advance.isPending}
+              onClick={() => advance.mutate({ sessionId: active.sessionId, status: 'abandoned' })}
+            >
+              {t('coding.session.end')}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="cd-actions">
+          {PRACTICE_SESSION_MINUTES.map((minutes) => (
+            <button key={minutes} type="button" className="cd-btn" disabled={start.isPending} onClick={() => begin(minutes)}>
+              {t('coding.session.start', { n: minutes })}
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="cd-shortcuts">{t('coding.session.note')}</p>
+      {error && <p className="cd-note cd-note--error" role="alert">{error}</p>}
+    </section>
+  );
+}
+
+
+/** Saved challenges and the learner's own named lists.
+ *
+ * A saved item that is not open yet stays here with an explanation rather than
+ * disappearing — the history is theirs — and the row still refuses to launch,
+ * because launching goes through the same eligibility check as everything
+ * else. */
+function SavedPanel({ signedIn, statusOf }: { signedIn: boolean; statusOf: (task: CodingTaskSummary) => Status }) {
+  const { t } = useLanguage();
+  const bookmarks = useBookmarks(signedIn);
+  const save = useSaveChallenge();
+  const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  if (!signedIn) return null;
+  if (bookmarks.isLoading) return <p className="cd-note" role="status">{t('common.loading')}</p>;
+  if (bookmarks.isError) return <p className="cd-note cd-note--error" role="alert">{t('coding.loadError')}</p>;
+
+  const saved = (bookmarks.data?.saved ?? [])
+    .map((id) => SECTION_INDEX.find((task) => task.id === id))
+    .filter((task): task is CodingTaskSummary => Boolean(task));
+  const collections = bookmarks.data?.collections ?? [];
+
+  const create = () => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setError(null);
+    save.mutate({ op: 'collection-upsert', name: trimmed }, {
+      onSuccess: () => setName(''),
+      onError: (cause) => setError(cause instanceof ApiError && cause.code === 'name_taken'
+        ? t('coding.collections.nameTaken')
+        : t('coding.collections.failed')),
+    });
+  };
+
+  return (
+    <section className="cd-saved" aria-labelledby="cd-saved-title">
+      <h2 id="cd-saved-title" className="ss-kicker">{t('coding.saved.title')}</h2>
+      {saved.length === 0 ? (
+        <p className="cd-note">{t('coding.saved.empty')}</p>
+      ) : (
+        <ul className="cd-rows">
+          {saved.map((task) => {
+            const status = statusOf(task);
+            return (
+              <li key={task.id} className="cd-saved__row">
+                <TaskRow
+                  task={task}
+                  status={status}
+                  saved
+                  saving={save.isPending}
+                  onSave={(taskId, next) => save.mutate({ op: 'save', taskId, saved: next })}
+                />
+                {status === 'locked' && <p className="cd-shortcuts">{t('coding.saved.lockedNote')}</p>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <h3 className="cd-saved__heading">{t('coding.collections.title')}</h3>
+      <ul className="cd-collections">
+        {collections.map((collection) => (
+          <li key={collection.collectionId}>
+            <span className="cd-collections__name">{collection.name}</span>
+            <span className="cd-collections__count">{t('coding.collections.count', { n: collection.taskIds.length })}</span>
+            <button
+              type="button"
+              className="cd-btn cd-btn--quiet"
+              disabled={save.isPending}
+              onClick={() => save.mutate({ op: 'collection-delete', collectionId: collection.collectionId })}
+            >
+              {t('coding.collections.delete')}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div className="cd-actions">
+        <label className="cd-visually-hidden" htmlFor="cd-collection-name">{t('coding.collections.newLabel')}</label>
+        <input
+          id="cd-collection-name"
+          type="text"
+          maxLength={60}
+          value={name}
+          placeholder={t('coding.collections.newLabel')}
+          onChange={(event) => setName(event.target.value)}
+          onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); create(); } }}
+        />
+        <button type="button" className="cd-btn" disabled={save.isPending || name.trim() === ''} onClick={create}>
+          {t('coding.collections.create')}
+        </button>
+      </div>
+      {error && <p className="cd-note cd-note--error" role="alert">{error}</p>}
+    </section>
+  );
 }
 
 /* ── /coding ──────────────────────────────────────────────────────────── */
@@ -130,6 +330,8 @@ export function CodingHome() {
         </div>
         {next && <Link className="cd-btn cd-btn--primary" to={`/coding/${next.track}/${next.id}`}>{t('coding.continue')}</Link>}
       </div>
+      <PracticeSessionPanel signedIn={isAuthenticated} />
+      <SavedPanel signedIn={isAuthenticated} statusOf={statusOf} />
       <section aria-label={t('coding.title')} className="cd-tracks">
         {CODING_SECTION_TRACKS.map((track) => {
           const tasks = SECTION_INDEX.filter((task) => task.track === track);
@@ -174,18 +376,47 @@ export function CodingTrackScreen() {
   const track = isCodingTrack(trackParam) ? trackParam : null;
   const group = params.get('group');
   const statusFilter = params.get('status') ?? 'all';
+  // Every filter lives in the URL, so a filtered list is a link a learner can
+  // keep, share with themselves on another device, or reload without losing.
+  const query = params.get('q') ?? '';
+  const difficulty = params.get('tier') ?? 'all';
+  const duration = params.get('time') ?? 'all';
+  const format = params.get('format') ?? 'all';
+  const savedOnly = params.get('saved') === '1';
+  const bookmarks = useBookmarks(isAuthenticated);
+  const savedIds = useMemo(() => new Set(bookmarks.data?.saved ?? []), [bookmarks.data]);
+  const save = useSaveChallenge();
+  const onSave = useCallback((taskId: string, next: boolean) => {
+    save.mutate({ op: 'save', taskId, saved: next });
+  }, [save]);
+
   const tasks = useMemo(() => SECTION_INDEX.filter((task) => task.track === track), [track]);
+  const needle = query.trim().toLowerCase();
   const filtered = useMemo(() => tasks.filter((task) => {
     if (group && group in CODING_TECHNIQUE_GROUPS) {
       const tags = CODING_TECHNIQUE_GROUPS[group as CodingTechniqueGroup] as readonly string[];
       if (!task.focus.some((tag) => tags.includes(tag))) return false;
     }
+    if (needle) {
+      // Title in either language, plus the technique tags: the words a learner
+      // actually remembers about a challenge.
+      const haystack = `${task.title.en} ${task.title.cs} ${task.focus.join(' ')}`.toLowerCase();
+      if (!haystack.includes(needle)) return false;
+    }
+    if (difficulty !== 'all' && String(task.tier) !== difficulty) return false;
+    if (duration === 'short' && task.estimatedMinutes > 10) return false;
+    if (duration === 'medium' && (task.estimatedMinutes <= 10 || task.estimatedMinutes > 25)) return false;
+    if (duration === 'long' && task.estimatedMinutes <= 25) return false;
+    if (format !== 'all' && task.verify !== format) return false;
+    if (savedOnly && !savedIds.has(task.id)) return false;
     if (statusFilter === 'all') return true;
     const status = statusOf(task);
     if (statusFilter === 'passed') return status === 'passed';
     if (statusFilter === 'due') return status === 'due';
     return status === 'open' || status === 'in_progress' || status === 'revealed';
-  }), [tasks, group, statusFilter, statusOf]);
+  }), [tasks, group, needle, difficulty, duration, format, savedOnly, savedIds, statusFilter, statusOf]);
+  const filtersOn = Boolean(group) || needle !== '' || difficulty !== 'all' || duration !== 'all'
+    || format !== 'all' || savedOnly || statusFilter !== 'all';
   const groupsHere = useMemo(() => GROUPS.filter((g) => tasks.some((task) => task.focus.some((tag) => (CODING_TECHNIQUE_GROUPS[g] as readonly string[]).includes(tag)))), [tasks]);
   if (track && isRetiredSectionTrack(track)) return <RetiredTrackNotice track={track} />;
   if (!track) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p><Link className="cd-btn" to="/coding">{t('coding.verdict.back')}</Link></div>;
@@ -219,9 +450,51 @@ export function CodingTrackScreen() {
               {value === 'all' ? t('coding.filter.all') : value === 'open' ? t('coding.status.open') : value === 'passed' ? t('coding.status.passed') : t('coding.status.due')}
             </button>
           ))}
+          <button type="button" className="cd-chip" aria-pressed={savedOnly} onClick={() => setFilter('saved', savedOnly ? null : '1')}>
+            {t('coding.filter.saved')}
+          </button>
         </div>
       )}
-      {filtered.length === 0 && <p className="cd-note">{t('coding.empty')}</p>}
+
+      <div className="cd-search">
+        <label className="cd-visually-hidden" htmlFor={`${track}-search`}>{t('coding.filter.searchLabel')}</label>
+        <input
+          id={`${track}-search`}
+          type="search"
+          value={query}
+          placeholder={t('coding.filter.searchPlaceholder')}
+          onChange={(event) => setFilter('q', event.target.value || null)}
+        />
+        <label className="cd-visually-hidden" htmlFor={`${track}-tier`}>{t('coding.filter.difficulty')}</label>
+        <select id={`${track}-tier`} value={difficulty} onChange={(event) => setFilter('tier', event.target.value === 'all' ? null : event.target.value)}>
+          <option value="all">{t('coding.filter.difficulty')}</option>
+          {([1, 2, 3, 4, 5] as CodingTier[]).map((tier) => (
+            <option key={tier} value={String(tier)}>{t(`coding.tier.${CODING_TIERS[tier]}` as never)}</option>
+          ))}
+        </select>
+        <label className="cd-visually-hidden" htmlFor={`${track}-time`}>{t('coding.filter.duration')}</label>
+        <select id={`${track}-time`} value={duration} onChange={(event) => setFilter('time', event.target.value === 'all' ? null : event.target.value)}>
+          <option value="all">{t('coding.filter.duration')}</option>
+          <option value="short">{t('coding.filter.durationShort')}</option>
+          <option value="medium">{t('coding.filter.durationMedium')}</option>
+          <option value="long">{t('coding.filter.durationLong')}</option>
+        </select>
+        <label className="cd-visually-hidden" htmlFor={`${track}-format`}>{t('coding.filter.format')}</label>
+        <select id={`${track}-format`} value={format} onChange={(event) => setFilter('format', event.target.value === 'all' ? null : event.target.value)}>
+          <option value="all">{t('coding.filter.format')}</option>
+          <option value="tests">{t('coding.filter.formatTests')}</option>
+          <option value="checklist">{t('coding.filter.formatChecklist')}</option>
+          <option value="debug">{t('coding.filter.formatDebug')}</option>
+        </select>
+        {filtersOn && (
+          <button type="button" className="cd-btn cd-btn--quiet" onClick={() => setParams(new URLSearchParams(), { replace: true })}>
+            {t('coding.filter.reset')}
+          </button>
+        )}
+      </div>
+      <p className="cd-shortcuts" role="status">{t('coding.filter.count', { shown: filtered.length, total: tasks.length })}</p>
+
+      {filtered.length === 0 && <p className="cd-note">{filtersOn ? t('coding.filter.empty') : t('coding.empty')}</p>}
       {tiers.map((tier) => {
         const reason = lockReason(track, tier);
         return (
@@ -231,7 +504,16 @@ export function CodingTrackScreen() {
               {reason && <p className="cd-tier__lock">{t(`coding.lock.${reason}` as never)}</p>}
             </div>
             <ul className="cd-rows">
-              {filtered.filter((task) => task.tier === tier).map((task) => <TaskRow key={task.id} task={task} status={statusOf(task)} />)}
+              {filtered.filter((task) => task.tier === tier).map((task) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  status={statusOf(task)}
+                  saved={savedIds.has(task.id)}
+                  onSave={isAuthenticated ? onSave : undefined}
+                  saving={save.isPending}
+                />
+              ))}
             </ul>
           </section>
         );

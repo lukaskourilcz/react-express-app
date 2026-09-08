@@ -25,6 +25,7 @@ import { eligibleCodingBadges } from '../../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../../lib/coding/catalog';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
 import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
+import { handleCodingBookmarks, handleCodingSkip, handlePracticeSession } from '../../lib/coding/practice-handlers';
 import {
   handleEnrollment,
   handleLearningPreference,
@@ -67,6 +68,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'advisor') return advisor(req, res);
   if (op === 'coding-progress') return handleCodingProgress(req, res, supabase);
   if (op === 'coding-draft') return handleCodingDraft(req, res, supabase);
+  if (op === 'coding-bookmarks') return handleCodingBookmarks(req, res, supabase);
+  if (op === 'coding-skip') return handleCodingSkip(req, res, supabase);
+  if (op === 'practice-session') return handlePracticeSession(req, res, supabase);
   if (op === 'learning-preference') return handleLearningPreference(req, res, supabase);
   if (op === 'learning-path-enrollment') return handleEnrollment(req, res, supabase);
   if (op === 'learning-path-progress') return handlePathProgress(req, res, supabase);
