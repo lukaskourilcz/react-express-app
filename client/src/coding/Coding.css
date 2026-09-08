@@ -298,3 +298,76 @@
   .cd-verdict { animation: cdRise 0.25s ease-out both; }
   @keyframes cdRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 }
+
+/* ── Code-ordering puzzle (issue #154) ──────────────────────────────────────
+   Every control is a real button so the puzzle works by touch, by keyboard and
+   with a screen reader; nothing here depends on a pointer drag. Targets are
+   44px tall at every width. */
+.cd-puzzle__competencies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cd-puzzle__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.cd-puzzle__block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background-color: var(--color-background-surface);
+}
+
+.cd-puzzle__code {
+  flex: 1 1 220px;
+  min-width: 0;
+  overflow-x: auto;
+  padding-block: 6px;
+}
+
+.cd-puzzle__code code {
+  white-space: pre;
+  font-size: 0.8125rem;
+}
+
+.cd-puzzle__controls {
+  display: flex;
+  gap: 6px;
+  margin-inline-start: auto;
+}
+
+.cd-puzzle__controls .cd-btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* An ordered answer list keeps its numbering visible: the position is the
+   whole point of the exercise. */
+.cd-puzzle ol.cd-puzzle__list {
+  counter-reset: cd-puzzle-line;
+}
+
+.cd-puzzle ol.cd-puzzle__list > .cd-puzzle__block::before {
+  counter-increment: cd-puzzle-line;
+  content: counter(cd-puzzle-line);
+  flex: 0 0 auto;
+  min-width: 22px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-align: end;
+}

@@ -34,6 +34,7 @@ import { levelCodingTasks, playable as playableCodingTask } from '../../lib/codi
 import type { RoadmapTopicStructure } from '../../lib/roadmap';
 import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
 import { decideStepFor, topicUnlockedFor } from '../../lib/progression';
+import { preparePuzzle, puzzleFor } from '../../lib/coding/puzzles';
 import { ProfileMigrationMissing } from '../../lib/learner-profile-store';
 import { encodeCodingSession } from '../../lib/quiz-tokens';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
@@ -166,10 +167,23 @@ function playableResponse(input: {
     questions: built.questions,
     ...(codingTasks.length > 0
       ? {
-          coding: codingTasks.map((task) => ({
-            task: playableCodingTask(task),
-            session: encodeCodingSession({ taskId: task.id, track: task.track, userId: null, roadmapAttemptId: attemptId }),
-          })),
+          // Each task also carries its authored code-ordering puzzle when one
+          // exists, with the shuffle sealed into that task's session (#154).
+          coding: codingTasks.map((task) => {
+            const authored = puzzleFor(task.id);
+            const prepared = authored ? preparePuzzle(authored, secureShuffle) : null;
+            return {
+              task: playableCodingTask(task),
+              session: encodeCodingSession({
+                taskId: task.id,
+                track: task.track,
+                userId: null,
+                roadmapAttemptId: attemptId,
+                ...(prepared ? { key: { puzzle: prepared.permutation } } : {}),
+              }),
+              puzzle: prepared?.playable ?? null,
+            };
+          }),
         }
       : {}),
   };

@@ -4,6 +4,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { getStoredLang } from '../i18n/LanguageContext';
+import type { CodingPuzzleVerdict } from '../../../shared/coding-puzzle';
 import type {
   CodingDraftResponse,
   CodingProgressResponse,
@@ -35,6 +36,14 @@ export function submitCoding(input: CodingSubmitRequest): Promise<CodingVerdictR
     method: 'POST',
     body: JSON.stringify({ ...input, lang: getStoredLang() }),
     timeoutMs: 30_000,
+  });
+}
+
+/** Grade an arrangement of a code-ordering puzzle (issue #154). */
+export function submitCodingPuzzle(input: { session: string; puzzleOrder: string[]; durationMs?: number }): Promise<CodingPuzzleVerdict> {
+  return apiFetch<CodingPuzzleVerdict>(`${ROADMAP}?resource=coding-submit`, {
+    method: 'POST',
+    body: JSON.stringify(input),
   });
 }
 

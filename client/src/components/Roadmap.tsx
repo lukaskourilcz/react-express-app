@@ -1293,6 +1293,14 @@ function LessonRunner({
             signedIn={Boolean(user)}
             initialCode={readString(codingDraftKey(current.task.id))}
             mode="lesson"
+            puzzle={current.puzzle ?? null}
+            onPuzzleVerdict={(verdict) => {
+              // A solved puzzle clears this task for the level; it is recorded
+              // as recognition, not as having written the code (issue #154).
+              if (verdict.verdict === 'passed' && verdict.satisfiesLevel) {
+                setCodingPassed((prev) => (prev.includes(current.task.id) ? prev : [...prev, current.task.id]));
+              }
+            }}
             onDraft={(code) => writeString(codingDraftKey(current.task.id), code)}
             onVerdict={(verdict) => {
               if (verdict.verdict === 'passed') {

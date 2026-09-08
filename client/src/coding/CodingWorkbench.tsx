@@ -13,6 +13,9 @@ import { runCodeTests, runPassed, type RunOutcome, type RunPhase } from './runne
 import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness';
 import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, type LadderRung } from './hint-ladder';
 import { revealCoding, submitCoding } from './api';
+import { CodePuzzle } from './CodePuzzle';
+import { useIsCompactPractice } from '../lib/useMediaQuery';
+import type { CodingPuzzleVerdict, PlayableCodingPuzzle } from '../../../shared/coding-puzzle';
 import { CODING_TIERS, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import type { CodingLockReason, CodingVerdictResponse } from '../../../shared/coding-api';
 import './Coding.css';
@@ -20,6 +23,9 @@ import './Coding.css';
 export interface CodingWorkbenchProps {
   task: PlayableCodingTask;
   session: string | null;
+  /** The authored code-ordering puzzle for this task, when one exists (#154). */
+  puzzle?: PlayableCodingPuzzle | null;
+  onPuzzleVerdict?: (verdict: CodingPuzzleVerdict) => void;
   locked: CodingLockReason | null;
   signedIn: boolean;
   initialCode: string | null;
@@ -69,7 +75,7 @@ function relativeTime(iso: string, lang: string): string {
 }
 
 export function CodingWorkbench(props: CodingWorkbenchProps) {
-  const { task, session, locked, signedIn, initialCode, mode, onDraft, onVerdict, onRevealed, nextHref, backHref, onContinue } = props;
+  const { task, session, locked, signedIn, initialCode, mode, onDraft, onVerdict, onRevealed, nextHref, backHref, onContinue, puzzle = null, onPuzzleVerdict } = props;
   const { t, lang } = useLanguage();
   const L = useCallback((value: Localized | undefined): string => (value ? value[lang] || value.en : ''), [lang]);
   const online = useOnline();
@@ -96,6 +102,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const [checked, setChecked] = useState<boolean[]>(() => (task.checklist?.en ?? []).map(() => false));
   const [formatError, setFormatError] = useState<string | null>(null);
   const startedAt = useRef(Date.now());
+  // Presentation policy (issue #154): at phone and tablet widths a code editor
+  // between quizzes is the wrong tool, so it is not mounted at all. Where an
+  // authored arrangement puzzle exists it takes its place; where none exists the
+  // task waits for a wider screen and says so, with the draft kept.
+  const compact = useIsCompactPractice();
+  const [preferEditor, setPreferEditor] = useState(false);
+  const puzzleMode = compact && Boolean(puzzle) && !(mode === 'section' && preferEditor);
+  const editorWithheld = compact && !puzzleMode && mode === 'lesson';
   const harness = useReactHarness();
 
   const rungs = useMemo(() => ladderRungs(task, lang), [task, lang]);
@@ -495,6 +509,34 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             </div>
           </section>
 
+          {puzzleMode && puzzle && (
+            <CodePuzzle
+              puzzle={puzzle}
+              session={session}
+              signedIn={signedIn}
+              onVerdict={onPuzzleVerdict}
+              onContinue={mode === 'lesson' ? onContinue : undefined}
+            />
+          )}
+          {puzzleMode && mode === 'section' && (
+            <div className="cd-actions">
+              <button type="button" className="cd-btn cd-btn--quiet" onClick={() => setPreferEditor(true)}>
+                {t('coding.puzzle.switchToEditor')}
+              </button>
+            </div>
+          )}
+          {editorWithheld && (
+            <section className="cd-pane cd-pane--editor" aria-labelledby={`${baseId}-pending`}>
+              <h3 id={`${baseId}-pending`} className="cd-editor-label">{t('coding.puzzle.pendingTitle')}</h3>
+              <p className="cd-note cd-note--warn" role="status">{t('coding.puzzle.pendingBody')}</p>
+              {mode === 'lesson' && onContinue && (
+                <div className="cd-actions">
+                  <button type="button" className="cd-btn" onClick={onContinue}>{t('coding.lesson.continue')}</button>
+                </div>
+              )}
+            </section>
+          )}
+          {!puzzleMode && !editorWithheld && (
           <section className="cd-pane cd-pane--editor">
             <label className="cd-editor-label" htmlFor={`${baseId}-editor`}>{t('coding.editorLabel')}</label>
             <div id={`${baseId}-editor`}>
@@ -524,7 +566,15 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             {!online && <p className="cd-note cd-note--warn" role="status">{t('coding.offline')}</p>}
             {formatError && <p className="cd-note cd-note--error" role="status">{formatError}</p>}
             {submitError && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
+            {compact && puzzle && mode === 'section' && preferEditor && (
+              <div className="cd-actions">
+                <button type="button" className="cd-btn cd-btn--quiet" onClick={() => setPreferEditor(false)}>
+                  {t('coding.puzzle.switchToPuzzle')}
+                </button>
+              </div>
+            )}
           </section>
+          )}
         </div>
 
         <section className="cd-pane cd-pane--output" aria-label={t('coding.tab.results')}>

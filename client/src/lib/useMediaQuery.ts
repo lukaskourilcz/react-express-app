@@ -27,3 +27,12 @@ export function useMediaQuery(query: string): boolean {
 export function useIsMobile(): boolean {
   return useMediaQuery('(max-width: 599.95px)');
 }
+
+/**
+ * True at the phone and tablet widths where a code editor between quizzes is
+ * the wrong tool (issue #154). Presentation only: the server never reads this,
+ * and it never decides what a learner is allowed to do.
+ */
+export function useIsCompactPractice(): boolean {
+  return useMediaQuery('(max-width: 899.95px)');
+}

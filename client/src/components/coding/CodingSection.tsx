@@ -297,7 +297,7 @@ export function CodingTaskScreen() {
       <nav aria-label={t('coding.title')}>
         <Kicker><Link className="cd-link" to="/coding">{t('coding.title')}</Link> · <Link className="cd-link" to={backHref}>{t(`coding.track.${data.task.track}` as never)}</Link></Kicker>
       </nav>
-      <CodingWorkbench key={data.task.id} task={data.task} session={data.session} locked={data.locked} signedIn={data.signedIn} initialCode={initialCode} mode="section" onDraft={onDraft} onVerdict={onVerdict} nextHref={nextHref} backHref={backHref} />
+      <CodingWorkbench key={data.task.id} task={data.task} session={data.session} locked={data.locked} signedIn={data.signedIn} initialCode={initialCode} mode="section" puzzle={data.puzzle} onDraft={onDraft} onVerdict={onVerdict} nextHref={nextHref} backHref={backHref} />
     </div>
   );
 }

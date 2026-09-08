@@ -1,3 +1,4 @@
+import type { PlayableCodingPuzzle } from '../../../shared/coding-puzzle';
 import type { PlayableCodingTask } from '../../../shared/coding-catalog';
 export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets' | 'continents' | 'capitals' | 'flags' | 'landforms' | 'climate' | 'population' | 'political' | 'economic' | 'cartography' | 'earth' | 'arithmetic' | 'fractions' | 'prealgebra' | 'algebra' | 'geometry' | 'trigonometry' | 'statistics' | 'precalculus' | 'calculus' | 'linear-algebra' | 'prehistory' | 'ancient' | 'classical' | 'medieval' | 'renaissance' | 'earlymodern' | 'industrial' | 'worldwars' | 'coldwar' | 'modern' | 'openings' | 'tactics' | 'strategy' | 'endgames' | 'combinations' | 'discrete-math' | 'number-theory' | 'multivariable-calculus' | 'differential-equations' | 'real-analysis' | 'geomorphology' | 'oceanography' | 'biogeography' | 'geopolitics' | 'gis' | 'historiography' | 'history-of-science' | 'economic-history' | 'intellectual-history' | 'military-history' | 'cell-biology' | 'skeletal-system' | 'muscular-system' | 'nervous-system' | 'endocrine-system' | 'cardiovascular-system' | 'respiratory-system' | 'digestive-system' | 'immune-system' | 'reproductive-system' | 'opening-theory' | 'middlegame' | 'pawn-structures' | 'endgame-technique' | 'chess-history' | 'positions' | 'starting-hands' | 'pot-odds' | 'betting-strategy' | 'postflop' | 'tournament-play' | 'psychology' | 'gto-advanced';
 
@@ -99,8 +100,9 @@ export interface RoadmapPlayable {
   passPct: number;
   sessionId: string;
   questions: RoadmapQuestion[];
-  /** devShark code topics: the level's coding tasks, each with its own sealed session. */
-  coding?: { task: PlayableCodingTask; session: string }[];
+  /** devShark code topics: the level's coding tasks, each with its own sealed
+   * session and, where one is authored, its code-ordering puzzle (#154). */
+  coding?: { task: PlayableCodingTask; session: string; puzzle?: PlayableCodingPuzzle | null }[];
 }
 
 export interface RoadmapAnswerResult {

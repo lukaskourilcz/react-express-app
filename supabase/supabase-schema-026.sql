@@ -5,6 +5,8 @@
 --   * learner_profiles: the accepted profile (base track, optional FDE
 --     specialisation, optional DSA enrolment, goals, experience, sitting
 --     length) plus the answers of a registration that was interrupted.
+--   * coding_puzzle_results: code-ordering (Parsons) evidence, kept apart from
+--     coding_progress so arranging code is never counted as writing it.
 --
 -- The profile is data, never an entitlement. Eligibility is derived in
 -- shared/progression.ts from this row *and* the verified completions already
@@ -12,7 +14,7 @@
 -- advisory. Learning stays free.
 
 -- ---------------------------------------------------------------------------
--- 1. Table.
+-- 1. The learner profile table.
 -- ---------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.learner_profiles (
   user_id    TEXT PRIMARY KEY,
@@ -44,7 +46,96 @@ CREATE POLICY "learner_profiles_select_own"
   USING (user_id = auth.uid()::text);
 
 -- ---------------------------------------------------------------------------
--- 3. Account erasure covers the new row.
+-- 3. Code-ordering puzzle results (issue #154).
+-- ---------------------------------------------------------------------------
+-- Arranging authored blocks into working code is recognition evidence. It is
+-- recorded here and NOT in coding_progress, because it is not the same claim as
+-- writing the implementation: the Coding section still shows such a task as
+-- unwritten. A passed puzzle does satisfy a Learn level's coding requirement so
+-- a learner on a phone is never stuck, and it awards no task XP.
+CREATE TABLE IF NOT EXISTS public.coding_puzzle_results (
+  attempt_id     TEXT PRIMARY KEY,
+  user_id        TEXT NOT NULL,
+  task_id        TEXT NOT NULL CHECK (task_id ~ '^[a-z0-9-]{3,64}$'),
+  track          TEXT NOT NULL CHECK (track IN ('javascript', 'typescript', 'react', 'system-design')),
+  puzzle_version INTEGER NOT NULL CHECK (puzzle_version BETWEEN 1 AND 1000),
+  passed         BOOLEAN NOT NULL DEFAULT FALSE,
+  competencies   TEXT[] NOT NULL DEFAULT '{}',
+  duration_ms    INTEGER CHECK (duration_ms IS NULL OR duration_ms >= 0),
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS coding_puzzle_results_user_task_idx
+  ON public.coding_puzzle_results (user_id, task_id, created_at DESC);
+
+ALTER TABLE public.coding_puzzle_results ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.coding_puzzle_results FROM anon, authenticated;
+DROP POLICY IF EXISTS "coding_puzzle_results_select_own" ON public.coding_puzzle_results;
+CREATE POLICY "coding_puzzle_results_select_own"
+  ON public.coding_puzzle_results FOR SELECT
+  USING (user_id = auth.uid()::text);
+
+-- Idempotent per sealed attempt id: a replayed submit returns the first result.
+CREATE OR REPLACE FUNCTION public.record_coding_puzzle_result(
+  p_user_id            TEXT,
+  p_attempt_id         TEXT,
+  p_task_id            TEXT,
+  p_track              TEXT,
+  p_puzzle_version     INTEGER,
+  p_passed             BOOLEAN,
+  p_competencies       TEXT[],
+  p_roadmap_attempt_id TEXT DEFAULT NULL,
+  p_duration_ms        INTEGER DEFAULT NULL
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_rows INTEGER := 0;
+  v_inserted BOOLEAN := FALSE;
+  v_satisfies BOOLEAN := FALSE;
+BEGIN
+  INSERT INTO public.coding_puzzle_results (
+    attempt_id, user_id, task_id, track, puzzle_version, passed, competencies, duration_ms
+  )
+  VALUES (
+    p_attempt_id, p_user_id, p_task_id, p_track, p_puzzle_version,
+    COALESCE(p_passed, FALSE), COALESCE(p_competencies, '{}'), p_duration_ms
+  )
+  ON CONFLICT (attempt_id) DO NOTHING;
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  v_inserted := v_rows > 0;
+
+  -- A passed puzzle clears the level's coding requirement so a phone is not a
+  -- dead end. `verified` stays FALSE: the level knows this was not written code.
+  IF COALESCE(p_passed, FALSE) AND p_roadmap_attempt_id IS NOT NULL THEN
+    IF EXISTS (
+      SELECT 1 FROM public.roadmap_attempts
+       WHERE attempt_id = p_roadmap_attempt_id AND user_id = p_user_id
+    ) THEN
+      INSERT INTO public.roadmap_attempt_coding (attempt_id, task_id, passed, verified)
+      VALUES (p_roadmap_attempt_id, p_task_id, TRUE, FALSE)
+      ON CONFLICT (attempt_id, task_id) DO UPDATE SET
+        passed = TRUE,
+        updated_at = NOW();
+      v_satisfies := TRUE;
+    END IF;
+  END IF;
+
+  RETURN jsonb_build_object('applied', v_inserted, 'satisfiesLevel', v_satisfies);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.record_coding_puzzle_result(
+  TEXT, TEXT, TEXT, TEXT, INTEGER, BOOLEAN, TEXT[], TEXT, INTEGER
+) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_coding_puzzle_result(
+  TEXT, TEXT, TEXT, TEXT, INTEGER, BOOLEAN, TEXT[], TEXT, INTEGER
+) TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 4. Account erasure covers the new rows.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.delete_user_data(p_user_id TEXT)
 RETURNS VOID
@@ -76,6 +167,7 @@ BEGIN
   DELETE FROM public.coding_drafts WHERE user_id = p_user_id;
   DELETE FROM public.coding_attempts WHERE user_id = p_user_id;
   DELETE FROM public.coding_progress WHERE user_id = p_user_id;
+  DELETE FROM public.coding_puzzle_results WHERE user_id = p_user_id;
   DELETE FROM public.learner_profiles WHERE user_id = p_user_id;
   DELETE FROM public.roadmap_attempts WHERE user_id = p_user_id;
   DELETE FROM public.verified_skill_checks WHERE user_id = p_user_id;

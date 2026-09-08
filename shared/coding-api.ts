@@ -3,6 +3,7 @@
  * consumes them. Answers never appear here: results, not keys. */
 
 import type { CodingTrack, Localized, PlayableCodingTask } from './coding-catalog';
+import type { CodingPuzzleVerdict, PlayableCodingPuzzle } from './coding-puzzle';
 import type { CallOutcome } from './coding-evaluate';
 import type { TypeCheckResult } from './coding-ts-check';
 
@@ -30,6 +31,12 @@ export interface CodingTaskResponse {
   draft: string | null;
   /** True when the learner is signed in; anonymous visitors may run, not submit. */
   signedIn: boolean;
+  /**
+   * The authored code-ordering puzzle for this task, in the server's shuffled
+   * order (issue #154). Present whenever one exists — which screen uses it is
+   * the browser's call, never an authorisation.
+   */
+  puzzle: PlayableCodingPuzzle | null;
 }
 
 export interface CodingGardenStatus {
@@ -44,10 +51,15 @@ export interface CodingSubmitRequest {
   code?: string;
   /** System design: one entry per step or one drill answer. */
   answers?: DesignAnswer[];
+  /** Code-ordering puzzle: the presented block ids in the learner's order. */
+  puzzleOrder?: string[];
   runCount?: number;
   hintsUsed?: number;
   durationMs?: number;
 }
+
+/** POST ?resource=coding-submit with `puzzleOrder`. */
+export type CodingPuzzleResponse = CodingPuzzleVerdict;
 
 /** A guided step answer is an option index; a drill answer depends on the
  * format: option index, estimate number, or the chosen order of step indices. */

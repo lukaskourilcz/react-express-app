@@ -20,6 +20,7 @@ import { runInSandbox } from './sandbox';
 import { nodeTypeScriptChecker } from './ts-check-node';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { afterCodingPass } from '../github-garden';
+import { gradePuzzle, preparePuzzle, puzzleFor } from './puzzles';
 import {
   CODING_TASK_XP,
   isCodingTaskId,
@@ -40,6 +41,8 @@ import type {
   CodingVerdictResponse,
   DesignAnswer,
 } from '../../shared/coding-api';
+import type { CodingPuzzleVerdict, PlayableCodingPuzzle } from '../../shared/coding-puzzle';
+import { isPuzzleOrder } from '../../shared/coding-puzzle';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
 import type { TypeCheckResult } from '../../shared/coding-ts-check';
 
@@ -155,9 +158,18 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
 
   const play = playable(task);
   let key: CodingSession['key'];
+  // An authored code-ordering puzzle rides along with every task that has one.
+  // The permutation is sealed into the session, never sent.
+  let puzzle: PlayableCodingPuzzle | null = null;
+  const authoredPuzzle = puzzleFor(task.id);
+  if (authoredPuzzle) {
+    const prepared = preparePuzzle(authoredPuzzle, secureShuffle);
+    puzzle = prepared.playable;
+    key = { ...(key ?? {}), puzzle: prepared.permutation };
+  }
   if (task.track === 'system-design') {
     const prepared = prepareDesign(task, secureShuffle);
-    key = prepared.key;
+    key = { ...(key ?? {}), ...prepared.key };
     if (prepared.design) {
       play.design = {
         scenario: prepared.design.scenario,
@@ -174,7 +186,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   const session = locked ? null : encodeCodingSession({ taskId: task.id, track: task.track, userId, ...(key ? { key } : {}) });
 
   res.setHeader('Cache-Control', 'private, no-store');
-  const body: CodingTaskResponse = { task: play, session, locked, progress, draft, signedIn: Boolean(userId) };
+  const body: CodingTaskResponse = { task: play, session, locked, progress, draft, signedIn: Boolean(userId), puzzle };
   return res.json(body);
 }
 
@@ -377,6 +389,78 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
   };
 }
 
+/* ── code-ordering puzzles (issue #154) ──────────────────────────────────── */
+
+/**
+ * Grade an arrangement of the sealed puzzle. The submission carries presented
+ * block ids; the authored order lives only in the session's sealed key, so a
+ * replay of someone else's session, a forged order or a client that patched its
+ * own "correct" flag all fail here.
+ *
+ * A pass is recorded as recognition evidence, in its own table. It never marks
+ * the coding task passed and never awards task XP: arranging code is not the
+ * same as writing it. It DOES satisfy a Learn level's coding requirement, so a
+ * learner on a phone is not left at a dead end — the Coding section still shows
+ * the task as unwritten, and says why.
+ */
+async function handlePuzzleSubmit(
+  res: VercelResponse,
+  supabase: SupabaseClient | null,
+  input: {
+    task: CodingTask;
+    session: CodingSession;
+    userId: string | null;
+    order: unknown;
+    durationMs?: number;
+  },
+) {
+  const { task, session, userId } = input;
+  const puzzle = puzzleFor(task.id);
+  const permutation = session.key?.puzzle;
+  if (!puzzle || !permutation) return jsonError(res, 400, 'no_puzzle', 'This task has no code-ordering puzzle');
+  const blocks = permutation.map((_, position) => ({ id: `b${position}`, code: '', indent: 0 }));
+  if (!isPuzzleOrder(input.order, blocks)) return jsonError(res, 400, 'bad_request', 'An arrangement of the shown blocks is required');
+
+  const grade = gradePuzzle(puzzle, permutation, input.order);
+  let applied = false;
+  let satisfiesLevel = false;
+  if (userId && supabase) {
+    const saved = await withTimeout(
+      supabase.rpc('record_coding_puzzle_result', {
+        p_user_id: userId,
+        p_attempt_id: session.attemptId,
+        p_task_id: task.id,
+        p_track: task.track,
+        p_puzzle_version: puzzle.version,
+        p_passed: grade.passed,
+        p_competencies: grade.competencies,
+        p_roadmap_attempt_id: session.roadmapAttemptId ?? null,
+        p_duration_ms: clampInt(input.durationMs, 86_400_000),
+      }),
+    );
+    if (saved.error) {
+      if (isRpcMissing(saved.error)) return jsonError(res, 503, 'migration_required', 'Puzzle migration 026 is not installed');
+      return jsonError(res, 500, 'db_error', 'Could not record the puzzle result');
+    }
+    const data = (saved.data ?? {}) as { applied?: boolean; satisfiesLevel?: boolean };
+    applied = data.applied === true;
+    satisfiesLevel = data.satisfiesLevel === true;
+  }
+  logEvent({ status: 200, kind: 'puzzle', track: task.track, verdict: grade.passed ? 'passed' : 'failed', hasUser: Boolean(userId) });
+  res.setHeader('Cache-Control', 'private, no-store');
+  const out: CodingPuzzleVerdict = {
+    verdict: grade.passed ? 'passed' : 'failed',
+    correctPrefix: grade.correctPrefix,
+    expectedLength: grade.expectedLength,
+    usedDistractor: grade.usedDistractor,
+    competencies: grade.competencies,
+    evidence: 'puzzle',
+    applied,
+    satisfiesLevel,
+  };
+  return res.json(out);
+}
+
 /* ── POST ?resource=coding-submit ────────────────────────────────────── */
 
 export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
@@ -389,6 +473,12 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   if (!task || task.track !== session.track) return jsonError(res, 400, 'invalid_session', 'Coding session does not match a task');
   const userId = await optionalUser(req, res);
   if (userId === undefined) return;
+
+  // A code-ordering puzzle arrives on the same resource with the same sealed
+  // session; the arrangement, not code, is what is graded.
+  if (body.puzzleOrder !== undefined) {
+    return handlePuzzleSubmit(res, supabase, { task, session, userId, order: body.puzzleOrder, durationMs: body.durationMs });
+  }
 
   let graded: Graded;
   let code: string | null = null;

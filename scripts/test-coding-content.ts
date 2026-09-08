@@ -24,6 +24,8 @@ import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { renderCodingIndex } from './build-coding-index';
+import { allPuzzles, assemble, gradePuzzle, preparePuzzle, puzzleProblems } from '../lib/coding/puzzles';
+import { MAX_PUZZLE_BLOCKS, PUZZLE_COMPETENCIES } from '../shared/coding-puzzle';
 
 const SKIP_CS = process.env.CODING_SKIP_CS === '1';
 const ALLOW_GAPS = process.env.CODING_ALLOW_LEVEL_GAPS === '1';
@@ -203,13 +205,71 @@ async function main() {
     if (!starter.compileError && starter.failed === 0) fail(`${where}: the untouched starter already passes its suite`);
   }
 
+  /* ── code-ordering puzzles (issue #154) ─────────────────────────────── */
+  // Every authored puzzle must belong to a real task, declare what solving it
+  // proves, and — the point of the check — assemble into code that passes that
+  // task's own tests. A puzzle that drifts away from its task fails here.
+  for (const problem of puzzleProblems()) fail(`puzzle: ${problem}`);
+  for (const puzzle of allPuzzles()) {
+    const where = `puzzle ${puzzle.taskId}`;
+    const task = CODING_TASKS.find((one) => one.id === puzzle.taskId);
+    if (!task) { fail(`${where}: no such task`); continue; }
+    if (task.track === 'system-design') fail(`${where}: design tasks take no arrangement puzzle`);
+    if (puzzle.lines.length > MAX_PUZZLE_BLOCKS) fail(`${where}: more than ${MAX_PUZZLE_BLOCKS} blocks`);
+    for (const competency of puzzle.competencies) {
+      if (!PUZZLE_COMPETENCIES.includes(competency)) fail(`${where}: unknown competency ${competency}`);
+    }
+    if (!task.tests || task.tests.length === 0) { fail(`${where}: the task has no tests to prove the puzzle against`); continue; }
+    for (const [index, accepted] of puzzle.accepted.entries()) {
+      const code = assemble(puzzle, accepted);
+      const run = await withTimeout(
+        evaluateCalls({ code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }),
+        8_000,
+        where,
+      );
+      if (!allPassed(run)) {
+        fail(`${where}: accepted arrangement ${index} does not pass the task's tests: ${run.codeError ?? run.results.map((r, i) => (r.pass ? null : task.tests![i].call)).filter(Boolean).join('; ')}`);
+      }
+    }
+    // A distractor must actually break the solution, or it is not a distractor.
+    for (const distractor of puzzle.lines.filter((line) => line.distractor)) {
+      const spoiled = assemble(puzzle, [...puzzle.accepted[0].slice(0, -1), distractor.id]);
+      const run = await withTimeout(
+        evaluateCalls({ code: spoiled, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }),
+        8_000,
+        where,
+      );
+      if (allPassed(run)) fail(`${where}: distractor ${distractor.id} still passes the task's tests`);
+    }
+    // Grading is driven by the sealed permutation, not by what the browser sees.
+    const identity = <T,>(items: T[]): T[] => items;
+    const { playable: shown, permutation } = preparePuzzle(puzzle, identity);
+    const idToPosition = new Map(permutation.map((authored, position) => [puzzle.lines[authored].id, `b${position}`]));
+    const correct = puzzle.accepted[0].map((id) => idToPosition.get(id)!);
+    const graded = gradePuzzle(puzzle, permutation, correct);
+    if (!graded.passed) fail(`${where}: the authored arrangement does not grade as passing`);
+    if (shown.blocks.length !== puzzle.lines.length) fail(`${where}: the playable puzzle drops blocks`);
+    if (JSON.stringify(shown).includes('"distractor"')) fail(`${where}: the playable puzzle names its distractors`);
+    if (correct.length > 1) {
+      const swapped = [correct[1], correct[0], ...correct.slice(2)];
+      if (gradePuzzle(puzzle, permutation, swapped).passed) fail(`${where}: a swapped arrangement grades as passing`);
+    }
+    const withDistractor = puzzle.lines.find((line) => line.distractor);
+    if (withDistractor) {
+      const bad = [...correct.slice(0, -1), idToPosition.get(withDistractor.id)!];
+      const badGrade = gradePuzzle(puzzle, permutation, bad);
+      if (badGrade.passed) fail(`${where}: an arrangement using a distractor grades as passing`);
+      if (!badGrade.usedDistractor) fail(`${where}: a used distractor is not reported`);
+    }
+  }
+
   if (failures.length > 0) {
     console.error(`Coding content contract: ${failures.length} problem(s)\n  - ${failures.join('\n  - ')}`);
     process.exitCode = 1;
     return;
   }
   const byTrack = CODING_TRACKS.map((track) => `${track} ${CODING_TASKS.filter((t) => t.track === track).length}`).join(', ');
-  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
+  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, ${allPuzzles().length} arrangement puzzles proven, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 
 void main().catch((error) => {
