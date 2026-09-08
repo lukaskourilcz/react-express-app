@@ -734,8 +734,8 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   const sessionQuestion = session.questions.find((question) => question.questionId === body.questionId);
   if (!sessionQuestion) return jsonError(res, 400, 'bad_request', 'Question is not part of this learning session');
   const userId = await optionalAuthSub(req, res);
-  if (userId !== undefined && !(await guardSessionStep(res, userId, session))) return;
   if (userId === undefined) return;
+  if (!(await guardSessionStep(res, userId, session))) return;
 
   const attemptResult = await ensureAttempt(session, userId);
   if (attemptResult.error || !attemptResult.data) {

@@ -39,15 +39,17 @@ export function SkipPanel({ taskId, sessionId, onSkipped }: {
       <h4 style={{ margin: '0 0 4px' }}>{t('coding.skip.title')}</h4>
       <p className="cd-shortcuts" style={{ margin: '0 0 8px' }}>{t('coding.skip.awardsNothing')}</p>
 
-      <div className="cd-chips" role="radiogroup" aria-label={t('coding.skip.title')}>
+      {/* Toggle buttons rather than radio semantics: a role="radiogroup" owes a
+          reader a roving tab stop, and these read better as one-of-five
+          pressed states than as a form control. */}
+      <div className="cd-chips" role="group" aria-label={t('coding.skip.title')}>
         {SKIP_REASONS.map((one) => (
           <button
             key={one}
             type="button"
-            role="radio"
-            aria-checked={reason === one}
+            aria-pressed={reason === one}
             className="cd-chip"
-            onClick={() => setReason(one)}
+            onClick={() => setReason(reason === one ? null : one)}
           >
             {t(`coding.skip.reason.${one}` as TranslationKey)}
           </button>

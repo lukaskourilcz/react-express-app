@@ -30,6 +30,9 @@ export function CodingLibraryScreen() {
   const progress = useCodingProgress(isAuthenticated);
   const [name, setName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  // Renaming happens in place. A window.prompt would be unstyled, unlocalised
+  // and modal over the whole tab, which is none of what this needs.
+  const [renaming, setRenaming] = useState<{ id: string; value: string } | null>(null);
 
   const passed = useMemo(
     () => new Set(Object.entries(progress.data?.tasks ?? {}).filter(([, row]) => row.status === 'passed').map(([id]) => id)),
@@ -181,11 +184,8 @@ export function CodingLibraryScreen() {
                     <button
                       type="button"
                       className="cd-btn cd-btn--quiet"
-                      onClick={() => {
-                        const next = window.prompt(t('coding.library.newCollectionLabel'), collection.name);
-                        const trimmed = next?.trim();
-                        if (trimmed) act.mutate({ action: 'rename-collection', id: collection.id, name: trimmed });
-                      }}
+                      aria-expanded={renaming?.id === collection.id}
+                      onClick={() => setRenaming(renaming?.id === collection.id ? null : { id: collection.id, value: collection.name })}
                     >
                       {t('coding.library.rename')}
                     </button>
@@ -194,6 +194,31 @@ export function CodingLibraryScreen() {
                     </button>
                   </div>
                 </div>
+                {renaming?.id === collection.id && (
+                  <form
+                    className="cd-actions"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      const trimmed = renaming.value.trim();
+                      if (!trimmed) return;
+                      act.mutate({ action: 'rename-collection', id: collection.id, name: trimmed }, { onSuccess: () => setRenaming(null) });
+                    }}
+                  >
+                    <label className="cd-editor-label" htmlFor={`cd-rename-${collection.id}`}>{t('coding.library.newCollectionLabel')}</label>
+                    <input
+                      id={`cd-rename-${collection.id}`}
+                      className="cd-input"
+                      autoFocus
+                      maxLength={data.limits.nameLength}
+                      value={renaming.value}
+                      onChange={(event) => setRenaming({ id: collection.id, value: event.target.value })}
+                    />
+                    <button type="submit" className="cd-btn cd-btn--primary" disabled={!renaming.value.trim() || act.isPending}>
+                      {t('coding.library.rename')}
+                    </button>
+                    <button type="button" className="cd-btn" onClick={() => setRenaming(null)}>{t('coding.retry')}</button>
+                  </form>
+                )}
                 {confirmDelete === collection.id && (
                   <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.library.delete')}>
                     <p style={{ margin: '0 0 8px' }}>{t('coding.library.deleteConfirm')}</p>
