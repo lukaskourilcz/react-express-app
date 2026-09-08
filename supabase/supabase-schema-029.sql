@@ -284,6 +284,14 @@ DECLARE
   v_move JSONB;
 BEGIN
   IF p_quantity < 1 OR p_quantity > 3 THEN RAISE EXCEPTION 'invalid_quantity'; END IF;
+  -- The API refuses an unpriced item before it gets here; this is the backstop,
+  -- so an unconfigured price can never become a free order.
+  IF p_payment = 'tokens' AND (p_total_tokens IS NULL OR p_total_tokens <= 0) THEN
+    RAISE EXCEPTION 'invalid_total';
+  END IF;
+  IF p_payment = 'cash' AND (p_total_cash_minor IS NULL OR p_total_cash_minor <= 0 OR p_currency IS NULL) THEN
+    RAISE EXCEPTION 'invalid_total';
+  END IF;
 
   -- A retry with the same key returns the order it already made.
   SELECT * INTO v_existing FROM public.reward_orders

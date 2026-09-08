@@ -21,7 +21,7 @@ Two things roll out separately, because they carry different risk:
 | #151 Learner profile | `shared/learner-profile.ts`, `lib/learner-profile-store.ts`, `?op=learner-profile`, `LearnerProfileDialog`, `LearningPlanCard`, migration 026 | `test:launch`: validation, partial drafts, version bump re-asks, plan-change detection | OAuth resume is exercised through the same op as email; no browser test drives a real OAuth round trip |
 | #152 Progression graph | `shared/progression.ts`, `lib/progression.ts`, guards in `api/quiz/roadmap.ts` on issuance, answer and completion | `test:launch`: acyclic graph, reachable first step for all twelve selections, level and checkpoint gates, forged step numbers, out-of-plan topics, diagnostics not bypassing | Cross-path unlocks beyond the FDE bridge are declared but have no authored content to link to |
 | #153 Personalised surfaces | `RoadmapTree` plan mode, `PlanSummary`, Today filtered by eligibility, the exact "More learning paths…" note in EN and CS | `test:launch` (eligibility shape), `check:responsive` on `/roadmap` and `/learn` | Locked bookmarks are explained in the library screen; the roadmap tree does not yet list them |
-| #154 Code-ordering puzzles | `shared/coding-puzzle.ts`, `lib/coding/puzzles/`, `CodePuzzle`, sealed permutation, migration 026 evidence table | `test:coding`: every accepted arrangement passes the task's own tests, every distractor breaks it, grading follows the sealed permutation | 12 puzzles, all JavaScript. TypeScript and React tasks have none, so those stay desktop-pending on a phone |
+| #154 Code-ordering puzzles | `shared/coding-puzzle.ts`, `lib/coding/puzzles/`, `CodePuzzle`, sealed permutation, migration 026 evidence table | `test:coding`: every accepted arrangement passes the task's own tests, every distractor breaks it, grading follows the sealed permutation. `test:db`: a pass clears the level unverified, never writes coding progress, is idempotent per sealed attempt, and clears nothing on another learner's attempt | 12 puzzles, all JavaScript. TypeScript and React tasks have none, so those stay desktop-pending on a phone |
 | #155 Resources panel | `resourcesFor()`, Resources tab, registry check | `test:coding`: no unreviewed host, no playground or solution link, no duplicate, every link is a technique of its task | — |
 | #156 Failure-specific hints | `shared/coding-failures.ts`, `lib/coding/failure-hints.ts`, verdict carries the advice | `test:coding`: no hidden fixture, internal error or solution quoted; both languages; every category has a fallback; classifier separates compile, runtime and test | Task-specific advice exists for six tasks; the rest fall back to the category |
 | #157 Library | `shared/coding-library.ts`, `lib/coding/library-handlers.ts`, `CodingLibraryScreen`, migration 027 | `test:coding`: name normalisation, id validation. Limits enforced in the API and by a database trigger | Export of the library as a file is not implemented; deletion is covered by account erasure |
@@ -35,12 +35,12 @@ Two things roll out separately, because they carry different risk:
 | #165 Coding tracks | `CODING_SECTION_TRACKS`, retired-track screen | `test:launch`: the section index excludes system design while the catalogue keeps it | — |
 | #166 devShark footer | `BrandFooter` gated on the product; CLAUDE.md and AGENTS.md updated | `test:launch`: the family blocks are gated, the legal row and settings remain | — |
 | #167 Merchandise spec | `shared/merchandise.ts`, `lib/rewards/config.ts`, `docs/rewards-launch.md` | `test:launch`: five SKUs, print briefs on physical items only, nothing buyable unconfigured | **No supplier quote, no price, no region, no tax treatment.** All owner decisions |
-| #168 Server wallet | `sync_reward_wallet`, `move_reward_tokens`, `?op=wallet`, migration 029 | `test:launch`: the balance comes from the ledger, a local balance is never converted, no total comes from the request | Reconciliation of historical local balances is deliberately not automated |
+| #168 Server wallet | `sync_reward_wallet`, `move_reward_tokens`, `?op=wallet`, migration 029 | `test:launch`: the balance comes from the ledger, a local balance is never converted, no total comes from the request. `test:db`: one grant per account, awards credited once each at the declared ratio, per-account isolation, overdraft refused, a repeated receipt never double-spending, balance equal to the ledger sum | Reconciliation of historical local balances is deliberately not automated |
 | #169 Shop catalogue | Rewritten `Shop.tsx`, blockers rendered per item, ring and flair sales retired | `test:launch`: availability rules, retired purchase path, `check:responsive` on `/shop` | Product photography does not exist; the cards use the brand marks |
-| #170 Orders | `place_reward_order`, `advance_reward_order`, `?op=orders` | `test:launch`: transition table, address validation, idempotency-key shape | End-to-end concurrency is enforced in SQL (`FOR UPDATE`, unique keys) but is not exercised by an integration test — there is no test database in this environment |
+| #170 Orders | `place_reward_order`, `advance_reward_order`, `?op=orders` | `test:launch`: transition table, address validation, idempotency-key shape. `test:db`: reservation and debit in one step, a retried idempotency key returning the first order, stock exhaustion, the reservation released when funds fall short, refund and stock return exactly once, the transition table, shipping consuming stock, an unpriced token order raising | — |
 | #171 Payments | `lib/rewards/payments.ts`, `?op=payment-webhook` | `test:launch`: signature verify and reject, forged amount, replay window, malformed and missing secret, event parsing | **No provider configured.** Live charging additionally requires `REWARDS_PAYMENT_MODE=live` |
-| #172 Fulfilment | `lib/rewards/fulfillment.ts`, `?op=fulfilment` on the admin dispatcher | `test:launch`: addresses are never logged; the export refuses without a supplier and an operations owner | **No supplier and no operations owner.** No real dispatch has been made |
-| #173 Crown | `CrownIcon`, `LearnerAvatar`, server-verified ownership and equipping | `test:launch`: decorative mark, named in the accessible label, unowned equip refused in SQL | The crown does not appear on the leaderboard or in the Play lobby — see the blocker below |
+| #172 Fulfilment | `lib/rewards/fulfillment.ts`, `?op=fulfilment` on the admin dispatcher | `test:launch`: addresses are never logged; the export refuses without a supplier and an operations owner. `test:db`: erasure keeps an order that still owes a delivery and clears its address | **No supplier and no operations owner.** No real dispatch has been made |
+| #173 Crown | `CrownIcon`, `LearnerAvatar`, server-verified ownership and equipping | `test:launch`: decorative mark, named in the accessible label. `test:db`: an unowned equip is refused, a duplicate grant yields one entitlement, one cosmetic worn at a time | The crown does not appear on the leaderboard or in the Play lobby — see the blocker below |
 | #174 This matrix | This document, plus the assertions listed above | The repository gates below | Integration coverage that needs a live database is not present |
 
 ## Rollout and rollback
@@ -79,11 +79,14 @@ automated here.
 
 ## What is not covered
 
-1. **A live database.** This environment has no Supabase instance, so the SQL
-   functions are reviewed and their contracts tested at the TypeScript boundary,
-   but the concurrency behaviour of `place_reward_order` and
-   `advance_reward_order` is not exercised end to end. That is the largest gap
-   in this branch.
+1. **A hosted Supabase project.** `npm run test:db` applies the whole schema to
+   a scratch PostgreSQL database and runs the SQL suites in `scripts/sql/`, so
+   the wallet ledger, the order state machine, stock reservation, the puzzle
+   evidence separation and account erasure are exercised for real. What that
+   cannot cover is Supabase's own layer: PostgREST behaviour, the service-role
+   boundary as Supabase configures it, and `auth.uid()` with real JWTs (the
+   suite substitutes a local `auth.uid()`). RLS policies are created and their
+   shape is checked, but they are not exercised as an authenticated role.
 2. **FDE and DSA curricula.** Issues #137–#139 and #145–#148 are outside this
    branch. The progression graph declares the FDE bridge and marks the module
    stage as content-pending so the Roadmap says so rather than drawing a dead
@@ -109,6 +112,7 @@ npm run test:coding
 npm run build
 npm run check:responsive          # needs a preview server on :4173 and CHROME_BIN
 npm run test:harness              # needs CHROME_BIN
+npm run test:db                   # needs psql; skips cleanly without one
 npm audit --omit=dev
 npm audit --omit=dev --prefix client
 git diff --check

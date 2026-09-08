@@ -41,7 +41,7 @@ Generative-media production uses `.claude/skills/generated-media-production/SKIL
 
 ## Validation and Git
 
-Use the actual scripts: `npm run typecheck:api`, `npm run test:launch`, `npm run build`, `npm run check:responsive`, both production dependency audits, and `git diff --check`. Do not report unexecuted checks as passing. Preserve unrelated work, stage deliberately, and create coherent incremental commits for large tasks. See `.claude/skills/shark-release-validation/SKILL.md` and `docs/DEEP_END_HANDOFF.md`.
+Use the actual scripts: `npm run typecheck:api`, `npm run test:launch`, `npm run build`, `npm run check:responsive`, `npm run test:db` (schema and SQL behaviour; skips cleanly without `psql`), both production dependency audits, and `git diff --check`. Do not report unexecuted checks as passing. Preserve unrelated work, stage deliberately, and create coherent incremental commits for large tasks. See `.claude/skills/shark-release-validation/SKILL.md` and `docs/DEEP_END_HANDOFF.md`.
 
 Definition of done: implementation, EN/CS copy, states, responsive/accessibility behavior, tests, documentation, and Git history agree with the product architecture and all relevant checks have real results.
 

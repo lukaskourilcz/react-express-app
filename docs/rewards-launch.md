@@ -112,6 +112,13 @@ quoted yet", "No supplier has been engaged" — instead of a placeholder price.
 Every transition writes a row to `reward_order_events` with the actor
 (`learner`, `admin`, `provider`, `system`).
 
+`npm run test:db` exercises this whole path against a real PostgreSQL: the
+reservation and the debit landing together, a retried idempotency key returning
+the first order rather than a second one, stock running out, the reservation
+being released when funds fall short, a refund and a stock return happening
+exactly once, the transition table refusing a jump, and shipping consuming the
+reservation.
+
 ## Retention and deletion
 
 - An order that still owes a delivery (`paid`, `fulfilling`, `shipped`) is kept

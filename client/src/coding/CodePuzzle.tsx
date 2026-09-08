@@ -30,6 +30,18 @@ export interface CodePuzzleProps {
 
 const draftKey = (taskId: string) => `devshark:coding:puzzle:${taskId}`;
 
+/** The presented block ids are positional (`b0`, `b1`, …), so they are the same
+ * for every shuffle of the same puzzle. A saved arrangement is only meaningful
+ * for the shuffle it was made in, so it is stored with a fingerprint of the
+ * order the blocks arrived in and dropped when that changes. */
+const fingerprintOf = (puzzle: PlayableCodingPuzzle): string =>
+  `${puzzle.version}:${puzzle.blocks.map((block) => block.code).join('\u0000')}`;
+
+interface PuzzleDraft {
+  fingerprint: string;
+  order: string[];
+}
+
 export function CodePuzzle({ puzzle, session, signedIn, onVerdict, onContinue }: CodePuzzleProps) {
   const { t } = useLanguage();
   const baseId = useId();
@@ -38,18 +50,20 @@ export function CodePuzzle({ puzzle, session, signedIn, onVerdict, onContinue }:
   const blockById = useMemo(() => new Map(puzzle.blocks.map((block) => [block.id, block])), [puzzle.blocks]);
   const allIds = useMemo(() => puzzle.blocks.map((block) => block.id), [puzzle.blocks]);
 
-  // The draft is per task and per shuffle: a stale arrangement from a previous
-  // shuffle would place the wrong blocks, so it is dropped when the ids differ.
+  const fingerprint = useMemo(() => fingerprintOf(puzzle), [puzzle]);
   const [used, setUsed] = useState<string[]>(() => {
-    const saved = readJSON<string[]>(draftKey(puzzle.taskId), []);
-    return Array.isArray(saved) && saved.every((id) => allIds.includes(id)) ? saved : [];
+    const saved = readJSON<PuzzleDraft | null>(draftKey(puzzle.taskId), null);
+    if (!saved || saved.fingerprint !== fingerprint || !Array.isArray(saved.order)) return [];
+    return saved.order.filter((id) => allIds.includes(id));
   });
   const [busy, setBusy] = useState(false);
   const [verdict, setVerdict] = useState<CodingPuzzleVerdict | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
-  useEffect(() => { writeJSON(draftKey(puzzle.taskId), used); }, [used, puzzle.taskId]);
+  useEffect(() => {
+    writeJSON(draftKey(puzzle.taskId), { fingerprint, order: used } satisfies PuzzleDraft);
+  }, [used, fingerprint, puzzle.taskId]);
 
   const available = allIds.filter((id) => !used.includes(id));
 

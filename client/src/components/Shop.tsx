@@ -65,6 +65,7 @@ function Shop() {
   const cancel = useCancelOrder();
   const equip = useEquipCosmetic();
   const legacy = useInventory();
+  const legacyRingColor = useEquippedRingColor();
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   const balance = wallet.data?.wallet.balance ?? 0;
@@ -174,7 +175,7 @@ function Shop() {
             name={displayName}
             size="medium"
             crowned={equipped === 'crown'}
-            ringColor={useEquippedRingColorSafe()}
+            ringColor={legacyRingColor}
           />
           <VStack gap={0.5}>
             <Text type="label" color="secondary">{t('shop.stylePreview')}</Text>
@@ -201,11 +202,6 @@ function Shop() {
       <AppToast open={!!toast} onClose={() => setToast(null)} severity={toast?.ok ? 'success' : 'info'} autoHideDuration={3500} message={toast?.msg ?? ''} />
     </VStack>
   );
-}
-
-/** The ring an account bought before rings were retired. Display only. */
-function useEquippedRingColorSafe(): string | null {
-  return useEquippedRingColor();
 }
 
 function LegacyFlair() {
