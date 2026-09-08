@@ -49,8 +49,9 @@ export type PuzzleOutcome = 'passed' | 'failed';
 
 export interface CodingPuzzleVerdict {
   verdict: PuzzleOutcome;
-  /** How many leading blocks are in an accepted position. */
-  correctPrefix: number;
+  /** How many leading blocks are in an accepted position — null until every
+   * block has been placed, because a per-block answer would be an oracle. */
+  correctPrefix: number | null;
   /** Total blocks in the shortest accepted arrangement. */
   expectedLength: number;
   /** True when a block that does not belong was used. */

@@ -60,6 +60,18 @@ export function CodePuzzle({ puzzle, session, signedIn, onVerdict, onContinue }:
   const [verdict, setVerdict] = useState<CodingPuzzleVerdict | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
+  // Every control here removes itself: a block moves to the other list, or
+  // reaching an end disables the arrow that was just pressed. Without this the
+  // keyboard falls back to the top of the page after every single move.
+  const rowRefs = useRef(new Map<string, HTMLLIElement | null>());
+  const [pendingFocus, setPendingFocus] = useState<{ id: string; control: string } | null>(null);
+  useEffect(() => {
+    if (!pendingFocus) return;
+    const row = rowRefs.current.get(pendingFocus.id);
+    const wanted = row?.querySelector<HTMLButtonElement>(`button[data-control="${pendingFocus.control}"]:not([disabled])`);
+    (wanted ?? row?.querySelector<HTMLButtonElement>('button:not([disabled])'))?.focus();
+    setPendingFocus(null);
+  }, [pendingFocus]);
 
   useEffect(() => {
     writeJSON(draftKey(puzzle.taskId), { fingerprint, order: used } satisfies PuzzleDraft);
@@ -68,17 +80,25 @@ export function CodePuzzle({ puzzle, session, signedIn, onVerdict, onContinue }:
   const available = allIds.filter((id) => !used.includes(id));
 
   const announce = useCallback((key: TranslationKey, vars?: Record<string, string | number>) => {
-    setAnnouncement(t(key, vars));
+    setAnnouncement((prev) => {
+      const text = t(key, vars);
+      // A live region speaks when its text changes, so the same message twice
+      // in a row — two removals, two moves — is silent. A zero-width space,
+      // toggled on and off, changes the text without changing what is read.
+      return prev.replace(/\u200b$/, '') === text ? `${text}\u200b` : text;
+    });
   }, [t]);
 
   const add = (id: string) => {
     setUsed((prev) => (prev.includes(id) ? prev : [...prev, id]));
     setVerdict(null);
+    setPendingFocus({ id, control: 'remove' });
     announce('coding.puzzle.added', { n: used.length + 1 });
   };
   const remove = (id: string) => {
     setUsed((prev) => prev.filter((one) => one !== id));
     setVerdict(null);
+    setPendingFocus({ id, control: 'add' });
     announce('coding.puzzle.removed');
   };
   const move = (id: string, delta: -1 | 1) => {
@@ -91,6 +111,9 @@ export function CodePuzzle({ puzzle, session, signedIn, onVerdict, onContinue }:
       return copy;
     });
     setVerdict(null);
+    // Stay on the arrow that was pressed; fall back to the other one when the
+    // block has reached an end and that arrow is now disabled.
+    setPendingFocus({ id, control: delta === -1 ? 'up' : 'down' });
     announce('coding.puzzle.moved', { n: Math.max(1, used.indexOf(id) + 1 + delta) });
   };
 
@@ -116,7 +139,7 @@ export function CodePuzzle({ puzzle, session, signedIn, onVerdict, onContinue }:
     if (!block) return null;
     const label = block.code;
     return (
-      <li key={id} className="cd-puzzle__block">
+      <li key={id} className="cd-puzzle__block" ref={(node) => { rowRefs.current.set(id, node); }}>
         <div className="cd-puzzle__code" style={{ paddingInlineStart: 8 + block.indent * 16 }}>
           <code>{label}</code>
         </div>
@@ -126,6 +149,7 @@ export function CodePuzzle({ puzzle, session, signedIn, onVerdict, onContinue }:
               <button
                 type="button"
                 className="cd-btn cd-btn--quiet"
+                data-control="up"
                 onClick={() => move(id, -1)}
                 disabled={position === 0}
                 aria-label={t('coding.puzzle.moveUp', { code: label })}
@@ -135,18 +159,19 @@ export function CodePuzzle({ puzzle, session, signedIn, onVerdict, onContinue }:
               <button
                 type="button"
                 className="cd-btn cd-btn--quiet"
+                data-control="down"
                 onClick={() => move(id, 1)}
                 disabled={position === used.length - 1}
                 aria-label={t('coding.puzzle.moveDown', { code: label })}
               >
                 ↓
               </button>
-              <button type="button" className="cd-btn" onClick={() => remove(id)} aria-label={t('coding.puzzle.remove', { code: label })}>
+              <button type="button" className="cd-btn" data-control="remove" onClick={() => remove(id)} aria-label={t('coding.puzzle.remove', { code: label })}>
                 {t('coding.puzzle.removeShort')}
               </button>
             </>
           ) : (
-            <button type="button" className="cd-btn" onClick={() => add(id)} aria-label={t('coding.puzzle.add', { code: label })}>
+            <button type="button" className="cd-btn" data-control="add" onClick={() => add(id)} aria-label={t('coding.puzzle.add', { code: label })}>
               {t('coding.puzzle.addShort')}
             </button>
           )}
@@ -199,7 +224,12 @@ export function CodePuzzle({ puzzle, session, signedIn, onVerdict, onContinue }:
         <div className={`cd-verdict cd-verdict--${verdict.verdict}`} role="status">
           <h4 className="cd-verdict__title">{t(verdict.verdict === 'passed' ? 'coding.puzzle.passed' : 'coding.puzzle.failed')}</h4>
           {verdict.verdict === 'failed' && (
-            <p className="cd-verdict__row">{t('coding.puzzle.progressNote', { correct: verdict.correctPrefix, total: verdict.expectedLength })}</p>
+            verdict.correctPrefix === null
+              // Placing one block and reading back whether it is the first
+              // would give the whole ordering away, so how far it is right is
+              // only reported once every block is placed.
+              ? <p className="cd-verdict__row">{t('coding.puzzle.incomplete', { total: verdict.expectedLength })}</p>
+              : <p className="cd-verdict__row">{t('coding.puzzle.progressNote', { correct: verdict.correctPrefix, total: verdict.expectedLength })}</p>
           )}
           {verdict.verdict === 'failed' && verdict.usedDistractor && (
             <p className="cd-verdict__row">{t('coding.puzzle.distractorUsed')}</p>

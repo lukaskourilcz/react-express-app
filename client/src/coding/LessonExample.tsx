@@ -32,6 +32,15 @@ export function LessonExamplePanel({ example }: { example: LessonExample }) {
   const [lines, setLines] = useState<OutputLine[] | null>(null);
   const [status, setStatus] = useState<'idle' | 'running' | 'timeout' | 'error'>('idle');
   const [message, setMessage] = useState<string | null>(null);
+  // A run replaces the trace below with real output and says nothing while it
+  // does. Without this a screen-reader user presses Run and hears nothing at
+  // all, so the announcement carries the result out loud.
+  const [announcement, setAnnouncement] = useState('');
+  const announce = useCallback((text: string) => {
+    // Two identical announcements in a row leave a live region silent, and
+    // running the same example twice is the ordinary case here.
+    setAnnouncement((prev) => (prev.replace(/\u200b$/, '') === text ? `${text}\u200b` : text));
+  }, []);
   const abort = useRef<AbortController | null>(null);
 
   // Leaving the lesson must not leave a worker running behind it.
@@ -41,6 +50,7 @@ export function LessonExamplePanel({ example }: { example: LessonExample }) {
     setLines(null);
     setStatus('idle');
     setMessage(null);
+    setAnnouncement('');
   }, [example.id, example.code]);
 
   const run = useCallback(async (calls: string[], source: string) => {
@@ -61,24 +71,28 @@ export function LessonExamplePanel({ example }: { example: LessonExample }) {
     if (outcome.timedOut) {
       setStatus('timeout');
       setLines(null);
+      announce(t('coding.example.timeout'));
       return;
     }
     if (outcome.codeError) {
       setStatus('error');
       setMessage(outcome.codeError.slice(0, 200));
       setLines(null);
+      announce(t('coding.example.error'));
       return;
     }
     setStatus('idle');
-    setLines(
-      outcome.results
-        .slice(0, EXAMPLE_MAX_OUTPUT_LINES)
-        .map((result, index) => ({
-          call: calls[index] ?? '',
-          value: (result.actual ?? '').slice(0, Math.floor(EXAMPLE_MAX_OUTPUT_CHARS / EXAMPLE_MAX_OUTPUT_LINES)),
-        })),
-    );
-  }, [example.runnable, example.track]);
+    const next = outcome.results
+      .slice(0, EXAMPLE_MAX_OUTPUT_LINES)
+      .map((result, index) => ({
+        call: calls[index] ?? '',
+        value: (result.actual ?? '').slice(0, Math.floor(EXAMPLE_MAX_OUTPUT_CHARS / EXAMPLE_MAX_OUTPUT_LINES)),
+      }));
+    setLines(next);
+    announce(next.length === 1
+      ? t('coding.example.ranOne', { call: next[0].call, value: next[0].value })
+      : t('coding.example.ranMany', { n: next.length }));
+  }, [example.runnable, example.track, announce, t]);
 
   const reset = () => {
     abort.current?.abort();
@@ -86,6 +100,7 @@ export function LessonExamplePanel({ example }: { example: LessonExample }) {
     setLines(null);
     setStatus('idle');
     setMessage(null);
+    announce(t('coding.example.resetDone'));
   };
 
   const showEditor = example.runnable && !compact;
@@ -95,11 +110,14 @@ export function LessonExamplePanel({ example }: { example: LessonExample }) {
       <h4 id={`${baseId}-title`}>{example.title[lang] || example.title.en}</h4>
       <p className="cd-note">{example.blurb[lang] || example.blurb.en}</p>
       <p className="cd-shortcuts">{t('coding.example.explorationNote')}</p>
+      <span className="cd-visually-hidden" role="status" aria-live="polite">{announcement}</span>
 
       {showEditor ? (
         <>
-          <label className="cd-editor-label" htmlFor={`${baseId}-editor`}>{t('coding.example.editorLabel')}</label>
-          <div id={`${baseId}-editor`}>
+          {/* Not a <label>: `for` has to name a labelable control and the
+              editor is a div. The editor carries the same name itself. */}
+          <p className="cd-editor-label">{t('coding.example.editorLabel')}</p>
+          <div>
             <Editor value={code} onChange={setCode} track={example.track === 'typescript' ? 'typescript' : 'javascript'} ariaLabel={t('coding.example.editorLabel')} />
           </div>
           <div className="cd-actions">

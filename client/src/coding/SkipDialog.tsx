@@ -81,7 +81,7 @@ export function SkipPanel({ taskId, sessionId, onSkipped }: {
         >
           {t('coding.skip.confirm')}
         </button>
-        <button type="button" className="cd-btn" onClick={() => setOpen(false)}>{t('coding.retry')}</button>
+        <button type="button" className="cd-btn" onClick={() => setOpen(false)}>{t('common.cancel')}</button>
       </div>
 
       {skip.isError && <p className="cd-note cd-note--error" role="alert">{t('coding.library.error')}</p>}

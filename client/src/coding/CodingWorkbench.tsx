@@ -680,7 +680,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                   <p style={{ margin: '0 0 8px' }}>{mode === 'lesson' ? t('coding.lesson.giveUpNote') : t('coding.giveUpConfirm')}</p>
                   <div className="cd-actions">
                     <button type="button" className="cd-btn cd-btn--primary" onClick={() => void reveal()}>{t('coding.giveUp')}</button>
-                    <button type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('coding.retry')}</button>
+                    <button type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('common.cancel')}</button>
                   </div>
                 </div>
               )}
@@ -743,7 +743,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 <p style={{ margin: '0 0 8px' }}>{t('coding.resetConfirm')}</p>
                 <div className="cd-actions">
                   <button type="button" className="cd-btn cd-btn--primary" onClick={reset}>{t('coding.reset')}</button>
-                  <button type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('coding.retry')}</button>
+                  <button type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('common.cancel')}</button>
                 </div>
               </div>
             )}

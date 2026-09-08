@@ -314,7 +314,13 @@ function ProductCard({ listing, lang, balance, owned, equipped, busy, onBuy, onE
                 )}
               </HStack>
             )}
+            {/* A disabled button with no sentence next to it is a dead end.
+                Say which of the three reasons it is. */}
             {!affordable && availability.tokens && <Text type="supporting" size="xsm" color="secondary">{t('shop.insufficient')}</Text>}
+            {!availability.tokens && <Text type="supporting" size="xsm" color="secondary">{t('shop.noTokenPrice')}</Text>}
+            {availability.tokens && affordable && product.kind === 'physical' && !showAddress && (
+              <Text type="supporting" size="xsm" color="secondary">{t('shop.addressNeeded')}</Text>
+            )}
           </VStack>
 
           {showAddress && product.kind === 'physical' && (
@@ -326,6 +332,17 @@ function ProductCard({ listing, lang, balance, owned, equipped, busy, onBuy, onE
   );
 }
 
+/** The autofill tokens for a shipping address (WCAG 1.3.5). Typing a postcode
+ * by hand is exactly the sort of thing a learner should not have to do. */
+const ADDRESS_AUTOCOMPLETE: Record<keyof ShippingAddress, string> = {
+  name: 'shipping name',
+  line1: 'shipping address-line1',
+  line2: 'shipping address-line2',
+  city: 'shipping address-level2',
+  postcode: 'shipping postal-code',
+  country: 'shipping country',
+};
+
 function AddressFields({ value, onChange, sku }: { value: ShippingAddress; onChange: (next: ShippingAddress) => void; sku: string }) {
   const t = useT();
   const field = (key: keyof ShippingAddress, label: TranslationKey, maxLength: number) => (
@@ -335,6 +352,7 @@ function AddressFields({ value, onChange, sku }: { value: ShippingAddress; onCha
         id={`${sku}-${key}`}
         className="cd-input"
         maxLength={maxLength}
+        autoComplete={ADDRESS_AUTOCOMPLETE[key]}
         value={(value[key] as string) ?? ''}
         onChange={(event) => onChange({ ...value, [key]: event.target.value })}
       />

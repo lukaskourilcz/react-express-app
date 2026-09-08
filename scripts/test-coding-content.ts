@@ -259,6 +259,14 @@ async function main() {
       const swapped = [correct[1], correct[0], ...correct.slice(2)];
       if (gradePuzzle(puzzle, permutation, swapped).passed) fail(`${where}: a swapped arrangement grades as passing`);
     }
+    // No positional oracle: a partial arrangement is graded, but how far it is
+    // right is not reported, or one block at a time would spell out the answer.
+    if (correct.length > 1) {
+      const partial = gradePuzzle(puzzle, permutation, correct.slice(0, 1));
+      if (partial.passed) fail(`${where}: a partial arrangement grades as passing`);
+      if (partial.correctPrefix !== null) fail(`${where}: a partial arrangement is told how far it is right`);
+      if (graded.correctPrefix === null) fail(`${where}: a complete arrangement must be told how far it is right`);
+    }
     const withDistractor = puzzle.lines.find((line) => line.distractor);
     if (withDistractor) {
       const bad = [...correct.slice(0, -1), idToPosition.get(withDistractor.id)!];

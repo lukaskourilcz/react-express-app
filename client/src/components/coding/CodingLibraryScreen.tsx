@@ -216,7 +216,7 @@ export function CodingLibraryScreen() {
                     <button type="submit" className="cd-btn cd-btn--primary" disabled={!renaming.value.trim() || act.isPending}>
                       {t('coding.library.rename')}
                     </button>
-                    <button type="button" className="cd-btn" onClick={() => setRenaming(null)}>{t('coding.retry')}</button>
+                    <button type="button" className="cd-btn" onClick={() => setRenaming(null)}>{t('common.cancel')}</button>
                   </form>
                 )}
                 {confirmDelete === collection.id && (
@@ -230,7 +230,7 @@ export function CodingLibraryScreen() {
                       >
                         {t('coding.library.delete')}
                       </button>
-                      <button type="button" className="cd-btn" onClick={() => setConfirmDelete(null)} autoFocus>{t('coding.retry')}</button>
+                      <button type="button" className="cd-btn" onClick={() => setConfirmDelete(null)} autoFocus>{t('common.cancel')}</button>
                     </div>
                   </div>
                 )}

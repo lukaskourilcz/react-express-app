@@ -52,7 +52,8 @@ export function preparePuzzle(
 
 export interface PuzzleGrade {
   passed: boolean;
-  correctPrefix: number;
+  /** null when the arrangement was not complete; see `gradePuzzle`. */
+  correctPrefix: number | null;
   expectedLength: number;
   usedDistractor: boolean;
   competencies: PuzzleCompetency[];
@@ -62,6 +63,11 @@ export interface PuzzleGrade {
  * Grade an arrangement of presented block ids against the authored orderings.
  * Any accepted arrangement passes; the reported prefix is the best partial
  * match, which is what the learner is told (never which block is wrong).
+ *
+ * The prefix is reported only for a complete arrangement. On a partial one it
+ * is an oracle: submit a single block, read back whether it is the first, and
+ * the whole ordering falls out in as many submissions as there are blocks,
+ * without the learner reading a line of the code.
  */
 export function gradePuzzle(
   puzzle: AuthoredPuzzle,
@@ -86,9 +92,10 @@ export function gradePuzzle(
     best = Math.max(best, prefix);
     if (!usedDistractor && authoredIds.length === accepted.length && prefix === accepted.length) passed = true;
   }
+  const complete = authoredIds.length === expectedLength && authoredIds.every((id) => id !== null);
   return {
     passed,
-    correctPrefix: best,
+    correctPrefix: complete ? best : null,
     expectedLength,
     usedDistractor,
     competencies: [...puzzle.competencies],
