@@ -87,6 +87,7 @@ import {
   PART_TEST_SIZE,
   type RoadmapTopic,
 } from '../../lib/roadmap';
+import { itemReview } from '../../lib/curation';
 
 // One function for the whole roadmap to stay within the Vercel Hobby
 // 12-function limit. It serves three things off the same route:
@@ -140,6 +141,7 @@ function buildQuestions(ids: string[], lang: ReturnType<typeof normalizeLang>, b
         options,
         category: q.category,
         difficulty: q.difficulty,
+        review: itemReview(base),
       };
     });
   return { questions, answerKey };

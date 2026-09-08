@@ -48,6 +48,7 @@ const SubjectPicker = lazy(() => import('./components/SubjectPicker'));
 const SupportPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.SupportPage })));
 const PrivacyPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.PrivacyPage })));
 const TermsPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.TermsPage })));
+const CurationPage = lazy(() => import('./components/CurationPage').then((m) => ({ default: m.CurationPage })));
 const ClassroomPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.ClassroomPage })));
 const TopicLandingPage = lazy(() => import('./components/TopicLandingPage'));
 const Today = lazy(() => import('./components/Today'));
@@ -699,6 +700,7 @@ function App() {
                 <Route path="/support" element={<SupportPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
+                <Route path="/curation" element={<CurationPage />} />
                 <Route path="/classroom" element={<ClassroomPage />} />
                 <Route path="/topics/:slug" element={<TopicLandingPage />} />
                 <Route path="/dev" element={<DevPage />} />

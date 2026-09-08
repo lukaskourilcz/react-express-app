@@ -9,6 +9,7 @@
 
 import type { FailureCategory } from './coding-failure';
 import type { PuzzleView } from './coding-puzzle';
+import type { PublicItemReview } from './curation';
 
 export type CodingTrack = 'javascript' | 'typescript' | 'react' | 'system-design';
 export type CodingTier = 1 | 2 | 3 | 4 | 5;
@@ -186,6 +187,11 @@ export interface CodingTaskSummary {
 
 /** What the browser receives to play a task: everything except the answers. */
 export interface PlayableCodingTask extends CodingTaskSummary {
+  /** The version of this brief, plus the machine evidence behind it. A coding
+   * task's solution is executed against its own grader by the content
+   * contract, which is evidence that it is solvable exactly as specified and
+   * is not evidence that it has no defects. */
+  review?: PublicItemReview;
   legacyId?: string;
   prompt: Localized;
   starter: string;

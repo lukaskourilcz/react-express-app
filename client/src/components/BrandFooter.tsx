@@ -84,6 +84,7 @@ export default function BrandFooter() {
         <span>{t('footer.free')}</span>
         <nav aria-label={t('footer.legal')}>
           <Link to="/support">{t('footer.support')}</Link>
+          <Link to="/curation">{t('footer.curation')}</Link>
           <Link to="/privacy">{t('footer.privacy')}</Link>
           <Link to="/terms">{t('footer.terms')}</Link>
         </nav>

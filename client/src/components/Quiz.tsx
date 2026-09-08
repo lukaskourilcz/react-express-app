@@ -35,6 +35,9 @@ import {
 import { apiFetch, friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { TermsBar } from './ui/Terms';
+import { WhyThis } from './ui/WhyThis';
+import { whyThisItem } from '../lib/curation';
+import { learnerProfileOf } from '../lib/trackPref';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { RotatingTip } from './reactbits/RotatingTip';
@@ -219,7 +222,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [snack, setSnack] = useState<string | null>(null);
   const [mode, setMode] = useState<QuizMode>('standard');
   const [reviewPlan, setReviewPlan] = useState<ReviewWeakArea[]>([]);
-  const [reportTarget, setReportTarget] = useState<string | null>(null);
+  // The item being reported, with the version of the wording that was on
+  // screen, so a fix can be matched to what the learner actually saw.
+  const [reportTarget, setReportTarget] = useState<{ id: string; version?: string } | null>(null);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [showSupportPrompt, setShowSupportPrompt] = useState(false);
   const [settings] = useSettings();
@@ -233,6 +238,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const hintAbortRef = useRef<AbortController | null>(null);
 
   const { isAuthenticated, user } = useAuth();
+  // The saved plan, used only to say whether this topic is part of it.
+  const learnerProfile = learnerProfileOf(user);
   const profile = getUserProfile(user);
   const visibleCategoryOptions = visibleCategoryOptionsFor(profile.email);
 
@@ -502,7 +509,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     async (reason: 'incorrect-answer' | 'unclear' | 'typo' | 'outdated' | 'duplicate' | 'other', detail?: string) => {
       if (!reportTarget) return;
       try {
-        await reportQuestion({ questionId: reportTarget, reason, detail, reporterSub: user?.id });
+        await reportQuestion({
+          questionId: reportTarget.id,
+          reason,
+          detail,
+          reporterSub: user?.id,
+          contentVersion: reportTarget.version,
+        });
         setSnack(t('quiz.reportSent'));
       } catch {
         setSnack(t('quiz.reportFailed'));
@@ -1096,7 +1109,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                         type="button"
                         aria-label={t('quiz.reportAria')}
                         title={t('quiz.reportAria')}
-                        onClick={() => setReportTarget(question.id)}
+                        onClick={() => setReportTarget({ id: question.id, version: question.review?.version })}
                         style={iconBtnStyle('var(--color-text-secondary)')}
                       >
                         <ReportFlagIcon />
@@ -1139,7 +1152,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       answerProof={questionResult.answerProof}
                       selectedAnswer={question.options[questionResult.selectedIndex] ?? ''}
                       lang={lang}
-                      onReport={() => setReportTarget(question.id)}
+                      onReport={() => setReportTarget({ id: question.id, version: question.review?.version })}
                     />
                   )}
                 </VStack>
@@ -1276,6 +1289,23 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   texts={[currentQuestion.question, ...currentQuestion.options]}
                   domain={glossaryDomainFor(currentQuestion.category)}
                 />
+                {/* Why this one is in front of you, assembled from the item's
+                    own metadata. The classic quiz has no level, so it carries
+                    no objective line — that field is omitted rather than
+                    filled with something plausible. */}
+                <WhyThis
+                  item={whyThisItem({
+                    tags: currentQuestion.tags,
+                    category: currentQuestion.category,
+                    topicLabel: t(categoryLabelKey(currentQuestion.category)),
+                    profile: learnerProfile,
+                    planLabel: learnerProfile ? t('why.yourPlan') : null,
+                  })}
+                  review={currentQuestion.review}
+                  onReport={() =>
+                    setReportTarget({ id: currentQuestion.id, version: currentQuestion.review?.version })
+                  }
+                />
               </div>
               {currentQuestion.introduction && (
                 <Popover
@@ -1314,7 +1344,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 type="button"
                 aria-label={t('quiz.reportAria')}
                 title={t('quiz.reportAria')}
-                onClick={() => setReportTarget(currentQuestion.id)}
+                onClick={() => setReportTarget({ id: currentQuestion.id, version: currentQuestion.review?.version })}
                 style={{ ...iconBtnStyle('var(--color-text-secondary)'), marginTop: 1 }}
               >
                 <ReportFlagIcon />

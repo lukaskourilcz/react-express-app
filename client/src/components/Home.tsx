@@ -11,7 +11,7 @@
 // this file is the reference implementation of.
 
 import { useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { SharkFin, Waterline } from './SharkFin';
 import { CategoryGlyph } from './ui/techIcons';
 import SubjectGlyph from './ui/SubjectGlyph';
@@ -280,6 +280,15 @@ export default function Home() {
           <h2 style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.015em' }}>
             {t('home.topicsTitle')}
           </h2>
+          {/* One line, in the one place a visitor is deciding what to practise.
+              It describes the criteria applied, not a result already achieved,
+              and it does not imply a plan the visitor has not chosen. */}
+          <p style={{ margin: '4px 0 0', color: 'var(--color-text-secondary)', maxWidth: '62ch' }}>
+            {t('home.curationNote')}{' '}
+            <Link to="/curation" style={{ color: 'var(--brand-accent)', textUnderlineOffset: 3 }}>
+              {t('footer.curation')}
+            </Link>
+          </p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 14 }}>
           {featured.map((topic) => (

@@ -576,7 +576,7 @@ async function handleReport(req: VercelRequest, res: VercelResponse) {
     if (e instanceof AuthError) return jsonError(res, e.status, e.code, e.message);
   }
 
-  const body = req.body as { question_id?: unknown; reason?: unknown; detail?: unknown };
+  const body = req.body as { question_id?: unknown; reason?: unknown; detail?: unknown; content_version?: unknown };
   if (!body || typeof body !== 'object') {
     return jsonError(res, 400, 'bad_request', 'Body must be JSON');
   }
@@ -592,6 +592,14 @@ async function handleReport(req: VercelRequest, res: VercelResponse) {
   }
   const detail =
     typeof body.detail === 'string' && body.detail.length <= 1000 ? body.detail : null;
+  // The version of the wording the reporter saw. Validated as the shape the
+  // server issues rather than trusted: it is stored and later compared, so a
+  // client-supplied value that is not one of ours would only produce a report
+  // that can never be matched to anything.
+  const contentVersion =
+    typeof body.content_version === 'string' && /^[A-Za-z0-9_-]{8,32}$/.test(body.content_version)
+      ? body.content_version
+      : null;
 
   try {
     const { error } = await withTimeout(
@@ -600,6 +608,7 @@ async function handleReport(req: VercelRequest, res: VercelResponse) {
         reason: body.reason,
         detail,
         reporter_sub,
+        content_version: contentVersion,
       }),
     );
     if (error) {

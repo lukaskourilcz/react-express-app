@@ -16,6 +16,7 @@ import { getChallengeLeaderboard, recordChallengeScore } from '../../lib/challen
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { defaultDeploymentCategories, deploymentSubjectIds, validateCategoryScope } from '../../lib/product-scope';
 import { ASSESSMENT_QUESTION_COUNT } from '../../shared/assessment';
+import { itemReview } from '../../lib/curation';
 
 // Biggest Shark Challenge: a single function serving every challenge resource
 // so we stay within Vercel's 12-function Hobby limit. Routing:
@@ -142,6 +143,7 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
       options: shuffled,
       category: q.category,
       difficulty: q.difficulty,
+      review: itemReview(base),
     };
   });
 

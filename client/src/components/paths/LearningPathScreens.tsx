@@ -263,6 +263,14 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
               {t('paths.inventory.hours', { min: manifest.estimatedHours.min, max: manifest.estimatedHours.max })}
             </li>
           </ul>
+          {/* What the four kinds of activity are for, said once at the top of
+              the path rather than repeated at each one. The last sentence is
+              the one that matters: coming back to earlier material is the plan
+              working, not the plan slipping. */}
+          <p className="lp-note">
+            {t('paths.activityKinds')}{' '}
+            <Link to="/curation">{t('footer.curation')}</Link>
+          </p>
         </div>
         <div className="lp-head__actions">
           {!isAuthenticated && <span className="lp-actions__status">{t('paths.guestPreview')}</span>}

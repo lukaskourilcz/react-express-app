@@ -24,6 +24,8 @@
 .lp-page h2 { margin: 0; font-family: var(--font-family-heading); font-size: 1.25rem; }
 .lp-page h3 { margin: 0; font-family: var(--font-family-heading); font-size: 1.05rem; }
 .lp-lead { margin: 8px 0 0; color: var(--color-text-secondary); max-width: 66ch; line-height: 1.6; }
+.lp-note { margin: 12px 0 0; color: var(--color-text-secondary); max-width: 66ch; line-height: 1.6; font-size: 0.9rem; }
+.lp-note a { color: var(--brand-accent); text-underline-offset: 3px; }
 .lp-page a { color: var(--color-text-accent); }
 
 /* ── header ────────────────────────────────────────────────────────────── */

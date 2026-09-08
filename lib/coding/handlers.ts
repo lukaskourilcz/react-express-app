@@ -15,6 +15,7 @@ import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
 import { CODING_SUMMARIES, codingTaskById, playable } from './catalog';
+import { codingTaskReview } from '../curation';
 import { solutionFor } from './solutions';
 import { runInSandbox } from './sandbox';
 import { nodeTypeScriptChecker } from './ts-check-node';
@@ -159,6 +160,10 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   }
 
   const play = playable(task);
+  // What is known about this brief: the version of it, and the execution
+  // evidence that a reference solution passes its own grader. Not a review —
+  // nobody has read it for clarity or judged whether it is worth doing.
+  play.review = codingTaskReview(task);
   // The puzzle's lines go out shuffled, and the accepted orders stay here. The
   // shuffle is per request, so reloading does not hand back the same start.
   const authoredPuzzle = puzzleFor(task.id);

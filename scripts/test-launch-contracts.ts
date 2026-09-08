@@ -38,6 +38,23 @@ import { runReactSuite } from '../lib/coding/react-runner';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
+import { contentVersion, itemReview, codingTaskReview } from '../lib/curation';
+import {
+  itemClaim,
+  publicItemReview,
+  reviewStatusFor,
+  summarizeCoverage,
+  coverageClaim,
+  passesBothGates,
+  RELEVANCE_MARKERS,
+  RELEVANCE_MAX,
+  RELEVANCE_MIN,
+  QUALITY_MAX,
+  QUALITY_MIN,
+  MARKER_MAX,
+  type ReviewRecord,
+} from '../shared/curation';
+import { createHash } from 'node:crypto';
 import { FAILURE_CATEGORIES, classifyFailure, failureHint } from '../shared/coding-failure';
 import { RETIRED_TOPIC_IDS, retirementOf } from '../shared/retired-content';
 import { GLOSSARY, termsIn } from '../shared/glossary';
@@ -873,7 +890,117 @@ async function main() {
     }
   }
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, and an unconfigured shop.');
+  // ── curation claims never outrun their evidence (#181) ─────────────────
+  //
+  // Every one of these is a sentence the product would otherwise be able to
+  // show a learner without anything behind it.
+  {
+    const sampleQuestion = {
+      id: 'rm-js-1',
+      tags: ['Roadmap'],
+      introduction: '',
+      question: 'What does this return?',
+      options: ['a', 'b', 'c', 'd'],
+      correctAnswer: 2,
+      category: 'javascript' as const,
+      explanation: 'Because.',
+      difficulty: 1 as const,
+    };
+
+    // The version covers the answer, so editing it invalidates the approval —
+    // and the version is keyed, so holding the options does not let anyone
+    // recover which one is right by hashing the four candidates.
+    const base = contentVersion(sampleQuestion);
+    assert.notEqual(base, contentVersion({ ...sampleQuestion, correctAnswer: 0 }));
+    assert.notEqual(base, contentVersion({ ...sampleQuestion, explanation: 'Different.' }));
+    assert.notEqual(base, contentVersion({ ...sampleQuestion, question: 'What now?' }));
+    assert.equal(base, contentVersion({ ...sampleQuestion }), 'the same content must give the same version');
+    assert.ok(
+      !createHash('sha256')
+        .update(JSON.stringify(sampleQuestion))
+        .digest('base64url')
+        .startsWith(base),
+      'the version must not be a plain digest of the content',
+    );
+
+    // Nothing is reviewed until a record exists for the exact version.
+    assert.equal(itemReview(sampleQuestion).status, 'unreviewed');
+    assert.equal(itemClaim(itemReview(sampleQuestion)), 'not-yet-reviewed');
+    assert.equal(reviewStatusFor(undefined, base), 'unavailable', 'a metadata failure is not a review');
+    assert.equal(itemClaim({ version: base, status: 'unavailable' }), 'none', 'unavailable metadata says nothing');
+
+    const record = (over: Partial<ReviewRecord> = {}): ReviewRecord => ({
+      itemId: sampleQuestion.id,
+      version: base,
+      relevance: 8,
+      quality: 5,
+      events: [{ kind: 'human', at: '2026-01-02' }],
+      ...over,
+    });
+    assert.equal(reviewStatusFor(record(), base), 'reviewed');
+    assert.equal(reviewStatusFor(record(), 'a-different-version'), 'superseded', 'an edit invalidates approval');
+    assert.equal(reviewStatusFor(record({ quality: 2 }), base), 'superseded', 'a failed gate is not reviewed');
+    assert.equal(reviewStatusFor(record({ relevance: 3 }), base), 'superseded', 'a failed gate is not reviewed');
+    assert.equal(itemClaim(publicItemReview(record(), 'a-different-version')), 'not-yet-reviewed');
+
+    // "Reviewed more than once" needs more than one recorded human review, and
+    // automated or execution evidence never counts toward it.
+    assert.equal(itemClaim(publicItemReview(record(), base)), 'reviewed-once');
+    assert.equal(
+      itemClaim(publicItemReview(record({ events: [
+        { kind: 'human', at: '2026-01-02' },
+        { kind: 'automated', at: '2026-02-02' },
+        { kind: 'execution', at: '2026-02-02' },
+      ] }), base)),
+      'reviewed-once',
+      'a script running is not a second human review',
+    );
+    assert.equal(
+      itemClaim(publicItemReview(record({ events: [
+        { kind: 'human', at: '2026-01-02' },
+        { kind: 'human', at: '2026-03-02' },
+      ] }), base)),
+      'reviewed-repeatedly',
+    );
+
+    // Machine evidence stands on its own and is never called a review.
+    const codingReview = codingTaskReview(CODING_TASKS[0]);
+    assert.equal(codingReview.status, 'unreviewed');
+    assert.equal((codingReview.executionChecks ?? 0) > 0, true, 'a proven solution is recorded evidence');
+    assert.equal(itemClaim(codingReview), 'checked-automatically');
+    assert.ok(codingReview.version.length >= 8, 'a coding task carries a version to report against');
+
+    // The public shape carries no scores unless a current record exists, and
+    // never a reviewer, a report or anything resembling an answer.
+    const unreviewedShape = Object.keys(itemReview(sampleQuestion));
+    for (const key of ['relevance', 'quality', 'reviewedAt', 'humanReviews']) {
+      assert.ok(!unreviewedShape.includes(key), `an unreviewed item must not carry ${key}`);
+    }
+    const reviewedShape = JSON.stringify(publicItemReview(record(), base));
+    assert.ok(!/reviewer|report|answer|correct/i.test(reviewedShape), 'review metadata must not name a reviewer or an answer');
+
+    // A bank-wide claim needs every source counted, and no claim at all is the
+    // answer to both "nothing reviewed" and "a source we cannot count".
+    assert.equal(coverageClaim(summarizeCoverage([{ id: 'bank', items: 100, reviewed: 0 }])), 'none');
+    assert.equal(coverageClaim(summarizeCoverage([{ id: 'bank', items: 100, reviewed: 40 }])), 'partial');
+    assert.equal(coverageClaim(summarizeCoverage([{ id: 'bank', items: 100, reviewed: 100 }])), 'complete');
+    assert.equal(
+      coverageClaim(summarizeCoverage([
+        { id: 'bank', items: 100, reviewed: 100 },
+        { id: 'overrides', items: null, reviewed: null },
+      ])),
+      'none',
+      'one uncountable source means no bank-wide claim',
+    );
+
+    // The gates are separate: passing one never stands in for the other.
+    assert.equal(passesBothGates(RELEVANCE_MAX, QUALITY_MIN - 1), false);
+    assert.equal(passesBothGates(RELEVANCE_MIN - 1, QUALITY_MAX), false);
+    assert.equal(passesBothGates(RELEVANCE_MIN, QUALITY_MIN), true);
+    assert.equal(RELEVANCE_MARKERS.length * MARKER_MAX, RELEVANCE_MAX, 'five markers of two points make ten');
+  }
+
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, and an unconfigured shop.');
 }
 
 void main().catch((error) => {

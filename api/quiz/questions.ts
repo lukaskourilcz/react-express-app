@@ -18,6 +18,8 @@ import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
 import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/product-scope';
 import { selectPersonalizedReview } from '../../lib/review-selection';
+import { curationCoverage, itemReview } from '../../lib/curation';
+import { coverageClaim } from '../../shared/curation';
 
 const ALL_CATEGORIES = Object.values(SUBJECT_SCOPE_CATALOG)
   .flatMap((subject) => [...subject.categories]) as CategoryType[];
@@ -35,6 +37,17 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+
+  // How much of the deliverable pool has a current review record. Answered
+  // before any quiz parameter is parsed, because it selects nothing and needs
+  // no categories: it is the evidence the methodology page is allowed to cite,
+  // and it is the only thing that decides which coverage sentence is shown.
+  if (resource === 'curation') {
+    const coverage = await curationCoverage();
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    logEvent({ status: 200, resource, claim: coverageClaim(coverage), latency_ms: Date.now() - started });
+    return res.json({ coverage, claim: coverageClaim(coverage) });
+  }
 
   const settings = await getGameSettings();
   const ownerEmail = settings.ownerEmail;
@@ -200,6 +213,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       options: shuffled,
       category: q.category,
       difficulty: q.difficulty,
+      // The version of this exact wording plus whatever review is recorded for
+      // it. No scores, no reviewer, no report text — and never a hint at the
+      // answer, since the version is a keyed digest.
+      review: itemReview(base),
     };
   });
 

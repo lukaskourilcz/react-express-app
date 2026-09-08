@@ -1,4 +1,5 @@
 import type { PlayableCodingTask } from '../../../shared/coding-catalog';
+import type { PublicItemReview } from '../../../shared/curation';
 export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets' | 'continents' | 'capitals' | 'flags' | 'landforms' | 'climate' | 'population' | 'political' | 'economic' | 'cartography' | 'earth' | 'arithmetic' | 'fractions' | 'prealgebra' | 'algebra' | 'geometry' | 'trigonometry' | 'statistics' | 'precalculus' | 'calculus' | 'linear-algebra' | 'prehistory' | 'ancient' | 'classical' | 'medieval' | 'renaissance' | 'earlymodern' | 'industrial' | 'worldwars' | 'coldwar' | 'modern' | 'openings' | 'tactics' | 'strategy' | 'endgames' | 'combinations' | 'discrete-math' | 'number-theory' | 'multivariable-calculus' | 'differential-equations' | 'real-analysis' | 'geomorphology' | 'oceanography' | 'biogeography' | 'geopolitics' | 'gis' | 'historiography' | 'history-of-science' | 'economic-history' | 'intellectual-history' | 'military-history' | 'cell-biology' | 'skeletal-system' | 'muscular-system' | 'nervous-system' | 'endocrine-system' | 'cardiovascular-system' | 'respiratory-system' | 'digestive-system' | 'immune-system' | 'reproductive-system' | 'opening-theory' | 'middlegame' | 'pawn-structures' | 'endgame-technique' | 'chess-history' | 'positions' | 'starting-hands' | 'pot-odds' | 'betting-strategy' | 'postflop' | 'tournament-play' | 'psychology' | 'gto-advanced';
 
 export interface Question {
@@ -9,6 +10,10 @@ export interface Question {
   options: string[];
   category: CategoryType;
   difficulty: 1 | 2 | 3 | 4 | 5;
+  /** The version of this exact wording, and whatever review is recorded for
+   * it. Absent when the server could not resolve it, which is a reason to say
+   * nothing about review rather than to assume the friendly answer. */
+  review?: PublicItemReview;
 }
 
 export type DifficultyMode = 'basics' | 'easy' | 'zero-to-hero' | 'advanced' | 'mixed';
@@ -86,6 +91,9 @@ export interface RoadmapQuestion {
   options: string[];
   category: CategoryType;
   difficulty: 1 | 2 | 3 | 4 | 5;
+  /** The version of this exact wording, with whatever review is recorded for
+   * it. Absent means say nothing about review, not assume the best case. */
+  review?: PublicItemReview;
 }
 
 // A playable lesson (a level) or exam (a checkpoint). `ref` is the level or

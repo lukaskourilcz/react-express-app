@@ -16,6 +16,10 @@ import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, type LadderRung } 
 import { taskResources } from '../../../shared/coding-docs';
 import { skipTask } from './practice';
 import { TermsBar } from '../components/ui/Terms';
+import { WhyThis } from '../components/ui/WhyThis';
+import { ReportDialog } from '../components/ReportDialog';
+import { whyThisItem } from '../lib/curation';
+import { reportQuestion } from '../lib/supabase';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
 import { useIsNarrowForEditor } from '../lib/useMediaQuery';
@@ -96,6 +100,7 @@ function relativeTime(iso: string, lang: string): string {
 export function CodingWorkbench(props: CodingWorkbenchProps) {
   const { task, session, locked, signedIn, initialCode, mode, onDraft, onVerdict, onRevealed, nextHref, backHref, onContinue } = props;
   const { t, lang } = useLanguage();
+  const [reportOpen, setReportOpen] = useState(false);
   const L = useCallback((value: Localized | undefined): string => (value ? value[lang] || value.en : ''), [lang]);
   const online = useOnline();
   const baseId = useId();
@@ -666,6 +671,17 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             {/* Beside the brief, so nothing is injected into code the learner
                 is reading or about to run. */}
             <TermsBar texts={[L(task.prompt), L(task.title)]} domain={glossaryDomainFor(task.track)} />
+            {/* What this task is for, and what is actually known about it: the
+                execution evidence, never a review nobody performed. */}
+            <WhyThis
+              item={whyThisItem({
+                tags: task.focus,
+                category: task.track,
+                topicLabel: trackLabel,
+              })}
+              review={task.review}
+              onReport={() => setReportOpen(true)}
+            />
             {formatOf(task) === 'debug' && <p className="cd-note">{t('coding.format.debugHint')}</p>}
             {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{L(task.api.note)}</p>}
             {locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}
@@ -883,6 +899,21 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {verdictCard}
         </section>
       </div>
+      {/* The same dialog the quiz uses, carrying the task id and the version of
+          the brief that was on screen. Reporting needs no account. */}
+      <ReportDialog
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        onSubmit={async (reason, detail) => {
+          await reportQuestion({
+            questionId: task.id,
+            reason,
+            detail,
+            contentVersion: task.review?.version,
+          });
+          setReportOpen(false);
+        }}
+      />
     </div>
   );
 }

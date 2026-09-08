@@ -85,6 +85,9 @@ export async function reportQuestion(input: {
   reason: 'incorrect-answer' | 'unclear' | 'typo' | 'outdated' | 'duplicate' | 'other' | 'needs-review';
   detail?: string;
   reporterSub?: string;
+  /** The version of the wording the reporter was looking at, so the fix can be
+   * matched to it. Omitted when the item carries no review metadata. */
+  contentVersion?: string;
 }) {
   await apiFetch('/api/quiz/submit?resource=report', {
     method: 'POST',
@@ -93,6 +96,7 @@ export async function reportQuestion(input: {
       reason: input.reason,
       detail: input.detail,
       reporter_sub: input.reporterSub,
+      content_version: input.contentVersion,
     }),
   });
 }
