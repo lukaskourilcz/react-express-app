@@ -103,6 +103,9 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   rate_limited: 'error.rateLimited',
   not_configured: 'error.serviceUnavailable',
   migration_required: 'error.serviceUnavailable',
+  // 403 without this would read "you need to sign in", which is the one thing
+  // a signed-in learner blocked by their own learning plan must not be told.
+  progression_locked: 'progression.locked',
 };
 
 // not_found spans several endpoints whose English server messages are more

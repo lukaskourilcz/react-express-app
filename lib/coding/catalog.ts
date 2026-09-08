@@ -18,6 +18,8 @@ import { REACT_TASKS } from './tasks/react';
 import { REACT_TASKS_CS } from './tasks/react.cs';
 import { SYSTEM_DESIGN_TASKS } from './tasks/system-design';
 import { SYSTEM_DESIGN_TASKS_CS } from './tasks/system-design.cs';
+import { JAVASCRIPT_DEBUG_TASKS } from './tasks/javascript-debug';
+import { JAVASCRIPT_DEBUG_TASKS_CS } from './tasks/javascript-debug.cs';
 import { JAVASCRIPT_LOOP_TASKS } from './tasks/javascript-loops';
 import { JAVASCRIPT_LOOP_TASKS_CS } from './tasks/javascript-loops.cs';
 import { TYPESCRIPT_LOOP_TASKS } from './tasks/typescript-loops';
@@ -28,6 +30,7 @@ import { REACT_LOOP_TASKS_CS } from './tasks/react-loops.cs';
 const sources: { tasks: CodingTaskSource[]; cs: Record<string, CodingTaskCs> }[] = [
   { tasks: JAVASCRIPT_TASKS, cs: JAVASCRIPT_TASKS_CS },
   { tasks: JAVASCRIPT_LOOP_TASKS, cs: JAVASCRIPT_LOOP_TASKS_CS },
+  { tasks: JAVASCRIPT_DEBUG_TASKS, cs: JAVASCRIPT_DEBUG_TASKS_CS },
   { tasks: TYPESCRIPT_TASKS, cs: TYPESCRIPT_TASKS_CS },
   { tasks: TYPESCRIPT_LOOP_TASKS, cs: TYPESCRIPT_LOOP_TASKS_CS },
   { tasks: REACT_TASKS, cs: REACT_TASKS_CS },
@@ -51,9 +54,13 @@ export const codingTaskByLegacyId = (legacyId: string): CodingTask | undefined =
 export const tasksForTrack = (track: CodingTrack): CodingTask[] => CODING_TASKS.filter((task) => task.track === track);
 
 /** Tasks that belong to one Learn level, in catalogue order. Checklist tasks
- * cannot gate a level, so they are never part of one. */
+ * cannot gate a level, so they are never part of one. Neither can a repair
+ * exercise (issue #163): it is a Coding-section format, and letting one into
+ * the quota would silently change which task an existing level asks for. */
 export function tasksForLevel(topic: CodingTask['topic'], level: number): CodingTask[] {
-  return CODING_TASKS.filter((task) => task.topic === topic && task.level === level && task.verify !== 'checklist');
+  return CODING_TASKS.filter(
+    (task) => task.topic === topic && task.level === level && task.verify !== 'checklist' && task.debug !== true,
+  );
 }
 
 /** How many tasks a Learn level asks for: one for levels 1–5, two for 6–15,
@@ -76,6 +83,7 @@ export function summarize(task: CodingTask): CodingTaskSummary {
     focus: task.focus,
     title: task.title,
     verify: task.verify,
+    ...(task.debug ? { debug: true } : {}),
     estimatedMinutes: task.estimatedMinutes,
   };
 }

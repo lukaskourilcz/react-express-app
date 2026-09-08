@@ -7,7 +7,6 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Avatar } from '@astryxdesign/core/Avatar';
 import { Button } from '@astryxdesign/core/Button';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Text } from '@astryxdesign/core/Text';
@@ -22,6 +21,8 @@ import { computeLearningXp, levelForXp } from '../lib/leveling';
 import { useTrack, rankLabelKeyFor } from '../lib/tracks';
 import { useEquippedRingColor } from '../lib/shop';
 import { useActiveSubject, topicSetForSubject } from '../lib/subjects';
+import { LearnerAvatar } from './ui/LearnerAvatar';
+import { useCrownEquipped } from '../lib/rewards';
 
 // A single row in the account dropdown — a full-width, left-aligned button that
 // mimics a menu item (subtle hover fill) without pulling in MUI's MenuItem.
@@ -64,6 +65,7 @@ function AuthButton() {
   const subject = useActiveSubject();
   const totalXp = computeLearningXp(progress, topicSetForSubject(subject.id)) + questXp;
   const ringColor = useEquippedRingColor();
+  const crowned = useCrownEquipped(isAuthenticated);
   const [track] = useTrack();
   const levelInfo = levelForXp(totalXp);
   const navigate = useNavigate();
@@ -156,18 +158,17 @@ function AuthButton() {
           cursor: 'pointer',
         }}
       >
-        <div
-          style={{
-            display: 'flex',
-            flexShrink: 0,
-            borderRadius: '50%',
-            ...(ringColor
-              ? { padding: 2, background: `${ringColor}22`, boxShadow: `0 0 0 1.5px ${ringColor}` }
-              : null),
-          }}
-        >
-          <Avatar src={profile.picture} name={displayName} alt="" size="medium" />
-        </div>
+        {/* One shared avatar so the crown appears the same way everywhere
+            (issue #173). The 56px toolbar height is unchanged: the crown
+            overhangs the circle without adding to the row. */}
+        <LearnerAvatar
+          src={profile.picture}
+          name={displayName}
+          alt=""
+          size="medium"
+          crowned={crowned}
+          ringColor={ringColor}
+        />
         {/* Name + rank are a wide-desktop luxury: below 1080px the widget is
             the avatar alone, so it can never crowd the centre nav. The rank
             stays on ONE ellipsized line (full title on hover + in Profile) so

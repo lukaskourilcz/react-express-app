@@ -20,6 +20,10 @@ import { runInSandbox } from './sandbox';
 import { nodeTypeScriptChecker } from './ts-check-node';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { afterCodingPass } from '../github-garden';
+import { gradePuzzle, preparePuzzle, puzzleFor } from './puzzles';
+import { adviceFor } from './failure-hints';
+import { approachesFor } from './approaches';
+import { classifyFailure, type FailureAdvice, type FailureSignals } from '../../shared/coding-failures';
 import {
   CODING_TASK_XP,
   isCodingTaskId,
@@ -40,6 +44,9 @@ import type {
   CodingVerdictResponse,
   DesignAnswer,
 } from '../../shared/coding-api';
+import type { CodingApproachesResponse } from '../../shared/coding-approaches';
+import type { CodingPuzzleVerdict, PlayableCodingPuzzle } from '../../shared/coding-puzzle';
+import { isPuzzleOrder } from '../../shared/coding-puzzle';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
 import type { TypeCheckResult } from '../../shared/coding-ts-check';
 
@@ -155,9 +162,18 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
 
   const play = playable(task);
   let key: CodingSession['key'];
+  // An authored code-ordering puzzle rides along with every task that has one.
+  // The permutation is sealed into the session, never sent.
+  let puzzle: PlayableCodingPuzzle | null = null;
+  const authoredPuzzle = puzzleFor(task.id);
+  if (authoredPuzzle) {
+    const prepared = preparePuzzle(authoredPuzzle, secureShuffle);
+    puzzle = prepared.playable;
+    key = { ...(key ?? {}), puzzle: prepared.permutation };
+  }
   if (task.track === 'system-design') {
     const prepared = prepareDesign(task, secureShuffle);
-    key = prepared.key;
+    key = { ...(key ?? {}), ...prepared.key };
     if (prepared.design) {
       play.design = {
         scenario: prepared.design.scenario,
@@ -174,7 +190,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   const session = locked ? null : encodeCodingSession({ taskId: task.id, track: task.track, userId, ...(key ? { key } : {}) });
 
   res.setHeader('Cache-Control', 'private, no-store');
-  const body: CodingTaskResponse = { task: play, session, locked, progress, draft, signedIn: Boolean(userId) };
+  const body: CodingTaskResponse = { task: play, session, locked, progress, draft, signedIn: Boolean(userId), puzzle };
   return res.json(body);
 }
 
@@ -257,7 +273,14 @@ async function gradeReact(task: CodingTask, code: string): Promise<Graded> {
       design: null, designReference: null,
     };
   }
-  const results = run.cases.map((one) => ({ pass: one.status === 'pass', actual: null, error: one.error }));
+  // `error` means "the code threw before the assertion could run" everywhere
+  // else in the grader, and the failure classifier reads it that way. A React
+  // case that simply failed an expectation is not that.
+  const results = run.cases.map((one) => ({
+    pass: one.status === 'pass',
+    actual: null,
+    error: one.assertion ? null : one.error,
+  }));
   const verdict: CodingOutcome = run.compileError
     ? 'error'
     : run.timedOut
@@ -359,9 +382,68 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   };
 }
 
-function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGardenStatus | null): CodingVerdictResponse {
+/**
+ * Turn a failed grade into the authored advice for its shape (issue #156).
+ *
+ * Only counts and flags from the *visible* run are read; a hidden test's call
+ * and expectation never reach this function, so nothing it returns can leak
+ * one. Raw runtime text is used to set a boolean and then discarded — the text
+ * the learner sees is authored, versioned with the task, and never a stack
+ * trace.
+ */
+function failureAdviceFor(task: CodingTask, graded: Graded): FailureAdvice | null {
+  if (graded.verdict === 'passed') return null;
+  const outcome = graded.verdict === 'timeout' ? 'timeout' : graded.verdict === 'error' ? 'error' : 'failed';
+  const visible = graded.results.map((result, index) => ({
+    pass: result.pass,
+    edge: task.tests?.[index]?.edge === true,
+  }));
+  const failed = graded.results
+    .map((result, index) => ({ result, test: task.tests?.[index] }))
+    .filter((one) => one.result.pass === false);
+  const typeErrors = graded.check
+    ? graded.check.codeErrors.length + graded.check.typeTests.filter((one) => !one.pass).length
+    : 0;
+  const allUndefined = failed.length > 0 && failed.every((one) => one.result.actual === 'undefined');
+  // "Right values, wrong container": the actual reads as a different JSON type
+  // from the expected one. Both sides are visible tests, which the learner has.
+  const shapeMismatch = failed.some((one) => {
+    if (one.result.actual === null || one.test === undefined) return false;
+    const expected = JSON.stringify(one.test.expected);
+    const actual = one.result.actual;
+    if (expected === undefined || actual === 'undefined') return false;
+    const shape = (value: string) => (value.startsWith('[') ? 'array' : value.startsWith('{') ? 'object' : value.startsWith('"') ? 'string' : 'scalar');
+    return shape(expected) !== shape(actual);
+  });
+  // A visible test whose call names a mutating method and whose neighbours also
+  // regress is the signal a mutation leaves behind.
+  const mutated = failed.length > 1 && failed.some((one) => /\.(push|splice|sort|reverse|unshift|shift|pop)\(/.test(one.test?.call ?? ''));
+  const signals: FailureSignals = {
+    outcome,
+    visible,
+    hidden: graded.hidden,
+    typeErrors,
+    threw: Boolean(graded.codeError) || failed.some((one) => one.result.error !== null),
+    allUndefined,
+    shapeMismatch,
+    mutated,
+    // A React suite asserts against what is on the screen, so a failed case
+    // carries no returned value. Reading "missing return" or "wrong container"
+    // out of that would be inventing a cause.
+    opaque: task.track === 'react',
+  };
+  return adviceFor(task.id, classifyFailure(signals));
+}
+
+function verdictBody(
+  task: CodingTask,
+  graded: Graded,
+  recorded: Recorded | null,
+  github: CodingGardenStatus | null,
+): CodingVerdictResponse {
   return {
     verdict: graded.verdict,
+    failureAdvice: failureAdviceFor(task, graded),
     results: graded.results,
     hidden: graded.hidden,
     check: graded.check,
@@ -377,6 +459,118 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
   };
 }
 
+/* ── code-ordering puzzles (issue #154) ──────────────────────────────────── */
+
+/**
+ * Grade an arrangement of the sealed puzzle. The submission carries presented
+ * block ids; the authored order lives only in the session's sealed key, so a
+ * replay of someone else's session, a forged order or a client that patched its
+ * own "correct" flag all fail here.
+ *
+ * A pass is recorded as recognition evidence, in its own table. It never marks
+ * the coding task passed and never awards task XP: arranging code is not the
+ * same as writing it. It DOES satisfy a Learn level's coding requirement, so a
+ * learner on a phone is not left at a dead end — the Coding section still shows
+ * the task as unwritten, and says why.
+ */
+async function handlePuzzleSubmit(
+  res: VercelResponse,
+  supabase: SupabaseClient | null,
+  input: {
+    task: CodingTask;
+    session: CodingSession;
+    userId: string | null;
+    order: unknown;
+    durationMs?: number;
+  },
+) {
+  const { task, session, userId } = input;
+  const puzzle = puzzleFor(task.id);
+  const permutation = session.key?.puzzle;
+  if (!puzzle || !permutation) return jsonError(res, 400, 'no_puzzle', 'This task has no code-ordering puzzle');
+  const blocks = permutation.map((_, position) => ({ id: `b${position}`, code: '', indent: 0 }));
+  if (!isPuzzleOrder(input.order, blocks)) return jsonError(res, 400, 'bad_request', 'An arrangement of the shown blocks is required');
+
+  const grade = gradePuzzle(puzzle, permutation, input.order);
+  let applied = false;
+  let satisfiesLevel = false;
+  if (userId && supabase) {
+    const saved = await withTimeout(
+      supabase.rpc('record_coding_puzzle_result', {
+        p_user_id: userId,
+        p_attempt_id: session.attemptId,
+        p_task_id: task.id,
+        p_track: task.track,
+        p_puzzle_version: puzzle.version,
+        p_passed: grade.passed,
+        p_competencies: grade.competencies,
+        p_roadmap_attempt_id: session.roadmapAttemptId ?? null,
+        p_duration_ms: clampInt(input.durationMs, 86_400_000),
+      }),
+    );
+    if (saved.error) {
+      if (isRpcMissing(saved.error)) return jsonError(res, 503, 'migration_required', 'Puzzle migration 027 is not installed');
+      return jsonError(res, 500, 'db_error', 'Could not record the puzzle result');
+    }
+    const data = (saved.data ?? {}) as { applied?: boolean; satisfiesLevel?: boolean };
+    applied = data.applied === true;
+    satisfiesLevel = data.satisfiesLevel === true;
+  }
+  logEvent({ status: 200, kind: 'puzzle', track: task.track, verdict: grade.passed ? 'passed' : 'failed', hasUser: Boolean(userId) });
+  res.setHeader('Cache-Control', 'private, no-store');
+  const out: CodingPuzzleVerdict = {
+    verdict: grade.passed ? 'passed' : 'failed',
+    correctPrefix: grade.correctPrefix,
+    expectedLength: grade.expectedLength,
+    usedDistractor: grade.usedDistractor,
+    competencies: grade.competencies,
+    evidence: 'puzzle',
+    applied,
+    satisfiesLevel,
+  };
+  return res.json(out);
+}
+
+/* ── GET ?resource=coding-approaches&id=… ────────────────────────────────── */
+
+/**
+ * The curated solution comparison (issue #158). It leaves the server only after
+ * the learner's own verdict is recorded: `passed` for someone who solved it,
+ * `revealed` for someone who gave up and read the reference. Those two are
+ * reported separately, because seeing how it could be written is not the same
+ * claim as having written it — and neither is a local boolean, which is why the
+ * gate reads coding_progress rather than anything in the request.
+ */
+export async function handleCodingApproaches(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+  if (!codingAvailable()) return notAvailable(res);
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+  const id = req.query.id;
+  if (!isCodingTaskId(id)) return jsonError(res, 400, 'bad_request', 'A task id is required');
+  const task = codingTaskById(id);
+  if (!task) return jsonError(res, 404, 'not_found', 'Unknown task');
+  const approaches = approachesFor(task.id);
+  if (!approaches || approaches.length === 0) {
+    return jsonError(res, 404, 'no_approaches', 'No solution comparison is authored for this task');
+  }
+  const userId = await requireAuthSub(req, res);
+  if (!userId) return;
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Coding progress is not configured');
+
+  let progress: CodingTaskProgress | null;
+  try {
+    progress = await loadProgressRow(supabase, userId, task.id);
+  } catch {
+    return jsonError(res, 500, 'db_error', 'Could not load coding progress');
+  }
+  if (progress?.status !== 'passed' && progress?.status !== 'revealed') {
+    return jsonError(res, 403, 'not_unlocked', 'Solve this task first to compare approaches');
+  }
+
+  res.setHeader('Cache-Control', 'private, no-store');
+  const out: CodingApproachesResponse = { taskId: task.id, unlockedBy: progress.status, approaches };
+  return res.json(out);
+}
+
 /* ── POST ?resource=coding-submit ────────────────────────────────────── */
 
 export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
@@ -389,6 +583,12 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   if (!task || task.track !== session.track) return jsonError(res, 400, 'invalid_session', 'Coding session does not match a task');
   const userId = await optionalUser(req, res);
   if (userId === undefined) return;
+
+  // A code-ordering puzzle arrives on the same resource with the same sealed
+  // session; the arrangement, not code, is what is graded.
+  if (body.puzzleOrder !== undefined) {
+    return handlePuzzleSubmit(res, supabase, { task, session, userId, order: body.puzzleOrder, durationMs: body.durationMs });
+  }
 
   let graded: Graded;
   let code: string | null = null;
@@ -423,7 +623,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   }
   logEvent({ status: 200, kind: 'submit', track: task.track, verdict: graded.verdict, hasUser: Boolean(userId) });
   res.setHeader('Cache-Control', 'private, no-store');
-  return res.json(verdictBody(graded, recorded, github));
+  return res.json(verdictBody(task, graded, recorded, github));
 }
 
 /* ── POST ?resource=coding-reveal ────────────────────────────────────── */

@@ -26,7 +26,7 @@ type Outgoing =
   | { type: 'ready' }
   | { type: 'compiled'; token: string }
   | { type: 'compile-error'; token: string; message: string }
-  | { type: 'test'; token: string; name: string; status: 'pass' | 'fail'; error: string | null; durationMs: number }
+  | { type: 'test'; token: string; name: string; status: 'pass' | 'fail'; error: string | null; assertion: boolean; durationMs: number }
   | { type: 'console'; token: string; level: string; text: string }
   | { type: 'preview-error'; token: string; message: string }
   | { type: 'done'; token: string; passed: number; failed: number; total: number; ran: boolean };
@@ -146,20 +146,20 @@ async function runInner(message: RunMessage) {
     try {
       makeRequire(files, jest.globals)('./App.test.js');
     } catch (error) {
-      post({ type: 'test', token: message.token, name: 'suite', status: 'fail', error: `compiling suite: ${String((error as Error)?.message ?? error).split('\n')[0]}`, durationMs: 0 });
+      post({ type: 'test', token: message.token, name: 'suite', status: 'fail', error: `compiling suite: ${String((error as Error)?.message ?? error).split('\n')[0]}`, assertion: false, durationMs: 0 });
       failed = 1;
       total = 1;
     }
     if (total === 0) {
       const outcome = await jest.run({ afterEach: () => RTL.cleanup(), timeoutMs: 5_000 });
       for (const one of outcome.cases) {
-        post({ type: 'test', token: message.token, name: one.name, status: one.status, error: one.error, durationMs: one.durationMs });
+        post({ type: 'test', token: message.token, name: one.name, status: one.status, error: one.error, assertion: one.assertion, durationMs: one.durationMs });
       }
       passed = outcome.passed;
       failed = outcome.failed;
       total = outcome.total;
       if (total === 0) {
-        post({ type: 'test', token: message.token, name: 'suite', status: 'fail', error: 'The suite registered no test cases', durationMs: 0 });
+        post({ type: 'test', token: message.token, name: 'suite', status: 'fail', error: 'The suite registered no test cases', assertion: false, durationMs: 0 });
         failed = 1;
         total = 1;
       }

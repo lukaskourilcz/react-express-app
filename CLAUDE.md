@@ -10,9 +10,10 @@ Read [the product architecture](docs/product-architecture.md), [the design contr
 ## Protected behavior
 
 - All learning is free. Support, cosmetic shop items, collectible Shark Cards, badges, and streak freezes never change access, content, explanations, paths, XP, scores, streaks, ranks, leaderboards, matchmaking, or AI availability. Sharkira hints follow the AI rules: off by default, capped/cached, and never reveal the answer. devShark ships no AI feature at all: its coding hints are authored and end in documentation links.
-- The server owns answers, grading, score/XP, product scope, subject scope, admin roles, and one-time claims. Correct answers never reach the client before submission.
+- The server owns answers, grading, score/XP, product scope, subject scope, admin roles, one-time claims, learning eligibility, the token wallet and every order total. Correct answers never reach the client before submission, and a browser never asserts a balance or an entitlement.
+- One learner profile (`shared/learner-profile.ts`) and one prerequisite graph (`shared/progression.ts`) decide what a learner may start. Diagnostics recommend; they never place. Arranging code is recorded as recognition, never as having written it.
 - Keep exactly twelve physical TypeScript handlers under `api/`; preserve validation, auth, authorization, rate limits, request IDs, safe errors, RLS, and service-role isolation.
-- Keep devShark out of StudyShark discovery and preserve the all-family footer.
+- Keep devShark out of StudyShark discovery. StudyShark keeps the all-family footer; devShark shows no sibling-brand promotion (issue #166) and keeps only the legal, support and site-setting controls.
 - Keep natural EN/CS parity and responsive web accessibility. Native/Expo work is out of scope.
 - Public legacy `DevQuiz` copy is stale; compatibility storage keys, migrations, package names, fixtures, and history may remain.
 
@@ -30,6 +31,8 @@ Generative-media production uses `.claude/skills/generated-media-production/SKIL
 - Tokens/shell: `client/src/styles/astryx-theme.css`, `client/src/styles/app-shell.css`
 - Localization: `client/src/i18n/translations.ts`, `client/src/i18n/translations.cs.ts`
 - API: `api/`, `lib/`, `shared/`
+- Learning plan: `shared/learner-profile.ts`, `shared/progression.ts`, `lib/progression.ts`
+- Rewards: `shared/merchandise.ts`, `shared/rewards.ts`, `lib/rewards/`, `docs/rewards-launch.md`
 - Supabase: `supabase/supabase-schema*.sql`
 - Design guidance: `docs/design/`
 - Skills: `.claude/skills/`
@@ -38,7 +41,7 @@ Generative-media production uses `.claude/skills/generated-media-production/SKIL
 
 ## Validation and Git
 
-Use the actual scripts: `npm run typecheck:api`, `npm run test:launch`, `npm run build`, `npm run check:responsive`, both production dependency audits, and `git diff --check`. Do not report unexecuted checks as passing. Preserve unrelated work, stage deliberately, and create coherent incremental commits for large tasks. See `.claude/skills/shark-release-validation/SKILL.md` and `docs/DEEP_END_HANDOFF.md`.
+Use the actual scripts: `npm run typecheck:api`, `npm run test:launch`, `npm run build`, `npm run check:responsive`, `npm run test:db` (schema and SQL behaviour; skips cleanly without `psql`), both production dependency audits, and `git diff --check`. Do not report unexecuted checks as passing. Preserve unrelated work, stage deliberately, and create coherent incremental commits for large tasks. See `.claude/skills/shark-release-validation/SKILL.md` and `docs/DEEP_END_HANDOFF.md`.
 
 Definition of done: implementation, EN/CS copy, states, responsive/accessibility behavior, tests, documentation, and Git history agree with the product architecture and all relevant checks have real results.
 

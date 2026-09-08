@@ -22,6 +22,7 @@ import {
   type RoadmapProgress,
 } from '../lib/roadmap';
 import { tracksForActiveSubject, stageTitleKey, localizedTopicDetail, type Track } from '../lib/tracks';
+import type { EligibilityResponse } from '../../../shared/progression';
 import { categoryLabelKey, getCategoryHexColor, onCategoryColorText } from '../lib/categories';
 import { useSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
@@ -31,7 +32,20 @@ import './Roadmap.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
-export default function RoadmapTree({ structure, track }: { structure: RoadmapStructure | null; track: Track }) {
+const stageLabelKey = (key: string): TranslationKey => `progression.stage.${key}` as TranslationKey;
+const pathLabelKey = (id: string): TranslationKey => `progression.path.${id}` as TranslationKey;
+
+/**
+ * The map. With a personalised plan (issue #153) it draws exactly the stages
+ * the learner may start — a locked stage is not a dimmed preview, it is simply
+ * not there, and one line says more will appear. Without a plan it falls back
+ * to the general roadmap for the chosen track.
+ */
+export default function RoadmapTree({ structure, track, plan }: {
+  structure: RoadmapStructure | null;
+  track: Track;
+  plan?: EligibilityResponse | null;
+}) {
   const t = useT();
   const [subject] = useSubject();
   const progress = useRoadmapProgress();
@@ -41,6 +55,73 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
   const def = tracksForActiveSubject()[track];
   const levelCountOf = (family: RoadmapTopic): number =>
     structure?.structure?.[family]?.levels.length ?? 0;
+
+  if (plan?.personalized) {
+    const showPathHeadings = plan.paths.length > 1;
+    return (
+      <div key={`plan-${plan.profileVersion}`} className="rm-track-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: 12 }}>
+        {plan.paths.map((path) => {
+          // A stage with nothing to draw is not drawn. That happens when a
+          // topic sits in two selected paths — `dsa` is in the Fullstack track
+          // and in DSA Foundations — and the response gives it to the path
+          // that owns its gate, so the other one is left empty. A stage whose
+          // content is still being written says so instead.
+          const open = path.stages.filter((stage) => stage.open && (stage.topics.length > 0 || stage.contentPending));
+          const hidden = path.stages.filter((stage) => !stage.open).length;
+          const pending = open.filter((stage) => stage.contentPending);
+          // Nothing to show and nothing to promise: the path is fully covered
+          // by another one the learner is already reading.
+          if (open.length === 0 && hidden === 0) return null;
+          return (
+            <section
+              key={path.id}
+              // With one path the heading is redundant on screen, so it is not
+              // rendered — and an aria-labelledby pointing at an id that does
+              // not exist leaves the region unnamed. Name it directly instead.
+              {...(showPathHeadings
+                ? { 'aria-labelledby': `rm-path-${path.id}` }
+                : { 'aria-label': t(pathLabelKey(path.id)) })}
+              style={{ width: '100%' }}
+            >
+              {showPathHeadings && (
+                <h3 id={`rm-path-${path.id}`} style={{ fontSize: '0.95rem', fontWeight: 800, textAlign: 'center', margin: '4px 0 12px' }}>
+                  {t(pathLabelKey(path.id))}
+                </h3>
+              )}
+              {open.map((stage, i) => (
+                <div key={stage.key} style={{ width: '100%' }}>
+                  <StageHeading index={i} label={t(stageLabelKey(stage.key))} />
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+                    {stage.topics.map((entry) => (
+                      <TopicCard
+                        key={entry.topic}
+                        family={entry.topic as RoadmapTopic}
+                        levelCount={levelCountOf(entry.topic as RoadmapTopic)}
+                        progress={progress}
+                        extraSet={extraSet}
+                        t={t}
+                      />
+                    ))}
+                  </div>
+                  {i < open.length - 1 && <StageConnector />}
+                </div>
+              ))}
+              {pending.length > 0 && (
+                <p className="rm-path-note" role="note" style={{ textAlign: 'center', margin: '12px 0 0', fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                  {t('roadmap.pathPending')}
+                </p>
+              )}
+              {hidden > 0 && (
+                <p className="rm-path-note" style={{ textAlign: 'center', margin: '12px 0 0', fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                  {t('roadmap.morePaths')}
+                </p>
+              )}
+            </section>
+          );
+        })}
+      </div>
+    );
+  }
 
   return (
     // The map: stages flow top → bottom. Keyed by track so switching tracks
@@ -57,28 +138,7 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
     >
       {def.stages.map((stage, i) => (
         <div key={stage.title} style={{ width: '100%' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 }}>
-            <div
-              aria-hidden
-              style={{
-                width: 22,
-                height: 22,
-                borderRadius: '50%',
-                backgroundColor: 'var(--brand-accent)',
-                color: '#fff',
-                fontSize: '0.72rem',
-                fontWeight: 800,
-                display: 'grid',
-                placeItems: 'center',
-                flexShrink: 0,
-              }}
-            >
-              {i + 1}
-            </div>
-            <div style={{ fontSize: '0.875rem', fontWeight: 800, letterSpacing: '0.3px' }}>
-              {t(stageTitleKey(subject, track, i))}
-            </div>
-          </div>
+          <StageHeading index={i} label={t(stageTitleKey(subject, track, i))} />
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
             {stage.topics.map((family) => (
@@ -96,6 +156,32 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
           {i < def.stages.length - 1 && <StageConnector />}
         </div>
       ))}
+    </div>
+  );
+}
+
+/** The numbered stage heading shared by the personalised and general maps. */
+function StageHeading({ index, label }: { index: number; label: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 }}>
+      <div
+        aria-hidden
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: '50%',
+          backgroundColor: 'var(--brand-accent)',
+          color: '#fff',
+          fontSize: '0.72rem',
+          fontWeight: 800,
+          display: 'grid',
+          placeItems: 'center',
+          flexShrink: 0,
+        }}
+      >
+        {index + 1}
+      </div>
+      <div style={{ fontSize: '0.875rem', fontWeight: 800, letterSpacing: '0.3px' }}>{label}</div>
     </div>
   );
 }

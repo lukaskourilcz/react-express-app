@@ -140,6 +140,11 @@ export function isRpcMissing(error: { message?: string } | null | undefined): bo
   return !!error && /function .* does not exist/i.test(error.message ?? '');
 }
 
+/** The same, for a table a migration has not created yet. */
+export function isTableMissing(error: { message?: string; code?: string } | null | undefined): boolean {
+  return !!error && (error.code === '42P01' || /relation .* does not exist/i.test(error.message ?? ''));
+}
+
 /**
  * Verify the caller and return the whole verified result (subject id plus the
  * token claims). Use this instead of `requireAuthSub` when the handler also

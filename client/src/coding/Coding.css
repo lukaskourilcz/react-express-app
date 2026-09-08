@@ -85,6 +85,9 @@
 }
 .cd-chip[aria-pressed='true'] { background: var(--ss-ink); color: var(--color-background-surface); border-color: var(--ss-ink); }
 .cd-chip:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
+/* "Show everything" clears a filter rather than toggling one, so it is spent
+   once nothing is filtered. Kept legible, not greyed into invisibility. */
+.cd-chip:disabled { cursor: default; opacity: 0.65; }
 
 .cd-tier { display: flex; flex-direction: column; gap: 10px; }
 .cd-tier__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 16px; }
@@ -207,6 +210,9 @@
 .cd-tab__badge--bad { background: var(--ss-error-soft); }
 .cd-panel { display: flex; flex-direction: column; gap: 10px; min-height: 160px; }
 .cd-panel[hidden] { display: none; }
+/* `.cd-pane` sets display, which beats the browser's own [hidden] rule, so the
+   brief stayed on screen in focus mode. Say it here. */
+.cd-pane[hidden] { display: none; }
 
 /* results */
 .cd-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -298,3 +304,186 @@
   .cd-verdict { animation: cdRise 0.25s ease-out both; }
   @keyframes cdRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 }
+
+/* ── Code-ordering puzzle (issue #154) ──────────────────────────────────────
+   Every control is a real button so the puzzle works by touch, by keyboard and
+   with a screen reader; nothing here depends on a pointer drag. Targets are
+   44px tall at every width. */
+.cd-puzzle__competencies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cd-puzzle__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 8px 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.cd-puzzle__block {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background-color: var(--color-background-surface);
+}
+
+.cd-puzzle__code {
+  flex: 1 1 220px;
+  min-width: 0;
+  overflow-x: auto;
+  padding-block: 6px;
+}
+
+.cd-puzzle__code code {
+  white-space: pre;
+  font-size: 0.8125rem;
+}
+
+.cd-puzzle__controls {
+  display: flex;
+  gap: 6px;
+  margin-inline-start: auto;
+}
+
+.cd-puzzle__controls .cd-btn {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* An ordered answer list keeps its numbering visible: the position is the
+   whole point of the exercise. */
+.cd-puzzle ol.cd-puzzle__list {
+  counter-reset: cd-puzzle-line;
+}
+
+.cd-puzzle ol.cd-puzzle__list > .cd-puzzle__block::before {
+  counter-increment: cd-puzzle-line;
+  content: counter(cd-puzzle-line);
+  flex: 0 0 auto;
+  min-width: 22px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  text-align: end;
+}
+
+/* ── Resources panel and failure advice (issues #155, #156) ─────────────── */
+.cd-resources { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.cd-resources a {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 8px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--color-text-primary);
+}
+.cd-resources a:hover { background: var(--color-background-muted); }
+.cd-resources code { font-size: 0.8125rem; }
+.cd-resources__source { font-size: 0.75rem; color: var(--color-text-secondary); }
+.cd-hint--advice { border-inline-start: 3px solid var(--brand-accent); }
+
+/* ── Search and combined filters (issue #161) ───────────────────────────── */
+.cd-filters { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+.cd-filters__search { display: flex; flex-direction: column; gap: 4px; max-width: 420px; }
+.cd-input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+.cd-filters__foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+/* A button that reads as a link. `a.cd-link` cannot match it, so it carries the
+   accent colour and the focus ring itself. */
+.cd-linkbtn {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+  color: var(--color-text-accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  border-radius: 2px;
+}
+.cd-linkbtn:hover { text-decoration-thickness: 2px; }
+.cd-linkbtn:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
+.cd-row--retired { opacity: 0.7; }
+.cd-actions--library { margin-top: 4px; }
+
+/* ── Curated approach comparison (issue #158) ───────────────────────────── */
+.cd-approaches { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; }
+.cd-approach { border: 1px solid var(--color-border); border-radius: 8px; padding: 12px; }
+.cd-approach h4 { margin: 0 0 6px; font-size: 0.9375rem; }
+.cd-approach__meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.cd-approach pre { overflow-x: auto; margin: 0 0 8px; }
+.cd-approach__row { margin: 0 0 6px; font-size: 0.8125rem; color: var(--color-text-secondary); }
+
+/* ── Skip feedback (issue #160) ─────────────────────────────────────────── */
+.cd-skip { display: flex; flex-direction: column; gap: 8px; }
+.cd-skip textarea.cd-input { min-height: 66px; resize: vertical; }
+
+/* ── Lesson examples (issue #162) ───────────────────────────────────────── */
+.cd-example { border: 1px solid var(--color-border); border-radius: 8px; padding: 12px; margin-top: 12px; }
+.cd-example h4 { margin: 0 0 4px; font-size: 0.9375rem; }
+.cd-example__code { overflow-x: auto; margin: 8px 0; }
+.cd-example__output { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.cd-example__output li { overflow-x: auto; font-size: 0.8125rem; }
+
+/* ── Resizable, focusable workspace (issue #164) ────────────────────────────
+   Two columns on a wide screen with a separator between them that answers both
+   a drag and the arrow keys; one column below 1024px, where the splitter is
+   hidden because there is nothing to split. Focus mode hides the brief and the
+   hint ladder and leaves the editor and the results — it does not move the
+   split, so what the separator reports stays what the grid does. */
+.cd-workbench__toolbar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.cd-splitter { display: none; }
+
+@media (min-width: 1024px) {
+  .cd-workbench__grid {
+    grid-template-columns: minmax(0, var(--cd-split, 58%)) 24px minmax(0, 1fr);
+  }
+  /* 24px of pointer target, drawn as a 4px rail: a 10px hair is a hard thing
+     to hit, and this one is meant to be dragged. */
+  .cd-splitter {
+    display: block;
+    align-self: stretch;
+    width: 24px;
+    border-radius: 999px;
+    background: linear-gradient(var(--color-border), var(--color-border)) center / 4px 100% no-repeat;
+    cursor: col-resize;
+    touch-action: none;
+  }
+  .cd-splitter:hover,
+  .cd-splitter[data-dragging='on'] { background-size: 6px 100%; }
+  .cd-splitter:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+  /* While the separator is being dragged the pointer is often over the panes,
+     and selecting their text mid-drag is nobody's intent. */
+  .cd-workbench__grid:has(.cd-splitter[data-dragging='on']) { user-select: none; }
+}
+
+/* Long results and long translated strings scroll inside their own panel
+   rather than stretching the page. */
+.cd-panel { max-height: min(60vh, 640px); overflow: auto; }
+.cd-panel pre, .cd-panel code { overflow-wrap: anywhere; }
+/* The live preview is a viewport of its own; capping it would put a scrollbar
+   inside a scrollbar and cut the component the learner is looking at. */
+.cd-panel--preview { max-height: none; overflow: visible; }

@@ -12,14 +12,26 @@ import { formatCode } from './runner/format';
 import { runCodeTests, runPassed, type RunOutcome, type RunPhase } from './runner/run-tests';
 import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness';
 import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, type LadderRung } from './hint-ladder';
-import { revealCoding, submitCoding } from './api';
+import { revealCoding, submitCoding, useCodingApproaches } from './api';
+import { CodePuzzle } from './CodePuzzle';
+import { useCodingLibrary, useCodingLibraryAction } from '../lib/codingLibrary';
+import { SkipPanel } from './SkipDialog';
+import { useIsCompactPractice } from '../lib/useMediaQuery';
+import type { CodingPuzzleVerdict, PlayableCodingPuzzle } from '../../../shared/coding-puzzle';
 import { CODING_TIERS, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
+import { resourcesFor } from '../../../shared/coding-docs';
 import type { CodingLockReason, CodingVerdictResponse } from '../../../shared/coding-api';
 import './Coding.css';
 
 export interface CodingWorkbenchProps {
   task: PlayableCodingTask;
   session: string | null;
+  /** The authored code-ordering puzzle for this task, when one exists (#154). */
+  puzzle?: PlayableCodingPuzzle | null;
+  /** The verdict already recorded for this learner, from the task response.
+   * Only `passed` or `revealed` opens the solution comparison (#158). */
+  progressStatus?: 'in_progress' | 'passed' | 'revealed' | null;
+  onPuzzleVerdict?: (verdict: CodingPuzzleVerdict) => void;
   locked: CodingLockReason | null;
   signedIn: boolean;
   initialCode: string | null;
@@ -32,11 +44,33 @@ export interface CodingWorkbenchProps {
   onContinue?: () => void;
 }
 
-type Tab = 'results' | 'types' | 'console' | 'preview';
+type Tab = 'results' | 'types' | 'console' | 'preview' | 'resources' | 'approaches';
 type Phase = 'idle' | 'running' | 'submitting';
 
 const DRAFT_DEBOUNCE_MS = 900;
 const hintsKey = (id: string) => `devshark:coding:hints:${id}`;
+/** Layout preferences are per learner, not per task, and are kept well away
+ * from the code drafts so clearing one never clears the other (issue #164). */
+const LAYOUT_KEY = 'devshark:coding:layout:v1';
+const DEFAULT_SPLIT = 58;
+const MIN_SPLIT = 30;
+const MAX_SPLIT = 75;
+const SPLIT_STEP = 2;
+
+interface WorkbenchLayout {
+  /** Percentage of the row the working column takes on a wide screen. */
+  split: number;
+  /** Focus mode hides the brief and the hints, leaving editor and results. */
+  focus: boolean;
+}
+
+const clampSplit = (value: number): number =>
+  Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, Math.round(Number.isFinite(value) ? value : DEFAULT_SPLIT)));
+
+function readLayout(): WorkbenchLayout {
+  const raw = readJSON<Partial<WorkbenchLayout>>(LAYOUT_KEY, {});
+  return { split: clampSplit(Number(raw?.split ?? DEFAULT_SPLIT)), focus: raw?.focus === true };
+}
 
 /** Prompt text with `code` spans rendered as code. */
 function Prompt({ text, className }: { text: string; className?: string }) {
@@ -69,7 +103,7 @@ function relativeTime(iso: string, lang: string): string {
 }
 
 export function CodingWorkbench(props: CodingWorkbenchProps) {
-  const { task, session, locked, signedIn, initialCode, mode, onDraft, onVerdict, onRevealed, nextHref, backHref, onContinue } = props;
+  const { task, session, locked, signedIn, initialCode, mode, onDraft, onVerdict, onRevealed, nextHref, backHref, onContinue, puzzle = null, onPuzzleVerdict, progressStatus = null } = props;
   const { t, lang } = useLanguage();
   const L = useCallback((value: Localized | undefined): string => (value ? value[lang] || value.en : ''), [lang]);
   const online = useOnline();
@@ -96,9 +130,48 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const [checked, setChecked] = useState<boolean[]>(() => (task.checklist?.en ?? []).map(() => false));
   const [formatError, setFormatError] = useState<string | null>(null);
   const startedAt = useRef(Date.now());
+  // Presentation policy (issue #154): at phone and tablet widths a code editor
+  // between quizzes is the wrong tool, so it is not mounted at all. Where an
+  // authored arrangement puzzle exists it takes its place; where none exists the
+  // task waits for a wider screen and says so, with the draft kept.
+  const compact = useIsCompactPractice();
+  const [layout, setLayout] = useState<WorkbenchLayout>(readLayout);
+  useEffect(() => { writeJSON(LAYOUT_KEY, layout); }, [layout]);
+  // The splitter shows a col-resize cursor, so it has to answer a drag as well
+  // as the arrow keys. Pointer capture keeps the move and up events coming to
+  // the separator even when the pointer runs ahead of it.
+  const gridRef = useRef<HTMLDivElement | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const dragTo = useCallback((clientX: number) => {
+    const box = gridRef.current?.getBoundingClientRect();
+    if (!box || box.width === 0) return;
+    setLayout((prev) => ({ ...prev, split: clampSplit(((clientX - box.left) / box.width) * 100) }));
+  }, []);
+  // Saving is a reading-list action (issue #157): it keeps the challenge in the
+  // learner's library and changes nothing about what they may start.
+  const library = useCodingLibrary(signedIn);
+  const libraryAction = useCodingLibraryAction();
+  const saved = library.data?.bookmarks.includes(task.id) ?? false;
+  const collections = library.data?.collections ?? [];
+  const [preferEditor, setPreferEditor] = useState(false);
+  const puzzleMode = compact && Boolean(puzzle) && !(mode === 'section' && preferEditor);
+  const editorWithheld = compact && !puzzleMode && mode === 'lesson';
   const harness = useReactHarness();
 
+  // The comparison opens on recorded evidence, never on a local flag: the fetch
+  // is enabled only once the server has a passed (or revealed) verdict for this
+  // learner, and the server checks the same thing again (issue #158).
+  const comparisonUnlocked = signedIn && (
+    progressStatus === 'passed' || progressStatus === 'revealed' ||
+    verdict?.verdict === 'passed' || Boolean(solution)
+  );
+  const approaches = useCodingApproaches(task.id, comparisonUnlocked);
+
   const rungs = useMemo(() => ladderRungs(task, lang), [task, lang]);
+  // Reading material for the techniques this task practises (issue #155). It is
+  // there from the first second, costs no hint rung, and never shows a solution.
+  const resources = useMemo(() => resourcesFor(task.focus), [task.focus]);
+
   const taken = Math.min(hintsTaken, rungs.length);
 
   // Draft: hand the code to the parent after the learner stops typing.
@@ -255,10 +328,24 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     : run && !run.codeError && run.results.length > 0 ? `${run.results.filter((r) => r.pass === true).length}/${run.results.length}` : null;
   const typesBadge = run?.check ? (run.check.codeErrors.length === 0 && run.check.typeTests.every((one) => one.pass) ? 'ok' : String(run.check.codeErrors.length + run.check.typeTests.filter((one) => !one.pass).length)) : null;
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
+  // After a verdict the learner's attention belongs on the result, so the panel
+  // takes focus rather than leaving it on a button that is now disabled.
+  const panelRefs = useRef<Partial<Record<Tab, HTMLDivElement | null>>>({});
+  useEffect(() => {
+    if (!verdict) return;
+    panelRefs.current[tab]?.focus();
+    // Only when a new verdict lands, not on every tab change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verdict]);
   const tabs: { key: Tab; label: string; badge: string | null; good: boolean | null }[] = [
     { key: 'results', label: t('coding.tab.results'), badge: resultsBadge, good: isReact ? (reactRun ? reactRun.failed === 0 && reactRun.total > 0 : null) : localPassed },
     ...(isTypeScript ? [{ key: 'types' as Tab, label: t('coding.tab.types'), badge: typesBadge, good: typesBadge === 'ok' ? true : typesBadge ? false : null }] : []),
     { key: 'console', label: t('coding.tab.console'), badge: null, good: null },
+    { key: 'resources' as Tab, label: t('coding.tab.resources'), badge: resources.length > 0 ? String(resources.length) : null, good: null },
+    // No empty comparison tab: it appears only when the server actually sent one.
+    ...((approaches.data?.approaches.length ?? 0) > 0
+      ? [{ key: 'approaches' as Tab, label: t('coding.tab.approaches'), badge: String(approaches.data!.approaches.length), good: null }]
+      : []),
     ...(isReact ? [{ key: 'preview' as Tab, label: t('coding.tab.preview'), badge: null, good: null }] : []),
   ];
 
@@ -386,6 +473,56 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const logs = isReact ? (reactRun?.logs.map((entry) => `${entry.level === 'log' ? '' : `[${entry.level}] `}${entry.text}`) ?? []) : (run?.logs ?? []);
   const renderConsole = (): ReactNode => (logs.length === 0 ? <p className="cd-console__empty">{t('coding.console.empty')}</p> : <pre className="cd-console">{logs.join('\n')}</pre>);
 
+  const renderResources = (): ReactNode => {
+    if (resources.length === 0) {
+      return <p className="cd-console__empty">{t('coding.resources.empty')}</p>;
+    }
+    return (
+      <>
+        <p className="cd-note">{t('coding.resources.intro')}</p>
+        <ul className="cd-resources">
+          {resources.map((resource) => (
+            <li key={resource.url}>
+              <a href={resource.url} target="_blank" rel="noreferrer">
+                {/* The technique keys and the pages they open are English, so
+                    they are marked as English: a Czech screen reader otherwise
+                    reads "async-await" with Czech phonetics. */}
+                <code lang="en">{resource.tag}</code>
+                <span className="cd-resources__source">{t(`coding.resources.source.${resource.source}` as never)}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </>
+    );
+  };
+
+  const renderApproaches = (): ReactNode => {
+    const data = approaches.data;
+    if (approaches.isLoading) return <p className="cd-console__empty" role="status">{t('common.loading')}</p>;
+    if (!data || data.approaches.length === 0) return <p className="cd-console__empty">{t('coding.approaches.locked')}</p>;
+    return (
+      <>
+        <p className="cd-note">{t(data.unlockedBy === 'passed' ? 'coding.approaches.introPassed' : 'coding.approaches.introRevealed')}</p>
+        <ul className="cd-approaches">
+          {data.approaches.map((approach) => (
+            <li key={approach.key} className="cd-approach">
+              <h4>{approach.title[lang] || approach.title.en}</h4>
+              <p className="cd-approach__meta">
+                <span className="cd-tag">{t(`coding.approaches.style.${approach.style}` as never)}</span>
+                <span className="cd-tag">{t('coding.approaches.time', { value: approach.time })}</span>
+                <span className="cd-tag">{t('coding.approaches.space', { value: approach.space })}</span>
+              </p>
+              <pre>{approach.code}</pre>
+              <p className="cd-approach__row"><b>{t('coding.approaches.assumptions')}:</b> {approach.assumptions[lang] || approach.assumptions.en}</p>
+              <p className="cd-approach__row"><b>{t('coding.approaches.tradeoffs')}:</b> {approach.tradeoffs[lang] || approach.tradeoffs.en}</p>
+            </li>
+          ))}
+        </ul>
+      </>
+    );
+  };
+
   const renderPreview = (): ReactNode => (
     <>
       {reactRun?.previewError && <p className="cd-note cd-note--error">{t('coding.preview.error', { message: reactRun.previewError })}</p>}
@@ -401,6 +538,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         <span>{t(`coding.verdict.${verdict.verdict}` as never)}</span>
         {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
       </h3>
+      {verdict.failureAdvice && (
+        <div className="cd-hint cd-hint--advice">
+          <span className="cd-hint__label">
+            {t(`coding.failure.${verdict.failureAdvice.category}` as never)} · {t(`coding.failure.stage.${verdict.failureAdvice.stage}` as never)}
+          </span>
+          <Prompt text={verdict.failureAdvice.body[lang] || verdict.failureAdvice.body.en} />
+        </div>
+      )}
       {verdict.verdict === 'passed' && verdict.progress && <p className="cd-verdict__row">{verdict.firstPass ? t('coding.verdict.firstPass') : t('coding.verdict.again')}</p>}
       {verdict.verdict === 'passed' && verdict.progress?.nextReviewAt && <p className="cd-verdict__row">{t('coding.verdict.review', { when: relativeTime(verdict.progress.nextReviewAt, lang) })}</p>}
       {verdict.verdict === 'passed' && !verdict.progress && <p className="cd-verdict__row">{signedIn ? t('coding.verdict.notRecorded') : t('coding.verdict.signIn')}</p>}
@@ -436,9 +581,31 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   return (
     <div className={`cd-workbench cd-workbench--${mode}`} onKeyDown={onKeyDown}>
       <span className="cd-visually-hidden" role="status" aria-live="polite">{announcement}</span>
-      <div className="cd-workbench__grid">
+      <div className="cd-workbench__toolbar">
+        <button
+          type="button"
+          className="cd-btn cd-btn--quiet"
+          aria-pressed={layout.focus}
+          onClick={() => setLayout((prev) => ({ ...prev, focus: !prev.focus }))}
+        >
+          {layout.focus ? t('coding.layout.focusOff') : t('coding.layout.focusOn')}
+        </button>
+        <button
+          type="button"
+          className="cd-btn cd-btn--quiet"
+          onClick={() => setLayout({ split: DEFAULT_SPLIT, focus: false })}
+          disabled={layout.split === DEFAULT_SPLIT && !layout.focus}
+        >
+          {t('coding.layout.reset')}
+        </button>
+      </div>
+      <div
+        ref={gridRef}
+        className="cd-workbench__grid"
+        style={{ ['--cd-split' as string]: `${layout.split}%` }}
+      >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-          <section className="cd-pane cd-pane--task" aria-labelledby={`${baseId}-title`}>
+          <section className="cd-pane cd-pane--task" aria-labelledby={`${baseId}-title`} hidden={layout.focus}>
             <div className="cd-pane__head">
               <span className="ss-kicker">{trackLabel} · {tierLabel}{task.level > 0 ? ` · ${t('coding.level', { n: task.level })}` : ''}</span>
               <h2 id={`${baseId}-title`}>{L(task.title)}</h2>
@@ -449,6 +616,41 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             </div>
             <Prompt className="cd-prompt" text={L(task.prompt)} />
             {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{L(task.api.note)}</p>}
+            {signedIn && (
+              <div className="cd-actions cd-actions--library">
+                <button
+                  type="button"
+                  className="cd-btn cd-btn--quiet"
+                  aria-pressed={saved}
+                  disabled={libraryAction.isPending}
+                  onClick={() => libraryAction.mutate(saved ? { action: 'unbookmark', taskId: task.id } : { action: 'bookmark', taskId: task.id })}
+                >
+                  {saved ? t('coding.library.unsave') : t('coding.library.save')}
+                </button>
+                {collections.map((collection) => {
+                  const inside = collection.taskIds.includes(task.id);
+                  return (
+                    <button
+                      key={collection.id}
+                      type="button"
+                      className="cd-btn cd-btn--quiet"
+                      aria-pressed={inside}
+                      disabled={libraryAction.isPending}
+                      onClick={() => libraryAction.mutate(inside
+                        ? { action: 'remove-from-collection', id: collection.id, taskId: task.id }
+                        : { action: 'add-to-collection', id: collection.id, taskId: task.id })}
+                    >
+                      {inside
+                        ? t('coding.library.removeFrom', { name: collection.name })
+                        : t('coding.library.addTo', { name: collection.name })}
+                    </button>
+                  );
+                })}
+                <Link className="cd-link" to="/coding/library">{t('coding.library.manage')}</Link>
+              </div>
+            )}
+            {libraryAction.isError && <p className="cd-note cd-note--error" role="alert">{t('coding.library.error')}</p>}
+            {signedIn && mode === 'section' && <SkipPanel taskId={task.id} />}
             {locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}
             {!signedIn && mode === 'section' && <p className="cd-note">{t('coding.signInHint')}</p>}
 
@@ -481,7 +683,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                   <p style={{ margin: '0 0 8px' }}>{mode === 'lesson' ? t('coding.lesson.giveUpNote') : t('coding.giveUpConfirm')}</p>
                   <div className="cd-actions">
                     <button type="button" className="cd-btn cd-btn--primary" onClick={() => void reveal()}>{t('coding.giveUp')}</button>
-                    <button type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('coding.retry')}</button>
+                    <button type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('common.cancel')}</button>
                   </div>
                 </div>
               )}
@@ -495,6 +697,34 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             </div>
           </section>
 
+          {puzzleMode && puzzle && (
+            <CodePuzzle
+              puzzle={puzzle}
+              session={session}
+              signedIn={signedIn}
+              onVerdict={onPuzzleVerdict}
+              onContinue={mode === 'lesson' ? onContinue : undefined}
+            />
+          )}
+          {puzzleMode && mode === 'section' && (
+            <div className="cd-actions">
+              <button type="button" className="cd-btn cd-btn--quiet" onClick={() => setPreferEditor(true)}>
+                {t('coding.puzzle.switchToEditor')}
+              </button>
+            </div>
+          )}
+          {editorWithheld && (
+            <section className="cd-pane cd-pane--editor" aria-labelledby={`${baseId}-pending`}>
+              <h3 id={`${baseId}-pending`} className="cd-editor-label">{t('coding.puzzle.pendingTitle')}</h3>
+              <p className="cd-note cd-note--warn" role="status">{t('coding.puzzle.pendingBody')}</p>
+              {mode === 'lesson' && onContinue && (
+                <div className="cd-actions">
+                  <button type="button" className="cd-btn" onClick={onContinue}>{t('coding.lesson.continue')}</button>
+                </div>
+              )}
+            </section>
+          )}
+          {!puzzleMode && !editorWithheld && (
           <section className="cd-pane cd-pane--editor">
             <label className="cd-editor-label" htmlFor={`${baseId}-editor`}>{t('coding.editorLabel')}</label>
             <div id={`${baseId}-editor`}>
@@ -516,7 +746,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 <p style={{ margin: '0 0 8px' }}>{t('coding.resetConfirm')}</p>
                 <div className="cd-actions">
                   <button type="button" className="cd-btn cd-btn--primary" onClick={reset}>{t('coding.reset')}</button>
-                  <button type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('coding.retry')}</button>
+                  <button type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('common.cancel')}</button>
                 </div>
               </div>
             )}
@@ -524,9 +754,58 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             {!online && <p className="cd-note cd-note--warn" role="status">{t('coding.offline')}</p>}
             {formatError && <p className="cd-note cd-note--error" role="status">{formatError}</p>}
             {submitError && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
+            {compact && puzzle && mode === 'section' && preferEditor && (
+              <div className="cd-actions">
+                <button type="button" className="cd-btn cd-btn--quiet" onClick={() => setPreferEditor(false)}>
+                  {t('coding.puzzle.switchToPuzzle')}
+                </button>
+              </div>
+            )}
           </section>
+          )}
         </div>
 
+        {/* Keyboard-first splitter: arrows move it, Home and End go to the
+            limits, and the toolbar's reset restores the default (issue #164). */}
+        <div
+          className="cd-splitter"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={t('coding.layout.splitter')}
+          aria-valuenow={layout.split}
+          aria-valuemin={MIN_SPLIT}
+          aria-valuemax={MAX_SPLIT}
+          data-dragging={dragging ? 'on' : undefined}
+          tabIndex={0}
+          onPointerDown={(event) => {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            event.currentTarget.setPointerCapture(event.pointerId);
+            setDragging(true);
+            dragTo(event.clientX);
+          }}
+          onPointerMove={(event) => { if (dragging) dragTo(event.clientX); }}
+          onPointerUp={(event) => {
+            if (!dragging) return;
+            setDragging(false);
+            if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+          }}
+          onPointerCancel={() => setDragging(false)}
+          onDoubleClick={() => setLayout((prev) => ({ ...prev, split: DEFAULT_SPLIT }))}
+          onKeyDown={(event) => {
+            const step = event.key === 'ArrowLeft' ? -SPLIT_STEP : event.key === 'ArrowRight' ? SPLIT_STEP : 0;
+            if (step !== 0) {
+              event.preventDefault();
+              setLayout((prev) => ({ ...prev, split: clampSplit(prev.split + step) }));
+            } else if (event.key === 'Home') {
+              event.preventDefault();
+              setLayout((prev) => ({ ...prev, split: MIN_SPLIT }));
+            } else if (event.key === 'End') {
+              event.preventDefault();
+              setLayout((prev) => ({ ...prev, split: MAX_SPLIT }));
+            }
+          }}
+        />
         <section className="cd-pane cd-pane--output" aria-label={t('coding.tab.results')}>
           <div className="cd-tabs" role="tablist" onKeyDown={onTabKeyDown}>
             {tabs.map((one) => (
@@ -552,10 +831,21 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {tabs.map((one) => (
             // The panel takes focus itself: its content is often plain text,
             // so without this a keyboard user tabs straight past the results.
-            <div key={one.key} role="tabpanel" tabIndex={tab === one.key ? 0 : -1} id={`${baseId}-panel-${one.key}`} aria-labelledby={`${baseId}-tab-${one.key}`} className="cd-panel" hidden={tab !== one.key}>
+            <div
+              key={one.key}
+              role="tabpanel"
+              tabIndex={tab === one.key ? 0 : -1}
+              ref={(node) => { panelRefs.current[one.key] = node; }}
+              id={`${baseId}-panel-${one.key}`}
+              aria-labelledby={`${baseId}-tab-${one.key}`}
+              className={one.key === 'preview' ? 'cd-panel cd-panel--preview' : 'cd-panel'}
+              hidden={tab !== one.key}
+            >
               {one.key === 'results' && renderResults()}
               {one.key === 'types' && renderTypes()}
               {one.key === 'console' && renderConsole()}
+              {one.key === 'resources' && renderResources()}
+              {one.key === 'approaches' && renderApproaches()}
               {one.key === 'preview' && renderPreview()}
             </div>
           ))}

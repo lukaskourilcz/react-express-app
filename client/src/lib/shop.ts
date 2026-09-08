@@ -1,13 +1,19 @@
-// In-app token shop. The public catalogue is deliberately cosmetic-only:
-// tokens never bypass learning prerequisites or alter ranked progression.
+// The ring and flair inventory.
 //
-// The shop is PER SUBJECT (platform): purchases are paid from the active
-// subject's wallet and land in the active subject's inventory. Every item is
-// cosmetic: purchases never alter XP, scores, streaks, access, or progression.
+// On devShark these cosmetics are no longer sold (issue #169): the shop offers
+// merchandise and the crown, bought through the server-owned wallet in
+// `client/src/lib/rewards.ts`, and `purchase` refuses here. StudyShark keeps the
+// shop it had, unchanged. Either way what an account already owns stays owned
+// and keeps rendering — a local claim of ownership is never converted into
+// redeemable value on devShark.
+//
+// The inventory is PER SUBJECT (platform). Every item is cosmetic: none of it
+// ever altered XP, scores, streaks, access, or progression.
 
 import { readJSON, writeJSON } from './storage';
-import { createStore, useStore } from './store';
 import { spendTokens, getTokens } from './tokens';
+import { CURRENT_PRODUCT } from './products';
+import { createStore, useStore } from './store';
 import { getGameConfig, type GameConfig } from './gameConfig';
 import { getSubject, useSubject, isSubjectId, type SubjectId } from './subjects';
 
@@ -166,15 +172,19 @@ export function useInventory(): Inventory {
   return map[subject] ?? EMPTY;
 }
 
-export type PurchaseResult = 'ok' | 'insufficient' | 'owned' | 'unknown';
+export type PurchaseResult = 'ok' | 'insufficient' | 'owned' | 'unknown' | 'retired';
 
 /**
- * Buy a product: spend its price from the active subject's wallet, then grant
- * it into the active subject's inventory. Cosmetics are a one-time purchase.
+ * Buy a cosmetic from the device-local wallet.
+ *
+ * Retired on devShark (issue #169): its shop is server-owned, a browser may not
+ * mint an entitlement for itself there, and this refuses rather than silently
+ * granting one. StudyShark's shop is outside that change and behaves as before.
  */
 export function purchase(id: string): PurchaseResult {
   const product = byId.get(id);
   if (!product) return 'unknown';
+  if (CURRENT_PRODUCT.id === 'devshark') return 'retired';
   const price = priceOf(product);
 
   const subject = getSubject();

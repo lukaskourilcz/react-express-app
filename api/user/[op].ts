@@ -32,6 +32,11 @@ import {
   handlePathProgress,
 } from '../../lib/learning-paths/handlers';
 import { handleGithub } from '../../lib/github-handlers';
+import { handleEligibility, handleLearnerProfile } from '../../lib/learning-plan-handlers';
+import { handleCodingLibrary } from '../../lib/coding/library-handlers';
+import { handleCodingSkip, handlePracticeSession } from '../../lib/coding/practice-handlers';
+import { handleCosmetic, handleOrders, handleShopCatalog, handleWallet } from '../../lib/rewards/handlers';
+import { handlePaymentWebhook } from '../../lib/rewards/payments';
 
 const supabase = createServiceClient();
 
@@ -47,6 +52,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
 
   const op = String(req.query.op || '').toLowerCase();
+  // The payment webhook is not a learner request: its credential is the
+  // provider's signature, and it must not be shaped by a per-IP learner budget.
+  if (op === 'payment-webhook') return handlePaymentWebhook(req, res, supabase);
   if (
     req.method !== 'GET' &&
     !(await enforceRateLimit(
@@ -65,6 +73,15 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'badges') return badges(req, res);
   if (op === 'freezes') return freezes(req, res);
   if (op === 'advisor') return advisor(req, res);
+  if (op === 'learner-profile') return handleLearnerProfile(req, res, supabase);
+  if (op === 'eligibility') return handleEligibility(req, res, supabase);
+  if (op === 'coding-library') return handleCodingLibrary(req, res, supabase);
+  if (op === 'wallet') return handleWallet(req, res, supabase);
+  if (op === 'shop-catalog') return handleShopCatalog(req, res, supabase);
+  if (op === 'orders') return handleOrders(req, res, supabase);
+  if (op === 'cosmetic') return handleCosmetic(req, res, supabase);
+  if (op === 'practice-session') return handlePracticeSession(req, res, supabase);
+  if (op === 'coding-skip') return handleCodingSkip(req, res, supabase);
   if (op === 'coding-progress') return handleCodingProgress(req, res, supabase);
   if (op === 'coding-draft') return handleCodingDraft(req, res, supabase);
   if (op === 'learning-preference') return handleLearningPreference(req, res, supabase);

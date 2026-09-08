@@ -82,6 +82,13 @@ export interface BuildTodayOptions {
   /** Skill-check-unlocked topics (`getExtraUnlocks()`), so their "new" levels
    * can appear. Starter + prereq-met topics are unlocked without this. */
   extraUnlocks?: RoadmapTopic[];
+  /**
+   * The topics the learner's plan currently allows (issue #153). When the
+   * server has answered with a personalised eligibility response, Today plans
+   * only inside it, so the daily queue can never propose a step the API would
+   * refuse. Omitted for a learner with no profile: they get the general plan.
+   */
+  eligibleTopics?: readonly string[];
 }
 
 const REASON: Record<TodayKind, TranslationKey> = {
@@ -142,7 +149,10 @@ export function buildToday(
 ): TodayResult {
   const today = opts.today ?? masteryDayKey();
   const extra = opts.extraUnlocks ?? [];
-  const topics = topicsForSubject(subject);
+  const eligible = opts.eligibleTopics ? new Set(opts.eligibleTopics) : null;
+  const topics = eligible
+    ? topicsForSubject(subject).filter((topic) => eligible.has(topic))
+    : topicsForSubject(subject);
 
   const unfinished: TodayItem[] = [];
   const review: TodayItem[] = [];

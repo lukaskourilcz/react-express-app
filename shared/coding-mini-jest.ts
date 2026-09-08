@@ -8,6 +8,10 @@ export interface MiniJestCase {
   name: string;
   status: 'pass' | 'fail';
   error: string | null;
+  /** True when the case failed an expectation rather than throwing. Both raise
+   * here, and only the caller knows the difference matters: the failure
+   * classifier reads a throw as "the code broke before the assertions ran". */
+  assertion: boolean;
   durationMs: number;
 }
 
@@ -35,9 +39,17 @@ const show = (value: unknown): string => {
 const isNode = (value: unknown): value is { textContent: string | null; ownerDocument?: { contains(n: unknown): boolean }; getAttribute?: (n: string) => string | null } =>
   Boolean(value && typeof value === 'object' && 'nodeType' in (value as object));
 
+/** A failed expectation. Marked so a caller can tell it from a real throw. */
+class ExpectationFailure extends Error {
+  readonly expectation = true;
+}
+
+const isExpectationFailure = (caught: unknown): boolean =>
+  Boolean(caught && typeof caught === 'object' && (caught as { expectation?: unknown }).expectation === true);
+
 function buildExpect(actual: unknown, negated: boolean): Record<string, unknown> {
   const check = (condition: boolean, message: string) => {
-    if (negated === condition) throw new Error(negated ? `not: ${message}` : message);
+    if (negated === condition) throw new ExpectationFailure(negated ? `not: ${message}` : message);
   };
   const matchers: Record<string, (...args: unknown[]) => void> = {
     toBe: (expected) => check(Object.is(actual, expected), `expected ${show(actual)} to be ${show(expected)}`),
@@ -109,6 +121,7 @@ export function createMiniJest() {
     for (const one of cases) {
       const started = Date.now();
       let error: string | null = null;
+      let assertion = false;
       try {
         for (const hook of before) await hook();
         await Promise.race([
@@ -118,9 +131,10 @@ export function createMiniJest() {
         for (const hook of after) await hook();
       } catch (caught) {
         error = String((caught as { message?: unknown })?.message ?? caught).split('\n')[0];
+        assertion = isExpectationFailure(caught);
       }
       try { await options.afterEach?.(); } catch { /* cleanup never fails a case */ }
-      results.push({ name: one.name, status: error ? 'fail' : 'pass', error, durationMs: Date.now() - started });
+      results.push({ name: one.name, status: error ? 'fail' : 'pass', error, assertion, durationMs: Date.now() - started });
     }
     const passed = results.filter((r) => r.status === 'pass').length;
     return { cases: results, passed, failed: results.length - passed, total: results.length };

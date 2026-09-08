@@ -118,6 +118,10 @@ export interface CodingDesignKey {
   band?: { min: number; max: number; answer: number };
   /** Drill: the correct order as indices into the shuffled step list. */
   order?: number[];
+  /** Code-ordering puzzle: the shuffled block positions, as authored indices.
+   * `puzzle[presented] = authored`, so the browser never receives the order it
+   * has to reconstruct (issue #154). */
+  puzzle?: number[];
 }
 interface CodingSessionPayload {
   kind: 'coding-session';
@@ -486,6 +490,7 @@ export function decodeCodingSession(token: string): CodingSession | null {
     if (k.steps !== undefined) { if (!isIndexList(k.steps, 10)) return null; key.steps = k.steps; }
     if (k.correct !== undefined) { if (!Number.isInteger(k.correct) || (k.correct as number) < 0 || (k.correct as number) > 25) return null; key.correct = k.correct as number; }
     if (k.order !== undefined) { if (!isIndexList(k.order, 12)) return null; key.order = k.order; }
+    if (k.puzzle !== undefined) { if (!isIndexList(k.puzzle, 12)) return null; key.puzzle = k.puzzle; }
     if (k.band !== undefined) {
       const b = k.band as Record<string, unknown>;
       if (!b || typeof b.min !== 'number' || typeof b.max !== 'number' || typeof b.answer !== 'number' || !Number.isFinite(b.min) || !Number.isFinite(b.max) || !Number.isFinite(b.answer)) return null;

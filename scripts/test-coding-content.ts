@@ -19,11 +19,18 @@ import {
   isCodingTechnique,
   isCodingTier,
 } from '../shared/coding-catalog';
-import { docsFor } from '../shared/coding-docs';
+import { docRegistryProblems, docsFor, resourcesFor } from '../shared/coding-docs';
+import { allFailureAdvice } from '../lib/coding/failure-hints';
+import { FAILURE_CATEGORIES, classifyFailure, stageOf } from '../shared/coding-failures';
 import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { renderCodingIndex } from './build-coding-index';
+import { isCollectionId, normalizeCollectionName } from '../shared/coding-library';
+import { allApproaches, approachCoverage } from '../lib/coding/approaches';
+import { APPROACH_STYLES, isComplexity } from '../shared/coding-approaches';
+import { allPuzzles, assemble, gradePuzzle, preparePuzzle, puzzleProblems } from '../lib/coding/puzzles';
+import { MAX_PUZZLE_BLOCKS, PUZZLE_COMPETENCIES } from '../shared/coding-puzzle';
 
 const SKIP_CS = process.env.CODING_SKIP_CS === '1';
 const ALLOW_GAPS = process.env.CODING_ALLOW_LEVEL_GAPS === '1';
@@ -203,13 +210,200 @@ async function main() {
     if (!starter.compileError && starter.failed === 0) fail(`${where}: the untouched starter already passes its suite`);
   }
 
+  /* ── code-ordering puzzles (issue #154) ─────────────────────────────── */
+  // Every authored puzzle must belong to a real task, declare what solving it
+  // proves, and — the point of the check — assemble into code that passes that
+  // task's own tests. A puzzle that drifts away from its task fails here.
+  for (const problem of puzzleProblems()) fail(`puzzle: ${problem}`);
+  for (const puzzle of allPuzzles()) {
+    const where = `puzzle ${puzzle.taskId}`;
+    const task = CODING_TASKS.find((one) => one.id === puzzle.taskId);
+    if (!task) { fail(`${where}: no such task`); continue; }
+    if (task.track === 'system-design') fail(`${where}: design tasks take no arrangement puzzle`);
+    if (puzzle.lines.length > MAX_PUZZLE_BLOCKS) fail(`${where}: more than ${MAX_PUZZLE_BLOCKS} blocks`);
+    for (const competency of puzzle.competencies) {
+      if (!PUZZLE_COMPETENCIES.includes(competency)) fail(`${where}: unknown competency ${competency}`);
+    }
+    if (!task.tests || task.tests.length === 0) { fail(`${where}: the task has no tests to prove the puzzle against`); continue; }
+    for (const [index, accepted] of puzzle.accepted.entries()) {
+      const code = assemble(puzzle, accepted);
+      const run = await withTimeout(
+        evaluateCalls({ code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }),
+        8_000,
+        where,
+      );
+      if (!allPassed(run)) {
+        fail(`${where}: accepted arrangement ${index} does not pass the task's tests: ${run.codeError ?? run.results.map((r, i) => (r.pass ? null : task.tests![i].call)).filter(Boolean).join('; ')}`);
+      }
+    }
+    // A distractor must actually break the solution, or it is not a distractor.
+    for (const distractor of puzzle.lines.filter((line) => line.distractor)) {
+      const spoiled = assemble(puzzle, [...puzzle.accepted[0].slice(0, -1), distractor.id]);
+      const run = await withTimeout(
+        evaluateCalls({ code: spoiled, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }),
+        8_000,
+        where,
+      );
+      if (allPassed(run)) fail(`${where}: distractor ${distractor.id} still passes the task's tests`);
+    }
+    // Grading is driven by the sealed permutation, not by what the browser sees.
+    const identity = <T,>(items: T[]): T[] => items;
+    const { playable: shown, permutation } = preparePuzzle(puzzle, identity);
+    const idToPosition = new Map(permutation.map((authored, position) => [puzzle.lines[authored].id, `b${position}`]));
+    const correct = puzzle.accepted[0].map((id) => idToPosition.get(id)!);
+    const graded = gradePuzzle(puzzle, permutation, correct);
+    if (!graded.passed) fail(`${where}: the authored arrangement does not grade as passing`);
+    if (shown.blocks.length !== puzzle.lines.length) fail(`${where}: the playable puzzle drops blocks`);
+    if (JSON.stringify(shown).includes('"distractor"')) fail(`${where}: the playable puzzle names its distractors`);
+    if (correct.length > 1) {
+      const swapped = [correct[1], correct[0], ...correct.slice(2)];
+      if (gradePuzzle(puzzle, permutation, swapped).passed) fail(`${where}: a swapped arrangement grades as passing`);
+    }
+    // No positional oracle: a partial arrangement is graded, but how far it is
+    // right is not reported, or one block at a time would spell out the answer.
+    if (correct.length > 1) {
+      const partial = gradePuzzle(puzzle, permutation, correct.slice(0, 1));
+      if (partial.passed) fail(`${where}: a partial arrangement grades as passing`);
+      if (partial.correctPrefix !== null) fail(`${where}: a partial arrangement is told how far it is right`);
+      if (graded.correctPrefix === null) fail(`${where}: a complete arrangement must be told how far it is right`);
+    }
+    const withDistractor = puzzle.lines.find((line) => line.distractor);
+    if (withDistractor) {
+      const bad = [...correct.slice(0, -1), idToPosition.get(withDistractor.id)!];
+      const badGrade = gradePuzzle(puzzle, permutation, bad);
+      if (badGrade.passed) fail(`${where}: an arrangement using a distractor grades as passing`);
+      if (!badGrade.usedDistractor) fail(`${where}: a used distractor is not reported`);
+    }
+  }
+
+  /* ── resources and failure advice (issues #155, #156) ───────────────── */
+  for (const problem of docRegistryProblems()) fail(`docs: ${problem}`);
+  for (const task of CODING_TASKS) {
+    if (task.track === 'system-design') continue;
+    const resources = resourcesFor(task.focus);
+    // Resources are reading material, not the ladder: they exist independently
+    // of how many hints were taken, so the only contract is that every link the
+    // panel would show is a reviewed one and that nothing repeats.
+    const urls = new Set(resources.map((one) => one.url));
+    if (urls.size !== resources.length) fail(`${task.id}: duplicate resource link`);
+    for (const resource of resources) {
+      if (!task.focus.includes(resource.tag)) fail(`${task.id}: resource ${resource.tag} is not a technique of this task`);
+    }
+  }
+  // Authored advice must never quote a hidden fixture or an internal error, and
+  // must exist in both languages.
+  const hiddenCalls = new Set(
+    CODING_TASKS.flatMap((task) => solutionFor(task.id)?.hiddenTests?.map((test) => test.call) ?? []),
+  );
+  for (const entry of allFailureAdvice()) {
+    const where = `advice ${entry.taskId ?? 'category'} ${entry.category}`;
+    if (!entry.body.en.trim()) fail(`${where}: missing English text`);
+    if (!SKIP_CS && !entry.body.cs.trim()) fail(`${where}: missing Czech text`);
+    for (const text of [entry.body.en, entry.body.cs]) {
+      for (const call of hiddenCalls) {
+        if (call && text.includes(call)) fail(`${where}: quotes the hidden test ${call}`);
+      }
+      if (/stack trace|at Object\.|node_modules|SyntaxError:/i.test(text)) fail(`${where}: quotes an internal error`);
+      if (/\bsolution\b|\břešení\b/i.test(text)) fail(`${where}: mentions the solution`);
+    }
+  }
+  // Every category resolves to advice and to a stage.
+  for (const category of FAILURE_CATEGORIES) {
+    if (!allFailureAdvice().some((entry) => entry.taskId === null && entry.category === category)) {
+      fail(`advice: no fallback authored for ${category}`);
+    }
+    if (!['compile', 'runtime', 'test'].includes(stageOf(category))) fail(`advice: ${category} has no stage`);
+  }
+  // The classifier separates compile, runtime and test failures.
+  const noVisible = { visible: [], hidden: null, typeErrors: 0, threw: false, allUndefined: false, shapeMismatch: false, mutated: false };
+  if (classifyFailure({ ...noVisible, outcome: 'timeout' }) !== 'timeout') fail('advice: a timeout must classify as a timeout');
+  if (classifyFailure({ ...noVisible, outcome: 'failed', typeErrors: 2 }) !== 'types') fail('advice: type errors must classify as types');
+  if (classifyFailure({ ...noVisible, outcome: 'error', threw: true }) !== 'threw') fail('advice: a thrown error must classify as threw');
+  if (classifyFailure({ ...noVisible, outcome: 'failed', visible: [{ pass: true, edge: false }, { pass: false, edge: true }] }) !== 'boundary') {
+    fail('advice: an edge-only failure must classify as boundary');
+  }
+  if (classifyFailure({ ...noVisible, outcome: 'failed', visible: [{ pass: true, edge: false }], hidden: { passed: 1, total: 3 } }) !== 'hidden-only') {
+    fail('advice: a hidden-only failure must classify as hidden-only');
+  }
+  if (classifyFailure({ ...noVisible, outcome: 'failed', allUndefined: true, visible: [{ pass: false, edge: false }] }) !== 'missing-return') {
+    fail('advice: an all-undefined failure must classify as missing-return');
+  }
+  // A React suite asserts against the screen, so a failed case carries no
+  // returned value. The classifier must not read a value-shaped cause into it.
+  const opaqueFail = { ...noVisible, outcome: 'failed' as const, opaque: true, visible: [{ pass: false, edge: false }] };
+  if (classifyFailure(opaqueFail) !== 'render') fail('advice: a rendered expectation must classify as render');
+  if (classifyFailure({ ...opaqueFail, allUndefined: true, shapeMismatch: true, mutated: true }) !== 'render') {
+    fail('advice: value-shaped guesses must not survive an opaque failure');
+  }
+  if (classifyFailure({ ...opaqueFail, outcome: 'error', threw: true }) !== 'threw') {
+    fail('advice: a React runtime error is still a throw');
+  }
+  if (classifyFailure({ ...opaqueFail, visible: [{ pass: true, edge: false }], hidden: { passed: 1, total: 2 } }) !== 'hidden-only') {
+    fail('advice: an opaque hidden-only failure stays hidden-only');
+  }
+
+  /* ── repair exercises and the library contract (issues #163, #157) ──── */
+  const debugTasks = CODING_TASKS.filter((task) => task.debug === true);
+  if (debugTasks.length === 0) fail('debug: no repair exercises are authored');
+  for (const task of debugTasks) {
+    const where = `debug ${task.id}`;
+    if (task.track === 'system-design') fail(`${where}: design tasks are not repair exercises`);
+    if (task.verify !== 'tests') fail(`${where}: a repair is decided by its tests`);
+    if (!task.tests || task.tests.length === 0) fail(`${where}: no tests to prove the repair`);
+    if (!solutionFor(task.id)) fail(`${where}: no reference repair`);
+    // The summary the browser reads must carry the format, or the filter cannot
+    // find it. (The reference repair passing and the broken starter failing are
+    // already asserted by the shared solution checks above.)
+    const summary = CODING_SUMMARIES.find((one) => one.id === task.id);
+    if (summary?.debug !== true) fail(`${where}: the summary does not declare the debug format`);
+  }
+  for (const name of ['', '   ', 'x'.repeat(41)]) {
+    if (normalizeCollectionName(name) !== null) fail(`library: "${name.slice(0, 8)}" should not be an acceptable collection name`);
+  }
+  if (normalizeCollectionName('  My   list  ') !== 'My list') fail('library: a name should be trimmed and its whitespace collapsed');
+  if (isCollectionId('short') || !isCollectionId('abcdefgh')) fail('library: collection ids must be validated');
+
+  /* ── curated solution comparisons (issue #158) ──────────────────────── */
+  // Every authored approach has to actually solve its task, or the comparison
+  // teaches the wrong thing. The manifest is the coverage record: a task not in
+  // it never renders a comparison tab.
+  const coverage = approachCoverage();
+  if (coverage.length === 0) fail('approaches: nothing is authored');
+  for (const [taskId, approaches] of Object.entries(allApproaches())) {
+    const where = `approaches ${taskId}`;
+    const task = CODING_TASKS.find((one) => one.id === taskId);
+    if (!task) { fail(`${where}: no such task`); continue; }
+    if (approaches.length < 2 || approaches.length > 3) fail(`${where}: expected two or three approaches, found ${approaches.length}`);
+    const keys = new Set(approaches.map((one) => one.key));
+    if (keys.size !== approaches.length) fail(`${where}: duplicate approach key`);
+    for (const approach of approaches) {
+      const what = `${where}/${approach.key}`;
+      if (!APPROACH_STYLES.includes(approach.style)) fail(`${what}: unknown style ${approach.style}`);
+      if (!isComplexity(approach.time)) fail(`${what}: time ${approach.time} is not a complexity we use`);
+      if (!isComplexity(approach.space)) fail(`${what}: space ${approach.space} is not a complexity we use`);
+      for (const field of ['title', 'assumptions', 'tradeoffs'] as const) {
+        if (!approach[field].en.trim()) fail(`${what}: ${field} has no English text`);
+        if (!SKIP_CS && !approach[field].cs.trim()) fail(`${what}: ${field} has no Czech text`);
+      }
+      if (!task.tests || task.tests.length === 0) { fail(`${what}: the task has no tests to prove it against`); continue; }
+      const run = await withTimeout(
+        evaluateCalls({ code: approach.code, calls: task.tests.map((one) => one.call), expectations: task.tests.map((one) => one.expected) }),
+        8_000,
+        what,
+      );
+      if (!allPassed(run)) {
+        fail(`${what}: does not pass the task's own tests: ${run.codeError ?? run.results.map((r, i) => (r.pass ? null : task.tests![i].call)).filter(Boolean).join('; ')}`);
+      }
+    }
+  }
+
   if (failures.length > 0) {
     console.error(`Coding content contract: ${failures.length} problem(s)\n  - ${failures.join('\n  - ')}`);
     process.exitCode = 1;
     return;
   }
   const byTrack = CODING_TRACKS.map((track) => `${track} ${CODING_TASKS.filter((t) => t.track === track).length}`).join(', ');
-  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
+  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, ${allPuzzles().length} arrangement puzzles proven, ${allFailureAdvice().length} failure hints checked, ${debugTasks.length} repair exercises, ${coverage.length} solution comparisons proven, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 
 void main().catch((error) => {

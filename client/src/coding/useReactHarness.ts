@@ -76,7 +76,7 @@ export function useReactHarness(): HarnessHandle {
         case 'test':
           settle({
             ...active,
-            cases: [...active.cases, { name: String(data.name), status: data.status === 'pass' ? 'pass' : 'fail', error: (data.error as string | null) ?? null, durationMs: Number(data.durationMs ?? 0) }],
+            cases: [...active.cases, { name: String(data.name), status: data.status === 'pass' ? 'pass' : 'fail', error: (data.error as string | null) ?? null, assertion: data.assertion === true, durationMs: Number(data.durationMs ?? 0) }],
           });
           return;
         case 'console':

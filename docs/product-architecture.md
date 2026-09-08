@@ -59,6 +59,47 @@ idempotent; see `NEEDED.md` to apply it). Cards, freezes, and badges are cosmeti
 retention only and never affect access, content, XP, scores, streaks, ranks, or
 AI availability.
 
+## Learner profile and progression (devShark)
+
+One record decides what a learner sees. `shared/learner-profile.ts` holds the
+versioned profile — base track (Fullstack, Frontend, Backend), the optional FDE
+specialisation, the independent DSA enrolment, goals, experience and sitting
+length — validated identically in the browser and on the server and stored per
+account by `lib/learner-profile-store.ts` (migration 027). Experience is
+advisory: it changes wording and suggestions, never a gate.
+
+`shared/progression.ts` is the single prerequisite graph. A path is a chain of
+stages; a stage opens once every topic in the stage before it has a first passed
+level; inside a topic, a level needs its predecessors and the checkpoint before
+it. `api/quiz/roadmap.ts` asks that graph before issuing a level, a checkpoint
+or a part test, and again when an answer or a completion arrives, so a direct
+URL or a stale tab cannot skip ahead. Diagnostics recommend and never place: a
+topic a skill check made visible is still gated level by level. A learner with
+no profile is not blocked — they get the general roadmap, and the surfaces say
+so.
+
+`?op=eligibility` is the one response every personalised surface reads, so the
+Roadmap, Today and the coding queue cannot invent their own rules.
+
+## Rewards (devShark)
+
+Tokens are a server ledger (`reward_ledger`, migration 030), derived from the
+one registration grant and from `verified_activity_awards` — the same verified
+evidence the XP ledger uses. A browser never asserts a balance, and the old
+device-local number is reported back as unverified and never converted.
+
+The shop offers four physical items and the avatar crown
+(`shared/merchandise.ts`). Prices, regions, stock, the supplier and the payment
+provider all come from configuration; a missing one is a stated blocker on the
+card, not a default. Orders use one model for tokens and cash, reserve stock
+atomically, and refund exactly once. A signed webhook is the only authority for
+a cash payment, and live charging additionally requires an explicit
+`REWARDS_PAYMENT_MODE=live`. `docs/rewards-launch.md` carries the specifications,
+the unit-economics template and the owner decisions still outstanding.
+
+Rewards never change learning: no access, content, XP, ranks, streaks or
+leaderboards.
+
 ## Coding section (devShark)
 
 The `/coding` section, the coding phase inside Learn levels, and the GitHub
@@ -82,8 +123,21 @@ verdict for each. Passed tasks re-enter a review ladder (4 h, 24 h, 48 h; two
 clean passes retire the task) surfaced on Today and at `/coding/review`. Tiers
 open in order (`tierUnlocked`), XP follows `CODING_TASK_XP` once per task, and
 the five coding badges join the shared badge sync for `webdev`. All storage is
-in `supabase/supabase-schema-025.sql`. devShark ships no AI feature; the last
-hint rung is a documentation link from `shared/coding-docs.ts`.
+in `supabase/supabase-schema-025.sql`. devShark ships no AI feature; the hint
+ladder ends in a documentation link from `shared/coding-docs.ts`, and the
+failure advice in `lib/coding/failure-hints.ts` is authored, versioned with the
+task and derived only from the visible run.
+
+The section presents JavaScript, TypeScript and React (`CODING_SECTION_TRACKS`).
+System design keeps its tasks, its grader and its place in Learn, but is no
+longer a Coding track; an old `/coding/system-design` link explains the move.
+Alongside the editor the section carries an always-open Resources panel, a
+curated approach comparison that opens on a recorded verdict, a saved-challenge
+library with named collections (migration 028), short practice sessions and skip
+feedback (migration 029), search with combined filters, repair exercises marked
+`debug`, and authored arrangement puzzles for screens where an editor does not
+belong (`shared/coding-puzzle.ts`). A puzzle pass is recorded as recognition, in
+its own table, and never as having written the code.
 
 The GitHub garden is an optional GitHub App integration (`lib/github-app.ts`,
 `lib/github-handlers.ts`): the learner installs the app on one repository they

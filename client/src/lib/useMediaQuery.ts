@@ -27,3 +27,20 @@ export function useMediaQuery(query: string): boolean {
 export function useIsMobile(): boolean {
   return useMediaQuery('(max-width: 599.95px)');
 }
+
+/**
+ * True on the phone and tablet screens where a code editor between quizzes is
+ * the wrong tool (issue #154). Presentation only: the server never reads this,
+ * and it never decides what a learner is allowed to do.
+ *
+ * Width alone would be wrong. Zooming a desktop page to 200% halves its CSS
+ * width, and a learner who has just made the text bigger has not swapped their
+ * keyboard for a thumb — withholding the editor from them would take a feature
+ * away for using zoom. So the narrow viewport has to come with no precise
+ * pointer anywhere on the device.
+ */
+export function useIsCompactPractice(): boolean {
+  const narrow = useMediaQuery('(max-width: 899.95px)');
+  const noPrecisePointer = !useMediaQuery('(any-pointer: fine)');
+  return narrow && noPrecisePointer;
+}

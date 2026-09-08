@@ -64,6 +64,8 @@ export interface CodingTaskSource {
   hints: string[];
   approach?: string[];
   verify: CodingVerify;
+  /** A repair exercise: the starter is broken on purpose (issue #163). */
+  debug?: boolean;
   tests?: SourceCallTest[];
   typeTests?: SourceTypeTest[];
   suite?: string;
@@ -133,6 +135,7 @@ export function mergeTask(source: CodingTaskSource, cs: CodingTaskCs | undefined
     hints: { en: source.hints, cs: cs?.hints ?? [] },
     ...(source.approach ? { approach: locList(source.approach, cs?.approach) } : {}),
     verify: source.verify,
+    ...(source.debug ? { debug: true } : {}),
     estimatedMinutes: source.estimatedMinutes,
   };
   if (source.tests) {
