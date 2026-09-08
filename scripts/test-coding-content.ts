@@ -20,6 +20,7 @@ import {
   isCodingTier,
 } from '../shared/coding-catalog';
 import { docsFor } from '../shared/coding-docs';
+import { approachCoverage, approachesFor } from '../lib/coding/approaches';
 import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { runReactSuite } from '../lib/coding/react-runner';
@@ -209,6 +210,26 @@ async function main() {
     return;
   }
   const byTrack = CODING_TRACKS.map((track) => `${track} ${CODING_TASKS.filter((t) => t.track === track).length}`).join(', ');
+  // ── approach comparisons (#158) ────────────────────────────────────────
+  // Every covered id is a real task; every comparison has at least two
+  // approaches, both languages throughout, and a stated cost. Nothing here
+  // reaches the browser before the server sees a recorded pass.
+  const coveredIds = approachCoverage();
+  assert.ok(coveredIds.length > 0, 'the approach manifest must cover something');
+  for (const id of coveredIds) {
+    const task = CODING_TASKS.find((one) => one.id === id);
+    assert.ok(task, `approach comparison ${id} must name a real task`);
+    const approaches = approachesFor(id);
+    assert.ok(approaches.length >= 2, `${id} needs at least two approaches to compare`);
+    for (const approach of approaches) {
+      for (const field of [approach.name, approach.readability, approach.assumptions, approach.tradeoffs]) {
+        assert.ok(field.en.length > 0 && field.cs.length > 0, `${id}: every approach field needs EN and CS`);
+      }
+      assert.ok(approach.code.trim().length > 0, `${id}: an approach needs code`);
+      assert.ok(approach.time.length > 0 && approach.space.length > 0, `${id}: an approach must state its cost`);
+    }
+  }
+
   console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 

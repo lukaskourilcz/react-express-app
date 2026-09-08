@@ -123,9 +123,40 @@
   gap: 16px;
 }
 @media (min-width: 1024px) {
-  .cd-workbench__grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); align-items: start; }
+  /* The split is the learner's, kept between sessions. It is bounded so
+     neither pane can be dragged away entirely. */
+  .cd-workbench__grid {
+    grid-template-columns: minmax(0, var(--cd-split, 58%)) 10px minmax(0, 1fr);
+    align-items: start;
+  }
   .cd-pane--output { position: sticky; top: 8px; }
+  .cd-splitter {
+    align-self: stretch;
+    min-height: 120px;
+    width: 10px;
+    border-radius: 999px;
+    background: var(--color-border);
+    cursor: col-resize;
+    touch-action: none;
+  }
+  .cd-splitter:hover { background: var(--brand-accent); }
+  .cd-splitter:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 }
+/* Below the two-column breakpoint there is nothing to split, and a stray
+   focusable element would be one more thing to tab past. */
+@media (max-width: 1023px) {
+  .cd-splitter { display: none; }
+}
+.cd-workbench__bar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+/* Focus mode: the task brief and the hint ladder step back so the editor and
+   its results have the room. Nothing is removed — the brief is one click away
+   again — and the reduced-motion rules are untouched because nothing moves. */
+.cd-workbench--focus .cd-pane--task { display: none; }
+.cd-workbench--focus .cd-workbench__grid { grid-template-columns: minmax(0, 1fr) 10px minmax(0, 1fr); }
+/* Long results and long translated labels scroll inside their own pane rather
+   than pushing the page sideways. */
+.cd-panel { overflow-x: auto; }
+.cd-panel pre { max-height: 60vh; overflow: auto; }
 .cd-pane {
   display: flex;
   flex-direction: column;
@@ -370,3 +401,17 @@
   color: var(--color-text-primary);
 }
 .cd-skip-note:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+.cd-verdict:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 3px; }
+
+/* Approach comparisons: one card per approach, each carrying its own cost. */
+.cd-approaches { display: flex; flex-direction: column; gap: 14px; }
+.cd-approach { border: 1px solid var(--color-border); border-radius: 12px; padding: 12px; }
+.cd-approach h4 { margin: 0 0 8px; font-size: 0.95rem; }
+.cd-approach pre { margin: 0 0 10px; overflow: auto; }
+.cd-approach dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 0.85rem; }
+.cd-approach dt { font-weight: 650; color: var(--color-text-secondary); }
+.cd-approach dd { margin: 0; }
+@media (max-width: 30rem) {
+  .cd-approach dl { grid-template-columns: 1fr; gap: 2px; }
+  .cd-approach dd { margin-bottom: 6px; }
+}

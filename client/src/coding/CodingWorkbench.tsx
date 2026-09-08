@@ -2,7 +2,7 @@
 // ladder. Used by the Coding section (`mode="section"`) and inside a Learn
 // level (`mode="lesson"`). It never fetches on its own: the parent hands it a
 // playable task, its sealed session and the saved draft.
-import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { readJSON, writeJSON } from '../lib/storage';
@@ -16,7 +16,7 @@ import { taskResources } from '../../../shared/coding-docs';
 import { skipTask } from './practice';
 import { SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint } from '../../../shared/coding-failure';
-import { revealCoding, submitCoding } from './api';
+import { revealCoding, submitCoding, useCodingApproaches } from './api';
 import { CODING_TIERS, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import type { CodingLockReason, CodingVerdictResponse } from '../../../shared/coding-api';
 import './Coding.css';
@@ -36,11 +36,27 @@ export interface CodingWorkbenchProps {
   onContinue?: () => void;
 }
 
-type Tab = 'results' | 'types' | 'console' | 'preview' | 'resources';
+type Tab = 'results' | 'types' | 'console' | 'preview' | 'resources' | 'approaches';
 type Phase = 'idle' | 'running' | 'submitting';
 
 const DRAFT_DEBOUNCE_MS = 900;
 const hintsKey = (id: string) => `devshark:coding:hints:${id}`;
+// Layout is a preference of the person, not of the task, and it is not their
+// work: it lives on the device beside the drafts but under its own key, so
+// clearing one never touches the other.
+const LAYOUT_KEY = 'devshark:coding:layout:v1';
+const SPLIT_MIN = 35;
+const SPLIT_MAX = 75;
+const SPLIT_DEFAULT = 58;
+const SPLIT_STEP = 5;
+interface WorkbenchLayout { split: number; focus: boolean }
+const readLayout = (): WorkbenchLayout => {
+  const stored = readJSON<Partial<WorkbenchLayout>>(LAYOUT_KEY, {});
+  const split = typeof stored.split === 'number' && Number.isFinite(stored.split)
+    ? Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, Math.round(stored.split)))
+    : SPLIT_DEFAULT;
+  return { split, focus: stored.focus === true };
+};
 
 /** Prompt text with `code` spans rendered as code. */
 function Prompt({ text, className }: { text: string; className?: string }) {
@@ -99,12 +115,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const [solution, setSolution] = useState<string | null>(null);
   const [checked, setChecked] = useState<boolean[]>(() => (task.checklist?.en ?? []).map(() => false));
   const [formatError, setFormatError] = useState<string | null>(null);
+  const [layout, setLayout] = useState<WorkbenchLayout>(readLayout);
   const [skipping, setSkipping] = useState(false);
   const [skipReason, setSkipReason] = useState<SkipReason>('later');
   const [skipNote, setSkipNote] = useState('');
   const [skipResult, setSkipResult] = useState<{ required: boolean; next: string | null } | null>(null);
   const [skipError, setSkipError] = useState<string | null>(null);
   const startedAt = useRef(Date.now());
+  const verdictRef = useRef<HTMLElement | null>(null);
   const harness = useReactHarness();
 
   const rungs = useMemo(() => ladderRungs(task, lang), [task, lang]);
@@ -119,6 +137,40 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   }, [code, onDraft]);
 
   useEffect(() => { writeJSON(hintsKey(task.id), hintsTaken); }, [hintsTaken, task.id]);
+  useEffect(() => { writeJSON(LAYOUT_KEY, layout); }, [layout]);
+  useEffect(() => { if (verdict) verdictRef.current?.focus(); }, [verdict]);
+
+  const setSplit = useCallback((next: number) => {
+    setLayout((current) => ({ ...current, split: Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, Math.round(next))) }));
+  }, []);
+
+  // The separator is a real one: it takes focus, arrows move it in steps, Home
+  // and End go to the limits, and Enter restores the default. Dragging is an
+  // addition to that, never the only way.
+  const onSeparatorKeyDown = useCallback((event: KeyboardEvent<HTMLDivElement>) => {
+    const step = event.key === 'ArrowLeft' ? -SPLIT_STEP : event.key === 'ArrowRight' ? SPLIT_STEP : 0;
+    if (step !== 0) { event.preventDefault(); setSplit(layout.split + step); return; }
+    if (event.key === 'Home') { event.preventDefault(); setSplit(SPLIT_MIN); return; }
+    if (event.key === 'End') { event.preventDefault(); setSplit(SPLIT_MAX); return; }
+    if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSplit(SPLIT_DEFAULT); }
+  }, [layout.split, setSplit]);
+
+  const onSeparatorPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    const grid = event.currentTarget.parentElement;
+    if (!grid) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const move = (moveEvent: PointerEvent) => {
+      const box = grid.getBoundingClientRect();
+      if (box.width <= 0) return;
+      setSplit(((moveEvent.clientX - box.left) / box.width) * 100);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  }, [setSplit]);
 
   const onCodeChange = useCallback((next: string) => {
     setCode(next);
@@ -266,6 +318,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
   const resources = useMemo(() => taskResources(task.focus), [task.focus]);
 
+  // Approach comparisons open on a recorded pass, and the server decides that.
+  // Giving up and reading the reference solution is a different thing: it does
+  // not open this, which is why the flag below is the verdict and not `solution`.
+  const passedNow = verdict?.verdict === 'passed';
+  const approaches = useCodingApproaches(task.id, passedNow);
+  const approachList = approaches.data?.approaches ?? [];
+
   // What went wrong, said once, in the learner's language.
   //
   // The server's verdict wins when there is one: it classifies with the hidden
@@ -295,6 +354,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     // Reading the documentation is not asking for help: this tab is open from
     // the moment the task loads, costs no hint rung, and needs no failed run.
     { key: 'resources', label: t('coding.tab.resources'), badge: resources.length > 0 ? String(resources.length) : null, good: null },
+    // Only when there is something to compare. A tab that opens on nothing is
+    // worse than no tab.
+    ...(approachList.length > 0
+      ? [{ key: 'approaches' as Tab, label: t('coding.tab.approaches'), badge: String(approachList.length), good: null }]
+      : []),
   ];
 
   // Arrow/Home/End across the tab strip, per the ARIA tabs pattern.
@@ -336,6 +400,31 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       </div>
     );
   };
+
+  /** Two or three ways to solve the same task, once the learner has solved it
+   * themselves. The point is the comparison, so each one carries its cost, its
+   * assumptions and what it gives up. */
+  const renderApproaches = (): ReactNode => (
+    <div className="cd-approaches">
+      <p className="cd-shortcuts">{t('coding.approaches.intro')}</p>
+      {approachList.map((approach, index) => (
+        <article key={index} className="cd-approach">
+          <h4>{approach.name[lang] || approach.name.en}</h4>
+          <pre>{approach.code}</pre>
+          <dl>
+            <dt>{t('coding.approaches.cost')}</dt>
+            <dd>{t('coding.approaches.costValue', { time: approach.time, space: approach.space })}</dd>
+            <dt>{t('coding.approaches.readability')}</dt>
+            <dd>{approach.readability[lang] || approach.readability.en}</dd>
+            <dt>{t('coding.approaches.assumptions')}</dt>
+            <dd>{approach.assumptions[lang] || approach.assumptions.en}</dd>
+            <dt>{t('coding.approaches.tradeoffs')}</dt>
+            <dd>{approach.tradeoffs[lang] || approach.tradeoffs.en}</dd>
+          </dl>
+        </article>
+      ))}
+    </div>
+  );
 
   const renderResults = (): ReactNode => {
     if (isReact) {
@@ -455,8 +544,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     </>
   );
 
+  // Grading finishes somewhere the learner is not looking, so focus follows the
+  // result. The card is not a dialog and does not trap anything: it takes focus
+  // once, and Tab carries on from there.
   const verdictCard = verdict && (
-    <section className={`cd-verdict cd-verdict--${verdict.verdict}`}>
+    <section className={`cd-verdict cd-verdict--${verdict.verdict}`} ref={verdictRef} tabIndex={-1}>
       <h3 className="cd-verdict__title">
         <span>{t(`coding.verdict.${verdict.verdict}` as never)}</span>
         {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
@@ -494,9 +586,32 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         : run ? t('coding.results.passing', { passed: run.results.filter((one) => one.pass === true).length, total: run.results.length }) : '';
 
   return (
-    <div className={`cd-workbench cd-workbench--${mode}`} onKeyDown={onKeyDown}>
+    <div
+      className={`cd-workbench cd-workbench--${mode}${layout.focus ? ' cd-workbench--focus' : ''}`}
+      onKeyDown={onKeyDown}
+    >
       <span className="cd-visually-hidden" role="status" aria-live="polite">{announcement}</span>
-      <div className="cd-workbench__grid">
+      <div className="cd-workbench__bar">
+        <button
+          type="button"
+          className="cd-btn cd-btn--quiet"
+          aria-pressed={layout.focus}
+          onClick={() => setLayout((current) => ({ ...current, focus: !current.focus }))}
+        >
+          {t(layout.focus ? 'coding.layout.focusOff' : 'coding.layout.focusOn')}
+        </button>
+        <button
+          type="button"
+          className="cd-btn cd-btn--quiet"
+          onClick={() => setLayout({ split: SPLIT_DEFAULT, focus: false })}
+        >
+          {t('coding.layout.reset')}
+        </button>
+      </div>
+      <div
+        className="cd-workbench__grid"
+        style={{ ['--cd-split' as string]: `${layout.split}%` }}
+      >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
           <section className="cd-pane cd-pane--task" aria-labelledby={`${baseId}-title`}>
             <div className="cd-pane__head">
@@ -655,6 +770,22 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           </section>
         </div>
 
+        {/* A real separator: it takes focus, arrows move it, Home and End go to
+            the limits and Enter restores the default. It is hidden below the
+            two-column breakpoint, where there is nothing to split. */}
+        <div
+          className="cd-splitter"
+          role="separator"
+          tabIndex={0}
+          aria-orientation="vertical"
+          aria-label={t('coding.layout.splitter')}
+          aria-valuenow={layout.split}
+          aria-valuemin={SPLIT_MIN}
+          aria-valuemax={SPLIT_MAX}
+          onKeyDown={onSeparatorKeyDown}
+          onPointerDown={onSeparatorPointerDown}
+        />
+
         <section className="cd-pane cd-pane--output" aria-label={t('coding.tab.results')}>
           <div className="cd-tabs" role="tablist" onKeyDown={onTabKeyDown}>
             {tabs.map((one) => (
@@ -686,6 +817,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               {one.key === 'console' && renderConsole()}
               {one.key === 'preview' && renderPreview()}
               {one.key === 'resources' && renderResources()}
+              {one.key === 'approaches' && renderApproaches()}
             </div>
           ))}
           {verdictCard}

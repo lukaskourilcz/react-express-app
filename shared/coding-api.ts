@@ -222,3 +222,27 @@ export interface PracticeSessionAdvanceRequest {
   position?: number;
   status?: 'finished' | 'abandoned';
 }
+
+/* ── curated approach comparisons ─────────────────────────────────────── */
+
+export interface CuratedApproachView {
+  name: Localized;
+  code: string;
+  readability: Localized;
+  time: string;
+  space: string;
+  assumptions: Localized;
+  tradeoffs: Localized;
+}
+
+/** GET ?resource=coding-approaches&id=…
+ *
+ * Two or three original solutions to the same task, with what each costs, what
+ * it assumes and what it gives up. Served only when the learner's own recorded
+ * evidence says they passed: a revealed solution after giving up is a different
+ * thing and does not open this. An empty list means nothing is authored for
+ * this task yet, and the client shows no tab rather than an empty one. */
+export interface CodingApproachesResponse {
+  taskId: string;
+  approaches: CuratedApproachView[];
+}

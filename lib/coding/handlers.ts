@@ -21,6 +21,7 @@ import { nodeTypeScriptChecker } from './ts-check-node';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { classifyFailure, failureHint, jsonKind } from '../../shared/coding-failure';
 import { afterCodingPass } from '../github-garden';
+import { approachesFor } from './approaches';
 import {
   CODING_TASK_XP,
   isCodingTaskId,
@@ -38,6 +39,7 @@ import type {
   CodingSubmitRequest,
   CodingTaskProgress,
   CodingTaskResponse,
+  CodingApproachesResponse,
   CodingVerdictResponse,
   DesignAnswer,
 } from '../../shared/coding-api';
@@ -553,4 +555,43 @@ export async function handleCodingDraft(req: VercelRequest, res: VercelResponse,
   }
   res.setHeader('Allow', 'GET, POST');
   return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+}
+
+
+/* ── GET ?resource=coding-approaches ─────────────────────────────────── */
+
+/**
+ * Curated approach comparisons for a task the learner has passed.
+ *
+ * The gate is the recorded verdict, not a flag from the browser and not the
+ * reveal: giving up shows the reference solution and ends the attempt, and it
+ * still does. Passing is what opens the comparison, because the comparison only
+ * teaches anything to someone who already has a working answer of their own.
+ */
+export async function handleCodingApproaches(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+  if (!codingAvailable()) return notAvailable(res);
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  }
+  const id = typeof req.query.id === 'string' ? req.query.id : '';
+  if (!isCodingTaskId(id) || !codingTaskById(id)) return jsonError(res, 404, 'not_found', 'Unknown challenge');
+  const userId = await requireAuthSub(req, res);
+  if (!userId) return;
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Account storage is not configured');
+
+  const row = await withTimeout(
+    supabase.from('coding_progress').select('status').eq('user_id', userId).eq('task_id', id).maybeSingle(),
+  );
+  if (row.error) {
+    if (isRpcMissing(row.error)) return jsonError(res, 503, 'migration_required', 'Coding progress migration 025 is not installed');
+    return jsonError(res, 500, 'db_error', 'Could not read your progress');
+  }
+  if (row.data?.status !== 'passed') {
+    return jsonError(res, 403, 'not_passed', 'Approach comparisons open once you have passed the challenge');
+  }
+
+  res.setHeader('Cache-Control', 'private, no-store');
+  const body: CodingApproachesResponse = { taskId: id, approaches: approachesFor(id) };
+  return res.json(body);
 }

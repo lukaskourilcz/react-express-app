@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { getStoredLang } from '../i18n/LanguageContext';
 import type {
+  CodingApproachesResponse,
   CodingDraftResponse,
   CodingProgressResponse,
   CodingRevealRequest,
@@ -21,6 +22,7 @@ const ROADMAP = '/api/quiz/roadmap';
 const USER = '/api/user/[op]';
 
 export const codingKeys = {
+  approaches: (id: string) => ['coding', 'approaches', id] as const,
   task: (id: string) => ['coding', 'task', id] as const,
   progress: () => ['coding', 'progress'] as const,
   github: () => ['coding', 'github'] as const,
@@ -80,6 +82,21 @@ export function useCodingProgress(enabled: boolean) {
     enabled,
     queryFn: ({ signal }) => fetchCodingProgress(signal),
     staleTime: 30_000,
+  });
+}
+
+/** Curated approaches for a task the learner has passed. The server decides;
+ * this hook only asks, and only once a pass has been recorded. */
+export function fetchCodingApproaches(id: string, signal?: AbortSignal): Promise<CodingApproachesResponse> {
+  return apiFetch<CodingApproachesResponse>(`${ROADMAP}?resource=coding-approaches&id=${encodeURIComponent(id)}`, { signal });
+}
+
+export function useCodingApproaches(id: string | undefined, passed: boolean) {
+  return useQuery({
+    queryKey: codingKeys.approaches(id ?? ''),
+    enabled: Boolean(id) && passed,
+    queryFn: ({ signal }) => fetchCodingApproaches(id!, signal),
+    staleTime: 5 * 60_000,
   });
 }
 
