@@ -437,6 +437,156 @@ export function parseLearningPreference(value: unknown): LearningPreference | nu
   };
 }
 
+/* ── the learner profile ───────────────────────────────────────────────── */
+
+/** What the learner is here for. A learner may hold more than one goal; the
+ * plan reads them to order recommendations, never to grant access. */
+export const LEARNER_GOALS = ['first-job', 'change-track', 'level-up', 'interview-prep', 'side-projects'] as const;
+export type LearnerGoal = (typeof LEARNER_GOALS)[number];
+export const isLearnerGoal = (value: unknown): value is LearnerGoal =>
+  typeof value === 'string' && (LEARNER_GOALS as readonly string[]).includes(value);
+export const MAX_LEARNER_GOALS = 3;
+
+/** How much programming the learner has done. Advisory only, and deliberately
+ * so: it orders recommendations and sets the tone of an explanation. It never
+ * unlocks a level, skips a prerequisite or stands in for verified evidence.
+ * `unsure` is a real answer, matching the placement check's "I don't know yet". */
+export const EXPERIENCE_LEVELS = ['unsure', 'new', 'some', 'professional'] as const;
+export type ExperienceLevel = (typeof EXPERIENCE_LEVELS)[number];
+export const isExperienceLevel = (value: unknown): value is ExperienceLevel =>
+  typeof value === 'string' && (EXPERIENCE_LEVELS as readonly string[]).includes(value);
+
+/** Minutes the learner expects to study on a day they study. Sizes the Today
+ * queue and the short practice sessions; it is a preference, not a quota. */
+export const STUDY_TIMES = ['under-15', '15-30', '30-60', '60-plus'] as const;
+export type StudyTime = (typeof STUDY_TIMES)[number];
+export const isStudyTime = (value: unknown): value is StudyTime =>
+  typeof value === 'string' && (STUDY_TIMES as readonly string[]).includes(value);
+
+/** Roughly how many minutes a study day holds, for sizing a session. The upper
+ * band is bounded on purpose: a learner who studies for hours still gets a
+ * session they can finish. */
+export const STUDY_TIME_MINUTES: Record<StudyTime, number> = {
+  'under-15': 10,
+  '15-30': 20,
+  '30-60': 45,
+  '60-plus': 75,
+};
+
+/** Skill paths the learner opted into. A skill path is entered directly and
+ * holds no preference slot, so it lives beside the role rather than inside it:
+ * DSA Foundations can run with or without FDE, and with any base track. */
+export type SkillPathId = Extract<LearningPathId, 'dsa-foundations'>;
+export const SKILL_PATH_IDS: readonly SkillPathId[] = ['dsa-foundations'];
+export const isSkillPathId = (value: unknown): value is SkillPathId =>
+  typeof value === 'string' && (SKILL_PATH_IDS as readonly string[]).includes(value);
+
+/**
+ * The versioned learner profile: everything the learner told us about what
+ * they are learning and why.
+ *
+ * It is one record with one writer. `baseTrack` and `specialization` keep the
+ * meaning they have in `LearningPreference`, which is still written beside it
+ * so a client that predates this profile reads a preference it understands.
+ * The rest is new: the goals, the experience answer and the study-time band
+ * that let Today, the roadmap and the short sessions describe a plan instead
+ * of a catalogue.
+ *
+ * None of it is authority. Eligibility comes from this profile *plus*
+ * server-verified completions (see `shared/progression.ts`); the profile alone
+ * never unlocks anything, and `experience` least of all.
+ */
+export interface LearnerProfile {
+  schemaVersion: 2;
+  baseTrack: BaseTrack;
+  specialization: RoleSpecializationId | null;
+  skillPaths: SkillPathId[];
+  goals: LearnerGoal[];
+  experience: ExperienceLevel;
+  studyTime: StudyTime;
+  /** When the learner last saved it, ISO-8601. Used to show "updated" copy and
+   * to break ties between two devices; never to expire a plan. */
+  updatedAt: string | null;
+}
+
+export const LEARNER_PROFILE_META_KEY = 'devquiz_learner_profile_v2';
+
+/** The fields a learner must answer before practice is personalised. The base
+ * track is not listed because a profile without one does not parse at all. */
+export const REQUIRED_PROFILE_FIELDS = ['goals', 'experience', 'studyTime'] as const;
+export type RequiredProfileField = (typeof REQUIRED_PROFILE_FIELDS)[number];
+
+/**
+ * Read a stored profile defensively, in the same spirit as
+ * `parseLearningPreference`: salvage what is readable rather than handing a
+ * learner back to onboarding because one field went bad. An unusable base
+ * track is the only thing that voids the record.
+ *
+ * A field that fails validation comes back missing rather than guessed, so
+ * `missingProfileFields` asks for it again instead of inventing an answer.
+ */
+export function parseLearnerProfile(value: unknown): LearnerProfile | null {
+  if (!value || typeof value !== 'object') return null;
+  const raw = value as Record<string, unknown>;
+  if (raw.schemaVersion !== 2) return null;
+  if (!isBaseTrack(raw.baseTrack)) return null;
+  const goals = Array.isArray(raw.goals)
+    ? Array.from(new Set(raw.goals.filter(isLearnerGoal))).slice(0, MAX_LEARNER_GOALS)
+    : [];
+  const skillPaths = Array.isArray(raw.skillPaths)
+    ? Array.from(new Set(raw.skillPaths.filter(isSkillPathId)))
+    : [];
+  return {
+    schemaVersion: 2,
+    baseTrack: raw.baseTrack,
+    specialization: isRoleSpecializationId(raw.specialization) ? raw.specialization : null,
+    skillPaths,
+    goals,
+    // An unreadable answer is a missing answer, not a default one.
+    experience: isExperienceLevel(raw.experience) ? raw.experience : ('' as ExperienceLevel),
+    studyTime: isStudyTime(raw.studyTime) ? raw.studyTime : ('' as StudyTime),
+    updatedAt: typeof raw.updatedAt === 'string' && raw.updatedAt.length <= 40 ? raw.updatedAt : null,
+  };
+}
+
+/** Which required answers are still missing. Empty means the profile is
+ * complete and personalised practice can start. */
+export function missingProfileFields(profile: LearnerProfile | null): RequiredProfileField[] {
+  if (!profile) return [...REQUIRED_PROFILE_FIELDS];
+  const missing: RequiredProfileField[] = [];
+  if (profile.goals.length === 0) missing.push('goals');
+  if (!isExperienceLevel(profile.experience)) missing.push('experience');
+  if (!isStudyTime(profile.studyTime)) missing.push('studyTime');
+  return missing;
+}
+
+export const isLearnerProfileComplete = (profile: LearnerProfile | null): boolean =>
+  profile !== null && missingProfileFields(profile).length === 0;
+
+/** The v1 preference this profile implies. Written beside the profile on every
+ * save so nothing that already reads the preference has to change. */
+export const learningPreferenceOf = (profile: LearnerProfile): LearningPreference => ({
+  schemaVersion: 1,
+  baseTrack: profile.baseTrack,
+  specialization: profile.specialization,
+});
+
+/** The profile an account that only ever saved a v1 preference implies: the
+ * plan it already chose, and the required answers still outstanding. */
+export const profileFromPreference = (preference: LearningPreference | null): LearnerProfile | null =>
+  preference === null
+    ? null
+    : {
+        schemaVersion: 2,
+        baseTrack: preference.baseTrack,
+        specialization: preference.specialization,
+        skillPaths: [],
+        goals: [],
+        experience: '' as ExperienceLevel,
+        studyTime: '' as StudyTime,
+        updatedAt: null,
+      };
+
 /* ── id shapes ─────────────────────────────────────────────────────────── */
 
 const ID_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;

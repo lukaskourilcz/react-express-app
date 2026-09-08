@@ -14,12 +14,18 @@ import type {
   ActivitySummary,
   BaseTrack,
   EvidenceState,
+  ExperienceLevel,
+  LearnerGoal,
+  LearnerProfile,
   LearningPathId,
   LearningPathManifest,
   LearningPreference,
   ModuleProgress,
   PathCodeLanguage,
   PathInventory,
+  RequiredProfileField,
+  SkillPathId,
+  StudyTime,
   VerificationKind,
 } from './learning-paths';
 
@@ -45,16 +51,31 @@ export interface LearningPathCatalogResponse {
 
 /* ── preference ────────────────────────────────────────────────────────── */
 
-/** GET/PUT /api/user/[op]?op=learning-preference */
+/** GET/PUT /api/user/[op]?op=learning-preference
+ *
+ * One op, one writer. The versioned learner profile is the record; the v1
+ * preference and the legacy track field are derived from it on every save so a
+ * client that predates the profile still reads something it understands. */
 export interface LearningPreferenceResponse {
   preference: LearningPreference | null;
   /** The legacy `devquiz_track` value, still written for older clients. */
   legacyTrack: BaseTrack | null;
+  /** The full profile, or null when the account has never saved one. */
+  profile: LearnerProfile | null;
+  /** Required answers still outstanding. Empty means practice is personalised. */
+  missingProfileFields: RequiredProfileField[];
 }
 
 export interface LearningPreferenceRequest {
   baseTrack: BaseTrack;
   specialization: 'fde' | null;
+  /** The profile answers. Optional so the existing track-only save from the
+   * Profile toggle keeps working: fields left out keep the value already on
+   * the account rather than being cleared. */
+  goals?: LearnerGoal[];
+  experience?: ExperienceLevel;
+  studyTime?: StudyTime;
+  skillPaths?: SkillPathId[];
 }
 
 /* ── enrollment ────────────────────────────────────────────────────────── */

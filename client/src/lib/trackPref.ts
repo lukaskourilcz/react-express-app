@@ -19,16 +19,35 @@ import { readJSON, writeJSON } from './storage';
 import { saveLearningPreference as savePreferenceToAccount } from './learningPaths';
 import { CURRENT_PRODUCT } from './products';
 import {
+  LEARNER_PROFILE_META_KEY,
   LEARNING_PREFERENCE_META_KEY,
   LEGACY_TRACK_META_KEY,
+  missingProfileFields,
+  parseLearnerProfile,
   parseLearningPreference,
+  profileFromPreference,
   type BaseTrack,
+  type ExperienceLevel,
+  type LearnerGoal,
+  type LearnerProfile,
   type LearningPreference,
+  type RequiredProfileField,
   type RoleSpecializationId,
+  type SkillPathId,
+  type StudyTime,
 } from '../../../shared/learning-paths';
 import type { Track } from './tracks';
 
-export type { BaseTrack, LearningPreference, RoleSpecializationId };
+export type { BaseTrack, LearnerProfile, LearningPreference, RequiredProfileField, RoleSpecializationId };
+
+/** The profile answers a save may carry. Everything is optional: a save that
+ * only changes the track leaves the rest of the profile exactly as it is. */
+export interface ProfileAnswers {
+  goals?: LearnerGoal[];
+  experience?: ExperienceLevel;
+  studyTime?: StudyTime;
+  skillPaths?: SkillPathId[];
+}
 
 const isTrack = (value: unknown): value is Track =>
   value === 'frontend' || value === 'backend' || value === 'fullstack';
@@ -54,6 +73,21 @@ export function preferredLearningOf(user: User | null): LearningPreference | nul
   const legacy = metadata[LEGACY_TRACK_META_KEY];
   return isTrack(legacy) ? { schemaVersion: 1, baseTrack: legacy, specialization: null } : null;
 }
+
+/** The full profile saved on the account. An account that only ever saved a v1
+ * preference reads back as the plan it chose with the newer answers still
+ * outstanding, so onboarding asks for what is missing rather than everything. */
+export function learnerProfileOf(user: User | null): LearnerProfile | null {
+  const metadata = (user?.user_metadata ?? {}) as Record<string, unknown>;
+  return parseLearnerProfile(metadata[LEARNER_PROFILE_META_KEY])
+    ?? profileFromPreference(parseLearningPreference(metadata[LEARNING_PREFERENCE_META_KEY]));
+}
+
+/** Required answers the learner still owes. Empty means practice can be
+ * personalised; a signed-out visitor owes nothing, because there is no account
+ * to personalise yet. */
+export const profileGapsOf = (user: User | null): RequiredProfileField[] =>
+  missingProfileFields(learnerProfileOf(user));
 
 /* ── the device cache ──────────────────────────────────────────────────── */
 
@@ -89,17 +123,20 @@ export type SaveOutcome =
 export async function saveLearningPreference(
   userId: string | null,
   preference: LearningPreference,
+  answers: ProfileAnswers = {},
 ): Promise<SaveOutcome> {
   writeCachedPreference(userId, preference);
   if (!supabase || !userId) {
     return { ok: false, reason: 'not_signed_in', message: 'not_signed_in' };
   }
   try {
-    // One writer: the API validates the enums and derives the legacy track
-    // field, so a malformed value cannot reach the account from any client.
+    // One writer: the API validates the enums, merges the answers this save
+    // does not carry, and derives the v1 preference and legacy track field, so
+    // a malformed value cannot reach the account from any client.
     await savePreferenceToAccount({
       baseTrack: preference.baseTrack,
       specialization: preference.specialization,
+      ...answers,
     });
     // The local `user` object caches user_metadata, so refresh the session to
     // pick up what the server just wrote. A failed refresh is not a failed

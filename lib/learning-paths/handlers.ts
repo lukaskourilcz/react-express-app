@@ -313,13 +313,22 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     const { data, error } = await withTimeout(supabase.auth.admin.getUserById(auth.sub));
     if (error) return jsonError(res, 500, 'db_error', 'Could not read the account preference');
     const metadata = (data.user?.user_metadata ?? {}) as Record<string, unknown>;
-    const { parseLearningPreference, LEARNING_PREFERENCE_META_KEY, LEGACY_TRACK_META_KEY } =
-      await import('../../shared/learning-paths');
+    const {
+      parseLearningPreference, parseLearnerProfile, profileFromPreference, missingProfileFields,
+      LEARNING_PREFERENCE_META_KEY, LEGACY_TRACK_META_KEY, LEARNER_PROFILE_META_KEY,
+    } = await import('../../shared/learning-paths');
     const legacy = metadata[LEGACY_TRACK_META_KEY];
+    const preference = parseLearningPreference(metadata[LEARNING_PREFERENCE_META_KEY]);
+    // An account that only ever saved a v1 preference reads back as the plan it
+    // already chose with its required answers still outstanding, so onboarding
+    // asks for what is missing instead of starting again from nothing.
+    const profile = parseLearnerProfile(metadata[LEARNER_PROFILE_META_KEY]) ?? profileFromPreference(preference);
     res.setHeader('Cache-Control', 'private, no-store');
     const body: LearningPreferenceResponse = {
-      preference: parseLearningPreference(metadata[LEARNING_PREFERENCE_META_KEY]),
+      preference,
       legacyTrack: isBaseTrack(legacy) ? legacy : null,
+      profile,
+      missingProfileFields: missingProfileFields(profile),
     };
     return res.json(body);
   }
@@ -332,21 +341,72 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     if (specialization !== null && specialization !== 'fde') {
       return jsonError(res, 400, 'bad_request', 'specialization must be fde or null');
     }
-    const { LEARNING_PREFERENCE_META_KEY, LEGACY_TRACK_META_KEY } = await import('../../shared/learning-paths');
-    // The legacy field is derived from every save, so a client that predates
-    // the new preference keeps reading a track it understands.
+    const {
+      LEARNING_PREFERENCE_META_KEY, LEGACY_TRACK_META_KEY, LEARNER_PROFILE_META_KEY,
+      MAX_LEARNER_GOALS, isLearnerGoal, isExperienceLevel, isStudyTime, isSkillPathId,
+      parseLearnerProfile, profileFromPreference, parseLearningPreference, missingProfileFields,
+    } = await import('../../shared/learning-paths');
+
+    // Validate every field the request actually carries. An answer the server
+    // does not recognise is rejected rather than dropped: a learner who thinks
+    // they answered should not silently be asked again.
+    if (body.goals !== undefined) {
+      if (!Array.isArray(body.goals) || body.goals.length === 0 || body.goals.length > MAX_LEARNER_GOALS
+          || !body.goals.every(isLearnerGoal)) {
+        return jsonError(res, 400, 'bad_request', `goals must be 1 to ${MAX_LEARNER_GOALS} known goals`);
+      }
+    }
+    if (body.experience !== undefined && !isExperienceLevel(body.experience)) {
+      return jsonError(res, 400, 'bad_request', 'experience must be one of the published levels');
+    }
+    if (body.studyTime !== undefined && !isStudyTime(body.studyTime)) {
+      return jsonError(res, 400, 'bad_request', 'studyTime must be one of the published bands');
+    }
+    if (body.skillPaths !== undefined
+        && (!Array.isArray(body.skillPaths) || !body.skillPaths.every(isSkillPathId))) {
+      return jsonError(res, 400, 'bad_request', 'skillPaths must be known skill paths');
+    }
+
+    // Read what the account already holds so a partial save — the Profile's
+    // track toggle, which sends no profile answers — keeps the rest.
+    const existingRead = await withTimeout(supabase.auth.admin.getUserById(auth.sub));
+    const existingMeta = (existingRead.data?.user?.user_metadata ?? {}) as Record<string, unknown>;
+    const existing = parseLearnerProfile(existingMeta[LEARNER_PROFILE_META_KEY])
+      ?? profileFromPreference(parseLearningPreference(existingMeta[LEARNING_PREFERENCE_META_KEY]));
+
+    const profile = {
+      schemaVersion: 2 as const,
+      baseTrack: body.baseTrack,
+      specialization,
+      skillPaths: body.skillPaths ?? existing?.skillPaths ?? [],
+      goals: body.goals ?? existing?.goals ?? [],
+      experience: body.experience ?? existing?.experience ?? ('' as never),
+      studyTime: body.studyTime ?? existing?.studyTime ?? ('' as never),
+      updatedAt: new Date().toISOString(),
+    };
+
+    // One write, three derived records: the profile, the v1 preference and the
+    // legacy field, so nothing that reads an older shape has to change.
     const { error } = await withTimeout(supabase.auth.admin.updateUserById(auth.sub, {
       user_metadata: {
+        [LEARNER_PROFILE_META_KEY]: profile,
         [LEARNING_PREFERENCE_META_KEY]: { schemaVersion: 1, baseTrack: body.baseTrack, specialization },
         [LEGACY_TRACK_META_KEY]: body.baseTrack,
       },
     }));
     if (error) return jsonError(res, 500, 'db_error', 'Could not save the learning preference');
-    logEvent({ status: 200, kind: 'preference_saved', specialization: specialization ?? 'none' });
+    logEvent({
+      status: 200,
+      kind: 'preference_saved',
+      specialization: specialization ?? 'none',
+      complete: missingProfileFields(profile).length === 0,
+    });
     res.setHeader('Cache-Control', 'private, no-store');
     const saved: LearningPreferenceResponse = {
       preference: { schemaVersion: 1, baseTrack: body.baseTrack, specialization },
       legacyTrack: body.baseTrack,
+      profile,
+      missingProfileFields: missingProfileFields(profile),
     };
     return res.json(saved);
   }

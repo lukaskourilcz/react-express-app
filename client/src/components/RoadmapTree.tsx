@@ -42,6 +42,19 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
   const levelCountOf = (family: RoadmapTopic): number =>
     structure?.structure?.[family]?.levels.length ?? 0;
 
+  // Only what the learner can actually open is drawn. A stage with nothing open
+  // yet disappears with its connector rather than leaving a gap in the path.
+  const visibleStages = def.stages
+    .map((stage, index) => ({
+      stage,
+      index,
+      topics: stage.topics.filter((family) => isTopicUnlocked(progress, family, extraSet)),
+    }))
+    .filter((entry) => entry.topics.length > 0);
+  const lastVisibleIndex = visibleStages.length > 0 ? visibleStages[visibleStages.length - 1].index : -1;
+  const hiddenCount = def.stages.reduce((total, stage) => total + stage.topics.length, 0)
+    - visibleStages.reduce((total, entry) => total + entry.topics.length, 0);
+
   return (
     // The map: stages flow top → bottom. Keyed by track so switching tracks
     // remounts and gently re-animates the new path into place.
@@ -55,7 +68,7 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
         width: '100%',
       }}
     >
-      {def.stages.map((stage, i) => (
+      {visibleStages.map(({ stage, index: i, topics }) => (
         <div key={stage.title} style={{ width: '100%' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 }}>
             <div
@@ -81,7 +94,7 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
-            {stage.topics.map((family) => (
+            {topics.map((family) => (
               <TopicCard
                 key={family}
                 family={family}
@@ -93,9 +106,17 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
             ))}
           </div>
 
-          {i < def.stages.length - 1 && <StageConnector />}
+          {i < lastVisibleIndex && <StageConnector />}
         </div>
       ))}
+
+      {/* Locked paths are not shown as dimmed teasers: a learner should see the
+          plan they are actually on, plus one honest sentence about the rest. */}
+      {hiddenCount > 0 && (
+        <p className="rm-more-note" role="status">
+          {t('roadmap.morePathsLater')}
+        </p>
+      )}
     </div>
   );
 }

@@ -36,6 +36,21 @@ import { runReactSuite } from '../lib/coding/react-runner';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
+import {
+  everyPlanHasAFirstStep,
+  isLevelUnlocked,
+  isTopicInPlan,
+  planTopics,
+  validateProgressionGraph,
+  WEBDEV_PLAN_STAGES,
+} from '../shared/progression';
+import {
+  isLearnerProfileComplete,
+  missingProfileFields,
+  parseLearnerProfile,
+  profileFromPreference,
+  type BaseTrack,
+} from '../shared/learning-paths';
 import { gradeCheck } from '../lib/learning-paths/grade';
 import {
   LEARNING_PATH_IDS,
@@ -632,7 +647,69 @@ async function main() {
     assert.ok(lesson.questions?.every((question) => !('correctAnswer' in question)));
   }
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, and 12-function budget.');
+  // ── progression graph (#152) ────────────────────────────────────────────
+  // A curriculum edit that strands a learner — a cycle, a prerequisite on a
+  // topic that no longer exists, a plan whose first stage nothing can open —
+  // fails here rather than in front of the learner.
+  const graphProblems = validateProgressionGraph(ROADMAP_TOPICS);
+  assert.deepEqual(
+    graphProblems,
+    [],
+    `progression graph must be complete, acyclic and reachable: ${JSON.stringify(graphProblems)}`,
+  );
+  assert.deepEqual(everyPlanHasAFirstStep(), [], 'every plan needs a first step a new learner can take');
+
+  // No plan may be empty, and every plan topic must belong to devShark.
+  for (const track of Object.keys(WEBDEV_PLAN_STAGES) as BaseTrack[]) {
+    const profile = {
+      schemaVersion: 2 as const,
+      baseTrack: track,
+      specialization: null,
+      skillPaths: [],
+      goals: ['level-up' as const],
+      experience: 'some' as const,
+      studyTime: '15-30' as const,
+      updatedAt: null,
+    };
+    assert.ok(planTopics(profile).length > 0, `${track} plan must contain topics`);
+    assert.equal(isLearnerProfileComplete(profile), true, 'a fully answered profile is complete');
+    // A plan excludes what the learner did not choose, and StudyShark, which
+    // has no plans, keeps everything its subjects own.
+    assert.equal(isTopicInPlan(profile, 'webdev', 'chess-history'), false);
+    assert.equal(isTopicInPlan(profile, 'geography', 'continents'), true);
+  }
+
+  // Experience is advisory: the most experienced answer opens nothing.
+  const senior = {
+    schemaVersion: 2 as const,
+    baseTrack: 'fullstack' as const,
+    specialization: null,
+    skillPaths: [],
+    goals: ['interview-prep' as const],
+    experience: 'professional' as const,
+    studyTime: '60-plus' as const,
+    updatedAt: null,
+  };
+  assert.equal(isLevelUnlocked({}, 'javascript', 2), false, 'level 2 needs level 1, whatever the learner reports');
+  assert.equal(isLevelUnlocked({}, 'javascript', 1), true);
+  assert.equal(isLevelUnlocked({ javascript: { levels: { '1': { passed: true } } } }, 'javascript', 2), true);
+  assert.equal(isLevelUnlocked({ javascript: { levels: { '5': { passed: true } } } }, 'javascript', 6), false,
+    'a new segment needs its checkpoint, not just the level before it');
+  assert.ok(planTopics(senior).includes('javascript'));
+
+  // A profile that fails to parse asks for what is missing instead of
+  // inventing answers, and never reads as complete.
+  const partial = parseLearnerProfile({ schemaVersion: 2, baseTrack: 'frontend', goals: ['nope'] });
+  assert.ok(partial);
+  assert.equal(isLearnerProfileComplete(partial), false);
+  assert.deepEqual(missingProfileFields(partial).sort(), ['experience', 'goals', 'studyTime']);
+  assert.equal(parseLearnerProfile({ schemaVersion: 2, baseTrack: 'nope' }), null);
+  const fromV1 = profileFromPreference({ schemaVersion: 1, baseTrack: 'backend', specialization: 'fde' });
+  assert.equal(fromV1?.baseTrack, 'backend');
+  assert.equal(fromV1?.specialization, 'fde');
+  assert.equal(isLearnerProfileComplete(fromV1), false, 'a v1 preference still owes the newer answers');
+
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, and the progression graph.');
 }
 
 void main().catch((error) => {

@@ -7,6 +7,15 @@ import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import { getSubject } from './subjects';
 import { assessmentUnlocks, ASSESSMENT_QUESTION_COUNT } from '../../../shared/assessment';
+import {
+  STARTER_TOPICS as SHARED_STARTER_TOPICS,
+  TOPIC_PREREQS as SHARED_TOPIC_PREREQS,
+  LEVELS_TO_UNLOCK_NEXT as SHARED_LEVELS_TO_UNLOCK_NEXT,
+  isLevelUnlocked as sharedIsLevelUnlocked,
+  isCheckpointUnlocked as sharedIsCheckpointUnlocked,
+  isTopicUnlocked as sharedIsTopicUnlocked,
+  passedLevelCount as sharedPassedLevelCount,
+} from '../../../shared/progression';
 import type {
   RoadmapAnswerResult,
   RoadmapCompletionResult,
@@ -35,128 +44,12 @@ export const CHECKPOINT_COUNT = ROADMAP_LEVELS / LEVELS_PER_CHECKPOINT;
  * Prereqs are intentionally a shallow graph so the path from zero → hero stays
  * obvious: master JS basics, then HTML+CSS for React, then specialise.
  */
-export const STARTER_TOPICS: RoadmapTopic[] = ['html', 'css', 'javascript', 'continents', 'capitals', 'flags', 'arithmetic', 'fractions', 'prealgebra', 'prehistory', 'ancient', 'classical', 'openings', 'cell-biology', 'positions'];
-
-// Levels of each prereq topic that must be passed before a topic unlocks.
-// 5 = "first checkpoint cleared" — the natural milestone in each path.
-export const LEVELS_TO_UNLOCK_NEXT = LEVELS_PER_CHECKPOINT;
-
-export const TOPIC_PREREQS: Record<RoadmapTopic, RoadmapTopic[]> = {
-  // Starters: no prereqs, always open.
-  html: [],
-  css: [],
-  javascript: [],
-  // Tier 2 — anything that builds directly on JS fundamentals.
-  typescript: ['javascript'],
-  abbreviations: ['javascript'],
-  general: ['javascript'],
-  git: ['javascript'],
-  dsa: ['javascript'],
-  algorithms: ['javascript'],
-  nodejs: ['javascript'],
-  testing: ['javascript'],
-  ai: ['javascript'],
-  'cool-stuff': ['javascript'],
-  security: ['javascript'],
-  // React needs the page-building trio (HTML + CSS + JS).
-  react: ['javascript', 'html', 'css'],
-  // Topics that build on React or Node.
-  nextjs: ['react'],
-  databases: ['nodejs'],
-  'system-design': ['nodejs'],
-  devops: ['nodejs'],
-  // Geography
-  // Starters: no prereqs, always open.
-  continents: [],
-  capitals: [],
-  flags: [],
-  // Tier 2 — physical geography builds on knowing the continents & oceans.
-  landforms: ['continents'],
-  climate: ['continents'],
-  cartography: ['continents'],
-  // Tier 2 — human geography builds on knowing the countries & capitals.
-  population: ['capitals'],
-  political: ['capitals'],
-  // Tier 3 — the deeper syntheses.
-  economic: ['population'],
-  earth: ['landforms'],
-  // Math
-  // Starters: no prereqs, always open.
-  arithmetic: [],
-  fractions: [],
-  prealgebra: [],
-  // Tier 2 — builds on the number sense from arithmetic/fractions/pre-algebra.
-  algebra: ['prealgebra'],
-  geometry: ['prealgebra'],
-  statistics: ['fractions'],
-  // Tier 3 — high-school math that leans on algebra & geometry.
-  trigonometry: ['geometry', 'algebra'],
-  precalculus: ['algebra'],
-  // Tier 4 — higher math.
-  calculus: ['precalculus', 'trigonometry'],
-  'linear-algebra': ['algebra'],
-  // History
-  // Starters: no prereqs, always open (the earliest three eras).
-  prehistory: [],
-  ancient: [],
-  classical: [],
-  // Each later era unlocks once the previous one has cleared its first checkpoint.
-  medieval: ['classical'],
-  renaissance: ['medieval'],
-  earlymodern: ['renaissance'],
-  industrial: ['earlymodern'],
-  worldwars: ['industrial'],
-  coldwar: ['worldwars'],
-  modern: ['coldwar'],
-  // Chess
-  // Starters: no prereqs, always open.
-  // Tier 2 — build directly on knowing how the pieces move.
-  // Tier 3 — the competitive skills, once you can deliver mate.
-  openings: [],
-  tactics: [],
-  endgames: [],
-  // Tier 4 — the deepest topics.
-  strategy: ['openings', 'tactics'],
-  combinations: ['tactics'],
-  'discrete-math': ['algebra'],
-  'number-theory': ['algebra'],
-  'multivariable-calculus': ['calculus'],
-  'differential-equations': ['calculus'],
-  'real-analysis': ['calculus'],
-  'geomorphology': ['landforms'],
-  'oceanography': ['earth'],
-  'biogeography': ['climate'],
-  'geopolitics': ['political'],
-  'gis': ['cartography'],
-  'historiography': ['ancient'],
-  'history-of-science': ['renaissance'],
-  'economic-history': ['industrial'],
-  'intellectual-history': ['classical'],
-  'military-history': ['classical'],
-  'cell-biology': [],
-  'skeletal-system': ['cell-biology'],
-  'muscular-system': ['skeletal-system'],
-  'nervous-system': ['cell-biology'],
-  'endocrine-system': ['nervous-system'],
-  'cardiovascular-system': ['cell-biology'],
-  'respiratory-system': ['cardiovascular-system'],
-  'digestive-system': ['cell-biology'],
-  'immune-system': ['cell-biology'],
-  'reproductive-system': ['endocrine-system'],
-  'opening-theory': ['openings'],
-  'middlegame': ['strategy'],
-  'pawn-structures': ['strategy'],
-  'endgame-technique': ['endgames'],
-  'chess-history': [],
-  'positions': [],
-  'starting-hands': ['positions'],
-  'pot-odds': ['positions'],
-  'betting-strategy': ['starting-hands'],
-  'postflop': ['betting-strategy'],
-  'tournament-play': ['betting-strategy'],
-  'psychology': ['positions'],
-  'gto-advanced': ['pot-odds'],
-};
+// The graph itself lives in shared/progression.ts, because the server enforces
+// the same rules when it decides whether to serve a level at all. Re-exported
+// here under the client's topic type so every existing caller keeps working.
+export const STARTER_TOPICS = SHARED_STARTER_TOPICS as readonly RoadmapTopic[];
+export const LEVELS_TO_UNLOCK_NEXT = SHARED_LEVELS_TO_UNLOCK_NEXT;
+export const TOPIC_PREREQS = SHARED_TOPIC_PREREQS as Record<RoadmapTopic, readonly RoadmapTopic[]>;
 
 /** Topics granted by an assessment scoring `correct` out of `total`. */
 export function topicsFromAssessment(correct: number): RoadmapTopic[] {
@@ -290,22 +183,17 @@ export const checkpointBestPct = (p: RoadmapProgress, topic: RoadmapTopic, check
 // unlocks only when the preceding checkpoint is passed; otherwise a level
 // unlocks when the previous one is passed.
 export function isLevelUnlocked(p: RoadmapProgress, topic: RoadmapTopic, level: number): boolean {
-  if (level <= 1) return true;
-  if (level % LEVELS_PER_CHECKPOINT === 1) {
-    const checkpoint = (level - 1) / LEVELS_PER_CHECKPOINT;
-    return isCheckpointPassed(p, topic, checkpoint);
-  }
-  return isLevelPassed(p, topic, level - 1);
+  return sharedIsLevelUnlocked(p, topic, level);
 }
 
 // A checkpoint unlocks once the last level of its segment is passed (which, by
 // the sequential gating above, means all 5 of its levels are passed).
 export function isCheckpointUnlocked(p: RoadmapProgress, topic: RoadmapTopic, checkpoint: number): boolean {
-  return isLevelPassed(p, topic, checkpoint * LEVELS_PER_CHECKPOINT);
+  return sharedIsCheckpointUnlocked(p, topic, checkpoint);
 }
 
 export function passedLevelCount(p: RoadmapProgress, topic: RoadmapTopic): number {
-  return Object.values(p[topic]?.levels ?? {}).filter((e) => e.passed).length;
+  return sharedPassedLevelCount(p, topic);
 }
 
 /* ──── Topic unlock state ───────────────────────────────────────────────── */
@@ -347,11 +235,7 @@ export function unlockExtraTopics(topics: RoadmapTopic[]): RoadmapTopic[] {
 }
 
 /** True if every prereq of `topic` has cleared its first checkpoint. */
-function prereqsMet(p: RoadmapProgress, topic: RoadmapTopic): boolean {
-  const reqs = TOPIC_PREREQS[topic] ?? [];
-  if (reqs.length === 0) return true;
-  return reqs.every((req) => passedLevelCount(p, req) >= LEVELS_TO_UNLOCK_NEXT);
-}
+
 
 /**
  * Whether the learner can open `topic`'s path. Starters are always unlocked;
@@ -363,10 +247,7 @@ export function isTopicUnlocked(
   topic: RoadmapTopic,
   extra: RoadmapTopic[] | Set<RoadmapTopic> = [],
 ): boolean {
-  if (STARTER_TOPICS.includes(topic)) return true;
-  const set = extra instanceof Set ? extra : new Set(extra);
-  if (set.has(topic)) return true;
-  return prereqsMet(p, topic);
+  return sharedIsTopicUnlocked(p, topic, extra instanceof Set ? extra : new Set(extra));
 }
 
 /** Human-readable reason a topic is locked (e.g. "Pass JavaScript level 5"). */

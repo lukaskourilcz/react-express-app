@@ -12,6 +12,7 @@ import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import type { SubjectId } from './subjects';
 import { getSubject } from './subjects';
+import { WEBDEV_PLAN_STAGES } from '../../../shared/progression';
 
 export type Track = 'frontend' | 'backend' | 'fullstack';
 export const TRACK_ORDER: Track[] = ['frontend', 'backend', 'fullstack'];
@@ -144,38 +145,37 @@ export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
 // production. Fullstack is the union; Frontend and Backend share the core
 // (JS/TS/Git/Testing) and branch into their own concerns. Non-essential topics
 // (Cool Stuff, AI, Abbreviations) are intentionally left off.
+// The topics of each devShark stage come from shared/progression.ts, which is
+// the same plan the server reads when it decides whether a level may be served.
+// Only the stage titles live here (as English fallbacks behind the i18n keys),
+// so the map a learner sees and the map the API enforces cannot drift apart.
+const WEBDEV_STAGE_TITLES: Record<Track, string[]> = {
+  frontend: ['Foundations', 'Level up the language', 'The React stack', 'How the web works'],
+  backend: ['Foundations', 'The server & the web', 'Data & computer science', 'Production & scale'],
+  fullstack: ['Foundations', 'Level up the language', 'Frontend', 'Backend', 'Computer science', 'Production & scale'],
+};
+
+const webdevStages = (track: Track): Stage[] =>
+  WEBDEV_PLAN_STAGES[track].map((topics, index) => ({
+    title: WEBDEV_STAGE_TITLES[track][index] ?? '',
+    topics: [...topics] as RoadmapTopic[],
+  }));
+
 const WEBDEV_TRACKS: Record<Track, TrackDef> = {
   frontend: {
     label: 'Frontend',
     blurb: 'Build the interfaces people actually touch: markup, styling, and the React stack.',
-    stages: [
-      { title: 'Foundations', topics: ['html', 'css', 'javascript'] },
-      { title: 'Level up the language', topics: ['typescript', 'git'] },
-      { title: 'The React stack', topics: ['react', 'nextjs'] },
-      { title: 'Ship with confidence', topics: ['testing', 'dsa'] },
-    ],
+    stages: webdevStages('frontend'),
   },
   backend: {
     label: 'Backend',
     blurb: 'Build and run the server: APIs, data, and systems that hold up under load.',
-    stages: [
-      { title: 'Foundations', topics: ['javascript', 'typescript', 'git'] },
-      { title: 'The server & the web', topics: ['nodejs', 'general'] },
-      { title: 'Data & computer science', topics: ['databases', 'dsa', 'algorithms'] },
-      { title: 'Production & scale', topics: ['testing', 'system-design', 'devops', 'security'] },
-    ],
+    stages: webdevStages('backend'),
   },
   fullstack: {
     label: 'Fullstack',
     blurb: 'The whole picture: frontend, backend, and everything that ties them together.',
-    stages: [
-      { title: 'Foundations', topics: ['html', 'css', 'javascript'] },
-      { title: 'Level up the language', topics: ['typescript', 'git'] },
-      { title: 'Frontend', topics: ['react', 'nextjs'] },
-      { title: 'Backend', topics: ['nodejs', 'general', 'databases'] },
-      { title: 'Computer science', topics: ['dsa', 'algorithms'] },
-      { title: 'Production & scale', topics: ['testing', 'system-design', 'devops', 'security'] },
-    ],
+    stages: webdevStages('fullstack'),
   },
 };
 

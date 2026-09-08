@@ -1,5 +1,13 @@
 // The learning-path picker: choose a base track, then — on devShark only —
-// choose whether to add the Forward Deployed Engineer specialization on top.
+// the optional Forward Deployed Engineer specialization, the independent DSA
+// Foundations skill path, and the profile answers that let the product describe
+// a plan instead of a catalogue.
+//
+// The profile answers are required before practice is personalised, so they are
+// asked here once rather than in a second form somewhere else. Goals, the
+// experience answer and the study-time band are all the learner telling us how
+// to talk to them: none of them opens a level, and the experience answer least
+// of all — progression comes from server-verified evidence and nothing else.
 //
 // Two explicit steps, not one list of six options. The base track is the
 // career choice the roadmap has always had; the specialization sits above it
@@ -23,7 +31,19 @@ import { useSubject } from '../lib/subjects';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { useT } from '../i18n/LanguageContext';
 import { RadioCard, RadioCardGroup } from './ui/RadioCards';
-import type { RoleSpecializationId } from '../../../shared/learning-paths';
+import {
+  EXPERIENCE_LEVELS,
+  LEARNER_GOALS,
+  MAX_LEARNER_GOALS,
+  STUDY_TIMES,
+  type ExperienceLevel,
+  type LearnerGoal,
+  type LearnerProfile,
+  type RoleSpecializationId,
+  type SkillPathId,
+  type StudyTime,
+} from '../../../shared/learning-paths';
+import type { TranslationKey } from '../i18n/translations';
 import './paths/LearningPaths.css';
 
 /** The second step's two answers. `none` is a real choice, not a dismissal. */
@@ -33,13 +53,26 @@ const ROLE_ORDER: RoleChoice[] = ['none', 'fde'];
 export interface PathPickerResult {
   track: Track;
   specialization: RoleSpecializationId | null;
+  skillPaths: SkillPathId[];
+  goals: LearnerGoal[];
+  experience: ExperienceLevel;
+  studyTime: StudyTime;
 }
+
+/** The steps devShark asks, in order. StudyShark asks only the first. */
+const DEV_STEPS = ['track', 'role', 'paths', 'profile'] as const;
+type Step = (typeof DEV_STEPS)[number];
+
+const goalKey = (goal: LearnerGoal) => `profile.goal.${goal}` as TranslationKey;
+const experienceKey = (level: ExperienceLevel) => `profile.experience.${level}` as TranslationKey;
+const studyTimeKey = (band: StudyTime) => `profile.studyTime.${band}` as TranslationKey;
 
 export default function PathPickerDialog({
   open,
   onClose,
   current,
   currentSpecialization,
+  currentProfile = null,
   onChoose,
   /** Set while the parent is saving, so the dialog cannot be double-submitted. */
   busy = false,
@@ -50,6 +83,9 @@ export default function PathPickerDialog({
   onClose: () => void;
   current: Track;
   currentSpecialization?: RoleSpecializationId | null;
+  /** The profile already on the account, so an edit starts from the learner's
+   * own answers rather than a blank form. */
+  currentProfile?: LearnerProfile | null;
   onChoose: (result: PathPickerResult) => void;
   busy?: boolean;
   error?: string | null;
@@ -60,19 +96,50 @@ export default function PathPickerDialog({
   // the dialog is the single-step track picker it has always been.
   const offersRole = CURRENT_PRODUCT.id === 'devshark';
 
-  const [step, setStep] = useState<'track' | 'role'>('track');
+  const [step, setStep] = useState<Step>('track');
   const [track, setTrack] = useState<Track>(current);
   const [role, setRole] = useState<RoleChoice>(currentSpecialization ?? 'none');
+  const [dsa, setDsa] = useState(false);
+  const [goals, setGoals] = useState<LearnerGoal[]>([]);
+  const [experience, setExperience] = useState<ExperienceLevel | null>(null);
+  const [studyTime, setStudyTime] = useState<StudyTime | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setStep('track');
     setTrack(current);
     setRole(currentSpecialization ?? 'none');
-  }, [open, current, currentSpecialization]);
+    setDsa(currentProfile?.skillPaths.includes('dsa-foundations') ?? false);
+    setGoals(currentProfile?.goals ?? []);
+    setExperience(EXPERIENCE_LEVELS.includes(currentProfile?.experience as ExperienceLevel)
+      ? (currentProfile!.experience as ExperienceLevel)
+      : null);
+    setStudyTime(STUDY_TIMES.includes(currentProfile?.studyTime as StudyTime)
+      ? (currentProfile!.studyTime as StudyTime)
+      : null);
+  }, [open, current, currentSpecialization, currentProfile]);
 
-  const commit = (chosenRole: RoleChoice) =>
-    onChoose({ track, specialization: chosenRole === 'none' ? null : chosenRole });
+  const steps: Step[] = offersRole ? [...DEV_STEPS] : ['track'];
+  const index = Math.max(0, steps.indexOf(step));
+  const isLast = index === steps.length - 1;
+  // The final step is the only one that can commit, and only once the three
+  // required answers are there. Nothing is guessed on the learner's behalf.
+  const canCommit = !offersRole || (goals.length > 0 && experience !== null && studyTime !== null);
+
+  const toggleGoal = (goal: LearnerGoal) =>
+    setGoals((current) => current.includes(goal)
+      ? current.filter((one) => one !== goal)
+      : current.length >= MAX_LEARNER_GOALS ? current : [...current, goal]);
+
+  const commit = () =>
+    onChoose({
+      track,
+      specialization: role === 'none' ? null : role,
+      skillPaths: dsa ? ['dsa-foundations'] : [],
+      goals,
+      experience: (experience ?? 'unsure') as ExperienceLevel,
+      studyTime: (studyTime ?? '15-30') as StudyTime,
+    });
 
   return (
     <Dialog
@@ -84,8 +151,18 @@ export default function PathPickerDialog({
       width="min(560px, 94vw)"
     >
       <DialogHeader
-        title={step === 'track' ? t('home.pathDialogTitle') : t('paths.picker.roleTitle')}
-        subtitle={step === 'track' ? t('home.pathDialogSubtitle') : t('paths.picker.roleSubtitle')}
+        title={t(
+          step === 'track' ? 'home.pathDialogTitle'
+            : step === 'role' ? 'paths.picker.roleTitle'
+              : step === 'paths' ? 'paths.picker.skillTitle'
+                : 'profile.picker.title',
+        )}
+        subtitle={t(
+          step === 'track' ? 'home.pathDialogSubtitle'
+            : step === 'role' ? 'paths.picker.roleSubtitle'
+              : step === 'paths' ? 'paths.picker.skillSubtitle'
+                : 'profile.picker.subtitle',
+        )}
         onOpenChange={(next) => {
           if (!next) onClose();
         }}
@@ -102,7 +179,7 @@ export default function PathPickerDialog({
         </div>
       )}
 
-      {step === 'track' ? (
+      {step === 'track' && (
         <RadioCardGroup
           value={track}
           onChange={(value) => setTrack(value as Track)}
@@ -133,7 +210,8 @@ export default function PathPickerDialog({
             );
           })}
         </RadioCardGroup>
-      ) : (
+      )}
+      {step === 'role' && (
         <RadioCardGroup
           value={role}
           onChange={(value) => setRole(value as RoleChoice)}
@@ -169,35 +247,118 @@ export default function PathPickerDialog({
           })}
         </RadioCardGroup>
       )}
+      {step === 'paths' && (
+        <div style={{ padding: 16, width: '100%' }}>
+          {/* A skill path is an opt-in, not one of a set: DSA Foundations runs
+              beside any track and beside FDE, so it is a checkbox rather than
+              another exclusive card. */}
+          <label className="lp-check">
+            <input type="checkbox" checked={dsa} onChange={(event) => setDsa(event.target.checked)} />
+            <span>
+              <Heading level={4}>{t('paths.picker.dsaLabel')}</Heading>
+              <Text type="supporting" color="secondary">{t('paths.picker.dsaBlurb')}</Text>
+            </span>
+          </label>
+        </div>
+      )}
+      {step === 'profile' && (
+        <div style={{ padding: 16, width: '100%', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <fieldset className="lp-fieldset">
+            <legend>{t('profile.picker.goalsLegend')}</legend>
+            <Text type="supporting" size="xsm" color="secondary">
+              {t('profile.picker.goalsHint', { max: MAX_LEARNER_GOALS })}
+            </Text>
+            <div className="lp-checks">
+              {LEARNER_GOALS.map((goal) => {
+                const checked = goals.includes(goal);
+                return (
+                  <label key={goal} className="lp-check">
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      // A full set stops accepting new answers but never blocks
+                      // clearing one, so the learner is not stuck at the cap.
+                      disabled={!checked && goals.length >= MAX_LEARNER_GOALS}
+                      onChange={() => toggleGoal(goal)}
+                    />
+                    <span>{t(goalKey(goal))}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <RadioCardGroup
+            value={experience}
+            onChange={(value) => setExperience(value as ExperienceLevel)}
+            label={t('profile.picker.experienceLegend')}
+            style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}
+          >
+            <Text type="supporting" weight="bold">{t('profile.picker.experienceLegend')}</Text>
+            <Text type="supporting" size="xsm" color="secondary">{t('profile.picker.experienceHint')}</Text>
+            {EXPERIENCE_LEVELS.map((level, i) => (
+              <RadioCard key={level} value={level} index={i} label={t(experienceKey(level))} width="100%">
+                <Text>{t(experienceKey(level))}</Text>
+              </RadioCard>
+            ))}
+          </RadioCardGroup>
+
+          <RadioCardGroup
+            value={studyTime}
+            onChange={(value) => setStudyTime(value as StudyTime)}
+            label={t('profile.picker.studyTimeLegend')}
+            style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}
+          >
+            <Text type="supporting" weight="bold">{t('profile.picker.studyTimeLegend')}</Text>
+            <Text type="supporting" size="xsm" color="secondary">{t('profile.picker.studyTimeHint')}</Text>
+            {STUDY_TIMES.map((band, i) => (
+              <RadioCard key={band} value={band} index={i} label={t(studyTimeKey(band))} width="100%">
+                <Text>{t(studyTimeKey(band))}</Text>
+              </RadioCard>
+            ))}
+          </RadioCardGroup>
+
+          {!canCommit && (
+            <Text type="supporting" size="xsm" color="secondary" role="status">
+              {t('profile.picker.incomplete')}
+            </Text>
+          )}
+        </div>
+      )}
 
       <div className="lp-actions" style={{ padding: '0 16px 16px' }}>
-        {step === 'role' && (
-          <button type="button" className="lp-btn lp-btn--quiet" onClick={() => setStep('track')} disabled={busy}>
+        {index > 0 && (
+          <button type="button" className="lp-btn lp-btn--quiet" onClick={() => setStep(steps[index - 1])} disabled={busy}>
             {t('paths.picker.back')}
           </button>
         )}
         <button type="button" className="lp-btn lp-btn--quiet" onClick={onClose} disabled={busy}>
           {t('paths.picker.cancel')}
         </button>
-        {step === 'track' && offersRole ? (
-          <button type="button" className="lp-btn lp-btn--primary" onClick={() => setStep('role')} disabled={busy}>
-            {t('paths.picker.continue')}
-          </button>
-        ) : (
+        {isLast ? (
           <button
             type="button"
             className="lp-btn lp-btn--primary"
-            onClick={() => commit(offersRole ? role : 'none')}
-            disabled={busy}
+            onClick={commit}
+            disabled={busy || !canCommit}
           >
             {busy ? t('paths.picker.saving') : t('paths.picker.save')}
+          </button>
+        ) : (
+          <button type="button" className="lp-btn lp-btn--primary" onClick={() => setStep(steps[index + 1])} disabled={busy}>
+            {t('paths.picker.continue')}
           </button>
         )}
       </div>
 
       <div style={{ padding: '0 16px 16px' }}>
         <Text type="supporting" size="xsm" color="secondary">
-          {step === 'role' ? t('paths.picker.roleFootnote') : t('paths.picker.trackFootnote')}
+          {t(
+            step === 'role' ? 'paths.picker.roleFootnote'
+              : step === 'paths' ? 'paths.picker.skillFootnote'
+                : step === 'profile' ? 'profile.picker.footnote'
+                  : 'paths.picker.trackFootnote',
+          )}
         </Text>
       </div>
     </Dialog>

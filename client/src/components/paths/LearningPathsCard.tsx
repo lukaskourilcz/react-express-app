@@ -23,7 +23,7 @@ import { friendlyError } from '../../lib/api';
 import { CURRENT_PRODUCT } from '../../lib/products';
 import { useSubject } from '../../lib/subjects';
 import { trackLabelKey, useTrack, type Track } from '../../lib/tracks';
-import { preferredLearningOf, saveLearningPreference } from '../../lib/trackPref';
+import { learnerProfileOf, preferredLearningOf, profileGapsOf, saveLearningPreference } from '../../lib/trackPref';
 import PathPickerDialog, { type PathPickerResult } from '../PathPickerDialog';
 import {
   changeEnrollment,
@@ -55,6 +55,10 @@ export default function LearningPathsCard() {
 
   const preference = useMemo(() => preferredLearningOf(user), [user]);
   const specialization = preference?.specialization ?? null;
+  const profile = useMemo(() => learnerProfileOf(user), [user]);
+  const gaps = useMemo(() => profileGapsOf(user), [user]);
+  // A signed-out visitor owes nothing: there is no account to personalise yet.
+  const needsProfile = isAuthenticated && gaps.length > 0;
 
   const fdeEntry = entryFor(catalog.data, 'fde');
   const dsaEntry = entryFor(catalog.data, 'dsa-foundations');
@@ -72,11 +76,16 @@ export default function LearningPathsCard() {
       // The local track changes first so the roadmap reflects the choice even
       // if the account save fails; the failure is then reported, not hidden.
       setTrack(result.track);
-      const saved = await saveLearningPreference(user?.id ?? null, {
-        schemaVersion: 1,
-        baseTrack: result.track,
-        specialization: result.specialization,
-      });
+      const saved = await saveLearningPreference(
+        user?.id ?? null,
+        { schemaVersion: 1, baseTrack: result.track, specialization: result.specialization },
+        {
+          goals: result.goals,
+          experience: result.experience,
+          studyTime: result.studyTime,
+          skillPaths: result.skillPaths,
+        },
+      );
       if (!saved.ok) {
         setBusy(false);
         setDialogError(saved.reason === 'not_signed_in' ? t('paths.signInToRecord') : t('paths.picker.saveFailed'));
@@ -106,6 +115,38 @@ export default function LearningPathsCard() {
         }
       }
 
+      // DSA Foundations is an independent enrollment: opting in enrolls or
+      // resumes it, opting out pauses it, and neither touches the base track
+      // or the role. Every result already recorded survives both.
+      if (dsaEntry && isOpen(dsaEntry.availability)) {
+        try {
+          const existing = enrollmentFor('dsa-foundations');
+          const wants = result.skillPaths.includes('dsa-foundations');
+          if (wants) {
+            await changeEnrollment({
+              pathId: 'dsa-foundations',
+              curriculumVersion: dsaEntry.manifest.version,
+              action: existing ? 'resume' : 'enroll',
+            });
+          } else if (existing && existing.status === 'active') {
+            await changeEnrollment({
+              pathId: 'dsa-foundations',
+              curriculumVersion: dsaEntry.manifest.version,
+              action: 'pause',
+            });
+          }
+          await queryClient.invalidateQueries({ queryKey: learningPathKeys.enrollments(user?.id) });
+        } catch (error) {
+          setBusy(false);
+          setDialogError(`${t('paths.picker.enrollFailed')} ${friendlyError(error)}`);
+          return;
+        }
+      }
+
+      // The plan changed, so anything derived from it — what is eligible, what
+      // Today offers — is stale until it is refetched.
+      await queryClient.invalidateQueries({ queryKey: ['eligibility'] });
+
       setBusy(false);
       setOpen(false);
       setNotice(
@@ -115,7 +156,7 @@ export default function LearningPathsCard() {
         }),
       );
     },
-    [enrollmentFor, fdeEntry, queryClient, setTrack, subject, t, user?.id],
+    [dsaEntry, enrollmentFor, fdeEntry, queryClient, setTrack, subject, t, user?.id],
   );
 
   if (CURRENT_PRODUCT.id !== 'devshark') return null;
@@ -138,6 +179,13 @@ export default function LearningPathsCard() {
           </Text>
         </VStack>
 
+        {needsProfile && (
+          <div className="lp-notice lp-notice--info" role="status">
+            <span className="lp-notice__glyph" aria-hidden="true">!</span>
+            <span>{t('profile.completePrompt')}</span>
+          </div>
+        )}
+
         <HStack gap={1} align="center" justify="between">
           <Text>
             {t(trackLabelKey(subject, track as Track))}
@@ -145,9 +193,20 @@ export default function LearningPathsCard() {
             {specialization === 'fde' ? 'Forward Deployed Engineer' : t('profile.pathNone')}
           </Text>
           <button type="button" className="lp-btn" onClick={() => setOpen(true)}>
-            {t('profile.pathChoose')}
+            {needsProfile ? t('profile.completeAction') : t('profile.pathChoose')}
           </button>
         </HStack>
+
+        {profile && !needsProfile && (
+          <dl className="lp-inventory">
+            <dt>{t('profile.picker.goalsLegend')}</dt>
+            <dd>{profile.goals.map((goal) => t(`profile.goal.${goal}` as never)).join(' · ')}</dd>
+            <dt>{t('profile.picker.experienceLegend')}</dt>
+            <dd>{t(`profile.experience.${profile.experience}` as never)}</dd>
+            <dt>{t('profile.picker.studyTimeLegend')}</dt>
+            <dd>{t(`profile.studyTime.${profile.studyTime}` as never)}</dd>
+          </dl>
+        )}
 
         {notice && (
           <div className="lp-notice lp-notice--info" role="status">
@@ -187,6 +246,7 @@ export default function LearningPathsCard() {
         }}
         current={track as Track}
         currentSpecialization={specialization}
+        currentProfile={profile}
         onChoose={(result) => void apply(result)}
         busy={busy}
         error={dialogError}

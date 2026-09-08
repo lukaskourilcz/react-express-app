@@ -25,6 +25,26 @@ import {
   withRequestContext,
 } from '../../lib/http';
 import { AuthError, tryAuth } from '../../lib/auth';
+import {
+  isCheckpointUnlocked as isCheckpointOpen,
+  isLevelUnlocked as isLevelOpen,
+  isTopicInPlan,
+  isTopicUnlocked as isTopicOpen,
+  areLevelsPassed,
+  eligibleTopics,
+  nextEligibleStep,
+  type VerifiedProgress,
+} from '../../shared/progression';
+import {
+  LEARNER_PROFILE_META_KEY,
+  LEARNING_PREFERENCE_META_KEY,
+  isLearnerProfileComplete,
+  missingProfileFields,
+  parseLearnerProfile,
+  parseLearningPreference,
+  profileFromPreference,
+  type LearnerProfile,
+} from '../../shared/learning-paths';
 import { getGameSettings } from '../../lib/settings-store';
 import { withGrantedTopics } from '../../lib/topic-grants';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
@@ -430,6 +450,93 @@ async function optionalAuthSub(req: VercelRequest, res: VercelResponse): Promise
     }
     throw error;
   }
+}
+
+/* ──── progression guard (issue #152) ───────────────────────────────────────
+ * One graph decides what a learner may open, and the server is where it is
+ * enforced. Until now the map hid a level the learner had not reached but the
+ * API still served it to a direct URL, and only the verified-completion routine
+ * refused — so a level could be played, just not finished. It is now refused at
+ * issuance too, from the same rules the map draws (shared/progression.ts).
+ *
+ * Two inputs, and only two: the versioned profile stored on the account, and
+ * the server's own record of what was verified. Nothing in the request body
+ * takes part. A signed-out visitor has no verified record at all, so nothing
+ * here can be checked against evidence — their play is a preview that never
+ * completes, never scores and never unlocks, exactly as before.
+ */
+
+interface LearnerContext {
+  userId: string;
+  profile: LearnerProfile | null;
+  progress: VerifiedProgress;
+  extraUnlocked: string[];
+}
+
+/** The learner's plan and verified record, or null for a guest.
+ * `undefined` means a response was already sent (a broken credential). */
+async function learnerContext(
+  req: VercelRequest,
+  res: VercelResponse,
+): Promise<LearnerContext | null | undefined> {
+  let auth: Awaited<ReturnType<typeof tryAuth>>;
+  try {
+    auth = await tryAuth(req);
+  } catch (error) {
+    if (error instanceof AuthError) {
+      jsonError(res, error.status, error.code, error.message);
+      return undefined;
+    }
+    throw error;
+  }
+  if (!auth) return null;
+  const metadata = ((auth.payload as Record<string, unknown>).user_metadata ?? {}) as Record<string, unknown>;
+  // The v2 profile when there is one; otherwise the plan the account already
+  // chose through the v1 preference, with its required answers still missing.
+  const profile =
+    parseLearnerProfile(metadata[LEARNER_PROFILE_META_KEY]) ??
+    profileFromPreference(parseLearningPreference(metadata[LEARNING_PREFERENCE_META_KEY]));
+  if (!supabase) return { userId: auth.sub, profile, progress: {}, extraUnlocked: [] };
+  const row = await withTimeout(
+    supabase.from(PROGRESS_TABLE).select('data, extra').eq('user_id', auth.sub).maybeSingle(),
+  );
+  if (row.error) return { userId: auth.sub, profile, progress: {}, extraUnlocked: [] };
+  return {
+    userId: auth.sub,
+    profile,
+    progress: (row.data?.data as VerifiedProgress) ?? {},
+    extraUnlocked: sanitizeExtra(row.data?.extra).unlocked,
+  };
+}
+
+type StepRequest =
+  | { kind: 'level'; level: number }
+  | { kind: 'checkpoint'; checkpoint: number }
+  | { kind: 'test'; from: number; to: number };
+
+/** Why the server will not serve this step, or null when it will. */
+function stepRefusal(
+  context: LearnerContext,
+  subject: string,
+  topic: string,
+  step: StepRequest,
+): { code: string; message: string } | null {
+  if (!isTopicInPlan(context.profile, subject, topic)) {
+    return { code: 'not_in_plan', message: 'This topic is not part of the learning plan you chose' };
+  }
+  if (!isTopicOpen(context.progress, topic, context.extraUnlocked)) {
+    return { code: 'topic_locked', message: 'Finish the topics this one builds on first' };
+  }
+  if (step.kind === 'level' && !isLevelOpen(context.progress, topic, step.level)) {
+    return { code: 'prerequisite_not_met', message: 'Complete the preceding learning steps first' };
+  }
+  if (step.kind === 'checkpoint' && !isCheckpointOpen(context.progress, topic, step.checkpoint)) {
+    return { code: 'prerequisite_not_met', message: 'Pass every level of this segment before its checkpoint' };
+  }
+  if (step.kind === 'test' && !areLevelsPassed(context.progress, topic, step.from, step.to)) {
+    return { code: 'prerequisite_not_met', message: 'Pass every level of this part before its test' };
+  }
+  return null;
 }
 
 /* ──── adaptive placement (GET/POST ?resource=placement) ────────────────────── */
@@ -935,6 +1042,46 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       return jsonError(res, 500, 'internal_error', 'Could not apply assessment unlocks');
     }
   }
+  // The learner's plan, what is open in it and the single next step. One
+  // answer, so the roadmap, Today and the navigation cannot disagree about
+  // what is eligible — and none of them has to recompute it from local state.
+  if (req.method === 'GET' && req.query.resource === 'eligibility') {
+    try {
+      const learner = await learnerContext(req, res);
+      if (learner === undefined) return;
+      const byId = await getEffectiveQuestionsById(undefined, false);
+      const exists = (id: string) => byId.has(id);
+      const structure = liveRoadmapStructure(exists);
+      const levelCount = (topic: string) => (structure as Record<string, { levels: unknown[] } | undefined>)[topic]?.levels.length ?? 0;
+      const subjects = deploymentSubjectIds();
+      const profile = learner?.profile ?? null;
+      const missing = missingProfileFields(profile);
+      const plans = subjects.map((subject) => {
+        const progress = learner?.progress ?? {};
+        const extra = learner?.extraUnlocked ?? [];
+        return {
+          subject,
+          topics: eligibleTopics(profile, subject, progress, extra),
+          next: nextEligibleStep(profile, subject, progress, levelCount, extra),
+        };
+      });
+      res.setHeader('Cache-Control', 'private, no-store');
+      logEvent({ status: 200, kind: 'eligibility', latency_ms: Date.now() - started });
+      return res.json({
+        signedIn: Boolean(learner),
+        profileComplete: isLearnerProfileComplete(profile),
+        missingProfileFields: missing,
+        plan: profile
+          ? { baseTrack: profile.baseTrack, specialization: profile.specialization, skillPaths: profile.skillPaths }
+          : null,
+        plans,
+      });
+    } catch (error) {
+      logEvent({ status: 500, kind: 'eligibility_error', category: error instanceof Error ? error.name : 'unknown' });
+      return jsonError(res, 500, 'internal_error', 'Could not load what is available');
+    }
+  }
+
   if (req.query.resource === 'placement') {
     if (req.method === 'GET') {
       try {
@@ -1000,6 +1147,18 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const topic: RoadmapTopic = topicRaw;
   const lang = normalizeLang(req.query.lang);
   const subject = subjectForTopic(topic)!;
+  // One read of the learner's plan and verified record, shared by the three
+  // step branches below. A guest has neither, and takes the preview path.
+  const learner = await learnerContext(req, res);
+  if (learner === undefined) return;
+  const refuse = (step: StepRequest) => {
+    if (!learner) return false;
+    const refusal = stepRefusal(learner, subject, topic, step);
+    if (!refusal) return false;
+    logEvent({ status: 403, kind: 'not_eligible', topic, reason: refusal.code });
+    jsonError(res, 403, refusal.code, refusal.message);
+    return true;
+  };
   const byId = await getEffectiveQuestionsById(subject, lang === 'cs');
   const exists = (id: string) => byId.has(id);
   const live = buildLiveTopic(topic, exists);
@@ -1012,6 +1171,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     if (!isValidPart(part)) return jsonError(res, 400, 'bad_request', 'Invalid test');
     const range = partRanges(live.levels.length).find((r) => r.part === part);
     if (!range || range.size <= 0) return jsonError(res, 400, 'bad_request', 'Invalid test');
+    if (refuse({ kind: 'test', from: range.startLevel, to: range.endLevel })) return;
 
     const pool: string[] = [];
     for (let l = range.startLevel; l <= range.endLevel; l++) {
@@ -1038,6 +1198,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const checkpoint = parseInt(checkpointRaw, 10);
     const meta = live.checkpoints.find((c) => c.checkpoint === checkpoint);
     if (!meta) return jsonError(res, 400, 'bad_request', 'Invalid checkpoint');
+    if (refuse({ kind: 'checkpoint', checkpoint })) return;
 
     const firstLevel = (checkpoint - 1) * LEVELS_PER_CHECKPOINT + 1;
     const ids: string[] = [];
@@ -1064,6 +1225,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const level = parseInt(levelRaw ?? '', 10);
   const meta = live.levels.find((l) => l.level === level);
   if (!meta) return jsonError(res, 400, 'bad_request', 'Invalid level');
+  if (refuse({ kind: 'level', level })) return;
 
   const playable = playableResponse({
     kind: 'level', topic, ref: meta.level, title: meta.title,

@@ -482,3 +482,60 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
   white-space: nowrap;
   border: 0;
 }
+
+/* ── profile answers in the path picker ──────────────────────────────────
+   Checkboxes, not cards: goals are a multi-select and a skill path is an
+   opt-in, so neither is one-of-N. Targets clear 44px on touch. */
+.lp-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+.lp-fieldset legend {
+  padding: 0;
+  font: 600 0.95rem var(--font-family-body);
+  color: var(--color-text-primary);
+}
+.lp-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 8px;
+}
+.lp-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--color-text-primary);
+}
+.lp-check > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.lp-check input {
+  width: 20px;
+  height: 20px;
+  margin-top: 2px;
+  accent-color: var(--brand-accent);
+  flex: none;
+}
+.lp-check:hover { background: var(--color-background-muted); }
+.lp-check:has(input:checked) {
+  border-color: var(--brand-accent);
+  background: var(--brand-accent-soft);
+}
+.lp-check:has(input:focus-visible) {
+  outline: 2px solid var(--ss-focus);
+  outline-offset: 2px;
+}
+.lp-check:has(input:disabled) {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
