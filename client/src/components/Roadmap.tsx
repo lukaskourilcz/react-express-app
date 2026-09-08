@@ -58,6 +58,7 @@ import {
   type MasteryState,
   type LevelMasteryEntry,
 } from '../../../shared/mastery';
+import { lessonExamplesFor } from '../../../shared/lesson-examples';
 import { ROADMAP_MAX_HEARTS } from '../../../shared/assessment';
 import { levelIntro, preloadLevelIntros } from '../lib/levelIntros';
 import { useRoadmapStructure } from '../lib/queries';
@@ -85,6 +86,7 @@ import './DeepEndScreens.css';
 // The coding workbench pulls the editor and the runner in; keep it out of the
 // Learn chunk until a devShark level actually reaches its coding phase.
 const CodingWorkbench = lazy(() => import('../coding/CodingWorkbench').then((m) => ({ default: m.CodingWorkbench })));
+const LessonExamplePanel = lazy(() => import('../coding/LessonExample').then((m) => ({ default: m.LessonExamplePanel })));
 const codingDraftKey = (id: string) => `devshark:coding:draft:${id}`;
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
@@ -1078,6 +1080,10 @@ function LessonRunner({
   // levels with no authored intro.
   const intro = playable.kind === 'level' ? levelIntro(playable.topic, playable.ref, lang) : null;
   const [showIntro, setShowIntro] = useState<boolean>(() => !!intro);
+  const examples = useMemo(
+    () => (playable.kind === 'level' ? lessonExamplesFor(playable.topic, playable.ref) : []),
+    [playable.kind, playable.topic, playable.ref],
+  );
   // Question sequence + answer order are shuffled on every play (and re-shuffled
   // on replay, avoiding the previous layout) so positions stay unmemorisable.
   const [presented] = useState<RoadmapQuestion[]>(() => presentQuestions(playable.questions));
@@ -1255,6 +1261,18 @@ function LessonRunner({
             <div style={{ marginTop: 12, fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
               <span style={{ fontWeight: 700 }}>{t('coding.lesson.kicker')}: </span>
               {codingTasks.map(({ task }) => task.title[lang === 'cs' ? 'cs' : 'en'] || task.title.en).join(' · ')}
+            </div>
+          )}
+          {/* Something to poke at before the questions start (issue #162).
+              Exploration only: it grades nothing and records nothing. */}
+          {examples.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ color: 'var(--color-text-secondary)', fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                {t('coding.example.heading')}
+              </div>
+              <Suspense fallback={<div className="cd-note" role="status">{t('common.loading')}</div>}>
+                {examples.map((example) => <LessonExamplePanel key={example.id} example={example} />)}
+              </Suspense>
             </div>
           )}
         </div>

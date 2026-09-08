@@ -84,6 +84,13 @@ import {
   type PracticeCandidate,
 } from '../shared/practice-session';
 import { SKIP_REASONS, isSkipReason, MAX_SKIP_NOTE } from '../shared/coding-skip';
+import {
+  EXAMPLE_MAX_OUTPUT_CHARS,
+  EXAMPLE_MAX_OUTPUT_LINES,
+  LESSON_EXAMPLES,
+  lessonExampleCoverage,
+  lessonExamplesFor,
+} from '../shared/lesson-examples';
 
 function apiFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -713,7 +720,46 @@ async function main() {
       `a skip must not touch ${forbidden}`);
   }
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, learner profile, progression graph, Coding tracks, devShark footer, practice sessions, skip feedback, and 12-function budget.');
+  /* ── lesson examples are exploration (issue #162) ───────────────────── */
+  const exampleCoverage = lessonExampleCoverage();
+  assert.ok(exampleCoverage.length > 0, 'the lesson examples need a coverage manifest');
+  for (const topic of ['javascript', 'typescript', 'react', 'dsa']) {
+    assert.ok(exampleCoverage.some((entry) => entry.topic === topic), `no example covers ${topic}`);
+  }
+  const exampleIds = new Set<string>();
+  for (const example of LESSON_EXAMPLES) {
+    assert.ok(!exampleIds.has(example.id), `duplicate example id ${example.id}`);
+    exampleIds.add(example.id);
+    assert.ok(example.title.en.trim() && example.title.cs.trim(), `${example.id} needs both languages`);
+    assert.ok(example.blurb.en.trim() && example.blurb.cs.trim(), `${example.id} needs both blurbs`);
+    // An example that cannot run must still be readable, and one that can must
+    // have something to print.
+    assert.ok(example.trace.length > 0, `${example.id} needs an authored trace`);
+    if (example.runnable) assert.ok(example.calls.length > 0, `${example.id} is runnable but prints nothing`);
+    else assert.equal(example.calls.length, 0, `${example.id} is trace-only and must ask for no evaluation`);
+    // No-typing interaction is authored, not improvised.
+    if (example.runnable) assert.ok(example.variants.length > 0, `${example.id} needs parameter choices for a narrow screen`);
+    assert.ok(lessonExamplesFor(example.topic, example.level).some((one) => one.id === example.id));
+  }
+  assert.ok(EXAMPLE_MAX_OUTPUT_LINES > 0 && EXAMPLE_MAX_OUTPUT_CHARS > 0, 'example output must be bounded');
+  // Nothing in the example path may record a verdict, XP or evidence.
+  const exampleSource = readSource(join(process.cwd(), 'client/src/coding/LessonExample.tsx'), 'utf8');
+  for (const forbidden of ['submitCoding', 'coding-submit', 'awardTokens', 'awardXp', 'apiFetch']) {
+    assert.doesNotMatch(exampleSource, new RegExp(forbidden), `a lesson example must not call ${forbidden}`);
+  }
+  assert.match(exampleSource, /runCodeTests/, 'examples must reuse the existing isolated runner');
+  assert.match(exampleSource, /grade: false/, 'examples must not ask the runner to grade');
+
+  /* ── the workspace remembers layout, not code (issue #164) ──────────── */
+  const workbenchSource = readSource(join(process.cwd(), 'client/src/coding/CodingWorkbench.tsx'), 'utf8');
+  assert.match(workbenchSource, /devshark:coding:layout:v1/, 'layout preferences need their own key');
+  assert.doesNotMatch(workbenchSource, /LAYOUT_KEY[^\n]*code/, 'layout preferences must not hold code');
+  assert.match(workbenchSource, /role="separator"/, 'the splitter must be a real separator');
+  assert.match(workbenchSource, /aria-valuenow=\{layout\.split\}/, 'the splitter must report its position');
+  assert.match(workbenchSource, /event\.key === 'ArrowLeft'/, 'the splitter must be keyboard operable');
+  assert.match(workbenchSource, /panelRefs\.current\[tab\]\?\.focus\(\)/, 'focus must land on the result after grading');
+
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, learner profile, progression graph, Coding tracks, devShark footer, practice sessions, skip feedback, lesson examples, workspace layout, and 12-function budget.');
 }
 
 void main().catch((error) => {

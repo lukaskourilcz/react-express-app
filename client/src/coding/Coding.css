@@ -419,3 +419,39 @@
 /* ── Skip feedback (issue #160) ─────────────────────────────────────────── */
 .cd-skip { display: flex; flex-direction: column; gap: 8px; }
 .cd-skip textarea.cd-input { min-height: 66px; resize: vertical; }
+
+/* ── Lesson examples (issue #162) ───────────────────────────────────────── */
+.cd-example { border: 1px solid var(--color-border); border-radius: 8px; padding: 12px; margin-top: 12px; }
+.cd-example h4 { margin: 0 0 4px; font-size: 0.9375rem; }
+.cd-example__code { overflow-x: auto; margin: 8px 0; }
+.cd-example__output { margin: 6px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.cd-example__output li { overflow-x: auto; font-size: 0.8125rem; }
+
+/* ── Resizable, focusable workspace (issue #164) ────────────────────────────
+   Two columns on a wide screen with a keyboard-operable separator between
+   them; one column below 1024px, where the splitter is hidden because there is
+   nothing to split. Focus mode hides the brief and the hint ladder and leaves
+   the editor and the results. */
+.cd-workbench__toolbar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.cd-splitter { display: none; }
+
+@media (min-width: 1024px) {
+  .cd-workbench__grid {
+    grid-template-columns: minmax(0, var(--cd-split, 58%)) 10px minmax(0, 1fr);
+  }
+  .cd-splitter {
+    display: block;
+    align-self: stretch;
+    width: 10px;
+    border-radius: 999px;
+    background: var(--color-border);
+    cursor: col-resize;
+  }
+  .cd-splitter:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 2px; }
+  .cd-workbench__grid[data-focus='on'] { grid-template-columns: minmax(0, 1fr) 10px minmax(0, 1fr); }
+}
+
+/* Long results and long translated strings scroll inside their own panel
+   rather than stretching the page. */
+.cd-panel { max-height: min(60vh, 640px); overflow: auto; }
+.cd-panel pre, .cd-panel code { overflow-wrap: anywhere; }

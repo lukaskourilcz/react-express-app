@@ -49,6 +49,28 @@ type Phase = 'idle' | 'running' | 'submitting';
 
 const DRAFT_DEBOUNCE_MS = 900;
 const hintsKey = (id: string) => `devshark:coding:hints:${id}`;
+/** Layout preferences are per learner, not per task, and are kept well away
+ * from the code drafts so clearing one never clears the other (issue #164). */
+const LAYOUT_KEY = 'devshark:coding:layout:v1';
+const DEFAULT_SPLIT = 58;
+const MIN_SPLIT = 30;
+const MAX_SPLIT = 75;
+const SPLIT_STEP = 2;
+
+interface WorkbenchLayout {
+  /** Percentage of the row the working column takes on a wide screen. */
+  split: number;
+  /** Focus mode hides the brief and the hints, leaving editor and results. */
+  focus: boolean;
+}
+
+const clampSplit = (value: number): number =>
+  Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, Math.round(Number.isFinite(value) ? value : DEFAULT_SPLIT)));
+
+function readLayout(): WorkbenchLayout {
+  const raw = readJSON<Partial<WorkbenchLayout>>(LAYOUT_KEY, {});
+  return { split: clampSplit(Number(raw?.split ?? DEFAULT_SPLIT)), focus: raw?.focus === true };
+}
 
 /** Prompt text with `code` spans rendered as code. */
 function Prompt({ text, className }: { text: string; className?: string }) {
@@ -113,6 +135,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // authored arrangement puzzle exists it takes its place; where none exists the
   // task waits for a wider screen and says so, with the draft kept.
   const compact = useIsCompactPractice();
+  const [layout, setLayout] = useState<WorkbenchLayout>(readLayout);
+  useEffect(() => { writeJSON(LAYOUT_KEY, layout); }, [layout]);
   // Saving is a reading-list action (issue #157): it keeps the challenge in the
   // learner's library and changes nothing about what they may start.
   const library = useCodingLibrary(signedIn);
@@ -294,6 +318,15 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     : run && !run.codeError && run.results.length > 0 ? `${run.results.filter((r) => r.pass === true).length}/${run.results.length}` : null;
   const typesBadge = run?.check ? (run.check.codeErrors.length === 0 && run.check.typeTests.every((one) => one.pass) ? 'ok' : String(run.check.codeErrors.length + run.check.typeTests.filter((one) => !one.pass).length)) : null;
   const tabRefs = useRef<Partial<Record<Tab, HTMLButtonElement | null>>>({});
+  // After a verdict the learner's attention belongs on the result, so the panel
+  // takes focus rather than leaving it on a button that is now disabled.
+  const panelRefs = useRef<Partial<Record<Tab, HTMLDivElement | null>>>({});
+  useEffect(() => {
+    if (!verdict) return;
+    panelRefs.current[tab]?.focus();
+    // Only when a new verdict lands, not on every tab change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verdict]);
   const tabs: { key: Tab; label: string; badge: string | null; good: boolean | null }[] = [
     { key: 'results', label: t('coding.tab.results'), badge: resultsBadge, good: isReact ? (reactRun ? reactRun.failed === 0 && reactRun.total > 0 : null) : localPassed },
     ...(isTypeScript ? [{ key: 'types' as Tab, label: t('coding.tab.types'), badge: typesBadge, good: typesBadge === 'ok' ? true : typesBadge ? false : null }] : []),
@@ -535,9 +568,31 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   return (
     <div className={`cd-workbench cd-workbench--${mode}`} onKeyDown={onKeyDown}>
       <span className="cd-visually-hidden" role="status" aria-live="polite">{announcement}</span>
-      <div className="cd-workbench__grid">
+      <div className="cd-workbench__toolbar">
+        <button
+          type="button"
+          className="cd-btn cd-btn--quiet"
+          aria-pressed={layout.focus}
+          onClick={() => setLayout((prev) => ({ ...prev, focus: !prev.focus }))}
+        >
+          {layout.focus ? t('coding.layout.focusOff') : t('coding.layout.focusOn')}
+        </button>
+        <button
+          type="button"
+          className="cd-btn cd-btn--quiet"
+          onClick={() => setLayout({ split: DEFAULT_SPLIT, focus: false })}
+          disabled={layout.split === DEFAULT_SPLIT && !layout.focus}
+        >
+          {t('coding.layout.reset')}
+        </button>
+      </div>
+      <div
+        className="cd-workbench__grid"
+        data-focus={layout.focus ? 'on' : undefined}
+        style={{ ['--cd-split' as string]: `${layout.split}%` }}
+      >
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
-          <section className="cd-pane cd-pane--task" aria-labelledby={`${baseId}-title`}>
+          <section className="cd-pane cd-pane--task" aria-labelledby={`${baseId}-title`} hidden={layout.focus}>
             <div className="cd-pane__head">
               <span className="ss-kicker">{trackLabel} · {tierLabel}{task.level > 0 ? ` · ${t('coding.level', { n: task.level })}` : ''}</span>
               <h2 id={`${baseId}-title`}>{L(task.title)}</h2>
@@ -697,6 +752,31 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           )}
         </div>
 
+        {/* Keyboard-first splitter: arrows move it, Home and End go to the
+            limits, and the toolbar's reset restores the default (issue #164). */}
+        <div
+          className="cd-splitter"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label={t('coding.layout.splitter')}
+          aria-valuenow={layout.split}
+          aria-valuemin={MIN_SPLIT}
+          aria-valuemax={MAX_SPLIT}
+          tabIndex={0}
+          onKeyDown={(event) => {
+            const step = event.key === 'ArrowLeft' ? -SPLIT_STEP : event.key === 'ArrowRight' ? SPLIT_STEP : 0;
+            if (step !== 0) {
+              event.preventDefault();
+              setLayout((prev) => ({ ...prev, split: clampSplit(prev.split + step) }));
+            } else if (event.key === 'Home') {
+              event.preventDefault();
+              setLayout((prev) => ({ ...prev, split: MIN_SPLIT }));
+            } else if (event.key === 'End') {
+              event.preventDefault();
+              setLayout((prev) => ({ ...prev, split: MAX_SPLIT }));
+            }
+          }}
+        />
         <section className="cd-pane cd-pane--output" aria-label={t('coding.tab.results')}>
           <div className="cd-tabs" role="tablist" onKeyDown={onTabKeyDown}>
             {tabs.map((one) => (
@@ -722,7 +802,16 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {tabs.map((one) => (
             // The panel takes focus itself: its content is often plain text,
             // so without this a keyboard user tabs straight past the results.
-            <div key={one.key} role="tabpanel" tabIndex={tab === one.key ? 0 : -1} id={`${baseId}-panel-${one.key}`} aria-labelledby={`${baseId}-tab-${one.key}`} className="cd-panel" hidden={tab !== one.key}>
+            <div
+              key={one.key}
+              role="tabpanel"
+              tabIndex={tab === one.key ? 0 : -1}
+              ref={(node) => { panelRefs.current[one.key] = node; }}
+              id={`${baseId}-panel-${one.key}`}
+              aria-labelledby={`${baseId}-tab-${one.key}`}
+              className="cd-panel"
+              hidden={tab !== one.key}
+            >
               {one.key === 'results' && renderResults()}
               {one.key === 'types' && renderTypes()}
               {one.key === 'console' && renderConsole()}
