@@ -666,6 +666,15 @@ export const cs: Record<TranslationKey, string> = {
 
   // Roadmap ("Learn") mode
   'roadmap.morePathsLater': 'Další učební cesty se ukážou, jakmile začneš dokončovat úrovně',
+  'terms.label': 'Zkratky v téhle otázce',
+  'terms.explain': 'Vysvětlit {term}',
+  'terms.notAnAcronym': 'Tohle je název, ne iniciály — písmena nic nezastupují.',
+  'terms.labelLesson': 'Zkratky na téhle stránce',
+  'terms.labelTask': 'Zkratky v téhle úloze',
+  'roadmap.retired.testing': 'Testování už není samostatná cesta. Základy jsou poslední čtyři úrovně Obecných znalostí a praktické testování žije uvnitř témat, která ověřuje — React, Node, bezpečnost, algoritmy a DevOps.',
+  'roadmap.retired.abbreviations': 'Zkratky už nejsou samostatná cesta. Každá zkratka se teď vysvětluje tam, kde se objeví: hledej vedle ní tlačítko s informací.',
+  'roadmap.retired.code-snippets': 'Úryvky kódu už nejsou samostatná cesta. Čtení kódu a uvažování nad ním je teď formát otázky uvnitř tématu, které daný úryvek učí.',
+  'roadmap.retiredHistory': 'Co jsi tam prošel, zůstává zaznamenané. Nic se neztratilo.',
   'roadmap.title': 'Učení',
   'roadmap.journeyTitle': 'Tvoje cesta učením.',
   'roadmap.wholeSwim': 'celá cesta',

@@ -15,6 +15,8 @@ import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness
 import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, type LadderRung } from './hint-ladder';
 import { taskResources } from '../../../shared/coding-docs';
 import { skipTask } from './practice';
+import { TermsBar } from '../components/ui/Terms';
+import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
 import { useIsNarrowForEditor } from '../lib/useMediaQuery';
 import { SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
@@ -661,6 +663,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               </div>
             </div>
             <Prompt className="cd-prompt" text={L(task.prompt)} />
+            {/* Beside the brief, so nothing is injected into code the learner
+                is reading or about to run. */}
+            <TermsBar texts={[L(task.prompt), L(task.title)]} domain={glossaryDomainFor(task.track)} />
             {formatOf(task) === 'debug' && <p className="cd-note">{t('coding.format.debugHint')}</p>}
             {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{L(task.api.note)}</p>}
             {locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}

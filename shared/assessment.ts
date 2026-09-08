@@ -46,19 +46,19 @@ const DEV_TIERS: { minCorrect: number; unlocks: string[] }[] = [
   {
     minCorrect: 18,
     unlocks: [
-      'typescript', 'abbreviations', 'general', 'git', 'dsa', 'algorithms',
-      'nodejs', 'testing', 'ai', 'security', 'react', 'nextjs',
+      'typescript', 'general', 'git', 'dsa', 'algorithms',
+      'nodejs', 'ai', 'security', 'react', 'nextjs',
       'databases', 'system-design', 'devops',
     ],
   },
   {
     minCorrect: 14,
     unlocks: [
-      'typescript', 'abbreviations', 'general', 'git', 'dsa', 'algorithms',
-      'nodejs', 'testing', 'ai', 'react',
+      'typescript', 'general', 'git', 'dsa', 'algorithms',
+      'nodejs', 'ai', 'react',
     ],
   },
-  { minCorrect: 10, unlocks: ['typescript', 'abbreviations', 'general', 'git'] },
+  { minCorrect: 10, unlocks: ['typescript', 'general', 'git'] },
 ];
 
 /** Deterministic, subject-local skill-check unlocks shared by client and API. */

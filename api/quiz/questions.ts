@@ -58,7 +58,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (selectedCategories.length === 0) {
     return jsonError(res, 400, 'bad_request', 'Select at least one category');
   }
-  const scope = validateCategoryScope(selectedCategories);
+  const scope = validateCategoryScope(selectedCategories, { forDelivery: true });
   if (!scope.ok) {
     return jsonError(res, 400, 'invalid_subject_scope', 'Categories must belong to this deployment and one subject');
   }

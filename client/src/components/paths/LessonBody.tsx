@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { runCodeTests } from '../../coding/runner/run-tests';
+import { TermsBar } from '../ui/Terms';
 import { useIsNarrowForEditor } from '../../lib/useMediaQuery';
 import { useLanguage, useT } from '../../i18n/LanguageContext';
 import type { LessonBody as LessonBodyDto, LessonSection, TraceSpec } from '../../../../shared/learning-path-api';
@@ -333,6 +334,16 @@ export function LessonView({ lesson }: { lesson: LessonBodyDto }) {
       {lesson.sections.map((section, index) => (
         <Section key={index} section={section} />
       ))}
+      {/* One control for the page: the abbreviations its prose actually uses,
+          explained where the learner meets them. */}
+      <TermsBar
+        texts={lesson.sections.flatMap((section) =>
+          section.kind === 'prose' || section.kind === 'callout'
+            ? [loc(section.body)]
+            : section.kind === 'code' || section.kind === 'example'
+              ? [loc(section.caption)]
+              : [])}
+      />
       {lesson.sources.length > 0 && (
         <section className="lp-section">
           <h3>{t('paths.lesson.sources')}</h3>

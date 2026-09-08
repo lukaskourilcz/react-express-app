@@ -665,6 +665,15 @@ export const en = {
 
   // Roadmap ("Learn") mode
   'roadmap.morePathsLater': 'More learning paths will show once you start completing levels',
+  'terms.label': 'Terms in this question',
+  'terms.explain': 'Explain {term}',
+  'terms.notAnAcronym': 'This one is a name, not initials — there is nothing for the letters to stand for.',
+  'terms.labelLesson': 'Terms on this page',
+  'terms.labelTask': 'Terms in this task',
+  'roadmap.retired.testing': 'Testing is no longer a path of its own. The foundations are the last four levels of General, and the applied testing lives inside the topics it verifies — React, Node, security, DSA and DevOps.',
+  'roadmap.retired.abbreviations': 'Abbreviations is no longer a path of its own. Every abbreviation is now explained where it appears: look for the info button beside it.',
+  'roadmap.retired.code-snippets': 'Code Snippets is no longer a path of its own. Reading and reasoning about code is now a question format inside the topic each snippet teaches.',
+  'roadmap.retiredHistory': 'Anything you passed there is still recorded. Nothing was taken away.',
   'roadmap.title': 'Learn',
   'roadmap.journeyTitle': 'Your learning path',
   'roadmap.wholeSwim': 'all topics',

@@ -34,6 +34,8 @@ import {
 } from '../lib/supabase';
 import { apiFetch, friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
+import { TermsBar } from './ui/Terms';
+import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { RotatingTip } from './reactbits/RotatingTip';
 import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
@@ -1265,7 +1267,16 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               className="quiz-question-text"
               style={{ display: 'flex', alignItems: 'flex-start', gap: 4, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}
             >
-              <div style={{ flex: 1 }}>{renderQuestion(currentQuestion.question)}</div>
+              <div style={{ flex: 1 }}>
+                {renderQuestion(currentQuestion.question)}
+                {/* Beside the block, never inside an option: opening help must
+                    not select an answer, and the list is the same whichever
+                    option is right. */}
+                <TermsBar
+                  texts={[currentQuestion.question, ...currentQuestion.options]}
+                  domain={glossaryDomainFor(currentQuestion.category)}
+                />
+              </div>
               {currentQuestion.introduction && (
                 <Popover
                   isOpen={!!revealedHints[currentQuestion.id]}

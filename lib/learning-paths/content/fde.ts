@@ -110,7 +110,9 @@ export const FDE_PATH: PathSource = {
       competencies: ['handoff', 'retrieval'],
       references: [
         { kind: 'roadmap-topic', ref: 'react', label: 'React Learn levels: state, effects, rendering' },
-        { kind: 'roadmap-topic', ref: 'testing', label: 'Testing Learn levels: what to assert on a UI' },
+        // Testing stopped being a path of its own (#179); its foundations are
+        // the last four General levels, which is where this bridge now points.
+        { kind: 'roadmap-topic', ref: 'general', label: 'General Learn levels: Testing Foundations — what to assert on a UI' },
         { kind: 'path-activity', ref: 'fde-v1-bridge-operator-state', label: 'Bridge exercise: the operator approval state machine' },
         {
           kind: 'doc',

@@ -3,7 +3,12 @@
 export const SUBJECT_SCOPE_CATALOG = {
   webdev: {
     questionCount: 2487,
-    topics: ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git', 'dsa', 'algorithms', 'abbreviations', 'general', 'ai', 'databases', 'system-design', 'testing', 'devops', 'security'],
+    // `abbreviations`, `testing` and `code-snippets` are gone from `topics`:
+    // they are no longer taught as paths of their own (see
+    // shared/retired-content.ts). They stay in `categories` on purpose, so
+    // every attempt, receipt and progress row written before the retirement
+    // still resolves to devShark exactly as it did.
+    topics: ['javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'html', 'css', 'git', 'dsa', 'algorithms', 'general', 'ai', 'databases', 'system-design', 'devops', 'security'],
     categories: ['html', 'css', 'javascript', 'typescript', 'react', 'nextjs', 'nodejs', 'git', 'dsa', 'algorithms', 'abbreviations', 'general', 'ai', 'databases', 'system-design', 'testing', 'devops', 'security', 'code-snippets'],
   },
   geography: {

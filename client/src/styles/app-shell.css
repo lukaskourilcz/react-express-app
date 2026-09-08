@@ -411,3 +411,56 @@
   font: inherit;
 }
 .ss-input:focus-visible, .ss-select:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+
+/* Contextual abbreviation help. One control per block: never inside an answer
+   button, never injected into code. */
+.ss-terms { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 10px; }
+.ss-terms__label { font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; color: var(--color-text-secondary); }
+.ss-terms__list { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0; padding: 0; }
+.ss-term { position: relative; display: inline-flex; }
+.ss-term__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font: 600 0.74rem var(--font-family-body);
+  cursor: pointer;
+}
+.ss-term__button:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
+.ss-term__button:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+.ss-term__glyph {
+  display: inline-grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: var(--brand-accent);
+  color: var(--brand-on-accent);
+  font-size: 0.62rem;
+  font-style: italic;
+}
+.ss-term__popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  width: min(320px, 78vw);
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-background-surface);
+  box-shadow: 0 12px 28px rgba(23, 39, 46, 0.18);
+}
+.ss-term__title { margin: 0 0 4px; font-weight: 700; font-size: 0.84rem; }
+.ss-term__expansion { font-weight: 500; color: var(--color-text-secondary); }
+.ss-term__meaning { margin: 0; font-size: 0.82rem; color: var(--color-text-primary); }
+.ss-term__note { margin: 6px 0 0; font-size: 0.75rem; color: var(--color-text-secondary); }
+/* Near the right edge the popover would overflow; flip it. */
+@media (max-width: 30rem) {
+  .ss-term__popover { left: auto; right: 0; }
+}

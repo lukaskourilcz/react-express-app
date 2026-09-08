@@ -180,7 +180,7 @@ async function create(req: VercelRequest, res: VercelResponse) {
   if (categories.length === 0) {
     return jsonError(res, 400, 'bad_request', 'No topics selected — refresh the page and try again');
   }
-  const scope = validateCategoryScope(categories);
+  const scope = validateCategoryScope(categories, { forDelivery: true });
   if (!scope.ok) {
     return jsonError(res, 400, 'invalid_subject_scope', 'Topics must belong to this deployment and one subject');
   }

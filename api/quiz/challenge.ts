@@ -287,5 +287,5 @@ function requestedScope(req: VercelRequest) {
   const requested = catRaw
     ? catRaw.split(',').map((s) => s.trim()).filter(Boolean)
     : defaultDeploymentCategories();
-  return validateCategoryScope(requested);
+  return validateCategoryScope(requested, { forDelivery: true });
 }

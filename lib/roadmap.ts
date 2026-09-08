@@ -41,11 +41,14 @@ export type RoadmapTopic =
   // Poker
   | 'positions' | 'starting-hands' | 'pot-odds' | 'betting-strategy' | 'postflop' | 'tournament-play' | 'psychology' | 'gto-advanced';
 
+// `abbreviations` and `testing` were retired as standalone paths (#177, #179).
+// Their type members, id prefixes and level titles stay so the seed banks and
+// every historical id still resolve; they are simply never offered.
 export const ROADMAP_TOPICS: RoadmapTopic[] = [
   'javascript', 'typescript', 'react', 'nextjs', 'nodejs',
   'html', 'css', 'git', 'dsa', 'algorithms',
-  'abbreviations', 'general', 'ai', 'cool-stuff',
-  'databases', 'system-design', 'testing', 'devops', 'security',
+  'general', 'ai', 'cool-stuff',
+  'databases', 'system-design', 'devops', 'security',
   // Geography
   'continents', 'capitals', 'flags', 'landforms', 'climate', 'population', 'political', 'economic', 'cartography', 'earth',
   // Math
@@ -247,6 +250,8 @@ const LEVEL_TITLES: Record<RoadmapTopic, string[]> = {
     'How the Web Works', 'Clients & Servers', 'HTTP Methods', 'HTTP Status Codes', 'URLs & Routing',
     'How Browsers Render', 'How Code Runs', 'How Frameworks Work', 'Frontend vs Backend', 'APIs & Communication',
     'Caching & CDNs', 'Authentication Basics', 'Databases Overview', 'Deployment & Hosting', 'Performance & Optimization',
+    // Testing Foundations, which replaced the standalone Testing path (#179).
+    'What Tests Can Prove', 'Read a Meaningful Test', 'Make Checks Reliable', 'Verify a Change',
   ],
   ai: [
     'What is AI?', 'Machine Learning Basics', 'Neural Networks', 'What is an LLM?', 'Tokens & Tokenization',

@@ -6,6 +6,7 @@
 import type { CategoryType } from '../types/quiz';
 import type { TranslationKey } from '../i18n/translations';
 import { getSubject, categoriesForSubject } from './subjects';
+import { isRetiredTopic } from '../../../shared/retired-content';
 
 export interface CategoryOption {
   value: CategoryType;
@@ -179,7 +180,11 @@ export const visibleCategoryOptionsFor = (
   // Scope to the active subject so each subject's picker shows only its own
   // categories (subjects are disjoint, so this is an exact partition).
   const inSubject = new Set<string>(categoriesForSubject(getSubject()));
-  const scoped = CATEGORY_OPTIONS.filter((c) => inSubject.has(c.value));
+  // A retired section keeps its category — history and scope checks depend on
+  // it — but it is never offered as something to choose. The label and colour
+  // lookups below still resolve it, so an old attempt still renders with its
+  // own name rather than as a blank.
+  const scoped = CATEGORY_OPTIONS.filter((c) => inSubject.has(c.value) && !isRetiredTopic(c.value));
   const base =
     (email ?? '').toLowerCase() === OWNER_EMAIL
       ? scoped

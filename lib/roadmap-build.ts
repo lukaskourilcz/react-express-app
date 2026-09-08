@@ -12,6 +12,7 @@
 // every 5-level checkpoint covers exactly 40 questions.
 
 import type { Question, CategoryType } from './quiz-data';
+import type { SnippetMeta } from '../shared/snippet-format';
 
 export const QUESTIONS_PER_LEVEL = 8;
 export const ROADMAP_LEVELS = 25;
@@ -31,6 +32,10 @@ export interface Seed {
   tags: string[];
   /** Optional per-question hint; falls back to a shape-aware nudge (see hintFor). */
   intro?: string;
+  /** Declared when the question is a code-reading one. Declared rather than
+   * inferred: a fenced block is not by itself a snippet question, and guessing
+   * would make the coverage report and the pacing rule meaningless. */
+  snippet?: SnippetMeta;
 }
 
 // Broad topic/category tags that don't make a useful "think about X" nudge on

@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Kicker } from './landing/LandingKit';
+import { retirementOf } from '../../../shared/retired-content';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
@@ -75,6 +76,8 @@ import { reportQuestion } from '../lib/supabase';
 import { shuffleDifferentFrom } from '../lib/shuffle';
 import { readString, removeStored, writeString } from '../lib/storage';
 import { renderQuestion } from './CodeBlock';
+import { TermsBar } from './ui/Terms';
+import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { RedFlagDialog } from './RedFlagDialog';
 import { IconTile, BoltIcon, CloseIcon, FlagIcon } from './ui/icons';
@@ -299,6 +302,13 @@ function Roadmap() {
   // fallback landing topic.
   const [subject] = useSubject();
   const TOPICS = topicsForSubject(subject);
+  // An old link to a path that no longer exists. It is answered rather than
+  // redirected: the learner asked for something specific and deserves to know
+  // where it went, and their history for it is untouched.
+  const [retired] = useState(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get('topic');
+    return fromUrl ? retirementOf(fromUrl) ?? null : null;
+  });
   const [topic, setTopic] = useState<RoadmapTopic>(() => {
     // A deep link from the roadmap tree (/learn?topic=…&part=…) wins over the
     // last-opened topic so clicking a part on the tree lands on that path.
@@ -625,6 +635,15 @@ function Roadmap() {
           <Text type="supporting" color="secondary">{t('roadmap.subtitle')}</Text>
         </div>
       </div>
+
+      {retired && (
+        <div className="cd-note" role="status" style={{ marginBottom: 16 }}>
+          <p style={{ margin: '0 0 8px' }}>
+            {t(`roadmap.retired.${retired.id}` as never)}
+          </p>
+          <p style={{ margin: 0 }}>{t('roadmap.retiredHistory')}</p>
+        </div>
+      )}
 
       {/* Topic selector — every topic in the subject is listed so the breadth of
           the map is obvious on a first visit. Locked ones stay in place, dimmed
@@ -1447,6 +1466,14 @@ function LessonRunner({
       {/* Question — the only region that scrolls when long. */}
       <div id="lesson-question" style={{ fontWeight: 500, marginBottom: 16, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}>
         {renderQuestion(question.question)}
+        {/* One control for the whole item: the question, every option and the
+            explanation. Beside the block rather than inside an option, so it
+            can never select an answer, and the same list for every option, so
+            it can never single one out. */}
+        <TermsBar
+          texts={[question.question, ...question.options, grade?.explanation]}
+          domain={glossaryDomainFor(playable.topic)}
+        />
       </div>
 
       {/* Options — anchored toward the bottom, labelled by the question. */}

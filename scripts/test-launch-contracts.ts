@@ -10,6 +10,8 @@ import {
   SUBJECT_SCOPE_CATALOG,
   STUDYSHARK_SCOPE_SUBJECTS,
   allowedDeploymentSubjects,
+  subjectForCategory,
+  subjectForTopic,
 } from '../shared/subject-catalog';
 import {
   decodeAnswerProof,
@@ -27,7 +29,7 @@ import healthHandler from '../api/health';
 import roadmapHandler from '../api/quiz/roadmap';
 import { selectPersonalizedReview } from '../lib/review-selection';
 import { aiDailyGenerationLimit, isAiExplanationConfigured } from '../lib/ai-provider';
-import { aiFeaturesAllowed } from '../lib/product-scope';
+import { aiFeaturesAllowed, defaultDeploymentCategories, validateCategoryScope } from '../lib/product-scope';
 import { codingTaskById, levelCodingTasks, playable as playableCodingTask, CODING_TASKS } from '../lib/coding/catalog';
 import { solutionFor } from '../lib/coding/solutions';
 import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
@@ -37,6 +39,8 @@ import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, enc
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
 import { FAILURE_CATEGORIES, classifyFailure, failureHint } from '../shared/coding-failure';
+import { RETIRED_TOPIC_IDS, retirementOf } from '../shared/retired-content';
+import { GLOSSARY, termsIn } from '../shared/glossary';
 import {
   DEFAULT_MERCH_SETTINGS,
   MERCH_SKUS,
@@ -720,6 +724,45 @@ async function main() {
   assert.equal(fromV1?.specialization, 'fde');
   assert.equal(isLearnerProfileComplete(fromV1), false, 'a v1 preference still owes the newer answers');
 
+  // ── retired sections and the glossary (#177, #178, #179) ───────────────
+  // A retired section leaves the topic list and stays in the category list:
+  // nothing serves it, and every historical row still resolves to devShark.
+  for (const topic of RETIRED_TOPIC_IDS) {
+    assert.ok(!ROADMAP_TOPICS.includes(topic as never), `${topic} must not be a served roadmap topic`);
+    assert.equal(subjectForTopic(topic), undefined, `${topic} must not resolve as a topic`);
+    assert.equal(subjectForCategory(topic), 'webdev', `${topic} must still resolve as a category for history`);
+    assert.ok(retirementOf(topic), `${topic} needs a recorded destination`);
+    // Discovery no longer offers it, and an explicit request cannot rebuild
+    // the pool either. (This suite runs in the StudyShark scope, where these
+    // devShark categories are out of deployment anyway; the retirement check is
+    // the one that holds on devShark too.)
+    assert.ok(!defaultDeploymentCategories().includes(topic), `${topic} must not be drawn by default`);
+    assert.equal(
+      validateCategoryScope([topic], { forDelivery: true }).ok,
+      false,
+      `${topic} must not be requestable for delivery`,
+    );
+  }
+  // The skill-check cannot grant a retired topic, however well the learner did.
+  for (const correct of [10, 14, 18, 20]) {
+    for (const granted of assessmentUnlocks('webdev', correct)) {
+      assert.ok(!RETIRED_TOPIC_IDS.includes(granted), `the skill check must not unlock ${granted}`);
+    }
+  }
+
+  // The glossary matches on word boundaries and exact case, and never invents
+  // an expansion for a name that is not an acronym.
+  assert.deepEqual(termsIn('rapid apiary').map((one) => one.term), [], 'lowercase fragments are not terms');
+  assert.deepEqual(termsIn('The API returns JSON.').map((one) => one.term), ['API', 'JSON']);
+  assert.deepEqual(termsIn('Two APIs disagree.').map((one) => one.term), ['API'], 'a plural still matches');
+  const npmEntry = GLOSSARY.find((one) => one.term === 'npm');
+  assert.ok(npmEntry && npmEntry.expansion === undefined, 'npm is a name, not initials');
+  for (const entry of GLOSSARY) {
+    assert.ok(entry.meaning.en.length > 20 && entry.meaning.cs.length > 20, `${entry.term} needs both meanings`);
+    assert.ok(entry.domains.length > 0, `${entry.term} must say where it means this`);
+    assert.match(entry.reviewed, /^\d{4}-\d{2}-\d{2}$/);
+  }
+
   // ── rewards (#167-#173) ────────────────────────────────────────────────
   // The shop ships unconfigured and cannot be talked into selling anything.
   // Nothing about a reward may reach a learning table, and the separation is
@@ -830,7 +873,7 @@ async function main() {
     }
   }
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, and an unconfigured shop.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, and an unconfigured shop.');
 }
 
 void main().catch((error) => {

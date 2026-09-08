@@ -67,7 +67,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const requested = catRaw
     ? catRaw.split(',').map((s) => s.trim()).filter(Boolean)
     : defaultDeploymentCategories();
-  const scope = validateCategoryScope(requested);
+  const scope = validateCategoryScope(requested, { forDelivery: true });
   if (!scope.ok) {
     return jsonError(res, 400, 'invalid_subject_scope', 'Categories must belong to this deployment and one subject');
   }

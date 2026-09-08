@@ -20,6 +20,7 @@ import { dsaSeeds } from './roadmap-questions-dsa';
 import { algorithmsSeeds } from './roadmap-questions-algorithms';
 import { abbreviationsSeeds } from './roadmap-questions-abbreviations';
 import { generalSeeds } from './roadmap-questions-general';
+import { testingFoundationsSeeds } from './roadmap-questions-testing-foundations';
 import { aiSeeds } from './roadmap-questions-ai';
 import { coolStuffSeeds } from './roadmap-questions-cool-stuff';
 import { databasesSeeds } from './roadmap-questions-databases';
@@ -54,7 +55,10 @@ export const roadmapCssQuestions = buildRoadmap('rm-css', 'css', cssSeeds);
 export const roadmapDsaQuestions = buildRoadmap('rm-dsa', 'dsa', dsaSeeds);
 export const roadmapAlgorithmsQuestions = buildRoadmap('rm-algorithms', 'algorithms', algorithmsSeeds);
 export const roadmapAbbreviationsQuestions = buildRoadmap('rm-abbr', 'abbreviations', abbreviationsSeeds);
-export const roadmapGeneralQuestions = buildRoadmap('rm-general', 'general', generalSeeds);
+// General runs fifteen levels of how-the-web-works plus the four Testing
+// Foundations levels that replaced the standalone Testing path (#179). The
+// order is the level order, so the testing material is levels 16-19.
+export const roadmapGeneralQuestions = buildRoadmap('rm-general', 'general', [...generalSeeds, ...testingFoundationsSeeds]);
 // AI & LLMs runs 20 levels (160 questions), authored as a single 8-per-level list.
 export const roadmapAiQuestions = buildRoadmap('rm-ai', 'ai', aiSeeds);
 // Cool Stuff (dev-world fun facts) runs 15 levels (120 questions).

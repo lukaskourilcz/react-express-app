@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
+import { isRetiredTopic } from '../../shared/retired-content';
 import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext } from '../../lib/http';
 import { requireAdmin } from '../../lib/admin-auth';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
@@ -157,7 +158,14 @@ async function listQuestions(req: VercelRequest, res: VercelResponse) {
   }
   const [questions, counts] = await Promise.all([listAdminQuestions(), reportCounts()]);
   res.setHeader('Cache-Control', 'no-store');
-  return res.json({ questions, categories: KNOWN_CATEGORIES, reportCounts: counts });
+  // A retired section is not offered as somewhere to publish. Existing
+  // questions in one still load and still save — the category stays valid,
+  // it is simply no longer a choice.
+  return res.json({
+    questions,
+    categories: KNOWN_CATEGORIES.filter((category) => !isRetiredTopic(category)),
+    reportCounts: counts,
+  });
 }
 
 async function saveQuestionOp(req: VercelRequest, res: VercelResponse) {
