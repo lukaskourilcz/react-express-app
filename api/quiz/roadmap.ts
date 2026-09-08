@@ -26,7 +26,9 @@ import {
 } from '../../lib/http';
 import { AuthError, tryAuth } from '../../lib/auth';
 import {
+  isCheckpointPassed,
   isCheckpointUnlocked as isCheckpointOpen,
+  isLevelPassed,
   isLevelUnlocked as isLevelOpen,
   isTopicInPlan,
   isTopicUnlocked as isTopicOpen,
@@ -516,6 +518,17 @@ type StepRequest =
   | { kind: 'checkpoint'; checkpoint: number }
   | { kind: 'test'; from: number; to: number };
 
+/** Has the learner already passed this exact step?
+ *
+ * Levels and checkpoints carry a passed record of their own. A part test does
+ * not — passing the levels it covers is its prerequisite, not a record that the
+ * test was taken — so it is deliberately not treated as already passed here. */
+function alreadyPassed(progress: VerifiedProgress, topic: string, step: StepRequest): boolean {
+  if (step.kind === 'level') return isLevelPassed(progress, topic, step.level);
+  if (step.kind === 'checkpoint') return isCheckpointPassed(progress, topic, step.checkpoint);
+  return false;
+}
+
 /** Why the server will not serve this step, or null when it will. */
 function stepRefusal(
   context: LearnerContext,
@@ -523,6 +536,11 @@ function stepRefusal(
   topic: string,
   step: StepRequest,
 ): { code: string; message: string } | null {
+  // Replaying something already passed is always allowed. Editing a plan
+  // narrows what is offered next; it must not take back work already done, and
+  // a learner who switches track would otherwise find levels they had passed
+  // refused as "not part of the plan you chose".
+  if (alreadyPassed(context.progress, topic, step)) return null;
   if (!isTopicInPlan(context.profile, subject, topic)) {
     return { code: 'not_in_plan', message: 'This topic is not part of the learning plan you chose' };
   }

@@ -10,6 +10,7 @@ import { createRequire } from 'node:module';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { CODING_TASKS, CODING_SUMMARIES, levelCodingTasks, playable, tasksForLevel } from '../lib/coding/catalog';
+import { formatOf } from '../shared/coding-catalog';
 import { solutionFor, solutionIds } from '../lib/coding/solutions';
 import { localizedFields, localizedLists } from '../lib/coding/types';
 import {
@@ -145,8 +146,19 @@ async function main() {
       if (tasks.length === 0 && !ALLOW_GAPS) fail(`${topic} level ${level} has no coding task`);
       const chosen = levelCodingTasks(topic, level);
       if (chosen.some((t) => t.verify === 'checklist')) fail(`${topic} level ${level} would gate on a checklist task`);
+      // A repair is a Coding-section format. Letting one into the quota does
+      // not add a task to a level, it takes the level's existing task away:
+      // repairs sort first within their own source array, so on a level whose
+      // quota is one the repair is the only task the level asks for.
+      if (chosen.some((t) => formatOf(t) === 'debug')) {
+        fail(`${topic} level ${level} would gate on a repair exercise: ${chosen.map((t) => t.id).join(', ')}`);
+      }
     }
   }
+  // Repairs are still authored, still reachable in the Coding section, and
+  // still carry a level for ordering — the point is only that a Learn level
+  // never asks for one.
+  if (!CODING_TASKS.some((task) => formatOf(task) === 'debug')) fail('no repair exercises are authored');
 
   /* ── index freshness ────────────────────────────────────────────────── */
   const indexPath = path.join(process.cwd(), 'shared', 'coding-index.ts');

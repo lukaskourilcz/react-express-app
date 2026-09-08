@@ -9,6 +9,7 @@ import type {
   CodingTrack,
   PlayableCodingTask,
 } from '../../shared/coding-catalog';
+import { formatOf } from '../../shared/coding-catalog';
 import { mergeTask, type CodingTaskCs, type CodingTaskSource } from './types';
 import { JAVASCRIPT_TASKS } from './tasks/javascript';
 import { JAVASCRIPT_TASKS_CS } from './tasks/javascript.cs';
@@ -56,7 +57,15 @@ export const tasksForTrack = (track: CodingTrack): CodingTask[] => CODING_TASKS.
 /** Tasks that belong to one Learn level, in catalogue order. Checklist tasks
  * cannot gate a level, so they are never part of one. */
 export function tasksForLevel(topic: CodingTask['topic'], level: number): CodingTask[] {
-  return CODING_TASKS.filter((task) => task.topic === topic && task.level === level && task.verify !== 'checklist');
+  return CODING_TASKS.filter(
+    (task) => task.topic === topic && task.level === level
+      && task.verify !== 'checklist'
+      // A repair is a Coding-section format, not a Learn task. Letting one into
+      // the quota silently changes which task an existing level asks for: the
+      // repairs sort first within their own source array, so `js-debug-average`
+      // took the single slot on JavaScript level 3 away from `js-fizz-values`.
+      && formatOf(task) !== 'debug',
+  );
 }
 
 /** How many tasks a Learn level asks for: one for levels 1–5, two for 6–15,

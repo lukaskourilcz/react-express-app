@@ -729,6 +729,18 @@ async function main() {
     assert.equal(isTopicInPlan(profile, 'geography', 'continents'), true);
   }
 
+  // Editing a plan narrows what is offered next; it never takes back work
+  // already done. The refusal in api/quiz/roadmap.ts checks plan membership
+  // first, so a level the learner passed before switching track has to be let
+  // through ahead of that check or it comes back as "not part of the plan you
+  // chose".
+  const roadmapSource = readFileSync(join(process.cwd(), 'api/quiz/roadmap.ts'), 'utf8');
+  assert.match(
+    roadmapSource,
+    /if \(alreadyPassed\(context\.progress, topic, step\)\) return null;[\s\S]{0,200}isTopicInPlan/,
+    'a step already passed must be served before plan membership is considered',
+  );
+
   // Experience is advisory: the most experienced answer opens nothing.
   const senior = {
     schemaVersion: 2 as const,
