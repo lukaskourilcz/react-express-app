@@ -237,3 +237,34 @@ export function IconTile({
     </span>
   );
 }
+
+/**
+ * The devShark crown (issue #173): an original five-point mark with a shark-fin
+ * silhouette at its centre point, so it reads as this product's crown and not a
+ * generic one. Drawn filled rather than stroked, because at 36px an outline
+ * crown becomes a smudge; the band keeps it legible against a photo.
+ *
+ * Decorative by design — it carries no rank, no access and no advantage — so it
+ * is aria-hidden and its meaning is announced in the avatar's own label.
+ */
+export const CrownIcon = ({ size = 20, style }: IconProps) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    aria-hidden
+    focusable={false}
+    style={style}
+  >
+    {/* Five points; the centre one rises into a fin rather than a spike. */}
+    <path
+      d="M3 9.2 6.1 13 8.9 6.6 12 10.4 15.1 6.6 17.9 13 21 9.2 19.6 17.4H4.4L3 9.2Z"
+      fill="currentColor"
+    />
+    {/* The band, drawn as a separate shape so it survives a colour swap. */}
+    <path d="M4.4 18.6h15.2v2.1H4.4z" fill="currentColor" opacity="0.85" />
+    {/* The fin notch on the centre point, cut out of the body. */}
+    <path d="M12 10.4 10.6 12.8h2.8L12 10.4Z" fill="var(--color-background-surface)" opacity="0.55" />
+  </svg>
+);

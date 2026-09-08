@@ -8,7 +8,6 @@ import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Card } from '@astryxdesign/core/Card';
 import { Button } from '@astryxdesign/core/Button';
-import { Avatar } from '@astryxdesign/core/Avatar';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { Banner } from '@astryxdesign/core/Banner';
 import { ToggleButton } from '@astryxdesign/core/ToggleButton';
@@ -42,6 +41,8 @@ import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
 import { SIBLING_PLATFORMS_URL, useActiveSubject, topicSetForSubject } from '../lib/subjects';
 import { CURRENT_PRODUCT } from '../lib/products';
 import LearningPlanCard from './LearningPlanCard';
+import { LearnerAvatar } from './ui/LearnerAvatar';
+import { useCrownEquipped } from '../lib/rewards';
 import { savePreferredLanguage } from '../lib/languagePref';
 import { useColorMode } from '../theme/ColorModeContext';
 import { useSettings } from '../lib/settings';
@@ -242,6 +243,8 @@ function ProfileBody({
   const t = useT();
   const ringColor = useEquippedRingColor();
   const flair = useEquippedFlair();
+  // The crown is a server-owned entitlement, read once for this identity block.
+  const crowned = useCrownEquipped(true);
   const { questions: bookmarkedQuestions } = useBookmarks();
   const currentStreak = currentStreakForDisplay(stats);
   // Drawn once per mount so a stats refetch or a language switch cannot swap
@@ -259,18 +262,7 @@ function ProfileBody({
             <Card variant="default" padding={4} width="100%">
               <div className="de-profile-identity__row">
                 <HStack gap={2} align="center">
-                  <div
-                    style={{
-                      flexShrink: 0,
-                      borderRadius: '50%',
-                      display: 'inline-flex',
-                      ...(ringColor
-                        ? { padding: 3, background: `${ringColor}33`, boxShadow: `0 0 0 2px ${ringColor}` }
-                        : null),
-                    }}
-                  >
-                    <Avatar src={user.picture} name={user.name} alt="" size={64} />
-                  </div>
+                  <LearnerAvatar src={user.picture} name={user.name ?? ''} alt="" size={64} crowned={crowned} ringColor={ringColor} />
                   <VStack gap={0.5}>
                     <span className="ss-kicker">{t('nav.profile')}</span>
                     <Heading level={1} maxLines={1}>

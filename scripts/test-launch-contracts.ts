@@ -85,6 +85,23 @@ import {
 } from '../shared/practice-session';
 import { SKIP_REASONS, isSkipReason, MAX_SKIP_NOTE } from '../shared/coding-skip';
 import {
+  MERCH_CATALOG,
+  MERCH_SKUS,
+  availabilityFor,
+  merchBySku,
+} from '../shared/merchandise';
+import {
+  REGISTRATION_GRANT,
+  TOKENS_PER_XP,
+  canTransition,
+  validateAddress,
+  type OrderStatus,
+} from '../shared/rewards';
+import { merchPricing, isLiveCharging, isPaymentConfigured, paymentConfig, resetMerchPricingCache } from '../lib/rewards/config';
+import { parsePaymentEvent, verifyWebhookSignature } from '../lib/rewards/payments';
+import { configuredSupplier, operationsOwner } from '../lib/rewards/fulfillment';
+import { createHmac } from 'node:crypto';
+import {
   EXAMPLE_MAX_OUTPUT_CHARS,
   EXAMPLE_MAX_OUTPUT_LINES,
   LESSON_EXAMPLES,
@@ -759,7 +776,116 @@ async function main() {
   assert.match(workbenchSource, /event\.key === 'ArrowLeft'/, 'the splitter must be keyboard operable');
   assert.match(workbenchSource, /panelRefs\.current\[tab\]\?\.focus\(\)/, 'focus must land on the result after grading');
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, learner profile, progression graph, Coding tracks, devShark footer, practice sessions, skip feedback, lesson examples, workspace layout, and 12-function budget.');
+  /* ── the shop ships closed until it is configured (#167, #169, #171) ── */
+  assert.deepEqual([...MERCH_SKUS], ['sticker-set', 'mug', 'tshirt', 'cap', 'crown']);
+  assert.equal(MERCH_CATALOG.filter((product) => product.kind === 'physical').length, 4);
+  assert.equal(MERCH_CATALOG.filter((product) => product.kind === 'cosmetic').length, 1);
+  for (const product of MERCH_CATALOG) {
+    assert.ok(product.name.en.trim() && product.name.cs.trim(), `${product.sku} needs both names`);
+    assert.ok(product.blurb.en.trim() && product.blurb.cs.trim(), `${product.sku} needs both blurbs`);
+    assert.ok(product.imageAlt.en.trim() && product.imageAlt.cs.trim(), `${product.sku} needs alt text`);
+    // A physical item has a print brief; the cosmetic ships nothing.
+    if (product.kind === 'physical') {
+      assert.ok(product.print, `${product.sku} needs a print specification`);
+      assert.ok(product.print!.artwork.startsWith('client/'), `${product.sku} must name its artwork source`);
+    } else {
+      assert.equal(product.print, null, `${product.sku} must not carry a print specification`);
+    }
+  }
+  assert.equal(merchBySku('tshirt')?.variants.length, 5, 'the T-shirt is sold in five sizes');
+
+  // With nothing configured, nothing can be bought and the reason is stated.
+  resetMerchPricingCache();
+  const pricing = merchPricing();
+  for (const product of MERCH_CATALOG) {
+    const closed = availabilityFor(product, pricing[product.sku], { paymentConfigured: false });
+    assert.equal(closed.cash, false, `${product.sku} must not be buyable without configuration`);
+    assert.equal(closed.tokens, false, `${product.sku} must not be redeemable without a token price`);
+    assert.ok(closed.blockers.length > 0, `${product.sku} must say what is missing`);
+    assert.ok(closed.blockers.includes('no_token_price'));
+  }
+  // A cosmetic needs only a token price; a physical item needs the whole set.
+  const crown = merchBySku('crown')!;
+  const crownPriced = availabilityFor(crown, { ...pricing.crown, tokens: 500 }, { paymentConfigured: false });
+  assert.equal(crownPriced.tokens, true, 'a priced cosmetic is redeemable without a supplier');
+  assert.equal(crownPriced.cash, false, 'a cosmetic is never a cash purchase');
+  const mug = merchBySku('mug')!;
+  const mugPartly = availabilityFor(mug, { ...pricing.mug, tokens: 900 }, { paymentConfigured: false });
+  assert.equal(mugPartly.tokens, false, 'a physical item still needs stock, a region and a supplier');
+  const mugReady = availabilityFor(mug, {
+    sku: 'mug', currency: 'CZK', cashMinor: 39000, tokens: 900,
+    regions: ['CZ'], stock: 10, supplier: 'example', effectiveFrom: '2026-10-01',
+  }, { paymentConfigured: true, region: 'CZ' });
+  assert.equal(mugReady.cash, true);
+  assert.equal(mugReady.tokens, true);
+  const mugElsewhere = availabilityFor(mug, {
+    sku: 'mug', currency: 'CZK', cashMinor: 39000, tokens: 900,
+    regions: ['CZ'], stock: 10, supplier: 'example', effectiveFrom: '2026-10-01',
+  }, { paymentConfigured: true, region: 'DE' });
+  assert.equal(mugElsewhere.tokens, false, 'tokens cannot buy their way past a region');
+  assert.ok(mugElsewhere.blockers.includes('not_in_region'));
+
+  // Payments are off, and live charging needs a deliberate switch.
+  assert.equal(isPaymentConfigured(paymentConfig()), false, 'no payment provider ships configured');
+  assert.equal(isLiveCharging(paymentConfig()), false, 'live charging is never on by default');
+  assert.equal(configuredSupplier(), null, 'no supplier ships configured');
+  assert.equal(operationsOwner(), null, 'no operations owner ships configured');
+
+  /* ── the wallet is a ledger, and the webhook is the payment authority ── */
+  assert.equal(TOKENS_PER_XP, 0.1);
+  assert.equal(REGISTRATION_GRANT, 200);
+  const walletSource = readSource(join(process.cwd(), 'lib/rewards/handlers.ts'), 'utf8');
+  assert.match(walletSource, /sync_reward_wallet/, 'the balance must come from the ledger');
+  assert.match(walletSource, /converted: false/, 'a local balance is never converted');
+  // A total is never taken from the request.
+  assert.doesNotMatch(walletSource, /body\.total/, 'the server must compute every total');
+  assert.doesNotMatch(walletSource, /body\.price/, 'the server must compute every price');
+
+  const secret = 'whsec_test_only';
+  const payload = JSON.stringify({ id: 'evt_000001', type: 'payment_succeeded', data: { orderId: 'abcdefgh', amountMinor: 39000, currency: 'CZK' } });
+  const webhookNow = Date.now();
+  const stamp = Math.floor(webhookNow / 1000);
+  const signed = createHmac('sha256', secret).update(`${stamp}.${payload}`, 'utf8').digest('hex');
+  assert.equal(verifyWebhookSignature({ body: payload, header: `t=${stamp},v1=${signed}`, secret, now: webhookNow }).ok, true);
+  // A forged amount changes the body, so the signature no longer verifies.
+  const forged = payload.replace('39000', '1');
+  assert.equal(verifyWebhookSignature({ body: forged, header: `t=${stamp},v1=${signed}`, secret, now: webhookNow }).ok, false);
+  assert.equal(verifyWebhookSignature({ body: payload, header: `t=${stamp},v1=${'0'.repeat(64)}`, secret, now: webhookNow }).reason, 'bad_signature');
+  assert.equal(verifyWebhookSignature({ body: payload, header: undefined, secret, now: webhookNow }).reason, 'malformed');
+  assert.equal(verifyWebhookSignature({ body: payload, header: `t=${stamp},v1=${signed}`, secret: null, now: webhookNow }).reason, 'no_secret');
+  // A captured request cannot be replayed later.
+  assert.equal(verifyWebhookSignature({ body: payload, header: `t=${stamp - 3600},v1=${signed}`, secret, now: webhookNow }).reason, 'stale');
+  assert.equal(parsePaymentEvent(JSON.parse(payload))?.orderId, 'abcdefgh');
+  assert.equal(parsePaymentEvent({ type: 'nonsense' }), null);
+  assert.equal(parsePaymentEvent({ id: 'evt_000002', type: 'payment_succeeded', data: { orderId: 'bad id' } }), null);
+
+  /* ── orders move one step at a time (#170, #172) ─────────────────────── */
+  assert.equal(canTransition('pending', 'paid'), true);
+  assert.equal(canTransition('pending', 'shipped'), false, 'an unpaid order cannot ship');
+  assert.equal(canTransition('shipped', 'cancelled'), false, 'a shipped order cannot be cancelled');
+  assert.equal(canTransition('shipped', 'refunded'), true);
+  for (const terminal of ['cancelled', 'refunded'] as OrderStatus[]) {
+    for (const target of ['paid', 'shipped', 'delivered'] as OrderStatus[]) {
+      assert.equal(canTransition(terminal, target), false, `${terminal} is final`);
+    }
+  }
+  assert.ok('errors' in validateAddress({ name: 'A' }), 'an incomplete address is refused');
+  assert.ok('errors' in validateAddress({ name: 'A', line1: 'B', city: 'C', postcode: 'D', country: 'CZE' }), 'a country must be two letters');
+  const goodAddress = validateAddress({ name: 'A', line1: 'B', city: 'C', postcode: 'D', country: 'cz' });
+  assert.ok('address' in goodAddress && goodAddress.address.country === 'CZ');
+
+  /* ── the crown is a cosmetic, and rings are retired (#169, #173) ─────── */
+  const retiredShop = readSource(join(process.cwd(), 'client/src/lib/shop.ts'), 'utf8');
+  assert.match(retiredShop, /return 'retired'/, 'local ring and flair purchases must be refused');
+  assert.doesNotMatch(retiredShop, /spendTokens/, 'the retired shop must not spend anything');
+  const avatarSource = readSource(join(process.cwd(), 'client/src/components/ui/LearnerAvatar.tsx'), 'utf8');
+  assert.match(avatarSource, /aria-hidden/, 'the crown mark itself is decorative');
+  assert.match(avatarSource, /shop\.crown\.wearing/, 'the crown must be named in the accessible label');
+  const fulfilmentSource = readSource(join(process.cwd(), 'lib/rewards/fulfillment.ts'), 'utf8');
+  // Addresses reach the operator who asked for them, never a log line.
+  assert.doesNotMatch(fulfilmentSource, /logEvent\([^)]*address/, 'addresses must never be logged');
+
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, learner profile, progression graph, Coding tracks, devShark footer, practice sessions, skip feedback, lesson examples, workspace layout, merchandise configuration, wallet ledger, payment webhooks, order transitions, and 12-function budget.');
 }
 
 void main().catch((error) => {

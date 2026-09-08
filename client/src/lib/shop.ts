@@ -1,13 +1,17 @@
-// In-app token shop. The public catalogue is deliberately cosmetic-only:
-// tokens never bypass learning prerequisites or alter ranked progression.
+// The retired ring and flair inventory.
 //
-// The shop is PER SUBJECT (platform): purchases are paid from the active
-// subject's wallet and land in the active subject's inventory. Every item is
-// cosmetic: purchases never alter XP, scores, streaks, access, or progression.
+// These cosmetics are no longer sold (issue #169): the shop now offers devShark
+// merchandise and the crown, both bought through the server-owned wallet in
+// `client/src/lib/rewards.ts`. What an account already owns stays owned and
+// keeps rendering, which is why the catalogue, the inventory and the account
+// sync all remain — a local claim of ownership is never converted into
+// redeemable value, and `purchase` refuses.
+//
+// The inventory is PER SUBJECT (platform). Every item is cosmetic: none of it
+// ever altered XP, scores, streaks, access, or progression.
 
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
-import { spendTokens, getTokens } from './tokens';
 import { getGameConfig, type GameConfig } from './gameConfig';
 import { getSubject, useSubject, isSubjectId, type SubjectId } from './subjects';
 
@@ -166,25 +170,18 @@ export function useInventory(): Inventory {
   return map[subject] ?? EMPTY;
 }
 
-export type PurchaseResult = 'ok' | 'insufficient' | 'owned' | 'unknown';
+export type PurchaseResult = 'ok' | 'insufficient' | 'owned' | 'unknown' | 'retired';
 
 /**
- * Buy a product: spend its price from the active subject's wallet, then grant
- * it into the active subject's inventory. Cosmetics are a one-time purchase.
+ * Retired (issue #169). Rings and flairs are no longer for sale, and a browser
+ * may not mint an entitlement for itself in any case — the shop's purchases go
+ * through the server-owned wallet and the order service. Kept as a refusal
+ * rather than deleted so any old caller fails loudly instead of silently
+ * granting something.
  */
 export function purchase(id: string): PurchaseResult {
-  const product = byId.get(id);
-  if (!product) return 'unknown';
-  const price = priceOf(product);
-
-  const subject = getSubject();
-  const inv = readInventory(subject);
-  if (inv.owned.includes(id)) return 'owned';
-  if (getTokens() < price) return 'insufficient';
-  if (!spendTokens(price)) return 'insufficient';
-
-  writeInventory(subject, { ...inv, owned: [...inv.owned, id], doubleXp: 0 });
-  return 'ok';
+  if (!byId.has(id)) return 'unknown';
+  return 'retired';
 }
 
 /** Equip (or, if already equipped, unequip) an owned ring/flair. No-op if unowned. */

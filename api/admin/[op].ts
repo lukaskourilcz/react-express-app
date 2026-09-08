@@ -14,6 +14,7 @@ import { listReports, dismissReport, reportCounts } from '../../lib/reports-stor
 import { listAuthEvents } from '../../lib/auth-events-store';
 import { getGameSettings, saveGameSettings } from '../../lib/settings-store';
 import { inspectQuestionQuality } from '../../lib/question-quality';
+import { handleFulfilment } from '../../lib/rewards/fulfillment';
 
 const log = createLogger('admin');
 const supabase = createServiceClient();
@@ -57,6 +58,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
         return await settingsOp(req, res);
       case 'quality':
         return await qualityOp(req, res);
+      case 'fulfilment':
+        return await handleFulfilment(req, res, supabase);
       default:
         return jsonError(res, 404, 'unknown_op', `Unknown admin op: ${op}`);
     }
