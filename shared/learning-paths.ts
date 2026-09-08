@@ -412,19 +412,28 @@ export const LEARNING_PREFERENCE_META_KEY = 'devquiz_learning_preference_v1';
 /** The pre-existing track field, still written for older clients. */
 export const LEGACY_TRACK_META_KEY = 'devquiz_track';
 
-/** Read a stored preference defensively: a malformed record must never block
- * a learner, so an unusable value degrades to null rather than throwing. */
+/**
+ * Read a stored preference defensively.
+ *
+ * Salvages what it can rather than discarding the record: a base track it
+ * cannot recognise makes the preference unusable, but an unrecognised
+ * specialization only costs the specialization. A learner whose account picked
+ * up a bad role value — an older client, a hand-edited record, a role that no
+ * longer exists — keeps their track and simply has no specialization, instead
+ * of being handed back to the picker as though they had never chosen anything.
+ *
+ * The specialization is a preference, not an authority: nothing about access or
+ * completion is decided from it, so recovering it this way is safe.
+ */
 export function parseLearningPreference(value: unknown): LearningPreference | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
   if (raw.schemaVersion !== 1) return null;
   if (!isBaseTrack(raw.baseTrack)) return null;
-  const specialization = raw.specialization;
-  if (specialization !== null && specialization !== undefined && !isRoleSpecializationId(specialization)) return null;
   return {
     schemaVersion: 1,
     baseTrack: raw.baseTrack,
-    specialization: isRoleSpecializationId(specialization) ? specialization : null,
+    specialization: isRoleSpecializationId(raw.specialization) ? raw.specialization : null,
   };
 }
 

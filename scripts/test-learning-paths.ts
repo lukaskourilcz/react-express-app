@@ -81,7 +81,18 @@ async function main() {
     }
 
     /* ── 2. no answer leaks through a public projection ────────────────── */
+    // Two complementary checks. The structural one is exact: the manifest must
+    // not carry the shapes that hold answers at all. The textual one only fires
+    // on strings long enough that a coincidence is implausible — a correct
+    // option of "8" or "O(n)" appears all over a manifest legitimately, and
+    // matching on those would report a leak that is not there.
     const publicJson = JSON.stringify(manifest);
+    const LEAK_MATCH_MIN = 30;
+    for (const key of ['options', 'correct', 'questions', 'explanation', 'harness', 'hiddenTests', 'starter']) {
+      if (new RegExp(`"${key}"\\s*:`).test(publicJson)) {
+        fail(`${where}: the published manifest carries a "${key}" field`);
+      }
+    }
     for (const module of path.modules) {
       for (const activity of module.activities) {
         const summary = JSON.stringify(activitySummary(activity));
@@ -89,12 +100,15 @@ async function main() {
         if (/"explanation"/.test(summary)) fail(`${where}/${activity.id}: activity summary carries an explanation`);
         if (/"harness"/.test(summary)) fail(`${where}/${activity.id}: activity summary carries the grading harness`);
         for (const question of activity.questions ?? []) {
-          if (publicJson.includes(question.explanation.en)) {
+          if (publicJson.includes(question.id)) {
+            fail(`${where}/${question.id}: a question id reached the published manifest`);
+          }
+          if (question.explanation.en.length >= LEAK_MATCH_MIN && publicJson.includes(question.explanation.en)) {
             fail(`${where}/${question.id}: an explanation reached the published manifest`);
           }
-          const optionTexts = question.options.map((option) => option.en);
-          if (publicJson.includes(optionTexts[question.correct])) {
-            fail(`${where}/${question.id}: an option text reached the published manifest`);
+          const correctText = question.options[question.correct]?.en ?? '';
+          if (correctText.length >= LEAK_MATCH_MIN && publicJson.includes(correctText)) {
+            fail(`${where}/${question.id}: the correct option text reached the published manifest`);
           }
         }
         const solution = solutionFor(activity.id);

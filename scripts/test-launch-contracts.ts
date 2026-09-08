@@ -80,6 +80,13 @@ function mockResponse() {
   };
 }
 
+/** Corrupt a sealed token in a way that always changes its authentication tag,
+ * so a "must fail closed" assertion cannot pass or fail by luck. */
+function tamperToken(token: string): string {
+  const tail = token.slice(-4);
+  return token.slice(0, -4) + (tail === 'AAAA' ? 'BBBB' : 'AAAA');
+}
+
 async function main() {
   assert.equal(apiFiles(join(process.cwd(), 'api')).length, 12, 'Vercel function budget must remain exactly 12');
 
@@ -232,7 +239,12 @@ async function main() {
   assert.equal(decodedCoding?.taskId, 'js-double-numbers');
   assert.equal(decodedCoding?.roadmapAttemptId, 'attempt-0123456789abcd');
   assert.match(decodedCoding?.attemptId ?? '', /^[A-Za-z0-9_-]{16,64}$/);
-  assert.equal(decodeCodingSession(codingSession.replace(/.$/, (c) => (c === 'A' ? 'B' : 'A'))), null, 'tampered coding session must fail closed');
+  // Tamper the last FOUR characters, not the last one. A 16-byte GCM tag is
+  // 128 bits, which is not a multiple of 6, so the final base64url character
+  // carries only 2 significant bits and 4 ignored ones — its value is always
+  // A, Q, g or w. Flipping just that character changes nothing about a quarter
+  // of the time, and the assertion then fails for no security reason.
+  assert.equal(decodeCodingSession(tamperToken(codingSession)), null, 'tampered coding session must fail closed');
   assert.equal(decodeSession(codingSession), null, 'a coding session is never a quiz session');
   const connectState = encodeGithubConnectState('user-0001');
   assert.equal(decodeGithubConnectState(connectState)?.userId, 'user-0001');
@@ -421,9 +433,15 @@ async function main() {
   // The account preference is validated on read: a malformed record degrades
   // to null rather than blocking a learner or granting a role.
   assert.equal(parseLearningPreference({ schemaVersion: 1, baseTrack: 'frontend', specialization: null })?.baseTrack, 'frontend');
-  assert.equal(parseLearningPreference({ schemaVersion: 1, baseTrack: 'wizard', specialization: null }), null);
-  assert.equal(parseLearningPreference({ schemaVersion: 1, baseTrack: 'frontend', specialization: 'dsa-foundations' })?.specialization, null);
-  assert.equal(parseLearningPreference({ schemaVersion: 2, baseTrack: 'frontend' }), null);
+  assert.equal(parseLearningPreference({ schemaVersion: 1, baseTrack: 'wizard', specialization: null }), null,
+    'an unrecognised base track makes the preference unusable');
+  assert.equal(parseLearningPreference({ schemaVersion: 2, baseTrack: 'frontend' }), null,
+    'a future schema version is not guessed at');
+  // A bad specialization costs the specialization, not the track: the learner
+  // keeps the career choice they made instead of being sent back to the picker.
+  const salvaged = parseLearningPreference({ schemaVersion: 1, baseTrack: 'frontend', specialization: 'dsa-foundations' });
+  assert.equal(salvaged?.baseTrack, 'frontend', 'a valid base track survives a bad specialization');
+  assert.equal(salvaged?.specialization, null, 'DSA Foundations can never be stored as a role specialization');
 
   // The attempt session binds owner, enrollment, activity, purpose and both
   // versions, so a submit handler never has to trust any of them from the body.
@@ -443,7 +461,7 @@ async function main() {
   assert.equal(decodedPath?.userId, 'user-0001-abcdef');
   assert.deepEqual(decodedPath?.answerKey, [2, 0, 1, 3]);
   assert.equal(decodeLearningPathSession('v2.not.a.token'), null);
-  assert.equal(decodeLearningPathSession(pathSession.token.slice(0, -4) + 'AAAA'), null,
+  assert.equal(decodeLearningPathSession(tamperToken(pathSession.token)), null,
     'a tampered attempt session must not decode');
 
   const paths026 = readFileSync(join(process.cwd(), 'supabase', 'supabase-schema-026.sql'), 'utf8');
@@ -468,11 +486,18 @@ async function main() {
   for (const table of ['learning_path_drafts', 'learning_path_progress', 'learning_path_evidence', 'learning_path_attempts', 'learning_path_enrollments']) {
     assert.match(paths026, new RegExp(`DELETE FROM public\\.${table} WHERE user_id = p_user_id`), `account deletion must reach ${table}`);
   }
-  // A learning path awards no XP in v1: the migration must not touch the
-  // ledger, so a task reused from the coding catalogue is never paid twice.
-  assert.doesNotMatch(paths026, /record_verified_activity_xp/, 'no learning path awards XP in v1');
-  assert.doesNotMatch(paths026, /public\.user_xp/, 'no learning path writes the XP table');
-  assert.doesNotMatch(paths026, /public\.coding_progress/, 'a path pass must not write ordinary coding progress');
+  // A learning path awards no XP in v1: none of its write paths may touch the
+  // XP ledger or coding progress, so a task reused from the coding catalogue is
+  // never paid twice. Scoped to the learning-path functions — account erasure
+  // further down the file deletes XP and coding rows, and must keep doing so.
+  const pathWritePaths = paths026.slice(0, paths026.indexOf('CREATE OR REPLACE FUNCTION public.delete_user_data'));
+  assert.ok(pathWritePaths.length > 1000, 'expected the learning-path functions before delete_user_data');
+  assert.doesNotMatch(pathWritePaths, /record_verified_activity_xp/, 'no learning path awards XP in v1');
+  assert.doesNotMatch(pathWritePaths, /public\.user_xp/, 'no learning path writes the XP table');
+  assert.doesNotMatch(pathWritePaths, /public\.coding_progress/, 'a path pass must not write ordinary coding progress');
+  // Account erasure still reaches the older tables it always did.
+  assert.match(paths026, /DELETE FROM public\.user_xp WHERE user_id = p_user_id/);
+  assert.match(paths026, /DELETE FROM public\.coding_progress WHERE user_id = p_user_id/);
 
   // Reference solutions and hidden tests never ship: nothing under client/
   // may import lib/coding, and the catalogue keeps solutions in their own module.
