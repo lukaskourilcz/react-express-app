@@ -4,7 +4,7 @@ What was verified for the modernization epic, what was not, and why. Every row
 is pass, fail or **not run** — never "should be fine". A row that could not be
 checked in this environment says so and names what would check it.
 
-Recorded on 2026-09-08, against the branch `claude/resolve-open-issues-xnr0lv`.
+Recorded on 2026-09-08, against `ccee58b`, which is on `main`.
 
 ## Repository gates
 
