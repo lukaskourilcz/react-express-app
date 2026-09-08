@@ -3,6 +3,7 @@ import { jsonError, withRequestContext } from '../lib/http';
 import { getGameSettings } from '../lib/settings-store';
 import { isAiExplanationConfigured } from '../lib/ai-provider';
 import { aiFeaturesAllowed } from '../lib/product-scope';
+import { learningPathCapability } from '../lib/learning-paths/handlers';
 
 // Public, read-only subset of the game settings, so the client can render the
 // configured count/time options and hide disabled features. Deliberately omits
@@ -51,6 +52,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       explanationsEnabled: aiFeaturesAllowed() && isAiExplanationConfigured(),
     },
     devTips: s.devTips,
+    // Per path, so DSA Foundations can open while FDE content is still being
+    // authored. The client reads this to decide what to show; every write is
+    // authorized on the server regardless of what the client believes.
+    learningPaths: learningPathCapability(),
   });
 }
 
