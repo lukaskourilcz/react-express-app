@@ -484,7 +484,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {resources.map((resource) => (
             <li key={resource.url}>
               <a href={resource.url} target="_blank" rel="noreferrer">
-                <code>{resource.tag}</code>
+                {/* The technique keys and the pages they open are English, so
+                    they are marked as English: a Czech screen reader otherwise
+                    reads "async-await" with Czech phonetics. */}
+                <code lang="en">{resource.tag}</code>
                 <span className="cd-resources__source">{t(`coding.resources.source.${resource.source}` as never)}</span>
               </a>
             </li>

@@ -735,7 +735,11 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   if (!sessionQuestion) return jsonError(res, 400, 'bad_request', 'Question is not part of this learning session');
   const userId = await optionalAuthSub(req, res);
   if (userId === undefined) return;
-  if (!(await guardSessionStep(res, userId, session))) return;
+  // No progression check here. The sealed session is proof this server issued
+  // this exact step to this learner, and answering writes no progress — the
+  // gate that matters runs at issuance and again at completion. Re-checking on
+  // every answer would cost two reads per question and would strand a learner
+  // mid-level if they edited their plan in another tab.
 
   const attemptResult = await ensureAttempt(session, userId);
   if (attemptResult.error || !attemptResult.data) {
@@ -824,9 +828,9 @@ async function guardStep(
 }
 
 /**
- * The same gate at answer and completion time, for a learner already
- * identified. A level checks the full chain; a checkpoint or part test checks
- * plan membership here and carries its required level range into
+ * The same gate at completion time, for a learner already identified. A level
+ * checks the full chain; a checkpoint or part test checks plan membership here
+ * and carries its required level range into
  * `complete_verified_roadmap_attempt`, which refuses the record itself.
  */
 async function guardSessionStep(
