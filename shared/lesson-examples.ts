@@ -58,7 +58,7 @@ export const LESSON_EXAMPLES: readonly LessonExample[] = [
     title: { en: 'What map gives back', cs: 'Co vrací map' },
     blurb: {
       en: 'map always returns an array of the same length. Change what the callback returns and watch the shape stay the same.',
-      cs: 'map vždycky vrátí pole stejné délky. Změňte, co vrací callback, a sledujte, že tvar zůstane stejný.',
+      cs: 'map vždycky vrátí pole stejné délky. Změň, co vrací callback, a sleduj, že tvar zůstane stejný.',
     },
     code: 'const numbers = [1, 2, 3];\nconst result = numbers.map(number => number * 2);',
     calls: ['result', 'result.length', 'numbers'],
@@ -106,7 +106,7 @@ export const LESSON_EXAMPLES: readonly LessonExample[] = [
     title: { en: 'Which methods rewrite the array', cs: 'Které metody pole přepisují' },
     blurb: {
       en: 'sort and reverse change the array they are called on. slice and the spread give you a copy first.',
-      cs: 'sort a reverse mění pole, na kterém je zavoláte. slice a spread vám nejdřív dají kopii.',
+      cs: 'sort a reverse mění pole, na kterém je zavoláš. slice a spread ti nejdřív dají kopii.',
     },
     code: 'const original = [3, 1, 2];\nconst copy = [...original].sort((a, b) => a - b);',
     calls: ['copy', 'original'],
@@ -128,7 +128,7 @@ export const LESSON_EXAMPLES: readonly LessonExample[] = [
     title: { en: 'Narrowing a union', cs: 'Zúžení sjednocení' },
     blurb: {
       en: 'A check in the code is a check in the types too: after typeof, TypeScript knows which half of the union you are holding.',
-      cs: 'Podmínka v kódu je i podmínkou v typech: po typeof už TypeScript ví, kterou polovinu sjednocení držíte.',
+      cs: 'Podmínka v kódu je i podmínkou v typech: po typeof už TypeScript ví, kterou polovinu sjednocení držíš.',
     },
     code: 'const describe = (value: string | number): string =>\n  typeof value === "string" ? value.toUpperCase() : value.toFixed(1);',
     calls: ['describe("hi")', 'describe(2)'],
@@ -150,7 +150,7 @@ export const LESSON_EXAMPLES: readonly LessonExample[] = [
     title: { en: 'What a linear scan costs', cs: 'Kolik stojí lineární průchod' },
     blurb: {
       en: 'Counting the comparisons makes the growth concrete: double the input, double the work.',
-      cs: 'Když porovnání spočítáte, růst přestane být abstraktní: dvojnásobný vstup, dvojnásobná práce.',
+      cs: 'Když si porovnání spočítáš, růst přestane být abstraktní: dvojnásobný vstup, dvojnásobná práce.',
     },
     code: 'const comparisons = size => {\n  let count = 0;\n  const values = Array.from({ length: size }, (_, i) => i);\n  for (const value of values) { count++; if (value === -1) break; }\n  return count;\n};',
     calls: ['comparisons(10)', 'comparisons(20)', 'comparisons(40)'],
@@ -174,7 +174,7 @@ export const LESSON_EXAMPLES: readonly LessonExample[] = [
     title: { en: 'State decides what renders', cs: 'Stav rozhoduje, co se vykreslí' },
     blurb: {
       en: 'Setting state schedules a render; the value you read is the one from this render, not the one you just set. This example is illustrated rather than run — a React render needs the preview frame, which the coding workbench provides.',
-      cs: 'Nastavení stavu naplánuje vykreslení; hodnota, kterou čtete, patří tomuhle vykreslení, ne tomu, co jste právě nastavili. Tenhle příklad je jen ukázka, nespouští se — vykreslení Reactu potřebuje náhledový rám, který má programovací plocha.',
+      cs: 'Nastavení stavu naplánuje vykreslení; hodnota, kterou čteš, patří tomuhle vykreslení, ne tomu, co jsi právě nastavil(a). Tenhle příklad je jen ukázka, nespouští se — vykreslení Reactu potřebuje náhledový rám, který má programovací plocha.',
     },
     code: 'const [count, setCount] = useState(0);\n\nconst onClick = () => {\n  setCount(count + 1);\n  console.log(count); // still the value this render started with\n};',
     calls: [],

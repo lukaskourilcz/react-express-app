@@ -167,7 +167,7 @@ export const MERCH_CATALOG: readonly MerchProduct[] = [
     name: { en: 'Shark crown', cs: 'Žraločí koruna' },
     blurb: {
       en: 'An original devShark crown that sits on your avatar. It ships nothing, and it means nothing beyond itself: no rank, no access, no advantage.',
-      cs: 'Původní koruna devShark, která sedí na vašem avataru. Nic se neposílá a nic neznamená: žádná hodnost, žádný přístup, žádná výhoda.',
+      cs: 'Původní koruna devShark, která sedí na tvém avataru. Nic se neposílá a nic neznamená: žádná hodnost, žádný přístup, žádná výhoda.',
     },
     spec: {
       en: 'Drawn as an SVG, so it stays sharp at every avatar size and in both themes.',

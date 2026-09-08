@@ -16,19 +16,19 @@ export const FAILURE_ADVICE_VERSION = 1;
 const CATEGORY_ADVICE: Record<FailureCategory, Localized> = {
   boundary: {
     en: 'The ordinary cases work; an edge case does not. Read the prompt again for what it says about empty input, zero, negatives or the very first and last item, and try that case by hand.',
-    cs: 'Běžné případy fungují, hraniční ne. Přečtěte si znovu zadání — co říká o prázdném vstupu, nule, záporných číslech nebo o úplně prvním a posledním prvku — a zkuste si ten případ projít rukou.',
+    cs: 'Běžné případy fungují, hraniční ne. Přečti si znovu zadání — co říká o prázdném vstupu, nule, záporných číslech nebo o úplně prvním a posledním prvku — a zkus si ten případ projít rukou.',
   },
   mutation: {
     en: 'Something changed the input instead of producing a new value. Methods like push, splice, sort and reverse rewrite the array they are called on; copy first, or use a method that returns a new array.',
-    cs: 'Něco změnilo vstup místo toho, aby vytvořilo novou hodnotu. Metody jako push, splice, sort nebo reverse přepisují pole, na kterém je zavoláte; nejdřív si udělejte kopii, nebo použijte metodu, která vrací nové pole.',
+    cs: 'Něco změnilo vstup místo toho, aby vytvořilo novou hodnotu. Metody jako push, splice, sort nebo reverse přepisují pole, na kterém je zavoláš; nejdřív si udělej kopii, nebo použij metodu, která vrací nové pole.',
   },
   types: {
     en: 'TypeScript refused the code before it ran. Fix the reported type errors first — the tests cannot say anything useful until the compiler is happy.',
-    cs: 'TypeScript kód odmítl ještě před spuštěním. Nejdřív opravte hlášené typové chyby — dokud překladač neprojde, testy nic užitečného neřeknou.',
+    cs: 'TypeScript kód odmítl ještě před spuštěním. Nejdřív oprav hlášené typové chyby — dokud překladač neprojde, testy nic užitečného neřeknou.',
   },
   'output-shape': {
     en: 'The values look close but the container does not match: an array where a string was asked for, a nested array, or one item too many. Compare the expected and the actual result side by side.',
-    cs: 'Hodnoty vypadají skoro dobře, ale nesedí obal: pole místo řetězce, zanořené pole nebo o prvek navíc. Porovnejte očekávaný a skutečný výsledek vedle sebe.',
+    cs: 'Hodnoty vypadají skoro dobře, ale nesedí obal: pole místo řetězce, zanořené pole nebo o prvek navíc. Porovnej očekávaný a skutečný výsledek vedle sebe.',
   },
   'missing-return': {
     en: 'The function produced nothing. A block body needs an explicit return, and a callback inside map or reduce needs one too.',
@@ -36,19 +36,19 @@ const CATEGORY_ADVICE: Record<FailureCategory, Localized> = {
   },
   threw: {
     en: 'The code threw before the tests could check anything. Read the error, then check the values it was working with just above that line.',
-    cs: 'Kód spadl dřív, než testy stihly cokoli ověřit. Přečtěte si chybu a pak se podívejte na hodnoty, se kterými se pracovalo o řádek výš.',
+    cs: 'Kód spadl dřív, než testy stihly cokoli ověřit. Přečti si chybu a pak se podívej na hodnoty, se kterými se pracovalo o řádek výš.',
   },
   timeout: {
     en: 'The code did not finish in time, which usually means a loop never ends. Check that whatever the loop is waiting for actually changes inside it.',
-    cs: 'Kód nedoběhl včas, což skoro vždy znamená nekonečný cyklus. Ověřte, že se to, na co cyklus čeká, uvnitř opravdu mění.',
+    cs: 'Kód nedoběhl včas, což skoro vždy znamená nekonečný cyklus. Ověř, že se to, na co cyklus čeká, uvnitř opravdu mění.',
   },
   render: {
     en: 'The component runs; it just does not do what the test asked for. The failing test\'s name says which behaviour is missing — check what the component shows in that state, and whether the event it listens for really updates the state it renders from.',
-    cs: 'Komponenta běží, jen nedělá to, co test chce. Název padajícího testu říká, které chování chybí — ověřte, co komponenta v tomto stavu zobrazuje a jestli událost, kterou poslouchá, opravdu mění stav, ze kterého se vykresluje.',
+    cs: 'Komponenta běží, jen nedělá to, co test chce. Název padajícího testu říká, které chování chybí — ověř, co komponenta v tomto stavu zobrazuje a jestli událost, kterou poslouchá, opravdu mění stav, ze kterého se vykresluje.',
   },
   'hidden-only': {
     en: 'Every visible test passes, and a further case does not. Re-read the prompt for a rule the shown tests do not exercise, and think about the inputs it would be easy to forget.',
-    cs: 'Všechny viditelné testy prošly, další případ ne. Přečtěte si zadání a hledejte pravidlo, které ukázané testy nezkouší, a zamyslete se nad vstupy, na které se snadno zapomene.',
+    cs: 'Všechny viditelné testy prošly, další případ ne. Přečti si zadání a hledej pravidlo, které ukázané testy nezkouší, a zamysli se nad vstupy, na které se snadno zapomene.',
   },
 };
 
@@ -79,19 +79,19 @@ const TASK_ADVICE: Record<string, Partial<Record<FailureCategory, Localized>>> =
   'js-unique-values': {
     'output-shape': {
       en: 'A Set is not an array. Spread it, or use Array.from, so the result is an array again.',
-      cs: 'Set není pole. Rozbalte ho spreadem nebo použijte Array.from, aby byl výsledek zase pole.',
+      cs: 'Set není pole. Rozbal ho spreadem nebo použij Array.from, aby byl výsledek zase pole.',
     },
   },
   'js-reverse-string': {
     threw: {
       en: 'Strings have no reverse method. Turn the text into an array of characters first, reverse that, and join it back.',
-      cs: 'Řetězce metodu reverse nemají. Nejdřív z textu udělejte pole znaků, to obraťte a pak zase spojte.',
+      cs: 'Řetězce metodu reverse nemají. Nejdřív z textu udělej pole znaků, to obrať a pak zase spoj.',
     },
   },
   'js-word-count': {
     boundary: {
       en: 'Splitting an empty or whitespace-only string still yields one entry. Decide what that case should return before you count.',
-      cs: 'Rozdělení prázdného řetězce nebo řetězce jen z mezer stejně vrátí jednu položku. Rozhodněte se, co má takový případ vrátit, ještě než začnete počítat.',
+      cs: 'Rozdělení prázdného řetězce nebo řetězce jen z mezer stejně vrátí jednu položku. Rozhodni se, co má takový případ vrátit, ještě než začneš počítat.',
     },
   },
 };

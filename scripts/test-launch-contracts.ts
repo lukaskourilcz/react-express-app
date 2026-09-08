@@ -80,6 +80,7 @@ import {
   isCodingSectionTrack,
 } from '../shared/coding-catalog';
 import { readFileSync as readSource } from 'node:fs';
+import { cs } from '../client/src/i18n/translations.cs';
 import {
   SESSION_MINUTES,
   buildPracticeSession,
@@ -841,6 +842,20 @@ async function main() {
   assert.doesNotMatch(codingCss, /data-focus/, 'focus mode must not move a split the separator still reports');
   const mediaSource = readSource(join(process.cwd(), 'client/src/lib/useMediaQuery.ts'), 'utf8');
   assert.match(mediaSource, /any-pointer: fine/, 'zooming a desktop page must not withhold the editor');
+
+  /* ── Czech speaks to the learner as "ty", everywhere ─────────────────── */
+  // The dictionary has always addressed the learner informally, which is what
+  // Czech developer products do. Formal "vy" in a handful of screens reads as
+  // two different products talking. Four strings predate this rule; they are
+  // named here rather than rewritten in a branch that did not write them.
+  const FORMAL_CZECH = /(va[šs]e|va[šs]eho|va[šs]em|va[šs]i|va[šs]ich|v[áa]m |v[áa]s |v[áa]mi|\bjste\b|Zkuste|P[řr]e[čc]t[ěe]te|Ov[ěe][řr]te|Porovnejte|Vyberte|Dokon[čc]ete|P[řr]ihlaste|Zkontrolujte)/i;
+  const FORMAL_CZECH_LEGACY = new Set([
+    'auth.signInFailed', 'auth.signOutFailed', 'common.offline', 'play.connectionStale',
+  ]);
+  for (const [key, value] of Object.entries(cs)) {
+    if (FORMAL_CZECH_LEGACY.has(key)) continue;
+    assert.doesNotMatch(value, FORMAL_CZECH, `${key} addresses the learner formally; the Czech dictionary uses "ty"`);
+  }
   assert.match(workbenchSource, /panelRefs\.current\[tab\]\?\.focus\(\)/, 'focus must land on the result after grading');
 
   /* ── the shop ships closed until it is configured (#167, #169, #171) ── */
@@ -964,7 +979,7 @@ async function main() {
   // Addresses reach the operator who asked for them, never a log line.
   assert.doesNotMatch(fulfilmentSource, /logEvent\([^)]*address/, 'addresses must never be logged');
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, learner profile, progression graph, Coding tracks, devShark footer, practice sessions, skip feedback, lesson examples, workspace layout, merchandise configuration, wallet ledger, payment webhooks, order transitions, and 12-function budget.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, learner profile, progression graph, Coding tracks, devShark footer, practice sessions, skip feedback, lesson examples, workspace layout, Czech register, merchandise configuration, wallet ledger, payment webhooks, order transitions, and 12-function budget.');
 }
 
 void main().catch((error) => {

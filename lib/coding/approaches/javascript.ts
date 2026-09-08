@@ -40,7 +40,7 @@ export const JAVASCRIPT_APPROACHES: Record<string, CodingApproach[]> = {
       },
       tradeoffs: {
         en: 'More lines to read, and the array has to be built by hand. Worth it when you need to skip or emit more than one value per entry — which map cannot do.',
-        cs: 'Víc řádků ke čtení a pole se staví ručně. Vyplatí se, když potřebujete nějakou položku přeskočit nebo z ní vyrobit víc hodnot — to map neumí.',
+        cs: 'Víc řádků ke čtení a pole se staví ručně. Vyplatí se, když potřebuješ nějakou položku přeskočit nebo z ní vyrobit víc hodnot — to map neumí.',
       },
     },
   ],
@@ -74,7 +74,7 @@ export const JAVASCRIPT_APPROACHES: Record<string, CodingApproach[]> = {
       },
       tradeoffs: {
         en: 'Three lines instead of one, and no starting-value trap. This is the version to reach for when the accumulation grows past a single addition.',
-        cs: 'Tři řádky místo jednoho a žádná past s počáteční hodnotou. K téhle verzi sáhněte, jakmile je akumulace složitější než jedno sčítání.',
+        cs: 'Tři řádky místo jednoho a žádná past s počáteční hodnotou. K téhle verzi sáhni, jakmile je akumulace složitější než jedno sčítání.',
       },
     },
   ],
@@ -92,7 +92,7 @@ export const JAVASCRIPT_APPROACHES: Record<string, CodingApproach[]> = {
       },
       tradeoffs: {
         en: 'Nothing to tune. When you need your own idea of sameness, a Set cannot express it.',
-        cs: 'Není co ladit. Jakmile potřebujete vlastní pojetí shody, Set ho nevyjádří.',
+        cs: 'Není co ladit. Jakmile potřebuješ vlastní pojetí shody, Set ho nevyjádří.',
       },
     },
     {
@@ -142,7 +142,7 @@ export const JAVASCRIPT_APPROACHES: Record<string, CodingApproach[]> = {
       },
       tradeoffs: {
         en: 'Works on any length and allocates nothing, at the cost of a starting value you have to justify.',
-        cs: 'Funguje na libovolné délce a nic nealokuje, za cenu počáteční hodnoty, kterou musíte obhájit.',
+        cs: 'Funguje na libovolné délce a nic nealokuje, za cenu počáteční hodnoty, kterou musíš obhájit.',
       },
     },
   ],

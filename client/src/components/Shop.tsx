@@ -317,7 +317,7 @@ function ProductCard({ listing, lang, balance, owned, equipped, busy, onBuy, onE
             {/* A disabled button with no sentence next to it is a dead end.
                 Say which of the three reasons it is. */}
             {!affordable && availability.tokens && <Text type="supporting" size="xsm" color="secondary">{t('shop.insufficient')}</Text>}
-            {!availability.tokens && <Text type="supporting" size="xsm" color="secondary">{t('shop.noTokenPrice')}</Text>}
+            {!availability.tokens && <Text type="supporting" size="xsm" color="secondary">{t('shop.noTokenPriceNote')}</Text>}
             {availability.tokens && affordable && product.kind === 'physical' && !showAddress && (
               <Text type="supporting" size="xsm" color="secondary">{t('shop.addressNeeded')}</Text>
             )}
