@@ -34,6 +34,17 @@ import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } fr
 import { runInSandbox } from '../lib/coding/sandbox';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
+import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
+import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor as pathAvailability } from '../lib/learning-paths/catalog';
+import { gradeCheck } from '../lib/learning-paths/grade';
+import {
+  LEARNING_PATH_IDS,
+  ROLE_SPECIALIZATION_IDS,
+  isRoleSpecializationId,
+  parseLearningPreference,
+  pathGuidedComplete,
+  pathInventory,
+} from '../shared/learning-paths';
 import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS } from '../shared/coding-catalog';
 import { CODING_BADGES } from '../shared/badges';
 import { CODING_INDEX } from '../shared/coding-index';
@@ -131,6 +142,13 @@ function mockResponse() {
     end() { return this; },
     headers,
   };
+}
+
+/** Corrupt a sealed token in a way that always changes its authentication tag,
+ * so a "must fail closed" assertion cannot pass or fail by luck. */
+function tamperToken(token: string): string {
+  const tail = token.slice(-4);
+  return token.slice(0, -4) + (tail === 'AAAA' ? 'BBBB' : 'AAAA');
 }
 
 async function main() {
@@ -285,12 +303,12 @@ async function main() {
   assert.equal(decodedCoding?.taskId, 'js-double-numbers');
   assert.equal(decodedCoding?.roadmapAttemptId, 'attempt-0123456789abcd');
   assert.match(decodedCoding?.attemptId ?? '', /^[A-Za-z0-9_-]{16,64}$/);
-  // Flip the first payload character, not the last: base64url's final character
-  // can carry padding bits only, so changing it sometimes decodes to the very
-  // same bytes and the assertion passes or fails at random.
-  const tamperedCoding = codingSession.replace(/^(v2\.)(.)/, (_m, prefix: string, c: string) => `${prefix}${c === 'A' ? 'B' : 'A'}`);
-  assert.notEqual(tamperedCoding, codingSession, 'the tamper must actually change the token');
-  assert.equal(decodeCodingSession(tamperedCoding), null, 'tampered coding session must fail closed');
+  // Tamper the last FOUR characters, not the last one. A 16-byte GCM tag is
+  // 128 bits, which is not a multiple of 6, so the final base64url character
+  // carries only 2 significant bits and 4 ignored ones — its value is always
+  // A, Q, g or w. Flipping just that character changes nothing about a quarter
+  // of the time, and the assertion then fails for no security reason.
+  assert.equal(decodeCodingSession(tamperToken(codingSession)), null, 'tampered coding session must fail closed');
   assert.equal(decodeSession(codingSession), null, 'a coding session is never a quiz session');
   const connectState = encodeGithubConnectState('user-0001');
   assert.equal(decodeGithubConnectState(connectState)?.userId, 'user-0001');
@@ -419,18 +437,146 @@ async function main() {
   assert.match(coding, /DELETE FROM public\.github_connections WHERE user_id = p_user_id/);
   assert.doesNotMatch(coding, /access_token|refresh_token|provider_token/, 'the garden must never store a user token');
 
-  // Reference solutions, hidden tests, authored puzzles and the curated
-  // approaches never ship: nothing under client/ may import the server's
-  // lib/coding directory, and the catalogue keeps solutions in their own module.
-  // The pattern matches the directory, not the prefix, so a client module whose
-  // own name begins with "coding" (client/src/lib/codingLibrary.ts) is not a
-  // false positive.
+  /* ── learning paths ─────────────────────────────────────────────────── */
+  // FDE is the only role specialization; DSA Foundations is a skill path and
+  // must never become a fourth base track or a second role.
+  assert.deepEqual([...ROLE_SPECIALIZATION_IDS], ['fde'], 'FDE must remain the only role specialization');
+  assert.deepEqual([...LEARNING_PATH_IDS], ['fde', 'dsa-foundations']);
+  assert.ok(!isRoleSpecializationId('dsa-foundations'), 'DSA Foundations is not a role');
+  const dsaPath = LEARNING_PATHS.find((path) => path.id === 'dsa-foundations');
+  const fdePath = LEARNING_PATHS.find((path) => path.id === 'fde');
+  assert.ok(dsaPath && fdePath, 'both learning paths must be published');
+  assert.equal(dsaPath!.kind, 'skill_path');
+  assert.equal(fdePath!.kind, 'role_specialization');
+
+  // A path opens only when the deployment switch is on, the content validates
+  // and the storage is installed. Each is checked separately so an operator
+  // can tell a half-written curriculum from a closed one.
+  assert.equal(pathEnabledInEnv('fde', {}), false, 'a path is off unless the deployment says otherwise');
+  assert.equal(pathEnabledInEnv('fde', { LEARNING_PATH_FDE_ENABLED: 'true' }), true);
+  assert.equal(pathEnabledInEnv('dsa-foundations', { LEARNING_PATH_FDE_ENABLED: 'true' }), false,
+    'the two paths have independent switches, so either can launch alone');
+  assert.equal(pathAvailability({ path: dsaPath!, enabled: false, storageInstalled: true }), 'disabled');
+  assert.equal(pathAvailability({ path: dsaPath!, enabled: true, storageInstalled: false }), 'storage_missing');
+
+  // The published manifest is answer-free. Every option a learner might be
+  // shown arrives shuffled with the key sealed in the attempt session, so the
+  // manifest must not contain the correct option text or its explanation.
+  for (const path of LEARNING_PATHS) {
+    const manifestJson = JSON.stringify(publicManifest(path));
+    assert.doesNotMatch(manifestJson, /"correct"\s*:/, `${path.id}: the manifest carries a correct index`);
+    assert.doesNotMatch(manifestJson, /"harness"\s*:/, `${path.id}: the manifest carries a grading harness`);
+    for (const module of path.modules) {
+      for (const activity of module.activities) {
+        for (const question of activity.questions ?? []) {
+          assert.ok(!manifestJson.includes(question.explanation.en), `${question.id}: explanation leaked into the manifest`);
+        }
+      }
+    }
+    // No path awards XP in v1, so no manifest may name one.
+    assert.doesNotMatch(manifestJson, /"xp"/i, `${path.id}: a learning path awards no XP in v1`);
+  }
+
+  // An objective check cannot be passed without the sealed key, which is what
+  // stops a forged or replayed session from minting a verified pass.
+  const checkActivity = LEARNING_PATHS
+    .flatMap((path) => path.modules.flatMap((module) => module.activities))
+    .find((activity) => activity.kind === 'check' && (activity.questions?.length ?? 0) > 0);
+  assert.ok(checkActivity, 'at least one objective check must exist');
+  const checkKey = checkActivity!.questions!.map((question) => question.correct);
+  assert.equal(gradeCheck(checkActivity!, checkKey, checkKey).state, 'verified_pass');
+  assert.notEqual(gradeCheck(checkActivity!, undefined, checkKey).state, 'verified_pass',
+    'a check graded without a sealed key must never pass');
+
+  // A path with unmet requirements is not complete, and an optional
+  // placement module never counts toward completion.
+  assert.equal(pathGuidedComplete(publicManifest(dsaPath!), new Map()), false);
+  const dsaInventory = pathInventory(publicManifest(dsaPath!));
+  assert.ok(dsaInventory.modules > 0, 'DSA Foundations must publish required modules');
+
+  // The account preference is validated on read: a malformed record degrades
+  // to null rather than blocking a learner or granting a role.
+  assert.equal(parseLearningPreference({ schemaVersion: 1, baseTrack: 'frontend', specialization: null })?.baseTrack, 'frontend');
+  assert.equal(parseLearningPreference({ schemaVersion: 1, baseTrack: 'wizard', specialization: null }), null,
+    'an unrecognised base track makes the preference unusable');
+  assert.equal(parseLearningPreference({ schemaVersion: 2, baseTrack: 'frontend' }), null,
+    'a future schema version is not guessed at');
+  // A bad specialization costs the specialization, not the track: the learner
+  // keeps the career choice they made instead of being sent back to the picker.
+  const salvaged = parseLearningPreference({ schemaVersion: 1, baseTrack: 'frontend', specialization: 'dsa-foundations' });
+  assert.equal(salvaged?.baseTrack, 'frontend', 'a valid base track survives a bad specialization');
+  assert.equal(salvaged?.specialization, null, 'DSA Foundations can never be stored as a role specialization');
+
+  // The attempt session binds owner, enrollment, activity, purpose and both
+  // versions, so a submit handler never has to trust any of them from the body.
+  const pathSession = encodeLearningPathSession({
+    attemptId: 'attempt-0123456789abcd',
+    enrollmentId: 'enroll-0123456789abcd',
+    userId: 'user-0001-abcdef',
+    pathId: 'dsa-foundations',
+    activityId: 'dsa-v1-d01-checks',
+    activityKind: 'check',
+    purpose: 'exercise',
+    curriculumVersion: 1,
+    rubricVersion: 1,
+    answerKey: [2, 0, 1, 3],
+  });
+  const decodedPath = decodeLearningPathSession(pathSession.token);
+  assert.equal(decodedPath?.userId, 'user-0001-abcdef');
+  assert.deepEqual(decodedPath?.answerKey, [2, 0, 1, 3]);
+  assert.equal(decodeLearningPathSession('v2.not.a.token'), null);
+  assert.equal(decodeLearningPathSession(tamperToken(pathSession.token)), null,
+    'a tampered attempt session must not decode');
+
+  const paths026 = readFileSync(join(process.cwd(), 'supabase', 'supabase-schema-026.sql'), 'utf8');
+  for (const table of ['learning_path_enrollments', 'learning_path_attempts', 'learning_path_evidence', 'learning_path_progress', 'learning_path_drafts']) {
+    assert.match(paths026, new RegExp(`CREATE TABLE IF NOT EXISTS public\\.${table}`), `migration 026 must create ${table}`);
+    assert.match(paths026, new RegExp(`ALTER TABLE public\\.${table} ENABLE ROW LEVEL SECURITY`), `${table} needs RLS`);
+  }
+  for (const fn of ['upsert_learning_path_enrollment', 'open_learning_path_attempt', 'accept_learning_path_result', 'save_learning_path_draft', 'delete_learning_path_data', 'delete_user_data', 'purge_expired_learning_data']) {
+    assert.match(paths026, new RegExp(`CREATE OR REPLACE FUNCTION public\\.${fn}\\(`), `migration 026 must define ${fn}`);
+    assert.match(paths026, new RegExp(`REVOKE ALL ON FUNCTION public\\.${fn}\\(`), `${fn} must be service-role only`);
+  }
+  // learning_path_attempts holds grading material. Owning the row is not a
+  // reason to read it, so it must have RLS on and no SELECT policy or grant.
+  assert.doesNotMatch(paths026, /CREATE POLICY "learning_path_attempts_select_own"/,
+    'learning_path_attempts must not expose grading material to its owner');
+  assert.doesNotMatch(paths026, /GRANT SELECT ON public\.learning_path_attempts/,
+    'learning_path_attempts must not be granted to a browser role');
+  for (const table of ['learning_path_enrollments', 'learning_path_evidence', 'learning_path_progress', 'learning_path_drafts']) {
+    assert.match(paths026, new RegExp(`GRANT SELECT ON public\\.${table} TO authenticated`), `${table} owner reads need the grant as well as the policy`);
+  }
+  assert.match(paths026, /user_id = \(SELECT auth\.uid\(\)\)::text/, 'owner policies must compare against the verified caller');
+  for (const table of ['learning_path_drafts', 'learning_path_progress', 'learning_path_evidence', 'learning_path_attempts', 'learning_path_enrollments']) {
+    assert.match(paths026, new RegExp(`DELETE FROM public\\.${table} WHERE user_id = p_user_id`), `account deletion must reach ${table}`);
+  }
+  // A learning path awards no XP in v1: none of its write paths may touch the
+  // XP ledger or coding progress, so a task reused from the coding catalogue is
+  // never paid twice. Scoped to the learning-path functions — account erasure
+  // further down the file deletes XP and coding rows, and must keep doing so.
+  const pathWritePaths = paths026.slice(0, paths026.indexOf('CREATE OR REPLACE FUNCTION public.delete_user_data'));
+  assert.ok(pathWritePaths.length > 1000, 'expected the learning-path functions before delete_user_data');
+  assert.doesNotMatch(pathWritePaths, /record_verified_activity_xp/, 'no learning path awards XP in v1');
+  assert.doesNotMatch(pathWritePaths, /public\.user_xp/, 'no learning path writes the XP table');
+  assert.doesNotMatch(pathWritePaths, /public\.coding_progress/, 'a path pass must not write ordinary coding progress');
+  // Account erasure still reaches the older tables it always did.
+  assert.match(paths026, /DELETE FROM public\.user_xp WHERE user_id = p_user_id/);
+  assert.match(paths026, /DELETE FROM public\.coding_progress WHERE user_id = p_user_id/);
+
+  // Reference solutions, hidden tests, authored puzzles, the curated approaches
+  // and the learning-path graders never ship: nothing under client/ may import
+  // the server's lib/coding or lib/learning-paths directories, and the
+  // catalogue keeps solutions in their own module. Each pattern matches the
+  // directory, not the prefix, so a client module whose own name begins with
+  // "coding" (client/src/lib/codingLibrary.ts) is not a false positive.
   const SERVER_CODING_IMPORT = /lib\/coding(\/|['"`])/;
+  const SERVER_PATHS_IMPORT = /lib\/learning-paths(\/|['"`])/;
   const clientFiles = readdirSync(join(process.cwd(), 'client', 'src'), { recursive: true }) as string[];
   for (const file of clientFiles) {
     if (!/\.(ts|tsx)$/.test(file)) continue;
     const text = readFileSync(join(process.cwd(), 'client', 'src', file), 'utf8');
     assert.doesNotMatch(text, SERVER_CODING_IMPORT, `client/src/${file} must not import lib/coding`);
+    assert.doesNotMatch(text, SERVER_PATHS_IMPORT, `client/src/${file} must not import lib/learning-paths`);
   }
   // The sandbox frame has an opaque origin, so its module script is a CORS
   // load: without Access-Control-Allow-Origin on its assets the harness never
@@ -457,7 +603,10 @@ async function main() {
   }
   const catalogSource = readFileSync(join(process.cwd(), 'lib/coding/catalog.ts'), 'utf8');
   assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue loader must not import the solutions');
-  for (const key of ['codingRun', 'codingDraft', 'codingReveal', 'githubConnect', 'githubSync']) {
+  const pathCatalogSource = readFileSync(join(process.cwd(), 'lib/learning-paths/catalog.ts'), 'utf8');
+  assert.doesNotMatch(pathCatalogSource, /from '\.\/solutions/, 'the learning-path catalogue must not import the solutions');
+  for (const key of ['codingRun', 'codingDraft', 'codingReveal', 'githubConnect', 'githubSync',
+                     'learningPathStart', 'learningPathSubmit', 'learningPathDraft', 'learningPathEnroll']) {
     assert.ok(key in RATE_LIMITS, `rate limit ${key} must exist`);
   }
 

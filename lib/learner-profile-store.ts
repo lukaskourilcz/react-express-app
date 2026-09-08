@@ -27,7 +27,7 @@ export const isTableMissing = (error: { message?: string; code?: string } | null
 
 export class ProfileMigrationMissing extends Error {
   constructor() {
-    super('learner profile migration 026 is not installed');
+    super('learner profile migration 027 is not installed');
     this.name = 'ProfileMigrationMissing';
   }
 }

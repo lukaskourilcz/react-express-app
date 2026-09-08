@@ -210,7 +210,7 @@ export async function handlePaymentWebhook(req: VercelRequest, res: VercelRespon
       .select('event_id'),
   );
   if (claimed.error) {
-    if (isTableMissing(claimed.error)) return jsonError(res, 503, 'migration_required', 'Rewards migration 029 is not installed');
+    if (isTableMissing(claimed.error)) return jsonError(res, 503, 'migration_required', 'Rewards migration 030 is not installed');
     return jsonError(res, 500, 'db_error', 'Could not record that event');
   }
   if ((claimed.data ?? []).length === 0) {
@@ -230,7 +230,7 @@ export async function handlePaymentWebhook(req: VercelRequest, res: VercelRespon
     p_provider_ref: event.providerRef,
   }));
   if (moved.error) {
-    if (isRpcMissing(moved.error)) return jsonError(res, 503, 'migration_required', 'Rewards migration 029 is not installed');
+    if (isRpcMissing(moved.error)) return jsonError(res, 503, 'migration_required', 'Rewards migration 030 is not installed');
     return jsonError(res, 500, 'db_error', 'Could not apply that event');
   }
   const result = (moved.data ?? {}) as { applied?: boolean; error?: string; status?: string };

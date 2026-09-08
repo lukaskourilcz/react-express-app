@@ -21,6 +21,13 @@ server owns answers, grading, scores, and XP.
   freezes), collectible cosmetic **Shark Cards**, and a read-only **study
   advisor**.
 - A devShark **typing racer** and per-subject flashcards.
+- Two optional devShark **learning paths**: the **Forward Deployed Engineer**
+  role specialization, which sits on top of the Fullstack/Frontend/Backend
+  track a learner already chose, and **DSA Foundations**, a focused skill path
+  entered directly with no track, role or XP rank required. Both grade through
+  the existing server sandbox, keep verified checks visibly apart from
+  self-reviewed writing, and award no XP — so a task reused from the coding
+  catalogue is never rewarded twice. Neither claims a certification.
 - A devShark **Coding** section: 245 tasks across JavaScript, TypeScript, React,
   and system design, graded on the server (QuickJS sandbox, TypeScript compiler,
   sealed design keys), with authored hint ladders that end in documentation,

@@ -1,119 +1,55 @@
-# Modernization release: acceptance matrix and rollout
+# devShark learning paths: implementation entry point
 
-The record for issue #174. It states, per child of epic #150, what was built on
-this branch, what verifies it, and what is not done. Nothing below is marked
-complete on the strength of a plan: a row is only "implemented" when code exists
-and a check exercises it.
+Prepared 8 September 2026. Documentation and issues only; application implementation has not started in this change.
 
-Two things roll out separately, because they carry different risk:
+## Product structure
 
-- **Learning and profile** — issues #151–#166. Additive schema, additive API ops,
-  and surfaces that fall back to their previous behaviour when the new data is
-  absent.
-- **Commerce** — issues #167–#173. Ships switched off. No supplier, no price, no
-  payment provider, so nothing can be bought; see `docs/rewards-launch.md` for
-  what a person has to decide before any of it opens.
+- Career-oriented learning: **Fullstack / Frontend / Backend → optional Forward Deployed Engineer specialization**.
+- Focused learning: **DSA Foundations**, directly accessible with no FDE or base-track enrollment required.
+- Both can coexist. They share bounded infrastructure and existing coding execution, with independent content, enrollment, progress and release readiness.
 
-## Acceptance matrix
+## Read in this order
 
-| Issue | Built | Verified by | Not done |
-| --- | --- | --- | --- |
-| #151 Learner profile | `shared/learner-profile.ts`, `lib/learner-profile-store.ts`, `?op=learner-profile`, `LearnerProfileDialog`, `LearningPlanCard`, migration 026 | `test:launch`: validation, partial drafts, version bump re-asks, plan-change detection | OAuth resume is exercised through the same op as email; no browser test drives a real OAuth round trip |
-| #152 Progression graph | `shared/progression.ts`, `lib/progression.ts`, guards in `api/quiz/roadmap.ts` on issuance, answer and completion | `test:launch`: acyclic graph, reachable first step for all twelve selections, level and checkpoint gates, forged step numbers, out-of-plan topics, diagnostics not bypassing | Cross-path unlocks beyond the FDE bridge are declared but have no authored content to link to |
-| #153 Personalised surfaces | `RoadmapTree` plan mode, `PlanSummary`, Today filtered by eligibility, the exact "More learning paths…" note in EN and CS | `test:launch` (eligibility shape), `check:responsive` on `/roadmap` and `/learn` | Locked bookmarks are explained in the library screen; the roadmap tree does not yet list them |
-| #154 Code-ordering puzzles | `shared/coding-puzzle.ts`, `lib/coding/puzzles/`, `CodePuzzle`, sealed permutation, migration 026 evidence table | `test:coding`: every accepted arrangement passes the task's own tests, every distractor breaks it, grading follows the sealed permutation. `test:db`: a pass clears the level unverified, never writes coding progress, is idempotent per sealed attempt, and clears nothing on another learner's attempt | 12 puzzles, all JavaScript. TypeScript and React tasks have none, so those stay desktop-pending on a phone |
-| #155 Resources panel | `resourcesFor()`, Resources tab, registry check | `test:coding`: no unreviewed host, no playground or solution link, no duplicate, every link is a technique of its task | — |
-| #156 Failure-specific hints | `shared/coding-failures.ts`, `lib/coding/failure-hints.ts`, verdict carries the advice | `test:coding`: no hidden fixture, internal error or solution quoted; both languages; every category has a fallback; the classifier separates compile, runtime and test, and reads no value-shaped cause into a failure that carries no value | Nine categories. Task-specific advice exists for six tasks; the rest fall back to the category |
-| #157 Library | `shared/coding-library.ts`, `lib/coding/library-handlers.ts`, `CodingLibraryScreen`, migration 027 | `test:coding`: name normalisation, id validation. Limits enforced in the API and by a database trigger | Export of the library as a file is not implemented; deletion is covered by account erasure |
-| #158 Curated approaches | `shared/coding-approaches.ts`, `lib/coding/approaches/`, `?resource=coding-approaches`, Approaches tab | `test:coding`: every approach passes the task's own tests, complexities are from the documented set, both languages | 6 tasks covered, all JavaScript. DSA comparisons wait on the DSA catalogue (#145–#148, outside this branch) |
-| #159 Practice sessions | `shared/practice-session.ts`, `lib/coding/practice-handlers.ts`, `PracticeSessionScreen`, migration 028 | `test:launch`: determinism, budget, review share, skip exclusion, touch preference, honest empty queue | — |
-| #160 Skip reasons | `shared/coding-skip.ts`, `?op=coding-skip`, `SkipPanel` | `test:launch`: the handler is asserted not to touch the verdict, XP or level tables | — |
-| #161 Search and filters | `CodingFilters.tsx`, URL-backed state, `CodingFilterBar` | `test:launch` (section tracks), `check:responsive` on `/coding/javascript` | A technique or track filter narrows the ladder in place; only a search flattens it and hides locked tasks |
-| #162 Lesson examples | `shared/lesson-examples.ts`, `LessonExample.tsx`, mounted in the level intro | `test:launch`: coverage manifest spans JS, TS, React and DSA; runnable examples print something; trace-only examples ask for no evaluation; the component cannot reach the submit path | 6 examples. The React one is trace-only because a render needs the preview frame |
-| #163 Repair exercises | `debug` metadata through to the summaries, four authored JavaScript repairs | `test:coding`: each reference repair passes, each broken starter fails, the summary carries the format, and no repair can be drawn as a Learn level's coding task | 4 repairs, all JavaScript |
-| #164 Workspace | Two-column layout with a draggable, keyboard-operable separator, focus mode, layout preferences under their own key | `test:launch`: separator semantics, keyboard and pointer handling, focus mode actually hiding the brief, focus after grading, layout storage is not code storage | — |
-| #165 Coding tracks | `CODING_SECTION_TRACKS`, retired-track screen, `/coding/review` naming any design reviews still held | `test:launch`: the section index excludes system design while the catalogue keeps it | — |
-| #166 devShark footer | `BrandFooter` gated on the product; CLAUDE.md and AGENTS.md updated | `test:launch`: the family blocks are gated, the legal row and settings remain | — |
-| #167 Merchandise spec | `shared/merchandise.ts`, `lib/rewards/config.ts`, `docs/rewards-launch.md` | `test:launch`: five SKUs, print briefs on physical items only, nothing buyable unconfigured | **No supplier quote, no price, no region, no tax treatment.** All owner decisions |
-| #168 Server wallet | `sync_reward_wallet`, `move_reward_tokens`, `?op=wallet`, migration 029 | `test:launch`: the balance comes from the ledger, a local balance is never converted, no total comes from the request. `test:db`: one grant per account, awards credited once each at the declared ratio, per-account isolation, overdraft refused, a repeated receipt never double-spending, balance equal to the ledger sum | Reconciliation of historical local balances is deliberately not automated |
-| #169 Shop catalogue | Rewritten `Shop.tsx`, blockers rendered per item, `reward_stock` the only stock authority on both the catalogue and the till, ring and flair sales retired | `test:launch`: availability rules, configured stock is not stock, the retired purchase path, `check:responsive` on `/shop` | Product photography does not exist; the cards use the brand marks |
-| #170 Orders | `place_reward_order`, `advance_reward_order`, `?op=orders` | `test:launch`: transition table, address validation, idempotency-key shape. `test:db`: reservation and debit in one step, a retried idempotency key returning the first order, stock exhaustion, the reservation released when funds fall short, refund and stock return exactly once, the transition table, shipping consuming stock, an unpriced token order raising | — |
-| #171 Payments | `lib/rewards/payments.ts`, `?op=payment-webhook`, an event ledger keyed by the provider's event id | `test:launch`: signature verify and reject, forged amount, replay window, malformed and missing secret, event parsing, an unreadable amount or currency refusing, a stale expiry never cancelling a paid order | **No provider configured.** Live charging additionally requires `REWARDS_PAYMENT_MODE=live` |
-| #172 Fulfilment | `lib/rewards/fulfillment.ts`, `?op=fulfilment` on the admin dispatcher, including the stock action | `test:launch`: addresses are never logged; the export refuses without a supplier and an operations owner; an owner has a supported way to write stock. `test:db`: erasure keeps an order that still owes a delivery and clears its address | **No supplier and no operations owner.** No real dispatch has been made |
-| #173 Crown | `CrownIcon`, `LearnerAvatar`, server-verified ownership and equipping | `test:launch`: decorative mark, named in the accessible label. `test:db`: an unowned equip is refused, a duplicate grant yields one entitlement, one cosmetic worn at a time | The crown does not appear on the leaderboard or in the Play lobby — see the blocker below |
-| #174 This matrix | This document, plus the assertions listed above | The repository gates below | Integration coverage that needs a live database is not present |
+1. [Research and product decisions](fde-learning-path-research.md)
+2. [FDE curriculum and assessment](fde-curriculum.md)
+3. [DSA foundations scope and coding inventory](dsa-foundations-plan.md)
+4. [Shared engineering implementation plan](fde-implementation-plan.md)
 
-## Rollout and rollback
+## GitHub backlog
 
-**Order.** Migrations 026 → 027 → 028 → 029, then the application. Every
-migration is additive: new tables, new functions, and one redefinition of
-`delete_user_data` per migration that extends its coverage. No column is dropped
-and no existing row is rewritten, so the application before this change keeps
-working against the new schema.
+- [FDE epic #128](https://github.com/lukaskourilcz/react-express-app/issues/128)
+- [DSA Foundations epic #129](https://github.com/lukaskourilcz/react-express-app/issues/129)
 
-**Feature state after deploy.**
+Two epics and nineteen implementation issues. Each issue has a concrete scope, affected files, blockers, acceptance checklist and verification plan.
 
-- The learner profile is empty for everyone. Every surface falls back to the
-  general roadmap until a learner answers, so nothing breaks on day one.
-- The progression guard is inert for a learner with no profile: `decideStep`
-  returns `no_profile` and the API allows the request, exactly as before.
-- The wallet is empty until its first sync, which derives it from
-  `verified_activity_awards` — evidence that already exists.
-- The shop is closed. Every item reports its blockers.
+| Issue | Work package | Blocked by |
+|---|---|---|
+| [#130](https://github.com/lukaskourilcz/react-express-app/issues/130) | Define shared versioned learning-path contracts for FDE and DSA Foundations | None |
+| [#131](https://github.com/lukaskourilcz/react-express-app/issues/131) | Add shared learning-path enrollment, attempts, evidence, drafts and progress storage | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130) |
+| [#132](https://github.com/lukaskourilcz/react-express-app/issues/132) | Implement guarded learning-path APIs for FDE and DSA within existing handlers | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130), [#131](https://github.com/lukaskourilcz/react-express-app/issues/131) |
+| [#133](https://github.com/lukaskourilcz/react-express-app/issues/133) | Adapt existing graders for FDE and DSA path-bound practical exercises | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130), [#131](https://github.com/lukaskourilcz/react-express-app/issues/131), [#132](https://github.com/lukaskourilcz/react-express-app/issues/132) |
+| [#134](https://github.com/lukaskourilcz/react-express-app/issues/134) | Add two-step track and optional FDE selection with safe account sync | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130), [#132](https://github.com/lukaskourilcz/react-express-app/issues/132) |
+| [#135](https://github.com/lukaskourilcz/react-express-app/issues/135) | Build FDE overview, module workspace and resumable progress UI | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130), [#132](https://github.com/lukaskourilcz/react-express-app/issues/132), [#133](https://github.com/lukaskourilcz/react-express-app/issues/133), [#134](https://github.com/lukaskourilcz/react-express-app/issues/134) |
+| [#136](https://github.com/lukaskourilcz/react-express-app/issues/136) | Implement competency diagnostics and track-specific bridge recommendations | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130), [#132](https://github.com/lukaskourilcz/react-express-app/issues/132), [#133](https://github.com/lukaskourilcz/react-express-app/issues/133), [#135](https://github.com/lukaskourilcz/react-express-app/issues/135) |
+| [#137](https://github.com/lukaskourilcz/react-express-app/issues/137) | Author FDE M01–M03 customer discovery, data integration and enterprise boundaries | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130), [#133](https://github.com/lukaskourilcz/react-express-app/issues/133) |
+| [#138](https://github.com/lukaskourilcz/react-express-app/issues/138) | Author FDE M04–M08 AI architecture, retrieval, tools, evaluations and security | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130), [#133](https://github.com/lukaskourilcz/react-express-app/issues/133), [#137](https://github.com/lukaskourilcz/react-express-app/issues/137) |
+| [#139](https://github.com/lukaskourilcz/react-express-app/issues/139) | Author M09–M10 operations and handoff plus staged FDE capstone | [#133](https://github.com/lukaskourilcz/react-express-app/issues/133), [#137](https://github.com/lukaskourilcz/react-express-app/issues/137), [#138](https://github.com/lukaskourilcz/react-express-app/issues/138) |
+| [#140](https://github.com/lukaskourilcz/react-express-app/issues/140) | Integrate specialization progress with Today, Profile and learning continuity | [#135](https://github.com/lukaskourilcz/react-express-app/issues/135), [#136](https://github.com/lukaskourilcz/react-express-app/issues/136), [#139](https://github.com/lukaskourilcz/react-express-app/issues/139) |
+| [#141](https://github.com/lukaskourilcz/react-express-app/issues/141) | Add FDE content readiness, reports and privacy-conscious pilot metrics | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130), [#132](https://github.com/lukaskourilcz/react-express-app/issues/132), [#135](https://github.com/lukaskourilcz/react-express-app/issues/135) |
+| [#142](https://github.com/lukaskourilcz/react-express-app/issues/142) | Update devShark positioning and EN/CS UX for foundations through specialization | [#134](https://github.com/lukaskourilcz/react-express-app/issues/134), [#135](https://github.com/lukaskourilcz/react-express-app/issues/135) |
+| [#143](https://github.com/lukaskourilcz/react-express-app/issues/143) | Verify FDE rollout, legacy compatibility and guarded production readiness | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130), [#131](https://github.com/lukaskourilcz/react-express-app/issues/131), [#132](https://github.com/lukaskourilcz/react-express-app/issues/132), [#133](https://github.com/lukaskourilcz/react-express-app/issues/133), [#134](https://github.com/lukaskourilcz/react-express-app/issues/134), [#135](https://github.com/lukaskourilcz/react-express-app/issues/135), [#136](https://github.com/lukaskourilcz/react-express-app/issues/136), [#137](https://github.com/lukaskourilcz/react-express-app/issues/137), [#138](https://github.com/lukaskourilcz/react-express-app/issues/138), [#139](https://github.com/lukaskourilcz/react-express-app/issues/139), [#140](https://github.com/lukaskourilcz/react-express-app/issues/140), [#141](https://github.com/lukaskourilcz/react-express-app/issues/141), [#142](https://github.com/lukaskourilcz/react-express-app/issues/142) |
+| [#144](https://github.com/lukaskourilcz/react-express-app/issues/144) | Add standalone DSA path entry, enrollment and progress without changing career choices | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130), [#131](https://github.com/lukaskourilcz/react-express-app/issues/131), [#132](https://github.com/lukaskourilcz/react-express-app/issues/132), [#133](https://github.com/lukaskourilcz/react-express-app/issues/133) |
+| [#145](https://github.com/lukaskourilcz/react-express-app/issues/145) | Author DSA complexity foundations with growth traces and verified reasoning | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130), [#133](https://github.com/lukaskourilcz/react-express-app/issues/133) |
+| [#146](https://github.com/lukaskourilcz/react-express-app/issues/146) | Author DSA arrays, maps, stacks, queues and linked-list coding modules | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130), [#133](https://github.com/lukaskourilcz/react-express-app/issues/133) |
+| [#147](https://github.com/lukaskourilcz/react-express-app/issues/147) | Author linear/binary search and basic sorting with coding and method checks | [#130](https://github.com/lukaskourilcz/react-express-app/issues/130), [#133](https://github.com/lukaskourilcz/react-express-app/issues/133), [#145](https://github.com/lukaskourilcz/react-express-app/issues/145), [#146](https://github.com/lukaskourilcz/react-express-app/issues/146) |
+| [#148](https://github.com/lukaskourilcz/react-express-app/issues/148) | Author basic trees/BSTs and final DSA assessment; verify complete path readiness | [#144](https://github.com/lukaskourilcz/react-express-app/issues/144), [#145](https://github.com/lukaskourilcz/react-express-app/issues/145), [#146](https://github.com/lukaskourilcz/react-express-app/issues/146), [#147](https://github.com/lukaskourilcz/react-express-app/issues/147) |
 
-**Rollback.** Redeploy the previous application build. The new tables are
-unreferenced by it and can be left in place; nothing in them is required by the
-old code, and no old table gained a column. If the schema must also be rolled
-back, drop in reverse order (029 → 026); `delete_user_data` should then be
-restored from migration 025.
+## Recommended sequencing
 
-**Data reconciliation.** The one place old and new data meet is the token
-balance. The old wallet lived in `localStorage` and in the account-synced
-progress blob, and was never verified. The new wallet is derived from
-`verified_activity_awards`, so a learner's balance is recomputed from evidence
-rather than migrated. The old number is shown to them, labelled unverified, and
-is not added. That is deliberate: converting it would mint value from a browser.
-If the owner decides to honour historical balances, that is an
-`adjustment`-reason ledger entry per account, made by a person, and is not
-automated here.
+Begin with shared #130–#133. Then progress FDE and DSA independently. For FDE, validate one M01/M02 slice with the chooser/workspace before scaling content. For DSA, establish direct entry and foundational content, then searching/sorting, trees and final assessment. #143 is the FDE release gate; #148 is the independent DSA gate and includes the shared release requirements.
 
-## What is not covered
+A completed document or merged planning PR must not close implementation issues. Keep the feature flags disabled until their respective release gates pass. No requirement to push/deploy after every issue; batch coherent work.
 
-1. **A hosted Supabase project.** `npm run test:db` applies the whole schema to
-   a scratch PostgreSQL database and runs the SQL suites in `scripts/sql/`, so
-   the wallet ledger, the order state machine, stock reservation, the puzzle
-   evidence separation and account erasure are exercised for real. What that
-   cannot cover is Supabase's own layer: PostgREST behaviour, the service-role
-   boundary as Supabase configures it, and `auth.uid()` with real JWTs (the
-   suite substitutes a local `auth.uid()`). RLS policies are created and their
-   shape is checked, but they are not exercised as an authenticated role.
-2. **FDE and DSA curricula.** Issues #137–#139 and #145–#148 are outside this
-   branch. The progression graph declares the FDE bridge and marks the module
-   stage as content-pending so the Roadmap says so rather than drawing a dead
-   end; DSA Foundations uses the `dsa` and `algorithms` topics that already
-   exist.
-3. **Puzzle and repair coverage.** Arrangement puzzles and repair exercises are
-   JavaScript only. A TypeScript or React task on a phone still shows the
-   desktop-resume pending state, which is the honest outcome rather than a pass.
-4. **The crown on public surfaces.** See `docs/rewards-launch.md`; it needs a
-   reviewed change to three leaderboard functions and an owner decision about
-   making a purchase publicly visible.
-5. **Commerce.** Nothing can be bought. Six owner decisions are listed in
-   `docs/rewards-launch.md`.
+## Verification of this planning change
 
-## The gates
-
-Run from the repository root:
-
-```
-npm run typecheck:api
-npm run test:launch
-npm run test:coding
-npm run build
-npm run check:responsive          # needs a preview server on :4173 and CHROME_BIN
-npm run test:harness              # needs CHROME_BIN
-npm run test:db                   # needs psql; skips cleanly without one
-npm audit --omit=dev
-npm audit --omit=dev --prefix client
-git diff --check
-```
+Source links and high-impact claims were checked during research; repository paths were inspected against the pinned baseline. Documentation cross-links, issue coverage/dependency graph, remote issue read-back and git diff are verified before delivery. No runtime tests, migration, live deployment or educational efficacy validation are claimed.

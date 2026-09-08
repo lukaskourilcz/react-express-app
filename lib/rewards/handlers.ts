@@ -50,7 +50,7 @@ const SUBJECT = 'webdev';
 const available = () => deploymentSubjectIds().includes(SUBJECT);
 
 const migrationError = (res: VercelResponse) =>
-  jsonError(res, 503, 'migration_required', 'Rewards migration 029 is not installed');
+  jsonError(res, 503, 'migration_required', 'Rewards migration 030 is not installed');
 
 const notAvailable = (res: VercelResponse) =>
   jsonError(res, 404, 'not_available', 'The shop is not part of this product');

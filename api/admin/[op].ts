@@ -15,6 +15,7 @@ import { listAuthEvents } from '../../lib/auth-events-store';
 import { getGameSettings, saveGameSettings } from '../../lib/settings-store';
 import { inspectQuestionQuality } from '../../lib/question-quality';
 import { handleFulfilment } from '../../lib/rewards/fulfillment';
+import { allReadiness, pathEnabledInEnv } from '../../lib/learning-paths/catalog';
 
 const log = createLogger('admin');
 const supabase = createServiceClient();
@@ -60,6 +61,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
         return await qualityOp(req, res);
       case 'fulfilment':
         return await handleFulfilment(req, res, supabase);
+      case 'learning-paths':
+        return await learningPathsOp(req, res);
       default:
         return jsonError(res, 404, 'unknown_op', `Unknown admin op: ${op}`);
     }
@@ -75,6 +78,33 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
   return withRequestContext(req, res, () => routeHandler(req, res));
+}
+
+/**
+ * Learning-path content readiness.
+ *
+ * Read-only, and deliberately so: publishing authority stays with code review.
+ * This reports what the validator found, the real inventory derived from the
+ * manifest, and whether the deployment switch is on — three separate facts, so
+ * an operator can tell "content incomplete" apart from "switched off". No
+ * request can mark an invalid curriculum ready.
+ */
+async function learningPathsOp(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  }
+  const paths = allReadiness().map((readiness) => ({
+    pathId: readiness.pathId,
+    version: readiness.version,
+    contentReady: readiness.contentReady,
+    enabledInEnv: pathEnabledInEnv(readiness.pathId),
+    inventory: readiness.inventory,
+    issues: readiness.issues,
+  }));
+  log({ op: 'learning-paths', status: 200, paths: paths.length });
+  res.setHeader('Cache-Control', 'private, no-store');
+  return res.json({ paths });
 }
 
 async function qualityOp(req: VercelRequest, res: VercelResponse) {

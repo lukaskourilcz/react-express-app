@@ -24,6 +24,7 @@ import {
   pushProgressToServer,
 } from '../lib/roadmap';
 import { useTrack, trackStarterTopics, rankLabelKeyFor, trackLabelKey, TRACK_ORDER, type Track } from '../lib/tracks';
+import LearningPathsCard from './paths/LearningPathsCard';
 import { getCategoryHexColor, categoryLabelKey, onCategoryColorText } from '../lib/categories';
 import { useQuestXp, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp, levelForXp, MAX_RANK } from '../lib/leveling';
@@ -338,8 +339,10 @@ function ProfileBody({
             <CareerCard />
 
             {/* devShark personalises from the versioned learner profile; the
-                other products keep the local track picker. */}
+                other products keep the local track picker. The specialisation
+                enrolments sit under it, on devShark only. */}
             {CURRENT_PRODUCT.id === 'devshark' ? <LearningPlanCard /> : <LearningTrackCard />}
+            {CURRENT_PRODUCT.id === 'devshark' && <LearningPathsCard />}
 
             <AdvisorCard />
 

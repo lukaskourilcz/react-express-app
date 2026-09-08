@@ -28,7 +28,7 @@ const logEvent = createLogger('admin/fulfilment');
 const FIELDS = 'order_id,user_id,status,payment,currency,total_cash_minor,total_tokens,lines,address,tracking_carrier,tracking_code,created_at,updated_at';
 
 const migrationError = (res: VercelResponse) =>
-  jsonError(res, 503, 'migration_required', 'Rewards migration 029 is not installed');
+  jsonError(res, 503, 'migration_required', 'Rewards migration 030 is not installed');
 
 /** The supplier the export is addressed to. No supplier, no export. */
 export const configuredSupplier = (): string | null => process.env.REWARDS_SUPPLIER?.trim() || null;

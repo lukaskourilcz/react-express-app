@@ -44,7 +44,7 @@ const tableMissing = (error: { message?: string; code?: string } | null | undefi
   !!error && (error.code === '42P01' || /relation .* does not exist/i.test(error.message ?? ''));
 
 const migrationError = (res: VercelResponse) =>
-  jsonError(res, 503, 'migration_required', 'Practice session migration 028 is not installed');
+  jsonError(res, 503, 'migration_required', 'Practice session migration 029 is not installed');
 
 interface SessionRow {
   session_id: string;

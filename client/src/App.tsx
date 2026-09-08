@@ -10,6 +10,7 @@ import { SharkFin, SwimmingFin, Waterline } from './components/SharkFin';
 import { useT, useLanguage } from './i18n/LanguageContext';
 import { preferredLanguageOf } from './lib/languagePref';
 import { preferredTrackOf } from './lib/trackPref';
+import { queryClient } from './lib/queryClient';
 import { setTrackValue } from './lib/tracks';
 import type { TranslationKey } from './i18n/translations';
 import { useGameConfig, localizedDevTips, type GameConfig } from './lib/gameConfig';
@@ -59,6 +60,10 @@ const CodingReviewScreen = lazy(() => import('./components/coding/CodingSection'
 const CodingLibraryScreen = lazy(() => import('./components/coding/CodingLibraryScreen').then((m) => ({ default: m.CodingLibraryScreen })));
 const PracticeSessionScreen = lazy(() => import('./components/coding/PracticeSessionScreen').then((m) => ({ default: m.PracticeSessionScreen })));
 const GithubSettingsPage = lazy(() => import('./components/coding/GithubSettingsPage').then((m) => ({ default: m.GithubSettingsPage })));
+const FdeOverview = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.FdeOverview })));
+const FdeModule = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.FdeModule })));
+const DsaOverview = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.DsaOverview })));
+const DsaModule = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.DsaModule })));
 const NotFoundPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.NotFoundPage })));
 
 // The landing gate: show the subject picker until the learner has chosen a
@@ -314,10 +319,22 @@ function App() {
   }, [user, setLang]);
 
   // Apply the account's saved learning track on sign-in, so the chosen path
-  // follows the learner across devices.
+  // follows the learner across devices. The account wins over anything cached
+  // on this device: a guest may draft a choice, but signing in never silently
+  // replaces what the account already says.
   useEffect(() => {
     const pref = preferredTrackOf(user);
     if (pref) setTrackValue(pref);
+  }, [user]);
+
+  // Sign-out drops every cached account response. Without this, the next
+  // person to sign in on this browser could see the previous learner's
+  // enrollments or evidence from a warm cache before the refetch lands.
+  const lastUserId = useRef<string | null>(null);
+  useEffect(() => {
+    const id = user?.id ?? null;
+    if (lastUserId.current !== null && lastUserId.current !== id) queryClient.clear();
+    lastUserId.current = id;
   }, [user]);
 
   // One-time 200-token welcome bonus on first sign-in. Idempotent across
@@ -669,6 +686,14 @@ function App() {
                 <Route path="/coding/session" element={CURRENT_PRODUCT.id === 'devshark' ? <PracticeSessionScreen /> : <Navigate to="/learn" replace />} />
                 <Route path="/coding/:track" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingTrackScreen /> : <Navigate to="/learn" replace />} />
                 <Route path="/coding/:track/:taskId" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingTaskScreen /> : <Navigate to="/learn" replace />} />
+                {/* Learning paths are devShark-only, like /coding and /roadmap.
+                    The role specialization and the standalone skill path get
+                    separate entry routes so the career flow and the focused
+                    paths stay visibly apart, though they share one workspace. */}
+                <Route path="/roadmap/specializations/fde" element={CURRENT_PRODUCT.id === 'devshark' ? <FdeOverview /> : <Navigate to="/learn" replace />} />
+                <Route path="/roadmap/specializations/fde/:moduleId" element={CURRENT_PRODUCT.id === 'devshark' ? <FdeModule /> : <Navigate to="/learn" replace />} />
+                <Route path="/roadmap/paths/dsa-foundations" element={CURRENT_PRODUCT.id === 'devshark' ? <DsaOverview /> : <Navigate to="/learn" replace />} />
+                <Route path="/roadmap/paths/dsa-foundations/:moduleId" element={CURRENT_PRODUCT.id === 'devshark' ? <DsaModule /> : <Navigate to="/learn" replace />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/settings/github" element={CURRENT_PRODUCT.id === 'devshark' ? <GithubSettingsPage /> : <Navigate to="/profile" replace />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />

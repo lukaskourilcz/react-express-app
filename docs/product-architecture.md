@@ -65,7 +65,7 @@ One record decides what a learner sees. `shared/learner-profile.ts` holds the
 versioned profile — base track (Fullstack, Frontend, Backend), the optional FDE
 specialisation, the independent DSA enrolment, goals, experience and sitting
 length — validated identically in the browser and on the server and stored per
-account by `lib/learner-profile-store.ts` (migration 026). Experience is
+account by `lib/learner-profile-store.ts` (migration 027). Experience is
 advisory: it changes wording and suggestions, never a gate.
 
 `shared/progression.ts` is the single prerequisite graph. A path is a chain of
@@ -83,7 +83,7 @@ Roadmap, Today and the coding queue cannot invent their own rules.
 
 ## Rewards (devShark)
 
-Tokens are a server ledger (`reward_ledger`, migration 029), derived from the
+Tokens are a server ledger (`reward_ledger`, migration 030), derived from the
 one registration grant and from `verified_activity_awards` — the same verified
 evidence the XP ledger uses. A browser never asserts a balance, and the old
 device-local number is reported back as unverified and never converted.
@@ -133,8 +133,8 @@ System design keeps its tasks, its grader and its place in Learn, but is no
 longer a Coding track; an old `/coding/system-design` link explains the move.
 Alongside the editor the section carries an always-open Resources panel, a
 curated approach comparison that opens on a recorded verdict, a saved-challenge
-library with named collections (migration 027), short practice sessions and skip
-feedback (migration 028), search with combined filters, repair exercises marked
+library with named collections (migration 028), short practice sessions and skip
+feedback (migration 029), search with combined filters, repair exercises marked
 `debug`, and authored arrangement puzzles for screens where an editor does not
 belong (`shared/coding-puzzle.ts`). A puzzle pass is recorded as recognition, in
 its own table, and never as having written the code.
@@ -147,6 +147,58 @@ tokens are minted from the app key on demand, failed commits queue for a later
 sync, and disconnecting deletes the connection and the queue. The feature stays
 hidden until `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, and `GITHUB_APP_PRIVATE_KEY`
 exist on the devShark deployment.
+
+## Learning paths (devShark)
+
+Two optional paths sit on top of the existing Learn levels and the Coding
+section. Neither replaces them, and neither changes product or subject scope.
+
+- **Forward Deployed Engineer** is a *role specialization*: the learner picks
+  Fullstack, Frontend or Backend first, then optionally adds FDE on top. It is
+  the only role, and it occupies the single `specialization` slot of the
+  account preference.
+- **DSA Foundations** is a *skill path*: entered directly at
+  `/roadmap/paths/dsa-foundations`, with no base track, no role and no XP rank
+  required. It can run alongside a career path, and the two enrollments are
+  independent.
+
+`shared/learning-paths.ts` owns the vocabulary — `LearningPathId`,
+`LearningPathKind`, `RoleSpecializationId`, the evidence states and the pure
+completion arithmetic. It stays deliberately apart from the existing
+registries: `Track` keeps its three values, the cosmetic `Specialization`
+label in `leveling.ts` is a different concept with a similar name, and neither
+`CodingTrack` nor `RoadmapTopic` gains a member. A path *references* those
+registries; it never joins them.
+
+`shared/learning-path-api.ts` is the wire contract. Authored content, answer
+keys, hidden assertions and reference solutions live under
+`lib/learning-paths/` and reach the browser only as projections that strip
+them. `lib/learning-paths/catalog.ts` never imports the solutions, and the
+launch contracts forbid `client/` from importing `lib/learning-paths` at all.
+
+Grading reuses what already exists: the QuickJS sandbox, the TypeScript
+checker and the same 2.5-second deadline. What the adapter adds is the
+path-shaped contract — an attempt bound to an enrollment (so a task reached
+through a path is authorized by that enrollment rather than the ordinary
+coding tier ladder), assertions grouped into named criteria (so a
+security-critical failure cannot be averaged away), and evidence recorded in
+`learning_path_*` only. A path pass writes no coding progress, no tier unlock
+and **no XP in v1**, which is what keeps a task reused from the coding
+catalogue from being rewarded twice.
+
+Endpoints are new `resource=`/`op=` branches on existing handlers
+(`learning-path-catalog`, `-start`, `-submit` on `api/quiz/roadmap.ts`;
+`learning-preference`, `learning-path-enrollment`, `-progress`, `-draft` on
+`api/user/[op].ts`), so the twelve-handler budget is unchanged. Storage is
+`supabase/supabase-schema-026.sql` (additive, idempotent). Availability is per
+path — `LEARNING_PATH_DSA_ENABLED` and `LEARNING_PATH_FDE_ENABLED` — so either
+can launch or pause without the other, and a path opens only when its switch
+is on, its content validates and the migration is installed.
+
+Completion language is deliberately narrow. The server says "FDE guided path
+completed" only after the required verified evidence, and displays "Portfolio
+self-reviewed" as a separate line. There is no certification, no rank and no
+claim about employment.
 
 ## Deployment matrix
 

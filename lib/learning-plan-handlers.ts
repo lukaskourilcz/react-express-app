@@ -20,7 +20,7 @@ const logEvent = createLogger('user/learning-plan');
 const MAX_BODY_KEYS = 12;
 
 function migrationError(res: VercelResponse) {
-  return jsonError(res, 503, 'migration_required', 'Learner profile migration 026 is not installed');
+  return jsonError(res, 503, 'migration_required', 'Learner profile migration 027 is not installed');
 }
 
 export async function handleLearnerProfile(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient) {

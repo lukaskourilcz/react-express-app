@@ -178,6 +178,12 @@ BEGIN
   INSERT INTO public.coding_skips (user_id, task_id, track, reason) VALUES (u, 'js-double-numbers', 'javascript', 'later');
   INSERT INTO public.practice_sessions (session_id, user_id, minutes, task_ids) VALUES ('sess0004', u, 5, ARRAY[]::TEXT[])
     ON CONFLICT DO NOTHING;
+  -- Migration 030 redefines delete_user_data, so it has to keep reaching the
+  -- learning-path tables migration 026 added. A redefinition that forgets an
+  -- earlier table is silent: erasure simply stops covering it.
+  INSERT INTO public.learning_path_enrollments (enrollment_id, user_id, path_id, curriculum_version)
+    VALUES ('enrol-0000000000000001', u, 'dsa-foundations', 1)
+    ON CONFLICT DO NOTHING;
 
   PERFORM public.delete_user_data(u);
 
@@ -189,5 +195,7 @@ BEGIN
   ASSERT n = 0, 'skips are erased';
   SELECT COUNT(*) INTO n FROM public.practice_sessions WHERE user_id = u;
   ASSERT n = 0, 'practice sessions are erased';
+  SELECT COUNT(*) INTO n FROM public.learning_path_enrollments WHERE user_id = u;
+  ASSERT n = 0, 'learning-path enrolments are still erased after 030 redefines the function';
   RAISE NOTICE 'account erasure: ok';
 END $$;

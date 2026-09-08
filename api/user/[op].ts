@@ -25,6 +25,12 @@ import { eligibleCodingBadges } from '../../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../../lib/coding/catalog';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
 import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
+import {
+  handleEnrollment,
+  handleLearningPreference,
+  handlePathDraft,
+  handlePathProgress,
+} from '../../lib/learning-paths/handlers';
 import { handleGithub } from '../../lib/github-handlers';
 import { handleEligibility, handleLearnerProfile } from '../../lib/learning-plan-handlers';
 import { handleCodingLibrary } from '../../lib/coding/library-handlers';
@@ -78,6 +84,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'coding-skip') return handleCodingSkip(req, res, supabase);
   if (op === 'coding-progress') return handleCodingProgress(req, res, supabase);
   if (op === 'coding-draft') return handleCodingDraft(req, res, supabase);
+  if (op === 'learning-preference') return handleLearningPreference(req, res, supabase);
+  if (op === 'learning-path-enrollment') return handleEnrollment(req, res, supabase);
+  if (op === 'learning-path-progress') return handlePathProgress(req, res, supabase);
+  if (op === 'learning-path-draft') return handlePathDraft(req, res, supabase);
   if (op.startsWith('github-')) return handleGithub(op, req, res, supabase);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
 }

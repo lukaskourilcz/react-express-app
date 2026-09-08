@@ -44,7 +44,7 @@ const tableMissing = (error: { message?: string; code?: string } | null | undefi
   !!error && (error.code === '42P01' || /relation .* does not exist/i.test(error.message ?? ''));
 
 const migrationError = (res: VercelResponse) =>
-  jsonError(res, 503, 'migration_required', 'Coding library migration 027 is not installed');
+  jsonError(res, 503, 'migration_required', 'Coding library migration 028 is not installed');
 
 interface CollectionRow { collection_id: string; name: string; position: number; updated_at: string }
 interface ItemRow { collection_id: string; task_id: string; position: number }

@@ -1,67 +1,88 @@
--- Migration 028: short practice sessions and skip feedback (issues #159, #160).
--- Apply after migrations 001-027. Safe to re-run.
+-- Migration 028: the learner's coding library — saved challenges and named
+-- collections (issue #157). Apply after migrations 001-027. Safe to re-run.
 --
--- Neither table grants anything. A practice session is a saved queue and a
--- position in it, so a learner can resume where they stopped; a skip is
--- feedback with a reason. No XP, no completion and no unlock is written here,
--- and choosing a session never opens a task the progression policy has not.
+-- A library is a reading list. Saving a challenge never opens it: eligibility
+-- still comes from the progression policy, so a saved task the learner's plan
+-- does not currently allow stays listed, with an explanation, and cannot start.
+-- Rows are owner-scoped; the service role writes them after verifying the token.
 
 -- ---------------------------------------------------------------------------
 -- 1. Tables.
 -- ---------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS public.practice_sessions (
-  session_id   TEXT PRIMARY KEY CHECK (session_id ~ '^[A-Za-z0-9_-]{8,64}$'),
-  user_id      TEXT NOT NULL,
-  minutes      INTEGER NOT NULL CHECK (minutes IN (5, 10, 20, 40)),
-  task_ids     TEXT[] NOT NULL DEFAULT '{}',
-  position     INTEGER NOT NULL DEFAULT 0 CHECK (position >= 0),
-  started_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  completed_at TIMESTAMPTZ,
-  CONSTRAINT practice_sessions_length CHECK (array_length(task_ids, 1) IS NULL OR array_length(task_ids, 1) <= 40)
-);
-
--- One open session per learner: a resume must be unambiguous.
-CREATE UNIQUE INDEX IF NOT EXISTS practice_sessions_one_open_idx
-  ON public.practice_sessions (user_id) WHERE completed_at IS NULL;
-CREATE INDEX IF NOT EXISTS practice_sessions_user_started_idx
-  ON public.practice_sessions (user_id, started_at DESC);
-
-CREATE TABLE IF NOT EXISTS public.coding_skips (
-  id         BIGSERIAL PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS public.coding_bookmarks (
   user_id    TEXT NOT NULL,
   task_id    TEXT NOT NULL CHECK (task_id ~ '^[a-z0-9-]{3,64}$'),
-  track      TEXT NOT NULL CHECK (track IN ('javascript', 'typescript', 'react', 'system-design')),
-  reason     TEXT NOT NULL CHECK (reason IN ('too-easy', 'too-hard', 'missing-prerequisite', 'unclear', 'later')),
-  -- Optional and bounded: a signal, not a support ticket.
-  note       TEXT CHECK (note IS NULL OR char_length(note) <= 280),
-  session_id TEXT,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, task_id)
 );
 
-CREATE INDEX IF NOT EXISTS coding_skips_user_created_idx
-  ON public.coding_skips (user_id, created_at DESC);
-CREATE INDEX IF NOT EXISTS coding_skips_task_reason_idx
-  ON public.coding_skips (task_id, reason);
+CREATE TABLE IF NOT EXISTS public.coding_collections (
+  collection_id TEXT PRIMARY KEY CHECK (collection_id ~ '^[A-Za-z0-9_-]{8,64}$'),
+  user_id       TEXT NOT NULL,
+  name          TEXT NOT NULL CHECK (char_length(name) BETWEEN 1 AND 40),
+  position      INTEGER NOT NULL DEFAULT 0 CHECK (position >= 0),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS public.coding_collection_items (
+  collection_id TEXT NOT NULL REFERENCES public.coding_collections(collection_id) ON DELETE CASCADE,
+  user_id       TEXT NOT NULL,
+  task_id       TEXT NOT NULL CHECK (task_id ~ '^[a-z0-9-]{3,64}$'),
+  position      INTEGER NOT NULL DEFAULT 0 CHECK (position >= 0),
+  added_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (collection_id, task_id)
+);
+
+CREATE INDEX IF NOT EXISTS coding_collections_user_position_idx
+  ON public.coding_collections (user_id, position);
+CREATE INDEX IF NOT EXISTS coding_collection_items_user_idx
+  ON public.coding_collection_items (user_id, collection_id, position);
+
+-- One learner may not hold more than twenty collections. The API refuses the
+-- twenty-first; this trigger is the backstop for anything that bypasses it.
+CREATE OR REPLACE FUNCTION public.enforce_coding_collection_limit()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF (SELECT COUNT(*) FROM public.coding_collections WHERE user_id = NEW.user_id) > 20 THEN
+    RAISE EXCEPTION 'coding_collection_limit';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS coding_collections_limit ON public.coding_collections;
+CREATE TRIGGER coding_collections_limit
+  AFTER INSERT ON public.coding_collections
+  FOR EACH ROW EXECUTE FUNCTION public.enforce_coding_collection_limit();
 
 -- ---------------------------------------------------------------------------
--- 2. Row-level security.
+-- 2. Row-level security: a learner reads their own library, the service writes.
 -- ---------------------------------------------------------------------------
-ALTER TABLE public.practice_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.coding_skips ENABLE ROW LEVEL SECURITY;
-REVOKE ALL ON public.practice_sessions, public.coding_skips FROM anon, authenticated;
+ALTER TABLE public.coding_bookmarks ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.coding_collections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.coding_collection_items ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.coding_bookmarks, public.coding_collections, public.coding_collection_items
+  FROM anon, authenticated;
 
-DROP POLICY IF EXISTS "practice_sessions_select_own" ON public.practice_sessions;
-CREATE POLICY "practice_sessions_select_own"
-  ON public.practice_sessions FOR SELECT
+DROP POLICY IF EXISTS "coding_bookmarks_select_own" ON public.coding_bookmarks;
+CREATE POLICY "coding_bookmarks_select_own"
+  ON public.coding_bookmarks FOR SELECT
   USING (user_id = auth.uid()::text);
-DROP POLICY IF EXISTS "coding_skips_select_own" ON public.coding_skips;
-CREATE POLICY "coding_skips_select_own"
-  ON public.coding_skips FOR SELECT
+DROP POLICY IF EXISTS "coding_collections_select_own" ON public.coding_collections;
+CREATE POLICY "coding_collections_select_own"
+  ON public.coding_collections FOR SELECT
+  USING (user_id = auth.uid()::text);
+DROP POLICY IF EXISTS "coding_collection_items_select_own" ON public.coding_collection_items;
+CREATE POLICY "coding_collection_items_select_own"
+  ON public.coding_collection_items FOR SELECT
   USING (user_id = auth.uid()::text);
 
 -- ---------------------------------------------------------------------------
--- 3. Account erasure covers both.
+-- 3. Account erasure and export cover the library.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.delete_user_data(p_user_id TEXT)
 RETURNS VOID
@@ -90,8 +111,6 @@ BEGIN
   DELETE FROM public.user_question_history WHERE user_id = p_user_id;
   DELETE FROM public.github_commits WHERE user_id = p_user_id;
   DELETE FROM public.github_connections WHERE user_id = p_user_id;
-  DELETE FROM public.practice_sessions WHERE user_id = p_user_id;
-  DELETE FROM public.coding_skips WHERE user_id = p_user_id;
   DELETE FROM public.coding_collection_items WHERE user_id = p_user_id;
   DELETE FROM public.coding_collections WHERE user_id = p_user_id;
   DELETE FROM public.coding_bookmarks WHERE user_id = p_user_id;

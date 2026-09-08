@@ -1,5 +1,5 @@
 // Applies the schema to a scratch database and runs the SQL integration checks
-// for migrations 026-029 (issues #151, #154, #157, #159, #160, #168, #170,
+// for migrations 027-030 (issues #151, #154, #157, #159, #160, #168, #170,
 // #172, #173).
 //
 //   npm run test:db

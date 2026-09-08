@@ -509,7 +509,7 @@ async function handlePuzzleSubmit(
       }),
     );
     if (saved.error) {
-      if (isRpcMissing(saved.error)) return jsonError(res, 503, 'migration_required', 'Puzzle migration 026 is not installed');
+      if (isRpcMissing(saved.error)) return jsonError(res, 503, 'migration_required', 'Puzzle migration 027 is not installed');
       return jsonError(res, 500, 'db_error', 'Could not record the puzzle result');
     }
     const data = (saved.data ?? {}) as { applied?: boolean; satisfiesLevel?: boolean };
