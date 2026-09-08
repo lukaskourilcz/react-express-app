@@ -51,11 +51,16 @@ export interface NestedBody {
   layers: { label: FigureText; value?: string; note?: FigureText }[];
 }
 
-/** A small table. Fixture rows for a join, a growth comparison, grid tracks. */
+/** A small table. Fixture rows for a join, a growth comparison, grid tracks.
+ *
+ * A cell is a plain string when it is language-neutral — a number, a column of
+ * code, a name — and a `FigureText` when it is prose. Both, rather than one,
+ * because forcing `{ en, cs }` around `'200px'` would be ceremony and leaving
+ * prose as a bare string would ship an English table to a Czech reader. */
 export interface TableBody {
   kind: 'table';
   columns: FigureText[];
-  rows: string[][];
+  rows: (string | FigureText)[][];
   /** Rows to mark, and the word that says why — never a colour alone. */
   marks?: { row: number; role: FigureText }[];
 }
@@ -553,9 +558,21 @@ export const LESSON_FIGURES: readonly LessonFigure[] = [
       kind: 'table',
       columns: [T('Scope', 'Rozsah'), T('Answers', 'Odpovídá na'), T('Blind to', 'Nevidí')],
       rows: [
-        ['Unit', 'Does this function do what it says?', 'How the pieces fit together'],
-        ['Integration', 'Do these pieces agree on their contract?', 'The browser and the user'],
-        ['End-to-end', 'Can a person actually do this?', 'Nothing — but it is slow and fragile'],
+        [
+          T('Unit', 'Jednotkový'),
+          T('Does this function do what it says?', 'Dělá tahle funkce, co slibuje?'),
+          T('How the pieces fit together', 'Jak do sebe díly zapadají'),
+        ],
+        [
+          T('Integration', 'Integrační'),
+          T('Do these pieces agree on their contract?', 'Shodnou se díly na smlouvě mezi sebou?'),
+          T('The browser and the user', 'Prohlížeč a uživatel'),
+        ],
+        [
+          T('End-to-end', 'End-to-end'),
+          T('Can a person actually do this?', 'Zvládne to člověk doopravdy?'),
+          T('Nothing — but it is slow and fragile', 'Nic — ale je pomalý a křehký'),
+        ],
       ],
     },
   },
@@ -697,6 +714,13 @@ export function validateFigures(levelCount: (topic: string) => number): string[]
     } else if (body.kind === 'table') {
       for (const row of body.rows) {
         if (row.length !== body.columns.length) problems.push(`${figure.id} has a row of the wrong width`);
+        for (const cell of row) {
+          // A localized cell must actually be localized; a plain string is a
+          // deliberate claim that the cell is language-neutral.
+          if (typeof cell !== 'string' && (!cell.en.trim() || !cell.cs.trim())) {
+            problems.push(`${figure.id} has a half-translated cell`);
+          }
+        }
       }
       for (const mark of body.marks ?? []) {
         if (mark.row < 0 || mark.row >= body.rows.length) problems.push(`${figure.id} marks a row that is not there`);

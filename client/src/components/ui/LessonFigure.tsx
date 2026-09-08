@@ -150,7 +150,7 @@ function TableView({ body, L }: { body: Extract<Figure['body'], { kind: 'table' 
               <tr key={rowIndex} className={mark ? 'ss-figure__row--marked' : undefined}>
                 {row.map((cell, cellIndex) => (
                   <td key={cellIndex}>
-                    {cell}
+                    {typeof cell === 'string' ? cell : L(cell)}
                     {/* The word is the mark; the background is decoration. */}
                     {mark && cellIndex === row.length - 1 && (
                       <span className="ss-figure__role"> {L(mark.role)}</span>
