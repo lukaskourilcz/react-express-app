@@ -24,6 +24,7 @@ import { CURRENT_PRODUCT } from '../lib/products';
 import { useT } from '../i18n/LanguageContext';
 import { RadioCard, RadioCardGroup } from './ui/RadioCards';
 import type { RoleSpecializationId } from '../../../shared/learning-paths';
+import './paths/LearningPaths.css';
 
 /** The second step's two answers. `none` is a real choice, not a dismissal. */
 type RoleChoice = RoleSpecializationId | 'none';

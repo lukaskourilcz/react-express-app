@@ -56,7 +56,7 @@ import type {
   StartActivityResponse,
   SubmitActivityResponse,
 } from '../../../../shared/learning-path-api';
-import type { ActivitySummary, EvidenceState, LearningPathId, ModuleSummary } from '../../../../shared/learning-paths';
+import type { ActivitySummary, EvidenceState, LearningPathId, Localized, ModuleSummary } from '../../../../shared/learning-paths';
 import './LearningPaths.css';
 
 /* ── shared hooks ──────────────────────────────────────────────────────── */
@@ -438,6 +438,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   const loc = useLoc();
   const locList = useLocList();
   const { moduleId = '' } = useParams();
+  const navigate = useNavigate();
   const [search, setSearch] = useSearchParams();
   const queryClient = useQueryClient();
   const { userId, isAuthenticated, catalog, entry, enrollment, progress } = usePathState(pathId);
@@ -566,9 +567,15 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
 
   const states = statesOf(progress.data);
   const moduleProgress = progress.data?.modules.find((one) => one.moduleId === module.id);
+  // Only the dimensions this artifact is judged against, so the learner reads
+  // the criteria that apply rather than the whole rubric.
   const rubric = entry.manifest.rubric.dimensions
     .filter((dimension) => open?.activity.rubricDimensions?.includes(dimension.id))
-    .map((dimension) => ({ id: dimension.id, title: dimension.title, levels: dimension.levels as unknown as Record<string, import('../../../../shared/learning-paths').Localized> }));
+    .map((dimension) => ({
+      id: dimension.id,
+      title: dimension.title,
+      levels: dimension.levels as unknown as Record<string, Localized>,
+    }));
 
   return (
     <div className="lp-page">
@@ -625,8 +632,6 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
           ))}
         </ul>
       </section>
-
-      {activityId && !enrollment && null}
 
       {activityId && enrollment && (
         <section className="lp-workspace" aria-live="polite">
@@ -755,7 +760,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
                         one.activities.some((a) => a.id === result.nextActivityId),
                       );
                       if (!nextModule) return;
-                      window.location.assign(activityHref(pathId, nextModule.id, result.nextActivityId!));
+                      navigate(activityHref(pathId, nextModule.id, result.nextActivityId!));
                     }}
                   >
                     {t('paths.action.next')}

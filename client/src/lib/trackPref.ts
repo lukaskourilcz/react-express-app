@@ -16,6 +16,7 @@
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
 import { readJSON, writeJSON } from './storage';
+import { saveLearningPreference as savePreferenceToAccount } from './learningPaths';
 import { CURRENT_PRODUCT } from './products';
 import {
   LEARNING_PREFERENCE_META_KEY,
@@ -94,17 +95,24 @@ export async function saveLearningPreference(
     return { ok: false, reason: 'not_signed_in', message: 'not_signed_in' };
   }
   try {
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        [LEARNING_PREFERENCE_META_KEY]: preference,
-        // Derived from every save, for older clients.
-        [LEGACY_TRACK_META_KEY]: preference.baseTrack,
-      },
+    // One writer: the API validates the enums and derives the legacy track
+    // field, so a malformed value cannot reach the account from any client.
+    await savePreferenceToAccount({
+      baseTrack: preference.baseTrack,
+      specialization: preference.specialization,
     });
-    if (error) return { ok: false, reason: 'rejected', message: error.message };
+    // The local `user` object caches user_metadata, so refresh the session to
+    // pick up what the server just wrote. A failed refresh is not a failed
+    // save: the write already landed, and the next sign-in will see it.
+    await supabase.auth.refreshSession().catch(() => null);
     return { ok: true, preference };
   } catch (error) {
-    return { ok: false, reason: 'network', message: error instanceof Error ? error.message : 'network' };
+    const status = (error as { status?: number } | null)?.status;
+    return {
+      ok: false,
+      reason: status === 0 || status === undefined ? 'network' : 'rejected',
+      message: error instanceof Error ? error.message : 'network',
+    };
   }
 }
 
