@@ -15,9 +15,14 @@ export default function BrandFooter() {
   const [settings, updateSettings] = useSettings();
   const [activeSubject] = useSubject();
   const studySharkUrl = productUrl(PRODUCTS.studyshark);
+  // devShark is a standalone developer platform: it does not advertise
+  // StudyShark or the subject brands. The registries stay intact for
+  // StudyShark, which still shows the whole family. (Issue #166.)
+  const showFamily = CURRENT_PRODUCT.id !== 'devshark';
 
   return (
-    <footer className="ss-brand-footer" aria-label={t('footer.aria')}>
+    <footer className="ss-brand-footer" aria-label={t(showFamily ? 'footer.aria' : 'footer.ariaStandalone')}>
+      {showFamily && (
       <div className="ss-brand-footer__heading">
         <span>{t('footer.family')}</span>
         {CURRENT_PRODUCT.id === 'studyshark' ? (
@@ -28,6 +33,8 @@ export default function BrandFooter() {
           <span>StudyShark</span>
         )}
       </div>
+      )}
+      {showFamily && (
       <ul className="ss-brand-footer__brands">
         {SHARK_BRANDS.map((product) => {
           const subjectBrand = product.relationship === 'studyshark-subject' ? product.subjectId : null;
@@ -69,6 +76,7 @@ export default function BrandFooter() {
           );
         })}
       </ul>
+      )}
       <div className="ss-brand-footer__meta">
         <span>{t('footer.free')}</span>
         <nav aria-label={t('footer.legal')}>

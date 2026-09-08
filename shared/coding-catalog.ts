@@ -24,6 +24,28 @@ export const CODING_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript'
 export const isCodingTrack = (value: unknown): value is CodingTrack =>
   typeof value === 'string' && (CODING_TRACKS as readonly string[]).includes(value);
 
+/** The tracks the Coding section presents: JavaScript, TypeScript and React.
+ * System design keeps its tasks, its grader and its place in the Learn
+ * curriculum and the FDE scenarios, but it is no longer a Coding track — no
+ * card, no count, no filter, no featured task, no search result (issue #165).
+ * Old `/coding/system-design…` links land on an explanation instead of a
+ * hidden exercise. */
+export const CODING_SECTION_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript', 'react'];
+export const isCodingSectionTrack = (value: unknown): value is CodingTrack =>
+  typeof value === 'string' && (CODING_SECTION_TRACKS as readonly string[]).includes(value);
+
+/** Tracks removed from Coding discovery. Their records stay readable. */
+export const CODING_RETIRED_SECTION_TRACKS: readonly CodingTrack[] = CODING_TRACKS.filter(
+  (track) => !isCodingSectionTrack(track),
+);
+
+/** The Learn topic a retired Coding track now points at. */
+export const RETIRED_TRACK_LEARN_TOPIC: Record<string, string> = { 'system-design': 'system-design' };
+
+/** Keep only what the Coding section may show. */
+export const codingSectionTasks = <T extends { track: CodingTrack }>(tasks: readonly T[]): T[] =>
+  tasks.filter((task) => isCodingSectionTrack(task.track));
+
 /** Tier ids, used as translation-key suffixes (`coding.tier.<id>`). */
 export const CODING_TIERS: Record<CodingTier, string> = {
   1: 'foundations',

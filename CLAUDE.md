@@ -12,7 +12,7 @@ Read [the product architecture](docs/product-architecture.md), [the design contr
 - All learning is free. Support, cosmetic shop items, collectible Shark Cards, badges, and streak freezes never change access, content, explanations, paths, XP, scores, streaks, ranks, leaderboards, matchmaking, or AI availability. Sharkira hints follow the AI rules: off by default, capped/cached, and never reveal the answer. devShark ships no AI feature at all: its coding hints are authored and end in documentation links.
 - The server owns answers, grading, score/XP, product scope, subject scope, admin roles, and one-time claims. Correct answers never reach the client before submission.
 - Keep exactly twelve physical TypeScript handlers under `api/`; preserve validation, auth, authorization, rate limits, request IDs, safe errors, RLS, and service-role isolation.
-- Keep devShark out of StudyShark discovery and preserve the all-family footer.
+- Keep devShark out of StudyShark discovery. StudyShark keeps the all-family footer; devShark shows no sibling-brand promotion (issue #166) and keeps only the legal, support and site-setting controls.
 - Keep natural EN/CS parity and responsive web accessibility. Native/Expo work is out of scope.
 - Public legacy `DevQuiz` copy is stale; compatibility storage keys, migrations, package names, fixtures, and history may remain.
 

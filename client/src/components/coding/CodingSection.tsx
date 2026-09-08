@@ -1,6 +1,6 @@
 // The Coding section: home, one track, one task, and the review queue.
 // devShark-only routes; the App gates them like /roadmap and /typing.
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -9,13 +9,15 @@ import { readString, removeStored, writeString } from '../../lib/storage';
 import { Kicker } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import { CodingWorkbench } from '../../coding/CodingWorkbench';
-import { DesignRunner } from '../../coding/DesignRunner';
 import { codingKeys, saveCodingDraft, useCodingProgress, useCodingTask } from '../../coding/api';
 import { CODING_INDEX } from '../../../../shared/coding-index';
 import {
+  CODING_SECTION_TRACKS,
   CODING_TECHNIQUE_GROUPS,
   CODING_TIERS,
-  CODING_TRACKS,
+  RETIRED_TRACK_LEARN_TOPIC,
+  codingSectionTasks,
+  isCodingSectionTrack,
   isCodingTrack,
   tierLockReason,
   tierUnlocked,
@@ -31,6 +33,27 @@ type Status = 'open' | 'in_progress' | 'passed' | 'revealed' | 'due' | 'locked';
 
 const draftKey = (id: string) => `devshark:coding:draft:${id}`;
 const GROUPS = Object.keys(CODING_TECHNIQUE_GROUPS) as CodingTechniqueGroup[];
+/** What Coding may show. System design keeps its records but leaves discovery. */
+const SECTION_INDEX = codingSectionTasks(CODING_INDEX);
+
+/** A retired Coding track: explain where the material went, start nothing. */
+function RetiredTrack({ track }: { track: CodingTrack }) {
+  const { t } = useLanguage();
+  const topic = RETIRED_TRACK_LEARN_TOPIC[track];
+  return (
+    <div className="cd-page ss-pop">
+      <header>
+        <Kicker><Link className="cd-link" to="/coding">{t('coding.title')}</Link></Kicker>
+        <h1>{t(`coding.track.${track}` as never)}</h1>
+      </header>
+      <p className="cd-note" role="status">{t('coding.retired.note')}</p>
+      <div className="cd-actions">
+        {topic && <Link className="cd-btn cd-btn--primary" to={`/learn?topic=${encodeURIComponent(topic)}`}>{t('coding.retired.learn')}</Link>}
+        <Link className="cd-btn" to="/coding">{t('coding.retired.back')}</Link>
+      </div>
+    </div>
+  );
+}
 
 function useStatuses(progress: CodingProgressResponse | undefined) {
   const passed = useMemo(() => new Set(Object.entries(progress?.tasks ?? {}).filter(([, p]) => p.status === 'passed').map(([id]) => id)), [progress]);
@@ -85,8 +108,11 @@ export function CodingHome() {
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { passed, statusOf } = useStatuses(progress.data);
-  const next = useMemo(() => nextOpenTask(CODING_INDEX, statusOf), [statusOf]);
-  const dueCount = progress.data?.due.length ?? 0;
+  const next = useMemo(() => nextOpenTask(SECTION_INDEX, statusOf), [statusOf]);
+  const dueCount = useMemo(
+    () => (progress.data?.due ?? []).filter((id) => SECTION_INDEX.some((task) => task.id === id)).length,
+    [progress.data],
+  );
 
   return (
     <div className="cd-page ss-pop">
@@ -104,8 +130,8 @@ export function CodingHome() {
         {next && <Link className="cd-btn cd-btn--primary" to={`/coding/${next.track}/${next.id}`}>{t('coding.continue')}</Link>}
       </div>
       <section aria-label={t('coding.title')} className="cd-tracks">
-        {CODING_TRACKS.map((track) => {
-          const tasks = CODING_INDEX.filter((task) => task.track === track);
+        {CODING_SECTION_TRACKS.map((track) => {
+          const tasks = SECTION_INDEX.filter((task) => task.track === track);
           const done = tasks.filter((task) => passed.has(task.id)).length;
           return (
             <Link key={track} className="cd-track ss-lift" to={`/coding/${track}`}>
@@ -125,7 +151,7 @@ export function CodingHome() {
           {GROUPS.map((group) => {
             const tags = CODING_TECHNIQUE_GROUPS[group] as readonly string[];
             const counts = new Map<CodingTrack, number>();
-            for (const task of CODING_INDEX) if (task.focus.some((tag) => tags.includes(tag))) counts.set(task.track, (counts.get(task.track) ?? 0) + 1);
+            for (const task of SECTION_INDEX) if (task.focus.some((tag) => tags.includes(tag))) counts.set(task.track, (counts.get(task.track) ?? 0) + 1);
             const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
             if (!best) return null;
             return <Link key={group} className="cd-chip" to={`/coding/${best[0]}?group=${group}`}>{t(`coding.group.${group}` as never)} · {[...counts.values()].reduce((a, b) => a + b, 0)}</Link>;
@@ -144,10 +170,11 @@ export function CodingTrackScreen() {
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { passed, statusOf, lockReason } = useStatuses(progress.data);
-  const track = isCodingTrack(trackParam) ? trackParam : null;
+  const track = isCodingSectionTrack(trackParam) ? trackParam : null;
+  const retired = !track && isCodingTrack(trackParam) ? trackParam : null;
   const group = params.get('group');
   const statusFilter = params.get('status') ?? 'all';
-  const tasks = useMemo(() => CODING_INDEX.filter((task) => task.track === track), [track]);
+  const tasks = useMemo(() => SECTION_INDEX.filter((task) => task.track === track), [track]);
   const filtered = useMemo(() => tasks.filter((task) => {
     if (group && group in CODING_TECHNIQUE_GROUPS) {
       const tags = CODING_TECHNIQUE_GROUPS[group as CodingTechniqueGroup] as readonly string[];
@@ -160,6 +187,7 @@ export function CodingTrackScreen() {
     return status === 'open' || status === 'in_progress' || status === 'revealed';
   }), [tasks, group, statusFilter, statusOf]);
   const groupsHere = useMemo(() => GROUPS.filter((g) => tasks.some((task) => task.focus.some((tag) => (CODING_TECHNIQUE_GROUPS[g] as readonly string[]).includes(tag)))), [tasks]);
+  if (retired) return <RetiredTrack track={retired} />;
   if (!track) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p><Link className="cd-btn" to="/coding">{t('coding.verdict.back')}</Link></div>;
   const done = tasks.filter((task) => passed.has(task.id)).length;
   const tiers = [1, 2, 3, 4, 5].filter((tier) => filtered.some((task) => task.tier === tier)) as CodingTier[];
@@ -222,9 +250,9 @@ export function CodingTaskScreen() {
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { statusOf } = useStatuses(progress.data);
-  const task = useCodingTask(taskId);
-  const [attempt, setAttempt] = useState(0);
-  const track = isCodingTrack(trackParam) ? trackParam : null;
+  const retired = isCodingTrack(trackParam) && !isCodingSectionTrack(trackParam) ? trackParam : null;
+  const task = useCodingTask(retired ? undefined : taskId);
+  const track = isCodingSectionTrack(trackParam) ? trackParam : null;
 
   useEffect(() => {
     if (task.data && track && task.data.task.track !== track) navigate(`/coding/${task.data.task.track}/${task.data.task.id}`, { replace: true });
@@ -241,12 +269,9 @@ export function CodingTaskScreen() {
     if (verdict.verdict === 'passed' && taskId) removeStored(draftKey(taskId));
   }, [queryClient, taskId]);
 
-  const onRetry = useCallback(() => {
-    void task.refetch();
-    setAttempt((n) => n + 1);
-  }, [task]);
-
+  if (retired) return <RetiredTrack track={retired} />;
   if (!track || !taskId) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p></div>;
+  if (task.data && !isCodingSectionTrack(task.data.task.track)) return <RetiredTrack track={task.data.task.track} />;
   if (task.isLoading) return <div className="cd-page"><p className="cd-note" role="status">{t('coding.loading')}</p></div>;
   if (task.isError || !task.data) {
     return (
@@ -260,7 +285,7 @@ export function CodingTaskScreen() {
     );
   }
   const data = task.data;
-  const trackTasks = CODING_INDEX.filter((one) => one.track === data.task.track);
+  const trackTasks = SECTION_INDEX.filter((one) => one.track === data.task.track);
   const next = nextOpenTask(trackTasks, statusOf, data.task.id);
   const nextHref = next && next.id !== data.task.id ? `/coding/${next.track}/${next.id}` : null;
   const backHref = `/coding/${data.task.track}`;
@@ -272,9 +297,7 @@ export function CodingTaskScreen() {
       <nav aria-label={t('coding.title')}>
         <Kicker><Link className="cd-link" to="/coding">{t('coding.title')}</Link> · <Link className="cd-link" to={backHref}>{t(`coding.track.${data.task.track}` as never)}</Link></Kicker>
       </nav>
-      {data.task.track === 'system-design'
-        ? <DesignRunner key={`${data.task.id}-${attempt}`} task={data.task} session={data.session} locked={data.locked} signedIn={data.signedIn} mode="section" onVerdict={onVerdict} onRetry={onRetry} nextHref={nextHref} backHref={backHref} />
-        : <CodingWorkbench key={`${data.task.id}-${attempt}`} task={data.task} session={data.session} locked={data.locked} signedIn={data.signedIn} initialCode={initialCode} mode="section" onDraft={onDraft} onVerdict={onVerdict} nextHref={nextHref} backHref={backHref} />}
+      <CodingWorkbench key={data.task.id} task={data.task} session={data.session} locked={data.locked} signedIn={data.signedIn} initialCode={initialCode} mode="section" onDraft={onDraft} onVerdict={onVerdict} nextHref={nextHref} backHref={backHref} />
     </div>
   );
 }
@@ -285,7 +308,7 @@ export function CodingReviewScreen() {
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { statusOf } = useStatuses(progress.data);
-  const due = (progress.data?.due ?? []).map((id) => CODING_INDEX.find((task) => task.id === id)).filter((task): task is CodingTaskSummary => Boolean(task));
+  const due = (progress.data?.due ?? []).map((id) => SECTION_INDEX.find((task) => task.id === id)).filter((task): task is CodingTaskSummary => Boolean(task));
   return (
     <div className="cd-page ss-pop">
       <header>
