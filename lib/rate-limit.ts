@@ -60,6 +60,12 @@ export const RATE_LIMITS = {
   codingReveal: { key: 'coding_reveal', capacity: 10, refillPerSecond: 10 / 3600 },
   githubConnect: { key: 'github_connect', capacity: 10, refillPerSecond: 10 / 3600 },
   githubSync: { key: 'github_sync', capacity: 6, refillPerSecond: 6 / 3600 },
+  // Learning paths: starting an activity is cheap, submitting one runs the
+  // sandbox, and a draft autosave fires while the learner types.
+  learningPathStart: { key: 'learning_path_start', capacity: 30, refillPerSecond: 30 / 600 },
+  learningPathSubmit: { key: 'learning_path_submit', capacity: 30, refillPerSecond: 30 / 600 },
+  learningPathDraft: { key: 'learning_path_draft', capacity: 60, refillPerSecond: 60 / 600 },
+  learningPathEnroll: { key: 'learning_path_enroll', capacity: 10, refillPerSecond: 10 / 600 },
 } satisfies Record<string, RateLimitConfig>;
 
 const buckets = new Map<string, Bucket>();

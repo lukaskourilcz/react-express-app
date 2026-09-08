@@ -198,3 +198,38 @@ export const scanQuestionQuality = (categories: readonly string[], store = false
   adminFetch<QuestionQualityScan>(`quality?categories=${encodeURIComponent(categories.join(','))}`, {
     method: store ? 'POST' : 'GET',
   });
+
+export interface LearningPathIssue {
+  level: 'error' | 'warning';
+  code: string;
+  at: string;
+  message: string;
+}
+
+export interface LearningPathReadiness {
+  pathId: string;
+  version: number;
+  /** The content validator found no errors. */
+  contentReady: boolean;
+  /** The deployment switch for this path is on. Separate from contentReady:
+   * a path can validate and still be deliberately closed. */
+  enabledInEnv: boolean;
+  inventory: {
+    modules: number;
+    lessons: number;
+    checks: number;
+    codeExercises: number;
+    artifacts: number;
+    estimatedMinutes: number;
+    moduleChecks: number;
+    moduleCodeExercises: number;
+    finalChecks: number;
+    finalCodeExercises: number;
+    diagnosticChecks: number;
+    diagnosticCodeExercises: number;
+  };
+  issues: LearningPathIssue[];
+}
+
+export const listLearningPathReadiness = () =>
+  adminFetch<{ paths: LearningPathReadiness[] }>('learning-paths');

@@ -33,6 +33,11 @@ import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope
 import { levelCodingTasks, playable as playableCodingTask } from '../../lib/coding/catalog';
 import type { RoadmapTopicStructure } from '../../lib/roadmap';
 import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
+import {
+  handleActivityStart,
+  handleActivitySubmit,
+  handleLearningPathCatalog,
+} from '../../lib/learning-paths/handlers';
 import { encodeCodingSession } from '../../lib/quiz-tokens';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
 import { subjectForCategory, subjectForTopic, isScopeSubject, type ScopeSubjectId } from '../../shared/subject-catalog';
@@ -72,6 +77,9 @@ import {
 //   POST /api/quiz/roadmap?resource=answer         → grade one first answer
 //   POST /api/quiz/roadmap?resource=complete       → atomically record progress
 //   PUT  /api/quiz/roadmap                         → save non-progression account extras
+//   GET  /api/quiz/roadmap?resource=learning-path-catalog → published path manifests
+//   POST /api/quiz/roadmap?resource=learning-path-start   → open one path activity
+//   POST /api/quiz/roadmap?resource=learning-path-submit  → grade and record it
 const logEvent = createLogger('quiz/roadmap');
 
 /** The level map marks devShark code levels that end with coding tasks, so the
@@ -887,6 +895,22 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     }
   }
 
+  // Learning paths share this function too (twelve-function budget):
+  //   GET  ?resource=learning-path-catalog → the published manifests, guests included
+  //   POST ?resource=learning-path-start   → an attempt, its sealed session and safe payload
+  //   POST ?resource=learning-path-submit  → server grading and the recorded evidence
+  if (resource.startsWith('learning-path-')) {
+    try {
+      if (resource === 'learning-path-catalog') return await handleLearningPathCatalog(req, res);
+      if (resource === 'learning-path-start') return await handleActivityStart(req, res, supabase);
+      if (resource === 'learning-path-submit') return await handleActivitySubmit(req, res, supabase);
+      return jsonError(res, 404, 'not_found', 'Unknown learning-path resource');
+    } catch (error) {
+      logEvent({ status: 500, kind: 'learning_path_error', resource, category: error instanceof Error ? error.name : 'unknown' });
+      return jsonError(res, 500, 'internal_error', 'Could not handle the learning-path request');
+    }
+  }
+
   if (req.method === 'POST' && req.query.resource === 'answer') {
     try {
       return await handleAnswer(req, res);
@@ -933,6 +957,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
 
   // Per-user progress sub-resource (auth-gated): GET ?resource=progress, or PUT.
+  // The PUT branch is deliberately generic, so it is guarded by the
+  // learning-path check above rather than left to catch everything.
   if (req.method === 'PUT' || (req.method === 'GET' && req.query.resource === 'progress')) {
     try {
       if (req.method === 'PUT' && !(await enforceRateLimit(req, res, RATE_LIMITS.roadmapMutation))) return;

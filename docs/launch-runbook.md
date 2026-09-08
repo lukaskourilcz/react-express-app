@@ -72,6 +72,20 @@ a slow healing poll while connected.
 6. Confirm browser roles cannot mutate protected stats, multiplayer answer-key,
    reports, flashcard, roadmap, streak, or XP tables directly.
 
+7. Apply `supabase/supabase-schema-025.sql` (coding) and
+   `supabase/supabase-schema-026.sql` (learning paths) if the environment does
+   not already contain them. Confirm the migration-026 tables
+   `learning_path_enrollments`, `learning_path_attempts`,
+   `learning_path_evidence`, `learning_path_progress` and
+   `learning_path_drafts` exist, and that `upsert_learning_path_enrollment`,
+   `open_learning_path_attempt`, `accept_learning_path_result`,
+   `save_learning_path_draft` and `delete_learning_path_data` are service-role
+   only.
+8. Confirm `learning_path_attempts` has row-level security **on** and **no**
+   SELECT policy or grant for `authenticated`. It holds grading material, and
+   owning a row is not a reason to read it. The other four learning-path
+   tables need both the owner policy and the matching `GRANT SELECT`.
+
 Migrations 021–023 are idempotent. Legacy daily/challenge rows are assigned
 to `webdev`; no existing progress is deleted. Do not casually restore removed browser write
 policies during rollback: they are the controls that prevent client-authored
@@ -88,13 +102,23 @@ npm audit --omit=dev
 npm audit --omit=dev --prefix client
 npm run typecheck:api
 npm run test:launch
+npm run test:coding
+npm run test:paths
 npm run build
+npm run check:responsive
 git diff --check
 ```
 
 `test:launch` verifies product resolution, scope isolation, token
-confidentiality/tamper detection, rate limiting, the health contract, and the
-12-function budget. The Vite build also creates metadata-specific static HTML
+confidentiality/tamper detection, rate limiting, the health contract, the
+12-function budget, and the learning-path invariants — the answer-free public
+manifest, the sealed attempt session, the service-only grading tables, and
+that no path writes XP or ordinary coding progress.
+
+`test:paths` runs the content validator over both learning paths and then
+executes every reference solution against its own visible and hidden
+assertions in the real sandbox. A task whose reference cannot pass is a task
+no learner can pass, so this failing blocks the release. The Vite build also creates metadata-specific static HTML
 shells for only the public topic pages allowed on that deployment.
 
 ## Preview smoke test
@@ -121,6 +145,18 @@ Test in English and Czech, desktop and a narrow mobile viewport:
    response reports distributed rate limiting as configured and alert on 503.
 10. If Support is enabled, verify the public target, costs, received amount,
     carry, provider, and separate StudyShark/devShark explanation are truthful.
+11. On devShark, walk one learning path end to end with the deployment switch
+    on: read the outline signed out, sign in, start the path, open an activity,
+    submit a wrong answer and a right one, close the tab mid-draft and reopen
+    it, then submit the same idempotency key twice and confirm the second call
+    replays the stored result rather than grading again. Confirm a paused path
+    keeps its evidence and leaves the queue, and that removing the FDE
+    specialization pauses it without deleting anything.
+12. With both `LEARNING_PATH_*_ENABLED` unset — or migration 026 not yet
+    applied — confirm every existing surface still works: Learn levels,
+    checkpoints, the Coding section, Today, Profile, XP and deletion. A path
+    that is switched off is previewable and says so; it never takes anything
+    else down with it.
 
 ## Release and observation
 
@@ -129,6 +165,24 @@ function errors/latency, `/api/health`, Supabase database/realtime health,
 rate-limit 429 volume, login failures, quiz submit failures, multiplayer
 reconnects, and account deletion errors for at least 30 minutes. Never include
 access tokens, emails, answer tokens, or submitted answer text in logs.
+
+## Learning-path rollback
+
+Disabling the feature is the supported rollback: unset
+`LEARNING_PATH_DSA_ENABLED` and `LEARNING_PATH_FDE_ENABLED`, and the paths go
+back to preview-only while every other surface is untouched. Migration 026 is
+additive and holds no other feature's data, so it stays applied.
+
+Do **not** drop the `learning_path_*` tables as a rollback step. They hold
+learner evidence, and dropping them destroys work somebody did; the switch
+already achieves everything a rollback needs. If the schema really must go,
+restore migration 025's `delete_user_data` and `purge_expired_learning_data`
+bodies first, and treat the data loss as a deliberate decision with the owner's
+explicit agreement.
+
+An application version that predates the feature ignores
+`devquiz_learning_preference_v1` and reads `devquiz_track`, which every
+preference save still writes. No client change is needed to roll back.
 
 ## Rollback
 
