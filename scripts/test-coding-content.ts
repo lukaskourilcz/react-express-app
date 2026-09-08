@@ -27,6 +27,8 @@ import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/codin
 import { runReactSuite } from '../lib/coding/react-runner';
 import { renderCodingIndex } from './build-coding-index';
 import { isCollectionId, normalizeCollectionName } from '../shared/coding-library';
+import { allApproaches, approachCoverage } from '../lib/coding/approaches';
+import { APPROACH_STYLES, isComplexity } from '../shared/coding-approaches';
 import { allPuzzles, assemble, gradePuzzle, preparePuzzle, puzzleProblems } from '../lib/coding/puzzles';
 import { MAX_PUZZLE_BLOCKS, PUZZLE_COMPETENCIES } from '../shared/coding-puzzle';
 
@@ -340,13 +342,47 @@ async function main() {
   if (normalizeCollectionName('  My   list  ') !== 'My list') fail('library: a name should be trimmed and its whitespace collapsed');
   if (isCollectionId('short') || !isCollectionId('abcdefgh')) fail('library: collection ids must be validated');
 
+  /* ── curated solution comparisons (issue #158) ──────────────────────── */
+  // Every authored approach has to actually solve its task, or the comparison
+  // teaches the wrong thing. The manifest is the coverage record: a task not in
+  // it never renders a comparison tab.
+  const coverage = approachCoverage();
+  if (coverage.length === 0) fail('approaches: nothing is authored');
+  for (const [taskId, approaches] of Object.entries(allApproaches())) {
+    const where = `approaches ${taskId}`;
+    const task = CODING_TASKS.find((one) => one.id === taskId);
+    if (!task) { fail(`${where}: no such task`); continue; }
+    if (approaches.length < 2 || approaches.length > 3) fail(`${where}: expected two or three approaches, found ${approaches.length}`);
+    const keys = new Set(approaches.map((one) => one.key));
+    if (keys.size !== approaches.length) fail(`${where}: duplicate approach key`);
+    for (const approach of approaches) {
+      const what = `${where}/${approach.key}`;
+      if (!APPROACH_STYLES.includes(approach.style)) fail(`${what}: unknown style ${approach.style}`);
+      if (!isComplexity(approach.time)) fail(`${what}: time ${approach.time} is not a complexity we use`);
+      if (!isComplexity(approach.space)) fail(`${what}: space ${approach.space} is not a complexity we use`);
+      for (const field of ['title', 'assumptions', 'tradeoffs'] as const) {
+        if (!approach[field].en.trim()) fail(`${what}: ${field} has no English text`);
+        if (!SKIP_CS && !approach[field].cs.trim()) fail(`${what}: ${field} has no Czech text`);
+      }
+      if (!task.tests || task.tests.length === 0) { fail(`${what}: the task has no tests to prove it against`); continue; }
+      const run = await withTimeout(
+        evaluateCalls({ code: approach.code, calls: task.tests.map((one) => one.call), expectations: task.tests.map((one) => one.expected) }),
+        8_000,
+        what,
+      );
+      if (!allPassed(run)) {
+        fail(`${what}: does not pass the task's own tests: ${run.codeError ?? run.results.map((r, i) => (r.pass ? null : task.tests![i].call)).filter(Boolean).join('; ')}`);
+      }
+    }
+  }
+
   if (failures.length > 0) {
     console.error(`Coding content contract: ${failures.length} problem(s)\n  - ${failures.join('\n  - ')}`);
     process.exitCode = 1;
     return;
   }
   const byTrack = CODING_TRACKS.map((track) => `${track} ${CODING_TASKS.filter((t) => t.track === track).length}`).join(', ');
-  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, ${allPuzzles().length} arrangement puzzles proven, ${allFailureAdvice().length} failure hints checked, ${debugTasks.length} repair exercises, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
+  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, ${allPuzzles().length} arrangement puzzles proven, ${allFailureAdvice().length} failure hints checked, ${debugTasks.length} repair exercises, ${coverage.length} solution comparisons proven, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 
 void main().catch((error) => {

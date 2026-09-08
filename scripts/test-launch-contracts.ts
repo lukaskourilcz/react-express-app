@@ -77,6 +77,13 @@ import {
   isCodingSectionTrack,
 } from '../shared/coding-catalog';
 import { readFileSync as readSource } from 'node:fs';
+import {
+  SESSION_MINUTES,
+  buildPracticeSession,
+  isSessionMinutes,
+  type PracticeCandidate,
+} from '../shared/practice-session';
+import { SKIP_REASONS, isSkipReason, MAX_SKIP_NOTE } from '../shared/coding-skip';
 
 function apiFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -379,13 +386,18 @@ async function main() {
   assert.match(coding, /DELETE FROM public\.github_connections WHERE user_id = p_user_id/);
   assert.doesNotMatch(coding, /access_token|refresh_token|provider_token/, 'the garden must never store a user token');
 
-  // Reference solutions and hidden tests never ship: nothing under client/
-  // may import lib/coding, and the catalogue keeps solutions in their own module.
+  // Reference solutions, hidden tests, authored puzzles and the curated
+  // approaches never ship: nothing under client/ may import the server's
+  // lib/coding directory, and the catalogue keeps solutions in their own module.
+  // The pattern matches the directory, not the prefix, so a client module whose
+  // own name begins with "coding" (client/src/lib/codingLibrary.ts) is not a
+  // false positive.
+  const SERVER_CODING_IMPORT = /lib\/coding(\/|['"`])/;
   const clientFiles = readdirSync(join(process.cwd(), 'client', 'src'), { recursive: true }) as string[];
   for (const file of clientFiles) {
     if (!/\.(ts|tsx)$/.test(file)) continue;
     const text = readFileSync(join(process.cwd(), 'client', 'src', file), 'utf8');
-    assert.doesNotMatch(text, /lib\/coding/, `client/src/${file} must not import lib/coding`);
+    assert.doesNotMatch(text, SERVER_CODING_IMPORT, `client/src/${file} must not import lib/coding`);
   }
   // The sandbox frame has an opaque origin, so its module script is a CORS
   // load: without Access-Control-Allow-Origin on its assets the harness never
@@ -407,7 +419,7 @@ async function main() {
   if (statSync(sandboxDir, { throwIfNoEntry: false })?.isDirectory()) {
     for (const file of readdirSync(sandboxDir, { recursive: true }) as string[]) {
       if (!/\.(ts|tsx)$/.test(file)) continue;
-      assert.doesNotMatch(readFileSync(join(sandboxDir, file), 'utf8'), /lib\/coding/, `client/sandbox/${file} must not import lib/coding`);
+      assert.doesNotMatch(readFileSync(join(sandboxDir, file), 'utf8'), SERVER_CODING_IMPORT, `client/sandbox/${file} must not import lib/coding`);
     }
   }
   const catalogSource = readFileSync(join(process.cwd(), 'lib/coding/catalog.ts'), 'utf8');
@@ -643,7 +655,65 @@ async function main() {
   assert.match(footerSource, /footer\.support/);
   assert.match(footerSource, /ss-footer-settings/);
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, learner profile, progression graph, Coding tracks, devShark footer, and 12-function budget.');
+  /* ── short practice sessions (issue #159) ───────────────────────────── */
+  const candidate = (taskId: string, minutes: number, extra: Partial<PracticeCandidate> = {}): PracticeCandidate => ({
+    taskId, track: 'javascript', estimatedMinutes: minutes, tier: 1, eligible: true, hasPuzzle: false, ...extra,
+  });
+  const pool: PracticeCandidate[] = [
+    candidate('a', 5), candidate('b', 5), candidate('c', 10),
+    candidate('d', 5, { eligible: false }), candidate('e', 5, { hasPuzzle: true }),
+  ];
+  const base = { candidates: pool, due: [], saved: [], passed: [] } as const;
+
+  // Deterministic: the same inputs give exactly the same queue, every time.
+  const first = buildPracticeSession({ ...base, minutes: 10 });
+  const again = buildPracticeSession({ ...base, minutes: 10 });
+  assert.deepEqual(first, again, 'the practice queue must be deterministic');
+  assert.ok(first.estimatedMinutes <= 10, 'the queue must fit the chosen budget');
+  assert.ok(first.items.every((item) => item.taskId !== 'd'), 'an ineligible task is never queued');
+
+  // A session never repeats work already passed, and never re-serves a skip.
+  const skippingA = buildPracticeSession({ ...base, minutes: 20, passed: ['b'], skipped: ['a'] });
+  assert.ok(skippingA.items.every((item) => item.taskId !== 'a' && item.taskId !== 'b'));
+
+  // Review comes first and takes at most half the budget, so new work still moves.
+  const withReview = buildPracticeSession({
+    candidates: pool, minutes: 20, due: ['a', 'b', 'c'], saved: [], passed: ['a', 'b', 'c'],
+  });
+  assert.equal(withReview.items[0]?.kind, 'review', 'due review leads the queue');
+  const reviewMinutes = withReview.items.filter((one) => one.kind === 'review').reduce((sum, one) => sum + one.estimatedMinutes, 0);
+  assert.ok(reviewMinutes <= 10, 'review takes at most half of a 20 minute session');
+
+  // Nothing eligible is an honest empty queue, not a padded one.
+  const nothing = buildPracticeSession({ minutes: 20, candidates: [candidate('x', 5, { eligible: false })], due: [], saved: [], passed: [] });
+  assert.equal(nothing.items.length, 0);
+  assert.equal(nothing.short, true);
+
+  // A five minute session with only a ten minute task still offers it rather
+  // than showing nothing at all; the estimate is reported honestly.
+  const single = buildPracticeSession({ minutes: 5, candidates: [candidate('long', 10)], due: [], saved: [], passed: [] });
+  assert.equal(single.items.length, 1);
+  assert.equal(single.estimatedMinutes, 10);
+
+  // On a touch screen the queue prefers tasks that have an arrangement puzzle.
+  const touch = buildPracticeSession({ ...base, minutes: 5, preferPuzzles: true });
+  assert.equal(touch.items[0]?.taskId, 'e', 'a touch session leads with a task that has a puzzle');
+
+  for (const minutes of SESSION_MINUTES) assert.ok(isSessionMinutes(minutes));
+  assert.equal(isSessionMinutes(7), false, 'an unoffered length is refused');
+
+  /* ── skipping awards nothing (issue #160) ───────────────────────────── */
+  assert.deepEqual([...SKIP_REASONS], ['too-easy', 'too-hard', 'missing-prerequisite', 'unclear', 'later']);
+  assert.equal(isSkipReason('bored'), false);
+  assert.ok(MAX_SKIP_NOTE > 0 && MAX_SKIP_NOTE <= 500, 'a skip note stays a signal, not an essay');
+  const skipSource = readSource(join(process.cwd(), 'lib/coding/practice-handlers.ts'), 'utf8');
+  const skipHandler = skipSource.slice(skipSource.indexOf('export async function handleCodingSkip'));
+  for (const forbidden of ['record_coding_verdict', 'record_verified_activity_xp', 'roadmap_attempt_coding', 'coding_progress']) {
+    assert.doesNotMatch(skipHandler, new RegExp(forbidden.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')),
+      `a skip must not touch ${forbidden}`);
+  }
+
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, learner profile, progression graph, Coding tracks, devShark footer, practice sessions, skip feedback, and 12-function budget.');
 }
 
 void main().catch((error) => {

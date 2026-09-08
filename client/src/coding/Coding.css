@@ -407,3 +407,15 @@
 .cd-linkbtn { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
 .cd-row--retired { opacity: 0.7; }
 .cd-actions--library { margin-top: 4px; }
+
+/* ── Curated approach comparison (issue #158) ───────────────────────────── */
+.cd-approaches { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 16px; }
+.cd-approach { border: 1px solid var(--color-border); border-radius: 8px; padding: 12px; }
+.cd-approach h4 { margin: 0 0 6px; font-size: 0.9375rem; }
+.cd-approach__meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.cd-approach pre { overflow-x: auto; margin: 0 0 8px; }
+.cd-approach__row { margin: 0 0 6px; font-size: 0.8125rem; color: var(--color-text-secondary); }
+
+/* ── Skip feedback (issue #160) ─────────────────────────────────────────── */
+.cd-skip { display: flex; flex-direction: column; gap: 8px; }
+.cd-skip textarea.cd-input { min-height: 66px; resize: vertical; }

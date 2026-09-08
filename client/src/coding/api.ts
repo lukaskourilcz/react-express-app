@@ -4,6 +4,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { getStoredLang } from '../i18n/LanguageContext';
+import type { CodingApproachesResponse } from '../../../shared/coding-approaches';
 import type { CodingPuzzleVerdict } from '../../../shared/coding-puzzle';
 import type {
   CodingDraftResponse,
@@ -23,6 +24,7 @@ const USER = '/api/user/[op]';
 
 export const codingKeys = {
   task: (id: string) => ['coding', 'task', id] as const,
+  approaches: (id: string) => ['coding', 'approaches', id] as const,
   progress: () => ['coding', 'progress'] as const,
   github: () => ['coding', 'github'] as const,
 };
@@ -89,6 +91,17 @@ export function useCodingProgress(enabled: boolean) {
     enabled,
     queryFn: ({ signal }) => fetchCodingProgress(signal),
     staleTime: 30_000,
+  });
+}
+
+/** The curated comparison, fetched only once the server says it is unlocked. */
+export function useCodingApproaches(id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: codingKeys.approaches(id),
+    enabled: enabled && Boolean(id),
+    queryFn: ({ signal }) => apiFetch<CodingApproachesResponse>(`${ROADMAP}?resource=coding-approaches&id=${encodeURIComponent(id)}`, { signal }),
+    staleTime: 5 * 60_000,
+    retry: false,
   });
 }
 

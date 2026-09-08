@@ -57,6 +57,7 @@ const CodingTrackScreen = lazy(() => import('./components/coding/CodingSection')
 const CodingTaskScreen = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.CodingTaskScreen })));
 const CodingReviewScreen = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.CodingReviewScreen })));
 const CodingLibraryScreen = lazy(() => import('./components/coding/CodingLibraryScreen').then((m) => ({ default: m.CodingLibraryScreen })));
+const PracticeSessionScreen = lazy(() => import('./components/coding/PracticeSessionScreen').then((m) => ({ default: m.PracticeSessionScreen })));
 const GithubSettingsPage = lazy(() => import('./components/coding/GithubSettingsPage').then((m) => ({ default: m.GithubSettingsPage })));
 const NotFoundPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.NotFoundPage })));
 
@@ -92,6 +93,7 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/coding': 'title.coding',
   '/coding/review': 'title.coding',
   '/coding/library': 'title.coding',
+  '/coding/session': 'title.coding',
   '/settings/github': 'title.github',
   '/shop': 'title.shop',
   '/play': 'title.play',
@@ -664,6 +666,7 @@ function App() {
                 <Route path="/coding" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingHome /> : <Navigate to="/learn" replace />} />
                 <Route path="/coding/review" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingReviewScreen /> : <Navigate to="/learn" replace />} />
                 <Route path="/coding/library" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingLibraryScreen /> : <Navigate to="/learn" replace />} />
+                <Route path="/coding/session" element={CURRENT_PRODUCT.id === 'devshark' ? <PracticeSessionScreen /> : <Navigate to="/learn" replace />} />
                 <Route path="/coding/:track" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingTrackScreen /> : <Navigate to="/learn" replace />} />
                 <Route path="/coding/:track/:taskId" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingTaskScreen /> : <Navigate to="/learn" replace />} />
                 <Route path="/profile" element={<Profile />} />

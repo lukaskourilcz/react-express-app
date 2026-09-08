@@ -12,9 +12,10 @@ import { formatCode } from './runner/format';
 import { runCodeTests, runPassed, type RunOutcome, type RunPhase } from './runner/run-tests';
 import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness';
 import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, type LadderRung } from './hint-ladder';
-import { revealCoding, submitCoding } from './api';
+import { revealCoding, submitCoding, useCodingApproaches } from './api';
 import { CodePuzzle } from './CodePuzzle';
 import { useCodingLibrary, useCodingLibraryAction } from '../lib/codingLibrary';
+import { SkipPanel } from './SkipDialog';
 import { useIsCompactPractice } from '../lib/useMediaQuery';
 import type { CodingPuzzleVerdict, PlayableCodingPuzzle } from '../../../shared/coding-puzzle';
 import { CODING_TIERS, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
@@ -27,6 +28,9 @@ export interface CodingWorkbenchProps {
   session: string | null;
   /** The authored code-ordering puzzle for this task, when one exists (#154). */
   puzzle?: PlayableCodingPuzzle | null;
+  /** The verdict already recorded for this learner, from the task response.
+   * Only `passed` or `revealed` opens the solution comparison (#158). */
+  progressStatus?: 'in_progress' | 'passed' | 'revealed' | null;
   onPuzzleVerdict?: (verdict: CodingPuzzleVerdict) => void;
   locked: CodingLockReason | null;
   signedIn: boolean;
@@ -40,7 +44,7 @@ export interface CodingWorkbenchProps {
   onContinue?: () => void;
 }
 
-type Tab = 'results' | 'types' | 'console' | 'preview' | 'resources';
+type Tab = 'results' | 'types' | 'console' | 'preview' | 'resources' | 'approaches';
 type Phase = 'idle' | 'running' | 'submitting';
 
 const DRAFT_DEBOUNCE_MS = 900;
@@ -77,7 +81,7 @@ function relativeTime(iso: string, lang: string): string {
 }
 
 export function CodingWorkbench(props: CodingWorkbenchProps) {
-  const { task, session, locked, signedIn, initialCode, mode, onDraft, onVerdict, onRevealed, nextHref, backHref, onContinue, puzzle = null, onPuzzleVerdict } = props;
+  const { task, session, locked, signedIn, initialCode, mode, onDraft, onVerdict, onRevealed, nextHref, backHref, onContinue, puzzle = null, onPuzzleVerdict, progressStatus = null } = props;
   const { t, lang } = useLanguage();
   const L = useCallback((value: Localized | undefined): string => (value ? value[lang] || value.en : ''), [lang]);
   const online = useOnline();
@@ -120,10 +124,20 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const editorWithheld = compact && !puzzleMode && mode === 'lesson';
   const harness = useReactHarness();
 
+  // The comparison opens on recorded evidence, never on a local flag: the fetch
+  // is enabled only once the server has a passed (or revealed) verdict for this
+  // learner, and the server checks the same thing again (issue #158).
+  const comparisonUnlocked = signedIn && (
+    progressStatus === 'passed' || progressStatus === 'revealed' ||
+    verdict?.verdict === 'passed' || Boolean(solution)
+  );
+  const approaches = useCodingApproaches(task.id, comparisonUnlocked);
+
   const rungs = useMemo(() => ladderRungs(task, lang), [task, lang]);
   // Reading material for the techniques this task practises (issue #155). It is
   // there from the first second, costs no hint rung, and never shows a solution.
   const resources = useMemo(() => resourcesFor(task.focus), [task.focus]);
+
   const taken = Math.min(hintsTaken, rungs.length);
 
   // Draft: hand the code to the parent after the learner stops typing.
@@ -285,6 +299,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     ...(isTypeScript ? [{ key: 'types' as Tab, label: t('coding.tab.types'), badge: typesBadge, good: typesBadge === 'ok' ? true : typesBadge ? false : null }] : []),
     { key: 'console', label: t('coding.tab.console'), badge: null, good: null },
     { key: 'resources' as Tab, label: t('coding.tab.resources'), badge: resources.length > 0 ? String(resources.length) : null, good: null },
+    // No empty comparison tab: it appears only when the server actually sent one.
+    ...((approaches.data?.approaches.length ?? 0) > 0
+      ? [{ key: 'approaches' as Tab, label: t('coding.tab.approaches'), badge: String(approaches.data!.approaches.length), good: null }]
+      : []),
     ...(isReact ? [{ key: 'preview' as Tab, label: t('coding.tab.preview'), badge: null, good: null }] : []),
   ];
 
@@ -433,6 +451,32 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     );
   };
 
+  const renderApproaches = (): ReactNode => {
+    const data = approaches.data;
+    if (approaches.isLoading) return <p className="cd-console__empty" role="status">{t('common.loading')}</p>;
+    if (!data || data.approaches.length === 0) return <p className="cd-console__empty">{t('coding.approaches.locked')}</p>;
+    return (
+      <>
+        <p className="cd-note">{t(data.unlockedBy === 'passed' ? 'coding.approaches.introPassed' : 'coding.approaches.introRevealed')}</p>
+        <ul className="cd-approaches">
+          {data.approaches.map((approach) => (
+            <li key={approach.key} className="cd-approach">
+              <h4>{approach.title[lang] || approach.title.en}</h4>
+              <p className="cd-approach__meta">
+                <span className="cd-tag">{t(`coding.approaches.style.${approach.style}` as never)}</span>
+                <span className="cd-tag">{t('coding.approaches.time', { value: approach.time })}</span>
+                <span className="cd-tag">{t('coding.approaches.space', { value: approach.space })}</span>
+              </p>
+              <pre>{approach.code}</pre>
+              <p className="cd-approach__row"><b>{t('coding.approaches.assumptions')}:</b> {approach.assumptions[lang] || approach.assumptions.en}</p>
+              <p className="cd-approach__row"><b>{t('coding.approaches.tradeoffs')}:</b> {approach.tradeoffs[lang] || approach.tradeoffs.en}</p>
+            </li>
+          ))}
+        </ul>
+      </>
+    );
+  };
+
   const renderPreview = (): ReactNode => (
     <>
       {reactRun?.previewError && <p className="cd-note cd-note--error">{t('coding.preview.error', { message: reactRun.previewError })}</p>}
@@ -538,6 +582,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               </div>
             )}
             {libraryAction.isError && <p className="cd-note cd-note--error" role="alert">{t('coding.library.error')}</p>}
+            {signedIn && mode === 'section' && <SkipPanel taskId={task.id} />}
             {locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}
             {!signedIn && mode === 'section' && <p className="cd-note">{t('coding.signInHint')}</p>}
 
@@ -682,6 +727,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               {one.key === 'types' && renderTypes()}
               {one.key === 'console' && renderConsole()}
               {one.key === 'resources' && renderResources()}
+              {one.key === 'approaches' && renderApproaches()}
               {one.key === 'preview' && renderPreview()}
             </div>
           ))}

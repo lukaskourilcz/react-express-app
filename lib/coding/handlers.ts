@@ -22,6 +22,7 @@ import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } fr
 import { afterCodingPass } from '../github-garden';
 import { gradePuzzle, preparePuzzle, puzzleFor } from './puzzles';
 import { adviceFor } from './failure-hints';
+import { approachesFor } from './approaches';
 import { classifyFailure, type FailureAdvice, type FailureSignals } from '../../shared/coding-failures';
 import {
   CODING_TASK_XP,
@@ -43,6 +44,7 @@ import type {
   CodingVerdictResponse,
   DesignAnswer,
 } from '../../shared/coding-api';
+import type { CodingApproachesResponse } from '../../shared/coding-approaches';
 import type { CodingPuzzleVerdict, PlayableCodingPuzzle } from '../../shared/coding-puzzle';
 import { isPuzzleOrder } from '../../shared/coding-puzzle';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
@@ -515,6 +517,46 @@ async function handlePuzzleSubmit(
     applied,
     satisfiesLevel,
   };
+  return res.json(out);
+}
+
+/* ── GET ?resource=coding-approaches&id=… ────────────────────────────────── */
+
+/**
+ * The curated solution comparison (issue #158). It leaves the server only after
+ * the learner's own verdict is recorded: `passed` for someone who solved it,
+ * `revealed` for someone who gave up and read the reference. Those two are
+ * reported separately, because seeing how it could be written is not the same
+ * claim as having written it — and neither is a local boolean, which is why the
+ * gate reads coding_progress rather than anything in the request.
+ */
+export async function handleCodingApproaches(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+  if (!codingAvailable()) return notAvailable(res);
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+  const id = req.query.id;
+  if (!isCodingTaskId(id)) return jsonError(res, 400, 'bad_request', 'A task id is required');
+  const task = codingTaskById(id);
+  if (!task) return jsonError(res, 404, 'not_found', 'Unknown task');
+  const approaches = approachesFor(task.id);
+  if (!approaches || approaches.length === 0) {
+    return jsonError(res, 404, 'no_approaches', 'No solution comparison is authored for this task');
+  }
+  const userId = await requireAuthSub(req, res);
+  if (!userId) return;
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Coding progress is not configured');
+
+  let progress: CodingTaskProgress | null;
+  try {
+    progress = await loadProgressRow(supabase, userId, task.id);
+  } catch {
+    return jsonError(res, 500, 'db_error', 'Could not load coding progress');
+  }
+  if (progress?.status !== 'passed' && progress?.status !== 'revealed') {
+    return jsonError(res, 403, 'not_unlocked', 'Solve this task first to compare approaches');
+  }
+
+  res.setHeader('Cache-Control', 'private, no-store');
+  const out: CodingApproachesResponse = { taskId: task.id, unlockedBy: progress.status, approaches };
   return res.json(out);
 }
 

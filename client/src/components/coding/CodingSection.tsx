@@ -143,6 +143,10 @@ export function CodingHome() {
         </div>
         {next && <Link className="cd-btn cd-btn--primary" to={`/coding/${next.track}/${next.id}`}>{t('coding.continue')}</Link>}
       </div>
+      <div className="cd-actions">
+        <Link className="cd-btn" to="/coding/session">{t('coding.session.open')}</Link>
+        <Link className="cd-btn" to="/coding/library">{t('coding.library.manage')}</Link>
+      </div>
       <section aria-label={t('coding.title')} className="cd-tracks">
         {CODING_SECTION_TRACKS.map((track) => {
           const tasks = SECTION_INDEX.filter((task) => task.track === track);
@@ -436,7 +440,7 @@ export function CodingTaskScreen() {
       <nav aria-label={t('coding.title')}>
         <Kicker><Link className="cd-link" to="/coding">{t('coding.title')}</Link> · <Link className="cd-link" to={backHref}>{t(`coding.track.${data.task.track}` as never)}</Link></Kicker>
       </nav>
-      <CodingWorkbench key={data.task.id} task={data.task} session={data.session} locked={data.locked} signedIn={data.signedIn} initialCode={initialCode} mode="section" puzzle={data.puzzle} onDraft={onDraft} onVerdict={onVerdict} nextHref={nextHref} backHref={backHref} />
+      <CodingWorkbench key={data.task.id} task={data.task} session={data.session} locked={data.locked} signedIn={data.signedIn} initialCode={initialCode} mode="section" puzzle={data.puzzle} progressStatus={data.progress?.status ?? null} onDraft={onDraft} onVerdict={onVerdict} nextHref={nextHref} backHref={backHref} />
     </div>
   );
 }
