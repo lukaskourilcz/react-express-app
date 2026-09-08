@@ -67,3 +67,51 @@ export function identifyUser(id: string, properties?: Record<string, unknown>): 
 export function resetAnalytics(): void {
   void ready().then((ph) => ph?.reset());
 }
+
+/* ── learning-path pilot funnel ────────────────────────────────────────── */
+
+/**
+ * The four events the FDE and DSA pilot needs, with an explicit allow-list of
+ * properties.
+ *
+ * Nothing a learner wrote ever leaves the app: no code, no free text, no
+ * artifact fields, no session token, no answer. Only ids that already appear
+ * in the public manifest, plus a coarse outcome. `capture` is a no-op when
+ * analytics is disabled, so the app works identically with it switched off.
+ */
+export type PathFunnelEvent =
+  | 'learning_path_enrolled'
+  | 'learning_path_activity_started'
+  | 'learning_path_activity_verified'
+  | 'learning_path_returned';
+
+export interface PathFunnelProperties {
+  /** 'fde' | 'dsa-foundations' — a published id, not a learner's. */
+  pathId: string;
+  curriculumVersion: number;
+  /** Manifest activity id. Public in the catalogue. */
+  activityId?: string;
+  /** 'lesson' | 'check' | 'code' | 'artifact'. */
+  activityKind?: string;
+  /** 'verified_pass' | 'self_reviewed' | 'needs_revision'. */
+  state?: string;
+}
+
+const FUNNEL_KEYS: (keyof PathFunnelProperties)[] = [
+  'pathId',
+  'curriculumVersion',
+  'activityId',
+  'activityKind',
+  'state',
+];
+
+export function capturePathEvent(event: PathFunnelEvent, properties: PathFunnelProperties): void {
+  // Rebuilt from the allow-list rather than filtered, so a caller cannot pass
+  // an extra field through by accident.
+  const safe: Record<string, unknown> = {};
+  for (const key of FUNNEL_KEYS) {
+    const value = properties[key];
+    if (value !== undefined) safe[key] = value;
+  }
+  capture(event, safe);
+}

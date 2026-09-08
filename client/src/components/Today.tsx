@@ -27,6 +27,7 @@ type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => stri
 // devShark only: coding tasks due for a second pass. Lazy so the coding index
 // stays out of the StudyShark bundle.
 const CodingDueSection = lazy(() => import('./coding/CodingDueSection').then((m) => ({ default: m.CodingDueSection })));
+const PathResumeSection = lazy(() => import('./paths/PathResumeSection').then((m) => ({ default: m.PathResumeSection })));
 
 // The plan is priority-ordered; render it grouped under these headings.
 const SECTION_ORDER: TodayKind[] = ['unfinished', 'review', 'new'];
@@ -178,6 +179,12 @@ export default function Today() {
       {CURRENT_PRODUCT.id === 'devshark' && isAuthenticated && (
         <Suspense fallback={null}>
           <CodingDueSection />
+        </Suspense>
+      )}
+
+      {CURRENT_PRODUCT.id === 'devshark' && isAuthenticated && (
+        <Suspense fallback={null}>
+          <PathResumeSection />
         </Suspense>
       )}
     </TodayShell>

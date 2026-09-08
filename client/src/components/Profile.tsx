@@ -25,6 +25,7 @@ import {
   pushProgressToServer,
 } from '../lib/roadmap';
 import { useTrack, trackStarterTopics, rankLabelKeyFor, trackLabelKey, TRACK_ORDER, type Track } from '../lib/tracks';
+import LearningPathsCard from './paths/LearningPathsCard';
 import { getCategoryHexColor, categoryLabelKey, onCategoryColorText } from '../lib/categories';
 import { useQuestXp, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp, levelForXp, MAX_RANK } from '../lib/leveling';
@@ -345,6 +346,7 @@ function ProfileBody({
             <CareerCard />
 
             <LearningTrackCard />
+            {CURRENT_PRODUCT.id === 'devshark' && <LearningPathsCard />}
 
             <AdvisorCard />
 
