@@ -19,14 +19,30 @@ Recorded on 2026-09-08, against the branch `claude/resolve-open-issues-xnr0lv`.
 | `npm audit --omit=dev` (root) | **Pass** — 0 vulnerabilities |
 | `npm audit --omit=dev --prefix client` | **Pass** — 0 vulnerabilities |
 | `git diff --check` | **Pass** — clean |
-| `npm run test:harness` | **Not run in this session** — skipped itself with "no Chrome/Chromium found"; it needs `CHROME_BIN`. It passed in the earlier session recorded in `docs/DEEP_END_HANDOFF.md` (23 assertions against the built sandbox), and the graders have not changed since |
-| `npm run check:responsive` | See below |
+| `npm run test:harness` | **Pass** — 23 assertions against the built sandbox in Chromium (needs `CHROME_BIN`; it skips itself silently without one) |
+| `npm run check:responsive` | **Pass** — see below |
 
 ## Responsive sweep
 
 The sweep renders each route at seven widths (360, 390, 430, 768, 1024, 1280,
 1440) against a local `vite preview` build and reports horizontal overflow and
 child boxes escaping their parents.
+
+Run over the routes this change touched — `/`, `/quiz`, `/learn`, `/today`,
+`/curation`, a coding task and a DSA module — at all seven widths in
+light/English: **49 probes, 0 with issues.** No horizontal overflow, no child
+escaping its parent, nothing under the ocean footer. The wider default sweep of
+all thirty routes exceeds this container's per-command time budget at roughly
+thirty seconds a probe; the earlier full-set results are in
+`docs/DEEP_END_HANDOFF.md`.
+
+A second pass in **dark theme and Czech** over the four surfaces this change
+added or altered (`/`, `/learn`, `/today`, `/curation`) reached **18 probes with
+zero issues** — every one of the four at 360, 390, 430 and 768, plus two at
+1024 — before it was stopped for time. The three desktop widths are therefore
+covered in light/English and not in dark/Czech for these routes; the earlier
+full-set dark/Czech results are in `docs/DEEP_END_HANDOFF.md`. Recorded as
+partial rather than rounded up.
 
 **Its limit, stated plainly: it renders signed out.** Every graded workspace,
 the coding editor beside its brief, the trace player and the review session are
