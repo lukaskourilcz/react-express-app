@@ -110,6 +110,27 @@ export async function handleWallet(req: VercelRequest, res: VercelResponse, supa
 
 /* ── shop catalogue ──────────────────────────────────────────────────────── */
 
+/**
+ * Units a learner could actually order, per SKU: what is on the shelf minus
+ * what other open orders have reserved.
+ *
+ * `reward_stock` is the only authority, on both the shelf and the till. The
+ * catalogue used to fall back to a number in `REWARDS_PRICING` when a SKU had
+ * no row, while `place_reward_order` reserves against the table and refuses
+ * with `no_stock_configured` — so a configured item was advertised as buyable
+ * and then refused at the last step. A SKU with no row has no stock.
+ */
+async function stockOnHand(supabase: SupabaseClient): Promise<Map<string, number>> {
+  const stock = await withTimeout(supabase.from('reward_stock').select('sku,on_hand,reserved'));
+  const onHand = new Map<string, number>();
+  if (!stock.error) {
+    for (const row of (stock.data ?? []) as { sku: string; on_hand: number; reserved: number }[]) {
+      onHand.set(row.sku, Math.max(0, Number(row.on_hand) - Number(row.reserved)));
+    }
+  }
+  return onHand;
+}
+
 export async function handleShopCatalog(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient) {
   if (!available()) return notAvailable(res);
   if (req.method !== 'GET') {
@@ -120,18 +141,11 @@ export async function handleShopCatalog(req: VercelRequest, res: VercelResponse,
   const configured = isPaymentConfigured(payment);
   const pricing = merchPricing();
 
-  // Stock is what the database says, not what a configuration file claims.
-  const stock = await withTimeout(supabase.from('reward_stock').select('sku,on_hand,reserved'));
-  const onHand = new Map<string, number>();
-  if (!stock.error) {
-    for (const row of (stock.data ?? []) as { sku: string; on_hand: number; reserved: number }[]) {
-      onHand.set(row.sku, Math.max(0, Number(row.on_hand) - Number(row.reserved)));
-    }
-  }
+  const onHand = await stockOnHand(supabase);
 
   const listings: MerchListing[] = MERCH_CATALOG.map((product) => {
     const configuredPricing = pricing[product.sku];
-    const withStock = { ...configuredPricing, stock: onHand.has(product.sku) ? onHand.get(product.sku)! : configuredPricing.stock };
+    const withStock = { ...configuredPricing, stock: onHand.get(product.sku) ?? null };
     return {
       product,
       pricing: withStock,
@@ -240,7 +254,11 @@ export async function handleOrders(req: VercelRequest, res: VercelResponse, supa
   }
 
   const config = paymentConfig();
-  const pricing = merchPricing()[product.sku];
+  // The same stock the catalogue showed, read again here: availability is
+  // decided against the table the order will reserve from, never against
+  // configuration.
+  const configuredPricing = merchPricing()[product.sku];
+  const pricing = { ...configuredPricing, stock: (await stockOnHand(supabase)).get(product.sku) ?? null };
   const region = product.kind === 'physical' && typeof (body.address as { country?: unknown } | undefined)?.country === 'string'
     ? String((body.address as { country: string }).country).toUpperCase()
     : null;

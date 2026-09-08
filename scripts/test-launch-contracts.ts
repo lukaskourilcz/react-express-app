@@ -907,6 +907,24 @@ async function main() {
   assert.equal(mugElsewhere.tokens, false, 'tokens cannot buy their way past a region');
   assert.ok(mugElsewhere.blockers.includes('not_in_region'));
 
+  // Configuration cannot claim inventory. `reward_stock` is what an order
+  // reserves against, so it is the only thing the shop may call stock — a
+  // number in an environment variable would advertise what the till refuses.
+  process.env.REWARDS_PRICING = JSON.stringify({ mug: { currency: 'CZK', cashMinor: 39000, tokens: 900, regions: ['CZ'], stock: 25, supplier: 'example' } });
+  resetMerchPricingCache();
+  assert.equal(merchPricing().mug.stock, null, 'configured stock is not stock');
+  assert.ok(
+    availabilityFor(mug, merchPricing().mug, { paymentConfigured: true, region: 'CZ' }).blockers.includes('no_stock'),
+    'a configured item with no stock row is not buyable',
+  );
+  delete process.env.REWARDS_PRICING;
+  resetMerchPricingCache();
+  const handlersSource = readSource(join(process.cwd(), 'lib/rewards/handlers.ts'), 'utf8');
+  assert.match(handlersSource, /stockOnHand\(supabase\)/, 'the catalogue reads stock from the database');
+  assert.equal((handlersSource.match(/stockOnHand\(supabase\)/g) ?? []).length, 2, 'and so does the order path');
+  const fulfilmentSourceStock = readSource(join(process.cwd(), 'lib/rewards/fulfillment.ts'), 'utf8');
+  assert.match(fulfilmentSourceStock, /action === 'stock'/, 'an owner needs a supported way to write stock');
+
   // Payments are off, and live charging needs a deliberate switch.
   assert.equal(isPaymentConfigured(paymentConfig()), false, 'no payment provider ships configured');
   assert.equal(isLiveCharging(paymentConfig()), false, 'live charging is never on by default');
@@ -940,6 +958,22 @@ async function main() {
   assert.equal(parsePaymentEvent(JSON.parse(payload))?.orderId, 'abcdefgh');
   assert.equal(parsePaymentEvent({ type: 'nonsense' }), null);
   assert.equal(parsePaymentEvent({ id: 'evt_000002', type: 'payment_succeeded', data: { orderId: 'bad id' } }), null);
+  // An amount the parser cannot read comes back as null, and the handler must
+  // treat that as "no evidence of payment" rather than skipping the check.
+  const unreadable = parsePaymentEvent({ id: 'evt_000003', type: 'payment_succeeded', data: { orderId: 'abcdefgh', amountMinor: '39000' } });
+  assert.equal(unreadable?.amountMinor, null, 'a non-integer amount does not parse');
+  const puzzleSource = readSource(join(process.cwd(), 'client/src/coding/CodePuzzle.tsx'), 'utf8');
+  // Block ids are positional, so a reshuffle remaps every one of them; an
+  // arrangement made against the old shuffle must not survive into the new one.
+  assert.match(puzzleSource, /shuffle\.current !== fingerprint/, 'a reshuffle must drop the previous arrangement');
+  const paymentsSource = readSource(join(process.cwd(), 'lib/rewards/payments.ts'), 'utf8');
+  assert.match(paymentsSource, /event\.amountMinor === null \|\| event\.amountMinor !== expected/, 'an unread amount must refuse, not pass');
+  assert.match(paymentsSource, /event\.currency === null \|\|/, 'an unread currency must refuse, not pass');
+  assert.match(
+    paymentsSource,
+    /event\.type === 'checkout_expired'\) && order\.data\.status !== 'pending'/,
+    'a stale expiry must not cancel an order that has already been paid',
+  );
 
   /* ── orders move one step at a time (#170, #172) ─────────────────────── */
   assert.equal(canTransition('pending', 'paid'), true);

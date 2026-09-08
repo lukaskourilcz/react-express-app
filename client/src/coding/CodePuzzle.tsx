@@ -73,6 +73,22 @@ export function CodePuzzle({ puzzle, session, signedIn, onVerdict, onContinue }:
     setPendingFocus(null);
   }, [pendingFocus]);
 
+  // The server reshuffles on every `coding-task` response and the block ids are
+  // positional, so a refetch — a reconnect, a background refresh — remaps every
+  // id while this component stays mounted. The arrangement made in the previous
+  // shuffle no longer means anything. Clearing it during render, rather than in
+  // an effect, is what stops the draft below from being stamped with the new
+  // fingerprint and restored as if it were still valid.
+  const shuffle = useRef(fingerprint);
+  if (shuffle.current !== fingerprint) {
+    shuffle.current = fingerprint;
+    setUsed([]);
+    setVerdict(null);
+    setError(null);
+    setPendingFocus(null);
+    startedAt.current = Date.now();
+  }
+
   useEffect(() => {
     writeJSON(draftKey(puzzle.taskId), { fingerprint, order: used } satisfies PuzzleDraft);
   }, [used, fingerprint, puzzle.taskId]);

@@ -104,7 +104,19 @@ BEGIN
     p_attempt_id, p_user_id, p_task_id, p_track, p_puzzle_version,
     COALESCE(p_passed, FALSE), COALESCE(p_competencies, '{}'), p_duration_ms
   )
-  ON CONFLICT (attempt_id) DO NOTHING;
+  -- One row per sealed attempt, and the sealed attempt is the whole coding
+  -- session: the same id comes back for every arrangement the learner checks
+  -- for up to three hours. A replay changes nothing, but the pass that follows
+  -- an earlier failure is the result worth keeping, so it replaces it. A pass
+  -- is never downgraded by a later failure.
+  ON CONFLICT (attempt_id) DO UPDATE SET
+    passed       = TRUE,
+    competencies = EXCLUDED.competencies,
+    duration_ms  = EXCLUDED.duration_ms,
+    created_at   = NOW()
+  WHERE public.coding_puzzle_results.user_id = EXCLUDED.user_id
+    AND public.coding_puzzle_results.passed = FALSE
+    AND EXCLUDED.passed;
   GET DIAGNOSTICS v_rows = ROW_COUNT;
   v_inserted := v_rows > 0;
 

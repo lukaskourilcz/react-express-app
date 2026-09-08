@@ -36,7 +36,11 @@ function parsePricing(raw: unknown, sku: MerchSku): MerchPricing {
     cashMinor: asInt(value.cashMinor, 10_000_000),
     tokens: asInt(value.tokens, 1_000_000),
     regions: asRegions(value.regions),
-    stock: asInt(value.stock, 1_000_000),
+    // Not read from configuration. Stock is a fact about a warehouse, and the
+    // one the shop honours is `reward_stock`, which is also what an order
+    // reserves against. A number in an environment variable could advertise an
+    // item the till would then refuse.
+    stock: null,
     supplier: typeof value.supplier === 'string' && value.supplier.trim().length > 0 ? value.supplier.trim().slice(0, 120) : null,
     effectiveFrom: typeof value.effectiveFrom === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.effectiveFrom) ? value.effectiveFrom : null,
   };

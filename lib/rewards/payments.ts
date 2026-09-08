@@ -114,10 +114,12 @@ export function rawBodyOf(req: VercelRequest): string | null {
  * The webhook. Unauthenticated by nature — the signature is the credential —
  * and the only thing in the system that may move a cash order to `paid`.
  *
- * Duplicate and out-of-order events are safe twice over: the provider's own
- * event id is recorded before anything is applied, so a re-delivery is
- * recognised and dropped, and `advance_reward_order` still applies at most one
- * transition and reports when it changed nothing.
+ * Duplicate and out-of-order events are handled in three places: the provider's
+ * own event id is recorded before anything is applied, so a re-delivery is
+ * recognised and dropped; a `payment_failed` or `checkout_expired` for an order
+ * that is no longer waiting for payment is a stale attempt and is ignored; and
+ * `advance_reward_order` still applies at most one transition and reports when
+ * it changed nothing.
  */
 export async function handlePaymentWebhook(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (req.method !== 'POST') {
@@ -171,15 +173,28 @@ export async function handlePaymentWebhook(req: VercelRequest, res: VercelRespon
     logEvent({ status: 200, kind: 'webhook_not_cash' });
     return res.json({ received: true, applied: false });
   }
+  // A negative event only ever applies to an order still waiting for payment.
+  // A provider's expiry job can fire for an abandoned first checkout long after
+  // a second one was captured, and `paid -> cancelled` is a transition the
+  // machine allows for the operator. It must not be reached this way.
+  if ((event.type === 'payment_failed' || event.type === 'checkout_expired') && order.data.status !== 'pending') {
+    logEvent({ status: 200, kind: 'webhook_stale_event', type: event.type, current: order.data.status });
+    return res.json({ received: true, applied: false, status: order.data.status });
+  }
+
   // The amount is checked against what the server itself computed, so a forged
-  // or altered amount cannot mark an order paid for less than it costs.
+  // or altered amount cannot mark an order paid for less than it costs. An
+  // amount we could not read is not evidence of payment either: refusing makes
+  // the provider retry and puts the mismatch in front of someone, where the
+  // alternative is shipping goods against an unread number.
   if (event.type === 'payment_succeeded') {
     const expected = Number(order.data.total_cash_minor ?? 0);
-    if (event.amountMinor !== null && event.amountMinor !== expected) {
-      logEvent({ status: 409, kind: 'webhook_amount_mismatch' });
+    if (event.amountMinor === null || event.amountMinor !== expected) {
+      logEvent({ status: 409, kind: 'webhook_amount_mismatch', read: event.amountMinor !== null });
       return jsonError(res, 409, 'amount_mismatch', 'The paid amount does not match the order');
     }
-    if (event.currency !== null && order.data.currency !== null && event.currency !== order.data.currency) {
+    if (event.currency === null || (order.data.currency !== null && event.currency !== order.data.currency)) {
+      logEvent({ status: 409, kind: 'webhook_currency_mismatch', read: event.currency !== null });
       return jsonError(res, 409, 'currency_mismatch', 'The paid currency does not match the order');
     }
   }

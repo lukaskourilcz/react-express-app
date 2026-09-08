@@ -71,6 +71,24 @@ BEGIN
   r := public.record_coding_puzzle_result('user-puzzle-2', 'puz-2', 'js-even-numbers', 'javascript', 1, TRUE,
     ARRAY['read-code'], a, NULL);
   ASSERT (r->>'satisfiesLevel')::BOOLEAN IS FALSE, 'a level belonging to another learner is not cleared';
+
+  -- 5. The sealed attempt covers a whole three-hour session, so a learner who
+  --    gets it wrong and then right must be recorded as having got it right.
+  r := public.record_coding_puzzle_result(u, 'puz-3', 'js-map-values', 'javascript', 1, FALSE,
+    ARRAY[]::TEXT[], NULL, 9000);
+  ASSERT (r->>'applied')::BOOLEAN, 'the first attempt is recorded';
+  r := public.record_coding_puzzle_result(u, 'puz-3', 'js-map-values', 'javascript', 1, TRUE,
+    ARRAY['read-code', 'choose-method'], NULL, 21000);
+  ASSERT (r->>'applied')::BOOLEAN, 'the pass that follows replaces the failure';
+  SELECT COUNT(*) INTO n FROM public.coding_puzzle_results
+   WHERE attempt_id = 'puz-3' AND passed AND array_length(competencies, 1) = 2 AND duration_ms = 21000;
+  ASSERT n = 1, 'and the stored evidence is the pass, once';
+  -- A later failure never undoes a pass.
+  r := public.record_coding_puzzle_result(u, 'puz-3', 'js-map-values', 'javascript', 1, FALSE,
+    ARRAY[]::TEXT[], NULL, 500);
+  ASSERT (r->>'applied')::BOOLEAN IS FALSE, 'a failure after a pass records nothing';
+  SELECT COUNT(*) INTO n FROM public.coding_puzzle_results WHERE attempt_id = 'puz-3' AND passed;
+  ASSERT n = 1, 'the pass stands';
   RAISE NOTICE 'puzzle evidence: ok';
 END $$;
 

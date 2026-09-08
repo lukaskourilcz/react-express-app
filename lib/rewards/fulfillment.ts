@@ -21,6 +21,7 @@ import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createLogger, isRpcMissing, isTableMissing as tableMissing, jsonError, withTimeout } from '../http';
 import { canTransition, type Order, type OrderStatus } from '../../shared/rewards';
+import { isMerchSku } from '../../shared/merchandise';
 
 const logEvent = createLogger('admin/fulfilment');
 
@@ -61,7 +62,8 @@ const isOrderStatus = (value: unknown): value is OrderStatus =>
 
 /**
  * GET  ?op=fulfilment&status=paid   → the queue a person works through
- * POST ?op=fulfilment               → export, advance, or record a shipment
+ * POST ?op=fulfilment               → export, advance, record a shipment, or
+ *                                     set the units on hand for one SKU
  */
 export async function handleFulfilment(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Orders are not configured');
@@ -163,6 +165,30 @@ export async function handleFulfilment(req: VercelRequest, res: VercelResponse, 
     if (result.error) return jsonError(res, 409, result.error, 'That transition was refused');
     logEvent({ status: 200, kind: 'advance', from, to: body.status, applied: result.applied === true });
     return res.json({ orderId, status: result.status ?? body.status, applied: result.applied === true });
+  }
+
+  // Inventory is a fact about a warehouse, so only a person can state it, and
+  // it is stated here rather than in configuration: `reward_stock` is what
+  // `place_reward_order` reserves against, and it is the only thing the shop
+  // will call stock. Without this action the table had no writer at all, and a
+  // configured item could be advertised and then refused at the till.
+  if (action === 'stock') {
+    if (!isMerchSku(body.sku)) return jsonError(res, 400, 'bad_request', 'A known product is required');
+    if (!Number.isInteger(body.onHand) || Number(body.onHand) < 0 || Number(body.onHand) > 1_000_000) {
+      return jsonError(res, 400, 'bad_request', 'A unit count between 0 and 1000000 is required');
+    }
+    const onHand = Number(body.onHand);
+    const saved = await withTimeout(
+      supabase.from('reward_stock').upsert({ sku: body.sku, on_hand: onHand, updated_at: new Date().toISOString() }, { onConflict: 'sku' }).select('sku,on_hand,reserved').maybeSingle(),
+    );
+    if (saved.error) {
+      if (tableMissing(saved.error)) return migrationError(res);
+      return jsonError(res, 500, 'db_error', 'Could not record that stock level');
+    }
+    const row = (saved.data ?? {}) as { on_hand?: number; reserved?: number };
+    logEvent({ status: 200, kind: 'stock', sku: body.sku, onHand });
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.json({ sku: body.sku, onHand: Number(row.on_hand ?? onHand), reserved: Number(row.reserved ?? 0) });
   }
 
   return jsonError(res, 400, 'bad_request', `Unknown fulfilment action: ${action}`);

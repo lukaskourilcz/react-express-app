@@ -75,7 +75,7 @@ default, and a malformed value is treated as no value.
 
 | Variable | What it is | Status |
 | --- | --- | --- |
-| `REWARDS_PRICING` | JSON keyed by SKU: `currency`, `cashMinor`, `tokens`, `regions`, `stock`, `supplier`, `effectiveFrom` | NOT SET |
+| `REWARDS_PRICING` | JSON keyed by SKU: `currency`, `cashMinor`, `tokens`, `regions`, `supplier`, `effectiveFrom` | NOT SET |
 | `REWARDS_PAYMENT_PROVIDER` | The provider's name | NOT SET |
 | `REWARDS_PAYMENT_SECRET_KEY` | Server-side key; never sent to a browser | NOT SET |
 | `REWARDS_PAYMENT_WEBHOOK_SECRET` | Signing secret for the webhook | NOT SET |
@@ -85,7 +85,17 @@ default, and a malformed value is treated as no value.
 | `REWARDS_OPS_OWNER` | The person accountable for dispatch | NOT SET |
 
 Stock is held in the database (`reward_stock`), not in configuration, because it
-changes as orders are reserved and shipped.
+changes as orders are reserved and shipped, and because an order reserves
+against that table: a number in configuration could advertise an item the till
+would then refuse. Set it per SKU, in units on the shelf:
+
+```
+POST /api/admin/[op]?op=fulfilment
+{ "action": "stock", "sku": "tshirt", "onHand": 40 }
+```
+
+The response reports what is on hand and how much of it open orders have
+reserved. A SKU with no row has no stock, and its card says so.
 
 An unconfigured item shows its blockers on its card — "No cash price has been
 quoted yet", "No supplier has been engaged" — instead of a placeholder price.
