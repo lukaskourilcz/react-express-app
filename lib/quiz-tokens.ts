@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from 'node:crypto';
 import { isScopeSubject, type ScopeSubjectId } from '../shared/subject-catalog';
+import { isLearningPathId, type LearningPathId } from '../shared/learning-paths';
 
 const SECRET = process.env.SESSION_SECRET;
 const IS_PROD = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
@@ -130,6 +131,28 @@ interface CodingSessionPayload {
   exp: number;
 }
 
+// One learning-path activity in flight. Everything the submit handler must not
+// take from the request lives here instead: the owner, the enrollment, the
+// activity, the curriculum and rubric versions, and the purpose the manifest
+// assigned. For an objective check the sealed key carries the correct option
+// index per question after shuffling, so the browser holds the questions
+// without holding the answers.
+interface LearningPathSessionPayload {
+  kind: 'learning-path-session';
+  attemptId: string;
+  enrollmentId: string;
+  userId: string;
+  pathId: LearningPathId;
+  activityId: string;
+  activityKind: 'lesson' | 'check' | 'code' | 'artifact';
+  purpose: 'diagnostic' | 'exercise' | 'project';
+  curriculumVersion: number;
+  rubricVersion: number;
+  answerKey?: number[];
+  iat: number;
+  exp: number;
+}
+
 // The GitHub App installation round trip. Bound to the user id so a callback
 // cannot attach an installation to another account.
 interface GithubConnectStatePayload {
@@ -147,6 +170,7 @@ type TokenPayload =
   | AnswerProofPayload
   | PlacementRunPayload
   | CodingSessionPayload
+  | LearningPathSessionPayload
   | GithubConnectStatePayload;
 
 function sealToken(payload: TokenPayload): string {
@@ -489,4 +513,85 @@ export function decodeGithubConnectState(token: string): { userId: string } | nu
   if (!payload || payload.kind !== 'github-connect' || !validLifetime(payload, GITHUB_CONNECT_TTL_MS)) return null;
   if (typeof payload.userId !== 'string' || payload.userId.length === 0 || payload.userId.length > 128) return null;
   return { userId: payload.userId };
+}
+
+/* ── learning-path attempt sessions ────────────────────────────────────── */
+
+const LEARNING_PATH_TTL_MS = 3 * 60 * 60 * 1000;
+
+export interface LearningPathSession {
+  attemptId: string;
+  enrollmentId: string;
+  userId: string;
+  pathId: LearningPathId;
+  activityId: string;
+  activityKind: LearningPathSessionPayload['activityKind'];
+  purpose: LearningPathSessionPayload['purpose'];
+  curriculumVersion: number;
+  rubricVersion: number;
+  answerKey?: number[];
+  issuedAt: number;
+  expiresAt: number;
+}
+
+export function encodeLearningPathSession(
+  input: Omit<LearningPathSession, 'issuedAt' | 'expiresAt'> & { ttlMs?: number },
+): { token: string; expiresAt: number } {
+  const now = Date.now();
+  const expiresAt = now + Math.min(input.ttlMs ?? LEARNING_PATH_TTL_MS, LEARNING_PATH_TTL_MS);
+  return {
+    token: sealToken({
+      kind: 'learning-path-session',
+      attemptId: input.attemptId,
+      enrollmentId: input.enrollmentId,
+      userId: input.userId,
+      pathId: input.pathId,
+      activityId: input.activityId,
+      activityKind: input.activityKind,
+      purpose: input.purpose,
+      curriculumVersion: input.curriculumVersion,
+      rubricVersion: input.rubricVersion,
+      ...(input.answerKey ? { answerKey: input.answerKey } : {}),
+      iat: now,
+      exp: expiresAt,
+    }),
+    expiresAt,
+  };
+}
+
+/** Decodes without trusting anything: a tampered or expired token, a foreign
+ * kind, or an out-of-range field all return null rather than a partial
+ * session the caller might use. */
+export function decodeLearningPathSession(token: string): LearningPathSession | null {
+  const payload = openToken(token) as Partial<LearningPathSessionPayload> | null;
+  if (!payload || payload.kind !== 'learning-path-session' || !validLifetime(payload, LEARNING_PATH_TTL_MS)) return null;
+  if (typeof payload.attemptId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId)) return null;
+  if (typeof payload.enrollmentId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.enrollmentId)) return null;
+  if (typeof payload.userId !== 'string' || payload.userId.length < 8 || payload.userId.length > 128) return null;
+  if (!isLearningPathId(payload.pathId)) return null;
+  if (typeof payload.activityId !== 'string' || !/^[a-z0-9-]{3,96}$/.test(payload.activityId)) return null;
+  if (!['lesson', 'check', 'code', 'artifact'].includes(payload.activityKind ?? '')) return null;
+  if (!['diagnostic', 'exercise', 'project'].includes(payload.purpose ?? '')) return null;
+  if (!Number.isInteger(payload.curriculumVersion) || payload.curriculumVersion! < 1 || payload.curriculumVersion! > 999) return null;
+  if (!Number.isInteger(payload.rubricVersion) || payload.rubricVersion! < 1 || payload.rubricVersion! > 999) return null;
+  let answerKey: number[] | undefined;
+  if (payload.answerKey !== undefined) {
+    if (!Array.isArray(payload.answerKey) || payload.answerKey.length > 60 ||
+        !payload.answerKey.every((index) => Number.isInteger(index) && index >= 0 && index <= 25)) return null;
+    answerKey = payload.answerKey;
+  }
+  return {
+    attemptId: payload.attemptId,
+    enrollmentId: payload.enrollmentId,
+    userId: payload.userId,
+    pathId: payload.pathId,
+    activityId: payload.activityId,
+    activityKind: payload.activityKind!,
+    purpose: payload.purpose!,
+    curriculumVersion: payload.curriculumVersion!,
+    rubricVersion: payload.rubricVersion!,
+    ...(answerKey ? { answerKey } : {}),
+    issuedAt: payload.iat!,
+    expiresAt: payload.exp!,
+  };
 }
