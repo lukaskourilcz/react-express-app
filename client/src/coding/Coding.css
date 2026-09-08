@@ -371,3 +371,21 @@
   color: var(--color-text-secondary);
   text-align: end;
 }
+
+/* ── Resources panel and failure advice (issues #155, #156) ─────────────── */
+.cd-resources { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.cd-resources a {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 8px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: var(--color-text-primary);
+}
+.cd-resources a:hover { background: var(--color-background-muted); }
+.cd-resources code { font-size: 0.8125rem; }
+.cd-resources__source { font-size: 0.75rem; color: var(--color-text-secondary); }
+.cd-hint--advice { border-inline-start: 3px solid var(--brand-accent); }

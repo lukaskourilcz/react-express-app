@@ -90,11 +90,67 @@ export const CODING_DOCS: Record<string, string> = {
   'data-model': 'https://developer.mozilla.org/en-US/docs/Glossary/Database',
 };
 
-/** The first documented technique of a task, or the JavaScript reference. */
+/** Which reviewed publication a link points at. The label is localised in the
+ * UI (`coding.resources.source.<id>`); the mapping itself is content. */
+export type CodingDocSource = 'mdn' | 'react' | 'typescript';
+
+export interface CodingResource {
+  /** The technique the link documents — also the task's `focus` tag. */
+  tag: string;
+  url: string;
+  source: CodingDocSource;
+}
+
+export function docSourceOf(url: string): CodingDocSource {
+  if (url.startsWith('https://react.dev/')) return 'react';
+  if (url.startsWith('https://www.typescriptlang.org/')) return 'typescript';
+  return 'mdn';
+}
+
+/** How many links the Resources panel shows before it stops (issue #155). */
+export const MAX_CODING_RESOURCES = 6;
+
+/**
+ * Every documented technique a task practises, in the task's own order
+ * (issue #155). This is reading material, available from the first second and
+ * costing no hint rung: it explains the tools, never the answer.
+ *
+ * A task whose techniques are all undocumented returns an empty list, and the
+ * panel says so rather than padding itself with something unrelated.
+ */
+export function resourcesFor(focus: readonly string[], limit = MAX_CODING_RESOURCES): CodingResource[] {
+  const out: CodingResource[] = [];
+  const seen = new Set<string>();
+  for (const tag of focus) {
+    const url = CODING_DOCS[tag];
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    out.push({ tag, url, source: docSourceOf(url) });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+/** The first documented technique of a task, or the JavaScript reference.
+ * Still the hint ladder's last rung before the reference solution. */
 export function docsFor(focus: readonly string[]): { tag: string; url: string } {
   for (const tag of focus) {
     const url = CODING_DOCS[tag];
     if (url) return { tag, url };
   }
   return { tag: 'javascript', url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript' };
+}
+
+/** Nothing in the registry may point at a solution or a playground. */
+export function docRegistryProblems(): string[] {
+  const problems: string[] = [];
+  for (const [tag, url] of Object.entries(CODING_DOCS)) {
+    if (!/^https:\/\//.test(url)) problems.push(`${tag}: not an https link`);
+    const host = url.split('/')[2] ?? '';
+    if (!['developer.mozilla.org', 'react.dev', 'www.typescriptlang.org'].includes(host)) {
+      problems.push(`${tag}: ${host} is not a reviewed documentation source`);
+    }
+    if (/play|repl|sandbox|solution|answer/i.test(url)) problems.push(`${tag}: link looks like a playground or a solution`);
+  }
+  return problems;
 }

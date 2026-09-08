@@ -19,7 +19,9 @@ import {
   isCodingTechnique,
   isCodingTier,
 } from '../shared/coding-catalog';
-import { docsFor } from '../shared/coding-docs';
+import { docRegistryProblems, docsFor, resourcesFor } from '../shared/coding-docs';
+import { allFailureAdvice } from '../lib/coding/failure-hints';
+import { FAILURE_CATEGORIES, classifyFailure, stageOf } from '../shared/coding-failures';
 import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { runReactSuite } from '../lib/coding/react-runner';
@@ -263,13 +265,66 @@ async function main() {
     }
   }
 
+  /* ── resources and failure advice (issues #155, #156) ───────────────── */
+  for (const problem of docRegistryProblems()) fail(`docs: ${problem}`);
+  for (const task of CODING_TASKS) {
+    if (task.track === 'system-design') continue;
+    const resources = resourcesFor(task.focus);
+    // Resources are reading material, not the ladder: they exist independently
+    // of how many hints were taken, so the only contract is that every link the
+    // panel would show is a reviewed one and that nothing repeats.
+    const urls = new Set(resources.map((one) => one.url));
+    if (urls.size !== resources.length) fail(`${task.id}: duplicate resource link`);
+    for (const resource of resources) {
+      if (!task.focus.includes(resource.tag)) fail(`${task.id}: resource ${resource.tag} is not a technique of this task`);
+    }
+  }
+  // Authored advice must never quote a hidden fixture or an internal error, and
+  // must exist in both languages.
+  const hiddenCalls = new Set(
+    CODING_TASKS.flatMap((task) => solutionFor(task.id)?.hiddenTests?.map((test) => test.call) ?? []),
+  );
+  for (const entry of allFailureAdvice()) {
+    const where = `advice ${entry.taskId ?? 'category'} ${entry.category}`;
+    if (!entry.body.en.trim()) fail(`${where}: missing English text`);
+    if (!SKIP_CS && !entry.body.cs.trim()) fail(`${where}: missing Czech text`);
+    for (const text of [entry.body.en, entry.body.cs]) {
+      for (const call of hiddenCalls) {
+        if (call && text.includes(call)) fail(`${where}: quotes the hidden test ${call}`);
+      }
+      if (/stack trace|at Object\.|node_modules|SyntaxError:/i.test(text)) fail(`${where}: quotes an internal error`);
+      if (/\bsolution\b|\břešení\b/i.test(text)) fail(`${where}: mentions the solution`);
+    }
+  }
+  // Every category resolves to advice and to a stage.
+  for (const category of FAILURE_CATEGORIES) {
+    if (!allFailureAdvice().some((entry) => entry.taskId === null && entry.category === category)) {
+      fail(`advice: no fallback authored for ${category}`);
+    }
+    if (!['compile', 'runtime', 'test'].includes(stageOf(category))) fail(`advice: ${category} has no stage`);
+  }
+  // The classifier separates compile, runtime and test failures.
+  const noVisible = { visible: [], hidden: null, typeErrors: 0, threw: false, allUndefined: false, shapeMismatch: false, mutated: false };
+  if (classifyFailure({ ...noVisible, outcome: 'timeout' }) !== 'timeout') fail('advice: a timeout must classify as a timeout');
+  if (classifyFailure({ ...noVisible, outcome: 'failed', typeErrors: 2 }) !== 'types') fail('advice: type errors must classify as types');
+  if (classifyFailure({ ...noVisible, outcome: 'error', threw: true }) !== 'threw') fail('advice: a thrown error must classify as threw');
+  if (classifyFailure({ ...noVisible, outcome: 'failed', visible: [{ pass: true, edge: false }, { pass: false, edge: true }] }) !== 'boundary') {
+    fail('advice: an edge-only failure must classify as boundary');
+  }
+  if (classifyFailure({ ...noVisible, outcome: 'failed', visible: [{ pass: true, edge: false }], hidden: { passed: 1, total: 3 } }) !== 'hidden-only') {
+    fail('advice: a hidden-only failure must classify as hidden-only');
+  }
+  if (classifyFailure({ ...noVisible, outcome: 'failed', allUndefined: true, visible: [{ pass: false, edge: false }] }) !== 'missing-return') {
+    fail('advice: an all-undefined failure must classify as missing-return');
+  }
+
   if (failures.length > 0) {
     console.error(`Coding content contract: ${failures.length} problem(s)\n  - ${failures.join('\n  - ')}`);
     process.exitCode = 1;
     return;
   }
   const byTrack = CODING_TRACKS.map((track) => `${track} ${CODING_TASKS.filter((t) => t.track === track).length}`).join(', ');
-  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, ${allPuzzles().length} arrangement puzzles proven, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
+  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, ${allPuzzles().length} arrangement puzzles proven, ${allFailureAdvice().length} failure hints checked, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 
 void main().catch((error) => {

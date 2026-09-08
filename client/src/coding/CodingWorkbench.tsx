@@ -17,6 +17,7 @@ import { CodePuzzle } from './CodePuzzle';
 import { useIsCompactPractice } from '../lib/useMediaQuery';
 import type { CodingPuzzleVerdict, PlayableCodingPuzzle } from '../../../shared/coding-puzzle';
 import { CODING_TIERS, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
+import { resourcesFor } from '../../../shared/coding-docs';
 import type { CodingLockReason, CodingVerdictResponse } from '../../../shared/coding-api';
 import './Coding.css';
 
@@ -38,7 +39,7 @@ export interface CodingWorkbenchProps {
   onContinue?: () => void;
 }
 
-type Tab = 'results' | 'types' | 'console' | 'preview';
+type Tab = 'results' | 'types' | 'console' | 'preview' | 'resources';
 type Phase = 'idle' | 'running' | 'submitting';
 
 const DRAFT_DEBOUNCE_MS = 900;
@@ -113,6 +114,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const harness = useReactHarness();
 
   const rungs = useMemo(() => ladderRungs(task, lang), [task, lang]);
+  // Reading material for the techniques this task practises (issue #155). It is
+  // there from the first second, costs no hint rung, and never shows a solution.
+  const resources = useMemo(() => resourcesFor(task.focus), [task.focus]);
   const taken = Math.min(hintsTaken, rungs.length);
 
   // Draft: hand the code to the parent after the learner stops typing.
@@ -273,6 +277,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     { key: 'results', label: t('coding.tab.results'), badge: resultsBadge, good: isReact ? (reactRun ? reactRun.failed === 0 && reactRun.total > 0 : null) : localPassed },
     ...(isTypeScript ? [{ key: 'types' as Tab, label: t('coding.tab.types'), badge: typesBadge, good: typesBadge === 'ok' ? true : typesBadge ? false : null }] : []),
     { key: 'console', label: t('coding.tab.console'), badge: null, good: null },
+    { key: 'resources' as Tab, label: t('coding.tab.resources'), badge: resources.length > 0 ? String(resources.length) : null, good: null },
     ...(isReact ? [{ key: 'preview' as Tab, label: t('coding.tab.preview'), badge: null, good: null }] : []),
   ];
 
@@ -400,6 +405,27 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const logs = isReact ? (reactRun?.logs.map((entry) => `${entry.level === 'log' ? '' : `[${entry.level}] `}${entry.text}`) ?? []) : (run?.logs ?? []);
   const renderConsole = (): ReactNode => (logs.length === 0 ? <p className="cd-console__empty">{t('coding.console.empty')}</p> : <pre className="cd-console">{logs.join('\n')}</pre>);
 
+  const renderResources = (): ReactNode => {
+    if (resources.length === 0) {
+      return <p className="cd-console__empty">{t('coding.resources.empty')}</p>;
+    }
+    return (
+      <>
+        <p className="cd-note">{t('coding.resources.intro')}</p>
+        <ul className="cd-resources">
+          {resources.map((resource) => (
+            <li key={resource.url}>
+              <a href={resource.url} target="_blank" rel="noreferrer">
+                <code>{resource.tag}</code>
+                <span className="cd-resources__source">{t(`coding.resources.source.${resource.source}` as never)}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </>
+    );
+  };
+
   const renderPreview = (): ReactNode => (
     <>
       {reactRun?.previewError && <p className="cd-note cd-note--error">{t('coding.preview.error', { message: reactRun.previewError })}</p>}
@@ -415,6 +441,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         <span>{t(`coding.verdict.${verdict.verdict}` as never)}</span>
         {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
       </h3>
+      {verdict.failureAdvice && (
+        <div className="cd-hint cd-hint--advice">
+          <span className="cd-hint__label">
+            {t(`coding.failure.${verdict.failureAdvice.category}` as never)} · {t(`coding.failure.stage.${verdict.failureAdvice.stage}` as never)}
+          </span>
+          <Prompt text={verdict.failureAdvice.body[lang] || verdict.failureAdvice.body.en} />
+        </div>
+      )}
       {verdict.verdict === 'passed' && verdict.progress && <p className="cd-verdict__row">{verdict.firstPass ? t('coding.verdict.firstPass') : t('coding.verdict.again')}</p>}
       {verdict.verdict === 'passed' && verdict.progress?.nextReviewAt && <p className="cd-verdict__row">{t('coding.verdict.review', { when: relativeTime(verdict.progress.nextReviewAt, lang) })}</p>}
       {verdict.verdict === 'passed' && !verdict.progress && <p className="cd-verdict__row">{signedIn ? t('coding.verdict.notRecorded') : t('coding.verdict.signIn')}</p>}
@@ -606,6 +640,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               {one.key === 'results' && renderResults()}
               {one.key === 'types' && renderTypes()}
               {one.key === 'console' && renderConsole()}
+              {one.key === 'resources' && renderResources()}
               {one.key === 'preview' && renderPreview()}
             </div>
           ))}

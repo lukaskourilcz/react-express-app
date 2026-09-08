@@ -4,6 +4,7 @@
 
 import type { CodingTrack, Localized, PlayableCodingTask } from './coding-catalog';
 import type { CodingPuzzleVerdict, PlayableCodingPuzzle } from './coding-puzzle';
+import type { FailureAdvice } from './coding-failures';
 import type { CallOutcome } from './coding-evaluate';
 import type { TypeCheckResult } from './coding-ts-check';
 
@@ -67,6 +68,12 @@ export type DesignAnswer = number | number[];
 
 export interface CodingVerdictResponse {
   verdict: CodingOutcome;
+  /**
+   * Authored advice for the shape of this failure (issue #156). Derived from
+   * the visible run and the hidden counts only, so it can never describe a
+   * hidden fixture; null on a pass and whenever nothing is authored.
+   */
+  failureAdvice: FailureAdvice | null;
   /** Visible tests, in task order (code tracks). */
   results: CallOutcome[];
   /** Hidden tests are reported as counts only. */

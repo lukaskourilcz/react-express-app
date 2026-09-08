@@ -21,6 +21,8 @@ import { nodeTypeScriptChecker } from './ts-check-node';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { afterCodingPass } from '../github-garden';
 import { gradePuzzle, preparePuzzle, puzzleFor } from './puzzles';
+import { adviceFor } from './failure-hints';
+import { classifyFailure, type FailureAdvice, type FailureSignals } from '../../shared/coding-failures';
 import {
   CODING_TASK_XP,
   isCodingTaskId,
@@ -371,9 +373,64 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   };
 }
 
-function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGardenStatus | null): CodingVerdictResponse {
+/**
+ * Turn a failed grade into the authored advice for its shape (issue #156).
+ *
+ * Only counts and flags from the *visible* run are read; a hidden test's call
+ * and expectation never reach this function, so nothing it returns can leak
+ * one. Raw runtime text is used to set a boolean and then discarded — the text
+ * the learner sees is authored, versioned with the task, and never a stack
+ * trace.
+ */
+function failureAdviceFor(task: CodingTask, graded: Graded): FailureAdvice | null {
+  if (graded.verdict === 'passed') return null;
+  const outcome = graded.verdict === 'timeout' ? 'timeout' : graded.verdict === 'error' ? 'error' : 'failed';
+  const visible = graded.results.map((result, index) => ({
+    pass: result.pass,
+    edge: task.tests?.[index]?.edge === true,
+  }));
+  const failed = graded.results
+    .map((result, index) => ({ result, test: task.tests?.[index] }))
+    .filter((one) => one.result.pass === false);
+  const typeErrors = graded.check
+    ? graded.check.codeErrors.length + graded.check.typeTests.filter((one) => !one.pass).length
+    : 0;
+  const allUndefined = failed.length > 0 && failed.every((one) => one.result.actual === 'undefined');
+  // "Right values, wrong container": the actual reads as a different JSON type
+  // from the expected one. Both sides are visible tests, which the learner has.
+  const shapeMismatch = failed.some((one) => {
+    if (one.result.actual === null || one.test === undefined) return false;
+    const expected = JSON.stringify(one.test.expected);
+    const actual = one.result.actual;
+    if (expected === undefined || actual === 'undefined') return false;
+    const shape = (value: string) => (value.startsWith('[') ? 'array' : value.startsWith('{') ? 'object' : value.startsWith('"') ? 'string' : 'scalar');
+    return shape(expected) !== shape(actual);
+  });
+  // A visible test whose call names a mutating method and whose neighbours also
+  // regress is the signal a mutation leaves behind.
+  const mutated = failed.length > 1 && failed.some((one) => /\.(push|splice|sort|reverse|unshift|shift|pop)\(/.test(one.test?.call ?? ''));
+  const signals: FailureSignals = {
+    outcome,
+    visible,
+    hidden: graded.hidden,
+    typeErrors,
+    threw: Boolean(graded.codeError) || failed.some((one) => one.result.error !== null),
+    allUndefined,
+    shapeMismatch,
+    mutated,
+  };
+  return adviceFor(task.id, classifyFailure(signals));
+}
+
+function verdictBody(
+  task: CodingTask,
+  graded: Graded,
+  recorded: Recorded | null,
+  github: CodingGardenStatus | null,
+): CodingVerdictResponse {
   return {
     verdict: graded.verdict,
+    failureAdvice: failureAdviceFor(task, graded),
     results: graded.results,
     hidden: graded.hidden,
     check: graded.check,
@@ -513,7 +570,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   }
   logEvent({ status: 200, kind: 'submit', track: task.track, verdict: graded.verdict, hasUser: Boolean(userId) });
   res.setHeader('Cache-Control', 'private, no-store');
-  return res.json(verdictBody(graded, recorded, github));
+  return res.json(verdictBody(task, graded, recorded, github));
 }
 
 /* ── POST ?resource=coding-reveal ────────────────────────────────────── */
