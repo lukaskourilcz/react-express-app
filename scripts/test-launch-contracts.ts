@@ -72,6 +72,7 @@ import {
 } from '../shared/spaced-practice';
 import { arrangePractice, arrangementProblems } from '../shared/interleave';
 import { questions } from '../lib/quiz-data';
+import { LESSON_FIGURES, figuresFor, visibleFigures, validateFigures } from '../shared/lesson-figures';
 import { FAILURE_CATEGORIES, classifyFailure, failureHint } from '../shared/coding-failure';
 import { RETIRED_TOPIC_IDS, retirementOf } from '../shared/retired-content';
 import { GLOSSARY, termsIn } from '../shared/glossary';
@@ -115,7 +116,7 @@ import { CODING_INDEX } from '../shared/coding-index';
 import { inspectQuestionQuality } from '../lib/question-quality';
 import { assessmentUnlocks, roadmapEndedOnHearts, ROADMAP_MAX_HEARTS } from '../shared/assessment';
 import { grantedTopicsFor, withGrantedTopics } from '../lib/topic-grants';
-import { ROADMAP_TOPICS } from '../lib/roadmap';
+import { ROADMAP_TOPICS, isRoadmapTopic, topicLevelCount } from '../lib/roadmap';
 import {
   disableSupportPrompt,
   dismissSupportPrompt,
@@ -1136,7 +1137,45 @@ async function main() {
     assert.ok(sessionSize(5) >= 4 && sessionSize(300) <= 20);
   }
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, spaced practice, interleaving, and an unconfigured shop.');
+  // ── lesson figures (#183) ───────────────────────────────────────────────
+  {
+    assert.deepEqual(
+      validateFigures((topic) => (isRoadmapTopic(topic) ? topicLevelCount(topic) : 0)),
+      [],
+      'every figure must name a real level and carry its content in words',
+    );
+    assert.ok(LESSON_FIGURES.length >= 15, 'the authored coverage should not silently shrink');
+
+    // A figure only reaches a level it was authored for.
+    for (const figure of LESSON_FIGURES) {
+      assert.ok(
+        figuresFor(figure.topic, figure.level, 'after').some((one) => one.id === figure.id),
+        `${figure.id} is not returned for its own level`,
+      );
+      assert.deepEqual(figuresFor(figure.topic, figure.level + 100), [], 'no figure leaks to another level');
+    }
+
+    // A figure held until after the assessment is not shown before it. None of
+    // the authored figures is marked today, so the rule is exercised against a
+    // synthetic one: the mechanism has to work the first time an author uses it.
+    const held = { ...LESSON_FIGURES[0], id: 'synthetic-held', afterSubmission: true };
+    const pair = [LESSON_FIGURES[0], held];
+    assert.deepEqual(
+      visibleFigures(pair, 'before').map((one) => one.id),
+      [LESSON_FIGURES[0].id],
+      'a held figure is not shown before submission',
+    );
+    assert.deepEqual(visibleFigures(pair, 'after').map((one) => one.id), pair.map((one) => one.id));
+
+    // Figures cover the areas the curriculum actually needs them for, rather
+    // than clustering in whichever topic was easiest to author.
+    const topics = new Set(LESSON_FIGURES.map((one) => one.topic));
+    for (const topic of ['html', 'css', 'javascript', 'react', 'dsa', 'databases', 'general']) {
+      assert.ok(topics.has(topic), `no figure covers ${topic}`);
+    }
+  }
+
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, spaced practice, interleaving, lesson figures, and an unconfigured shop.');
 }
 
 void main().catch((error) => {

@@ -79,6 +79,8 @@ import { renderQuestion } from './CodeBlock';
 import { TermsBar } from './ui/Terms';
 import { WhyThis } from './ui/WhyThis';
 import { whyThisItem } from '../lib/curation';
+import { LessonFigures } from './ui/LessonFigure';
+import { figuresFor } from '../../../shared/lesson-figures';
 import { learnerProfileOf } from '../lib/trackPref';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
@@ -1283,6 +1285,11 @@ function LessonRunner({
           <div style={{ fontSize: '1.02rem', lineHeight: 1.6, marginTop: 4, marginBottom: 4 }}>
             {intro}
           </div>
+          {/* The worked example for this level's objective, before the
+              questions. Figures that would answer one of them are held back;
+              `figuresFor` filters them out at this phase rather than the
+              renderer hiding them afterwards. */}
+          <LessonFigures figures={figuresFor(playable.topic, playable.ref, 'before')} />
           {codingTasks.length > 0 && (
             <div style={{ marginTop: 12, fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
               <span style={{ fontWeight: 700 }}>{t('coding.lesson.kicker')}: </span>
