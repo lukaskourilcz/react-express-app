@@ -155,7 +155,11 @@ export async function recordConceptReviews(
   if (worst.size === 0) return;
 
   const byConcept = new Map(states.map((state) => [state.conceptId, state]));
-  for (const [conceptId, item] of worst) {
+  // One row per concept, written concurrently: they are independent rows and a
+  // submit should not wait for them in series. Awaited rather than fired and
+  // forgotten, because a serverless function can be frozen the moment it
+  // responds and an unawaited write would sometimes simply not happen.
+  await Promise.all([...worst].map(async ([conceptId, item]) => {
     const outcome: AttemptOutcome = {
       conceptId,
       correct: item.correct,
@@ -193,7 +197,7 @@ export async function recordConceptReviews(
         error: err instanceof Error ? err.message : 'unknown',
       });
     }
-  }
+  }));
 }
 
 /** How far a retrieval kind is from independent recall. Higher is weaker. */

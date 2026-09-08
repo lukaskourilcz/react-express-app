@@ -214,11 +214,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       : [];
     const fresher = duePool.filter((q) => !lastItems.has(q.id));
     const dueFirst = [...fresher, ...duePool.filter((q) => lastItems.has(q.id))];
+    const dueIds = new Set(dueFirst.map((q) => q.id));
 
     const plan = selectPersonalizedReview(
       // With nothing due this is exactly the previous behaviour. With concepts
       // due, they lead and the ranking fills the rest.
-      dueFirst.length > 0 ? [...dueFirst, ...pool.filter((q) => !dueFirst.includes(q))] : pool,
+      dueFirst.length > 0 ? [...dueFirst, ...pool.filter((q) => !dueIds.has(q.id))] : pool,
       stats.data ?? [],
       history.data ?? [],
       count,

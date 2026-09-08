@@ -32,6 +32,7 @@ Generative-media production uses `.claude/skills/generated-media-production/SKIL
 - API: `api/`, `lib/`, `shared/`
 - Supabase: `supabase/supabase-schema*.sql`
 - Design guidance: `docs/design/`
+- Release evidence: `docs/release-acceptance.md`
 - Skills: `.claude/skills/`
 - Agents: `.claude/agents/`
 - Commands: `.claude/commands/`

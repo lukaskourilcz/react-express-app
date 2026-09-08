@@ -19,5 +19,11 @@ Authoritative references:
 - `.claude/agents/`
 - `.claude/commands/`
 - `docs/DEEP_END_HANDOFF.md`
+- `docs/curation-claims.md` — what may be said about content review, and why
+  every claim fails closed
+- `docs/practice-scheduling.md` — the spacing and interleaving policies, kept
+  apart on purpose
+- `docs/release-acceptance.md` — the acceptance matrix: every gate with its
+  actual result, and every check that could not run
 
 Release commands are `npm run typecheck:api`, `npm run test:launch`, `npm run build`, `npm run check:responsive`, `npm audit --omit=dev`, `npm audit --omit=dev --prefix client`, and `git diff --check`. Record actual outcomes. Stage only coherent intended files, leave unrelated work untouched, and commit incrementally.

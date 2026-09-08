@@ -146,6 +146,42 @@ completed" only after the required verified evidence, and displays "Portfolio
 self-reviewed" as a separate line. There is no certification, no rank and no
 claim about employment.
 
+## Practice, scheduling and what the product claims about it
+
+Four shared modules were added alongside the learning paths, each owning one
+job and deliberately not the next one.
+
+`shared/concepts.ts` names the unit practice is scheduled and ordered by. A
+category is a shelf — "javascript" says where a question lives, not what it
+teaches — so twenty authored groups resolve fifty concepts from tags the banks
+already carry. A concept never spans categories, which is what stops a mixed
+session reaching into a topic the learner has not unlocked.
+
+`shared/spaced-practice.ts` decides *which* concepts are due.
+`shared/interleave.ts` decides *what order* a session is played in. Keeping
+them apart is what makes both testable and what stops the ordering policy
+quietly becoming a second scheduler. Both are pure with the clock injected;
+persistence is `concept_reviews` (migration 030), written only through an
+idempotent service-role routine. Only independent retrieval lengthens an
+interval — a hinted, revealed or recognition-shaped answer holds the rung it
+already earned. Review grants no XP of its own and never widens the pool it
+draws from. See `docs/practice-scheduling.md`.
+
+`shared/curation.ts` owns what the product is allowed to *say* about its
+content: the two gates (relevance out of ten, quality out of five, both
+required), and the derivations that fail closed — no record is not reviewed, a
+record for a different version is not reviewed, "more than once" needs more
+than one recorded human review, and unreadable metadata produces no sentence at
+all. `lib/curation.ts` computes the keyed content version that makes "an edit
+invalidates the approval" enforceable rather than a promise. The registry is
+empty until an item-level audit runs, and every surface is written to be
+correct while it is. See `docs/curation-claims.md`.
+
+`shared/lesson-figures.ts` holds the authored worked examples shown in Learn
+level intros — deterministic HTML and CSS, never generated imagery, each
+carrying its content in words rather than a caption. See
+`docs/lesson-figures.md`.
+
 ## Deployment matrix
 
 | Deployment | Identity | Subjects | Footer |
