@@ -18,7 +18,7 @@
 //   * Nothing moves under a reduced-motion preference, because nothing moves at
 //     all — the frames are states, not an animation.
 
-import { useId, useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useLanguage, useT } from '../../i18n/LanguageContext';
 import { TermsBar } from './Terms';
 import { glossaryDomainFor } from '../../lib/glossaryDomain';
@@ -115,7 +115,7 @@ function FlowView({ body, L }: { body: Extract<Figure['body'], { kind: 'flow' }>
 function NestedView({ body, L }: { body: Extract<Figure['body'], { kind: 'nested' }>; L: Localize }) {
   // Rendered by real nesting, so the containment the figure is about is the
   // containment the browser lays out.
-  const render = (index: number): React.ReactNode => {
+  const render = (index: number): ReactNode => {
     const layer = body.layers[index];
     if (!layer) return null;
     return (
