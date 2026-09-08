@@ -28,6 +28,9 @@ const MEMORY_BYTES = 64 * 1024 * 1024;
 const STACK_BYTES = 1024 * 1024;
 const MAX_TICKS = 10_000;
 const MAX_LOGS = 100;
+/** What a learner sees when their call chain ran out of stack. Named rather
+ * than inlined so the message reads the same wherever the overflow surfaces. */
+const STACK_MESSAGE = 'The call stack ran out of room: the recursion went too deep, or a base case is never reached.';
 
 // Runs inside the VM before the learner's code: a virtual clock, timers,
 // console capture and the evaluator. Declared with `var` so a learner's own
@@ -152,6 +155,7 @@ export async function runInSandbox(input: SandboxInput): Promise<EvaluateResult>
     return { results: [], logs, codeError: message, timedOut };
   };
   const isInterrupt = (message: string) => /interrupted|InternalError: interrupted/i.test(message);
+  const isStackOverflow = (message: string) => /stack overflow|maximum call stack|gc_obj_list/i.test(message);
 
   try {
     const evaluated = vm.evalCode(program(input.code, input.calls, input.expectations), 'task.js');
@@ -160,6 +164,7 @@ export async function runInSandbox(input: SandboxInput): Promise<EvaluateResult>
       evaluated.error.dispose();
       const message = typeof error === 'string' ? error : `${error?.name ?? 'Error'}: ${error?.message ?? 'failed'}`;
       if (isInterrupt(message)) return failure(TIMEOUT_MESSAGE, true);
+      if (isStackOverflow(message)) return failure(STACK_MESSAGE);
       return failure(message.replace(/^SyntaxError: /, 'SyntaxError: '));
     }
     evaluated.value.dispose();
@@ -204,9 +209,18 @@ export async function runInSandbox(input: SandboxInput): Promise<EvaluateResult>
   } catch (error) {
     const message = String((error as Error)?.message ?? error);
     if (isInterrupt(message)) return failure(TIMEOUT_MESSAGE, true);
+    if (isStackOverflow(message)) return failure(STACK_MESSAGE);
     return failure(message.includes('memory') ? 'Out of memory.' : message);
   } finally {
-    vm.dispose();
-    runtime.dispose();
+    // Disposal can fail after a run that exhausted the stack: QuickJS asserts
+    // its object list is empty and aborts the whole WebAssembly instance.
+    // Letting that escape would discard the result the run already produced and
+    // surface deep recursion — an ordinary learner mistake this module promises
+    // to report rather than crash on — as a 500. Swallow it, and drop the
+    // cached module so the next run starts from a clean instance.
+    let disposalFailed = false;
+    try { vm.dispose(); } catch { disposalFailed = true; }
+    try { runtime.dispose(); } catch { disposalFailed = true; }
+    if (disposalFailed) modulePromise = null;
   }
 }
