@@ -1,6 +1,6 @@
 // The Coding section: home, one track, one task, and the review queue.
 // devShark-only routes; the App gates them like /roadmap and /typing.
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useId, useMemo } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -10,6 +10,18 @@ import { Kicker } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import { CodingWorkbench } from '../../coding/CodingWorkbench';
 import { codingKeys, saveCodingDraft, useCodingProgress, useCodingTask } from '../../coding/api';
+import { useCodingLibrary } from '../../lib/codingLibrary';
+import { useEligibility } from '../../lib/learningPlan';
+import {
+  DURATIONS,
+  EMPTY_FILTERS,
+  TIERS,
+  applyCodingFilters,
+  hasActiveFilters,
+  readFilters,
+  writeFilters,
+  type CodingFilterState,
+} from './CodingFilters';
 import { CODING_INDEX } from '../../../../shared/coding-index';
 import {
   CODING_SECTION_TRACKS,
@@ -83,7 +95,7 @@ function StatusText({ status }: { status: Status }) {
   return <span className={`cd-row__status cd-status--${status}`}><span aria-hidden>{glyph}</span>{t(`coding.status.${status}` as never)}</span>;
 }
 
-function TaskRow({ task, status }: { task: CodingTaskSummary; status: Status }) {
+function TaskRow({ task, status, saved = false }: { task: CodingTaskSummary; status: Status; saved?: boolean }) {
   const { t, lang } = useLanguage();
   const locked = status === 'locked';
   const inner = (
@@ -92,6 +104,8 @@ function TaskRow({ task, status }: { task: CodingTaskSummary; status: Status }) 
       <span className="cd-row__meta">
         {task.level > 0 && <span>{t('coding.level', { n: task.level })}</span>}
         <span>{t('coding.minutes', { n: task.estimatedMinutes })}</span>
+        {task.debug && <span className="cd-tag">{t('coding.filter.format.debug')}</span>}
+        {saved && <span className="cd-tag" title={t('coding.library.saved')}>{t('coding.library.savedShort')}</span>}
         {task.focus.slice(0, 3).map((tag) => <span key={tag} className="cd-tag">{tag}</span>)}
       </span>
       <StatusText status={status} />
@@ -169,33 +183,48 @@ export function CodingTrackScreen() {
   const [params, setParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
+  const library = useCodingLibrary(isAuthenticated);
+  const eligibility = useEligibility(isAuthenticated);
   const { passed, statusOf, lockReason } = useStatuses(progress.data);
   const track = isCodingSectionTrack(trackParam) ? trackParam : null;
   const retired = !track && isCodingTrack(trackParam) ? trackParam : null;
-  const group = params.get('group');
-  const statusFilter = params.get('status') ?? 'all';
+
+  const filters = useMemo(() => readFilters(params), [params]);
+  const savedIds = useMemo(() => new Set(library.data?.bookmarks ?? []), [library.data]);
+  const collectionIds = useMemo(() => {
+    if (!filters.collection) return null;
+    const found = library.data?.collections.find((one) => one.id === filters.collection);
+    return new Set(found?.taskIds ?? []);
+  }, [filters.collection, library.data]);
+  const debugIds = useMemo(() => new Set(SECTION_INDEX.filter((task) => task.debug).map((task) => task.id)), []);
+
+  // The plan decides what exists here at all; the ladder decides what is open
+  // within it. Search reaches neither past the plan nor past the ladder.
+  const planTopics = eligibility.data?.personalized ? new Set(eligibility.data.unlockedTopics) : null;
+  const inPlan = !planTopics || (track !== null && planTopics.has(track));
   const tasks = useMemo(() => SECTION_INDEX.filter((task) => task.track === track), [track]);
-  const filtered = useMemo(() => tasks.filter((task) => {
-    if (group && group in CODING_TECHNIQUE_GROUPS) {
-      const tags = CODING_TECHNIQUE_GROUPS[group as CodingTechniqueGroup] as readonly string[];
-      if (!task.focus.some((tag) => tags.includes(tag))) return false;
-    }
-    if (statusFilter === 'all') return true;
-    const status = statusOf(task);
-    if (statusFilter === 'passed') return status === 'passed';
-    if (statusFilter === 'due') return status === 'due';
-    return status === 'open' || status === 'in_progress' || status === 'revealed';
-  }), [tasks, group, statusFilter, statusOf]);
-  const groupsHere = useMemo(() => GROUPS.filter((g) => tasks.some((task) => task.focus.some((tag) => (CODING_TECHNIQUE_GROUPS[g] as readonly string[]).includes(tag)))), [tasks]);
+  const groupTags = filters.group && filters.group in CODING_TECHNIQUE_GROUPS
+    ? (CODING_TECHNIQUE_GROUPS[filters.group as CodingTechniqueGroup] as readonly string[])
+    : null;
+  const filtered = useMemo(
+    () => applyCodingFilters({ tasks, state: filters, lang, groupTags, savedIds, collectionIds, debugIds, statusOf }),
+    [tasks, filters, lang, groupTags, savedIds, collectionIds, debugIds, statusOf],
+  );
+  const groupsHere = useMemo(
+    () => GROUPS.filter((g) => tasks.some((task) => task.focus.some((tag) => (CODING_TECHNIQUE_GROUPS[g] as readonly string[]).includes(tag)))),
+    [tasks],
+  );
+
+  const setFilter = useCallback((patch: Partial<CodingFilterState>) => {
+    setParams(writeFilters(params, { ...readFilters(params), ...patch }), { replace: true });
+  }, [params, setParams]);
+  const resetFilters = useCallback(() => setParams(writeFilters(params, EMPTY_FILTERS), { replace: true }), [params, setParams]);
+
   if (retired) return <RetiredTrack track={retired} />;
   if (!track) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p><Link className="cd-btn" to="/coding">{t('coding.verdict.back')}</Link></div>;
   const done = tasks.filter((task) => passed.has(task.id)).length;
+  const active = hasActiveFilters(filters);
   const tiers = [1, 2, 3, 4, 5].filter((tier) => filtered.some((task) => task.tier === tier)) as CodingTier[];
-  const setFilter = (key: string, value: string | null) => {
-    const next = new URLSearchParams(params);
-    if (value) next.set(key, value); else next.delete(key);
-    setParams(next, { replace: true });
-  };
 
   return (
     <div className="cd-page ss-pop">
@@ -208,35 +237,145 @@ export function CodingTrackScreen() {
           <p className="cd-track__count" style={{ margin: '6px 0 0' }}>{t('coding.progress', { passed: done, total: tasks.length })}</p>
         </div>
       </header>
-      <div className="cd-chips" role="group" aria-label={t('coding.techniques')}>
-        <button type="button" className="cd-chip" aria-pressed={!group} onClick={() => setFilter('group', null)}>{t('coding.techniques.all')}</button>
-        {groupsHere.map((g) => <button key={g} type="button" className="cd-chip" aria-pressed={group === g} onClick={() => setFilter('group', g)}>{t(`coding.group.${g}` as never)}</button>)}
+
+      {!inPlan && (
+        <p className="cd-note cd-note--warn" role="status">
+          {t('coding.filter.notInPlan')} <Link className="cd-link" to="/profile">{t('plan.editLink')}</Link>
+        </p>
+      )}
+
+      <CodingFilterBar
+        filters={filters}
+        groups={groupsHere}
+        collections={library.data?.collections ?? []}
+        signedIn={isAuthenticated}
+        resultCount={filtered.length}
+        onChange={setFilter}
+        onReset={resetFilters}
+      />
+
+      {filtered.length === 0 && (
+        <p className="cd-note" role="status">
+          {active ? t('coding.filter.noResults') : t('coding.empty')}
+          {active && <> <button type="button" className="cd-link cd-linkbtn" onClick={resetFilters}>{t('coding.filter.reset')}</button></>}
+        </p>
+      )}
+
+      {active
+        ? filtered.length > 0 && (
+          <ul className="cd-rows" aria-label={t('coding.filter.results', { n: filtered.length })}>
+            {filtered.map((task) => <TaskRow key={task.id} task={task} status={statusOf(task)} saved={savedIds.has(task.id)} />)}
+          </ul>
+        )
+        : tiers.map((tier) => {
+          const reason = lockReason(track, tier);
+          return (
+            <section key={tier} className="cd-tier" aria-labelledby={`cd-tier-${tier}`}>
+              <div className="cd-tier__head">
+                <h2 id={`cd-tier-${tier}`}>{t(`coding.tier.${CODING_TIERS[tier]}` as never)}</h2>
+                {reason && <p className="cd-tier__lock">{t(`coding.lock.${reason}` as never)}</p>}
+              </div>
+              <ul className="cd-rows">
+                {filtered.filter((task) => task.tier === tier).map((task) => (
+                  <TaskRow key={task.id} task={task} status={statusOf(task)} saved={savedIds.has(task.id)} />
+                ))}
+              </ul>
+            </section>
+          );
+        })}
+    </div>
+  );
+}
+
+/** Search plus the combined filters, as one keyboard-operable strip (#161). */
+function CodingFilterBar({
+  filters, groups, collections, signedIn, resultCount, onChange, onReset,
+}: {
+  filters: CodingFilterState;
+  groups: string[];
+  collections: { id: string; name: string }[];
+  signedIn: boolean;
+  resultCount: number;
+  onChange: (patch: Partial<CodingFilterState>) => void;
+  onReset: () => void;
+}) {
+  const { t } = useLanguage();
+  const searchId = useId();
+  const active = hasActiveFilters(filters);
+  return (
+    <div className="cd-filters">
+      <div className="cd-filters__search">
+        <label className="cd-editor-label" htmlFor={searchId}>{t('coding.filter.searchLabel')}</label>
+        <input
+          id={searchId}
+          type="search"
+          className="cd-input"
+          value={filters.q}
+          placeholder={t('coding.filter.searchPlaceholder')}
+          onChange={(event) => onChange({ q: event.target.value })}
+        />
       </div>
-      {isAuthenticated && (
+
+      <div className="cd-chips" role="group" aria-label={t('coding.techniques')}>
+        <button type="button" className="cd-chip" aria-pressed={!filters.group} onClick={() => onChange({ group: null })}>{t('coding.techniques.all')}</button>
+        {groups.map((g) => (
+          <button key={g} type="button" className="cd-chip" aria-pressed={filters.group === g} onClick={() => onChange({ group: filters.group === g ? null : g })}>
+            {t(`coding.group.${g}` as never)}
+          </button>
+        ))}
+      </div>
+
+      <div className="cd-chips" role="group" aria-label={t('coding.filter.difficulty')}>
+        {TIERS.map((tier) => (
+          <button key={tier} type="button" className="cd-chip" aria-pressed={filters.tier === tier} onClick={() => onChange({ tier: filters.tier === tier ? null : tier })}>
+            {t(`coding.tier.${CODING_TIERS[tier]}` as never)}
+          </button>
+        ))}
+      </div>
+
+      <div className="cd-chips" role="group" aria-label={t('coding.filter.duration')}>
+        {DURATIONS.map((duration) => (
+          <button key={duration} type="button" className="cd-chip" aria-pressed={filters.duration === duration} onClick={() => onChange({ duration: filters.duration === duration ? null : duration })}>
+            {t(`coding.filter.duration.${duration}` as never)}
+          </button>
+        ))}
+      </div>
+
+      <div className="cd-chips" role="group" aria-label={t('coding.filter.format')}>
+        {(['tests', 'checklist', 'debug'] as const).map((format) => (
+          <button key={format} type="button" className="cd-chip" aria-pressed={filters.format === format} onClick={() => onChange({ format: filters.format === format ? null : format })}>
+            {t(`coding.filter.format.${format}` as never)}
+          </button>
+        ))}
+      </div>
+
+      {signedIn && (
         <div className="cd-chips" role="group" aria-label={t('coding.filter.status')}>
-          {(['all', 'open', 'passed', 'due'] as const).map((value) => (
-            <button key={value} type="button" className="cd-chip" aria-pressed={statusFilter === value} onClick={() => setFilter('status', value === 'all' ? null : value)}>
-              {value === 'all' ? t('coding.filter.all') : value === 'open' ? t('coding.status.open') : value === 'passed' ? t('coding.status.passed') : t('coding.status.due')}
+          {(['all', 'open', 'passed', 'due', 'saved'] as const).map((value) => (
+            <button key={value} type="button" className="cd-chip" aria-pressed={filters.status === value} onClick={() => onChange({ status: value })}>
+              {value === 'all' ? t('coding.filter.all')
+                : value === 'saved' ? t('coding.library.saved')
+                : t(`coding.status.${value}` as never)}
             </button>
           ))}
         </div>
       )}
-      {filtered.length === 0 && <p className="cd-note">{t('coding.empty')}</p>}
-      {tiers.map((tier) => {
-        const reason = lockReason(track, tier);
-        return (
-          <section key={tier} className="cd-tier" aria-labelledby={`cd-tier-${tier}`}>
-            <div className="cd-tier__head">
-              <h2 id={`cd-tier-${tier}`}>{t(`coding.tier.${CODING_TIERS[tier]}` as never)}</h2>
-              {reason && <p className="cd-tier__lock">{t(`coding.lock.${reason}` as never)}</p>}
-            </div>
-            <ul className="cd-rows">
-              {filtered.filter((task) => task.tier === tier).map((task) => <TaskRow key={task.id} task={task} status={statusOf(task)} />)}
-            </ul>
-          </section>
-        );
-      })}
-      <p className="cd-shortcuts">{lang === 'cs' ? '' : ''}</p>
+
+      {signedIn && collections.length > 0 && (
+        <div className="cd-chips" role="group" aria-label={t('coding.library.collections')}>
+          {collections.map((collection) => (
+            <button key={collection.id} type="button" className="cd-chip" aria-pressed={filters.collection === collection.id} onClick={() => onChange({ collection: filters.collection === collection.id ? null : collection.id })}>
+              {collection.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="cd-filters__foot">
+        <span className="cd-shortcuts" role="status">{t('coding.filter.results', { n: resultCount })}</span>
+        <button type="button" className="cd-btn cd-btn--quiet" onClick={onReset} disabled={!active}>{t('coding.filter.reset')}</button>
+        <Link className="cd-link" to="/coding/library">{t('coding.library.manage')}</Link>
+      </div>
     </div>
   );
 }

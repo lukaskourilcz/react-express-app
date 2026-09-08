@@ -139,6 +139,12 @@ export interface CodingTask {
   hints: LocalizedList;
   approach?: LocalizedList;
   verify: CodingVerify;
+  /**
+   * A repair exercise: the starter is deliberately broken and the learner fixes
+   * it (issue #163). The format is metadata, not a different grader — the same
+   * tests decide, so a repair has to work, not merely look plausible.
+   */
+  debug?: boolean;
   tests?: CallTest[];
   typeTests?: TypeTest[];
   /** React: Testing Library suite source for `/App.test.js`. */
@@ -161,6 +167,8 @@ export interface CodingTaskSummary {
   focus: string[];
   title: Localized;
   verify: CodingVerify;
+  /** True for a repair exercise; drives the format filter (issue #163). */
+  debug?: boolean;
   estimatedMinutes: number;
 }
 

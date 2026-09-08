@@ -6,11 +6,12 @@ import { JAVASCRIPT_SOLUTIONS } from './javascript';
 import { TYPESCRIPT_SOLUTIONS } from './typescript';
 import { REACT_SOLUTIONS } from './react';
 import { JAVASCRIPT_LOOP_SOLUTIONS } from './javascript-loops';
+import { JAVASCRIPT_DEBUG_SOLUTIONS } from './javascript-debug';
 import { TYPESCRIPT_LOOP_SOLUTIONS } from './typescript-loops';
 import { REACT_LOOP_SOLUTIONS } from './react-loops';
 
 const ALL: Record<string, CodingSolution> = {
-  ...JAVASCRIPT_SOLUTIONS, ...JAVASCRIPT_LOOP_SOLUTIONS,
+  ...JAVASCRIPT_SOLUTIONS, ...JAVASCRIPT_LOOP_SOLUTIONS, ...JAVASCRIPT_DEBUG_SOLUTIONS,
   ...TYPESCRIPT_SOLUTIONS, ...TYPESCRIPT_LOOP_SOLUTIONS,
   ...REACT_SOLUTIONS, ...REACT_LOOP_SOLUTIONS,
 };

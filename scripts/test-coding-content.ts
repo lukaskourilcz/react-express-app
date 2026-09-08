@@ -26,6 +26,7 @@ import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { renderCodingIndex } from './build-coding-index';
+import { isCollectionId, normalizeCollectionName } from '../shared/coding-library';
 import { allPuzzles, assemble, gradePuzzle, preparePuzzle, puzzleProblems } from '../lib/coding/puzzles';
 import { MAX_PUZZLE_BLOCKS, PUZZLE_COMPETENCIES } from '../shared/coding-puzzle';
 
@@ -318,13 +319,34 @@ async function main() {
     fail('advice: an all-undefined failure must classify as missing-return');
   }
 
+  /* ── repair exercises and the library contract (issues #163, #157) ──── */
+  const debugTasks = CODING_TASKS.filter((task) => task.debug === true);
+  if (debugTasks.length === 0) fail('debug: no repair exercises are authored');
+  for (const task of debugTasks) {
+    const where = `debug ${task.id}`;
+    if (task.track === 'system-design') fail(`${where}: design tasks are not repair exercises`);
+    if (task.verify !== 'tests') fail(`${where}: a repair is decided by its tests`);
+    if (!task.tests || task.tests.length === 0) fail(`${where}: no tests to prove the repair`);
+    if (!solutionFor(task.id)) fail(`${where}: no reference repair`);
+    // The summary the browser reads must carry the format, or the filter cannot
+    // find it. (The reference repair passing and the broken starter failing are
+    // already asserted by the shared solution checks above.)
+    const summary = CODING_SUMMARIES.find((one) => one.id === task.id);
+    if (summary?.debug !== true) fail(`${where}: the summary does not declare the debug format`);
+  }
+  for (const name of ['', '   ', 'x'.repeat(41)]) {
+    if (normalizeCollectionName(name) !== null) fail(`library: "${name.slice(0, 8)}" should not be an acceptable collection name`);
+  }
+  if (normalizeCollectionName('  My   list  ') !== 'My list') fail('library: a name should be trimmed and its whitespace collapsed');
+  if (isCollectionId('short') || !isCollectionId('abcdefgh')) fail('library: collection ids must be validated');
+
   if (failures.length > 0) {
     console.error(`Coding content contract: ${failures.length} problem(s)\n  - ${failures.join('\n  - ')}`);
     process.exitCode = 1;
     return;
   }
   const byTrack = CODING_TRACKS.map((track) => `${track} ${CODING_TASKS.filter((t) => t.track === track).length}`).join(', ');
-  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, ${allPuzzles().length} arrangement puzzles proven, ${allFailureAdvice().length} failure hints checked, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
+  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, ${allPuzzles().length} arrangement puzzles proven, ${allFailureAdvice().length} failure hints checked, ${debugTasks.length} repair exercises, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 
 void main().catch((error) => {

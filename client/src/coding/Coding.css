@@ -389,3 +389,21 @@
 .cd-resources code { font-size: 0.8125rem; }
 .cd-resources__source { font-size: 0.75rem; color: var(--color-text-secondary); }
 .cd-hint--advice { border-inline-start: 3px solid var(--brand-accent); }
+
+/* ── Search and combined filters (issue #161) ───────────────────────────── */
+.cd-filters { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+.cd-filters__search { display: flex; flex-direction: column; gap: 4px; max-width: 420px; }
+.cd-input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.9375rem;
+}
+.cd-filters__foot { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.cd-linkbtn { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+.cd-row--retired { opacity: 0.7; }
+.cd-actions--library { margin-top: 4px; }

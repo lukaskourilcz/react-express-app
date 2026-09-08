@@ -14,6 +14,7 @@ import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness
 import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, type LadderRung } from './hint-ladder';
 import { revealCoding, submitCoding } from './api';
 import { CodePuzzle } from './CodePuzzle';
+import { useCodingLibrary, useCodingLibraryAction } from '../lib/codingLibrary';
 import { useIsCompactPractice } from '../lib/useMediaQuery';
 import type { CodingPuzzleVerdict, PlayableCodingPuzzle } from '../../../shared/coding-puzzle';
 import { CODING_TIERS, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
@@ -108,6 +109,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // authored arrangement puzzle exists it takes its place; where none exists the
   // task waits for a wider screen and says so, with the draft kept.
   const compact = useIsCompactPractice();
+  // Saving is a reading-list action (issue #157): it keeps the challenge in the
+  // learner's library and changes nothing about what they may start.
+  const library = useCodingLibrary(signedIn);
+  const libraryAction = useCodingLibraryAction();
+  const saved = library.data?.bookmarks.includes(task.id) ?? false;
+  const collections = library.data?.collections ?? [];
   const [preferEditor, setPreferEditor] = useState(false);
   const puzzleMode = compact && Boolean(puzzle) && !(mode === 'section' && preferEditor);
   const editorWithheld = compact && !puzzleMode && mode === 'lesson';
@@ -497,6 +504,40 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             </div>
             <Prompt className="cd-prompt" text={L(task.prompt)} />
             {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{L(task.api.note)}</p>}
+            {signedIn && (
+              <div className="cd-actions cd-actions--library">
+                <button
+                  type="button"
+                  className="cd-btn cd-btn--quiet"
+                  aria-pressed={saved}
+                  disabled={libraryAction.isPending}
+                  onClick={() => libraryAction.mutate(saved ? { action: 'unbookmark', taskId: task.id } : { action: 'bookmark', taskId: task.id })}
+                >
+                  {saved ? t('coding.library.unsave') : t('coding.library.save')}
+                </button>
+                {collections.map((collection) => {
+                  const inside = collection.taskIds.includes(task.id);
+                  return (
+                    <button
+                      key={collection.id}
+                      type="button"
+                      className="cd-btn cd-btn--quiet"
+                      aria-pressed={inside}
+                      disabled={libraryAction.isPending}
+                      onClick={() => libraryAction.mutate(inside
+                        ? { action: 'remove-from-collection', id: collection.id, taskId: task.id }
+                        : { action: 'add-to-collection', id: collection.id, taskId: task.id })}
+                    >
+                      {inside
+                        ? t('coding.library.removeFrom', { name: collection.name })
+                        : t('coding.library.addTo', { name: collection.name })}
+                    </button>
+                  );
+                })}
+                <Link className="cd-link" to="/coding/library">{t('coding.library.manage')}</Link>
+              </div>
+            )}
+            {libraryAction.isError && <p className="cd-note cd-note--error" role="alert">{t('coding.library.error')}</p>}
             {locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}
             {!signedIn && mode === 'section' && <p className="cd-note">{t('coding.signInHint')}</p>}
 
