@@ -24,6 +24,19 @@ export const CODING_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript'
 export const isCodingTrack = (value: unknown): value is CodingTrack =>
   typeof value === 'string' && (CODING_TRACKS as readonly string[]).includes(value);
 
+/** The tracks the Coding section offers as practice. System design is taught in
+ * the Learn curriculum and inside the FDE specialization, not practised as a
+ * coding challenge, so discovery never lists it — but its tasks, grader,
+ * sessions and every record already earned against them stay exactly as they
+ * are. `CODING_TRACKS` remains the full grading vocabulary; only this list
+ * decides what the section shows. */
+export const CODING_SECTION_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript', 'react'];
+export const isCodingSectionTrack = (value: unknown): value is CodingTrack =>
+  typeof value === 'string' && (CODING_SECTION_TRACKS as readonly string[]).includes(value);
+/** A track that still grades and still owns history, but has left the section. */
+export const isRetiredSectionTrack = (value: unknown): value is CodingTrack =>
+  isCodingTrack(value) && !isCodingSectionTrack(value);
+
 /** Tier ids, used as translation-key suffixes (`coding.tier.<id>`). */
 export const CODING_TIERS: Record<CodingTier, string> = {
   1: 'foundations',

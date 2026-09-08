@@ -327,6 +327,10 @@
 .ss-brand-footer__pending { display: inline-flex; align-items: baseline; gap: 0.35rem; }
 .ss-brand-footer__pending small { font-size: 0.62rem; opacity: 0.75; }
 .ss-brand-footer__meta { justify-content: space-between; padding-top: 0.8rem; border-top: 1px solid var(--ss-header-border); }
+/* devShark ships no family heading or sibling list, so the meta row is the
+   whole footer: the second rule directly under the first one would read as a
+   stray line. */
+.ss-brand-footer--utility .ss-brand-footer__meta { padding-top: 0; border-top: 0; }
 @media (max-width: 599px) {
   .ss-brand-footer { margin-top: 2.5rem; }
   .ss-brand-footer__meta { align-items: flex-start; flex-direction: column; }

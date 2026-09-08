@@ -150,7 +150,7 @@ claim about employment.
 
 | Deployment | Identity | Subjects | Footer |
 |---|---|---|---|
-| devShark | devShark | webdev only | devShark plus StudyShark subject links |
+| devShark | devShark | webdev only | legal links and utility controls only |
 | StudyShark | StudyShark | all non-development subjects | devShark plus every internal subject brand |
 
 Set matching client and server identity values on every deployment. For
@@ -167,7 +167,10 @@ Only `VITE_STUDYSHARK_URL` and `VITE_DEVSHARK_URL` are public product URLs.
 geoShark, mathShark, historyShark, bioShark, chessShark, and pokerShark are
 branded subject contexts linking to `/subjects?subject=…` on StudyShark. The
 shared footer marks the active context accessibly; “Coming soon” is reserved
-for an unconfigured devShark link.
+for an unconfigured devShark link. Those brand rows render on StudyShark only:
+devShark promotes no sibling product, so its footer keeps the legal links and
+the language, appearance and sound controls and nothing else. The registries
+stay whole either way — the metadata generator and StudyShark both read them.
 
 ## Adding a future subject
 

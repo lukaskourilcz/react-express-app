@@ -3,6 +3,7 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
 import { useCodingProgress } from '../../coding/api';
 import { CODING_INDEX } from '../../../../shared/coding-index';
+import { isCodingSectionTrack } from '../../../../shared/coding-catalog';
 
 const SHOWN = 3;
 
@@ -29,7 +30,9 @@ export function CodingDueSection() {
   const due = query.data?.due ?? [];
   const rows = due
     .map((id) => CODING_INDEX.find((row) => row.id === id))
-    .filter((row): row is (typeof CODING_INDEX)[number] => Boolean(row))
+    // Tracks that left the Coding section keep their records but never come
+    // back as practice, so Today does not offer them for review either.
+    .filter((row): row is (typeof CODING_INDEX)[number] => Boolean(row) && isCodingSectionTrack(row!.track))
     .slice(0, SHOWN);
   if (rows.length === 0) return null;
   const actionLabel = t('today.review');

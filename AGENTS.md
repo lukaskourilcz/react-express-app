@@ -2,7 +2,7 @@
 
 Audit before editing: inspect Git state, trace the route/data flow, read both translation dictionaries, and search for reusable registries, components, hooks, styles, dialogs, and tests. Preserve unrelated user work.
 
-StudyShark contains the six general-learning subjects. devShark is the standalone `webdev` sibling and never appears in the StudyShark picker. Product identity, URLs, subjects, counts, and accents come from `client/product-catalog.ts`, `shared/subject-catalog.ts`, and their existing adapters. Preserve the all-brand footer and EN/CS parity.
+StudyShark contains the six general-learning subjects. devShark is the standalone `webdev` sibling and never appears in the StudyShark picker. Product identity, URLs, subjects, counts, and accents come from `client/product-catalog.ts`, `shared/subject-catalog.ts`, and their existing adapters. StudyShark keeps the all-brand footer; devShark shows no family heading and no sibling-brand list, only the legal links and the language, appearance and sound controls. Preserve EN/CS parity.
 
 All learning remains free. Support and cosmetics are fairness-neutral. The server remains authoritative for answers, grading, scores, XP, subject/product scope, roles, and claims. Keep Supabase/RLS/service-role isolation and exactly twelve physical TypeScript handlers under `api/`. Do not add native/Expo code.
 
