@@ -369,10 +369,6 @@ export const en = {
   'quiz.difficultyAria': 'Difficulty: {label}',
   'quiz.startQuiz': 'Start quiz',
   'quiz.selectCategoryError': 'Select at least one category to start.',
-  'quiz.practiceMode': 'Practice mode',
-  'quiz.practiceModeHint': 'Learn without changing XP, streaks or leaderboard results.',
-  'quiz.practiceComplete': 'Practice complete — this result was not ranked or added to your progress.',
-
   // Difficulty modes
   'difficulty.basics': 'Basics',
   'difficulty.easy': 'Easy',

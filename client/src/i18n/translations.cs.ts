@@ -370,10 +370,6 @@ export const cs: Record<TranslationKey, string> = {
   'quiz.difficultyAria': 'Obtížnost: {label}',
   'quiz.startQuiz': 'Spustit kvíz',
   'quiz.selectCategoryError': 'Pro start vyber alespoň jednu kategorii.',
-  'quiz.practiceMode': 'Tréninkový režim',
-  'quiz.practiceModeHint': 'Uč se bez změn XP, série nebo výsledků v žebříčku.',
-  'quiz.practiceComplete': 'Trénink dokončen — výsledek se nehodnotil ani nepřidal k postupu.',
-
   // Difficulty modes
   'difficulty.basics': 'Základy',
   'difficulty.easy': 'Lehká',

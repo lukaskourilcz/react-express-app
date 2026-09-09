@@ -69,7 +69,7 @@ import {
 } from '../lib/supportPrompt';
 import './Quiz.css';
 
-type QuizMode = 'standard' | 'practice' | 'daily' | 'review';
+type QuizMode = 'standard' | 'daily' | 'review';
 type ReviewWeakArea = { category: CategoryType; accuracyPct: number; answered: number; focusTags: string[] };
 
 const DIFFICULTY_VALUES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
@@ -83,7 +83,6 @@ interface SavedSetup {
   count?: number;
   difficulty?: DifficultyMode;
   categories?: string[];
-  practice?: boolean;
 }
 
 interface PersistedProgress {
@@ -201,9 +200,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         ? config.quiz.defaultDifficulty as DifficultyMode
         : 'zero-to-hero');
   });
-  const [practiceMode, setPracticeMode] = useState(() =>
-    readJSON<SavedSetup>(SETUP_KEY, {}).practice === true,
-  );
   const [selectedCategories, setSelectedCategories] = useState<CategoryType[]>(() => {
     const linkedCategory = typeof window !== 'undefined'
       ? new URLSearchParams(window.location.search).get('category')
@@ -340,9 +336,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       count: questionCount,
       difficulty: difficultyMode,
       categories: selectedCategories,
-      practice: practiceMode,
     } satisfies SavedSetup);
-  }, [questionCount, difficultyMode, selectedCategories, practiceMode]);
+  }, [questionCount, difficultyMode, selectedCategories]);
 
   const clearProgress = useCallback(() => {
     try {
@@ -357,7 +352,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       count: number,
       difficulty: DifficultyMode,
       categories: CategoryType[],
-      nextMode: 'standard' | 'practice' = 'standard',
     ) => {
       fetchAbortRef.current?.abort();
       const controller = new AbortController();
@@ -393,7 +387,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         setHintedIds([]);
         setReviewPlan([]);
         setCurrentIndex(0);
-        setMode(nextMode);
+        setMode('standard');
         setState('in-progress');
       } catch (err) {
         if (controller.signal.aborted) return;
@@ -493,17 +487,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     setResult(null);
     // Top of the quiz funnel. No-op unless PostHog is configured.
     capture('quiz_started', {
-      mode: practiceMode ? 'practice' : 'standard',
+      mode: 'standard',
       question_count: questionCount,
       difficulty: difficultyMode,
       category_count: selectedCategories.length,
     });
-    fetchQuestions(
-      questionCount,
-      difficultyMode,
-      selectedCategories,
-      practiceMode ? 'practice' : 'standard',
-    );
+    fetchQuestions(questionCount, difficultyMode, selectedCategories);
   };
 
   const handleCategoryToggle = (category: CategoryType) => {
@@ -590,21 +579,19 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         correct: data.correctAnswers,
         total: data.totalQuestions,
       });
-      if (mode !== 'practice') {
-        const supportState = readJSON<SupportPromptPreference>(SUPPORT_PROMPT_KEY, {});
-        const supportMilestone = recordSupportMilestone(
-          supportState,
-          data.percentage,
-          config.support.enabled,
-        );
-        writeJSON(SUPPORT_PROMPT_KEY, supportMilestone.state);
-        setShowSupportPrompt(supportMilestone.show);
-        if (data.percentage === 100) recordPerfectQuiz();
-      }
+      const supportState = readJSON<SupportPromptPreference>(SUPPORT_PROMPT_KEY, {});
+      const supportMilestone = recordSupportMilestone(
+        supportState,
+        data.percentage,
+        config.support.enabled,
+      );
+      writeJSON(SUPPORT_PROMPT_KEY, supportMilestone.state);
+      setShowSupportPrompt(supportMilestone.show);
+      if (data.percentage === 100) recordPerfectQuiz();
 
-      if (mode === 'practice') {
-        // Practice results are intentionally local and unranked.
-      } else if (isAuthenticated && user?.id) {
+      // Every quiz counts. There is no unranked kind any more, so the only
+      // question left is whether there is an account to record it against.
+      if (isAuthenticated && user?.id) {
         if (!data.resultReceipt) {
           setSnack(t('quiz.streakWarning'));
         } else {
@@ -835,12 +822,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               <Button
                 variant="primary"
                 label={t('quiz.retry')}
-                onClick={() => fetchQuestions(
-                  questionCount,
-                  difficultyMode,
-                  selectedCategories,
-                  practiceMode ? 'practice' : 'standard',
-                )}
+                onClick={() => fetchQuestions(questionCount, difficultyMode, selectedCategories)}
               />
               <Button variant="secondary" label={t('quiz.backToSettings')} onClick={handleRestart} />
             </HStack>
@@ -937,33 +919,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </div>
           </div>
 
-          <label
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: 12,
-              padding: '14px 16px',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-container)',
-              background: practiceMode ? 'var(--ss-success-soft)' : 'var(--color-background-muted)',
-              cursor: 'pointer',
-              position: 'relative',
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={practiceMode}
-              onChange={(event) => setPracticeMode(event.target.checked)}
-              style={{ width: 18, height: 18, marginTop: 2, accentColor: 'var(--brand-accent)' }}
-            />
-            <span style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={labelStyle}>{t('quiz.practiceMode')}</span>
-              <span style={{ fontSize: '0.82rem', color: 'var(--color-text-secondary)' }}>
-                {t('quiz.practiceModeHint')}
-              </span>
-            </span>
-          </label>
-
           {/* Start — swim-through CTA + reassurance line. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', position: 'relative' }}>
             <SwimCta label={t('quiz.startQuiz')} onClick={handleStart} dir={1} disabled={selectedCategories.length === 0} size="lg" />
@@ -1024,12 +979,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             {mode === 'daily' && (
               <Text type="supporting" color="secondary" justify="center">
                 {t('quiz.dailyComplete')}
-              </Text>
-            )}
-
-            {mode === 'practice' && (
-              <Text type="supporting" color="secondary" justify="center">
-                {t('quiz.practiceComplete')}
               </Text>
             )}
 
