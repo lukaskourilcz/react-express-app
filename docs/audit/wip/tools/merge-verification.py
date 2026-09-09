@@ -1,9 +1,13 @@
 # Folds the second reading (verify-out/*.jsonl) and the cross-batch duplicate
 # decisions into the review fragments, writing one final JSON Lines file per
 # batch under <outDir>. The originals are never modified. Usage:
-#   python3 merge-verification.py <reviewDir> <verifyDir> <outDir>
+#   python3 merge-verification.py <reviewDir> <verifyDir> <outDir> [inventoryDir]
 import json,glob,os,sys,copy
 rev_dir, ver_dir, out = sys.argv[1], sys.argv[2], sys.argv[3]
+inv_dir = sys.argv[4] if len(sys.argv) > 4 else 'docs/audit/wip/inventory'
+inv = {}
+for f in glob.glob(f'{inv_dir}/batch-*.json'):
+    for it in json.load(open(f)): inv[it['id']] = it
 os.makedirs(out, exist_ok=True)
 verify = {}; dups = []
 for f in glob.glob(f'{ver_dir}/verify-*.jsonl'):
@@ -20,10 +24,26 @@ for d in dups:
         survivor = [i for i in d['pair'] if i != d['retire']][0]
         retire_by_dup[d['retire']] = (survivor, d['reason'])
 FIELDS = ('question', 'options', 'correctAnswer', 'hint', 'explanation')
+# Keys settled by hand, with the reason. Used only where the reviewer rebuilt
+# the options and the old key's wording changed too, so no text match can
+# resolve it and guessing would be a coin toss.
+MANUAL_KEYS = {
+    'rm-node-156': (1, "the second reader rebuilt all four options as parallel statements and recorded \"Key stays at index 1\" in its notes; index 1 is the one-way statement, which is what the original keyed"),
+    'rm-ts-80': (1, 'the reviewer replaced the key\'s wording ("Valid (recursive alias)" -> "Compiles") in place; index unchanged, confirmed against the rewritten explanation, which says the alias compiles'),
+}
 stats = {'accept': 0, 'amend': 0, 'reject': 0, 'dup-retire': 0, 'missing-verification': 0, 'rows': 0}
 problems = []
 def finalize(r):
     r = copy.deepcopy(r)
+    # The wording keyed before the second reading touched anything: the
+    # reviewer's rewritten options if it rebuilt them, otherwise the served
+    # ones. A key resolved against this survives an amendment that rebuilds
+    # the options again.
+    item0 = inv.get(r['id'])
+    rw0 = r.get('rewrite') or {}
+    base_options = rw0['options'] if isinstance(rw0.get('options'), list) else (item0['options'] if item0 else None)
+    base_key = rw0.get('correctAnswer', item0['correctAnswer'] if item0 else None)
+    base_key_text = base_options[base_key].strip() if (base_options and isinstance(base_key, int) and 0 <= base_key < len(base_options)) else None
     v = verify.get(r['id'])
     if r['decision'] == 'rewrite' and r.get('rewrite'):
         if not v:
@@ -52,9 +72,35 @@ def finalize(r):
         r['verification'] = {**(r.get('verification') or {}), 'duplicatePass': {'retired': True, 'survivor': survivor}}
     # A rewrite that was never accepted by a second reading must not be applied.
     if r['decision'] == 'rewrite':
-        rs = r['rewrite'].get('rescored') or {}
+        rw = r['rewrite']
+        rs = rw.get('rescored') or {}
         q = rs.get('qualityScore'); rel = rs.get('relevanceScore')
         if q is None or rel is None or q < 3 or rel < 4: problems.append(f"{r['id']}: rewrite fails a gate after the second reading (q {q}, r {rel})")
+        # Rebuilt options with no stated key silently reuse the old index. That
+        # is right only when the key text did not move, so it is checked by
+        # hand rather than assumed.
+        # Rebuilt options with no stated key: resolve it by finding the text
+        # the reviewer keyed before. Only an exact, unique match is safe; a key
+        # whose wording also changed has to be stated, not guessed.
+        if isinstance(rw.get('options'), list) and 'correctAnswer' not in rw:
+            if base_key_text is None: problems.append(f"{r['id']}: options rewritten without a stated correctAnswer and nothing to resolve it against")
+            else:
+                matches = [i for i, o in enumerate(rw['options']) if o.strip() == base_key_text]
+                if len(matches) == 1:
+                    rw['correctAnswer'] = matches[0]
+                    stats['key-resolved'] = stats.get('key-resolved', 0) + 1
+                    if matches[0] != base_key: stats['key-moved'] = stats.get('key-moved', 0) + 1
+                elif r['id'] in MANUAL_KEYS:
+                    rw['correctAnswer'], why = MANUAL_KEYS[r['id']]
+                    r.setdefault('verification', {}).setdefault('manualKey', why)
+                    stats['key-manual'] = stats.get('key-manual', 0) + 1
+                else:
+                    problems.append(f"{r['id']}: options rewritten without a stated correctAnswer and the old key text is not in them")
+        if 'correctAnswer' in rw and not (isinstance(rw['correctAnswer'], int) and 0 <= rw['correctAnswer'] <= 3): problems.append(f"{r['id']}: correctAnswer out of range")
+        opts = rw.get('options')
+        # Case matters in this bank: "Active" and "ACTIVE" are a legitimate
+        # pair when the item is about a string enum's name versus its value.
+        if isinstance(opts, list) and len({o.strip() for o in opts}) < 4: problems.append(f"{r['id']}: rewritten options are not four distinct strings")
     return r
 for f in sorted(glob.glob(f'{rev_dir}/*.jsonl') + glob.glob(f'{rev_dir}/*.json')):
     name = os.path.basename(f)
