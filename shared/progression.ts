@@ -290,25 +290,40 @@ export function areLevelsPassed(progress: VerifiedProgress, topic: string, from:
  * stay in `client/src/lib/tracks.ts`, which reads these lists so the two cannot
  * drift. Frontend and Fullstack carry the browser (HTML and CSS) in full;
  * Backend gets the narrow web-foundations bridge it actually needs rather than
- * the whole styling curriculum. */
+ * the whole styling curriculum.
+ *
+ * TypeScript has a stage to itself, and a late one. It used to sit second, one
+ * step after a learner's first JavaScript — which put a type system in front of
+ * people who had not yet written enough code for one to help. It is a large
+ * topic and it pays off against real components and real handlers, so it comes
+ * after them now: after the React stack on Frontend, after the server and its
+ * data on Backend, after both on Fullstack. A stage of its own rather than a
+ * seat in a crowded one, because its size is the point.
+ *
+ * The hard prerequisite is unchanged and stays `javascript` alone. Order and
+ * dependency are different questions: this list is the recommended order, and
+ * moving a topic later here never withdraws a level anyone already passed. */
 export const WEBDEV_PLAN_STAGES: Record<BaseTrack, readonly (readonly string[])[]> = {
   frontend: [
     ['html', 'css', 'javascript'],
-    ['typescript', 'git'],
+    ['git'],
     ['react', 'nextjs'],
+    ['typescript'],
     ['general', 'dsa', 'ai'],
   ],
   backend: [
-    ['javascript', 'typescript', 'git'],
+    ['javascript', 'git'],
     ['nodejs', 'general'],
     ['databases', 'dsa', 'algorithms'],
+    ['typescript'],
     ['system-design', 'devops', 'security', 'ai'],
   ],
   fullstack: [
     ['html', 'css', 'javascript'],
-    ['typescript', 'git'],
+    ['git'],
     ['react', 'nextjs'],
     ['nodejs', 'general', 'databases'],
+    ['typescript'],
     ['dsa', 'algorithms'],
     ['system-design', 'devops', 'security', 'ai'],
   ],

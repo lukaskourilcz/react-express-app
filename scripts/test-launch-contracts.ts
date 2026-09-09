@@ -755,6 +755,29 @@ async function main() {
     assert.deepEqual(stranded, [], `every deployable topic needs a base track that plans it: ${stranded.join(', ')}`);
   }
 
+  // TypeScript is a late topic, deliberately. It used to sit one stage after a
+  // learner's first JavaScript, which put a type system in front of people who
+  // had not written enough code for one to help yet. It now comes after the
+  // work it pays off against, and this fails if it drifts back to the front.
+  {
+    for (const [track, stages] of Object.entries(WEBDEV_PLAN_STAGES)) {
+      const indexOf = (topic: string) => stages.findIndex((stage) => stage.includes(topic));
+      const ts = indexOf('typescript');
+      assert.ok(ts >= 0, `${track} must still plan typescript`);
+      assert.ok(
+        ts >= Math.ceil(stages.length / 2),
+        `typescript is stage ${ts + 1} of ${stages.length} on ${track}; it belongs in the second half`,
+      );
+      // And after the thing it is types *for*: components on the browser tracks,
+      // handlers on the server one.
+      const after = track === 'backend' ? 'nodejs' : 'react';
+      assert.ok(
+        indexOf(after) >= 0 && indexOf(after) < ts,
+        `typescript must come after ${after} on ${track}`,
+      );
+    }
+  }
+
   // Editing a plan narrows what is offered next; it never withdraws what was
   // earned. A learner who passed Next.js levels on the frontend track and then
   // moved to backend — where Next.js is not in the plan — must still be able to
