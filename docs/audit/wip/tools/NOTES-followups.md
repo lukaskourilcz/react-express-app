@@ -246,3 +246,17 @@ for a second reader rather than a second automated check.
   because it works from the final English rather than from the served Czech,
   which is the right direction of travel and the reason the localisation pass
   runs after the rewrites are applied rather than beside them.
+- **The Testing retirement holds up under review.** Its first half retired 49 of
+  60 items outright and redistributed 11, most into General levels 16-19, Node
+  level 24, DevOps levels 3 and 11, and Databases level 11. That is the answer
+  the retirement decision needed and never had: the section was not carrying
+  material the rest of the map lacks.
+- **One AI item's Czech asks a different question entirely.** `rm-ai-50` serves
+  a Czech item about which 2017 paper introduced the transformer, where the
+  English asks about the quadratic cost of attention. Every one of the 25 items
+  in that range is drift of some degree.
+- **A tokenizer rule of thumb stated as fact.** One item gives "one token is
+  about four characters, about 0.75 words" as a general truth. Measured across
+  tokenizers the range is 0.72 to 0.90 words per token, and Anthropic's own
+  documentation gives roughly 3.5 characters. The key survives; the explanation
+  needed the hedge.
