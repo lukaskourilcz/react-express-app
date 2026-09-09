@@ -90,3 +90,7 @@
 - **`rm-general-34` back-references "that URL" from `rm-general-33`.** Every
   delivery path shuffles, so the reference breaks. Worth a mechanical sweep for
   other items that lean on their neighbour.
+- **32 items ship with no Czech at all.** The whole Testing Foundations block
+  (General levels 16-19) has `cs: null`, so a Czech learner meets those levels
+  in English today. The localisation pass writes them from scratch rather than
+  repairing a translation.
