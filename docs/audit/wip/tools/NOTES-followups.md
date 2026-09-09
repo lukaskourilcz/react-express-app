@@ -31,3 +31,9 @@
 - **Snippets that never compiled.** `rm-ts-93` and `rm-ts-142` ship code with
   an undeclared identifier (`TS2304`), so the question asked about a program
   that does not exist. Both rewrites supply the declaration.
+- **`rm-node-32` "which is NOT a Node global?"** `__dirname` is not a global
+  either: `Object.hasOwn(globalThis, "__dirname")` is false in CommonJS and it
+  is a `ReferenceError` in ESM, and the Node 22 documentation says so
+  explicitly. The item's explanation asserted the opposite. The rewrite asks
+  about availability inside a CommonJS module, which turns the bug into the
+  lesson.
