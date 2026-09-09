@@ -229,3 +229,13 @@ for a second reader rather than a second automated check.
   than timing: `shift` touched 40 indexed reads at n=40 where `pop` touched
   one, at every size. That is the right kind of evidence for this topic, and
   the items that already name their case are the strongest in the bank.
+- **An outcome label is prose; a value is code.** The Czech pass surfaced a
+  question the brief had not answered: is the option `Error` a value to keep in
+  English or a description of what happened? Different batches answered
+  differently. Settled: an option that names the outcome (`Error`, `Type
+  error`, `Compiles`, `Nothing`) takes its Czech form, and an option a learner
+  would type or see printed (`undefined`, `null`, `NaN`, `TypeError`, `string`,
+  `"ACTIVE"`, `42`) stays byte-for-byte English. The test is whether the text
+  is the value or a description of it. `normalise-cs.py` applies the rule to
+  rows written before it was settled; run it once every Czech batch has
+  finished, never while one is still appending.
