@@ -1297,7 +1297,32 @@ async function main() {
       }
     }
 
-    // The pre-paint bootstrap has to run before anything that can block it.
+    // EN and CS must carry the same keys. The type system only catches one
+  // direction: TranslationKey is derived from the English file, so a missing
+  // Czech key is a compile error — but a key removed from English and left in
+  // Czech is invisible, and a Czech string nobody can reach is worse than no
+  // string, because it reads as translated work that is live and is not.
+  {
+    const keysOf = (file: string) => {
+      const source = readFileSync(join(process.cwd(), 'client/src/i18n', file), 'utf8');
+      return new Set((source.match(/^ {2}'[^']+':/gm) ?? []).map((line) => line.trim().slice(1, -2)));
+    };
+    const en = keysOf('translations.ts');
+    const cs = keysOf('translations.cs.ts');
+    assert.ok(en.size > 1500, `the English dictionary looks truncated: ${en.size} keys`);
+    assert.deepEqual(
+      [...en].filter((key) => !cs.has(key)),
+      [],
+      'every English key needs a Czech one',
+    );
+    assert.deepEqual(
+      [...cs].filter((key) => !en.has(key)),
+      [],
+      'a Czech key with no English counterpart is unreachable and should be deleted',
+    );
+  }
+
+  // The pre-paint bootstrap has to run before anything that can block it.
     // A pending stylesheet suspends every script after it, so a webfont link
     // above this one leaves the page in the default theme until a third-party
     // host answers — verified in a browser: with fonts.googleapis.com
