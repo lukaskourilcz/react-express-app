@@ -181,3 +181,14 @@ for a second reader rather than a second automated check.
   rather than `reset`. Seven items teach the previous shape. One explanation
   says nested metadata merges; the documentation says the merge is shallow and
   a nested object is replaced wholesale, and the Czech repeats the error.
+- **The audit's first retain.** `rm-devops-1` is the only item in 1,800 reviewed
+  so far that passed both gates as written, and the reason is exactly the one
+  the audit exists to find: it is the only item whose hint was written for its
+  own question rather than taken from the six-sentence fallback set.
+- **DORA now publishes five metrics, not four.** `rm-devops-5` teaches the old
+  set and the old name; dora.dev renamed mean time to restore as failed
+  deployment recovery time and added deployment rework rate.
+- **`rm-devops-35` teaches a mistake that causes real deploys.** Its key says
+  workflow jobs run in sequence; GitHub Actions documents that jobs run in
+  parallel unless a dependency says otherwise, which is precisely how a deploy
+  job runs despite failing tests.
