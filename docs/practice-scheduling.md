@@ -130,6 +130,26 @@ used for it, so a review tests the objective rather than the memory of one
 question. When no other item exists it uses the same one and says nothing — the
 objective has not changed.
 
+## What feeds the ladder
+
+Two surfaces, both graded by the server:
+
+- **Quiz sessions**, on submit. The client reports which questions had a hint
+  open; a hinted answer holds its rung rather than climbing one. It cannot go
+  the other way — the absence of a hint id is not a claim the server acts on,
+  so the signal can only ever make an outcome more conservative.
+- **Learn levels**, on completion. A level has no hint affordance, so every
+  answer is independent retrieval. Questions left unanswered when the hearts ran
+  out are absent from the graded rows and are not recorded as failures: they
+  were not attempted.
+
+Levels are where most devShark time is spent, so leaving them out would make
+scheduling inert for exactly the learners it is for — nothing ever due, and a
+Review button with nothing behind it.
+
+Challenge runs are excluded. They are a timed score, not a retention check, and
+recording them would advance intervals on a format the ladder does not model.
+
 ## Persistence
 
 `concept_reviews` (migration 030) is owner-scoped: readable by its owner,

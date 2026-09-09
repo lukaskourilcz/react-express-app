@@ -88,7 +88,8 @@ import {
   PART_TEST_SIZE,
   type RoadmapTopic,
 } from '../../lib/roadmap';
-import { itemReview } from '../../lib/curation';
+import { itemReview, contentVersion } from '../../lib/curation';
+import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
 
 // One function for the whole roadmap to stay within the Vercel Hobby
 // 12-function limit. It serves three things off the same route:
@@ -910,7 +911,10 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 409, 'attempt_conflict', 'This learning attempt belongs to another session');
   }
   const answers = await withTimeout(
-    supabase.from('roadmap_attempt_answers').select('is_correct').eq('attempt_id', session.attemptId!),
+    supabase
+      .from('roadmap_attempt_answers')
+      .select('question_id,is_correct')
+      .eq('attempt_id', session.attemptId!),
   );
   if (answers.error) return jsonError(res, 500, 'db_error', 'Could not grade the learning attempt');
   const graded = answers.data ?? [];
@@ -987,6 +991,43 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       supabase.from('roadmap_attempts').update({ completed_at: new Date().toISOString() }).eq('attempt_id', session.attemptId!),
     );
     applied = true;
+  }
+
+  // Concept-level review state, from the answers the server itself graded.
+  //
+  // Levels are where a devShark learner spends most of their time, so leaving
+  // this out left spaced practice inert for them: nothing was ever due, and
+  // Review had nothing to offer. Recorded here rather than per answer because
+  // the interval belongs to the concept and a level asking `reduce` three times
+  // is one review of `reduce`, not three; the attempt id makes it idempotent,
+  // so a retried completion reports the stored state and changes nothing.
+  //
+  // Every answer counts as independent retrieval: a level has no hint
+  // affordance, so unlike a quiz there is nothing to downgrade. Questions left
+  // unanswered when the hearts ran out are simply absent from the graded rows
+  // and are not recorded as failures — they were not attempted.
+  if (userId && isScopeSubject(session.subject)) {
+    const byId = await getEffectiveQuestionsById(session.subject, false);
+    const items = graded.flatMap((answer) => {
+      const question = byId.get(String(answer.question_id));
+      if (!question) return [];
+      return [{
+        itemId: question.id,
+        itemVersion: contentVersion(question),
+        category: question.category,
+        tags: question.tags,
+        correct: answer.is_correct === true,
+        kind: 'independent' as const,
+      }];
+    });
+    if (items.length > 0) {
+      const states = await loadReviewStates(supabase, userId, session.subject);
+      await recordConceptReviews(
+        supabase,
+        { userId, subject: session.subject, eventId: session.attemptId!, items },
+        states,
+      );
+    }
   }
 
   logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length, outOfHearts: endedOnHearts });
