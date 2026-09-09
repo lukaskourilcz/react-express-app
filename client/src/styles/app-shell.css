@@ -609,3 +609,56 @@
 .ss-figure__position { font-size: 0.76rem; color: var(--color-text-secondary); }
 .ss-figure__frames { margin-top: 10px; display: grid; gap: 4px; font-size: 0.8rem; color: var(--color-text-secondary); counter-reset: figframe; }
 .ss-figure__frames li::before { counter-increment: figframe; content: counter(figframe) ". "; font-weight: 700; }
+
+/* ── Touch targets ──────────────────────────────────────────────────────────
+ *
+ * The design contract asks for 44px targets. The app's own controls meet it;
+ * the ones that did not were the shared Astryx controls and the family footer,
+ * measured in a headless browser at 390px across nineteen routes: the mobile
+ * navigation toggle at 36×36, primary and secondary buttons at 32px tall,
+ * segmented-control items at 28px, and the sibling-brand links at 14px — text
+ * height, no padding at all. The navigation toggle is the most-tapped control
+ * on a phone and was the smallest thing on the page.
+ *
+ * Scoped to coarse pointers on purpose. A mouse is precise and the desktop
+ * density is deliberate; a finger is not, and this is the case the 44px rule
+ * is actually about. Applied as a floor rather than a fixed size so a control
+ * that is already larger is untouched, and to min-height/min-width rather than
+ * padding so nothing reflows into a neighbour.
+ */
+@media (pointer: coarse) {
+  /* !important, deliberately and only here. Astryx ships StyleX atomic rules
+     guarded by repeated id-level negations, which is a specificity no class
+     selector can reach. The alternative is forking the design system, which
+     the implementation rules rule out; this stays a floor on two properties,
+     inside one media query. */
+  .astryx-button,
+  .astryx-segmented-control-item {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+
+  .ss-footer-settings button,
+  .ss-drawer-brand,
+  .ss-skip-link {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* The footer links are bare text in wrapped rows — sibling brands in one,
+     the legal links in the other. Height is what gives them a target; the
+     rows' own gaps keep them from touching. */
+  .ss-brand-footer__brands a,
+  .ss-brand-footer__brands strong,
+  .ss-brand-footer__meta a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    /* A short word is a short target: "Terms" measured 34px wide. The padding
+       is what widens it. Real padding rather than a negative margin, so the
+       row's gap still separates two adjacent targets instead of leaving their
+       hit areas touching. */
+    padding-inline: 0.3rem;
+  }
+  .ss-brand-footer__brands { padding-block: 0.35rem; }
+}

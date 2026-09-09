@@ -360,6 +360,11 @@ async function probeRoute(call, baseUrl, route, vp) {
     deviceScaleFactor: vp.mobile ? 2 : 1,
     mobile: vp.mobile,
   });
+  // `mobile: true` does not make `(pointer: coarse)` match — touch emulation is
+  // what does. Without this the sweep is blind to every coarse-pointer rule,
+  // which is where the app's touch-target floors live: a phone width was being
+  // measured with a mouse's stylesheet.
+  await call('Emulation.setTouchEmulationEnabled', { enabled: vp.mobile, maxTouchPoints: vp.mobile ? 5 : 1 });
   // Blank between routes: a route that redirects itself (signed-out /profile)
   // can still have a client-side navigation in flight, which races the next
   // Page.navigate and leaves the document loading forever.
@@ -395,23 +400,23 @@ async function screenshot(call, outDir, name) {
   return file;
 }
 
-async function main() {
-  if (process.argv.includes('--help')) {
-    printHelp();
-    return;
-  }
-  if (typeof globalThis.WebSocket !== 'function') {
-    throw new Error('Responsive checks require Node.js 22 or newer (the version declared in package.json).');
-  }
-  const { routes, viewports } = selectedMatrix();
-  const baseUrl = (optionValue('--base-url') ?? process.env.RESPONSIVE_BASE_URL ?? DEFAULT_BASE).replace(/\/$/, '');
-  const configuredOutput = optionValue('--output-dir') ?? process.env.RESPONSIVE_OUTPUT_DIR;
-  const outDir = configuredOutput
-    ? path.resolve(configuredOutput)
-    : mkdtempSync(path.join(tmpdir(), 'shark-responsive-shots-'));
-  mkdirSync(outDir, { recursive: true });
+// Bumped per launch so a relaunch never reuses the port a wedged browser may
+// still be holding.
+let browserGeneration = 0;
+
+/**
+ * Start a browser and connect to its page target.
+ *
+ * Separated out so the sweep can start a *new* one. A long headless run wedges
+ * its renderer eventually — twice in one afternoon here, both times about
+ * seventy probes in, after which every DevTools command times out and every
+ * remaining route goes unmeasured. Relaunching costs a couple of seconds and
+ * recovers the rest of the sweep, which is worth far more than the seconds.
+ */
+async function openBrowser(seed) {
   const userData = mkdtempSync(path.join(tmpdir(), 'shark-responsive-profile-'));
-  const debugPort = Number.parseInt(process.env.RESPONSIVE_DEBUG_PORT ?? '', 10) || 9300 + (process.pid % 500);
+  const debugPort = Number.parseInt(process.env.RESPONSIVE_DEBUG_PORT ?? '', 10)
+    || 9300 + ((process.pid + browserGeneration++) % 500);
   const chromeArgs = [
     '--headless=new',
     '--disable-gpu',
@@ -424,15 +429,13 @@ async function main() {
   if (IS_LINUX) chromeArgs.unshift('--no-sandbox', '--disable-dev-shm-usage');
   const chrome = spawn(CHROME, chromeArgs, { stdio: ['ignore', 'pipe', 'pipe'] });
 
-  let cleaned = false;
-  const cleanup = () => {
-    if (cleaned) return;
-    cleaned = true;
-    try { chrome.kill('SIGTERM'); } catch { /* ignore */ }
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    try { chrome.kill('SIGKILL'); } catch { /* ignore */ }
     try { rmSync(userData, { recursive: true, force: true }); } catch { /* ignore */ }
   };
-  process.on('exit', cleanup);
-  process.on('SIGINT', () => { cleanup(); process.exit(130); });
 
   try {
     await waitFor(async () => {
@@ -449,10 +452,7 @@ async function main() {
     const call = rpc(ws);
     await call('Page.enable');
     await call('Runtime.enable');
-    if (SEED) {
-      await call('Page.addScriptToEvaluateOnNewDocument', { source: SEED });
-      console.log(`  seeded${THEME ? ` theme=${THEME}` : ''}${LOCALE ? ` locale=${LOCALE}` : ''}`);
-    }
+    if (seed) await call('Page.addScriptToEvaluateOnNewDocument', { source: seed });
     // Sandboxed runners cannot reach the Google Fonts hosts, so every document
     // waits out its font requests and never fires `load`. Blocking them makes
     // an offline run fast and deterministic; the page then measures with the
@@ -463,7 +463,42 @@ async function main() {
         urls: ['*://fonts.googleapis.com/*', '*://fonts.gstatic.com/*', '*://www.google.com/*'],
       });
     }
+    return { call, close, ws };
+  } catch (err) {
+    close();
+    throw err;
+  }
+}
 
+
+async function main() {
+  if (process.argv.includes('--help')) {
+    printHelp();
+    return;
+  }
+  if (typeof globalThis.WebSocket !== 'function') {
+    throw new Error('Responsive checks require Node.js 22 or newer (the version declared in package.json).');
+  }
+  const { routes, viewports } = selectedMatrix();
+  const baseUrl = (optionValue('--base-url') ?? process.env.RESPONSIVE_BASE_URL ?? DEFAULT_BASE).replace(/\/$/, '');
+  const configuredOutput = optionValue('--output-dir') ?? process.env.RESPONSIVE_OUTPUT_DIR;
+  const outDir = configuredOutput
+    ? path.resolve(configuredOutput)
+    : mkdtempSync(path.join(tmpdir(), 'shark-responsive-shots-'));
+  mkdirSync(outDir, { recursive: true });
+  let session = await openBrowser(SEED);
+  if (SEED) console.log(`  seeded${THEME ? ` theme=${THEME}` : ''}${LOCALE ? ` locale=${LOCALE}` : ''}`);
+
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    session.close();
+  };
+  process.on('exit', cleanup);
+  process.on('SIGINT', () => { cleanup(); process.exit(130); });
+
+  try {
     const results = [];
     for (const vp of viewports) {
       for (const route of routes) {
@@ -472,16 +507,28 @@ async function main() {
         // the rest of the sweep — and never passes by being unmeasured.
         let r;
         try {
-          r = await probeRoute(call, baseUrl, route, vp);
-        } catch (err) {
-          const reason = err instanceof Error ? err.message : String(err);
-          results.push({
-            route, viewport: vp.label, error: reason, overflow: 0,
-            horizOffenders: [], parentOffenders: [], covered: [], ready: false,
-            winW: vp.width, docW: vp.width,
-          });
-          process.stdout.write(`  ERROR ${vp.label.padEnd(10)} ${route}  (${reason})\n`);
-          continue;
+          r = await probeRoute(session.call, baseUrl, route, vp);
+        } catch (first) {
+          // A timed-out command usually means the renderer has wedged, and a
+          // wedged renderer answers nothing again — so every route after this
+          // one would fail too. Start a fresh browser and give the route one
+          // more try; if it fails on a browser that has just started, the
+          // route is the problem rather than the browser.
+          process.stdout.write(`  ..... ${vp.label.padEnd(10)} ${route}  (restarting the browser)\n`);
+          try {
+            session.close();
+            session = await openBrowser(SEED);
+            r = await probeRoute(session.call, baseUrl, route, vp);
+          } catch (second) {
+            const reason = second instanceof Error ? second.message : String(second);
+            results.push({
+              route, viewport: vp.label, error: reason, overflow: 0,
+              horizOffenders: [], parentOffenders: [], covered: [], ready: false,
+              winW: vp.width, docW: vp.width,
+            });
+            process.stdout.write(`  ERROR ${vp.label.padEnd(10)} ${route}  (${reason})\n`);
+            continue;
+          }
         }
         results.push(r);
         const broken = r.overflow > 0 || r.parentOffenders.length > 0 || r.covered.length > 0;
@@ -490,11 +537,11 @@ async function main() {
         process.stdout.write(`  ${tag.padEnd(5)} ${vp.label.padEnd(10)} ${route}${slow}\n`);
         if (broken) {
           const safeRoute = route === '/' ? '_home' : route.replace(/\//g, '_');
-          await screenshot(call, outDir, `${vp.label}_${safeRoute}.png`);
+          await screenshot(session.call, outDir, `${vp.label}_${safeRoute}.png`);
         }
       }
     }
-    ws.close();
+    session.close();
 
     const errored = results.filter((r) => r.error);
     const fails = results.filter((r) => r.overflow > 0 || r.parentOffenders.length > 0 || r.covered.length > 0);

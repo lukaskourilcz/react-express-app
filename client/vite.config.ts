@@ -44,7 +44,13 @@ function purgeAstryxCss(): Plugin {
           keyframes: false, // all @keyframes kept (some are toggled at runtime)
           fontFace: false, // all @font-face kept
           safelist: {
-            standard: [/^ss-/, /^rm-/, /^quiz-/, /^devshark/, /^cd-/, /^cm-/, 'html', 'body'],
+            // `astryx-*` are the design system's own semantic class names. They
+            // are composed at runtime rather than written as literals in the
+            // bundle, so PurgeCSS cannot see them and silently deleted the
+            // app's overrides of them — a rule that worked in dev and was gone
+            // in production, which is the worst shape a bug can take. Twelve
+            // such classes exist in total, so keeping them costs almost nothing.
+            standard: [/^ss-/, /^rm-/, /^quiz-/, /^devshark/, /^cd-/, /^cm-/, /^astryx-/, 'html', 'body'],
             // Attribute/state selectors composed at runtime.
             greedy: [/data-theme/, /data-color-mode/, /data-selected/, /data-active/, /data-tone/, /data-locked/, /data-complete/],
           },
