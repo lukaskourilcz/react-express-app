@@ -67,3 +67,13 @@
   The key is right and the explanation is wrong, and the Czech reproduces the
   same error faithfully — the one place in the audit where a translation is
   accurate to a mistake.
+- **Four items teach the same rules-of-hooks rule.** `rm-react-50`, `91`, `114`
+  and `186` each state that hooks cannot be called conditionally. They sit in
+  four different batches, so no first reviewer could see the overlap; the
+  cross-batch duplicate pass decides which one survives. The version carrying
+  code is the strongest candidate.
+- **`rm-react-177`/`181` overstate `memo`.** Both say a memoized component
+  re-renders only when its props change. It also re-renders on its own state
+  change and on a context change, which react.dev states and the reviewer
+  measured. `rm-react-185`/`192` claim a render loop repeats forever; React
+  throws "Too many re-renders" instead.
