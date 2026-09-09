@@ -220,3 +220,12 @@ for a second reader rather than a second automated check.
   eight; another described a component that is not in its own snippet. Both
   came from the first pass, and both are the reason the second reader re-runs
   measurements rather than trusting the sentence.
+- **Complexity taught without its case.** The DSA bank states push and pop as
+  O(1) with no mention that it is amortised for an array-backed stack, hides a
+  queue claim behind "well implemented" without saying that
+  `Array.prototype.shift` is the implementation learners reach for and does not
+  meet it, and asserts average-case hash lookup with no bounded-load-factor
+  assumption. The reviewer counted operations with proxy index counters rather
+  than timing: `shift` touched 40 indexed reads at n=40 where `pop` touched
+  one, at every size. That is the right kind of evidence for this topic, and
+  the items that already name their case are the strongest in the bank.
