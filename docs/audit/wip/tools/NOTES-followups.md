@@ -77,3 +77,16 @@
   change and on a context change, which react.dev states and the reviewer
   measured. `rm-react-185`/`192` claim a render loop repeats forever; React
   throws "Too many re-renders" instead.
+- **Status-code items state convention as specification.** `rm-general-31`
+  keys 403 as "you are known but not allowed", while RFC 9110 says a request
+  "might be forbidden for reasons unrelated to the credentials";
+  `rm-general-32` keys 404 as "does not exist", while the specification also
+  covers a server unwilling to disclose that it does; `rm-general-39` claims a
+  301 "passes link equity", which Google's own redirect documentation does not
+  state. All three are rewritten to what the specification says.
+- **`rm-general-12` hard-codes TCP.** HTTP/3 carries requests on QUIC streams
+  over UDP, so the key is wrong for the current protocol; rewritten to "the
+  connection the request arrived on".
+- **`rm-general-34` back-references "that URL" from `rm-general-33`.** Every
+  delivery path shuffles, so the reference breaks. Worth a mechanical sweep for
+  other items that lean on their neighbour.
