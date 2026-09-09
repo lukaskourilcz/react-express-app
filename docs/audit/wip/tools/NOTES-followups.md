@@ -60,3 +60,10 @@
   caught only 12 of them. The topic needs retranslating whole, and the
   detector's miss rate is worth reporting: it flags changed code, and these
   items changed their subject without changing any code.
+- **`rm-node-140` explanation reverses the event-loop ordering.** It says a
+  `setImmediate` often runs after a zero-millisecond timeout inside an I/O
+  cycle. Run inside an `fs.readFile` callback the order is immediate first, and
+  the Node documentation says the immediate "is always executed first" there.
+  The key is right and the explanation is wrong, and the Czech reproduces the
+  same error faithfully — the one place in the audit where a translation is
+  accurate to a mistake.
