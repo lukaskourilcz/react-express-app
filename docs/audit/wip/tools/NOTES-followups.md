@@ -268,3 +268,16 @@ for a second reader rather than a second automated check.
   ran the probe set and credited each input with the bug it actually catches.
   Two passes were needed to get one sentence right, which is the strongest
   single argument in the audit for not shipping on one reading.
+- **The AI bank teaches an API shape the vendors no longer have.** One item
+  keys "roles such as system, user, and assistant"; Anthropic's Messages API
+  states there is no system role for input messages, it is a top-level
+  parameter, and OpenAI's current guide documents developer, user and
+  assistant. Three more items assume temperature is settable, which newer
+  Claude models reject outright. The rewrites state the assumption rather than
+  dropping the concept, which is the right treatment: the idea of sampling
+  temperature is still worth teaching even where one vendor has fixed it.
+- **Express 5 changed the catch-all route.** One General item gives `*`, where
+  the Express 5 migration guide requires a named wildcard such as `/*splat`.
+- **A claim that was false in the level that teaches it.** One item said
+  changing a query parameter always means a new request. Under `history.pushState`
+  it does not, and client-side routing is the subject of that very level.
