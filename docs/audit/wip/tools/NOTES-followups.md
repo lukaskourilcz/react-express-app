@@ -45,3 +45,12 @@
   running the development build actually sees (setup, cleanup, setup). Decide
   once whether the bank teaches the production model with a development note,
   or the development model outright.
+- **Hooks called at module scope.** `rm-react-105`, `108`, `145` and `147` ship
+  snippets whose `useRef`/`useState` call sits outside any component, so the
+  code throws `Invalid hook call` rather than doing what the question asks
+  about. One item was retired; the rest are rewritten with the call inside a
+  component. Worth a mechanical check across the React bank for the same shape.
+- **The Czech hint is one sentence for the whole bank.** Every Czech item
+  carries "Pozorně si přečti kód a odhadni, co dělá nebo co vrací", which is
+  not a translation of the English hint and tells the learner to read code that
+  prose-only items do not contain. The localisation pass replaces all of them.
