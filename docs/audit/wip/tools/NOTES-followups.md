@@ -144,3 +144,15 @@ for a second reader rather than a second automated check.
   items are correctly labelled legacy and were kept, which is the right
   treatment: legacy knowledge with a stated maintenance context passes the
   relevance gate, legacy taught as current does not.
+- **Twelve Security items have a hint that names the answer.** The generic
+  fallback ends "Focus on `<tag>`", and in twelve items that tag is the keyed
+  option word for word while the stem withholds it. That is not a weak hint but
+  a spoiling one, recorded as `misleading-hint`, and it means the generic hint
+  is not uniformly harmless filler: where the fallback interpolates a tag, it
+  can hand over the answer. Worth a mechanical sweep of the whole bank for
+  items whose hint contains the keyed option's distinguishing word.
+- **Password-storage advice is a generation behind.** Three Security items list
+  bcrypt, scrypt and Argon2 as interchangeable. The current OWASP guidance
+  ranks Argon2id first, scrypt second, PBKDF2 for FIPS, and bcrypt for legacy
+  systems only; one item also places a pepper in application config where the
+  guidance requires a vault or HSM.
