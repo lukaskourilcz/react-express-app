@@ -172,12 +172,23 @@ CREATE POLICY "cosmetic_entitlements_select_own"
   ON public.cosmetic_entitlements FOR SELECT TO authenticated
   USING (user_id = (SELECT auth.uid()::TEXT));
 
+-- Supabase grants INSERT, UPDATE, DELETE and TRUNCATE to anon and authenticated
+-- on every new table by default. RLS filters the rows a statement may touch; it
+-- does not filter TRUNCATE, which takes no rows and therefore passes no policy.
+-- Revoking first and granting back only SELECT is what makes the policies above
+-- the whole story rather than the interesting half of it.
+REVOKE ALL ON public.token_ledger          FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.token_balances        FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.merch_orders          FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.merch_order_items     FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.cosmetic_entitlements FROM PUBLIC, anon, authenticated;
+
 GRANT SELECT ON public.token_ledger          TO authenticated;
 GRANT SELECT ON public.token_balances        TO authenticated;
 GRANT SELECT ON public.merch_orders          TO authenticated;
 GRANT SELECT ON public.merch_order_items     TO authenticated;
 GRANT SELECT ON public.cosmetic_entitlements TO authenticated;
-REVOKE ALL ON public.merch_stock FROM anon, authenticated;
+REVOKE ALL ON public.merch_stock           FROM PUBLIC, anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 4. Wallet routines.

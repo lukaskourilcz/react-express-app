@@ -154,6 +154,18 @@ CREATE POLICY "practice_sessions_select_own"
   ON public.practice_sessions FOR SELECT TO authenticated
   USING (user_id = (SELECT auth.uid()::TEXT));
 
+-- Supabase grants INSERT, UPDATE, DELETE and TRUNCATE to anon and authenticated
+-- on every new table by default. RLS filters the rows a statement may touch; it
+-- does not filter TRUNCATE, which takes no rows and therefore passes no policy.
+-- Revoking first and granting back only SELECT is what makes the policies above
+-- the whole story rather than the interesting half of it.
+REVOKE ALL ON public.coding_bookmarks        FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.coding_collections      FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.coding_collection_items FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.coding_skips            FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.coding_puzzle_results   FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.practice_sessions       FROM PUBLIC, anon, authenticated;
+
 GRANT SELECT ON public.coding_bookmarks        TO authenticated;
 GRANT SELECT ON public.coding_collections      TO authenticated;
 GRANT SELECT ON public.coding_collection_items TO authenticated;
