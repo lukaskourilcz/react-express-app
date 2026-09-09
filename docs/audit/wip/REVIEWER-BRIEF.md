@@ -75,6 +75,8 @@ Every rewrite will need new Czech for the changed fields; a later localisation p
 - For a factual or versioned claim you are not certain of (defaults, deprecations, which version introduced/removed what, HTTP/security semantics, framework behaviour), fetch the primary page and cite the URL. One fetch can serve several items; cite it for each.
 - For well-established facts you are certain of, `knowledge:` with a few words is acceptable. Do not pad evidence.
 
+**Use the repository's own toolchain, not whatever is on the PATH.** Bare `npx tsc` in a scratch directory resolves to a globally installed TypeScript (6.x, where `strictNullChecks` is already on) and will give you answers the product does not produce. Run `/home/user/react-express-app/node_modules/.bin/tsc` and record the version you used (`--version`); the same applies to `react`, `react-dom`, `express` and every other library — require them from `/home/user/react-express-app/node_modules` so your evidence is about the code the product ships.
+
 ## Output — JSON Lines, written as you go
 Write **one file**: the path given in your task, ending in `.jsonl`. One JSON object per line, one line per item, in input order. **Append after every 8–10 items** (a shell heredoc `>>` is fine) so an interrupted run keeps its progress; never rewrite the file from scratch. If the file already exists when you start, read the ids it holds and continue from the first item not yet in it. Valid JSON on every line, UTF-8, no commentary lines. Schema per item (shown pretty-printed; write it on one line):
 
