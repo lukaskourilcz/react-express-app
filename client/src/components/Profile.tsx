@@ -26,7 +26,7 @@ import {
 } from '../lib/roadmap';
 import { useTrack, trackStarterTopics, rankLabelKeyFor, trackLabelKey, TRACK_ORDER, type Track } from '../lib/tracks';
 import LearningPathsCard from './paths/LearningPathsCard';
-import { getCategoryHexColor, categoryLabelKey, onCategoryColorText } from '../lib/categories';
+import { getCategoryHexColor, categoryLabelKey } from '../lib/categories';
 import { useQuestXp, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp, levelForXp, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
@@ -363,8 +363,11 @@ function ProfileBody({
           <VStack gap={2}>
             <CareerCard />
 
-            <LearningTrackCard />
-            {CURRENT_PRODUCT.id === 'devshark' && <LearningPathsCard />}
+            {/* One card owns the track. On devShark that is the paths card,
+                which carries the specialization and the picker as well; the
+                simpler chooser below is for the subjects that have no paths.
+                Rendering both put the same decision on the page twice. */}
+            {CURRENT_PRODUCT.id === 'devshark' ? <LearningPathsCard /> : <LearningTrackCard />}
 
             <AdvisorCard />
           </VStack>
@@ -810,20 +813,14 @@ function LearningTrackCard() {
                 <button
                   key={topic}
                   type="button"
+                  className="de-topic-chip"
+                  data-unlocked={unlocked}
                   onClick={() => navigate(`/learn?topic=${topic}`)}
-                  style={{
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                    fontSize: '0.8125rem',
-                    lineHeight: 1.4,
-                    minHeight: 44,
-                    padding: '8px 12px',
-                    borderRadius: 999,
-                    border: `1px solid ${color}`,
-                    backgroundColor: unlocked ? color : 'transparent',
-                    color: unlocked ? onCategoryColorText(topic) : 'var(--color-text-secondary)',
-                  }}
                 >
+                  {/* The topic's colour, as a mark rather than a flood. Locked
+                      and unlocked differ in weight and border too, so the state
+                      is not carried by colour alone. */}
+                  <span aria-hidden className="de-topic-chip__dot" style={{ backgroundColor: color }} />
                   {t(categoryLabelKey(topic))}
                 </button>
               );

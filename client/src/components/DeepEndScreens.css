@@ -81,3 +81,13 @@
 .de-tab:hover{color:var(--color-text-primary)}
 .de-tab:focus-visible{outline:2px solid var(--ss-focus);outline-offset:-2px}
 .de-tab[aria-selected=true]{color:var(--color-text-primary);font-weight:750;border-bottom-color:var(--brand-accent)}
+
+/* Starting-section chips. One surface, the topic's colour as a dot; locked and
+   unlocked differ in weight and border as well as in shade, so the state reads
+   without relying on colour. */
+.de-topic-chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 14px;border-radius:999px;border:1px solid var(--ss-card-line);background:var(--color-background-surface);color:var(--color-text-secondary);font:600 .8125rem/1.4 var(--font-family-body);cursor:pointer}
+.de-topic-chip[data-unlocked=true]{border-color:var(--color-border-strong);color:var(--color-text-primary);font-weight:750}
+.de-topic-chip:hover{background:var(--color-background-muted)}
+.de-topic-chip:focus-visible{outline:2px solid var(--ss-focus);outline-offset:2px}
+.de-topic-chip__dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.de-topic-chip[data-unlocked=false] .de-topic-chip__dot{opacity:.45}
