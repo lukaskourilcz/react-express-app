@@ -128,3 +128,11 @@ for a second reader rather than a second automated check.
 - **`rm-db-47` Czech reverses the English.** "Spojení vyžaduje SQL" says SQL is
   required by joins rather than joins are required by SQL. The clearest single
   translation defect the audit has found.
+- **System Design fails on presentation, not facts.** All 60 keys in its first
+  batch are correct and singly defensible — the only topic so far with no
+  correctness blocker at all. It fails on the generic hint, on 28 items with
+  nonsense distractors ("Email", "Add SPOFs", "Writes are dropped"), and on 26
+  whose key runs between 1.6 and 5.7 times the average distractor length. The
+  report should say this plainly: a bank can be entirely true and still
+  unusable, because a learner who reads only the shape of the options answers
+  most of it correctly.
