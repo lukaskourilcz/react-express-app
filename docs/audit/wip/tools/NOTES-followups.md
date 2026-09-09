@@ -166,3 +166,18 @@ for a second reader rather than a second automated check.
   categories and folded SSRF into A01. One item also asserts the naive
   double-submit cookie pattern is unforgeable, which the OWASP CSRF cheat sheet
   explicitly says is bypassable by anyone who can write a cookie on the domain.
+- **A measurement in the bank does not reproduce.** `rm-node-181`'s explanation
+  cites thread-pool timings that a second reader could not repeat on a
+  four-processor machine: it claims 695 ms at `UV_THREADPOOL_SIZE=32` where
+  contention bites, but with only eight queued tasks a pool of 32 never runs
+  more than eight threads, and the measured figure was about 200 ms. The
+  explanation now states reproducible figures. This is the one class of claim
+  no amount of documentation checking would have caught, and it argues for
+  re-running any item that quotes a number.
+- **Next.js 16 moved again during the audit.** The interceptor file is now
+  `proxy.ts` and defaults to the Node.js runtime, `priority` on the image
+  component is deprecated in favour of `preload`, single-argument
+  `revalidateTag()` is a type error, and the error boundary's prop is `retry`
+  rather than `reset`. Seven items teach the previous shape. One explanation
+  says nested metadata merges; the documentation says the merge is shallow and
+  a nested object is replaced wholesale, and the Czech repeats the error.
