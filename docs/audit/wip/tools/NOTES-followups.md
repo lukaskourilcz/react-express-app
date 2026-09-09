@@ -281,3 +281,12 @@ for a second reader rather than a second automated check.
 - **A claim that was false in the level that teaches it.** One item said
   changing a query parameter always means a new request. Under `history.pushState`
   it does not, and client-side routing is the subject of that very level.
+- **A graph item with no representation stated.** `rm-dsa-116` asks the time
+  complexity of depth-first search while `O(V²)` sits in its option list. That
+  is exactly the adjacency-matrix cost, so with no representation in the stem
+  the option is defensible: measured at 64,000 vertices, the matrix walk
+  inspects about four billion cells against two hundred thousand list
+  operations. The sibling breadth-first item has the same omission but no
+  matrix-consistent option, so it is a wording defect rather than a second
+  answer. The reviewer brief now names this check, because no automated flag
+  can see it.
