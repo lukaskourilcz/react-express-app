@@ -192,3 +192,16 @@ for a second reader rather than a second automated check.
   workflow jobs run in sequence; GitHub Actions documents that jobs run in
   parallel unless a dependency says otherwise, which is precisely how a deploy
   job runs despite failing tests.
+- **The audit's first rejection.** `rm-react-73` was rejected by the second
+  reader rather than amended: it duplicates `rm-react-77` in the same batch and
+  two of its four options are not coherent code (one calls an undeclared
+  setter, another declares a ref where the item needs state). A rejection
+  becomes a quarantine, so the item is withheld rather than served on its old
+  wording, which is the behaviour the pipeline was built for.
+- **"Too many re-renders" is not thrown for an effect loop.** A second reader
+  found the distinction the bank blurs: React throws that error only for a
+  render-phase update. A `setState` loop inside an effect hits the passive
+  limit, which logs an error and keeps going — the run reached 301 renders
+  without throwing. Items claiming a throw for the effect case were scoped to
+  what actually happens, and to development builds, since the production bundle
+  does not contain the message at all.
