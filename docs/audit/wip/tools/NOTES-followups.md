@@ -94,3 +94,11 @@
   (General levels 16-19) has `cs: null`, so a Czech learner meets those levels
   in English today. The localisation pass writes them from scratch rather than
   repairing a translation.
+- **Distractors that need no knowledge.** In the General bank roughly 35 of 51
+  items in one batch carry two or more category-error options ("Sends emails",
+  "Routes electrical signals" against a question about caching), so a learner
+  who knows nothing can answer by elimination. This is the second systemic
+  defect after the generic hint, and unlike the hint it varies by topic, so the
+  report should give it per topic rather than as one number.
+- **`rm-general-100` states a foreign key must reference a primary key.**
+  PostgreSQL's documentation says any unique constraint may be the target.
