@@ -136,3 +136,11 @@ for a second reader rather than a second automated check.
   report should say this plainly: a bank can be entirely true and still
   unusable, because a learner who reads only the shape of the options answers
   most of it correctly.
+- **Next.js carries the most version rot, as expected.** Three items teach
+  `params` and `searchParams` as plain objects; they have been Promises since
+  version 15. Two leave the caching default unstated, which preserves the
+  pre-15 "cached by default" model in the learner's head. One anchors itself to
+  "Next.js 13+". Eleven of sixty are near-duplicate clusters. The Pages-Router
+  items are correctly labelled legacy and were kept, which is the right
+  treatment: legacy knowledge with a stated maintenance context passes the
+  relevance gate, legacy taught as current does not.
