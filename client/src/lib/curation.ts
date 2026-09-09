@@ -33,9 +33,6 @@ import {
   type RelevanceMarker,
   type QualityCriterion,
 } from '../../../shared/curation';
-import { subjectForCategory } from '../../../shared/subject-catalog';
-import { isTopicInPlan } from '../../../shared/progression';
-import type { LearnerProfile } from '../../../shared/learning-paths';
 import type { Lang } from '../i18n/LanguageContext';
 
 export {
@@ -107,37 +104,6 @@ export const QUALITY_COPY: Record<QualityCriterion, Bilingual> = {
   },
 };
 
-/* ── what may be said about one item ───────────────────────────────────── */
-
-export const ITEM_CLAIM_COPY: Record<ItemClaim, Bilingual | null> = {
-  'reviewed-repeatedly': {
-    en: 'Reviewed against our quality and relevance criteria more than once.',
-    cs: 'Zkontrolováno podle našich kritérií kvality a relevance více než jednou.',
-  },
-  'reviewed-once': {
-    en: 'Reviewed against our quality and relevance criteria.',
-    cs: 'Zkontrolováno podle našich kritérií kvality a relevance.',
-  },
-  'checked-automatically': {
-    en: 'Checked by our automated content contracts. Not yet read by a reviewer.',
-    cs: 'Ověřeno našimi automatickými kontrolami obsahu. Zatím to nečetl člověk.',
-  },
-  'not-yet-reviewed': {
-    en: 'Not yet reviewed against the published criteria.',
-    cs: 'Zatím neprošlo kontrolou podle zveřejněných kritérií.',
-  },
-  // Metadata unavailable: say nothing at all rather than the friendly default.
-  none: null,
-};
-
-export const itemClaimText = (
-  review: PublicItemReview | undefined,
-  lang: Lang,
-): string | null => {
-  const copy = ITEM_CLAIM_COPY[itemClaim(review)];
-  return copy ? copy[lang] ?? copy.en : null;
-};
-
 /* ── what may be said about the whole bank ─────────────────────────────── */
 
 /**
@@ -177,66 +143,3 @@ export const COVERAGE_PENDING: Bilingual = {
   en: 'The item-by-item review has not started yet. Until it has, this page describes the criteria we will apply — not a result we can already show you.',
   cs: 'Kontrola jednotlivých položek zatím nezačala. Než začne, tahle stránka popisuje kritéria, která použijeme — ne výsledek, který bychom už mohli ukázat.',
 };
-
-/* ── "Why this question?" ──────────────────────────────────────────────── */
-
-export interface WhyThisItem {
-  /** The level's own title — the objective this level is about. */
-  objective?: string;
-  /** The topic the item belongs to, as the learner knows it. */
-  topic?: string;
-  /** The chosen path, when the topic is part of it. */
-  path?: string;
-  /** True when a path is chosen and this topic is not in it — practice a
-   * learner asked for rather than practice their plan asked for. */
-  outsidePlan?: boolean;
-  /** The item's own tags, minus the scaffolding ones. */
-  competencies: string[];
-}
-
-/** Tags that describe the shelf rather than the skill. */
-const STRUCTURAL_TAGS = new Set(['Roadmap', 'Terminology']);
-
-/**
- * Assemble the note from what is already known about the item.
- *
- * Every field is optional and every one of them is omitted when its source is
- * missing. There is no default objective and no default reason: an item whose
- * level has no title simply does not get an objective line.
- */
-export function whyThisItem(input: {
-  tags?: readonly string[];
-  /** The item's category id — how the plan check identifies the topic. */
-  category?: string;
-  /** The topic's name as the learner sees it elsewhere in the product. */
-  topicLabel?: string;
-  /** The level's own title: what this level is for. */
-  levelTitle?: string;
-  /** The learner's saved plan, or null for a visitor who has not chosen one. */
-  profile?: LearnerProfile | null;
-  /** The plan's name as the learner sees it. */
-  planLabel?: string | null;
-}): WhyThisItem {
-  const topicLabel = input.topicLabel ?? '';
-  const competencies = (input.tags ?? [])
-    .filter((tag) => !STRUCTURAL_TAGS.has(tag))
-    // The first tag is usually the topic again; keep it only when it says
-    // something the topic line does not.
-    .filter((tag) => tag.toLowerCase() !== topicLabel.toLowerCase());
-
-  const subject = input.category ? subjectForCategory(input.category) : undefined;
-  // No plan chosen, or a subject that has none, means there is nothing to say
-  // about plan membership — not that the item is outside a plan.
-  const hasPlan = Boolean(input.profile && subject && input.category);
-  const inPlan = hasPlan
-    ? isTopicInPlan(input.profile ?? null, subject as string, input.category as string)
-    : null;
-
-  return {
-    objective: input.levelTitle || undefined,
-    topic: input.topicLabel || undefined,
-    path: inPlan === true ? input.planLabel || undefined : undefined,
-    outsidePlan: inPlan === false,
-    competencies,
-  };
-}

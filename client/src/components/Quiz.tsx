@@ -35,9 +35,6 @@ import {
 import { apiFetch, friendlyError } from '../lib/api';
 import { renderQuestion } from './CodeBlock';
 import { TermsBar } from './ui/Terms';
-import { WhyThis } from './ui/WhyThis';
-import { whyThisItem } from '../lib/curation';
-import { learnerProfileOf } from '../lib/trackPref';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { RotatingTip } from './reactbits/RotatingTip';
@@ -247,7 +244,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   const { isAuthenticated, user } = useAuth();
   // The saved plan, used only to say whether this topic is part of it.
-  const learnerProfile = learnerProfileOf(user);
   const profile = getUserProfile(user);
   const visibleCategoryOptions = visibleCategoryOptionsFor(profile.email);
 
@@ -1278,28 +1274,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   texts={[currentQuestion.question, ...currentQuestion.options]}
                   domain={glossaryDomainFor(currentQuestion.category)}
                 />
-                {/* Why this one is in front of you, assembled from the item's
-                    own metadata. The classic quiz has no level, so it carries
-                    no objective line — that field is omitted rather than
-                    filled with something plausible. */}
                 {mode === 'review' && interleaved && currentIndex === 0 && (
                   <p style={{ margin: '10px 0 0', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
                     {t('quiz.interleavedNote')}
                   </p>
                 )}
-                <WhyThis
-                  item={whyThisItem({
-                    tags: currentQuestion.tags,
-                    category: currentQuestion.category,
-                    topicLabel: t(categoryLabelKey(currentQuestion.category)),
-                    profile: learnerProfile,
-                    planLabel: learnerProfile ? t('why.yourPlan') : null,
-                  })}
-                  review={currentQuestion.review}
-                  onReport={() =>
-                    setReportTarget({ id: currentQuestion.id, version: currentQuestion.review?.version })
-                  }
-                />
               </div>
               {currentQuestion.introduction && (
                 <Popover

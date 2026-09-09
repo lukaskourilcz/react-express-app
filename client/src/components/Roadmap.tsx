@@ -77,11 +77,8 @@ import { shuffleDifferentFrom } from '../lib/shuffle';
 import { readString, removeStored, writeString } from '../lib/storage';
 import { renderQuestion } from './CodeBlock';
 import { TermsBar } from './ui/Terms';
-import { WhyThis } from './ui/WhyThis';
-import { whyThisItem } from '../lib/curation';
 import { LessonFigures } from './ui/LessonFigure';
 import { figuresFor } from '../../../shared/lesson-figures';
-import { learnerProfileOf } from '../lib/trackPref';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { RedFlagDialog } from './RedFlagDialog';
@@ -1096,7 +1093,6 @@ function LessonRunner({
 }) {
   const { user } = useAuth();
   // Read only to say whether this topic is part of the learner's own plan.
-  const learnerProfile = learnerProfileOf(user);
   const isMobile = useIsMobile();
   const isCheckpoint = playable.kind === 'checkpoint';
   const accent = isCheckpoint ? CHECKPOINT_GOLD : topicColor;
@@ -1492,21 +1488,6 @@ function LessonRunner({
         <TermsBar
           texts={[question.question, ...question.options, grade?.explanation]}
           domain={glossaryDomainFor(playable.topic)}
-        />
-        {/* The objective is the level's own title, the topic is the item's own
-            category and the plan line is the same check the graph uses to
-            unlock things. Nothing here is written for the occasion. */}
-        <WhyThis
-          item={whyThisItem({
-            tags: question.tags,
-            category: question.category,
-            topicLabel: t(categoryLabelKey(playable.topic)),
-            levelTitle: isCheckpoint ? undefined : playable.title,
-            profile: learnerProfile,
-            planLabel: learnerProfile ? t('why.yourPlan') : null,
-          })}
-          review={question.review}
-          onReport={() => setFlagOpen(true)}
         />
       </div>
 
