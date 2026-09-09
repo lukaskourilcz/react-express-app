@@ -236,11 +236,11 @@
    "explanation": "git --version vypíše verzi Gitu nainstalovanou na vašem počítači.",
    "csHash": "4c2d67e6ed6260a4"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code block differs between EN and CS question"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

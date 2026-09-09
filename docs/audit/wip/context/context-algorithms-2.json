@@ -1,9 +1,9 @@
 {
- "batch": "algorithms",
+ "batch": "algorithms-2",
  "topic": "algorithms",
- "items": 80,
+ "items": 40,
  "idRange": [
-  "rm-algorithms-1",
+  "rm-algorithms-41",
   "rm-algorithms-80"
  ],
  "plansIncludingTopic": [
@@ -24,11 +24,6 @@
  },
  "audienceAndVerification": "Backend and fullstack plans. Mathematical reasoning a developer actually uses (modular arithmetic, combinatorics, probability, bitwise logic, growth). Score practicalUtility honestly: a puzzle with no engineering use scores low there.",
  "levelsInThisBatch": [
-  1,
-  2,
-  3,
-  4,
-  5,
   6,
   7,
   8,

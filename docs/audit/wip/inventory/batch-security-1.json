@@ -353,11 +353,11 @@
    "explanation": "Autentizace ověřuje identitu (kdo jste); autorizace rozhoduje, co smíte dělat.",
    "csHash": "4d103d95da949390"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'Who are you? (verifying identity)' vs CS 'Kdo jsi? (ověření identity)'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -964,11 +964,11 @@
    "explanation": "ABAC vyhodnocuje atributy (např. oddělení, vlastnictví, čas) pro flexibilní, jemně odstupňovanou autorizaci nad rámec jednoduchých rolí.",
    "csHash": "28f2454ae9a6247a"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'Attributes/policies (user, resource, context) for fine-grained rules' vs CS 'Atributů/zásad (uživatel, zdroj, kontext) pro jemně odstupňovaná pravidla'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

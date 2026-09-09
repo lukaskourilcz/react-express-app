@@ -633,11 +633,11 @@
    "explanation": "Výchozí řazení převede prvky na řetězce, takže [1, 2, 10].sort() dá [1, 10, 2]. Pro číselné pořadí předej komparátor.",
    "csHash": "11ea2e9dd3dd7fd9"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'Strings (lexicographically)' vs CS 'Jako řetězce (lexikograficky)'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -4244,13 +4244,13 @@
    "explanation": "Legendární „případ e-mailu na 500 mil“ popisoval, jak pošta záhadně selhávala za hranicí ~500 mil.",
    "csHash": "caf74f66c54ef0f0"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '5 miles' vs CS '5 mil'",
    "code-like option 1 differs: EN '500 miles' vs CS '500 mil'",
    "code-like option 2 differs: EN '5,000 miles' vs CS '5 000 mil'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -4371,12 +4371,12 @@
    "explanation": "Výrok „640 kB by mělo stačit“ je proslulý – jenže Gates opakovaně popřel, že by ho kdy řekl.",
    "csHash": "34208b784ac3e980"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '640K' vs CS '640 kB'",
    "code-like option 2 differs: EN '64 KB' vs CS '64 kB'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

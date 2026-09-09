@@ -644,11 +644,11 @@
    "explanation": "B-stromy udržují klíče seřazené a vyvážené, čímž poskytují logaritmické vyhledávání, rozsahové prohledávání a uspořádaný průchod.",
    "csHash": "471cc6184293244c"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'B-tree (balanced tree)' vs CS 'B-strom (vyvážený strom)'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1539,13 +1539,13 @@
    "explanation": "To je klasický N+1: 1 dotaz pro příspěvky plus 100 pro autory = 101 kol.",
    "csHash": "0e32e4a42f519b68"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '1 query' vs CS '1 dotaz'",
    "code-like option 2 differs: EN '2 queries' vs CS '2 dotazy'",
    "code-like option 3 differs: EN '0 queries' vs CS '0 dotazů'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

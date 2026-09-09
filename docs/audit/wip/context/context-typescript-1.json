@@ -1,10 +1,10 @@
 {
  "batch": "typescript-1",
  "topic": "typescript",
- "items": 100,
+ "items": 50,
  "idRange": [
   "rm-ts-1",
-  "rm-ts-100"
+  "rm-ts-50"
  ],
  "plansIncludingTopic": [
   "frontend",
@@ -46,13 +46,7 @@
   4,
   5,
   6,
-  7,
-  8,
-  9,
-  10,
-  11,
-  12,
-  13
+  7
  ],
  "note": "difficulty 1 = levels 1-5, 2 = 6-10, 3 = 11-15, 4 = 16-20, 5 = 21-25. Items with `possibleDuplicates` pointing outside this batch: judge on this item alone but mention the id."
 }

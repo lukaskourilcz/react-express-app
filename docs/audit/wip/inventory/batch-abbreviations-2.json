@@ -475,14 +475,14 @@
    "explanation": "OLAP (analytické, velké dotazy nad sklady) vs OLTP (transakční, malé rychlé zápisy).",
    "csHash": "588f1697640f41c0"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN 'OLAP for analytics; OLTP for transactions' vs CS 'OLAP = analytické, OLTP = transakční'",
    "code-like option 1 differs: EN 'OLTP for analytics; OLAP for transactions' vs CS 'OLAP = logování, OLTP = trasování'",
    "code-like option 2 differs: EN 'ACID for analytics; BASE for transactions' vs CS 'Jsou to synonyma'",
    "code-like option 3 differs: EN 'ETL for analytics; CRUD for transactions' vs CS 'OLAP = online, OLTP = offline'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

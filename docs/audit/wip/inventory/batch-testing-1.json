@@ -1162,12 +1162,12 @@
    "explanation": "Skutečnou hodnotu předáváš do expect() a očekávanou do matcheru: expect(sum(2,3)).toBe(5). Jejich prohození dělá chybové zprávy zavádějícími.",
    "csHash": "6373a27bc212ae04"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN 'expect(actual).matcher(expected), e.g. expect(sum(2,3)).toBe(5)' vs CS 'expect(actual).matcher(expected), např. expect(sum(2,3)).toBe(5)'",
    "code-like option 1 differs: EN 'expect(expected).matcher(actual), e.g. expect(5).toBe(sum(2,3))' vs CS 'expect(expected).matcher(actual), např. expect(5).toBe(sum(2,3))'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

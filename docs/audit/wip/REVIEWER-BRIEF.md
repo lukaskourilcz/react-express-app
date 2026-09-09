@@ -75,8 +75,8 @@ Every rewrite will need new Czech for the changed fields; a later localisation p
 - For a factual or versioned claim you are not certain of (defaults, deprecations, which version introduced/removed what, HTTP/security semantics, framework behaviour), fetch the primary page and cite the URL. One fetch can serve several items; cite it for each.
 - For well-established facts you are certain of, `knowledge:` with a few words is acceptable. Do not pad evidence.
 
-## Output
-Write **one file**: the path given in your task, a JSON array, same order as the input. Valid JSON, UTF-8, no trailing commentary. Schema per item:
+## Output — JSON Lines, written as you go
+Write **one file**: the path given in your task, ending in `.jsonl`. One JSON object per line, one line per item, in input order. **Append after every 8–10 items** (a shell heredoc `>>` is fine) so an interrupted run keeps its progress; never rewrite the file from scratch. If the file already exists when you start, read the ids it holds and continue from the first item not yet in it. Valid JSON on every line, UTF-8, no commentary lines. Schema per item (shown pretty-printed; write it on one line):
 
 ```json
 {
@@ -109,4 +109,4 @@ Write **one file**: the path given in your task, a JSON array, same order as the
 
 Field rules: `correctnessBlocker` is `null` or one of `wrong-key`, `multiple-defensible`, `misleading-hint`, `unverifiable`, `false-premise`. `decision` is one of `retain`, `rewrite`, `retire`, `quarantine`. `rewrite` is `null` unless `decision` is `rewrite`; when present it may contain any of `question`, `options` (array of 4), `correctAnswer`, `explanation`, `hint`, and must contain `rescored`. For `retain`, `rewrite` is `null` and the current hint must already be specific. `retireReason` is a short phrase for `retire` and `quarantine`, otherwise `null`. `cs` is `null` when the input `cs` is `null`.
 
-Work through the batch in order. Run your executable checks in a few grouped node invocations rather than one per item. When you finish, re-open your output file and confirm it parses and has the same number of objects as the input, then report the counts by decision in one line.
+Work through the batch in order. Run your executable checks in a few grouped node invocations (10–20 items per invocation) rather than one per item; fetch documentation only for version-dependent or uncertain claims, not for facts you are sure of. Keep `rationale` to two sentences and `evidence` to three entries at most. When you finish, re-open your output file, confirm every line parses and the line count equals the input count, then report the counts by decision in one line.

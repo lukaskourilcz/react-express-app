@@ -39,8 +39,8 @@ Use the same seven names as the shared brief, read as: `topicRelevance` (belongs
 - `retire` — the objective fails relevance, duplicates another task better done elsewhere (name it), or the grader/spec cannot be fixed locally.
 - `quarantine` — could not be executed/verified with the tools here (say what is missing).
 
-## Output
-One JSON array, same order and count as the batch, at the path in your task. Schema per task:
+## Output — JSON Lines, written as you go
+One JSON object per line, one line per task, in batch order, at the `.jsonl` path in your task. **Append after every 4–5 tasks** so an interrupted run keeps its progress; if the file already exists when you start, continue from the first task not yet in it. Schema per task (shown pretty-printed; write it on one line):
 ```json
 {
   "id": "js-double-numbers",
@@ -70,4 +70,4 @@ One JSON array, same order and count as the batch, at the path in your task. Sch
 ```
 `rewrite`, when present, may contain: `prompt`, `hints` (full EN list), `approach`, `starter`, `addTests`, `addHiddenTests`, `fixTests`, `removeTests` (calls to drop), `typeTests`, `design` (only the changed step objects with their index), `drill`, `failureHints`, `checklist`, and must contain `rescored`. Every wrong approach you report as `"verdict": "passed"` is a defect you must reflect in `answerOptions` ≤ 2 unless the rewrite closes it and you re-ran the grader with the added test (say so in evidence).
 
-Work through the batch in order. When finished, re-open the output file, confirm it parses and the count matches, and report the counts by decision plus every grader hole you found in one line each.
+Work through the batch in order. Keep `rationale` to two sentences and `evidence` to four entries at most. When finished, re-open the output file, confirm every line parses and the line count equals the batch count, and report the counts by decision plus every grader hole you found in one line each.

@@ -2414,13 +2414,13 @@
    "explanation": "Commit obvykle stále existuje; reflog odhalí jeho hash, takže jej můžete obnovit, než dojde k garbage collection.",
    "csHash": "397eca5c452e4871"
   },
-  "automatedFlags": [
-   "correct option is markedly longer/more detailed than distractors",
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 2 differs: EN 'Run `git pull`' vs CS 'Spustit `git pull`'",
    "code-like option 3 differs: EN 'Run `git stash`' vs CS 'Spustit `git stash`'"
+  ],
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

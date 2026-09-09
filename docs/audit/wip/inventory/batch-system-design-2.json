@@ -1611,11 +1611,11 @@
    "explanation": "Strukturované logy (JSON) jsou prohledatelné a filtrovatelné, ve velkém měřítku mnohem užitečnější než nestrukturovaný text.",
    "csHash": "dc7dbdedd54eac3d"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'Emitted as machine-parseable key/value (e.g. JSON) for querying' vs CS 'Vydávané jako strojově parsovatelné klíč/hodnota (např. JSON) pro dotazování'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

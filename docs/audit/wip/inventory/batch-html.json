@@ -35,11 +35,11 @@
    "explanation": "HTML je HyperText Markup Language — značkovací jazyk, který strukturuje webové stránky.",
    "csHash": "8bbad5563507484e"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN '`header`, `nav`, `main`, `aside` and `footer`' vs CS 'Hyperlink Text Mode Language'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -362,12 +362,12 @@
    "explanation": "Doctype říká prohlížeči, aby použil standardní režim pro HTML5.",
    "csHash": "b0b45d3529dba598"
   },
+  "csDriftFlags": [
+   "code-like option 3 differs: EN '`input type=\"button\"`' vs CS 'Skript'"
+  ],
   "automatedFlags": [
    "time-sensitive wording: verify against a dated primary source",
    "hint is the generic shape-based fallback (not question-specific)"
-  ],
-  "csDriftFlags": [
-   "code-like option 3 differs: EN '`input type=\"button\"`' vs CS 'Skript'"
   ]
  },
  {
@@ -406,11 +406,11 @@
    "explanation": "Vše leží uvnitř kořenového elementu <html>.",
    "csHash": "a877d451523dc94b"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN '`button`' vs CS '<head>'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -733,13 +733,13 @@
    "explanation": "<p> označuje odstavec textu.",
    "csHash": "2fcd49d35c9157f9"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '`<label class=\"email\">` and `<input class=\"email\">`' vs CS 'Stránku'",
    "code-like option 1 differs: EN '`<label for=\"email\">` and `<input id=\"email\">`' vs CS 'Odstavec'",
    "code-like option 2 differs: EN '`<label name=\"email\">` and `<input name=\"email\">`' vs CS 'Panel'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -778,14 +778,14 @@
    "explanation": "<br> vkládá jednoduché zalomení řádku uvnitř textu.",
    "csHash": "d5de7cf97c28560b"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '`id`' vs CS 'Tučný úsek'",
    "code-like option 1 differs: EN '`name`' vs CS 'Zalomení řádku'",
    "code-like option 2 differs: EN '`class`' vs CS 'Okraj'",
    "code-like option 3 differs: EN '`placeholder`' vs CS 'Odrážku'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1027,12 +1027,12 @@
    "explanation": "Element anchor vytváří hypertextový odkaz na URL v atributu href.",
    "csHash": "631c3e2055bc67ad"
   },
+  "csDriftFlags": [
+   "code-like option 0 differs: EN '\"image\"' vs CS 'Obrázek'"
+  ],
   "automatedFlags": [
    "correct option is markedly longer/more detailed than distractors",
    "hint is the generic shape-based fallback (not question-specific)"
-  ],
-  "csDriftFlags": [
-   "code-like option 0 differs: EN '\"image\"' vs CS 'Obrázek'"
   ]
  },
  {
@@ -1071,11 +1071,11 @@
    "explanation": "href (hypertext reference) obsahuje cílovou URL odkazu.",
    "csHash": "67e4c6bcad249549"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'Empty: `alt=\"\"`' vs CS 'link'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1479,11 +1479,11 @@
    "explanation": "Atribut start nastavuje první číslo číslovaného seznamu.",
    "csHash": "8092160c0a5eefef"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 3 differs: EN 'An `aria-label` on the table' vs CS 'Obrátí seznam'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1647,14 +1647,14 @@
    "explanation": "Položky seznamu (<li>) musí být přímými potomky <ul> nebo <ol>.",
    "csHash": "eb82b479deeedcb7"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '`pre`' vs CS '<ul><p>…</p></ul>'",
    "code-like option 1 differs: EN '`code`' vs CS '<ul><li>…</li></ul>'",
    "code-like option 2 differs: EN '`samp`' vs CS 'Pouze <li><ul>…</ul></li>'",
    "code-like option 3 differs: EN '`kbd`' vs CS '<list><li>…'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1693,13 +1693,13 @@
    "explanation": "Mnoho elementů může sdílet jednu třídu, což z ní dělá znovupoužitelný háček pro stylování/skriptování.",
    "csHash": "a570ec715b347c10"
   },
-  "automatedFlags": [
-   "time-sensitive wording: verify against a dated primary source",
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 2 differs: EN 'A `type` attribute' vs CS 'K nastavení textu'",
    "code-like option 3 differs: EN 'A `name` attribute' vs CS 'K odkazování na stránku'"
+  ],
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1778,11 +1778,11 @@
    "explanation": "Atributy se objevují v počáteční značce jako dvojice name=\"value\".",
    "csHash": "4dcafa325e44dff5"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 3 differs: EN 'Add `aria-level=\"1\"` to the `h4`' vs CS 'name=value;'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1862,12 +1862,12 @@
    "explanation": "Globální atributy jsou povolené prakticky na jakémkoli elementu.",
    "csHash": "3f3e7cf49ab2d9db"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN 'A `name` attribute' vs CS 'Fungují pouze na <body>'",
    "code-like option 2 differs: EN 'An `alt` attribute' vs CS 'Fungují pouze na formulářích'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

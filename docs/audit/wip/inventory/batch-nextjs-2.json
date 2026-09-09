@@ -321,11 +321,11 @@
    "explanation": "Handlery vracejí webovou Response (NextResponse ji rozšiřuje).",
    "csHash": "5dcdb45a47692bc9"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'A `Response` or `NextResponse` object' vs CS 'Response (nebo NextResponse)'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -845,11 +845,11 @@
    "explanation": "Exportujte ze stránky/layoutu objekt metadata (nebo generateMetadata).",
    "csHash": "7d21c444b17c106a"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN 'a <title> in JSX only' vs CS 'pouze <title> v JSX'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1128,12 +1128,12 @@
    "explanation": "Metadata deklarujete, místo abyste ručně upravovali hlavičku dokumentu.",
    "csHash": "aa91dbe7f8320c22"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '<body> tags' vs CS 'tagů <body>'",
    "code-like option 1 differs: EN '<head>/<meta> tags' vs CS 'tagů <head>/<meta>'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1332,11 +1332,11 @@
    "explanation": "Tailwind je prvotřídní volba konfigurovaná přes PostCSS.",
    "csHash": "69129aec90715fa3"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'configuring Tailwind/PostCSS (supported via setup)' vs CS 'nakonfigurujete Tailwind/PostCSS (podporováno přes setup)'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1495,11 +1495,11 @@
    "explanation": "Komponenta <Image> z next/image poskytuje automatickou optimalizaci.",
    "csHash": "78cc9643a05ee21c"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '<img> only' vs CS 'pouze <img>'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1658,11 +1658,11 @@
    "explanation": "Soubory fontů se stahují při buildu a servírují se z vaší domény.",
    "csHash": "7c4205d7fde8c090"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 2 differs: EN 'adds a <link> to Google' vs CS 'se přidá <link> na Google'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1741,11 +1741,11 @@
    "explanation": "priority dychtivě přednačte důležité obrázky jako hero/LCP.",
    "csHash": "bca947976bea02ba"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'preloads it (no lazy-loading) for above-the-fold/LCP images' vs CS 'přednačte jej (bez lazy-loadingu) pro obrázky nad ohybem / LCP'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1905,11 +1905,11 @@
    "explanation": "Dostává vyhozenou chybu a reset() ke zkusení opětovného vykreslení.",
    "csHash": "c9fd4bc98f52b96b"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN 'Only `children` and `fallback`' vs CS 'pouze children'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -2069,11 +2069,11 @@
    "explanation": "Zachytává chyby vyhozené samotným kořenovým layoutem.",
    "csHash": "28fc7a82674ce082"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 2 differs: EN '404s' vs CS '404'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -2272,11 +2272,11 @@
    "explanation": "Konfigurace projektu se nachází v next.config.js.",
    "csHash": "4b8474aeabb1843a"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'next.config.js (or .mjs/.ts)' vs CS 'next.config.js (nebo .mjs/.ts)'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -2436,11 +2436,11 @@
    "explanation": "Vercel (tvůrce Next.js) je běžný cíl nasazení, i když funguje mnoho dalších.",
    "csHash": "1b59300b1137482c"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'Vercel (among others)' vs CS 'Vercel (mimo jiné)'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  }
 ]

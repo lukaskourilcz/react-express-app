@@ -1202,11 +1202,11 @@
    "explanation": "AND vyžaduje, aby platily obě podmínky; OR vyžaduje alespoň jednu.",
    "csHash": "b15f38c2b509f971"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code block differs between EN and CS question"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1245,11 +1245,11 @@
    "explanation": "DESC řadí sestupně, takže nejnovější hodnoty created_at jsou na začátku.",
    "csHash": "7afa7b9121a56def"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'Newest (largest) first' vs CS 'Nejnovější (největší) jako první'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1569,14 +1569,14 @@
    "explanation": "MIN() a MAX() vracejí minimální a maximální hodnotu sloupce.",
    "csHash": "ca7a579c6cb26404"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN 'LOW() and HIGH()' vs CS 'LOW() a HIGH()'",
    "code-like option 1 differs: EN 'MIN() and MAX()' vs CS 'MIN() a MAX()'",
    "code-like option 2 differs: EN 'FIRST() and LAST()' vs CS 'FIRST() a LAST()'",
    "code-like option 3 differs: EN 'HEAD() and TAIL()' vs CS 'HEAD() a TAIL()'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

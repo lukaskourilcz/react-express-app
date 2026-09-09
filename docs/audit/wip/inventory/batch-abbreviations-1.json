@@ -2118,11 +2118,11 @@
    "explanation": "2FA je konkrétní případ MFA, který používá přesně dva faktory.",
    "csHash": "6292f0822377097e"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '2FA' vs CS 'Two-Factor Authentication'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

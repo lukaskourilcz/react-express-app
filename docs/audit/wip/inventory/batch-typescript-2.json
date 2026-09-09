@@ -1,4357 +1,705 @@
 [
  {
-  "id": "rm-ts-101",
+  "id": "rm-ts-51",
   "delivery": "active",
   "category": "typescript",
   "topic": "typescript",
-  "level": 13,
-  "levelTitle": "Enums",
-  "difficulty": 3,
+  "level": 7,
+  "levelTitle": "Union Types",
+  "difficulty": 2,
   "tags": [
    "Roadmap",
-   "Enums"
+   "Unions",
+   "Literals"
   ],
-  "contentHash": "ca7e2c2bda9ba182",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Enums.",
-  "question": "What is E.A + E.B?\n\n```ts\nenum E {\n  A = 1,\n  B = 2,\n}\nE.A + E.B;\n```",
+  "contentHash": "9a49eee5f6b140cf",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Literals.",
+  "question": "What happens?\n\n```ts\ntype Status = \"on\" | \"off\";\nlet s: Status = \"maybe\";\n```",
   "options": [
-   "3",
-   "\"AB\"",
-   "12",
-   "Error"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Numeric enum members add like numbers: 1 + 2 = 3.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je E.A + E.B?\n\n```ts\nenum E {\n  A = 1,\n  B = 2,\n}\nE.A + E.B;\n```",
-   "options": [
-    "3",
-    "\"AB\"",
-    "12",
-    "Chyba"
-   ],
-   "explanation": "Členy číselného enumu se sčítají jako čísla: 1 + 2 = 3.",
-   "csHash": "3184fdb5c2303b5d"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-102",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 13,
-  "levelTitle": "Enums",
-  "difficulty": 3,
-  "tags": [
-   "Roadmap",
-   "Enums"
-  ],
-  "contentHash": "8444baaa03ee50d9",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Enums.",
-  "question": "What is C.Y?\n\n```ts\nconst enum C {\n  X,\n  Y,\n}\nC.Y;\n```",
-  "options": [
-   "0",
-   "1",
-   "\"Y\"",
-   "Error"
+   "Compiles",
+   "Type error",
+   "s is \"maybe\"",
+   "Runtime error"
   ],
   "correctAnswer": 1,
-  "explanation": "const enum members auto-number from 0, so Y is 1 (inlined at compile time).",
+  "explanation": "\"maybe\" is not part of the union, so this is a type error.",
   "cs": {
    "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je C.Y?\n\n```ts\nconst enum C {\n  X,\n  Y,\n}\nC.Y;\n```",
+   "question": "Co se stane?\n\n```ts\ntype Status = \"on\" | \"off\";\nlet s: Status = \"maybe\";\n```",
    "options": [
-    "0",
-    "1",
-    "\"Y\"",
-    "Chyba"
+    "Zkompiluje se",
+    "Chyba typu",
+    "s je \"maybe\"",
+    "Chyba za běhu"
    ],
-   "explanation": "Členy const enum se automaticky číslují od 0, takže Y je 1 (vloženo inline při kompilaci).",
-   "csHash": "dc82a6bc5f57ae73"
+   "explanation": "\"maybe\" není součástí unionu, takže jde o chybu typu.",
+   "csHash": "4eebc95e7118a180"
   },
+  "csDriftFlags": [
+   "code-like option 2 differs: EN 's is \"maybe\"' vs CS 's je \"maybe\"'"
+  ],
   "automatedFlags": [
    "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
-  "id": "rm-ts-103",
+  "id": "rm-ts-52",
   "delivery": "active",
   "category": "typescript",
   "topic": "typescript",
-  "level": 13,
-  "levelTitle": "Enums",
-  "difficulty": 3,
+  "level": 7,
+  "levelTitle": "Union Types",
+  "difficulty": 2,
   "tags": [
    "Roadmap",
-   "Enums",
-   "Strings"
+   "Unions"
   ],
-  "contentHash": "f98e1b4cdb8c570d",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Strings.",
-  "question": "What does E.A.toUpperCase() return?\n\n```ts\nenum E {\n  A = \"a\",\n}\nE.A.toUpperCase();\n```",
+  "contentHash": "2338a62949744b1e",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Unions.",
+  "question": "What is the return type?\n\n```ts\nfunction size(x: string | any[]) {\n  return x.length;\n}\n```",
   "options": [
-   "\"a\"",
-   "\"A\"",
-   "0",
-   "Error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "E.A is the string \"a\", so toUpperCase gives \"A\".",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co vrátí E.A.toUpperCase()?\n\n```ts\nenum E {\n  A = \"a\",\n}\nE.A.toUpperCase();\n```",
-   "options": [
-    "\"a\"",
-    "\"A\"",
-    "0",
-    "Chyba"
-   ],
-   "explanation": "E.A je řetězec \"a\", takže toUpperCase vrátí \"A\".",
-   "csHash": "4aff9cd47693cd77"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)",
-   "duplicate options"
-  ]
- },
- {
-  "id": "rm-ts-104",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 13,
-  "levelTitle": "Enums",
-  "difficulty": 3,
-  "tags": [
-   "Roadmap",
-   "Enums"
-  ],
-  "contentHash": "726258423efa0332",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Enums.",
-  "question": "What is E.C?\n\n```ts\nenum E {\n  A,\n  B,\n  C,\n}\nE.C;\n```",
-  "options": [
-   "0",
-   "1",
-   "2",
-   "\"C\""
-  ],
-  "correctAnswer": 2,
-  "explanation": "Auto-numbering: A=0, B=1, C=2.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je E.C?\n\n```ts\nenum E {\n  A,\n  B,\n  C,\n}\nE.C;\n```",
-   "options": [
-    "0",
-    "1",
-    "2",
-    "\"C\""
-   ],
-   "explanation": "Automatické číslování: A=0, B=1, C=2.",
-   "csHash": "7b57f8379fd322b9"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-105",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 14,
-  "levelTitle": "Generics: Basics",
-  "difficulty": 3,
-  "tags": [
-   "Roadmap",
-   "Generics"
-  ],
-  "contentHash": "b536fd2f3e916f25",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Generics.",
-  "question": "What does identity<number>(5) return?\n\n```ts\nfunction identity<T>(x: T): T {\n  return x;\n}\nidentity<number>(5);\n```",
-  "options": [
-   "5",
-   "T",
    "number",
-   "any"
-  ],
-  "correctAnswer": 0,
-  "explanation": "identity returns its argument unchanged, so the value is 5.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co vrátí identity<number>(5)?\n\n```ts\nfunction identity<T>(x: T): T {\n  return x;\n}\nidentity<number>(5);\n```",
-   "options": [
-    "5",
-    "T",
-    "number",
-    "any"
-   ],
-   "explanation": "identity vrátí svůj argument beze změny, takže hodnota je 5.",
-   "csHash": "1c1f745492e43eb7"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-106",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 14,
-  "levelTitle": "Generics: Basics",
-  "difficulty": 3,
-  "tags": [
-   "Roadmap",
-   "Generics",
-   "Inference"
-  ],
-  "contentHash": "1bd48945714b6bb7",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Inference.",
-  "question": "What is the return type of first([\"a\", \"b\"])?\n\n```ts\nfunction first<T>(arr: T[]): T {\n  return arr[0];\n}\nfirst([\"a\", \"b\"]);\n```",
-  "options": [
+   "Type error",
    "string",
-   "T",
-   "string[]",
    "any"
   ],
   "correctAnswer": 0,
-  "explanation": "T is inferred as string from the argument, so the return type is string.",
+  "explanation": "Both string and array have a numeric length, so the common member is allowed and returns number.",
   "cs": {
    "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Jaký je návratový typ first([\"a\", \"b\"])?\n\n```ts\nfunction first<T>(arr: T[]): T {\n  return arr[0];\n}\nfirst([\"a\", \"b\"]);\n```",
+   "question": "Jaký je návratový typ?\n\n```ts\nfunction size(x: string | any[]) {\n  return x.length;\n}\n```",
    "options": [
+    "number",
+    "Chyba typu",
     "string",
-    "T",
-    "string[]",
     "any"
    ],
-   "explanation": "T se z argumentu odvodí jako string, takže návratový typ je string.",
-   "csHash": "488987eb87e36f09"
+   "explanation": "Jak string, tak pole mají číselné length, takže společný člen je povolen a vrací number.",
+   "csHash": "7136f9823deb0f9d"
   },
   "automatedFlags": [
    "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
-  "id": "rm-ts-107",
+  "id": "rm-ts-53",
   "delivery": "active",
   "category": "typescript",
   "topic": "typescript",
-  "level": 14,
-  "levelTitle": "Generics: Basics",
-  "difficulty": 3,
+  "level": 7,
+  "levelTitle": "Union Types",
+  "difficulty": 2,
   "tags": [
    "Roadmap",
-   "Generics"
+   "Unions",
+   "Literals"
   ],
-  "contentHash": "1cdacdf497400cff",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Generics.",
-  "question": "What does wrap(5) return?\n\n```ts\nfunction wrap<T>(x: T): T[] {\n  return [x];\n}\nwrap(5);\n```",
+  "contentHash": "1e0cfdd8d314a5fb",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Literals.",
+  "question": "What happens?\n\n```ts\nfunction f(x: \"a\" | \"b\") {}\nf(\"c\");\n```",
   "options": [
-   "5",
-   "[5]",
-   "number",
-   "T[]"
+   "Compiles",
+   "Type error",
+   "\"c\" is allowed",
+   "Runtime error"
   ],
   "correctAnswer": 1,
-  "explanation": "wrap puts its argument into an array, so wrap(5) is [5].",
+  "explanation": "\"c\" is not part of the literal union, so it is a type error.",
   "cs": {
    "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co vrátí wrap(5)?\n\n```ts\nfunction wrap<T>(x: T): T[] {\n  return [x];\n}\nwrap(5);\n```",
+   "question": "Co se stane?\n\n```ts\nfunction f(x: \"a\" | \"b\") {}\nf(\"c\");\n```",
    "options": [
-    "5",
-    "[5]",
-    "number",
-    "T[]"
+    "Zkompiluje se",
+    "Chyba typu",
+    "\"c\" je povoleno",
+    "Chyba za běhu"
    ],
-   "explanation": "wrap vloží svůj argument do pole, takže wrap(5) je [5].",
-   "csHash": "54c95df443c3c784"
+   "explanation": "\"c\" není součástí literálového unionu, takže jde o chybu typu.",
+   "csHash": "43b3ce0f179a5a5f"
+  },
+  "csDriftFlags": [
+   "code-like option 2 differs: EN '\"c\" is allowed' vs CS '\"c\" je povoleno'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-54",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 7,
+  "levelTitle": "Union Types",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Unions"
+  ],
+  "contentHash": "dde375179553f9c1",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Unions.",
+  "question": "What happens?\n\n```ts\nlet x: number | string = 5;\nx.toFixed(2);\n```",
+  "options": [
+   "Compiles",
+   "Type error",
+   "\"5.00\"",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "toFixed exists on number but not string, so calling it on the union is an error.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\nlet x: number | string = 5;\nx.toFixed(2);\n```",
+   "options": [
+    "Zkompiluje se",
+    "Chyba typu",
+    "\"5.00\"",
+    "Chyba za běhu"
+   ],
+   "explanation": "toFixed existuje na number, ale ne na string, takže jeho volání na unionu je chyba.",
+   "csHash": "cb58725f16544991"
   },
   "automatedFlags": [
    "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
-  "id": "rm-ts-108",
+  "id": "rm-ts-55",
   "delivery": "active",
   "category": "typescript",
   "topic": "typescript",
-  "level": 14,
-  "levelTitle": "Generics: Basics",
-  "difficulty": 3,
+  "level": 7,
+  "levelTitle": "Union Types",
+  "difficulty": 2,
   "tags": [
    "Roadmap",
-   "Generics",
-   "Inference"
+   "Unions",
+   "Arrays"
   ],
-  "contentHash": "2bf1cf4883118063",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Inference.",
-  "question": "What type is box(\"hi\").value?\n\n```ts\nconst box = <T,>(v: T) => ({ value: v });\nbox(\"hi\").value;\n```",
+  "contentHash": "80e6428c7bd8272c",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Arrays.",
+  "question": "What happens?\n\n```ts\ntype T = (number | string)[];\nconst a: T = [1, \"a\", 2];\n```",
   "options": [
-   "string",
-   "T",
-   "{ value: string }",
+   "Type error",
+   "Compiles",
+   "mixing not allowed",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "An array of a union type accepts both numbers and strings.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\ntype T = (number | string)[];\nconst a: T = [1, \"a\", 2];\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se",
+    "míchání není povoleno",
+    "Chyba za běhu"
+   ],
+   "explanation": "Pole union typu přijímá jak čísla, tak řetězce.",
+   "csHash": "2cc41e3571e8cb4c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-56",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 7,
+  "levelTitle": "Union Types",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Unions",
+   "Errors"
+  ],
+  "contentHash": "b6d4344856aa7411",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Errors.",
+  "question": "What happens?\n\n```ts\ntype R = string | number;\nconst r: R = true;\n```",
+  "options": [
+   "Compiles",
+   "Type error",
+   "r is true",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "boolean is not a member of the union string | number.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\ntype R = string | number;\nconst r: R = true;\n```",
+   "options": [
+    "Zkompiluje se",
+    "Chyba typu",
+    "r je true",
+    "Chyba za běhu"
+   ],
+   "explanation": "boolean není členem unionu string | number.",
+   "csHash": "ccfad914b20cd57d"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-57",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 8,
+  "levelTitle": "Literal Types",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Literals"
+  ],
+  "contentHash": "ae104f6999536c1a",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Literals.",
+  "question": "What happens?\n\n```ts\ntype Dir = \"left\" | \"right\";\nconst d: Dir = \"left\";\n```",
+  "options": [
+   "Type error",
+   "Compiles",
+   "d is string",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "\"left\" is a member of the literal union Dir, so it compiles.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\ntype Dir = \"left\" | \"right\";\nconst d: Dir = \"left\";\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se",
+    "d je string",
+    "Chyba za běhu"
+   ],
+   "explanation": "\"left\" je členem literálového unionu Dir, takže se to zkompiluje.",
+   "csHash": "802c0f3ed750a812"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-58",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 8,
+  "levelTitle": "Literal Types",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Literals",
+   "as const"
+  ],
+  "contentHash": "6a4f91034b59078e",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on as const.",
+  "question": "What type is x?\n\n```ts\nconst x = 5 as const;\n```",
+  "options": [
+   "number",
+   "5",
+   "const",
    "any"
   ],
-  "correctAnswer": 0,
-  "explanation": "T is inferred as string, so value has type string.",
+  "correctAnswer": 1,
+  "explanation": "as const narrows to the literal type 5.",
   "cs": {
    "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Jaký typ má box(\"hi\").value?\n\n```ts\nconst box = <T,>(v: T) => ({ value: v });\nbox(\"hi\").value;\n```",
+   "question": "Jaký typ má x?\n\n```ts\nconst x = 5 as const;\n```",
    "options": [
-    "string",
-    "T",
-    "{ value: string }",
+    "number",
+    "5",
+    "const",
     "any"
    ],
-   "explanation": "T se odvodí jako string, takže value má typ string.",
-   "csHash": "cff07f82adb29d63"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-109",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 14,
-  "levelTitle": "Generics: Basics",
-  "difficulty": 3,
-  "tags": [
-   "Roadmap",
-   "Generics"
-  ],
-  "contentHash": "11f2b6e246589c1c",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Generics.",
-  "question": "What type is pair(1, \"x\")?\n\n```ts\nfunction pair<T, U>(a: T, b: U): [T, U] {\n  return [a, b];\n}\npair(1, \"x\");\n```",
-  "options": [
-   "[number, string]",
-   "[T, U]",
-   "[1, \"x\"]",
-   "any[]"
-  ],
-  "correctAnswer": 0,
-  "explanation": "T and U infer to number and string, giving [number, string].",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Jaký typ má pair(1, \"x\")?\n\n```ts\nfunction pair<T, U>(a: T, b: U): [T, U] {\n  return [a, b];\n}\npair(1, \"x\");\n```",
-   "options": [
-    "[number, string]",
-    "[T, U]",
-    "[1, \"x\"]",
-    "any[]"
-   ],
-   "explanation": "T a U se odvodí na number a string, což dá [number, string].",
-   "csHash": "cf18ae4a58cf00f5"
+   "explanation": "as const zúží typ na literálový typ 5.",
+   "csHash": "2c2edbb1530e9877"
   },
   "possibleDuplicates": [
-   "rm-ts-25"
+   "rm-js-86"
   ],
   "automatedFlags": [
    "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
-  "id": "rm-ts-110",
+  "id": "rm-ts-59",
   "delivery": "active",
   "category": "typescript",
   "topic": "typescript",
-  "level": 14,
-  "levelTitle": "Generics: Basics",
-  "difficulty": 3,
+  "level": 8,
+  "levelTitle": "Literal Types",
+  "difficulty": 2,
   "tags": [
    "Roadmap",
-   "Generics",
-   "Inference"
+   "Literals",
+   "Errors"
   ],
-  "contentHash": "a0327b17da2f74c1",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Inference.",
-  "question": "What is the return type of id(\"hi\")?\n\n```ts\nfunction id<T>(x: T) {\n  return x;\n}\nid(\"hi\");\n```",
+  "contentHash": "1dcfe88e52f8066e",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Errors.",
+  "question": "What happens?\n\n```ts\nlet n: 1 | 2 | 3 = 4;\n```",
+  "options": [
+   "Compiles",
+   "Type error",
+   "n is 4",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "4 is not one of the allowed literals 1, 2, or 3, so it is a type error.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\nlet n: 1 | 2 | 3 = 4;\n```",
+   "options": [
+    "Zkompiluje se",
+    "Chyba typu",
+    "n je 4",
+    "Chyba za běhu"
+   ],
+   "explanation": "4 není jedním z povolených literálů 1, 2 ani 3, takže jde o chybu typu.",
+   "csHash": "b8555b0644154d12"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-60",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 8,
+  "levelTitle": "Literal Types",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Literals"
+  ],
+  "contentHash": "95dee5edbd40f606",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Literals.",
+  "question": "What happens?\n\n```ts\ntype Bit = 0 | 1;\nconst b: Bit = 1;\n```",
+  "options": [
+   "Type error",
+   "Compiles",
+   "b is number",
+   "b is boolean"
+  ],
+  "correctAnswer": 1,
+  "explanation": "1 is a valid member of the literal union Bit.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\ntype Bit = 0 | 1;\nconst b: Bit = 1;\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se",
+    "b je number",
+    "b je boolean"
+   ],
+   "explanation": "1 je platným členem literálového unionu Bit.",
+   "csHash": "9a1cd62388908ba3"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-61",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 8,
+  "levelTitle": "Literal Types",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Literals"
+  ],
+  "contentHash": "e55bfd87d107c943",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Literals.",
+  "question": "What happens?\n\n```ts\ntype Yes = true;\nconst y: Yes = false;\n```",
+  "options": [
+   "Compiles",
+   "Type error",
+   "y is false",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The literal type true only accepts true, not false.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\ntype Yes = true;\nconst y: Yes = false;\n```",
+   "options": [
+    "Zkompiluje se",
+    "Chyba typu",
+    "y je false",
+    "Chyba za běhu"
+   ],
+   "explanation": "Literálový typ true přijímá pouze true, nikoli false.",
+   "csHash": "cbef0ed056a9961f"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-62",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 8,
+  "levelTitle": "Literal Types",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Literals",
+   "as const"
+  ],
+  "contentHash": "d19bb43d6b866e93",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on as const.",
+  "question": "What type is obj.dir?\n\n```ts\nconst obj = { dir: \"left\" } as const;\nobj.dir;\n```",
   "options": [
    "string",
-   "\"hi\"",
-   "T",
-   "any"
+   "\"left\"",
+   "any",
+   "readonly"
   ],
-  "correctAnswer": 0,
-  "explanation": "T infers to string, so id returns string.",
+  "correctAnswer": 1,
+  "explanation": "as const narrows dir to the literal type \"left\".",
   "cs": {
    "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Jaký je návratový typ id(\"hi\")?\n\n```ts\nfunction id<T>(x: T) {\n  return x;\n}\nid(\"hi\");\n```",
+   "question": "Jaký typ má obj.dir?\n\n```ts\nconst obj = { dir: \"left\" } as const;\nobj.dir;\n```",
    "options": [
     "string",
-    "\"hi\"",
-    "T",
-    "any"
+    "\"left\"",
+    "any",
+    "readonly"
    ],
-   "explanation": "T se odvodí jako string, takže id vrátí string.",
-   "csHash": "a06e87fb7b4d6038"
+   "explanation": "as const zúží dir na literálový typ \"left\".",
+   "csHash": "20a387c75ee26015"
   },
   "automatedFlags": [
    "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
-  "id": "rm-ts-111",
+  "id": "rm-ts-63",
   "delivery": "active",
   "category": "typescript",
   "topic": "typescript",
-  "level": 14,
-  "levelTitle": "Generics: Basics",
-  "difficulty": 3,
+  "level": 8,
+  "levelTitle": "Literal Types",
+  "difficulty": 2,
   "tags": [
    "Roadmap",
-   "Generics"
+   "Literals"
   ],
-  "contentHash": "04f66dd63a08a0e4",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Generics.",
-  "question": "What does arr(true) return?\n\n```ts\nfunction arr<T>(x: T): T[] {\n  return [x, x];\n}\narr(true);\n```",
+  "contentHash": "0035180b87cb0c87",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Literals.",
+  "question": "What happens?\n\n```ts\nfunction move(d: \"up\" | \"down\") {}\nmove(\"up\");\n```",
   "options": [
-   "[true, true]",
-   "a boolean",
-   "[T]",
-   "Error"
+   "Type error",
+   "Compiles",
+   "Runtime error",
+   "any"
   ],
-  "correctAnswer": 0,
-  "explanation": "It returns a two-element array of the argument: [true, true].",
+  "correctAnswer": 1,
+  "explanation": "\"up\" is a valid member of the literal union.",
   "cs": {
    "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co vrátí arr(true)?\n\n```ts\nfunction arr<T>(x: T): T[] {\n  return [x, x];\n}\narr(true);\n```",
+   "question": "Co se stane?\n\n```ts\nfunction move(d: \"up\" | \"down\") {}\nmove(\"up\");\n```",
    "options": [
-    "[true, true]",
-    "boolean",
-    "[T]",
-    "Chyba"
+    "Chyba typu",
+    "Zkompiluje se",
+    "Chyba za běhu",
+    "any"
    ],
-   "explanation": "Vrátí dvouprvkové pole svého argumentu: [true, true].",
-   "csHash": "e8e37abd1c784952"
+   "explanation": "\"up\" je platným členem literálového unionu.",
+   "csHash": "97d82ec3af4ec817"
   },
   "automatedFlags": [
    "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
-  "id": "rm-ts-112",
+  "id": "rm-ts-64",
   "delivery": "active",
   "category": "typescript",
   "topic": "typescript",
-  "level": 14,
-  "levelTitle": "Generics: Basics",
-  "difficulty": 3,
+  "level": 8,
+  "levelTitle": "Literal Types",
+  "difficulty": 2,
   "tags": [
    "Roadmap",
-   "Generics"
+   "Literals"
   ],
-  "contentHash": "cf3336abe4b16625",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Generics.",
-  "question": "What does first([10, 20]) return?\n\n```ts\nconst first = <T>(a: T[]): T => a[0];\nfirst([10, 20]);\n```",
+  "contentHash": "55fcc7f3a492faa3",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Literals.",
+  "question": "What happens?\n\n```ts\nlet x: \"a\" = \"a\";\nx = \"b\";\n```",
   "options": [
-   "10",
-   "a number",
-   "T",
+   "Compiles",
+   "Type error",
+   "x is \"b\"",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The literal type \"a\" only accepts \"a\", so assigning \"b\" is an error.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\nlet x: \"a\" = \"a\";\nx = \"b\";\n```",
+   "options": [
+    "Zkompiluje se",
+    "Chyba typu",
+    "x je \"b\"",
+    "Chyba za běhu"
+   ],
+   "explanation": "Literálový typ \"a\" přijímá pouze \"a\", takže přiřazení \"b\" je chyba.",
+   "csHash": "79db97fd823c059c"
+  },
+  "csDriftFlags": [
+   "code-like option 2 differs: EN 'x is \"b\"' vs CS 'x je \"b\"'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-65",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 9,
+  "levelTitle": "Optional & Readonly",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Optional"
+  ],
+  "contentHash": "2c8fd76d97d3a9b5",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Optional.",
+  "question": "What type is u.email?\n\n```ts\ninterface User {\n  name: string;\n  email?: string;\n}\nconst u: User = { name: \"A\" };\nu.email;\n```",
+  "options": [
+   "string",
+   "string | undefined",
+   "undefined",
+   "Error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "An optional property has type string | undefined.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Jaký typ má u.email?\n\n```ts\ninterface User {\n  name: string;\n  email?: string;\n}\nconst u: User = { name: \"A\" };\nu.email;\n```",
+   "options": [
+    "string",
+    "string | undefined",
+    "undefined",
+    "Error"
+   ],
+   "explanation": "Volitelná vlastnost má typ string | undefined.",
+   "csHash": "42be927cc22de9a6"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-66",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 9,
+  "levelTitle": "Optional & Readonly",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "readonly"
+  ],
+  "contentHash": "639fb7ab2e55249e",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on readonly.",
+  "question": "What happens?\n\n```ts\ninterface P {\n  readonly id: number;\n}\nconst p: P = { id: 1 };\np.id = 2;\n```",
+  "options": [
+   "Compiles",
+   "Type error",
+   "id is 2",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A readonly property cannot be reassigned, so this is a type error.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\ninterface P {\n  readonly id: number;\n}\nconst p: P = { id: 1 };\np.id = 2;\n```",
+   "options": [
+    "Zkompiluje se",
+    "Chyba typu",
+    "id je 2",
+    "Chyba za běhu"
+   ],
+   "explanation": "Vlastnost readonly nelze přiřadit znovu, takže jde o chybu typu.",
+   "csHash": "7bf66d1c335ff93e"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-67",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 9,
+  "levelTitle": "Optional & Readonly",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Optional"
+  ],
+  "contentHash": "3d0beb5cc37a7be1",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Optional.",
+  "question": "What does f(5) return?\n\n```ts\nfunction f(a: number, b?: number): number {\n  return a + (b ?? 0);\n}\nf(5);\n```",
+  "options": [
+   "5",
+   "NaN",
+   "Error",
    "undefined"
   ],
   "correctAnswer": 0,
-  "explanation": "It returns the first element, 10.",
+  "explanation": "b is undefined, so ?? gives 0 and the result is 5 + 0 = 5.",
   "cs": {
    "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co vrátí first([10, 20])?\n\n```ts\nconst first = <T>(a: T[]): T => a[0];\nfirst([10, 20]);\n```",
-   "options": [
-    "10",
-    "číslo",
-    "T",
-    "undefined"
-   ],
-   "explanation": "Vrátí první prvek, 10.",
-   "csHash": "180916a5dc405cf5"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-113",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 15,
-  "levelTitle": "Generic Constraints",
-  "difficulty": 3,
-  "tags": [
-   "Roadmap",
-   "Generics",
-   "Constraints"
-  ],
-  "contentHash": "dc596dc2b99303ab",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Constraints.",
-  "question": "What does len(\"hello\") return?\n\n```ts\nfunction len<T extends { length: number }>(x: T): number {\n  return x.length;\n}\nlen(\"hello\");\n```",
-  "options": [
-   "5",
-   "number",
-   "\"hello\"",
-   "Error"
-  ],
-  "correctAnswer": 0,
-  "explanation": "A string satisfies the length constraint, and its length is 5.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co vrátí len(\"hello\")?\n\n```ts\nfunction len<T extends { length: number }>(x: T): number {\n  return x.length;\n}\nlen(\"hello\");\n```",
+   "question": "Co vrátí f(5)?\n\n```ts\nfunction f(a: number, b?: number): number {\n  return a + (b ?? 0);\n}\nf(5);\n```",
    "options": [
     "5",
-    "number",
-    "\"hello\"",
-    "Chyba"
+    "NaN",
+    "Error",
+    "undefined"
    ],
-   "explanation": "Řetězec splňuje omezení length a jeho délka je 5.",
-   "csHash": "89800b7c2be8283a"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-114",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 15,
-  "levelTitle": "Generic Constraints",
-  "difficulty": 3,
-  "tags": [
-   "Roadmap",
-   "Generics",
-   "Constraints"
-  ],
-  "contentHash": "1a0f4bab8c50e756",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Constraints.",
-  "question": "What happens?\n\n```ts\nfunction len<T extends { length: number }>(x: T) {\n  return x.length;\n}\nlen(42);\n```",
-  "options": [
-   "Compiles",
-   "Type error",
-   "0",
-   "Runtime error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "A number has no length property, so it violates the constraint — a type error.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\nfunction len<T extends { length: number }>(x: T) {\n  return x.length;\n}\nlen(42);\n```",
-   "options": [
-    "Zkompiluje se",
-    "Chyba typu",
-    "0",
-    "Chyba za běhu"
-   ],
-   "explanation": "Číslo nemá vlastnost length, takže porušuje omezení — chyba typu.",
-   "csHash": "51166dd4f88e24c5"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-115",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 15,
-  "levelTitle": "Generic Constraints",
-  "difficulty": 3,
-  "tags": [
-   "Roadmap",
-   "Generics",
-   "keyof"
-  ],
-  "contentHash": "7d08fb41735cc809",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on keyof.",
-  "question": "What does getProp({ a: 1 }, \"a\") return?\n\n```ts\nfunction getProp<T, K extends keyof T>(obj: T, key: K) {\n  return obj[key];\n}\ngetProp({ a: 1 }, \"a\");\n```",
-  "options": [
-   "1",
-   "number",
-   "\"a\"",
-   "Error"
-  ],
-  "correctAnswer": 0,
-  "explanation": "It reads obj[\"a\"], which is 1.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co vrátí getProp({ a: 1 }, \"a\")?\n\n```ts\nfunction getProp<T, K extends keyof T>(obj: T, key: K) {\n  return obj[key];\n}\ngetProp({ a: 1 }, \"a\");\n```",
-   "options": [
-    "1",
-    "number",
-    "\"a\"",
-    "Chyba"
-   ],
-   "explanation": "Přečte obj[\"a\"], což je 1.",
-   "csHash": "3ea76eb8690f0656"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-116",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 15,
-  "levelTitle": "Generic Constraints",
-  "difficulty": 3,
-  "tags": [
-   "Roadmap",
-   "Generics",
-   "keyof"
-  ],
-  "contentHash": "dfaca5d4c23e1e68",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on keyof.",
-  "question": "What happens?\n\n```ts\nfunction getProp<T, K extends keyof T>(obj: T, key: K) {\n  return obj[key];\n}\ngetProp({ a: 1 }, \"b\");\n```",
-  "options": [
-   "Compiles",
-   "Type error",
-   "undefined",
-   "1"
-  ],
-  "correctAnswer": 1,
-  "explanation": "\"b\" is not a key of { a: number }, so it violates K extends keyof T.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\nfunction getProp<T, K extends keyof T>(obj: T, key: K) {\n  return obj[key];\n}\ngetProp({ a: 1 }, \"b\");\n```",
-   "options": [
-    "Zkompiluje se",
-    "Chyba typu",
-    "undefined",
-    "1"
-   ],
-   "explanation": "\"b\" není klíčem { a: number }, takže porušuje K extends keyof T.",
-   "csHash": "1d90de4532767dbc"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-117",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 15,
-  "levelTitle": "Generic Constraints",
-  "difficulty": 3,
-  "tags": [
-   "Roadmap",
-   "Generics",
-   "Constraints"
-  ],
-  "contentHash": "6ab57a98fe563470",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Constraints.",
-  "question": "What does f(\"hi\") return?\n\n```ts\nfunction f<T extends string>(x: T) {\n  return x.length;\n}\nf(\"hi\");\n```",
-  "options": [
-   "2",
-   "a number",
-   "\"hi\"",
-   "Error"
-  ],
-  "correctAnswer": 0,
-  "explanation": "A string is allowed by the constraint; its length is 2.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co vrátí f(\"hi\")?\n\n```ts\nfunction f<T extends string>(x: T) {\n  return x.length;\n}\nf(\"hi\");\n```",
-   "options": [
-    "2",
-    "číslo",
-    "\"hi\"",
-    "Chyba"
-   ],
-   "explanation": "Řetězec je omezením povolen; jeho délka je 2.",
-   "csHash": "966e20cf84909f06"
+   "explanation": "b je undefined, takže ?? dá 0 a výsledek je 5 + 0 = 5.",
+   "csHash": "83037f8e54115bc3"
   },
   "possibleDuplicates": [
    "rm-js-71",
-   "rm-ts-70",
-   "rm-ts-90"
+   "rm-ts-70"
   ],
   "automatedFlags": [
    "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
-  "id": "rm-ts-118",
+  "id": "rm-ts-68",
   "delivery": "active",
   "category": "typescript",
   "topic": "typescript",
-  "level": 15,
-  "levelTitle": "Generic Constraints",
-  "difficulty": 3,
+  "level": 9,
+  "levelTitle": "Optional & Readonly",
+  "difficulty": 2,
   "tags": [
    "Roadmap",
-   "Generics",
-   "Constraints"
+   "Optional"
   ],
-  "contentHash": "c7b842cad3db9b41",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Constraints.",
-  "question": "What does f([1, 2, 3]) return?\n\n```ts\nfunction f<T extends any[]>(x: T) {\n  return x.length;\n}\nf([1, 2, 3]);\n```",
-  "options": [
-   "3",
-   "a number",
-   "[1, 2, 3]",
-   "Error"
-  ],
-  "correctAnswer": 0,
-  "explanation": "The array satisfies the constraint; its length is 3.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co vrátí f([1, 2, 3])?\n\n```ts\nfunction f<T extends any[]>(x: T) {\n  return x.length;\n}\nf([1, 2, 3]);\n```",
-   "options": [
-    "3",
-    "číslo",
-    "[1, 2, 3]",
-    "Chyba"
-   ],
-   "explanation": "Pole splňuje omezení; jeho délka je 3.",
-   "csHash": "915f02c3623fc7e9"
-  },
-  "possibleDuplicates": [
-   "rm-ts-24",
-   "rm-ts-47"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-119",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 15,
-  "levelTitle": "Generic Constraints",
-  "difficulty": 3,
-  "tags": [
-   "Roadmap",
-   "Generics",
-   "Constraints"
-  ],
-  "contentHash": "9624257685c897dc",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Constraints.",
-  "question": "What does merge({ a: 1 }, { b: 2 }) produce?\n\n```ts\nfunction merge<T extends object, U extends object>(a: T, b: U) {\n  return { ...a, ...b };\n}\nmerge({ a: 1 }, { b: 2 });\n```",
-  "options": [
-   "T & U (a and b combined)",
-   "only a",
-   "only b",
-   "any"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Spreading both gives the intersection T & U: { a: number; b: number }.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co vyprodukuje merge({ a: 1 }, { b: 2 })?\n\n```ts\nfunction merge<T extends object, U extends object>(a: T, b: U) {\n  return { ...a, ...b };\n}\nmerge({ a: 1 }, { b: 2 });\n```",
-   "options": [
-    "T & U (a a b zkombinované)",
-    "jen a",
-    "jen b",
-    "any"
-   ],
-   "explanation": "Rozprostření obou dá průnik (intersection) T & U: { a: number; b: number }.",
-   "csHash": "5d325848ab468f78"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
-  "csDriftFlags": [
-   "code-like option 0 differs: EN 'T & U (a and b combined)' vs CS 'T & U (a a b zkombinované)'"
-  ]
- },
- {
-  "id": "rm-ts-120",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 15,
-  "levelTitle": "Generic Constraints",
-  "difficulty": 3,
-  "tags": [
-   "Roadmap",
-   "Generics",
-   "Constraints"
-  ],
-  "contentHash": "52bb9a1b72f84a35",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Constraints.",
-  "question": "What does f({ id: 5, name: \"a\" }) return?\n\n```ts\nfunction f<T extends { id: number }>(x: T) {\n  return x.id;\n}\nf({ id: 5, name: \"a\" });\n```",
-  "options": [
-   "5",
-   "a number",
-   "{ id: 5 }",
-   "Error"
-  ],
-  "correctAnswer": 0,
-  "explanation": "The constraint guarantees an id property, which is 5.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co vrátí f({ id: 5, name: \"a\" })?\n\n```ts\nfunction f<T extends { id: number }>(x: T) {\n  return x.id;\n}\nf({ id: 5, name: \"a\" });\n```",
-   "options": [
-    "5",
-    "číslo",
-    "{ id: 5 }",
-    "Chyba"
-   ],
-   "explanation": "Omezení zaručuje vlastnost id, která je 5.",
-   "csHash": "0fd3b96f4ac159d1"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-121",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 16,
-  "levelTitle": "keyof & typeof",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "keyof"
-  ],
-  "contentHash": "3554c8920570e16e",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on keyof.",
-  "question": "What is K?\n\n```ts\ntype Point = { x: number; y: number };\ntype K = keyof Point;\n```",
-  "options": [
-   "\"x\" | \"y\"",
-   "string",
-   "number",
-   "Point"
-  ],
-  "correctAnswer": 0,
-  "explanation": "keyof produces the union of the object’s keys: \"x\" | \"y\".",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je K?\n\n```ts\ntype Point = { x: number; y: number };\ntype K = keyof Point;\n```",
-   "options": [
-    "\"x\" | \"y\"",
-    "string",
-    "number",
-    "Point"
-   ],
-   "explanation": "keyof vytvoří union (sjednocení) klíčů objektu: \"x\" | \"y\".",
-   "csHash": "cb7e571e68d3446c"
-  },
-  "possibleDuplicates": [
-   "rm-ts-125",
-   "rm-ts-128"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-122",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 16,
-  "levelTitle": "keyof & typeof",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "typeof"
-  ],
-  "contentHash": "eee29b828b8b2e7c",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on typeof.",
-  "question": "What is T?\n\n```ts\nconst obj = { a: 1, b: 2 };\ntype T = typeof obj;\n```",
-  "options": [
-   "{ a: number; b: number }",
-   "{ a: 1; b: 2 }",
-   "number",
-   "keyof obj"
-  ],
-  "correctAnswer": 0,
-  "explanation": "typeof on a let/var object gives the widened shape { a: number; b: number }.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\nconst obj = { a: 1, b: 2 };\ntype T = typeof obj;\n```",
-   "options": [
-    "{ a: number; b: number }",
-    "{ a: 1; b: 2 }",
-    "number",
-    "keyof obj"
-   ],
-   "explanation": "typeof na objektu vytvořeném přes let/var dá rozšířený tvar { a: number; b: number }.",
-   "csHash": "05b3217f27dc7134"
-  },
-  "possibleDuplicates": [
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-123",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 16,
-  "levelTitle": "keyof & typeof",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "typeof",
-   "Indexed access"
-  ],
-  "contentHash": "4616e0c9a106cfbf",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Indexed access.",
-  "question": "What is Color?\n\n```ts\nconst colors = [\"red\", \"green\"] as const;\ntype Color = typeof colors[number];\n```",
-  "options": [
-   "string",
-   "\"red\" | \"green\"",
-   "string[]",
-   "number"
-  ],
-  "correctAnswer": 1,
-  "explanation": "With as const, indexing the tuple by number yields the union \"red\" | \"green\".",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je Color?\n\n```ts\nconst colors = [\"red\", \"green\"] as const;\ntype Color = typeof colors[number];\n```",
-   "options": [
-    "string",
-    "\"red\" | \"green\"",
-    "string[]",
-    "number"
-   ],
-   "explanation": "S as const dá indexování n-tice (tuple) přes number union \"red\" | \"green\".",
-   "csHash": "fea7c9eb6a142a31"
-  },
-  "possibleDuplicates": [
-   "rm-ts-97"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-124",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 16,
-  "levelTitle": "keyof & typeof",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "keyof"
-  ],
-  "contentHash": "55087c254914e8d8",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on keyof.",
-  "question": "What is Keys?\n\n```ts\ntype Keys = keyof { a: 1; b: 2; c: 3 };\n```",
-  "options": [
-   "\"a\" | \"b\" | \"c\"",
-   "1 | 2 | 3",
-   "string",
-   "3"
-  ],
-  "correctAnswer": 0,
-  "explanation": "keyof gives the union of property names: \"a\" | \"b\" | \"c\".",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je Keys?\n\n```ts\ntype Keys = keyof { a: 1; b: 2; c: 3 };\n```",
-   "options": [
-    "\"a\" | \"b\" | \"c\"",
-    "1 | 2 | 3",
-    "string",
-    "3"
-   ],
-   "explanation": "keyof dá union (sjednocení) názvů vlastností: \"a\" | \"b\" | \"c\".",
-   "csHash": "55e261a873d21a49"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-125",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 16,
-  "levelTitle": "keyof & typeof",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "keyof",
-   "typeof"
-  ],
-  "contentHash": "9f52f23421debcc6",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on typeof.",
-  "question": "What is K?\n\n```ts\nconst p = { x: 1, y: 2 };\ntype K = keyof typeof p;\n```",
-  "options": [
-   "\"x\" | \"y\"",
-   "number",
-   "{ x; y }",
-   "string"
-  ],
-  "correctAnswer": 0,
-  "explanation": "typeof p is { x: number; y: number }; keyof gives \"x\" | \"y\".",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je K?\n\n```ts\nconst p = { x: 1, y: 2 };\ntype K = keyof typeof p;\n```",
-   "options": [
-    "\"x\" | \"y\"",
-    "number",
-    "{ x; y }",
-    "string"
-   ],
-   "explanation": "typeof p je { x: number; y: number }; keyof dá \"x\" | \"y\".",
-   "csHash": "7fa7e778bd505225"
-  },
-  "possibleDuplicates": [
-   "rm-ts-121",
-   "rm-ts-128"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-126",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 16,
-  "levelTitle": "keyof & typeof",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "typeof",
-   "Literals"
-  ],
-  "contentHash": "5e73f7ec2cbfd409",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Literals.",
-  "question": "What is T?\n\n```ts\nconst s = \"hi\";\ntype T = typeof s;\n```",
-  "options": [
-   "string",
-   "\"hi\"",
-   "any",
-   "typeof"
-  ],
-  "correctAnswer": 1,
-  "explanation": "const s infers the literal \"hi\", so typeof s is \"hi\".",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\nconst s = \"hi\";\ntype T = typeof s;\n```",
-   "options": [
-    "string",
-    "\"hi\"",
-    "any",
-    "typeof"
-   ],
-   "explanation": "const s odvodí literál \"hi\", takže typeof s je \"hi\".",
-   "csHash": "bdf6117f12fc0f01"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-127",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 16,
-  "levelTitle": "keyof & typeof",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "typeof",
-   "as const"
-  ],
-  "contentHash": "a0d27721e234cfaa",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on as const.",
-  "question": "What is T?\n\n```ts\nconst arr = [1, 2, 3] as const;\ntype T = typeof arr[0];\n```",
-  "options": [
-   "number",
-   "1",
-   "readonly",
-   "1 | 2 | 3"
-  ],
-  "correctAnswer": 1,
-  "explanation": "With as const, arr[0] has the literal type 1.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\nconst arr = [1, 2, 3] as const;\ntype T = typeof arr[0];\n```",
-   "options": [
-    "number",
-    "1",
-    "readonly",
-    "1 | 2 | 3"
-   ],
-   "explanation": "S as const má arr[0] literálový typ 1.",
-   "csHash": "916ad8d6b2123b7c"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-128",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 16,
-  "levelTitle": "keyof & typeof",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "keyof"
-  ],
-  "contentHash": "bed10e384816a2bd",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on keyof.",
-  "question": "What is K?\n\n```ts\ntype K = keyof { 0: \"a\"; 1: \"b\" };\n```",
-  "options": [
-   "0 | 1",
-   "\"a\" | \"b\"",
-   "number",
-   "string"
-  ],
-  "correctAnswer": 0,
-  "explanation": "keyof returns the numeric-literal keys 0 | 1.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je K?\n\n```ts\ntype K = keyof { 0: \"a\"; 1: \"b\" };\n```",
-   "options": [
-    "0 | 1",
-    "\"a\" | \"b\"",
-    "number",
-    "string"
-   ],
-   "explanation": "keyof vrátí číselné literálové klíče 0 | 1.",
-   "csHash": "753019046db0e817"
-  },
-  "possibleDuplicates": [
-   "rm-ts-121",
-   "rm-ts-125"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-129",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 17,
-  "levelTitle": "Indexed Access",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Indexed access"
-  ],
-  "contentHash": "24dc23d827613f37",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Indexed access.",
-  "question": "What is Name?\n\n```ts\ntype User = { name: string; age: number };\ntype Name = User[\"name\"];\n```",
-  "options": [
-   "string",
-   "number",
-   "\"name\"",
-   "User"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Indexing the type by the key \"name\" yields its type, string.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je Name?\n\n```ts\ntype User = { name: string; age: number };\ntype Name = User[\"name\"];\n```",
-   "options": [
-    "string",
-    "number",
-    "\"name\"",
-    "User"
-   ],
-   "explanation": "Indexování typu klíčem \"name\" vrátí jeho typ, string.",
-   "csHash": "53c6cabd4ebaf4f9"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-130",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 17,
-  "levelTitle": "Indexed Access",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Indexed access"
-  ],
-  "contentHash": "79a681e9fcc79ae8",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Indexed access.",
-  "question": "What is V?\n\n```ts\ntype T = { a: number; b: string };\ntype V = T[\"a\" | \"b\"];\n```",
-  "options": [
-   "string | number",
-   "number",
-   "string",
-   "never"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Indexing by a union of keys yields the union of their value types.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je V?\n\n```ts\ntype T = { a: number; b: string };\ntype V = T[\"a\" | \"b\"];\n```",
-   "options": [
-    "string | number",
-    "number",
-    "string",
-    "never"
-   ],
-   "explanation": "Indexování unionem klíčů vrátí union jejich hodnotových typů.",
-   "csHash": "0c770af8ee21630e"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-131",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 17,
-  "levelTitle": "Indexed Access",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Indexed access"
-  ],
-  "contentHash": "2b1bd84817537cc1",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Indexed access.",
-  "question": "What is Item?\n\n```ts\ntype Arr = string[];\ntype Item = Arr[number];\n```",
-  "options": [
-   "string",
-   "number",
-   "string[]",
-   "Arr"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Indexing an array type by number gives its element type, string.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je Item?\n\n```ts\ntype Arr = string[];\ntype Item = Arr[number];\n```",
-   "options": [
-    "string",
-    "number",
-    "string[]",
-    "Arr"
-   ],
-   "explanation": "Indexování typu pole přes number vrátí jeho typ prvku, string.",
-   "csHash": "1737d05c19e69d11"
-  },
-  "possibleDuplicates": [
-   "rm-ts-135"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-132",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 17,
-  "levelTitle": "Indexed Access",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Indexed access",
-   "typeof"
-  ],
-  "contentHash": "bd1d4b2813b401c4",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on typeof.",
-  "question": "What is Tags?\n\n```ts\nconst data = { id: 1, tags: [\"a\", \"b\"] };\ntype Tags = typeof data[\"tags\"];\n```",
-  "options": [
-   "string[]",
-   "string",
-   "[\"a\", \"b\"]",
-   "number"
-  ],
-  "correctAnswer": 0,
-  "explanation": "The tags property is inferred as string[], so the indexed access is string[].",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je Tags?\n\n```ts\nconst data = { id: 1, tags: [\"a\", \"b\"] };\ntype Tags = typeof data[\"tags\"];\n```",
-   "options": [
-    "string[]",
-    "string",
-    "[\"a\", \"b\"]",
-    "number"
-   ],
-   "explanation": "Vlastnost tags se odvodí jako string[], takže indexovaný přístup je string[].",
-   "csHash": "b7dd5f3f753dc1ac"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-133",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 17,
-  "levelTitle": "Indexed Access",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Indexed access"
-  ],
-  "contentHash": "03cfbf598b6c97d0",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Indexed access.",
-  "question": "What is B?\n\n```ts\ntype T = { a: { b: number } };\ntype B = T[\"a\"][\"b\"];\n```",
-  "options": [
-   "number",
-   "{ b: number }",
-   "\"b\"",
-   "T"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Chained indexed access reaches the nested b, which is number.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je B?\n\n```ts\ntype T = { a: { b: number } };\ntype B = T[\"a\"][\"b\"];\n```",
-   "options": [
-    "number",
-    "{ b: number }",
-    "\"b\"",
-    "T"
-   ],
-   "explanation": "Zřetězený indexovaný přístup dosáhne na vnořené b, které je number.",
-   "csHash": "9281499feb94c46d"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-134",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 17,
-  "levelTitle": "Indexed Access",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Indexed access",
-   "keyof"
-  ],
-  "contentHash": "9f37fb87159ff399",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on keyof.",
-  "question": "What is Values?\n\n```ts\ntype Person = { name: string; age: number };\ntype Values = Person[keyof Person];\n```",
-  "options": [
-   "string | number",
-   "string",
-   "number",
-   "keyof Person"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Indexing by all keys yields the union of value types: string | number.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je Values?\n\n```ts\ntype Person = { name: string; age: number };\ntype Values = Person[keyof Person];\n```",
-   "options": [
-    "string | number",
-    "string",
-    "number",
-    "keyof Person"
-   ],
-   "explanation": "Indexování všemi klíči vrátí union hodnotových typů: string | number.",
-   "csHash": "4a39811afcd4ecdc"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-135",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 17,
-  "levelTitle": "Indexed Access",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Indexed access",
-   "typeof"
-  ],
-  "contentHash": "2e4b06f216943097",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on typeof.",
-  "question": "What is Item?\n\n```ts\nconst obj = { list: [1, 2, 3] };\ntype Item = typeof obj[\"list\"][number];\n```",
-  "options": [
-   "number",
-   "number[]",
-   "1 | 2 | 3",
-   "any"
-  ],
-  "correctAnswer": 0,
-  "explanation": "list is inferred as number[]; indexing by number gives number.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je Item?\n\n```ts\nconst obj = { list: [1, 2, 3] };\ntype Item = typeof obj[\"list\"][number];\n```",
-   "options": [
-    "number",
-    "number[]",
-    "1 | 2 | 3",
-    "any"
-   ],
-   "explanation": "list se odvodí jako number[]; indexování přes number vrátí number.",
-   "csHash": "8cc657e8d0fa1de7"
-  },
-  "possibleDuplicates": [
-   "rm-ts-131"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-136",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 17,
-  "levelTitle": "Indexed Access",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Indexed access",
-   "Utility"
-  ],
-  "contentHash": "68d6ba50e7c8de77",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Utility.",
-  "question": "What is R?\n\n```ts\ntype Fn = { greet: () => string };\ntype R = ReturnType<Fn[\"greet\"]>;\n```",
-  "options": [
-   "string",
-   "void",
-   "Fn",
-   "never"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Fn[\"greet\"] is () => string; ReturnType extracts string.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype Fn = { greet: () => string };\ntype R = ReturnType<Fn[\"greet\"]>;\n```",
-   "options": [
-    "string",
-    "void",
-    "Fn",
-    "never"
-   ],
-   "explanation": "Fn[\"greet\"] je () => string; ReturnType z něj vytáhne string.",
-   "csHash": "5fff879b26c547b0"
-  },
-  "possibleDuplicates": [
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-137",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 18,
-  "levelTitle": "Partial & Required",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Partial"
-  ],
-  "contentHash": "2b9e48f0c796f6e2",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Partial.",
-  "question": "What does Partial do here?\n\n```ts\ntype User = { name: string; age: number };\ntype T = Partial<User>;\n```",
-  "options": [
-   "Makes all properties optional",
-   "Makes all required",
-   "Removes properties",
-   "Makes them readonly"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Partial<T> turns every property optional.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co tady dělá Partial?\n\n```ts\ntype User = { name: string; age: number };\ntype T = Partial<User>;\n```",
-   "options": [
-    "Udělá všechny vlastnosti volitelné",
-    "Udělá všechny povinné",
-    "Odebere vlastnosti",
-    "Udělá je readonly"
-   ],
-   "explanation": "Partial<T> udělá každou vlastnost volitelnou.",
-   "csHash": "124f99733fd39cf5"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-138",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 18,
-  "levelTitle": "Partial & Required",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Partial"
-  ],
-  "contentHash": "08c2887eaab80266",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Partial.",
-  "question": "What happens?\n\n```ts\ntype T = Partial<{ a: number }>;\nconst x: T = {};\n```",
-  "options": [
-   "Type error",
-   "Compiles",
-   "a is required",
-   "Runtime error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Partial makes a optional, so an empty object is valid.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype T = Partial<{ a: number }>;\nconst x: T = {};\n```",
-   "options": [
-    "Chyba typu",
-    "Zkompiluje se",
-    "a je povinné",
-    "Chyba za běhu"
-   ],
-   "explanation": "Partial udělá a volitelným, takže prázdný objekt je platný.",
-   "csHash": "7d028d7513d5566f"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-139",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 18,
-  "levelTitle": "Partial & Required",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Required"
-  ],
-  "contentHash": "6894d6cca9d0d930",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Required.",
-  "question": "What happens?\n\n```ts\ntype T = Required<{ a?: number; b?: string }>;\nconst x: T = { a: 1 };\n```",
-  "options": [
-   "Compiles",
-   "Type error",
-   "b is optional",
-   "Runtime error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Required makes b mandatory, so omitting it is a type error.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype T = Required<{ a?: number; b?: string }>;\nconst x: T = { a: 1 };\n```",
-   "options": [
-    "Zkompiluje se",
-    "Chyba typu",
-    "b je volitelné",
-    "Chyba za běhu"
-   ],
-   "explanation": "Required udělá b povinným, takže jeho vynechání je chyba typu.",
-   "csHash": "46a76de4147ca5a5"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-140",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 18,
-  "levelTitle": "Partial & Required",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Readonly"
-  ],
-  "contentHash": "ff40460c33e382b1",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Readonly.",
-  "question": "What happens?\n\n```ts\ntype T = Readonly<{ a: number }>;\nconst x: T = { a: 1 };\nx.a = 2;\n```",
-  "options": [
-   "Compiles",
-   "Type error",
-   "Sets to 2",
-   "Runtime error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Readonly makes a immutable, so reassigning it is a type error.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype T = Readonly<{ a: number }>;\nconst x: T = { a: 1 };\nx.a = 2;\n```",
-   "options": [
-    "Zkompiluje se",
-    "Chyba typu",
-    "Nastaví na 2",
-    "Chyba za běhu"
-   ],
-   "explanation": "Readonly udělá a neměnným, takže jeho přepsání je chyba typu.",
-   "csHash": "d3db9256db38944f"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-141",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 18,
-  "levelTitle": "Partial & Required",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Partial",
-   "Required"
-  ],
-  "contentHash": "8799aad6e48c0aa0",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Required.",
-  "question": "What is T?\n\n```ts\ntype T = Required<Partial<{ a: number }>>;\n```",
-  "options": [
-   "{ a?: number }",
-   "{ a: number }",
-   "{}",
-   "never"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Partial makes a optional, then Required makes it required again: { a: number }.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype T = Required<Partial<{ a: number }>>;\n```",
-   "options": [
-    "{ a?: number }",
-    "{ a: number }",
-    "{}",
-    "never"
-   ],
-   "explanation": "Partial udělá a volitelným, pak Required ho udělá znovu povinným: { a: number }.",
-   "csHash": "313adb15de4844d3"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-142",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 18,
-  "levelTitle": "Partial & Required",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Partial"
-  ],
-  "contentHash": "715a94d7306ddcaf",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Partial.",
-  "question": "What can you pass to update?\n\n```ts\nfunction update(u: Partial<User>) {}\n```",
-  "options": [
-   "all properties required",
-   "any subset of User’s properties",
-   "no properties allowed",
-   "only id"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Partial<User> makes every property optional, so any subset is valid.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co můžeš předat do update?\n\n```ts\nfunction update(u: Partial<User>) {}\n```",
-   "options": [
-    "všechny vlastnosti povinné",
-    "libovolnou podmnožinu vlastností User",
-    "žádné vlastnosti nejsou povoleny",
-    "jen id"
-   ],
-   "explanation": "Partial<User> udělá každou vlastnost volitelnou, takže libovolná podmnožina je platná.",
-   "csHash": "b39612533fd719d8"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-143",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 18,
-  "levelTitle": "Partial & Required",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Partial"
-  ],
-  "contentHash": "2dd2d2b867b87b51",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Partial.",
-  "question": "What happens?\n\n```ts\ntype T = Partial<{ a: number; b: string }>;\nconst x: T = { b: \"hi\" };\n```",
-  "options": [
-   "Type error",
-   "Compiles",
-   "a is required",
-   "Runtime error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Both properties are optional, so providing only b is fine.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype T = Partial<{ a: number; b: string }>;\nconst x: T = { b: \"hi\" };\n```",
-   "options": [
-    "Chyba typu",
-    "Zkompiluje se",
-    "a je povinné",
-    "Chyba za běhu"
-   ],
-   "explanation": "Obě vlastnosti jsou volitelné, takže poskytnout jen b je v pořádku.",
-   "csHash": "7397f1d0de09df4a"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-144",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 18,
-  "levelTitle": "Partial & Required",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Required"
-  ],
-  "contentHash": "f7c09c93b4cbfe33",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Required.",
-  "question": "What happens?\n\n```ts\ntype T = Required<{ a?: number }>;\nconst x: T = {};\n```",
-  "options": [
-   "Compiles",
-   "Type error",
-   "a is optional",
-   "Runtime error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Required makes a mandatory, so the empty object is a type error.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype T = Required<{ a?: number }>;\nconst x: T = {};\n```",
-   "options": [
-    "Zkompiluje se",
-    "Chyba typu",
-    "a je volitelné",
-    "Chyba za běhu"
-   ],
-   "explanation": "Required udělá a povinným, takže prázdný objekt je chyba typu.",
-   "csHash": "c030a2d9622b6b8e"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-145",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 19,
-  "levelTitle": "Pick & Omit",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Pick"
-  ],
-  "contentHash": "b9083afcdd988f57",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Pick.",
-  "question": "What is T?\n\n```ts\ntype User = { id: number; name: string; age: number };\ntype T = Pick<User, \"id\" | \"name\">;\n```",
-  "options": [
-   "{ id: number; name: string }",
-   "{ age: number }",
-   "{ id; name; age }",
-   "never"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Pick keeps only the listed keys: id and name.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype User = { id: number; name: string; age: number };\ntype T = Pick<User, \"id\" | \"name\">;\n```",
-   "options": [
-    "{ id: number; name: string }",
-    "{ age: number }",
-    "{ id; name; age }",
-    "never"
-   ],
-   "explanation": "Pick ponechá jen uvedené klíče: id a name.",
-   "csHash": "1e2c995a9d741ada"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-146",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 19,
-  "levelTitle": "Pick & Omit",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Omit"
-  ],
-  "contentHash": "8cc6ee23af780ef9",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Omit.",
-  "question": "What is T?\n\n```ts\ntype User = { id: number; name: string; age: number };\ntype T = Omit<User, \"age\">;\n```",
-  "options": [
-   "{ id: number; name: string }",
-   "{ age: number }",
-   "{ id; name; age }",
-   "never"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Omit removes the listed key, leaving id and name.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype User = { id: number; name: string; age: number };\ntype T = Omit<User, \"age\">;\n```",
-   "options": [
-    "{ id: number; name: string }",
-    "{ age: number }",
-    "{ id; name; age }",
-    "never"
-   ],
-   "explanation": "Omit odstraní uvedený klíč a ponechá id a name.",
-   "csHash": "b970d9ec4e5f8928"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-147",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 19,
-  "levelTitle": "Pick & Omit",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Pick"
-  ],
-  "contentHash": "60322342b94db856",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Pick.",
-  "question": "What happens?\n\n```ts\ntype T = Pick<{ a: 1; b: 2 }, \"a\">;\nconst x: T = { a: 1, b: 2 };\n```",
-  "options": [
-   "Compiles",
-   "Type error",
-   "b is ignored",
-   "Runtime error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Pick keeps only a, so the extra b is an excess-property type error.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype T = Pick<{ a: 1; b: 2 }, \"a\">;\nconst x: T = { a: 1, b: 2 };\n```",
-   "options": [
-    "Zkompiluje se",
-    "Chyba typu",
-    "b se ignoruje",
-    "Chyba za běhu"
-   ],
-   "explanation": "Pick ponechá jen a, takže navíc uvedené b je chyba typu kvůli nadbytečné vlastnosti.",
-   "csHash": "660dfe5bb32b0820"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-148",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 19,
-  "levelTitle": "Pick & Omit",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Omit"
-  ],
-  "contentHash": "3b870576a25c6572",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Omit.",
-  "question": "What happens?\n\n```ts\ntype T = Omit<{ a: number; b: number }, \"a\">;\nconst x: T = { b: 5 };\n```",
-  "options": [
-   "Type error",
-   "Compiles",
-   "a is required",
-   "Runtime error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Omit drops a, leaving { b: number }, which { b: 5 } satisfies.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype T = Omit<{ a: number; b: number }, \"a\">;\nconst x: T = { b: 5 };\n```",
-   "options": [
-    "Chyba typu",
-    "Zkompiluje se",
-    "a je povinné",
-    "Chyba za běhu"
-   ],
-   "explanation": "Omit zahodí a a ponechá { b: number }, což { b: 5 } splňuje.",
-   "csHash": "a0d8050d9fb3781a"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-149",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 19,
-  "levelTitle": "Pick & Omit",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Pick"
-  ],
-  "contentHash": "1b269bbd060d6281",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Pick.",
-  "question": "Which keys does T have?\n\n```ts\ntype T = Pick<{ a: 1; b: 2; c: 3 }, \"a\" | \"c\">;\n```",
-  "options": [
-   "a and c",
-   "b",
-   "all three",
-   "none"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Pick keeps only the listed keys: a and c.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Které klíče má T?\n\n```ts\ntype T = Pick<{ a: 1; b: 2; c: 3 }, \"a\" | \"c\">;\n```",
-   "options": [
-    "a a c",
-    "b",
-    "všechny tři",
-    "žádný"
-   ],
-   "explanation": "Pick ponechá jen uvedené klíče: a a c.",
-   "csHash": "06d19d390a1c37c5"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-150",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 19,
-  "levelTitle": "Pick & Omit",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Omit"
-  ],
-  "contentHash": "c1c90b2278c80a45",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Omit.",
-  "question": "What is T?\n\n```ts\ntype T = Omit<{ a: 1; b: 2 }, \"a\" | \"b\">;\n```",
-  "options": [
-   "{ a; b }",
-   "{} (empty)",
-   "{ a }",
-   "never"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Omitting both keys leaves an empty object type.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype T = Omit<{ a: 1; b: 2 }, \"a\" | \"b\">;\n```",
-   "options": [
-    "{ a; b }",
-    "{} (prázdný)",
-    "{ a }",
-    "never"
-   ],
-   "explanation": "Vynechání obou klíčů zanechá prázdný typ objektu.",
-   "csHash": "0cc610a82434b118"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
-  "csDriftFlags": [
-   "code-like option 1 differs: EN '{} (empty)' vs CS '{} (prázdný)'"
-  ]
- },
- {
-  "id": "rm-ts-151",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 19,
-  "levelTitle": "Pick & Omit",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Omit"
-  ],
-  "contentHash": "4348d65c22aac762",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Omit.",
-  "question": "Which keys does Safe have?\n\n```ts\ntype User = { id: number; pw: string };\ntype Safe = Omit<User, \"pw\">;\n```",
-  "options": [
-   "id and pw",
-   "id only",
-   "pw only",
-   "none"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Omit removes pw, leaving id only.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Které klíče má Safe?\n\n```ts\ntype User = { id: number; pw: string };\ntype Safe = Omit<User, \"pw\">;\n```",
-   "options": [
-    "id and pw",
-    "id only",
-    "pw only",
-    "nic"
-   ],
-   "explanation": "Omit odstraní pw a ponechá pouze id.",
-   "csHash": "7d69aee18fcfb86e"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-152",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 19,
-  "levelTitle": "Pick & Omit",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Pick"
-  ],
-  "contentHash": "571ec76dbe9a977a",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Pick.",
-  "question": "What happens?\n\n```ts\ntype T = Pick<{ a: number }, \"b\">;\n```",
-  "options": [
-   "T is {}",
-   "Type error",
-   "T is { b }",
-   "any"
-  ],
-  "correctAnswer": 1,
-  "explanation": "\"b\" is not a key of the object, so Pick reports a type error.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype T = Pick<{ a: number }, \"b\">;\n```",
-   "options": [
-    "T is {}",
-    "Chyba typu",
-    "T is { b }",
-    "any"
-   ],
-   "explanation": "\"b\" není klíčem objektu, takže Pick ohlásí chybu typu.",
-   "csHash": "434047af89321ee6"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-153",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 20,
-  "levelTitle": "Record",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Record"
-  ],
-  "contentHash": "437ce68ed665e629",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Record.",
-  "question": "What happens?\n\n```ts\ntype T = Record<string, number>;\nconst x: T = { a: 1, b: 2 };\n```",
-  "options": [
-   "Type error",
-   "Compiles",
-   "keys must be numbers",
-   "Runtime error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Record<string, number> allows any string key with number values.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype T = Record<string, number>;\nconst x: T = { a: 1, b: 2 };\n```",
-   "options": [
-    "Chyba typu",
-    "Zkompiluje se",
-    "klíče musí být čísla",
-    "Chyba za běhu"
-   ],
-   "explanation": "Record<string, number> umožňuje libovolný klíč typu string s hodnotami typu number.",
-   "csHash": "2c7705eb2348330c"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-154",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 20,
-  "levelTitle": "Record",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Record"
-  ],
-  "contentHash": "f05974b3c343250d",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Record.",
-  "question": "What happens?\n\n```ts\ntype T = Record<\"a\" | \"b\", number>;\nconst x: T = { a: 1 };\n```",
-  "options": [
-   "Compiles",
-   "Type error",
-   "b is optional",
-   "Runtime error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Record<\"a\" | \"b\", number> requires both keys, so missing b is a type error.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype T = Record<\"a\" | \"b\", number>;\nconst x: T = { a: 1 };\n```",
-   "options": [
-    "Zkompiluje se",
-    "Chyba typu",
-    "b je volitelné",
-    "Chyba za běhu"
-   ],
-   "explanation": "Record<\"a\" | \"b\", number> vyžaduje oba klíče, takže chybějící b je chyba typu.",
-   "csHash": "72c675aa7f7c5ce6"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-155",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 20,
-  "levelTitle": "Record",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Record"
-  ],
-  "contentHash": "f7374dfdef3a9028",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Record.",
-  "question": "How many properties does Roles have?\n\n```ts\ntype Roles = Record<\"admin\" | \"user\", boolean>;\n```",
-  "options": [
-   "1",
-   "2",
-   "0",
-   "infinite"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Record creates one property per key in the union: admin and user.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Kolik vlastností má Roles?\n\n```ts\ntype Roles = Record<\"admin\" | \"user\", boolean>;\n```",
-   "options": [
-    "1",
-    "2",
-    "0",
-    "nekonečně"
-   ],
-   "explanation": "Record vytvoří jednu vlastnost pro každý klíč v unionu: admin a user.",
-   "csHash": "6cd2c1a788d2ee78"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-156",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 20,
-  "levelTitle": "Record",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Record"
-  ],
-  "contentHash": "c359b3b5bfc873e0",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Record.",
-  "question": "What happens?\n\n```ts\ntype T = Record<string, string>;\nconst x: T = { name: 5 };\n```",
-  "options": [
-   "Compiles",
-   "Type error",
-   "5 becomes \"5\"",
-   "Runtime error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "The value type is string, so a number value is a type error.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype T = Record<string, string>;\nconst x: T = { name: 5 };\n```",
-   "options": [
-    "Zkompiluje se",
-    "Chyba typu",
-    "5 becomes \"5\"",
-    "Chyba za běhu"
-   ],
-   "explanation": "Typ hodnoty je string, takže hodnota typu number je chyba typu.",
-   "csHash": "c8ee81ac64dcc76d"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-157",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 20,
-  "levelTitle": "Record",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Record"
-  ],
-  "contentHash": "18b1426bec3f1003",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Record.",
-  "question": "What happens?\n\n```ts\ntype Scores = Record<\"math\" | \"art\", number>;\nconst s: Scores = { math: 90, art: 80 };\n```",
-  "options": [
-   "Type error",
-   "Compiles",
-   "art is missing",
-   "Runtime error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Both required keys are present with number values.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype Scores = Record<\"math\" | \"art\", number>;\nconst s: Scores = { math: 90, art: 80 };\n```",
-   "options": [
-    "Chyba typu",
-    "Zkompiluje se",
-    "art chybí",
-    "Chyba za běhu"
-   ],
-   "explanation": "Oba povinné klíče jsou přítomny s hodnotami typu number.",
-   "csHash": "ba779a7f98654ac5"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-158",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 20,
-  "levelTitle": "Record",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Record"
-  ],
-  "contentHash": "13aad9c7b307567d",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Record.",
-  "question": "What happens?\n\n```ts\ntype T = Record<number, string>;\nconst x: T = { 0: \"a\", 1: \"b\" };\n```",
-  "options": [
-   "Type error",
-   "Compiles",
-   "string keys only",
-   "Runtime error"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Record<number, string> allows numeric keys with string values.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype T = Record<number, string>;\nconst x: T = { 0: \"a\", 1: \"b\" };\n```",
-   "options": [
-    "Chyba typu",
-    "Zkompiluje se",
-    "pouze klíče typu string",
-    "Chyba za běhu"
-   ],
-   "explanation": "Record<number, string> umožňuje číselné klíče s hodnotami typu string.",
-   "csHash": "b5ccd1ba48a0fd54"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-159",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 20,
-  "levelTitle": "Record",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Record"
-  ],
-  "contentHash": "71ad23e0a263b644",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Record.",
-  "question": "What happens?\n\n```ts\ntype Flags = Record<string, boolean>;\nconst f: Flags = { on: true, off: false };\n```",
-  "options": [
-   "Type error",
-   "Compiles",
-   "Runtime error",
-   "any"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Any string key maps to a boolean, so this is valid.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype Flags = Record<string, boolean>;\nconst f: Flags = { on: true, off: false };\n```",
-   "options": [
-    "Chyba typu",
-    "Zkompiluje se",
-    "Chyba za běhu",
-    "any"
-   ],
-   "explanation": "Libovolný klíč typu string se mapuje na boolean, takže je to platné.",
-   "csHash": "8653e04cd29f4b28"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-160",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 20,
-  "levelTitle": "Record",
-  "difficulty": 4,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Record"
-  ],
-  "contentHash": "bc61111f66c85044",
-  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Record.",
-  "question": "Record<K, V> is equivalent to:",
-  "options": [
-   "{ [P in K]: V }",
-   "K | V",
-   "[K, V]",
-   "K & V"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Record is a mapped type creating a V-valued property for each key in K.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Record<K, V> je ekvivalentní k:",
-   "options": [
-    "{ [P in K]: V }",
-    "K | V",
-    "[K, V]",
-    "K & V"
-   ],
-   "explanation": "Record je mapovaný typ vytvářející vlastnost s hodnotou V pro každý klíč v K.",
-   "csHash": "d03a10a7f4cd39bc"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-161",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 21,
-  "levelTitle": "Mapped Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Mapped types"
-  ],
-  "contentHash": "70fc17a15d778f04",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Mapped types.",
-  "question": "What is T?\n\n```ts\ntype T = { [K in \"a\" | \"b\"]: number };\n```",
-  "options": [
-   "{ a: number; b: number }",
-   "{ a: \"a\"; b: \"b\" }",
-   "number",
-   "never"
-  ],
-  "correctAnswer": 0,
-  "explanation": "The mapped type creates a number-valued property for each key in the union.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype T = { [K in \"a\" | \"b\"]: number };\n```",
-   "options": [
-    "{ a: number; b: number }",
-    "{ a: \"a\"; b: \"b\" }",
-    "number",
-    "never"
-   ],
-   "explanation": "Mapovaný typ vytvoří vlastnost s hodnotou number pro každý klíč v unionu.",
-   "csHash": "025811744521aba8"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-162",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 21,
-  "levelTitle": "Mapped Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Mapped types"
-  ],
-  "contentHash": "109b64aea03c6122",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Mapped types.",
-  "question": "What is R?\n\n```ts\ntype Optional<T> = { [K in keyof T]?: T[K] };\ntype R = Optional<{ a: number }>;\n```",
-  "options": [
-   "{ a: number }",
-   "{ a?: number }",
-   "{ a: undefined }",
-   "never"
-  ],
-  "correctAnswer": 1,
-  "explanation": "The ? in the mapped type makes each property optional, like Partial.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype Optional<T> = { [K in keyof T]?: T[K] };\ntype R = Optional<{ a: number }>;\n```",
-   "options": [
-    "{ a: number }",
-    "{ a?: number }",
-    "{ a: undefined }",
-    "never"
-   ],
-   "explanation": "? v mapovaném typu udělá každou vlastnost volitelnou, podobně jako Partial.",
-   "csHash": "eafb1f745e6a1489"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-163",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 21,
-  "levelTitle": "Mapped Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Mapped types"
-  ],
-  "contentHash": "e396a8a540a5b961",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Mapped types.",
-  "question": "What is R?\n\n```ts\ntype Stringify<T> = { [K in keyof T]: string };\ntype R = Stringify<{ a: number; b: boolean }>;\n```",
-  "options": [
-   "{ a: number; b: boolean }",
-   "{ a: string; b: string }",
-   "string",
-   "never"
-  ],
-  "correctAnswer": 1,
-  "explanation": "The mapped type sets every property’s value type to string.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype Stringify<T> = { [K in keyof T]: string };\ntype R = Stringify<{ a: number; b: boolean }>;\n```",
-   "options": [
-    "{ a: number; b: boolean }",
-    "{ a: string; b: string }",
-    "string",
-    "never"
-   ],
-   "explanation": "Mapovaný typ nastaví typ hodnoty každé vlastnosti na string.",
-   "csHash": "29efd3bf9783c1d9"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-164",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 21,
-  "levelTitle": "Mapped Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Mapped types",
-   "readonly"
-  ],
-  "contentHash": "d2355ba892d0c5bc",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on readonly.",
-  "question": "What does this make the properties?\n\n```ts\ntype ReadonlyAll<T> = { readonly [K in keyof T]: T[K] };\n```",
-  "options": [
-   "optional",
-   "readonly",
-   "required",
-   "strings"
-  ],
-  "correctAnswer": 1,
-  "explanation": "The readonly modifier in the mapped type makes every property readonly.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Čím se stanou vlastnosti?\n\n```ts\ntype ReadonlyAll<T> = { readonly [K in keyof T]: T[K] };\n```",
-   "options": [
-    "volitelnými",
-    "readonly",
-    "povinnými",
-    "řetězci"
-   ],
-   "explanation": "Modifikátor readonly v mapovaném typu udělá každou vlastnost readonly.",
-   "csHash": "c8b17084d59ed2d5"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-165",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 21,
-  "levelTitle": "Mapped Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Mapped types"
-  ],
-  "contentHash": "f7249d5cb1d2cd4b",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Mapped types.",
-  "question": "What does this do to each property?\n\n```ts\ntype Nullable<T> = { [K in keyof T]: T[K] | null };\n```",
-  "options": [
-   "makes them readonly",
-   "makes them optional",
-   "lets each also accept null",
-   "removes them"
-  ],
-  "correctAnswer": 2,
-  "explanation": "It rewrites each value type to T[K] | null.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co to udělá s každou vlastností?\n\n```ts\ntype Nullable<T> = { [K in keyof T]: T[K] | null };\n```",
-   "options": [
-    "udělá je readonly",
-    "udělá je volitelnými",
-    "umožní každé přijmout i null",
-    "odstraní je"
-   ],
-   "explanation": "Přepíše typ každé hodnoty na T[K] | null.",
-   "csHash": "15dbd86c3294ab6e"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-166",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 21,
-  "levelTitle": "Mapped Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Mapped types"
-  ],
-  "contentHash": "fd23a6d7a807de6a",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Mapped types.",
-  "question": "What does each property become?\n\n```ts\ntype Getters<T> = { [K in keyof T]: () => T[K] };\n```",
-  "options": [
-   "its value",
-   "a function returning its value",
-   "optional",
-   "readonly"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Each property becomes a function that returns the original value type.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Čím se každá vlastnost stane?\n\n```ts\ntype Getters<T> = { [K in keyof T]: () => T[K] };\n```",
-   "options": [
-    "svou hodnotou",
-    "funkcí vracející jeho hodnotu",
-    "volitelnou",
-    "readonly"
-   ],
-   "explanation": "Každá vlastnost se stane funkcí, která vrací původní typ hodnoty.",
-   "csHash": "1d6f17fa024522ad"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-167",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 21,
-  "levelTitle": "Mapped Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Mapped types",
-   "readonly"
-  ],
-  "contentHash": "3df937af2948fb3c",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on readonly.",
-  "question": "What does -readonly do here?\n\n```ts\ntype Mutable = { -readonly [K in keyof { readonly a: number }]: number };\n```",
-  "options": [
-   "keeps a readonly",
-   "makes a mutable",
-   "makes a optional",
-   "never"
-  ],
-  "correctAnswer": 1,
-  "explanation": "The -readonly modifier strips readonly, making a writable.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co tady dělá -readonly?\n\n```ts\ntype Mutable = { -readonly [K in keyof { readonly a: number }]: number };\n```",
-   "options": [
-    "ponechá a jako readonly",
-    "udělá a měnitelným",
-    "udělá a volitelným",
-    "never"
-   ],
-   "explanation": "Modifikátor -readonly odstraní readonly a udělá a zapisovatelným.",
-   "csHash": "d050df862a7a3d4f"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-168",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 21,
-  "levelTitle": "Mapped Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Mapped types"
-  ],
-  "contentHash": "6e26713c1c1bb737",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Mapped types.",
-  "question": "What is the result for { a: 1 }?\n\n```ts\ntype Keys<T> = { [K in keyof T]: K };\ntype R = Keys<{ a: 1 }>;\n```",
-  "options": [
-   "{ a: 1 }",
-   "{ a: \"a\" }",
-   "{ a: number }",
-   "never"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Each value becomes the key’s name, so a maps to \"a\".",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Jaký je výsledek pro { a: 1 }?\n\n```ts\ntype Keys<T> = { [K in keyof T]: K };\ntype R = Keys<{ a: 1 }>;\n```",
-   "options": [
-    "{ a: 1 }",
-    "{ a: \"a\" }",
-    "{ a: number }",
-    "never"
-   ],
-   "explanation": "Každá hodnota se stane názvem klíče, takže a se mapuje na \"a\".",
-   "csHash": "57eb0c09da5ac499"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-169",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 22,
-  "levelTitle": "Conditional Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Conditional types"
-  ],
-  "contentHash": "58e4e1efbd26a0e6",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Conditional types.",
-  "question": "What is R?\n\n```ts\ntype IsString<T> = T extends string ? \"yes\" : \"no\";\ntype R = IsString<string>;\n```",
-  "options": [
-   "\"yes\"",
-   "\"no\"",
-   "boolean",
-   "never"
-  ],
-  "correctAnswer": 0,
-  "explanation": "string extends string is true, so R is the \"yes\" branch.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype IsString<T> = T extends string ? \"yes\" : \"no\";\ntype R = IsString<string>;\n```",
-   "options": [
-    "\"yes\"",
-    "\"no\"",
-    "boolean",
-    "never"
-   ],
-   "explanation": "string extends string je true, takže R je větev \"yes\".",
-   "csHash": "5bf71d3d59aa2072"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-170",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 22,
-  "levelTitle": "Conditional Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Conditional types"
-  ],
-  "contentHash": "af255b2021e011f3",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Conditional types.",
-  "question": "What is R?\n\n```ts\ntype IsString<T> = T extends string ? \"yes\" : \"no\";\ntype R = IsString<number>;\n```",
-  "options": [
-   "\"yes\"",
-   "\"no\"",
-   "boolean",
-   "never"
-  ],
-  "correctAnswer": 1,
-  "explanation": "number does not extend string, so R is the \"no\" branch.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype IsString<T> = T extends string ? \"yes\" : \"no\";\ntype R = IsString<number>;\n```",
-   "options": [
-    "\"yes\"",
-    "\"no\"",
-    "boolean",
-    "never"
-   ],
-   "explanation": "number nesplňuje extends string, takže R je větev \"no\".",
-   "csHash": "4855942426438e6c"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-171",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 22,
-  "levelTitle": "Conditional Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Conditional types",
-   "Distributive"
-  ],
-  "contentHash": "63e7d27afae79745",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Distributive.",
-  "question": "What is R?\n\n```ts\ntype NonNull<T> = T extends null | undefined ? never : T;\ntype R = NonNull<string | null>;\n```",
-  "options": [
-   "string",
-   "never",
-   "null",
-   "string | null"
-  ],
-  "correctAnswer": 0,
-  "explanation": "The conditional distributes over the union, dropping null and leaving string.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype NonNull<T> = T extends null | undefined ? never : T;\ntype R = NonNull<string | null>;\n```",
-   "options": [
-    "string",
-    "never",
-    "null",
-    "string | null"
-   ],
-   "explanation": "Podmíněný typ se distribuuje přes union, vypustí null a ponechá string.",
-   "csHash": "5c24ef14813b6580"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "absolute/test-taking language in stem",
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-172",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 22,
-  "levelTitle": "Conditional Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Conditional types",
-   "infer"
-  ],
-  "contentHash": "8840bad44c985821",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on infer.",
-  "question": "What is R?\n\n```ts\ntype Flatten<T> = T extends Array<infer U> ? U : T;\ntype R = Flatten<number[]>;\n```",
-  "options": [
-   "number[]",
-   "number",
-   "Array",
-   "never"
-  ],
-  "correctAnswer": 1,
-  "explanation": "infer U captures the element type of number[], so R is number.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype Flatten<T> = T extends Array<infer U> ? U : T;\ntype R = Flatten<number[]>;\n```",
-   "options": [
-    "number[]",
-    "number",
-    "Array",
-    "never"
-   ],
-   "explanation": "infer U zachytí typ prvku number[], takže R je number.",
-   "csHash": "4c3d6b3c6d980834"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-173",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 22,
-  "levelTitle": "Conditional Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Conditional types"
-  ],
-  "contentHash": "432c9f304921e475",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Conditional types.",
-  "question": "What is T?\n\n```ts\ntype T = 1 extends number ? true : false;\n```",
-  "options": [
-   "true",
-   "false",
-   "boolean",
-   "never"
-  ],
-  "correctAnswer": 0,
-  "explanation": "The literal 1 extends number, so T is true.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype T = 1 extends number ? true : false;\n```",
-   "options": [
-    "true",
-    "false",
-    "boolean",
-    "never"
-   ],
-   "explanation": "Literál 1 splňuje extends number, takže T je true.",
-   "csHash": "9043c47eba500ceb"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-174",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 22,
-  "levelTitle": "Conditional Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Conditional types"
-  ],
-  "contentHash": "9391e1d768a5ff29",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Conditional types.",
-  "question": "What is T?\n\n```ts\ntype T = string extends number ? \"a\" : \"b\";\n```",
-  "options": [
-   "\"a\"",
-   "\"b\"",
-   "never",
-   "boolean"
-  ],
-  "correctAnswer": 1,
-  "explanation": "string does not extend number, so T is the \"b\" branch.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype T = string extends number ? \"a\" : \"b\";\n```",
-   "options": [
-    "\"a\"",
-    "\"b\"",
-    "never",
-    "boolean"
-   ],
-   "explanation": "string nesplňuje extends number, takže T je větev \"b\".",
-   "csHash": "bbf20f0314d323bc"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-175",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 22,
-  "levelTitle": "Conditional Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Conditional types",
-   "Distributive"
-  ],
-  "contentHash": "c7c6219584886749",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Distributive.",
-  "question": "What is R?\n\n```ts\ntype Without<T, U> = T extends U ? never : T;\ntype R = Without<\"a\" | \"b\", \"a\">;\n```",
-  "options": [
-   "\"a\"",
-   "\"b\"",
-   "never",
-   "\"a\" | \"b\""
-  ],
-  "correctAnswer": 1,
-  "explanation": "Distributing over the union removes \"a\", leaving \"b\".",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype Without<T, U> = T extends U ? never : T;\ntype R = Without<\"a\" | \"b\", \"a\">;\n```",
-   "options": [
-    "\"a\"",
-    "\"b\"",
-    "never",
-    "\"a\" | \"b\""
-   ],
-   "explanation": "Distribuce přes union odstraní \"a\" a ponechá \"b\".",
-   "csHash": "37e23824abcc5845"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "absolute/test-taking language in stem",
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-176",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 22,
-  "levelTitle": "Conditional Types",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Conditional types"
-  ],
-  "contentHash": "41bc072c7903df92",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Conditional types.",
-  "question": "What is T?\n\n```ts\ntype T = [] extends { length: number } ? 1 : 0;\n```",
-  "options": [
-   "0",
-   "1",
-   "never",
-   "boolean"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Arrays have a numeric length, so [] extends { length: number } is true → 1.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype T = [] extends { length: number } ? 1 : 0;\n```",
-   "options": [
-    "0",
-    "1",
-    "never",
-    "boolean"
-   ],
-   "explanation": "Pole mají číselnou length, takže [] extends { length: number } je true → 1.",
-   "csHash": "97dbbbe7bd8ed1fb"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-177",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 23,
-  "levelTitle": "infer",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "infer"
-  ],
-  "contentHash": "055aba86ac2bd637",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on infer.",
-  "question": "What is R?\n\n```ts\ntype ElementType<T> = T extends (infer U)[] ? U : never;\ntype R = ElementType<string[]>;\n```",
-  "options": [
-   "string[]",
-   "string",
-   "never",
-   "U"
-  ],
-  "correctAnswer": 1,
-  "explanation": "infer U binds to the array’s element type, string.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype ElementType<T> = T extends (infer U)[] ? U : never;\ntype R = ElementType<string[]>;\n```",
-   "options": [
-    "string[]",
-    "string",
-    "never",
-    "U"
-   ],
-   "explanation": "infer U se naváže na typ prvku pole, string.",
-   "csHash": "929c1e5d09828a0d"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "absolute/test-taking language in stem",
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-178",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 23,
-  "levelTitle": "infer",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "infer"
-  ],
-  "contentHash": "c34757056bd97021",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on infer.",
-  "question": "What is R?\n\n```ts\ntype ReturnTypeOf<T> = T extends (...args: any[]) => infer R ? R : never;\ntype R = ReturnTypeOf<() => number>;\n```",
-  "options": [
-   "number",
-   "void",
-   "never",
-   "() => number"
-  ],
-  "correctAnswer": 0,
-  "explanation": "infer R captures the function’s return type, number.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype ReturnTypeOf<T> = T extends (...args: any[]) => infer R ? R : never;\ntype R = ReturnTypeOf<() => number>;\n```",
-   "options": [
-    "number",
-    "void",
-    "never",
-    "() => number"
-   ],
-   "explanation": "infer R zachytí návratový typ funkce, number.",
-   "csHash": "24d74c4a8b0004b2"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "absolute/test-taking language in stem",
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-179",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 23,
-  "levelTitle": "infer",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "infer"
-  ],
-  "contentHash": "dab77592cd2adac6",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on infer.",
-  "question": "What is R?\n\n```ts\ntype Unwrap<T> = T extends Promise<infer U> ? U : T;\ntype R = Unwrap<Promise<string>>;\n```",
-  "options": [
-   "Promise<string>",
-   "string",
-   "never",
-   "U"
-  ],
-  "correctAnswer": 1,
-  "explanation": "infer U extracts the value inside the Promise, string.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype Unwrap<T> = T extends Promise<infer U> ? U : T;\ntype R = Unwrap<Promise<string>>;\n```",
-   "options": [
-    "Promise<string>",
-    "string",
-    "never",
-    "U"
-   ],
-   "explanation": "infer U vytáhne hodnotu uvnitř Promise, string.",
-   "csHash": "d993aa97638499fd"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-180",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 23,
-  "levelTitle": "infer",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "infer",
-   "Tuples"
-  ],
-  "contentHash": "c7f7e437c7bb46cd",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Tuples.",
-  "question": "What is R?\n\n```ts\ntype First<T> = T extends [infer F, ...any[]] ? F : never;\ntype R = First<[1, 2, 3]>;\n```",
-  "options": [
-   "1",
-   "[1, 2, 3]",
-   "number",
-   "never"
-  ],
-  "correctAnswer": 0,
-  "explanation": "infer F captures the first tuple element, the literal 1.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype First<T> = T extends [infer F, ...any[]] ? F : never;\ntype R = First<[1, 2, 3]>;\n```",
-   "options": [
-    "1",
-    "[1, 2, 3]",
-    "number",
-    "never"
-   ],
-   "explanation": "infer F zachytí první prvek n-tice (tuple), literál 1.",
-   "csHash": "0ada4a796f5973d2"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "absolute/test-taking language in stem",
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-181",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 23,
-  "levelTitle": "infer",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "infer",
-   "Tuples"
-  ],
-  "contentHash": "41df1982ef3f8573",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Tuples.",
-  "question": "What is R?\n\n```ts\ntype Last<T> = T extends [...any[], infer L] ? L : never;\ntype R = Last<[1, 2, 3]>;\n```",
-  "options": [
-   "1",
-   "3",
-   "number",
-   "never"
-  ],
-  "correctAnswer": 1,
-  "explanation": "infer L captures the last tuple element, 3.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype Last<T> = T extends [...any[], infer L] ? L : never;\ntype R = Last<[1, 2, 3]>;\n```",
-   "options": [
-    "1",
-    "3",
-    "number",
-    "never"
-   ],
-   "explanation": "infer L zachytí poslední prvek n-tice (tuple), 3.",
-   "csHash": "6f744eb0d23524cb"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "absolute/test-taking language in stem",
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-182",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 23,
-  "levelTitle": "infer",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "infer"
-  ],
-  "contentHash": "5d31d6a54df45292",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on infer.",
-  "question": "What is R?\n\n```ts\ntype Arg<T> = T extends (a: infer A) => any ? A : never;\ntype R = Arg<(x: string) => void>;\n```",
-  "options": [
-   "string",
-   "void",
-   "never",
-   "x"
-  ],
-  "correctAnswer": 0,
-  "explanation": "infer A captures the parameter type, string.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype Arg<T> = T extends (a: infer A) => any ? A : never;\ntype R = Arg<(x: string) => void>;\n```",
-   "options": [
-    "string",
-    "void",
-    "never",
-    "x"
-   ],
-   "explanation": "infer A zachytí typ parametru, string.",
-   "csHash": "f5ba68b886930ad4"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-183",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "absolute/test-taking language in stem",
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-183",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 23,
-  "levelTitle": "infer",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "infer",
-   "Conditional types"
-  ],
-  "contentHash": "6b5c9970c2781f84",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Conditional types.",
-  "question": "What is R?\n\n```ts\ntype Unwrap<T> = T extends Promise<infer U> ? U : T;\ntype R = Unwrap<number>;\n```",
-  "options": [
-   "number",
-   "never",
-   "Promise<number>",
-   "U"
-  ],
-  "correctAnswer": 0,
-  "explanation": "number is not a Promise, so the conditional falls through to T, which is number.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype Unwrap<T> = T extends Promise<infer U> ? U : T;\ntype R = Unwrap<number>;\n```",
-   "options": [
-    "number",
-    "never",
-    "Promise<number>",
-    "U"
-   ],
-   "explanation": "number není Promise, takže podmíněný typ propadne na T, což je number.",
-   "csHash": "f06df585d32b59b8"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-184",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-184",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 23,
-  "levelTitle": "infer",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "infer"
-  ],
-  "contentHash": "ef0e1503fef14b09",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on infer.",
-  "question": "What is R?\n\n```ts\ntype Inner<T> = T extends Array<Array<infer U>> ? U : never;\ntype R = Inner<number[][]>;\n```",
-  "options": [
-   "number[][]",
-   "number[]",
-   "number",
-   "never"
-  ],
-  "correctAnswer": 2,
-  "explanation": "number[][] is Array<Array<number>>, so infer U captures number.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype Inner<T> = T extends Array<Array<infer U>> ? U : never;\ntype R = Inner<number[][]>;\n```",
-   "options": [
-    "number[][]",
-    "number[]",
-    "number",
-    "never"
-   ],
-   "explanation": "number[][] je Array<Array<number>>, takže infer U zachytí number.",
-   "csHash": "cd728a487354245f"
-  },
-  "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-199"
-  ],
-  "automatedFlags": [
-   "absolute/test-taking language in stem",
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-185",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 24,
-  "levelTitle": "Template Literals",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Template literals"
-  ],
-  "contentHash": "49dcacaa7257ac19",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Template literals.",
-  "question": "What happens?\n\n```ts\ntype Greeting = `Hello, ${string}`;\nconst g: Greeting = \"Hello, World\";\n```",
-  "options": [
-   "Type error",
-   "Compiles",
-   "Runtime error",
-   "g is string"
-  ],
-  "correctAnswer": 1,
-  "explanation": "\"Hello, World\" matches the template pattern `Hello, ${string}`.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype Greeting = `Hello, ${string}`;\nconst g: Greeting = \"Hello, World\";\n```",
-   "options": [
-    "Chyba typu",
-    "Zkompiluje se",
-    "Chyba za běhu",
-    "g je string"
-   ],
-   "explanation": "\"Hello, World\" odpovídá template vzoru `Hello, ${string}`.",
-   "csHash": "1dfcb78a152fef10"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-186",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 24,
-  "levelTitle": "Template Literals",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Template literals"
-  ],
-  "contentHash": "a10e46587822d8ab",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Template literals.",
-  "question": "What is T?\n\n```ts\ntype T = `on${\"Click\" | \"Hover\"}`;\n```",
-  "options": [
-   "\"onClick\" | \"onHover\"",
-   "\"onClickHover\"",
-   "string",
-   "\"on\""
-  ],
-  "correctAnswer": 0,
-  "explanation": "The template distributes over the union, producing \"onClick\" | \"onHover\".",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype T = `on${\"Click\" | \"Hover\"}`;\n```",
-   "options": [
-    "\"onClick\" | \"onHover\"",
-    "\"onClickHover\"",
-    "string",
-    "\"on\""
-   ],
-   "explanation": "Template se distribuuje přes union a vyprodukuje \"onClick\" | \"onHover\".",
-   "csHash": "84aa82a3ea825587"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-187",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 24,
-  "levelTitle": "Template Literals",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Template literals"
-  ],
-  "contentHash": "fdabebd0c5565deb",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Template literals.",
-  "question": "What happens?\n\n```ts\ntype Greeting = `Hi ${string}`;\nconst g: Greeting = \"Bye there\";\n```",
-  "options": [
-   "Compiles",
-   "Type error",
-   "Runtime error",
-   "g is \"Bye there\""
-  ],
-  "correctAnswer": 1,
-  "explanation": "\"Bye there\" does not start with \"Hi \", so it fails the template type.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype Greeting = `Hi ${string}`;\nconst g: Greeting = \"Bye there\";\n```",
-   "options": [
-    "Zkompiluje se",
-    "Chyba typu",
-    "Chyba za běhu",
-    "g je \"Bye there\""
-   ],
-   "explanation": "\"Bye there\" nezačíná na \"Hi \", takže neprojde template typem.",
-   "csHash": "2d31c08423434278"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
-  "csDriftFlags": [
-   "code-like option 3 differs: EN 'g is \"Bye there\"' vs CS 'g je \"Bye there\"'"
-  ]
- },
- {
-  "id": "rm-ts-188",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 24,
-  "levelTitle": "Template Literals",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Template literals"
-  ],
-  "contentHash": "ee0110ca9d026b17",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Template literals.",
-  "question": "What is Class?\n\n```ts\ntype Size = \"sm\" | \"lg\";\ntype Class = `btn-${Size}`;\n```",
-  "options": [
-   "\"btn-sm\" | \"btn-lg\"",
-   "\"btn-Size\"",
-   "string",
-   "\"btn-\""
-  ],
-  "correctAnswer": 0,
-  "explanation": "The template substitutes each union member, giving \"btn-sm\" | \"btn-lg\".",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je Class?\n\n```ts\ntype Size = \"sm\" | \"lg\";\ntype Class = `btn-${Size}`;\n```",
-   "options": [
-    "\"btn-sm\" | \"btn-lg\"",
-    "\"btn-Size\"",
-    "string",
-    "\"btn-\""
-   ],
-   "explanation": "Template dosadí každý člen unionu a dá \"btn-sm\" | \"btn-lg\".",
-   "csHash": "4cf2ae99471fe3e8"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-189",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 24,
-  "levelTitle": "Template Literals",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Template literals"
-  ],
-  "contentHash": "1a4d710c55529ed2",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Template literals.",
-  "question": "What is T?\n\n```ts\ntype T = Uppercase<\"hello\">;\n```",
-  "options": [
-   "\"hello\"",
-   "\"HELLO\"",
-   "\"Hello\"",
-   "string"
-  ],
-  "correctAnswer": 1,
-  "explanation": "The Uppercase intrinsic produces \"HELLO\".",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype T = Uppercase<\"hello\">;\n```",
-   "options": [
-    "\"hello\"",
-    "\"HELLO\"",
-    "\"Hello\"",
-    "string"
-   ],
-   "explanation": "Vestavěný Uppercase vyprodukuje \"HELLO\".",
-   "csHash": "888b23211e75f281"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)",
-   "duplicate options"
-  ]
- },
- {
-  "id": "rm-ts-190",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 24,
-  "levelTitle": "Template Literals",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Template literals"
-  ],
-  "contentHash": "176693175ed62794",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Template literals.",
-  "question": "What is T?\n\n```ts\ntype T = `${1}-${2}`;\n```",
-  "options": [
-   "\"1-2\"",
-   "\"12\"",
-   "\"3\"",
-   "number"
-  ],
-  "correctAnswer": 0,
-  "explanation": "Number literals interpolate into the string \"1-2\".",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype T = `${1}-${2}`;\n```",
-   "options": [
-    "\"1-2\"",
-    "\"12\"",
-    "\"3\"",
-    "number"
-   ],
-   "explanation": "Číselné literály se interpolují do řetězce \"1-2\".",
-   "csHash": "41d3703f2335d53b"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-191",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 24,
-  "levelTitle": "Template Literals",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Template literals"
-  ],
-  "contentHash": "eeab32c496577b37",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Template literals.",
-  "question": "What happens?\n\n```ts\ntype Event = `${string}Changed`;\nconst e: Event = \"valueChanged\";\n```",
-  "options": [
-   "Type error",
-   "Compiles",
-   "Runtime error",
-   "any"
-  ],
-  "correctAnswer": 1,
-  "explanation": "\"valueChanged\" matches the pattern `${string}Changed`.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype Event = `${string}Changed`;\nconst e: Event = \"valueChanged\";\n```",
-   "options": [
-    "Chyba typu",
-    "Zkompiluje se",
-    "Chyba za běhu",
-    "any"
-   ],
-   "explanation": "\"valueChanged\" odpovídá vzoru `${string}Changed`.",
-   "csHash": "f980416afc0a4dde"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-192",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 24,
-  "levelTitle": "Template Literals",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Template literals"
-  ],
-  "contentHash": "d23e50e87203908c",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Template literals.",
-  "question": "What is T?\n\n```ts\ntype T = Capitalize<\"name\">;\n```",
-  "options": [
-   "\"name\"",
-   "\"Name\"",
-   "\"NAME\"",
-   "string"
-  ],
-  "correctAnswer": 1,
-  "explanation": "Capitalize uppercases only the first letter: \"Name\".",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype T = Capitalize<\"name\">;\n```",
-   "options": [
-    "\"name\"",
-    "\"Name\"",
-    "\"NAME\"",
-    "string"
-   ],
-   "explanation": "Capitalize převede na velké písmeno pouze první znak: \"Name\".",
-   "csHash": "5ed8a7a541343951"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)",
-   "duplicate options"
-  ]
- },
- {
-  "id": "rm-ts-193",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 25,
-  "levelTitle": "Mixed Mastery",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Generics",
-   "Mastery"
-  ],
-  "contentHash": "d6b904eda5fe3136",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Mastery.",
-  "question": "What does pluck return?\n\n```ts\nfunction pluck<T, K extends keyof T>(items: T[], key: K): T[K][] {\n  return items.map(i => i[key]);\n}\npluck([{ id: 1 }, { id: 2 }], \"id\");\n```",
-  "options": [
-   "[1, 2]",
-   "number",
-   "[{ id: 1 }, { id: 2 }]",
-   "Error"
-  ],
-  "correctAnswer": 0,
-  "explanation": "It maps each object to its id, returning [1, 2].",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co pluck vrací?\n\n```ts\nfunction pluck<T, K extends keyof T>(items: T[], key: K): T[K][] {\n  return items.map(i => i[key]);\n}\npluck([{ id: 1 }, { id: 2 }], \"id\");\n```",
-   "options": [
-    "[1, 2]",
-    "number",
-    "[{ id: 1 }, { id: 2 }]",
-    "Error"
-   ],
-   "explanation": "Mapuje každý objekt na jeho id a vrací [1, 2].",
-   "csHash": "2fb04184da587eed"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-194",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 25,
-  "levelTitle": "Mixed Mastery",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Mastery"
-  ],
-  "contentHash": "3fd1ea3dc1a838ac",
-  "hint": "Read the code once for control flow, then again for the values that change. Focus on Mastery.",
-  "question": "What happens?\n\n```ts\ntype T = Partial<Record<\"a\" | \"b\", number>>;\nconst x: T = { a: 1 };\n```",
+  "contentHash": "af5263ba1d920db7",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Optional.",
+  "question": "What happens?\n\n```ts\ntype T = { a: number; b?: string };\nconst obj: T = { a: 1, b: undefined };\n```",
   "options": [
    "Type error",
    "Compiles",
@@ -4359,361 +707,1319 @@
    "Runtime error"
   ],
   "correctAnswer": 1,
-  "explanation": "Record requires a and b, but Partial makes both optional, so { a: 1 } compiles.",
+  "explanation": "An optional b accepts undefined, so this compiles.",
   "cs": {
    "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co se stane?\n\n```ts\ntype T = Partial<Record<\"a\" | \"b\", number>>;\nconst x: T = { a: 1 };\n```",
+   "question": "Co se stane?\n\n```ts\ntype T = { a: number; b?: string };\nconst obj: T = { a: 1, b: undefined };\n```",
    "options": [
     "Chyba typu",
     "Zkompiluje se",
     "b je povinné",
     "Chyba za běhu"
    ],
-   "explanation": "Record vyžaduje a a b, ale Partial je oba udělá volitelnými, takže { a: 1 } se zkompiluje.",
-   "csHash": "c478adb1c22923f4"
+   "explanation": "Volitelné b přijímá undefined, takže se to zkompiluje.",
+   "csHash": "38d81b7fefe249f5"
   },
   "automatedFlags": [
    "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
-  "id": "rm-ts-195",
+  "id": "rm-ts-69",
   "delivery": "active",
   "category": "typescript",
   "topic": "typescript",
-  "level": 25,
-  "levelTitle": "Mixed Mastery",
-  "difficulty": 5,
+  "level": 9,
+  "levelTitle": "Optional & Readonly",
+  "difficulty": 2,
   "tags": [
    "Roadmap",
-   "Utility",
-   "Mastery"
+   "Optional"
   ],
-  "contentHash": "747a97d56dd4fbb9",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Mastery.",
-  "question": "What is T?\n\n```ts\ntype T = ReturnType<() => { a: number }>;\n```",
+  "contentHash": "519a3d92cffd0cf2",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Optional.",
+  "question": "What happens?\n\n```ts\ninterface T {\n  a?: number;\n}\nconst x: T = { a: undefined };\n```",
   "options": [
-   "{ a: number }",
-   "number",
-   "void",
-   "never"
-  ],
-  "correctAnswer": 0,
-  "explanation": "ReturnType extracts the function’s return type, { a: number }.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype T = ReturnType<() => { a: number }>;\n```",
-   "options": [
-    "{ a: number }",
-    "number",
-    "void",
-    "never"
-   ],
-   "explanation": "ReturnType vytáhne návratový typ funkce, { a: number }.",
-   "csHash": "ef77ce31d33980cc"
-  },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
-  ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-196",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 25,
-  "levelTitle": "Mixed Mastery",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "as const",
-   "Mastery"
-  ],
-  "contentHash": "f50aeeddb94c36b6",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Mastery.",
-  "question": "What is T?\n\n```ts\nconst tuple = [1, \"two\", true] as const;\ntype T = typeof tuple;\n```",
-  "options": [
-   "(number | string | boolean)[]",
-   "readonly [1, \"two\", true]",
-   "any[]",
-   "[1, \"two\", true]"
+   "Type error",
+   "Compiles",
+   "a is required",
+   "Runtime error"
   ],
   "correctAnswer": 1,
-  "explanation": "as const infers a readonly tuple of the exact literal types.",
+  "explanation": "An optional property accepts undefined.",
   "cs": {
    "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\nconst tuple = [1, \"two\", true] as const;\ntype T = typeof tuple;\n```",
+   "question": "Co se stane?\n\n```ts\ninterface T {\n  a?: number;\n}\nconst x: T = { a: undefined };\n```",
    "options": [
-    "(number | string | boolean)[]",
-    "readonly [1, \"two\", true]",
-    "any[]",
-    "[1, \"two\", true]"
+    "Chyba typu",
+    "Zkompiluje se",
+    "a je povinné",
+    "Chyba za běhu"
    ],
-   "explanation": "as const odvodí readonly n-tici (tuple) přesných literálových typů.",
-   "csHash": "db0206ac9af95656"
+   "explanation": "Volitelná vlastnost přijímá undefined.",
+   "csHash": "1471602214f7f4f6"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-70",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 9,
+  "levelTitle": "Optional & Readonly",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Optional"
+  ],
+  "contentHash": "fdd53a753eaf0715",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Optional.",
+  "question": "What does f() return?\n\n```ts\nfunction f(a?: number) {\n  return a;\n}\nf();\n```",
+  "options": [
+   "0",
+   "undefined",
+   "Error",
+   "null"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A missing optional argument is undefined, which is returned.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co vrátí f()?\n\n```ts\nfunction f(a?: number) {\n  return a;\n}\nf();\n```",
+   "options": [
+    "0",
+    "undefined",
+    "Error",
+    "null"
+   ],
+   "explanation": "Chybějící volitelný argument je undefined, který se vrátí.",
+   "csHash": "f8732a59ab6e3c6a"
   },
   "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-197",
-   "rm-ts-200",
-   "rm-ts-32"
+   "rm-js-71",
+   "rm-ts-117",
+   "rm-ts-47",
+   "rm-ts-67",
+   "rm-ts-78",
+   "rm-ts-84",
+   "rm-ts-90"
   ],
   "automatedFlags": [
    "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
-  "id": "rm-ts-197",
+  "id": "rm-ts-71",
   "delivery": "active",
   "category": "typescript",
   "topic": "typescript",
-  "level": 25,
-  "levelTitle": "Mixed Mastery",
-  "difficulty": 5,
+  "level": 9,
+  "levelTitle": "Optional & Readonly",
+  "difficulty": 2,
   "tags": [
    "Roadmap",
-   "Utility",
-   "Mastery"
+   "readonly",
+   "Arrays"
   ],
-  "contentHash": "10ce69d332949cec",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Mastery.",
-  "question": "What is T?\n\n```ts\ntype T = Partial<Pick<{ a: number; b: string }, \"a\">>;\n```",
+  "contentHash": "81d9e5b9c1443e0f",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Arrays.",
+  "question": "What happens?\n\n```ts\nconst arr: readonly number[] = [1, 2];\narr.push(3);\n```",
   "options": [
-   "{ a?: number }",
-   "{ a: number }",
-   "{ b?: string }",
+   "Compiles",
+   "Type error",
+   "arr is [1, 2, 3]",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "readonly arrays have no push method, so this is a type error.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\nconst arr: readonly number[] = [1, 2];\narr.push(3);\n```",
+   "options": [
+    "Zkompiluje se",
+    "Chyba typu",
+    "arr je [1, 2, 3]",
+    "Chyba za běhu"
+   ],
+   "explanation": "readonly pole nemají metodu push, takže jde o chybu typu.",
+   "csHash": "6df47da285de5693"
+  },
+  "csDriftFlags": [
+   "code-like option 2 differs: EN 'arr is [1, 2, 3]' vs CS 'arr je [1, 2, 3]'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-72",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 9,
+  "levelTitle": "Optional & Readonly",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "readonly"
+  ],
+  "contentHash": "d4eb9e620f81a673",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on readonly.",
+  "question": "What happens?\n\n```ts\ninterface P {\n  readonly name: string;\n}\nlet p: P = { name: \"a\" };\np = { name: \"b\" };\n```",
+  "options": [
+   "Type error",
+   "Compiles",
+   "name is locked",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "readonly applies to the property, not the variable, so replacing the whole object is fine.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\ninterface P {\n  readonly name: string;\n}\nlet p: P = { name: \"a\" };\np = { name: \"b\" };\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se",
+    "name je uzamčeno",
+    "Chyba za běhu"
+   ],
+   "explanation": "readonly se vztahuje na vlastnost, ne na proměnnou, takže nahrazení celého objektu je v pořádku.",
+   "csHash": "f06a707a6261e74f"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-73",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 10,
+  "levelTitle": "Type Aliases",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Type aliases"
+  ],
+  "contentHash": "f389c5ac3c4c338d",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Type aliases.",
+  "question": "What happens?\n\n```ts\ntype ID = string;\nconst x: ID = \"abc\";\n```",
+  "options": [
+   "Type error",
+   "Compiles",
+   "x is ID",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "ID is just an alias for string, so a string compiles.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\ntype ID = string;\nconst x: ID = \"abc\";\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se",
+    "x je ID",
+    "Chyba za běhu"
+   ],
+   "explanation": "ID je jen alias pro string, takže se string zkompiluje.",
+   "csHash": "01cddff273fe7dec"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-74",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 10,
+  "levelTitle": "Type Aliases",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Type aliases",
+   "Tuples"
+  ],
+  "contentHash": "456faa9c939cb7cd",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Tuples.",
+  "question": "What happens?\n\n```ts\ntype Pair = [number, number];\nconst p: Pair = [1, 2, 3];\n```",
+  "options": [
+   "Compiles",
+   "Type error",
+   "Ignores 3",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A 2-tuple cannot hold three elements, so this is a type error.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\ntype Pair = [number, number];\nconst p: Pair = [1, 2, 3];\n```",
+   "options": [
+    "Zkompiluje se",
+    "Chyba typu",
+    "Ignoruje 3",
+    "Chyba za běhu"
+   ],
+   "explanation": "2-prvkový tuple nemůže pojmout tři prvky, takže jde o chybu typu.",
+   "csHash": "ca8e929b7702fdf7"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-75",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 10,
+  "levelTitle": "Type Aliases",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Type aliases",
+   "Functions"
+  ],
+  "contentHash": "33e470b4b587556e",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Functions.",
+  "question": "What type is n?\n\n```ts\ntype Callback = (n: number) => void;\nconst cb: Callback = (n) => console.log(n);\n```",
+  "options": [
+   "number",
+   "any",
+   "string",
+   "void"
+  ],
+  "correctAnswer": 0,
+  "explanation": "The alias declares the parameter n as number, so it is inferred there.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Jaký typ má n?\n\n```ts\ntype Callback = (n: number) => void;\nconst cb: Callback = (n) => console.log(n);\n```",
+   "options": [
+    "number",
+    "any",
+    "string",
+    "void"
+   ],
+   "explanation": "Alias deklaruje parametr n jako number, takže se tam odvodí tento typ.",
+   "csHash": "5cddc4f7c9764ce4"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-76",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 10,
+  "levelTitle": "Type Aliases",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Type aliases",
+   "Generics"
+  ],
+  "contentHash": "9d22179308312914",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Generics.",
+  "question": "What happens?\n\n```ts\ntype Nullable<T> = T | null;\nconst x: Nullable<string> = null;\n```",
+  "options": [
+   "Type error",
+   "Compiles",
+   "x is string",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Nullable<string> is string | null, so null is allowed.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\ntype Nullable<T> = T | null;\nconst x: Nullable<string> = null;\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se",
+    "x je string",
+    "Chyba za běhu"
+   ],
+   "explanation": "Nullable<string> je string | null, takže null je povoleno.",
+   "csHash": "deedf26dc68eb957"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-77",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 10,
+  "levelTitle": "Type Aliases",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Type aliases"
+  ],
+  "contentHash": "183e870c573eed93",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Type aliases.",
+  "question": "What happens?\n\n```ts\ntype Age = number;\ntype User = { age: Age; name: string };\nconst u: User = { age: 1, name: \"a\" };\n```",
+  "options": [
+   "Type error",
+   "Compiles",
+   "Runtime error",
+   "any"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Age is an alias for number, so the object satisfies User.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\ntype Age = number;\ntype User = { age: Age; name: string };\nconst u: User = { age: 1, name: \"a\" };\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se",
+    "Chyba za běhu",
+    "any"
+   ],
+   "explanation": "Age je alias pro number, takže objekt splňuje User.",
+   "csHash": "ea9b597f97f4309e"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-78",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 10,
+  "levelTitle": "Type Aliases",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Type aliases",
+   "Functions"
+  ],
+  "contentHash": "8b713eb250ceca1f",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Functions.",
+  "question": "What does f(4) return?\n\n```ts\ntype Fn = (x: number) => number;\nconst f: Fn = x => x + 1;\nf(4);\n```",
+  "options": [
+   "5",
+   "a number",
+   "Error",
+   "undefined"
+  ],
+  "correctAnswer": 0,
+  "explanation": "f adds 1 to its argument: 4 + 1 = 5.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co vrátí f(4)?\n\n```ts\ntype Fn = (x: number) => number;\nconst f: Fn = x => x + 1;\nf(4);\n```",
+   "options": [
+    "5",
+    "číslo",
+    "Error",
+    "undefined"
+   ],
+   "explanation": "f přičte 1 ke svému argumentu: 4 + 1 = 5.",
+   "csHash": "38b88005a44e03e8"
+  },
+  "possibleDuplicates": [
+   "rm-js-71",
+   "rm-ts-70"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-79",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 10,
+  "levelTitle": "Type Aliases",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Type aliases",
+   "Unions"
+  ],
+  "contentHash": "075eb50990a49dd8",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Unions.",
+  "question": "What is U?\n\n```ts\ntype T = string | number;\ntype U = T | boolean;\n```",
+  "options": [
+   "string | number | boolean",
+   "string",
+   "boolean",
    "never"
   ],
   "correctAnswer": 0,
-  "explanation": "Pick keeps a, then Partial makes it optional: { a?: number }.",
+  "explanation": "U expands to the full union string | number | boolean.",
   "cs": {
    "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype T = Partial<Pick<{ a: number; b: string }, \"a\">>;\n```",
+   "question": "Co je U?\n\n```ts\ntype T = string | number;\ntype U = T | boolean;\n```",
    "options": [
-    "{ a?: number }",
-    "{ a: number }",
-    "{ b?: string }",
+    "string | number | boolean",
+    "string",
+    "boolean",
     "never"
    ],
-   "explanation": "Pick ponechá a, poté ji Partial udělá volitelnou: { a?: number }.",
-   "csHash": "ade00f04ddb7e076"
+   "explanation": "U se rozšíří na celý union string | number | boolean.",
+   "csHash": "91a66eeafa2fe6c5"
   },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-200",
-   "rm-ts-32"
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-80",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 10,
+  "levelTitle": "Type Aliases",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "Type aliases",
+   "Recursive"
+  ],
+  "contentHash": "75f9c23358b9b4c1",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Recursive.",
+  "question": "What happens?\n\n```ts\ntype Tree = { value: number; children: Tree[] };\n```",
+  "options": [
+   "Type error",
+   "Valid (recursive alias)",
+   "infinite loop",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Type aliases may reference themselves, enabling recursive structures.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\ntype Tree = { value: number; children: Tree[] };\n```",
+   "options": [
+    "Chyba typu",
+    "Platné (rekurzivní alias)",
+    "nekonečná smyčka",
+    "Chyba za běhu"
+   ],
+   "explanation": "Typové aliasy se mohou odkazovat samy na sebe, což umožňuje rekurzivní struktury.",
+   "csHash": "75fb82f3edc4ab77"
+  },
+  "csDriftFlags": [
+   "code-like option 1 differs: EN 'Valid (recursive alias)' vs CS 'Platné (rekurzivní alias)'"
   ],
   "automatedFlags": [
    "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
-  "id": "rm-ts-198",
+  "id": "rm-ts-81",
   "delivery": "active",
   "category": "typescript",
   "topic": "typescript",
-  "level": 25,
-  "levelTitle": "Mixed Mastery",
-  "difficulty": 5,
+  "level": 11,
+  "levelTitle": "Type Narrowing",
+  "difficulty": 3,
   "tags": [
    "Roadmap",
-   "Generics",
-   "Mastery"
+   "Narrowing"
   ],
-  "contentHash": "f641b3068599c2a2",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Mastery.",
-  "question": "What type is prop({ a: \"x\" }, \"a\")?\n\n```ts\nfunction prop<T, K extends keyof T>(o: T, k: K): T[K] {\n  return o[k];\n}\nprop({ a: \"x\" }, \"a\");\n```",
+  "contentHash": "8c4496858b008c68",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Narrowing.",
+  "question": "What happens?\n\n```ts\nfunction f(x: string | number) {\n  if (typeof x === \"string\") {\n    return x.toUpperCase();\n  }\n  return x.toFixed(2);\n}\n```",
+  "options": [
+   "Type error",
+   "Compiles",
+   "Runtime error",
+   "Returns any"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The typeof check narrows x to string in the if and number after it, so each method call is valid.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\nfunction f(x: string | number) {\n  if (typeof x === \"string\") {\n    return x.toUpperCase();\n  }\n  return x.toFixed(2);\n}\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se",
+    "Chyba za běhu",
+    "Vrací any"
+   ],
+   "explanation": "Kontrola typeof zúží x na string uvnitř if a na number za ním, takže každé volání metody je platné.",
+   "csHash": "5b34b18c1085f2ae"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-82",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 11,
+  "levelTitle": "Type Narrowing",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Narrowing"
+  ],
+  "contentHash": "1a2dc9f73a8bb18a",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Narrowing.",
+  "question": "What is the return type?\n\n```ts\nfunction f(x: string | null) {\n  if (x) {\n    return x.length;\n  }\n  return 0;\n}\n```",
+  "options": [
+   "number",
+   "number | null",
+   "Type error",
+   "string"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Inside the truthy check x is string so length is number, and the other branch returns 0 — both number.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Jaký je návratový typ?\n\n```ts\nfunction f(x: string | null) {\n  if (x) {\n    return x.length;\n  }\n  return 0;\n}\n```",
+   "options": [
+    "number",
+    "number | null",
+    "Chyba typu",
+    "string"
+   ],
+   "explanation": "Uvnitř kontroly truthy je x typu string, takže length je number, a druhá větev vrací 0 — obojí number.",
+   "csHash": "37e900a5c0647b4b"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-83",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 11,
+  "levelTitle": "Type Narrowing",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "unknown",
+   "Narrowing"
+  ],
+  "contentHash": "61347a208e8502d6",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Narrowing.",
+  "question": "What happens?\n\n```ts\nfunction f(x: unknown) {\n  return x.toFixed(2);\n}\n```",
+  "options": [
+   "Compiles",
+   "Type error",
+   "number",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "unknown must be narrowed before use; accessing a method on it directly is a type error.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\nfunction f(x: unknown) {\n  return x.toFixed(2);\n}\n```",
+   "options": [
+    "Zkompiluje se",
+    "Chyba typu",
+    "number",
+    "Chyba za běhu"
+   ],
+   "explanation": "unknown je nutné před použitím zúžit; přístup k metodě přímo na něm je chyba typu.",
+   "csHash": "dbd11a61e2aa2bc4"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-84",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 11,
+  "levelTitle": "Type Narrowing",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Narrowing",
+   "Nullish"
+  ],
+  "contentHash": "287c8702b51f9568",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Nullish.",
+  "question": "What does f(undefined) return?\n\n```ts\nfunction f(x: number | undefined) {\n  return x ?? -1;\n}\nf(undefined);\n```",
+  "options": [
+   "-1",
+   "undefined",
+   "0",
+   "Error"
+  ],
+  "correctAnswer": 0,
+  "explanation": "x is undefined, so ?? returns the fallback -1.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co vrátí f(undefined)?\n\n```ts\nfunction f(x: number | undefined) {\n  return x ?? -1;\n}\nf(undefined);\n```",
+   "options": [
+    "-1",
+    "undefined",
+    "0",
+    "Error"
+   ],
+   "explanation": "x je undefined, takže ?? vrátí náhradní hodnotu -1.",
+   "csHash": "49d4110e300b2136"
+  },
+  "possibleDuplicates": [
+   "rm-js-71",
+   "rm-ts-70"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-85",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 11,
+  "levelTitle": "Type Narrowing",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Narrowing"
+  ],
+  "contentHash": "540e1f965a2c7693",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Narrowing.",
+  "question": "What happens?\n\n```ts\nfunction f(x: string | string[]) {\n  return typeof x === \"string\" ? x : x.join(\",\");\n}\n```",
+  "options": [
+   "Type error",
+   "Compiles",
+   "Runtime error",
+   "any"
+  ],
+  "correctAnswer": 1,
+  "explanation": "typeof narrows x to string or string[], so each branch is valid.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\nfunction f(x: string | string[]) {\n  return typeof x === \"string\" ? x : x.join(\",\");\n}\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se",
+    "Chyba za běhu",
+    "any"
+   ],
+   "explanation": "typeof zúží x na string nebo string[], takže každá větev je platná.",
+   "csHash": "9bdead16f21e9c8c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-86",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 11,
+  "levelTitle": "Type Narrowing",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Narrowing"
+  ],
+  "contentHash": "cd4bba02bd000fe2",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Narrowing.",
+  "question": "What is the return type?\n\n```ts\nfunction f(x?: number) {\n  if (x !== undefined) return x.toFixed();\n  return \"0\";\n}\n```",
+  "options": [
+   "number",
+   "string",
+   "number | string",
+   "Error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Both branches return strings (toFixed gives a string, and \"0\").",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Jaký je návratový typ?\n\n```ts\nfunction f(x?: number) {\n  if (x !== undefined) return x.toFixed();\n  return \"0\";\n}\n```",
+   "options": [
+    "number",
+    "string",
+    "number | string",
+    "Error"
+   ],
+   "explanation": "Obě větve vracejí řetězce (toFixed dává řetězec a \"0\").",
+   "csHash": "914b805470a778e7"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-87",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 11,
+  "levelTitle": "Type Narrowing",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Narrowing",
+   "Non-null"
+  ],
+  "contentHash": "3e29d8ac2c2a5a92",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Non-null.",
+  "question": "What happens?\n\n```ts\nfunction f(x: number | null) {\n  return x!.toFixed();\n}\n```",
+  "options": [
+   "Type error",
+   "Compiles (non-null assertion)",
+   "always safe at runtime",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The ! non-null assertion tells the compiler x is not null, so it compiles.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\nfunction f(x: number | null) {\n  return x!.toFixed();\n}\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se (non-null assertion)",
+    "vždy bezpečné za běhu",
+    "Chyba za běhu"
+   ],
+   "explanation": "Operátor ! (non-null assertion) říká kompilátoru, že x není null, takže se to zkompiluje.",
+   "csHash": "b3103491e0958687"
+  },
+  "csDriftFlags": [
+   "code-like option 1 differs: EN 'Compiles (non-null assertion)' vs CS 'Zkompiluje se (non-null assertion)'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-88",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 11,
+  "levelTitle": "Type Narrowing",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Narrowing"
+  ],
+  "contentHash": "fc20a776d4fde8d7",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Narrowing.",
+  "question": "In the else branch, what is the type of x?\n\n```ts\nfunction f(x: \"a\" | \"b\") {\n  if (x === \"a\") {\n  } else {\n    // here\n  }\n}\n```",
+  "options": [
+   "\"a\"",
+   "\"b\"",
+   "\"a\" | \"b\"",
+   "never"
+  ],
+  "correctAnswer": 1,
+  "explanation": "After ruling out \"a\", x narrows to \"b\" in the else branch.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Jaký typ má x ve větvi else?\n\n```ts\nfunction f(x: \"a\" | \"b\") {\n  if (x === \"a\") {\n  } else {\n    // here\n  }\n}\n```",
+   "options": [
+    "\"a\"",
+    "\"b\"",
+    "\"a\" | \"b\"",
+    "never"
+   ],
+   "explanation": "Po vyloučení \"a\" se x ve větvi else zúží na \"b\".",
+   "csHash": "187c4e82750f30c8"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-89",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 12,
+  "levelTitle": "Type Guards",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Type guards"
+  ],
+  "contentHash": "3d055f3637f0164c",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Type guards.",
+  "question": "What is this an example of?\n\n```ts\nfunction isString(x: unknown): x is string {\n  return typeof x === \"string\";\n}\n```",
+  "options": [
+   "A user-defined type guard",
+   "A class",
+   "A generic",
+   "An error"
+  ],
+  "correctAnswer": 0,
+  "explanation": "The x is string return type makes this a custom type guard the compiler trusts.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Čeho je toto příklad?\n\n```ts\nfunction isString(x: unknown): x is string {\n  return typeof x === \"string\";\n}\n```",
+   "options": [
+    "Uživatelsky definovaný type guard",
+    "Třída",
+    "Generikum",
+    "Chyba"
+   ],
+   "explanation": "Návratový typ x is string z toho dělá vlastní type guard, kterému kompilátor důvěřuje.",
+   "csHash": "cd9b86cca9bdeb89"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-90",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 12,
+  "levelTitle": "Type Guards",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Type guards"
+  ],
+  "contentHash": "5e52bc925cafb026",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Type guards.",
+  "question": "What does f(\"hi\") return?\n\n```ts\nfunction f(x: string | number) {\n  if (Array.isArray(x)) {\n    return \"array\";\n  }\n  return \"not array\";\n}\nf(\"hi\");\n```",
+  "options": [
+   "\"array\"",
+   "\"not array\"",
+   "Error",
+   "undefined"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A string is not an array, so it returns \"not array\".",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co vrátí f(\"hi\")?\n\n```ts\nfunction f(x: string | number) {\n  if (Array.isArray(x)) {\n    return \"array\";\n  }\n  return \"not array\";\n}\nf(\"hi\");\n```",
+   "options": [
+    "\"array\"",
+    "\"not array\"",
+    "Error",
+    "undefined"
+   ],
+   "explanation": "Řetězec není pole, takže vrátí \"not array\".",
+   "csHash": "49fcdc2d8f468ad0"
+  },
+  "possibleDuplicates": [
+   "rm-js-71",
+   "rm-ts-117",
+   "rm-ts-70"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-91",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 12,
+  "levelTitle": "Type Guards",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Type guards",
+   "instanceof"
+  ],
+  "contentHash": "7b2bf62d125d7f6f",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on instanceof.",
+  "question": "What happens?\n\n```ts\nclass Dog {\n  bark() {}\n}\nfunction f(x: unknown) {\n  if (x instanceof Dog) {\n    x.bark();\n    return true;\n  }\n  return false;\n}\n```",
+  "options": [
+   "Type error",
+   "Compiles",
+   "Runtime error",
+   "Always true"
+  ],
+  "correctAnswer": 1,
+  "explanation": "instanceof narrows x to Dog inside the branch, so calling bark() is valid.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\nclass Dog {\n  bark() {}\n}\nfunction f(x: unknown) {\n  if (x instanceof Dog) {\n    x.bark();\n    return true;\n  }\n  return false;\n}\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se",
+    "Chyba za běhu",
+    "Vždy true"
+   ],
+   "explanation": "instanceof zúží x na Dog uvnitř větve, takže volání bark() je platné.",
+   "csHash": "b25955f8a21d4928"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-92",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 12,
+  "levelTitle": "Type Guards",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Type guards",
+   "in"
+  ],
+  "contentHash": "cde02e8f3039ce5d",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on in.",
+  "question": "What happens?\n\n```ts\ntype A = { a: number };\ntype B = { b: number };\nfunction f(x: A | B) {\n  return \"a\" in x ? \"has a\" : \"has b\";\n}\n```",
+  "options": [
+   "Type error",
+   "Compiles",
+   "Runtime error",
+   "Always \"has a\""
+  ],
+  "correctAnswer": 1,
+  "explanation": "The in operator is a valid narrowing check on union members, so this compiles.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\ntype A = { a: number };\ntype B = { b: number };\nfunction f(x: A | B) {\n  return \"a\" in x ? \"has a\" : \"has b\";\n}\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se",
+    "Chyba za běhu",
+    "Vždy \"has a\""
+   ],
+   "explanation": "Operátor in je platná kontrola pro zúžení nad členy unionu, takže se to zkompiluje.",
+   "csHash": "388688013f162b44"
+  },
+  "csDriftFlags": [
+   "code-like option 3 differs: EN 'Always \"has a\"' vs CS 'Vždy \"has a\"'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-93",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 12,
+  "levelTitle": "Type Guards",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Type guards"
+  ],
+  "contentHash": "9d5160869afe4ec5",
+  "hint": "Read the code once for control flow, then again for the values that change. Focus on Type guards.",
+  "question": "After this check, what type is x?\n\n```ts\nif (typeof x === \"number\") {\n  // x here\n}\n```",
   "options": [
    "string",
-   "\"x\"",
-   "T[K]",
-   "any"
-  ],
-  "correctAnswer": 0,
-  "explanation": "T[K] resolves to the type of property a, which is string.",
-  "cs": {
-   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Jaký typ má prop({ a: \"x\" }, \"a\")?\n\n```ts\nfunction prop<T, K extends keyof T>(o: T, k: K): T[K] {\n  return o[k];\n}\nprop({ a: \"x\" }, \"a\");\n```",
-   "options": [
-    "string",
-    "\"x\"",
-    "T[K]",
-    "any"
-   ],
-   "explanation": "T[K] se vyhodnotí na typ vlastnosti a, což je string.",
-   "csHash": "6fdd4cf394dd22e1"
-  },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ]
- },
- {
-  "id": "rm-ts-199",
-  "delivery": "active",
-  "category": "typescript",
-  "topic": "typescript",
-  "level": 25,
-  "levelTitle": "Mixed Mastery",
-  "difficulty": 5,
-  "tags": [
-   "Roadmap",
-   "Utility",
-   "Mastery"
-  ],
-  "contentHash": "5020be1e1057aefa",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Mastery.",
-  "question": "What is R?\n\n```ts\ntype R = ReturnType<() => Promise<number>>;\n```",
-  "options": [
    "number",
-   "Promise<number>",
-   "void",
+   "any",
    "never"
   ],
   "correctAnswer": 1,
-  "explanation": "ReturnType extracts the declared return type, Promise<number>.",
+  "explanation": "typeof \"number\" narrows x to number inside the block.",
   "cs": {
    "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je R?\n\n```ts\ntype R = ReturnType<() => Promise<number>>;\n```",
+   "question": "Jaký typ má x po této kontrole?\n\n```ts\nif (typeof x === \"number\") {\n  // x here\n}\n```",
    "options": [
+    "string",
     "number",
-    "Promise<number>",
-    "void",
+    "any",
     "never"
    ],
-   "explanation": "ReturnType vytáhne deklarovaný návratový typ, Promise<number>.",
-   "csHash": "9e21aa9b27692d8a"
+   "explanation": "typeof \"number\" zúží x na number uvnitř bloku.",
+   "csHash": "1b4cfdb6aee781a3"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-94",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 12,
+  "levelTitle": "Type Guards",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Type guards"
+  ],
+  "contentHash": "26ab0d64dee8c176",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Type guards.",
+  "question": "Is this a valid type guard?\n\n```ts\nfunction isArr(x: unknown): x is unknown[] {\n  return Array.isArray(x);\n}\n```",
+  "options": [
+   "Type error",
+   "Yes, a valid type guard",
+   "runtime only",
+   "Runtime error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The x is unknown[] predicate makes it a custom type guard.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Je toto platný type guard?\n\n```ts\nfunction isArr(x: unknown): x is unknown[] {\n  return Array.isArray(x);\n}\n```",
+   "options": [
+    "Chyba typu",
+    "Ano, platný type guard",
+    "pouze za běhu",
+    "Chyba za běhu"
+   ],
+   "explanation": "Predikát x is unknown[] z toho dělá vlastní type guard.",
+   "csHash": "dc0f555c7cc71ef2"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-95",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 12,
+  "levelTitle": "Type Guards",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Type guards",
+   "instanceof"
+  ],
+  "contentHash": "d015e590871e73f0",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on instanceof.",
+  "question": "What happens?\n\n```ts\nfunction f(x: Date | string) {\n  return x instanceof Date ? x.getFullYear() : x;\n}\n```",
+  "options": [
+   "Type error",
+   "Compiles",
+   "Runtime error",
+   "any"
+  ],
+  "correctAnswer": 1,
+  "explanation": "instanceof narrows x to Date in the first branch, so getFullYear is valid.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\nfunction f(x: Date | string) {\n  return x instanceof Date ? x.getFullYear() : x;\n}\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se",
+    "Chyba za běhu",
+    "any"
+   ],
+   "explanation": "instanceof zúží x na Date v první větvi, takže getFullYear je platné.",
+   "csHash": "6e91106396a61193"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-96",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 12,
+  "levelTitle": "Type Guards",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Type guards",
+   "in"
+  ],
+  "contentHash": "70acf130d413ee7e",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on in.",
+  "question": "What happens?\n\n```ts\nfunction f(x: { a: number } | { b: number }) {\n  return \"a\" in x ? x.a : x.b;\n}\n```",
+  "options": [
+   "Type error",
+   "Compiles",
+   "Runtime error",
+   "any"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The in operator narrows the union, so x.a and x.b are each valid.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co se stane?\n\n```ts\nfunction f(x: { a: number } | { b: number }) {\n  return \"a\" in x ? x.a : x.b;\n}\n```",
+   "options": [
+    "Chyba typu",
+    "Zkompiluje se",
+    "Chyba za běhu",
+    "any"
+   ],
+   "explanation": "Operátor in zúží union, takže x.a i x.b jsou platné.",
+   "csHash": "bd34f00f5fc74a1e"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-97",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 13,
+  "levelTitle": "Enums",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Enums"
+  ],
+  "contentHash": "68d914f5a736db00",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Enums.",
+  "question": "What is Color.Green?\n\n```ts\nenum Color {\n  Red,\n  Green,\n  Blue,\n}\nColor.Green;\n```",
+  "options": [
+   "0",
+   "1",
+   "2",
+   "\"Green\""
+  ],
+  "correctAnswer": 1,
+  "explanation": "Numeric enums auto-number from 0, so Green is 1.",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co je Color.Green?\n\n```ts\nenum Color {\n  Red,\n  Green,\n  Blue,\n}\nColor.Green;\n```",
+   "options": [
+    "0",
+    "1",
+    "2",
+    "\"Green\""
+   ],
+   "explanation": "Číselné enumy (výčty) se automaticky číslují od 0, takže Green je 1.",
+   "csHash": "22b93607e7dee507"
   },
   "possibleDuplicates": [
-   "rm-ts-136",
-   "rm-ts-162",
-   "rm-ts-163",
-   "rm-ts-169",
-   "rm-ts-170",
-   "rm-ts-171",
-   "rm-ts-172",
-   "rm-ts-175",
-   "rm-ts-177",
-   "rm-ts-178",
-   "rm-ts-179",
-   "rm-ts-180",
-   "rm-ts-181",
-   "rm-ts-182",
-   "rm-ts-183",
-   "rm-ts-184"
+   "rm-ts-123"
   ],
   "automatedFlags": [
    "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
-  "id": "rm-ts-200",
+  "id": "rm-ts-98",
   "delivery": "active",
   "category": "typescript",
   "topic": "typescript",
-  "level": 25,
-  "levelTitle": "Mixed Mastery",
-  "difficulty": 5,
+  "level": 13,
+  "levelTitle": "Enums",
+  "difficulty": 3,
   "tags": [
    "Roadmap",
-   "Utility",
-   "Mastery"
+   "Enums"
   ],
-  "contentHash": "6920e1a388408c95",
-  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Mastery.",
-  "question": "What is T?\n\n```ts\ntype T = Record<\"a\", number> & Record<\"b\", string>;\n```",
+  "contentHash": "821a84c348641421",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Enums.",
+  "question": "What is Dir.Down?\n\n```ts\nenum Dir {\n  Up = 1,\n  Down,\n}\nDir.Down;\n```",
   "options": [
-   "{ a: number; b: string }",
-   "{ a: number } | { b: string }",
-   "never",
-   "any"
+   "0",
+   "1",
+   "2",
+   "\"Down\""
   ],
-  "correctAnswer": 0,
-  "explanation": "The intersection combines both records into { a: number; b: string }.",
+  "correctAnswer": 2,
+  "explanation": "Auto-numbering continues from Up = 1, so Down is 2.",
   "cs": {
    "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
-   "question": "Co je T?\n\n```ts\ntype T = Record<\"a\", number> & Record<\"b\", string>;\n```",
+   "question": "Co je Dir.Down?\n\n```ts\nenum Dir {\n  Up = 1,\n  Down,\n}\nDir.Down;\n```",
    "options": [
-    "{ a: number; b: string }",
-    "{ a: number } | { b: string }",
-    "never",
-    "any"
+    "0",
+    "1",
+    "2",
+    "\"Down\""
    ],
-   "explanation": "Průnik (intersection) zkombinuje oba recordy do { a: number; b: string }.",
-   "csHash": "30a7625ded0d0aa3"
+   "explanation": "Automatické číslování pokračuje od Up = 1, takže Down je 2.",
+   "csHash": "16f1aff63fc255cd"
   },
-  "possibleDuplicates": [
-   "rm-ts-122",
-   "rm-ts-126",
-   "rm-ts-127",
-   "rm-ts-141",
-   "rm-ts-145",
-   "rm-ts-146",
-   "rm-ts-150",
-   "rm-ts-161",
-   "rm-ts-173",
-   "rm-ts-174",
-   "rm-ts-176",
-   "rm-ts-186",
-   "rm-ts-189",
-   "rm-ts-190",
-   "rm-ts-192",
-   "rm-ts-195",
-   "rm-ts-196",
-   "rm-ts-197",
-   "rm-ts-32"
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ts-99",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 13,
+  "levelTitle": "Enums",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Enums"
   ],
+  "contentHash": "f1c5b80286e3c76a",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Enums.",
+  "question": "What is Status.Active?\n\n```ts\nenum Status {\n  Active = \"ACTIVE\",\n  Inactive = \"INACTIVE\",\n}\nStatus.Active;\n```",
+  "options": [
+   "0",
+   "\"Active\"",
+   "\"ACTIVE\"",
+   "1"
+  ],
+  "correctAnswer": 2,
+  "explanation": "A string enum member holds its assigned string, \"ACTIVE\".",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co je Status.Active?\n\n```ts\nenum Status {\n  Active = \"ACTIVE\",\n  Inactive = \"INACTIVE\",\n}\nStatus.Active;\n```",
+   "options": [
+    "0",
+    "\"Active\"",
+    "\"ACTIVE\"",
+    "1"
+   ],
+   "explanation": "Člen řetězcového enumu (výčtu) drží svůj přiřazený řetězec, \"ACTIVE\".",
+   "csHash": "31f7c6bb815e0a52"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)",
+   "duplicate options"
+  ]
+ },
+ {
+  "id": "rm-ts-100",
+  "delivery": "active",
+  "category": "typescript",
+  "topic": "typescript",
+  "level": 13,
+  "levelTitle": "Enums",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Enums"
+  ],
+  "contentHash": "1ec56c38640cc351",
+  "hint": "Trace the code one line at a time. Write down each value before choosing. Focus on Enums.",
+  "question": "What is E[0]?\n\n```ts\nenum E {\n  A,\n  B,\n  C,\n}\nE[0];\n```",
+  "options": [
+   "0",
+   "\"A\"",
+   "\"B\"",
+   "undefined"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Numeric enums get a reverse mapping, so E[0] is the name \"A\".",
+  "cs": {
+   "hint": "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
+   "question": "Co je E[0]?\n\n```ts\nenum E {\n  A,\n  B,\n  C,\n}\nE[0];\n```",
+   "options": [
+    "0",
+    "\"A\"",
+    "\"B\"",
+    "undefined"
+   ],
+   "explanation": "Číselné enumy (výčty) získávají reverzní mapování, takže E[0] je název \"A\".",
+   "csHash": "55f2a2e7ef9e8639"
+  },
   "automatedFlags": [
    "hint is the generic shape-based fallback (not question-specific)"
   ]

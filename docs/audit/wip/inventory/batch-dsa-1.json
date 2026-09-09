@@ -1217,15 +1217,15 @@
   "possibleDuplicates": [
    "rm-js-10"
   ],
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code block differs between EN and CS question",
    "code-like option 0 differs: EN '\"dcba\"' vs CS '\"abcd\"'",
    "code-like option 1 differs: EN '\"cdab\"' vs CS '\"ab cd\"'",
    "code-like option 2 differs: EN '[\"d\", \"c\", \"b\", \"a\"]' vs CS '\"cdab\"'",
    "code-like option 3 differs: EN '\"abcd\"' vs CS '\"abc\"'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

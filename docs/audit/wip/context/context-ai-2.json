@@ -1,10 +1,10 @@
 {
  "batch": "ai-2",
  "topic": "ai",
- "items": 80,
+ "items": 54,
  "idRange": [
-  "rm-ai-81",
-  "rm-ai-160"
+  "rm-ai-55",
+  "rm-ai-108"
  ],
  "plansIncludingTopic": [
   "frontend",
@@ -35,16 +35,14 @@
  },
  "audienceAndVerification": "All plans; optional literacy about machine learning and LLMs for a developer who will call model APIs and build with them. Check that claims are current for 2025–2026 practice; cite primary docs (openai/anthropic docs, arXiv, huggingface docs) for versioned claims.",
  "levelsInThisBatch": [
+  7,
+  8,
+  9,
+  10,
   11,
   12,
   13,
-  14,
-  15,
-  16,
-  17,
-  18,
-  19,
-  20
+  14
  ],
  "note": "difficulty 1 = levels 1-5, 2 = 6-10, 3 = 11-15, 4 = 16-20, 5 = 21-25. Items with `possibleDuplicates` pointing outside this batch: judge on this item alone but mention the id."
 }

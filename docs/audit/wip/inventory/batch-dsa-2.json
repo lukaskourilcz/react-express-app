@@ -642,11 +642,11 @@
    "explanation": "Stabilní řazení zachovává prvky se stejnou hodnotou v jejich původním relativním pořadí.",
    "csHash": "c402830c68ea2e7d"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 3 differs: EN 'Runs in O(n)' vs CS 'Běží v O(n)'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -725,11 +725,11 @@
    "explanation": "Standardní in-place quicksort může přeházet stejné prvky, takže obecně není stabilní; merge sort stabilní je.",
    "csHash": "851fbe7c6a76a753"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 3 differs: EN 'O(n) time' vs CS 'O(n) čas'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -2052,11 +2052,11 @@
    "explanation": "Postup sestavení haldy zdola nahoru běží v O(n), což je těsnější než vkládání n prvků jednoho po druhém.",
    "csHash": "9b1fb13b0fb3ffae"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 2 differs: EN 'O(n log n) only' vs CS 'Pouze O(n log n)'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

@@ -721,15 +721,15 @@
    "explanation": "Kořenový layout musí povinně definovat <html> a <body>.",
    "csHash": "73889b65210837e3"
   },
-  "automatedFlags": [
-   "time-sensitive wording: verify against a dated primary source",
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '`<head><main>{children}</main></head>`' vs CS 'pouze div'",
    "code-like option 1 differs: EN '`<html><body><main>{children}</main></body></html>`' vs CS 'tagy <html> a <body>'",
    "code-like option 2 differs: EN '`<body><main>{children}</main></body>`' vs CS 'nic'",
    "code-like option 3 differs: EN '`<html><main>{children}</main></html>`' vs CS 'pouze <head>'"
+  ],
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1013,11 +1013,11 @@
    "explanation": "Komponenta <Link> z next/link umožňuje rychlé klientské přechody s prefetchem.",
    "csHash": "56d4f7366bc5c433"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 2 differs: EN 'a <Router>' vs CS '<Router>'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1379,11 +1379,11 @@
    "explanation": "Umístěním \"use client\" na začátek souboru jej (i jeho importy) označíte jako klientský kód.",
    "csHash": "9b355629efd64194"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'Put `\"use client\"` at the top of the module' vs CS 'přidáte na začátek direktivu \"use client\"'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1743,14 +1743,14 @@
    "explanation": "cache: \"force-cache\" uloží výsledek, takže opakované požadavky jej znovu použijí.",
    "csHash": "d2a3a0bf546745a3"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '`{ cache: \"no-store\" }`' vs CS '{ cache: \"no-store\" }'",
    "code-like option 1 differs: EN '`{ cache: \"force-cache\" }`' vs CS '{ cache: \"force-cache\" }'",
    "code-like option 2 differs: EN '`{ next: { revalidate: 0 } }`' vs CS '{ revalidate: 0 }'",
    "code-like option 3 differs: EN '`{ cache: \"reload\" }`' vs CS 'nic'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1789,14 +1789,14 @@
    "explanation": "cache: \"no-store\" způsobí, že se fetch při každém požadavku provede znovu.",
    "csHash": "5fb6e40377333fea"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '`{ cache: \"force-cache\" }`' vs CS '{ cache: \"force-cache\" }'",
    "code-like option 1 differs: EN '`{ cache: \"no-store\" }`' vs CS '{ cache: \"no-store\" }'",
    "code-like option 2 differs: EN '`{ next: { revalidate: 3600 } }`' vs CS '{ revalidate: true }'",
    "code-like option 3 differs: EN '`{ cache: \"only-if-cached\" }`' vs CS 'nic'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -2196,12 +2196,12 @@
    "explanation": "Parametry route jsou vždy řetězce.",
    "csHash": "860d586aa08b9bb1"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '42 (a number)' vs CS '42 (číslo)'",
    "code-like option 1 differs: EN '\"42\" (a string)' vs CS '\"42\" (řetězec)'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -2240,11 +2240,11 @@
    "explanation": "Next.js předává objekt params stránce a layoutu daného segmentu.",
    "csHash": "cbffcbfc2bd561e3"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'the `params` prop' vs CS 'prop `params`'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -2283,12 +2283,12 @@
    "explanation": "Stránky Server Component dostávají pro query string prop `searchParams`.",
    "csHash": "50403fd8220c236f"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN 'use the `searchParams` prop' vs CS 'použijete prop `searchParams`'",
    "code-like option 2 differs: EN 'useSearchParams (on the server)' vs CS 'useSearchParams (na serveru)'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

@@ -918,11 +918,11 @@
    "explanation": "Pomíjivá, čistá CI prostředí eliminují skryté lokální závislosti, díky čemuž jsou buildy reprodukovatelné.",
    "csHash": "af04f8f60df6a166"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '\"Works on my machine\" bugs' vs CS 'Chyby typu „u mě to funguje“'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1697,11 +1697,11 @@
    "explanation": "Kontejnery balí závislosti, takže stejný image běží všude stejně, čímž odpadá rozdíl mezi prostředími.",
    "csHash": "0fc5a72dadc5dc0b"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '\"Works on my machine\" problems' vs CS 'Problémy typu „u mě to funguje“'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

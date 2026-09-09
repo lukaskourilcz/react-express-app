@@ -30,10 +30,10 @@
    "explanation": "Když se pole/objekty použijí s +, převedou se na stringy. [] se stane \"\" a {} se stane \"[object Object]\". Uvnitř console.log(...) se každý výraz vyhodnocuje v kontextu výrazu, takže {} je objektový literál (ne blok). Proto [] + [] = \"\", [] + {} = \"[object Object]\" a {} + [] = \"[object Object]\" + \"\" = \"[object Object]\".",
    "csHash": "e5f2b2d5057c2613"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "526",
@@ -66,11 +66,11 @@
    "explanation": "var má funkční rozsah, takže všechny tři callbacky sdílejí stejnou proměnnou i. Než se timeouty spustí, smyčka skončí a i je 3. Každý callback vypíše 3. Použití let místo var by to opravilo, protože let má blokový rozsah a vytvoří novou vazbu pro každou iteraci.",
    "csHash": "3d19afcc0871d5aa"
   },
-  "automatedFlags": [
-   "time-sensitive wording: verify against a dated primary source"
-  ],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
+  ],
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source"
   ]
  },
  {
@@ -104,10 +104,10 @@
    "explanation": "Synchronní kód běží první: \"A\" pak \"D\". Microtasky (Promise.then) běží před macrotasky (setTimeout). Takže \"C\" se vypíše před \"B\". Výsledné pořadí: A, D, C, B.",
    "csHash": "06ba39283f2e479c"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "528",
@@ -140,10 +140,10 @@
    "explanation": "Při == se obě strany převedou na čísla. [] se převede na 0 (přes \"\" → 0) a false se převede na 0. Protože 0 == 0 je true, výraz se vyhodnotí jako true. Klasický příklad, proč je === lepší než ==.",
    "csHash": "5782212811341e77"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "529",
@@ -176,11 +176,11 @@
    "explanation": "I když je x deklarováno ve vnějším rozsahu, vnitřní let x = 2 vytvoří novou vazbu pro celý blok funkce. Přístup k x před jeho deklarací uvnitř bloku způsobí ReferenceError kvůli Temporal Dead Zone (TDZ).",
    "csHash": "58a3b998e5893994"
   },
-  "automatedFlags": [
-   "time-sensitive wording: verify against a dated primary source"
-  ],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
+  ],
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source"
   ]
  },
  {
@@ -214,10 +214,10 @@
    "explanation": "typeof null vrací \"object\" — historická chyba v JavaScriptu, která se kvůli zpětné kompatibilitě nikdy neopravila. typeof undefined vrací podle očekávání \"undefined\". typeof NaN vrací \"number\", protože NaN je technicky číselná hodnota (IEEE 754 Not-a-Number).",
    "csHash": "091a87e1d1b4b11b"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "531",
@@ -250,10 +250,10 @@
    "explanation": "Výchozí hodnoty se uplatní jen když je hodnota undefined, ne null nebo jiné falsy hodnoty. a je undefined, takže se použije default 10. b je null (ne undefined), takže zůstane null. c je 0 (ne undefined), takže zůstane 0.",
    "csHash": "b0d8d79640bbc19e"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "532",
@@ -286,10 +286,10 @@
    "explanation": "Krok za krokem: filter ponechá lichá čísla → [1, 3, 5]. map je umocní → [1, 9, 25]. reduce je sečte → 1 + 9 + 25 = 35.",
    "csHash": "91b68eeed6271e10"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "533",
@@ -322,10 +322,10 @@
    "explanation": "Spread operátor vytvoří mělkou kopii. Změna copy.a neovlivní original.a, protože a je primitiv (kopírováno hodnotou). Ale copy.b a original.b odkazují na stejný zanořený objekt, takže změna copy.b.c změní i original.b.c. Výstup: 1, 99.",
    "csHash": "7ef5edf765a583cd"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "534",
@@ -358,11 +358,11 @@
    "explanation": "obj.greet() je běžná funkce volaná na obj, takže this je obj. Vrácená arrow funkce dědí this z greet, takže vypíše \"Alice\". obj.farewell je arrow funkce definovaná při vytvoření objektu, takže this je obklopující rozsah — zde non-module globální objekt, který nemá vlastnost name — takže this.name je undefined.",
    "csHash": "0aa6046f349193ce"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "code block differs between EN and CS question",
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "535",
@@ -395,10 +395,10 @@
    "explanation": "|| vrátí první truthy hodnotu (nebo poslední hodnotu). 0 je falsy, takže se vrátí \"hello\". \"\", 0, null jsou všechny falsy, takže se vrátí \"world\". && vrátí první falsy hodnotu (nebo poslední). 1, 2 jsou truthy, takže se vrátí 3 (poslední). 0 je falsy, takže se okamžitě vrátí 0.",
    "csHash": "86e35b0d5f4d98d7"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "536",
@@ -431,10 +431,10 @@
    "explanation": "\"4\" se vypíše první (synchronně). Zavolá se foo(): \"1\" se vypíše (synchronní část async funkce). await pozastaví foo a vrátí řízení. Vypíše se \"5\". Pak se awaitnutá promise vyřeší: \"2\" pak \"3\". Výsledné pořadí: 4, 1, 5, 2, 3.",
    "csHash": "4db53623b1b3e54a"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "537",
@@ -467,10 +467,10 @@
    "explanation": "null == undefined je podle specifikace true (jsou si volně rovny navzájem a ničemu jinému). null === undefined je false (různé typy). null == 0 je false (null se s == rovná jen undefined). null > 0 je false (null se převede na 0, 0 > 0 je false). null >= 0 je true (null se převede na 0, 0 >= 0 je true). Nesoulad mezi == a >= je známá zvláštnost JavaScriptu.",
    "csHash": "728a810c3d08de70"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "538",
@@ -503,10 +503,10 @@
    "explanation": "str.slice(-6) začíná 6 znaků od konce \"Hello, World!\" (délka 13), což je index 7: \"World!\". str.indexOf(\"o\") najde první \"o\" na indexu 4. str.split(\", \") rozdělí na [\"Hello\", \"World!\"], takže délka je 2.",
    "csHash": "30f2879343f1e886"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "539",
@@ -539,10 +539,10 @@
    "explanation": "Object.entries(obj) vrátí [[\"x\", 1], [\"y\", 2], [\"z\", 3]]. filter ponechá záznamy, kde val > 1: [[\"y\", 2], [\"z\", 3]]. map vytáhne jen klíče: [\"y\", \"z\"].",
    "csHash": "55162e07738f05c3"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "540",
@@ -575,10 +575,10 @@
    "explanation": "Deklarace funkcí se plně hoistují — foo() lze zavolat před deklarací a vrátí \"hello\". var deklarace se hoistují, ale ne jejich přiřazení — bar existuje, ale v okamžiku console.log je undefined. Přiřazení bar = \"world\" proběhne později za běhu.",
    "csHash": "ef00fa962eb6695f"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "541",
@@ -611,11 +611,11 @@
    "explanation": "yield 1 a yield 2 vrátí {value, done: false}. return 3 vrátí {value: 3, done: true} — generátor je nyní hotový. Jakékoli další volání next() vrací {value: undefined, done: true}.",
    "csHash": "aa7c9ea3096fba4e"
   },
-  "automatedFlags": [
-   "time-sensitive wording: verify against a dated primary source"
-  ],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
+  ],
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source"
   ]
  },
  {
@@ -649,11 +649,11 @@
    "explanation": "d.speak() projde prototypový řetězec a najde speak na Dog.prototype, použije d jako this a vrátí \"Rex says woof\". name se v konstruktoru nastaví přímo na d, takže hasOwnProperty(\"name\") je true. speak je na prototypu, ne na d samotném, takže hasOwnProperty(\"speak\") je false.",
    "csHash": "bab425eef40365a7"
   },
-  "automatedFlags": [
-   "time-sensitive wording: verify against a dated primary source"
-  ],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
+  ],
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source"
   ]
  },
  {
@@ -687,11 +687,11 @@
    "explanation": "Set odstraní duplicity, takže [...new Set([1,2,2,3,3,3,4])] dá [1, 2, 3, 4]. Set používá pro porovnání striktní rovnost (===): 1 (number), \"1\" (string) a true (boolean) jsou všechny různé typy, takže velikost je 3.",
    "csHash": "899d764024813602"
   },
-  "automatedFlags": [
-   "time-sensitive wording: verify against a dated primary source"
-  ],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
+  ],
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source"
   ]
  },
  {
@@ -725,10 +725,10 @@
    "explanation": "Optional chaining vrátí undefined, když se řetězec přeruší (user.address je undefined). ?? použije fallback jen pro null/undefined, ne pro jiné falsy hodnoty. Takže 0 ?? \"default\" vrátí 0 (0 není null/undefined) a \"\" ?? \"default\" vrátí \"\" (prázdný string není null/undefined). To se liší od ||, které bere všechny falsy hodnoty jako spouštěč fallbacku.",
    "csHash": "e15265bb48eacac8"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "545",
@@ -766,13 +766,13 @@
    "explanation": "Partial<User> udělá všechny vlastnosti nepovinnými, takže a = {} i b = { id: 1 } jsou platné. Pick<User, \"id\" | \"name\"> vytvoří typ vyžadující jak id, tak name. const c = { id: 1 } postrádá name, což způsobí typovou chybu. const d má obě povinné vlastnosti.",
    "csHash": "c2e046a714d76903"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "code-like option 0 differs: EN 'const a (empty object)' vs CS 'const a (prázdný objekt)'",
    "code-like option 1 differs: EN 'const b (missing fields)' vs CS 'const b (chybějící pole)'",
    "code-like option 2 differs: EN 'const c (missing name)' vs CS 'const c (chybí name)'",
    "code-like option 3 differs: EN 'const d (all present)' vs CS 'const d (vše přítomno)'"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "546",
@@ -805,10 +805,10 @@
    "explanation": "Promise.allSettled počká na dokončení všech promisů bez ohledu na to, zda se vyřeší nebo selžou. Každý výsledek má vlastnost status: \"fulfilled\" pro vyřešené a \"rejected\" pro odmítnuté. Na rozdíl od Promise.all nikdy nezkratuje při rejectu.",
    "csHash": "40594cac8332a60d"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "547",
@@ -841,10 +841,10 @@
    "explanation": "flat() bez argumentu má výchozí hloubku 1 a zploští jednu úroveň: [1, 2, 3, 4, [5, 6]]. flat(Infinity) zploští všechny úrovně: [1, 2, 3, 4, 5, 6]. at(-1) vrátí poslední prvek: 3.",
    "csHash": "e8a51deee96da185"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "548",
@@ -877,11 +877,11 @@
    "explanation": "Map používá pro objektové klíče rovnost odkazů. objKey je stejný odkaz použitý v set i get, takže map.get(objKey) vrátí \"value1\". {} v map.get({}) vytvoří nový objekt (jiný odkaz než ten v set), takže vrátí undefined. Map má 2 záznamy, protože ta dvě {} jsou různé objekty.",
    "csHash": "9df169e8710ce10a"
   },
-  "automatedFlags": [
-   "time-sensitive wording: verify against a dated primary source"
-  ],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
+  ],
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source"
   ]
  },
  {
@@ -915,11 +915,11 @@
    "explanation": "delete odebere vlastnost, ale nezmění délku pole. Po delete arr[2] má pole stále délku 5, ale index 2 je nyní prázdný slot (undefined při čtení). Pole se stane [1, 2, <empty>, 4, 5]. Pro skutečné odebrání prvků a zkrácení pole použij splice().",
    "csHash": "45adacd5b46327be"
   },
-  "automatedFlags": [
-   "time-sensitive wording: verify against a dated primary source"
-  ],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
+  ],
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source"
   ]
  },
  {
@@ -953,10 +953,10 @@
    "explanation": "first dostane 1, second dostane 2 a ...rest sesbírá zbývající argumenty do [3, 4, 5]. arguments.length počítá všechny předané argumenty (5) bez ohledu na počet definovaných parametrů. Pozor: rest je skutečné pole, zatímco arguments je array-like objekt.",
    "csHash": "af525b3646edf2a8"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "551",
@@ -989,10 +989,10 @@
    "explanation": "inner() má vlastní var a (hoistnuté na začátek funkce). a++ inkrementuje hoistnuté-ale-undefined lokální a, čímž vznikne NaN, pak a = 3 ho přiřadí. console.log(a) uvnitř inner vypíše 3. Vnější a (2) je nedotčené, takže console.log v outer vypíše 2. Globální a (1) je nedotčené, takže poslední console.log vypíše 1.",
    "csHash": "306a6587f9e31e51"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "552",
@@ -1025,10 +1025,10 @@
    "explanation": "Každé volání Symbol() vytvoří unikátní symbol, i se stejným popisem. s1 === s2 je false. toString() vrátí popis zabalený jako \"Symbol(id)\". typeof vrátí \"symbol\", což je vlastní primitivní typ.",
    "csHash": "61731ad1bf169880"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "553",
@@ -1061,11 +1061,11 @@
    "explanation": "Proxy zachytí veškerý přístup k vlastnostem přes get trap. U existujících vlastností (a, b) vrátí skutečnou hodnotu. U jakékoli neexistující vlastnosti (c) vrátí výchozí hodnotu 42 místo undefined.",
    "csHash": "fa94b377d1668c1e"
   },
-  "automatedFlags": [
-   "time-sensitive wording: verify against a dated primary source"
-  ],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
+  ],
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source"
   ]
  },
  {
@@ -1099,10 +1099,10 @@
    "explanation": "Když j === 1, continue outer přeskočí zbytek vnitřní smyčky a přejde na další iteraci vnější smyčky. Takže pro každé i (0, 1, 2) inkrementuje count jen j = 0, než j = 1 spustí continue. count se inkrementuje 3×.",
    "csHash": "7007bf23132cecfa"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "555",
@@ -1135,10 +1135,10 @@
    "explanation": "Blok finally se vykoná vždy, a pokud obsahuje return, přepíše jakýkoli předchozí return z try nebo catch. Funkce vrátí \"finally\". To se obecně považuje za špatnou praxi — vyhýbej se return v blocích finally.",
    "csHash": "38a9bc65cd369467"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "756",
@@ -1170,10 +1170,10 @@
    "explanation": "var má funkční rozsah, takže všechny tři callbacky sdílejí stejné i. Smyčka skončí (i se stane 3) dřív, než se spustí jakýkoli setTimeout callback, takže každý vypíše 3.",
    "csHash": "cfefb1515bd4f50a"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "757",
@@ -1205,10 +1205,10 @@
    "explanation": "let má blokový rozsah, takže každá iterace dostane vlastní i. Každý closure zachytí odlišnou vazbu, takže callbacky vypíšou 0, 1, 2.",
    "csHash": "7f4801652febefb2"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "758",
@@ -1240,10 +1240,10 @@
    "explanation": "Deklarace var x se hoistne na začátek rozsahu a inicializuje na undefined. Přiřazení x = 5 proběhne na původním řádku, až po logu.",
    "csHash": "8e54ab76dcf273d3"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "759",
@@ -1275,10 +1275,10 @@
    "explanation": "Na rozdíl od var jsou vazby let v Temporal Dead Zone, dokud se nevyhodnotí jejich deklarace. Přístup k y před deklarací vyhodí ReferenceError.",
    "csHash": "14790d34ac4b7d98"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "760",
@@ -1310,10 +1310,10 @@
    "explanation": "Synchronní kód první: A, D. Pak se vyprázdní fronta microtasků (Promise.then): C. Pak fronta macrotasků: B. Pořadí: A, D, C, B.",
    "csHash": "779e367ddc719031"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "761",
@@ -1345,10 +1345,10 @@
    "explanation": "Sync první: 4. Fronta microtasků běží: 2, což naplánuje další microtask 3, který také proběhne před jakýmkoli macrotaskem. Nakonec macrotask setTimeout: 1.",
    "csHash": "f90210d62cdce48d"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "763",
@@ -1385,10 +1385,10 @@
    "explanation": "parseInt dostane (value, index). parseInt(\"1\", 0) bere radix 0 jako 10 → 1. parseInt(\"2\", 1) je NaN (neplatný radix). parseInt(\"3\", 2) je NaN (\"3\" nemá v základu 2 platnou číslici).",
    "csHash": "324c57ffb6afcf97"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "code-like option 3 differs: EN '[1, 2, 3] as strings' vs CS '[1, 2, 3] jako stringy'"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "764",
@@ -1420,10 +1420,10 @@
    "explanation": "f() běží synchronně až k await a vypíše A. await funkci pozastaví (pokračování zařadí jako microtask). Pak se vypíše C. Nakonec se microtask obnoví a vypíše B.",
    "csHash": "ed4a2b80b48e405c"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "765",
@@ -1529,11 +1529,11 @@
    "explanation": "a.x = 2 nastaví vlastní vlastnost. delete a.x odebere jen vlastní vlastnost. Čtení a.x nyní projde prototypový řetězec a najde A.prototype.x = 1.",
    "csHash": "d9a4c9a57089f55a"
   },
-  "automatedFlags": [
-   "time-sensitive wording: verify against a dated primary source"
-  ],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
+  ],
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source"
   ]
  },
  {
@@ -1566,10 +1566,10 @@
    "explanation": "Výchozí hodnoty při destrukturalizaci se uplatní jen když je vlastnost striktně undefined. Takže a dostane default 10, ale b je null (ne undefined), takže b zůstane null.",
    "csHash": "e3beadc53eb79fbb"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "769",
@@ -1601,10 +1601,10 @@
    "explanation": "Spread a pak b: x=1 z a, y=2 z a je přepsáno y=3 z b, z=4 z b. Výsledek: { x: 1, y: 3, z: 4 }.",
    "csHash": "a893065d534b9cba"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "770",
@@ -1636,10 +1636,10 @@
    "explanation": "Protože obj je null, obj?. zkratuje celý výraz a vrátí undefined, aniž by vyhodnotil .a.b.c.",
    "csHash": "fd6da51069b4655d"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "771",
@@ -1671,10 +1671,10 @@
    "explanation": "První next() yieldne 1; druhý yieldne 2; třetí dosáhne return a vyrobí { value: 3, done: true }. Takže .value těch tří volání je 1, 2, 3.",
    "csHash": "32116cd6e4b571a5"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "772",
@@ -1706,10 +1706,10 @@
    "explanation": "typeof null je historická chyba \"object\". NaN je číselná hodnota, takže typeof NaN je \"number\". Pole jsou objekty, takže typeof [] je \"object\".",
    "csHash": "f2daf58315304fb7"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "773",
@@ -1741,10 +1741,10 @@
    "explanation": "a() vypíše 1, pak zavolá b(), které synchronně vypíše 3 a vrátí vyřešenou promise. await pozastaví a. Sync pokračuje: 4. Microtask obnoví a: 2.",
    "csHash": "b0cefa8e2ad383db"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "774",
@@ -1781,10 +1781,10 @@
    "explanation": "map prázdné sloty zcela přeskočí: callback se pro ně nevolá a díra zůstane i ve výsledku. Pole má stále délku 3 — díry se do length počítají.",
    "csHash": "88806dc769c6e4aa"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "code block differs between EN and CS question"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "775",
@@ -1816,10 +1816,10 @@
    "explanation": "Číselné klíče na běžných objektech se převedou na stringy. o[1] a o[\"1\"] zapisují do stejného klíče, takže druhé přiřazení přepíše první. Je tu 1 klíč a o[1] je \"b\".",
    "csHash": "6644e6732db78e02"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "776",
@@ -1851,10 +1851,10 @@
    "explanation": "Zleva doprava: 1 + \"2\" → \"12\", pak \"12\" + 3 → \"123\". Druhý: 1 + 2 → 3 (obě čísla), pak 3 + \"3\" → \"33\".",
    "csHash": "427d58f0b8966204"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "777",
@@ -1886,11 +1886,11 @@
    "explanation": "IIFE vytvoří nový rozsah pro každou iteraci a zachytí i hodnotou do parametru j. Každý setTimeout uzavírá své vlastní j, takže vypíšou 0, 1, 2.",
    "csHash": "bbb2788af6b96c1b"
   },
-  "automatedFlags": [
-   "time-sensitive wording: verify against a dated primary source"
-  ],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
+  ],
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source"
   ]
  },
  {
@@ -1923,10 +1923,10 @@
    "explanation": "TypeScript zúží x na string ve větvi if, takže \"hello\".length je 5. Ve větvi else je x number, takže 4 + 1 je 5. Výstup: 5 5.",
    "csHash": "35c97b5e8cbe23a7"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "779",
@@ -1958,10 +1958,10 @@
    "explanation": "Sync první: 1, 5. Microtasky v pořadí FIFO: queueMicrotask byl zařazen před Promise.then, takže 3 pak 4. Macrotask poslední: 2.",
    "csHash": "d9070df5084b3b77"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  },
  {
   "id": "780",
@@ -1993,9 +1993,9 @@
    "explanation": "V objektech JSON.stringify vynechá vlastnosti, jejichž hodnoty jsou undefined, funkce nebo symboly. Takže b a c se zahodí a zůstane {\"a\":1,\"d\":\"x\"}.",
    "csHash": "4df29b91dd0308b4"
   },
-  "automatedFlags": [],
   "csDriftFlags": [
    "CS has no options (EN options shown with CS question)"
-  ]
+  ],
+  "automatedFlags": []
  }
 ]

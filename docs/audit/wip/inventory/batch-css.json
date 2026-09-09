@@ -156,14 +156,14 @@
    "explanation": "Prohlížeč nejprve zváží důležitost, pak jak je selektor specifický, a nakonec které pravidlo přišlo jako poslední.",
    "csHash": "34dbfaa79668733f"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '`border`' vs CS 'Velikost a název souboru'",
    "code-like option 1 differs: EN '`color`' vs CS 'Původ/důležitost, pak specificita, pak pořadí ve zdroji'",
    "code-like option 2 differs: EN '`padding`' vs CS 'Abecední pořadí'",
    "code-like option 3 differs: EN '`display`' vs CS 'Náhodná volba'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -365,14 +365,14 @@
    "explanation": "Třídy jsou běžný způsob, jak přiřadit styly: přidej class=\"x\" a napiš pravidlo `.x { }`.",
    "csHash": "dacaacc224fd6744"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '300px' vs CS 'Napíšeš ho v JavaScriptu'",
    "code-like option 1 differs: EN '350px' vs CS 'Dáš prvku třídu a v CSS zacílíš `.class`'",
    "code-like option 2 differs: EN '345px' vs CS 'Použiješ komentář'",
    "code-like option 3 differs: EN '325px' vs CS 'Přejmenuješ tag'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -451,14 +451,14 @@
    "explanation": "Třídy lze sdílet a snadno přepsat; id jsou unikátní a jejich vysoká specificita způsobuje problémy s přepisováním.",
    "csHash": "c7f8bab52e0cae95"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '50px' vs CS 'Id jsou zastaralá'",
    "code-like option 1 differs: EN '30px' vs CS 'Třídy jsou znovupoužitelné na mnoha prvcích; id musí být unikátní a jsou velmi specifická'",
    "code-like option 2 differs: EN '20px' vs CS 'Id nelze stylovat'",
    "code-like option 3 differs: EN '0' vs CS 'Třídy se načítají rychleji'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -497,11 +497,11 @@
    "explanation": "Více tříd se kombinuje — základní „card“ plus modifikátor „featured“ je běžný, skladatelný vzor.",
    "csHash": "a42ab127fb1d96bc"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 2 differs: EN 'The `display` value' vs CS 'Rozbít kaskádu'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -540,14 +540,14 @@
    "explanation": "Selektor tagu je nejslabší, pak třídy, pak id, pak inline styly — znalost pořadí vysvětluje překvapení s přepisováním.",
    "csHash": "abb2dacc62b647c7"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '`text-overflow: ellipsis`' vs CS 'id < class < type'",
    "code-like option 1 differs: EN '`overflow-wrap: anywhere`' vs CS 'type < class < id < inline'",
    "code-like option 2 differs: EN '`white-space: nowrap`' vs CS 'class < type < id'",
    "code-like option 3 differs: EN '`overflow: hidden`' vs CS 'jsou všechny stejné'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -586,11 +586,11 @@
    "explanation": "!important vyhraje bez ohledu na specificitu, takže má tendenci spustit eskalující válku !importantů. Používej ho střídmě.",
    "csHash": "00fa48c8a5144881"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN 'Set `overflow-x: hidden` on the body' vs CS 'Je to neplatné CSS'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -629,12 +629,12 @@
    "explanation": "Mezera znamená „potomek“, takže pravidlo se vztahuje na odstavce, které žijí uvnitř .card.",
    "csHash": "409e8be19b3941f1"
   },
+  "csDriftFlags": [
+   "code-like option 2 differs: EN '`em` is absolute' vs CS '.card uvnitř <p>'"
+  ],
   "automatedFlags": [
    "correct option is markedly longer/more detailed than distractors",
    "hint is the generic shape-based fallback (not question-specific)"
-  ],
-  "csDriftFlags": [
-   "code-like option 2 differs: EN '`em` is absolute' vs CS '.card uvnitř <p>'"
   ]
  },
  {
@@ -753,14 +753,14 @@
    "explanation": "Padding odtlačuje obsah od borderu; margin odtlačuje ostatní prvky.",
    "csHash": "ce33bfb0bc8c7bbb"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '`flex-grow: 1`, `flex-shrink: 1`, `flex-basis: 0%`' vs CS 'Jsou totožné'",
    "code-like option 1 differs: EN '`flex-grow: 1` only' vs CS 'Padding je prostor uvnitř borderu; margin je prostor vně, mezi prvky'",
    "code-like option 2 differs: EN '`flex-basis: 1`' vs CS 'Margin je uvnitř, padding vně'",
    "code-like option 3 differs: EN '`flex-grow: 1`, `flex-shrink: 0`, `flex-basis: auto`' vs CS 'Oba jsou bordery'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -799,12 +799,12 @@
    "explanation": "S border-box zůstane šířka 200px na 200px i s paddingem/borderem — mnohem snazší na úvahu.",
    "csHash": "4d00982876a2a276"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN '`justify-content` is wrong' vs CS 'Aby `width` prvku zahrnovala padding a border, čímž je rozměr předvídatelný'",
    "code-like option 3 differs: EN '`align-items` is `stretch`' vs CS 'Aby zapnuli flexbox'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -843,14 +843,14 @@
    "explanation": "Ve výchozím content-boxu width určuje rozměr jen obsahu; padding a border se přidávají k viditelné velikosti.",
    "csHash": "af82b1056225259e"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '`flex-shrink: 0`' vs CS 'Chyba prohlížeče'",
    "code-like option 1 differs: EN '`min-width: 0` on the item' vs CS 'Padding a border se přičítají k šířce obsahu'",
    "code-like option 2 differs: EN '`overflow: hidden` on the container' vs CS 'Marginy se zdvojnásobí'",
    "code-like option 3 differs: EN '`width: auto`' vs CS 'Šířka se ignoruje'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -929,12 +929,12 @@
    "explanation": "Levý/pravý margin auto rozdělí zbývající prostor a blok se vycentruje.",
    "csHash": "b0d48e89fb5b3022"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN '`gap`' vs CS 'margin: 0 auto'",
    "code-like option 2 differs: EN '`justify-content: space-between`' vs CS 'padding: auto'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -973,14 +973,14 @@
    "explanation": "Rozestupy jsou záležitost stylování — použij margin nebo gap, ne značky navíc.",
    "csHash": "858c2e6b6bd9683f"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '`flex-shrink: 0` on the icon' vs CS 'Prázdný oddělovací prvek'",
    "code-like option 1 differs: EN '`align-items: center`' vs CS 'Margin (nebo `gap` ve flexu/gridu)'",
    "code-like option 2 differs: EN '`flex-wrap: wrap`' vs CS 'Spousta tagů <br>'",
    "code-like option 3 differs: EN '`min-width` on the container' vs CS 'Průhledný obrázek'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1426,13 +1426,13 @@
    "explanation": "Vyber Flex pro jeden směr, Grid když umisťuješ věci napříč oběma osami.",
    "csHash": "bc63563d5bfcc1f7"
   },
-  "automatedFlags": [
-   "correct option is markedly longer/more detailed than distractors",
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN 'A `z-index`' vs CS 'Jsou stejné'",
    "code-like option 3 differs: EN '`overflow: hidden` on the parent' vs CS 'Flex funguje jen na text'"
+  ],
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1511,14 +1511,14 @@
    "explanation": "Media dotazy podmiňují CSS podmínkami jako šířka obrazovky, čímž umožní breakpointy.",
    "csHash": "f366c0c4d3e9e53b"
   },
-  "automatedFlags": [
-   "time-sensitive wording: verify against a dated primary source",
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 1 differs: EN '`opacity: 0.99`' vs CS 'Podmíněně aplikovat styly podle velikosti viewportu nebo vlastností'",
    "code-like option 2 differs: EN '`overflow: hidden`' vs CS 'Importovat fonty'",
    "code-like option 3 differs: EN '`display: flex`' vs CS 'Definovat proměnné'"
+  ],
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1597,14 +1597,14 @@
    "explanation": "Relativní jednotky se ohýbají podle obrazovky a kořenové velikosti písma, takže se rozvržení přizpůsobí místo toho, aby se rozbilo.",
    "csHash": "53c16307e716b748"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '`position: relative`' vs CS 'Jsou kratší'",
    "code-like option 1 differs: EN '`overflow: hidden`' vs CS 'Škálují se podle svého kontextu, místo aby byly uzamčené na jednu velikost'",
    "code-like option 2 differs: EN '`z-index: 0`' vs CS 'Jsou povinné'",
    "code-like option 3 differs: EN '`display: flex`' vs CS 'px na mobilu nefunguje'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {
@@ -1684,12 +1684,12 @@
    "explanation": "Plynulá rozvržení zvládnou velikosti mezi tím; breakpointy provedou větší strukturální změny tam, kde je třeba.",
    "csHash": "5b9ec6b65e09a79d"
   },
+  "csDriftFlags": [
+   "code-like option 3 differs: EN '`overflow: visible` on the dropdown' vs CS 'Inline styly'"
+  ],
   "automatedFlags": [
    "correct option is markedly longer/more detailed than distractors",
    "hint is the generic shape-based fallback (not question-specific)"
-  ],
-  "csDriftFlags": [
-   "code-like option 3 differs: EN '`overflow: visible` on the dropdown' vs CS 'Inline styly'"
   ]
  },
  {
@@ -2013,11 +2013,11 @@
    "explanation": "Sdílené tokeny udrží design soudržný a umožní přeskinovat aplikaci úpravou malé sady hodnot.",
    "csHash": "0d6888e94cc0f20c"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN 'Using `rem` for spacing' vs CS 'Aby ses napsal víc CSS'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  }
 ]

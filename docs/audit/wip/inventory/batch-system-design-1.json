@@ -153,11 +153,11 @@
    "explanation": "Propustnost měří objem za čas (např. požadavky/s); lze ji zlepšovat nezávisle na latenci.",
    "csHash": "39a7ebdc00afe770"
   },
-  "automatedFlags": [
-   "hint is the generic shape-based fallback (not question-specific)"
-  ],
   "csDriftFlags": [
    "code-like option 0 differs: EN '20 ms per message' vs CS 'Dobu na jeden požadavek'"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
   ]
  },
  {

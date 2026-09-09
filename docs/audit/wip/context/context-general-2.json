@@ -1,10 +1,10 @@
 {
  "batch": "general-2",
  "topic": "general",
- "items": 76,
+ "items": 51,
  "idRange": [
-  "rm-general-77",
-  "rm-general-152"
+  "rm-general-52",
+  "rm-general-102"
  ],
  "plansIncludingTopic": [
   "frontend",
@@ -34,16 +34,13 @@
  },
  "audienceAndVerification": "All plans after JavaScript: how the web, browsers, HTTP, APIs, caching, auth, deployment and performance work, plus levels 16–19 (Testing Foundations, authored in #179). Working-developer level.",
  "levelsInThisBatch": [
+  7,
+  8,
+  9,
   10,
   11,
   12,
-  13,
-  14,
-  15,
-  16,
-  17,
-  18,
-  19
+  13
  ],
  "note": "difficulty 1 = levels 1-5, 2 = 6-10, 3 = 11-15, 4 = 16-20, 5 = 21-25. Items with `possibleDuplicates` pointing outside this batch: judge on this item alone but mention the id."
 }
