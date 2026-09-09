@@ -54,3 +54,9 @@
   carries "Pozorně si přečti kód a odhadni, co dělá nebo co vrací", which is
   not a translation of the English hint and tells the learner to read code that
   prose-only items do not contain. The localisation pass replaces all of them.
+- **The HTML bank's Czech is a different bank.** All 48 Czech items translate
+  the older abbreviation-and-tag-definition questions ("Co znamená zkratka
+  HTML?"), not the rescoped English ones, and the automated drift detector
+  caught only 12 of them. The topic needs retranslating whole, and the
+  detector's miss rate is worth reporting: it flags changed code, and these
+  items changed their subject without changing any code.
