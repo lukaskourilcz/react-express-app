@@ -60,7 +60,7 @@ Do **not** mark material irrelevant merely because it is old, foundational, plai
 For **retired sections** (abbreviations, testing, code-snippets, fix-the-test) the sidecar says what a `rewrite` means there; read it.
 
 ## Rewrite style
-Plain, specific, short. A hint is one or two sentences, at most ~30 words, never an option label, never "the answer is", never a list that eliminates everything but one option. Point at the one thing to notice or the one rule to recall. Explanations: two to four sentences, say why the key is right and why the strongest distractor is wrong. Options: same grammatical shape and comparable length; no "all of the above". No marketing words, no "delve", "leverage", "seamless", "master". Do not make an item tricky through wording.
+Plain, specific, short. The bank is written in **American spelling** (serialize, behavior, color, normalize): match it, and treat a British spelling in a rewrite as a defect to fix. A hint is one or two sentences, at most ~30 words, never an option label, never "the answer is", never a list that eliminates everything but one option. Point at the one thing to notice or the one rule to recall. Explanations: two to four sentences, say why the key is right and why the strongest distractor is wrong. Options: same grammatical shape and comparable length; no "all of the above". No marketing words, no "delve", "leverage", "seamless", "master". Do not make an item tricky through wording.
 
 ## Czech (do not write Czech; assess it)
 For each item with `cs`, set `cs.status`:

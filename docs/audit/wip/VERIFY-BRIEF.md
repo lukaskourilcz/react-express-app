@@ -18,7 +18,8 @@ A JSON array. Each item: `id`, `category`, `level`, `levelTitle` (the learning o
 4. **Explanation.** Says why the key is right **and** why the strongest distractor is wrong; two to four sentences; every factual claim in it is true (check them — an explanation that is wrong is worse than a thin one); mentions runtime/version where behaviour depends on it.
 5. **Options.** Exactly four; comparable length, grammatical shape and specificity; no "all/none of the above"; no repeated wording that reveals the key; no conspicuously detailed correct option; no two options that mean the same thing.
 6. **Question.** One clear question; assumptions stated (strict mode? module or script? which runtime?); fenced code blocks and backticks intact; no answer leaked in the code or the wording; fits `levelTitle` and `difficulty`.
-7. **Style.** Plain and short; no "delve", "leverage", "seamless", "master", "robust", no marketing tone, no em-dash chains, no exclamation marks.
+7. **Style.** Plain and short; no "delve", "leverage", "seamless", "master", "robust", no marketing tone, no em-dash chains, no exclamation marks. The bank uses **American spelling** (serialize, behavior, color, normalize) — a British spelling introduced by a rewrite is an amend.
+8. **Hint independence.** The commonest defect the first pass introduces is a hint that states the very rule the item tests, or that rules out every option but one. Read the hint alone and ask: could a learner who has not read the code pick the key from it? If yes, amend it to point at what to notice rather than at what to conclude.
 
 ## Verdicts
 - `accept` — the final item passes all seven checks as written.
