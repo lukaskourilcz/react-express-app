@@ -12,7 +12,7 @@ import { createPortal } from 'react-dom';
 import { useLocation } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { Text } from '@astryxdesign/core/Text';
-import { m, AnimatePresence } from '../lib/motion';
+import { m, AnimatePresence, useReducedMotion, stillIfReduced } from '../lib/motion';
 import { useIsMobile } from '../lib/useMediaQuery';
 import { useAuth } from '../lib/auth';
 import { useT } from '../i18n/LanguageContext';
@@ -46,6 +46,7 @@ function markDismissed(): void {
 }
 
 function RegisterPromptSnackbar() {
+  const reduce = useReducedMotion();
   const { isAuthenticated, isLoading, signInWithGoogle } = useAuth();
   const t = useT();
   const isMobile = useIsMobile();
@@ -111,9 +112,9 @@ function RegisterPromptSnackbar() {
             role="region"
             aria-label={t('register.title')}
             className="ss-register-prompt"
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 40 }}
+            initial={stillIfReduced(reduce, { opacity: 0, x: 40 })}
+            animate={stillIfReduced(reduce, { opacity: 1, x: 0 })}
+            exit={stillIfReduced(reduce, { opacity: 0, x: 40 })}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
             style={{
               pointerEvents: 'auto',
@@ -181,9 +182,9 @@ function RegisterPromptSnackbar() {
             key="register-error"
             role="alert"
             aria-live="assertive"
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 40 }}
+            initial={stillIfReduced(reduce, { opacity: 0, x: 40 })}
+            animate={stillIfReduced(reduce, { opacity: 1, x: 0 })}
+            exit={stillIfReduced(reduce, { opacity: 0, x: 40 })}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
             style={{
               pointerEvents: 'auto',

@@ -30,6 +30,29 @@ export function MotionProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** The variant keys that move something. Opacity is deliberately not among
+ * them: a toast still has to arrive and leave, and fading is not what motion
+ * sensitivity is about. */
+const MOVEMENT_KEYS = new Set(['x', 'y', 'z', 'scale', 'scaleX', 'scaleY', 'rotate', 'rotateX', 'rotateY']);
+
+/**
+ * Take the movement out of a motion variant when the reader has asked for less
+ * of it, and leave it alone otherwise.
+ *
+ * The shared primitives below each do this inline. This is the same rule for
+ * the places that need a variant of their own — a toast sliding in from the
+ * right, say — so the next one does not have to remember the rule to follow it.
+ */
+export function stillIfReduced<T extends Record<string, unknown>>(
+  reduce: boolean | null | undefined,
+  variant: T,
+): T {
+  if (!reduce) return variant;
+  return Object.fromEntries(
+    Object.entries(variant).filter(([key]) => !MOVEMENT_KEYS.has(key)),
+  ) as T;
+}
+
 /**
  * Fade + slide a block in on mount. Pass an `index` to stagger a list of
  * stacked siblings (the delay is capped so a long list never crawls in).

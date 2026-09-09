@@ -4,7 +4,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { onXpToast, type XpToast } from '../lib/xp';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
-import { MotionPop, m, AnimatePresence } from '../lib/motion';
+import { MotionPop, m, AnimatePresence, useReducedMotion, stillIfReduced } from '../lib/motion';
 import { useIsMobile } from '../lib/useMediaQuery';
 import { BoltIcon, TrophyIcon } from './ui/icons';
 
@@ -52,6 +52,7 @@ export default function XpToaster() {
 
   // After the exit transition, clear `current` so the next item can show.
   const handleExited = () => setCurrent(null);
+  const reduce = useReducedMotion();
 
   if (!current) return null;
   const isRankUp = current.kind === 'rankup';
@@ -78,9 +79,9 @@ export default function XpToaster() {
         {open && (
           <m.div
             key={seq.current}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
+            initial={stillIfReduced(reduce, { opacity: 0, y: 12 })}
+            animate={stillIfReduced(reduce, { opacity: 1, y: 0 })}
+            exit={stillIfReduced(reduce, { opacity: 0, y: 12 })}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             style={{ pointerEvents: 'auto' }}
           >

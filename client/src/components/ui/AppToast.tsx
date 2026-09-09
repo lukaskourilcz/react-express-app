@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import { useEffect } from 'react';
-import { m, AnimatePresence } from '../../lib/motion';
+import { m, AnimatePresence, useReducedMotion, stillIfReduced } from '../../lib/motion';
 import { useT } from '../../i18n/LanguageContext';
 import { CloseIcon } from './icons';
 
@@ -32,6 +32,7 @@ export function AppToast({
   autoHideDuration?: number | null;
 }) {
   const t = useT();
+  const reduce = useReducedMotion();
   useEffect(() => {
     if (!open || autoHideDuration == null) return;
     const id = window.setTimeout(onClose, autoHideDuration);
@@ -60,9 +61,9 @@ export function AppToast({
           <m.div
             role={severity === 'error' ? 'alert' : 'status'}
             aria-live={severity === 'error' ? 'assertive' : 'polite'}
-            initial={{ opacity: 0, y: 16, scale: 0.96 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.98 }}
+            initial={stillIfReduced(reduce, { opacity: 0, y: 16, scale: 0.96 })}
+            animate={stillIfReduced(reduce, { opacity: 1, y: 0, scale: 1 })}
+            exit={stillIfReduced(reduce, { opacity: 0, y: 12, scale: 0.98 })}
             transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
             style={{
               pointerEvents: 'auto',
