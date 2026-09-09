@@ -9,7 +9,10 @@ import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useSubject, topicsForSubject, type SubjectId } from '../lib/subjects';
-import { useRoadmapProgress, useExtraUnlocks, type RoadmapProgress } from '../lib/roadmap';
+import { useRoadmapProgress, useExtraUnlocks, type RoadmapProgress,
+  availabilityOf,
+  type StepAvailability,
+} from '../lib/roadmap';
 import { useRoadmapStructure } from '../lib/queries';
 import { ApiError } from '../lib/api';
 import { buildToday, type TodayItem, type TodayKind } from '../lib/today';
@@ -72,6 +75,21 @@ function levelCountsFor(
   return counts;
 }
 
+/** Per-topic availability from the fetched map, so Today steps over levels the
+ *  server will not open and uses the real part boundaries. */
+function availabilityFor(
+  structure: RoadmapStructure | null,
+  subject: SubjectId,
+): Partial<Record<RoadmapTopic, StepAvailability>> | undefined {
+  if (!structure) return undefined;
+  const out: Partial<Record<RoadmapTopic, StepAvailability>> = {};
+  for (const topic of topicsForSubject(subject)) {
+    const entry = structure.structure[topic];
+    if (entry) out[topic] = availabilityOf(entry);
+  }
+  return out;
+}
+
 /** Distinct levels passed today (mirrors buildToday's completedToday signal),
  *  capped at the target — drives the "N / target done" line. Needs lastPassDay,
  *  which is written by the server on a verified pass, so guests may read 0. */
@@ -104,6 +122,7 @@ export default function Today() {
       buildToday(progress, subject, {
         today: masteryDayKey(),
         levelCounts: levelCountsFor(structure, subject),
+        availability: availabilityFor(structure, subject),
         extraUnlocks,
       }),
     [progress, subject, extraUnlocks, structure],

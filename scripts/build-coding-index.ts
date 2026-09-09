@@ -3,7 +3,7 @@
 //   npm run build:coding-index
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { CODING_SUMMARIES } from '../lib/coding/catalog';
+import { CODING_SUMMARIES } from '../lib/coding/active';
 import type { CodingTaskSummary } from '../shared/coding-catalog';
 
 export function renderCodingIndex(summaries: readonly CodingTaskSummary[]): string {

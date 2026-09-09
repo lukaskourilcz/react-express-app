@@ -34,6 +34,7 @@ import {
   stepAlreadyPassed,
   eligibleTopics,
   nextEligibleStep,
+  type StepAvailability,
   type VerifiedProgress,
 } from '../../shared/progression';
 import {
@@ -51,7 +52,8 @@ import { withGrantedTopics } from '../../lib/topic-grants';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
-import { levelCodingTasks, playable as playableCodingTask } from '../../lib/coding/catalog';
+import { playable as playableCodingTask } from '../../lib/coding/catalog';
+import { levelCodingTasks } from '../../lib/coding/active';
 import type { RoadmapTopicStructure } from '../../lib/roadmap';
 import { handleCodingApproaches, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
 import {
@@ -76,6 +78,8 @@ import {
 import {
   buildLiveTopic,
   liveRoadmapStructure,
+  liveAvailability,
+  unavailablePartsOf,
   isRoadmapTopic,
   ROADMAP_TOPICS,
   ROADMAP_LEVELS,
@@ -89,6 +93,7 @@ import {
   type RoadmapTopic,
 } from '../../lib/roadmap';
 import { itemReview, contentVersion } from '../../lib/curation';
+import { isRetiredTopic } from '../../shared/retired-content';
 import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
 
 // One function for the whole roadmap to stay within the Vercel Hobby
@@ -414,23 +419,33 @@ async function handleSkillCheck(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'bad_request', 'A verified assessment receipt is required');
   }
   const receipt = decodeQuizResultReceipt(body.resultReceipt);
+  // A receipt may be a few questions short of the budget when items were
+  // retired mid-run (the grader voids them). It is still a full run — every
+  // question the learner was asked was graded — so the unlock tier is read
+  // from the share correct, scaled to the budget, rather than refused.
+  // Anything shorter than that is not an assessment.
+  const MAX_VOIDED = 5;
   if (
     !receipt || receipt.userId !== userId || receipt.purpose !== 'assessment' ||
-    receipt.total !== ASSESSMENT_QUESTION_COUNT || receipt.outcomes.length !== receipt.total ||
+    receipt.total > ASSESSMENT_QUESTION_COUNT || receipt.total < ASSESSMENT_QUESTION_COUNT - MAX_VOIDED ||
+    receipt.outcomes.length !== receipt.total ||
     !deploymentSubjectIds().includes(receipt.subject) ||
     receipt.outcomes.some((outcome) => subjectForCategory(outcome.category) !== receipt.subject)
   ) {
     return jsonError(res, 400, 'invalid_receipt', 'Assessment receipt expired or invalid');
   }
 
-  const unlocked = assessmentUnlocks(receipt.subject, receipt.correct, receipt.total);
+  const scaledCorrect = receipt.total === ASSESSMENT_QUESTION_COUNT
+    ? receipt.correct
+    : Math.round((receipt.correct * ASSESSMENT_QUESTION_COUNT) / receipt.total);
+  const unlocked = assessmentUnlocks(receipt.subject, scaledCorrect, ASSESSMENT_QUESTION_COUNT);
   const applied = await withTimeout(
     supabase.rpc('apply_verified_skill_check', {
       p_user_id: userId,
       p_attempt_id: receipt.attemptId,
       p_subject: receipt.subject,
-      p_correct: receipt.correct,
-      p_total: receipt.total,
+      p_correct: scaledCorrect,
+      p_total: ASSESSMENT_QUESTION_COUNT,
       p_unlocked: unlocked,
     }),
   );
@@ -524,6 +539,7 @@ function stepRefusal(
   subject: string,
   topic: string,
   step: StepRequest,
+  availability: StepAvailability,
 ): { code: string; message: string } | null {
   // Work already done is served whatever the plan says now. Editing a plan
   // narrows what is offered next; it does not withdraw what was earned. Without
@@ -542,16 +558,53 @@ function stepRefusal(
   if (!isTopicOpen(context.progress, topic, context.extraUnlocked)) {
     return { code: 'topic_locked', message: 'Finish the topics this one builds on first' };
   }
-  if (step.kind === 'level' && !isLevelOpen(context.progress, topic, step.level)) {
+  if (step.kind === 'level' && !isLevelOpen(context.progress, topic, step.level, availability)) {
     return { code: 'prerequisite_not_met', message: 'Complete the preceding learning steps first' };
   }
-  if (step.kind === 'checkpoint' && !isCheckpointOpen(context.progress, topic, step.checkpoint)) {
+  if (step.kind === 'checkpoint' && !isCheckpointOpen(context.progress, topic, step.checkpoint, availability)) {
     return { code: 'prerequisite_not_met', message: 'Pass every level of this segment before its checkpoint' };
   }
-  if (step.kind === 'test' && !areLevelsPassed(context.progress, topic, step.from, step.to)) {
+  if (step.kind === 'test' && !areLevelsPassed(context.progress, topic, step.from, step.to, availability)) {
     return { code: 'prerequisite_not_met', message: 'Pass every level of this part before its test' };
   }
   return null;
+}
+
+/** A step with too few served questions is refused for everyone, signed in or
+ * not, with its own code: the learner has not failed to earn it, there is
+ * nothing there to earn. */
+const STEP_UNAVAILABLE = { code: 'step_unavailable', message: 'Not enough reviewed questions are available for this step yet' } as const;
+
+/** The nearest available level before `level` in its part, or null when the
+ * level is the first available one of its part (the part test before it is
+ * what gates it, and the completion routine does not check tests). */
+function previousAvailable(availability: StepAvailability, level: number): number | null {
+  const range = partRanges(availability.levelCount ?? 0).find((r) => level >= r.startLevel && level <= r.endLevel);
+  const start = range?.startLevel ?? 1;
+  for (let candidate = level - 1; candidate >= start; candidate--) {
+    if (!availability.unavailableLevels?.has(candidate)) return candidate;
+  }
+  return null;
+}
+
+/**
+ * The level range the completion routine must find passed before it records
+ * an exam. The routine walks the range level by level, so a range that spans
+ * an unavailable level could never be satisfied; when the range has a gap the
+ * requirement narrows to its last available level, which — by the sequential
+ * rule the map applies — is passed only when every available level before it
+ * is. The handler has already applied the full rule with availability.
+ */
+function requiredRange(availability: StepAvailability, from: number, to: number): { requiredLevelStart: number; requiredLevelEnd: number } | Record<string, never> {
+  const unavailable = availability.unavailableLevels;
+  let hasGap = false;
+  let last: number | null = null;
+  for (let level = from; level <= to; level++) {
+    if (unavailable?.has(level)) hasGap = true;
+    else last = level;
+  }
+  if (last === null) return {};
+  return hasGap ? { requiredLevelStart: last, requiredLevelEnd: last } : { requiredLevelStart: from, requiredLevelEnd: to };
 }
 
 /* ──── adaptive placement (GET/POST ?resource=placement) ────────────────────── */
@@ -567,8 +620,13 @@ function stepRefusal(
 
 type PlacementOutcome = { questionId: string; category: string; isCorrect: boolean };
 
+/** The placement pool: the subject's served questions, in the categories
+ * discovery still offers. Retired sections are excluded here as they are from
+ * every other selector — the eligibility gate withholds their items anyway,
+ * and this keeps the pool honest even for a section retired before its items
+ * were dispositioned. */
 function poolForSubject(byId: Map<string, Question>, subject: ScopeSubjectId): Question[] {
-  const cats = new Set<string>(SUBJECT_SCOPE_CATALOG[subject].categories);
+  const cats = new Set<string>(SUBJECT_SCOPE_CATALOG[subject].categories.filter((category) => !isRetiredTopic(category)));
   return [...byId.values()].filter((q) => cats.has(q.category));
 }
 
@@ -614,7 +672,11 @@ function placementRoundResponse(input: {
   lang: ReturnType<typeof normalizeLang>;
 }): Record<string, unknown> | null {
   const seen = new Set<string>(input.history.map((h) => h.questionId));
-  const ids = pickPlacementIds(input.pool, input.difficulty, PLACEMENT_ROUND_SIZE, seen);
+  // A round is five questions, or fewer when fewer are left in the budget: a
+  // void earlier in the run adds a short top-up round rather than a sixth
+  // full one.
+  const remaining = PLACEMENT_TOTAL - input.history.length;
+  const ids = pickPlacementIds(input.pool, input.difficulty, Math.max(1, Math.min(PLACEMENT_ROUND_SIZE, remaining)), seen);
   if (ids.length === 0) return null;
   const built = buildQuestions(ids, input.lang, input.byId);
   if (built.questions.length === 0) return null;
@@ -634,7 +696,9 @@ function placementRoundResponse(input: {
   return {
     done: false,
     round: input.round,
-    totalRounds: PLACEMENT_ROUNDS,
+    // The nominal count; a void extends the run by one short round, and the
+    // client counts from `asked`/`total` so the extra round reads correctly.
+    totalRounds: Math.max(PLACEMENT_ROUNDS, input.round),
     difficulty: input.difficulty,
     asked: input.history.length,
     total: PLACEMENT_TOTAL,
@@ -679,12 +743,21 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
   }
   const answerMap = body.answers as Record<string, unknown>;
 
+  // A question retired while the round was open is void: it is neither a hit
+  // nor a miss, it does not move the difficulty, and the run is topped up with
+  // another question later so the receipt still covers the full budget.
+  const servedNow = await getEffectiveQuestionsById(state.subject, false);
   const roundOutcomes: PlacementOutcome[] = [];
   let roundCorrect = 0;
+  let voided = 0;
   for (const item of state.items) {
     const raw = answerMap[item.questionId];
     if (raw !== undefined && (typeof raw !== 'number' || !Number.isInteger(raw) || raw < -1 || raw > 25)) {
       return jsonError(res, 400, 'bad_request', 'Invalid answer index');
+    }
+    if (!servedNow.has(item.questionId)) {
+      voided++;
+      continue;
     }
     // A missing answer or -1 is the "I don't know yet" option and counts as a miss.
     const selected = typeof raw === 'number' ? raw : -1;
@@ -694,8 +767,12 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
   }
 
   const history = [...state.history, ...roundOutcomes];
-  const nextDifficulty = stepDifficulty(state.difficulty, roundCorrect, state.items.length);
-  const finished = state.round >= PLACEMENT_ROUNDS || history.length >= PLACEMENT_TOTAL;
+  const graded = state.items.length - voided;
+  const nextDifficulty = graded > 0 ? stepDifficulty(state.difficulty, roundCorrect, graded) : state.difficulty;
+  // The run ends when the budget is met. A void leaves the budget short, so
+  // one more round is served (bounded: a round always asks at least one
+  // question, and the budget is twenty).
+  const finished = history.length >= PLACEMENT_TOTAL;
 
   if (finished) {
     const userId = await optionalAuthSub(req, res);
@@ -750,7 +827,8 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
   });
   if (!response) return jsonError(res, 404, 'no_questions', 'No placement questions available');
   response.lastRoundCorrect = roundCorrect;
-  response.lastRoundSize = state.items.length;
+  response.lastRoundSize = graded;
+  if (voided > 0) response.voided = voided;
   res.setHeader('Cache-Control', 'private, no-store');
   logEvent({ status: 200, kind: 'placement_round', subject: state.subject, round: state.round + 1, difficulty: nextDifficulty });
   return res.json(response);
@@ -909,6 +987,35 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   const attempt = attemptResult.data as Record<string, unknown>;
   if (!attemptMatches(attempt, session, userId)) {
     return jsonError(res, 409, 'attempt_conflict', 'This learning attempt belongs to another session');
+  }
+
+  // A question retired while this attempt was open. The verified completion
+  // routine grades every sealed question and cannot void one, so the attempt
+  // is closed without a verdict instead: nothing is written to the learner's
+  // progress, no pass is granted on a flawed item and no fail is recorded for
+  // one. The client offers the level again with its current questions.
+  const served = await getEffectiveQuestionsById(session.subject, false);
+  const retired = session.questions.filter((q) => !served.has(q.questionId)).map((q) => q.questionId);
+  if (retired.length > 0) {
+    if (!attempt.completed_at) {
+      const closed = await withTimeout(
+        supabase
+          .from('roadmap_attempts')
+          .update({ completed_at: new Date().toISOString(), passed: false })
+          .eq('attempt_id', session.attemptId!),
+      );
+      if (closed.error) return jsonError(res, 500, 'db_error', 'Could not close the learning attempt');
+    }
+    logEvent({ status: 200, kind: 'invalidated', topic: session.topic, retired: retired.length });
+    return res.json({
+      correctAnswers: 0,
+      totalQuestions: session.questions.length,
+      percentage: 0,
+      passed: false,
+      applied: false,
+      codingPending: [],
+      invalidated: { reason: 'content_retired', questionIds: retired },
+    });
   }
   const answers = await withTimeout(
     supabase
@@ -1109,6 +1216,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       const exists = (id: string) => byId.has(id);
       const structure = liveRoadmapStructure(exists);
       const levelCount = (topic: string) => (structure as Record<string, { levels: unknown[] } | undefined>)[topic]?.levels.length ?? 0;
+      const availabilityOf = (topic: string) => (isRoadmapTopic(topic) ? liveAvailability(buildLiveTopic(topic, exists)) : {});
       const subjects = deploymentSubjectIds();
       const profile = learner?.profile ?? null;
       const missing = missingProfileFields(profile);
@@ -1118,7 +1226,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
         return {
           subject,
           topics: eligibleTopics(profile, subject, progress, extra),
-          next: nextEligibleStep(profile, subject, progress, levelCount, extra),
+          next: nextEligibleStep(profile, subject, progress, levelCount, extra, availabilityOf),
         };
       });
       res.setHeader('Cache-Control', 'private, no-store');
@@ -1190,7 +1298,11 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const structure = Object.fromEntries(
       Object.entries(liveRoadmapStructure(exists))
         .filter(([topic]) => topicSet.has(topic))
-        .map(([topic, live]) => [topic, withCodingCounts(topic, live)]),
+        .map(([topic, live]) => {
+          const withCounts = withCodingCounts(topic, live);
+          const unavailableParts = unavailablePartsOf(withCounts.levels);
+          return [topic, unavailableParts.length > 0 ? { ...withCounts, unavailableParts } : withCounts];
+        }),
     );
     res.setHeader('Cache-Control', 'public, max-age=60');
     logEvent({ status: 200, kind: 'structure', latency_ms: Date.now() - started });
@@ -1207,17 +1319,18 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // step branches below. A guest has neither, and takes the preview path.
   const learner = await learnerContext(req, res);
   if (learner === undefined) return;
+  const byId = await getEffectiveQuestionsById(subject, lang === 'cs');
+  const exists = (id: string) => byId.has(id);
+  const live = buildLiveTopic(topic, exists);
+  const availability = liveAvailability(live);
   const refuse = (step: StepRequest) => {
     if (!learner) return false;
-    const refusal = stepRefusal(learner, subject, topic, step);
+    const refusal = stepRefusal(learner, subject, topic, step, availability);
     if (!refusal) return false;
     logEvent({ status: 403, kind: 'not_eligible', topic, reason: refusal.code });
     jsonError(res, 403, refusal.code, refusal.message);
     return true;
   };
-  const byId = await getEffectiveQuestionsById(subject, lang === 'cs');
-  const exists = (id: string) => byId.has(id);
-  const live = buildLiveTopic(topic, exists);
 
   // ── Part test (a focused exam over one of the topic's 3 parts) ────────────
   // A part is a contiguous slice of the topic's (live) levels; the test samples
@@ -1227,6 +1340,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     if (!isValidPart(part)) return jsonError(res, 400, 'bad_request', 'Invalid test');
     const range = partRanges(live.levels.length).find((r) => r.part === part);
     if (!range || range.size <= 0) return jsonError(res, 400, 'bad_request', 'Invalid test');
+    if (live.unavailableParts.has(part)) {
+      logEvent({ status: 409, kind: 'unavailable', topic, part });
+      return jsonError(res, 409, STEP_UNAVAILABLE.code, STEP_UNAVAILABLE.message);
+    }
     if (refuse({ kind: 'test', from: range.startLevel, to: range.endLevel })) return;
 
     const pool: string[] = [];
@@ -1237,8 +1354,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const playable = playableResponse({
       kind: 'checkpoint', topic, ref: part, title: `Part ${part}`,
       passPct: PART_TEST_PASS, ids, lang, byId,
-      requiredLevelStart: range.startLevel,
-      requiredLevelEnd: range.endLevel,
+      ...requiredRange(availability, range.startLevel, range.endLevel),
     });
     if (!playable || playable.questions.length === 0) return jsonError(res, 404, 'no_questions', 'No questions for this test');
 
@@ -1249,23 +1365,30 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  // ── Checkpoint exam (the surviving questions over its 5 levels) ───────────
+  // ── Checkpoint exam ───────────────────────────────────────────────────────
+  // The older name for a part test. Checkpoint *n* is recorded as the test of
+  // part *n* — the progress record has only ever had one `checkpoints` map —
+  // so this serves exactly what `?test=n` serves, over the part's levels.
+  // Serving the authored five-level block here would grade an exam the map
+  // never offered and record it under a number that means something else.
   if (checkpointRaw !== undefined) {
     const checkpoint = parseInt(checkpointRaw, 10);
-    const meta = live.checkpoints.find((c) => c.checkpoint === checkpoint);
-    if (!meta) return jsonError(res, 400, 'bad_request', 'Invalid checkpoint');
+    if (!isValidPart(checkpoint)) return jsonError(res, 400, 'bad_request', 'Invalid checkpoint');
+    const range = partRanges(live.levels.length).find((r) => r.part === checkpoint);
+    if (!range || range.size <= 0) return jsonError(res, 400, 'bad_request', 'Invalid checkpoint');
+    if (live.unavailableParts.has(checkpoint)) {
+      logEvent({ status: 409, kind: 'unavailable', topic, checkpoint });
+      return jsonError(res, 409, STEP_UNAVAILABLE.code, STEP_UNAVAILABLE.message);
+    }
     if (refuse({ kind: 'checkpoint', checkpoint })) return;
 
-    const firstLevel = (checkpoint - 1) * LEVELS_PER_CHECKPOINT + 1;
-    const ids: string[] = [];
-    for (let l = firstLevel; l < firstLevel + LEVELS_PER_CHECKPOINT; l++) {
-      ids.push(...(live.levelIds[l - 1] ?? []));
-    }
+    const pool: string[] = [];
+    for (let l = range.startLevel; l <= range.endLevel; l++) pool.push(...(live.levelIds[l - 1] ?? []));
+    const ids = secureShuffle(pool).slice(0, PART_TEST_SIZE);
     const playable = playableResponse({
-      kind: 'checkpoint', topic, ref: meta.checkpoint, title: meta.title,
-      passPct: meta.passPct, ids, lang, byId,
-      requiredLevelStart: firstLevel,
-      requiredLevelEnd: firstLevel + LEVELS_PER_CHECKPOINT - 1,
+      kind: 'checkpoint', topic, ref: checkpoint, title: `Part ${checkpoint}`,
+      passPct: PART_TEST_PASS, ids, lang, byId,
+      ...requiredRange(availability, range.startLevel, range.endLevel),
     });
     if (!playable || playable.questions.length === 0) {
       return jsonError(res, 404, 'no_questions', 'No questions for this checkpoint');
@@ -1281,13 +1404,21 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const level = parseInt(levelRaw ?? '', 10);
   const meta = live.levels.find((l) => l.level === level);
   if (!meta) return jsonError(res, 400, 'bad_request', 'Invalid level');
+  if (meta.unavailable) {
+    logEvent({ status: 409, kind: 'unavailable', topic, level });
+    return jsonError(res, 409, STEP_UNAVAILABLE.code, STEP_UNAVAILABLE.message);
+  }
   if (refuse({ kind: 'level', level })) return;
 
+  // The completion routine re-checks the prerequisite in SQL by level number,
+  // so it is told the nearest *available* level before this one: an
+  // unavailable level is stepped over there exactly as the map steps over it.
+  const required = previousAvailable(availability, level);
   const playable = playableResponse({
     kind: 'level', topic, ref: meta.level, title: meta.title,
     difficulty: meta.difficulty, passPct: LEVEL_PASS,
     ids: live.levelIds[level - 1] ?? [], lang, byId,
-    ...(level > 1 ? { requiredLevelStart: level - 1, requiredLevelEnd: level - 1 } : {}),
+    ...(required !== null ? { requiredLevelStart: required, requiredLevelEnd: required } : {}),
   });
   if (!playable || playable.questions.length === 0) {
     return jsonError(res, 404, 'no_questions', 'No questions for this level');

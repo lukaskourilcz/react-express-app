@@ -9,7 +9,8 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { CODING_TASKS, CODING_SUMMARIES, levelCodingTasks, playable, tasksForLevel } from '../lib/coding/catalog';
+import { CODING_TASKS, playable } from '../lib/coding/catalog';
+import { CODING_SUMMARIES, levelCodingTasks, tasksForLevel } from '../lib/coding/active';
 import { solutionFor, solutionIds } from '../lib/coding/solutions';
 import { localizedFields, localizedLists } from '../lib/coding/types';
 import {

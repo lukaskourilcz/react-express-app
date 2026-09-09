@@ -30,7 +30,7 @@
 
 import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
-import { codingTaskByLegacyId, codingTaskById } from '../lib/coding/catalog';
+import { codingTaskByLegacyId, codingTaskForHistory } from '../lib/coding/catalog';
 import type { CodingTrack } from '../shared/coding-catalog';
 
 interface LegacyAttempt {
@@ -94,7 +94,7 @@ function timestamp(value: unknown, fallback: string): string {
 
 /** Task lookup: the old ids first, then the new ids for an export that already uses them. */
 function resolveTask(legacyId: string) {
-  return codingTaskByLegacyId(legacyId) ?? codingTaskById(legacyId);
+  return codingTaskByLegacyId(legacyId) ?? codingTaskForHistory(legacyId);
 }
 
 function main(): { attempts: AttemptRow[]; progress: ProgressRow[]; unknown: string[]; skipped: number; userId: string; apply: boolean } {

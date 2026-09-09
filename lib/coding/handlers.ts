@@ -14,7 +14,8 @@ import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
-import { CODING_SUMMARIES, codingTaskById, playable } from './catalog';
+import { codingTaskForHistory, playable } from './catalog';
+import { CODING_SUMMARIES, codingTaskById } from './active';
 import { codingTaskReview } from '../curation';
 import { solutionFor } from './solutions';
 import { runInSandbox } from './sandbox';
@@ -129,7 +130,13 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   const id = req.query.id;
   if (!isCodingTaskId(id)) return jsonError(res, 400, 'bad_request', 'A task id is required');
   const task = codingTaskById(id);
-  if (!task) return jsonError(res, 404, 'not_found', 'Unknown task');
+  if (!task) {
+    // A task that exists but is withheld by the content gate is told apart
+    // from an unknown id, so a stale bookmark gets an honest answer rather
+    // than a "not found" it will keep retrying.
+    if (codingTaskForHistory(id)) return jsonError(res, 410, 'task_retired', 'This challenge was retired from the active catalogue');
+    return jsonError(res, 404, 'not_found', 'Unknown task');
+  }
 
   const userId = await optionalUser(req, res);
   if (userId === undefined) return;
@@ -163,7 +170,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   // What is known about this brief: the version of it, and the execution
   // evidence that a reference solution passes its own grader. Not a review —
   // nobody has read it for clarity or judged whether it is worth doing.
-  play.review = codingTaskReview(task);
+  play.review = codingTaskReview(task, solutionFor(task.id));
   // The puzzle's lines go out shuffled, and the accepted orders stay here. The
   // shuffle is per request, so reloading does not hand back the same start.
   const authoredPuzzle = puzzleFor(task.id);

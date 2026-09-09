@@ -22,7 +22,7 @@ import { deploymentSubjectIds } from '../../lib/product-scope';
 import { rollPack, subjectCardCount } from '../../shared/cards';
 import { eligibleServerBadges, type BadgeStatsSummary } from '../../shared/badges';
 import { eligibleCodingBadges } from '../../shared/coding-catalog';
-import { CODING_SUMMARIES } from '../../lib/coding/catalog';
+import { CODING_SUMMARIES } from '../../lib/coding/active';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
 import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
 import { handleCodingBookmarks, handleCodingSkip, handlePracticeSession } from '../../lib/coding/practice-handlers';

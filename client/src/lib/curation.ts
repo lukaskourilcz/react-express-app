@@ -118,6 +118,10 @@ export const ITEM_CLAIM_COPY: Record<ItemClaim, Bilingual | null> = {
     en: 'Reviewed against our quality and relevance criteria.',
     cs: 'Zkontrolováno podle našich kritérií kvality a relevance.',
   },
+  'reviewed-by-model': {
+    en: 'Reviewed item by item by an AI model against our criteria, with its code checks run. Not yet read by a person.',
+    cs: 'Zkontrolováno položku po položce modelem umělé inteligence podle našich kritérií, včetně spuštění kódu. Zatím to nečetl člověk.',
+  },
   'checked-automatically': {
     en: 'Checked by our automated content contracts. Not yet read by a reviewer.',
     cs: 'Ověřeno našimi automatickými kontrolami obsahu. Zatím to nečetl člověk.',
@@ -154,17 +158,21 @@ export function coverageText(
 ): string | null {
   if (!report) return null;
   const claim = coverageClaim(report);
+  // The review on record is the model review of the content audit: every
+  // served item was scored item by item against the published criteria with
+  // its code checks run, and anything that failed left the pool. That is what
+  // the sentence says, and it does not say a person read them.
   if (claim === 'complete') {
     const copy = {
-      en: `Every one of the ${report.items} questions we can serve has been reviewed against the published criteria.`,
-      cs: `Všech ${report.items} otázek, které umíme nabídnout, prošlo kontrolou podle zveřejněných kritérií.`,
+      en: `Every one of the ${report.items} questions we can serve has a current review against the published criteria — an item-by-item model review with its code checks run. A person has not yet re-read them.`,
+      cs: `Všech ${report.items} otázek, které umíme nabídnout, má platnou kontrolu podle zveřejněných kritérií — položku po položce modelem umělé inteligence, včetně spuštění kódu. Člověk je zatím znovu nečetl.`,
     };
     return copy[lang] ?? copy.en;
   }
   if (claim === 'partial') {
     const copy = {
-      en: `We are reviewing the question bank against the published criteria: ${report.reviewed} of ${report.items} questions so far.`,
-      cs: `Databázi otázek kontrolujeme podle zveřejněných kritérií: zatím ${report.reviewed} z ${report.items}.`,
+      en: `We are reviewing the question bank against the published criteria: ${report.reviewed} of ${report.items} questions have a current review so far.`,
+      cs: `Databázi otázek kontrolujeme podle zveřejněných kritérií: zatím má platnou kontrolu ${report.reviewed} z ${report.items} otázek.`,
     };
     return copy[lang] ?? copy.en;
   }

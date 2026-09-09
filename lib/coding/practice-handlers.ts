@@ -19,7 +19,7 @@ import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } from '../http';
 import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
-import { CODING_SUMMARIES } from './catalog';
+import { CODING_SUMMARIES } from './active';
 import { isCodingSectionTrack, isCodingTaskId, tierUnlocked, type CodingTaskSummary } from '../../shared/coding-catalog';
 import {
   isPracticeSessionMinutes,

@@ -52,6 +52,7 @@ import {
   topicsFromAssessment,
   type PartRange,
 } from '../lib/roadmap';
+import { availabilityOf } from '../lib/roadmap';
 import { useSubject, topicsForSubject, type SubjectId } from '../lib/subjects';
 import {
   masteryState,
@@ -167,6 +168,7 @@ interface PlacedNode {
   /** For a test node: the part it ends and that part's global level range. */
   part?: number;
   range?: PartRange;
+  unavailable?: boolean;
 }
 
 // Track an element's width so the path can lay itself out responsively. Uses a
@@ -369,13 +371,17 @@ function Roadmap() {
     [TOPICS, isUnlocked],
   );
   // The topic's full (global) level list, split into progression checkpoints.
-  const levels: RoadmapLevelMeta[] = structure?.structure[topic]?.levels ?? [];
+  const topicStructure = structure?.structure[topic];
+  const levels: RoadmapLevelMeta[] = topicStructure?.levels ?? [];
   const ranges = useMemo(() => partRanges(levels.length), [levels.length]);
+  // Which steps the server will not open, read from the map it sent: the
+  // unlock rules step over them rather than dead-ending behind them.
+  const availability = useMemo(() => availabilityOf(topicStructure), [topicStructure]);
   const safePart = Math.min(Math.max(part, 1), Math.max(1, ranges.length));
   const topicColor = getCategoryHexColor(topic);
   const continueLevel = levels.find((meta) => {
     const owningRange = ranges.find((r) => meta.level >= r.startLevel && meta.level <= r.endLevel);
-    return !!owningRange && isPartLevelUnlocked(progress, topic, owningRange, meta.level) && !isLevelPassed(progress, topic, meta.level);
+    return !!owningRange && isPartLevelUnlocked(progress, topic, owningRange, meta.level, availability) && !isLevelPassed(progress, topic, meta.level);
   });
 
   // Keep the selected part on something the learner can actually open: if it's
@@ -383,10 +389,10 @@ function Roadmap() {
   // unlocked, incomplete part.
   useEffect(() => {
     if (ranges.length === 0) return;
-    if (!isPathUnlocked(progress, topic, part, extraUnlocksSet)) {
-      setPart(currentPart(progress, topic, ranges, extraUnlocksSet));
+    if (!isPathUnlocked(progress, topic, part, extraUnlocksSet, availability)) {
+      setPart(currentPart(progress, topic, ranges, extraUnlocksSet, availability));
     }
-  }, [topic, ranges, progress, extraUnlocksSet, part]);
+  }, [topic, ranges, progress, extraUnlocksSet, part, availability]);
 
   // Pull account progress + XP on sign-in and merge with this device (progress
   // first, so the merged learning XP is reflected before the XP reconcile).
@@ -479,7 +485,7 @@ function Roadmap() {
     if (!range) return;
     setPart(range.part);
     writeString(PART_KEY, String(range.part));
-    if (isPartLevelUnlocked(progress, topic, range, lvl)) {
+    if (isPartLevelUnlocked(progress, topic, range, lvl, availabilityOf(structure.structure[topic]))) {
       open({ kind: 'level', ref: lvl });
     }
   }, [structure, topic]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -539,11 +545,12 @@ function Roadmap() {
       const cy = BASE + row * ROW_H + p * SLOPE;
       if (node.type === 'test') {
         const passed = isPartTestPassed(progress, topic, node.part);
-        const unlocked = isPartTestUnlocked(progress, topic, node.range);
+        const unavailable = availability.unavailableCheckpoints?.has(node.part) ?? false;
+        const unlocked = !unavailable && isPartTestUnlocked(progress, topic, node.range, availability);
         return {
           i, kind: 'test', key: `test-${node.part}`, cx, cy, half: 25,
           accent: CHECKPOINT_GOLD, grad: CHECKPOINT_GRAD, part: node.part, range: node.range,
-          unlocked, passed, isCurrent: unlocked && !passed,
+          unlocked, passed, isCurrent: unlocked && !passed, unavailable,
           best: partTestBestPct(progress, topic, node.part),
         };
       }
@@ -551,7 +558,8 @@ function Roadmap() {
       const nodeRange = node.range;
       const band = bandForCategory(topic, meta.difficulty);
       const passed = isLevelPassed(progress, topic, meta.level);
-      const unlocked = isPartLevelUnlocked(progress, topic, nodeRange, meta.level);
+      const unavailable = meta.unavailable === true;
+      const unlocked = !unavailable && isPartLevelUnlocked(progress, topic, nodeRange, meta.level, availability);
       const isCurrent = unlocked && !passed;
       // Spaced mastery reads the stored level entry (migration-024 fields are
       // additive; older/guest rows without passDays resolve to "cleared").
@@ -560,7 +568,7 @@ function Roadmap() {
         i, kind: 'level', key: `lvl-${meta.level}`, cx, cy, half: isCurrent ? 23 : 20,
         accent: band.solid, grad: band.grad, level: meta,
         displayNum: meta.level,
-        unlocked, passed, isCurrent: unlocked && !passed,
+        unlocked, passed, isCurrent: unlocked && !passed, unavailable,
         best: levelBestPct(progress, topic, meta.level),
         mastery: masteryState(entry),
         due: isDueForReview(entry),
@@ -576,7 +584,7 @@ function Roadmap() {
       return { x1: a.cx, y1: a.cy, x2: b.cx, y2: b.cy, color: done || active ? b.accent : null, active };
     });
     return { width: pathWidth, height, cellW, nodes: placed, segments };
-  }, [pathWidth, levels, ranges, progress, topic]);
+  }, [pathWidth, levels, ranges, progress, topic, availability]);
 
   /* ──── skill check view ─────────────────────────────────────────────── */
   if (skillCheckOpen) {
@@ -723,7 +731,7 @@ function Roadmap() {
               paths, each ending with a test; only one part shows at a time. */}
           <div role="radiogroup" aria-label={t('roadmap.partsAria')} style={{ display: 'none' }}>
             {ranges.map((r) => {
-              const status = pathStatus(progress, topic, ranges, r.part, extraUnlocksSet);
+              const status = pathStatus(progress, topic, ranges, r.part, extraUnlocksSet, availability);
               const locked = status === 'locked';
               const selected = r.part === safePart;
               return (
@@ -816,6 +824,7 @@ function Roadmap() {
                           accent={n.accent}
                           grad={n.grad}
                           unlocked={n.unlocked}
+                          unavailable={n.unavailable ?? false}
                           passed={n.passed}
                           best={n.best}
                           isCurrent={n.isCurrent}
@@ -829,6 +838,7 @@ function Roadmap() {
                           displayNum={n.displayNum!}
                           accent={n.accent}
                           unlocked={n.unlocked}
+                          unavailable={n.unavailable ?? false}
                           passed={n.passed}
                           best={n.best}
                           isCurrent={n.isCurrent}
@@ -905,16 +915,18 @@ function MasteryLegend({ t }: { t: TFn }) {
 /* ──── level node ───────────────────────────────────────────────────────── */
 
 function LevelNode({
-  meta, displayNum, accent, unlocked, passed, best, isCurrent, mastery, due, masteryDays, onClick, t, cellW,
+  meta, displayNum, accent, unlocked, unavailable, passed, best, isCurrent, mastery, due, masteryDays, onClick, t, cellW,
 }: {
   meta: RoadmapLevelMeta; displayNum: number; accent: string;
-  unlocked: boolean; passed: boolean; best: number; isCurrent: boolean;
+  unlocked: boolean; unavailable: boolean; passed: boolean; best: number; isCurrent: boolean;
   mastery: MasteryState; due: boolean; masteryDays: number;
   onClick: () => void; t: TFn; cellW: number;
 }) {
   // Within a shown part levels gate sequentially; the first level of a part is
-  // gated by the previous part's test at the part selector, never here.
-  const lockedHint = t('roadmap.lockedHint');
+  // gated by the previous part's test at the part selector, never here. An
+  // unavailable level is a different thing from a locked one: nothing the
+  // learner does opens it, and the path continues past it.
+  const lockedHint = unavailable ? t('roadmap.unavailableHint') : t('roadmap.lockedHint');
   // Spaced mastery: a passed level is "cleared" (amber) until it is mastered
   // (green). Soft fill + strong border/icon mirror the quiz feedback tokens so
   // contrast holds in light and dark; the glyph (check vs star) and the aria
@@ -933,7 +945,7 @@ function LevelNode({
   const coding = (meta.codingTasks ?? 0) > 0;
   const label = unlocked
     ? `${t('roadmap.levelLabel', { n: displayNum })}: ${meta.title}${passed ? `, ${masteryText}${due ? `, ${t('mastery.dueForReview')}` : ''}, ${best}%` : ''}${coding ? `, ${t('coding.lesson.mapGlyph')}` : ''}`
-    : `${t('roadmap.levelLabel', { n: displayNum })}: ${t('roadmap.locked')}`;
+    : `${t('roadmap.levelLabel', { n: displayNum })}: ${meta.title}, ${unavailable ? t('roadmap.unavailable') : t('roadmap.locked')}`;
   const labelWidth = Math.max(72, Math.min(150, cellW - 10));
 
   return (
@@ -961,7 +973,7 @@ function LevelNode({
               fontFamily: 'inherit',
             }}
           >
-            {passed ? (mastered ? <StarIcon size={20} /> : <CheckIcon />) : unlocked ? displayNum : <LockIcon />}
+            {passed ? (mastered ? <StarIcon size={20} /> : <CheckIcon />) : unlocked ? displayNum : unavailable ? <span aria-hidden="true" style={{ fontSize: '0.95rem', fontWeight: 800 }}>…</span> : <LockIcon />}
             {isCurrent && <span className="rm-current-fin" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M3 18 Q 6 6 15 3 Q 17 11 21 18 Z" fill={accent} /></svg></span>}
             {due && <span className="rm-due-marker" aria-hidden="true"><ReviewIcon size={10} /></span>}
             {coding && unlocked && <span className="rm-code-marker" aria-hidden="true"><CodeIcon size={9} /></span>}
@@ -973,6 +985,7 @@ function LevelNode({
         style={{
           fontSize: '0.75rem',
           fontWeight: isCurrent ? 700 : 500,
+          fontStyle: unavailable ? 'italic' : undefined,
           color: unlocked ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
           maxWidth: labelWidth,
           textAlign: 'center',
@@ -993,21 +1006,21 @@ function LevelNode({
 /* ──── part-test (boss) node ────────────────────────────────────────────── */
 
 function PartTestNode({
-  part, range, accent, grad, unlocked, passed, best, isCurrent, onClick, t, cellW,
+  part, range, accent, grad, unlocked, unavailable, passed, best, isCurrent, onClick, t, cellW,
 }: {
   part: number; range: PartRange; accent: string; grad: [string, string];
-  unlocked: boolean; passed: boolean; best: number; isCurrent: boolean;
+  unlocked: boolean; unavailable: boolean; passed: boolean; best: number; isCurrent: boolean;
   onClick: () => void; t: TFn; cellW: number;
 }) {
   const title = t('roadmap.partTestTitle', { n: part });
   const label = unlocked
     ? `${title}${passed ? ` — ${t('roadmap.passed')} ${best}%` : ''}`
-    : `${title}: ${t('roadmap.locked')}`;
+    : `${title}: ${unavailable ? t('roadmap.unavailable') : t('roadmap.locked')}`;
   const labelWidth = Math.max(84, Math.min(160, cellW - 8));
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <div className={isCurrent ? 'rm-bob' : undefined}>
-        <Tooltip content={t('roadmap.checkpointLocked', { from: range.startLevel, to: range.endLevel })} placement="above" isEnabled={!unlocked}>
+        <Tooltip content={unavailable ? t('roadmap.unavailableHint') : t('roadmap.checkpointLocked', { from: range.startLevel, to: range.endLevel })} placement="above" isEnabled={!unlocked}>
           <span style={{ display: 'inline-block' }}>
           <button
             type="button"
@@ -1133,6 +1146,10 @@ function LessonRunner({
   const [codingIndex, setCodingIndex] = useState(0);
   const [codingPassed, setCodingPassed] = useState<string[]>([]);
   const [codingPending, setCodingPending] = useState<string[]>([]);
+  // The attempt was closed without a verdict because a question in it was
+  // retired while it was open. Nothing was recorded, so the finish screen
+  // offers the level again rather than a score.
+  const [invalidated, setInvalidated] = useState(false);
 
   const question = presented[qIndex];
   // Out of hearts once this answer is revealed and it pushed mistakes to the max.
@@ -1170,6 +1187,12 @@ function LessonRunner({
     setAnswerError(null);
     try {
       const result = await completeRoadmapAttempt(playable.sessionId);
+      if (result.invalidated) {
+        setInvalidated(true);
+        setCodingPhase(false);
+        setFinished(true);
+        return;
+      }
       setCorrectCount(result.correctAnswers);
       setCodingPending(result.codingPending ?? []);
       // A level that fails its coding gate is recorded as not passed even with
@@ -1191,6 +1214,11 @@ function LessonRunner({
       setAnswerError(null);
       try {
         const result = await completeRoadmapAttempt(playable.sessionId);
+        if (result.invalidated) {
+          setInvalidated(true);
+          setFinished(true);
+          return;
+        }
         setCorrectCount(result.correctAnswers);
         // Out of hearts is a failed level however the percentage lands, so keep
         // the local record below the pass mark and let the server decide.
@@ -1347,6 +1375,31 @@ function LessonRunner({
           />
         </Suspense>
         <span className="cd-visually-hidden" aria-live="polite">{t('coding.lesson.pending', { n: codingTasks.length - codingPassed.length })}: {title}</span>
+      </div>
+    );
+  }
+
+  if (finished && invalidated) {
+    return (
+      <div
+        style={{
+          flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          alignItems: 'center', textAlign: 'center', maxWidth: 520, margin: '0 auto', position: 'relative',
+          paddingLeft: 16, paddingRight: 16,
+        }}
+      >
+        <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">{t('roadmap.invalidatedTitle')}</h1>
+        <div role="status" style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>
+          {t('roadmap.invalidatedBody')}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+          <button type="button" className="rm-accent-btn" onClick={onReplay} style={{ backgroundColor: accent }}>
+            {t('roadmap.retryLevel')}
+          </button>
+          <button type="button" className="rm-text-btn" onClick={onExit}>
+            {t('roadmap.backToPath')}
+          </button>
+        </div>
       </div>
     );
   }

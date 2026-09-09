@@ -1021,6 +1021,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               {t('quiz.scoreOutOf', { correct: result.correctAnswers, total: result.totalQuestions })} · {result.percentage}%
             </span>
 
+            {(result.voided?.length ?? 0) > 0 && (
+              <Text type="supporting" color="secondary" justify="center">
+                {t('quiz.voidedNote', { n: result.voided!.length })}
+              </Text>
+            )}
+
             {mode === 'daily' && (
               <Text type="supporting" color="secondary" justify="center">
                 {t('quiz.dailyComplete')}

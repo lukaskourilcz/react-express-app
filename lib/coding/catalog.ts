@@ -1,7 +1,16 @@
 /** The merged coding catalogue: every task with English and Czech copy, plus
  * the projections the API serves. Never imports the solutions module, so a
  * client bundle that pulled this in by mistake would still carry no answers;
- * the launch contracts forbid that import anyway. */
+ * the launch contracts forbid that import anyway.
+ *
+ * Two modules, on purpose. This one holds everything authored, which the
+ * content contract keeps proving solvable and which history (a passed record,
+ * a bookmark, an imported attempt) still resolves against. `./active` holds
+ * what may be issued: the same list with the audit's eligibility gate applied
+ * through the registry (`lib/curation.ts`). Every issuing path — a task by id,
+ * a Learn level's quota, the section lists, the practice queue, the browser
+ * index — reads `./active`, so a retired task cannot be reached by any of
+ * them, and nothing here offers an issuing lookup to forget the gate with. */
 
 import type {
   CodingTask,
@@ -9,7 +18,6 @@ import type {
   CodingTrack,
   PlayableCodingTask,
 } from '../../shared/coding-catalog';
-import { formatOf } from '../../shared/coding-catalog';
 import { mergeTask, type CodingTaskCs, type CodingTaskSource } from './types';
 import { JAVASCRIPT_TASKS } from './tasks/javascript';
 import { JAVASCRIPT_TASKS_CS } from './tasks/javascript.cs';
@@ -47,34 +55,14 @@ export const CODING_TASKS: readonly CodingTask[] = sources
   .sort((a, b) => (TRACK_ORDER[a.task.track] - TRACK_ORDER[b.task.track]) || (a.task.level - b.task.level) || (a.task.tier - b.task.tier) || (a.order - b.order))
   .map(({ task }) => task);
 
-const BY_ID = new Map(CODING_TASKS.map((task) => [task.id, task]));
+const ALL_BY_ID = new Map(CODING_TASKS.map((task) => [task.id, task]));
 const BY_LEGACY = new Map(CODING_TASKS.filter((task) => task.legacyId).map((task) => [task.legacyId!, task]));
 
-export const codingTaskById = (id: string): CodingTask | undefined => BY_ID.get(id);
+/** Any authored task by id, retired ones included. For history only — a
+ * passed record, a bookmark, a garden path, an imported attempt — never for
+ * issuing. The issuing lookup is `codingTaskById` in `./active`. */
+export const codingTaskForHistory = (id: string): CodingTask | undefined => ALL_BY_ID.get(id);
 export const codingTaskByLegacyId = (legacyId: string): CodingTask | undefined => BY_LEGACY.get(legacyId);
-export const tasksForTrack = (track: CodingTrack): CodingTask[] => CODING_TASKS.filter((task) => task.track === track);
-
-/** Tasks that belong to one Learn level, in catalogue order. Checklist tasks
- * cannot gate a level, so they are never part of one.
- *
- * Neither can a repair task. A debug exercise carries a `level` so it sorts into
- * the right place in the Coding section's ladder, but it is a format a learner
- * chooses, not a gate they must pass: letting one into the quota silently
- * *replaces* the implementation task the level was asking for, because the
- * quota takes the first N in catalogue order. That is what happened when the
- * repair tasks were added — JavaScript level 3, whose quota is one, swapped
- * `js-fizz-values` for `js-debug-average`, and level 10 dropped
- * `js-activate-user`. The launch contract now asserts no level can gate on one.
- */
-export function tasksForLevel(topic: CodingTask['topic'], level: number): CodingTask[] {
-  return CODING_TASKS.filter(
-    (task) =>
-      task.topic === topic &&
-      task.level === level &&
-      task.verify !== 'checklist' &&
-      formatOf(task) !== 'debug',
-  );
-}
 
 /** How many tasks a Learn level asks for: one for levels 1–5, two for 6–15,
  * up to three for 16–25. Deterministic: the first tasks in catalogue order. */
@@ -82,9 +70,6 @@ export function levelTaskQuota(level: number): number {
   if (level <= 5) return 1;
   if (level <= 15) return 2;
   return 3;
-}
-export function levelCodingTasks(topic: CodingTask['topic'], level: number): CodingTask[] {
-  return tasksForLevel(topic, level).slice(0, levelTaskQuota(level));
 }
 
 export function summarize(task: CodingTask): CodingTaskSummary {
@@ -134,5 +119,3 @@ export function playable(task: CodingTask): PlayableCodingTask {
   }
   return out;
 }
-
-export const CODING_SUMMARIES: readonly CodingTaskSummary[] = CODING_TASKS.map(summarize);

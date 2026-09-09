@@ -103,6 +103,8 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   rate_limited: 'error.rateLimited',
   not_configured: 'error.serviceUnavailable',
   migration_required: 'error.serviceUnavailable',
+  step_unavailable: 'error.stepUnavailable',
+  task_retired: 'error.taskRetired',
 };
 
 // not_found spans several endpoints whose English server messages are more

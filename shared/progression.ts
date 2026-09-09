@@ -59,11 +59,16 @@ export function passedLevelCount(progress: VerifiedProgress, topic: string): num
 /** The first level of a topic the learner has not passed, counting from 1 and
  * stopping at the first gap. This is "where am I", which is not the same
  * question as "how much have I done": a gap means the next step is the gap. */
-export function firstUnfinishedLevel(progress: VerifiedProgress, topic: string): number {
-  const levels = progress[topic]?.levels;
-  if (!levels) return 1;
+export function firstUnfinishedLevel(
+  progress: VerifiedProgress,
+  topic: string,
+  availability: StepAvailability = EVERYTHING_AVAILABLE,
+): number {
+  const levels = progress[topic]?.levels ?? {};
   let level = 1;
-  while (entryPassed(levels[String(level)])) level++;
+  // An unavailable level cannot be the next step; it is stepped over like a
+  // passed one. The walk is bounded by the map's own level count downstream.
+  while (entryPassed(levels[String(level)]) || (availability.unavailableLevels?.has(level) ?? false)) level++;
   return level;
 }
 
@@ -223,29 +228,189 @@ export const LEVELS_PER_CHECKPOINT = 5;
 export const isCheckpointPassed = (progress: VerifiedProgress, topic: string, checkpoint: number): boolean =>
   entryPassed(progress[topic]?.checkpoints?.[String(checkpoint)]);
 
-/**
- * Level 1 is always the way in. The first level of a new segment (6, 11, 16,
- * 21) needs that segment's checkpoint exam passed; every other level needs the
- * one before it.
- *
- * This is the rule the roadmap map has always drawn, and it is at least as
- * strict as the verified-completion routine's — so a level the server agrees to
- * serve is a level the learner can also finish, and a level the map hides is
- * one the API refuses.
- */
-export function isLevelUnlocked(progress: VerifiedProgress, topic: string, level: number): boolean {
-  if (!Number.isInteger(level) || level < 1) return false;
-  if (level === 1) return true;
-  if (level % LEVELS_PER_CHECKPOINT === 1) {
-    return isCheckpointPassed(progress, topic, (level - 1) / LEVELS_PER_CHECKPOINT);
-  }
-  return isLevelPassed(progress, topic, level - 1);
+/* ── parts and availability ────────────────────────────────────────────── */
+
+/** Every topic is presented as this many sequential parts, each ending with
+ * its own test. A part is a contiguous slice of the topic's levels, sized
+ * from the level count so a topic re-splits cleanly whatever its length. The
+ * test of part *n* is recorded as checkpoint *n*. This is the split the map
+ * draws and the exams the learner actually sits, so it is also the split the
+ * unlock rules use — the fixed five-level segments below are the shape the
+ * question ids are authored in, not the shape the learner meets. */
+export const PARTS_PER_TOPIC = 3;
+
+/** Split a level count into PARTS_PER_TOPIC contiguous sizes (extra → earlier parts). */
+export function partSizes(levelCount: number): number[] {
+  const n = Math.max(0, Math.floor(levelCount));
+  const base = Math.floor(n / PARTS_PER_TOPIC);
+  const rem = n % PARTS_PER_TOPIC;
+  return Array.from({ length: PARTS_PER_TOPIC }, (_, i) => base + (i < rem ? 1 : 0));
 }
 
-/** A checkpoint opens once the last level of its segment is passed, which by
- * the rule above means all five are. */
-export const isCheckpointUnlocked = (progress: VerifiedProgress, topic: string, checkpoint: number): boolean =>
-  isLevelPassed(progress, topic, checkpoint * LEVELS_PER_CHECKPOINT);
+export interface PartRange {
+  /** 1-based part number (1..PARTS_PER_TOPIC). */
+  part: number;
+  /** First / last GLOBAL level (1-based, inclusive) covered by this part. */
+  startLevel: number;
+  endLevel: number;
+  size: number;
+}
+
+/** Contiguous global-level ranges for each part of a topic with `levelCount` levels. */
+export function partRanges(levelCount: number): PartRange[] {
+  const sizes = partSizes(levelCount);
+  const ranges: PartRange[] = [];
+  let start = 1;
+  for (let i = 0; i < sizes.length; i++) {
+    const size = sizes[i];
+    ranges.push({ part: i + 1, startLevel: start, endLevel: start + size - 1, size });
+    start += size;
+  }
+  return ranges;
+}
+
+/**
+ * What the unlock rules need to know about a topic beyond the learner's
+ * record: how long it is, and which of its steps cannot be opened right now.
+ *
+ * `levelCount` decides where the part tests fall. Without it the rules fall
+ * back to the authored five-level segments, which is what they used before
+ * the map was split into parts — and which refused level 6 of a 25-level
+ * topic to a signed-in learner whose part-1 test does not come until level 9.
+ * Every caller that knows the topic's length passes it.
+ *
+ * A level is unavailable when too few of its questions are served — the
+ * content audit retired them, or the owner hid them. Such a level stays on
+ * the map with its number, so an old record for it keeps its meaning, but the
+ * rules step over it: it is never a prerequisite, and a part whose last level
+ * is unavailable opens its test on the last level that is available. A test
+ * with nothing to examine is unavailable in turn and opens the next part as
+ * if it were passed. This is what stops a retired item from turning into a
+ * dead end for the learner behind it.
+ *
+ * Both sides read the same availability: the server derives it from the
+ * served question set and sends it in the level map, and the browser reads it
+ * from that map. Nothing here grants access — an unavailable step is one the
+ * server refuses to serve, so stepping over it is the only way forward.
+ */
+export interface StepAvailability {
+  levelCount?: number;
+  unavailableLevels?: ReadonlySet<number>;
+  /** Checkpoint (part test) numbers with no available level to examine. */
+  unavailableCheckpoints?: ReadonlySet<number>;
+}
+export const EVERYTHING_AVAILABLE: StepAvailability = {};
+
+interface Segment {
+  /** 1-based; the checkpoint or part test that closes it carries this number. */
+  index: number;
+  start: number;
+  end: number;
+}
+
+/** The segment a level belongs to: its part when the topic's length is known,
+ * otherwise the authored five-level block. */
+function segmentOf(availability: StepAvailability, level: number): Segment {
+  if (availability.levelCount && availability.levelCount > 0) {
+    const range = partRanges(availability.levelCount).find((r) => level >= r.startLevel && level <= r.endLevel);
+    if (range) return { index: range.part, start: range.startLevel, end: range.endLevel };
+    // Past the end of the topic: not a step at all. Treat as its own segment so
+    // the rule refuses it (nothing before it can be "the last available level").
+    return { index: PARTS_PER_TOPIC + 1, start: level, end: level };
+  }
+  const block = Math.floor((level - 1) / LEVELS_PER_CHECKPOINT);
+  return { index: block + 1, start: block * LEVELS_PER_CHECKPOINT + 1, end: (block + 1) * LEVELS_PER_CHECKPOINT };
+}
+
+/** The segment a checkpoint (part test) closes, or null when the topic has no
+ * such segment. */
+function segmentClosedBy(availability: StepAvailability, checkpoint: number): Segment | null {
+  if (!Number.isInteger(checkpoint) || checkpoint < 1) return null;
+  if (availability.levelCount && availability.levelCount > 0) {
+    const range = partRanges(availability.levelCount)[checkpoint - 1];
+    return range && range.size > 0 ? { index: range.part, start: range.startLevel, end: range.endLevel } : null;
+  }
+  return { index: checkpoint, start: (checkpoint - 1) * LEVELS_PER_CHECKPOINT + 1, end: checkpoint * LEVELS_PER_CHECKPOINT };
+}
+
+const levelAvailable = (availability: StepAvailability, level: number): boolean =>
+  !(availability.unavailableLevels?.has(level) ?? false);
+const checkpointAvailable = (availability: StepAvailability, checkpoint: number): boolean =>
+  !(availability.unavailableCheckpoints?.has(checkpoint) ?? false);
+
+/** The last available level in a segment, or null. */
+function lastAvailableLevel(availability: StepAvailability, segment: Segment): number | null {
+  for (let candidate = segment.end; candidate >= segment.start; candidate--) {
+    if (levelAvailable(availability, candidate)) return candidate;
+  }
+  return null;
+}
+
+/** The segment's levels are all done: its last available level passed, or —
+ * when it has none — the segment before it cleared. */
+function segmentDone(progress: VerifiedProgress, topic: string, segment: Segment, availability: StepAvailability): boolean {
+  const last = lastAvailableLevel(availability, segment);
+  if (last === null) return segment.index === 1 || isSegmentCleared(progress, topic, segment.index - 1, availability);
+  return isLevelPassed(progress, topic, last);
+}
+
+/**
+ * Whether segment `index` (a part, or an authored block) is behind the
+ * learner: its test passed, or — when that test has nothing to examine — its
+ * levels done. The first level of the next segment opens on this.
+ */
+export function isSegmentCleared(progress: VerifiedProgress, topic: string, index: number, availability: StepAvailability = EVERYTHING_AVAILABLE): boolean {
+  if (index < 1) return true;
+  const segment = segmentClosedBy(availability, index);
+  if (!segment) return false;
+  if (checkpointAvailable(availability, index)) return isCheckpointPassed(progress, topic, index);
+  return segmentDone(progress, topic, segment, availability);
+}
+
+/**
+ * Level 1 is always the way in. The first level of a new part needs the part
+ * before it cleared (its test passed); every other level needs the nearest
+ * available level before it in the same part. An unavailable level is stepped
+ * over in both directions: it cannot be opened itself, and the level after it
+ * looks past it.
+ *
+ * This is the rule the roadmap map draws, and it is at least as strict as the
+ * verified-completion routine's — so a level the server agrees to serve is a
+ * level the learner can also finish, and a level the map hides is one the API
+ * refuses.
+ */
+export function isLevelUnlocked(
+  progress: VerifiedProgress,
+  topic: string,
+  level: number,
+  availability: StepAvailability = EVERYTHING_AVAILABLE,
+): boolean {
+  if (!Number.isInteger(level) || level < 1) return false;
+  if (availability.levelCount !== undefined && level > availability.levelCount) return false;
+  if (!levelAvailable(availability, level)) return false;
+  const segment = segmentOf(availability, level);
+  for (let candidate = level - 1; candidate >= segment.start; candidate--) {
+    if (levelAvailable(availability, candidate)) return isLevelPassed(progress, topic, candidate);
+  }
+  // First available level of its segment: the segment before must be cleared.
+  return segment.index === 1 || isSegmentCleared(progress, topic, segment.index - 1, availability);
+}
+
+/** A checkpoint (part test) opens once the last available level of its
+ * segment is passed, which by the rule above means every available level in
+ * it is. */
+export function isCheckpointUnlocked(
+  progress: VerifiedProgress,
+  topic: string,
+  checkpoint: number,
+  availability: StepAvailability = EVERYTHING_AVAILABLE,
+): boolean {
+  if (!checkpointAvailable(availability, checkpoint)) return false;
+  const segment = segmentClosedBy(availability, checkpoint);
+  if (!segment) return false;
+  const last = lastAvailableLevel(availability, segment);
+  return last !== null && isLevelPassed(progress, topic, last);
+}
 
 /** A checkpoint needs every level it examines. */
 /** A step a learner can ask the server for. */
@@ -277,8 +442,19 @@ export function stepAlreadyPassed(
   return false;
 }
 
-export function areLevelsPassed(progress: VerifiedProgress, topic: string, from: number, to: number): boolean {
-  for (let level = from; level <= to; level++) if (!isLevelPassed(progress, topic, level)) return false;
+/** Every available level in the range passed; unavailable ones are stepped
+ * over, as they are everywhere else. */
+export function areLevelsPassed(
+  progress: VerifiedProgress,
+  topic: string,
+  from: number,
+  to: number,
+  availability: StepAvailability = EVERYTHING_AVAILABLE,
+): boolean {
+  for (let level = from; level <= to; level++) {
+    if (!levelAvailable(availability, level)) continue;
+    if (!isLevelPassed(progress, topic, level)) return false;
+  }
   return true;
 }
 
@@ -390,11 +566,12 @@ export function nextEligibleStep(
   progress: VerifiedProgress,
   levelCount: (topic: string) => number,
   extraUnlocked: readonly string[] = [],
+  availabilityOf: (topic: string) => StepAvailability = () => EVERYTHING_AVAILABLE,
 ): { topic: string; level: number } | null {
   for (const topic of eligibleTopics(profile, subject, progress, extraUnlocked)) {
     const total = levelCount(topic);
     if (total <= 0) continue;
-    const next = firstUnfinishedLevel(progress, topic);
+    const next = firstUnfinishedLevel(progress, topic, availabilityOf(topic));
     if (next <= total) return { topic, level: next };
   }
   return null;

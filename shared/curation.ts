@@ -72,14 +72,17 @@ export const passesBothGates = (relevance: number, quality: number): boolean =>
 
 /* ── what a review event actually was ──────────────────────────────────── */
 
-/** Three different things, never collapsed into one word.
+/** Four different things, never collapsed into one word.
  *
- * `human` is a person applying the criteria. `automated` is a check a script
- * can make — a contract test, a link check, the content audit script. For a
- * coding task, `execution` is the solution proven against the grader, which
- * is evidence that the task is solvable as specified and is not evidence that
- * it has no defects. */
-export const REVIEW_EVENT_KINDS = ['human', 'automated', 'execution'] as const;
+ * `human` is a person applying the criteria. `model` is an AI model applying
+ * the same criteria item by item, with its executable checks run and its
+ * sources cited — the content audit of #176 was performed this way, and it is
+ * recorded as what it was, because "a person read it" is a different claim.
+ * `automated` is a check a script can make — a contract test, a link check,
+ * the content audit script. For a coding task, `execution` is the solution
+ * proven against the grader, which is evidence that the task is solvable as
+ * specified and is not evidence that it has no defects. */
+export const REVIEW_EVENT_KINDS = ['human', 'model', 'automated', 'execution'] as const;
 export type ReviewEventKind = (typeof REVIEW_EVENT_KINDS)[number];
 
 export interface ReviewEvent {
@@ -103,6 +106,138 @@ export interface ReviewRecord {
   /** 0-5, scored across the five quality criteria. */
   quality: number;
   events: ReviewEvent[];
+}
+
+/* ── the ledger: what one audit decision records ───────────────────────── */
+
+/** The disposition a review reaches. `retain` and `rewrite` are the two that
+ * keep an item live (a rewrite is re-scored on its corrected version before it
+ * returns); `retire` and `quarantine` remove it from every active pool the
+ * moment the decision is recorded. */
+export const LEDGER_DECISIONS = ['retain', 'rewrite', 'retire', 'quarantine'] as const;
+export type LedgerDecision = (typeof LEDGER_DECISIONS)[number];
+export const isLedgerDecision = (value: unknown): value is LedgerDecision =>
+  typeof value === 'string' && (LEDGER_DECISIONS as readonly string[]).includes(value);
+
+/** The five modern-relevance markers, 0-2 each, summed into `relevance`. */
+export interface RelevanceMarkers {
+  presentDay: number;
+  practicalUtility: number;
+  transferable: number;
+  audienceFit: number;
+  riskOutcome: number;
+}
+export const RELEVANCE_MARKER_KEYS = ['presentDay', 'practicalUtility', 'transferable', 'audienceFit', 'riskOutcome'] as const;
+
+/** The seven quality dimensions, 1-5 each. The final quality score is their
+ * minimum, never their average, so one serious weakness cannot hide. */
+export interface QualityDimensions {
+  topicRelevance: number;
+  learningValue: number;
+  technicalCorrectness: number;
+  wording: number;
+  answerOptions: number;
+  hint: number;
+  explanation: number;
+}
+export const QUALITY_DIMENSION_KEYS = ['topicRelevance', 'learningValue', 'technicalCorrectness', 'wording', 'answerOptions', 'hint', 'explanation'] as const;
+
+export const relevanceTotal = (markers: RelevanceMarkers): number =>
+  RELEVANCE_MARKER_KEYS.reduce((sum, key) => sum + markers[key], 0);
+export const qualityFloor = (dimensions: QualityDimensions): number =>
+  Math.min(...QUALITY_DIMENSION_KEYS.map((key) => dimensions[key]));
+
+/** One row of the review registry: the compact, runtime-loaded projection of a
+ * ledger entry. It names the exact content the decision was made about (by
+ * plain hash, checked against the served item on every request) and carries
+ * the scores the admin view shows. Nothing here is served to a learner
+ * directly; `publicItemReview` derives what may cross the wire. */
+export interface RegistryEntry {
+  id: string;
+  kind: 'question' | 'coding-task';
+  /** Plain digest of the reviewed content. A served item with a different
+   * digest was edited after this decision and the decision no longer applies. */
+  hash: string;
+  /** Digest of the reviewed Czech translation, or null when the item has no
+   * approved translation. A served translation with a different digest is
+   * dropped in favour of English rather than served unreviewed. */
+  cs: string | null;
+  relevance: number;
+  quality: number;
+  markers: RelevanceMarkers;
+  dimensions: QualityDimensions;
+  decision: LedgerDecision;
+  /** Why an item left, in a few words. Present for retire and quarantine. */
+  reason?: string;
+  /** ISO date of the decision. */
+  reviewedAt: string;
+  /** 1 for the version first reviewed; incremented by each recorded rewrite. */
+  revision: number;
+}
+
+/** A registry row is internally consistent when its totals are what its
+ * markers and dimensions add up to. A row that fails this is a data error and
+ * is treated as no record at all — never as an approval. */
+export function registryEntryConsistent(entry: RegistryEntry): boolean {
+  return (
+    RELEVANCE_MARKER_KEYS.every((key) => Number.isInteger(entry.markers[key]) && entry.markers[key] >= 0 && entry.markers[key] <= MARKER_MAX) &&
+    QUALITY_DIMENSION_KEYS.every((key) => Number.isInteger(entry.dimensions[key]) && entry.dimensions[key] >= 1 && entry.dimensions[key] <= QUALITY_MAX) &&
+    relevanceTotal(entry.markers) === entry.relevance &&
+    qualityFloor(entry.dimensions) === entry.quality &&
+    isLedgerDecision(entry.decision)
+  );
+}
+
+/* ── eligibility: may this exact content be served? ────────────────────── */
+
+export type EligibilityReason =
+  /** The audit does not cover this subject; the gate does not apply. */
+  | 'not-in-scope'
+  /** Current record, both gates pass, decision keeps it live. */
+  | 'reviewed'
+  /** No record at all. */
+  | 'unreviewed'
+  /** A record exists for a different version of the content. */
+  | 'superseded'
+  /** The recorded decision retired it. */
+  | 'retired'
+  /** Correctness could not be verified; held pending evidence. */
+  | 'quarantined'
+  /** The record's own scores fail a gate, whatever its decision says. */
+  | 'failed-gate'
+  /** The record is internally inconsistent and is ignored. */
+  | 'invalid-record';
+
+export interface Eligibility {
+  active: boolean;
+  reason: EligibilityReason;
+  entry: RegistryEntry | null;
+  /** True when the served translation is the one that was reviewed (or the
+   * item has none). False means serve English instead. */
+  csApproved: boolean;
+}
+
+/**
+ * The one rule every delivery surface applies, pure so that the contract
+ * suite can run it against every boundary: relevance 3 retires, 4 alone does
+ * not, 4 with quality 2 still retires, relevance 10 with a wrong key (quality
+ * capped at 2) still retires, and an item nobody has reviewed is not served.
+ */
+export function eligibilityFrom(
+  entry: RegistryEntry | null | undefined,
+  contentHash: string,
+  translationHash: string | null,
+  inScope: boolean,
+): Eligibility {
+  if (!inScope) return { active: true, reason: 'not-in-scope', entry: null, csApproved: true };
+  if (!entry) return { active: false, reason: 'unreviewed', entry: null, csApproved: false };
+  if (!registryEntryConsistent(entry)) return { active: false, reason: 'invalid-record', entry, csApproved: false };
+  if (entry.hash !== contentHash) return { active: false, reason: 'superseded', entry, csApproved: false };
+  const csApproved = translationHash === null ? true : entry.cs === translationHash;
+  if (entry.decision === 'retire') return { active: false, reason: 'retired', entry, csApproved };
+  if (entry.decision === 'quarantine') return { active: false, reason: 'quarantined', entry, csApproved };
+  if (!passesBothGates(entry.relevance, entry.quality)) return { active: false, reason: 'failed-gate', entry, csApproved };
+  return { active: true, reason: 'reviewed', entry, csApproved };
 }
 
 /* ── status, derived and failing closed ────────────────────────────────── */
@@ -138,7 +273,11 @@ export const countEvents = (record: ReviewRecord | null | undefined, kind: Revie
 /** The most recent human review date, or null. Used for "reviewed on", which
  * is a claim about a person having looked, not about a script having run. */
 export function lastHumanReviewAt(record: ReviewRecord | null | undefined): string | null {
-  const dates = (record?.events ?? []).filter((e) => e.kind === 'human').map((e) => e.at).sort();
+  return lastReviewAt(record, 'human');
+}
+
+export function lastReviewAt(record: ReviewRecord | null | undefined, kind: ReviewEventKind): string | null {
+  const dates = (record?.events ?? []).filter((e) => e.kind === kind).map((e) => e.at).sort();
   return dates.length > 0 ? dates[dates.length - 1] : null;
 }
 
@@ -152,6 +291,10 @@ export interface PublicItemReview {
   reviewedAt?: string;
   /** Present only when status is 'reviewed'. Counted, never rounded up. */
   humanReviews?: number;
+  /** Present only when status is 'reviewed': item-level reviews performed by
+   * an AI model against the published criteria. A different claim from a
+   * person having read it, and labelled as one. */
+  modelReviews?: number;
   /** Machine evidence, which exists independently of anyone having read the
    * item — a contract suite passing is a fact whether or not a reviewer has
    * looked. Carried whatever the status, so an item nobody has read can still
@@ -179,12 +322,13 @@ export function publicItemReview(
     ...(execution > 0 ? { executionChecks: execution } : {}),
   };
   if (status !== 'reviewed' || !record) return { version, status, ...machine };
-  const reviewedAt = lastHumanReviewAt(record);
+  const reviewedAt = lastHumanReviewAt(record) ?? lastReviewAt(record, 'model');
   return {
     version,
     status,
     ...(reviewedAt ? { reviewedAt } : {}),
     humanReviews: countEvents(record, 'human'),
+    modelReviews: countEvents(record, 'model'),
     ...machine,
     relevance: record.relevance,
     quality: record.quality,
@@ -200,18 +344,24 @@ export function publicItemReview(
 export type ItemClaim =
   | 'reviewed-repeatedly'
   | 'reviewed-once'
+  /** Reviewed item by item by an AI model against the criteria, with the
+   * executable checks run; not yet read by a person. Never upgraded to either
+   * sentence above. */
+  | 'reviewed-by-model'
   | 'checked-automatically'
   | 'not-yet-reviewed'
   | 'none';
 
 export function itemClaim(review: PublicItemReview | null | undefined): ItemClaim {
   if (!review || review.status === 'unavailable') return 'none';
-  // Human review outranks machine evidence, and only a current record counts:
-  // 'superseded' is deliberately indistinguishable from 'unreviewed' to the
-  // learner, because in both cases nobody has approved what is on their screen.
+  // Human review outranks model review, which outranks machine evidence, and
+  // only a current record counts: 'superseded' is deliberately
+  // indistinguishable from 'unreviewed' to the learner, because in both cases
+  // nobody has approved what is on their screen.
   if (review.status === 'reviewed') {
     if ((review.humanReviews ?? 0) > 1) return 'reviewed-repeatedly';
     if ((review.humanReviews ?? 0) === 1) return 'reviewed-once';
+    if ((review.modelReviews ?? 0) > 0) return 'reviewed-by-model';
   }
   if ((review.automatedChecks ?? 0) + (review.executionChecks ?? 0) > 0) {
     return 'checked-automatically';

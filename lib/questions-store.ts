@@ -11,6 +11,8 @@ import { loadDeploymentQuestionBank, loadSubjectQuestionBank } from './question-
 import { createServiceClient, withTimeout } from './http';
 import { computeImportance, clampImportance } from './importance';
 import { subjectForCategory, type ScopeSubjectId } from '../shared/subject-catalog';
+import { questionEligibility } from './curation';
+import type { Eligibility, LedgerDecision } from '../shared/curation';
 
 const supabase = createServiceClient();
 
@@ -108,12 +110,49 @@ export interface CsFields {
   explanation: string;
 }
 
+/** What the admin console is told about an item's review state: whether it
+ * is served, why not, and the scores of the decision on record. The reason
+ * is the same word the gate used, so an operator editing a devShark question
+ * can see that the edit made it `superseded` and that it stays out of every
+ * pool until a review of the new wording is recorded. */
+export interface AdminReviewState {
+  active: boolean;
+  reason: Eligibility['reason'];
+  csApproved: boolean;
+  decision?: LedgerDecision;
+  retireReason?: string;
+  relevance?: number;
+  quality?: number;
+  reviewedAt?: string;
+  revision?: number;
+}
+
 /** A question as shown in the admin console: full content, origin, and cs text. */
 export interface AdminQuestion extends Question {
   source: 'base' | 'edited' | 'custom';
   deleted: boolean;
   /** Current Czech translation (db override, else static bank), for editing. */
   cs: CsFields;
+  review: AdminReviewState;
+}
+
+function adminReviewState(q: Question): AdminReviewState {
+  const e = questionEligibility(q);
+  return {
+    active: e.active,
+    reason: e.reason,
+    csApproved: e.csApproved,
+    ...(e.entry
+      ? {
+          decision: e.entry.decision,
+          ...(e.entry.reason ? { retireReason: e.entry.reason } : {}),
+          relevance: e.entry.relevance,
+          quality: e.entry.quality,
+          reviewedAt: e.entry.reviewedAt,
+          revision: e.entry.revision,
+        }
+      : {}),
+  };
 }
 
 /** Validated input accepted by saveQuestion(). */
@@ -247,9 +286,46 @@ function buildEffective(
   return list;
 }
 
-type EffectiveCache = { at: number; list: Question[]; byId: Map<string, Question> };
+type EffectiveCache = {
+  at: number;
+  /** What may be served: the merged set with the eligibility gate applied. */
+  list: Question[];
+  byId: Map<string, Question>;
+  /** The merged set before the gate, for history: an explanation for an
+   * attempt made before an item was retired, an admin summary of a reported
+   * question. Never a pool to select from. */
+  historyById: Map<string, Question>;
+  /** Merged items the gate removed, with the reason, for the admin view and
+   * the coverage report. */
+  withheld: Map<string, Eligibility['reason']>;
+};
 const caches = new Map<string, EffectiveCache>();
 const inflight = new Map<string, Promise<EffectiveCache>>();
+
+/**
+ * The eligibility gate, applied once, here, to the merged set.
+ *
+ * Everything a learner can be served reads `list` or `byId`, so a retired,
+ * quarantined, edited-since-review or never-reviewed devShark item is absent
+ * from every selector at once: quiz, daily, challenge, placement, Learn levels
+ * and checkpoints, personalised review, Play, flashcard creation, the coverage
+ * count. Subjects outside the audit pass through unchanged. A translation that
+ * is not the reviewed one is dropped rather than served: the learner gets the
+ * reviewed English instead of unreviewed Czech.
+ */
+export function applyEligibility(merged: Question[]): { list: Question[]; withheld: Map<string, Eligibility['reason']> } {
+  const list: Question[] = [];
+  const withheld = new Map<string, Eligibility['reason']>();
+  for (const q of merged) {
+    const eligibility = questionEligibility(q);
+    if (!eligibility.active) {
+      withheld.set(q.id, eligibility.reason);
+      continue;
+    }
+    list.push(eligibility.csApproved || !q.csTranslation ? q : { ...q, csTranslation: null });
+  }
+  return { list, withheld };
+}
 
 async function effective(subject?: ScopeSubjectId, includeCzech = true): Promise<EffectiveCache> {
   const key = `${subject ?? 'deployment'}:${includeCzech ? 'cs' : 'en'}`;
@@ -266,10 +342,17 @@ async function effective(subject?: ScopeSubjectId, includeCzech = true): Promise
       csTranslation: bank.translations[question.id] ?? null,
     }));
     const overrides = await loadOverrides();
-    const list = overrides
+    const merged = overrides
       ? buildEffective(baseQuestions, overrides, subject)
       : baseQuestions.map(withImportance);
-    const value = { at: Date.now(), list, byId: new Map(list.map((q) => [q.id, q])) };
+    const { list, withheld } = applyEligibility(merged);
+    const value: EffectiveCache = {
+      at: Date.now(),
+      list,
+      byId: new Map(list.map((q) => [q.id, q])),
+      historyById: new Map(merged.map((q) => [q.id, q])),
+      withheld,
+    };
     caches.set(key, value);
     return value;
   })().finally(() => inflight.delete(key));
@@ -277,14 +360,33 @@ async function effective(subject?: ScopeSubjectId, includeCzech = true): Promise
   return loading;
 }
 
-/** The live question set (base + overrides), used by the quiz/play endpoints. */
+/** The live question set (base + overrides, eligibility applied), used by
+ * every selector. */
 export async function getEffectiveQuestions(subject?: ScopeSubjectId, includeCzech = true): Promise<Question[]> {
   return (await effective(subject, includeCzech)).list;
 }
 
-/** Same set as a lookup map, for grading and explanation lookups. */
+/** Same set as a lookup map, for grading and explanation lookups. An id the
+ * map lacks is either unknown or no longer served; graders treat both the
+ * same way — the answer is void, neither counted for nor against. */
 export async function getEffectiveQuestionsById(subject?: ScopeSubjectId, includeCzech = true): Promise<Map<string, Question>> {
   return (await effective(subject, includeCzech)).byId;
+}
+
+/**
+ * The merged set before the gate, by id. For reading history only: the
+ * explanation of an item a learner answered before it was retired, the
+ * summary of a reported question in the admin console. Nothing selects from
+ * it, which is what keeps retirement from being deletion.
+ */
+export async function getQuestionsForHistoryById(subject?: ScopeSubjectId, includeCzech = true): Promise<Map<string, Question>> {
+  return (await effective(subject, includeCzech)).historyById;
+}
+
+/** Ids the gate withheld from the served set, with the reason each was
+ * withheld. For the admin view and the audit report. */
+export async function getWithheldQuestions(subject?: ScopeSubjectId): Promise<Map<string, Eligibility['reason']>> {
+  return (await effective(subject, false)).withheld;
 }
 
 /**
@@ -338,15 +440,16 @@ export async function listAdminQuestions(): Promise<AdminQuestion[]> {
     const ov = overrides.get(base.id);
     if (ov) {
       const merged = mergeRow(ov, base);
-      out.push({ ...merged, source: 'edited', deleted: ov.deleted, cs: csFieldsFor(merged, ov) });
+      out.push({ ...merged, source: 'edited', deleted: ov.deleted, cs: csFieldsFor(merged, ov), review: adminReviewState(merged) });
     } else {
-      out.push({ ...withImportance(base), source: 'base', deleted: false, cs: csFieldsFor(base) });
+      const item = withImportance(base);
+      out.push({ ...item, source: 'base', deleted: false, cs: csFieldsFor(base), review: adminReviewState(item) });
     }
   }
   for (const ov of overrides.values()) {
     if (ov.is_custom) {
       const merged = mergeRow(ov);
-      out.push({ ...merged, source: 'custom', deleted: ov.deleted, cs: csFieldsFor(merged, ov) });
+      out.push({ ...merged, source: 'custom', deleted: ov.deleted, cs: csFieldsFor(merged, ov), review: adminReviewState(merged) });
     }
   }
   return out;

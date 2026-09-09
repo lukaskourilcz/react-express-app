@@ -16,6 +16,7 @@ import {
   isTopicUnlocked,
   ROADMAP_LEVELS,
   type RoadmapProgress,
+  type StepAvailability,
 } from './roadmap';
 import { topicsForSubject, type SubjectId } from './subjects';
 import {
@@ -79,6 +80,10 @@ export interface BuildTodayOptions {
    * which is exact for any topic the learner has not fully completed.
    */
   levelCounts?: Partial<Record<RoadmapTopic, number>>;
+  /** Per-topic availability from the fetched RoadmapStructure, so the unlock
+   * rule uses the real part boundaries and steps over levels the server will
+   * not open. Omitted, the rule falls back to the authored segments. */
+  availability?: Partial<Record<RoadmapTopic, StepAvailability>>;
   /** Skill-check-unlocked topics (`getExtraUnlocks()`), so their "new" levels
    * can appear. Starter + prereq-met topics are unlocked without this. */
   extraUnlocks?: RoadmapTopic[];
@@ -118,10 +123,12 @@ function nextNewLevel(
   topic: RoadmapTopic,
   levels: Record<string, unknown>,
   cap: number,
+  availability: StepAvailability = {},
 ): number | null {
   const max = Math.min(Math.max(0, Math.floor(cap)), ROADMAP_LEVELS);
   for (let level = 1; level <= max; level++) {
-    if (!isLevelUnlocked(progress, topic, level)) return null; // frontier is gated → nothing new
+    if (availability.unavailableLevels?.has(level)) continue; // nothing to open here → look past it
+    if (!isLevelUnlocked(progress, topic, level, availability)) return null; // frontier is gated → nothing new
     if (isLevelPassed(progress, topic, level)) continue; // cleared → look further along
     // Unlocked + not passed. If it already has an entry it's "unfinished" (not
     // new), and since it isn't passed no later level is unlocked → no new level.
@@ -164,7 +171,7 @@ export function buildToday(
       const state = masteryState(entry);
       if (state === 'notStarted') {
         // Has an entry but was never passed → unfinished (guard: still unlocked).
-        if (isLevelUnlocked(progress, topic, level)) {
+        if (isLevelUnlocked(progress, topic, level, opts.availability?.[topic])) {
           unfinished.push(makeItem(topic, level, 'unfinished'));
         }
       } else if (state === 'cleared' && isDueForReview(entry, today)) {
@@ -176,7 +183,7 @@ export function buildToday(
     // (3): the next new level, only for topics the learner can actually open.
     if (isTopicUnlocked(progress, topic, extra)) {
       const cap = opts.levelCounts?.[topic] ?? ROADMAP_LEVELS;
-      const next = nextNewLevel(progress, topic, levels, cap);
+      const next = nextNewLevel(progress, topic, levels, cap, opts.availability?.[topic]);
       if (next !== null) fresh.push(makeItem(topic, next, 'new'));
     }
   }

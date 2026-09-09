@@ -23,6 +23,10 @@ export interface QuizResult {
   correctAnswers: number;
   percentage: number;
   questXp: number;
+  /** Questions retired between the session being issued and the answers
+   * arriving. Graded as void — neither for nor against — and left out of the
+   * total, so the result screen says why the count is short. */
+  voided?: string[];
   resultReceipt?: string;
   results: {
     questionId: string;
@@ -60,6 +64,9 @@ export interface RoadmapLevelMeta {
   questionCount: number;
   /** devShark code topics only: how many coding tasks close this level. */
   codingTasks?: number;
+  /** Too few reviewed questions to open. Stays on the map with its number;
+   * never a prerequisite, and the rules step over it. */
+  unavailable?: true;
 }
 
 export interface RoadmapCheckpointMeta {
@@ -74,6 +81,8 @@ export interface RoadmapCheckpointMeta {
 export interface RoadmapTopicStructure {
   levels: RoadmapLevelMeta[];
   checkpoints: RoadmapCheckpointMeta[];
+  /** Part tests with no available level to examine. */
+  unavailableParts?: number[];
 }
 
 export interface RoadmapStructure {
@@ -126,6 +135,10 @@ export interface RoadmapCompletionResult {
   applied: boolean;
   /** Coding task ids the level still needs before it passes. */
   codingPending?: string[];
+  /** The attempt was closed without a verdict because a question in it was
+   * retired while it was open. Nothing was recorded; the level can be opened
+   * again with its current questions. */
+  invalidated?: { reason: 'content_retired'; questionIds: string[] };
   progress?: Partial<Record<RoadmapTopic, {
     levels: Record<string, { passed: boolean; bestPct: number }>;
     checkpoints: Record<string, { passed: boolean; bestPct: number }>;

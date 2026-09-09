@@ -45,9 +45,10 @@ const COPY = {
     relevanceLead: 'Five things we look for. Each is scored 0, 1 or 2, so an item can score at most 10. Below 4 it leaves the active pool.',
     qualityHeading: 'Is it right?',
     qualityLead: `Five separate checks, one point each. Below ${QUALITY_MIN} out of ${QUALITY_MAX} the item leaves the active pool, whatever its relevance score. A question can be completely current and still have two defensible answers — the gates do not stand in for each other.`,
-    kindsHeading: 'Three different kinds of checking',
+    kindsHeading: 'Four different kinds of checking',
     kinds: [
-      ['A person reads it', 'Someone applies the criteria above to the item as written, including the hint and the explanation. This is what "reviewed" means on this site, and it is the only thing that word is used for.'],
+      ['A person reads it', 'Someone applies the criteria above to the item as written, including the hint and the explanation. This is the strongest claim on this site, and it is never made on the strength of any other kind of check.'],
+      ['A model reads it', 'An AI model applies the same criteria to every item individually — it runs the code a question asks about, reads the current documentation for versioned claims, scores each dimension and records why. Every question we serve today was reviewed this way in the content audit, and anything that failed a gate left the pool. It is labelled as a model review, not as a person having read it.'],
       ['A script checks it', 'Automated contracts run on every change: that a coding task has a solution that passes its own tests, that no answer key reaches the browser before you submit, that translations exist for every string, that the level structure is intact. These catch a specific class of mistake very reliably and cannot tell you whether a question is worth asking.'],
       ['A solution is executed', 'Every coding task is run against its grader with a known-good solution. That is evidence the task is solvable exactly as specified. It is not evidence that the task has no defects.'],
     ],
@@ -55,7 +56,7 @@ const COPY = {
     honest: [
       'That content is guaranteed correct. It is checked, corrected when someone finds a problem, and retired when it stops passing.',
       'That an item was reviewed several times, unless there is more than one recorded review of it.',
-      'That an automated check was an expert review. They are different things and are labelled differently.',
+      'That an automated check, or a model review, was a person reading it. They are different things and are labelled differently.',
       'That the whole bank has been reviewed, unless every place a question can come from has been counted. One source we cannot count means no bank-wide claim at all.',
       'Anything at all, when we cannot read the record. A missing record shows as missing, not as reviewed.',
     ],
@@ -74,9 +75,10 @@ const COPY = {
     relevanceLead: 'Pět věcí, které hledáme. Každá se hodnotí 0, 1 nebo 2 body, dohromady nejvýš 10. Pod 4 body položka z aktivní nabídky mizí.',
     qualityHeading: 'Je to správně?',
     qualityLead: `Pět samostatných kontrol, každá za bod. Pod ${QUALITY_MIN} z ${QUALITY_MAX} položka z aktivní nabídky mizí bez ohledu na relevanci. Otázka může být naprosto aktuální a přitom mít dvě obhajitelné odpovědi — jedna podmínka nenahrazuje druhou.`,
-    kindsHeading: 'Tři různé druhy kontroly',
+    kindsHeading: 'Čtyři různé druhy kontroly',
     kinds: [
-      ['Přečte to člověk', 'Někdo použije kritéria výše na položku tak, jak je napsaná — včetně nápovědy a vysvětlení. Tohle na tomhle webu znamená „zkontrolováno“ a pro nic jiného se to slovo nepoužívá.'],
+      ['Přečte to člověk', 'Někdo použije kritéria výše na položku tak, jak je napsaná — včetně nápovědy a vysvětlení. Je to nejsilnější tvrzení na tomhle webu a nikdy ho neděláme na základě jiného druhu kontroly.'],
+      ['Přečte to model', 'Model umělé inteligence použije stejná kritéria na každou položku zvlášť — spustí kód, na který se otázka ptá, přečte aktuální dokumentaci u tvrzení závislých na verzi, oboduje každé hledisko a zapíše proč. Každá otázka, kterou dnes nabízíme, prošla touhle kontrolou v auditu obsahu, a co neprošlo, z nabídky odešlo. Označujeme to jako kontrolu modelem, ne jako přečtení člověkem.'],
       ['Zkontroluje to skript', 'Automatické kontroly běží při každé změně: že programovací úloha má řešení, které projde jejími testy, že se do prohlížeče před odevzdáním nedostane správná odpověď, že existují překlady všech textů, že struktura úrovní sedí. Ty chytají určitou třídu chyb velmi spolehlivě a vůbec nepoznají, jestli má smysl se na to ptát.'],
       ['Spustí se řešení', 'Každá programovací úloha se spouští proti svému hodnotiteli se známým správným řešením. To je důkaz, že úloha je řešitelná přesně tak, jak je zadaná. Není to důkaz, že v ní není chyba.'],
     ],
@@ -84,7 +86,7 @@ const COPY = {
     honest: [
       'Že je obsah zaručeně správný. Kontrolujeme ho, opravujeme, když někdo najde problém, a vyřazujeme, když přestane vyhovovat.',
       'Že položka prošla kontrolou několikrát, pokud o ní není zaznamenaná víc než jedna kontrola.',
-      'Že automatická kontrola byla odborná revize. Jsou to různé věci a označujeme je různě.',
+      'Že automatická kontrola nebo kontrola modelem byla přečtení člověkem. Jsou to různé věci a označujeme je různě.',
       'Že prošla kontrolou celá databáze otázek, dokud nespočítáme každé místo, odkud může otázka přijít. Jediný zdroj, který spočítat neumíme, znamená žádné tvrzení o celku.',
       'Cokoli, když záznam nepřečteme. Chybějící záznam se ukáže jako chybějící, ne jako zkontrolováno.',
     ],

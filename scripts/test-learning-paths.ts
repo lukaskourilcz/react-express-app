@@ -20,7 +20,7 @@ import { LEARNING_PATHS, activitySummary, publicManifest, readinessFor } from '.
 import { gradeCheck, gradePathCode, codeFromReusedTask } from '../lib/learning-paths/grade';
 import { solutionFor, solutionIds } from '../lib/learning-paths/solutions';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedPath } from '../lib/learning-paths/types';
-import { codingTaskById } from '../lib/coding/catalog';
+import { codingTaskById } from '../lib/coding/active';
 import { pathInventory } from '../shared/learning-paths';
 
 const ONLY = process.env.PATHS_ONLY ?? '';

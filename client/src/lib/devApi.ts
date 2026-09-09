@@ -65,6 +65,19 @@ export interface AdminQuestion {
   deleted: boolean;
   /** Current Czech translation (db override, else static bank), for editing. */
   cs: CsFields;
+  /** What the content audit says about this exact wording: served or not,
+   * why, and the decision on record. Mirrors `AdminReviewState` on the server. */
+  review: {
+    active: boolean;
+    reason: 'not-in-scope' | 'reviewed' | 'unreviewed' | 'superseded' | 'retired' | 'quarantined' | 'failed-gate' | 'invalid-record';
+    csApproved: boolean;
+    decision?: 'retain' | 'rewrite' | 'retire' | 'quarantine';
+    retireReason?: string;
+    relevance?: number;
+    quality?: number;
+    reviewedAt?: string;
+    revision?: number;
+  };
 }
 
 export interface QuestionPayload {

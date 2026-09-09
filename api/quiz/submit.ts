@@ -196,11 +196,19 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (claim === 'conflict') {
     return jsonError(res, 409, 'attempt_already_graded', 'This answer has already been graded and cannot be changed');
   }
-  // Effective question set (base + /dev overrides) for localized explanations.
+  // Effective question set (base + /dev overrides, eligibility applied) for
+  // localized explanations — and for the one grading decision the sealed key
+  // cannot make on its own. A question that was retired between the session
+  // being issued and the answers arriving is void: it is neither counted for
+  // nor against the learner, it earns no proof, and it is reported back so
+  // the result screen can say why the total is short. The key stays sealed
+  // either way; nothing here reveals it.
   const questionsById = await getEffectiveQuestionsById(subject, lang === 'cs');
+  const voided = validated.filter(({ questionId }) => !questionsById.has(questionId)).map(({ questionId }) => questionId);
+  const gradable = validated.filter(({ questionId }) => questionsById.has(questionId));
 
   let correct = 0;
-  const results = validated.map(({ questionId, selectedIndex }) => {
+  const results = gradable.map(({ questionId, selectedIndex }) => {
     const sessionQ = sessionById.get(questionId);
     const q = questionsById.get(questionId);
     const isCorrect = sessionQ?.correctAnswer === selectedIndex;
@@ -218,7 +226,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       : result;
   });
 
-  const total = validated.length;
+  const total = gradable.length;
   const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
   const breakdown: Record<string, { correct: number; total: number }> = {};
   let questXp = 0;
@@ -236,7 +244,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     if (result.isCorrect && question) questXp += 2 + 2 * question.difficulty;
   }
   if (session.scope === 'daily') questXp = Math.max(20, questXp);
-  const resultReceipt = auth && session.scope !== 'challenge'
+  // A receipt needs something graded behind it. An attempt whose every
+  // question was retired mid-flight is reported, not recorded.
+  const resultReceipt = auth && session.scope !== 'challenge' && total > 0
       ? encodeQuizResultReceipt({
         attemptId: session.attemptId,
         userId: auth.sub,
@@ -288,7 +298,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     );
   }
 
-  logEvent({ status: 200, total, correct, percentage, latency_ms: Date.now() - started });
+  logEvent({ status: 200, total, correct, percentage, voided: voided.length, latency_ms: Date.now() - started });
 
   res.json({
     totalQuestions: total,
@@ -296,6 +306,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     percentage,
     questXp,
     results,
+    ...(voided.length > 0 ? { voided } : {}),
     ...(resultReceipt ? { resultReceipt } : {}),
   });
 }

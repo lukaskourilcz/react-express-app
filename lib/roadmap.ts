@@ -14,6 +14,7 @@
 // structure (fetched at runtime) so titles never drift out of sync.
 
 import { QUESTIONS_PER_LEVEL, ROADMAP_LEVELS, difficultyForLevel } from './roadmap-build';
+import { PARTS_PER_TOPIC, partRanges, type StepAvailability } from '../shared/progression';
 
 export type RoadmapTopic =
   | 'javascript' | 'typescript' | 'react' | 'nextjs' | 'nodejs'
@@ -564,6 +565,9 @@ export interface RoadmapLevelMeta {
   questionCount: number;
   /** devShark code topics only: how many coding tasks close this level. */
   codingTasks?: number;
+  /** Too few served questions to open. Kept on the map with its number so
+   * progress records keep their meaning; never a prerequisite. */
+  unavailable?: true;
 }
 
 export interface RoadmapCheckpointMeta {
@@ -574,6 +578,8 @@ export interface RoadmapCheckpointMeta {
   afterLevel: number;
   questionCount: number;
   passPct: number;
+  /** No available level in its segment, so nothing to examine. */
+  unavailable?: true;
 }
 
 export interface RoadmapTopicStructure {
@@ -648,15 +654,33 @@ export function roadmapStructure(): Record<RoadmapTopic, RoadmapTopicStructure> 
 
 /* ──── dynamic ("live") structure ───────────────────────────────────────────
  * The functions above describe the *authored* path (a fixed N levels × 8). The
- * live quiz, however, lets the owner hide questions from /dev, and the path must
- * re-sync: with fewer surviving questions a topic has fewer levels, and those
- * levels get repacked and re-graded by position. The builders below take a
- * predicate for which question ids still exist (i.e. aren't soft-deleted) and
- * recompute everything from the surviving set, so deleting a question in /dev
- * automatically shrinks/relevels the learning path. The static functions are
- * kept for the build scripts (mobile offline snapshot, integrity checks), which
- * always want the full authored set.
+ * served set is smaller: the owner can hide a question from /dev, and the
+ * content audit's eligibility gate withholds anything retired, quarantined,
+ * edited since its review or never reviewed. The builders below take a
+ * predicate for which question ids are actually served and recompute the path
+ * from the surviving set.
+ *
+ * Levels keep their authored membership. Question `rm-js-41` belongs to level
+ * 6 whether or not `rm-js-40` survives, because the level's title is its
+ * objective and the coding tasks attached to it are keyed by its number: the
+ * previous behaviour of repacking survivors eight at a time slid questions
+ * across level boundaries and put "Closures" material under the "Functions &
+ * Scope" title. A level with fewer survivors is served with fewer questions.
+ * A level with fewer than `MIN_LEVEL_QUESTIONS` is *unavailable*: it is still
+ * on the map with its number, so progress records keep their meaning, but it
+ * cannot be opened, it is never a prerequisite, and its questions are not
+ * drawn into the segment's checkpoint or part test — the shared progression
+ * rules step over it. That is the honest "not enough reviewed content" state
+ * the audit asks for, rather than a thin level pretending to be a full one.
+ * The static functions are kept for the build scripts (integrity checks),
+ * which always want the full authored set.
  * ─────────────────────────────────────────────────────────────────────────── */
+
+/** The fewest served questions a level may open with. Below this a level is
+ * marked unavailable rather than served as a two-question lesson. Three is
+ * the smallest count at which the 75% pass mark still means something (a
+ * miss fails the level, as it would with eight). */
+export const MIN_LEVEL_QUESTIONS = 3;
 
 /** All authored question ids for a topic, in canonical order (ignoring deletes). */
 export function topicAllQuestionIds(topic: RoadmapTopic): string[] {
@@ -668,34 +692,42 @@ export function topicAllQuestionIds(topic: RoadmapTopic): string[] {
 export interface LiveTopic {
   levels: RoadmapLevelMeta[];
   checkpoints: RoadmapCheckpointMeta[];
-  /** levelIds[level - 1] = the surviving question ids packed into that level. */
+  /** levelIds[level - 1] = the served question ids of that authored level.
+   * Empty for an unavailable level. */
   levelIds: string[][];
+  /** The levels that cannot be opened, for the progression rules. */
+  unavailableLevels: Set<number>;
+  /** The authored five-level checkpoints with no available level to examine. */
+  unavailableCheckpoints: Set<number>;
+  /** The part tests with no available level to examine. */
+  unavailableParts: Set<number>;
 }
 
-/** Recompute a topic's levels/checkpoints from the questions that still exist. */
+/** Recompute a topic's levels/checkpoints from the questions that are served. */
 export function buildLiveTopic(topic: RoadmapTopic, exists: (id: string) => boolean): LiveTopic {
-  const surviving = topicAllQuestionIds(topic).filter(exists);
-  const levelCount = Math.min(
-    topicLevelCount(topic),
-    Math.ceil(surviving.length / QUESTIONS_PER_LEVEL),
-  );
+  const levelCount = topicLevelCount(topic);
   const titles = LEVEL_TITLES[topic];
 
   const levels: RoadmapLevelMeta[] = [];
   const levelIds: string[][] = [];
+  const unavailableLevels = new Set<number>();
   for (let l = 1; l <= levelCount; l++) {
-    const chunk = surviving.slice((l - 1) * QUESTIONS_PER_LEVEL, l * QUESTIONS_PER_LEVEL);
-    levelIds.push(chunk);
+    const served = levelQuestionIds(topic, l).filter(exists);
+    const available = served.length >= MIN_LEVEL_QUESTIONS;
+    if (!available) unavailableLevels.add(l);
+    levelIds.push(available ? served : []);
     levels.push({
       level: l,
       title: titles[l - 1],
       difficulty: difficultyForLevel(l),
-      questionCount: chunk.length,
+      questionCount: available ? served.length : 0,
+      ...(available ? {} : { unavailable: true }),
     });
   }
 
   const checkpointCount = Math.floor(levelCount / LEVELS_PER_CHECKPOINT);
   const checkpoints: RoadmapCheckpointMeta[] = [];
+  const unavailableCheckpoints = new Set<number>();
   for (let n = 1; n <= checkpointCount; n++) {
     const afterLevel = n * LEVELS_PER_CHECKPOINT;
     const isFinal = afterLevel === levelCount;
@@ -703,15 +735,45 @@ export function buildLiveTopic(topic: RoadmapTopic, exists: (id: string) => bool
     for (let l = afterLevel - LEVELS_PER_CHECKPOINT + 1; l <= afterLevel; l++) {
       questionCount += levelIds[l - 1].length;
     }
+    if (questionCount === 0) unavailableCheckpoints.add(n);
     checkpoints.push({
       checkpoint: n,
       title: isFinal ? FINAL_CHECKPOINT_TITLE : CHECKPOINT_TITLES[n - 1] ?? `Checkpoint ${n}`,
       afterLevel,
       questionCount,
       passPct: CHECKPOINT_PASS,
+      ...(questionCount === 0 ? { unavailable: true } : {}),
     });
   }
-  return { levels, checkpoints, levelIds };
+  const unavailableParts = new Set<number>();
+  for (const range of partRanges(levelCount)) {
+    let served = 0;
+    for (let l = range.startLevel; l <= range.endLevel; l++) served += levelIds[l - 1]?.length ?? 0;
+    if (range.size <= 0 || served === 0) unavailableParts.add(range.part);
+  }
+  return { levels, checkpoints, levelIds, unavailableLevels, unavailableCheckpoints, unavailableParts };
+}
+
+/** The availability the shared progression rules read, from a live topic.
+ * Checkpoints mean part tests here, because those are the exams the learner
+ * sits and the numbers the progress record stores. */
+export function liveAvailability(live: LiveTopic): StepAvailability {
+  return {
+    levelCount: live.levels.length,
+    unavailableLevels: live.unavailableLevels,
+    unavailableCheckpoints: live.unavailableParts,
+  };
+}
+
+/** The unavailable parts of a live structure entry as sent to the browser,
+ * derived the same way the server derives them so the two agree. */
+export function unavailablePartsOf(levels: readonly RoadmapLevelMeta[]): number[] {
+  const out: number[] = [];
+  for (const range of partRanges(levels.length)) {
+    const anyAvailable = levels.slice(range.startLevel - 1, range.endLevel).some((level) => !level.unavailable);
+    if (range.size <= 0 || !anyAvailable) out.push(range.part);
+  }
+  return out;
 }
 
 /** The full live structure for every topic, given the surviving-id predicate. */
@@ -740,49 +802,18 @@ export function isValidCheckpoint(topic: RoadmapTopic, checkpoint: number): bool
 
 /* ──── parts ("learning paths" split) ──────────────────────────────────────
  * Each topic is presented to the learner as PARTS_PER_TOPIC shorter, sequential
- * "parts" instead of one long path — every part ends with its own test. A part
- * is a contiguous slice of the topic's levels; boundaries are derived from the
- * (live) level count so a topic re-splits gracefully if questions are hidden in
- * /dev. The level + question banks are unchanged: parts are a pure split layer,
- * and per-part progress reuses the existing global level / checkpoint maps.
+ * "parts" instead of one long path — every part ends with its own test. The
+ * split itself lives in shared/progression.ts, because the unlock rules the
+ * server enforces and the map the browser draws both read it; this module
+ * re-exports it for the API and adds the test size.
  * ─────────────────────────────────────────────────────────────────────────── */
 
-export const PARTS_PER_TOPIC = 3;
+export { PARTS_PER_TOPIC, partSizes, partRanges, type PartRange } from '../shared/progression';
 // A part's end-of-part test uses the same gate the old checkpoints did.
 export const PART_TEST_PASS = CHECKPOINT_PASS;
-// Max questions sampled into a part test. A part spans 3–9 levels (× 8), so the
+// Max questions sampled into a part test. A part spans 2–9 levels (× 8), so the
 // test is a focused exam over the part rather than its whole question pool.
 export const PART_TEST_SIZE = 20;
-
-/** Split a level count into PARTS_PER_TOPIC contiguous sizes (extra → earlier parts). */
-export function partSizes(levelCount: number): number[] {
-  const n = Math.max(0, Math.floor(levelCount));
-  const base = Math.floor(n / PARTS_PER_TOPIC);
-  const rem = n % PARTS_PER_TOPIC;
-  return Array.from({ length: PARTS_PER_TOPIC }, (_, i) => base + (i < rem ? 1 : 0));
-}
-
-export interface PartRange {
-  /** 1-based part number (1..PARTS_PER_TOPIC). */
-  part: number;
-  /** First / last GLOBAL level (1-based, inclusive) covered by this part. */
-  startLevel: number;
-  endLevel: number;
-  size: number;
-}
-
-/** Contiguous global-level ranges for each part of a topic with `levelCount` levels. */
-export function partRanges(levelCount: number): PartRange[] {
-  const sizes = partSizes(levelCount);
-  const ranges: PartRange[] = [];
-  let start = 1;
-  for (let i = 0; i < sizes.length; i++) {
-    const size = sizes[i];
-    ranges.push({ part: i + 1, startLevel: start, endLevel: start + size - 1, size });
-    start += size;
-  }
-  return ranges;
-}
 
 export function isValidPart(part: number): boolean {
   return Number.isInteger(part) && part >= 1 && part <= PARTS_PER_TOPIC;

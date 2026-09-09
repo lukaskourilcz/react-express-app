@@ -21,7 +21,7 @@ import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { shuffleWithOrder } from '../coding/grade';
-import { codingTaskById } from '../coding/catalog';
+import { codingTaskById } from '../coding/active';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../quiz-tokens';
 import {
   activityIn,

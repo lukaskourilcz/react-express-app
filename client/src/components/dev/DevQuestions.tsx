@@ -183,6 +183,39 @@ function Pill({
   );
 }
 
+/** What the content audit says about this exact wording. `not-in-scope` is a
+ * StudyShark item the audit does not cover; everything else is a devShark
+ * verdict, and only `reviewed` is served. An edit turns a reviewed item into
+ * `superseded` until a review of the new wording is recorded in the ledger. */
+const REVIEW_COLOR: Record<AdminQuestion['review']['reason'], string> = {
+  reviewed: '#15803d',
+  'not-in-scope': '#6b7280',
+  unreviewed: '#b45309',
+  superseded: '#b45309',
+  retired: '#dc2626',
+  quarantined: '#dc2626',
+  'failed-gate': '#dc2626',
+  'invalid-record': '#dc2626',
+};
+
+function ReviewCell({ review }: { review: AdminQuestion['review'] }) {
+  if (review.reason === 'not-in-scope') return <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>—</span>;
+  const scores = review.relevance !== undefined && review.quality !== undefined ? ` · R ${review.relevance}/10 · Q ${review.quality}/5` : '';
+  const title = [
+    review.active ? 'Served: this exact wording has a current passing review.' : `Not served: ${review.reason}.`,
+    review.decision ? `Decision: ${review.decision}${review.retireReason ? ` (${review.retireReason})` : ''}.` : 'No decision on record.',
+    review.reviewedAt ? `Reviewed ${review.reviewedAt}, revision ${review.revision ?? 1}.` : '',
+    review.active && !review.csApproved ? 'Czech translation not the reviewed one: English is served to Czech learners.' : '',
+  ].filter(Boolean).join(' ');
+  return (
+    <span title={title} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+      <Pill label={review.reason} color={REVIEW_COLOR[review.reason]} />
+      {scores && <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>{scores.replace(/^ · /, '')}</span>}
+      {review.active && !review.csApproved && <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)' }}>CS → EN</span>}
+    </span>
+  );
+}
+
 const SOURCE_PILL_COLOR: Record<AdminQuestion['source'], string> = {
   base: 'var(--color-border)',
   edited: '#f5a623',
@@ -552,6 +585,9 @@ export default function DevQuestions() {
                 </SortLabel>
               </TableHeaderCell>
               <TableHeaderCell style={{ textAlign: 'center' }}>Flags</TableHeaderCell>
+              <TableHeaderCell style={{ textAlign: 'center' }}>
+                <span title="Content-audit eligibility: whether this exact wording is served, and the review on record">Review</span>
+              </TableHeaderCell>
               <TableHeaderCell style={{ textAlign: 'right' }}>Actions</TableHeaderCell>
             </TableRow>
           </TableHeader>
@@ -646,6 +682,9 @@ export default function DevQuestions() {
                     <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>—</span>
                   )}
                 </TableCell>
+                <TableCell style={{ textAlign: 'center' }}>
+                  <ReviewCell review={q.review} />
+                </TableCell>
                 <TableCell style={{ textAlign: 'right' }}>
                   <div style={{ display: 'inline-flex', gap: 2 }}>
                     <ActionButton label="Edit" onClick={() => openEdit(q)} />
@@ -657,7 +696,7 @@ export default function DevQuestions() {
             ))}
             {pageRows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7}>
+                <TableCell colSpan={8}>
                   <div style={{ ...captionStyle, textAlign: 'center', padding: '32px 0' }}>
                     No questions match these filters.
                   </div>

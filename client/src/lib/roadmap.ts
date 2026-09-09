@@ -11,18 +11,44 @@ import {
   STARTER_TOPICS as SHARED_STARTER_TOPICS,
   TOPIC_PREREQS as SHARED_TOPIC_PREREQS,
   LEVELS_TO_UNLOCK_NEXT as SHARED_LEVELS_TO_UNLOCK_NEXT,
+  PARTS_PER_TOPIC as SHARED_PARTS_PER_TOPIC,
+  partSizes as sharedPartSizes,
+  partRanges as sharedPartRanges,
   isLevelUnlocked as sharedIsLevelUnlocked,
   isCheckpointUnlocked as sharedIsCheckpointUnlocked,
+  isSegmentCleared as sharedIsSegmentCleared,
   isTopicUnlocked as sharedIsTopicUnlocked,
   passedLevelCount as sharedPassedLevelCount,
+  type PartRange as SharedPartRange,
+  type StepAvailability,
 } from '../../../shared/progression';
 import type {
   RoadmapAnswerResult,
   RoadmapCompletionResult,
   RoadmapStructure,
+  RoadmapTopicStructure,
   RoadmapPlayable,
   RoadmapTopic,
 } from '../types/quiz';
+
+export type { StepAvailability };
+
+/**
+ * What the unlock rules need to know about a topic beyond the learner's
+ * record, read from the level map the server sent: how long the topic is and
+ * which of its steps cannot be opened. With no map yet (still loading, or
+ * offline) the rules fall back to the authored segments, which is the preview
+ * the product has always drawn and never grants access — the server decides
+ * every time it is asked.
+ */
+export function availabilityOf(structure: RoadmapTopicStructure | undefined): StepAvailability {
+  if (!structure) return {};
+  return {
+    levelCount: structure.levels.length,
+    unavailableLevels: new Set(structure.levels.filter((level) => level.unavailable).map((level) => level.level)),
+    unavailableCheckpoints: new Set(structure.unavailableParts ?? []),
+  };
+}
 
 // Pass thresholds (must match lib/roadmap.ts on the server).
 export const LEVEL_PASS = 75;
@@ -179,17 +205,18 @@ export const isCheckpointPassed = (p: RoadmapProgress, topic: RoadmapTopic, chec
 export const checkpointBestPct = (p: RoadmapProgress, topic: RoadmapTopic, checkpoint: number): number =>
   p[topic]?.checkpoints?.[String(checkpoint)]?.bestPct ?? 0;
 
-// Level 1 is always open. The first level of a new segment (6, 11, 16, 21)
-// unlocks only when the preceding checkpoint is passed; otherwise a level
-// unlocks when the previous one is passed.
-export function isLevelUnlocked(p: RoadmapProgress, topic: RoadmapTopic, level: number): boolean {
-  return sharedIsLevelUnlocked(p, topic, level);
+// Level 1 is always open. The first level of a new part unlocks only when the
+// preceding part's test is passed; otherwise a level unlocks when the nearest
+// available level before it is passed. Pass the topic's availability from the
+// fetched map so the rule uses the real part boundaries.
+export function isLevelUnlocked(p: RoadmapProgress, topic: RoadmapTopic, level: number, availability: StepAvailability = {}): boolean {
+  return sharedIsLevelUnlocked(p, topic, level, availability);
 }
 
-// A checkpoint unlocks once the last level of its segment is passed (which, by
-// the sequential gating above, means all 5 of its levels are passed).
-export function isCheckpointUnlocked(p: RoadmapProgress, topic: RoadmapTopic, checkpoint: number): boolean {
-  return sharedIsCheckpointUnlocked(p, topic, checkpoint);
+// A part test (checkpoint) unlocks once the last available level of its part
+// is passed (which, by the sequential gating above, means all of them are).
+export function isCheckpointUnlocked(p: RoadmapProgress, topic: RoadmapTopic, checkpoint: number, availability: StepAvailability = {}): boolean {
+  return sharedIsCheckpointUnlocked(p, topic, checkpoint, availability);
 }
 
 export function passedLevelCount(p: RoadmapProgress, topic: RoadmapTopic): number {
@@ -275,38 +302,13 @@ export function topicUnlockHint(
  * exactly with the old 5-level checkpoints, so existing progress carries over.
  * ─────────────────────────────────────────────────────────────────────────── */
 
-export const PARTS_PER_TOPIC = 3;
+// The split lives in shared/progression.ts, where the server's unlock rules
+// read it too; re-exported so every existing caller keeps working.
+export const PARTS_PER_TOPIC = SHARED_PARTS_PER_TOPIC;
 export const PART_TEST_PASS = CHECKPOINT_PASS;
-
-/** Split a level count into PARTS_PER_TOPIC contiguous sizes (extra → earlier parts). */
-export function partSizes(levelCount: number): number[] {
-  const n = Math.max(0, Math.floor(levelCount));
-  const base = Math.floor(n / PARTS_PER_TOPIC);
-  const rem = n % PARTS_PER_TOPIC;
-  return Array.from({ length: PARTS_PER_TOPIC }, (_, i) => base + (i < rem ? 1 : 0));
-}
-
-export interface PartRange {
-  /** 1-based part number (1..PARTS_PER_TOPIC). */
-  part: number;
-  /** First / last GLOBAL level (1-based, inclusive) covered by this part. */
-  startLevel: number;
-  endLevel: number;
-  size: number;
-}
-
-/** Contiguous global-level ranges for each part of a topic with `levelCount` levels. */
-export function partRanges(levelCount: number): PartRange[] {
-  const sizes = partSizes(levelCount);
-  const ranges: PartRange[] = [];
-  let start = 1;
-  for (let i = 0; i < sizes.length; i++) {
-    const size = sizes[i];
-    ranges.push({ part: i + 1, startLevel: start, endLevel: start + size - 1, size });
-    start += size;
-  }
-  return ranges;
-}
+export const partSizes = sharedPartSizes;
+export const partRanges = sharedPartRanges;
+export type PartRange = SharedPartRange;
 
 /** Build a path id ("javascript-2") and parse it back, family ids may contain '-'. */
 export const makePathId = (family: RoadmapTopic, part: number): string => `${family}-${part}`;
@@ -340,31 +342,48 @@ export function partPassedLevels(p: RoadmapProgress, family: RoadmapTopic, range
   return n;
 }
 
-/** A global level is unlocked if it's the first of an (already unlocked) part, else the previous passed. */
-export function isPartLevelUnlocked(p: RoadmapProgress, family: RoadmapTopic, range: PartRange, globalLevel: number): boolean {
-  if (globalLevel <= range.startLevel) return true;
-  return isLevelPassed(p, family, globalLevel - 1);
+/**
+ * A global level within an open part: the same shared rule the server
+ * applies, given the topic's availability. The part is already known to be
+ * open (see `isPathUnlocked`), so the rule's own "previous part cleared"
+ * check agrees with the part selector rather than repeating it.
+ */
+export function isPartLevelUnlocked(
+  p: RoadmapProgress,
+  family: RoadmapTopic,
+  range: PartRange,
+  globalLevel: number,
+  availability: StepAvailability = { levelCount: range.endLevel },
+): boolean {
+  return sharedIsLevelUnlocked(p, family, globalLevel, availability);
 }
 
-/** A part's test unlocks once every level in the part is passed. */
-export function isPartTestUnlocked(p: RoadmapProgress, family: RoadmapTopic, range: PartRange): boolean {
+/** A part's test unlocks once every available level in the part is passed. */
+export function isPartTestUnlocked(
+  p: RoadmapProgress,
+  family: RoadmapTopic,
+  range: PartRange,
+  availability: StepAvailability = { levelCount: range.endLevel },
+): boolean {
   if (range.size <= 0) return false;
-  return partPassedLevels(p, family, range) >= range.size;
+  return sharedIsCheckpointUnlocked(p, family, range.part, availability);
 }
 
 /**
  * Whether a path (part) is open: its family must be unlocked, and either it's
- * the first part or the previous part's test has been passed.
+ * the first part or the previous part is cleared — its test passed, or, when
+ * that test has nothing left to examine, its levels done.
  */
 export function isPathUnlocked(
   p: RoadmapProgress,
   family: RoadmapTopic,
   part: number,
   extra: RoadmapTopic[] | Set<RoadmapTopic> = [],
+  availability: StepAvailability = {},
 ): boolean {
   if (!isTopicUnlocked(p, family, extra)) return false;
   if (part <= 1) return true;
-  return isPartTestPassed(p, family, part - 1);
+  return sharedIsSegmentCleared(p, family, part - 1, availability);
 }
 
 export type PathStatus = 'locked' | 'available' | 'in-progress' | 'complete';
@@ -376,10 +395,11 @@ export function pathStatus(
   ranges: PartRange[],
   part: number,
   extra: RoadmapTopic[] | Set<RoadmapTopic> = [],
+  availability: StepAvailability = {},
 ): PathStatus {
   const range = ranges[part - 1];
-  if (!range || !isPathUnlocked(p, family, part, extra)) return 'locked';
-  if (isPartTestPassed(p, family, part)) return 'complete';
+  if (!range || !isPathUnlocked(p, family, part, extra, availability)) return 'locked';
+  if (sharedIsSegmentCleared(p, family, part, availability)) return 'complete';
   return partPassedLevels(p, family, range) > 0 ? 'in-progress' : 'available';
 }
 
@@ -389,12 +409,13 @@ export function currentPart(
   family: RoadmapTopic,
   ranges: PartRange[],
   extra: RoadmapTopic[] | Set<RoadmapTopic> = [],
+  availability: StepAvailability = {},
 ): number {
   let lastUnlocked = 1;
   for (let part = 1; part <= ranges.length; part++) {
-    if (!isPathUnlocked(p, family, part, extra)) break;
+    if (!isPathUnlocked(p, family, part, extra, availability)) break;
     lastUnlocked = part;
-    if (!isPartTestPassed(p, family, part)) return part;
+    if (!sharedIsSegmentCleared(p, family, part, availability)) return part;
   }
   return lastUnlocked;
 }
