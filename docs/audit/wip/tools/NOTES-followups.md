@@ -210,3 +210,13 @@ for a second reader rather than a second automated check.
   whole-object assignment. Node 22 does: a named import from a `.cjs` file
   returned the values, and a default import returned the assigned object. This
   is the kind of claim that was true of an older Node and was never revisited.
+- **React freezes props in development.** `rm-react-122` explained that
+  assigning to `props.count` "mutates an object React will not look at again".
+  In a development build React freezes props, so the assignment throws a
+  TypeError; under a production build it does not. The item described neither
+  behaviour correctly.
+- **Two "measured" sentences in rewrites described something that was not
+  measured.** One quoted three interval ticks after unmount where a run gives
+  eight; another described a component that is not in its own snippet. Both
+  came from the first pass, and both are the reason the second reader re-runs
+  measurements rather than trusting the sentence.
