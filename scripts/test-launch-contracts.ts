@@ -644,7 +644,7 @@ async function main() {
   assert.doesNotMatch(xpSource, /\bconsumeDoubleXpCharge\b/, 'XP awards must remain independent of shop inventory');
 
   const profileSource = readFileSync(join(process.cwd(), 'client/src/components/Profile.tsx'), 'utf8');
-  const profileStreakIndex = profileSource.indexOf('<StreakCard stats={stats} />');
+  const profileStreakIndex = profileSource.indexOf('<StreakCard stats={stats}');
   const profileSectionsIndex = profileSource.indexOf('<Grid columns={{ minWidth: 360, max: 2 }}');
   assert.ok(
     profileStreakIndex >= 0 && profileSectionsIndex >= 0 && profileStreakIndex < profileSectionsIndex,
@@ -655,11 +655,22 @@ async function main() {
     /profile\.backToQuiz/,
     'Profile is an overview and must not end with a contextless Back to quiz action',
   );
-  assert.equal(
-    profileSource.match(/<ConsistencyTip/g)?.length,
-    1,
-    'Profile should keep exactly one consistency tip, drawn from the rotating pool',
+  // The tip is one line inside the streak card now, not a card of its own. The
+  // rule that matters is that it never repeats what it said last time: a plain
+  // random draw from ten repeats about one visit in ten, which is what "always
+  // different" is not.
+  assert.match(
+    profileSource,
+    /const pool = CONSISTENCY_TIPS\.filter\(\(key\) => key !== previous\)/,
+    'the consistency tip must exclude the one shown last time',
   );
+  assert.ok(
+    (profileSource.match(/'profile\.tip\.[a-zA-Z]+'/g) ?? []).length >= 8,
+    'the tip pool must be large enough that a learner does not recognise it',
+  );
+  // And the last-quiz date is gone: it is a fact nobody acts on, and the tip
+  // took its place.
+  assert.doesNotMatch(profileSource, /profile\.lastQuiz/, 'the last-quiz date should not come back');
   assert.match(
     profileSource,
     /<IdentitySettings \/>/,

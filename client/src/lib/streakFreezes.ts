@@ -1,75 +1,85 @@
-// Forgiving streaks — the read/config wrapper for streak freezes (S4). Each
-// learner gets a small monthly freeze budget that bridges missed school days;
-// configurable off-days never break a streak. Freezes are NEVER a shop item and
-// are never client-settable — the only user-writable field is the off-days set.
+// Streak protection — the read wrapper and the one action a learner can take.
 //
-// `getFreezes` is a read and degrades gracefully (never throws into render).
-// `setOffDays` is an explicit user action: it returns the authoritative new
-// state on success and throws an ApiError on failure so the caller's save
-// handler can surface a save error — it is never called during render.
+// Every learner gets two protections a month. They used to be spent for you,
+// after the fact: come back after a missed day and one was quietly used to
+// bridge it. That is still the safety net, but it is invisible, and a learner
+// who knows they will be away tomorrow had no way to say so. The shield is
+// that way: spend one now and the streak survives the next 48 hours.
+//
+// `getStreakProtection` is a read and degrades gracefully — it never throws
+// into render, so a signed-out visitor, an offline device or a database that
+// has not had migration 032 applied all resolve to a state the profile can
+// still draw. `activateShield` is an explicit user action and throws an
+// ApiError on failure so the click handler can say what went wrong.
 
 import { apiFetch } from './api';
 
-/** The live freeze budget + off-day configuration. */
-export interface FreezeState {
-  /** Freezes left this period. */
+export interface StreakProtection {
+  /** Protections left this period. */
   remaining: number;
   /** Budget period, 'YYYY-MM'. */
   period: string;
-  /** ISO dates (YYYY-MM-DD) a freeze has been spent on this period. */
+  /** ISO dates (YYYY-MM-DD) a protection has been spent on this period. */
   used: string[];
-  /** Off-days, 0=Sunday … 6=Saturday. Weekend default is [0, 6]. */
-  offDays: number[];
+  /** When the active shield expires, or null when none is active. */
+  shieldUntil: string | null;
+  /** False when the server cannot offer the shield yet — the migration that
+   * adds it has not been applied. The budget still reads correctly. */
+  shieldSupported: boolean;
 }
 
-/** Mirrors the server default so the offline fallback matches a fresh account. */
-export const DEFAULT_OFF_DAYS: number[] = [0, 6];
-
-const FREEZES_URL = '/api/user/freezes';
+const URL = '/api/user/freezes';
 
 const currentPeriod = (): string => new Date().toISOString().slice(0, 7);
 
-/** Coerce 0–6 integers, de-duplicated and sorted; drops anything invalid. */
-export function sanitizeOffDays(input: number[]): number[] {
-  const set = new Set<number>();
-  for (const value of input) {
-    if (Number.isInteger(value) && value >= 0 && value <= 6) set.add(value);
-  }
-  return [...set].sort((a, b) => a - b);
-}
+const EMPTY: StreakProtection = {
+  remaining: 0,
+  period: currentPeriod(),
+  used: [],
+  shieldUntil: null,
+  shieldSupported: false,
+};
 
-function normalize(res: Partial<FreezeState>): FreezeState {
+function normalize(res: Partial<StreakProtection>): StreakProtection {
+  const until = typeof res.shieldUntil === 'string' ? res.shieldUntil : null;
   return {
     remaining: Number(res.remaining) || 0,
     period: typeof res.period === 'string' && res.period ? res.period : currentPeriod(),
     used: Array.isArray(res.used) ? res.used.filter((d): d is string => typeof d === 'string') : [],
-    offDays: Array.isArray(res.offDays) ? sanitizeOffDays(res.offDays.map(Number)) : [...DEFAULT_OFF_DAYS],
+    shieldUntil: until && Number.isFinite(Date.parse(until)) ? until : null,
+    shieldSupported: res.shieldSupported === true,
   };
 }
 
-/**
- * Read the current freeze budget + off-days. Never throws: offline /
- * signed-out / migration-missing resolve to a safe empty state (0 remaining,
- * current period, weekend off-days) so the profile can still render.
- */
-export async function getFreezes(): Promise<FreezeState> {
+/** Read the protection budget and any active shield. Never throws. */
+export async function getStreakProtection(): Promise<StreakProtection> {
   try {
-    const res = await apiFetch<Partial<FreezeState>>(FREEZES_URL);
-    return normalize(res);
+    return normalize(await apiFetch<Partial<StreakProtection>>(URL));
   } catch {
-    return { remaining: 0, period: currentPeriod(), used: [], offDays: [...DEFAULT_OFF_DAYS] };
+    return { ...EMPTY };
   }
 }
 
 /**
- * Update the off-days (the only user-writable field) and return the refreshed
- * state. Throws an ApiError on failure so a save handler can show a save error —
- * it must be called from an event handler, not during render.
+ * Spend one protection to shield the streak for the next 48 hours, and return
+ * the refreshed state. Throws on failure — call it from an event handler.
+ *
+ * Spending is the server's decision, not this function's: it refuses when the
+ * budget is empty and returns the existing window unchanged when a shield is
+ * already running, so a second click cannot cost a second protection.
  */
-export async function setOffDays(offDays: number[]): Promise<FreezeState> {
-  const res = await apiFetch<Partial<FreezeState>>(FREEZES_URL, {
-    method: 'PUT',
-    body: JSON.stringify({ offDays: sanitizeOffDays(offDays) }),
-  });
-  return normalize(res);
+export async function activateShield(): Promise<StreakProtection> {
+  return normalize(await apiFetch<Partial<StreakProtection>>(URL, { method: 'POST' }));
+}
+
+/** Whole hours and minutes left on a shield, or null once it has expired.
+ * Deliberately not live: it is read on load and left alone, because a ticking
+ * clock on a two-day window is decoration that costs a render a second. */
+export function shieldRemaining(shieldUntil: string | null, now = Date.now()): { hours: number; minutes: number } | null {
+  if (!shieldUntil) return null;
+  const until = Date.parse(shieldUntil);
+  if (!Number.isFinite(until)) return null;
+  const ms = until - now;
+  if (ms <= 0) return null;
+  return { hours: Math.floor(ms / 3_600_000), minutes: Math.floor((ms % 3_600_000) / 60_000) };
 }

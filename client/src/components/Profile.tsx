@@ -1,12 +1,11 @@
 import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { Kicker } from './landing/LandingKit';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Grid } from '@astryxdesign/core/Grid';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
-import { Badge } from '@astryxdesign/core/Badge';
 import { Card } from '@astryxdesign/core/Card';
 import { Button } from '@astryxdesign/core/Button';
 import { Avatar } from '@astryxdesign/core/Avatar';
@@ -33,9 +32,8 @@ import { computeLearningXp, levelForXp, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { apiFetch, friendlyError } from '../lib/api';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
-import { getFreezes, setOffDays, sanitizeOffDays, type FreezeState } from '../lib/streakFreezes';
+import { getStreakProtection, activateShield, shieldRemaining, type StreakProtection } from '../lib/streakFreezes';
 import { getAdvice, advisorCategoryKey, type Advice } from '../lib/advisor';
-import { getCollection, subjectCardCount } from '../lib/cards';
 import { renderQuestion } from './CodeBlock';
 import { useT, useLanguage } from '../i18n/LanguageContext';
 import type { Lang } from '../i18n/LanguageContext';
@@ -49,7 +47,7 @@ import { useSettings } from '../lib/settings';
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { SwimmingFin } from './SharkFin';
-import { FlameIcon, BoltIcon, TrophyIcon, CardsIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, SoundOffIcon } from './ui/icons';
+import { FlameIcon, BoltIcon, TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, SoundOffIcon } from './ui/icons';
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import './DeepEndScreens.css';
@@ -198,7 +196,6 @@ function Profile() {
     stats && stats.total_questions > 0
       ? Math.round((stats.total_correct / stats.total_questions) * 100)
       : 0;
-  const isFirstTime = totalQuizzes === 0;
   return (
     <ProfileBody
       user={profile}
@@ -207,8 +204,6 @@ function Profile() {
       totalCorrect={totalCorrect}
       totalQuestions={totalQuestions}
       averageScore={averageScore}
-      isFirstTime={isFirstTime}
-      navigate={navigate}
       statsWarning={error}
       onRetryStats={() => statsQuery.refetch()}
     />
@@ -222,8 +217,6 @@ interface ProfileBodyProps {
   totalCorrect: number;
   totalQuestions: number;
   averageScore: number;
-  isFirstTime: boolean;
-  navigate: (path: string) => void;
   statsWarning: string | null;
   onRetryStats: () => void;
 }
@@ -235,8 +228,6 @@ function ProfileBody({
   totalCorrect,
   totalQuestions,
   averageScore,
-  isFirstTime,
-  navigate,
   statsWarning,
   onRetryStats,
 }: ProfileBodyProps) {
@@ -244,11 +235,9 @@ function ProfileBody({
   const ringColor = useEquippedRingColor();
   const flair = useEquippedFlair();
   const { questions: bookmarkedQuestions } = useBookmarks();
-  const currentStreak = currentStreakForDisplay(stats);
   // Drawn once per mount so a stats refetch or a language switch cannot swap
   // the tip out from under someone mid-sentence.
-  const [tipSeed] = useState(Math.random);
-  const tip = consistencyTipFor(tipSeed, currentStreak > 0);
+  const [tipKey] = useState(nextConsistencyTip);
 
   return (
     <div className="de-page" style={{ maxWidth: 1000 }}>
@@ -299,19 +288,7 @@ function ProfileBody({
 
         {/* Keep the streak in the first scan path for both products, including
             a useful zero state. It must not be buried below track/stat cards. */}
-        <StreakCard stats={stats} />
-
-        <ConsistencyTip
-          title={t(tip.titleKey)}
-          body={t(tip.bodyKey)}
-          actionLabel={isFirstTime ? t('profile.streakAction') : undefined}
-          onAction={isFirstTime ? () => navigate('/quiz') : undefined}
-        />
-
-        {/* Streak protection sits directly beneath the streak so the two read as
-            one story: here is your streak, here is how a missed day is bridged.
-            Freezes are free and never a shop item. */}
-        <StreakFreezeCard />
+        <StreakCard stats={stats} tipKey={tipKey} />
 
         {/* On a standalone deploy (e.g. devShark) point learners at the umbrella
             site so they can discover the other Shark platforms. Hidden when
@@ -350,8 +327,6 @@ function ProfileBody({
             {CURRENT_PRODUCT.id === 'devshark' && <LearningPathsCard />}
 
             <AdvisorCard />
-
-            <SharkCardsEntry />
           </VStack>
 
           <VStack gap={2}>
@@ -434,7 +409,15 @@ function currentStreakForDisplay(stats: UserStats | null, now = new Date()): num
   return daysSinceQuiz === 0 || daysSinceQuiz === 1 ? stats.current_streak : 0;
 }
 
-function StreakCard({ stats, unavailable = false }: { stats: UserStats | null; unavailable?: boolean }) {
+function StreakCard({
+  stats,
+  tipKey,
+  unavailable = false,
+}: {
+  stats: UserStats | null;
+  tipKey?: TranslationKey;
+  unavailable?: boolean;
+}) {
   const { t, lang } = useLanguage();
   const currentLabelId = useId();
   const longestLabelId = useId();
@@ -442,10 +425,6 @@ function StreakCard({ stats, unavailable = false }: { stats: UserStats | null; u
   const longestStreak = stats?.longest_streak ?? 0;
   const currentStreakDisplay = unavailable ? '—' : currentStreak;
   const longestStreakDisplay = unavailable ? '—' : longestStreak;
-  const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(lang === 'cs' ? 'cs-CZ' : 'en', { dateStyle: 'medium', timeZone: 'UTC' }),
-    [lang],
-  );
   const dayUnit = (value: number) => {
     if (lang === 'en') return t(value === 1 ? 'profile.day' : 'profile.days');
     if (value === 1) return t('profile.day');
@@ -475,6 +454,10 @@ function StreakCard({ stats, unavailable = false }: { stats: UserStats | null; u
                     {t('profile.currentStreak')}
                   </Text>
                   {!unavailable && <MetaPill color="var(--ss-warning)">{dayUnit(currentStreak)}</MetaPill>}
+                  {/* Protection lives inside the streak it protects. It used to
+                      be a card of its own below, which read as a separate
+                      feature rather than as part of this number. */}
+                  {!unavailable && <StreakShield />}
                 </VStack>
               </Card>
             </div>
@@ -500,9 +483,12 @@ function StreakCard({ stats, unavailable = false }: { stats: UserStats | null; u
             </div>
           </Grid>
 
-          {stats?.last_quiz_date && (
+          {/* One line, in the space the "last quiz" date used to take. The date
+              was a fact nobody acts on; this is the same height and says
+              something a learner can do next. */}
+          {tipKey && !unavailable && (
             <Text type="supporting" size="xsm" color="secondary" justify="center">
-              {t('profile.lastQuiz', { date: dateFormatter.format(new Date(stats.last_quiz_date)) })}
+              {t(tipKey)}
             </Text>
           )}
           {unavailable && (
@@ -516,48 +502,120 @@ function StreakCard({ stats, unavailable = false }: { stats: UserStats | null; u
   );
 }
 
-// One tip is shown per visit, drawn from this pool, so the profile does not
-// open on the same sentence every time. The streak pair stays in the draw: it is
-// the only tip that reads the learner's current streak.
-const CONSISTENCY_TIPS: ReadonlyArray<{ titleKey: TranslationKey; bodyKey: TranslationKey }> = [
-  { titleKey: 'profile.reviewTipTitle', bodyKey: 'profile.reviewTipBody' },
-  { titleKey: 'profile.mixTipTitle', bodyKey: 'profile.mixTipBody' },
-  { titleKey: 'profile.recallTipTitle', bodyKey: 'profile.recallTipBody' },
-];
-
-function consistencyTipFor(seed: number, hasStreak: boolean) {
-  const pool = [
-    hasStreak
-      ? { titleKey: 'profile.streakActiveTipTitle' as TranslationKey, bodyKey: 'profile.streakActiveTipBody' as TranslationKey }
-      : { titleKey: 'profile.streakStartTipTitle' as TranslationKey, bodyKey: 'profile.streakStartTipBody' as TranslationKey },
-    ...CONSISTENCY_TIPS,
-  ];
-  return pool[Math.floor(seed * pool.length) % pool.length];
-}
-
-interface ConsistencyTipProps {
-  title: string;
-  body: string;
-  actionLabel?: string;
-  onAction?: () => void;
-}
-
-function ConsistencyTip({ title, body, actionLabel, onAction }: ConsistencyTipProps) {
+/**
+ * The shield: spend one of the month's two protections and the streak survives
+ * the next 48 hours.
+ *
+ * Three states and nothing else. A shield is running (a countdown, in whole
+ * hours and minutes, read once on load — a live clock on a two-day window is
+ * decoration). A protection is available (the button). The month's two are
+ * spent (a line saying when the next arrive). Everything is server-owned: the
+ * budget, the spend and the expiry, so a client cannot grant itself either.
+ *
+ * It renders nothing at all until the read lands, and nothing if the server
+ * cannot offer it yet, so the streak card never shows a control that would
+ * fail.
+ */
+function StreakShield() {
   const t = useT();
-  const titleId = useId();
+  const [state, setState] = useState<StreakProtection | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Read once, on mount. The window is 48 hours long; re-reading it while the
+  // page sits open would tell the learner nothing they cannot get by reloading.
+  const [now] = useState(() => Date.now());
+
+  useEffect(() => {
+    let active = true;
+    getStreakProtection().then((next) => { if (active) setState(next); });
+    return () => { active = false; };
+  }, []);
+
+  if (!state || !state.shieldSupported) return null;
+
+  const left = shieldRemaining(state.shieldUntil, now);
+  if (left) {
+    return (
+      <span className="de-shield de-shield--on">
+        <ShieldIcon size={16} />
+        {t('profile.shieldActive', { h: left.hours, m: left.minutes })}
+      </span>
+    );
+  }
+
+  if (state.remaining <= 0) {
+    return (
+      <span className="de-shield de-shield--spent">
+        <ShieldIcon size={16} />
+        {t('profile.shieldNone')}
+      </span>
+    );
+  }
+
+  const spend = async () => {
+    setPending(true);
+    setError(null);
+    try {
+      setState(await activateShield());
+    } catch (err) {
+      setError(friendlyError(err));
+    } finally {
+      setPending(false);
+    }
+  };
 
   return (
-    <aside className="de-profile-guidance" aria-labelledby={titleId}>
-      <VStack gap={0.5} width="100%">
-        <span className="de-profile-guidance__label">{t('profile.consistencyTip')}</span>
-        <h2 id={titleId} className="de-profile-guidance__title">{title}</h2>
-        <Text type="supporting" size="xsm" color="secondary">{body}</Text>
-      </VStack>
-      {actionLabel && onAction && (
-        <Button variant="secondary" size="sm" label={actionLabel} onClick={onAction} />
-      )}
-    </aside>
+    <VStack gap={0.5} align="center">
+      <button type="button" className="de-shield de-shield--action" onClick={spend} disabled={pending}>
+        <ShieldIcon size={16} />
+        {pending ? t('profile.shieldSpending') : t('profile.shieldAction')}
+      </button>
+      <span className="de-shield__meta">{t('profile.shieldLeft', { n: state.remaining })}</span>
+      {error && <span className="de-shield__meta de-shield__meta--error" role="alert">{error}</span>}
+    </VStack>
   );
+}
+
+// Ten one-line tips. They sit inside the streak card now rather than in a card
+// of their own, so there is room for exactly one line and no more.
+const CONSISTENCY_TIPS: readonly TranslationKey[] = [
+  'profile.tip.short',
+  'profile.tip.unfinished',
+  'profile.tip.wrong',
+  'profile.tip.finish',
+  'profile.tip.tomorrow',
+  'profile.tip.recall',
+  'profile.tip.mix',
+  'profile.tip.tooEasy',
+  'profile.tip.showUp',
+  'profile.tip.readAnyway',
+];
+
+const LAST_TIP_KEY = 'devquiz:profile-tip';
+
+/**
+ * A tip the learner did not see last time.
+ *
+ * "Always different" is the whole request, and a random draw is not that — a
+ * pool of ten repeats about one visit in ten. The last one shown is remembered
+ * and excluded, so the next is always new. Storage failing (private mode, a
+ * fresh browser) degrades to a plain random draw rather than to nothing.
+ */
+function nextConsistencyTip(): TranslationKey {
+  let previous: string | null = null;
+  try {
+    previous = localStorage.getItem(LAST_TIP_KEY);
+  } catch {
+    /* no storage — a repeat is possible and harmless */
+  }
+  const pool = CONSISTENCY_TIPS.filter((key) => key !== previous);
+  const chosen = pool[Math.floor(Math.random() * pool.length)] ?? CONSISTENCY_TIPS[0];
+  try {
+    localStorage.setItem(LAST_TIP_KEY, chosen);
+  } catch {
+    /* ignore */
+  }
+  return chosen;
 }
 
 // Career level card: the learner's rank (derived from total XP = learning XP +
@@ -749,20 +807,6 @@ function LearningTrackCard() {
   );
 }
 
-// ─────────────────────────── Streak freezes ───────────────────────────
-// Forgiving-streak controls: the monthly freeze budget that bridges a missed
-// school day, plus the learner's configurable off-days. Freezes are free and
-// never a shop item; off-days are the only user-writable field. Reads degrade to
-// a safe empty state (streakFreezes.getFreezes never throws); saving off-days is
-// an explicit action with saving / saved / error feedback.
-
-const dayShortKey = (d: number): TranslationKey => `freezes.day.${d}` as TranslationKey;
-const dayFullKey = (d: number): TranslationKey => `freezes.dayFull.${d}` as TranslationKey;
-// Render the week Monday-first (Czech + most EU locales); values stay 0=Sun..6=Sat.
-const OFF_DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
-
-// Shield-with-check: "your streak is protected". A single decorative one-off in
-// the app's inline-SVG idiom (no new icon family).
 function ShieldIcon({ size = 22 }: { size?: number }) {
   return (
     <svg aria-hidden viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
@@ -772,155 +816,6 @@ function ShieldIcon({ size = 22 }: { size?: number }) {
   );
 }
 
-function StreakFreezeCard() {
-  const t = useT();
-  const [state, setState] = useState<FreezeState | null>(null);
-  const [draft, setDraft] = useState<number[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [toast, setToast] = useState<{ message: string; severity: 'success' | 'error' } | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    getFreezes().then((s) => {
-      if (!active) return;
-      setState(s);
-      setDraft(s.offDays);
-    });
-    return () => { active = false; };
-  }, []);
-
-  const toggleDay = (d: number) => {
-    setDraft((prev) => sanitizeOffDays(prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]));
-  };
-
-  const dirty = useMemo(() => {
-    if (!state) return false;
-    const a = sanitizeOffDays(draft);
-    const b = sanitizeOffDays(state.offDays);
-    return a.length !== b.length || a.some((v, i) => v !== b[i]);
-  }, [draft, state]);
-
-  const save = async () => {
-    setSaving(true);
-    try {
-      const next = await setOffDays(draft);
-      setState(next);
-      setDraft(next.offDays);
-      setToast({ message: t('freezes.saved'), severity: 'success' });
-    } catch {
-      // setOffDays throws on failure so the save handler can surface it; the
-      // draft is kept so the learner can simply retry.
-      setToast({ message: t('freezes.saveError'), severity: 'error' });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Lift>
-      <Card variant="default" padding={3} width="100%">
-        <VStack gap={2}>
-          <VStack gap={0.5}>
-            <SectionLabel>{t('freezes.title')}</SectionLabel>
-            <Text type="supporting" color="secondary">{t('freezes.subtitle')}</Text>
-          </VStack>
-
-          {!state ? (
-            <div role="status" aria-live="polite" style={{ padding: '6px 0' }}>
-              <Text type="supporting" size="xsm" color="secondary">{t('freezes.loading')}</Text>
-            </div>
-          ) : (
-            <>
-              <HStack gap={1.5} align="center">
-                <div aria-hidden className="ss-tile" style={{ width: 44, height: 44, color: 'var(--brand-accent)', background: 'var(--brand-accent-soft)' }}>
-                  <ShieldIcon />
-                </div>
-                <VStack gap={0}>
-                  <Text weight="bold">
-                    {state.remaining > 0 ? t('freezes.remaining', { n: state.remaining }) : t('freezes.none')}
-                  </Text>
-                  <Text type="supporting" size="xsm" color="secondary">
-                    {state.remaining > 0 ? t('freezes.explainer') : t('freezes.noneHint')}
-                  </Text>
-                  {state.used.length > 0 && (
-                    <Text type="supporting" size="xsm" color="secondary">{t('freezes.used', { n: state.used.length })}</Text>
-                  )}
-                </VStack>
-              </HStack>
-
-              {/* Protected behaviour: freezes are part of learning, never a
-                  purchasable item. Say so plainly. */}
-              <div style={{ border: '1px solid var(--color-border)', borderRadius: 'var(--radius-element)', background: 'var(--color-background-muted)', padding: '10px 12px' }}>
-                <Text weight="semibold" size="sm">{t('freezes.notShopTitle')}</Text>
-                <Text type="supporting" size="xsm" color="secondary" display="block">{t('freezes.notShopBody')}</Text>
-              </div>
-
-              <VStack gap={1}>
-                <VStack gap={0.5}>
-                  <Text weight="semibold">{t('freezes.offDaysTitle')}</Text>
-                  <Text type="supporting" size="xsm" color="secondary">{t('freezes.offDaysHint')}</Text>
-                </VStack>
-                <div role="group" aria-label={t('freezes.offDaysTitle')} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {OFF_DAY_ORDER.map((d) => {
-                    const sel = draft.includes(d);
-                    return (
-                      <button
-                        key={d}
-                        type="button"
-                        aria-pressed={sel}
-                        aria-label={t(dayFullKey(d))}
-                        onClick={() => toggleDay(d)}
-                        style={{
-                          cursor: 'pointer',
-                          minWidth: 46,
-                          minHeight: 44,
-                          padding: '0 12px',
-                          borderRadius: 999,
-                          fontWeight: 700,
-                          fontSize: '0.8125rem',
-                          border: `1px solid ${sel ? 'var(--brand-accent)' : 'var(--color-border-strong)'}`,
-                          background: sel ? 'var(--brand-accent-soft)' : 'transparent',
-                          color: sel ? 'var(--brand-accent)' : 'var(--color-text-secondary)',
-                          display: 'inline-grid',
-                          placeItems: 'center',
-                        }}
-                      >
-                        <span aria-hidden>{t(dayShortKey(d))}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <Text type="supporting" size="xsm" color="secondary">{t('freezes.weekendHint')}</Text>
-                <HStack justify="end">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    label={saving ? t('freezes.saving') : t('freezes.saveOffDays')}
-                    isDisabled={saving || !dirty}
-                    onClick={save}
-                  />
-                </HStack>
-              </VStack>
-            </>
-          )}
-        </VStack>
-
-        <AppToast
-          open={!!toast}
-          onClose={() => setToast(null)}
-          severity={toast?.severity ?? 'info'}
-          message={toast?.message ?? ''}
-          autoHideDuration={toast?.severity === 'error' ? null : 3000}
-        />
-      </Card>
-    </Lift>
-  );
-}
-
-// ───────────────────────────── Advisor ─────────────────────────────
-// Read-only "where to focus" panel built from the learner's own verified
-// per-category accuracy. It never diagnoses and offers no actions — just the
-// weakest areas from the server's deterministic S5.
 function AdvisorCard() {
   const t = useT();
   const subject = useActiveSubject();
@@ -979,60 +874,6 @@ function AdvisorCard() {
         </VStack>
       </Card>
     </Lift>
-  );
-}
-
-// ─────────────────────── Shark Cards entry point ───────────────────────
-// A quiet teaser into the cosmetic album (route /collection): how much of this
-// subject's album is collected, with a "pack ready" flag when today's plan is
-// done. Cards never affect access, XP, scores, streaks, ranks, or AI.
-function SharkCardsEntry() {
-  const t = useT();
-  const subject = useActiveSubject();
-  const [state, setState] = useState<{ owned: number; total: number; packAvailable: boolean } | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    setState(null);
-    getCollection(subject.id).then((res) => {
-      if (!active) return;
-      setState({ owned: res.cards.length, total: res.total, packAvailable: res.packAvailable });
-    });
-    return () => { active = false; };
-  }, [subject.id]);
-
-  const total = state?.total ?? subjectCardCount(subject.id);
-  const owned = state?.owned ?? 0;
-
-  return (
-    <Link
-      to="/collection"
-      style={{ textDecoration: 'none', color: 'inherit', display: 'flex', width: '100%', borderRadius: 'var(--radius-container)' }}
-    >
-      <div className="ss-lift" style={{ display: 'flex', width: '100%' }}>
-        <Card variant="default" padding={3} width="100%">
-          <HStack gap={1.5} align="center" justify="between">
-            <HStack gap={1.5} align="center">
-              <div aria-hidden className="ss-tile" style={{ width: 44, height: 44, color: 'var(--brand-accent)', background: 'var(--brand-accent-soft)' }}>
-                <CardsIcon size={22} />
-              </div>
-              <VStack gap={0}>
-                <Text weight="bold">{t('cards.title')}</Text>
-                <Text type="supporting" size="xsm" color="secondary">
-                  {state ? t('cards.count', { owned, total }) : t('cards.loading')}
-                </Text>
-                {state?.packAvailable && (
-                  <span style={{ marginTop: 4 }}>
-                    <Badge variant="success" label={t('cards.packReady')} />
-                  </span>
-                )}
-              </VStack>
-            </HStack>
-            <span aria-hidden style={{ color: 'var(--brand-accent)', fontWeight: 800, fontSize: '1.25rem', flexShrink: 0 }}>→</span>
-          </HStack>
-        </Card>
-      </div>
-    </Link>
   );
 }
 

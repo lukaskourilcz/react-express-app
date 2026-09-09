@@ -59,3 +59,16 @@
 }
 .de-mode-card[data-selected='true'] .de-mode-card__check { opacity: 1; }
 .de-gold-pill { background: var(--ss-warning-soft); color: var(--ss-warning); }
+
+/* Streak shield — the control and its two read-only states, inside the current
+   streak card. Sized to clear 44px so it is a real target on a phone, and it
+   says its state in words as well as in colour. */
+.de-shield{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin-top:6px;padding:6px 12px;border-radius:999px;font:650 .78rem/1.3 var(--font-family-body);text-align:center}
+.de-shield--action{border:1px solid var(--ss-warning);background:var(--color-background-surface);color:var(--color-text-primary);cursor:pointer}
+.de-shield--action:hover{background:var(--color-background-muted)}
+.de-shield--action:focus-visible{outline:2px solid var(--ss-focus);outline-offset:2px}
+.de-shield--action:disabled{cursor:progress;opacity:.65}
+.de-shield--on{border:1px solid var(--ss-success);background:var(--ss-success-soft);color:var(--color-text-primary)}
+.de-shield--spent{border:1px dashed var(--color-border);color:var(--color-text-secondary)}
+.de-shield__meta{font-size:.72rem;color:var(--color-text-secondary);text-align:center}
+.de-shield__meta--error{color:var(--ss-danger,var(--color-text-primary))}
