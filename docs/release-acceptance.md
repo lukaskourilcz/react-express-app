@@ -4,7 +4,8 @@ What was verified for the modernization epic, what was not, and why. Every row
 is pass, fail or **not run** — never "should be fine". A row that could not be
 checked in this environment says so and names what would check it.
 
-Recorded on 2026-09-08, against `ccee58b`, which is on `main`.
+Recorded on 2026-09-08 against `ccee58b`, and extended on 2026-09-09 after a
+full code, design, content and architecture review. Both commits are on `main`.
 
 ## Repository gates
 
@@ -21,6 +22,7 @@ Recorded on 2026-09-08, against `ccee58b`, which is on `main`.
 | `git diff --check` | **Pass** — clean |
 | `npm run test:harness` | **Pass** — 23 assertions against the built sandbox in Chromium (needs `CHROME_BIN`; it skips itself silently without one) |
 | `npm run check:responsive` | **Pass** — see below |
+| `npm audit --omit=dev` (both, re-run 2026-09-09) | **Pass** — 0 vulnerabilities |
 
 ## Responsive sweep
 
@@ -125,14 +127,14 @@ may and may not say until it runs.
 
 ## Not run in this environment, and what would run it
 
-This container has no Supabase project, no `vercel dev` and no browser session,
-so everything below is honestly **not run** rather than assumed:
+A Supabase connection was available on 2026-09-09, so the migrations and the
+policy checks below moved out of this table and into **Applied and verified**.
+The rest still needs a deployment, a signed-in session or a real payment
+provider, and is honestly **not run** rather than assumed:
 
 | Check | What it needs |
 | --- | --- |
 | Guest → sign in → diagnostic → practical pass → resume → capstone | A preview deployment with Supabase configured |
-| Migrations 026–030 applied against a real database | A controlled window and a verified backup (`docs/backup-restore.md`) |
-| RLS behaviour on the new tables | A live database; the policies are written and reviewed, but reviewing SQL is not running it |
 | Payment webhook replay | A configured payment provider in test mode |
 | Account switching and deletion end to end | Two real accounts |
 | Rollback (disable the feature, retain the data) | The same preview environment |
@@ -142,6 +144,152 @@ These are the owner's deployment checks, and each already has an entry in
 `NEEDED.md` with an owner and an estimate. **None of them is claimed as passing
 here.** An unchecked box in an issue is not evidence, and neither is this
 document: it records what the commands actually printed.
+
+## Review of 2026-09-09: what it found
+
+A code, design, content and architecture pass over the shipped epic. Everything
+below was reproduced before it was fixed, and the fix was measured afterwards.
+
+### Features that ran but did not reach the learner
+
+**Spaced practice selected nothing.** The review handler worked out which
+concepts were due, built a due-first pool, and handed it to a ranking that sorts
+by its own total order — so the ordering was discarded. Verified with two
+learners, one with nothing due and one with two concepts due: byte-identical
+ten-question sessions, neither containing a due concept. Slots are now taken out
+of the count before the ranking runs, which is the one arrangement the ranking
+cannot undo. The contract asserts both halves.
+
+**Hinted answers counted as independent recall.** The submit payload reported
+which hint popovers were *open* at submit time. They never are — the popover
+light-dismisses on the same click that picks an answer — so `hinted` went out
+empty and every hinted answer climbed the interval ladder, which is exactly what
+spaced practice exists to see through. The flag is sticky now.
+
+**Levels fed nothing into the ladder.** Only quiz submits recorded a concept
+review, and levels are where a devShark learner spends most of their time, so
+nothing was ever due for them. Level completion records the same way now.
+
+**The AI topic was unreachable.** Twenty levels and 160 questions, planned only
+by the FDE bridge, so every learner who did not take that specialisation was
+refused it as "not in your plan". It now closes all three base tracks, and the
+contract fails if any deployable topic is planned by no track.
+
+### Design defects
+
+**The theme and language were applied after the bundle rendered.** A learner who
+chose dark got a white page until the entry bundle had downloaded, parsed and
+rendered — on a phone on a slow connection, a second or more, every cold load.
+The document also stayed `lang="en"` while showing Czech, which a screen reader
+reads in an English voice. Both are set before first paint now.
+
+The ordering matters as much as the script: a pending stylesheet blocks every
+script after it, so with the webfont link first the theme was never applied at
+all while `fonts.googleapis.com` was unreachable. Measured in a headless browser
+with the entry bundle blocked, so nothing but the bootstrap could have set the
+attributes.
+
+**Touch targets.** Measured across nineteen routes at 390px with touch
+emulation on: the mobile navigation toggle at 36×36 — the most-tapped control on
+a phone and the smallest thing on the page — buttons at 32px tall, segmented
+control items at 28px, footer links at 14px. A coarse-pointer floor now brings
+every control to 44px; re-measured across twenty-four routes in English and
+Czech — 602 interactive elements each — nothing below it, no two clickable
+boxes overlapping, and no clipped text without an ellipsis.
+
+Those last two came back empty, so the instrument was checked rather than
+believed: injecting two overlapping buttons and one deliberately clipped
+sentence into a real page made it report all three. A zero from a measurement
+that cannot produce a one is not a result.
+
+**Toasts ignored `prefers-reduced-motion`.** The shared motion primitives each
+handle it; the three components with a variant of their own slid and scaled for
+everyone. One shared helper now takes the movement out and leaves opacity alone.
+
+**An English phrase inside a Czech figure.** The HTML landmarks figure annotated
+`main` with the plain value "one per page". It is a localized note now, and the
+figure contract refuses any value carrying whitespace.
+
+### Performance
+
+**Hashed assets were revalidated on every visit.** Production served
+`/assets/*` as `max-age=0, must-revalidate`, so a returning visitor made a
+conditional request per chunk and got a 304. A content hash in the filename is
+what makes a long cache safe; they are `immutable` for a year now, and the entry
+documents still revalidate.
+
+Measured on the live deployment: HTML 4.7kB and TTFB 0.39s; the entry bundle
+300kB raw, 99kB over Brotli. The initial critical path is roughly 215kB
+compressed — entry, React, router, query client and the shell stylesheet.
+Routes, both translation tables, the level intros and the in-browser compiler
+toolchain are all separate chunks and none is on that path.
+
+**The coverage endpoint costs 18ms** for all 4,320 questions, edge-cached for
+60 seconds with a five-minute stale-while-revalidate. Measured rather than
+assumed.
+
+**No unbounded or per-row queries were found** in the request paths. Every
+learner query is keyed by `user_id` and the aggregates are bounded; the live
+multiplayer view uses Realtime with polling only as a fallback.
+
+### Tooling that was reporting more than it knew
+
+**The responsive sweep could stall forever.** A DevTools command had no
+deadline, so a wedged renderer left its promise pending and the retry loop
+around it could never reach its own clock. One run sat frozen for half an hour
+with the process alive. Commands have deadlines now, a route that cannot be
+probed is reported as an error rather than skipped silently, a wedged browser is
+restarted and the route retried once, and a sweep that failed to look at
+something no longer prints "all clear".
+
+**It was also measuring phones with a mouse's stylesheet.** `mobile: true` does
+not make `(pointer: coarse)` match; touch emulation does. Every coarse-pointer
+rule was invisible to it.
+
+**And the build was deleting the app's overrides of design-system classes.** The
+post-build purge keeps class names it can find as literals in the emitted JS,
+and Astryx composes its `astryx-*` names at runtime. A rule that worked in `npm
+run dev` was gone in production, silently. They are safelisted now, for about
+2kB gzipped.
+
+### Content
+
+`npm run audit:devshark-content` flags **158 of 2,423 devShark questions**
+(6.5%) where the correct answer is markedly longer and more detailed than its
+distractors — the oldest tell in multiple choice. Not fixed here: rewriting them
+is the content audit's work (#176), and this records the number so the decision
+to run it has one.
+
+EN/CS parity was re-checked mechanically: **2,038 keys each, none missing on
+either side.** The 54 identical values are proper nouns, technology names,
+format strings and deliberate borrowings ("skill check", declined properly in
+the surrounding Czech copy).
+
+## Applied and verified against production (2026-09-09)
+
+| What | Result |
+| --- | --- |
+| Migrations 026, 027, 028, 029, 030 applied in order | **Pass** — all additive and idempotent, applied after 029 was used as a low-risk smoke test |
+| Migration 031 (RLS InitPlan, duplicate index) | **Pass** |
+| Row-level security on the eighteen new tables | **Pass** — enabled on every one |
+| `learning_path_attempts` and `merch_stock` readable by nobody but the service role | **Pass** — zero policies, zero grants |
+| Every new function service-role only | **Pass** |
+| No policy re-evaluates `auth.uid()` per row | **Pass** — 0 remaining, down from 18 |
+| `question_reports.content_version` exists and is nullable | **Pass** |
+
+Two defects were found while applying them, both now fixed in the migration
+files as well as in production:
+
+**027 and 028 left Supabase's default table grants in place.** They granted
+`SELECT` without revoking first, so `INSERT`, `UPDATE`, `DELETE` and `TRUNCATE`
+remained for `anon` and `authenticated` on twelve tables — the token ledger,
+balances, merchandise orders and cosmetic entitlements among them. The policies
+masked the first three by matching no rows. `TRUNCATE` takes no rows and so
+passes no policy: any signed-in browser session could have emptied a table.
+
+**Eighteen owner-read policies evaluated the caller once per row.** Correct, but
+a cost that grows with the table. Wrapped in a scalar subquery it is evaluated
+once per query.
 
 ## Migration order and rollback
 
