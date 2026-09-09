@@ -1232,6 +1232,28 @@ async function main() {
       assert.deepEqual(selectDueItems([], dueOrder, concept, new Set(), 6), [], 'nothing due, nothing reserved');
     }
 
+    // The pre-paint bootstrap has to run before anything that can block it.
+    // A pending stylesheet suspends every script after it, so a webfont link
+    // above this one leaves the page in the default theme until a third-party
+    // host answers — verified in a browser: with fonts.googleapis.com
+    // unreachable and the link first, the theme was never applied at all.
+    {
+      const html = readFileSync(join(process.cwd(), 'client', 'index.html'), 'utf8');
+      const bootstrap = html.indexOf("devquiz:color-mode");
+      assert.ok(bootstrap > 0, 'index.html must set the colour mode before first paint');
+      assert.ok(
+        html.indexOf('devquiz.lang') > 0,
+        'index.html must set the document language before first paint, so a screen reader reads Czech in a Czech voice',
+      );
+      const firstBlocking = html.search(/<link[^>]+rel="stylesheet"/);
+      if (firstBlocking >= 0) {
+        assert.ok(
+          bootstrap < firstBlocking,
+          'the pre-paint bootstrap must come before any stylesheet link; a pending stylesheet blocks every script after it',
+        );
+      }
+    }
+
     // Interleaving: bounded runs, no duplicates, focused block for new material.
     const item = (id: string, tags: string[], format?: string) =>
       ({ id, category: 'javascript', tags, format });

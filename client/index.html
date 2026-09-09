@@ -2,6 +2,53 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <!--
+      Theme and language before first paint.
+
+      Both were applied from a React effect, which runs only after the entry
+      bundle has downloaded, parsed and rendered. On a phone on a slow
+      connection that is a second or more of white page for a learner who chose
+      dark, on every cold load — and an `html lang="en"` that a screen reader
+      pronounces Czech content with, which is the exact mistake one of our own
+      HTML questions is about.
+
+      Kept deliberately small and duplicated rather than imported: it has to run
+      before anything else, so it cannot be a module. The keys and the fallback
+      order match ColorModeContext.resolveInitial and LanguageContext
+      .detectInitialLang; the React effects still run and still win, this only
+      stops the flash before them. Everything is inside a try/catch because
+      localStorage throws outright in some privacy modes.
+
+      It sits above the font links on purpose, and this is not cosmetic
+      ordering. A pending stylesheet blocks every script after it, so with the
+      webfont link first the theme was not applied until fonts.googleapis.com
+      answered — measured in a browser with that host unreachable, the page sat
+      in the default light theme indefinitely. Nothing here reads styles, so it
+      belongs above anything that can block.
+    -->
+    <script>
+      (function () {
+        var root = document.documentElement;
+        var mode = 'light';
+        var lang = null;
+        try {
+          var stored = localStorage.getItem('devquiz:color-mode');
+          if (stored === 'light' || stored === 'dark') mode = stored;
+          else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) mode = 'dark';
+          var storedLang = localStorage.getItem('devquiz.lang');
+          if (storedLang === 'cs' || storedLang === 'en') lang = storedLang;
+        } catch (e) {
+          /* storage unavailable — the media query answer, or the default, stands */
+        }
+        if (!lang) {
+          lang = (navigator.language || '').toLowerCase().indexOf('cs') === 0 ? 'cs' : 'en';
+        }
+        root.dataset.colorMode = mode;
+        root.dataset.theme = mode;
+        root.style.colorScheme = mode;
+        root.lang = lang;
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
