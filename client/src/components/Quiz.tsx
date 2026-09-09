@@ -70,6 +70,7 @@ import {
 import './Quiz.css';
 
 type QuizMode = 'standard' | 'daily' | 'review';
+const QUIZ_MODES: readonly string[] = ['standard', 'daily', 'review'];
 type ReviewWeakArea = { category: CategoryType; accuracyPct: number; answered: number; focusTags: string[] };
 
 const DIFFICULTY_VALUES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', 'advanced', 'mixed'];
@@ -312,7 +313,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setQuestions(saved.questions);
       setAnswers(saved.answers || {});
       setCurrentIndex(Math.min(saved.currentIndex || 0, saved.questions.length - 1));
-      setMode(saved.mode || 'standard');
+      // A quiz saved before practice mode was removed still says 'practice'
+      // here. Nothing branches on it any more, but it would still be reported
+      // as the mode to analytics, so an unknown mode reads as a standard quiz.
+      setMode(QUIZ_MODES.includes(saved.mode) ? saved.mode : 'standard');
       setState('in-progress');
     } catch {
       // ignore corrupt state
