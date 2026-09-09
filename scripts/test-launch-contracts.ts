@@ -1232,6 +1232,37 @@ async function main() {
       assert.deepEqual(selectDueItems([], dueOrder, concept, new Set(), 6), [], 'nothing due, nothing reserved');
     }
 
+    // Hashed asset filenames are what make a long cache safe: a new build is a
+    // new URL, so an old URL can be cached forever. Production was serving them
+    // `max-age=0, must-revalidate` instead — a round trip per chunk on every
+    // visit, for files that cannot change. The entry documents are the opposite
+    // case and must stay revalidated, or a deploy would never reach anyone.
+    {
+      const vercel = JSON.parse(readFileSync(join(process.cwd(), 'vercel.json'), 'utf8')) as {
+        headers?: { source: string; headers: { key: string; value: string }[] }[];
+      };
+      const cacheFor = (source: string) =>
+        vercel.headers
+          ?.find((rule) => rule.source === source)
+          ?.headers.find((one) => one.key.toLowerCase() === 'cache-control')?.value ?? null;
+
+      for (const source of ['/assets/(.*)', '/sandbox/assets/(.*)']) {
+        const value = cacheFor(source);
+        assert.ok(value, `${source} needs a Cache-Control header; hashed files should not be revalidated`);
+        assert.match(value!, /immutable/, `${source} serves content-hashed files and should be immutable`);
+        assert.match(value!, /max-age=\d{6,}/, `${source} should be cached for a long time, not seconds`);
+      }
+      // Nothing that serves a document may be immutable.
+      for (const rule of vercel.headers ?? []) {
+        const value = rule.headers.find((one) => one.key.toLowerCase() === 'cache-control')?.value;
+        if (!value || !/immutable/.test(value)) continue;
+        assert.ok(
+          rule.source.includes('assets/'),
+          `${rule.source} is cached immutably but does not look like a hashed-asset path`,
+        );
+      }
+    }
+
     // The pre-paint bootstrap has to run before anything that can block it.
     // A pending stylesheet suspends every script after it, so a webfont link
     // above this one leaves the page in the default theme until a third-party
