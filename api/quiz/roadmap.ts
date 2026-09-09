@@ -850,38 +850,75 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   const userId = await optionalAuthSub(req, res);
   if (userId === undefined) return;
 
-  const attemptResult = await ensureAttempt(session, userId);
-  if (attemptResult.error || !attemptResult.data) {
-    if (isRpcMissing(attemptResult.error)) {
-      return jsonError(res, 503, 'migration_required', 'Verified learning migration is not installed');
-    }
-    return jsonError(res, 500, 'db_error', 'Could not start the learning attempt');
-  }
-  if (!attemptMatches(attemptResult.data as Record<string, unknown>, session, userId)) {
-    return jsonError(res, 409, 'attempt_conflict', 'This learning attempt belongs to another session');
-  }
-
   const selectedIndex = Number(body.selectedIndex);
-  const saved = await withTimeout(
-    supabase.rpc('record_roadmap_answer', {
+  const lang = normalizeLang(body.lang);
+
+  // The explanation does not depend on the grade, so it is fetched alongside it
+  // rather than after it. The store is cached, but a cold instance pays a read,
+  // and paying it in parallel costs nothing.
+  const questionsPromise = getEffectiveQuestionsById(session.subject, lang === 'cs');
+
+  // One round trip. The v2 routine opens the attempt if this is the first
+  // answer and runs every check the two-step path ran on the same locked row,
+  // so reading the attempt separately first was a second read of it.
+  let saved = await withTimeout(
+    supabase.rpc('record_roadmap_answer_v2', {
       p_attempt_id: session.attemptId,
       p_user_id: userId,
       p_question_id: body.questionId,
       p_selected_index: selectedIndex,
       p_correct_index: sessionQuestion.correctAnswer,
+      p_subject: session.subject,
+      p_topic: session.topic,
+      p_kind: session.roadmapKind,
+      p_ref: session.ref,
+      p_total_questions: session.questions.length,
+      p_pass_pct: session.roadmapKind === 'level' ? LEVEL_PASS : PART_TEST_PASS,
+      p_required_start: session.requiredLevelStart ?? null,
+      p_required_end: session.requiredLevelEnd ?? null,
     }),
   );
-  if (saved.error || !saved.data || typeof saved.data !== 'object') {
+
+  // Until migration 034 is applied, fall back to the pair it replaces. Costs a
+  // wasted call once per cold instance and nothing after that.
+  if (isRpcMissing(saved.error)) {
+    const attemptResult = await ensureAttempt(session, userId);
+    if (attemptResult.error || !attemptResult.data) {
+      if (isRpcMissing(attemptResult.error)) {
+        return jsonError(res, 503, 'migration_required', 'Verified learning migration is not installed');
+      }
+      return jsonError(res, 500, 'db_error', 'Could not start the learning attempt');
+    }
+    if (!attemptMatches(attemptResult.data as Record<string, unknown>, session, userId)) {
+      return jsonError(res, 409, 'attempt_conflict', 'This learning attempt belongs to another session');
+    }
+    saved = await withTimeout(
+      supabase.rpc('record_roadmap_answer', {
+        p_attempt_id: session.attemptId,
+        p_user_id: userId,
+        p_question_id: body.questionId,
+        p_selected_index: selectedIndex,
+        p_correct_index: sessionQuestion.correctAnswer,
+      }),
+    );
     if (isRpcMissing(saved.error)) {
       return jsonError(res, 503, 'migration_required', 'Verified learning migration 023 is not installed');
+    }
+  }
+
+  if (saved.error || !saved.data || typeof saved.data !== 'object') {
+    // The routine raises this when the attempt is not the caller's, has expired,
+    // is finished, or describes a different lesson than the session does.
+    if (/invalid_roadmap_attempt/i.test(saved.error?.message ?? '')) {
+      return jsonError(res, 409, 'attempt_conflict', 'This learning attempt belongs to another session');
     }
     return jsonError(res, 500, 'db_error', 'Could not record the answer');
   }
   const stored = saved.data as { selectedIndex?: unknown; correctAnswer?: unknown; isCorrect?: unknown };
 
-  const questions = await getEffectiveQuestionsById(session.subject, normalizeLang(body.lang) === 'cs');
+  const questions = await questionsPromise;
   const base = questions.get(body.questionId);
-  const explanation = base ? localizeQuestion(base, normalizeLang(body.lang)).explanation : '';
+  const explanation = base ? localizeQuestion(base, lang).explanation : '';
   res.setHeader('Cache-Control', 'private, no-store');
   return res.json({
     selectedIndex: Number(stored.selectedIndex),
