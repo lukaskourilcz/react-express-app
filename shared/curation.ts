@@ -191,7 +191,8 @@ export function registryEntryConsistent(entry: RegistryEntry): boolean {
 /* ── eligibility: may this exact content be served? ────────────────────── */
 
 export type EligibilityReason =
-  /** The audit does not cover this subject; the gate does not apply. */
+  /** Nothing on record applies to this content and its category is outside
+   * the audited scope: served as before, with no claim. */
   | 'not-in-scope'
   /** Current record, both gates pass, decision keeps it live. */
   | 'reviewed'
@@ -222,6 +223,16 @@ export interface Eligibility {
  * suite can run it against every boundary: relevance 3 retires, 4 alone does
  * not, 4 with quality 2 still retires, relevance 10 with a wrong key (quality
  * capped at 2) still retires, and an item nobody has reviewed is not served.
+ *
+ * A recorded decision about exactly this content is enforced wherever the
+ * item lives: a retirement withholds it and a passing review serves it (and
+ * approves its translation) whether or not its category is in the audited
+ * scope. The scope decides only what happens to content nobody has recorded a
+ * decision about — no record, a record for other wording, a broken record:
+ * inside the scope that content is withheld until it is reviewed; outside it
+ * is served as before, with no claim. That is what lets a wave land its rows
+ * for a category before the category is complete, without either withholding
+ * the items it has not reached or serving the ones it retired.
  */
 export function eligibilityFrom(
   entry: RegistryEntry | null | undefined,
@@ -229,10 +240,13 @@ export function eligibilityFrom(
   translationHash: string | null,
   inScope: boolean,
 ): Eligibility {
-  if (!inScope) return { active: true, reason: 'not-in-scope', entry: null, csApproved: true };
-  if (!entry) return { active: false, reason: 'unreviewed', entry: null, csApproved: false };
-  if (!registryEntryConsistent(entry)) return { active: false, reason: 'invalid-record', entry, csApproved: false };
-  if (entry.hash !== contentHash) return { active: false, reason: 'superseded', entry, csApproved: false };
+  const unrecorded = (reason: 'unreviewed' | 'invalid-record' | 'superseded', record: RegistryEntry | null): Eligibility =>
+    inScope
+      ? { active: false, reason, entry: record, csApproved: false }
+      : { active: true, reason: 'not-in-scope', entry: null, csApproved: true };
+  if (!entry) return unrecorded('unreviewed', null);
+  if (!registryEntryConsistent(entry)) return unrecorded('invalid-record', entry);
+  if (entry.hash !== contentHash) return unrecorded('superseded', entry);
   const csApproved = translationHash === null ? true : entry.cs === translationHash;
   if (entry.decision === 'retire') return { active: false, reason: 'retired', entry, csApproved };
   if (entry.decision === 'quarantine') return { active: false, reason: 'quarantined', entry, csApproved };

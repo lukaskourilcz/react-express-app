@@ -57,21 +57,27 @@ const taskFlags = CODING_TASKS.flatMap((task) => {
   return flags.length > 0 ? [{ id: task.id, track: task.track, flags, title: task.title.en }] : [];
 });
 
-// What the content-audit gate does to the static bank: per audited category,
-// how many items are served and how many are withheld, by reason. The
-// override layer is not read here, so this is the repository's answer, not
-// production's.
+// What the content-audit gate does to the static bank: per category the
+// audit has reached, how many items are served on a review, served with no
+// claim, and withheld, by reason. A category is listed when it is in the
+// completed scope or any of its items has a registry row. The override layer
+// is not read here, so this is the repository's answer, not production's.
+const reviewedIds = new Set(REVIEW_REGISTRY.map((row) => row.id));
+const reached = new Set<string>([...AUDITED_CATEGORIES, ...questions.filter((question) => reviewedIds.has(question.id)).map((question) => question.category)]);
 const gate = Object.fromEntries(
-  [...AUDITED_CATEGORIES].sort().map((category) => {
+  [...reached].sort().map((category) => {
     const inCategory = questions.filter((question) => question.category === category);
     const reasons: Record<string, number> = {};
     let served = 0;
+    let reviewed = 0;
     for (const question of inCategory) {
       const eligibility = questionEligibility(question);
-      if (eligibility.active) served++;
-      else reasons[eligibility.reason] = (reasons[eligibility.reason] ?? 0) + 1;
+      if (eligibility.active) {
+        served++;
+        if (eligibility.reason === 'reviewed') reviewed++;
+      } else reasons[eligibility.reason] = (reasons[eligibility.reason] ?? 0) + 1;
     }
-    return [category, { authored: inCategory.length, served, withheld: reasons }];
+    return [category, { complete: AUDITED_CATEGORIES.has(category), authored: inCategory.length, served, servedOnReview: reviewed, servedWithoutClaim: served - reviewed, withheld: reasons }];
   }),
 );
 

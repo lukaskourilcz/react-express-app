@@ -42,9 +42,11 @@ import {
 
 /** The subject the audit covers. Items of every other subject are not gated
  * by it: they are served exactly as before and never claim to be reviewed.
- * Within the subject, only the categories the ledger's scope names are
- * gated — the audit lands in waves, and a category still waiting for its
- * wave is served as before rather than withheld for want of a review. */
+ * Within the subject, a recorded decision is enforced for every item it names;
+ * the categories the ledger's scope lists are the complete ones, where an
+ * item with no applicable record is withheld too. The audit lands in waves,
+ * and a category still waiting for the rest of its wave serves its unreviewed
+ * items as before rather than withholding them for want of a review. */
 export const AUDITED_SUBJECT: ScopeSubjectId = 'webdev';
 
 const logEvent = createLogger('curation');

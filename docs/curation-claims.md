@@ -38,13 +38,16 @@ can forget to ask. Coding tasks go through the same rule in
 `lib/coding/active.ts`, which every issuing path reads; the authored catalogue
 in `lib/coding/catalog.ts` keeps history and offers no issuing lookup.
 
-The gate governs the **audited scope** and only that. The audit lands in
-waves, and the ledger's `scope` names the devShark categories a wave has
-covered; a category still waiting for its wave is served as before, with no
-review claim, rather than withheld for want of a review it has not had the
-chance to get. Adding a category to the scope without its rows withholds the
-whole category, which is the intended failure. StudyShark subjects are outside
-the audit entirely.
+A recorded decision is enforced wherever its item lives: a retirement
+withholds the item and a passing review serves it, whether or not its category
+is complete. The ledger's `scope` names the devShark categories the audit has
+covered **completely**; only there is an item with no applicable record — none
+at all, one for other wording, a broken one — withheld as well. The audit lands
+in waves, and a category the current wave has reached only in part keeps
+serving its unreviewed items as before, with no review claim, while the
+decisions already recorded for it hold. Adding a category to the scope without
+all of its rows withholds the rest of it, which is the intended failure.
+StudyShark subjects are outside the audit entirely.
 
 Retirement is not deletion. A withheld item stays in its source file and in
 `getQuestionsForHistoryById`, so an old attempt still finds its explanation
@@ -203,8 +206,9 @@ from the console.
 
 ## What this does not do
 
-It does not claim more than the ledger holds. A category outside the audited
-scope is served with no claim; an item whose translation was not reviewed is
-served in English; a coding task is gated only once the coding wave has
-landed. `docs/audit/devshark-content-audit.md` says what each wave covered and
-what it did not.
+It does not claim more than the ledger holds. An item with no applicable
+record in a category outside the audited scope is served with no claim; an
+item whose translation was not reviewed is served in English; a coding task
+with no record is issued as before until the coding wave has landed.
+`docs/audit/devshark-content-audit.md` says what each wave covered and what it
+did not.

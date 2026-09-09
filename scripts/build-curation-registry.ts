@@ -23,11 +23,14 @@ export const REGISTRY_PATH = path.join('lib', 'curation-registry.ts');
 export interface LedgerFile {
   schema: string;
   auditedOn: string;
-  /** What the audit has covered so far. The eligibility gate governs exactly
-   * this: a devShark category outside `categories` is served as before, with
-   * no review claim, until its wave of the audit lands; coding tasks are
-   * gated only once `codingTasks` is true. Adding to the scope without adding
-   * the rows withholds the whole category, which is the fail-closed intent. */
+  /** The categories the audit has covered completely. Every ledger row is
+   * enforced wherever its item lives; `categories` names the ones where an
+   * item with no applicable row is withheld as well, and coding tasks get the
+   * same treatment once `codingTasks` is true. A category with rows for only
+   * part of its items stays out of this list, so its unreviewed items are
+   * served as before while its retirements already hold. Adding a category
+   * here without all of its rows withholds the rest of it, which is the
+   * fail-closed intent. */
   scope: { categories: string[]; codingTasks: boolean };
   items: LedgerItem[];
 }

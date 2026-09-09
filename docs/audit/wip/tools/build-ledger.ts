@@ -1,12 +1,18 @@
 // Builds docs/audit/devshark-content-ledger.json from the review fragments
 // and the (post-rewrite) inventory. Usage:
-//   node build-ledger.mjs <inventoryDirAfterApply> <inventoryDirBeforeApply> <reviewDir> <csDir|-> <categories,comma> <codingTasks:true|false>
+//   node build-ledger.mjs <inventoryDirAfterApply> <inventoryDirBeforeApply> <reviewDir> <csDir|-> <categories,comma> <completeCategories,comma|-> <codingTasks:true|false>
+// `categories` are the categories whose reviewed items get rows (an item of
+// one of them without a review is skipped and counted); `completeCategories`
+// are the ones every served item of which has a row — they enter the ledger's
+// scope, where the gate withholds anything without a record.
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 
 const ROOT = '/home/user/react-express-app';
-const [afterDir, beforeDir, reviewDir, csDir, categoriesArg, codingArg] = process.argv.slice(2);
+const [afterDir, beforeDir, reviewDir, csDir, categoriesArg, completeArg, codingArg] = process.argv.slice(2);
 const categories = categoriesArg.split(',').map((s) => s.trim()).filter(Boolean);
+const complete = (completeArg && completeArg !== '-' ? completeArg.split(',') : []).map((s) => s.trim()).filter(Boolean);
+for (const c of complete) if (!categories.includes(c)) throw new Error(`complete category ${c} is not among the categories being built`);
 
 function rows(dir: string): Map<string, any> {
   const out = new Map<string, any>();
@@ -49,10 +55,15 @@ const kept = new Map<string, any>((existing.items ?? []).map((r: any) => [r.id, 
 const today = new Date().toISOString().slice(0, 10);
 const out: any[] = [];
 const problems: string[] = [];
+const unreviewed: Record<string, number> = {};
 for (const [id, it] of after.items) {
   if (!categories.includes(it.category)) { if (kept.has(id)) out.push(kept.get(id)); continue; }
   const r = reviews.get(id);
-  if (!r) { problems.push(`${id}: no review`); continue; }
+  if (!r) {
+    unreviewed[it.category] = (unreviewed[it.category] ?? 0) + 1;
+    if (complete.includes(it.category)) problems.push(`${id}: no review, but ${it.category} is declared complete`);
+    continue;
+  }
   const rewritten = r.decision === 'rewrite' && r.rewrite;
   const beforeItem = before.items.get(id);
   const scores = rewritten ? r.rewrite.rescored : { quality: r.quality, qualityScore: r.qualityScore, relevance: r.relevance, relevanceScore: r.relevanceScore };
@@ -94,7 +105,8 @@ for (const [id, it] of after.items) {
     rationale: r.rationale,
     evidence: r.evidence ?? [],
     cs: csRecord,
-    reviewer: { kind: 'model', pass: 'item-review', run: 'claude-code session, 2026-09-09' },
+    ...(r.verification ? { verification: r.verification } : {}),
+    reviewer: { kind: 'model', passes: r.verification ? ['item-review', 'second-reading'] : ['item-review'], run: 'claude-code session, 2026-09-09' },
     reviewedAt: today,
   };
   if (row.decision === 'retain' || row.decision === 'rewrite') {
@@ -107,11 +119,11 @@ for (const [id, r] of kept) if (!after.items.has(id) && !out.some((x) => x.id ==
 const ledger = {
   schema: 'devshark-content-ledger/v1',
   auditedOn: today,
-  scope: { categories: [...new Set([...(existing.scope?.categories ?? []), ...categories])].sort(), codingTasks: codingArg === 'true' },
+  scope: { categories: [...new Set([...(existing.scope?.categories ?? []), ...complete])].sort(), codingTasks: codingArg === 'true' },
   sources: after.meta.sources,
   counts: after.meta.counts,
   items: out.sort((a, b) => a.id.localeCompare(b.id)),
 };
 writeFileSync(path.join(ROOT, 'docs/audit/devshark-content-ledger.json'), JSON.stringify(ledger, null, 1) + '\n');
-console.log(JSON.stringify({ rows: out.length, problems: problems.length }, null, 1));
+console.log(JSON.stringify({ rows: out.length, unreviewed, scope: ledger.scope, problems: problems.length }, null, 1));
 if (problems.length) console.log(problems.slice(0, 40).join('\n'));

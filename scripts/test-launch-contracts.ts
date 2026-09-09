@@ -42,7 +42,7 @@ import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } fro
 import { contentVersion, contentHash, translationHash, itemReview, codingTaskReview, questionEligibility, isAuditedCategory } from '../lib/curation';
 import { AUDITED_CATEGORIES, REVIEW_REGISTRY } from '../lib/curation-registry';
 import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH } from './build-curation-registry';
-import { applyEligibility, getEffectiveQuestions } from '../lib/questions-store';
+import { applyEligibility, getEffectiveQuestions, getQuestionsForHistoryById } from '../lib/questions-store';
 import { buildLiveTopic, liveAvailability, MIN_LEVEL_QUESTIONS, unavailablePartsOf, partRanges as roadmapPartRanges } from '../lib/roadmap';
 import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRanges } from '../shared/progression';
 import { eligibilityFrom, registryEntryConsistent, type RegistryEntry } from '../shared/curation';
@@ -194,7 +194,16 @@ async function auditGateContracts() {
   assert.equal(eligibilityFrom(entry(), 'h1', 'c2', true).csApproved, false, 'an edited translation is not the reviewed one');
   assert.equal(eligibilityFrom(entry({ cs: null }), 'h1', null, true).csApproved, true, 'no translation to approve');
   assert.equal(eligibilityFrom(entry({ relevance: 9 }), 'h1', 'c1', true).reason, 'invalid-record', 'a row whose totals disagree with its markers is no record at all');
-  assert.equal(eligibilityFrom(null, 'h1', 'c1', false).active, true, 'outside the audited scope the gate does not apply');
+  assert.equal(eligibilityFrom(null, 'h1', 'c1', false).active, true, 'outside the audited scope an unreviewed item is served as before');
+  assert.equal(eligibilityFrom(null, 'h1', 'c1', false).reason, 'not-in-scope');
+  // A recorded decision holds wherever the item lives; the scope only decides
+  // what happens to content with no applicable record.
+  assert.equal(eligibilityFrom(entry({ decision: 'retire' }), 'h1', 'c1', false).reason, 'retired', 'a retirement recorded for a category still in progress withholds the item now');
+  assert.equal(eligibilityFrom(entry({ relevance: 3, markers: markers(3) }), 'h1', 'c1', false).reason, 'failed-gate', 'a failing row withholds outside the scope too');
+  assert.equal(eligibilityFrom(entry(), 'h1', 'c1', false).reason, 'reviewed', 'a passing row serves, and claims, outside the scope');
+  assert.equal(eligibilityFrom(entry(), 'h1', 'c2', false).csApproved, false, 'a reviewed item outside the scope still drops an unreviewed translation');
+  assert.deepEqual(eligibilityFrom(entry(), 'h2', 'c1', false), { active: true, reason: 'not-in-scope', entry: null, csApproved: true }, 'a superseded row outside the scope neither withholds nor claims');
+  assert.equal(eligibilityFrom(entry({ relevance: 9 }), 'h1', 'c1', false).active, true, 'a broken row outside the scope is no record, so the item is served as before');
   assert.equal(registryEntryConsistent(entry({ quality: 5 })), false, 'the quality score must be the floor of its dimensions');
 
   // The registry is the ledger, exactly.
@@ -212,19 +221,35 @@ async function auditGateContracts() {
   // The served set is read with the gate applied, so a withheld item is
   // proven absent rather than assumed.
   const served = await getEffectiveQuestions('webdev', true);
+  const history = await getQuestionsForHistoryById('webdev', true);
   const byId = new Map(REVIEW_REGISTRY.map((row) => [row.id, row]));
   for (const q of served) {
-    if (!AUDITED_CATEGORIES.has(q.category)) continue;
     const row = byId.get(q.id);
-    assert.ok(row, `${q.id} is served from audited category ${q.category} without a review record`);
-    assert.equal(row!.hash, contentHash(q), `${q.id} is served on content its record was not made about`);
-    assert.ok(row!.decision === 'retain' || row!.decision === 'rewrite', `${q.id} is served with decision ${row!.decision}`);
-    assert.ok(passesBothGates(row!.relevance, row!.quality), `${q.id} is served while failing a gate`);
-    if (q.csTranslation) assert.equal(translationHash(q.csTranslation), row!.cs, `${q.id} serves a Czech translation that was not reviewed`);
+    if (!row) {
+      assert.ok(!AUDITED_CATEGORIES.has(q.category), `${q.id} is served from audited category ${q.category} without a review record`);
+      continue;
+    }
+    // A served item with a row is served on that row's terms wherever it lives:
+    // current content, live decision, both gates, the reviewed translation.
+    if (row.hash !== contentHash(q)) {
+      assert.ok(!AUDITED_CATEGORIES.has(q.category), `${q.id} is served on content its record was not made about`);
+      continue;
+    }
+    assert.ok(row.decision === 'retain' || row.decision === 'rewrite', `${q.id} is served with decision ${row.decision}`);
+    assert.ok(passesBothGates(row.relevance, row.quality), `${q.id} is served while failing a gate`);
+    if (q.csTranslation) assert.equal(translationHash(q.csTranslation), row.cs, `${q.id} serves a Czech translation that was not reviewed`);
   }
   const withheldByDecision = REVIEW_REGISTRY.filter((row) => row.decision === 'retire' || row.decision === 'quarantine' || !passesBothGates(row.relevance, row.quality));
   const servedIds = new Set(served.map((q) => q.id));
   for (const row of withheldByDecision) assert.ok(!servedIds.has(row.id), `${row.id} was retired or quarantined and is still served`);
+  for (const row of REVIEW_REGISTRY) {
+    if (row.kind !== 'question') continue;
+    const item = history.get(row.id);
+    assert.ok(item, `registry row ${row.id} names no devShark question`);
+    if (row.hash === contentHash(item!) && (row.decision === 'retain' || row.decision === 'rewrite') && passesBothGates(row.relevance, row.quality)) {
+      assert.ok(servedIds.has(row.id), `${row.id} has a current passing record and is not served`);
+    }
+  }
 
   // The store applies the rule once, to the merged set, so an edit in the
   // override layer supersedes a review with no code path able to forget it.
@@ -238,6 +263,24 @@ async function auditGateContracts() {
     const foreignCs = { ...audited, csTranslation: { question: 'Jiná otázka' } };
     assert.equal(applyEligibility([foreignCs]).list[0]?.csTranslation, null, 'an unreviewed translation is dropped, and English served instead');
     assert.equal(questionEligibility(audited).active, true);
+  }
+  // In a category the wave has reached only in part, the recorded decisions
+  // hold and everything else is served as before.
+  const partial = served.find((q) => !AUDITED_CATEGORIES.has(q.category) && byId.has(q.id));
+  if (partial) {
+    const edited = { ...partial, explanation: `${partial.explanation} (edited in /dev)` };
+    const gated = applyEligibility([partial, edited, { ...partial, id: 'rm-js-never-reviewed' }]);
+    assert.deepEqual(gated.list.map((q) => q.id), [partial.id, partial.id, 'rm-js-never-reviewed'], 'outside the completed scope an edit or a missing record serves the item as before');
+    assert.equal(questionEligibility(edited).reason, 'not-in-scope');
+    assert.equal(questionEligibility(partial).reason, 'reviewed', 'the recorded review still applies to the unedited wording');
+    const foreignCs = { ...partial, csTranslation: { question: 'Jiná otázka' } };
+    assert.equal(applyEligibility([foreignCs]).list[0]?.csTranslation, null, 'a reviewed item outside the scope still serves only its reviewed translation');
+  }
+  const retiredRow = REVIEW_REGISTRY.find((row) => row.kind === 'question' && row.decision === 'retire' && !AUDITED_CATEGORIES.has(history.get(row.id)?.category ?? ''));
+  if (retiredRow) {
+    const item = history.get(retiredRow.id)!;
+    assert.equal(questionEligibility(item).reason, retiredRow.hash === contentHash(item) ? 'retired' : 'not-in-scope');
+    assert.ok(!servedIds.has(retiredRow.id) || retiredRow.hash !== contentHash(item), `${retiredRow.id} was retired in a category still in progress and is still served`);
   }
   const geography = (await getEffectiveQuestions('geography', false))[0];
   assert.ok(geography, 'StudyShark subjects are unaffected');
