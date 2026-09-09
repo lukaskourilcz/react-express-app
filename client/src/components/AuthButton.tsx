@@ -26,30 +26,15 @@ import { CrownBadge } from './ui/Crown';
 import { useActiveSubject, topicSetForSubject } from '../lib/subjects';
 
 // A single row in the account dropdown — a full-width, left-aligned button that
-// mimics a menu item (subtle hover fill) without pulling in MUI's MenuItem.
+// mimics a menu item without pulling in MUI's MenuItem.
+//
+// The fill is CSS rather than a React hover flag on purpose: a flag set by
+// onMouseEnter never fires for a keyboard user, so tabbing to Log out gave no
+// indication of where you were. `:hover, :focus-visible` covers both, and the
+// focus ring stays on top of the fill.
 function MenuAction({ label, onClick }: { label: string; onClick: () => void }) {
-  const [hover, setHover] = useState(false);
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        display: 'block',
-        width: '100%',
-        textAlign: 'left',
-        padding: '8px 14px',
-        margin: 0,
-        font: 'inherit',
-        fontSize: '0.9rem',
-        color: 'var(--color-text-primary)',
-        background: hover ? 'var(--color-background-muted)' : 'transparent',
-        border: 'none',
-        borderRadius: 8,
-        cursor: 'pointer',
-      }}
-    >
+    <button type="button" className="ss-account-menu__item" onClick={onClick}>
       {label}
     </button>
   );
@@ -136,7 +121,12 @@ function AuthButton() {
       width={168}
       label={t('auth.accountMenu', { name: displayName })}
       content={
-        <div style={{ display: 'flex', flexDirection: 'column', minWidth: 168 }}>
+        // No minWidth here. The popover surface is 168px wide and carries
+        // 12px of padding on every side, so its content box is 144px; a child
+        // asking for 168 is 24px wider than the space it has, and the rows'
+        // hover fill was painting that overflow outside the popover's rounded
+        // edge. Filling the content box is the whole fix.
+        <div className="ss-account-menu">
           <MenuAction label={t('auth.profile')} onClick={handleProfile} />
           <MenuAction label={t('auth.logOut')} onClick={handleLogout} />
         </div>
