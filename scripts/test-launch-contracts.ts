@@ -214,6 +214,15 @@ async function auditGateContracts() {
     'lib/curation-registry.ts is stale: run npm run build:curation-registry',
   );
   for (const row of REVIEW_REGISTRY) assert.ok(registryEntryConsistent(row), `registry row ${row.id} is inconsistent`);
+  // Content this audit rewrote is served only after a second reader checked
+  // the rewrite: revision 2 without an accepted verdict is a process failure,
+  // not a wording preference.
+  for (const item of ledger.items as unknown as { id: string; revision: number; decision: string; verification?: { verdict?: string } }[]) {
+    if (item.revision > 1 && (item.decision === 'retain' || item.decision === 'rewrite')) {
+      const verdict = item.verification?.verdict;
+      assert.ok(verdict === 'accept' || verdict === 'amend', `${item.id} was rewritten and is served without an accepted second reading`);
+    }
+  }
   for (const category of AUDITED_CATEGORIES) assert.ok(isAuditedCategory(category), `${category} must resolve to devShark`);
 
   // Reconciliation: every served item of an audited category has a decision

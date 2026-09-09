@@ -112,6 +112,13 @@ for (const [id, it] of after.items) {
   if (row.decision === 'retain' || row.decision === 'rewrite') {
     if (!(row.gates.quality && row.gates.relevance)) problems.push(`${id}: decision ${row.decision} but gates fail (q ${row.qualityScore}, r ${row.relevanceScore})`);
   }
+  // Nothing rewritten reaches a learner on one reading: a row whose content
+  // this audit changed must carry the second reader's verdict.
+  if (rewritten) {
+    const v = (r.verification ?? null) as { verdict?: string } | null;
+    if (!v) problems.push(`${id}: rewritten without a second reading`);
+    else if (v.verdict !== 'accept' && v.verdict !== 'amend') problems.push(`${id}: rewritten but the second reading returned ${v.verdict}`);
+  }
   out.push(row);
 }
 for (const [id, r] of kept) if (!after.items.has(id) && !out.some((x) => x.id === id)) out.push(r);
