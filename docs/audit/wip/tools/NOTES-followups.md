@@ -260,3 +260,11 @@ for a second reader rather than a second automated check.
   tokenizers the range is 0.72 to 0.90 words per token, and Anthropic's own
   documentation gives roughly 3.5 characters. The key survives; the explanation
   needed the hedge.
+- **The second reader corrected the first pass's correction.** `rm-general-132`
+  claimed a boundary test catches swapping `<` for `<=` in a clamp. The first
+  pass replaced that with "or a comparison against the wrong bound", which is
+  also false: a clamp written against the wrong bound agrees with a correct one
+  at the boundaries and differs only at the inside values. The second reader
+  ran the probe set and credited each input with the bug it actually catches.
+  Two passes were needed to get one sentence right, which is the strongest
+  single argument in the audit for not shipping on one reading.
