@@ -16,8 +16,9 @@ for bf in sorted(glob.glob(f'{bdir}/cs-batch-*.json')):
         except Exception as e: problems.append(f'{name}:{i+1}: unparseable ({e})'); continue
         if r['id'] in rows: problems.append(f"{name}: duplicate row {r['id']}")
         rows[r['id']] = r
-    for i in batch:
-        if i not in rows: problems.append(f'{name}: missing {i}')
+    missing = [i for i in batch if i not in rows]
+    if missing:
+        problems.append(f'{name}: {len(missing)} of {len(batch)} not yet localised (first {missing[0]})' if len(missing) < len(batch) else f'{name}: none of {len(batch)} localised')
     for i, r in rows.items():
         it = batch.get(i)
         if not it: problems.append(f'{name}: unknown id {i}'); continue
@@ -35,9 +36,15 @@ for bf in sorted(glob.glob(f'{bdir}/cs-batch-*.json')):
             if not isinstance(co, str) or not co.strip(): problems.append(f'{i}: empty option {j}'); continue
             for m in TICK.findall(eo):
                 if m not in co: problems.append(f'{i}: option {j} lost {m}')
-            # Options that are pure code/values must stay identical.
-            if re.fullmatch(r'[`\w\.\[\]\(\)\{\}\'":,\-\s<>/=+*!?&|;%#@$^~]*', eo) and not re.search(r'[A-Za-z]{3,}\s+[A-Za-z]{3,}', eo) and eo != co and eo.strip('`') != co.strip('`'):
-                problems.append(f'{i}: code-like option {j} changed: {eo!r} -> {co!r}')
+            # An option that is nothing but code must stay identical. "Nothing
+            # but code" means: strip the backticked spans and what is left is
+            # punctuation, or the whole option is a bare identifier, a
+            # declaration, or a number with a unit. An option that mixes a
+            # backticked token with prose is translated like any other prose.
+            bare = TICK.sub('', eo).strip(' .,;:—-')
+            code_only = bare == '' or bool(re.fullmatch(r'[-\w$.]+(\s*:\s*[-\w$.%()\s]+)?|-?\d+(\.\d+)?[a-z%]*|"[^"]*"|\'[^\']*\'', eo.strip()))
+            if code_only and eo != co:
+                problems.append(f'{i}: code-only option {j} changed: {eo!r} -> {co!r}')
         if r.get('status') == 'kept' and it.get('cs'):
             for k in ('question', 'options', 'explanation'):
                 if r[k] != it['cs'][k]: problems.append(f'{i}: status kept but {k} differs from the served Czech')
