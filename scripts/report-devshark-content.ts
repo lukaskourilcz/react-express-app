@@ -1,5 +1,7 @@
 import { questions } from '../lib/quiz-data';
 import { CODING_TASKS } from '../lib/coding/catalog';
+import { questionEligibility } from '../lib/curation';
+import { AUDITED_CATEGORIES, REGISTRY_AUDITED_ON, REVIEW_REGISTRY } from '../lib/curation-registry';
 
 const stripCode = (value: string): string => value.replace(/```[\s\S]*?```/g, ' ');
 const words = (value: string): number => stripCode(value).trim().split(/\s+/).filter(Boolean).length;
@@ -55,7 +57,31 @@ const taskFlags = CODING_TASKS.flatMap((task) => {
   return flags.length > 0 ? [{ id: task.id, track: task.track, flags, title: task.title.en }] : [];
 });
 
+// What the content-audit gate does to the static bank: per audited category,
+// how many items are served and how many are withheld, by reason. The
+// override layer is not read here, so this is the repository's answer, not
+// production's.
+const gate = Object.fromEntries(
+  [...AUDITED_CATEGORIES].sort().map((category) => {
+    const inCategory = questions.filter((question) => question.category === category);
+    const reasons: Record<string, number> = {};
+    let served = 0;
+    for (const question of inCategory) {
+      const eligibility = questionEligibility(question);
+      if (eligibility.active) served++;
+      else reasons[eligibility.reason] = (reasons[eligibility.reason] ?? 0) + 1;
+    }
+    return [category, { authored: inCategory.length, served, withheld: reasons }];
+  }),
+);
+
 const report = {
+  audit: {
+    auditedOn: REGISTRY_AUDITED_ON,
+    reviewedItems: REVIEW_REGISTRY.length,
+    auditedCategories: [...AUDITED_CATEGORIES].sort(),
+    gate,
+  },
   totals: {
     questions: questions.length,
     roadmapQuestions: questions.filter((question) => question.id.startsWith('rm-')).length,
@@ -71,6 +97,7 @@ const report = {
 
 const details = process.argv.includes('--details');
 console.log(JSON.stringify(details ? report : {
+  audit: report.audit,
   totals: report.totals,
   categoryCounts: report.categoryCounts,
   questionFlagCount: report.questionFlagCount,

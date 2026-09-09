@@ -147,8 +147,9 @@ function main() {
   // The served pool: lib/webdev-bank.ts loads `questions` plus the
   // fix-the-test set. Retired sections stay in the pool for history and are
   // classified by their category.
-  // Batches of at most a hundred items per topic, split evenly, so every
-  // reviewer reads a run of whole levels rather than a tail of sixteen.
+  // Batches of at most sixty items per topic, split evenly, so every
+  // reviewer reads a run of whole levels rather than a tail of sixteen and a
+  // review that is interrupted loses little.
   const perTopic = new Map<string, number>();
   for (const q of questions) perTopic.set(topicOf(q.id) ?? q.category, (perTopic.get(topicOf(q.id) ?? q.category) ?? 0) + 1);
   const seen = new Map<string, number>();
@@ -156,7 +157,7 @@ function main() {
     const delivery: Delivery = isRetiredTopic(q.category) ? 'retired-section' : 'active';
     const key = topicOf(q.id) ?? q.category;
     const total = perTopic.get(key) ?? 1;
-    const parts = Math.ceil(total / 100);
+    const parts = Math.ceil(total / 60);
     const size = Math.ceil(total / parts);
     const index = seen.get(key) ?? 0;
     seen.set(key, index + 1);

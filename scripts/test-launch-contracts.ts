@@ -39,7 +39,15 @@ import { runReactSuite } from '../lib/coding/react-runner';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
-import { contentVersion, itemReview, codingTaskReview } from '../lib/curation';
+import { contentVersion, contentHash, translationHash, itemReview, codingTaskReview, questionEligibility, isAuditedCategory } from '../lib/curation';
+import { AUDITED_CATEGORIES, REVIEW_REGISTRY } from '../lib/curation-registry';
+import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH } from './build-curation-registry';
+import { applyEligibility, getEffectiveQuestions } from '../lib/questions-store';
+import { buildLiveTopic, liveAvailability, MIN_LEVEL_QUESTIONS, unavailablePartsOf, partRanges as roadmapPartRanges } from '../lib/roadmap';
+import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRanges } from '../shared/progression';
+import { eligibilityFrom, registryEntryConsistent, type RegistryEntry } from '../shared/curation';
+import submitHandler from '../api/quiz/submit';
+import { encodePlacementRun } from '../lib/quiz-tokens';
 import {
   itemClaim,
   publicItemReview,
@@ -153,6 +161,165 @@ function mockResponse() {
 function tamperToken(token: string): string {
   const tail = token.slice(-4);
   return token.slice(0, -4) + (tail === 'AAAA' ? 'BBBB' : 'AAAA');
+}
+
+/* ── the content-audit gate (#176) ────────────────────────────────────────
+ *
+ * Every rule here is one the audit's retirement policy depends on: the two
+ * gates never stand in for each other, a record applies only to the exact
+ * content it was made about, a withheld item is absent from every selector
+ * at once, a retired item leaves a level thin or unavailable rather than
+ * sliding its neighbours across titles, the unlock rules step over what
+ * cannot be opened, and an answer to a retired item is void. */
+async function auditGateContracts() {
+  const markers = (n: number) => ({ presentDay: Math.min(2, n), practicalUtility: Math.min(2, Math.max(0, n - 2)), transferable: Math.min(2, Math.max(0, n - 4)), audienceFit: Math.min(2, Math.max(0, n - 6)), riskOutcome: Math.min(2, Math.max(0, n - 8)) });
+  const dims = (floor: number) => ({ topicRelevance: 5, learningValue: 5, technicalCorrectness: 5, wording: 5, answerOptions: 5, hint: floor, explanation: 5 });
+  const entry = (over: Partial<RegistryEntry> = {}): RegistryEntry => ({
+    id: 'rm-js-1', kind: 'question', hash: 'h1', cs: 'c1',
+    relevance: 8, quality: 4, markers: markers(8), dimensions: dims(4),
+    decision: 'retain', reviewedAt: '2026-09-09', revision: 1, ...over,
+  });
+
+  // The boundaries the audit names, one by one.
+  assert.equal(eligibilityFrom(entry(), 'h1', 'c1', true).active, true, 'a current passing record is served');
+  assert.equal(eligibilityFrom(entry({ relevance: 3, markers: markers(3) }), 'h1', 'c1', true).reason, 'failed-gate', 'relevance 3 retires');
+  assert.equal(eligibilityFrom(entry({ relevance: 4, markers: markers(4) }), 'h1', 'c1', true).active, true, 'relevance 4 alone does not retire');
+  assert.equal(eligibilityFrom(entry({ relevance: 4, markers: markers(4), quality: 2, dimensions: dims(2) }), 'h1', 'c1', true).reason, 'failed-gate', 'relevance 4 with quality 2 still retires');
+  assert.equal(eligibilityFrom(entry({ relevance: 10, markers: markers(10), quality: 2, dimensions: dims(2) }), 'h1', 'c1', true).reason, 'failed-gate', 'relevance 10 with a wrong key (quality capped at 2) still retires');
+  assert.equal(eligibilityFrom(entry({ decision: 'retire' }), 'h1', 'c1', true).reason, 'retired', 'a retire decision withholds whatever the scores say');
+  assert.equal(eligibilityFrom(entry({ decision: 'quarantine' }), 'h1', 'c1', true).reason, 'quarantined', 'unverified correctness is held, not passed');
+  assert.equal(eligibilityFrom(null, 'h1', 'c1', true).reason, 'unreviewed', 'no record means not served');
+  assert.equal(eligibilityFrom(entry(), 'h2', 'c1', true).reason, 'superseded', 'a record for other content does not apply — an edit invalidates approval');
+  assert.equal(eligibilityFrom(entry({ hash: 'h2', revision: 2 }), 'h2', 'c1', true).active, true, 'a re-reviewed rewrite returns on its new hash');
+  assert.equal(eligibilityFrom(entry(), 'h1', 'c2', true).csApproved, false, 'an edited translation is not the reviewed one');
+  assert.equal(eligibilityFrom(entry({ cs: null }), 'h1', null, true).csApproved, true, 'no translation to approve');
+  assert.equal(eligibilityFrom(entry({ relevance: 9 }), 'h1', 'c1', true).reason, 'invalid-record', 'a row whose totals disagree with its markers is no record at all');
+  assert.equal(eligibilityFrom(null, 'h1', 'c1', false).active, true, 'outside the audited scope the gate does not apply');
+  assert.equal(registryEntryConsistent(entry({ quality: 5 })), false, 'the quality score must be the floor of its dimensions');
+
+  // The registry is the ledger, exactly.
+  const ledger = readLedger();
+  assert.equal(
+    readFileSync(join(process.cwd(), REGISTRY_PATH), 'utf8'),
+    renderCurationRegistry(registryFromLedger(ledger), ledger),
+    'lib/curation-registry.ts is stale: run npm run build:curation-registry',
+  );
+  for (const row of REVIEW_REGISTRY) assert.ok(registryEntryConsistent(row), `registry row ${row.id} is inconsistent`);
+  for (const category of AUDITED_CATEGORIES) assert.ok(isAuditedCategory(category), `${category} must resolve to devShark`);
+
+  // Reconciliation: every served item of an audited category has a decision
+  // for its exact current content, and every registry row names a real item.
+  // The served set is read with the gate applied, so a withheld item is
+  // proven absent rather than assumed.
+  const served = await getEffectiveQuestions('webdev', true);
+  const byId = new Map(REVIEW_REGISTRY.map((row) => [row.id, row]));
+  for (const q of served) {
+    if (!AUDITED_CATEGORIES.has(q.category)) continue;
+    const row = byId.get(q.id);
+    assert.ok(row, `${q.id} is served from audited category ${q.category} without a review record`);
+    assert.equal(row!.hash, contentHash(q), `${q.id} is served on content its record was not made about`);
+    assert.ok(row!.decision === 'retain' || row!.decision === 'rewrite', `${q.id} is served with decision ${row!.decision}`);
+    assert.ok(passesBothGates(row!.relevance, row!.quality), `${q.id} is served while failing a gate`);
+    if (q.csTranslation) assert.equal(translationHash(q.csTranslation), row!.cs, `${q.id} serves a Czech translation that was not reviewed`);
+  }
+  const withheldByDecision = REVIEW_REGISTRY.filter((row) => row.decision === 'retire' || row.decision === 'quarantine' || !passesBothGates(row.relevance, row.quality));
+  const servedIds = new Set(served.map((q) => q.id));
+  for (const row of withheldByDecision) assert.ok(!servedIds.has(row.id), `${row.id} was retired or quarantined and is still served`);
+
+  // The store applies the rule once, to the merged set, so an edit in the
+  // override layer supersedes a review with no code path able to forget it.
+  const audited = served.find((q) => AUDITED_CATEGORIES.has(q.category));
+  if (audited) {
+    const edited = { ...audited, explanation: `${audited.explanation} (edited in /dev)` };
+    const gated = applyEligibility([audited, edited, { ...audited, id: 'rm-js-never-reviewed' }]);
+    assert.deepEqual(gated.list.map((q) => q.id), [audited.id], 'the edited copy and the unreviewed id are withheld');
+    assert.equal(gated.withheld.get(audited.id), 'superseded');
+    assert.equal(gated.withheld.get('rm-js-never-reviewed'), 'unreviewed');
+    const foreignCs = { ...audited, csTranslation: { question: 'Jiná otázka' } };
+    assert.equal(applyEligibility([foreignCs]).list[0]?.csTranslation, null, 'an unreviewed translation is dropped, and English served instead');
+    assert.equal(questionEligibility(audited).active, true);
+  }
+  const geography = (await getEffectiveQuestions('geography', false))[0];
+  assert.ok(geography, 'StudyShark subjects are unaffected');
+  assert.equal(questionEligibility(geography).reason, 'not-in-scope', 'StudyShark subjects are outside the audit and served as before');
+
+  // Levels keep their authored membership. A retired question thins its own
+  // level; it never slides a neighbour under another title. Below the floor a
+  // level is unavailable, and its part follows when every level in it is.
+  const all = new Set(Array.from({ length: 200 }, (_, i) => `rm-js-${i + 1}`));
+  const intact = buildLiveTopic('javascript', (id) => all.has(id));
+  assert.equal(intact.levels.length, 25);
+  assert.ok(intact.levels.every((level) => level.questionCount === 8 && !level.unavailable));
+  const thinned = new Set(all);
+  for (const n of [9, 10]) thinned.delete(`rm-js-${n}`); // two from level 2
+  for (let n = 17; n <= 22; n++) thinned.delete(`rm-js-${n}`); // six from level 3 → two left
+  const live = buildLiveTopic('javascript', (id) => thinned.has(id));
+  assert.equal(live.levels[1].questionCount, 6, 'level 2 is served with its six survivors');
+  assert.deepEqual(live.levelIds[1], ['rm-js-11', 'rm-js-12', 'rm-js-13', 'rm-js-14', 'rm-js-15', 'rm-js-16'], 'the survivors are level 2 questions, not level 3 ones pulled forward');
+  assert.equal(live.levels[2].unavailable, true, `fewer than ${MIN_LEVEL_QUESTIONS} survivors makes a level unavailable`);
+  assert.deepEqual(live.levelIds[2], [], 'an unavailable level contributes nothing to a test');
+  assert.equal(live.levels[3].questionCount, 8, 'level 4 is untouched');
+  assert.equal(live.levels.length, 25, 'the topic keeps its length');
+  assert.deepEqual([...live.unavailableLevels], [3]);
+  assert.deepEqual([...live.unavailableParts], [], 'a part with any available level is available');
+  assert.deepEqual(unavailablePartsOf(live.levels), []);
+  const emptyPart = buildLiveTopic('javascript', (id) => { const n = Number(id.slice(6)); return n > 72; }); // levels 1–9 gone: part 1 empty
+  assert.deepEqual([...emptyPart.unavailableParts], [1], 'a part with no available level is unavailable');
+  assert.deepEqual(roadmapPartRanges(25).map((r) => r.size), [9, 8, 8]);
+
+  // The unlock rules follow the parts the learner actually meets, and step
+  // over what cannot be opened. Level 6 of a 25-level topic needs level 5,
+  // not a checkpoint that is recorded only after level 9.
+  const availability = liveAvailability(live);
+  const passed = (...levels: number[]) => ({ javascript: { levels: Object.fromEntries(levels.map((l) => [String(l), { passed: true }])) } });
+  assert.equal(isLevelUnlocked(passed(1, 2, 3, 4, 5), 'javascript', 6, { levelCount: 25 }), true, 'level 6 needs level 5 on a 25-level topic');
+  assert.equal(isLevelUnlocked(passed(1, 2, 3, 4, 5, 6, 7, 8, 9), 'javascript', 10, { levelCount: 25 }), false, 'level 10 opens part 2 and needs the part-1 test');
+  assert.equal(isLevelUnlocked({ javascript: { levels: passed(1, 2, 3, 4, 5, 6, 7, 8, 9).javascript.levels, checkpoints: { '1': { passed: true } } } }, 'javascript', 10, { levelCount: 25 }), true);
+  assert.equal(isLevelUnlocked(passed(1, 2), 'javascript', 3, availability), false, 'an unavailable level cannot be opened');
+  assert.equal(isLevelUnlocked(passed(1, 2), 'javascript', 4, availability), true, 'the level after an unavailable one opens on the nearest available level');
+  assert.equal(firstUnfinishedLevel(passed(1, 2), 'javascript', availability), 4, 'the next step skips an unavailable level');
+  assert.equal(isCheckpointUnlocked(passed(1, 2, 4, 5, 6, 7, 8), 'javascript', 1, availability), false, 'a part test needs its last available level');
+  assert.equal(isCheckpointUnlocked(passed(1, 2, 4, 5, 6, 7, 8, 9), 'javascript', 1, availability), true);
+  const emptyAvailability = liveAvailability(emptyPart);
+  assert.equal(isSegmentCleared({}, 'javascript', 1, emptyAvailability), true, 'an empty part is cleared, not a dead end');
+  assert.equal(isLevelUnlocked({}, 'javascript', 10, emptyAvailability), true, 'the next part opens past an empty one');
+  assert.equal(partRanges(6).map((r) => r.size).join(','), '2,2,2');
+
+  // An answer to a question that is no longer served is void: neither for nor
+  // against, no proof minted, and reported so the result screen can say why.
+  const sample = geography;
+  const session = encodeSession(
+    [{ questionId: sample.id, correctAnswer: 1 }, { questionId: 'retired-while-open', correctAnswer: 2 }],
+    { subject: 'geography' },
+  );
+  const submitRes = mockResponse();
+  await submitHandler({ method: 'POST', headers: {}, query: {}, body: { sessionId: session, answers: { [sample.id]: 1, 'retired-while-open': 2 } } } as never, submitRes as never);
+  assert.equal(submitRes.statusCode, 200, JSON.stringify(submitRes.body));
+  const graded = submitRes.body as { totalQuestions: number; correctAnswers: number; voided?: string[]; results: { questionId: string }[] };
+  assert.deepEqual(graded.voided, ['retired-while-open']);
+  assert.equal(graded.totalQuestions, 1, 'the void item is left out of the total');
+  assert.equal(graded.correctAnswers, 1, 'the served item still counts');
+  assert.ok(graded.results.every((r) => r.questionId !== 'retired-while-open'), 'no proof is minted for a void item');
+
+  // A placement round voids a retired item and tops the run up instead of
+  // ending it short of the budget.
+  const pool = (await getEffectiveQuestions('geography', false)).slice(0, 3);
+  const placementToken = encodePlacementRun({
+    subject: 'geography', attemptId: 'placement-void-contract-1234', round: 1, difficulty: 3, history: [],
+    items: [
+      { questionId: pool[0].id, correctAnswer: 0, category: pool[0].category },
+      { questionId: 'retired-while-open', correctAnswer: 0, category: pool[0].category },
+    ],
+  });
+  const roundRes = mockResponse();
+  await roadmapHandler({ method: 'POST', headers: {}, query: { resource: 'placement' }, body: { placementToken, answers: { [pool[0].id]: 0, 'retired-while-open': 0 } } } as never, roundRes as never);
+  assert.equal(roundRes.statusCode, 200, JSON.stringify(roundRes.body));
+  const round = roundRes.body as { done: boolean; voided?: number; lastRoundSize?: number; lastRoundCorrect?: number; asked?: number };
+  assert.equal(round.done, false);
+  assert.equal(round.voided, 1, 'the retired item is reported as void');
+  assert.equal(round.lastRoundSize, 1, 'the void item does not count in the round');
+  assert.equal(round.lastRoundCorrect, 1);
+  assert.equal(round.asked, 1, 'the run continues from what was actually graded');
 }
 
 async function main() {
@@ -1377,7 +1544,9 @@ async function main() {
     }
   }
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, spaced practice, interleaving, lesson figures, and an unconfigured shop.');
+  await auditGateContracts();
+
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, lesson figures, and an unconfigured shop.');
 }
 
 void main().catch((error) => {

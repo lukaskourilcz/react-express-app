@@ -1,5 +1,9 @@
 {
   "schema": "devshark-content-ledger/v1",
   "auditedOn": "2026-09-09",
+  "scope": {
+    "categories": [],
+    "codingTasks": false
+  },
   "items": []
 }

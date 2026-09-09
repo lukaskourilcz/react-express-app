@@ -26,7 +26,7 @@ import type { Question, QuestionTranslation } from './quiz-data';
 import { subjectForCategory, type ScopeSubjectId } from '../shared/subject-catalog';
 import type { CodingTask, Localized } from '../shared/coding-catalog';
 import type { CodingSolution } from './coding/types';
-import { REVIEW_REGISTRY } from './curation-registry';
+import { AUDITED_CATEGORIES, CODING_TASKS_AUDITED, REVIEW_REGISTRY } from './curation-registry';
 import {
   eligibilityFrom,
   publicItemReview,
@@ -41,7 +41,10 @@ import {
 } from '../shared/curation';
 
 /** The subject the audit covers. Items of every other subject are not gated
- * by it: they are served exactly as before and never claim to be reviewed. */
+ * by it: they are served exactly as before and never claim to be reviewed.
+ * Within the subject, only the categories the ledger's scope names are
+ * gated — the audit lands in waves, and a category still waiting for its
+ * wave is served as before rather than withheld for want of a review. */
 export const AUDITED_SUBJECT: ScopeSubjectId = 'webdev';
 
 const logEvent = createLogger('curation');
@@ -201,7 +204,12 @@ export const registryEntryFor = (itemId: string): RegistryEntry | null => REGIST
 
 export const registrySize = (): number => REGISTRY_BY_ID.size;
 
-const isAudited = (q: Pick<Question, 'category'>): boolean => subjectForCategory(q.category) === AUDITED_SUBJECT;
+const isAudited = (q: Pick<Question, 'category'>): boolean =>
+  subjectForCategory(q.category) === AUDITED_SUBJECT && AUDITED_CATEGORIES.has(q.category);
+
+/** Whether the gate applies to this category at all. */
+export const isAuditedCategory = (category: string): boolean =>
+  subjectForCategory(category) === AUDITED_SUBJECT && AUDITED_CATEGORIES.has(category);
 
 /**
  * May this exact question be served?
@@ -218,7 +226,7 @@ export function questionEligibility(q: Question): Eligibility {
 
 /** May this exact coding task be issued? Same rule, same registry. */
 export function codingTaskEligibility(task: CodingTask, solution: CodingSolution | undefined): Eligibility {
-  return eligibilityFrom(REGISTRY_BY_ID.get(task.id), taskHash(task, solution), taskTranslationHash(task), true);
+  return eligibilityFrom(REGISTRY_BY_ID.get(task.id), taskHash(task, solution), taskTranslationHash(task), CODING_TASKS_AUDITED);
 }
 
 function recordFrom(entry: RegistryEntry, current: boolean, version: string): ReviewRecord {

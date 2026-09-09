@@ -173,9 +173,14 @@ required), and the derivations that fail closed — no record is not reviewed, a
 record for a different version is not reviewed, "more than once" needs more
 than one recorded human review, and unreadable metadata produces no sentence at
 all. `lib/curation.ts` computes the keyed content version that makes "an edit
-invalidates the approval" enforceable rather than a promise. The registry is
-empty until an item-level audit runs, and every surface is written to be
-correct while it is. See `docs/curation-claims.md`.
+invalidates the approval" enforceable rather than a promise, and applies the
+eligibility rule: a devShark item in an audited category is served only with
+a current, passing review record in the registry generated from the audit
+ledger (`docs/audit/devshark-content-ledger.json` →
+`lib/curation-registry.ts`). The rule is applied once, in the questions store
+and the active coding catalogue, so every selector sees the same set. The
+audit lands in waves; a category outside the ledger's scope is served as
+before, with no claim. See `docs/curation-claims.md`.
 
 `shared/lesson-figures.ts` holds the authored worked examples shown in Learn
 level intros — deterministic HTML and CSS, never generated imagery, each

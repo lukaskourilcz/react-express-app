@@ -6,6 +6,14 @@ import type { RegistryEntry } from '../shared/curation';
 
 export const REGISTRY_AUDITED_ON = "2026-09-09";
 
+/** The devShark categories the audit has covered. The gate governs these and
+ * only these; a category not yet audited is served as before, with no claim. */
+export const AUDITED_CATEGORIES: ReadonlySet<string> = new Set([]);
+
+/** Whether the coding catalogue has been audited; until it has, coding tasks
+ * are issued as before, with no claim. */
+export const CODING_TASKS_AUDITED = false;
+
 export const REVIEW_REGISTRY: readonly RegistryEntry[] = [
 
 ];
