@@ -121,3 +121,10 @@ said to return the array when it returns the new length, a slice described as
 three would have been caught by re-running the item's own key, because the key
 was right and only the reasoning about a distractor was wrong. That is the case
 for a second reader rather than a second automated check.
+- **`rm-db-57` states UNIQUE absolutely.** PostgreSQL treats two nulls as
+  distinct under a unique constraint unless the constraint declares `NULLS NOT
+  DISTINCT` (PostgreSQL 15 and later), so the item is wrong for the engine the
+  product itself runs on.
+- **`rm-db-47` Czech reverses the English.** "Spojení vyžaduje SQL" says SQL is
+  required by joins rather than joins are required by SQL. The clearest single
+  translation defect the audit has found.
