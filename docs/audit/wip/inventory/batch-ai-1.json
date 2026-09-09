@@ -1,0 +1,3241 @@
+[
+ {
+  "id": "rm-ai-1",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 1,
+  "levelTitle": "What is AI?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "AI",
+   "basics"
+  ],
+  "contentHash": "f75c8971261deee3",
+  "hint": "Let's start with the big picture.",
+  "question": "What does the term 'artificial intelligence' (AI) most broadly refer to?",
+  "options": [
+   "A single computer program that thinks exactly like a human brain",
+   "Any computer connected to the internet",
+   "A type of physical robot with arms and legs",
+   "The field of building computer systems that perform tasks normally requiring human intelligence"
+  ],
+  "correctAnswer": 3,
+  "explanation": "AI is the broad field of creating systems that perform tasks we associate with human intelligence, such as reasoning, perception, and language. It is not limited to robots or any single program.",
+  "cs": {
+   "hint": "Začněme tím nejširším pohledem.",
+   "question": "Co nejobecněji označuje pojem „umělá inteligence“ (AI)?",
+   "options": [
+    "Jediný počítačový program, který myslí přesně jako lidský mozek",
+    "Jakýkoli počítač připojený k internetu",
+    "Typ fyzického robota s rukama a nohama",
+    "Obor zabývající se tvorbou počítačových systémů, které vykonávají úlohy běžně vyžadující lidskou inteligenci"
+   ],
+   "explanation": "AI je široký obor zaměřený na tvorbu systémů, které vykonávají úlohy spojené s lidskou inteligencí, jako je usuzování, vnímání a práce s jazykem. Neomezuje se na roboty ani na jediný program.",
+   "csHash": "c921bb3f72e7e4f3"
+  },
+  "automatedFlags": []
+ },
+ {
+  "id": "rm-ai-2",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 1,
+  "levelTitle": "What is AI?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "AI",
+   "ML"
+  ],
+  "contentHash": "31437853937a2435",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on ML.",
+  "question": "How are machine learning (ML) and artificial intelligence related?",
+  "options": [
+   "Machine learning is a subfield of artificial intelligence",
+   "ML and AI are completely unrelated fields",
+   "AI is a subfield of machine learning",
+   "They are exactly the same thing with two names"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Machine learning is one approach within the broader field of AI, where systems learn patterns from data rather than following only hand-written rules.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na ML.",
+   "question": "Jak spolu souvisí strojové učení (ML) a umělá inteligence?",
+   "options": [
+    "Strojové učení je podoborem umělé inteligence",
+    "ML a AI jsou zcela nesouvisející obory",
+    "AI je podoborem strojového učení",
+    "Jsou to úplně totéž, jen pod dvěma názvy"
+   ],
+   "explanation": "Strojové učení je jedním z přístupů v rámci širšího oboru AI, kdy se systémy učí vzory z dat, místo aby se řídily jen ručně napsanými pravidly.",
+   "csHash": "29888a2ebab56417"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-3",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 1,
+  "levelTitle": "What is AI?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "AI",
+   "deep learning"
+  ],
+  "contentHash": "883099204edb28a5",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on deep learning.",
+  "question": "Where does deep learning fit relative to AI and machine learning?",
+  "options": [
+   "Deep learning is broader than AI",
+   "Deep learning has nothing to do with machine learning",
+   "Deep learning is a subset of machine learning, which is a subset of AI",
+   "AI is a subset of deep learning"
+  ],
+  "correctAnswer": 2,
+  "explanation": "The standard nesting is AI > machine learning > deep learning. Deep learning is ML that uses many-layered neural networks.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na hluboké učení.",
+   "question": "Jak hluboké učení zapadá do vztahu k AI a strojovému učení?",
+   "options": [
+    "Hluboké učení je širší než AI",
+    "Hluboké učení nemá se strojovým učením nic společného",
+    "Hluboké učení je podmnožinou strojového učení, které je podmnožinou AI",
+    "AI je podmnožinou hlubokého učení"
+   ],
+   "explanation": "Standardní hierarchie je AI > strojové učení > hluboké učení. Hluboké učení je ML využívající mnohovrstvé neuronové sítě.",
+   "csHash": "00ca960a5722854f"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-4",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 1,
+  "levelTitle": "What is AI?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "AI",
+   "narrow AI"
+  ],
+  "contentHash": "85fa058fc3598bd6",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on narrow AI.",
+  "question": "What best describes 'narrow AI' (also called weak AI)?",
+  "options": [
+   "AI that is smarter than humans at every possible task",
+   "AI that has genuine consciousness and feelings",
+   "AI that can only run on a single narrow computer chip",
+   "AI designed and trained to perform a specific task or narrow set of tasks"
+  ],
+  "correctAnswer": 3,
+  "explanation": "Narrow AI is built for particular tasks, like spam filtering or image tagging. Essentially all AI in use today is narrow AI.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na úzkou AI.",
+   "question": "Co nejlépe vystihuje „úzkou AI“ (označovanou též jako slabá AI)?",
+   "options": [
+    "AI, která je chytřejší než lidé ve všech myslitelných úlohách",
+    "AI, která má skutečné vědomí a cítění",
+    "AI, která dokáže běžet jen na jediném úzkém počítačovém čipu",
+    "AI navrženou a natrénovanou k vykonávání konkrétní úlohy nebo úzkého okruhu úloh"
+   ],
+   "explanation": "Úzká AI je vytvořena pro konkrétní úlohy, jako je filtrování spamu nebo označování obrázků. Prakticky veškerá dnes používaná AI je úzká AI.",
+   "csHash": "1638d28a59955131"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-5",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 1,
+  "levelTitle": "What is AI?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "AI",
+   "AGI"
+  ],
+  "contentHash": "5a844046d7daa99d",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on AGI.",
+  "question": "What would 'artificial general intelligence' (AGI) mean?",
+  "options": [
+   "AI that controls general-purpose hardware",
+   "AI used only by the general public",
+   "AI that can match or exceed human ability across the full range of cognitive tasks",
+   "Any AI that can play more than one video game"
+  ],
+  "correctAnswer": 2,
+  "explanation": "AGI refers to a hypothetical system with broad, human-level competence across diverse tasks. It does not yet exist; today's systems are narrow AI.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na AGI.",
+   "question": "Co by znamenala „obecná umělá inteligence“ (AGI)?",
+   "options": [
+    "AI, která řídí univerzální hardware",
+    "AI, kterou používá pouze široká veřejnost",
+    "AI, která se dokáže vyrovnat lidským schopnostem nebo je překonat v celé škále kognitivních úloh",
+    "Jakákoli AI, která dokáže hrát více než jednu videohru"
+   ],
+   "explanation": "AGI označuje hypotetický systém s širokou kompetencí na lidské úrovni napříč různorodými úlohami. Zatím neexistuje; dnešní systémy jsou úzkou AI.",
+   "csHash": "ef0c0d66d13fc821"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-6",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 1,
+  "levelTitle": "What is AI?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "AI",
+   "examples"
+  ],
+  "contentHash": "c77637b43294aaad",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on examples.",
+  "question": "Which of these is a common everyday example of AI in action?",
+  "options": [
+   "A pocket calculator adding two numbers",
+   "A streaming service recommending shows based on your viewing history",
+   "A spreadsheet summing a column with a fixed formula",
+   "A light switch turning a bulb on and off"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Recommendation systems learn from data about your behavior to make predictions, a hallmark of AI. A calculator or fixed formula just executes predetermined rules.",
+  "cs": {
+   "hint": "Nejprve vylučte možnosti, které lze vyřadit – odpovědí je často to, co zbude. Mysli na příklady.",
+   "question": "Co z tohoto je běžným každodenním příkladem AI v praxi?",
+   "options": [
+    "Kapesní kalkulačka sčítající dvě čísla",
+    "Streamovací služba doporučující pořady na základě historie vašeho sledování",
+    "Tabulkový procesor sčítající sloupec pevně daným vzorcem",
+    "Vypínač zapínající a vypínající žárovku"
+   ],
+   "explanation": "Doporučovací systémy se učí z dat o vašem chování, aby vytvářely předpovědi, což je typický znak AI. Kalkulačka nebo pevný vzorec jen vykonávají předem dané postupy.",
+   "csHash": "aec491a92666e2d6"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-7",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 1,
+  "levelTitle": "What is AI?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "AI",
+   "history"
+  ],
+  "contentHash": "c63d9d221d8c62e4",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "Before modern machine learning, many early AI systems worked mainly by:",
+  "options": [
+   "Following large sets of hand-written rules created by experts",
+   "Learning automatically from millions of examples",
+   "Randomly guessing until they got the right answer",
+   "Copying answers directly from the internet"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Classic 'symbolic' or rule-based AI relied on explicitly programmed if-then rules and expert knowledge, rather than learning patterns from data.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Před nástupem moderního strojového učení mnoho raných systémů AI fungovalo převážně tak, že:",
+   "options": [
+    "Řídily se rozsáhlými sadami ručně napsaných pravidel vytvořených experty",
+    "Učily se automaticky z milionů příkladů",
+    "Náhodně hádaly, dokud nenarazily na správnou odpověď",
+    "Kopírovaly odpovědi přímo z internetu"
+   ],
+   "explanation": "Klasická „symbolická“ AI založená na pravidlech se spoléhala na explicitně naprogramovaná pravidla typu když-pak a na expertní znalosti, nikoli na učení vzorů z dat.",
+   "csHash": "ac96e61433e61bf0"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-8",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 1,
+  "levelTitle": "What is AI?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "AI",
+   "limitations"
+  ],
+  "contentHash": "96c1026ebf96549d",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on limitations.",
+  "question": "Which statement about today's AI systems is most accurate?",
+  "options": [
+   "They are conscious and self-aware like humans",
+   "They are narrow tools that can be very capable within their trained domains but lack general human-like understanding",
+   "They can already do absolutely any task a human can do",
+   "They never make mistakes once trained"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Current AI can be highly capable in specific areas yet remains narrow, can make errors, and does not possess general human-like understanding or consciousness.",
+  "cs": {
+   "hint": "Nejprve vylučte možnosti, které lze vyřadit – odpovědí je často to, co zbude. Mysli na omezení.",
+   "question": "Které tvrzení o dnešních systémech AI je nejpřesnější?",
+   "options": [
+    "Jsou vědomé a sebevědomé jako lidé",
+    "Jsou to úzké nástroje, které mohou být velmi výkonné v rámci natrénovaných oblastí, ale postrádají obecné, lidem podobné porozumění",
+    "Už dnes dokážou naprosto cokoli, co dokáže člověk",
+    "Po natrénování už nikdy nedělají chyby"
+   ],
+   "explanation": "Současná AI může být v konkrétních oblastech velmi výkonná, přesto zůstává úzká, může chybovat a nemá obecné, lidem podobné porozumění ani vědomí.",
+   "csHash": "a2548be8809c191d"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-9",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 2,
+  "levelTitle": "Machine Learning Basics",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "ML",
+   "basics"
+  ],
+  "contentHash": "69b941f6a1c8e9cf",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on basics.",
+  "question": "What is the core idea behind machine learning?",
+  "options": [
+   "A programmer writes every rule the system will ever use by hand",
+   "The computer copies an existing program exactly",
+   "Humans manually label every possible answer in advance forever",
+   "A system learns patterns from data so it can make predictions or decisions on new data"
+  ],
+  "correctAnswer": 3,
+  "explanation": "In machine learning, the system infers patterns from training data and generalizes them to make predictions on new, unseen inputs.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost odpovídající jeho účelu. Mysli na základy.",
+   "question": "Co je hlavní myšlenkou strojového učení?",
+   "options": [
+    "Programátor ručně napíše každé pravidlo, které kdy systém použije",
+    "Počítač přesně zkopíruje existující program",
+    "Lidé navždy ručně předem označí každou možnou odpověď",
+    "Systém se učí vzory z dat, aby mohl vytvářet předpovědi nebo rozhodnutí na nových datech"
+   ],
+   "explanation": "Při strojovém učení systém odvodí vzory z trénovacích dat a zobecní je, aby dokázal vytvářet předpovědi na nových, dosud neviděných vstupech.",
+   "csHash": "b1916d605cef3b94"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-10",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 2,
+  "levelTitle": "Machine Learning Basics",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "ML",
+   "supervised"
+  ],
+  "contentHash": "4f738972c6d6fbd0",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on supervised.",
+  "question": "In supervised learning, the training data consists of:",
+  "options": [
+   "Inputs only, with no correct answers provided",
+   "Rewards and punishments from an environment",
+   "Random noise with no structure",
+   "Inputs paired with the correct outputs (labels)"
+  ],
+  "correctAnswer": 3,
+  "explanation": "Supervised learning uses labeled examples, input paired with the desired output, so the model learns to map inputs to correct outputs.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na učení s učitelem.",
+   "question": "U učení s učitelem (supervised learning) se trénovací data skládají z:",
+   "options": [
+    "Pouze vstupů, bez poskytnutých správných odpovědí",
+    "Odměn a trestů z prostředí",
+    "Náhodného šumu bez jakékoli struktury",
+    "Vstupů spárovaných se správnými výstupy (popisky)"
+   ],
+   "explanation": "Učení s učitelem využívá označené příklady – vstup spárovaný s požadovaným výstupem –, takže se model učí mapovat vstupy na správné výstupy.",
+   "csHash": "aa2f018020d65638"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-11",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 2,
+  "levelTitle": "Machine Learning Basics",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "ML",
+   "unsupervised"
+  ],
+  "contentHash": "444f807e8c2121bf",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on unsupervised.",
+  "question": "Which task is a typical example of unsupervised learning?",
+  "options": [
+   "Predicting tomorrow's temperature from labeled historical data",
+   "Classifying emails as spam using labeled examples",
+   "Grouping customers into clusters based on similar behavior without predefined labels",
+   "Training a robot using rewards for good moves"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Unsupervised learning finds structure in unlabeled data; clustering similar items together is a classic example.",
+  "cs": {
+   "hint": "Nejprve vylučte možnosti, které lze vyřadit – odpovědí je často to, co zbude. Mysli na učení bez učitele.",
+   "question": "Která úloha je typickým příkladem učení bez učitele (unsupervised learning)?",
+   "options": [
+    "Předpověď zítřejší teploty z označených historických dat",
+    "Klasifikace e-mailů jako spam pomocí označených příkladů",
+    "Seskupování zákazníků do shluků na základě podobného chování bez předem daných popisků",
+    "Trénování robota pomocí odměn za dobré tahy"
+   ],
+   "explanation": "Učení bez učitele hledá strukturu v neoznačených datech; seskupování podobných položek dohromady je klasickým příkladem.",
+   "csHash": "37436454d0f32301"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-12",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 2,
+  "levelTitle": "Machine Learning Basics",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "ML",
+   "reinforcement"
+  ],
+  "contentHash": "4681ffd2859a493e",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on reinforcement.",
+  "question": "Reinforcement learning is best described as learning by:",
+  "options": [
+   "Trial and error, guided by rewards and penalties from an environment",
+   "Memorizing a fixed table of answers",
+   "Reading labeled input-output pairs",
+   "Sorting data into clusters"
+  ],
+  "correctAnswer": 0,
+  "explanation": "In reinforcement learning, an agent takes actions in an environment and learns from the rewards or penalties it receives to maximize long-term reward.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na zpětnovazební učení.",
+   "question": "Zpětnovazební učení (reinforcement learning) lze nejlépe popsat jako učení pomocí:",
+   "options": [
+    "Pokusu a omylu, řízeného odměnami a tresty z prostředí",
+    "Zapamatování pevné tabulky odpovědí",
+    "Čtení označených dvojic vstup–výstup",
+    "Třídění dat do shluků"
+   ],
+   "explanation": "Při zpětnovazebním učení agent provádí akce v prostředí a učí se z odměn či trestů, které dostává, aby maximalizoval dlouhodobou odměnu.",
+   "csHash": "28fd95bf0e80cb43"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-13",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 2,
+  "levelTitle": "Machine Learning Basics",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "ML",
+   "training",
+   "inference"
+  ],
+  "contentHash": "36bd7c43636d595c",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on inference.",
+  "question": "In machine learning, what is the difference between training and inference?",
+  "options": [
+   "Training is when the model learns from data; inference is when the trained model makes predictions on new inputs",
+   "Training uses the model to make predictions; inference builds the model",
+   "They are the same step",
+   "Training happens only on phones; inference only on servers"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Training is the learning phase where parameters are adjusted using data. Inference is using the finished model to make predictions.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost odpovídající jeho účelu. Mysli na inferenci.",
+   "question": "Jaký je při strojovém učení rozdíl mezi trénováním a inferencí?",
+   "options": [
+    "Trénování je, když se model učí z dat; inference je, když natrénovaný model vytváří předpovědi na nových vstupech",
+    "Trénování využívá model k vytváření předpovědí; inference model sestavuje",
+    "Jde o tentýž krok",
+    "Trénování probíhá jen na telefonech; inference jen na serverech"
+   ],
+   "explanation": "Trénování je fáze učení, kdy se pomocí dat upravují parametry. Inference je použití hotového modelu k vytváření předpovědí.",
+   "csHash": "3653ff967d885577"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-14",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 2,
+  "levelTitle": "Machine Learning Basics",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "ML",
+   "features"
+  ],
+  "contentHash": "c4a8db388e1be8ef",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on features.",
+  "question": "In the language of machine learning, what are 'features'?",
+  "options": [
+   "The correct answers the model is trying to predict",
+   "The errors the model makes during training",
+   "The input variables or measurable properties used to make a prediction",
+   "The hardware used to run the model"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Features are the input attributes (for example, a house's size and location) that the model uses to predict the target.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na příznaky.",
+   "question": "Co jsou v terminologii strojového učení „příznaky“ (features)?",
+   "options": [
+    "Správné odpovědi, které se model snaží předpovědět",
+    "Chyby, kterých se model dopouští během trénování",
+    "Vstupní proměnné nebo měřitelné vlastnosti používané k vytvoření předpovědi",
+    "Hardware používaný ke spuštění modelu"
+   ],
+   "explanation": "Příznaky jsou vstupní atributy (například velikost a poloha domu), které model používá k předpovědi cílové hodnoty.",
+   "csHash": "d1590fda463abb9f"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-15",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 2,
+  "levelTitle": "Machine Learning Basics",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "ML",
+   "labels"
+  ],
+  "contentHash": "1fdb22ca813b2b8a",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on labels.",
+  "question": "In supervised learning, the 'label' refers to:",
+  "options": [
+   "A sticker placed on the training computer",
+   "The correct output or answer associated with each training example",
+   "The name of the algorithm being used",
+   "An input feature that is ignored"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The label is the ground-truth output for an example, such as 'spam' or 'not spam', that the model learns to predict.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na popisky.",
+   "question": "U učení s učitelem označuje „popisek“ (label):",
+   "options": [
+    "Nálepku nalepenou na trénovacím počítači",
+    "Správný výstup nebo odpověď přiřazenou ke každému trénovacímu příkladu",
+    "Název použitého algoritmu",
+    "Vstupní příznak, který je ignorován"
+   ],
+   "explanation": "Popisek je skutečný (ground-truth) výstup příkladu, například „spam“ nebo „není spam“, který se model učí předpovídat.",
+   "csHash": "91ced2a208a9b23f"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-16",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 2,
+  "levelTitle": "Machine Learning Basics",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "ML",
+   "models"
+  ],
+  "contentHash": "ff032b1b1793ff06",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on models.",
+  "question": "In machine learning, what is a 'model'?",
+  "options": [
+   "A human expert who supervises training",
+   "A learned function, defined by parameters, that maps inputs to outputs",
+   "The raw dataset before any learning",
+   "A physical scale replica of a computer"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A model is the artifact produced by training: a parameterized function that takes inputs and produces predictions.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost odpovídající jeho účelu. Mysli na modely.",
+   "question": "Co je při strojovém učení „model“?",
+   "options": [
+    "Lidský expert, který dohlíží na trénování",
+    "Naučená funkce, definovaná parametry, která mapuje vstupy na výstupy",
+    "Surová datová sada před jakýmkoli učením",
+    "Fyzická zmenšená maketa počítače"
+   ],
+   "explanation": "Model je artefakt vzniklý trénováním: parametrizovaná funkce, která přijímá vstupy a produkuje předpovědi.",
+   "csHash": "5c10d9aaecb4426b"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-17",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 3,
+  "levelTitle": "Neural Networks",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "neural networks",
+   "basics"
+  ],
+  "contentHash": "b0c6cf82052ef71c",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on basics.",
+  "question": "An artificial neural network is loosely inspired by:",
+  "options": [
+   "The way muscles contract",
+   "The structure of computer hard drives",
+   "How electricity flows through a single wire",
+   "Networks of interconnected neurons in the brain"
+  ],
+  "correctAnswer": 3,
+  "explanation": "Artificial neural networks take loose inspiration from biological neurons that pass signals to one another, though they are mathematical, not biological.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na základy.",
+   "question": "Umělá neuronová síť je volně inspirována:",
+   "options": [
+    "Způsobem, jakým se stahují svaly",
+    "Strukturou počítačových pevných disků",
+    "Tím, jak elektřina prochází jediným drátem",
+    "Sítěmi propojených neuronů v mozku"
+   ],
+   "explanation": "Umělé neuronové sítě se volně inspirují biologickými neurony, které si vzájemně předávají signály, ačkoli jsou matematické, nikoli biologické.",
+   "csHash": "49a3507295a1e6ac"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-18",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 3,
+  "levelTitle": "Neural Networks",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "neural networks",
+   "weights"
+  ],
+  "contentHash": "526039037fb51eb8",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on weights.",
+  "question": "In a neural network, what do the 'weights' represent?",
+  "options": [
+   "The physical mass of the hardware",
+   "Adjustable parameters that determine the strength of connections between neurons",
+   "The number of layers in the network",
+   "The labels in the training set"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Weights are the tunable parameters that scale the inputs to each neuron; learning means adjusting these weights to reduce error.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na váhy.",
+   "question": "Co v neuronové síti představují „váhy“ (weights)?",
+   "options": [
+    "Fyzickou hmotnost hardwaru",
+    "Nastavitelné parametry, které určují sílu spojení mezi neurony",
+    "Počet vrstev v síti",
+    "Popisky v trénovací sadě"
+   ],
+   "explanation": "Váhy jsou laditelné parametry, které škálují vstupy do každého neuronu; učení znamená upravování těchto vah za účelem snížení chyby.",
+   "csHash": "d14a6360d4ec9535"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-19",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 3,
+  "levelTitle": "Neural Networks",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "neural networks",
+   "layers"
+  ],
+  "contentHash": "e72f5590ab91658b",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on layers.",
+  "question": "A typical feedforward neural network is organized into:",
+  "options": [
+   "A single neuron only",
+   "Only an output layer",
+   "An input layer, one or more hidden layers, and an output layer",
+   "A circular ring with no start or end"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Feedforward networks pass data from an input layer through hidden layers to an output layer, with each layer transforming the previous one's output.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na vrstvy.",
+   "question": "Typická dopředná neuronová síť (feedforward) je uspořádána do:",
+   "options": [
+    "Pouze jediného neuronu",
+    "Pouze výstupní vrstvy",
+    "Vstupní vrstvy, jedné nebo více skrytých vrstev a výstupní vrstvy",
+    "Kruhového prstence bez začátku a konce"
+   ],
+   "explanation": "Dopředné sítě posílají data ze vstupní vrstvy přes skryté vrstvy do výstupní vrstvy, přičemž každá vrstva transformuje výstup té předchozí.",
+   "csHash": "7fce74e7985f76b0"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-20",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 3,
+  "levelTitle": "Neural Networks",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "deep learning",
+   "layers"
+  ],
+  "contentHash": "c67027b42dd1630e",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on layers.",
+  "question": "What does the word 'deep' mean in 'deep learning'?",
+  "options": [
+   "The neural network has many hidden layers",
+   "The network is trained for a very long time",
+   "The data is stored deep underground",
+   "The model uses only one powerful neuron"
+  ],
+  "correctAnswer": 0,
+  "explanation": "'Deep' refers to network depth, the presence of many hidden layers, which lets the model learn increasingly abstract representations.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost odpovídající jeho účelu. Mysli na vrstvy.",
+   "question": "Co znamená slovo „hluboké“ ve slovním spojení „hluboké učení“?",
+   "options": [
+    "Neuronová síť má mnoho skrytých vrstev",
+    "Síť se trénuje velmi dlouho",
+    "Data jsou uložena hluboko pod zemí",
+    "Model používá jen jeden výkonný neuron"
+   ],
+   "explanation": "„Hluboké“ odkazuje na hloubku sítě, tedy na přítomnost mnoha skrytých vrstev, což modelu umožňuje učit se stále abstraktnější reprezentace.",
+   "csHash": "afba1630f86a83df"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-21",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 3,
+  "levelTitle": "Neural Networks",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "neural networks",
+   "activation"
+  ],
+  "contentHash": "42dec5055e7521ed",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on activation.",
+  "question": "What is the main purpose of an activation function in a neuron?",
+  "options": [
+   "To store the training data",
+   "To introduce non-linearity so the network can learn complex patterns",
+   "To delete unused neurons",
+   "To label the input data"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Activation functions add non-linearity; without them, stacking layers would only produce a linear model unable to capture complex relationships.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost odpovídající jeho účelu. Mysli na aktivaci.",
+   "question": "Jaký je hlavní účel aktivační funkce v neuronu?",
+   "options": [
+    "Uchovávat trénovací data",
+    "Zavést nelinearitu, aby se síť mohla učit složité vzory",
+    "Mazat nepoužívané neurony",
+    "Označovat vstupní data"
+   ],
+   "explanation": "Aktivační funkce přidávají nelinearitu; bez nich by skládání vrstev vytvořilo pouze lineární model neschopný zachytit složité vztahy.",
+   "csHash": "bbd0b2576a20d777"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-22",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 3,
+  "levelTitle": "Neural Networks",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "neural networks",
+   "activation"
+  ],
+  "contentHash": "343c9ab0863fade6",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on activation.",
+  "question": "Which of the following is a commonly used activation function?",
+  "options": [
+   "SQL",
+   "JPEG",
+   "ReLU (rectified linear unit)",
+   "TCP"
+  ],
+  "correctAnswer": 2,
+  "explanation": "ReLU is one of the most widely used activation functions. The other options are unrelated technologies (a query language, an image format, and a network protocol).",
+  "cs": {
+   "hint": "Nejprve vylučte možnosti, které lze vyřadit – odpovědí je často to, co zbude. Mysli na aktivaci.",
+   "question": "Co z následujícího je běžně používaná aktivační funkce?",
+   "options": [
+    "SQL",
+    "JPEG",
+    "ReLU (rectified linear unit)",
+    "TCP"
+   ],
+   "explanation": "ReLU je jednou z nejpoužívanějších aktivačních funkcí. Ostatní možnosti jsou nesouvisející technologie (dotazovací jazyk, obrazový formát a síťový protokol).",
+   "csHash": "88192c2d9b62eac1"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-23",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 3,
+  "levelTitle": "Neural Networks",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "neural networks",
+   "training"
+  ],
+  "contentHash": "8b98c67e735a4780",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on training.",
+  "question": "During training, how does a neural network typically improve?",
+  "options": [
+   "By randomly rewriting its own source code",
+   "By adding more training data to its memory at inference time",
+   "By deleting its hidden layers one by one",
+   "By adjusting its weights to reduce the error between its predictions and the correct answers"
+  ],
+  "correctAnswer": 3,
+  "explanation": "Training uses optimization (commonly gradient descent with backpropagation) to nudge weights in directions that reduce prediction error.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na trénování.",
+   "question": "Jak se neuronová síť během trénování obvykle zlepšuje?",
+   "options": [
+    "Náhodným přepisováním vlastního zdrojového kódu",
+    "Přidáváním dalších trénovacích dat do své paměti během inference",
+    "Postupným mazáním svých skrytých vrstev",
+    "Upravováním svých vah za účelem snížení chyby mezi svými předpověďmi a správnými odpověďmi"
+   ],
+   "explanation": "Trénování využívá optimalizaci (běžně gradientní sestup se zpětným šířením) k posouvání vah ve směrech, které snižují chybu predikce.",
+   "csHash": "cef597f2eca515d3"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-24",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 3,
+  "levelTitle": "Neural Networks",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "neural networks",
+   "backpropagation"
+  ],
+  "contentHash": "b8883db69ba1e0f6",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on backpropagation.",
+  "question": "What is backpropagation used for in neural networks?",
+  "options": [
+   "Computing how each weight contributed to the error so the weights can be updated",
+   "Sending the network's output back to the user",
+   "Backing up the model to a hard drive",
+   "Reversing the order of the input data"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Backpropagation efficiently computes gradients of the loss with respect to each weight, enabling the optimizer to update weights and reduce error.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost odpovídající jeho účelu. Mysli na zpětné šíření.",
+   "question": "K čemu se v neuronových sítích používá zpětné šíření (backpropagation)?",
+   "options": [
+    "K výpočtu, jak každá váha přispěla k chybě, aby bylo možné váhy aktualizovat",
+    "K odesílání výstupu sítě zpět uživateli",
+    "K zálohování modelu na pevný disk",
+    "K obrácení pořadí vstupních dat"
+   ],
+   "explanation": "Zpětné šíření efektivně počítá gradienty ztráty vzhledem ke každé váze, což optimalizátoru umožňuje aktualizovat váhy a snížit chybu.",
+   "csHash": "eb8017f3de1132af"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-25",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 4,
+  "levelTitle": "What is an LLM?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "LLM",
+   "basics"
+  ],
+  "contentHash": "a62e841be303aa55",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on basics.",
+  "question": "A service predicts and generates text from a model trained on a very large text corpus. Which common term describes that model?",
+  "options": [
+   "OCR",
+   "RAG",
+   "LLM",
+   "CNN"
+  ],
+  "correctAnswer": 2,
+  "explanation": "LLM means Large Language Model. It learns statistical patterns in language and generates sequences of tokens.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost odpovídající jeho účelu. Mysli na základy.",
+   "question": "Co znamená zkratka „LLM“?",
+   "options": [
+    "Logical Learning Machine",
+    "Linked List Memory",
+    "Large Language Model",
+    "Layered Logic Module"
+   ],
+   "explanation": "LLM znamená Large Language Model (velký jazykový model), tedy neuronovou síť s mnoha parametry natrénovanou na velkém množství textu.",
+   "csHash": "22b50fe3261ec578"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-26",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 4,
+  "levelTitle": "What is an LLM?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "LLM",
+   "next-token"
+  ],
+  "contentHash": "fbb8aaa67a9ecda1",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on next-token.",
+  "question": "At their core, most modern LLMs are trained to do what?",
+  "options": [
+   "Search the live internet in real time",
+   "Predict the next token (piece of text) given the preceding text",
+   "Store every webpage word-for-word in a database",
+   "Translate only between two fixed languages"
+  ],
+  "correctAnswer": 1,
+  "explanation": "LLMs are fundamentally next-token predictors: given a sequence of text, they estimate the probability of what comes next and generate text token by token.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na předpověď dalšího tokenu.",
+   "question": "K čemu jsou v jádru trénovány nejmodernější LLM?",
+   "options": [
+    "K vyhledávání na živém internetu v reálném čase",
+    "K předpovídání dalšího tokenu (kousku textu) na základě předchozího textu",
+    "K ukládání každé webové stránky doslovně do databáze",
+    "K překladu pouze mezi dvěma pevně danými jazyky"
+   ],
+   "explanation": "LLM jsou v zásadě prediktory dalšího tokenu: na základě sekvence textu odhadují pravděpodobnost toho, co následuje, a generují text token po tokenu.",
+   "csHash": "2c9e473bb1b96f89"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-27",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 4,
+  "levelTitle": "What is an LLM?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "LLM",
+   "models"
+  ],
+  "contentHash": "5228b50c7d37cc9f",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on models.",
+  "question": "Which of these is a well-known family of large language models?",
+  "options": [
+   "GPT (from OpenAI)",
+   "Photoshop",
+   "Excel",
+   "Linux"
+  ],
+  "correctAnswer": 0,
+  "explanation": "GPT is OpenAI's family of large language models. Other prominent families include Anthropic's Claude and Google's Gemini.",
+  "cs": {
+   "hint": "Nejprve vylučte možnosti, které lze vyřadit – odpovědí je často to, co zbude. Mysli na modely.",
+   "question": "Co z tohoto je dobře známá rodina velkých jazykových modelů?",
+   "options": [
+    "GPT (od OpenAI)",
+    "Photoshop",
+    "Excel",
+    "Linux"
+   ],
+   "explanation": "GPT je rodina velkých jazykových modelů od OpenAI. Mezi další významné rodiny patří Claude od Anthropic a Gemini od Googlu.",
+   "csHash": "c1a844f1de528427"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ],
+  "csDriftFlags": [
+   "code-like option 0 differs: EN 'GPT (from OpenAI)' vs CS 'GPT (od OpenAI)'"
+  ]
+ },
+ {
+  "id": "rm-ai-28",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 4,
+  "levelTitle": "What is an LLM?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "LLM",
+   "tools"
+  ],
+  "contentHash": "4defa2557da27138",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on tools.",
+  "question": "An assistant must answer questions and call a search API when its stored knowledge is insufficient. Which setup fits?",
+  "options": [
+   "A classifier with no generated output",
+   "A text embedding model by itself",
+   "A static autocomplete dictionary",
+   "A language model with controlled tool access"
+  ],
+  "correctAnswer": 3,
+  "explanation": "A tool-enabled language model can decide when it needs external information and call an approved search function. The application still needs validation and permission boundaries.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na Claude.",
+   "question": "Rodina velkých jazykových modelů od Anthropic se jmenuje:",
+   "options": [
+    "Gemini",
+    "Llama",
+    "Copilot",
+    "Claude"
+   ],
+   "explanation": "Claude je rodina velkých jazykových modelů vyvinutých společností Anthropic. Gemini je od Googlu a Llama od Meta.",
+   "csHash": "838f5c1cff7fc8c8"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-29",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 4,
+  "levelTitle": "What is an LLM?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "LLM",
+   "RAG"
+  ],
+  "contentHash": "75953052615fc604",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on RAG.",
+  "question": "An assistant must answer from private documents that change every day. Which approach best grounds its response?",
+  "options": [
+   "Retrieve relevant documents and include them as model context",
+   "Increase temperature so the model explores more answers",
+   "Fine-tune once and assume the documents never change",
+   "Ask the model to rely only on its original training data"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Retrieval-augmented generation can supply current, private source text at request time. The model can then answer from that context instead of guessing from training data.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na Gemini.",
+   "question": "Rodina velkých jazykových modelů od Googlu je známá jako:",
+   "options": [
+    "Gemini",
+    "Claude",
+    "GPT",
+    "Mistral"
+   ],
+   "explanation": "Gemini je rodina velkých jazykových modelů od Googlu. Claude je od Anthropic a GPT od OpenAI.",
+   "csHash": "9db2b3b2c2564763"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-30",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 4,
+  "levelTitle": "What is an LLM?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "LLM",
+   "capabilities"
+  ],
+  "contentHash": "824974767c28f07d",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on capabilities.",
+  "question": "Which of the following is something LLMs are generally good at?",
+  "options": [
+   "Guaranteeing perfectly accurate facts about very recent events",
+   "Knowing today's date and your private files automatically",
+   "Generating and summarizing fluent text and answering many questions",
+   "Performing flawless large-number arithmetic with no errors"
+  ],
+  "correctAnswer": 2,
+  "explanation": "LLMs excel at fluent language tasks like drafting, summarizing, and answering. They can struggle with up-to-the-minute facts and precise arithmetic.",
+  "cs": {
+   "hint": "Nejprve vylučte možnosti, které lze vyřadit – odpovědí je často to, co zbude. Mysli na schopnosti.",
+   "question": "Co z následujícího je něco, v čem jsou LLM obecně dobré?",
+   "options": [
+    "Garantování naprosto přesných faktů o velmi nedávných událostech",
+    "Automatická znalost dnešního data a vašich soukromých souborů",
+    "Generování a shrnování plynulého textu a odpovídání na mnoho otázek",
+    "Bezchybné provádění aritmetiky s velkými čísly bez chyb"
+   ],
+   "explanation": "LLM vynikají v plynulých jazykových úlohách, jako je psaní, shrnování a odpovídání. Mohou mít potíže s aktuálními fakty a přesnou aritmetikou.",
+   "csHash": "539abd26c9917513"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-31",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 4,
+  "levelTitle": "What is an LLM?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "LLM",
+   "hallucination"
+  ],
+  "contentHash": "86fc29042829a83d",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on hallucination.",
+  "question": "A model gives a fluent answer and invents a research citation that does not exist. What is this failure called?",
+  "options": [
+   "A context-window overflow that prevents any output",
+   "A hallucination: plausible-sounding but false or fabricated output",
+   "A refusal, because the model declined the requested task",
+   "Prompt injection, because external text changed the model's instructions"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A hallucination is generated content that sounds plausible but is not grounded in fact or the supplied sources. Important claims still need verification.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost odpovídající jeho účelu. Mysli na halucinaci.",
+   "question": "Co je v kontextu LLM „halucinace“?",
+   "options": [
+    "Když se model přehřeje a poškodí hardware",
+    "Když model vytvoří sebevědomě znějící výstup, který je ve skutečnosti nepravdivý nebo smyšlený",
+    "Když model odmítne odpovědět",
+    "Když uživatel napíše matoucí prompt"
+   ],
+   "explanation": "Halucinace je situace, kdy LLM vygeneruje věrohodně znějící, ale nesprávné či vymyšlené informace, což je známé omezení těchto modelů.",
+   "csHash": "5bf43fe4e61108a7"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-32",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 4,
+  "levelTitle": "What is an LLM?",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "LLM",
+   "knowledge cutoff"
+  ],
+  "contentHash": "1f3bb902bb197da8",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on knowledge cutoff.",
+  "question": "Why might a standalone LLM be unable to tell you about an event from last week?",
+  "options": [
+   "Its responses are always delayed by exactly seven days",
+   "LLMs cannot process dates at all",
+   "It can only discuss fictional events",
+   "Its training data has a knowledge cutoff, so it lacks information after that date unless given tools or new context"
+  ],
+  "correctAnswer": 3,
+  "explanation": "An LLM's parametric knowledge is frozen at its training cutoff. Without web access or supplied context, it cannot know about events after that point.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na hranici znalostí.",
+   "question": "Proč vám samostatný LLM nemusí umět říct o události z minulého týdne?",
+   "options": [
+    "Jeho odpovědi jsou vždy zpožděny přesně o sedm dní",
+    "LLM nedokážou vůbec zpracovávat data",
+    "Dokáže probírat pouze smyšlené události",
+    "Jeho trénovací data mají hranici znalostí (knowledge cutoff), takže postrádá informace po tomto datu, pokud nedostane nástroje nebo nový kontext"
+   ],
+   "explanation": "Parametrické znalosti LLM jsou zamrzlé k datu hranice trénování. Bez přístupu na web nebo dodaného kontextu nemůže vědět o událostech po tomto okamžiku.",
+   "csHash": "8019ff6458e44e28"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-33",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 5,
+  "levelTitle": "Tokens & Tokenization",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "tokens",
+   "basics"
+  ],
+  "contentHash": "ce81f93f3dfe6bee",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on basics.",
+  "question": "An LLM API reports that a prompt used 37 input tokens even though it contains fewer than 37 words. What is a token?",
+  "options": [
+   "Exactly one complete sentence, regardless of its length",
+   "A unit of text, often a word or part of a word, that the model processes",
+   "An API credential counted once for each request",
+   "A Unicode character, with every character always counted separately"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Models process sequences of tokens. A tokenizer may split one word into several pieces or combine punctuation with nearby text, so token count does not equal word count.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost odpovídající jeho účelu. Mysli na základy.",
+   "question": "Co je v kontextu LLM „token“?",
+   "options": [
+    "Jediná úplná věta",
+    "Jednotka textu, například slovo nebo část slova, kterou model zpracovává",
+    "Heslo používané k přihlášení k modelu",
+    "Fyzická mince používaná k placení za AI"
+   ],
+   "explanation": "Token je kousek textu, často slovo nebo část slova (subword), který model čte a generuje. LLM pracují se sekvencemi tokenů.",
+   "csHash": "719da179413497f6"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-34",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 5,
+  "levelTitle": "Tokens & Tokenization",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "tokens",
+   "tokenization"
+  ],
+  "contentHash": "b9c91a6dea57fdfc",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on tokenization.",
+  "question": "Why do LLMs break text into tokens rather than processing raw characters or whole words only?",
+  "options": [
+   "Because tokens are encrypted for security",
+   "Because computers cannot read letters",
+   "Subword tokens balance vocabulary size and flexibility, handling rare and new words efficiently",
+   "Because each token must be exactly one byte"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Subword tokenization keeps the vocabulary manageable while still representing rare or novel words by combining smaller pieces.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na tokenizaci.",
+   "question": "Proč LLM rozdělují text na tokeny, místo aby zpracovávaly surové znaky nebo pouze celá slova?",
+   "options": [
+    "Protože tokeny jsou pro bezpečnost šifrované",
+    "Protože počítače neumějí číst písmena",
+    "Subwordové tokeny vyvažují velikost slovníku a flexibilitu, takže efektivně zvládají vzácná a nová slova",
+    "Protože každý token musí mít přesně jeden bajt"
+   ],
+   "explanation": "Subwordová tokenizace udržuje slovník zvládnutelný a přitom dokáže reprezentovat vzácná nebo nová slova skládáním menších kousků.",
+   "csHash": "5a630d04cc4c6e86"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-35",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 5,
+  "levelTitle": "Tokens & Tokenization",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "tokens",
+   "counting"
+  ],
+  "contentHash": "187b25afbccb6701",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on counting.",
+  "question": "Roughly how much English text does one token correspond to on average for many modern tokenizers?",
+  "options": [
+   "About 100 words",
+   "Exactly one full paragraph",
+   "Exactly one letter, always",
+   "About three-quarters of a word (a few characters)"
+  ],
+  "correctAnswer": 3,
+  "explanation": "A common rule of thumb is that one token is about 4 characters or roughly 0.75 words of English, though it varies by tokenizer and language.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na počítání.",
+   "question": "Zhruba jakému množství anglického textu odpovídá v průměru jeden token u mnoha moderních tokenizérů?",
+   "options": [
+    "Asi 100 slovům",
+    "Přesně jednomu celému odstavci",
+    "Vždy přesně jednomu písmenu",
+    "Asi třem čtvrtinám slova (několika znakům)"
+   ],
+   "explanation": "Běžné orientační pravidlo říká, že jeden token odpovídá zhruba 4 znakům nebo přibližně 0,75 slova angličtiny, ačkoli se to liší podle tokenizéru a jazyka.",
+   "csHash": "6e9e9e25a4120d32"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-36",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 5,
+  "levelTitle": "Tokens & Tokenization",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "tokens",
+   "subwords"
+  ],
+  "contentHash": "a375a362d9cb8290",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on subwords.",
+  "question": "A long, uncommon word like 'antidisestablishmentarianism' is most likely to be:",
+  "options": [
+   "A single token",
+   "Ignored entirely by the model",
+   "Converted into an image",
+   "Split into several subword tokens"
+  ],
+  "correctAnswer": 3,
+  "explanation": "Rare or long words are typically broken into multiple subword tokens, while common short words often map to a single token.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na subwordy.",
+   "question": "Dlouhé, neobvyklé slovo jako „antidisestablishmentarianism“ bude nejpravděpodobněji:",
+   "options": [
+    "Jediný token",
+    "Modelem zcela ignorováno",
+    "Převedeno na obrázek",
+    "Rozděleno na několik subwordových tokenů"
+   ],
+   "explanation": "Vzácná nebo dlouhá slova se obvykle rozdělují na více subwordových tokenů, zatímco běžná krátká slova často odpovídají jedinému tokenu.",
+   "csHash": "a3e6a0459f960da7"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-37",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 5,
+  "levelTitle": "Tokens & Tokenization",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "tokens",
+   "cost",
+   "limits"
+  ],
+  "contentHash": "aa1df899450a502e",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on limits.",
+  "question": "Why should an application track both input and output token counts for LLM requests?",
+  "options": [
+   "Only output tokens count toward any model limit or bill",
+   "They commonly affect usage cost and how much content fits in the context window",
+   "They determine which UI theme the model returns",
+   "They measure spelling quality but not resource usage"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Providers commonly meter usage and define context limits in tokens. Long prompts and responses can therefore increase cost or exceed the model’s available context.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na limity.",
+   "question": "Proč na počtu tokenů záleží při používání LLM API?",
+   "options": [
+    "Vůbec na něm nezáleží",
+    "Ceny a limity kontextu se obvykle měří v tokenech, takže více tokenů může znamenat vyšší náklady a může narazit na limity",
+    "Tokeny určují barevné schéma modelu",
+    "Počet tokenů ovlivňuje pouze pravopis"
+   ],
+   "explanation": "Náklady na API a maximální délka kontextu se obvykle počítají v tokenech, takže delší vstupy a výstupy stojí více a mohou překročit limity.",
+   "csHash": "8edd33ba94a77cc2"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-38",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 5,
+  "levelTitle": "Tokens & Tokenization",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "tokens",
+   "tokenization"
+  ],
+  "contentHash": "38858ca1ef7a508f",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on tokenization.",
+  "question": "Which factor most affects how a given piece of text is split into tokens?",
+  "options": [
+   "The specific tokenizer used by the model",
+   "The user's typing speed",
+   "The brightness of the screen",
+   "The time of day"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Different models use different tokenizers, so the same text can produce different token counts depending on the model.",
+  "cs": {
+   "hint": "Nejprve vylučte možnosti, které lze vyřadit – odpovědí je často to, co zbude. Mysli na tokenizaci.",
+   "question": "Který faktor nejvíce ovlivňuje, jak je daný kus textu rozdělen na tokeny?",
+   "options": [
+    "Konkrétní tokenizér používaný modelem",
+    "Rychlost psaní uživatele",
+    "Jas obrazovky",
+    "Denní doba"
+   ],
+   "explanation": "Různé modely používají různé tokenizéry, takže tentýž text může v závislosti na modelu vést k různému počtu tokenů.",
+   "csHash": "44ec82ad8c027e5e"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-39",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 5,
+  "levelTitle": "Tokens & Tokenization",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "tokens",
+   "generation"
+  ],
+  "contentHash": "2f6a4885d338c208",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on generation.",
+  "question": "When an LLM generates a response, it produces the output:",
+  "options": [
+   "All at once as a finished essay with no intermediate steps",
+   "Only as whole paragraphs chosen from a fixed list",
+   "One token at a time, each conditioned on the tokens so far",
+   "By editing a pre-written template word for word"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Generation is autoregressive: the model emits tokens sequentially, feeding each new token back in to help predict the next one.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na generování.",
+   "question": "Když LLM generuje odpověď, produkuje výstup:",
+   "options": [
+    "Naráz jako hotový esej bez jakýchkoli mezikroků",
+    "Pouze jako celé odstavce vybrané z pevného seznamu",
+    "Po jednom tokenu, přičemž každý je podmíněn dosavadními tokeny",
+    "Úpravou předem napsané šablony slovo po slovu"
+   ],
+   "explanation": "Generování je autoregresivní: model vydává tokeny postupně a každý nový token zpětně přivádí dovnitř, aby pomohl předpovědět ten následující.",
+   "csHash": "5dac5da913dbee1c"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-40",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 5,
+  "levelTitle": "Tokens & Tokenization",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "tokens",
+   "languages"
+  ],
+  "contentHash": "b65ae1d7c29d0032",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on languages.",
+  "question": "Compared with English, text in some other languages or with many emojis and symbols often:",
+  "options": [
+   "Can require more tokens to represent the same amount of meaning",
+   "Always uses exactly the same number of tokens",
+   "Cannot be tokenized at all",
+   "Uses zero tokens"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Tokenizers are often optimized for English, so other scripts, emojis, and unusual symbols can consume more tokens per character or word.",
+  "cs": {
+   "hint": "Zaměřte se na podstatu otázky a vylučte možnosti, které zjevně nesedí. Mysli na jazyky.",
+   "question": "Ve srovnání s angličtinou text v některých jiných jazycích nebo s mnoha emoji a symboly často:",
+   "options": [
+    "Může vyžadovat více tokenů k vyjádření stejného množství významu",
+    "Vždy používá přesně stejný počet tokenů",
+    "Nelze vůbec tokenizovat",
+    "Používá nula tokenů"
+   ],
+   "explanation": "Tokenizéry jsou často optimalizované pro angličtinu, takže jiná písma, emoji a neobvyklé symboly mohou spotřebovat více tokenů na znak nebo slovo.",
+   "csHash": "193452c7e97a5754"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-41",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 6,
+  "levelTitle": "Training Data & Datasets",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "training data",
+   "pretraining"
+  ],
+  "contentHash": "cc635f6a6cc3ee6e",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on pretraining.",
+  "question": "What is 'pretraining' for an LLM?",
+  "options": [
+   "A warm-up the model does before each question",
+   "The initial phase where the model learns general language patterns from a large text corpus",
+   "Training the user how to write prompts",
+   "Testing the model on a final exam"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Pretraining is the large-scale phase where the model learns broad language and world patterns from massive text datasets, before any task-specific tuning.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost, která odpovídá jeho účelu. Zaměřte se na předtrénování (pretraining).",
+   "question": "Co je 'pretraining' (předtrénování) u LLM?",
+   "options": [
+    "Zahřívací fáze, kterou model provádí před každou otázkou",
+    "Počáteční fáze, kdy se model učí obecné jazykové vzorce z velkého textového korpusu",
+    "Trénování uživatele, jak psát prompty",
+    "Testování modelu při závěrečné zkoušce"
+   ],
+   "explanation": "Předtrénování je rozsáhlá fáze, během níž se model učí obecné jazykové a faktické vzorce z obrovských textových datasetů, ještě před jakýmkoli laděním pro konkrétní úlohu.",
+   "csHash": "e7f4621792254975"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-42",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 6,
+  "levelTitle": "Training Data & Datasets",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "training data",
+   "corpus"
+  ],
+  "contentHash": "602872e92dfe1867",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on corpus.",
+  "question": "What is a 'corpus' in the context of training LLMs?",
+  "options": [
+   "A type of neural network layer",
+   "A single web page",
+   "The model's output buffer",
+   "A large collection of text used as training data"
+  ],
+  "correctAnswer": 3,
+  "explanation": "A corpus is a large body of text gathered for training. Pretraining corpora can include web pages, books, code, and more.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost, která odpovídá jeho účelu. Zaměřte se na korpus.",
+   "question": "Co je 'korpus' v kontextu trénování LLM?",
+   "options": [
+    "Typ vrstvy neuronové sítě",
+    "Jediná webová stránka",
+    "Výstupní buffer modelu",
+    "Rozsáhlá sbírka textů použitá jako trénovací data"
+   ],
+   "explanation": "Korpus je rozsáhlý soubor textů shromážděný pro trénování. Korpusy pro předtrénování mohou obsahovat webové stránky, knihy, kód a další.",
+   "csHash": "a333f15bd7d60836"
+  },
+  "possibleDuplicates": [
+   "rm-ai-132",
+   "rm-ai-57",
+   "rm-ai-89"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-43",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 6,
+  "levelTitle": "Training Data & Datasets",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "training data",
+   "quality"
+  ],
+  "contentHash": "b3e930140a5fdfa7",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on quality.",
+  "question": "Why does the quality of training data matter so much for an LLM?",
+  "options": [
+   "It does not; only the quantity matters",
+   "Quality only affects the model's file size",
+   "Models learn patterns from their data, so low-quality or erroneous data can degrade outputs",
+   "High-quality data makes the model run on less electricity"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Because models imitate patterns in their training data, noisy, low-quality, or incorrect data can lead to worse, less reliable outputs.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na kvalitu.",
+   "question": "Proč na kvalitě trénovacích dat u LLM tolik záleží?",
+   "options": [
+    "Nezáleží; rozhoduje pouze množství",
+    "Kvalita ovlivňuje jen velikost souboru modelu",
+    "Modely se učí vzorce ze svých dat, takže nekvalitní nebo chybná data mohou zhoršit výstupy",
+    "Kvalitní data způsobí, že model spotřebuje méně elektřiny"
+   ],
+   "explanation": "Protože modely napodobují vzorce ve svých trénovacích datech, mohou zašuměná, nekvalitní nebo nesprávná data vést k horším a méně spolehlivým výstupům.",
+   "csHash": "79db5e25ece42118"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-44",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 6,
+  "levelTitle": "Training Data & Datasets",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "training data",
+   "scale"
+  ],
+  "contentHash": "028cdc190ac10205",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on scale.",
+  "question": "Why is the scale (sheer size) of training data important for modern LLMs?",
+  "options": [
+   "Larger, more diverse data generally helps models learn broader and more robust patterns",
+   "Bigger data always guarantees a perfect model with no errors",
+   "Scale only matters for image models, not text",
+   "More data makes the model smaller"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Training on large, diverse corpora helps LLMs capture a wide range of language and knowledge, though scale alone does not eliminate errors or bias.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na měřítko (rozsah).",
+   "question": "Proč je měřítko (samotná velikost) trénovacích dat důležité pro moderní LLM?",
+   "options": [
+    "Větší a rozmanitější data obecně pomáhají modelům naučit se širší a robustnější vzorce",
+    "Větší množství dat vždy zaručí dokonalý model bez chyb",
+    "Měřítko hraje roli jen u obrazových modelů, ne u textových",
+    "Více dat zmenší velikost modelu"
+   ],
+   "explanation": "Trénování na rozsáhlých a rozmanitých korpusech pomáhá LLM zachytit širokou škálu jazyka a znalostí, samotné měřítko však neodstraní chyby ani zaujatost.",
+   "csHash": "5b6eeeaaf30276c0"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-45",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 6,
+  "levelTitle": "Training Data & Datasets",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "training data",
+   "knowledge cutoff"
+  ],
+  "contentHash": "b0eefa996494ec58",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on knowledge cutoff.",
+  "question": "A model's 'knowledge cutoff' refers to:",
+  "options": [
+   "The point in time after which the model's training data does not include new information",
+   "A maximum number of questions it can answer",
+   "The moment the model is shut down",
+   "A limit on how long an answer can be"
+  ],
+  "correctAnswer": 0,
+  "explanation": "The knowledge cutoff is the date beyond which the model has no training data, so it is unaware of later events unless given new context or tools.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na hranici znalostí (knowledge cutoff).",
+   "question": "'Knowledge cutoff' (hranice znalostí) modelu označuje:",
+   "options": [
+    "Okamžik, po kterém už trénovací data modelu neobsahují nové informace",
+    "Maximální počet otázek, které dokáže zodpovědět",
+    "Okamžik, kdy je model vypnut",
+    "Omezení, jak dlouhá může být odpověď"
+   ],
+   "explanation": "Hranice znalostí je datum, za nímž už model nemá žádná trénovací data, takže o pozdějších událostech neví, pokud nedostane nový kontext nebo nástroje.",
+   "csHash": "27fe91e7c90246bd"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-46",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 6,
+  "levelTitle": "Training Data & Datasets",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "training data",
+   "bias"
+  ],
+  "contentHash": "019ac2cb5447a626",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on bias.",
+  "question": "How can bias enter an LLM?",
+  "options": [
+   "Only if a programmer deliberately codes it in by hand",
+   "Bias is impossible in AI systems",
+   "Only through the user's questions",
+   "Through biases present in the training data, which the model can learn and reproduce"
+  ],
+  "correctAnswer": 3,
+  "explanation": "Models learn statistical patterns from their data, so societal or sampling biases in that data can be absorbed and reflected in the model's outputs.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na zaujatost (bias).",
+   "question": "Jak se může do LLM dostat zaujatost (bias)?",
+   "options": [
+    "Jen pokud ji programátor záměrně ručně naprogramuje",
+    "Zaujatost je v AI systémech nemožná",
+    "Pouze prostřednictvím otázek uživatele",
+    "Prostřednictvím zaujatostí přítomných v trénovacích datech, které se model může naučit a reprodukovat"
+   ],
+   "explanation": "Modely se ze svých dat učí statistické vzorce, takže společenské nebo výběrové zaujatosti v těchto datech mohou být modelem převzaty a promítnuty do jeho výstupů.",
+   "csHash": "0d56a01e74592a7b"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-47",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 6,
+  "levelTitle": "Training Data & Datasets",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "training data",
+   "data cleaning"
+  ],
+  "contentHash": "63d6cb5fc8dff666",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on data cleaning.",
+  "question": "Why do AI developers often 'clean' or filter training data before pretraining?",
+  "options": [
+   "To make the files load faster only",
+   "To remove duplicates, spam, and harmful or low-quality content that could hurt the model",
+   "To translate everything into binary",
+   "To delete all punctuation"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Data cleaning and filtering remove noise, duplication, and harmful or low-value content, which generally improves the quality and safety of the trained model.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na čištění dat.",
+   "question": "Proč vývojáři AI často před předtrénováním trénovací data 'čistí' nebo filtrují?",
+   "options": [
+    "Pouze aby se soubory rychleji načítaly",
+    "Aby odstranili duplicity, spam a škodlivý nebo nekvalitní obsah, který by mohl modelu uškodit",
+    "Aby vše přeložili do binární podoby",
+    "Aby smazali veškerou interpunkci"
+   ],
+   "explanation": "Čištění a filtrování dat odstraní šum, duplicity a škodlivý nebo bezcenný obsah, což obecně zvyšuje kvalitu a bezpečnost natrénovaného modelu.",
+   "csHash": "ebc829c51f0d7781"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-48",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 6,
+  "levelTitle": "Training Data & Datasets",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "training data",
+   "representativeness",
+   "bias"
+  ],
+  "contentHash": "31fe81c731af8629",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on bias.",
+  "question": "Why is the representativeness (diversity) of a training dataset important?",
+  "options": [
+   "It is irrelevant as long as the data is large",
+   "Diversity only changes the model's color output",
+   "If some topics, languages, or groups are underrepresented, the model may perform worse on them",
+   "Representative data removes the need for any testing"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Gaps or imbalances in the data can lead to uneven performance, with the model doing worse on underrepresented topics, languages, or groups.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na zaujatost (bias).",
+   "question": "Proč je reprezentativnost (rozmanitost) trénovacího datasetu důležitá?",
+   "options": [
+    "Je nepodstatná, dokud jsou data dostatečně velká",
+    "Rozmanitost ovlivňuje jen barevný výstup modelu",
+    "Pokud jsou některá témata, jazyky nebo skupiny nedostatečně zastoupeny, model na nich může fungovat hůře",
+    "Reprezentativní data odstraní potřebu jakéhokoli testování"
+   ],
+   "explanation": "Mezery nebo nevyváženosti v datech mohou vést k nerovnoměrnému výkonu, kdy si model vede hůře u nedostatečně zastoupených témat, jazyků nebo skupin.",
+   "csHash": "814052d8dce39248"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-49",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 7,
+  "levelTitle": "Transformers & Attention",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "transformers",
+   "architecture"
+  ],
+  "contentHash": "9916a2d78b3c6f84",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on architecture.",
+  "question": "Most modern LLMs are built on which neural network architecture?",
+  "options": [
+   "The decision tree",
+   "The spreadsheet",
+   "The relational database",
+   "The transformer"
+  ],
+  "correctAnswer": 3,
+  "explanation": "The transformer architecture, introduced in 2017, underpins essentially all modern large language models.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na architekturu.",
+   "question": "Na jaké architektuře neuronové sítě je postavena většina moderních LLM?",
+   "options": [
+    "Rozhodovací strom",
+    "Tabulkový procesor",
+    "Relační databáze",
+    "Transformer"
+   ],
+   "explanation": "Architektura transformer, představená v roce 2017, tvoří v podstatě základ všech moderních velkých jazykových modelů.",
+   "csHash": "327677925f4978f5"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-50",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 7,
+  "levelTitle": "Transformers & Attention",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "transformers",
+   "attention"
+  ],
+  "contentHash": "3c3e34cffaf51883",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on attention.",
+  "question": "Why can self-attention be expensive for a very long input sequence?",
+  "options": [
+   "It must store the entire training dataset in each request",
+   "It can compare every token with every other token",
+   "It runs one separate model for every output token",
+   "It converts every token into a full source document"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Standard self-attention forms relationships between pairs of token positions, so its time and memory cost grows roughly with the square of sequence length.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na historii.",
+   "question": "Slavná práce z roku 2017, která představila architekturu transformer, nese název:",
+   "options": [
+    "'Gradient Descent for Everyone'",
+    "'Attention Is All You Need'",
+    "'Deep Blue Revisited'",
+    "'The Perceptron Manifesto'"
+   ],
+   "explanation": "'Attention Is All You Need' (Vaswani et al., 2017) představila transformer, který se místo rekurence opírá o mechanismy pozornosti (attention).",
+   "csHash": "be946d97dd047ecc"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-51",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 7,
+  "levelTitle": "Transformers & Attention",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "transformers",
+   "attention"
+  ],
+  "contentHash": "8e9b6c388af89e37",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on attention.",
+  "question": "What does the self-attention mechanism let a model do?",
+  "options": [
+   "Weigh the relevance of different tokens in the input to each other when forming representations",
+   "Pay attention to its own hardware temperature",
+   "Ignore all but the first word",
+   "Attend only to the most recent token"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Self-attention lets each token consider and weigh all other tokens in the sequence, capturing relationships and context regardless of distance.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost, která odpovídá jeho účelu. Zaměřte se na pozornost (attention).",
+   "question": "Co umožňuje modelu mechanismus self-attention?",
+   "options": [
+    "Vážit relevanci různých tokenů ve vstupu vůči sobě navzájem při tvorbě reprezentací",
+    "Sledovat teplotu vlastního hardwaru",
+    "Ignorovat vše kromě prvního slova",
+    "Věnovat se pouze nejnovějšímu tokenu"
+   ],
+   "explanation": "Self-attention umožňuje každému tokenu zvážit a posoudit všechny ostatní tokeny v sekvenci a zachytit tak vztahy a kontext bez ohledu na vzdálenost.",
+   "csHash": "491a0c2553029a9c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-52",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 7,
+  "levelTitle": "Transformers & Attention",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "transformers",
+   "parallelism",
+   "RNN"
+  ],
+  "contentHash": "430d51377eb38f49",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on RNN.",
+  "question": "A key practical advantage of transformers over older RNNs (recurrent neural networks) is:",
+  "options": [
+   "They require no training data",
+   "They never make mistakes",
+   "They use no memory",
+   "They process tokens in parallel rather than strictly one after another, enabling efficient training at scale"
+  ],
+  "correctAnswer": 3,
+  "explanation": "Unlike RNNs, which process sequences step by step, transformers can process all tokens in parallel, making them far more efficient to train on modern hardware.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na RNN.",
+   "question": "Klíčovou praktickou výhodou transformerů oproti starším RNN (rekurentním neuronovým sítím) je:",
+   "options": [
+    "Nepotřebují žádná trénovací data",
+    "Nikdy nedělají chyby",
+    "Nevyužívají žádnou paměť",
+    "Zpracovávají tokeny paralelně, nikoli striktně jeden po druhém, což umožňuje efektivní trénování ve velkém měřítku"
+   ],
+   "explanation": "Na rozdíl od RNN, které zpracovávají sekvence krok za krokem, dokážou transformery zpracovat všechny tokeny paralelně, díky čemuž jsou na moderním hardwaru mnohem efektivnější na trénování.",
+   "csHash": "941c9913f196c447"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-53",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 7,
+  "levelTitle": "Transformers & Attention",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "transformers",
+   "RNN"
+  ],
+  "contentHash": "55fcf84c7775c3ac",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on RNN.",
+  "question": "Why did RNNs struggle with very long sequences compared to transformers?",
+  "options": [
+   "Information had to pass step by step, making it hard to retain long-range dependencies",
+   "RNNs could not run on computers",
+   "RNNs ignored the first half of every input",
+   "RNNs required exactly four words of input"
+  ],
+  "correctAnswer": 0,
+  "explanation": "RNNs propagate information sequentially, which makes long-range dependencies hard to preserve. Attention lets transformers connect distant tokens directly.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na RNN.",
+   "question": "Proč měly RNN oproti transformerům potíže s velmi dlouhými sekvencemi?",
+   "options": [
+    "Informace musela procházet krok za krokem, což ztěžovalo uchování dlouhých závislostí",
+    "RNN nešlo spustit na počítačích",
+    "RNN ignorovaly první polovinu každého vstupu",
+    "RNN vyžadovaly přesně čtyři slova vstupu"
+   ],
+   "explanation": "RNN šíří informace sekvenčně, což ztěžuje zachování dlouhých závislostí. Mechanismus attention umožňuje transformerům propojit vzdálené tokeny napřímo.",
+   "csHash": "1931f57c024f037c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-54",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 7,
+  "levelTitle": "Transformers & Attention",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "transformers",
+   "positional encoding"
+  ],
+  "contentHash": "a6e23d4b241b9292",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on positional encoding.",
+  "question": "Because transformers do not process tokens in order inherently, they add 'positional encodings' in order to:",
+  "options": [
+   "Encrypt the input",
+   "Reduce the number of tokens",
+   "Give the model information about the order or position of tokens",
+   "Translate the text"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Self-attention is order-agnostic by itself, so positional encodings inject information about each token's position so word order is preserved.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na poziční kódování (positional encoding).",
+   "question": "Protože transformery samy o sobě nezpracovávají tokeny v pořadí, přidávají 'positional encodings' (poziční kódování) za účelem:",
+   "options": [
+    "Zašifrování vstupu",
+    "Snížení počtu tokenů",
+    "Poskytnutí informace o pořadí nebo pozici tokenů modelu",
+    "Překladu textu"
+   ],
+   "explanation": "Self-attention je sám o sobě nezávislý na pořadí, takže poziční kódování vkládá informaci o pozici každého tokenu, aby zůstalo zachováno pořadí slov.",
+   "csHash": "5d2f807c60ed5aaf"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-55",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 7,
+  "levelTitle": "Transformers & Attention",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "transformers",
+   "attention"
+  ],
+  "contentHash": "d0680db5c4b7d2ec",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on attention.",
+  "question": "What is 'multi-head attention' in a transformer?",
+  "options": [
+   "Using multiple separate computers",
+   "Attending to multiple users simultaneously",
+   "Running several attention mechanisms in parallel so the model can focus on different relationships at once",
+   "Stacking many output layers"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Multi-head attention runs several attention 'heads' in parallel, each able to learn different types of relationships among tokens, then combines them.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost, která odpovídá jeho účelu. Zaměřte se na pozornost (attention).",
+   "question": "Co je v transformeru 'multi-head attention'?",
+   "options": [
+    "Použití více samostatných počítačů",
+    "Současné věnování pozornosti více uživatelům",
+    "Souběžný běh několika mechanismů attention, aby se model mohl naráz soustředit na různé vztahy",
+    "Vrstvení mnoha výstupních vrstev"
+   ],
+   "explanation": "Multi-head attention spouští paralelně několik 'hlav' attention, z nichž každá se může naučit jiný typ vztahů mezi tokeny, a poté je spojuje dohromady.",
+   "csHash": "136a6ad61b3a1601"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-56",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 7,
+  "levelTitle": "Transformers & Attention",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "transformers",
+   "GPT"
+  ],
+  "contentHash": "18f95d7cba4bf105",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on GPT.",
+  "question": "A GPT-style model uses attention blocks rather than recurrence as its main sequence architecture. Which architecture is that?",
+  "options": [
+   "Translator",
+   "Transformer",
+   "Trainer",
+   "Tokenizer"
+  ],
+  "correctAnswer": 1,
+  "explanation": "GPT means Generative Pre-trained Transformer. Transformer names the attention-based architecture used by the model.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost, která odpovídá jeho účelu. Zaměřte se na GPT.",
+   "question": "Co znamená 'T' ve zkratce GPT u jazykových modelů založených na transformerech?",
+   "options": [
+    "Translator",
+    "Transformer",
+    "Trainer",
+    "Tokenizer"
+   ],
+   "explanation": "GPT znamená Generative Pre-trained Transformer, což odráží architekturu transformer v jeho jádru.",
+   "csHash": "e7130469a3b8d28d"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-57",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 8,
+  "levelTitle": "Prompting Basics",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "prompting",
+   "basics"
+  ],
+  "contentHash": "d28c67fcb21470d9",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on basics.",
+  "question": "In the context of LLMs, what is a 'prompt'?",
+  "options": [
+   "The model's internal weights",
+   "The input text or instructions you give the model to guide its response",
+   "An error message",
+   "The model's training dataset"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A prompt is the input, your question, instructions, or context, that you provide to the model to elicit a response.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost, která odpovídá jeho účelu. Zaměřte se na základy.",
+   "question": "Co je v kontextu LLM 'prompt'?",
+   "options": [
+    "Interní váhy modelu",
+    "Vstupní text nebo instrukce, které modelu zadáváte, abyste nasměrovali jeho odpověď",
+    "Chybová hláška",
+    "Trénovací dataset modelu"
+   ],
+   "explanation": "Prompt je vstup, vaše otázka, instrukce nebo kontext, který modelu poskytnete, abyste vyvolali odpověď.",
+   "csHash": "cf207d5ce2b13340"
+  },
+  "possibleDuplicates": [
+   "rm-ai-132",
+   "rm-ai-42",
+   "rm-ai-89"
+  ],
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-58",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 8,
+  "levelTitle": "Prompting Basics",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "prompting",
+   "zero-shot"
+  ],
+  "contentHash": "6945483792a8fbc2",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on zero-shot.",
+  "question": "What is 'zero-shot' prompting?",
+  "options": [
+   "Giving the model exactly zero instructions",
+   "Running the model with no training",
+   "Turning off the model",
+   "Asking the model to do a task without providing any examples in the prompt"
+  ],
+  "correctAnswer": 3,
+  "explanation": "Zero-shot prompting asks the model to perform a task directly, relying on its pretrained knowledge, without including worked examples.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost, která odpovídá jeho účelu. Zaměřte se na zero-shot.",
+   "question": "Co je 'zero-shot' prompting?",
+   "options": [
+    "Zadání přesně nulových instrukcí modelu",
+    "Spuštění modelu bez jakéhokoli trénování",
+    "Vypnutí modelu",
+    "Požádání modelu o splnění úlohy bez uvedení jakýchkoli příkladů v promptu"
+   ],
+   "explanation": "Zero-shot prompting žádá model, aby úlohu provedl napřímo a spoléhal přitom na své předtrénované znalosti, aniž by obsahoval názorné příklady.",
+   "csHash": "a012ddd7573df234"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-59",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 8,
+  "levelTitle": "Prompting Basics",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "prompting",
+   "few-shot"
+  ],
+  "contentHash": "478261de443081f4",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on few-shot.",
+  "question": "What is 'few-shot' prompting?",
+  "options": [
+   "Prompting only a few times per day",
+   "Using a model with few parameters",
+   "Including a small number of examples in the prompt to show the model the desired pattern",
+   "Limiting the answer to a few words"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Few-shot prompting provides a handful of input-output examples in the prompt so the model can infer the pattern and apply it to the new input.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost, která odpovídá jeho účelu. Zaměřte se na few-shot.",
+   "question": "Co je 'few-shot' prompting?",
+   "options": [
+    "Promptování jen několikrát denně",
+    "Použití modelu s malým počtem parametrů",
+    "Zahrnutí malého počtu příkladů do promptu, aby se modelu ukázal požadovaný vzorec",
+    "Omezení odpovědi na několik slov"
+   ],
+   "explanation": "Few-shot prompting poskytuje v promptu několik dvojic vstup-výstup, aby model mohl odvodit vzorec a aplikovat jej na nový vstup.",
+   "csHash": "815a3b563b60fb4c"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-60",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 8,
+  "levelTitle": "Prompting Basics",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "prompting",
+   "clarity"
+  ],
+  "contentHash": "9a9cdac5f490e0d0",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on clarity.",
+  "question": "Which prompt is most likely to produce a useful, focused answer?",
+  "options": [
+   "'Tell me about it.'",
+   "'Stuff.'",
+   "'Summarize this article in three bullet points for a beginner audience.'",
+   "'?'"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Clear, specific instructions, including the task, format, and audience, give the model the guidance it needs to produce a useful response.",
+  "cs": {
+   "hint": "Nejdříve vylučte možnosti, které lze vyřadit – odpovědí je často to, co zbude. Zaměřte se na srozumitelnost.",
+   "question": "Který prompt nejspíše přinese užitečnou a cílenou odpověď?",
+   "options": [
+    "'Řekni mi o tom.'",
+    "'Věci.'",
+    "'Shrň tento článek do tří odrážek pro začátečnické publikum.'",
+    "'?'"
+   ],
+   "explanation": "Jasné a konkrétní instrukce, včetně úlohy, formátu a publika, dávají modelu vodítka, která potřebuje k vytvoření užitečné odpovědi.",
+   "csHash": "9e026d9fa78c4fec"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-61",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 8,
+  "levelTitle": "Prompting Basics",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "prompting",
+   "clarity"
+  ],
+  "contentHash": "6e75df683a0c5658",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on clarity.",
+  "question": "Why does giving an LLM clear, specific instructions usually help?",
+  "options": [
+   "It reduces ambiguity, so the model is more likely to produce the output you actually want",
+   "It makes the model run on less power",
+   "It increases the number of tokens for no reason",
+   "It is required or the model will crash"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Specific instructions reduce ambiguity about the task, format, and goal, helping the model align its output with your intent.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na srozumitelnost.",
+   "question": "Proč obvykle pomáhá zadávat LLM jasné a konkrétní instrukce?",
+   "options": [
+    "Snižuje to víceznačnost, takže model spíše vytvoří výstup, který skutečně chcete",
+    "Způsobí to, že model poběží na nižší spotřebu energie",
+    "Zbytečně to zvyšuje počet tokenů",
+    "Je to nutné, jinak model spadne"
+   ],
+   "explanation": "Konkrétní instrukce snižují víceznačnost ohledně úlohy, formátu a cíle, čímž modelu pomáhají sladit výstup s vaším záměrem.",
+   "csHash": "6583ed648cdf7cc9"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-62",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 8,
+  "levelTitle": "Prompting Basics",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "prompting",
+   "roles"
+  ],
+  "contentHash": "8bdbc2774b4ef63d",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on roles.",
+  "question": "In chat-style LLM interfaces, what is the purpose of a 'system' role or system prompt?",
+  "options": [
+   "To set overall instructions, persona, or rules that guide the assistant's behavior",
+   "To store the user's password",
+   "To display advertisements",
+   "To translate the conversation"
+  ],
+  "correctAnswer": 0,
+  "explanation": "The system message provides high-level guidance, such as the assistant's role, tone, or constraints, that shapes how it responds throughout the conversation.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost, která odpovídá jeho účelu. Zaměřte se na role.",
+   "question": "K čemu slouží v chatovacích rozhraních LLM role 'system' neboli systémový prompt?",
+   "options": [
+    "K nastavení celkových instrukcí, persony nebo pravidel, která usměrňují chování asistenta",
+    "K uložení hesla uživatele",
+    "K zobrazování reklam",
+    "K překladu konverzace"
+   ],
+   "explanation": "Systémová zpráva poskytuje vodítka na vysoké úrovni, například roli, tón nebo omezení asistenta, která utvářejí způsob, jakým odpovídá v průběhu celé konverzace.",
+   "csHash": "13d0b11feed0f34c"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-63",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 8,
+  "levelTitle": "Prompting Basics",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "prompting",
+   "few-shot",
+   "examples"
+  ],
+  "contentHash": "6c264991a19470e8",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on examples.",
+  "question": "Including a few worked examples in a prompt is especially helpful when:",
+  "options": [
+   "You want the model to use less electricity",
+   "You want to hide information from the model",
+   "You never want consistent output",
+   "You want the output to follow a specific format or style the model might not guess"
+  ],
+  "correctAnswer": 3,
+  "explanation": "Examples demonstrate the exact format or style you want, which is useful when a plain instruction might leave the desired structure ambiguous.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na příklady.",
+   "question": "Zahrnutí několika názorných příkladů do promptu je obzvlášť užitečné, když:",
+   "options": [
+    "Chcete, aby model spotřeboval méně elektřiny",
+    "Chcete před modelem skrýt informace",
+    "Nikdy nechcete konzistentní výstup",
+    "Chcete, aby výstup dodržel konkrétní formát nebo styl, který by model nemusel uhodnout"
+   ],
+   "explanation": "Příklady ukazují přesný formát nebo styl, který chcete, což je užitečné, když by prostá instrukce ponechávala požadovanou strukturu víceznačnou.",
+   "csHash": "092c9d59916a76a2"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-64",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 8,
+  "levelTitle": "Prompting Basics",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "prompting",
+   "best practices"
+  ],
+  "contentHash": "03f6b59edea0c031",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on best practices.",
+  "question": "Which of the following is generally good prompting practice?",
+  "options": [
+   "Being vague so the model has freedom",
+   "Specifying the desired format, audience, and constraints clearly",
+   "Using as few relevant details as possible",
+   "Never giving any context"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Clearly stating the format, audience, and any constraints helps the model produce output that matches your needs.",
+  "cs": {
+   "hint": "Nejdříve vylučte možnosti, které lze vyřadit – odpovědí je často to, co zbude. Zaměřte se na osvědčené postupy.",
+   "question": "Co z následujícího je obecně dobrá praxe při promptování?",
+   "options": [
+    "Být vágní, aby měl model volnost",
+    "Jasně specifikovat požadovaný formát, publikum a omezení",
+    "Používat co nejméně relevantních detailů",
+    "Nikdy neuvádět žádný kontext"
+   ],
+   "explanation": "Jasné uvedení formátu, publika a případných omezení pomáhá modelu vytvořit výstup, který odpovídá vašim potřebám.",
+   "csHash": "6fa68e761e5136bd"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-65",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 9,
+  "levelTitle": "Context Windows",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "context window",
+   "basics"
+  ],
+  "contentHash": "2a2eb8ce2f7ede26",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on basics.",
+  "question": "What is an LLM's 'context window'?",
+  "options": [
+   "A pop-up window in the app",
+   "The model's training duration",
+   "The maximum amount of text (in tokens) the model can consider at once, including input and output",
+   "The size of the user's monitor"
+  ],
+  "correctAnswer": 2,
+  "explanation": "The context window is the maximum span of tokens the model can attend to in a single request, covering both the prompt and the generated response.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost, která odpovídá jeho účelu. Zaměřte se na základy.",
+   "question": "Co je u LLM 'context window' (kontextové okno)?",
+   "options": [
+    "Vyskakovací okno v aplikaci",
+    "Délka trénování modelu",
+    "Maximální množství textu (v tokenech), které model dokáže zvážit naráz, včetně vstupu i výstupu",
+    "Velikost monitoru uživatele"
+   ],
+   "explanation": "Kontextové okno je maximální rozsah tokenů, kterým se model může v rámci jednoho požadavku věnovat, a pokrývá jak prompt, tak vygenerovanou odpověď.",
+   "csHash": "deae1c7905adaf2d"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-66",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 9,
+  "levelTitle": "Context Windows",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "context window",
+   "tokens"
+  ],
+  "contentHash": "c5b8cbbb0aa56150",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on tokens.",
+  "question": "The context window is typically measured in:",
+  "options": [
+   "Tokens",
+   "Megabytes",
+   "Pixels",
+   "Seconds"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Context window size is expressed in tokens, the same units the model uses to read and generate text.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na tokeny.",
+   "question": "Kontextové okno se typicky měří v:",
+   "options": [
+    "Tokenech",
+    "Megabajtech",
+    "Pixelech",
+    "Sekundách"
+   ],
+   "explanation": "Velikost kontextového okna se vyjadřuje v tokenech, tedy ve stejných jednotkách, které model používá ke čtení a generování textu.",
+   "csHash": "239102faace68f78"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-67",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 9,
+  "levelTitle": "Context Windows",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "context window",
+   "truncation"
+  ],
+  "contentHash": "05db69a436752951",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on truncation.",
+  "question": "What usually happens if a conversation or document exceeds the model's context window?",
+  "options": [
+   "The model automatically gains more memory",
+   "The model translates it",
+   "Nothing; context windows are unlimited",
+   "Older or excess content must be truncated or dropped, so the model can lose access to it"
+  ],
+  "correctAnswer": 3,
+  "explanation": "When input exceeds the window, content must be trimmed or summarized; anything dropped is no longer directly visible to the model.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na zkracování (truncation).",
+   "question": "Co se obvykle stane, když konverzace nebo dokument překročí kontextové okno modelu?",
+   "options": [
+    "Model automaticky získá více paměti",
+    "Model jej přeloží",
+    "Nic; kontextová okna jsou neomezená",
+    "Starší nebo přebytečný obsah musí být oříznut nebo vypuštěn, takže k němu model může ztratit přístup"
+   ],
+   "explanation": "Když vstup překročí okno, musí být obsah ořezán nebo shrnut; cokoli vypuštěného už není pro model přímo viditelné.",
+   "csHash": "30d7898929818edf"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-68",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 9,
+  "levelTitle": "Context Windows",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "context window",
+   "tokens"
+  ],
+  "contentHash": "0b0a63c79ef2b508",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on tokens.",
+  "question": "Within a single request, the context window must accommodate:",
+  "options": [
+   "Only the input prompt",
+   "Both the input tokens and the output tokens together",
+   "Only the model's output",
+   "Neither input nor output"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The context window is shared by the prompt and the generated response, so a very long prompt leaves less room for output, and vice versa.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na tokeny.",
+   "question": "V rámci jednoho požadavku musí kontextové okno pojmout:",
+   "options": [
+    "Pouze vstupní prompt",
+    "Vstupní i výstupní tokeny dohromady",
+    "Pouze výstup modelu",
+    "Ani vstup, ani výstup"
+   ],
+   "explanation": "Kontextové okno sdílí prompt i vygenerovaná odpověď, takže velmi dlouhý prompt ponechává méně místa pro výstup a naopak.",
+   "csHash": "f156d03bf456252a"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-69",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 9,
+  "levelTitle": "Context Windows",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "context window",
+   "long context"
+  ],
+  "contentHash": "8fa914fd47304d95",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on long context.",
+  "question": "Why is a larger context window useful?",
+  "options": [
+   "It makes the model immune to mistakes",
+   "It removes the need for any prompt",
+   "It lets the model consider more information at once, such as long documents or longer conversations",
+   "It always makes responses shorter"
+  ],
+  "correctAnswer": 2,
+  "explanation": "A bigger context window allows the model to take in more text, like lengthy documents or extended chats, without losing earlier content.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na dlouhý kontext.",
+   "question": "Proč je větší kontextové okno užitečné?",
+   "options": [
+    "Učiní model imunním vůči chybám",
+    "Odstraní potřebu jakéhokoli promptu",
+    "Umožní modelu zvážit naráz více informací, například dlouhé dokumenty nebo delší konverzace",
+    "Vždy zkrátí odpovědi"
+   ],
+   "explanation": "Větší kontextové okno umožňuje modelu pojmout více textu, jako jsou rozsáhlé dokumenty nebo delší konverzace, aniž by ztratil dřívější obsah.",
+   "csHash": "1ee1a065974d20e3"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-70",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 9,
+  "levelTitle": "Context Windows",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "context window",
+   "current"
+  ],
+  "contentHash": "e40fcf5978945afc",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on current.",
+  "question": "Which statement about modern LLM context windows (as of 2024-2026) is most accurate?",
+  "options": [
+   "Many leading models now support very large windows, on the order of hundreds of thousands of tokens or more",
+   "They are all fixed at exactly 100 tokens",
+   "No model can exceed 1,000 tokens",
+   "Context windows have shrunk over time"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Context windows have grown dramatically; several frontier models now handle hundreds of thousands of tokens, and some advertise around a million.",
+  "cs": {
+   "hint": "Nejdříve vylučte možnosti, které lze vyřadit – odpovědí je často to, co zbude. Zaměřte se na současnost.",
+   "question": "Které tvrzení o moderních kontextových oknech LLM (k období 2024–2026) je nejpřesnější?",
+   "options": [
+    "Mnoho předních modelů nyní podporuje velmi velká okna v řádu stovek tisíc tokenů i více",
+    "Všechna jsou pevně nastavena přesně na 100 tokenů",
+    "Žádný model nedokáže překročit 1 000 tokenů",
+    "Kontextová okna se v průběhu času zmenšila"
+   ],
+   "explanation": "Kontextová okna dramaticky vzrostla; několik špičkových modelů nyní zvládá stovky tisíc tokenů a některé uvádějí kolem jednoho milionu.",
+   "csHash": "a7071e40a62d783d"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-71",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 9,
+  "levelTitle": "Context Windows",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "context window",
+   "cost",
+   "best practices"
+  ],
+  "contentHash": "fd2832ffd82e6818",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on best practices.",
+  "question": "A practical reason to manage context length (rather than always sending everything) is:",
+  "options": [
+   "Longer context always improves accuracy with no downside",
+   "More tokens can increase cost and latency, and very long inputs may dilute the model's focus",
+   "Models charge per word regardless of tokens",
+   "Context length has no effect on cost"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Sending more tokens raises cost and can slow responses, and stuffing the window with irrelevant text can make it harder for the model to focus on what matters.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na osvědčené postupy.",
+   "question": "Praktickým důvodem k řízení délky kontextu (namísto stálého posílání všeho) je:",
+   "options": [
+    "Delší kontext vždy zvyšuje přesnost bez jakýchkoli nevýhod",
+    "Více tokenů může zvýšit náklady a latenci a velmi dlouhé vstupy mohou rozmělnit zaměření modelu",
+    "Modely účtují za slovo bez ohledu na tokeny",
+    "Délka kontextu nemá na náklady žádný vliv"
+   ],
+   "explanation": "Posílání většího počtu tokenů zvyšuje náklady a může zpomalit odpovědi, a zaplnění okna irelevantním textem může modelu ztížit soustředění na to podstatné.",
+   "csHash": "ec489e9cfaf86be4"
+  },
+  "automatedFlags": [
+   "absolute/test-taking language in stem",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-72",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 9,
+  "levelTitle": "Context Windows",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "context window",
+   "memory"
+  ],
+  "contentHash": "f3f158681806d2c4",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on memory.",
+  "question": "Because an LLM is generally stateless between separate API calls, how does it 'remember' earlier parts of a conversation?",
+  "options": [
+   "It permanently stores every chat in its weights",
+   "It cannot use any earlier information ever",
+   "It downloads the history from the internet",
+   "The prior conversation is re-sent as part of the context in each request"
+  ],
+  "correctAnswer": 3,
+  "explanation": "By default, the model does not retain memory between calls; conversation history is included in the context window of each new request so it stays available.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na paměť.",
+   "question": "Protože LLM je mezi jednotlivými API voláními obvykle bezstavový (stateless), jak si 'pamatuje' dřívější části konverzace?",
+   "options": [
+    "Trvale ukládá každý chat do svých vah",
+    "Nemůže nikdy použít žádnou dřívější informaci",
+    "Stahuje historii z internetu",
+    "Předchozí konverzace se v každém požadavku znovu odešle jako součást kontextu"
+   ],
+   "explanation": "Ve výchozím nastavení si model mezi voláními neuchovává paměť; historie konverzace je zahrnuta do kontextového okna každého nového požadavku, aby zůstala k dispozici.",
+   "csHash": "1cc87ea5be49d95a"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-73",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 10,
+  "levelTitle": "Embeddings & Vectors",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "embeddings",
+   "basics"
+  ],
+  "contentHash": "94ab60c464dc8efb",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on basics.",
+  "question": "What is a text 'embedding'?",
+  "options": [
+   "A picture embedded in a document",
+   "A numerical vector that represents the meaning of text in a way computers can compare",
+   "A font style for displaying text",
+   "A compressed zip file of text"
+  ],
+  "correctAnswer": 1,
+  "explanation": "An embedding is a vector of numbers that captures semantic meaning, so that similar texts have similar vectors.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost, která odpovídá jeho účelu. Zaměřte se na základy.",
+   "question": "Co je textový 'embedding'?",
+   "options": [
+    "Obrázek vložený do dokumentu",
+    "Číselný vektor, který reprezentuje význam textu způsobem, jaký mohou počítače porovnávat",
+    "Styl písma pro zobrazení textu",
+    "Komprimovaný zip soubor s textem"
+   ],
+   "explanation": "Embedding je vektor čísel, který zachycuje sémantický význam tak, že podobné texty mají podobné vektory.",
+   "csHash": "c2f5992e5b4b39f1"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-74",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 10,
+  "levelTitle": "Embeddings & Vectors",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "embeddings",
+   "similarity"
+  ],
+  "contentHash": "06db3e37fbc25694",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on similarity.",
+  "question": "A key property of good text embeddings is that:",
+  "options": [
+   "Texts with similar meaning have vectors that are close together",
+   "Every text maps to the exact same vector",
+   "Vectors are always two-dimensional",
+   "Embeddings can only represent single letters"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Quality embeddings place semantically similar texts near each other in vector space, enabling meaning-based comparison.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na podobnost.",
+   "question": "Klíčovou vlastností dobrých textových embeddingů je, že:",
+   "options": [
+    "Texty s podobným významem mají vektory, které jsou blízko u sebe",
+    "Každý text se mapuje na úplně stejný vektor",
+    "Vektory jsou vždy dvourozměrné",
+    "Embeddingy mohou reprezentovat pouze jednotlivá písmena"
+   ],
+   "explanation": "Kvalitní embeddingy umisťují sémanticky podobné texty blízko sebe ve vektorovém prostoru, což umožňuje porovnávání založené na významu.",
+   "csHash": "47dfe8ff3fe8acd2"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-75",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 10,
+  "levelTitle": "Embeddings & Vectors",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "embeddings",
+   "similarity"
+  ],
+  "contentHash": "6458dfb979c64941",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on similarity.",
+  "question": "Which measure is commonly used to compare how similar two embedding vectors are?",
+  "options": [
+   "Spell check",
+   "Cosine similarity",
+   "Word count",
+   "File size"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Cosine similarity measures the angle between two vectors and is a standard way to gauge semantic similarity between embeddings.",
+  "cs": {
+   "hint": "Nejdříve vylučte možnosti, které lze vyřadit – odpovědí je často to, co zbude. Zaměřte se na podobnost.",
+   "question": "Která míra se běžně používá k porovnání, jak podobné jsou dva embeddingové vektory?",
+   "options": [
+    "Kontrola pravopisu",
+    "Kosinová podobnost (cosine similarity)",
+    "Počet slov",
+    "Velikost souboru"
+   ],
+   "explanation": "Kosinová podobnost měří úhel mezi dvěma vektory a je standardním způsobem, jak posoudit sémantickou podobnost mezi embeddingy.",
+   "csHash": "747c901a95f16fc1"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-76",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 10,
+  "levelTitle": "Embeddings & Vectors",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "embeddings",
+   "semantic search"
+  ],
+  "contentHash": "2f65a6aeaa9b4fba",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on semantic search.",
+  "question": "What is 'semantic search'?",
+  "options": [
+   "Searching only for exact keyword matches",
+   "Searching alphabetically",
+   "Searching based on meaning, using embeddings to find conceptually similar results even if the words differ",
+   "Searching by file date only"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Semantic search uses embeddings to match on meaning rather than exact keywords, so 'car' can match 'automobile' if they are semantically close.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost, která odpovídá jeho účelu. Zaměřte se na sémantické vyhledávání.",
+   "question": "Co je 'sémantické vyhledávání'?",
+   "options": [
+    "Vyhledávání pouze přesných shod klíčových slov",
+    "Vyhledávání podle abecedy",
+    "Vyhledávání na základě významu, které pomocí embeddingů najde konceptuálně podobné výsledky, i když se slova liší",
+    "Vyhledávání pouze podle data souboru"
+   ],
+   "explanation": "Sémantické vyhledávání používá embeddingy k porovnávání podle významu namísto přesných klíčových slov, takže 'auto' může odpovídat slovu 'automobil', pokud jsou si sémanticky blízké.",
+   "csHash": "197c21e019457525"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-77",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 10,
+  "levelTitle": "Embeddings & Vectors",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "embeddings",
+   "vector database"
+  ],
+  "contentHash": "6c941f163386a691",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on vector database.",
+  "question": "What is a vector database primarily designed to do?",
+  "options": [
+   "Store only plain text with no structure",
+   "Render 3D graphics",
+   "Replace all spreadsheets",
+   "Store and efficiently search high-dimensional embedding vectors by similarity"
+  ],
+  "correctAnswer": 3,
+  "explanation": "Vector databases are optimized to store embeddings and quickly retrieve the most similar vectors to a query, powering semantic search and retrieval.",
+  "cs": {
+   "hint": "Připomeňte si, k čemu daný koncept slouží, a vyberte možnost, která odpovídá jeho účelu. Zaměřte se na vektorovou databázi.",
+   "question": "K čemu je vektorová databáze primárně určena?",
+   "options": [
+    "K ukládání pouze prostého textu bez struktury",
+    "K vykreslování 3D grafiky",
+    "K nahrazení všech tabulkových procesorů",
+    "K ukládání a efektivnímu vyhledávání vysokorozměrných embeddingových vektorů podle podobnosti"
+   ],
+   "explanation": "Vektorové databáze jsou optimalizovány pro ukládání embeddingů a rychlé získávání vektorů nejpodobnějších dotazu, čímž pohánějí sémantické vyhledávání a získávání informací.",
+   "csHash": "ceef86be9551c9c9"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-78",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 10,
+  "levelTitle": "Embeddings & Vectors",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "embeddings",
+   "RAG"
+  ],
+  "contentHash": "4bfab6b53bfe047b",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on RAG.",
+  "question": "In retrieval-augmented generation (RAG), embeddings are typically used to:",
+  "options": [
+   "Find relevant documents to retrieve and add to the prompt so the LLM can use them",
+   "Train the model from scratch each time",
+   "Replace the language model entirely",
+   "Encrypt the user's data"
+  ],
+  "correctAnswer": 0,
+  "explanation": "RAG embeds a query, retrieves the most similar stored documents, and inserts them into the prompt so the LLM can ground its answer in that content.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na RAG.",
+   "question": "V retrieval-augmented generation (RAG) se embeddingy typicky používají k:",
+   "options": [
+    "Nalezení relevantních dokumentů, které se získají a přidají do promptu, aby je LLM mohl využít",
+    "Trénování modelu od nuly pokaždé znovu",
+    "Úplnému nahrazení jazykového modelu",
+    "Zašifrování dat uživatele"
+   ],
+   "explanation": "RAG vytvoří embedding dotazu, získá nejpodobnější uložené dokumenty a vloží je do promptu, aby LLM mohl svou odpověď opřít o tento obsah.",
+   "csHash": "b014a8c2bae456fd"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-79",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 10,
+  "levelTitle": "Embeddings & Vectors",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "embeddings",
+   "vectors"
+  ],
+  "contentHash": "810b9fe0be63add5",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on vectors.",
+  "question": "Each number (dimension) in an embedding vector roughly corresponds to:",
+  "options": [
+   "A specific letter of the alphabet",
+   "The position of the text on the page",
+   "A learned feature of meaning, not usually human-interpretable on its own",
+   "The color of the text"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Embedding dimensions encode learned latent features of meaning; individual dimensions are generally not directly interpretable by humans.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na vektory.",
+   "question": "Každé číslo (dimenze) v embeddingovém vektoru zhruba odpovídá:",
+   "options": [
+    "Konkrétnímu písmenu abecedy",
+    "Pozici textu na stránce",
+    "Naučenému rysu významu, který obvykle není sám o sobě člověkem interpretovatelný",
+    "Barvě textu"
+   ],
+   "explanation": "Dimenze embeddingu kódují naučené latentní rysy významu; jednotlivé dimenze obecně nejsou pro člověka přímo interpretovatelné.",
+   "csHash": "a0c3dbc31dbef185"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-ai-80",
+  "delivery": "active",
+  "category": "ai",
+  "topic": "ai",
+  "level": 10,
+  "levelTitle": "Embeddings & Vectors",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "embeddings",
+   "applications"
+  ],
+  "contentHash": "d80ce4bece669c26",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on applications.",
+  "question": "Why are embeddings useful for tasks like clustering or recommendations?",
+  "options": [
+   "They make text unreadable",
+   "They delete duplicate words",
+   "They only work on images",
+   "They turn text into numbers whose distances reflect semantic relationships, which algorithms can operate on"
+  ],
+  "correctAnswer": 3,
+  "explanation": "By converting text into meaningful numeric vectors, embeddings let standard algorithms measure similarity, group related items, and power recommendations.",
+  "cs": {
+   "hint": "Zaměřte se na hlavní myšlenku, kterou otázka prověřuje, a vylučte možnosti, které zjevně nesedí. Zaměřte se na aplikace.",
+   "question": "Proč jsou embeddingy užitečné pro úlohy jako shlukování (clustering) nebo doporučování?",
+   "options": [
+    "Činí text nečitelným",
+    "Mažou duplicitní slova",
+    "Fungují pouze na obrázcích",
+    "Převádějí text na čísla, jejichž vzdálenosti odrážejí sémantické vztahy, s nimiž mohou algoritmy pracovat"
+   ],
+   "explanation": "Tím, že převádějí text na smysluplné číselné vektory, umožňují embeddingy běžným algoritmům měřit podobnost, seskupovat související položky a pohánět doporučování.",
+   "csHash": "1a4c5ff58f32c1d6"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ }
+]

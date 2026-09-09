@@ -1,0 +1,4035 @@
+[
+ {
+  "id": "rm-node-101",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 13,
+  "levelTitle": "Callbacks & Promisify",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Callbacks"
+  ],
+  "contentHash": "48f9ee78b5f5fade",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Callbacks.",
+  "question": "After promisifying a function, you can use:",
+  "options": [
+   "require",
+   "await",
+   "emit",
+   "pipe"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Once it returns a Promise, you can await the result instead of nesting callbacks.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na callbacky.",
+   "question": "Po promisifikaci funkce můžeš použít:",
+   "options": [
+    "require",
+    "await",
+    "emit",
+    "pipe"
+   ],
+   "explanation": "Jakmile funkce vrací Promise, můžeš na výsledek použít await místo vnořování callbacků.",
+   "csHash": "0b4bf624c89be2be"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-102",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 13,
+  "levelTitle": "Callbacks & Promisify",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Callbacks"
+  ],
+  "contentHash": "f5e9ef3836538fdf",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Callbacks.",
+  "question": "In `fs.readFile(path, cb)`, what is the callback’s first argument?",
+  "options": [
+   "The file data",
+   "The error (or null)",
+   "The encoding",
+   "The path"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The first callback argument is the error, which is null on success.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na callbacky.",
+   "question": "Co je v `fs.readFile(path, cb)` první argument callbacku?",
+   "options": [
+    "Data souboru",
+    "Chyba (nebo null)",
+    "Kódování",
+    "Cesta"
+   ],
+   "explanation": "První argument callbacku je chyba, která je při úspěchu null.",
+   "csHash": "37d88bdf859b62b7"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-103",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 13,
+  "levelTitle": "Callbacks & Promisify",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Callbacks"
+  ],
+  "contentHash": "3711f2f0df34d7da",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Callbacks.",
+  "question": "Converting nested callbacks to Promises mainly improves:",
+  "options": [
+   "Raw speed",
+   "Readability and error flow",
+   "Memory usage",
+   "Bundle size"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Promises/async-await flatten nesting and centralize error handling.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na callbacky.",
+   "question": "Převod vnořených callbacků na Promises zlepšuje hlavně:",
+   "options": [
+    "Čistou rychlost",
+    "Čitelnost a tok chyb",
+    "Spotřebu paměti",
+    "Velikost bundlu"
+   ],
+   "explanation": "Promises/async-await zploští vnořování a centralizují zpracování chyb.",
+   "csHash": "f4dd79c87c46f031"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-104",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 13,
+  "levelTitle": "Callbacks & Promisify",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Callbacks"
+  ],
+  "contentHash": "d70f28f30730fa46",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Callbacks.",
+  "question": "A callback that is accidentally invoked twice is:",
+  "options": [
+   "Expected",
+   "A bug — it should be called exactly once",
+   "Required for streams",
+   "How retries work"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Error-first callbacks must be called once; double-calling causes subtle bugs.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na callbacky.",
+   "question": "Callback, který se omylem zavolá dvakrát, je:",
+   "options": [
+    "Očekávaný",
+    "Chyba — měl by se volat přesně jednou",
+    "Nutný pro streamy",
+    "Způsob, jak fungují opakované pokusy"
+   ],
+   "explanation": "Error-first callbacky musí být volány jednou; dvojí volání způsobuje záludné chyby.",
+   "csHash": "7f9b1ea283a60cee"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-105",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 14,
+  "levelTitle": "Async / Await",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Async"
+  ],
+  "contentHash": "f81bdb42cb29bbfa",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Async.",
+  "question": "What does an `async` function always return?",
+  "options": [
+   "undefined",
+   "A Promise",
+   "The awaited value directly",
+   "A callback"
+  ],
+  "correctAnswer": 1,
+  "explanation": "An async function wraps its return value in a Promise.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na async.",
+   "question": "Co vždy vrací `async` funkce?",
+   "options": [
+    "undefined",
+    "Promise",
+    "Přímo awaitovanou hodnotu",
+    "Callback"
+   ],
+   "explanation": "Async funkce zabalí svou návratovou hodnotu do Promise.",
+   "csHash": "7018cbf782f07a55"
+  },
+  "automatedFlags": [
+   "absolute/test-taking language in stem",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-106",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 14,
+  "levelTitle": "Async / Await",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Async"
+  ],
+  "contentHash": "59bbead5945ef09a",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Async.",
+  "question": "What does `await` do?",
+  "options": [
+   "Blocks all threads",
+   "Pauses the async function until the promise settles",
+   "Cancels the promise",
+   "Creates a new thread"
+  ],
+  "correctAnswer": 1,
+  "explanation": "await suspends the async function (not the whole process) until the awaited promise resolves or rejects.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na async.",
+   "question": "Co dělá `await`?",
+   "options": [
+    "Blokuje všechna vlákna",
+    "Pozastaví async funkci, dokud se promise nevyřeší",
+    "Zruší promise",
+    "Vytvoří nové vlákno"
+   ],
+   "explanation": "await pozastaví async funkci (ne celý proces), dokud se awaitovaný promise nevyřeší nebo neodmítne.",
+   "csHash": "14644aeef461c4d5"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-107",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 14,
+  "levelTitle": "Async / Await",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Async"
+  ],
+  "contentHash": "6e18987bb108cadc",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Async.",
+  "question": "What happens when you `await` a rejected promise?",
+  "options": [
+   "It returns undefined",
+   "It throws, which you can catch",
+   "It retries",
+   "It is ignored"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Awaiting a rejected promise throws the rejection reason at the await point.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na async.",
+   "question": "Co se stane, když uděláš `await` na odmítnutém promisu?",
+   "options": [
+    "Vrátí undefined",
+    "Vyhodí výjimku, kterou můžeš zachytit",
+    "Zopakuje pokus",
+    "Je ignorováno"
+   ],
+   "explanation": "Await na odmítnutém promisu vyhodí v místě await důvod odmítnutí.",
+   "csHash": "dd294ff952f86075"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-108",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 14,
+  "levelTitle": "Async / Await",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Async"
+  ],
+  "contentHash": "038a69470658105c",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Async.",
+  "question": "How do you handle errors with async/await?",
+  "options": [
+   ".catch only",
+   "try/catch around the await",
+   "process.exit",
+   "Ignore them"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Wrap awaited calls in try/catch to handle rejections like synchronous errors.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na async.",
+   "question": "Jak ošetříš chyby s async/await?",
+   "options": [
+    "Pouze .catch",
+    "try/catch kolem await",
+    "process.exit",
+    "Ignorovat je"
+   ],
+   "explanation": "Awaitovaná volání obal do try/catch, abys odmítnutí ošetřil jako synchronní chyby.",
+   "csHash": "c1fae7220626b081"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-109",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 14,
+  "levelTitle": "Async / Await",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Async"
+  ],
+  "contentHash": "49605ae9aae64bfc",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Async.",
+  "question": "How do you run several promises concurrently and wait for all?",
+  "options": [
+   "Await them one by one",
+   "Promise.all([...])",
+   "A for-loop with await",
+   "setTimeout"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Promise.all runs the promises concurrently and resolves when all complete.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na async.",
+   "question": "Jak spustíš několik promisů souběžně a počkáš na všechny?",
+   "options": [
+    "Awaitovat je jeden po druhém",
+    "Promise.all([...])",
+    "Cyklus for s await",
+    "setTimeout"
+   ],
+   "explanation": "Promise.all spustí promisy souběžně a vyřeší se, až jsou všechny hotové.",
+   "csHash": "26beb4c9b00d59c1"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-110",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 14,
+  "levelTitle": "Async / Await",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Async"
+  ],
+  "contentHash": "5181c27e726bbb89",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Async.",
+  "question": "Using `await` inside a normal for-loop runs the iterations:",
+  "options": [
+   "In parallel",
+   "Sequentially, one after another",
+   "Randomly",
+   "Never"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Awaiting inside a loop waits for each iteration before starting the next — they run in series.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na async.",
+   "question": "Použití `await` uvnitř běžného cyklu for spouští iterace:",
+   "options": [
+    "Paralelně",
+    "Sekvenčně, jednu po druhé",
+    "Náhodně",
+    "Nikdy"
+   ],
+   "explanation": "Await uvnitř cyklu čeká na každou iteraci, než začne další — běží sériově.",
+   "csHash": "ab53a9fe7c1d607e"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-111",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 14,
+  "levelTitle": "Async / Await",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Async"
+  ],
+  "contentHash": "5d5151940c8c78ec",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Async.",
+  "question": "How does `Promise.allSettled` differ from `Promise.all`?",
+  "options": [
+   "It rejects faster",
+   "It waits for all and never short-circuits on rejection",
+   "It runs sequentially",
+   "It only takes two promises"
+  ],
+  "correctAnswer": 1,
+  "explanation": "allSettled resolves once every promise settles, reporting each as fulfilled or rejected.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na async.",
+   "question": "Jak se `Promise.allSettled` liší od `Promise.all`?",
+   "options": [
+    "Odmítá rychleji",
+    "Počká na všechny a nikdy se nezkratuje při odmítnutí",
+    "Běží sekvenčně",
+    "Přijímá jen dva promisy"
+   ],
+   "explanation": "allSettled se vyřeší, jakmile se každý promise vyřeší, a každý nahlásí jako splněný nebo odmítnutý.",
+   "csHash": "25edcea6719a5d81"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-112",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 14,
+  "levelTitle": "Async / Await",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Async"
+  ],
+  "contentHash": "b2dbc71460d822db",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Async.",
+  "question": "async/await is syntactic sugar over:",
+  "options": [
+   "Callbacks",
+   "Promises",
+   "Streams",
+   "Events"
+  ],
+  "correctAnswer": 1,
+  "explanation": "async/await is built on top of Promises, making asynchronous code read synchronously.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na async.",
+   "question": "async/await je syntaktický cukr nad:",
+   "options": [
+    "Callbacky",
+    "Promises",
+    "Streamy",
+    "Eventy"
+   ],
+   "explanation": "async/await je postaveno na Promises a umožňuje číst asynchronní kód synchronně.",
+   "csHash": "67c8409f97b3c537"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-113",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 15,
+  "levelTitle": "Environment & CLI",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "CLI"
+  ],
+  "contentHash": "eaa9a117e4918984",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on CLI.",
+  "question": "How do you read an environment variable named API_KEY?",
+  "options": [
+   "process.get(\"API_KEY\")",
+   "process.env.API_KEY",
+   "env(\"API_KEY\")",
+   "global.API_KEY"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Environment variables are accessed via process.env.<NAME>.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na CLI.",
+   "question": "Jak přečteš proměnnou prostředí s názvem API_KEY?",
+   "options": [
+    "process.get(\"API_KEY\")",
+    "process.env.API_KEY",
+    "env(\"API_KEY\")",
+    "global.API_KEY"
+   ],
+   "explanation": "K proměnným prostředí se přistupuje přes process.env.<NÁZEV>.",
+   "csHash": "c34dcdbe42861052"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-114",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 15,
+  "levelTitle": "Environment & CLI",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "CLI"
+  ],
+  "contentHash": "0f45102ea5e3b06c",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on CLI.",
+  "question": "What is `process.argv[0]`?",
+  "options": [
+   "The first user argument",
+   "The path to the node executable",
+   "The script name",
+   "The exit code"
+  ],
+  "correctAnswer": 1,
+  "explanation": "argv[0] is the node binary path; argv[1] is the script; argv[2]+ are user args.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na CLI.",
+   "question": "Co je `process.argv[0]`?",
+   "options": [
+    "První uživatelský argument",
+    "Cesta ke spustitelnému souboru node",
+    "Název skriptu",
+    "Návratový kód"
+   ],
+   "explanation": "argv[0] je cesta k binárce node; argv[1] je skript; argv[2]+ jsou uživatelské argumenty.",
+   "csHash": "adc81cd78c0fa2ae"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-115",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 15,
+  "levelTitle": "Environment & CLI",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "CLI"
+  ],
+  "contentHash": "3caad018b0d906ac",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on CLI.",
+  "question": "What is `process.argv[2]`?",
+  "options": [
+   "The node path",
+   "The script path",
+   "The first user-supplied argument",
+   "Always undefined"
+  ],
+  "correctAnswer": 2,
+  "explanation": "The first argument the user passes appears at index 2 of process.argv.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na CLI.",
+   "question": "Co je `process.argv[2]`?",
+   "options": [
+    "Cesta k node",
+    "Cesta ke skriptu",
+    "První argument zadaný uživatelem",
+    "Vždy undefined"
+   ],
+   "explanation": "První argument, který uživatel předá, se objeví na indexu 2 v process.argv.",
+   "csHash": "5d431caf427b8bf8"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-116",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 15,
+  "levelTitle": "Environment & CLI",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "CLI"
+  ],
+  "contentHash": "d2e506468bb59b0f",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on CLI.",
+  "question": "How do you set an env var inline on Unix when running a script?",
+  "options": [
+   "node app.js --PORT 3000",
+   "PORT=3000 node app.js",
+   "set PORT 3000",
+   "env.PORT = 3000"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Prefixing the command with NAME=value sets the variable for that process: PORT=3000 node app.js.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na CLI.",
+   "question": "Jak nastavíš proměnnou prostředí inline na Unixu při spuštění skriptu?",
+   "options": [
+    "node app.js --PORT 3000",
+    "PORT=3000 node app.js",
+    "set PORT 3000",
+    "env.PORT = 3000"
+   ],
+   "explanation": "Předřazení NAME=value před příkaz nastaví proměnnou pro daný proces: PORT=3000 node app.js.",
+   "csHash": "4b4000f1daa336d2"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-117",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 15,
+  "levelTitle": "Environment & CLI",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "CLI"
+  ],
+  "contentHash": "92964d1b42f3749f",
+  "hint": "Check the statement against the normal case and one likely edge case. Focus on CLI.",
+  "question": "Are `.env` files loaded automatically by Node by default?",
+  "options": [
+   "Yes, always",
+   "No — use a loader (dotenv) or --env-file",
+   "Only in production",
+   "Only with TypeScript"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Historically Node didn’t read .env on its own; you use dotenv or the newer --env-file flag.",
+  "cs": {
+   "hint": "Rozhodni, zda to platí obecně, a dej pozor na hraniční případy. Mysli na CLI.",
+   "question": "Načítá Node soubory `.env` automaticky ve výchozím nastavení?",
+   "options": [
+    "Ano, vždy",
+    "Ne — použij loader (dotenv) nebo --env-file",
+    "Jen v produkci",
+    "Jen s TypeScriptem"
+   ],
+   "explanation": "Historicky Node sám .env nečetl; používá se dotenv nebo novější flag --env-file.",
+   "csHash": "0a02d087d5c63fd4"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-118",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 15,
+  "levelTitle": "Environment & CLI",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "CLI"
+  ],
+  "contentHash": "ac1052534356537e",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on CLI.",
+  "question": "An exit code of 0 from a process conventionally means:",
+  "options": [
+   "An error",
+   "Success",
+   "A warning",
+   "A timeout"
+  ],
+  "correctAnswer": 1,
+  "explanation": "By convention exit code 0 indicates success; non-zero indicates failure.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na CLI.",
+   "question": "Návratový kód 0 z procesu konvenčně znamená:",
+   "options": [
+    "Chybu",
+    "Úspěch",
+    "Varování",
+    "Vypršení času"
+   ],
+   "explanation": "Podle konvence návratový kód 0 značí úspěch; nenulový značí selhání.",
+   "csHash": "415842dbff497f94"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-119",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 15,
+  "levelTitle": "Environment & CLI",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "CLI"
+  ],
+  "contentHash": "0d5dd60fb002bcca",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on CLI.",
+  "question": "Which stream reads input typed by the user?",
+  "options": [
+   "process.stdout",
+   "process.stdin",
+   "process.stderr",
+   "process.env"
+  ],
+  "correctAnswer": 1,
+  "explanation": "process.stdin is the readable stream for standard input.",
+  "cs": {
+   "hint": "Nejprve vyluč možnosti, které lze vyloučit — odpovědí je často to, co zbude. Mysli na CLI.",
+   "question": "Který stream čte vstup zadaný uživatelem?",
+   "options": [
+    "process.stdout",
+    "process.stdin",
+    "process.stderr",
+    "process.env"
+   ],
+   "explanation": "process.stdin je čitelný stream pro standardní vstup.",
+   "csHash": "f7386f391fe536db"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-120",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 15,
+  "levelTitle": "Environment & CLI",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "CLI"
+  ],
+  "contentHash": "93db5ff6e67a60ea",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on CLI.",
+  "question": "What is `NODE_ENV` commonly set to?",
+  "options": [
+   "\"fast\" or \"slow\"",
+   "\"production\" or \"development\"",
+   "\"on\" or \"off\"",
+   "A port number"
+  ],
+  "correctAnswer": 1,
+  "explanation": "NODE_ENV typically holds the environment name, e.g. \"development\" or \"production\".",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na CLI.",
+   "question": "Na co se běžně nastavuje `NODE_ENV`?",
+   "options": [
+    "\"fast\" nebo \"slow\"",
+    "\"production\" nebo \"development\"",
+    "\"on\" nebo \"off\"",
+    "Číslo portu"
+   ],
+   "explanation": "NODE_ENV obvykle obsahuje název prostředí, např. \"development\" nebo \"production\".",
+   "csHash": "8f97f1ffed8b409c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ],
+  "csDriftFlags": [
+   "code-like option 0 differs: EN '\"fast\" or \"slow\"' vs CS '\"fast\" nebo \"slow\"'",
+   "code-like option 1 differs: EN '\"production\" or \"development\"' vs CS '\"production\" nebo \"development\"'",
+   "code-like option 2 differs: EN '\"on\" or \"off\"' vs CS '\"on\" nebo \"off\"'"
+  ]
+ },
+ {
+  "id": "rm-node-121",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 16,
+  "levelTitle": "npm & package.json",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "npm"
+  ],
+  "contentHash": "543343fb8476a98f",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on npm.",
+  "question": "What does the package.json \"scripts\" field define?",
+  "options": [
+   "Dependencies",
+   "Named commands runnable via npm run",
+   "The license",
+   "The author"
+  ],
+  "correctAnswer": 1,
+  "explanation": "scripts maps names to shell commands you invoke with `npm run <name>`.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na npm.",
+   "question": "Co definuje pole \"scripts\" v package.json?",
+   "options": [
+    "Závislosti",
+    "Pojmenované příkazy spustitelné přes npm run",
+    "Licenci",
+    "Autora"
+   ],
+   "explanation": "scripts mapuje názvy na shellové příkazy, které vyvoláváš pomocí `npm run <name>`.",
+   "csHash": "4f826f9a5a24aee9"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-122",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 16,
+  "levelTitle": "npm & package.json",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "npm"
+  ],
+  "contentHash": "3bd93caeafe247bc",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on npm.",
+  "question": "How do dependencies differ from devDependencies?",
+  "options": [
+   "No difference",
+   "devDependencies are only needed for development/build/test",
+   "devDependencies ship to users",
+   "dependencies are optional"
+  ],
+  "correctAnswer": 1,
+  "explanation": "devDependencies (tools like test runners/bundlers) aren’t needed at runtime in production.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na npm.",
+   "question": "Čím se liší dependencies od devDependencies?",
+   "options": [
+    "Žádný rozdíl",
+    "devDependencies jsou potřeba jen pro vývoj/build/testy",
+    "devDependencies se dodávají uživatelům",
+    "dependencies jsou volitelné"
+   ],
+   "explanation": "devDependencies (nástroje jako test runnery/bundlery) nejsou potřeba za běhu v produkci.",
+   "csHash": "d29351726c7722e4"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-123",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 16,
+  "levelTitle": "npm & package.json",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "npm"
+  ],
+  "contentHash": "3deedc935e733f35",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on npm.",
+  "question": "What does `npm install jest --save-dev` do?",
+  "options": [
+   "Adds jest to dependencies",
+   "Adds jest to devDependencies",
+   "Removes jest",
+   "Runs jest"
+  ],
+  "correctAnswer": 1,
+  "explanation": "--save-dev (or -D) records the package under devDependencies.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na npm.",
+   "question": "Co dělá `npm install jest --save-dev`?",
+   "options": [
+    "Přidá jest do dependencies",
+    "Přidá jest do devDependencies",
+    "Odebere jest",
+    "Spustí jest"
+   ],
+   "explanation": "--save-dev (nebo -D) zaznamená balíček do devDependencies.",
+   "csHash": "5df367378eb65751"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-124",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 16,
+  "levelTitle": "npm & package.json",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "npm"
+  ],
+  "contentHash": "54c6152ce31971a8",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on npm.",
+  "question": "What is package-lock.json for?",
+  "options": [
+   "Storing secrets",
+   "Pinning the exact resolved dependency versions",
+   "Listing scripts",
+   "Configuring Node"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The lockfile records the exact versions of every installed package for reproducible installs.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na npm.",
+   "question": "K čemu je package-lock.json?",
+   "options": [
+    "K ukládání tajemství",
+    "K připnutí přesných vyřešených verzí závislostí",
+    "K výpisu skriptů",
+    "Ke konfiguraci Node"
+   ],
+   "explanation": "Lockfile zaznamenává přesné verze každého instalovaného balíčku kvůli reprodukovatelným instalacím.",
+   "csHash": "c1cb1ef2c5de4fbd"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-125",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 16,
+  "levelTitle": "npm & package.json",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "npm"
+  ],
+  "contentHash": "4d5fc3876d6bafbc",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on npm.",
+  "question": "What does the \"main\" field in package.json specify?",
+  "options": [
+   "The test command",
+   "The package’s entry-point module",
+   "The author",
+   "The Node version"
+  ],
+  "correctAnswer": 1,
+  "explanation": "\"main\" is the file loaded when another module requires the package.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na npm.",
+   "question": "Co určuje pole \"main\" v package.json?",
+   "options": [
+    "Příkaz pro testy",
+    "Vstupní modul balíčku",
+    "Autora",
+    "Verzi Node"
+   ],
+   "explanation": "\"main\" je soubor, který se načte, když jiný modul tento balíček importuje přes require.",
+   "csHash": "abaef7f967f2c3b3"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-126",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 16,
+  "levelTitle": "npm & package.json",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "npm"
+  ],
+  "contentHash": "f82e84f7f3313354",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on npm.",
+  "question": "What does the version range `^1.2.3` allow?",
+  "options": [
+   "Only 1.2.3",
+   ">=1.2.3 and <2.0.0",
+   "Any version",
+   "<1.2.3"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A caret allows compatible updates: the latest 1.x.x that is >=1.2.3 but below 2.0.0.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na npm.",
+   "question": "Co povoluje rozsah verzí `^1.2.3`?",
+   "options": [
+    "Pouze 1.2.3",
+    ">=1.2.3 a <2.0.0",
+    "Jakoukoli verzi",
+    "<1.2.3"
+   ],
+   "explanation": "Stříška povoluje kompatibilní aktualizace: nejnovější 1.x.x, které je >=1.2.3, ale pod 2.0.0.",
+   "csHash": "dd34f624a81f845e"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ],
+  "csDriftFlags": [
+   "code-like option 1 differs: EN '>=1.2.3 and <2.0.0' vs CS '>=1.2.3 a <2.0.0'"
+  ]
+ },
+ {
+  "id": "rm-node-127",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 16,
+  "levelTitle": "npm & package.json",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "npm"
+  ],
+  "contentHash": "01d8487b0a712a1a",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on npm.",
+  "question": "What does `npm ci` do?",
+  "options": [
+   "Edits package.json",
+   "Installs exactly from the lockfile, removing node_modules first",
+   "Publishes a package",
+   "Runs continuous integration tests"
+  ],
+  "correctAnswer": 1,
+  "explanation": "npm ci does a clean, lockfile-faithful install — ideal for CI and reproducible builds.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na npm.",
+   "question": "Co dělá `npm ci`?",
+   "options": [
+    "Edituje package.json",
+    "Nainstaluje přesně podle lockfile a předtím smaže node_modules",
+    "Publikuje balíček",
+    "Spustí continuous integration testy"
+   ],
+   "explanation": "npm ci provede čistou instalaci věrnou lockfile — ideální pro CI a reprodukovatelné buildy.",
+   "csHash": "84ca97af8ceb22bd"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-128",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 16,
+  "levelTitle": "npm & package.json",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "npm"
+  ],
+  "contentHash": "5c90788c885ca176",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on npm.",
+  "question": "What lives in the node_modules folder?",
+  "options": [
+   "Your source code",
+   "Installed dependencies",
+   "Environment variables",
+   "Build output"
+  ],
+  "correctAnswer": 1,
+  "explanation": "node_modules holds the installed packages your project depends on.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na npm.",
+   "question": "Co se nachází ve složce node_modules?",
+   "options": [
+    "Tvůj zdrojový kód",
+    "Nainstalované závislosti",
+    "Proměnné prostředí",
+    "Výstup buildu"
+   ],
+   "explanation": "node_modules obsahuje nainstalované balíčky, na kterých tvůj projekt závisí.",
+   "csHash": "dc8c0ec81b7366b1"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-129",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 17,
+  "levelTitle": "Error Handling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Errors"
+  ],
+  "contentHash": "3a149f715072ae06",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Errors.",
+  "question": "Throwing inside an async function causes the returned promise to:",
+  "options": [
+   "Resolve",
+   "Reject",
+   "Hang forever",
+   "Retry"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A throw in an async function rejects its returned promise with that error.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na chyby.",
+   "question": "Vyhození výjimky uvnitř async funkce způsobí, že vrácený promise se:",
+   "options": [
+    "Vyřeší",
+    "Odmítne",
+    "Zasekne navždy",
+    "Zopakuje"
+   ],
+   "explanation": "throw v async funkci odmítne její vrácený promise s danou chybou.",
+   "csHash": "f85c9c4c2198ee33"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-130",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 17,
+  "levelTitle": "Error Handling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Errors"
+  ],
+  "contentHash": "d2b31a507fcf8b5e",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on Errors.",
+  "question": "Which event fires on a synchronous uncaught exception?",
+  "options": [
+   "process.on(\"exit\")",
+   "process.on(\"uncaughtException\")",
+   "process.on(\"error\")",
+   "process.on(\"crash\")"
+  ],
+  "correctAnswer": 1,
+  "explanation": "uncaughtException catches errors that bubble up with no handler — typically log and exit.",
+  "cs": {
+   "hint": "Nejprve vyluč možnosti, které lze vyloučit — odpovědí je často to, co zbude. Mysli na chyby.",
+   "question": "Která událost se spustí při synchronní nezachycené výjimce?",
+   "options": [
+    "process.on(\"exit\")",
+    "process.on(\"uncaughtException\")",
+    "process.on(\"error\")",
+    "process.on(\"crash\")"
+   ],
+   "explanation": "uncaughtException zachytí chyby, které probublají bez handleru — typicky se zaloguje a ukončí proces.",
+   "csHash": "f96883f7d8f544cb"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-131",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 17,
+  "levelTitle": "Error Handling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Errors"
+  ],
+  "contentHash": "8be0f2a09bfceeaa",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on Errors.",
+  "question": "Which event fires for a promise rejection with no .catch?",
+  "options": [
+   "unhandledRejection",
+   "rejection",
+   "promiseError",
+   "asyncError"
+  ],
+  "correctAnswer": 0,
+  "explanation": "process emits \"unhandledRejection\" when a promise rejects without a handler.",
+  "cs": {
+   "hint": "Nejprve vyluč možnosti, které lze vyloučit — odpovědí je často to, co zbude. Mysli na chyby.",
+   "question": "Která událost se spustí při odmítnutí promisu bez .catch?",
+   "options": [
+    "unhandledRejection",
+    "rejection",
+    "promiseError",
+    "asyncError"
+   ],
+   "explanation": "process vyšle \"unhandledRejection\", když se promise odmítne bez handleru.",
+   "csHash": "d566d64cf09acb8e"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-132",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 17,
+  "levelTitle": "Error Handling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Errors"
+  ],
+  "contentHash": "b0f17bc1aa9528d8",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Errors.",
+  "question": "What does a try/catch block catch?",
+  "options": [
+   "Only network errors",
+   "Synchronous throws and awaited rejections",
+   "Callback errors automatically",
+   "Nothing async"
+  ],
+  "correctAnswer": 1,
+  "explanation": "try/catch handles synchronous errors and, with await, asynchronous rejections.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na chyby.",
+   "question": "Co zachytí blok try/catch?",
+   "options": [
+    "Pouze síťové chyby",
+    "Synchronní vyhození a awaitovaná odmítnutí",
+    "Chyby callbacků automaticky",
+    "Nic asynchronního"
+   ],
+   "explanation": "try/catch zpracuje synchronní chyby a s await i asynchronní odmítnutí.",
+   "csHash": "da9fef1bcbcffe7d"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-133",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 17,
+  "levelTitle": "Error Handling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Errors"
+  ],
+  "contentHash": "a8db1a8e113f9222",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Errors.",
+  "question": "How do you create a custom error type?",
+  "options": [
+   "return \"error\"",
+   "class MyError extends Error",
+   "throw a string",
+   "new Object()"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Extending the built-in Error class gives custom errors a name, message and stack.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na chyby.",
+   "question": "Jak vytvoříš vlastní typ chyby?",
+   "options": [
+    "return \"error\"",
+    "class MyError extends Error",
+    "vyhodit řetězec",
+    "new Object()"
+   ],
+   "explanation": "Rozšíření vestavěné třídy Error dá vlastním chybám name, message a stack.",
+   "csHash": "b3f9f2993dac6487"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-134",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 17,
+  "levelTitle": "Error Handling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Errors"
+  ],
+  "contentHash": "fe4c3ad8fa6e2aac",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Errors.",
+  "question": "What does `error.stack` contain?",
+  "options": [
+   "The exit code",
+   "The stack trace where the error occurred",
+   "The HTTP status",
+   "The env vars"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The stack property holds a trace of the call stack at the point the error was created.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na chyby.",
+   "question": "Co obsahuje `error.stack`?",
+   "options": [
+    "Návratový kód",
+    "Stack trace místa, kde chyba vznikla",
+    "HTTP status",
+    "Proměnné prostředí"
+   ],
+   "explanation": "Vlastnost stack obsahuje trasu zásobníku volání v bodě, kde byla chyba vytvořena.",
+   "csHash": "66345f1cdf86741c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-135",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 17,
+  "levelTitle": "Error Handling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Errors"
+  ],
+  "contentHash": "6e6ba4eca68aa12d",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Errors.",
+  "question": "After an `uncaughtException`, the safest practice is to:",
+  "options": [
+   "Ignore it and continue",
+   "Log it and exit, since state may be corrupt",
+   "Restart the event loop",
+   "Swallow it silently"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The process may be in an undefined state, so the recommendation is to log and exit (let a supervisor restart).",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na chyby.",
+   "question": "Po `uncaughtException` je nejbezpečnější:",
+   "options": [
+    "Ignorovat to a pokračovat",
+    "Zalogovat to a ukončit proces, protože stav může být poškozený",
+    "Restartovat event loop",
+    "Tiše to spolknout"
+   ],
+   "explanation": "Proces může být v nedefinovaném stavu, takže se doporučuje zalogovat a ukončit (restart nechat na supervisorovi).",
+   "csHash": "1882515a4543beba"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-136",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 17,
+  "levelTitle": "Error Handling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Errors"
+  ],
+  "contentHash": "76e4e68f1793b95e",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Errors.",
+  "question": "How do operational and programmer errors differ?",
+  "options": [
+   "They are the same",
+   "Operational are expected runtime issues (e.g. network); programmer errors are bugs",
+   "Operational are always fatal",
+   "Programmer errors never crash"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Operational errors (timeouts, bad input) are expected and handled; programmer errors are bugs to fix.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na chyby.",
+   "question": "Čím se liší operační chyby od programátorských?",
+   "options": [
+    "Jsou stejné",
+    "Operační jsou očekávané problémy za běhu (např. síť); programátorské chyby jsou bugy",
+    "Operační jsou vždy fatální",
+    "Programátorské chyby nikdy nezpůsobí pád"
+   ],
+   "explanation": "Operační chyby (timeouty, špatný vstup) jsou očekávané a ošetřují se; programátorské chyby jsou bugy, které je třeba opravit.",
+   "csHash": "b86643c4dd9ad0a3"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-137",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 18,
+  "levelTitle": "Timers & Scheduling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Timers"
+  ],
+  "contentHash": "c6b29a4a0b9af368",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Timers.",
+  "question": "When does `setTimeout(fn, 0)` run fn?",
+  "options": [
+   "Immediately, synchronously",
+   "After the current synchronous code, in the timers phase",
+   "Never",
+   "Before the current code"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Even with 0ms, the callback is deferred until the call stack clears and the timers phase runs.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na časovače.",
+   "question": "Kdy `setTimeout(fn, 0)` spustí fn?",
+   "options": [
+    "Okamžitě, synchronně",
+    "Po aktuálním synchronním kódu, ve fázi timers",
+    "Nikdy",
+    "Před aktuálním kódem"
+   ],
+   "explanation": "I s 0 ms je callback odložen, dokud se nevyprázdní zásobník volání a neproběhne fáze timers.",
+   "csHash": "3fac26acb99dd037"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-138",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 18,
+  "levelTitle": "Timers & Scheduling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Timers"
+  ],
+  "contentHash": "b4e8a1b4e3f85d77",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Timers.",
+  "question": "What does `setInterval` do?",
+  "options": [
+   "Runs once after a delay",
+   "Runs a callback repeatedly on an interval",
+   "Cancels a timer",
+   "Pauses execution"
+  ],
+  "correctAnswer": 1,
+  "explanation": "setInterval schedules a callback to run repeatedly every N milliseconds.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na časovače.",
+   "question": "Co dělá `setInterval`?",
+   "options": [
+    "Spustí se jednou po prodlevě",
+    "Spouští callback opakovaně v daném intervalu",
+    "Zruší časovač",
+    "Pozastaví běh"
+   ],
+   "explanation": "setInterval naplánuje opakované spouštění callbacku každých N milisekund.",
+   "csHash": "fe3cf55f67057ba5"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-139",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 18,
+  "levelTitle": "Timers & Scheduling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Timers"
+  ],
+  "contentHash": "fc0a39f35c190e5d",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Timers.",
+  "question": "What does `clearTimeout(id)` do?",
+  "options": [
+   "Runs the timer now",
+   "Cancels a pending timeout",
+   "Creates a timer",
+   "Pauses all timers"
+  ],
+  "correctAnswer": 1,
+  "explanation": "clearTimeout cancels a timeout that hasn’t fired yet, using its id.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na časovače.",
+   "question": "Co dělá `clearTimeout(id)`?",
+   "options": [
+    "Spustí časovač hned teď",
+    "Zruší čekající timeout",
+    "Vytvoří časovač",
+    "Pozastaví všechny časovače"
+   ],
+   "explanation": "clearTimeout zruší timeout, který ještě nevypršel, podle jeho id.",
+   "csHash": "63450e441e27ad87"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-140",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 18,
+  "levelTitle": "Timers & Scheduling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Timers"
+  ],
+  "contentHash": "7a8e1cc8444630cb",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Timers.",
+  "question": "How does `setImmediate` differ from `setTimeout(fn, 0)`?",
+  "options": [
+   "They are identical",
+   "setImmediate runs in the check phase, after I/O",
+   "setImmediate is synchronous",
+   "setImmediate never runs"
+  ],
+  "correctAnswer": 1,
+  "explanation": "setImmediate fires in the check phase (after the poll/I/O phase), often after a 0ms timeout within an I/O cycle.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na časovače.",
+   "question": "Jak se `setImmediate` liší od `setTimeout(fn, 0)`?",
+   "options": [
+    "Jsou identické",
+    "setImmediate běží ve fázi check, po I/O",
+    "setImmediate je synchronní",
+    "setImmediate se nikdy nespustí"
+   ],
+   "explanation": "setImmediate se spustí ve fázi check (po fázi poll/I/O), často po 0ms timeoutu v rámci I/O cyklu.",
+   "csHash": "9bc905bdd6604ee6"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-141",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 18,
+  "levelTitle": "Timers & Scheduling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Timers"
+  ],
+  "contentHash": "f7285b6558894286",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Timers.",
+  "question": "Relative to timers and promises, `process.nextTick` callbacks run:",
+  "options": [
+   "Last",
+   "Before promise microtasks and timers",
+   "Only on exit",
+   "At a fixed interval"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The nextTick queue is drained before promise microtasks and before the loop moves on to timers.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na časovače.",
+   "question": "Vzhledem k časovačům a promisům se callbacky `process.nextTick` spouštějí:",
+   "options": [
+    "Jako poslední",
+    "Před promise mikroúlohami a časovači",
+    "Pouze při ukončení",
+    "V pevném intervalu"
+   ],
+   "explanation": "Fronta nextTick se vyprázdní před promise mikroúlohami a předtím, než loop přejde k časovačům.",
+   "csHash": "c5e79eb1997d6f35"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-142",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 18,
+  "levelTitle": "Timers & Scheduling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Timers"
+  ],
+  "contentHash": "e5adc466ba903541",
+  "hint": "Check the statement against the normal case and one likely edge case. Focus on Timers.",
+  "question": "Do Node timers guarantee an exact delay?",
+  "options": [
+   "Yes, to the millisecond",
+   "No — they guarantee a minimum delay, not exact timing",
+   "Only setInterval does",
+   "Only in production"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Timers fire no earlier than the delay, but a busy event loop can push them later.",
+  "cs": {
+   "hint": "Rozhodni, zda to platí obecně, a dej pozor na hraniční případy. Mysli na časovače.",
+   "question": "Garantují časovače v Node přesnou prodlevu?",
+   "options": [
+    "Ano, na milisekundu přesně",
+    "Ne — garantují minimální prodlevu, ne přesné načasování",
+    "Pouze setInterval ano",
+    "Pouze v produkci"
+   ],
+   "explanation": "Časovače se nespustí dříve než po prodlevě, ale vytížený event loop je může posunout později.",
+   "csHash": "caa38e82039f06e0"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-143",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 18,
+  "levelTitle": "Timers & Scheduling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Timers"
+  ],
+  "contentHash": "d7dff21c34e53ca2",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Timers.",
+  "question": "What does calling `.unref()` on a timer do?",
+  "options": [
+   "Speeds it up",
+   "Lets the process exit if the timer is the only thing left",
+   "Cancels it",
+   "Doubles the delay"
+  ],
+  "correctAnswer": 1,
+  "explanation": "An unref’d timer won’t keep the event loop (and process) alive on its own.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na časovače.",
+   "question": "Co udělá volání `.unref()` na časovači?",
+   "options": [
+    "Zrychlí ho",
+    "Umožní procesu skončit, pokud je časovač jediné, co zbývá",
+    "Zruší ho",
+    "Zdvojnásobí prodlevu"
+   ],
+   "explanation": "Časovač s unref sám o sobě neudrží event loop (a proces) naživu.",
+   "csHash": "0cb90a3e09a7ed20"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-144",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 18,
+  "levelTitle": "Timers & Scheduling",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Timers"
+  ],
+  "contentHash": "3f94d0d28aa225bc",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Timers.",
+  "question": "What does `queueMicrotask(fn)` schedule?",
+  "options": [
+   "A macrotask",
+   "A microtask, run after the current operation",
+   "A timer",
+   "A new thread"
+  ],
+  "correctAnswer": 1,
+  "explanation": "queueMicrotask enqueues fn onto the microtask queue, alongside promise reactions.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na časovače.",
+   "question": "Co naplánuje `queueMicrotask(fn)`?",
+   "options": [
+    "Makroúlohu",
+    "Mikroúlohu, spuštěnou po aktuální operaci",
+    "Časovač",
+    "Nové vlákno"
+   ],
+   "explanation": "queueMicrotask zařadí fn do fronty mikroúloh, vedle reakcí promisů.",
+   "csHash": "3cc3ff6f197486c5"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-145",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 19,
+  "levelTitle": "Child Processes",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "ChildProcess"
+  ],
+  "contentHash": "97082f2cc89d22b9",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on ChildProcess.",
+  "question": "Which module runs other programs or commands?",
+  "options": [
+   "cluster",
+   "child_process",
+   "worker_threads",
+   "net"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The child_process module spawns subprocesses to run commands or other scripts.",
+  "cs": {
+   "hint": "Nejprve vyluč možnosti, které lze vyloučit — odpovědí je často to, co zbude. Mysli na ChildProcess.",
+   "question": "Který modul spouští jiné programy nebo příkazy?",
+   "options": [
+    "cluster",
+    "child_process",
+    "worker_threads",
+    "net"
+   ],
+   "explanation": "Modul child_process spouští podprocesy pro běh příkazů nebo jiných skriptů.",
+   "csHash": "c846d6d9337cf676"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-146",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 19,
+  "levelTitle": "Child Processes",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "ChildProcess"
+  ],
+  "contentHash": "48f17c75f9833488",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on ChildProcess.",
+  "question": "What does `exec(cmd, cb)` do?",
+  "options": [
+   "Streams output with no shell",
+   "Runs a command in a shell and buffers the output",
+   "Forks a Node process",
+   "Creates a thread"
+  ],
+  "correctAnswer": 1,
+  "explanation": "exec runs the command in a shell and passes the buffered stdout/stderr to the callback.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na ChildProcess.",
+   "question": "Co dělá `exec(cmd, cb)`?",
+   "options": [
+    "Streamuje výstup bez shellu",
+    "Spustí příkaz v shellu a bufferuje výstup",
+    "Forkne Node proces",
+    "Vytvoří vlákno"
+   ],
+   "explanation": "exec spustí příkaz v shellu a předá nabufferovaný stdout/stderr callbacku.",
+   "csHash": "6de449668f149169"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-147",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 19,
+  "levelTitle": "Child Processes",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "ChildProcess"
+  ],
+  "contentHash": "6b68293a0f429222",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on ChildProcess.",
+  "question": "How does `spawn` differ from `exec`?",
+  "options": [
+   "spawn buffers everything",
+   "spawn streams output and doesn’t use a shell by default",
+   "spawn is synchronous",
+   "spawn returns a Promise"
+  ],
+  "correctAnswer": 1,
+  "explanation": "spawn streams stdout/stderr (good for large output) and runs without a shell unless you ask.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na ChildProcess.",
+   "question": "Jak se `spawn` liší od `exec`?",
+   "options": [
+    "spawn vše bufferuje",
+    "spawn streamuje výstup a ve výchozím nastavení nepoužívá shell",
+    "spawn je synchronní",
+    "spawn vrací Promise"
+   ],
+   "explanation": "spawn streamuje stdout/stderr (vhodné pro velký výstup) a běží bez shellu, pokud o něj nepožádáš.",
+   "csHash": "1ef1586e7203d447"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-148",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 19,
+  "levelTitle": "Child Processes",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "ChildProcess"
+  ],
+  "contentHash": "0cd7bc114f5c8ebf",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on ChildProcess.",
+  "question": "What does `fork` create?",
+  "options": [
+   "A thread",
+   "A new Node process with an IPC channel",
+   "A shell command",
+   "A cluster"
+  ],
+  "correctAnswer": 1,
+  "explanation": "fork spawns a child Node process and sets up an IPC channel for message passing.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na ChildProcess.",
+   "question": "Co vytvoří `fork`?",
+   "options": [
+    "Vlákno",
+    "Nový Node proces s IPC kanálem",
+    "Shellový příkaz",
+    "Cluster"
+   ],
+   "explanation": "fork spustí potomka Node procesu a nastaví IPC kanál pro předávání zpráv.",
+   "csHash": "08ed54252961a4d4"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-149",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 19,
+  "levelTitle": "Child Processes",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "ChildProcess"
+  ],
+  "contentHash": "6eea0afb966a7627",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on ChildProcess.",
+  "question": "How do a parent and a forked child communicate?",
+  "options": [
+   "Shared variables",
+   "process.send and the \"message\" event",
+   "Global state",
+   "A database"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Forked processes exchange messages via child.send / process.on(\"message\").",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na ChildProcess.",
+   "question": "Jak spolu komunikuje rodič a forknutý potomek?",
+   "options": [
+    "Sdílené proměnné",
+    "process.send a událost \"message\"",
+    "Globální stav",
+    "Databáze"
+   ],
+   "explanation": "Forknuté procesy si vyměňují zprávy přes child.send / process.on(\"message\").",
+   "csHash": "840aa5d0ec5b7e91"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ],
+  "csDriftFlags": [
+   "code-like option 1 differs: EN 'process.send and the \"message\" event' vs CS 'process.send a událost \"message\"'"
+  ]
+ },
+ {
+  "id": "rm-node-150",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 19,
+  "levelTitle": "Child Processes",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "ChildProcess"
+  ],
+  "contentHash": "c14a119a40473fe8",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on ChildProcess.",
+  "question": "A risk of `exec` with very large output is:",
+  "options": [
+   "It is too fast",
+   "Exceeding maxBuffer and erroring",
+   "Using no memory",
+   "Running twice"
+  ],
+  "correctAnswer": 1,
+  "explanation": "exec buffers all output in memory; output larger than maxBuffer throws an error.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka prověřuje, a vyluč možnosti, které zjevně nesedí. Mysli na ChildProcess.",
+   "question": "Riziko `exec` s velmi velkým výstupem je:",
+   "options": [
+    "Je příliš rychlý",
+    "Překročení maxBuffer a chyba",
+    "Nulová spotřeba paměti",
+    "Dvojí spuštění"
+   ],
+   "explanation": "exec bufferuje veškerý výstup v paměti; výstup větší než maxBuffer vyhodí chybu.",
+   "csHash": "3a3c3fddc1a261c9"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-151",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 19,
+  "levelTitle": "Child Processes",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "ChildProcess"
+  ],
+  "contentHash": "780408251a2e1090",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on ChildProcess.",
+  "question": "What does `spawn` return?",
+  "options": [
+   "A string of output",
+   "A ChildProcess with stdout/stderr streams",
+   "A Buffer",
+   "undefined"
+  ],
+  "correctAnswer": 1,
+  "explanation": "spawn returns a ChildProcess object whose stdout/stderr are readable streams.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na ChildProcess.",
+   "question": "Co vrací `spawn`?",
+   "options": [
+    "Řetězec s výstupem",
+    "ChildProcess se streamy stdout/stderr",
+    "Buffer",
+    "undefined"
+   ],
+   "explanation": "spawn vrací objekt ChildProcess, jehož stdout/stderr jsou čitelné streamy.",
+   "csHash": "baa75c2ec85d8eae"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-152",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 19,
+  "levelTitle": "Child Processes",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "ChildProcess"
+  ],
+  "contentHash": "fd0614f776741208",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on ChildProcess.",
+  "question": "What does `execSync` do?",
+  "options": [
+   "Runs asynchronously",
+   "Runs a command synchronously and returns its output",
+   "Streams output",
+   "Forks a process"
+  ],
+  "correctAnswer": 1,
+  "explanation": "execSync blocks until the command finishes and returns its stdout.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na ChildProcess.",
+   "question": "Co dělá `execSync`?",
+   "options": [
+    "Běží asynchronně",
+    "Spustí příkaz synchronně a vrátí jeho výstup",
+    "Streamuje výstup",
+    "Forkne proces"
+   ],
+   "explanation": "execSync blokuje, dokud příkaz neskončí, a vrací jeho stdout.",
+   "csHash": "10f3dfaadcf17f56"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-153",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 20,
+  "levelTitle": "Crypto",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Crypto"
+  ],
+  "contentHash": "06ad8e9313eea803",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on Crypto.",
+  "question": "Which module provides cryptographic functions?",
+  "options": [
+   "hash",
+   "crypto",
+   "secure",
+   "cipher"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The built-in `crypto` module offers hashing, HMAC, ciphers and random bytes.",
+  "cs": {
+   "hint": "Nejprve vyluč možnosti, které lze vyloučit — odpovědí často bývá to, co zbude. Mysli na Crypto.",
+   "question": "Který modul poskytuje kryptografické funkce?",
+   "options": [
+    "hash",
+    "crypto",
+    "secure",
+    "cipher"
+   ],
+   "explanation": "Vestavěný modul `crypto` nabízí hashování, HMAC, šifry a náhodné bajty.",
+   "csHash": "2ce602bc676e64c4"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-154",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 20,
+  "levelTitle": "Crypto",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Crypto"
+  ],
+  "contentHash": "26c752c98e750d9c",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Crypto.",
+  "question": "What does `crypto.randomUUID()` return?",
+  "options": [
+   "A timestamp",
+   "A random RFC 4122 v4 UUID string",
+   "A hash",
+   "A Buffer"
+  ],
+  "correctAnswer": 1,
+  "explanation": "randomUUID generates a random version-4 UUID as a string.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Crypto.",
+   "question": "Co vrací `crypto.randomUUID()`?",
+   "options": [
+    "Časové razítko",
+    "Náhodný řetězec UUID verze 4 dle RFC 4122",
+    "Hash",
+    "Buffer"
+   ],
+   "explanation": "randomUUID generuje náhodné UUID verze 4 jako řetězec.",
+   "csHash": "a94297a6dd2a535a"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-155",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 20,
+  "levelTitle": "Crypto",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Crypto"
+  ],
+  "contentHash": "f69edb12faaff10c",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Crypto.",
+  "question": "What does `crypto.createHash(\"sha256\")` create?",
+  "options": [
+   "A cipher",
+   "A hash object you update then digest",
+   "A random key",
+   "A certificate"
+  ],
+  "correctAnswer": 1,
+  "explanation": "createHash returns a Hash instance; you call update() with data then digest() for the result.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Crypto.",
+   "question": "Co vytvoří `crypto.createHash(\"sha256\")`?",
+   "options": [
+    "Šifru",
+    "Objekt hashe, který nejprve aktualizuješ a pak z něj získáš digest",
+    "Náhodný klíč",
+    "Certifikát"
+   ],
+   "explanation": "createHash vrací instanci Hash; zavoláš update() s daty a poté digest() pro výsledek.",
+   "csHash": "bb77fed165cd8e7c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-156",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 20,
+  "levelTitle": "Crypto",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Crypto"
+  ],
+  "contentHash": "8569a867789be75f",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Crypto.",
+  "question": "A cryptographic hash function is:",
+  "options": [
+   "Reversible",
+   "One-way (you can’t recover the input)",
+   "A form of encryption",
+   "Random each call"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Hashes are one-way: the same input always yields the same digest, but you can’t invert it.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Crypto.",
+   "question": "Kryptografická hashovací funkce je:",
+   "options": [
+    "Reverzibilní",
+    "Jednosměrná (vstup z ní nelze získat zpět)",
+    "Forma šifrování",
+    "Při každém volání náhodná"
+   ],
+   "explanation": "Hashe jsou jednosměrné: stejný vstup vždy vrací stejný digest, ale nelze ho invertovat zpět.",
+   "csHash": "b95f9327be3e94b8"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-157",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 20,
+  "levelTitle": "Crypto",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Crypto"
+  ],
+  "contentHash": "cef48e05dd79c10b",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Crypto.",
+  "question": "What does `crypto.randomBytes(16)` give you?",
+  "options": [
+   "A predictable sequence",
+   "16 cryptographically strong random bytes",
+   "A UUID",
+   "A hash"
+  ],
+  "correctAnswer": 1,
+  "explanation": "randomBytes produces cryptographically secure random data, e.g. for tokens or salts.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Crypto.",
+   "question": "Co ti dá `crypto.randomBytes(16)`?",
+   "options": [
+    "Předvídatelnou sekvenci",
+    "16 kryptograficky silných náhodných bajtů",
+    "UUID",
+    "Hash"
+   ],
+   "explanation": "randomBytes produkuje kryptograficky bezpečná náhodná data, např. pro tokeny nebo soli.",
+   "csHash": "985ac90620aa34f1"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-158",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 20,
+  "levelTitle": "Crypto",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Crypto"
+  ],
+  "contentHash": "c573dd8d466d33ae",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Crypto.",
+  "question": "What does an HMAC require that a plain hash does not?",
+  "options": [
+   "A larger input",
+   "A secret key",
+   "A salt only",
+   "A certificate"
+  ],
+  "correctAnswer": 1,
+  "explanation": "HMAC combines a hash with a secret key to authenticate a message.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Crypto.",
+   "question": "Co vyžaduje HMAC, co prostý hash nepotřebuje?",
+   "options": [
+    "Větší vstup",
+    "Tajný klíč",
+    "Pouze sůl",
+    "Certifikát"
+   ],
+   "explanation": "HMAC kombinuje hash s tajným klíčem k autentizaci zprávy.",
+   "csHash": "c06217e317e69e70"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-159",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 20,
+  "levelTitle": "Crypto",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Crypto"
+  ],
+  "contentHash": "740df7a01fc293be",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Crypto.",
+  "question": "How should you store user passwords?",
+  "options": [
+   "Plain sha256",
+   "With a slow password hash like bcrypt/scrypt/pbkdf2",
+   "Base64",
+   "In plain text"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Use a deliberately slow, salted KDF (bcrypt, scrypt, argon2, pbkdf2) — not a fast raw hash.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Crypto.",
+   "question": "Jak bys měl ukládat hesla uživatelů?",
+   "options": [
+    "Prostý sha256",
+    "Pomalým hashem na hesla jako bcrypt/scrypt/pbkdf2",
+    "Base64",
+    "V čistém textu"
+   ],
+   "explanation": "Použij záměrně pomalou, solenou KDF (bcrypt, scrypt, argon2, pbkdf2) — ne rychlý surový hash.",
+   "csHash": "de2fbfd357d5d25d"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-160",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 20,
+  "levelTitle": "Crypto",
+  "difficulty": 4,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Crypto"
+  ],
+  "contentHash": "ba4b8db3c8b169a5",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Crypto.",
+  "question": "What does `createHash(\"sha256\").update(data).digest(\"hex\")` return?",
+  "options": [
+   "The original data",
+   "The hash as a hex string",
+   "A Buffer of the input",
+   "A random value"
+  ],
+  "correctAnswer": 1,
+  "explanation": "digest(\"hex\") finalizes the hash and returns it encoded as hexadecimal.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Crypto.",
+   "question": "Co vrací `createHash(\"sha256\").update(data).digest(\"hex\")`?",
+   "options": [
+    "Původní data",
+    "Hash jako hexadecimální řetězec",
+    "Buffer se vstupem",
+    "Náhodnou hodnotu"
+   ],
+   "explanation": "digest(\"hex\") finalizuje hash a vrátí ho zakódovaný hexadecimálně.",
+   "csHash": "401988111535b066"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-161",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 21,
+  "levelTitle": "Express: Basics",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "5bff54e51c0c4b8e",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "What is Express?",
+  "options": [
+   "A database",
+   "A minimal web framework for Node",
+   "A template engine",
+   "A bundler"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Express is a small, flexible web framework for building Node HTTP servers and APIs.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Co je Express?",
+   "options": [
+    "Databáze",
+    "Minimalistický webový framework pro Node",
+    "Šablonovací engine",
+    "Bundler"
+   ],
+   "explanation": "Express je malý, flexibilní webový framework pro tvorbu HTTP serverů a API v Node.",
+   "csHash": "93521e028cacb6a9"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-162",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 21,
+  "levelTitle": "Express: Basics",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "67499c982144cd82",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Express.",
+  "question": "How do you create an Express app?",
+  "options": [
+   "new Express()",
+   "const app = express()",
+   "express.app()",
+   "createApp()"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Calling the imported express() function returns an application object.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Express.",
+   "question": "Jak vytvoříš Express aplikaci?",
+   "options": [
+    "new Express()",
+    "const app = express()",
+    "express.app()",
+    "createApp()"
+   ],
+   "explanation": "Volání importované funkce express() vrací objekt aplikace.",
+   "csHash": "b5fb24ad7ff174f8"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-163",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 21,
+  "levelTitle": "Express: Basics",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "6f9147b04995f659",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "What does `app.get(\"/\", handler)` do?",
+  "options": [
+   "Sends a GET request",
+   "Registers a handler for GET requests to \"/\"",
+   "Starts the server",
+   "Adds middleware globally"
+  ],
+  "correctAnswer": 1,
+  "explanation": "app.get registers a route handler for GET requests at the given path.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Co dělá `app.get(\"/\", handler)`?",
+   "options": [
+    "Odešle GET požadavek",
+    "Zaregistruje handler pro GET požadavky na \"/\"",
+    "Spustí server",
+    "Přidá middleware globálně"
+   ],
+   "explanation": "app.get zaregistruje handler trasy pro GET požadavky na zadané cestě.",
+   "csHash": "46234a5e6556058f"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-164",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 21,
+  "levelTitle": "Express: Basics",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "02b77427c9016053",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "What is the signature of Express middleware?",
+  "options": [
+   "(req, res)",
+   "(req, res, next)",
+   "(err)",
+   "(app)"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Middleware functions take (req, res, next) and call next() to continue.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Jaká je signatura Express middlewaru?",
+   "options": [
+    "(req, res)",
+    "(req, res, next)",
+    "(err)",
+    "(app)"
+   ],
+   "explanation": "Middlewarové funkce přijímají (req, res, next) a voláním next() pokračují dál.",
+   "csHash": "64ad25ef7080c285"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-165",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 21,
+  "levelTitle": "Express: Basics",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "3aa50e82a04e8ce3",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "What does `app.listen(3000)` do?",
+  "options": [
+   "Defines a route",
+   "Starts the server listening on port 3000",
+   "Parses JSON",
+   "Adds middleware"
+  ],
+  "correctAnswer": 1,
+  "explanation": "app.listen binds the Express app to a port and starts accepting requests.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Co dělá `app.listen(3000)`?",
+   "options": [
+    "Definuje trasu",
+    "Spustí server naslouchající na portu 3000",
+    "Parsuje JSON",
+    "Přidá middleware"
+   ],
+   "explanation": "app.listen naváže Express aplikaci na port a začne přijímat požadavky.",
+   "csHash": "c9d597f23bb1a07d"
+  },
+  "possibleDuplicates": [
+   "rm-node-93"
+  ],
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-166",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 21,
+  "levelTitle": "Express: Basics",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "1b813ae6d6e2b2d8",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "What does `express.json()` do?",
+  "options": [
+   "Sends JSON",
+   "Parses incoming JSON request bodies into req.body",
+   "Validates JSON",
+   "Stringifies responses"
+  ],
+  "correctAnswer": 1,
+  "explanation": "express.json() is built-in middleware that parses JSON bodies and populates req.body.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Co dělá `express.json()`?",
+   "options": [
+    "Odesílá JSON",
+    "Parsuje příchozí JSON těla požadavků do req.body",
+    "Validuje JSON",
+    "Serializuje odpovědi do řetězce"
+   ],
+   "explanation": "express.json() je vestavěný middleware, který parsuje JSON těla a plní req.body.",
+   "csHash": "f0a1ed1f3728402b"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-167",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 21,
+  "levelTitle": "Express: Basics",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "bc44a37395b1f7ec",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "What does calling `next()` in middleware do?",
+  "options": [
+   "Ends the response",
+   "Passes control to the next matching middleware/handler",
+   "Restarts the request",
+   "Throws an error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "next() hands off to the next middleware in the chain; without it the request stalls.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Co dělá volání `next()` v middlewaru?",
+   "options": [
+    "Ukončí odpověď",
+    "Předá řízení dalšímu odpovídajícímu middlewaru/handleru",
+    "Restartuje požadavek",
+    "Vyhodí chybu"
+   ],
+   "explanation": "next() předá řízení dalšímu middlewaru v řetězci; bez něj požadavek uvázne.",
+   "csHash": "5e8ef4d30f344a61"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-168",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 21,
+  "levelTitle": "Express: Basics",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "2b407605445a1094",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "What does `app.use(fn)` do?",
+  "options": [
+   "Defines a GET route",
+   "Mounts middleware that runs for matching requests",
+   "Starts the server",
+   "Sends a response"
+  ],
+  "correctAnswer": 1,
+  "explanation": "app.use registers middleware (optionally path-scoped) in the request pipeline.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Co dělá `app.use(fn)`?",
+   "options": [
+    "Definuje GET trasu",
+    "Připojí middleware, který běží pro odpovídající požadavky",
+    "Spustí server",
+    "Odešle odpověď"
+   ],
+   "explanation": "app.use zaregistruje middleware (volitelně omezený na cestu) do roury zpracování požadavků.",
+   "csHash": "1799f596c6e036a8"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-169",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 22,
+  "levelTitle": "Express: Req & Res",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "a9c23f46c2c5dd0e",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "In Express, what is `req.params`?",
+  "options": [
+   "The query string",
+   "The named route parameters (e.g. :id)",
+   "The request body",
+   "The headers"
+  ],
+  "correctAnswer": 1,
+  "explanation": "req.params holds values captured from route segments like /users/:id.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Co je v Expressu `req.params`?",
+   "options": [
+    "Query řetězec",
+    "Pojmenované parametry trasy (např. :id)",
+    "Tělo požadavku",
+    "Hlavičky"
+   ],
+   "explanation": "req.params obsahuje hodnoty zachycené ze segmentů trasy jako /users/:id.",
+   "csHash": "60728cb135151d4b"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-170",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 22,
+  "levelTitle": "Express: Req & Res",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "e785edd98224b289",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "What is `req.query`?",
+  "options": [
+   "The route params",
+   "The parsed query-string parameters",
+   "The body",
+   "The cookies"
+  ],
+  "correctAnswer": 1,
+  "explanation": "req.query is an object of the URL’s query-string key/value pairs.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Co je `req.query`?",
+   "options": [
+    "Parametry trasy",
+    "Naparsované parametry z query řetězce",
+    "Tělo",
+    "Cookies"
+   ],
+   "explanation": "req.query je objekt s páry klíč/hodnota z query řetězce URL.",
+   "csHash": "a503bd00e16fe33c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-171",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 22,
+  "levelTitle": "Express: Req & Res",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "199d7ae4a101e2b8",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "What is `req.body` (with a body parser)?",
+  "options": [
+   "The URL",
+   "The parsed request payload",
+   "The status code",
+   "The route"
+  ],
+  "correctAnswer": 1,
+  "explanation": "With body-parsing middleware, req.body holds the parsed request payload (e.g. JSON).",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Co je `req.body` (s parserem těla)?",
+   "options": [
+    "URL",
+    "Naparsovaný obsah požadavku",
+    "Stavový kód",
+    "Trasa"
+   ],
+   "explanation": "S middlewarem pro parsování těla obsahuje req.body naparsovaný obsah požadavku (např. JSON).",
+   "csHash": "af26a8e8cce05cc0"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-172",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 22,
+  "levelTitle": "Express: Req & Res",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "27ce8cff9998deb2",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "What does `res.json(obj)` do?",
+  "options": [
+   "Logs obj",
+   "Sends obj as JSON and sets the content type",
+   "Validates obj",
+   "Redirects"
+  ],
+  "correctAnswer": 1,
+  "explanation": "res.json serializes the object to JSON and sets Content-Type: application/json.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Co dělá `res.json(obj)`?",
+   "options": [
+    "Zaloguje obj",
+    "Odešle obj jako JSON a nastaví content type",
+    "Validuje obj",
+    "Přesměruje"
+   ],
+   "explanation": "res.json serializuje objekt do JSON a nastaví Content-Type: application/json.",
+   "csHash": "5d49ffebcb47a357"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-173",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 22,
+  "levelTitle": "Express: Req & Res",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "f9ffda9ff96b4290",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "What does `res.status(404)` do?",
+  "options": [
+   "Sends the body",
+   "Sets the HTTP status code on the response",
+   "Ends the response",
+   "Logs an error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "res.status sets the status code; it’s chainable, e.g. res.status(404).json(...).",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Co dělá `res.status(404)`?",
+   "options": [
+    "Odešle tělo",
+    "Nastaví HTTP stavový kód na odpovědi",
+    "Ukončí odpověď",
+    "Zaloguje chybu"
+   ],
+   "explanation": "res.status nastaví stavový kód; je řetězitelný, např. res.status(404).json(...).",
+   "csHash": "1d48beb09384ded6"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-174",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 22,
+  "levelTitle": "Express: Req & Res",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "be3eba6c4ed7038f",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "What does `res.send(data)` do?",
+  "options": [
+   "Reads a file",
+   "Sends a response with appropriate content type",
+   "Defines a route",
+   "Starts the server"
+  ],
+  "correctAnswer": 1,
+  "explanation": "res.send sends a response body (string, Buffer or object) and infers the content type.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Co dělá `res.send(data)`?",
+   "options": [
+    "Čte soubor",
+    "Odešle odpověď s odpovídajícím content type",
+    "Definuje trasu",
+    "Spustí server"
+   ],
+   "explanation": "res.send odešle tělo odpovědi (řetězec, Buffer nebo objekt) a odvodí content type.",
+   "csHash": "4c1fb4ce0e16e3fc"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-175",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 22,
+  "levelTitle": "Express: Req & Res",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "4cf8f137ff675a65",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Express.",
+  "question": "What does `res.redirect(\"/login\")` do?",
+  "options": [
+   "Renders a page",
+   "Sends a redirect response (302 by default)",
+   "Throws",
+   "Sets a cookie"
+  ],
+  "correctAnswer": 1,
+  "explanation": "res.redirect sends an HTTP redirect to the given location.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Express.",
+   "question": "Co dělá `res.redirect(\"/login\")`?",
+   "options": [
+    "Vykreslí stránku",
+    "Odešle přesměrovací odpověď (ve výchozím stavu 302)",
+    "Vyhodí chybu",
+    "Nastaví cookie"
+   ],
+   "explanation": "res.redirect odešle HTTP přesměrování na zadané umístění.",
+   "csHash": "8ceeb0a523be1a04"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-176",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 22,
+  "levelTitle": "Express: Req & Res",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Express"
+  ],
+  "contentHash": "fbb526bedafe4003",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Express.",
+  "question": "How do you define a route parameter for a user id?",
+  "options": [
+   "\"/users/{id}\"",
+   "\"/users/:id\"",
+   "\"/users/[id]\"",
+   "\"/users/*\""
+  ],
+  "correctAnswer": 1,
+  "explanation": "Express uses the colon syntax: \"/users/:id\" captures id into req.params.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Express.",
+   "question": "Jak definuješ parametr trasy pro ID uživatele?",
+   "options": [
+    "\"/users/{id}\"",
+    "\"/users/:id\"",
+    "\"/users/[id]\"",
+    "\"/users/*\""
+   ],
+   "explanation": "Express používá syntaxi s dvojtečkou: \"/users/:id\" zachytí id do req.params.",
+   "csHash": "99058165cdb229c2"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-177",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 23,
+  "levelTitle": "Concurrency",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Concurrency"
+  ],
+  "contentHash": "8cfbec4432ec0676",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Concurrency.",
+  "question": "How does Node achieve concurrency for I/O?",
+  "options": [
+   "One OS thread per request",
+   "A single thread plus the non-blocking event loop",
+   "Busy-waiting",
+   "Web Workers in the browser"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Node overlaps many I/O operations on one thread via the event loop and async callbacks.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Concurrency.",
+   "question": "Jak Node dosahuje souběžnosti pro I/O?",
+   "options": [
+    "Jedno OS vlákno na požadavek",
+    "Jedno vlákno plus neblokující event loop",
+    "Aktivním čekáním (busy-waiting)",
+    "Web Workery v prohlížeči"
+   ],
+   "explanation": "Node překrývá mnoho I/O operací na jednom vlákně pomocí event loopu a asynchronních callbacků.",
+   "csHash": "83c4335a0a4b093d"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-178",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 23,
+  "levelTitle": "Concurrency",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Concurrency"
+  ],
+  "contentHash": "2fa1223cbb1f9a44",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Concurrency.",
+  "question": "A request handler performs a long synchronous image calculation on Node’s main JavaScript thread. What happens to unrelated callbacks?",
+  "options": [
+   "They continue normally because every callback gets its own thread",
+   "They wait until the calculation releases the event loop",
+   "They run faster because the CPU stays active",
+   "They move to worker threads automatically"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Long synchronous CPU work occupies the main JavaScript thread, so timers and I/O callbacks cannot run until it finishes.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Concurrency.",
+   "question": "Co dělá s event loopem práce náročná na CPU?",
+   "options": [
+    "Nic",
+    "Blokuje ho a zdržuje všechny ostatní callbacky",
+    "Zrychluje ho",
+    "Automaticky spouští vlákna"
+   ],
+   "explanation": "Dlouhá synchronní práce s CPU blokuje jediné JS vlákno a zastavuje vše ostatní.",
+   "csHash": "bc12ac96643f5842"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-179",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 23,
+  "levelTitle": "Concurrency",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Concurrency"
+  ],
+  "contentHash": "a0161d8c5c5bcc11",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Concurrency.",
+  "question": "What does the `worker_threads` module enable?",
+  "options": [
+   "Child processes only",
+   "Running JavaScript in parallel threads",
+   "Faster timers",
+   "HTTP routing"
+  ],
+  "correctAnswer": 1,
+  "explanation": "worker_threads lets you run JS on additional threads — useful for CPU-heavy tasks.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Concurrency.",
+   "question": "Co umožňuje modul `worker_threads`?",
+   "options": [
+    "Pouze child procesy",
+    "Spouštění JavaScriptu v paralelních vláknech",
+    "Rychlejší časovače",
+    "Směrování HTTP"
+   ],
+   "explanation": "worker_threads umožňuje spouštět JS na dalších vláknech — užitečné pro úlohy náročné na CPU.",
+   "csHash": "13cb084d1ee293bf"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-180",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 23,
+  "levelTitle": "Concurrency",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Concurrency"
+  ],
+  "contentHash": "24135cbc1143c8b5",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on Concurrency.",
+  "question": "Which pair of asynchronous Node operations can use libuv’s worker pool rather than non-blocking network polling?",
+  "options": [
+   "setTimeout and Promise.then",
+   "fs.readFile and crypto.pbkdf2",
+   "HTTP socket reads and queueMicrotask",
+   "JSON.parse and an ordinary JavaScript loop"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Many file-system operations and selected crypto or DNS functions use the libuv worker pool. Timers, microtasks, network polling, and normal JavaScript execute through other paths.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Concurrency.",
+   "question": "Thread pool knihovny libuv zpracovává některé asynchronní operace ve výchozí velikosti:",
+   "options": [
+    "1",
+    "4",
+    "16",
+    "Neomezeně"
+   ],
+   "explanation": "Thread pool libuv má ve výchozím stavu 4 vlákna (využívá je fs, část crypto, dns.lookup atd.).",
+   "csHash": "c5f7bfb2e6253896"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-181",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 23,
+  "levelTitle": "Concurrency",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Concurrency"
+  ],
+  "contentHash": "83473d8e3dc628c7",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Concurrency.",
+  "question": "File and crypto jobs appear to saturate libuv’s worker pool. What should you do before increasing its size?",
+  "options": [
+   "Set a very large value in every environment",
+   "Measure which operations queue and test whether more workers improve the workload",
+   "Move all network sockets into the same worker pool",
+   "Assume CPU count alone determines the best setting"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A larger pool can help some workloads and hurt others through contention. Identify the queued operations, measure latency and throughput, then test a bounded change.",
+  "cs": {
+   "hint": "Nejprve vyluč možnosti, které lze vyloučit — odpovědí často bývá to, co zbude. Mysli na Concurrency.",
+   "question": "Která proměnná prostředí mění velikost thread poolu libuv?",
+   "options": [
+    "NODE_THREADS",
+    "UV_THREADPOOL_SIZE",
+    "THREAD_POOL",
+    "NODE_POOL_SIZE"
+   ],
+   "explanation": "Nastavení UV_THREADPOOL_SIZE upraví, kolik vláken pool libuv používá.",
+   "csHash": "404b927eacf4884a"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-182",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 23,
+  "levelTitle": "Concurrency",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Concurrency"
+  ],
+  "contentHash": "7050d13026946a2e",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Concurrency.",
+  "question": "What does the `cluster` module do?",
+  "options": [
+   "Runs one thread",
+   "Forks multiple worker processes that share a server port",
+   "Encrypts data",
+   "Parses JSON"
+  ],
+  "correctAnswer": 1,
+  "explanation": "cluster forks worker processes (one per core, typically) that share the same listening port.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Concurrency.",
+   "question": "Co dělá modul `cluster`?",
+   "options": [
+    "Spouští jedno vlákno",
+    "Forkne více worker procesů, které sdílejí port serveru",
+    "Šifruje data",
+    "Parsuje JSON"
+   ],
+   "explanation": "cluster forkne worker procesy (typicky jeden na jádro), které sdílejí stejný naslouchající port.",
+   "csHash": "5b2e01265c877f12"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-183",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 23,
+  "levelTitle": "Concurrency",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Concurrency"
+  ],
+  "contentHash": "682f7eca17487476",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Concurrency.",
+  "question": "What does a `SharedArrayBuffer` allow?",
+  "options": [
+   "Sharing memory between threads/workers",
+   "Faster strings",
+   "Encrypted buffers",
+   "Streaming files"
+  ],
+  "correctAnswer": 0,
+  "explanation": "A SharedArrayBuffer lets multiple workers access the same memory region.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Concurrency.",
+   "question": "Co umožňuje `SharedArrayBuffer`?",
+   "options": [
+    "Sdílení paměti mezi vlákny/workery",
+    "Rychlejší řetězce",
+    "Šifrované buffery",
+    "Streamování souborů"
+   ],
+   "explanation": "SharedArrayBuffer umožňuje více workerům přistupovat ke stejné oblasti paměti.",
+   "csHash": "3ad6bbba2afaa1c2"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-184",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 23,
+  "levelTitle": "Concurrency",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Concurrency"
+  ],
+  "contentHash": "4fc576ed0a5eb39d",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Concurrency.",
+  "question": "To keep the event loop responsive during heavy computation, you should:",
+  "options": [
+   "Use a bigger setTimeout",
+   "Offload work to worker threads or child processes",
+   "Add more callbacks",
+   "Use synchronous fs"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Move CPU-bound work off the main thread (workers/child processes) so I/O stays responsive.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Concurrency.",
+   "question": "Abys udržel event loop responzivní během náročných výpočtů, měl bys:",
+   "options": [
+    "Použít větší setTimeout",
+    "Přesunout práci na worker vlákna nebo child procesy",
+    "Přidat víc callbacků",
+    "Použít synchronní fs"
+   ],
+   "explanation": "Přesuň práci náročnou na CPU mimo hlavní vlákno (workery/child procesy), aby I/O zůstalo responzivní.",
+   "csHash": "886c3bb57b78c18a"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-185",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 24,
+  "levelTitle": "Testing & Debugging",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Testing"
+  ],
+  "contentHash": "9adfb17e8cc3db2f",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Node.",
+  "question": "What is Node’s built-in test runner module?",
+  "options": [
+   "node:assert",
+   "node:test",
+   "node:jest",
+   "node:spec"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Node ships a built-in test runner accessible via node:test and `node --test`.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Node.",
+   "question": "Jaký je vestavěný modul Node pro spouštění testů?",
+   "options": [
+    "node:assert",
+    "node:test",
+    "node:jest",
+    "node:spec"
+   ],
+   "explanation": "Node má vestavěný test runner přístupný přes node:test a `node --test`.",
+   "csHash": "370dc7134a4cbbe9"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-186",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 24,
+  "levelTitle": "Testing & Debugging",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Testing"
+  ],
+  "contentHash": "5d7b71031c51d02f",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on Node.",
+  "question": "Which built-in module provides assertions?",
+  "options": [
+   "expect",
+   "assert",
+   "check",
+   "verify"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The `assert` module offers assertion helpers like strictEqual and deepEqual.",
+  "cs": {
+   "hint": "Nejprve vyluč možnosti, které lze vyloučit — odpovědí často bývá to, co zbude. Mysli na Node.",
+   "question": "Který vestavěný modul poskytuje aserce?",
+   "options": [
+    "expect",
+    "assert",
+    "check",
+    "verify"
+   ],
+   "explanation": "Modul `assert` nabízí pomocníky pro aserce jako strictEqual a deepEqual.",
+   "csHash": "6d7c03472682ce1a"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-187",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 24,
+  "levelTitle": "Testing & Debugging",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Debugging"
+  ],
+  "contentHash": "a4bf0acfa5d8e281",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Debugging.",
+  "question": "What does running with `node --inspect` enable?",
+  "options": [
+   "Production mode",
+   "The debugger / DevTools protocol",
+   "Faster startup",
+   "Verbose logging only"
+  ],
+  "correctAnswer": 1,
+  "explanation": "--inspect starts the Inspector so you can attach Chrome DevTools or an IDE debugger.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný koncept slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Debugging.",
+   "question": "Co umožní spuštění s `node --inspect`?",
+   "options": [
+    "Produkční režim",
+    "Debugger / protokol DevTools",
+    "Rychlejší start",
+    "Pouze podrobné logování"
+   ],
+   "explanation": "--inspect spustí Inspector, takže můžeš připojit Chrome DevTools nebo debugger v IDE.",
+   "csHash": "bd2448f36b101e26"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-188",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 24,
+  "levelTitle": "Testing & Debugging",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Debugging"
+  ],
+  "contentHash": "813ea6a9f153f89e",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Debugging.",
+  "question": "Where does `console.error` write?",
+  "options": [
+   "stdout",
+   "stderr",
+   "A file",
+   "The network"
+  ],
+  "correctAnswer": 1,
+  "explanation": "console.error writes to the standard error stream (stderr).",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Debugging.",
+   "question": "Kam zapisuje `console.error`?",
+   "options": [
+    "stdout",
+    "stderr",
+    "Do souboru",
+    "Do sítě"
+   ],
+   "explanation": "console.error zapisuje do standardního chybového streamu (stderr).",
+   "csHash": "a7ad8ad54595eb93"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-189",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 24,
+  "levelTitle": "Testing & Debugging",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Testing"
+  ],
+  "contentHash": "7a23f04d96160a66",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on Node.",
+  "question": "Which is a popular third-party Node test framework?",
+  "options": [
+   "Webpack",
+   "Jest",
+   "Express",
+   "Nodemon"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Jest is a widely used testing framework for JavaScript/Node projects.",
+  "cs": {
+   "hint": "Nejprve vyluč možnosti, které lze vyloučit — odpovědí často bývá to, co zbude. Mysli na Node.",
+   "question": "Co je oblíbený třetí stranou poskytovaný testovací framework pro Node?",
+   "options": [
+    "Webpack",
+    "Jest",
+    "Express",
+    "Nodemon"
+   ],
+   "explanation": "Jest je široce používaný testovací framework pro projekty v JavaScriptu/Node.",
+   "csHash": "fb46515358f14abe"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-190",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 24,
+  "levelTitle": "Testing & Debugging",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Debugging"
+  ],
+  "contentHash": "29517c72fbf3c749",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on Debugging.",
+  "question": "Code calls `console.time(\"parse\")`, parses a file, then calls `console.timeEnd(\"parse\")`. What does Node report?",
+  "options": [
+   "The heap memory allocated while parsing",
+   "The elapsed duration between the matching calls",
+   "The CPU time used by every process on the machine",
+   "Only the time spent waiting for network operations"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Matching `console.time` and `console.timeEnd` calls measure elapsed wall-clock duration for the labeled section.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Debugging.",
+   "question": "Co měří `console.time(\"t\")` a `console.timeEnd(\"t\")`?",
+   "options": [
+    "Paměť",
+    "Uplynulou dobu mezi oběma voláními",
+    "Teplotu CPU",
+    "Latenci sítě"
+   ],
+   "explanation": "Vypíšou, kolik času uplynulo mezi odpovídajícími voláními time/timeEnd.",
+   "csHash": "cc436696bbc54d63"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-191",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 24,
+  "levelTitle": "Testing & Debugging",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Testing"
+  ],
+  "contentHash": "c808a65d2fd9af54",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Node.",
+  "question": "What comparison does `assert.strictEqual` use?",
+  "options": [
+   "== (loose)",
+   "=== (strict)",
+   "Deep equality",
+   "Reference only"
+  ],
+  "correctAnswer": 1,
+  "explanation": "strictEqual checks strict equality (===) between actual and expected.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Node.",
+   "question": "Jaké porovnání používá `assert.strictEqual`?",
+   "options": [
+    "== (volné)",
+    "=== (striktní)",
+    "Hlubokou rovnost",
+    "Pouze referenci"
+   ],
+   "explanation": "strictEqual kontroluje striktní rovnost (===) mezi skutečnou a očekávanou hodnotou.",
+   "csHash": "5a1d0ebd595a5911"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ],
+  "csDriftFlags": [
+   "code-like option 0 differs: EN '== (loose)' vs CS '== (volné)'",
+   "code-like option 1 differs: EN '=== (strict)' vs CS '=== (striktní)'"
+  ]
+ },
+ {
+  "id": "rm-node-192",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 24,
+  "levelTitle": "Testing & Debugging",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Debugging"
+  ],
+  "contentHash": "baef53a940470c3f",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Debugging.",
+  "question": "A good tool for investigating a memory leak is:",
+  "options": [
+   "console.log only",
+   "Heap snapshots via --inspect",
+   "Deleting node_modules",
+   "A bigger timeout"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Capturing heap snapshots with the Inspector helps find what’s retaining memory.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Debugging.",
+   "question": "Dobrým nástrojem pro zkoumání úniku paměti je:",
+   "options": [
+    "Pouze console.log",
+    "Snímky haldy přes --inspect",
+    "Smazání node_modules",
+    "Větší timeout"
+   ],
+   "explanation": "Pořizování snímků haldy pomocí Inspectoru pomáhá najít, co drží paměť.",
+   "csHash": "2a2411efb91aa97c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-193",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 25,
+  "levelTitle": "Mixed Mastery",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Mastery"
+  ],
+  "contentHash": "677d79bb217dea96",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on Mastery.",
+  "question": "Which call blocks the event loop?",
+  "options": [
+   "fs.readFile",
+   "fs.readFileSync",
+   "fs.promises.readFile",
+   "fs.createReadStream"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The synchronous *Sync variants block the thread until they finish.",
+  "cs": {
+   "hint": "Nejprve vyluč možnosti, které lze vyloučit — odpovědí často bývá to, co zbude. Mysli na Mastery.",
+   "question": "Které volání blokuje event loop?",
+   "options": [
+    "fs.readFile",
+    "fs.readFileSync",
+    "fs.promises.readFile",
+    "fs.createReadStream"
+   ],
+   "explanation": "Synchronní varianty *Sync blokují vlákno, dokud neskončí.",
+   "csHash": "8cbb384758bb2e80"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-194",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 25,
+  "levelTitle": "Mixed Mastery",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Mastery"
+  ],
+  "contentHash": "9e6693adf06d027d",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Mastery.",
+  "question": "How can you force a module to be re-loaded instead of using the cache?",
+  "options": [
+   "Restart Node only",
+   "delete require.cache[require.resolve(path)]",
+   "Call require twice",
+   "Use import()"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Removing the cache entry makes the next require re-evaluate the module.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Mastery.",
+   "question": "Jak můžeš vynutit znovunačtení modulu místo použití cache?",
+   "options": [
+    "Pouze restartovat Node",
+    "delete require.cache[require.resolve(path)]",
+    "Zavolat require dvakrát",
+    "Použít import()"
+   ],
+   "explanation": "Odstranění záznamu z cache způsobí, že příští require modul znovu vyhodnotí.",
+   "csHash": "9a1f2626d63ed24d"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ],
+  "csDriftFlags": [
+   "code-like option 3 differs: EN 'Use import()' vs CS 'Použít import()'"
+  ]
+ },
+ {
+  "id": "rm-node-195",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 25,
+  "levelTitle": "Mixed Mastery",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Mastery"
+  ],
+  "contentHash": "433c97fcc22f45a0",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on Mastery.",
+  "question": "Which works in both Node and the browser?",
+  "options": [
+   "process",
+   "globalThis",
+   "__dirname",
+   "window"
+  ],
+  "correctAnswer": 1,
+  "explanation": "globalThis is the standard global reference available in every JS environment.",
+  "cs": {
+   "hint": "Nejprve vyluč možnosti, které lze vyloučit — odpovědí často bývá to, co zbude. Mysli na Mastery.",
+   "question": "Co funguje jak v Node, tak v prohlížeči?",
+   "options": [
+    "process",
+    "globalThis",
+    "__dirname",
+    "window"
+   ],
+   "explanation": "globalThis je standardní globální reference dostupná v každém JS prostředí.",
+   "csHash": "1fdcba3a8293de32"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-196",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 25,
+  "levelTitle": "Mixed Mastery",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Mastery"
+  ],
+  "contentHash": "5be5d131bd0bc617",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Mastery.",
+  "question": "Streaming a large file instead of readFile mainly improves:",
+  "options": [
+   "Code length",
+   "Memory usage",
+   "Network speed",
+   "Type safety"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Streaming processes the file in chunks, so it doesn’t load the whole thing into memory.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Mastery.",
+   "question": "Streamování velkého souboru namísto readFile zlepšuje hlavně:",
+   "options": [
+    "Délku kódu",
+    "Využití paměti",
+    "Rychlost sítě",
+    "Typovou bezpečnost"
+   ],
+   "explanation": "Streamování zpracovává soubor po částech, takže ho nenačítá celý do paměti.",
+   "csHash": "21c711f210f20f3c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-197",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 25,
+  "levelTitle": "Mixed Mastery",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Mastery"
+  ],
+  "contentHash": "e9e92d4e43c88659",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Mastery.",
+  "question": "Given a `process.nextTick` and a `setImmediate` scheduled together, which runs first?",
+  "options": [
+   "setImmediate",
+   "process.nextTick",
+   "They tie",
+   "Neither runs"
+  ],
+  "correctAnswer": 1,
+  "explanation": "nextTick callbacks run before the loop continues, ahead of setImmediate’s check phase.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Mastery.",
+   "question": "Pokud jsou `process.nextTick` a `setImmediate` naplánovány společně, který poběží první?",
+   "options": [
+    "setImmediate",
+    "process.nextTick",
+    "Doběhnou současně",
+    "Ani jeden se nespustí"
+   ],
+   "explanation": "Callbacky nextTick běží před pokračováním smyčky, tedy před fází check, kde běží setImmediate.",
+   "csHash": "d9aa6d7a6f3cf315"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-198",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 25,
+  "levelTitle": "Mixed Mastery",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Mastery"
+  ],
+  "contentHash": "ad74e2ea3d560db8",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on Mastery.",
+  "question": "Which actually controls a CommonJS module’s exports?",
+  "options": [
+   "exports",
+   "module.exports",
+   "export default",
+   "global"
+  ],
+  "correctAnswer": 1,
+  "explanation": "require returns module.exports; the `exports` shortcut only works while it still references it.",
+  "cs": {
+   "hint": "Nejprve vyluč možnosti, které lze vyloučit — odpovědí často bývá to, co zbude. Mysli na Mastery.",
+   "question": "Co ve skutečnosti řídí exporty CommonJS modulu?",
+   "options": [
+    "exports",
+    "module.exports",
+    "export default",
+    "global"
+   ],
+   "explanation": "require vrací module.exports; zkratka `exports` funguje jen, dokud na něj stále odkazuje.",
+   "csHash": "7675fd55802c751c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-199",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 25,
+  "levelTitle": "Mixed Mastery",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Mastery"
+  ],
+  "contentHash": "1126ae916be9d050",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Mastery.",
+  "question": "To run independent async tasks together and collect every result, use:",
+  "options": [
+   "A sequential await loop",
+   "Promise.all",
+   "setInterval",
+   "process.nextTick"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Promise.all runs them concurrently and resolves with an array of all results.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Mastery.",
+   "question": "Ke společnému spuštění nezávislých asynchronních úloh a sebrání všech výsledků použiješ:",
+   "options": [
+    "Sekvenční smyčku s await",
+    "Promise.all",
+    "setInterval",
+    "process.nextTick"
+   ],
+   "explanation": "Promise.all je spustí souběžně a vyřeší se polem všech výsledků.",
+   "csHash": "8a62810a55c2f271"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-node-200",
+  "delivery": "active",
+  "category": "nodejs",
+  "topic": "nodejs",
+  "level": 25,
+  "levelTitle": "Mixed Mastery",
+  "difficulty": 5,
+  "tags": [
+   "Roadmap",
+   "Node",
+   "Mastery"
+  ],
+  "contentHash": "a5e2460b9c1f5823",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on Mastery.",
+  "question": "An EventEmitter emits \"error\" with no listener attached. What happens?",
+  "options": [
+   "It is ignored",
+   "Node throws the error, often crashing the process",
+   "It retries",
+   "It logs a warning only"
+  ],
+  "correctAnswer": 1,
+  "explanation": "An unhandled \"error\" event is thrown by EventEmitter and can crash the process — always handle it.",
+  "cs": {
+   "hint": "Zaměř se na hlavní myšlenku, kterou otázka zkouší, a vyluč možnosti, které zjevně nesedí. Mysli na Mastery.",
+   "question": "EventEmitter vyvolá událost \"error\" bez připojeného posluchače. Co se stane?",
+   "options": [
+    "Je ignorována",
+    "Node chybu vyhodí, často spadne proces",
+    "Zkusí to znovu",
+    "Pouze zaloguje varování"
+   ],
+   "explanation": "Neošetřenou událost \"error\" EventEmitter vyhodí a může spadnout proces — vždy ji ošetři.",
+   "csHash": "4faf0df8afc125c6"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ }
+]

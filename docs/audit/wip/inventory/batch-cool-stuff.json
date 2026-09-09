@@ -1,0 +1,4824 @@
+[
+ {
+  "id": "rm-cool-1",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 1,
+  "levelTitle": "JavaScript: Birth & Names",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "history"
+  ],
+  "contentHash": "d6d3245c1a4a2b02",
+  "hint": "Some genuinely cool dev-world trivia ahead — let's begin with JavaScript.",
+  "question": "Who created JavaScript?",
+  "options": [
+   "James Gosling",
+   "Brendan Eich",
+   "Linus Torvalds",
+   "Tim Berners-Lee"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Brendan Eich created JavaScript at Netscape in 1995. James Gosling made Java, Torvalds made Linux/Git, and Berners-Lee invented the Web.",
+  "cs": {
+   "hint": "Čeká nás pár opravdu zajímavostí ze světa vývojářů – začněme JavaScriptem.",
+   "question": "Kdo vytvořil JavaScript?",
+   "options": [
+    "James Gosling",
+    "Brendan Eich",
+    "Linus Torvalds",
+    "Tim Berners-Lee"
+   ],
+   "explanation": "JavaScript vytvořil Brendan Eich ve společnosti Netscape v roce 1995. James Gosling stojí za Javou, Torvalds za Linuxem/Gitem a Berners-Lee vynalezl Web.",
+   "csHash": "1263f793f5603347"
+  },
+  "automatedFlags": []
+ },
+ {
+  "id": "rm-cool-2",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 1,
+  "levelTitle": "JavaScript: Birth & Names",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "history"
+  ],
+  "contentHash": "2dddc4ab2b1e42ba",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "Roughly how long did Brendan Eich take to build the first JavaScript prototype?",
+  "options": [
+   "About 10 days",
+   "About 10 weeks",
+   "About 10 months",
+   "About 10 years"
+  ],
+  "correctAnswer": 0,
+  "explanation": "The first prototype was famously hacked together in about ten days in May 1995 — which is why JavaScript has so many quirks.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Jak dlouho přibližně trvalo Brendanu Eichovi vytvořit první prototyp JavaScriptu?",
+   "options": [
+    "Asi 10 dní",
+    "Asi 10 týdnů",
+    "Asi 10 měsíců",
+    "Asi 10 let"
+   ],
+   "explanation": "První prototyp byl proslule splácaný za zhruba deset dní v květnu 1995 – proto má JavaScript tolik podivností.",
+   "csHash": "aef224d796c6be2d"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-3",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 1,
+  "levelTitle": "JavaScript: Birth & Names",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "naming"
+  ],
+  "contentHash": "f6403aa93bcef30e",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on naming.",
+  "question": "What was JavaScript's original internal codename?",
+  "options": [
+   "Oak",
+   "Mocha",
+   "Coffee",
+   "Ember"
+  ],
+  "correctAnswer": 1,
+  "explanation": "It was first called Mocha, then shipped briefly as LiveScript, before being renamed JavaScript.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na názvy.",
+   "question": "Jaké bylo původní interní krycí jméno JavaScriptu?",
+   "options": [
+    "Oak",
+    "Mocha",
+    "Coffee",
+    "Ember"
+   ],
+   "explanation": "Nejprve se jmenoval Mocha, poté krátce vyšel jako LiveScript a teprve potom byl přejmenován na JavaScript.",
+   "csHash": "02509af9a749a44f"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-4",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 1,
+  "levelTitle": "JavaScript: Birth & Names",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "naming"
+  ],
+  "contentHash": "f670724f25d87491",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on naming.",
+  "question": "Just before it was called 'JavaScript', the language shipped under which name?",
+  "options": [
+   "Mocha",
+   "LiveScript",
+   "JScript",
+   "ECMAScript"
+  ],
+  "correctAnswer": 1,
+  "explanation": "It shipped as LiveScript in a Netscape Navigator 2.0 beta (1995) before the marketing rename to JavaScript.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na názvy.",
+   "question": "Těsně předtím, než se začal jmenovat „JavaScript“, vyšel jazyk pod jakým názvem?",
+   "options": [
+    "Mocha",
+    "LiveScript",
+    "JScript",
+    "ECMAScript"
+   ],
+   "explanation": "Vyšel jako LiveScript v beta verzi Netscape Navigatoru 2.0 (1995), než byl marketingově přejmenován na JavaScript.",
+   "csHash": "5a1aa0b4ad1cb0aa"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-5",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 1,
+  "levelTitle": "JavaScript: Birth & Names",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "naming"
+  ],
+  "contentHash": "1453acbe6deeb96b",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on naming.",
+  "question": "Why was the language renamed 'JavaScript'?",
+  "options": [
+   "It was written in Java",
+   "A marketing tie-in with the then-hot Java, despite being unrelated",
+   "It runs on the Java Virtual Machine",
+   "Java's team built it"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Netscape renamed it to ride Java's popularity (a Sun partnership). The two languages are otherwise largely unrelated.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na názvy.",
+   "question": "Proč byl jazyk přejmenován na „JavaScript“?",
+   "options": [
+    "Byl napsán v Javě",
+    "Marketingové napojení na tehdy populární Javu, přestože s ní nesouvisí",
+    "Běží na Java Virtual Machine",
+    "Vytvořil ho tým Javy"
+   ],
+   "explanation": "Netscape ho přejmenoval, aby se svezl na popularitě Javy (partnerství se Sunem). Jinak spolu oba jazyky v podstatě nesouvisí.",
+   "csHash": "6a3059ed184c0855"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-6",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 1,
+  "levelTitle": "JavaScript: Birth & Names",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "myth"
+  ],
+  "contentHash": "be4f7bf69a2a6fb7",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on myth.",
+  "question": "What is the relationship between Java and JavaScript?",
+  "options": [
+   "JavaScript is a version of Java",
+   "They are essentially unrelated languages with a similar name",
+   "Java compiles to JavaScript",
+   "They are the same language"
+  ],
+  "correctAnswer": 1,
+  "explanation": "As the saying goes, Java and JavaScript are alike as car and carpet — the shared name was marketing, not lineage.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na mýty.",
+   "question": "Jaký je vztah mezi Javou a JavaScriptem?",
+   "options": [
+    "JavaScript je verze Javy",
+    "Jsou to v podstatě nesouvisející jazyky s podobným názvem",
+    "Java se kompiluje do JavaScriptu",
+    "Jsou to tentýž jazyk"
+   ],
+   "explanation": "Jak se říká, Java a JavaScript mají k sobě asi tak blízko jako auto a autogram – společné jméno byl marketing, ne příbuznost.",
+   "csHash": "4cccc616e19bd8a5"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-7",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 1,
+  "levelTitle": "JavaScript: Birth & Names",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "standards"
+  ],
+  "contentHash": "f673406c515fc2d7",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on standards.",
+  "question": "What is the official standardized name for the JavaScript language?",
+  "options": [
+   "ECMAScript",
+   "JavaSE",
+   "HTMLScript",
+   "W3Script"
+  ],
+  "correctAnswer": 0,
+  "explanation": "The language standard is ECMAScript (maintained by Ecma International); 'JavaScript' is the popular name for it.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na standardy.",
+   "question": "Jaký je oficiální standardizovaný název jazyka JavaScript?",
+   "options": [
+    "ECMAScript",
+    "JavaSE",
+    "HTMLScript",
+    "W3Script"
+   ],
+   "explanation": "Standardem jazyka je ECMAScript (spravovaný organizací Ecma International); „JavaScript“ je jeho zažitý lidový název.",
+   "csHash": "95a15b74fcdd791b"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-8",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 1,
+  "levelTitle": "JavaScript: Birth & Names",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "history"
+  ],
+  "contentHash": "857c8658f24eb212",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "At which company was JavaScript created?",
+  "options": [
+   "Sun Microsystems",
+   "Microsoft",
+   "Netscape",
+   "Google"
+  ],
+  "correctAnswer": 2,
+  "explanation": "Brendan Eich created it at Netscape Communications for the Navigator browser.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Ve které společnosti JavaScript vznikl?",
+   "options": [
+    "Sun Microsystems",
+    "Microsoft",
+    "Netscape",
+    "Google"
+   ],
+   "explanation": "Brendan Eich ho vytvořil ve společnosti Netscape Communications pro prohlížeč Navigator.",
+   "csHash": "908c0a5522f99c50"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-9",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 2,
+  "levelTitle": "JavaScript: Weird Parts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "quirks"
+  ],
+  "contentHash": "0953b6127d1ca484",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on quirks.",
+  "question": "What does typeof null return in JavaScript?",
+  "options": [
+   "'null'",
+   "'object'",
+   "'undefined'",
+   "'boolean'"
+  ],
+  "correctAnswer": 1,
+  "explanation": "typeof null is 'object' — a long-standing bug kept for backward compatibility.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na podivnosti.",
+   "question": "Co v JavaScriptu vrací typeof null?",
+   "options": [
+    "'null'",
+    "'object'",
+    "'undefined'",
+    "'boolean'"
+   ],
+   "explanation": "typeof null vrací 'object' – jde o dlouholetou chybu zachovanou kvůli zpětné kompatibilitě.",
+   "csHash": "9f4bbced04456090"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-10",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 2,
+  "levelTitle": "JavaScript: Weird Parts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "quirks"
+  ],
+  "contentHash": "a47cea81ed19d7ab",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on quirks.",
+  "question": "Why does typeof null return 'object'?",
+  "options": [
+   "null is technically an empty object",
+   "An early implementation tagged values by type, and null shared the tag (0) used for objects",
+   "The spec defines null as an object",
+   "It is a documentation typo"
+  ],
+  "correctAnswer": 1,
+  "explanation": "In the original engine, values had a type tag; objects were tag 0 and null was the null pointer (also 0), so it read as 'object'.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na podivnosti.",
+   "question": "Proč typeof null vrací 'object'?",
+   "options": [
+    "null je technicky vzato prázdný objekt",
+    "První implementace označovala hodnoty podle typu a null sdílel značku (0) používanou pro objekty",
+    "Specifikace definuje null jako objekt",
+    "Je to překlep v dokumentaci"
+   ],
+   "explanation": "V původním enginu měly hodnoty typovou značku; objekty měly značku 0 a null byl nulový ukazatel (rovněž 0), takže byl čten jako 'object'.",
+   "csHash": "e67650f8591748b1"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-11",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 2,
+  "levelTitle": "JavaScript: Weird Parts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "numbers"
+  ],
+  "contentHash": "3756bb8915d6ddff",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on numbers.",
+  "question": "In JavaScript, what does 0.1 + 0.2 evaluate to?",
+  "options": [
+   "Exactly 0.3",
+   "0.30000000000000004",
+   "NaN",
+   "It throws an error"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Floating-point (IEEE 754) can't represent 0.1 and 0.2 exactly, so the sum is 0.30000000000000004 — not strictly 0.3.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na čísla.",
+   "question": "Na co se v JavaScriptu vyhodnotí 0.1 + 0.2?",
+   "options": [
+    "Přesně 0.3",
+    "0.30000000000000004",
+    "NaN",
+    "Vyhodí chybu"
+   ],
+   "explanation": "Plovoucí desetinná čárka (IEEE 754) neumí 0.1 a 0.2 přesně reprezentovat, takže součet je 0.30000000000000004 – ne přesně 0.3.",
+   "csHash": "03ef707b377520a6"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-12",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 2,
+  "levelTitle": "JavaScript: Weird Parts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "numbers"
+  ],
+  "contentHash": "3152ea66d51f6aca",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on numbers.",
+  "question": "What is the result of NaN === NaN?",
+  "options": [
+   "true",
+   "false",
+   "It throws",
+   "undefined"
+  ],
+  "correctAnswer": 1,
+  "explanation": "NaN is the only value not equal to itself; NaN === NaN is false. Use Number.isNaN() to test for it.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na čísla.",
+   "question": "Jaký je výsledek NaN === NaN?",
+   "options": [
+    "true",
+    "false",
+    "Vyhodí chybu",
+    "undefined"
+   ],
+   "explanation": "NaN je jediná hodnota, která se nerovná sama sobě; NaN === NaN je false. K otestování použij Number.isNaN().",
+   "csHash": "5761a6560211b184"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-13",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 2,
+  "levelTitle": "JavaScript: Weird Parts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "numbers"
+  ],
+  "contentHash": "f522e510a7add2ef",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on numbers.",
+  "question": "What does typeof NaN return?",
+  "options": [
+   "'number'",
+   "'NaN'",
+   "'undefined'",
+   "'object'"
+  ],
+  "correctAnswer": 0,
+  "explanation": "NaN ('Not a Number') is, paradoxically, of type 'number'.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na čísla.",
+   "question": "Co vrací typeof NaN?",
+   "options": [
+    "'number'",
+    "'NaN'",
+    "'undefined'",
+    "'object'"
+   ],
+   "explanation": "NaN („Not a Number“, tedy „není číslo“) je paradoxně typu 'number'.",
+   "csHash": "1ccceb098f053961"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-14",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 2,
+  "levelTitle": "JavaScript: Weird Parts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "quirks"
+  ],
+  "contentHash": "78e2ff3059ce767f",
+  "hint": "Check the statement against the normal case and one likely edge case. Focus on quirks.",
+  "question": "Is an empty array [] truthy or falsy in JavaScript?",
+  "options": [
+   "Truthy",
+   "Falsy",
+   "It throws",
+   "Depends on its length"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Empty arrays (and empty objects) are truthy. Only a fixed set of values — false, 0, '', null, undefined, NaN — are falsy.",
+  "cs": {
+   "hint": "Rozhodni, zda to platí obecně, a dej pozor na okrajové případy. Mysli na podivnosti.",
+   "question": "Je prázdné pole [] v JavaScriptu pravdivé (truthy), nebo nepravdivé (falsy)?",
+   "options": [
+    "Pravdivé (truthy)",
+    "Nepravdivé (falsy)",
+    "Vyhodí chybu",
+    "Záleží na jeho délce"
+   ],
+   "explanation": "Prázdná pole (i prázdné objekty) jsou pravdivá. Nepravdivá je jen pevná sada hodnot – false, 0, '', null, undefined, NaN.",
+   "csHash": "a1a210aaa47f09c7"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-15",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 2,
+  "levelTitle": "JavaScript: Weird Parts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "operators"
+  ],
+  "contentHash": "95049b5ef107856b",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on operators.",
+  "question": "What does the loose equality operator == do that strict === does not?",
+  "options": [
+   "Compares object references",
+   "Performs type coercion before comparing",
+   "Runs faster",
+   "Handles NaN correctly"
+  ],
+  "correctAnswer": 1,
+  "explanation": "== coerces operands to a common type before comparing (so 1 == '1' is true); === compares without coercion.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na operátory.",
+   "question": "Co dělá operátor volné rovnosti == oproti přísnému ===?",
+   "options": [
+    "Porovnává reference objektů",
+    "Před porovnáním provádí typovou konverzi",
+    "Běží rychleji",
+    "Správně zachází s NaN"
+   ],
+   "explanation": "== před porovnáním převede operandy na společný typ (takže 1 == '1' je true); === porovnává bez konverze.",
+   "csHash": "f7a804a32601a89c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-16",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 2,
+  "levelTitle": "JavaScript: Weird Parts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "JavaScript",
+   "arrays"
+  ],
+  "contentHash": "a5bbc613a284e58f",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on arrays.",
+  "question": "By default, JavaScript's Array sort() compares elements as what?",
+  "options": [
+   "Numbers, ascending",
+   "Strings (lexicographically)",
+   "Randomly",
+   "By length"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Default sort converts items to strings, so [1, 2, 10].sort() gives [1, 10, 2]. Pass a comparator for numeric order.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na pole.",
+   "question": "Jak ve výchozím nastavení porovnává prvky metoda sort() polí v JavaScriptu?",
+   "options": [
+    "Jako čísla, vzestupně",
+    "Jako řetězce (lexikograficky)",
+    "Náhodně",
+    "Podle délky"
+   ],
+   "explanation": "Výchozí řazení převede prvky na řetězce, takže [1, 2, 10].sort() dá [1, 10, 2]. Pro číselné pořadí předej komparátor.",
+   "csHash": "11ea2e9dd3dd7fd9"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ],
+  "csDriftFlags": [
+   "code-like option 1 differs: EN 'Strings (lexicographically)' vs CS 'Jako řetězce (lexikograficky)'"
+  ]
+ },
+ {
+  "id": "rm-cool-17",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 3,
+  "levelTitle": "Birth of the Web",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "history"
+  ],
+  "contentHash": "2ead36e02e761e13",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "Who invented the World Wide Web?",
+  "options": [
+   "Vint Cerf",
+   "Tim Berners-Lee",
+   "Bill Gates",
+   "Marc Andreessen"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Tim Berners-Lee invented the Web at CERN around 1989–1991. Vint Cerf is a 'father of the Internet' — a different thing.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Kdo vynalezl World Wide Web?",
+   "options": [
+    "Vint Cerf",
+    "Tim Berners-Lee",
+    "Bill Gates",
+    "Marc Andreessen"
+   ],
+   "explanation": "Tim Berners-Lee vynalezl Web v CERNu kolem let 1989–1991. Vint Cerf je „otec internetu“ – což je něco jiného.",
+   "csHash": "af696c7f4d2d58c3"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-18",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 3,
+  "levelTitle": "Birth of the Web",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "history"
+  ],
+  "contentHash": "c30a15c3db31ce46",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "The world's first website ran on what kind of computer at CERN?",
+  "options": [
+   "An IBM PC",
+   "A NeXT computer",
+   "An Apple Macintosh",
+   "A Cray supercomputer"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The first web server ran on a NeXT machine; a note on it reportedly warned people not to power it off.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Na jakém počítači v CERNu běžel první web na světě?",
+   "options": [
+    "Na IBM PC",
+    "Na počítači NeXT",
+    "Na Apple Macintosh",
+    "Na superpočítači Cray"
+   ],
+   "explanation": "První webový server běžel na stroji NeXT; na něm prý byla cedulka varující, aby ho lidé nevypínali.",
+   "csHash": "5aa14d58e5eab7a4"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-19",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 3,
+  "levelTitle": "Birth of the Web",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "firsts"
+  ],
+  "contentHash": "32f43eaad5398ee6",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on firsts.",
+  "question": "What was the address of the world's first website?",
+  "options": [
+   "www.w3.org",
+   "info.cern.ch",
+   "web.cern.org",
+   "the.first.web"
+  ],
+  "correctAnswer": 1,
+  "explanation": "info.cern.ch hosted the first website, describing the World Wide Web project itself.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na prvenství.",
+   "question": "Jaká byla adresa prvního webu na světě?",
+   "options": [
+    "www.w3.org",
+    "info.cern.ch",
+    "web.cern.org",
+    "the.first.web"
+   ],
+   "explanation": "info.cern.ch hostoval první web, který popisoval samotný projekt World Wide Web.",
+   "csHash": "6724c07cff4500c8"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-20",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 3,
+  "levelTitle": "Birth of the Web",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "concepts"
+  ],
+  "contentHash": "da5ee238c2a5e146",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on concepts.",
+  "question": "How are 'the Web' and 'the Internet' related?",
+  "options": [
+   "They are the same thing",
+   "The Web is a service that runs on top of the Internet",
+   "The Internet runs on top of the Web",
+   "They are completely unrelated"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The Internet is the global network; the Web (sites, links, HTTP) is one of many things built on top of it.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na pojmy.",
+   "question": "Jak spolu souvisí „Web“ a „internet“?",
+   "options": [
+    "Je to totéž",
+    "Web je služba, která běží nad internetem",
+    "Internet běží nad Webem",
+    "Vůbec spolu nesouvisí"
+   ],
+   "explanation": "Internet je globální síť; Web (stránky, odkazy, HTTP) je jednou z mnoha věcí postavených nad ním.",
+   "csHash": "02d7840e4168307a"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-21",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 3,
+  "levelTitle": "Birth of the Web",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "browsers"
+  ],
+  "contentHash": "e12d346c277a8705",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on browsers.",
+  "question": "What was the name of the first web browser, written by Berners-Lee?",
+  "options": [
+   "Mosaic",
+   "WorldWideWeb",
+   "Netscape",
+   "Lynx"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The first browser was called WorldWideWeb (later renamed Nexus to avoid confusion with the Web itself).",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na prohlížeče.",
+   "question": "Jak se jmenoval první webový prohlížeč, který napsal Berners-Lee?",
+   "options": [
+    "Mosaic",
+    "WorldWideWeb",
+    "Netscape",
+    "Lynx"
+   ],
+   "explanation": "První prohlížeč se jmenoval WorldWideWeb (později přejmenovaný na Nexus, aby se nepletl se samotným Webem).",
+   "csHash": "f0ca095dad537499"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-22",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 3,
+  "levelTitle": "Birth of the Web",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "HTML"
+  ],
+  "contentHash": "d2932c64763f8287",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs.",
+  "question": "Which non-standard tag, introduced by Netscape, made text flash on and off?",
+  "options": [
+   "<flash>",
+   "<blink>",
+   "<strobe>",
+   "<marquee>"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The infamous <blink> tag made text blink; it's widely reviled and effectively obsolete.",
+  "cs": {
+   "hint": "Nejdřív vyluč možnosti, které jdou vyloučit – odpověď je často to, co zbude.",
+   "question": "Která nestandardní značka zavedená Netscapem nechávala text blikat?",
+   "options": [
+    "<flash>",
+    "<blink>",
+    "<strobe>",
+    "<marquee>"
+   ],
+   "explanation": "Nechvalně proslulá značka <blink> nechávala text blikat; je všeobecně nenáviděná a fakticky zastaralá.",
+   "csHash": "0e7f9e4fa3469f0e"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-23",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 3,
+  "levelTitle": "Birth of the Web",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "HTML"
+  ],
+  "contentHash": "ddb31526c2d2a0f9",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs.",
+  "question": "Which non-standard tag (popularized by Internet Explorer) scrolled text across the page?",
+  "options": [
+   "<marquee>",
+   "<scroll>",
+   "<ticker>",
+   "<blink>"
+  ],
+  "correctAnswer": 0,
+  "explanation": "<marquee> scrolled content across the screen — a hallmark of 1990s web pages, now obsolete.",
+  "cs": {
+   "hint": "Nejdřív vyluč možnosti, které jdou vyloučit – odpověď je často to, co zbude.",
+   "question": "Která nestandardní značka (zpopularizovaná Internet Explorerem) posouvala text po stránce?",
+   "options": [
+    "<marquee>",
+    "<scroll>",
+    "<ticker>",
+    "<blink>"
+   ],
+   "explanation": "<marquee> posouval obsah po obrazovce – poznávací znamení webových stránek 90. let, dnes zastaralé.",
+   "csHash": "a4d357ee70cdb57d"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-24",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 3,
+  "levelTitle": "Birth of the Web",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "HTML"
+  ],
+  "contentHash": "c80971697d8c4139",
+  "hint": "Explain the term in your own words, including when you would use it.",
+  "question": "What does 'HTML' stand for?",
+  "options": [
+   "HyperText Markup Language",
+   "High-level Text Machine Language",
+   "Hyperlink Text Management Logic",
+   "Home Tool Markup Language"
+  ],
+  "correctAnswer": 0,
+  "explanation": "HTML is HyperText Markup Language — the markup that structures web pages.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu.",
+   "question": "Co znamená zkratka „HTML“?",
+   "options": [
+    "HyperText Markup Language",
+    "High-level Text Machine Language",
+    "Hyperlink Text Management Logic",
+    "Home Tool Markup Language"
+   ],
+   "explanation": "HTML znamená HyperText Markup Language – značkovací jazyk, který dává strukturu webovým stránkám.",
+   "csHash": "edf424582f2f83de"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-25",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 4,
+  "levelTitle": "Internet Firsts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "firsts"
+  ],
+  "contentHash": "987d9b4b9fa123a7",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on firsts.",
+  "question": "What was the first registered .com domain name?",
+  "options": [
+   "apple.com",
+   "symbolics.com",
+   "ibm.com",
+   "mit.com"
+  ],
+  "correctAnswer": 1,
+  "explanation": "symbolics.com was registered on 15 March 1985 by computer maker Symbolics, Inc.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na prvenství.",
+   "question": "Jaké bylo první zaregistrované doménové jméno s koncovkou .com?",
+   "options": [
+    "apple.com",
+    "symbolics.com",
+    "ibm.com",
+    "mit.com"
+   ],
+   "explanation": "symbolics.com zaregistroval 15. března 1985 výrobce počítačů Symbolics, Inc.",
+   "csHash": "47b38160bc3dac20"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-26",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 4,
+  "levelTitle": "Internet Firsts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "firsts"
+  ],
+  "contentHash": "43a83cba5e29180e",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on firsts.",
+  "question": "The world's first webcam was set up to watch what?",
+  "options": [
+   "A parking lot",
+   "A coffee pot",
+   "A server room",
+   "A fish tank"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Cambridge researchers pointed a camera at the 'Trojan Room' coffee pot so they'd know if it was empty before walking over.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na prvenství.",
+   "question": "Na co byla namířena první webkamera na světě?",
+   "options": [
+    "Na parkoviště",
+    "Na konvici na kávu",
+    "Na serverovnu",
+    "Na akvárium"
+   ],
+   "explanation": "Cambridgeští výzkumníci namířili kameru na konvici na kávu v „Trojan Room“, aby věděli, jestli je prázdná, než tam dojdou.",
+   "csHash": "8c212ebe05970198"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-27",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 4,
+  "levelTitle": "Internet Firsts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "firsts"
+  ],
+  "contentHash": "0ba83c626bbfe0bd",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on firsts.",
+  "question": "The web's first banner ad (1994, for AT&T) asked: 'Have you ever clicked your mouse right HERE? ___'",
+  "options": [
+   "You will.",
+   "Buy now.",
+   "Click me.",
+   "Win big."
+  ],
+  "correctAnswer": 0,
+  "explanation": "AT&T's 1994 banner on HotWired read 'You will.' — widely cited as the first web banner ad.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na prvenství.",
+   "question": "První bannerová reklama na webu (1994, pro AT&T) se ptala: „Have you ever clicked your mouse right HERE? ___“",
+   "options": [
+    "You will.",
+    "Buy now.",
+    "Click me.",
+    "Win big."
+   ],
+   "explanation": "Banner AT&T z roku 1994 na HotWired hlásal „You will.“ – bývá označován za první webovou bannerovou reklamu.",
+   "csHash": "25a934fbeaf4df3c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-28",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 4,
+  "levelTitle": "Internet Firsts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "firsts"
+  ],
+  "contentHash": "f976976a5eff95cd",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on firsts.",
+  "question": "What did the very first tweet say?",
+  "options": [
+   "Hello world",
+   "just setting up my twttr",
+   "First!",
+   "Twitter is live"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Co-founder Jack Dorsey posted 'just setting up my twttr' in 2006.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na prvenství.",
+   "question": "Co stálo v úplně prvním tweetu?",
+   "options": [
+    "Hello world",
+    "just setting up my twttr",
+    "First!",
+    "Twitter is live"
+   ],
+   "explanation": "Spoluzakladatel Jack Dorsey napsal v roce 2006 „just setting up my twttr“.",
+   "csHash": "2513fdcdaa7702c7"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-29",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 4,
+  "levelTitle": "Internet Firsts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "firsts"
+  ],
+  "contentHash": "8199d4c0e66e2b33",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on firsts.",
+  "question": "What was the title of the first video uploaded to YouTube?",
+  "options": [
+   "Charlie bit my finger",
+   "Me at the zoo",
+   "Gangnam Style",
+   "First video"
+  ],
+  "correctAnswer": 1,
+  "explanation": "'Me at the zoo' (2005), a 19-second clip of co-founder Jawed Karim at the San Diego Zoo, was YouTube's first upload.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na prvenství.",
+   "question": "Jak se jmenovalo první video nahrané na YouTube?",
+   "options": [
+    "Charlie bit my finger",
+    "Me at the zoo",
+    "Gangnam Style",
+    "First video"
+   ],
+   "explanation": "„Me at the zoo“ (2005), devatenáctisekundový klip spoluzakladatele Jaweda Karima v zoo v San Diegu, bylo první nahrávkou na YouTube.",
+   "csHash": "0964ade37100c360"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-30",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 4,
+  "levelTitle": "Internet Firsts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "firsts"
+  ],
+  "contentHash": "eafa0e93e65027cc",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on firsts.",
+  "question": "Who sent the first networked email and chose the '@' sign for addresses (1971)?",
+  "options": [
+   "Vint Cerf",
+   "Ray Tomlinson",
+   "Tim Berners-Lee",
+   "Gary Thuerk"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Ray Tomlinson sent the first email across a network and picked '@' to separate the user from the host machine.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na prvenství.",
+   "question": "Kdo odeslal první e-mail po síti a zvolil znak „@“ pro adresy (1971)?",
+   "options": [
+    "Vint Cerf",
+    "Ray Tomlinson",
+    "Tim Berners-Lee",
+    "Gary Thuerk"
+   ],
+   "explanation": "Ray Tomlinson odeslal první e-mail po síti a zvolil „@“ pro oddělení uživatele od hostitelského stroje.",
+   "csHash": "718b31828e0c3c33"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-31",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 4,
+  "levelTitle": "Internet Firsts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "web",
+   "email"
+  ],
+  "contentHash": "bb80e4a7900e92e5",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on email.",
+  "question": "Why did Ray Tomlinson pick the '@' symbol for email addresses?",
+  "options": [
+   "It was the first key on the keyboard",
+   "It naturally meant 'user AT host' and was otherwise unused",
+   "It stood for 'address'",
+   "He chose it at random"
+  ],
+  "correctAnswer": 1,
+  "explanation": "'@' conveniently read as 'at' (user at host) and wasn't used in names, avoiding ambiguity.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na e-mail.",
+   "question": "Proč Ray Tomlinson vybral pro e-mailové adresy symbol „@“?",
+   "options": [
+    "Byla to první klávesa na klávesnici",
+    "Přirozeně znamenal „uživatel AT (na) hostiteli“ a jinak se nepoužíval",
+    "Znamenal „address“ (adresa)",
+    "Vybral ho náhodně"
+   ],
+   "explanation": "„@“ se příhodně četlo jako „at“ (uživatel na hostiteli) a nepoužívalo se ve jménech, takže se předešlo nejednoznačnosti.",
+   "csHash": "aad8b24dff430a73"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-32",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 4,
+  "levelTitle": "Internet Firsts",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "security",
+   "firsts"
+  ],
+  "contentHash": "005e823f49a063e3",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on firsts.",
+  "question": "The first computer virus/worm, which printed 'I'M THE CREEPER...', was named?",
+  "options": [
+   "Reaper",
+   "Creeper",
+   "ILOVEYOU",
+   "Morris"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Creeper (1971) was an experimental self-replicating program; the program written to delete it was called Reaper.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na prvenství.",
+   "question": "Jak se jmenoval první počítačový virus/červ, který vypisoval „I'M THE CREEPER...“?",
+   "options": [
+    "Reaper",
+    "Creeper",
+    "ILOVEYOU",
+    "Morris"
+   ],
+   "explanation": "Creeper (1971) byl experimentální samoreplikující se program; program napsaný k jeho odstranění se jmenoval Reaper.",
+   "csHash": "f99bf371459818a8"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-33",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 5,
+  "levelTitle": "Famous Software Disasters",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "space"
+  ],
+  "contentHash": "cc350e9275f0100e",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on space.",
+  "question": "The 1996 Ariane 5 rocket self-destructed because of what software fault?",
+  "options": [
+   "A typo in a comment",
+   "A 64-bit float converted into a too-small 16-bit integer (overflow)",
+   "A dead backup battery",
+   "A network outage"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Reused Ariane 4 code tried to fit a 64-bit floating value into a 16-bit integer; the overflow crashed the guidance system.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na vesmír.",
+   "question": "Raketa Ariane 5 se v roce 1996 sama zničila kvůli jaké softwarové chybě?",
+   "options": [
+    "Překlep v komentáři",
+    "64bitové desetinné číslo převedené do příliš malého 16bitového celého čísla (přetečení)",
+    "Vybitá záložní baterie",
+    "Výpadek sítě"
+   ],
+   "explanation": "Převzatý kód z Ariane 4 se pokusil vměstnat 64bitovou desetinnou hodnotu do 16bitového celého čísla; přetečení shodilo naváděcí systém.",
+   "csHash": "4d0944948b2e6aa5"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-34",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 5,
+  "levelTitle": "Famous Software Disasters",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "space"
+  ],
+  "contentHash": "a2f6f924cea90d68",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on space.",
+  "question": "NASA's 1999 Mars Climate Orbiter was lost due to what mistake?",
+  "options": [
+   "A cracked lens",
+   "A mix-up between metric and imperial units",
+   "A solar flare",
+   "A fuel leak"
+  ],
+  "correctAnswer": 1,
+  "explanation": "One team used pound-force seconds while another expected newton-seconds, so the orbiter approached Mars at the wrong altitude.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na vesmír.",
+   "question": "Sonda NASA Mars Climate Orbiter byla v roce 1999 ztracena kvůli jaké chybě?",
+   "options": [
+    "Prasklá čočka",
+    "Záměna mezi metrickými a imperiálními jednotkami",
+    "Sluneční erupce",
+    "Únik paliva"
+   ],
+   "explanation": "Jeden tým použil libry síly za sekundu, zatímco druhý čekal newtony za sekundu, takže se sonda přiblížila k Marsu ve špatné výšce.",
+   "csHash": "4bbe63df9602528c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-35",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 5,
+  "levelTitle": "Famous Software Disasters",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "finance"
+  ],
+  "contentHash": "da0a3c89b147bcb9",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on finance.",
+  "question": "A 2012 trading-software bug made Knight Capital lose about $440 million in roughly how long?",
+  "options": [
+   "A full year",
+   "About 45 minutes",
+   "A week",
+   "One second"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A misconfigured deployment triggered runaway trades, losing ~$440M in about 45 minutes and nearly bankrupting the firm.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na finance.",
+   "question": "Chyba v obchodním softwaru v roce 2012 připravila Knight Capital o zhruba 440 milionů dolarů zhruba za jak dlouho?",
+   "options": [
+    "Za celý rok",
+    "Asi za 45 minut",
+    "Za týden",
+    "Za jednu sekundu"
+   ],
+   "explanation": "Chybně nasazená konfigurace spustila nekontrolované obchody, které během asi 45 minut připravily firmu o ~440 milionů dolarů a téměř ji přivedly k bankrotu.",
+   "csHash": "d816d80eb83f6b82"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-36",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 5,
+  "levelTitle": "Famous Software Disasters",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "hardware"
+  ],
+  "contentHash": "7e3fb5b892974e07",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on hardware.",
+  "question": "The 1994 Intel 'FDIV' bug was an error in which operation?",
+  "options": [
+   "Memory addressing",
+   "Floating-point division",
+   "The system clock",
+   "Integer addition"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The Pentium's floating-point division could return slightly wrong results, leading to a costly recall.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na hardware.",
+   "question": "Chyba „FDIV“ v procesoru Intel z roku 1994 byla chybou ve které operaci?",
+   "options": [
+    "Adresování paměti",
+    "Dělení v plovoucí desetinné čárce",
+    "Systémové hodiny",
+    "Celočíselné sčítání"
+   ],
+   "explanation": "Dělení v plovoucí desetinné čárce u Pentia mohlo vracet mírně chybné výsledky, což vedlo k nákladnému stažení produktu.",
+   "csHash": "0a3d6f76097cf7c0"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-37",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 5,
+  "levelTitle": "Famous Software Disasters",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "safety"
+  ],
+  "contentHash": "2f220fc6bd2fd62d",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on safety.",
+  "question": "The Therac-25's software bug caused what tragic outcome?",
+  "options": [
+   "Overheating",
+   "Lethal radiation overdoses to patients",
+   "Loss of data",
+   "Screen flicker"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Race conditions in the Therac-25 radiation machine delivered massive overdoses, injuring and killing patients (1985–87).",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na bezpečnost.",
+   "question": "Jaký tragický následek způsobila softwarová chyba přístroje Therac-25?",
+   "options": [
+    "Přehřátí",
+    "Smrtelné předávkování pacientů zářením",
+    "Ztrátu dat",
+    "Blikání obrazovky"
+   ],
+   "explanation": "Souběhy (race conditions) v ozařovacím přístroji Therac-25 dodaly masivní dávky záření, čímž v letech 1985–87 zranily a usmrtily pacienty.",
+   "csHash": "d8fe1107deeae291"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-38",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 5,
+  "levelTitle": "Famous Software Disasters",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "javascript"
+  ],
+  "contentHash": "a05a049bbc89dd45",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on bugs.",
+  "question": "In 2016, un-publishing a tiny (~11-line) npm package broke builds across the internet. Which package?",
+  "options": [
+   "lodash",
+   "left-pad",
+   "jquery",
+   "is-odd"
+  ],
+  "correctAnswer": 1,
+  "explanation": "left-pad padded strings; its removal cascaded through dependencies (Babel, React and more), breaking countless builds.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na chyby.",
+   "question": "V roce 2016 stažení malého (~11řádkového) npm balíčku rozbilo buildy po celém internetu. Který balíček to byl?",
+   "options": [
+    "lodash",
+    "left-pad",
+    "jquery",
+    "is-odd"
+   ],
+   "explanation": "left-pad doplňoval řetězce; jeho odstranění se kaskádovitě prošířilo závislostmi (Babel, React a další) a rozbilo nespočet buildů.",
+   "csHash": "fd4f91a9e90955f0"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-39",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 5,
+  "levelTitle": "Famous Software Disasters",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "history"
+  ],
+  "contentHash": "1187a6813440dffe",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "The 'Y2K' problem was the fear that computers would mishandle dates because they stored years how?",
+  "options": [
+   "With only two digits",
+   "As random numbers",
+   "In binary only",
+   "Without time zones"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Storing years as two digits (e.g. '99') risked rolling over to 1900 instead of 2000 — prompting a huge global fix effort.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Problém „Y2K“ byla obava, že počítače budou špatně zacházet s daty, protože roky ukládaly jak?",
+   "options": [
+    "Jen dvěma číslicemi",
+    "Jako náhodná čísla",
+    "Jen v binární podobě",
+    "Bez časových pásem"
+   ],
+   "explanation": "Ukládání let dvěma číslicemi (např. „99“) hrozilo přetočením na rok 1900 místo 2000 – což vyvolalo obrovské celosvětové úsilí o nápravu.",
+   "csHash": "d11d510077301431"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-40",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 5,
+  "levelTitle": "Famous Software Disasters",
+  "difficulty": 1,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "time"
+  ],
+  "contentHash": "85c43aec76535a22",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on time.",
+  "question": "The 'Year 2038 problem' threatens systems that store time as what?",
+  "options": [
+   "A two-digit year",
+   "A 32-bit signed integer of seconds since 1970",
+   "A floating-point number",
+   "A text string"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A signed 32-bit Unix timestamp overflows on 19 January 2038; systems must move to 64-bit time.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na čas.",
+   "question": "„Problém roku 2038“ ohrožuje systémy, které ukládají čas jako co?",
+   "options": [
+    "Dvouciferný rok",
+    "32bitové celé číslo se znaménkem počítající sekundy od roku 1970",
+    "Číslo v plovoucí desetinné čárce",
+    "Textový řetězec"
+   ],
+   "explanation": "32bitové unixové časové razítko se znaménkem přeteče 19. ledna 2038; systémy musejí přejít na 64bitový čas.",
+   "csHash": "55760dbf7bdbb3c3"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-41",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 6,
+  "levelTitle": "The Original Bug",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "history"
+  ],
+  "contentHash": "9af367a1d65c6efb",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "The famous 1947 'first actual case of a bug' taped into a logbook was literally what?",
+  "options": [
+   "A beetle",
+   "A moth",
+   "A spider",
+   "A worm"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A moth was found in a relay of the Harvard Mark II and taped into the log with that caption.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Slavný „první skutečný případ bugu“ z roku 1947 vlepený do provozního deníku byl doslova co?",
+   "options": [
+    "Brouk",
+    "Můra",
+    "Pavouk",
+    "Červ"
+   ],
+   "explanation": "V relé počítače Harvard Mark II byla nalezena můra a vlepena do deníku s tímto popiskem.",
+   "csHash": "565e9275c1430316"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-42",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 6,
+  "levelTitle": "The Original Bug",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "history"
+  ],
+  "contentHash": "9b9405ecb4046c87",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "In which machine was the 1947 moth found?",
+  "options": [
+   "ENIAC",
+   "The Harvard Mark II",
+   "UNIVAC",
+   "The Altair 8800"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Operators found the moth jammed in a relay of the Harvard Mark II electromechanical computer.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Ve kterém stroji byla v roce 1947 nalezena ona můra?",
+   "options": [
+    "ENIAC",
+    "Harvard Mark II",
+    "UNIVAC",
+    "Altair 8800"
+   ],
+   "explanation": "Obsluha našla můru zaklíněnou v relé elektromechanického počítače Harvard Mark II.",
+   "csHash": "67723b8eeed5e180"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-43",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 6,
+  "levelTitle": "The Original Bug",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "people"
+  ],
+  "contentHash": "9984ac3efa4ffaac",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on people.",
+  "question": "Which computing pioneer is most associated with popularizing 'bug' and 'debugging' after the moth incident?",
+  "options": [
+   "Ada Lovelace",
+   "Grace Hopper",
+   "Alan Turing",
+   "Steve Wozniak"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Grace Hopper and the Mark II team helped popularize the terms, though they didn't invent the word 'bug'.",
+  "cs": {
+   "hint": "Nejdřív vyluč možnosti, které jdou vyloučit – odpověď je často to, co zbude. Mysli na lidi.",
+   "question": "Který průkopník počítačů je nejvíce spojován s rozšířením pojmů „bug“ a „debugging“ po incidentu s můrou?",
+   "options": [
+    "Ada Lovelace",
+    "Grace Hopper",
+    "Alan Turing",
+    "Steve Wozniak"
+   ],
+   "explanation": "Grace Hopper a tým u Mark II pomohli tyto pojmy rozšířit, ačkoli slovo „bug“ nevymysleli.",
+   "csHash": "c56ca6c3e0b33e8f"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-44",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 6,
+  "levelTitle": "The Original Bug",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "etymology"
+  ],
+  "contentHash": "d7ac7211e8cc276b",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on etymology.",
+  "question": "The term 'bug' for a technical fault actually predates 1947 — who used it decades earlier?",
+  "options": [
+   "Thomas Edison",
+   "Charles Babbage",
+   "Nikola Tesla",
+   "Henry Ford"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Thomas Edison used 'bug' for technical faults in the 1870s–80s, so the moth was a playful 'first actual' bug.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na etymologii.",
+   "question": "Pojem „bug“ pro technickou závadu je ve skutečnosti starší než rok 1947 – kdo ho používal už o desítky let dříve?",
+   "options": [
+    "Thomas Edison",
+    "Charles Babbage",
+    "Nikola Tesla",
+    "Henry Ford"
+   ],
+   "explanation": "Thomas Edison používal „bug“ pro technické závady už v 70.–80. letech 19. století, takže ona můra byla hravě míněný „první skutečný“ bug.",
+   "csHash": "97ad884a4a20d6fc"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-45",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 6,
+  "levelTitle": "The Original Bug",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "history"
+  ],
+  "contentHash": "38b87a41a965358b",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "Where is the logbook with the actual taped-in moth preserved today?",
+  "options": [
+   "At CERN",
+   "At the Smithsonian",
+   "At MIT",
+   "At Google HQ"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The page with the moth is held by the Smithsonian's National Museum of American History.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Kde je dnes uchováván deník se skutečnou vlepenou můrou?",
+   "options": [
+    "V CERNu",
+    "V Smithsonianu",
+    "Na MIT",
+    "V sídle Googlu"
+   ],
+   "explanation": "Stránku s můrou má Smithsonianovo Národní muzeum americké historie.",
+   "csHash": "5cf5b3addf2addfd"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-46",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 6,
+  "levelTitle": "The Original Bug",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "debugging",
+   "culture"
+  ],
+  "contentHash": "9becda6654f91397",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on culture.",
+  "question": "What is 'rubber duck debugging'?",
+  "options": [
+   "A load-testing tool",
+   "Explaining your code aloud, line by line, to an object until you spot the bug",
+   "A type of CAPTCHA",
+   "A waterproof keyboard"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Articulating the problem to a 'rubber duck' often reveals the flaw — the listener needn't understand a word.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na kulturu.",
+   "question": "Co je „rubber duck debugging“ (ladění s gumovou kachničkou)?",
+   "options": [
+    "Nástroj na zátěžové testování",
+    "Vysvětlování svého kódu nahlas, řádek po řádku, nějakému předmětu, dokud chybu neodhalíš",
+    "Druh CAPTCHA",
+    "Vodotěsná klávesnice"
+   ],
+   "explanation": "Vyslovení problému „gumové kachničce“ často chybu odhalí – posluchač nemusí rozumět jedinému slovu.",
+   "csHash": "834e0611495ddeb7"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-47",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 6,
+  "levelTitle": "The Original Bug",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "debugging",
+   "culture"
+  ],
+  "contentHash": "fb42931d593d4577",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on culture.",
+  "question": "What is a 'heisenbug'?",
+  "options": [
+   "A bug that changes or disappears when you try to observe it",
+   "A bug in a page heading",
+   "A bug that corrupts memory",
+   "A bug only on Heisenberg's PC"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Named after the uncertainty principle, a heisenbug seems to vanish under a debugger or extra logging.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na kulturu.",
+   "question": "Co je „heisenbug“?",
+   "options": [
+    "Chyba, která se mění nebo mizí, jakmile se ji pokusíš pozorovat",
+    "Chyba v nadpisu stránky",
+    "Chyba, která poškozuje paměť",
+    "Chyba pouze na Heisenbergově počítači"
+   ],
+   "explanation": "Heisenbug, pojmenovaný podle principu neurčitosti, jako by mizel pod debuggerem nebo při přidání logování.",
+   "csHash": "6309756b3e87bda2"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-48",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 6,
+  "levelTitle": "The Original Bug",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "bugs",
+   "etymology"
+  ],
+  "contentHash": "05bc093f8ef2fec6",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on etymology.",
+  "question": "The logbook caption said 'first actual case of a bug being found.' What does 'actual' imply?",
+  "options": [
+   "It was the first bug ever in history",
+   "'Bug' was already slang for a fault, so finding a real insect was the joke",
+   "The computer was acting",
+   "Nothing in particular"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Because engineers already called faults 'bugs', a literal insect was humorously the 'first actual' one.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na etymologii.",
+   "question": "Popisek v deníku zněl „first actual case of a bug being found“ (první skutečný případ nalezeného bugu). Co naznačuje slovo „actual“ (skutečný)?",
+   "options": [
+    "Šlo o vůbec první chybu v dějinách",
+    "„Bug“ byl už slang pro závadu, takže nalezení opravdového hmyzu byl vtip",
+    "Počítač jen hrál",
+    "Vůbec nic"
+   ],
+   "explanation": "Protože inženýři už závadám říkali „bugy“, doslovný hmyz byl žertem „první skutečný“.",
+   "csHash": "edc6abaf4517dda8"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-49",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 7,
+  "levelTitle": "Worms, Viruses & Spam",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "security",
+   "history"
+  ],
+  "contentHash": "f8a531b47073ab97",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "Creeper (1971), often called the first virus/worm, was written by whom?",
+  "options": [
+   "Robert Tappan Morris",
+   "Bob Thomas",
+   "Kevin Mitnick",
+   "John McAfee"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Bob Thomas wrote Creeper at BBN as a harmless experiment in self-replicating programs.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Creeper (1971), často označovaný za první virus/červ, napsal kdo?",
+   "options": [
+    "Robert Tappan Morris",
+    "Bob Thomas",
+    "Kevin Mitnick",
+    "John McAfee"
+   ],
+   "explanation": "Bob Thomas napsal Creeper v BBN jako neškodný experiment se samoreplikujícími se programy.",
+   "csHash": "c6708514d76537c9"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-50",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 7,
+  "levelTitle": "Worms, Viruses & Spam",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "security",
+   "history"
+  ],
+  "contentHash": "07565a3ad112c863",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "What program was created specifically to remove Creeper?",
+  "options": [
+   "Cleaner",
+   "Reaper",
+   "Norton",
+   "Defender"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Reaper roamed the network deleting Creeper — arguably the first antivirus.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Jaký program byl vytvořen konkrétně k odstranění Creepera?",
+   "options": [
+    "Cleaner",
+    "Reaper",
+    "Norton",
+    "Defender"
+   ],
+   "explanation": "Reaper se potuloval po síti a mazal Creepera – dalo by se říct první antivirus.",
+   "csHash": "b16e1b6607087c45"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-51",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 7,
+  "levelTitle": "Worms, Viruses & Spam",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "security",
+   "history"
+  ],
+  "contentHash": "c3ef080ddc77d9b8",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "The 1988 'Morris Worm', one of the first internet worms, was created by?",
+  "options": [
+   "Bob Thomas",
+   "Robert Tappan Morris",
+   "Gary Thuerk",
+   "Linus Torvalds"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Robert Tappan Morris released it in 1988; it spread far wider than intended and led to the first CFAA conviction.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "„Morrisův červ“ z roku 1988, jeden z prvních internetových červů, vytvořil kdo?",
+   "options": [
+    "Bob Thomas",
+    "Robert Tappan Morris",
+    "Gary Thuerk",
+    "Linus Torvalds"
+   ],
+   "explanation": "Robert Tappan Morris ho vypustil v roce 1988; rozšířil se mnohem víc, než bylo zamýšleno, a vedl k prvnímu odsouzení podle zákona CFAA.",
+   "csHash": "bd2e68fd99099b15"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-52",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 7,
+  "levelTitle": "Worms, Viruses & Spam",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "security",
+   "firsts"
+  ],
+  "contentHash": "b3158ff23c18c315",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on firsts.",
+  "question": "The first commercial spam email (1978) was sent by Gary Thuerk over which network?",
+  "options": [
+   "The World Wide Web",
+   "ARPANET",
+   "AOL",
+   "SMS"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Thuerk emailed a DEC product pitch to hundreds of ARPANET users in 1978 — the first email spam.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na prvenství.",
+   "question": "První komerční spamový e-mail (1978) odeslal Gary Thuerk přes jakou síť?",
+   "options": [
+    "World Wide Web",
+    "ARPANET",
+    "AOL",
+    "SMS"
+   ],
+   "explanation": "Thuerk v roce 1978 rozeslal nabídku produktu DEC stovkám uživatelů ARPANETu – první e-mailový spam.",
+   "csHash": "5f913a8aea0ae9f7"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-53",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 7,
+  "levelTitle": "Worms, Viruses & Spam",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "security",
+   "culture"
+  ],
+  "contentHash": "89b3ecadeb66b2b1",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on culture.",
+  "question": "The term 'spam' for unwanted messages comes from where?",
+  "options": [
+   "An acronym for junk mail",
+   "A Monty Python comedy sketch",
+   "A computer virus",
+   "A programmer's surname"
+  ],
+  "correctAnswer": 1,
+  "explanation": "It comes from the Monty Python sketch where 'spam' is repeated endlessly, drowning everything out.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na kulturu.",
+   "question": "Odkud pochází pojem „spam“ pro nevyžádané zprávy?",
+   "options": [
+    "Z akronymu pro nevyžádanou poštu",
+    "Z komediální scénky Monty Python",
+    "Z počítačového viru",
+    "Z příjmení programátora"
+   ],
+   "explanation": "Pochází ze scénky Monty Python, kde se „spam“ donekonečna opakuje a všechno ostatní přehlušuje.",
+   "csHash": "a614dd88c8660e72"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-54",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 7,
+  "levelTitle": "Worms, Viruses & Spam",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "security",
+   "history"
+  ],
+  "contentHash": "87bbed9220206496",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "What message did Creeper display on infected machines?",
+  "options": [
+   "'ALL YOUR BASE ARE BELONG TO US'",
+   "'I'M THE CREEPER : CATCH ME IF YOU CAN'",
+   "'Hello, World'",
+   "'Gotcha!'"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Creeper printed 'I'M THE CREEPER : CATCH ME IF YOU CAN' as it hopped between machines.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Jakou zprávu zobrazoval Creeper na nakažených strojích?",
+   "options": [
+    "'ALL YOUR BASE ARE BELONG TO US'",
+    "'I'M THE CREEPER : CATCH ME IF YOU CAN'",
+    "'Hello, World'",
+    "'Gotcha!'"
+   ],
+   "explanation": "Creeper při přeskakování mezi stroji vypisoval „I'M THE CREEPER : CATCH ME IF YOU CAN“.",
+   "csHash": "dd1c9cf38da51f3c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-55",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 7,
+  "levelTitle": "Worms, Viruses & Spam",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "security",
+   "history"
+  ],
+  "contentHash": "eed4b3c3e3457e40",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "The year-2000 'ILOVEYOU' outbreak spread mainly through what?",
+  "options": [
+   "Email attachments",
+   "USB sticks",
+   "Bluetooth",
+   "Floppy disks"
+  ],
+  "correctAnswer": 0,
+  "explanation": "The ILOVEYOU worm arrived as a 'love letter' email attachment (a VBScript) and spread explosively.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Nákaza „ILOVEYOU“ z roku 2000 se šířila hlavně čím?",
+   "options": [
+    "E-mailovými přílohami",
+    "USB flashkami",
+    "Bluetoothem",
+    "Disketami"
+   ],
+   "explanation": "Červ ILOVEYOU přicházel jako e-mailová příloha s „milostným dopisem“ (VBScript) a šířil se explozivně.",
+   "csHash": "781eea4c6b029ead"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-56",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 7,
+  "levelTitle": "Worms, Viruses & Spam",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "security",
+   "culture"
+  ],
+  "contentHash": "bfda44265e511cd0",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on culture.",
+  "question": "In its original 1960s MIT sense, a 'hacker' meant what?",
+  "options": [
+   "A bank robber",
+   "A clever, playful technical tinkerer",
+   "A type of virus",
+   "A fast typist"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Originally 'hacker' praised ingenious tinkering; the criminal sense came much later in popular usage.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na kulturu.",
+   "question": "Co v původním významu z MIT v 60. letech znamenalo slovo „hacker“?",
+   "options": [
+    "Bankovní lupič",
+    "Chytrý, hravý technický kutil",
+    "Druh viru",
+    "Rychlý písař"
+   ],
+   "explanation": "Původně „hacker“ chválil důmyslné kutilství; kriminální význam se v běžném užití objevil mnohem později.",
+   "csHash": "6b863f2f7f24c326"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-57",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 8,
+  "levelTitle": "Programming Pioneers",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "people",
+   "history"
+  ],
+  "contentHash": "500dbc28b4a53712",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "Who is often called the first computer programmer?",
+  "options": [
+   "Grace Hopper",
+   "Ada Lovelace",
+   "Margaret Hamilton",
+   "Alan Turing"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Ada Lovelace, in the 1840s, wrote what's considered the first algorithm intended for a machine.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Kdo je často označován za prvního programátora?",
+   "options": [
+    "Grace Hopper",
+    "Ada Lovelace",
+    "Margaret Hamilton",
+    "Alan Turing"
+   ],
+   "explanation": "Ada Lovelace ve 40. letech 19. století napsala to, co je považováno za první algoritmus určený pro stroj.",
+   "csHash": "d373cb20ba8ad9f2"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-58",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 8,
+  "levelTitle": "Programming Pioneers",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "people",
+   "history"
+  ],
+  "contentHash": "4d513cecb4ce8a89",
+  "hint": "Identify the requirement or failure mode first, then compare the trade-offs. Focus on history.",
+  "question": "Ada Lovelace's famous algorithm was written for which of Charles Babbage's machines?",
+  "options": [
+   "The Difference Engine",
+   "The Analytical Engine",
+   "ENIAC",
+   "The Turing machine"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Her notes on the (never-built) programmable Analytical Engine included an algorithm to compute Bernoulli numbers.",
+  "cs": {
+   "hint": "Nejdřív vyluč možnosti, které jdou vyloučit – odpověď je často to, co zbude. Mysli na historii.",
+   "question": "Slavný algoritmus Ady Lovelace byl napsán pro který stroj Charlese Babbage?",
+   "options": [
+    "Diferenční stroj",
+    "Analytický stroj",
+    "ENIAC",
+    "Turingův stroj"
+   ],
+   "explanation": "Její poznámky k (nikdy nepostavenému) programovatelnému Analytickému stroji obsahovaly algoritmus pro výpočet Bernoulliho čísel.",
+   "csHash": "18694d86fe574152"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-59",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 8,
+  "levelTitle": "Programming Pioneers",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "people",
+   "history"
+  ],
+  "contentHash": "2c04b0559c5cbf60",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "The first programmers of the ENIAC computer were predominantly who?",
+  "options": [
+   "Women",
+   "Soldiers",
+   "Teenagers",
+   "University professors"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Six women — including Jean Bartik and Kay McNulty — programmed ENIAC, often unrecognized for decades.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "První programátoři počítače ENIAC byli převážně kdo?",
+   "options": [
+    "Ženy",
+    "Vojáci",
+    "Teenageři",
+    "Univerzitní profesoři"
+   ],
+   "explanation": "ENIAC programovalo šest žen – mimo jiné Jean Bartik a Kay McNulty – často po desetiletí bez uznání.",
+   "csHash": "63a75c8db6104f19"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-60",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 8,
+  "levelTitle": "Programming Pioneers",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "people",
+   "etymology"
+  ],
+  "contentHash": "a6cc2814a5efb802",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on etymology.",
+  "question": "Before electronic machines, the word 'computer' referred to what?",
+  "options": [
+   "A person who performs calculations",
+   "A typewriter",
+   "An abacus",
+   "A robot"
+  ],
+  "correctAnswer": 0,
+  "explanation": "'Computer' was a job title for a human (often a woman) doing calculations by hand.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na etymologii.",
+   "question": "Co označovalo slovo „computer“ před elektronickými stroji?",
+   "options": [
+    "Člověka, který provádí výpočty",
+    "Psací stroj",
+    "Počítadlo (abakus)",
+    "Robota"
+   ],
+   "explanation": "„Computer“ byl pracovní název pro člověka (často ženu), který prováděl výpočty ručně.",
+   "csHash": "03ca8f7a3a3ef46e"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-61",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 8,
+  "levelTitle": "Programming Pioneers",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "people",
+   "languages"
+  ],
+  "contentHash": "945f24aa26fb2e08",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on languages.",
+  "question": "Grace Hopper was instrumental in creating which business programming language?",
+  "options": [
+   "FORTRAN",
+   "COBOL",
+   "LISP",
+   "BASIC"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Hopper championed machine-independent languages and helped create COBOL; she also built an early compiler.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na jazyky.",
+   "question": "Grace Hopper se zásadně podílela na vzniku kterého obchodního programovacího jazyka?",
+   "options": [
+    "FORTRAN",
+    "COBOL",
+    "LISP",
+    "BASIC"
+   ],
+   "explanation": "Hopper prosazovala strojově nezávislé jazyky a pomohla vytvořit COBOL; sestavila také jeden z prvních kompilátorů.",
+   "csHash": "4ecc9326cc00de83"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-62",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 8,
+  "levelTitle": "Programming Pioneers",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "people",
+   "AI"
+  ],
+  "contentHash": "70f3d543724cd17d",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on AI.",
+  "question": "The 'Turing test', proposed by Alan Turing, measures what?",
+  "options": [
+   "A CPU's speed",
+   "Whether a machine's responses are indistinguishable from a human's",
+   "A program's memory use",
+   "Code quality"
+  ],
+  "correctAnswer": 1,
+  "explanation": "If a human can't reliably tell the machine from a person in conversation, it passes the Turing test.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na AI.",
+   "question": "Co měří „Turingův test“, který navrhl Alan Turing?",
+   "options": [
+    "Rychlost procesoru",
+    "Zda jsou odpovědi stroje k nerozeznání od odpovědí člověka",
+    "Spotřebu paměti programu",
+    "Kvalitu kódu"
+   ],
+   "explanation": "Pokud člověk nedokáže spolehlivě odlišit stroj od člověka v konverzaci, stroj Turingovým testem prošel.",
+   "csHash": "889b4fcc0cc98692"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-63",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 8,
+  "levelTitle": "Programming Pioneers",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "people",
+   "languages"
+  ],
+  "contentHash": "bbb6380b0987be2d",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on languages.",
+  "question": "Dennis Ritchie created the C language and co-created which operating system?",
+  "options": [
+   "Windows",
+   "Unix",
+   "Linux",
+   "macOS"
+  ],
+  "correctAnswer": 1,
+  "explanation": "At Bell Labs, Ritchie created C and co-created Unix with Ken Thompson — foundations of modern computing.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na jazyky.",
+   "question": "Dennis Ritchie vytvořil jazyk C a spoluvytvořil který operační systém?",
+   "options": [
+    "Windows",
+    "Unix",
+    "Linux",
+    "macOS"
+   ],
+   "explanation": "V Bell Labs Ritchie vytvořil jazyk C a spolu s Kenem Thompsonem Unix – základy moderního počítačového světa.",
+   "csHash": "6c11ab16fa56fed5"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-64",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 8,
+  "levelTitle": "Programming Pioneers",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "people",
+   "languages"
+  ],
+  "contentHash": "8ba3b5bc5d23f581",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on languages.",
+  "question": "Edsger Dijkstra's famous 1968 essay declared which statement 'considered harmful'?",
+  "options": [
+   "GOTO",
+   "IF",
+   "WHILE",
+   "RETURN"
+  ],
+  "correctAnswer": 0,
+  "explanation": "'Go To Statement Considered Harmful' argued against goto in favor of structured programming.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na jazyky.",
+   "question": "Slavná esej Edsgera Dijkstry z roku 1968 prohlásila který příkaz za „škodlivý“?",
+   "options": [
+    "GOTO",
+    "IF",
+    "WHILE",
+    "RETURN"
+   ],
+   "explanation": "Esej „Go To Statement Considered Harmful“ argumentovala proti goto ve prospěch strukturovaného programování.",
+   "csHash": "f19589f76226e85f"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-65",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 9,
+  "levelTitle": "Language Naming & Lore",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "languages",
+   "naming"
+  ],
+  "contentHash": "275fbf57bb9bf94a",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on naming.",
+  "question": "Java was originally named what, after a tree outside the office?",
+  "options": [
+   "Oak",
+   "Green",
+   "Bean",
+   "Latte"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Java started as 'Oak' (a tree outside James Gosling's office) and was renamed Java after the coffee.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na názvy.",
+   "question": "Jak se Java původně jmenovala, podle stromu před kanceláří?",
+   "options": [
+    "Oak",
+    "Green",
+    "Bean",
+    "Latte"
+   ],
+   "explanation": "Java vznikla jako „Oak“ (dub před kanceláří Jamese Goslinga) a podle kávy byla přejmenována na Java.",
+   "csHash": "18025cbd280a8a7b"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-66",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 9,
+  "levelTitle": "Language Naming & Lore",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "languages",
+   "naming"
+  ],
+  "contentHash": "14348ec3dea1b135",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on naming.",
+  "question": "The Python language is named after what?",
+  "options": [
+   "The snake",
+   "Monty Python's Flying Circus",
+   "A Greek myth",
+   "An acronym"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Guido van Rossum named it after the British comedy troupe Monty Python — not the reptile.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na názvy.",
+   "question": "Podle čeho je pojmenován jazyk Python?",
+   "options": [
+    "Podle hada",
+    "Podle Monty Python's Flying Circus",
+    "Podle řeckého mýtu",
+    "Je to akronym"
+   ],
+   "explanation": "Guido van Rossum ho pojmenoval podle britského komediálního souboru Monty Python – ne podle plaza.",
+   "csHash": "9189e0be1c21897a"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-67",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 9,
+  "levelTitle": "Language Naming & Lore",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "companies",
+   "naming"
+  ],
+  "contentHash": "8d11a05a69f0f19d",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on naming.",
+  "question": "'Google' is a misspelling of which mathematical term?",
+  "options": [
+   "googol",
+   "goggle",
+   "googly",
+   "gogol"
+  ],
+  "correctAnswer": 0,
+  "explanation": "A googol is 10^100; the company name is a (now-iconic) misspelling of it.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na názvy.",
+   "question": "„Google“ je překlep kterého matematického pojmu?",
+   "options": [
+    "googol",
+    "goggle",
+    "googly",
+    "gogol"
+   ],
+   "explanation": "Googol je 10^100; název firmy je dnes již ikonický překlep tohoto slova.",
+   "csHash": "bc3cc9a481528518"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-68",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 9,
+  "levelTitle": "Language Naming & Lore",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "tools",
+   "naming"
+  ],
+  "contentHash": "2733fb32eb3acc4c",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on naming.",
+  "question": "According to Linus Torvalds, 'git' is partly named because it's British slang for what?",
+  "options": [
+   "Fast",
+   "An unpleasant person",
+   "A tracker",
+   "Global"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Torvalds joked he names projects after himself; 'git' is British slang for an annoying person. (Its man page calls it 'the stupid content tracker'.)",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na názvy.",
+   "question": "Podle Linuse Torvaldse je „git“ pojmenován zčásti proto, že je to britský slang pro co?",
+   "options": [
+    "Rychlý",
+    "Nepříjemný člověk",
+    "Sledovač",
+    "Globální"
+   ],
+   "explanation": "Torvalds žertoval, že projekty pojmenovává po sobě; „git“ je britský slang pro otravného člověka. (Jeho manuálová stránka ho označuje za „the stupid content tracker“.)",
+   "csHash": "f7b72fbd7e7e2129"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-69",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 9,
+  "levelTitle": "Language Naming & Lore",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "languages",
+   "naming"
+  ],
+  "contentHash": "2fa2ab8144ad0df0",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on naming.",
+  "question": "The C programming language was derived from an earlier language called what?",
+  "options": [
+   "A",
+   "B",
+   "D",
+   "C++"
+  ],
+  "correctAnswer": 1,
+  "explanation": "C evolved from a language called B (itself influenced by BCPL) at Bell Labs.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na názvy.",
+   "question": "Programovací jazyk C vznikl z dřívějšího jazyka s názvem jakým?",
+   "options": [
+    "A",
+    "B",
+    "D",
+    "C++"
+   ],
+   "explanation": "C se vyvinul z jazyka B (ovlivněného jazykem BCPL) v Bell Labs.",
+   "csHash": "2a10996e619041fb"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-70",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 9,
+  "levelTitle": "Language Naming & Lore",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "software",
+   "naming"
+  ],
+  "contentHash": "c91bfecd7f5aa388",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on naming.",
+  "question": "'GNU' is a recursive acronym standing for what?",
+  "options": [
+   "GNU's Not Unix",
+   "General New Unix",
+   "Great Networked Utility",
+   "Grand Nix Unit"
+  ],
+  "correctAnswer": 0,
+  "explanation": "GNU famously stands for 'GNU's Not Unix' — a recursive acronym that refers to itself.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na názvy.",
+   "question": "„GNU“ je rekurzivní akronym, který znamená co?",
+   "options": [
+    "GNU's Not Unix",
+    "General New Unix",
+    "Great Networked Utility",
+    "Grand Nix Unit"
+   ],
+   "explanation": "GNU proslule znamená „GNU's Not Unix“ – rekurzivní akronym, který odkazuje sám na sebe.",
+   "csHash": "53b70e1e6cb6a2af"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-71",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 9,
+  "levelTitle": "Language Naming & Lore",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "languages",
+   "naming"
+  ],
+  "contentHash": "2ff28dcc526f0f48",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on naming.",
+  "question": "Today, 'PHP' is a recursive acronym for what (it began as 'Personal Home Page')?",
+  "options": [
+   "PHP: Hypertext Preprocessor",
+   "Private Hosting Protocol",
+   "Pre-Hyper Processor",
+   "Public HTML Parser"
+  ],
+  "correctAnswer": 0,
+  "explanation": "PHP now stands for the recursive 'PHP: Hypertext Preprocessor'.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na názvy.",
+   "question": "Co dnes znamená rekurzivní akronym „PHP“ (původně začínal jako „Personal Home Page“)?",
+   "options": [
+    "PHP: Hypertext Preprocessor",
+    "Private Hosting Protocol",
+    "Pre-Hyper Processor",
+    "Public HTML Parser"
+   ],
+   "explanation": "PHP dnes znamená rekurzivní „PHP: Hypertext Preprocessor“.",
+   "csHash": "e314aeb28059023e"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-72",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 9,
+  "levelTitle": "Language Naming & Lore",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "languages",
+   "culture"
+  ],
+  "contentHash": "6f48caf986c786c3",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on culture.",
+  "question": "In Python, the traditional placeholder variable names are often what (a Monty Python nod)?",
+  "options": [
+   "foo and bar",
+   "spam and eggs",
+   "cat and dog",
+   "alice and bob"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Python docs favor 'spam' and 'eggs' (from a Monty Python sketch) over the usual 'foo' and 'bar'.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na kulturu.",
+   "question": "Jaké jsou v Pythonu tradiční zástupné názvy proměnných (s odkazem na Monty Python)?",
+   "options": [
+    "foo a bar",
+    "spam a eggs",
+    "cat a dog",
+    "alice a bob"
+   ],
+   "explanation": "Dokumentace Pythonu dává přednost „spam“ a „eggs“ (ze scénky Monty Python) před obvyklými „foo“ a „bar“.",
+   "csHash": "5077d3e5be86f7d1"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-73",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 10,
+  "levelTitle": "Esoteric Languages",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "esolang",
+   "trivia"
+  ],
+  "contentHash": "1ef4898087b5ea3a",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on trivia.",
+  "question": "The esoteric language Brainfuck is famous for having only how many commands?",
+  "options": [
+   "8",
+   "26",
+   "1",
+   "100"
+  ],
+  "correctAnswer": 0,
+  "explanation": "Brainfuck has just 8 single-character commands, designed for the smallest possible compiler.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na zajímavosti.",
+   "question": "Ezoterický jazyk Brainfuck je proslulý tím, že má jen kolik příkazů?",
+   "options": [
+    "8",
+    "26",
+    "1",
+    "100"
+   ],
+   "explanation": "Brainfuck má jen 8 jednoznakových příkazů, navržených pro co nejmenší možný kompilátor.",
+   "csHash": "00347a7858f17ddd"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-74",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 10,
+  "levelTitle": "Esoteric Languages",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "esolang",
+   "trivia"
+  ],
+  "contentHash": "ff96f2543b41c8e6",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on trivia.",
+  "question": "The language 'Whitespace' is unusual because the only meaningful characters are what?",
+  "options": [
+   "Emojis",
+   "Spaces, tabs, and line breaks",
+   "Numbers",
+   "Brackets"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Whitespace ignores everything except spaces, tabs and newlines — so programs can hide inside other text.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na zajímavosti.",
+   "question": "Jazyk „Whitespace“ je neobvyklý tím, že jediné významové znaky jsou jaké?",
+   "options": [
+    "Emoji",
+    "Mezery, tabulátory a konce řádků",
+    "Čísla",
+    "Závorky"
+   ],
+   "explanation": "Whitespace ignoruje vše kromě mezer, tabulátorů a konců řádků – takže programy se mohou skrývat uvnitř jiného textu.",
+   "csHash": "70a552a513196ad1"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-75",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 10,
+  "levelTitle": "Esoteric Languages",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "esolang",
+   "history"
+  ],
+  "contentHash": "53314c52f7fcc6ed",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "INTERCAL (1972) was created mainly as what?",
+  "options": [
+   "A NASA flight language",
+   "A parody of other programming languages",
+   "A database language",
+   "A typing tutor"
+  ],
+  "correctAnswer": 1,
+  "explanation": "INTERCAL was a deliberate joke; its name is 'Compiler Language With No Pronounceable Acronym'.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "INTERCAL (1972) byl vytvořen převážně jako co?",
+   "options": [
+    "Letový jazyk NASA",
+    "Parodie na ostatní programovací jazyky",
+    "Databázový jazyk",
+    "Výuka psaní na stroji"
+   ],
+   "explanation": "INTERCAL byl záměrný vtip; jeho název znamená „Compiler Language With No Pronounceable Acronym“ (kompilátorový jazyk bez vyslovitelného akronymu).",
+   "csHash": "efc9a1854f80ac25"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-76",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 10,
+  "levelTitle": "Esoteric Languages",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "esolang",
+   "trivia"
+  ],
+  "contentHash": "3be58380332414c6",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on trivia.",
+  "question": "A LOLCODE program begins with which keyword?",
+  "options": [
+   "START",
+   "HAI",
+   "BEGIN",
+   "MAIN"
+  ],
+  "correctAnswer": 1,
+  "explanation": "LOLCODE programs open with 'HAI' and close with 'KTHXBYE', mimicking lolcat-speak.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na zajímavosti.",
+   "question": "Program v LOLCODE začíná kterým klíčovým slovem?",
+   "options": [
+    "START",
+    "HAI",
+    "BEGIN",
+    "MAIN"
+   ],
+   "explanation": "Programy v LOLCODE začínají slovem „HAI“ a končí „KTHXBYE“, čímž napodobují mluvu lolkoček.",
+   "csHash": "13cbcdc20742953b"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-77",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 10,
+  "levelTitle": "Esoteric Languages",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "esolang",
+   "trivia"
+  ],
+  "contentHash": "8b543f14fbf8758b",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on trivia.",
+  "question": "INTERCAL famously expects you to be polite by using which keyword the right amount?",
+  "options": [
+   "SORRY",
+   "PLEASE",
+   "THANKS",
+   "HELLO"
+  ],
+  "correctAnswer": 1,
+  "explanation": "INTERCAL complains if you use 'PLEASE' too rarely (rude) or too often (overly polite).",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na zajímavosti.",
+   "question": "INTERCAL proslule očekává, že budeš zdvořilý a budeš ve správné míře používat které klíčové slovo?",
+   "options": [
+    "SORRY",
+    "PLEASE",
+    "THANKS",
+    "HELLO"
+   ],
+   "explanation": "INTERCAL si stěžuje, pokud používáš „PLEASE“ příliš zřídka (neslušné) nebo příliš často (přehnaně zdvořilé).",
+   "csHash": "ab1ec822c06d1fa6"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-78",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 10,
+  "levelTitle": "Esoteric Languages",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "esolang",
+   "history"
+  ],
+  "contentHash": "38c904a23ff82473",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "Brainfuck's creator, Urban Müller, designed it with what goal?",
+  "options": [
+   "The fastest runtime",
+   "The smallest possible compiler",
+   "The easiest syntax",
+   "The best graphics"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The aim was a language with the tiniest possible compiler — readability was never the point.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "S jakým cílem navrhl tvůrce Brainfucku, Urban Müller, tento jazyk?",
+   "options": [
+    "Nejrychlejší běh",
+    "Co nejmenší možný kompilátor",
+    "Nejjednodušší syntaxi",
+    "Nejlepší grafiku"
+   ],
+   "explanation": "Cílem byl jazyk s co nejmenším možným kompilátorem – čitelnost nikdy nebyla smyslem.",
+   "csHash": "da65ba25f02aacbd"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-79",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 10,
+  "levelTitle": "Esoteric Languages",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "esolang",
+   "concepts"
+  ],
+  "contentHash": "5802348ccef4e971",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on concepts.",
+  "question": "What is the general term for joke or experimental languages like Brainfuck and LOLCODE?",
+  "options": [
+   "Legacy languages",
+   "Esoteric languages (esolangs)",
+   "Assembly languages",
+   "Scripting languages"
+  ],
+  "correctAnswer": 1,
+  "explanation": "They're called esoteric languages, or 'esolangs' — built for fun, art, or to prove a point, not for production.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na pojmy.",
+   "question": "Jaký je obecný termín pro vtipné nebo experimentální jazyky jako Brainfuck a LOLCODE?",
+   "options": [
+    "Zastaralé jazyky",
+    "Ezoterické jazyky (esolangy)",
+    "Assemblery",
+    "Skriptovací jazyky"
+   ],
+   "explanation": "Říká se jim ezoterické jazyky neboli „esolangy“ – tvořené pro zábavu, umění nebo pro důkaz nějakého tvrzení, ne pro produkční nasazení.",
+   "csHash": "00c0300b8998102e"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-80",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 10,
+  "levelTitle": "Esoteric Languages",
+  "difficulty": 2,
+  "tags": [
+   "Roadmap",
+   "esolang",
+   "culture"
+  ],
+  "contentHash": "2c62a9e89cde0695",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on culture.",
+  "question": "LOLCODE's syntax is styled after what?",
+  "options": [
+   "Latin",
+   "The 'lolcat' meme / broken-English speak",
+   "Pure emoji",
+   "Binary"
+  ],
+  "correctAnswer": 1,
+  "explanation": "LOLCODE imitates the lolcat internet meme, with keywords like 'I HAS A' and 'VISIBLE'.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na kulturu.",
+   "question": "Podle čeho je stylizovaná syntaxe jazyka LOLCODE?",
+   "options": [
+    "Podle latiny",
+    "Podle memu „lolcat“ / mluvy lámanou angličtinou",
+    "Podle čistých emoji",
+    "Podle binárního kódu"
+   ],
+   "explanation": "LOLCODE napodobuje internetový mem lolcat, s klíčovými slovy jako „I HAS A“ a „VISIBLE“.",
+   "csHash": "6ab85a9dd2f8045c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-81",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 11,
+  "levelTitle": "Mascots, Logos & Symbols",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "mascots",
+   "linux"
+  ],
+  "contentHash": "75f036463cfae079",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on linux.",
+  "question": "The Linux mascot is a penguin named what?",
+  "options": [
+   "Beastie",
+   "Tux",
+   "Gopher",
+   "Ducky"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Tux the penguin is Linux's mascot; Linus Torvalds is fond of penguins.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na Linux.",
+   "question": "Maskotem Linuxu je tučňák jménem jak?",
+   "options": [
+    "Beastie",
+    "Tux",
+    "Gopher",
+    "Ducky"
+   ],
+   "explanation": "Tučňák Tux je maskotem Linuxu; Linus Torvalds má tučňáky rád.",
+   "csHash": "9382a9c95789d0ce"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-82",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 11,
+  "levelTitle": "Mascots, Logos & Symbols",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "mascots",
+   "linux"
+  ],
+  "contentHash": "80b40e2138990257",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on linux.",
+  "question": "'Tux', the Linux penguin, is commonly said to stand for what?",
+  "options": [
+   "Tuxedo",
+   "Torvalds Unix",
+   "The Ultimate eXperience",
+   "Nothing at all"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A popular backronym reads Tux as (T)orvalds (U)ni(X), though it also evokes a penguin's tuxedo look.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na Linux.",
+   "question": "O „Tuxovi“, linuxovém tučňákovi, se běžně tvrdí, že jeho jméno znamená co?",
+   "options": [
+    "Tuxedo (smoking)",
+    "Torvalds Unix",
+    "The Ultimate eXperience",
+    "Vůbec nic"
+   ],
+   "explanation": "Populární zpětný akronym čte Tux jako (T)orvalds (U)ni(X), i když zároveň připomíná tučňákův smokingový vzhled.",
+   "csHash": "5fb8344faf5d1bc4"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-83",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 11,
+  "levelTitle": "Mascots, Logos & Symbols",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "naming",
+   "hardware"
+  ],
+  "contentHash": "b99db33b5db73172",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on hardware.",
+  "question": "Bluetooth is named after a 10th-century Scandinavian king, Harald 'Bluetooth', because he what?",
+  "options": [
+   "Invented radio",
+   "United warring tribes (as Bluetooth unites devices)",
+   "Had a blue tooth implant",
+   "Founded Ericsson"
+  ],
+  "correctAnswer": 1,
+  "explanation": "King Harald united Danish tribes; the tech unites devices, so his nickname was borrowed.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na hardware.",
+   "question": "Bluetooth je pojmenován po skandinávském králi z 10. století Haraldu „Modrozubém“ (Bluetooth), protože on co?",
+   "options": [
+    "Vynalezl rádio",
+    "Sjednotil válčící kmeny (jako Bluetooth sjednocuje zařízení)",
+    "Měl implantát modrého zubu",
+    "Založil Ericsson"
+   ],
+   "explanation": "Král Harald sjednotil dánské kmeny; technologie sjednocuje zařízení, a tak byla jeho přezdívka vypůjčena.",
+   "csHash": "672eff72acad1a50"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-84",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 11,
+  "levelTitle": "Mascots, Logos & Symbols",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "naming",
+   "hardware"
+  ],
+  "contentHash": "221e2782418de849",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on hardware.",
+  "question": "The Bluetooth logo is a bind rune of which initials?",
+  "options": [
+   "B and T",
+   "Harald Bluetooth's initials, H and B",
+   "The letters B-T",
+   "A tooth and a wave"
+  ],
+  "correctAnswer": 1,
+  "explanation": "It merges the Younger Futhark runes for H and B — Harald Bluetooth's initials.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na hardware.",
+   "question": "Logo Bluetooth je vázaná runa kterých iniciál?",
+   "options": [
+    "B a T",
+    "Iniciály Haralda Bluetooth, H a B",
+    "Písmena B-T",
+    "Zub a vlna"
+   ],
+   "explanation": "Spojuje runy mladšího futharku pro H a B – iniciály Haralda Bluetooth.",
+   "csHash": "fe684f9683e8adbd"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-85",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 11,
+  "levelTitle": "Mascots, Logos & Symbols",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "naming",
+   "myth"
+  ],
+  "contentHash": "a2f5e85def63e7bd",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on myth.",
+  "question": "Despite popular belief, 'Wi-Fi' officially stands for what?",
+  "options": [
+   "Wireless Fidelity",
+   "Nothing — it isn't an acronym",
+   "Wide Frequency",
+   "Wireless Fast Internet"
+  ],
+  "correctAnswer": 1,
+  "explanation": "'Wi-Fi' is just a catchy brand name (echoing Hi-Fi); it was never an abbreviation for 'Wireless Fidelity'.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na mýty.",
+   "question": "Navzdory rozšířenému přesvědčení „Wi-Fi“ oficiálně znamená co?",
+   "options": [
+    "Wireless Fidelity",
+    "Nic – není to akronym",
+    "Wide Frequency",
+    "Wireless Fast Internet"
+   ],
+   "explanation": "„Wi-Fi“ je jen chytlavý název značky (s odkazem na Hi-Fi); nikdy nebyl zkratkou pro „Wireless Fidelity“.",
+   "csHash": "fc43aa2d43ab8a51"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-86",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 11,
+  "levelTitle": "Mascots, Logos & Symbols",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "mascots",
+   "tools"
+  ],
+  "contentHash": "c2a7ec358fe6b3c7",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on tools.",
+  "question": "GitHub's mascot is a cat-octopus hybrid called what?",
+  "options": [
+   "Gitty",
+   "The Octocat",
+   "Hubcat",
+   "Tux"
+  ],
+  "correctAnswer": 1,
+  "explanation": "GitHub's mascot is the Octocat (named Mona Lisa / 'Monalisa Octocat').",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na nástroje.",
+   "question": "Maskotem GitHubu je kočko-chobotnice zvaná jak?",
+   "options": [
+    "Gitty",
+    "Octocat",
+    "Hubcat",
+    "Tux"
+   ],
+   "explanation": "Maskotem GitHubu je Octocat (zvaný Mona Lisa / „Monalisa Octocat“).",
+   "csHash": "c9dea2894a97a48f"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-87",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 11,
+  "levelTitle": "Mascots, Logos & Symbols",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "mascots",
+   "tools"
+  ],
+  "contentHash": "622902c14bf55f75",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on tools.",
+  "question": "Docker's mascot is a whale named what?",
+  "options": [
+   "Willy",
+   "Moby Dock",
+   "Flipper",
+   "Bubbles"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Docker's whale (carrying containers) is named Moby Dock — a nod to Moby-Dick.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na nástroje.",
+   "question": "Maskotem Dockeru je velryba jménem jak?",
+   "options": [
+    "Willy",
+    "Moby Dock",
+    "Flipper",
+    "Bubbles"
+   ],
+   "explanation": "Velryba Dockeru (nesoucí kontejnery) se jmenuje Moby Dock – odkaz na Moby Dicka.",
+   "csHash": "d5641651f2de0783"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-88",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 11,
+  "levelTitle": "Mascots, Logos & Symbols",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "culture",
+   "etymology"
+  ],
+  "contentHash": "d55f7ee0b79b33ad",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on etymology.",
+  "question": "The placeholder names 'foo' and 'bar' are widely thought to derive from which military slang?",
+  "options": [
+   "RADAR",
+   "FUBAR",
+   "SONAR",
+   "AWOL"
+  ],
+  "correctAnswer": 1,
+  "explanation": "'foobar' likely comes from the WWII slang FUBAR; foo and bar are the classic metasyntactic variables.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na etymologii.",
+   "question": "O zástupných názvech „foo“ a „bar“ se všeobecně soudí, že pocházejí z kterého vojenského slangu?",
+   "options": [
+    "RADAR",
+    "FUBAR",
+    "SONAR",
+    "AWOL"
+   ],
+   "explanation": "„foobar“ pravděpodobně pochází ze slangu FUBAR z druhé světové války; foo a bar jsou klasické metasyntaktické proměnné.",
+   "csHash": "d577a9ee2a79118b"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-89",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 12,
+  "levelTitle": "Hardware Marvels & Oddities",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "hardware",
+   "history"
+  ],
+  "contentHash": "bfde780b10f478f5",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "IBM's first hard drive (the RAMAC, 1956) weighed roughly how much?",
+  "options": [
+   "A few grams",
+   "About a ton",
+   "About 10 kg",
+   "About 1 kg"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The RAMAC weighed about a ton and was moved with forklifts and shipped on cargo planes.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "První pevný disk IBM (RAMAC, 1956) vážil zhruba kolik?",
+   "options": [
+    "Pár gramů",
+    "Asi tunu",
+    "Asi 10 kg",
+    "Asi 1 kg"
+   ],
+   "explanation": "RAMAC vážil asi tunu, převážel se vysokozdvižnými vozíky a posílal nákladními letadly.",
+   "csHash": "9ae8cab2d3e25dfb"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-90",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 12,
+  "levelTitle": "Hardware Marvels & Oddities",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "hardware",
+   "history"
+  ],
+  "contentHash": "919363434b101e33",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "Approximately how much data could that first IBM RAMAC hard drive store?",
+  "options": [
+   "About 5 megabytes",
+   "About 5 gigabytes",
+   "About 5 terabytes",
+   "About 500 megabytes"
+  ],
+  "correctAnswer": 0,
+  "explanation": "It stored about 5 MB across fifty 24-inch spinning platters — a fortune of storage at the time.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Přibližně kolik dat dokázal uložit onen první pevný disk IBM RAMAC?",
+   "options": [
+    "Asi 5 megabajtů",
+    "Asi 5 gigabajtů",
+    "Asi 5 terabajtů",
+    "Asi 500 megabajtů"
+   ],
+   "explanation": "Uložil asi 5 MB na padesáti 24palcových rotujících plotnách – na tehdejší dobu hotové bohatství úložiště.",
+   "csHash": "4a93bb80d3b2aa57"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-91",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 12,
+  "levelTitle": "Hardware Marvels & Oddities",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "hardware",
+   "history"
+  ],
+  "contentHash": "41df5d1f4b5dc665",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "The first computer mouse, built by Douglas Engelbart in the 1960s, was made of what?",
+  "options": [
+   "Aluminum",
+   "Wood",
+   "Plastic",
+   "Glass"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Engelbart's prototype mouse had a carved wooden shell and one button; the cord looked like a tail.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "První počítačová myš, kterou v 60. letech sestrojil Douglas Engelbart, byla z čeho?",
+   "options": [
+    "Z hliníku",
+    "Ze dřeva",
+    "Z plastu",
+    "Ze skla"
+   ],
+   "explanation": "Engelbartův prototyp myši měl vyřezávaný dřevěný kryt a jedno tlačítko; kabel připomínal ocásek.",
+   "csHash": "2fd8827c4fe79b68"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-92",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 12,
+  "levelTitle": "Hardware Marvels & Oddities",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "hardware",
+   "space"
+  ],
+  "contentHash": "a763d58856130d5c",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on space.",
+  "question": "The Apollo Guidance Computer that helped land humans on the Moon had memory measured in what?",
+  "options": [
+   "Kilobytes",
+   "Gigabytes",
+   "Terabytes",
+   "Petabytes"
+  ],
+  "correctAnswer": 0,
+  "explanation": "The AGC had only a few kilobytes of RAM and tens of KB of ROM — far less than a modern phone.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na vesmír.",
+   "question": "Naváděcí počítač Apolla, který pomohl přistát lidem na Měsíci, měl paměť měřenou v čem?",
+   "options": [
+    "V kilobajtech",
+    "V gigabajtech",
+    "V terabajtech",
+    "V petabajtech"
+   ],
+   "explanation": "AGC měl jen pár kilobajtů RAM a desítky KB ROM – mnohem méně než dnešní telefon.",
+   "csHash": "ae345a6a6243edb0"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-93",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 12,
+  "levelTitle": "Hardware Marvels & Oddities",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "hardware",
+   "concepts"
+  ],
+  "contentHash": "61d04fb10e1d31d2",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on concepts.",
+  "question": "'Moore's Law' observes that the number of transistors on a chip roughly does what?",
+  "options": [
+   "Halves every year",
+   "Doubles about every two years",
+   "Stays constant",
+   "Triples every month"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Gordon Moore noted transistor counts roughly double about every two years — a decades-long trend.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na pojmy.",
+   "question": "„Moorův zákon“ pozoruje, že počet tranzistorů na čipu zhruba dělá co?",
+   "options": [
+    "Každý rok se zmenší na polovinu",
+    "Zhruba každé dva roky se zdvojnásobí",
+    "Zůstává konstantní",
+    "Každý měsíc se ztrojnásobí"
+   ],
+   "explanation": "Gordon Moore si všiml, že počty tranzistorů se zhruba každé dva roky zdvojnásobí – trend trvající desítky let.",
+   "csHash": "2dd6b61364c56402"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-94",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 12,
+  "levelTitle": "Hardware Marvels & Oddities",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "companies",
+   "history"
+  ],
+  "contentHash": "76a99df58fda32cd",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "Nintendo was founded in 1889 originally making what?",
+  "options": [
+   "Video games",
+   "Playing cards",
+   "Televisions",
+   "Toy robots"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Nintendo began as a maker of hanafuda playing cards, decades before video games existed.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Nintendo bylo založeno v roce 1889 a původně vyrábělo co?",
+   "options": [
+    "Videohry",
+    "Hrací karty",
+    "Televize",
+    "Hračky roboty"
+   ],
+   "explanation": "Nintendo začalo jako výrobce hracích karet hanafuda, celá desetiletí předtím, než vznikly videohry.",
+   "csHash": "958814be880ca564"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-95",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 12,
+  "levelTitle": "Hardware Marvels & Oddities",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "hardware",
+   "culture"
+  ],
+  "contentHash": "beb04924f08f8ed9",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on culture.",
+  "question": "In most software, the 'Save' icon depicts what increasingly unfamiliar object?",
+  "options": [
+   "A hard drive",
+   "A floppy disk",
+   "A CD",
+   "A cloud"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The save icon is a 3.5-inch floppy disk — an object many users have never physically seen.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na kulturu.",
+   "question": "Ve většině softwaru zobrazuje ikona „Uložit“ jaký čím dál neznámější předmět?",
+   "options": [
+    "Pevný disk",
+    "Disketu",
+    "CD",
+    "Mrak"
+   ],
+   "explanation": "Ikona uložení je 3,5palcová disketa – předmět, který mnozí uživatelé nikdy fyzicky neviděli.",
+   "csHash": "b56e473830e4b69d"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-96",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 12,
+  "levelTitle": "Hardware Marvels & Oddities",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "hardware",
+   "history"
+  ],
+  "contentHash": "9b85b78a39615ed4",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "The ENIAC (1940s) did its calculations using thousands of what?",
+  "options": [
+   "Transistors",
+   "Vacuum tubes",
+   "Microchips",
+   "Mechanical gears"
+  ],
+  "correctAnswer": 1,
+  "explanation": "ENIAC used around 18,000 vacuum tubes, which burned out frequently and generated enormous heat.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "ENIAC (40. léta) prováděl své výpočty pomocí tisíců čeho?",
+   "options": [
+    "Tranzistorů",
+    "Elektronek",
+    "Mikročipů",
+    "Mechanických ozubených kol"
+   ],
+   "explanation": "ENIAC používal kolem 18 000 elektronek, které se často vypalovaly a vytvářely obrovské teplo.",
+   "csHash": "616a80ddcc34fbdd"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-97",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 13,
+  "levelTitle": "Gaming & Easter Eggs",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "gaming",
+   "trivia"
+  ],
+  "contentHash": "8e602e1bb004daa4",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on trivia.",
+  "question": "The 'Konami Code' (up up down down left right left right B A) first appeared in which game?",
+  "options": [
+   "Contra",
+   "Gradius",
+   "Super Mario Bros.",
+   "Tetris"
+  ],
+  "correctAnswer": 1,
+  "explanation": "It debuted in Gradius (1985); it later became legendary through Contra.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na zajímavosti.",
+   "question": "„Konami kód“ (nahoru nahoru dolů dolů vlevo vpravo vlevo vpravo B A) se poprvé objevil ve které hře?",
+   "options": [
+    "Contra",
+    "Gradius",
+    "Super Mario Bros.",
+    "Tetris"
+   ],
+   "explanation": "Debutoval ve hře Gradius (1985); legendárním se později stal díky hře Contra.",
+   "csHash": "c7d31ddc90d7bd79"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-98",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 13,
+  "levelTitle": "Gaming & Easter Eggs",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "gaming",
+   "trivia"
+  ],
+  "contentHash": "7a5f7306244638da",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on trivia.",
+  "question": "Why did the programmer originally add the Konami Code?",
+  "options": [
+   "To hide his name",
+   "To make the game easier while testing/debugging it",
+   "To cheat in tournaments",
+   "To unlock advertisements"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Kazuhisa Hashimoto added it to survive while testing, then forgot to remove it before release.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na zajímavosti.",
+   "question": "Proč programátor Konami kód původně přidal?",
+   "options": [
+    "Aby skryl své jméno",
+    "Aby si při testování/ladění usnadnil hru",
+    "Aby podváděl na turnajích",
+    "Aby odemkl reklamy"
+   ],
+   "explanation": "Kazuhisa Hashimoto ho přidal, aby při testování přežil, a pak ho zapomněl před vydáním odstranit.",
+   "csHash": "87514eb79df2614b"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-99",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 13,
+  "levelTitle": "Gaming & Easter Eggs",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "gaming",
+   "history"
+  ],
+  "contentHash": "b207e4892ce621e0",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "One of the first video-game Easter eggs was a hidden room secretly crediting whom?",
+  "options": [
+   "Shigeru Miyamoto",
+   "Warren Robinett",
+   "Steve Jobs",
+   "The Atari CEO"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Robinett hid 'Created by Warren Robinett' inside Atari's Adventure — an early, iconic Easter egg.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Jeden z prvních velikonočních vajíček ve videohrách byla skrytá místnost, která tajně připisovala zásluhy komu?",
+   "options": [
+    "Shigeru Miyamoto",
+    "Warren Robinett",
+    "Steve Jobs",
+    "Řediteli Atari"
+   ],
+   "explanation": "Robinett skryl ve hře Adventure od Atari nápis „Created by Warren Robinett“ – časný a ikonický easter egg.",
+   "csHash": "c20cc76c82646d1e"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-100",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 13,
+  "levelTitle": "Gaming & Easter Eggs",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "gaming",
+   "history"
+  ],
+  "contentHash": "089168a5945eee3c",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "Why did Warren Robinett hide his name in the game?",
+  "options": [
+   "He was bored",
+   "Atari didn't publicly credit its game programmers",
+   "It was a contest",
+   "For legal reasons"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Atari withheld individual credit, so Robinett snuck his name in as quiet protest.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Proč Warren Robinett skryl ve hře své jméno?",
+   "options": [
+    "Nudil se",
+    "Atari veřejně neuvádělo zásluhy svých herních programátorů",
+    "Byla to soutěž",
+    "Z právních důvodů"
+   ],
+   "explanation": "Atari neuvádělo individuální zásluhy, a tak Robinett své jméno propašoval dovnitř jako tichý protest.",
+   "csHash": "af8c935ffe1f2b9f"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-101",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 13,
+  "levelTitle": "Gaming & Easter Eggs",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "gaming",
+   "history"
+  ],
+  "contentHash": "0ab76a91f6fc5999",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "'Spacewar!' (1962), one of the earliest video games, ran on which computer?",
+  "options": [
+   "A Game Boy",
+   "A DEC PDP-1",
+   "An Atari 2600",
+   "An IBM PC"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Spacewar! was developed by MIT students on the DEC PDP-1 minicomputer.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "„Spacewar!“ (1962), jedna z nejstarších videoher, běžela na kterém počítači?",
+   "options": [
+    "Na Game Boyi",
+    "Na DEC PDP-1",
+    "Na Atari 2600",
+    "Na IBM PC"
+   ],
+   "explanation": "Spacewar! vyvinuli studenti MIT na minipočítači DEC PDP-1.",
+   "csHash": "f65774cb180b06e6"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-102",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 13,
+  "levelTitle": "Gaming & Easter Eggs",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "gaming",
+   "history"
+  ],
+  "contentHash": "dd3f98080dc40306",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "Tetris was created in 1984 by Alexey Pajitnov in which country?",
+  "options": [
+   "Japan",
+   "The Soviet Union",
+   "The United States",
+   "The United Kingdom"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Pajitnov created Tetris while working at a computing center in Soviet Moscow.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Tetris vytvořil v roce 1984 Alexej Pažitnov ve které zemi?",
+   "options": [
+    "V Japonsku",
+    "V Sovětském svazu",
+    "Ve Spojených státech",
+    "Ve Spojeném království"
+   ],
+   "explanation": "Pažitnov vytvořil Tetris během práce ve výpočetním středisku v sovětské Moskvě.",
+   "csHash": "07e8e2437bbae741"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-103",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 13,
+  "levelTitle": "Gaming & Easter Eggs",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "gaming",
+   "history"
+  ],
+  "contentHash": "c6daaa9ead2d2167",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "In 1983, Atari secretly buried millions of unsold cartridges (like E.T.) where?",
+  "options": [
+   "In the ocean",
+   "In a New Mexico landfill",
+   "In a volcano",
+   "In a museum"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Atari buried cartridges in a New Mexico landfill — long a legend until it was excavated in 2014.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "V roce 1983 Atari tajně pohřbilo miliony neprodaných kazet (jako E.T.) kde?",
+   "options": [
+    "V oceánu",
+    "Na skládce v Novém Mexiku",
+    "V sopce",
+    "V muzeu"
+   ],
+   "explanation": "Atari pohřbilo kazety na skládce v Novém Mexiku – dlouho legenda, dokud nebyly v roce 2014 vykopány.",
+   "csHash": "736943d9ab2f00d8"
+  },
+  "automatedFlags": [
+   "time-sensitive wording: verify against a dated primary source",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-104",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 13,
+  "levelTitle": "Gaming & Easter Eggs",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "gaming",
+   "bugs"
+  ],
+  "contentHash": "41ade9e276d0b4c8",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on bugs.",
+  "question": "The original arcade Pac-Man has a famous 'kill screen' at which level?",
+  "options": [
+   "Level 100",
+   "Level 256",
+   "Level 999",
+   "Level 1"
+  ],
+  "correctAnswer": 1,
+  "explanation": "An 8-bit counter overflow corrupts level 256, making it unplayable — the classic Pac-Man kill screen.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na chyby.",
+   "question": "Původní arkádový Pac-Man má proslulou „kill screen“ na kterém levelu?",
+   "options": [
+    "Level 100",
+    "Level 256",
+    "Level 999",
+    "Level 1"
+   ],
+   "explanation": "Přetečení 8bitového čítače poškodí level 256 a učiní ho nehratelným – klasický kill screen Pac-Mana.",
+   "csHash": "5defcf5f968b59eb"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-105",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 14,
+  "levelTitle": "Bizarre Tech Tales",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "web",
+   "humor"
+  ],
+  "contentHash": "5e2f574728ca387b",
+  "hint": "Explain the term in your own words, including when you would use it. Focus on humor.",
+  "question": "What does HTTP status code 418 mean?",
+  "options": [
+   "Server on fire",
+   "I'm a teapot",
+   "Coffee ready",
+   "Not found"
+  ],
+  "correctAnswer": 1,
+  "explanation": "418 'I'm a teapot' comes from a 1998 April Fools' RFC for a (joke) Hyper Text Coffee Pot Control Protocol.",
+  "cs": {
+   "hint": "Připomeň si, k čemu daný pojem slouží, a vyber možnost, která odpovídá jeho účelu. Mysli na humor.",
+   "question": "Co znamená stavový kód HTTP 418?",
+   "options": [
+    "Server v plamenech",
+    "I'm a teapot (jsem konvička)",
+    "Káva hotová",
+    "Nenalezeno"
+   ],
+   "explanation": "418 „I'm a teapot“ pochází z aprílového RFC z roku 1998 pro (žertovný) Hyper Text Coffee Pot Control Protocol.",
+   "csHash": "8ef83f4d9e0b234d"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-106",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 14,
+  "levelTitle": "Bizarre Tech Tales",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "web",
+   "legend"
+  ],
+  "contentHash": "53b52278b0efb9a8",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on legend.",
+  "question": "In a famous sysadmin story, a user complained they couldn't send email farther than about how far?",
+  "options": [
+   "5 miles",
+   "500 miles",
+   "5,000 miles",
+   "The next room"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The legendary 'case of the 500-mile email' described mail mysteriously failing beyond ~500 miles.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na legendy.",
+   "question": "Ve slavné historce správce systému si uživatel stěžoval, že nemůže poslat e-mail dál než asi jak daleko?",
+   "options": [
+    "5 mil",
+    "500 mil",
+    "5 000 mil",
+    "Do vedlejší místnosti"
+   ],
+   "explanation": "Legendární „případ e-mailu na 500 mil“ popisoval, jak pošta záhadně selhávala za hranicí ~500 mil.",
+   "csHash": "caf74f66c54ef0f0"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ],
+  "csDriftFlags": [
+   "code-like option 0 differs: EN '5 miles' vs CS '5 mil'",
+   "code-like option 1 differs: EN '500 miles' vs CS '500 mil'",
+   "code-like option 2 differs: EN '5,000 miles' vs CS '5 000 mil'"
+  ]
+ },
+ {
+  "id": "rm-cool-107",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 14,
+  "levelTitle": "Bizarre Tech Tales",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "web",
+   "legend"
+  ],
+  "contentHash": "12a2d3fea80f7272",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on legend.",
+  "question": "What actually caused the '500-mile email' problem?",
+  "options": [
+   "A cable that was physically too long",
+   "A timeout so short only nearby servers could reply in time",
+   "Gravity",
+   "A distance-based firewall"
+  ],
+  "correctAnswer": 1,
+  "explanation": "A botched config set the connect timeout to a few milliseconds; light/round-trips limited replies to roughly 500 miles.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na legendy.",
+   "question": "Co ve skutečnosti způsobilo problém „e-mailu na 500 mil“?",
+   "options": [
+    "Kabel, který byl fyzicky příliš dlouhý",
+    "Tak krátký timeout, že stihly odpovědět jen blízké servery",
+    "Gravitace",
+    "Firewall založený na vzdálenosti"
+   ],
+   "explanation": "Zpackaná konfigurace nastavila timeout připojení na pár milisekund; rychlost světla / doba odezvy omezila odpovědi zhruba na 500 mil.",
+   "csHash": "7abb98a812fdce81"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-108",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 14,
+  "levelTitle": "Bizarre Tech Tales",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "space",
+   "myth"
+  ],
+  "contentHash": "a3e5e8ae2017af0b",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on myth.",
+  "question": "The story that NASA spent millions on a 'space pen' while the Soviets just used pencils is?",
+  "options": [
+   "Completely true",
+   "Mostly false — the pen was privately developed by Fisher",
+   "About banning ballpoints",
+   "About anti-gravity ink"
+  ],
+  "correctAnswer": 1,
+  "explanation": "The Fisher Space Pen was privately funded; NASA later bought them cheaply. The 'millions wasted' tale is a myth.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na mýty.",
+   "question": "Historka, že NASA utratila miliony za „vesmírné pero“, zatímco Sověti používali jen tužky, je?",
+   "options": [
+    "Naprosto pravdivá",
+    "Většinou nepravdivá – pero soukromě vyvinul Fisher",
+    "O zákazu kuličkových per",
+    "O inkoustu odolávajícím gravitaci"
+   ],
+   "explanation": "Fisher Space Pen bylo financováno soukromě; NASA je později levně odkoupila. Historka o „promrhaných milionech“ je mýtus.",
+   "csHash": "87f3bfcd757b7398"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-109",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 14,
+  "levelTitle": "Bizarre Tech Tales",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "history",
+   "myth"
+  ],
+  "contentHash": "9815ccca4d24e5f7",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on myth.",
+  "question": "Bill Gates is often misquoted as saying which amount of memory 'ought to be enough for anyone'?",
+  "options": [
+   "640K",
+   "1 MB",
+   "64 KB",
+   "1 GB"
+  ],
+  "correctAnswer": 0,
+  "explanation": "The '640K ought to be enough' quote is famous — but Gates has repeatedly denied ever saying it.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na mýty.",
+   "question": "Billu Gatesovi se často mylně připisuje výrok, že kolik paměti „by mělo stačit komukoli“?",
+   "options": [
+    "640 kB",
+    "1 MB",
+    "64 kB",
+    "1 GB"
+   ],
+   "explanation": "Výrok „640 kB by mělo stačit“ je proslulý – jenže Gates opakovaně popřel, že by ho kdy řekl.",
+   "csHash": "34208b784ac3e980"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ],
+  "csDriftFlags": [
+   "code-like option 0 differs: EN '640K' vs CS '640 kB'",
+   "code-like option 2 differs: EN '64 KB' vs CS '64 kB'"
+  ]
+ },
+ {
+  "id": "rm-cool-110",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 14,
+  "levelTitle": "Bizarre Tech Tales",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "hardware",
+   "myth"
+  ],
+  "contentHash": "c15bc35d888e06c8",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on myth.",
+  "question": "The popular myth about the QWERTY keyboard is that it was designed to do what?",
+  "options": [
+   "Speed typists up",
+   "Slow typists down",
+   "Save ink",
+   "Fit a patent diagram"
+  ],
+  "correctAnswer": 1,
+  "explanation": "People often say QWERTY was meant to slow typists; in reality it aimed to reduce jamming of adjacent typebars.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na mýty.",
+   "question": "Rozšířený mýtus o klávesnici QWERTY je, že byla navržena tak, aby dělala co?",
+   "options": [
+    "Zrychlovala písaře",
+    "Zpomalovala písaře",
+    "Šetřila inkoust",
+    "Vešla se do patentového nákresu"
+   ],
+   "explanation": "Lidé často říkají, že QWERTY měla písaře zpomalovat; ve skutečnosti měla omezit zasekávání sousedních typových páček.",
+   "csHash": "b5e1021297d5cad2"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-111",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 14,
+  "levelTitle": "Bizarre Tech Tales",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "web",
+   "etymology"
+  ],
+  "contentHash": "eef9cfa74cd8dd43",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on etymology.",
+  "question": "The web 'cookie' is believed to take its name from what earlier computing term?",
+  "options": [
+   "A snack-based reward system",
+   "The 'magic cookie' — a token of data passed between programs",
+   "The author's pet",
+   "An acronym, C.O.O.K.I.E."
+  ],
+  "correctAnswer": 1,
+  "explanation": "HTTP cookies were named after 'magic cookies', a pre-existing term for a small token of data handed around.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na etymologii.",
+   "question": "Předpokládá se, že webová „cookie“ převzala svůj název z kterého staršího počítačového pojmu?",
+   "options": [
+    "Ze systému odměn založeného na sušenkách",
+    "Z „magic cookie“ – tokenu dat předávaného mezi programy",
+    "Ze jména autorova mazlíčka",
+    "Z akronymu C.O.O.K.I.E."
+   ],
+   "explanation": "HTTP cookies byly pojmenovány podle „magic cookies“, dříve existujícího pojmu pro malý token dat předávaný mezi programy.",
+   "csHash": "6105be22da1cfcbb"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-112",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 14,
+  "levelTitle": "Bizarre Tech Tales",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "culture",
+   "humor"
+  ],
+  "contentHash": "8f4703700b5cbfa7",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on humor.",
+  "question": "The joke 'There is no cloud — it's just someone else's computer' pokes fun at what?",
+  "options": [
+   "Weather apps",
+   "Cloud computing really being remote servers",
+   "Encryption",
+   "Wireless charging"
+  ],
+  "correctAnswer": 1,
+  "explanation": "It reminds people that 'the cloud' is just data centers — computers you don't own, somewhere else.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na humor.",
+   "question": "Vtip „Žádný cloud neexistuje – je to jen něčí cizí počítač“ si dělá legraci z čeho?",
+   "options": [
+    "Z aplikací na počasí",
+    "Z toho, že cloud computing jsou ve skutečnosti vzdálené servery",
+    "Ze šifrování",
+    "Z bezdrátového nabíjení"
+   ],
+   "explanation": "Připomíná lidem, že „cloud“ jsou jen datová centra – počítače, které nevlastníš, někde jinde.",
+   "csHash": "d61a856787060385"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-113",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 15,
+  "levelTitle": "Tech Trivia Mastery",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "web",
+   "etymology"
+  ],
+  "contentHash": "cface125a0ab59dd",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on etymology.",
+  "question": "The word 'wiki' comes from a Hawaiian word meaning what?",
+  "options": [
+   "Knowledge",
+   "Quick",
+   "Web",
+   "Together"
+  ],
+  "correctAnswer": 1,
+  "explanation": "'Wiki' is Hawaiian for 'quick' (as in wiki-wiki) — fitting for quickly editable pages.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na etymologii.",
+   "question": "Slovo „wiki“ pochází z havajského slova, které znamená co?",
+   "options": [
+    "Znalost",
+    "Rychlý",
+    "Web",
+    "Spolu"
+   ],
+   "explanation": "„Wiki“ je havajsky „rychlý“ (jako ve wiki-wiki) – příhodné pro rychle upravitelné stránky.",
+   "csHash": "0cd4a00fd84161f9"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-114",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 15,
+  "levelTitle": "Tech Trivia Mastery",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "web",
+   "history"
+  ],
+  "contentHash": "17175eead66b1d53",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "Who created the first wiki (the WikiWikiWeb)?",
+  "options": [
+   "Jimmy Wales",
+   "Ward Cunningham",
+   "Tim Berners-Lee",
+   "Linus Torvalds"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Ward Cunningham launched the first wiki in 1995; Wikipedia came later, built on the wiki idea.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Kdo vytvořil první wiki (WikiWikiWeb)?",
+   "options": [
+    "Jimmy Wales",
+    "Ward Cunningham",
+    "Tim Berners-Lee",
+    "Linus Torvalds"
+   ],
+   "explanation": "Ward Cunningham spustil první wiki v roce 1995; Wikipedie přišla později, postavená na myšlence wiki.",
+   "csHash": "f7a00e4fb9ecea9c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-115",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 15,
+  "levelTitle": "Tech Trivia Mastery",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "web",
+   "etymology"
+  ],
+  "contentHash": "bcb168275aee5299",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on etymology.",
+  "question": "The word 'blog' is a shortening of what?",
+  "options": [
+   "Backlog",
+   "Weblog",
+   "Web log-in",
+   "Big log"
+  ],
+  "correctAnswer": 1,
+  "explanation": "'Blog' is a contraction of 'weblog' — a log of posts published on the web.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na etymologii.",
+   "question": "Slovo „blog“ je zkrácením čeho?",
+   "options": [
+    "Backlog",
+    "Weblog",
+    "Web log-in",
+    "Big log"
+   ],
+   "explanation": "„Blog“ je stažením slova „weblog“ – záznam (log) příspěvků publikovaných na webu.",
+   "csHash": "72d7d76c93677c55"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-116",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 15,
+  "levelTitle": "Tech Trivia Mastery",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "culture",
+   "humor"
+  ],
+  "contentHash": "f78b25f5715d9dbb",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on humor.",
+  "question": "The programmer joke 'There are 10 kinds of people...' works because '10' is what?",
+  "options": [
+   "Ten in hexadecimal",
+   "Binary for the number 2",
+   "A typo",
+   "Base-10 ten"
+  ],
+  "correctAnswer": 1,
+  "explanation": "In binary, '10' equals 2 — so the joke is 'those who understand binary and those who don't'.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na humor.",
+   "question": "Programátorský vtip „Existuje 10 druhů lidí...“ funguje, protože „10“ je co?",
+   "options": [
+    "Deset v šestnáctkové soustavě",
+    "Binárně číslo 2",
+    "Překlep",
+    "Desítkově deset"
+   ],
+   "explanation": "V binární soustavě se „10“ rovná 2 – takže vtip zní „ti, kdo rozumějí binárce, a ti, kdo ne“.",
+   "csHash": "7cb3c86c3199b99b"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-117",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 15,
+  "levelTitle": "Tech Trivia Mastery",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "culture",
+   "etymology"
+  ],
+  "contentHash": "32567024f51ed975",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on etymology.",
+  "question": "The word 'robot' comes from a Czech word (via Karel Capek's play R.U.R.) meaning what?",
+  "options": [
+   "Machine",
+   "Forced labor",
+   "Metal man",
+   "Helper"
+  ],
+  "correctAnswer": 1,
+  "explanation": "It derives from 'robota', meaning forced labor or drudgery; the play R.U.R. (1920) popularized 'robot'.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na etymologii.",
+   "question": "Slovo „robot“ pochází z českého slova (skrze hru Karla Čapka R.U.R.), které znamená co?",
+   "options": [
+    "Stroj",
+    "Nucená práce",
+    "Kovový muž",
+    "Pomocník"
+   ],
+   "explanation": "Odvozuje se ze slova „robota“, znamenajícího nucenou práci či dřinu; hra R.U.R. (1920) slovo „robot“ zpopularizovala.",
+   "csHash": "314aeb165d97abf7"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-118",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 15,
+  "levelTitle": "Tech Trivia Mastery",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "culture",
+   "history"
+  ],
+  "contentHash": "088a882dbe867ce4",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "The first text emoticons :-) and :-( were proposed in 1982 by whom?",
+  "options": [
+   "Kevin Mitnick",
+   "Scott Fahlman",
+   "Shigeru Miyamoto",
+   "Vint Cerf"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Scott Fahlman suggested :-) and :-( on a Carnegie Mellon message board to mark jokes and serious posts.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "První textové smajlíky :-) a :-( navrhl v roce 1982 kdo?",
+   "options": [
+    "Kevin Mitnick",
+    "Scott Fahlman",
+    "Shigeru Miyamoto",
+    "Vint Cerf"
+   ],
+   "explanation": "Scott Fahlman navrhl :-) a :-( na diskuzní nástěnce Carnegie Mellon k označení vtipů a vážných příspěvků.",
+   "csHash": "cf219b5ffe09b31c"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-119",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 15,
+  "levelTitle": "Tech Trivia Mastery",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "culture",
+   "history"
+  ],
+  "contentHash": "d376e260fb2c43b9",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on history.",
+  "question": "The 'Hello, World!' sample program was popularized by which author?",
+  "options": [
+   "Bjarne Stroustrup",
+   "Brian Kernighan",
+   "James Gosling",
+   "Guido van Rossum"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Brian Kernighan used 'hello, world' in early tutorials (and K&R's 'The C Programming Language'), making it the canonical first program.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na historii.",
+   "question": "Ukázkový program „Hello, World!“ zpopularizoval který autor?",
+   "options": [
+    "Bjarne Stroustrup",
+    "Brian Kernighan",
+    "James Gosling",
+    "Guido van Rossum"
+   ],
+   "explanation": "Brian Kernighan použil „hello, world“ v raných tutoriálech (a v knize K&R „The C Programming Language“), čímž z něj udělal kanonický první program.",
+   "csHash": "2f3d4a23ced5b5bf"
+  },
+  "automatedFlags": [
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ },
+ {
+  "id": "rm-cool-120",
+  "delivery": "unreferenced",
+  "category": "cool-stuff",
+  "topic": "cool-stuff",
+  "level": 15,
+  "levelTitle": "Tech Trivia Mastery",
+  "difficulty": 3,
+  "tags": [
+   "Roadmap",
+   "concepts",
+   "theory"
+  ],
+  "contentHash": "86af2153f7922277",
+  "hint": "Name the requirement or behavior first, then compare the options against it. Focus on theory.",
+  "question": "A system is 'Turing complete' if it can do what?",
+  "options": [
+   "Pass the Turing test",
+   "Compute anything a Turing machine can, given enough time and memory",
+   "Run on any operating system",
+   "Never crash"
+  ],
+  "correctAnswer": 1,
+  "explanation": "Turing completeness means the system can express any computation a Turing machine can — a key measure of computational power.",
+  "cs": {
+   "hint": "Soustřeď se na hlavní myšlenku otázky a vyluč možnosti, které zjevně nesedí. Mysli na teorii.",
+   "question": "Systém je „Turingovsky úplný“, pokud umí dělat co?",
+   "options": [
+    "Projít Turingovým testem",
+    "Spočítat cokoli, co umí Turingův stroj, má-li dost času a paměti",
+    "Běžet na libovolném operačním systému",
+    "Nikdy nespadnout"
+   ],
+   "explanation": "Turingovská úplnost znamená, že systém dokáže vyjádřit jakýkoli výpočet, který umí Turingův stroj – klíčové měřítko výpočetní síly.",
+   "csHash": "c6883af975ce8e0e"
+  },
+  "automatedFlags": [
+   "correct option is markedly longer/more detailed than distractors",
+   "hint is the generic shape-based fallback (not question-specific)"
+  ]
+ }
+]
