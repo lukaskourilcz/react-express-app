@@ -643,16 +643,21 @@ async function handleReport(req: VercelRequest, res: VercelResponse) {
       ? body.content_version
       : null;
 
+  const row = { question_id: body.question_id, reason: body.reason, detail, reporter_sub };
   try {
-    const { error } = await withTimeout(
-      serviceSupabase.from('question_reports').insert({
-        question_id: body.question_id,
-        reason: body.reason,
-        detail,
-        reporter_sub,
-        content_version: contentVersion,
-      }),
+    let { error } = await withTimeout(
+      serviceSupabase.from('question_reports').insert({ ...row, content_version: contentVersion }),
     );
+    // The version column arrives with migration 029. Until it is applied the
+    // insert is rejected for an unknown column, and a learner reporting a wrong
+    // answer would get an error for a feature that worked yesterday. Losing the
+    // version is a much smaller loss than losing the report, so fall back to the
+    // row without it. Self-healing: once the migration lands, the first attempt
+    // succeeds and this never runs again.
+    if (error && /content_version/i.test(error.message ?? '')) {
+      reportLogger({ status: 200, reason: 'version_column_missing', migration: '029' });
+      ({ error } = await withTimeout(serviceSupabase.from('question_reports').insert(row)));
+    }
     if (error) {
       reportLogger({ status: 500, reason: 'insert_failed', error: error.message });
       return jsonError(res, 500, 'db_error', 'Could not save report');
