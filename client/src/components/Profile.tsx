@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { Kicker } from './landing/LandingKit';
 import { useNavigate } from 'react-router-dom';
 import { Grid } from '@astryxdesign/core/Grid';
@@ -44,6 +44,7 @@ import { CURRENT_PRODUCT } from '../lib/products';
 import { savePreferredLanguage } from '../lib/languagePref';
 import { useColorMode } from '../theme/ColorModeContext';
 import { useSettings } from '../lib/settings';
+const FriendsPanel = lazy(() => import('./FriendsPanel'));
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { SwimmingFin } from './SharkFin';
@@ -235,6 +236,7 @@ function ProfileBody({
   const ringColor = useEquippedRingColor();
   const flair = useEquippedFlair();
   const { questions: bookmarkedQuestions } = useBookmarks();
+  const [tab, setTab] = useState<'overview' | 'friends'>('overview');
   // Drawn once per mount so a stats refetch or a language switch cannot swap
   // the tip out from under someone mid-sentence.
   const [tipKey] = useState(nextConsistencyTip);
@@ -276,6 +278,44 @@ function ProfileBody({
             </Card>
           </div>
         </div>
+
+        {/* Two tabs. The overview is everything the profile has always been;
+            Friends is the only thing on this page about anybody else, so it
+            gets its own space rather than becoming a ninth card. */}
+        <div className="de-tabs" role="tablist" aria-label={t('nav.profile')}>
+          <button
+            type="button"
+            role="tab"
+            id="profile-tab-overview"
+            aria-selected={tab === 'overview'}
+            aria-controls="profile-panel-overview"
+            className="de-tab"
+            onClick={() => setTab('overview')}
+          >
+            {t('friends.tabOverview')}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            id="profile-tab-friends"
+            aria-selected={tab === 'friends'}
+            aria-controls="profile-panel-friends"
+            className="de-tab"
+            onClick={() => setTab('friends')}
+          >
+            {t('friends.tabFriends')}
+          </button>
+        </div>
+
+        {tab === 'friends' && (
+          <div role="tabpanel" id="profile-panel-friends" aria-labelledby="profile-tab-friends">
+            <Suspense fallback={null}>
+              <FriendsPanel />
+            </Suspense>
+          </div>
+        )}
+
+        {tab === 'overview' && (<div role="tabpanel" id="profile-panel-overview" aria-labelledby="profile-tab-overview"><VStack gap={2}>
 
         {statsWarning && (
           <Banner
@@ -389,6 +429,7 @@ function ProfileBody({
             <AccountDeletionCard />
           </VStack>
         </Grid>
+        </VStack></div>)}
       </VStack>
     </div>
   );

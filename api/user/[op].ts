@@ -34,6 +34,7 @@ import {
   handlePathProgress,
 } from '../../lib/learning-paths/handlers';
 import { handleGithub } from '../../lib/github-handlers';
+import { handleFriends } from '../../lib/friends-handlers';
 
 const supabase = createServiceClient();
 
@@ -83,6 +84,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'learning-path-progress') return handlePathProgress(req, res, supabase);
   if (op === 'learning-path-draft') return handlePathDraft(req, res, supabase);
   if (op.startsWith('github-')) return handleGithub(op, req, res, supabase);
+  if (op.startsWith('friends-')) return handleFriends(op, req, res, supabase);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
 }
 

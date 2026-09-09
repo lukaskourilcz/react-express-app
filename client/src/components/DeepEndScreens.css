@@ -72,3 +72,12 @@
 .de-shield--spent{border:1px dashed var(--color-border);color:var(--color-text-secondary)}
 .de-shield__meta{font-size:.72rem;color:var(--color-text-secondary);text-align:center}
 .de-shield__meta--error{color:var(--ss-danger,var(--color-text-primary))}
+
+/* Profile tabs — the overview and the friends list. Underline rather than a
+   pill row: two tabs do not need a container, and the selected one says so with
+   weight and a rule, not with colour alone. */
+.de-tabs{display:flex;gap:4px;border-bottom:1px solid var(--ss-card-line)}
+.de-tab{min-height:44px;padding:8px 16px;border:0;border-bottom:2px solid transparent;background:none;color:var(--color-text-secondary);font:650 .92rem/1.4 var(--font-family-body);cursor:pointer}
+.de-tab:hover{color:var(--color-text-primary)}
+.de-tab:focus-visible{outline:2px solid var(--ss-focus);outline-offset:-2px}
+.de-tab[aria-selected=true]{color:var(--color-text-primary);font-weight:750;border-bottom-color:var(--brand-accent)}
