@@ -239,3 +239,10 @@ for a second reader rather than a second automated check.
   is the value or a description of it. `normalise-cs.py` applies the rule to
   rows written before it was settled; run it once every Czech batch has
   finished, never while one is still appending.
+- **The Czech translations were checked against the English that ships, not the
+  English that was reviewed.** Three items in one batch had a served Czech
+  question still showing the pre-rewrite snippet — an old array, a stale
+  comment, a `Promise.all` that the rewrite had removed. The translator noticed
+  because it works from the final English rather than from the served Czech,
+  which is the right direction of travel and the reason the localisation pass
+  runs after the rewrites are applied rather than beside them.
