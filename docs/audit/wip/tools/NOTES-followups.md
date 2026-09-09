@@ -102,3 +102,8 @@
   report should give it per topic rather than as one number.
 - **`rm-general-100` states a foreign key must reference a primary key.**
   PostgreSQL's documentation says any unique constraint may be the target.
+- **`rm-git-47` teaches a default Git does not have.** Its explanation says
+  modern repositories default to `main`. Git 2.43 still prints the hint that it
+  is using `master` for the initial branch when `init.defaultBranch` is unset,
+  and the documentation says the fallback changes only in Git 3.0. The rewrite
+  moves the claim to hosting platforms and states Git's own behaviour.
