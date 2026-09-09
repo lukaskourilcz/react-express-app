@@ -15,3 +15,11 @@
 - **`rm-node-62` and `rm-node-64` Czech drift.** The reviewer recorded that the
   Czech tracks an older English stem for both; the localisation pass must
   retranslate rather than keep.
+- **`rm-ts-36` and `rm-ts-40`.** The second reader flagged them as teaching the
+  same excess-property rule, differing only in call-site versus assignment
+  position. Both are sound as written; the duplicate pass should decide once
+  whether the second position is worth its own item.
+- **Hint calibration inside a batch.** The `ts-a` reader deliberately matched
+  the line the earlier rows of the same file had drawn rather than a stricter
+  one of its own, so a resumed batch stays internally consistent. Keep that
+  rule: a resumed second reading calibrates to the rows already in its file.
