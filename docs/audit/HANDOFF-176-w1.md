@@ -14,7 +14,7 @@ Commits on the branch, in order:
 | `471677d` | The eligibility gate, the ledger-backed registry, positional Learn levels with the unavailable floor, parts-based unlock rules, void and invalidation flows, the `model` review kind, the inventory script |
 | `59e5c64` | First snapshot of interim artifacts under `docs/audit/wip/` |
 | `b4dc91b` | Gate scoped to the ledger's audited categories; launch contracts for every gate boundary; docs updated; sixty-item batches |
-| *(this commit)* | Reviewer outputs so far, all tools, this handoff |
+| `3df6ec8` | Reviewer outputs so far, all tools, this handoff (amended in the next commit with this hash) |
 
 Every repository gate passes on the branch as committed: `npm run
 typecheck:api`, `cd client && npx tsc -b`, `npm run test:launch` (now including
