@@ -86,6 +86,7 @@ import {
 } from '../shared/rewards';
 import { normalizeSettings } from '../lib/settings-store';
 import { taskResources, CODING_DOC_LINKS } from '../shared/coding-docs';
+import { STREAK_PROTECTION_CAP } from '../shared/rewards';
 import {
   everyPlanHasAFirstStep,
   stepAlreadyPassed,
@@ -642,6 +643,41 @@ async function main() {
   assert.doesNotMatch(shopSource, /\bconsumeDoubleXpCharge\b/, 'shop must never influence XP awards');
   const xpSource = readFileSync(join(process.cwd(), 'client/src/lib/xp.ts'), 'utf8');
   assert.doesNotMatch(xpSource, /\bconsumeDoubleXpCharge\b/, 'XP awards must remain independent of shop inventory');
+
+  // Streak protection is the one thing the shop sells that touches learning at
+  // all, and the exception is only defensible while it stays bounded. Each of
+  // these is one of the four bounds, asserted rather than promised.
+  {
+    const rewardsSource = readFileSync(join(process.cwd(), 'shared/rewards.ts'), 'utf8');
+    // 1. Capped, and the cap is two.
+    assert.equal(STREAK_PROTECTION_CAP, 2, 'the protection cap is what stops a purchase buying a deeper reserve');
+    // 2. Priced in tokens, which are earned. There is no money price for it.
+    assert.match(rewardsSource, /streakProtectionTokenPrice: number/);
+    assert.doesNotMatch(
+      rewardsSource,
+      /streakProtection(Price|Cash|Minor)/,
+      'streak protection must have no cash price — the currency is earned tokens',
+    );
+    // 3. The database restores toward the cap and never past it.
+    const migration = readFileSync(join(process.cwd(), 'supabase/supabase-schema-035.sql'), 'utf8');
+    assert.match(
+      migration,
+      /LEAST\(COALESCE\(v_row\.remaining, 0\) \+ 1, 2\)/,
+      'buying a protection must never raise the budget above the cap',
+    );
+    // 4. It buys a protection and nothing else. If any of these words ever
+    //    appear in the purchase routine, the exception has stopped being bounded.
+    const routine = migration.slice(
+      migration.indexOf('FUNCTION public.purchase_streak_protection'),
+      migration.indexOf('GRANT EXECUTE ON FUNCTION public.purchase_streak_protection'),
+    );
+    for (const forbidden of ['user_xp', 'user_stats', 'quest_xp', 'badge', 'leaderboard', 'roadmap_progress']) {
+      assert.ok(
+        !routine.toLowerCase().includes(forbidden),
+        `buying a protection must not touch ${forbidden}`,
+      );
+    }
+  }
 
   const profileSource = readFileSync(join(process.cwd(), 'client/src/components/Profile.tsx'), 'utf8');
   const profileStreakIndex = profileSource.indexOf('<StreakCard stats={stats}');

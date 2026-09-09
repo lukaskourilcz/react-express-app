@@ -26,11 +26,12 @@ import { CODING_SUMMARIES } from '../../lib/coding/catalog';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
 import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
 import { handleCodingBookmarks, handleCodingSkip, handlePracticeSession } from '../../lib/coding/practice-handlers';
-import { creditVerifiedXp, handleCosmetic, handleFulfilment, handleOrders, handlePaymentWebhook, handleShopCatalogue, handleWallet } from '../../lib/rewards/handlers';
+import { creditVerifiedXp, handleCosmetic, handleStreakProtection, handleFulfilment, handleOrders, handlePaymentWebhook, handleShopCatalogue, handleWallet } from '../../lib/rewards/handlers';
 import {
   handleEnrollment,
   handleLearningPreference,
   handlePathDraft,
+  handlePathReward,
   handlePathProgress,
 } from '../../lib/learning-paths/handlers';
 import { handleGithub } from '../../lib/github-handlers';
@@ -77,12 +78,14 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'shop') return handleShopCatalogue(req, res, supabase);
   if (op === 'orders') return handleOrders(req, res, supabase);
   if (op === 'cosmetic') return handleCosmetic(req, res, supabase);
+  if (op === 'protection') return handleStreakProtection(req, res, supabase);
   if (op === 'payment-webhook') return handlePaymentWebhook(req, res, supabase);
   if (op === 'fulfilment') return handleFulfilment(req, res, supabase);
   if (op === 'learning-preference') return handleLearningPreference(req, res, supabase);
   if (op === 'learning-path-enrollment') return handleEnrollment(req, res, supabase);
   if (op === 'learning-path-progress') return handlePathProgress(req, res, supabase);
   if (op === 'learning-path-draft') return handlePathDraft(req, res, supabase);
+  if (op === 'learning-path-reward') return handlePathReward(req, res, supabase);
   if (op.startsWith('github-')) return handleGithub(op, req, res, supabase);
   if (op.startsWith('friends-')) return handleFriends(op, req, res, supabase);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);

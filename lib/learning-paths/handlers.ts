@@ -31,6 +31,7 @@ import {
   manifestFor,
   moduleSummary,
   pathById,
+  inventoryFor,
   pathEnabledInEnv,
   publicManifest,
 } from './catalog';
@@ -1024,6 +1025,111 @@ function projectModuleProgress(
 /* ── drafts ───────────────────────────────────────────────────────────── */
 
 /** GET/PUT /api/user/[op]?op=learning-path-draft */
+/* ── GET/POST ?op=learning-path-reward ─────────────────────────────────── */
+
+/**
+ * The merchandise package a finished learning path earns: a t-shirt, a mug and
+ * a sticker set.
+ *
+ * Completion is the server's own reading of the progress rows the graders
+ * wrote — `path_is_complete` counts them against the module count this
+ * deployment ships — so a client cannot claim a package for a path it did not
+ * finish. The claim is keyed by (learner, path), which is what makes it
+ * one-time: completing twice, or two devices reporting the same completion,
+ * grants once and the second call reports the first order.
+ *
+ * A reward *for* learning is not a purchase that affects learning. Nothing here
+ * touches XP, scores, streaks, ranks or access; the only thing that changes is
+ * that somebody is owed a parcel.
+ *
+ * The address is part of the claim rather than a later step because
+ * `merch_orders` requires one, and a placeholder would put a fake address in
+ * the table the owner ships from. And the package is an order, not a parcel:
+ * merchandise is still unconfigured — no supplier, no stock, no postage — so
+ * what a claim produces is something waiting for the owner to fulfil.
+ */
+export async function handlePathReward(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+  const userId = await requireAuthSub(req, res);
+  if (!userId) return;
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Account storage is not configured');
+  if (!deploymentSubjectIds().includes('webdev')) {
+    return jsonError(res, 404, 'not_available', 'Learning paths are not part of this product');
+  }
+  res.setHeader('Cache-Control', 'private, no-store');
+
+  const pathId = typeof req.query.pathId === 'string' ? req.query.pathId : String((req.body as { pathId?: unknown })?.pathId ?? '');
+  if (!isLearningPathId(pathId)) return jsonError(res, 400, 'bad_request', 'Unknown path');
+  const inventory = inventoryFor(pathId);
+  if (!inventory) return jsonError(res, 404, 'not_found', 'Unknown path');
+
+  const missing = (error: { message?: string } | null) =>
+    /does not exist|schema cache/i.test(error?.message ?? '');
+
+  if (req.method === 'GET') {
+    const [claim, complete] = await Promise.all([
+      withTimeout(supabase.from('path_reward_claims').select('order_id,claimed_at').eq('user_id', userId).eq('path_id', pathId).maybeSingle()),
+      withTimeout(supabase.rpc('path_is_complete', { p_user_id: userId, p_path_id: pathId, p_modules: inventory.modules })),
+    ]);
+    if (missing(claim.error) || missing(complete.error)) {
+      return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-035.sql to enable path rewards');
+    }
+    if (claim.error || complete.error) return jsonError(res, 500, 'db_error', 'Could not read the reward state');
+    return res.json({
+      eligible: complete.data === true,
+      claimed: Boolean(claim.data),
+      orderId: claim.data?.order_id ?? null,
+      modules: inventory.modules,
+    });
+  }
+
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  }
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
+
+  const body = (req.body || {}) as Record<string, unknown>;
+  const text = (value: unknown, max: number): string =>
+    (typeof value === 'string' ? value.trim() : '').slice(0, max);
+
+  const claimed = await withTimeout(
+    supabase.rpc('claim_path_reward', {
+      p_user_id: userId,
+      p_path_id: pathId,
+      p_modules: inventory.modules,
+      p_shirt: text(body.shirt, 3).toUpperCase(),
+      p_name: text(body.name, 120),
+      p_line1: text(body.line1, 160),
+      p_line2: text(body.line2, 160) || null,
+      p_city: text(body.city, 80),
+      p_postal: text(body.postal, 24),
+      p_country: text(body.country, 2).toUpperCase(),
+    }),
+  );
+  if (claimed.error) {
+    if (missing(claimed.error)) {
+      return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-035.sql to enable path rewards');
+    }
+    if (/path_not_complete/i.test(claimed.error.message ?? '')) {
+      return jsonError(res, 409, 'not_complete', 'Finish every module of the path first');
+    }
+    if (/invalid_address/i.test(claimed.error.message ?? '')) {
+      return jsonError(res, 400, 'invalid_address', 'A name, street, town, postcode and two-letter country are all required');
+    }
+    if (/invalid_variant/i.test(claimed.error.message ?? '')) {
+      return jsonError(res, 400, 'bad_request', 'Pick a shirt size');
+    }
+    return jsonError(res, 500, 'db_error', 'Could not claim the package');
+  }
+  const row = Array.isArray(claimed.data) ? claimed.data[0] : claimed.data;
+  logEvent({ status: 200, kind: 'path_reward_claimed', granted: row?.granted === true });
+  return res.json({
+    granted: row?.granted === true,
+    already: row?.already === true,
+    orderId: row?.reward_order_id ?? null,
+  });
+}
+
 export async function handlePathDraft(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!pathsAvailable()) return notAvailable(res);
   const userId = await requireAuthSub(req, res);

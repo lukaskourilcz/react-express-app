@@ -49,6 +49,9 @@ export interface ShopResponse {
   policyUrl: string;
   items: ShopItem[];
   crown: { available: boolean; tokenPrice: number };
+  /** Consumable, capped, and bought with tokens earned by learning. Absent from
+   * a deployment whose server predates it. */
+  protection?: { available: boolean; tokenPrice: number; cap: number };
 }
 
 export interface OrderSummary {
@@ -105,6 +108,12 @@ export const cancelOrder = (orderId: string): Promise<{ outcome: string }> =>
 export const buyCrown = (): Promise<{ owned: boolean; alreadyOwned: boolean }> =>
   apiFetch(`${USER}?op=cosmetic`, { method: 'POST', body: JSON.stringify({ id: 'crown' }) });
 
+/** Buy one streak protection. At the cap this charges nothing and reports
+ * `bought: false` rather than failing — the cap is not an error. */
+export const buyStreakProtection = (): Promise<{
+  bought: boolean; remaining: number; period: string;
+}> => apiFetch('/api/user/protection', { method: 'POST' });
+
 export const wearCrown = (equipped: boolean): Promise<{ equipped: boolean }> =>
   apiFetch(`${USER}?op=cosmetic`, {
     method: 'POST',
@@ -146,6 +155,19 @@ export function useCosmeticMutation() {
     mutationFn: async (input) =>
       input.op === 'buy' ? await buyCrown() : await wearCrown(input.op === 'equip'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: rewardKeys.wallet() }),
+  });
+}
+
+/** Buying a protection changes the wallet and the streak budget, so both are
+ * refetched — the profile's shield reads the second one. */
+export function useProtectionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation<{ bought: boolean; remaining: number; period: string }, Error, void>({
+    mutationFn: () => buyStreakProtection(),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: rewardKeys.wallet() });
+      void queryClient.invalidateQueries({ queryKey: ['streak-protection'] });
+    },
   });
 }
 

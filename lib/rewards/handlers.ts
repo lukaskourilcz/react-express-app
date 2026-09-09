@@ -25,6 +25,8 @@ import { deploymentSubjectIds } from '../product-scope';
 import { isScopeSubject } from '../../shared/subject-catalog';
 import {
   crownAvailable,
+  streakProtectionAvailable,
+  STREAK_PROTECTION_CAP,
   isMerchSku,
   isShirtSize,
   merchAvailability,
@@ -206,6 +208,13 @@ export async function handleShopCatalogue(req: VercelRequest, res: VercelRespons
     policyUrl: merch.policyUrl,
     items,
     crown: { available: crownAvailable(merch), tokenPrice: merch.crownTokenPrice },
+    // Consumable rather than owned, so the shop shows a cap and a balance
+    // instead of an owned/not-owned state.
+    protection: {
+      available: streakProtectionAvailable(merch),
+      tokenPrice: merch.streakProtectionTokenPrice,
+      cap: STREAK_PROTECTION_CAP,
+    },
   });
 }
 
@@ -437,6 +446,64 @@ export async function handleCosmetic(req: VercelRequest, res: VercelResponse, su
   logEvent({ status: 200, kind: 'cosmetic_bought' });
   res.setHeader('Cache-Control', 'private, no-store');
   return res.json({ owned: true, alreadyOwned: bought.data !== true });
+}
+
+/* ── POST ?op=protection ───────────────────────────────────────────────── */
+
+/**
+ * Buy one streak protection with earned tokens.
+ *
+ * The whole decision is the database's: whether there is room under the cap,
+ * whether the wallet covers it, and how much the budget becomes. This function
+ * supplies the price from settings — never from the request — and reports what
+ * happened.
+ *
+ * At the cap it is not an error and not a charge. Asking for a third protection
+ * when two are already in hand returns the budget unchanged, because the point
+ * of the cap is that no amount of currency buys a deeper reserve than a learner
+ * who spends nothing has.
+ */
+export async function handleStreakProtection(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', 'POST');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  }
+  const userId = await requireAuthSub(req, res);
+  if (!userId) return;
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Account storage is not configured');
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
+
+  const subject = walletSubject(req);
+  if (!subject) return jsonError(res, 400, 'bad_request', 'Unknown subject');
+  const settings = await getGameSettings();
+  if (!streakProtectionAvailable(settings.merch)) {
+    return jsonError(res, 409, 'unavailable', 'Streak protection is not on sale');
+  }
+
+  const bought = await withTimeout(
+    supabase.rpc('purchase_streak_protection', {
+      p_user_id: userId,
+      p_subject: subject,
+      p_price: settings.merch.streakProtectionTokenPrice,
+    }),
+  );
+  if (bought.error) {
+    if (isRpcMissing(bought.error)) return migrationRequired(res);
+    if (/insufficient_tokens/i.test(bought.error.message ?? '')) {
+      return jsonError(res, 409, 'insufficient_tokens', 'You do not have enough tokens');
+    }
+    return jsonError(res, 500, 'db_error', 'Could not complete the purchase');
+  }
+  const row = Array.isArray(bought.data) ? bought.data[0] : bought.data;
+  logEvent({ status: 200, kind: 'protection_bought', charged: row?.bought === true });
+  res.setHeader('Cache-Control', 'private, no-store');
+  return res.json({
+    bought: row?.bought === true,
+    remaining: Number(row?.remaining ?? 0),
+    period: String(row?.period ?? ''),
+    shieldUntil: row?.shield_until ?? null,
+    shieldSupported: true,
+  });
 }
 
 /* ── POST ?op=payment-webhook ──────────────────────────────────────────── */

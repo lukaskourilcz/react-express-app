@@ -1,9 +1,8 @@
 # Handoff — the thirteen changes of 2026-09-09
 
-Everything below is on `main` and deployed. This file exists because three of
-the thirteen requested changes are finished in the database and not yet wired to
-a screen, and because two of them change something the repository documents as
-an invariant. Both need a decision, not just more code.
+All thirteen are implemented and on `main`. What is left is not code: four
+migrations have to be applied to production, and nothing signed in has been
+seen by a human.
 
 Read `docs/release-acceptance.md` for what was verified and how. This file is
 only what is *left*.
@@ -22,94 +21,25 @@ only what is *left*.
 | 8 | Coding techniques read as content rather than as bare pills | `f9b7b7e` |
 | 9 | The roadmap pillars and the profile chips stopped painting by position | `86cff67` |
 
-## Not finished
+## Everything asked for is now implemented
 
-### A. The shop still sells the old cosmetics
+The three items this file was written to hand over were finished on the same
+day, and the two decisions it could not make were answered by the owner:
 
-**Asked for:** "The only thing he could buy will be the crown and the streak +
-then merch."
-
-**Done:** the SQL for buying a streak protection (`supabase-schema-035.sql`,
-`purchase_streak_protection`), applied and exercised locally.
-
-**Left:** the client shop still lists three rings and three flairs
-(`client/src/lib/shop.ts`, `STATIC_CATALOGUE`). They need to stop being
-*purchasable* without stopping being *ownable* — learners already own some, and
-`useEquippedRingColor` / `useEquippedFlair` render them in the profile header.
-Split the list in two: what is for sale, and what can be worn. Removing the
-definitions outright would strip an equipped item off an account that paid for
-it, which the repo's own rule against withdrawing earned things forbids.
-
-Then add protection to the shop UI and an op that calls
-`purchase_streak_protection` — `handleCosmetic` in `lib/rewards/handlers.ts` is
-the pattern to copy, and `RATE_LIMITS.userMutation` already covers it.
-
-There is no price yet. `MerchSettings.crownTokenPrice` is 1200 and tokens accrue
-at 10% of verified XP, so a crown is roughly 12,000 XP. A protection should cost
-far less than that — it is consumable and capped at two. **Someone has to pick
-the number.**
-
-### B. The merchandise package has no screen
-
-**Asked for:** "When user completes the entire learning path, he will get a
-t-shirt and a mug and stickers, the whole merch package."
-
-**Done:** `claim_path_reward` and `path_is_complete` in
-`supabase-schema-035.sql`. Completion is derived from the progress rows the
-graders wrote, the claim is keyed by (learner, path) so it grants exactly once,
-and the order is created unpaid and unpriced.
-
-**Left:** an op on `api/user/[op].ts` and a claim form. The form needs the
-shirt size and a shipping address, because `merch_orders` requires one and
-inventing a placeholder would put a fake address in the table the owner ships
-from. `LearningPathsCard` is the natural home for the entry point.
-
-Two things to be honest about in the copy: merchandise is **unconfigured** —
-no supplier, no stock, no postage — so a claim produces an order waiting for the
-owner, not a parcel. And "the entire learning path" currently means one path
-(DSA Foundations or FDE), not both. If the owner meant both, `path_is_complete`
-takes a path id and would need a second call.
-
-### C. Two invariants now say something the code does not
-
-This is the part that needs a decision rather than an implementation.
-
-**CLAUDE.md** and `docs/product-architecture.md` say streak freezes "never
-change ... streaks". That was already inaccurate before today: since migration
-024, returning after a missed day spends a protection and the streak survives.
-Making protections purchasable widens it — a learning-earned currency now buys
-one — but it does not create the exception, it enlarges one that existed.
-
-`shared/rewards.ts`'s header is more direct: "Buying anything ... changes ... no
-streak." That sentence becomes false the moment A ships.
-
-The honest correction is to say what the code does:
-
-> All learning is free. Support, cosmetic shop items, collectible Shark Cards
-> and badges never change access, content, explanations, paths, XP, scores,
-> ranks, leaderboards, matchmaking or AI availability. Streak protection is the
-> one bounded exception: two a month, free; extra ones cost tokens earned by
-> learning; the ceiling never rises above two; and a protection changes the day
-> count of a streak and nothing else. No leaderboard in this product ranks by
-> streak.
-
-Update all four places in the same commit as A, or the next agent will read the
-old sentence and revert the feature as a bug.
-
-### D. Weekends now count against a streak
-
-Dropping days off, as asked, removed the rule that a learner's configured
-off-days — weekends by default — never broke a streak. Every calendar day counts
-now, and the two monthly protections are the whole story.
-
-That is the point: two rules for the same thing meant nobody could tell which
-one had saved their streak. But it is a real change for people mid-streak. A
-learner who practises on weekdays and has a long streak built under the old rule
-can lose it the first weekend after migration 032 reaches production.
-
-The alternative is a fixed weekend grace with no setting — one line in
-`record_verified_quiz_result_v2`. **Decide before applying 032.** It is in
-`NEEDED.md` too.
+- **The shop sells the crown, streak protection and merchandise.** The legacy
+  rings and flairs turned out to be unsellable already; they stay ownable and
+  keep rendering for anybody who has them. A protection costs 250 tokens —
+  against the crown's 1200, because it is consumable and capped at two.
+- **The merchandise package has its screen.** It appears on a path card only
+  once the server says the path is finished, collects a size and an address,
+  and claims once.
+- **The invariant now says what the code does**, in `CLAUDE.md`, `AGENTS.md`,
+  `docs/product-architecture.md` and `shared/rewards.ts` — and four bounds on
+  the exception are asserted by the launch contract rather than promised in
+  prose.
+- **Weekends are not free.** Every calendar day counts; the two monthly
+  protections are the whole story. There are no live accounts yet, so nothing
+  is lost by applying migration 032.
 
 ## Migrations waiting to be applied
 
@@ -120,10 +50,10 @@ re-applied to prove idempotency.
 
 | File | What it does | Blocked on |
 | --- | --- | --- |
-| 032 | Streak shield; off-days no longer exempt | Decision D |
+| 032 | Streak shield; every day counts, no weekend exemption | Nothing — decided |
 | 033 | Friends: handles, friendships, the list | Nothing |
 | 034 | One-round-trip Learn answers | Nothing |
-| 035 | Bought protection, earned merch package | Decisions A and C |
+| 035 | Bought protection, earned merch package | Nothing — decided |
 
 Every client and server path degrades until its migration lands: the profile
 shows no shield control, the friends tab says it is unavailable, and the answer

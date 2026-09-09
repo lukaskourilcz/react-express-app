@@ -36,6 +36,7 @@ import {
   useOrderMutation,
   useOrders,
   useShop,
+  useProtectionMutation,
   useWallet,
   type ShopItem,
 } from '../lib/rewards';
@@ -132,6 +133,17 @@ function MerchCard({
   );
 }
 
+// Shield-with-check, the same mark the profile uses for a raised shield, so the
+// thing being bought and the thing it becomes look like each other.
+function ShieldGlyph({ size = 40 }: { size?: number }) {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      <path d="M9 12l2 2 4-4" />
+    </svg>
+  );
+}
+
 function Shop() {
   const t = useT();
   const { lang } = useLanguage();
@@ -141,6 +153,7 @@ function Shop() {
   const wallet = useWallet(isAuthenticated);
   const orders = useOrders(isAuthenticated);
   const cosmetic = useCosmeticMutation();
+  const protection = useProtectionMutation();
   const order = useOrderMutation();
 
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
@@ -262,6 +275,56 @@ function Shop() {
                       {t('shop.buy')}
                     </button>
                   )}
+                </HStack>
+              </div>
+            </HStack>
+          </Card>
+        </VStack>
+      )}
+
+      {/* Streak protection: consumable, capped, and the one thing sold here
+          that touches learning at all — see the bounded exception written out
+          in shared/rewards.ts. It is bought with tokens earned by learning, it
+          restores the same two-a-month budget and never exceeds it, and no
+          leaderboard in this product ranks by streak. */}
+      {shop.data?.protection?.available && (
+        <VStack gap={2}>
+          <Heading level={3}>{t('shop.protectionSection')}</Heading>
+          <Card variant="default" padding={3} width="100%">
+            <HStack gap={2} align="center" wrap="wrap">
+              <span aria-hidden style={{ color: 'var(--ss-warning)', display: 'inline-flex' }}>
+                <ShieldGlyph size={40} />
+              </span>
+              <VStack gap={0.5}>
+                <Heading level={4}>{t('shop.protectionName')}</Heading>
+                <Text type="supporting" color="secondary">
+                  {t('shop.protectionBlurb', { cap: shop.data.protection.cap })}
+                </Text>
+                <Text type="supporting" size="xsm" color="secondary">
+                  {t('shop.protectionFair')}
+                </Text>
+              </VStack>
+              <div style={{ marginLeft: 'auto' }}>
+                <HStack gap={1} align="center" wrap="wrap">
+                  <Text weight="bold">{t('shop.tokenPrice', { n: shop.data.protection.tokenPrice })}</Text>
+                  <button
+                    type="button"
+                    className="lp-btn lp-btn--primary"
+                    disabled={!isAuthenticated || protection.isPending || balance < shop.data.protection.tokenPrice}
+                    onClick={() => protection.mutate(undefined, {
+                      onSuccess: (result) => setToast({
+                        // At the cap nothing was charged, and saying "bought"
+                        // would be a lie about a balance that did not move.
+                        msg: result.bought
+                          ? t('shop.protectionBought', { n: result.remaining })
+                          : t('shop.protectionAtCap', { n: result.remaining }),
+                        ok: true,
+                      }),
+                      onError: (error) => setToast({ msg: friendlyError(error), ok: false }),
+                    })}
+                  >
+                    {t('shop.buy')}
+                  </button>
                 </HStack>
               </div>
             </HStack>
