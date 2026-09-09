@@ -217,6 +217,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     return saved.categories.filter((c): c is CategoryType => known.has(c as CategoryType));
   });
   const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
+  // Whether a hint was *ever* opened for a question, which is not the same as
+  // whether one is open now. The popover light-dismisses on the click that
+  // picks an answer, so the open flag is already false by the time the session
+  // is submitted; reporting that would have recorded every hinted answer as an
+  // independent one and let it lengthen a review interval. This is sticky on
+  // purpose: opening a hint cannot be taken back, and it is cleared only when a
+  // new session starts.
+  const [hintedIds, setHintedIds] = useState<string[]>([]);
   const [attemptedStart, setAttemptedStart] = useState(false);
   const { ids: bookmarks } = useBookmarks();
   const [snack, setSnack] = useState<string | null>(null);
@@ -382,6 +390,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         setSessionId(data.sessionId);
         setQuestions(data.questions);
         setAnswers({});
+        setHintedIds([]);
         setReviewPlan([]);
         setCurrentIndex(0);
         setMode(nextMode);
@@ -411,6 +420,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setSessionId(data.sessionId);
       setQuestions(data.questions as Question[]);
       setAnswers({});
+      setHintedIds([]);
       setCurrentIndex(0);
       setMode('daily');
       setState('in-progress');
@@ -448,6 +458,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setSessionId(data.sessionId);
       setQuestions(data.questions);
       setAnswers({});
+      setHintedIds([]);
       setReviewPlan(data.reviewPlan ?? []);
       setInterleaved(Boolean(data.interleaved));
       setCurrentIndex(0);
@@ -564,7 +575,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           sessionId,
           answers,
           lang,
-          hinted: Object.entries(revealedHints).filter(([, open]) => open).map(([id]) => id),
+          hinted: hintedIds,
         }),
       });
       setResult(data);
@@ -624,7 +635,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     } finally {
       setSubmitting(false);
     }
-  }, [answers, clearProgress, config.support.enabled, isAuthenticated, sessionId, submitting, user, lang, t, questions, mode, revealedHints]);
+  }, [answers, clearProgress, config.support.enabled, isAuthenticated, sessionId, submitting, user, lang, t, questions, mode, hintedIds]);
 
   const handleRestart = () => {
     clearProgress();
@@ -632,6 +643,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     setQuestions([]);
     setResult(null);
     setAnswers({});
+    setHintedIds([]);
     setCurrentIndex(0);
     setMode('standard');
     setReviewPlan([]);
@@ -1340,7 +1352,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 <Popover
                   isOpen={!!revealedHints[currentQuestion.id]}
                   onOpenChange={(o) =>
-                    setRevealedHints((prev) => ({ ...prev, [currentQuestion.id]: o }))
+                    setRevealedHints((prev) => {
+                      if (o) {
+                        setHintedIds((ids) =>
+                          ids.includes(currentQuestion.id) ? ids : [...ids, currentQuestion.id],
+                        );
+                      }
+                      return { ...prev, [currentQuestion.id]: o };
+                    })
                   }
                   placement="below"
                   width={320}
