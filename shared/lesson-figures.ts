@@ -117,7 +117,7 @@ export const LESSON_FIGURES: readonly LessonFigure[] = [
         { label: T('body', 'body'), note: T('the document', 'dokument') },
         { label: T('header → “banner”', 'header → „banner“') },
         { label: T('nav → “navigation”', 'nav → „navigace“') },
-        { label: T('main → “main”', 'main → „hlavní obsah“'), value: 'one per page' },
+        { label: T('main → “main”', 'main → „hlavní obsah“'), note: T('one per page', 'jen jeden na stránku') },
         { label: T('aside → “complementary”', 'aside → „doplňkový obsah“') },
         { label: T('footer → “content information”', 'footer → „informace o obsahu“') },
       ],
@@ -670,6 +670,16 @@ export const visibleFigures = (
   phase === 'after' ? [...figures] : figures.filter((figure) => !figure.afterSubmission);
 
 /** Structural problems an authoring mistake would introduce. Empty is correct. */
+/** A plain `value` is a claim that the string reads the same in every language:
+ * a measurement, a count, a literal. Every real one is a single token. Prose
+ * gets in here by looking harmless — `one per page` shipped as a value and was
+ * rendered, in English, inside an otherwise Czech figure. Whitespace is the
+ * cheap tell, and it costs nothing to refuse. */
+const neutral = (id: string, value: string): string[] =>
+  /\s/.test(value) || !value.trim()
+    ? [`${id} has an untranslated value "${value}"; use a localized note instead`]
+    : [];
+
 export function validateFigures(levelCount: (topic: string) => number): string[] {
   const problems: string[] = [];
   const seen = new Set<string>();
@@ -711,6 +721,15 @@ export function validateFigures(levelCount: (topic: string) => number): string[]
       }
     } else if (body.kind === 'nested') {
       if (body.layers.length < 2) problems.push(`${figure.id} has nothing nested`);
+      for (const layer of body.layers) {
+        if (!layer.label.en.trim() || !layer.label.cs.trim()) {
+          problems.push(`${figure.id} has a half-translated layer label`);
+        }
+        if (layer.note && (!layer.note.en.trim() || !layer.note.cs.trim())) {
+          problems.push(`${figure.id} has a half-translated layer note`);
+        }
+        if (layer.value !== undefined) problems.push(...neutral(figure.id, layer.value));
+      }
     } else if (body.kind === 'table') {
       for (const row of body.rows) {
         if (row.length !== body.columns.length) problems.push(`${figure.id} has a row of the wrong width`);
@@ -731,6 +750,7 @@ export function validateFigures(levelCount: (topic: string) => number): string[]
       if (body.frames.length < 2) problems.push(`${figure.id} is a sequence with nothing happening`);
       for (const frame of body.frames) {
         if (!frame.note.en.trim() || !frame.note.cs.trim()) problems.push(`${figure.id} has a frame with no description`);
+        if (frame.counter) problems.push(...neutral(figure.id, frame.counter.value));
         for (const mark of frame.marks ?? []) {
           if (mark.index < 0 || mark.index >= frame.cells.length) {
             problems.push(`${figure.id} marks a cell that is not in the frame`);
