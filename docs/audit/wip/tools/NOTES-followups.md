@@ -205,3 +205,8 @@ for a second reader rather than a second automated check.
   without throwing. Items claiming a throw for the effect case were scoped to
   what actually happens, and to development builds, since the production bundle
   does not contain the message at all.
+- **Two Node items denied that ESM can read CommonJS exports.** Both
+  explanations said an ES module "does not read" `module.exports.x = 1` or a
+  whole-object assignment. Node 22 does: a named import from a `.cjs` file
+  returned the values, and a default import returned the assigned object. This
+  is the kind of claim that was true of an older Node and was never revisited.
