@@ -3,6 +3,18 @@
 import json,glob,os,sys,re
 bdir, odir = sys.argv[1], sys.argv[2]
 FENCE = re.compile(r'```[\s\S]*?```'); TICK = re.compile(r'`[^`\n]+`')
+# The outcome labels the brief settles, with the Czech this bank uses.
+LABELS = {
+    'Error': 'Chyba', 'An error': 'Chyba', 'Throws': 'Vyhodí chybu',
+    'Type error': 'Chyba typu', 'A type error': 'Chyba typu',
+    'Runtime error': 'Chyba za běhu', 'Compiles': 'Zkompiluje se',
+    'Nothing': 'Nic', 'Nothing happens': 'Nic se nestane',
+    'It throws': 'Vyhodí chybu', 'None of the above': 'Nic z uvedeného',
+    # A bare type noun names what kind of value came back; the quoted form
+    # ("function") is a typeof result and is a value, so it is not listed here.
+    'function': 'funkce', 'a function': 'funkce', 'an object': 'objekt',
+    'an array': 'pole', 'a string': 'řetězec', 'a number': 'číslo',
+}
 total = 0; problems = []; counts = {}
 for bf in sorted(glob.glob(f'{bdir}/cs-batch-*.json')):
     name = os.path.basename(bf)[9:-5]
@@ -42,7 +54,16 @@ for bf in sorted(glob.glob(f'{bdir}/cs-batch-*.json')):
             # declaration, or a number with a unit. An option that mixes a
             # backticked token with prose is translated like any other prose.
             bare = TICK.sub('', eo).strip(' .,;:—-')
-            code_only = bare == '' or bool(re.fullmatch(r'[-\w$.]+(\s*:\s*[-\w$.%()\s]+)?|-?\d+(\.\d+)?[a-z%]*|"[^"]*"|\'[^\']*\'', eo.strip()))
+            e = eo.strip()
+            # An outcome label describes what happened and is prose; the brief
+            # names the Czech each takes.
+            if e in LABELS:
+                if co.strip() != LABELS[e]:
+                    problems.append(f'{i}: outcome label {j} is {co.strip()!r}, the bank uses {LABELS[e]!r}')
+                continue
+            code_only = bare == '' or bool(
+                re.fullmatch(r'[-\w$.]+(\s*:\s*[-\w$.%()]+)?|-?\d+(\.\d+)?[a-z%]*|"[^"]*"|\'[^\']*\'', e)
+            ) and len(e.split()) <= 3
             if code_only and eo != co:
                 problems.append(f'{i}: code-only option {j} changed: {eo!r} -> {co!r}')
         if r.get('status') == 'kept' and it.get('cs'):
