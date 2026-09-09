@@ -37,3 +37,11 @@
   explicitly. The item's explanation asserted the opposite. The rewrite asks
   about availability inside a CommonJS module, which turns the bug into the
   lesson.
+- **`rm-react-51` rewrite has options without `correctAnswer`.** Only the fourth
+  option changed, so the key stays at index 1, but the applying pass should set
+  `correctAnswer` explicitly rather than rely on the old value surviving.
+- **StrictMode caveat missing across React effect items.** `rm-react-81`, `85`,
+  `93`, `97` and `98` state production behaviour without saying what a learner
+  running the development build actually sees (setup, cleanup, setup). Decide
+  once whether the bank teaches the production model with a development note,
+  or the development model outright.
