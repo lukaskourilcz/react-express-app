@@ -33,4 +33,6 @@ One file, the `.jsonl` path in your task. One object per line, in batch order. *
 {"id":"rm-js-2","verdict":"amend","fields":{"hint":"…"},"rescored":null,"problems":["hint names the correct option"],"evidence":["knowledge: …"],"notes":""}
 {"id":"rm-js-3","verdict":"reject","fields":null,"rescored":null,"problems":["multiple-defensible: option 2 is also true when …"],"evidence":["node: …"],"notes":""}
 ```
+**Use the repository's own toolchain, not whatever is on the PATH.** Bare `npx tsc` in a scratch directory resolves to a globally installed TypeScript (6.x, where `strictNullChecks` is already on) and will give you answers the product does not produce. Run `/home/user/react-express-app/node_modules/.bin/tsc` and record the version; require `react`, `react-dom`, `express` and the rest from `/home/user/react-express-app/node_modules` for the same reason.
+
 Group executable checks (10–20 items per `node` invocation) and record each item's result separately. Keep `evidence` to three entries and `notes` to one sentence. When finished, re-open the file, confirm every line parses and the line count equals the batch length, and report the counts by verdict in one line.

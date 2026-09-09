@@ -23,3 +23,11 @@
   the line the earlier rows of the same file had drawn rather than a stricter
   one of its own, so a resumed batch stays internally consistent. Keep that
   rule: a resumed second reading calibrates to the rows already in its file.
+- **`rm-node-191` wrong key.** `assert.strictEqual` uses `Object.is`, not `===`:
+  verified on Node 22 that `strictEqual(NaN, NaN)` passes and
+  `strictEqual(0, -0)` throws, the opposite of `===` in both cases. The
+  reviewer's rewrite fixes it; this is one of the two wrong keys the audit
+  found in the bank.
+- **Snippets that never compiled.** `rm-ts-93` and `rm-ts-142` ship code with
+  an undeclared identifier (`TS2304`), so the question asked about a program
+  that does not exist. Both rewrites supply the declaration.
