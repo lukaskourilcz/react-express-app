@@ -10,17 +10,27 @@
  * says so rather than leaving it to be discovered by a search that finds
  * nothing.
  *
+ * A friend is identified by their avatar, their flag and — if they own one —
+ * their crown. Not by a name: `user_stats.name` is whatever an OAuth provider
+ * handed us and nobody chose to publish it, and the handle is an address you
+ * type, not a label to hang on somebody. The handle stays as the accessible
+ * name of the row's controls, so the list is still operable and unambiguous to
+ * a screen reader and on hover.
+ *
  * Every number on a friend's row comes from the server. The crown is a picture
  * somebody spent earned tokens on: it is shown and it changes nothing, least of
- * all the order of this list, which is by streak.
+ * all the order of this list, which is by streak. The flag is the same — where
+ * somebody is from moves them up nothing.
  */
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
-import { useT } from '../i18n/LanguageContext';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import { Avatar } from '@astryxdesign/core/Avatar';
+import { useLanguage, useT } from '../i18n/LanguageContext';
 import { friendlyError } from '../lib/api';
 import { CrownBadge } from './ui/Crown';
+import { CountryFlag, countryOptions } from './ui/CountryFlag';
 import {
-  getHandle, setHandle as saveHandle, setDiscoverable,
+  getHandle, setHandle as saveHandle, setDiscoverable, setCountry,
   lookupFriend, requestFriend, respondFriend, removeFriend, listFriends,
   isValidHandle,
   type Friend, type FriendRequest, type HandleState, type LookupResult,
@@ -81,6 +91,7 @@ export function FriendsPanel() {
 
 function HandleCard({ state, onChanged }: { state: HandleState | null; onChanged: () => void }) {
   const t = useT();
+  const { lang } = useLanguage();
   const inputId = useId();
   const [draft, setDraft] = useState(state?.handle ?? '');
   const [saving, setSaving] = useState(false);
@@ -106,6 +117,17 @@ function HandleCard({ state, onChanged }: { state: HandleState | null; onChanged
     try { await setDiscoverable(next); onChanged(); }
     catch (err) { setError(friendlyError(err)); }
   };
+
+  const chooseCountry = async (next: string) => {
+    setError(null);
+    try { await setCountry(next); onChanged(); }
+    catch (err) { setError(friendlyError(err)); }
+  };
+
+  // 249 codes named and sorted in the reader's language. Memoised because that
+  // is 249 Intl lookups and a collated sort, and neither depends on the draft
+  // handle being typed one character at a time.
+  const countries = useMemo(() => countryOptions(lang), [lang]);
 
   return (
     <section className="fr-card" aria-labelledby={`${inputId}-title`}>
@@ -136,17 +158,37 @@ function HandleCard({ state, onChanged }: { state: HandleState | null; onChanged
       {saved && <p className="fr-note fr-note--ok" role="status">{t('friends.handleSaved')}</p>}
       {error && <p className="fr-note fr-note--error" role="alert">{error}</p>}
       {state?.handle && (
-        <label className="fr-check">
-          <input
-            type="checkbox"
-            checked={state.discoverable}
-            onChange={(event) => void toggleDiscoverable(event.target.checked)}
-          />
-          <span>
-            {t('friends.discoverable')}
-            <span className="fr-note">{t('friends.discoverableHelp')}</span>
-          </span>
-        </label>
+        <>
+          <div className="fr-row fr-row--country">
+            <label className="fr-label" htmlFor={`${inputId}-country`}>{t('friends.countryLabel')}</label>
+            <span className="fr-country">
+              <CountryFlag code={state.country} locale={lang} size={20} />
+              <select
+                id={`${inputId}-country`}
+                className="fr-select"
+                value={state.country ?? ''}
+                onChange={(event) => void chooseCountry(event.target.value)}
+              >
+                <option value="">{t('friends.countryNone')}</option>
+                {countries.map((country) => (
+                  <option key={country.code} value={country.code}>{country.name}</option>
+                ))}
+              </select>
+            </span>
+          </div>
+          <p className="fr-note">{t('friends.countryHelp')}</p>
+          <label className="fr-check">
+            <input
+              type="checkbox"
+              checked={state.discoverable}
+              onChange={(event) => void toggleDiscoverable(event.target.checked)}
+            />
+            <span>
+              {t('friends.discoverable')}
+              <span className="fr-note">{t('friends.discoverableHelp')}</span>
+            </span>
+          </label>
+        </>
       )}
     </section>
   );
@@ -298,6 +340,7 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const { lang } = useLanguage();
   const drop = async (handle: string) => {
     setBusy(handle); setError(null);
     try { await removeFriend(handle); onChanged(); }
@@ -314,9 +357,13 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
         <ul className="fr-list">
           {friends.map((friend) => (
             <li key={friend.handle} className="fr-friend">
+              {/* The avatar carries the handle as its alt text: it is the one
+                  place a reader can find out who this row is, without the list
+                  turning into a column of names. */}
+              <Avatar src={friend.picture ?? undefined} name={friend.handle} alt={friend.handle} size="small" />
               <span className="fr-friend__who">
-                <span className="fr-friend__handle">
-                  {friend.handle}
+                <span className="fr-friend__marks">
+                  <CountryFlag code={friend.country} locale={lang} size={16} />
                   {/* Owned and worn. It says nothing about anybody's learning
                       and it does not move this row: the order is by streak. */}
                   {friend.crown && <CrownBadge size={16} />}
@@ -330,7 +377,13 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
                   {friend.activeToday && <> {' · '}<span className="fr-today">{t('friends.today')}</span></>}
                 </span>
               </span>
-              <button type="button" className="fr-btn" disabled={busy === friend.handle} onClick={() => void drop(friend.handle)}>
+              <button
+                type="button"
+                className="fr-btn"
+                disabled={busy === friend.handle}
+                aria-label={t('friends.removeOne', { handle: friend.handle })}
+                onClick={() => void drop(friend.handle)}
+              >
                 {t('friends.remove')}
               </button>
             </li>

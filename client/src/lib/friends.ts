@@ -13,6 +13,8 @@ export interface HandleState {
   handle: string | null;
   /** False means no new person can find you. It does not unmake a friendship. */
   discoverable: boolean;
+  /** ISO 3166-1 alpha-2, or null for no flag. Declaring one is optional. */
+  country: string | null;
   /** When the handle may next change, or null when it never has been set. */
   canChangeAt: string | null;
 }
@@ -33,6 +35,8 @@ export interface LookupResult {
 export interface Friend {
   handle: string;
   picture: string | null;
+  /** ISO 3166-1 alpha-2, or null. Shown as a flag, never ranked. */
+  country: string | null;
   /** Owned and worn. A picture, and never a term in the ordering. */
   crown: boolean;
   currentStreak: number;
@@ -68,6 +72,10 @@ export const setHandle = (handle: string): Promise<{ handle: string }> =>
 
 export const setDiscoverable = (discoverable: boolean): Promise<{ discoverable: boolean }> =>
   apiFetch(OP('friends-handle'), { method: 'PUT', body: JSON.stringify({ discoverable }) });
+
+/** `''` clears it. The server stores no empty string: blank means no flag. */
+export const setCountry = (country: string): Promise<{ country: string | null }> =>
+  apiFetch(OP('friends-handle'), { method: 'PUT', body: JSON.stringify({ country }) });
 
 export const lookupFriend = (handle: string, signal?: AbortSignal): Promise<LookupResult> =>
   apiFetch(`/api/user/friends-lookup?handle=${encodeURIComponent(handle.trim())}`, { signal });

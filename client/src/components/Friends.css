@@ -44,6 +44,25 @@
 }
 .fr-input:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 
+.fr-row--country { align-items: center; }
+.fr-label { font-size: 0.9rem; font-weight: 650; }
+/* The flag sits with the select rather than inside it: a native <select> can
+   render an option's text and nothing else, so the chosen flag has to live
+   beside the control to be visible at all. */
+.fr-country { display: inline-flex; align-items: center; gap: 8px; flex: 1 1 12rem; min-width: 0; }
+.fr-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: var(--radius-element);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+.fr-select:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+
 .fr-btn {
   min-height: 44px;
   padding: 8px 16px;
@@ -87,8 +106,8 @@
 .fr-item__handle { font-weight: 650; }
 .fr-item__actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
-/* min-width:0 so a long handle ellipsizes instead of pushing Remove off. */
-.fr-friend__who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 12rem; }
+/* min-width:0 so a long row ellipsizes instead of pushing Remove off. */
+.fr-friend__who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 8rem; }
 .fr-friend__handle {
   display: inline-flex;
   align-items: center;
@@ -97,6 +116,18 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+/* The flag and the crown: a friend's whole visible identity beside the avatar.
+   min-height keeps the row from shifting between a friend who has both and one
+   who has neither. */
+.fr-friend__marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+}
+/* A glyph, not an image: line-height 1 stops the taller emoji metrics adding a
+   few pixels of leading that only some platforms would show. */
+.ss-flag { line-height: 1; }
 .fr-friend__meta { font-size: 0.8rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
 /* A word as well as a colour: "today" reads the same to anyone. */
 .fr-today { font-weight: 700; color: var(--ss-success, var(--color-text-primary)); }

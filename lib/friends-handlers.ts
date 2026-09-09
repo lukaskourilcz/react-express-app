@@ -39,6 +39,8 @@ const KNOWN: Record<string, { status: number; code: string; message: string }> =
   pending_limit_reached: { status: 409, code: 'pending_limit', message: 'You have too many requests waiting for an answer' },
   request_declined: { status: 409, code: 'declined', message: 'That request was declined' },
   no_request: { status: 404, code: 'not_found', message: 'There is no request to answer' },
+  invalid_country: { status: 400, code: 'invalid_country', message: 'A country is a two-letter ISO code, or blank for none' },
+  no_handle: { status: 409, code: 'no_handle', message: 'Choose a handle before setting a country' },
 };
 
 function rpcError(res: VercelResponse, error: { message?: string } | null, fallback: string) {
@@ -83,18 +85,38 @@ export async function handleFriends(
       return res.json({
         handle: row?.handle ?? null,
         discoverable: row?.discoverable ?? true,
+        country: row?.country ?? null,
         canChangeAt: row?.can_change_at ?? null,
       });
     }
     if (req.method === 'PUT') {
-      // Two independent settings on one op: the handle itself, and whether a
-      // stranger who types it can find you.
+      // Three independent settings on one op: the handle itself, whether a
+      // stranger who types it can find you, and the flag shown beside your
+      // avatar. Each is recognised by its own key being present, so saving one
+      // never silently rewrites another.
       if (typeof body.discoverable === 'boolean' && body.handle === undefined) {
         const { data, error } = await withTimeout(
           supabase.rpc('set_handle_discoverable', { p_user_id: userId, p_discoverable: body.discoverable }),
         );
         if (error) return rpcError(res, error, 'Could not save the setting');
         return res.json({ discoverable: data === true });
+      }
+      if (body.country !== undefined && body.handle === undefined) {
+        // '' and null both mean "no flag". Anything else has to be two letters,
+        // and the database refuses it again if this misses.
+        const raw = body.country;
+        if (raw !== null && typeof raw !== 'string') {
+          return jsonError(res, 400, 'invalid_country', KNOWN.invalid_country.message);
+        }
+        const country = raw === null ? '' : raw.trim().toUpperCase();
+        if (country !== '' && !/^[A-Z]{2}$/.test(country)) {
+          return jsonError(res, 400, 'invalid_country', KNOWN.invalid_country.message);
+        }
+        const { data, error } = await withTimeout(
+          supabase.rpc('set_user_country', { p_user_id: userId, p_country: country }),
+        );
+        if (error) return rpcError(res, error, 'Could not save your country');
+        return res.json({ country: (data as string | null) ?? null });
       }
       const handle = readHandle(body.handle);
       if (!handle) return jsonError(res, 400, 'invalid_handle', KNOWN.invalid_handle.message);
@@ -183,6 +205,7 @@ export async function handleFriends(
       friends: (list.data ?? []).map((row: Record<string, unknown>) => ({
         handle: row.handle,
         picture: row.picture ?? null,
+        country: row.country ?? null,
         crown: row.crown === true,
         currentStreak: Number(row.current_streak ?? 0),
         longestStreak: Number(row.longest_streak ?? 0),
