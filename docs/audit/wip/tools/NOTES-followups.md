@@ -12,3 +12,6 @@
   results or source in options of this shape.
 - **`rm-js-189` case-only distractor `"Function"`.** Kept: the key is still the
   only defensible answer and no stronger distractor was available.
+- **`rm-node-62` and `rm-node-64` Czech drift.** The reviewer recorded that the
+  Czech tracks an older English stem for both; the localisation pass must
+  retranslate rather than keep.

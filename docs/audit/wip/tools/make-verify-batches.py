@@ -1,10 +1,25 @@
 # Builds second-reading batches from the review fragments: every rewrite as it
 # will be served, beside the original and the reviewer's reasoning; plus the
 # cross-batch duplicate pairs. Usage:
-#   python3 make-verify-batches.py <inventoryDir> <reviewDir> <outDir> [group=batch1+batch2,...]
+#   python3 make-verify-batches.py <inventoryDir> <reviewDir> <outDir> [group=batch1+batch2,...] [--done <verifyOutDir>]
+#
+# --done names a directory of finished second readings; every id already in one
+# of its .jsonl files is left out, so a batch that grew after its first round
+# produces a round-two batch of exactly the rewrites nobody has checked yet.
 import json,glob,os,sys,collections
-inv_dir, rev_dir, out = sys.argv[1], sys.argv[2], sys.argv[3]
-groups = sys.argv[4].split(',') if len(sys.argv) > 4 else None
+argv = sys.argv[1:]
+done_dir = None
+if '--done' in argv:
+    i = argv.index('--done'); done_dir = argv[i + 1]; del argv[i:i + 2]
+inv_dir, rev_dir, out = argv[0], argv[1], argv[2]
+groups = argv[3].split(',') if len(argv) > 3 else None
+done = set()
+if done_dir:
+    for f in glob.glob(f'{done_dir}/verify-*.jsonl'):
+        for l in open(f):
+            if l.strip():
+                r = json.loads(l)
+                if 'id' in r: done.add(r['id'])
 os.makedirs(out, exist_ok=True)
 rows = {}
 for f in glob.glob(f'{rev_dir}/*.jsonl'):
@@ -37,16 +52,25 @@ if groups is None:
     groups = [f'{n}={n}' for n in sorted(order) if any(rows.get(i, {}).get('decision') == 'rewrite' for i in order[n])]
 for g in groups:
     gname, members = g.split('=')
-    ids = [i for m in members.split('+') for i in order[m] if rows.get(i, {}).get('decision') == 'rewrite' and rows[i].get('rewrite')]
+    ids = [i for m in members.split('+') for i in order[m]
+           if rows.get(i, {}).get('decision') == 'rewrite' and rows[i].get('rewrite') and i not in done]
     if not ids: continue
     json.dump([item_of(i) for i in ids], open(f'{out}/verify-{gname}.json', 'w'), indent=1, ensure_ascii=False)
     made.append((gname, len(ids)))
 live = [i for i, r in rows.items() if r['decision'] in ('rewrite', 'retain')]
 pairs = set()
+seen_pairs = set()
+if done_dir:
+    for f in glob.glob(f'{done_dir}/verify-*.jsonl'):
+        for l in open(f):
+            if l.strip():
+                r = json.loads(l)
+                if 'pair' in r: seen_pairs.add(tuple(sorted(r['pair'])))
 for i in live:
     for d in inv[i].get('possibleDuplicates') or []:
         if d in rows and rows[d]['decision'] in ('rewrite', 'retain') and batchof[d] != batchof[i]:
-            pairs.add(tuple(sorted((i, d))))
+            p = tuple(sorted((i, d)))
+            if p not in seen_pairs: pairs.add(p)
 def dup_item(i):
     it = inv[i]; r = rows[i]
     return {'id': i, 'category': it['category'], 'level': it['level'], 'levelTitle': it['levelTitle'], 'objective': r.get('objective'), **final_of(i)}
