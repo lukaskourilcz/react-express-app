@@ -156,3 +156,13 @@ for a second reader rather than a second automated check.
   ranks Argon2id first, scrypt second, PBKDF2 for FIPS, and bcrypt for legacy
   systems only; one item also places a pepper in application config where the
   guidance requires a vault or HSM.
+- **Key position is not uniformly harmless after all.** In the second Security
+  batch the key sits at option index 1 in 57 of 60 items. Delivery shuffles
+  options, so this does not help a learner in the product, but it does mean the
+  authored bank was written to a template; rewrites that rebuild options should
+  vary the position so the source stops encoding it.
+- **The OWASP references are a full edition behind.** Five items cite the 2021
+  Top Ten by name or by category title; the 2025 edition renamed several
+  categories and folded SSRF into A01. One item also asserts the naive
+  double-submit cookie pattern is unforgeable, which the OWASP CSRF cheat sheet
+  explicitly says is bypassable by anyone who can write a cookie on the domain.
