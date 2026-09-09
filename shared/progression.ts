@@ -296,13 +296,13 @@ export const WEBDEV_PLAN_STAGES: Record<BaseTrack, readonly (readonly string[])[
     ['html', 'css', 'javascript'],
     ['typescript', 'git'],
     ['react', 'nextjs'],
-    ['general', 'dsa'],
+    ['general', 'dsa', 'ai'],
   ],
   backend: [
     ['javascript', 'typescript', 'git'],
     ['nodejs', 'general'],
     ['databases', 'dsa', 'algorithms'],
-    ['system-design', 'devops', 'security'],
+    ['system-design', 'devops', 'security', 'ai'],
   ],
   fullstack: [
     ['html', 'css', 'javascript'],
@@ -310,7 +310,7 @@ export const WEBDEV_PLAN_STAGES: Record<BaseTrack, readonly (readonly string[])[
     ['react', 'nextjs'],
     ['nodejs', 'general', 'databases'],
     ['dsa', 'algorithms'],
-    ['system-design', 'devops', 'security'],
+    ['system-design', 'devops', 'security', 'ai'],
   ],
 };
 

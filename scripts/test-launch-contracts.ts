@@ -89,6 +89,7 @@ import { taskResources, CODING_DOC_LINKS } from '../shared/coding-docs';
 import {
   everyPlanHasAFirstStep,
   stepAlreadyPassed,
+  WEBDEV_PLAN_STAGES,
   isLevelUnlocked,
   isTopicInPlan,
   planTopics,
@@ -736,6 +737,23 @@ async function main() {
     `progression graph must be complete, acyclic and reachable: ${JSON.stringify(graphProblems)}`,
   );
   assert.deepEqual(everyPlanHasAFirstStep(), [], 'every plan needs a first step a new learner can take');
+
+  // Every deployable devShark topic must be in at least one base track's plan.
+  // A topic that is in none is authored content no learner can reach: `ai` was
+  // exactly that — twenty levels and a hundred and sixty questions, present only
+  // in the FDE bridge, so every learner who did not take the specialisation was
+  // refused it as "not in your plan".
+  {
+    const withTrack = (baseTrack: string) => ({
+      schemaVersion: 2, baseTrack, specialization: null, skillPaths: [],
+      goals: ['job'], experience: 'some', studyTime: 15,
+    } as unknown as Parameters<typeof isTopicInPlan>[0]);
+    const tracks = Object.keys(WEBDEV_PLAN_STAGES);
+    const stranded = [...SUBJECT_SCOPE_CATALOG.webdev.topics].filter(
+      (topic) => !tracks.some((track) => isTopicInPlan(withTrack(track), 'webdev', topic)),
+    );
+    assert.deepEqual(stranded, [], `every deployable topic needs a base track that plans it: ${stranded.join(', ')}`);
+  }
 
   // Editing a plan narrows what is offered next; it never withdraws what was
   // earned. A learner who passed Next.js levels on the frontend track and then
