@@ -17,7 +17,7 @@ import { getGameSettings } from '../../lib/settings-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
 import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/product-scope';
-import { selectPersonalizedReview } from '../../lib/review-selection';
+import { selectPersonalizedReview, selectDueItems, DUE_SHARE } from '../../lib/review-selection';
 import { curationCoverage, itemReview } from '../../lib/curation';
 import { coverageClaim } from '../../shared/curation';
 import { loadReviewStates, dueFor, practisedCounts } from '../../lib/concept-review';
@@ -212,22 +212,29 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
           return concept !== null && dueSet.has(concept);
         })
       : [];
-    const fresher = duePool.filter((q) => !lastItems.has(q.id));
-    const dueFirst = [...fresher, ...duePool.filter((q) => lastItems.has(q.id))];
-    const dueIds = new Set(dueFirst.map((q) => q.id));
+    // Reserved slots, not a preferred ordering. Handing a due-first list to the
+    // ranking below does nothing: it re-sorts by its own total order, so the
+    // ordering is discarded and a learner told two concepts were due gets a
+    // session with neither in it. Taking the slots out of the count first is
+    // the only arrangement the ranking cannot undo. One slot is always left
+    // for the ranking, so a review is never only a drill.
+    const dueLimit = Math.min(duePool.length, Math.max(0, Math.min(count - 1, Math.round(count * DUE_SHARE))));
+    const dueItems = selectDueItems(duePool, due.map((one) => one.conceptId), conceptOf, lastItems, dueLimit);
+    const dueIds = new Set(dueItems.map((q) => q.id));
 
     const plan = selectPersonalizedReview(
-      // With nothing due this is exactly the previous behaviour. With concepts
-      // due, they lead and the ranking fills the rest.
-      dueFirst.length > 0 ? [...dueFirst, ...pool.filter((q) => !dueIds.has(q.id))] : pool,
+      // With nothing due this is exactly the previous behaviour: the whole pool
+      // and the whole count.
+      dueIds.size > 0 ? pool.filter((q) => !dueIds.has(q.id)) : pool,
       stats.data ?? [],
       history.data ?? [],
-      count,
+      count - dueItems.length,
     );
+    const questionsForSession = [...dueItems, ...plan.questions].slice(0, count);
     const arrangement = arrangePractice({
-      items: plan.questions.map((q) => ({ ...q, format: q.snippet?.subtype })),
+      items: questionsForSession.map((q) => ({ ...q, format: q.snippet?.subtype })),
       practised: practisedCounts(states),
-      seed: plan.questions.length,
+      seed: questionsForSession.length,
     });
     selected = arrangement.items;
     reviewPlan = plan.weakAreas;

@@ -24,6 +24,76 @@ export interface WeakArea {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * How much of a review session concepts that are actually due may take.
+ *
+ * Not all of it. A session made only of due items stops being a review of the
+ * subject and becomes a drill on whatever the learner last got wrong, and one
+ * due concept would produce ten questions about that one concept. Not none of
+ * it either, which is what shipped first: the due ordering was handed to the
+ * ranking below, which re-sorts by its own total order and threw it away, so a
+ * learner told two concepts were due got a session with neither in it.
+ */
+export const DUE_SHARE = 0.6;
+
+/**
+ * One item per due concept, most overdue first, until the reserved slots run
+ * out. Pure, and separate from the ranking below on purpose: which concepts
+ * come back is spaced practice's decision, and which item serves a concept is
+ * this file's.
+ *
+ * Round-robin rather than concept-by-concept, so four due concepts and four
+ * slots give four concepts rather than four questions about the first one.
+ * Within a concept, an item the learner has not just seen comes first — a
+ * review that re-asks the identical question tests whether the answer position
+ * was memorised, not whether the idea was.
+ */
+export function selectDueItems(
+  duePool: readonly Question[],
+  dueOrder: readonly string[],
+  conceptOf: (question: Question) => string | null,
+  lastItemIds: ReadonlySet<string>,
+  limit: number,
+): Question[] {
+  if (limit <= 0) return [];
+  const byConcept = new Map<string, Question[]>();
+  for (const question of duePool) {
+    const concept = conceptOf(question);
+    if (concept === null) continue;
+    const bucket = byConcept.get(concept) ?? [];
+    bucket.push(question);
+    byConcept.set(concept, bucket);
+  }
+  for (const [concept, bucket] of byConcept) {
+    byConcept.set(
+      concept,
+      [...bucket].sort(
+        (a, b) =>
+          Number(lastItemIds.has(a.id)) - Number(lastItemIds.has(b.id)) ||
+          (b.importance ?? 5) - (a.importance ?? 5) ||
+          a.id.localeCompare(b.id),
+      ),
+    );
+  }
+
+  const taken: Question[] = [];
+  const used = new Set<string>();
+  const order = dueOrder.filter((concept) => byConcept.has(concept));
+  for (let round = 0; taken.length < limit && round < duePool.length; round++) {
+    let progressed = false;
+    for (const concept of order) {
+      if (taken.length >= limit) break;
+      const next = (byConcept.get(concept) ?? []).find((question) => !used.has(question.id));
+      if (!next) continue;
+      taken.push(next);
+      used.add(next.id);
+      progressed = true;
+    }
+    if (!progressed) break;
+  }
+  return taken;
+}
+
 /** Deterministic, curated-bank-only personalized review selection. */
 export function selectPersonalizedReview(
   questions: Question[],

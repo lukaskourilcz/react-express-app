@@ -27,7 +27,7 @@ import {
 import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS } from '../lib/rate-limit';
 import healthHandler from '../api/health';
 import roadmapHandler from '../api/quiz/roadmap';
-import { selectPersonalizedReview } from '../lib/review-selection';
+import { selectPersonalizedReview, selectDueItems, DUE_SHARE } from '../lib/review-selection';
 import { aiDailyGenerationLimit, isAiExplanationConfigured } from '../lib/ai-provider';
 import { aiFeaturesAllowed, defaultDeploymentCategories, validateCategoryScope } from '../lib/product-scope';
 import { codingTaskById, levelCodingTasks, playable as playableCodingTask, CODING_TASKS } from '../lib/coding/catalog';
@@ -1154,6 +1154,83 @@ async function main() {
     assert.equal(dueConcepts(states, () => true, t0, 0).length, 0);
     // Nothing due, nothing owed — a fresh learner gets ordinary practice.
     assert.deepEqual(dueConcepts([], () => true, t0), []);
+
+    // A due concept must reach the session, not merely be preferred in a list
+    // the ranking is free to re-sort. It was: the handler built a due-first
+    // pool and handed it to selectPersonalizedReview, which sorts by its own
+    // total order, so the ordering was discarded and a learner told two
+    // concepts were due got a session containing neither. The two assertions
+    // below are the regression and the fix, side by side.
+    {
+      const q = (id: string, category: string, tags: string[], importance = 5) =>
+        ({
+          id, category, tags, difficulty: 2, importance, introduction: '', question: id,
+          options: ['a', 'b'], correctAnswer: 0, explanation: '',
+        }) as unknown as Question;
+      // Two questions per due concept, plus filler the ranking scores higher
+      // (weak category, high importance) so preference alone loses.
+      const duePool = [
+        q('map-1', 'javascript', ['map']), q('map-2', 'javascript', ['map']),
+        q('filter-1', 'javascript', ['filter']), q('filter-2', 'javascript', ['filter']),
+      ];
+      const filler = Array.from({ length: 12 }, (_, i) => q(`filler-${i}`, 'weak', ['Terminology'], 10));
+      const dueOrder = ['js-map', 'js-filter'];
+      const concept = (question: Question) =>
+        question.tags.includes('map') ? 'js-map' : question.tags.includes('filter') ? 'js-filter' : null;
+      const dueIdSet = new Set(duePool.map((one) => one.id));
+
+      // The regression: ordering the input does nothing.
+      const ordered = selectPersonalizedReview(
+        [...duePool, ...filler],
+        [{ category: 'weak', total_correct: 0, total_questions: 20 }],
+        [],
+        10,
+        t0,
+      );
+      assert.equal(
+        ordered.questions.filter((one) => dueIdSet.has(one.id)).length,
+        0,
+        'the ranking discards input order, which is why reserved slots are the only thing that works',
+      );
+
+      // The fix: slots are taken out of the count before the ranking runs.
+      const count = 10;
+      const limit = Math.min(duePool.length, Math.max(0, Math.min(count - 1, Math.round(count * DUE_SHARE))));
+      const taken = selectDueItems(duePool, dueOrder, concept, new Set(['map-1']), limit);
+      assert.equal(taken.length, 4, 'four due items fill four of the six reserved slots');
+      assert.equal(taken[0].id, 'map-2', 'the item just used for a concept goes last within it');
+      assert.deepEqual(
+        taken.slice(0, 2).map(concept),
+        ['js-map', 'js-filter'],
+        'round-robin, so several due concepts are covered before any is asked twice',
+      );
+      assert.equal(new Set(taken.map((one) => one.id)).size, taken.length, 'no item twice');
+
+      const rest = selectPersonalizedReview(
+        filler,
+        [{ category: 'weak', total_correct: 0, total_questions: 20 }],
+        [],
+        count - taken.length,
+        t0,
+      );
+      const session = [...taken, ...rest.questions].slice(0, count);
+      assert.equal(session.length, count, 'the session is still the size the learner asked for');
+      assert.equal(
+        session.filter((one) => dueIdSet.has(one.id)).length,
+        4,
+        'every due item reaches the session',
+      );
+      assert.ok(session.some((one) => !dueIdSet.has(one.id)), 'a review is never only a drill');
+
+      // One due concept must not take the whole session.
+      const oneConcept = selectDueItems(
+        [q('map-1', 'javascript', ['map']), q('map-2', 'javascript', ['map'])],
+        ['js-map'], concept, new Set(), 6,
+      );
+      assert.equal(oneConcept.length, 2, 'a concept contributes only the items it has');
+      assert.deepEqual(selectDueItems(duePool, dueOrder, concept, new Set(), 0), [], 'no slots, no items');
+      assert.deepEqual(selectDueItems([], dueOrder, concept, new Set(), 6), [], 'nothing due, nothing reserved');
+    }
 
     // Interleaving: bounded runs, no duplicates, focused block for new material.
     const item = (id: string, tags: string[], format?: string) =>
