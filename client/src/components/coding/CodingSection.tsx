@@ -350,16 +350,31 @@ export function CodingHome() {
           );
         })}
       </section>
+      {/* Ten technique groups, each one a row that says what it is rather than
+          a pill that says only its name and a number. The tag count is the
+          honest measure of breadth; the sentence is what makes the name mean
+          something to a learner who has not met it yet. */}
       <section aria-labelledby="cd-techniques">
         <Kicker as="h2" id="cd-techniques">{t('coding.techniques')}</Kicker>
-        <div className="cd-chips" style={{ marginTop: 10 }}>
+        <p className="cd-lead">{t('coding.techniquesLead')}</p>
+        <div className="cd-techniques">
           {GROUPS.map((group) => {
             const tags = CODING_TECHNIQUE_GROUPS[group] as readonly string[];
             const counts = new Map<CodingTrack, number>();
             for (const task of SECTION_INDEX) if (task.focus.some((tag) => tags.includes(tag))) counts.set(task.track, (counts.get(task.track) ?? 0) + 1);
             const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
             if (!best) return null;
-            return <Link key={group} className="cd-chip" to={`/coding/${best[0]}?group=${group}`}>{t(`coding.group.${group}` as never)} · {[...counts.values()].reduce((a, b) => a + b, 0)}</Link>;
+            const total = [...counts.values()].reduce((a, b) => a + b, 0);
+            return (
+              <Link key={group} className="cd-technique" to={`/coding/${best[0]}?group=${group}`}>
+                <span className="cd-technique__head">
+                  <span className="cd-technique__name">{t(`coding.group.${group}` as never)}</span>
+                  <span className="cd-technique__count">{t('coding.techniqueCount', { n: total })}</span>
+                </span>
+                <span className="cd-technique__blurb">{t(`coding.groupBlurb.${group}` as never)}</span>
+                <span className="cd-technique__tags">{t('coding.techniqueTags', { n: tags.length })}</span>
+              </Link>
+            );
           })}
         </div>
       </section>

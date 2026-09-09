@@ -71,6 +71,62 @@
   border: 1px solid var(--ss-card-line);
 }
 
+/* Technique groups. They were a flat row of pills reading "Loops · 24", which
+ * says the name and the number and nothing else — the techniques themselves,
+ * which are the content, were invisible. Each group is a row now, in the same
+ * surface idiom as the track cards above it: name, how many challenges use it,
+ * one line on what it is, and how many techniques it covers. */
+.cd-techniques {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+.cd-technique {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 44px;
+  padding: 14px 16px;
+  border-radius: var(--radius-container);
+  background: var(--color-background-surface);
+  border: 1px solid var(--ss-card-line);
+  color: inherit;
+  text-decoration: none;
+}
+.cd-technique:hover { border-color: var(--color-border-strong); }
+.cd-technique:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
+.cd-technique__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.cd-technique__name {
+  font-family: var(--font-family-heading, inherit);
+  font-weight: 700;
+  font-size: 1.02rem;
+  /* A long Czech group name wraps rather than pushing the count off the row. */
+  min-width: 0;
+}
+.cd-technique__count {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.cd-technique__blurb {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.cd-technique__tags {
+  font-size: 0.78rem;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+
 .cd-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .cd-chip {
   min-height: 44px;
