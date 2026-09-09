@@ -151,6 +151,11 @@ RESPONSIVE_LOCALE=cs to sweep the other theme and the other language.
 Failure screenshots use a temporary directory by default.`);
 }
 
+// A DevTools command that has not answered by now is not going to. Long enough
+// for a slow first paint on a cold preview server, short enough that a hung
+// route costs one route rather than the run.
+const CALL_TIMEOUT_MS = 30000;
+
 async function waitFor(predicate, { timeout = 15000, interval = 200 } = {}) {
   const start = Date.now();
   while (Date.now() - start < timeout) {
@@ -182,10 +187,25 @@ function rpc(ws) {
       else resolve(msg.result);
     }
   });
-  return (method, params = {}) =>
+  // Every command gets a deadline. Without one a single unresponsive renderer
+  // stalls the whole sweep silently and forever: `waitFor` looks like it has a
+  // timeout, but its predicate awaits a call, and a promise that never settles
+  // never lets the loop reach its own clock. That is not hypothetical — it
+  // stopped a full-route run dead for half an hour on one route, with the
+  // process alive and the log frozen mid-sweep.
+  return (method, params = {}, { timeout = CALL_TIMEOUT_MS } = {}) =>
     new Promise((resolve, reject) => {
       const reqId = id++;
-      pending.set(reqId, { resolve, reject });
+      const timer = setTimeout(() => {
+        if (!pending.has(reqId)) return;
+        pending.delete(reqId);
+        reject(new Error(`${method} did not answer within ${timeout}ms`));
+      }, timeout);
+      const settle = (fn) => (value) => {
+        clearTimeout(timer);
+        fn(value);
+      };
+      pending.set(reqId, { resolve: settle(resolve), reject: settle(reject) });
       ws.send(JSON.stringify({ id: reqId, method, params }));
     });
 }
@@ -447,7 +467,22 @@ async function main() {
     const results = [];
     for (const vp of viewports) {
       for (const route of routes) {
-        const r = await probeRoute(call, baseUrl, route, vp);
+        // A route that cannot be probed is a result, not a gap. Reported as a
+        // failure and skipped, so one bad route costs its own line rather than
+        // the rest of the sweep — and never passes by being unmeasured.
+        let r;
+        try {
+          r = await probeRoute(call, baseUrl, route, vp);
+        } catch (err) {
+          const reason = err instanceof Error ? err.message : String(err);
+          results.push({
+            route, viewport: vp.label, error: reason, overflow: 0,
+            horizOffenders: [], parentOffenders: [], covered: [], ready: false,
+            winW: vp.width, docW: vp.width,
+          });
+          process.stdout.write(`  ERROR ${vp.label.padEnd(10)} ${route}  (${reason})\n`);
+          continue;
+        }
         results.push(r);
         const broken = r.overflow > 0 || r.parentOffenders.length > 0 || r.covered.length > 0;
         const tag = broken ? 'FAIL' : 'OK';
@@ -461,8 +496,13 @@ async function main() {
     }
     ws.close();
 
+    const errored = results.filter((r) => r.error);
     const fails = results.filter((r) => r.overflow > 0 || r.parentOffenders.length > 0 || r.covered.length > 0);
-    console.log(`\n${results.length} probes · ${fails.length} with issues`);
+    console.log(`\n${results.length} probes · ${fails.length} with issues · ${errored.length} unprobed`);
+    if (errored.length) {
+      console.log('\nCould not be probed:');
+      for (const e of errored) console.log(`  ${e.viewport}  ${e.route} — ${e.error}`);
+    }
     if (fails.length) {
       console.log('\nDetails:');
       for (const f of fails) {
@@ -488,6 +528,12 @@ async function main() {
         }
       }
       console.log(`\nFailure screenshots: ${outDir}`);
+      process.exitCode = 1;
+    } else if (errored.length) {
+      // Nothing was found to be broken, but not everything was looked at.
+      // Saying "all clear" here would be the sweep reporting a result it does
+      // not have.
+      console.log(`\n${errored.length} route(s) could not be probed; the rest are clear.`);
       process.exitCode = 1;
     } else {
       console.log('\nAll clear — no horizontal overflow, no child escaping its parent, nothing under the ocean footer.');
