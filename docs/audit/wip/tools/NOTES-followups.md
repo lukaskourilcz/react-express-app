@@ -107,3 +107,17 @@
   is using `master` for the initial branch when `init.defaultBranch` is unset,
   and the documentation says the fallback changes only in Git 3.0. The rewrite
   moves the claim to hosting platforms and states Git's own behaviour.
+
+## What the second reading catches that the first pass introduces
+
+The JavaScript beginner batch amended 17 of 45 rewrites, the highest rate in
+the audit, and the pattern is worth stating plainly: a reviewer that has just
+worked out why an item is hard tends to put that reasoning into the hint, which
+is precisely what a hint must not contain. Eleven of the seventeen were that.
+Three more were new factual errors in rewritten explanations — a `push` variant
+said to return the array when it returns the new length, a slice described as
+"the opposite order" when it is the same order without the uppercase step, and
+`"he"` attributed to a wrong start index rather than a wrong end. None of the
+three would have been caught by re-running the item's own key, because the key
+was right and only the reasoning about a distractor was wrong. That is the case
+for a second reader rather than a second automated check.
