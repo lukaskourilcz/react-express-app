@@ -32,9 +32,20 @@ done, what is not, and the order to finish the first wave.
   helpers that validate reviews, enrich batches, build contexts, build Czech
   batches and summarise the ledger. The handoff shows how to bundle them.
 
-State when this snapshot was taken: the eligibility gate is implemented,
-fails closed, and is scoped by the ledger's `scope` — which is still empty —
-so it withholds nothing yet and every repository gate passes on the branch.
-462 of the first wave's 848 items (css, javascript, typescript, react, nodejs)
-have a review; 386 do not. Do not add a category to the ledger's scope
-before its rows exist: that withholds the whole category.
+State when this snapshot was taken: the gate is live. 848 items are in the
+ledger, CSS, JavaScript and TypeScript are enforced as complete categories,
+and 84 items are retired and 1 quarantined across five topics. Every one of
+the 2,128 served questions has a first-pass review; eleven topics are waiting
+on their second reading before their rewrites can be applied.
+`docs/audit/HANDOFF-176-w2.md` says exactly how to continue.
+
+Directories added since the first snapshot:
+
+- `verify/` — the second reading. One JSON Lines row per rewrite: the verdict
+  (accept, amend or reject), the fields it changed, the problems it found and
+  the evidence it ran. A reject becomes a quarantine, so nothing rewritten
+  reaches a learner on one reading.
+- `final/` — the merged rows, the review folded together with its second
+  reading. This is what the applier and the ledger builder read; the
+  fragments in `review/` and `verify/` are never edited in place.
+- `cs/` — the Czech localisation rows, written from the final English.
