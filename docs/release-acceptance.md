@@ -120,10 +120,14 @@ the shop.
 `LEARNING_PATH_DSA_ENABLED` and `LEARNING_PATH_FDE_ENABLED` are independent, and
 the API refuses both outside the `webdev` scope regardless of the variable.
 
-**No item-level content audit has run.** The review registry is empty and every
-learner-facing claim resolves to "not reviewed yet". That is #176, which is out
-of scope here, and `docs/curation-claims.md` records exactly what the product
-may and may not say until it runs.
+**The item-level content audit has run in part.** Every one of the 2,128
+served devShark questions has been read; 848 have completed both readings and
+are recorded in the ledger, and the gate enforces CSS, JavaScript and
+TypeScript as complete categories. 84 items are retired and 1 quarantined, so
+they are withheld from every delivery surface. The other eleven active topics
+are reviewed but not yet landed and are served as before, with no claim.
+`docs/audit/devshark-content-audit.md` reports what was found and what remains;
+`docs/curation-claims.md` records what the product may say.
 
 ## Not run in this environment, and what would run it
 

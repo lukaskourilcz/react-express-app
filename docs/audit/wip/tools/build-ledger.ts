@@ -57,6 +57,10 @@ const out: any[] = [];
 const problems: string[] = [];
 const unreviewed: Record<string, number> = {};
 for (const [id, it] of after.items) {
+  // An unreferenced bank has no delivery path, so the gate never sees it and
+  // completeness cannot depend on it. Those banks get a disposition in the
+  // report, not a ledger row.
+  if (it.delivery === 'unreferenced') { if (kept.has(id)) out.push(kept.get(id)); continue; }
   if (!categories.includes(it.category)) { if (kept.has(id)) out.push(kept.get(id)); continue; }
   const r = reviews.get(id);
   if (!r) {

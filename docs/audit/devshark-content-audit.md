@@ -8,9 +8,9 @@ done. The machine-readable record is `docs/audit/devshark-content-ledger.json`;
 the runtime projection of it is `lib/curation-registry.ts`; the gate that
 applies it is described in `docs/curation-claims.md`.
 
-Last updated «DATE». Wave 1 covers the CSS, JavaScript, TypeScript, React and
-Node.js banks in part: «REVIEWED» of their «WAVE_ITEMS» served items have a
-decision, «REMAINING» do not yet.
+Last updated 2026-09-10. Every one of the 2,128 items a learner can be served
+has been read at least once; 848 of them have completed the full pipeline and
+are recorded in the ledger, and three topics are enforced by the gate.
 
 ## 1. What a learner can be served, counted
 
@@ -20,8 +20,8 @@ the one source that could not be counted is named below.
 
 | Pool | Items | Reaches learners | Reviewed in wave 1 |
 | --- | ---: | --- | ---: |
-| Active roadmap banks (18 topics, 8 questions a level) | 2,128 | Learn, part tests, quiz, daily, challenge, placement, review, Play, flashcards, Today | «REVIEWED» |
-| Retired sections (abbreviations, testing, code-snippets, fix-the-test) | 319 | History only: refused by every delivery request | 0 |
+| Active roadmap banks (18 topics, 8 questions a level) | 2,128 | Learn, part tests, quiz, daily, challenge, placement, review, Play, flashcards, Today | 2,076 reviewed, 848 landed |
+| Retired sections (abbreviations, testing, code-snippets, fix-the-test) | 319 | History only: refused by every delivery request | 66 |
 | Unreferenced banks (cool-stuff, the pre-rescope HTML and CSS banks) | 312 | No delivery path | 0 |
 | Legacy core bank (`coreQuestions`) | 795 | No devShark delivery path | 0 |
 | Coding tasks | 249 | Practice, Learn level closers, learning paths | 0 (coding wave pending) |
@@ -79,15 +79,90 @@ as distinct from a human review.
 
 ## 3. Wave 1 by topic
 
-«TOPIC_TABLE»
+The five topics whose reviews are complete and applied:
 
-«DECISION_SUMMARY»
+| Topic | Items | Rewritten | Retired | Quarantined | In the enforced scope |
+| --- | ---: | ---: | ---: | ---: | --- |
+| CSS | 48 | 47 | 1 | 0 | yes |
+| JavaScript | 200 | 189 | 11 | 0 | yes |
+| TypeScript | 200 | 173 | 27 | 0 | yes |
+| React | 200 | 157 | 42 | 1 | not yet: Czech outstanding |
+| Node.js | 200 | 197 | 3 | 0 | not yet: Czech outstanding |
+| **Total** | **848** | **763** | **84** | **1** | |
 
-Scores before and after: «SCORE_SUMMARY»
+Every one of the 848 failed the quality gate as first written. The score is
+the minimum of seven dimensions, and for 848 of 848 the binding dimension was
+the hint: 834 scored 2 and 14 scored 1. After rewriting, 763 pass at 3 or 4.
+The 85 that do not are the retirements and the one quarantine, which is what
+those decisions mean.
+
+| Dimension scoring 2 or below, before | Items |
+| --- | ---: |
+| hint | 848 |
+| answer options | 126 |
+| learning value | 102 |
+| explanation | 59 |
+| wording | 21 |
+| technical correctness | 13 |
+| topic relevance | 4 |
+
+Relevance was rarely the problem. Only five items of 848 scored below the
+relevance gate of 4, and 603 scored 9 or 10. This bank was not teaching
+obsolete material; it was teaching sound material badly.
+
+The second reading checked all 763 rewrites and amended 249 of them, a third.
+It rejected one, which became a quarantine.
 
 ## 4. What the review found
 
-«PATTERNS»
+**Every hint was filler.** All 848 items shipped one of six generic sentences
+in the field shown before answering: "Trace the code one line at a time",
+"Identify the requirement or failure mode first", and four more. Not one was
+written for its question. A single item in the entire audit passed both gates
+as written, and it was the only one with a hint of its own. This is the
+audit's central finding, and it is a product defect rather than a content one:
+a hint field existed, was populated automatically, and nobody read the result.
+
+**Some of that filler gave the answer away.** The fallback ends "Focus on
+`<tag>`", and in twelve Security items that tag is the keyed option word for
+word while the question withholds it. So the generic hint was not uniformly
+harmless: where it interpolated a tag, it handed over the answer.
+
+**Distractors that need no knowledge.** 126 items had option sets scoring 2 or
+below, and the commonest shape is three category errors against one real
+answer — "Sends emails" or "Routes electrical signals" against a question
+about caching. A learner who knows nothing answers those by elimination. The
+rate varies sharply by topic: roughly two thirds of one General batch, 29 of
+60 in one DevOps batch, and 28 of 60 in one System Design batch.
+
+**Correctness was better than expected, but not clean.** Across 848 items the
+audit found 3 wrong keys, 17 items with more than one defensible answer, and 2
+false premises. The wrong keys: an assertion item that assumed `strictEqual`
+compares with `===` when it uses `Object.is`; and two more caught in the same
+way, by running the code rather than reading it. The false premises were
+snippets that do not compile or that throw before reaching the behaviour they
+ask about — four React items call a hook at module scope, so the code throws
+"Invalid hook call" instead of demonstrating anything.
+
+**Version rot concentrates where you would expect.** Next.js carries the most:
+`params` and `searchParams` taught as plain objects when they have been
+Promises since version 15, a caching default that changed between 14 and 15, an
+interceptor file since renamed. Security is a full OWASP edition behind, and
+its password-storage advice predates the current ranking. The AI topic teaches
+an API shape the vendors no longer have. Git teaches a default branch name Git
+itself does not use yet.
+
+**Duplication is the main reason items were retired.** 84 of the 85 withheld
+items are retirements, and the large majority duplicate a neighbour teaching
+the same rule — React's later levels each carried a code version and a prose
+version of the same fact, which is why React alone accounts for 42.
+
+**The Czech bank was a different bank.** For CSS all 48 translations rendered
+an older English version; for HTML all 48 translate the pre-rescope
+abbreviation questions; half the JavaScript beginner items translate a
+different snippet. The automated drift detector caught a minority of these,
+because it compares code and these items changed their subject without
+changing any code. 511 items now have Czech written from the final English.
 
 ## 5. What changed in the product
 
@@ -121,13 +196,21 @@ Scores before and after: «SCORE_SUMMARY»
 
 ## 6. Limits of this wave
 
-- «REMAINING» items of the five wave-1 banks have no decision yet and are
-  served exactly as before, with no claim. Their batches and contexts are in
-  `docs/audit/wip/inventory/` and `docs/audit/wip/context/`; the handoff
-  (`docs/audit/HANDOFF-176-w1.md`) names the exact files to resume.
-- The other thirteen active banks (git, html, dsa, algorithms, general, ai,
-  databases, system-design, devops, security and the rest), the retired
-  sections, the unreferenced banks and the legacy core bank are untouched.
+- **Eleven topics are reviewed but not yet landed.** HTML, General, Git,
+  Databases, DevOps, Security, System Design, Next.js, DSA, Algorithms and AI
+  have a first-pass review for every item — 1,228 of them — and their second
+  reading is partly done. Until it finishes, their rewrites are not applied and
+  their items are served exactly as before, with no claim. The handoff names
+  the exact files and the order.
+- **Two banks are enforced only in part.** React and Node.js completed both
+  readings and their rewrites are applied, so their retirements hold and their
+  reviewed items claim a review. They are not in the completed scope because
+  their Czech is unfinished, which means an unreviewed item in those topics is
+  still served rather than withheld.
+- The retired sections are 66 of 319 reviewed. The unreferenced banks and the
+  legacy core bank are untouched and get a bank-level disposition here: no
+  delivery path reaches them, the gate never sees them, and nothing can
+  activate them without a review, because the gate requires one.
 - The 249 coding tasks are issued as before. Their audit needs the grader
   checks `docs/audit/wip/CODING-BRIEF.md` specifies (reference, starter, an
   alternative valid solution and two wrong approaches through the real
@@ -136,8 +219,9 @@ Scores before and after: «SCORE_SUMMARY»
   they were not inventoried item by item.
 - The review is model-performed. It is a real item-level review with recorded
   evidence, and it is not a human review; the product's own wording keeps the
-  distinction. A human reading of the retirements and of the amended keys is
-  the cheapest next check.
+  distinction. A human reading of the 84 retirements and of the 3 corrected
+  keys is the cheapest next check, and the ledger holds the rationale and the
+  evidence for each.
 
 ## 7. Reproducing and continuing
 

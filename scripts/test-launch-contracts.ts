@@ -1204,8 +1204,13 @@ async function main() {
   // Every one of these is a sentence the product would otherwise be able to
   // show a learner without anything behind it.
   {
+    // A synthetic id, never in the registry: this block tests what the product
+    // says about an item nobody has reviewed, so it must not borrow the id of
+    // a real one. Borrowing `rm-js-1` made the fixture read as `superseded`
+    // once the audit recorded a decision for that id, which is the right
+    // answer to a different question.
     const sampleQuestion = {
-      id: 'rm-js-1',
+      id: 'rm-js-contract-fixture',
       tags: ['Roadmap'],
       introduction: '',
       question: 'What does this return?',
