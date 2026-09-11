@@ -6,7 +6,11 @@ import { AUDITED_CATEGORIES, REGISTRY_AUDITED_ON, REVIEW_REGISTRY } from '../lib
 const stripCode = (value: string): string => value.replace(/```[\s\S]*?```/g, ' ');
 const words = (value: string): number => stripCode(value).trim().split(/\s+/).filter(Boolean).length;
 const boilerplate = /\b(mastering|realm|delve|leverage|utilize|seamless|supercharge|game-changing)\b/i;
-const genericIntros = /^(understanding|this question|this concept|in (modern|today's)|\w+ is (one of|a common)|knowing how)/i;
+// "X is one of" alone catches real hints — "x is one of two things", "This is
+// one of TypeScript's four built-in string-manipulation types" — so it wants
+// the article that the filler shape ("one of the most important concepts")
+// always carries and a specific hint rarely does.
+const genericIntros = /^(understanding|this question|this concept|in (modern|today's)|\w+ is (one of the|a common)|knowing how)/i;
 const unseriousDistractor = /\b(cpu temperature|physical coin|color scheme|developer(?:'s|’s) mood|make buttons blue|random chance|magic happens|faster css|slow css)\b/i;
 
 const ids = new Set<string>();
@@ -31,7 +35,12 @@ const categoryCounts = Object.entries(Object.groupBy(questions, (question) => qu
 const questionFlags = questions.flatMap((question) => {
   const flags: string[] = [];
   if (words(question.introduction) > 28) flags.push(`long intro (${words(question.introduction)} words)`);
-  if (words(question.explanation) > 55) flags.push(`long explanation (${words(question.explanation)} words)`);
+  // The audit deliberately lengthened explanations: a reviewed one states the
+  // rule and then says why each wrong answer is wrong, which costs roughly
+  // sixty to eighty words on a four-option item. At the old threshold of 55
+  // this fired on 71% of the bank and meant nothing. The median is now 64 and
+  // the 99th percentile 102, so 100 keeps the long tail worth reading.
+  if (words(question.explanation) > 100) flags.push(`long explanation (${words(question.explanation)} words)`);
   if (boilerplate.test(question.introduction)) flags.push('AI-like intro language');
   if (genericIntros.test(question.introduction)) flags.push('templated intro');
 

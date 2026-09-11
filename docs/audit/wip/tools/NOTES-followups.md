@@ -452,3 +452,17 @@ for a second reader rather than a second automated check.
   always said, which is an owner's call rather than a translator's. Counted
   with:
   `grep -o -i "repozitář[a-zěščřžýáíéůú]*\|úložišt[a-zěščřžýáíéůú]*" <cs rows>`
+- **The audit moved the distribution its own report measures against.** The
+  content report flagged 1,532 questions after the rewrites landed, against 158
+  before — but the composition inverted. The tell the audit exists to remove,
+  "correct answer is much more detailed", fell from **158 items to 25**. What
+  replaced it was 1,509 hits on "long explanation (>55 words)", which is not a
+  defect at all: a reviewed explanation states the rule and then says why each
+  wrong answer is wrong, and that costs sixty to eighty words on a four-option
+  item. The median active explanation is now 64 words and the 99th percentile
+  102. The threshold is raised to 100, which keeps 26 genuine outliers.
+  "Templated intro" had also decayed to 0% precision — its pattern matched
+  "x is one of two things" and "This is one of TypeScript's four built-in
+  string-manipulation types", both real hints — and now requires the article
+  the filler shape carries. Total flags: 64, of which 25 are the longest-key
+  tell that is the audit's remaining work.
