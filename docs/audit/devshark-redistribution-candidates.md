@@ -6,7 +6,7 @@ worth keeping, and named a live level that does not already teach it.
 Nothing here is applied: the rewrite patcher skips a retired section, so
 every one of these needs a decision before it reaches a learner.
 
-43 candidates across 3 retired sections.
+46 candidates across 3 retired sections.
 
 | Candidate | From | Proposed destination | Objective |
 | --- | --- | --- | --- |
@@ -23,7 +23,7 @@ every one of these needs a decision before it reaches a learner.
 | `rm-testing-80` | testing | general level 16 | State what a snapshot assertion establishes: that output is unchanged since it was recorded, not that the output is right. |
 | `rm-testing-83` | testing | general level 16 | Read a coverage report: full line coverage can hide an untaken branch, which is what branch coverage counts. |
 | `rm-testing-24` | testing | general level 17 | Scope a unit test to one behavior so a failure names what broke. |
-| `rm-testing-18` | testing | general level 18 | Pick the test shape that fits a suite running on every save: fast, deterministic, with controlled dependencies. |
+| `testfix-15` | testing | general level 18 | A test double has to satisfy the contract the caller depends on - here, return a promise, because the code chains `.then` on it. |
 | `rm-testing-4` | testing | general level 19 | Choose which checks belong in an automated per-pull-request gate: deterministic ones with an agreed pass condition. |
 | `538` | code-snippets | javascript level 2 | Read negative slice indices, first-match indexOf and split length on one string. |
 | `547` | code-snippets | javascript level 4 | Show that flat() defaults to depth 1 while flat(Infinity) flattens every level. |
@@ -43,6 +43,7 @@ every one of these needs a decision before it reaches a learner.
 | `527` | code-snippets | javascript level 22 | Order synchronous statements, a microtask and a timer callback. |
 | `761` | code-snippets | javascript level 22 | Show that a chained .then queued during the microtask drain still runs before the pending timer. |
 | `773` | code-snippets | javascript level 22 | Show that calling an async function runs its body synchronously up to its first await, before the caller suspends. |
+| `testfix-24` | testing | javascript level 22 | `forEach` ignores the promise an async callback returns, so the function returns before any awaited addition has happened. |
 | `548` | code-snippets | javascript level 23 | Show that a Map keyed by an object matches on reference identity, so an equal-looking literal misses. |
 | `537` | code-snippets | javascript level 24 | Separate loose equality from relational comparison for null, including the null > 0 / null >= 0 asymmetry. |
 | `549` | code-snippets | javascript level 24 | Show that delete on an array clears the element but leaves a hole and the original length. |
@@ -53,6 +54,8 @@ every one of these needs a decision before it reaches a learner.
 | `rm-testing-28` | testing | nodejs level 24 | Assert that a call throws by handing the matcher a function instead of the call's result. |
 | `rm-testing-48` | testing | nodejs level 24 | Clear a double's recorded calls between tests so a later assertion does not depend on run order. |
 | `rm-testing-67` | testing | nodejs level 24 | Assert that a promise rejects by unwrapping the rejection reason with an awaited matcher, not by inspecting the promise object. |
+| `testfix-3` | testing | nodejs level 24 | Assert on a returned object by structure rather than by identity, because two separately built objects are never the same reference. |
+| `testfix-7` | testing | nodejs level 24 | An assertion that a call throws must receive the call itself, not the result of running it. |
 
 ## Why each one, in the reviewer's words
 
@@ -82,7 +85,7 @@ every one of these needs a decision before it reaches a learner.
 
 **`rm-testing-24` → general level 17.** Worth redistributing to general, level 17 'Read a Meaningful Test': the three distractors are genuine misconceptions (coverage maximizing, asserting internals, wrong scope) and no General item yet asks how wide one test should be — rm-general-136 judges failure messages, not test scope. Only the filler hint and the thin explanation need repair.
 
-**`rm-testing-18` → general level 18.** Worth redistributing to general, level 18 'Make Checks Reliable': the distractors are the three real sources of unreliable feedback and the seed point is not covered by rm-general-138 to rm-general-143. Only the hint and the explanation's silence on the seed need repair.
+**`testfix-15` → general level 18.** The objective - a stub that does not honor the caller's contract breaks the code under test before any assertion runs - is worth keeping and is a gap at general L18 'Make Checks Reliable', where rm-general-140 covers what a stub stops checking and rm-general-144 covers mocking the unit itself, but nothing covers a double of the wrong shape. Rewritten framework-neutrally and with the incorrect sentence removed.
 
 **`rm-testing-4` → general level 19.** Worth redistributing to general, level 19 'Verify a Change': deciding what a per-change gate should contain is a review judgment and is not covered by rm-general-148, which is about where effort goes rather than what automates. The distractors are already good; only the hint and explanation fall short.
 
@@ -122,6 +125,8 @@ every one of these needs a decision before it reaches a learner.
 
 **`773` → javascript level 22.** Belongs in javascript L22 (Async / Await) as a predict snippet: it is the only item in the batch showing that an async callee's body runs synchronously, which rm-js-174 and the other copies (536, 764) never reach. The hint is the one local defect.
 
+**`testfix-24` → javascript level 22.** The most valuable item in the batch and the only one whose lesson is a real gap in a live bank: javascript L22 'Async / Await' holds rm-js-169 to rm-js-176, including the `Promise.all(map(async ...))` complement, but nothing on `forEach` swallowing async callbacks. Rewritten as a plain L22 'what does it resolve to' item with a hint that no longer names the rule.
+
 **`548` → javascript level 23.** Belongs in javascript L23 (Sets & Maps) as a predict snippet: rm-js-179 to rm-js-184 all use string keys, so reference-identity keys are new and explain a real class of cache and memo bugs. Only the hint needs replacing.
 
 **`537` → javascript level 24.** Belongs in javascript L24 (Edge Cases & Gotchas) as a predict snippet: L3 has only `null == undefined` (rm-js-22) and nothing anywhere covers the relational asymmetry that silently makes null behave like 0. Only the hint is a local defect.
@@ -141,4 +146,8 @@ every one of these needs a decision before it reaches a learner.
 **`rm-testing-48` → nodejs level 24.** Worth redistributing to nodejs, level 24 'Testing & Debugging': leaked call history is a concrete order-dependence cause that rm-general-138 only diagnoses in the abstract, and the clear-versus-restore distinction is runner API knowledge that belongs with the runner. The rewrite turns the instruction into the symptom and gives every distractor a real misconception.
 
 **`rm-testing-67` → nodejs level 24.** Worth redistributing to nodejs, level 24 'Testing & Debugging', beside rm-node-186 and rm-node-191 and the rm-testing-27 and rm-testing-28 rewrites already headed there: rejection assertions are the async half of that lesson and General 18 covers only the missing await (rm-general-137), not which assertion reports a rejection. Rewritten, the silent-pass catch replaces the two unrunnable options.
+
+**`testfix-3` → nodejs level 24.** The objective is worth keeping and has a live home: nodejs L24 'Testing & Debugging' already teaches `assert.strictEqual` uses Object.is (rm-node-191) and names `deepStrictEqual` (rm-node-186) but never shows the consequence for objects. Rewritten onto `node:assert` with a stem that no longer answers itself.
+
+**`testfix-7` → nodejs level 24.** This is the strongest mechanics item in the batch and it has a live home: nodejs L24 'Testing & Debugging' teaches node:test and node:assert (rm-node-185/186/191) but has no item on `assert.throws`, and rm-general-128 covers whether to assert a throw, not how to hand the call to the assertion. Rewritten onto `node:assert` with a stem that no longer states the diagnosis.
 

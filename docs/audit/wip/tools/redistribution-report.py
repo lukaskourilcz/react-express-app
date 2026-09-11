@@ -2,7 +2,10 @@
 # bank. They are never applied automatically: the applier skips them, because
 # moving an item into a live level is a content decision, not a rewrite.
 #
-# Usage: python3 redistribution-report.py <reviewDir> <inventoryDir> > out.md
+# Usage: python3 redistribution-report.py <mergedDir> <inventoryDir> > out.md
+# Read the MERGED rows, not the raw review fragments: a proposal the second
+# reading rejected is a quarantine by then, and listing it as a live candidate
+# would put a decision back in front of a human that has already been made.
 import json, os, re, sys
 
 REVIEW, INV = sys.argv[1], sys.argv[2]

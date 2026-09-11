@@ -478,3 +478,27 @@ for a second reader rather than a second automated check.
   handoff's rebuild step already names. Worth checking the bundle timestamps
   against their sources before trusting a bundle that was built in an earlier
   session.
+- **The fix-the-test section was run, not read.** No test framework exists in
+  the repository's `node_modules`, so its reviewer installed Jest 29.7.0 in a
+  scratch directory and generated one test file per (item, option) — a hundred
+  of them — then ran every option of every item, with the two DOM items under
+  jsdom against the repository's own React 19.2.8. That is what a
+  "which change makes this pass?" item needs and what nothing cheaper would
+  have caught: **testfix-20 has two options that both turn the suite green.**
+  `setTimeout(() => expect(onReady).toHaveBeenCalled(), 0)` reports PASS,
+  silently, because the test body returns before the assertion is evaluated —
+  confirmed with the polling function written both as nested timeouts and as a
+  promise chain. The item's own explanation names the mechanism without
+  noticing it is what makes the suite pass.
+- **A whole section keyed in a cycle.** Across all 24 fix-the-test items the
+  correct answer sits at index `(n-1) mod 4` — 0, 1, 2, 3, 0, 1 and so on
+  without a break. In the source a learner reading nothing would score 100%.
+  It never reached anyone: delivery shuffles answer order, and the section is
+  refused by every delivery request. It is still the clearest evidence in the
+  audit that an authoring pass can leave a pattern no single-item review would
+  ever see, which is an argument for checking key position across a section
+  rather than within an item.
+- **Two more explanations that contradict what the code does**, both faithfully
+  translated into Czech: testfix-15 says `mockReturnValue(Promise.resolve())`
+  "makes `res.name` undefined" when it actually throws a TypeError, and
+  testfix-3 calls a two-field object "the four-field object".
