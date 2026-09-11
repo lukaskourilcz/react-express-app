@@ -122,7 +122,7 @@ function Leaderboard() {
               fontWeight: 700,
               fontSize: '0.8125rem',
               lineHeight: 1.2,
-              color: 'var(--brand-accent)',
+              color: 'var(--color-text-primary)',
               border: '1px solid var(--brand-accent)',
               background: 'var(--brand-accent-soft)',
             }}

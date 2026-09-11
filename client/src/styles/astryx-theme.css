@@ -81,6 +81,7 @@
   --ss-success-strong: light-dark(#166534, #22c55e);
   --ss-success-soft: light-dark(rgba(22, 128, 60, 0.08), rgba(74, 222, 128, 0.12));
   --ss-error: light-dark(#dc2626, #f87171);
+  --ss-error-text: light-dark(#b91c1c, #fca5a5);
   --ss-error-soft: light-dark(rgba(220, 38, 38, 0.07), rgba(248, 113, 113, 0.12));
   --ss-warning: light-dark(#8a5700, #fbbf24);
   --ss-warning-soft: light-dark(rgba(138, 87, 0, 0.09), rgba(251, 191, 36, 0.12));

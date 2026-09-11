@@ -37,7 +37,7 @@ export default function ErrorRetry({ message, onRetry, sx }: Props) {
         borderRadius: 'var(--radius-element)',
         border: '1px solid color-mix(in srgb, var(--ss-error) 26%, transparent)',
         background: 'var(--ss-error-soft)',
-        color: 'var(--ss-error)',
+        color: 'var(--ss-error-text)',
         fontSize: '0.875rem',
         lineHeight: 1.5,
         ...sxToStyle(sx),
