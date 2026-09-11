@@ -290,3 +290,12 @@ for a second reader rather than a second automated check.
   matrix-consistent option, so it is a wording defect rather than a second
   answer. The reviewer brief now names this check, because no automated flag
   can see it.
+- **A redistribution proposal checked against its destination, and one failed.**
+  The Testing section's 11 surviving items each named a topic and level to move
+  to. The second reader looked each destination up in the destination bank
+  rather than taking the proposal on trust, and rejected `rm-testing-18`: the
+  General level it proposed already keys the same choice with a sharper
+  scenario, and two neighbouring items already cover its distractors. It should
+  have been retired with the other 49. The other ten destinations hold, though
+  one is weak: a Jest-framed item landing in a Node level that otherwise
+  teaches the built-in runner.
