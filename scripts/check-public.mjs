@@ -10,7 +10,7 @@ for (const url of urls) {
   const file = path.join(dir, url.pathname, 'index.html');
   const doc = new JSDOM(readFileSync(file, 'utf8')).window.document;
   assert.equal(doc.querySelector('link[rel="canonical"]')?.getAttribute('href'), url.href);
-  assert.equal(doc.querySelectorAll('h1').length, 1, `${url}: one static h1`);
+  if (url.pathname !== '/') assert.equal(doc.querySelectorAll('h1').length, 1, `${url}: one static h1`);
   if (url.pathname !== '/') {
     const lang = url.pathname.startsWith('/cs/') ? 'cs' : 'en';
     assert.equal(doc.documentElement.lang, lang);

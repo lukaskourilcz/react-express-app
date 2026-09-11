@@ -11,13 +11,12 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         product: [devshark, studyshark]
     env:
-      VITE_PRODUCT: ${{ matrix.product }}
-      VITE_LOCK_SUBJECT: ${{ matrix.product == 'devshark' && 'webdev' || '' }}
       TEST_PRODUCT: ${{ matrix.product }}
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +32,10 @@ jobs:
       - run: npm run test:launch && npm run test:coding && npm run test:paths && npm run test:client
       - run: npm run check:unused && npm run check:security
       - run: npm run build && npm run check:public && npm run check:bundle
+        id: build
+        env:
+          VITE_PRODUCT: ${{ matrix.product }}
+          VITE_LOCK_SUBJECT: ${{ matrix.product == 'devshark' && 'webdev' || '' }}
       - run: npm audit --omit=dev && npm audit --omit=dev --prefix client
       - run: npx playwright install --with-deps chromium
       - name: Browser checks
@@ -46,7 +49,7 @@ jobs:
           npm run check:responsive -- --routes /,/quiz,/topics/$TOPIC,/cs/topics/$TOPIC --widths 360,390,430,768,1024,1280,1440
           RESPONSIVE_THEME=dark RESPONSIVE_LOCALE=cs npm run check:responsive -- --routes /,/cs/topics/$TOPIC --widths 390,768,1280
           npm run test:harness
-      - if: matrix.product == 'devshark'
+      - if: matrix.product == 'devshark' && !cancelled() && steps.build.conclusion == 'success'
         name: Storybook and performance
         run: |
           npm run audit:performance

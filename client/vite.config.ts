@@ -104,6 +104,18 @@ function productMetadata(env: Record<string, string>): Plugin {
         res.end(manifest);
       });
     },
+    configurePreviewServer(server) {
+      // Vite's SPA fallback does not resolve clean topic URLs to nested index
+      // files. Mirror the Vercel rewrites so no-JS and Lighthouse checks inspect
+      // the same public HTML that production serves.
+      server.middlewares.use((req, _res, next) => {
+        const [pathname, search] = (req.url || '').split('?');
+        if (/^\/(?:cs\/)?topics\/[a-z0-9-]+\/?$/.test(pathname)) {
+          req.url = `${pathname.replace(/\/$/, '')}/index.html${search ? `?${search}` : ''}`;
+        }
+        next();
+      });
+    },
     generateBundle(_options, bundle) {
       const asset = bundle['manifest.webmanifest'];
       if (asset?.type === 'asset') asset.source = manifest;
@@ -137,7 +149,7 @@ function productMetadata(env: Record<string, string>): Plugin {
         urls.push(url);
       }
       const fallback = `<main class="ss-public-fallback ss-info-page"><h1>${escape(title)}</h1><p>${escape(description)}</p><ul class="ss-topic-links">${topics.map(topic => `<li><a href="${topicPath(topic.slug, 'en')}">${escape(topic.title.en)}</a></li>`).join('')}</ul></main>`;
-      await writeFile(path.join(outDir, 'index.html'), indexHtml.replace('</head>', `<link rel="canonical" href="${origin}/" /></head>`).replace('<div id="root"></div>', `<div id="root">${fallback}</div>`));
+      await writeFile(path.join(outDir, 'index.html'), indexHtml.replace('</head>', `<link rel="canonical" href="${origin}/" /></head>`).replace('<div id="root"></div>', `<div id="root"><noscript>${fallback}</noscript></div>`));
       await writeFile(path.join(outDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(url => `<url><loc>${url}</loc></url>`).join('')}</urlset>`);
       await writeFile(path.join(outDir, 'robots.txt'), `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /sandbox/\nDisallow: /dev\nSitemap: ${origin}/sitemap.xml\n`);
     },
