@@ -88,8 +88,15 @@ def finalize(r):
                     if 'correctAnswer' in fields: rewrite['correctAnswer'] = fields['correctAnswer']
                     elif base_key is not None: rewrite['correctAnswer'] = base_key
                 # A retained item already cleared both gates, so its own scores
-                # stand unless the second reader restated them.
-                rewrite['rescored'] = v.get('rescored') or {'qualityScore': r.get('qualityScore'), 'relevanceScore': r.get('relevanceScore')}
+                # stand unless the second reader restated them. Carry the whole
+                # block, dimensions and markers included: the ledger stores the
+                # per-dimension breakdown, and the registry recomputes both
+                # totals from it to check the row is self-consistent, so the two
+                # scores alone leave a row that cannot be verified.
+                rewrite['rescored'] = v.get('rescored') or {
+                    'quality': r.get('quality'), 'qualityScore': r.get('qualityScore'),
+                    'relevance': r.get('relevance'), 'relevanceScore': r.get('relevanceScore'),
+                }
                 r['decision'] = 'rewrite'
                 r['rewrite'] = rewrite
                 stats['retain-promoted'] = stats.get('retain-promoted', 0) + 1
