@@ -1,0 +1,34 @@
+{
+  "commit": "ef954d1f2414536035d9a6ad88cbaa6a68f53403",
+  "workflowRun": 34605485210,
+  "environment": "GitHub Actions Ubuntu, Node 24; Vite production-mode static preview without live service credentials",
+  "requestedUrl": "http://localhost:4173",
+  "source": "https://github.com/lukaskourilcz/react-express-app/actions/runs/34605485210",
+  "profiles": [
+    {
+      "profile": "mobile",
+      "performance": 75,
+      "accessibility": 100,
+      "bestPractices": 96,
+      "seo": 100,
+      "lcpMs": 3534.1788,
+      "cls": 0.222435449512016,
+      "tbtMs": 110.2053
+    },
+    {
+      "profile": "desktop",
+      "performance": 97,
+      "accessibility": 100,
+      "bestPractices": 96,
+      "seo": 100,
+      "lcpMs": 795.2759,
+      "cls": 0.09040816741090973,
+      "tbtMs": 0
+    }
+  ],
+  "notes": [
+    "Final implementation lab run with first-viewport font preloads; not field Core Web Vitals.",
+    "Mobile layout shift remains a measured follow-up; these single runs do not establish an overall performance improvement.",
+    "Full reports retained in the quality-devshark workflow artifact for 14 days."
+  ]
+}
