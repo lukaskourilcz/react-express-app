@@ -120,14 +120,19 @@ the shop.
 `LEARNING_PATH_DSA_ENABLED` and `LEARNING_PATH_FDE_ENABLED` are independent, and
 the API refuses both outside the `webdev` scope regardless of the variable.
 
-**The item-level content audit has run in part.** Every one of the 2,128
-served devShark questions has been read; 848 have completed both readings and
-are recorded in the ledger, and the gate enforces CSS, JavaScript and
-TypeScript as complete categories. 84 items are retired and 1 quarantined, so
-they are withheld from every delivery surface. The other eleven active topics
-are reviewed but not yet landed and are served as before, with no claim.
-`docs/audit/devshark-content-audit.md` reports what was found and what remains;
-`docs/curation-claims.md` records what the product may say.
+**The item-level content audit has run over the whole question bank.** All
+2,128 served devShark questions have been read twice, rewritten or retired,
+translated from the final English, and recorded in the ledger. All sixteen
+categories are complete, so the gate withholds any item without a current
+passing record rather than serving it with no claim: 1,974 are served on a
+recorded review, 152 are retired and 2 quarantined. The 319 items in the
+retired sections have each been read once; the unreferenced banks and the
+legacy core bank have no delivery path and get a bank-level disposition
+instead. The review is model-performed with recorded evidence and the product
+says so rather than calling it a human review.
+`docs/audit/devshark-content-audit.md` reports what was found and what a human
+still has to decide; `docs/curation-claims.md` records what the product may
+say.
 
 ## Not run in this environment, and what would run it
 

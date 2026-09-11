@@ -180,9 +180,10 @@ ledger (`docs/audit/devshark-content-ledger.json` →
 a retirement withholds, a current passing review serves — and in a category
 the ledger's scope lists as complete an item with no applicable record is
 withheld too. The rule is applied once, in the questions store and the active
-coding catalogue, so every selector sees the same set. The audit lands in
-waves; an unrecorded item outside the completed scope is served as before,
-with no claim. See `docs/curation-claims.md`.
+coding catalogue, so every selector sees the same set. Every roadmap category
+is now in that scope, so an unrecorded roadmap item is withheld rather than
+served; the coding catalogue is not audited yet, and an unrecorded task there
+is served as before with no claim. See `docs/curation-claims.md`.
 
 `shared/lesson-figures.ts` holds the authored worked examples shown in Learn
 level intros — deterministic HTML and CSS, never generated imagery, each
