@@ -1,27 +1,32 @@
 # Handoff `176-w2-2026-09-10` — devShark content audit
 
-For the next session continuing
-[#176](https://github.com/lukaskourilcz/react-express-app/issues/176) on branch
-`claude/qa-hints-audit-i0kh9t`. This supersedes `HANDOFF-176-w1.md`, which
-describes a state the branch has passed. Read section 3 first: it is the only
-part you need to resume.
+**The question-bank wave is finished.** All 2,128 served items are reviewed
+twice, applied, translated and in the ledger's scope; see
+`docs/audit/devshark-content-audit.md` for the result and
+`docs/audit/wip/tools/NOTES-followups.md` for everything found along the way
+that was not an item-level defect.
+
+What remains of this document is the method: the pipeline, the tools and the
+traps. Keep it, because the coding wave runs on the same machinery — 249 tasks
+that need the grader checks in `docs/audit/wip/CODING-BRIEF.md` rather than a
+reading. The per-topic table in section 2 and the resume instructions in
+section 3 describe a state the branch has passed; sections 4 and 5, the
+settled decisions and the pitfalls, are the parts worth reading first.
 
 ## 1. What is done and enforced
 
-The gate is live. `docs/audit/devshark-content-ledger.json` holds 848 rows and
-`lib/curation-registry.ts` is generated from it. CSS, JavaScript and TypeScript
-are in `scope.categories`, so an item of theirs without a current passing
-record is withheld. React and Node.js have their decisions recorded and
-enforced per item — their retirements hold — but stay outside the scope until
-their Czech is finished, so an unreviewed item there is still served.
+The gate is live over the whole bank. `docs/audit/devshark-content-ledger.json`
+holds 2,128 rows and `lib/curation-registry.ts` is generated from it. All
+sixteen roadmap categories are in `scope.categories`, so any item without a
+current passing record is withheld rather than served with no claim.
 
 Effect on the bank, from `npm run audit:devshark-content`:
 
 | | Items |
 | --- | ---: |
-| Served on a recorded review | 763 |
-| Retired | 84 |
-| Quarantined | 1 |
+| Served on a recorded review | 1,974 |
+| Retired | 152 |
+| Quarantined | 2 |
 
 Every repository gate passes on the branch as pushed: `npm run typecheck:api`,
 `cd client && npx tsc -b`, `npm run test:launch` (including the content-audit
