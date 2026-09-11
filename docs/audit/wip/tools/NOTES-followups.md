@@ -407,3 +407,13 @@ for a second reader rather than a second automated check.
   found it. They belong to the next wave, which should treat the localisation
   pass as a reviewer rather than a scribe and give it a way to file a defect
   against the English instead of a note in a row.
+- **A batch generator that silently handed a reviewer the wrong file.**
+  `make-verify-batches.py` always writes the cross-batch duplicate pairs to
+  `verify-duplicates.json`, and a later run that named a group `duplicates`
+  wrote its items to that same path. The reviewer opened the file, found seven
+  duplicate *pairs* in a different schema instead of its seven items, and had
+  to reconstruct its own batch from the inventory using the generator's own
+  logic. It did, and reported the collision rather than reviewing the wrong
+  thing — but a less careful agent would have reviewed the pairs and returned
+  rows nobody asked for. The name is now reserved and the path refuses to
+  overwrite an existing file.

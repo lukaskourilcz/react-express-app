@@ -55,6 +55,8 @@ for g in groups:
     ids = [i for m in members.split('+') for i in order[m]
            if rows.get(i, {}).get('decision') == 'rewrite' and rows[i].get('rewrite') and i not in done]
     if not ids: continue
+    if gname == 'duplicates':
+        raise SystemExit("'duplicates' is reserved for the cross-batch duplicate pairs this script writes last; name the group something else")
     json.dump([item_of(i) for i in ids], open(f'{out}/verify-{gname}.json', 'w'), indent=1, ensure_ascii=False)
     made.append((gname, len(ids)))
 live = [i for i, r in rows.items() if r['decision'] in ('rewrite', 'retain')]
@@ -76,6 +78,12 @@ def dup_item(i):
     return {'id': i, 'category': it['category'], 'level': it['level'], 'levelTitle': it['levelTitle'], 'objective': r.get('objective'), **final_of(i)}
 dups = [{'pair': list(p), 'a': dup_item(p[0]), 'b': dup_item(p[1])} for p in sorted(pairs)]
 if dups:
-    json.dump(dups, open(f'{out}/verify-duplicates.json', 'w'), indent=1, ensure_ascii=False)
+    # The pairs always land here, so a named group may not take this path: a
+    # reviewer handed the duplicate pairs instead of its own batch cannot tell
+    # the difference until it reads the file and finds the wrong schema.
+    dup_path = f'{out}/verify-duplicates.json'
+    if os.path.exists(dup_path):
+        raise SystemExit(f'{dup_path} already exists; refusing to overwrite it')
+    json.dump(dups, open(dup_path, 'w'), indent=1, ensure_ascii=False)
     made.append(('duplicates', len(dups)))
 print(made)
