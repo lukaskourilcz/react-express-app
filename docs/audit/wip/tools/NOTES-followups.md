@@ -541,3 +541,16 @@ for a second reader rather than a second automated check.
   tell, and swept the rest of its batch for the same shape. Worth making an
   explicit item in the Czech brief: a stem must not agree with only some of its
   options.
+- **Widening the position-reference sweep, then narrowing it again.** A
+  translator found one the sweep had missed: `rm-ai-60`'s explanation opened
+  "Only the first prompt fixes the task…" in an item whose four options *are*
+  prompts. The pattern only knew the nouns option, answer and choice. Widening
+  it to `one`, `statement`, `claim` and `snippet` produced 31 hits — and all 29
+  of the `one` hits turned out to be the item's own content: the first element
+  popped, the second declaration, the last commit, the first request of a
+  preflight pair. "useState must be the first statement in the component" is
+  the language's rule, not a pointer at an option. So the noun list is back to
+  those that actually name an answer, plus `prompt`, which earned its place by
+  catching the real one. The lesson is the same one the explanation-length flag
+  taught: a pattern that fires on content nobody can act on is worse than a
+  narrower one, because the next reader stops looking.

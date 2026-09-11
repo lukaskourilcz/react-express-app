@@ -19,9 +19,17 @@ PATTERNS = [
     ('scratch path', re.compile(r'/tmp/|scratchpad|node_modules/\.cache')),
     ('reviewer vocabulary', re.compile(r'\bdistractors?\b|\bthe key option\b|\bthe first pass\b|\bsecond reading\b', re.I)),
     ('reviewer vocabulary (cs)', re.compile(r'\bdistraktor\w*\b|\brozptylova\w+\b', re.I)),
+    # The noun matters as much as the ordinal. "the first one", "the second
+    # one", "the last one" are almost always the item's own content — an
+    # element, a call, a declaration, a commit — and across the whole bank all
+    # 29 such hits were content, none an option. Only nouns that name an answer
+    # belong here; "prompt" earns its place because an item whose options are
+    # prompts said "the first prompt" and meant the keyed one.
     ('option by position', re.compile(
-        r'\boptions? [0-9]\b|\bthe (?:first|second|third|fourth|last) (?:option|answer|choice)\b'
-        r'|\b(?:prvn[íi]|druh[áa]|t[řr]et[íi]|[čc]tvrt[áa]|posledn[íi]) (?:mo[žz]nost|odpov[ěe][ďd])\b', re.I)),
+        r'\boptions? [0-9]\b'
+        r'|\bthe (?:first|second|third|fourth|last) (?:option|answer|choice|prompt)\b'
+        r'|\b(?:prvn[íi]|druh[áa]|t[řr]et[íi]|[čc]tvrt[áa]|posledn[íi]) '
+        r'(?:mo[žz]nost|odpov[ěe][ďd]|volba)\b', re.I)),
 ]
 
 
