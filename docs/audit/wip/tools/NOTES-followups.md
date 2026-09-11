@@ -315,3 +315,16 @@ for a second reader rather than a second automated check.
 - **A CRDT explanation that described the opposite of a CRDT.** It grouped them
   with strategies that drop writes or make the application resolve conflicts;
   automatic deterministic merge is their defining property.
+- **The mechanical sweep found the leak in a fourth form: audit jargon.** The
+  sweep for item ids, commit hashes and tool version strings came back clean —
+  the second readings had already removed all five occurrences recorded above.
+  But widening it to the audit's own vocabulary caught four items whose
+  learner-facing copy called an option a "distractor": `rm-algorithms-50` and
+  `rm-ts-18` in their explanations, `rm-security-26` in its explanation, and
+  `rm-db-25` in its hint. Two of them ("One distractor also rearranges rows",
+  "which is the distractor here") also point at a specific option, which the
+  server's answer shuffle makes meaningless. All four are fixed. The lesson for
+  the next wave is that the sweep has to cover the reviewer's working
+  vocabulary, not only artifacts that look machine-generated: a reviewer
+  explaining why a wrong answer is tempting naturally reaches for the word the
+  brief taught them.

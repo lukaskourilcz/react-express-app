@@ -1311,7 +1311,7 @@ export const roadmapTranslationsCs: Record<string, QuestionTranslation> = {
     introduction: "Zeptej se, jestli se řádek za voláním fail(...) může vůbec někdy spustit. Funkce, která nevrací nic, a funkce, která se nevrátí vůbec, mají různý typ.",
     question: "Která anotace návratového typu popisuje fail nejpřesněji?\n\n```ts\nfunction fail(message: string) {\n  throw new Error(message);\n}\n```",
     options: ["never","void","undefined","Chyba"],
-    explanation: "fail vždycky vyhodí výjimku, takže se řízení nikdy nevrátí volajícímu a nevznikne žádná hodnota, ani undefined; typ pro tohle je never a s anotací : never může kompilátor brát kód za fail(...) jako nedosažitelný. void je nejsilnější past, protože právě to TypeScript pro takovou deklaraci odvodí, když anotaci vynecháš: never se odvozuje jen u funkčních výrazů a arrow funkcí, takže deklarace, která má být never, to musí říct výslovně. undefined by popisovalo funkci, která se normálně vrátí bez hodnoty, a Error je typ vyhozeného objektu, ne návratový typ.",
+    explanation: "fail vždycky vyhodí výjimku, takže se řízení nikdy nevrátí volajícímu a nevznikne žádná hodnota, ani undefined; typ pro tohle je never a s anotací : never může kompilátor brát kód za fail(...) jako nedosažitelný. void se nabízí samo, protože právě to TypeScript pro takovou deklaraci odvodí, když anotaci vynecháš: never se odvozuje jen u funkčních výrazů a arrow funkcí, takže deklarace, která má být never, to musí říct výslovně. undefined by popisovalo funkci, která se normálně vrátí bez hodnoty, a Error je typ vyhozeného objektu, ne návratový typ.",
   },
   "rm-ts-19": {
     introduction: "Pozorně si přečti kód a odhadni, co dělá nebo co vrací.",
