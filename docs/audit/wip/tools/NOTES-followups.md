@@ -299,3 +299,19 @@ for a second reader rather than a second automated check.
   have been retired with the other 49. The other ten destinations hold, though
   one is weak: a Jest-framed item landing in a Node level that otherwise
   teaches the built-in runner.
+- **The audit left its own working notes in learner copy.** Three Git items
+  shipped evidence artifacts from the first pass: "(verified: `A`, `M` and `D`
+  entries after one run)", "(here `6265b34` became `d6fc251`)", and a sentence
+  naming `git version 2.43.0` as though it were the learner's own build. A
+  System Design item printed an internal item id, and an earlier React item did
+  the same. This is now five occurrences across four topics, so it is a
+  recurring failure mode of the rewrite step rather than a slip: a reviewer
+  writing an explanation immediately after running a check tends to carry the
+  check into the explanation. Worth a mechanical sweep of every applied rewrite
+  for item ids, commit hashes and tool version strings before the branch merges.
+- **A hint that inverts the arithmetic.** One System Design storage estimate
+  told the learner to multiply the exponents, where they add — following it
+  turns 10^9 x 10^3 into 10^27.
+- **A CRDT explanation that described the opposite of a CRDT.** It grouped them
+  with strategies that drop writes or make the application resolve conflicts;
+  automatic deterministic merge is their defining property.
