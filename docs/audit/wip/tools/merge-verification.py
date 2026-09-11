@@ -31,7 +31,7 @@ MANUAL_KEYS = {
     'rm-node-156': (1, "the second reader rebuilt all four options as parallel statements and recorded \"Key stays at index 1\" in its notes; index 1 is the one-way statement, which is what the original keyed"),
     'rm-ts-80': (1, 'the reviewer replaced the key\'s wording ("Valid (recursive alias)" -> "Compiles") in place; index unchanged, confirmed against the rewritten explanation, which says the alias compiles'),
 }
-stats = {'accept': 0, 'amend': 0, 'reject': 0, 'dup-retire': 0, 'missing-verification': 0, 'rows': 0}
+stats = {'accept': 0, 'amend': 0, 'reject': 0, 'dup-retire': 0, 'missing-verification': 0, 'rows': 0, 'redistribution-proposal': 0}
 problems = []
 def finalize(r):
     r = copy.deepcopy(r)
@@ -47,7 +47,14 @@ def finalize(r):
     v = verify.get(r['id'])
     if r['decision'] == 'rewrite' and r.get('rewrite'):
         if not v:
-            stats['missing-verification'] += 1; problems.append(f"{r['id']}: rewrite without a second reading")
+            # A rewrite in a section no delivery request reaches is a proposal
+            # to move the item somewhere live, not a rewrite that will be
+            # served. The patcher skips it and a human decides it, so it needs
+            # no second reading — see devshark-redistribution-candidates.md.
+            if (item0 or {}).get('delivery') in ('retired-section', 'unreferenced'):
+                stats['redistribution-proposal'] += 1
+            else:
+                stats['missing-verification'] += 1; problems.append(f"{r['id']}: rewrite without a second reading")
         else:
             stats[v['verdict']] += 1
             record = {'pass': 'second-reading', 'verdict': v['verdict'], 'problems': v.get('problems') or [], 'evidence': v.get('evidence') or [], 'notes': v.get('notes') or ''}
@@ -64,6 +71,33 @@ def finalize(r):
                 r['decision'] = 'quarantine'
                 r['retireReason'] = 'second reading: ' + '; '.join(v.get('problems') or ['rejected'])
             r['verification'] = record
+    elif r['decision'] == 'retain' and v:
+        # A second reader may find a defect in an item the first pass kept —
+        # usually a hint that would sit unchanged on any other item. The row has
+        # no rewrite to fold the amendment into, so promote it to one carrying
+        # just the amended fields. Without this the amendment is silently lost.
+        stats[v['verdict']] += 1
+        record = {'pass': 'second-reading', 'verdict': v['verdict'], 'problems': v.get('problems') or [], 'evidence': v.get('evidence') or [], 'notes': v.get('notes') or ''}
+        if v['verdict'] == 'amend':
+            fields = v.get('fields') or {}
+            changed = [k for k in FIELDS if k in fields]
+            if changed:
+                rewrite = {k: fields[k] for k in changed}
+                if 'options' in fields:
+                    if len(fields['options']) != 4: problems.append(f"{r['id']}: amended options are not four")
+                    if 'correctAnswer' in fields: rewrite['correctAnswer'] = fields['correctAnswer']
+                    elif base_key is not None: rewrite['correctAnswer'] = base_key
+                # A retained item already cleared both gates, so its own scores
+                # stand unless the second reader restated them.
+                rewrite['rescored'] = v.get('rescored') or {'qualityScore': r.get('qualityScore'), 'relevanceScore': r.get('relevanceScore')}
+                r['decision'] = 'rewrite'
+                r['rewrite'] = rewrite
+                stats['retain-promoted'] = stats.get('retain-promoted', 0) + 1
+            record['changed'] = changed
+        elif v['verdict'] == 'reject':
+            r['decision'] = 'quarantine'
+            r['retireReason'] = 'second reading: ' + '; '.join(v.get('problems') or ['rejected'])
+        r['verification'] = record
     if r['id'] in retire_by_dup and r['decision'] in ('rewrite', 'retain'):
         survivor, reason = retire_by_dup[r['id']]
         stats['dup-retire'] += 1
