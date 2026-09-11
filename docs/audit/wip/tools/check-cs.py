@@ -3,6 +3,12 @@
 import json,glob,os,sys,re
 bdir, odir = sys.argv[1], sys.argv[2]
 FENCE = re.compile(r'```[\s\S]*?```'); TICK = re.compile(r'`[^`\n]+`')
+# One ordinary English word is prose and gets translated; a token only counts as
+# code when it is shaped like code. Without this every option reading "Staged",
+# "Monday" or "Apples" is reported as a lost identifier.
+WORDY = re.compile(r"[A-Za-z][A-Za-z'\u2019-]*")
+NUMBERY = re.compile(r'[^\dA-Za-z]{0,2}\s*-?\d[\d\s.,\u00a0]*\s*[%A-Za-z$\u20ac\u00a3]{0,12}')
+def digits(s): return re.sub(r'[^\d]', '', s)
 # The outcome labels the brief settles, with the Czech this bank uses.
 LABELS = {
     'Error': 'Chyba', 'An error': 'Chyba', 'Throws': 'Vyhodí chybu',
@@ -15,7 +21,8 @@ LABELS = {
     'function': 'funkce', 'a function': 'funkce', 'an object': 'objekt',
     'an array': 'pole', 'a string': 'řetězec', 'a number': 'číslo',
 }
-total = 0; problems = []; counts = {}
+total = 0; problems = []
+formatting = []; counts = {}
 for bf in sorted(glob.glob(f'{bdir}/cs-batch-*.json')):
     name = os.path.basename(bf)[9:-5]
     batch = {it['id']: it for it in json.load(open(bf))}
@@ -61,9 +68,25 @@ for bf in sorted(glob.glob(f'{bdir}/cs-batch-*.json')):
                 if co.strip() != LABELS[e]:
                     problems.append(f'{i}: outcome label {j} is {co.strip()!r}, the bank uses {LABELS[e]!r}')
                 continue
-            code_only = bare == '' or bool(
-                re.fullmatch(r'[-\w$.]+(\s*:\s*[-\w$.%()]+)?|-?\d+(\.\d+)?[a-z%]*|"[^"]*"|\'[^\']*\'', e)
-            ) and len(e.split()) <= 3
+            if bare == '':
+                code_only = True                     # nothing outside the backticks
+            elif NUMBERY.fullmatch(e):
+                # A value carrying a currency symbol, a percent sign or a unit.
+                # Czech typography moves the symbol after the number and uses a
+                # decimal comma, so the string legitimately differs; what must
+                # not change is the quantity. Report a mismatch in the digits as
+                # a defect and a difference in formatting alone as its own kind.
+                code_only = False
+                if digits(eo) != digits(co):
+                    problems.append(f'{i}: value option {j} changed: {eo!r} -> {co!r}')
+                elif eo != co:
+                    formatting.append(f'{i}: option {j} reformatted: {eo!r} -> {co!r}')
+            elif WORDY.fullmatch(e):
+                code_only = False                    # one ordinary word is prose
+            else:
+                code_only = bool(
+                    re.fullmatch(r'[-\w$.]+(\s*:\s*[-\w$.%()]+)?|"[^"]*"|\'[^\']*\'', e)
+                ) and len(e.split()) <= 3
             if code_only and eo != co:
                 problems.append(f'{i}: code-only option {j} changed: {eo!r} -> {co!r}')
         if r.get('status') == 'kept' and it.get('cs'):
@@ -72,5 +95,10 @@ for bf in sorted(glob.glob(f'{bdir}/cs-batch-*.json')):
         if r['question'] == en['question'] and len(en['question']) > 40 and not en['question'].startswith('```'): problems.append(f'{i}: question left in English')
         if r['explanation'] == en['explanation']: problems.append(f'{i}: explanation left in English')
         if r['hint'] == en['hint']: problems.append(f'{i}: hint left in English')
-print(json.dumps({'rows': total, 'byStatus': counts, 'problems': len(problems)}))
+print(json.dumps({'rows': total, 'byStatus': counts, 'problems': len(problems), 'reformatted': len(formatting)}))
+if '--formatting' in sys.argv:
+    # Not defects: the quantity is unchanged and Czech typography puts the
+    # symbol after the number and uses a decimal comma. Printed so one topic
+    # can be checked for using both conventions at once.
+    for f in formatting: print(' ', f)
 for p in problems[:80]: print(' ', p)

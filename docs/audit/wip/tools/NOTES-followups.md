@@ -417,3 +417,22 @@ for a second reader rather than a second automated check.
   thing — but a less careful agent would have reviewed the pairs and returned
   rows nobody asked for. The name is now reserved and the path refuses to
   overwrite an existing file.
+- **The Czech parity checker was crying wolf, and that hides real defects.** It
+  treated any short option as code, so "Staged", "Monday", "Apples", "$8" and
+  "24 days" were all reported as lost identifiers — 83 findings across the
+  first 1,500 rows, essentially all false. A check nobody can read is a check
+  nobody runs. It now counts one ordinary English word as prose, and for an
+  option carrying a number it compares the quantity rather than the string:
+  a changed digit is a defect, while `$8` → `8 $`, `75%` → `75 %` and
+  `24 days` → `24 dní` are correct Czech and are listed separately under
+  `--formatting`. That leaves 0 real parity defects in the rows written so far.
+- **One convention question for a human, not for another rewrite.** Czech
+  writes money and percentages with the symbol after the number and a decimal
+  comma, and the translators applied that to option values. Arithmetic inside
+  an explanation keeps the English decimal point, because a formula is written
+  the way it is written. Two algorithms items therefore read both ways at once:
+  a reviewer-verified stem says `1,5 hodiny` while its new explanation says
+  `60 / 1.5 = 40 mph`. Both translators noticed it, neither changed it, and
+  neither should have — the stem's English was never rewritten, so there was no
+  second reading to accept a change to it. Settling which convention wins is a
+  one-line decision that belongs to the owner.
