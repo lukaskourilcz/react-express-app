@@ -138,7 +138,7 @@
       "destination": "/robots.txt"
     },
     {
-      "source": "/((?!api/|ingest/|sandbox/).*)",
+      "source": "/((?!api/|ingest/|sandbox/|topics/|cs/topics/).*)",
       "destination": "/index.html"
     }
   ]
