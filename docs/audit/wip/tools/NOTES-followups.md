@@ -466,3 +466,15 @@ for a second reader rather than a second automated check.
   string-manipulation types", both real hints — and now requires the article
   the filler shape carries. Total flags: 64, of which 25 are the longest-key
   tell that is the audit's remaining work.
+- **A stale copy of the tools in the scratchpad, which the bundles were built
+  from.** `node_modules/.cache/shark/audit-*.mjs` had been bundled from
+  `scratchpad/tools/*.ts`, a copy taken before the repository versions were
+  edited. The three apply-side tools turned out byte-identical, so nothing
+  applied wrongly — but `build-ledger.ts` had diverged: the scratchpad copy
+  predates both the `completeCategories` argument and the rule that skips an
+  unreferenced bank, so building from it would have written a ledger whose
+  scope claimed categories that are not complete. The copies are deleted and
+  the bundles are rebuilt from `docs/audit/wip/tools/`, which is what the
+  handoff's rebuild step already names. Worth checking the bundle timestamps
+  against their sources before trusting a bundle that was built in an earlier
+  session.
