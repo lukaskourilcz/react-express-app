@@ -328,3 +328,15 @@ for a second reader rather than a second automated check.
   vocabulary, not only artifacts that look machine-generated: a reviewer
   explaining why a wrong answer is tempting naturally reaches for the word the
   brief taught them.
+- **The sweep is now a tool, and it caught a second class the eye had missed.**
+  `docs/audit/wip/tools/sweep-artifacts.py <inventoryDir>` scans every
+  learner-visible field, English and Czech, for item ids, commit hashes, tool
+  version strings, working notes, scratch paths, the reviewer's vocabulary, and
+  references to an option by its position. It exits non-zero on a hit, so it can
+  gate the merge. Its second run found six items whose explanations pointed at
+  "the first option" or "the last option" — meaningless, because the server
+  shuffles answer order before serving, so those sentences name whatever
+  happened to land there. Two of the six had already been translated, so the
+  Czech carried the same defect. All fixed by naming the content instead of the
+  position. One match is allowlisted in the tool with its reason: OWASP's own
+  ranking of password hashing functions calls Argon2id "the first choice".

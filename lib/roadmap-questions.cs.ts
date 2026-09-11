@@ -1575,7 +1575,7 @@ export const roadmapTranslationsCs: Record<string, QuestionTranslation> = {
     introduction: "Vlastnosti objektu se běžně odvozují jako měnitelné a s rozšířeným typem. Než typ vlastnosti pojmenuješ, rozmysli si, co s tím udělá as const.",
     question: "Jaký typ má obj.dir?\n\n```ts\nconst obj = { dir: \"left\" } as const;\nobj.dir;\n```",
     options: ["string","\"left\"","any","{ readonly dir: \"left\" }"],
-    explanation: "as const udělá každou vlastnost jen pro čtení a nechá jí literálový typ, takže obj má typ { readonly dir: \"left\" } a obj.dir má typ \"left\". Bez té aserce by se dir odvodilo jako string, protože měnitelná vlastnost se rozšiřuje. Poslední možnost je typ samotného obj, ne typ obj.dir.",
+    explanation: "as const udělá každou vlastnost jen pro čtení a nechá jí literálový typ, takže obj má typ { readonly dir: \"left\" } a obj.dir má typ \"left\". Bez té aserce by se dir odvodilo jako string, protože měnitelná vlastnost se rozšiřuje. { readonly dir: \"left\" } je typ samotného obj, ne typ obj.dir.",
   },
   "rm-ts-63": {
     introduction: "Typ parametru vyjmenovává přesné řetězce, které funkce přijímá. Než rozhodneš, co překladač udělá, porovnej s tím seznamem předaný argument.",
@@ -2379,7 +2379,7 @@ export const roadmapTranslationsCs: Record<string, QuestionTranslation> = {
     introduction: "Vyjdi z typu, který by se pro tohle pole odvodil bez aserce, a pak přidej to, co as const dělá navíc.",
     question: "Co je T?\n\n```ts\nconst tuple = [1, \"two\", true] as const;\ntype T = typeof tuple;\n```",
     options: ["(number | string | boolean)[]","readonly [1, \"two\", true]","any[]","[1, \"two\", true]"],
-    explanation: "as const zastaví rozšiřování a zafixuje tvar: prvky si nechají literálové typy 1, \"two\" a true a z hodnoty se stane readonly tuple pevné délky, takže typeof tuple je readonly [1, \"two\", true]. Bez té aserce se odvodí (string | number | boolean)[], což je první možnost. Ani měnitelná podoba tuplu nevznikne, protože aserce as const nad literálem pole ho vždycky udělá readonly.",
+    explanation: "as const zastaví rozšiřování a zafixuje tvar: prvky si nechají literálové typy 1, \"two\" a true a z hodnoty se stane readonly tuple pevné délky, takže typeof tuple je readonly [1, \"two\", true]. Bez té aserce se odvodí (string | number | boolean)[], tedy měnitelné pole s rozšířeným sjednocením. Ani měnitelná podoba tuplu nevznikne, protože aserce as const nad literálem pole ho vždycky udělá readonly.",
   },
   "rm-ts-197": {
     introduction: "Čti to zevnitř ven: co po Pick zbude a co s tím pak udělá vnější pomocný typ?",
