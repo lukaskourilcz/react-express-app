@@ -37,9 +37,10 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(new Error('timeout')), timeoutMs);
 
+  const forwardAbort = () => controller.abort(signal?.reason);
   if (signal) {
     if (signal.aborted) controller.abort(signal.reason);
-    else signal.addEventListener('abort', () => controller.abort(signal.reason), { once: true });
+    else signal.addEventListener('abort', forwardAbort, { once: true });
   }
 
   const token = await getAccessToken();
@@ -89,6 +90,7 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
     );
   } finally {
     clearTimeout(timeoutId);
+    signal?.removeEventListener('abort', forwardAbort);
   }
 }
 

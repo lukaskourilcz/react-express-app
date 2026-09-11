@@ -338,7 +338,7 @@
 
 .ss-info-page { width: 100%; max-width: 920px; margin: 0 auto; display: flex; flex-direction: column; gap: 1rem; }
 .ss-info-page__header { display: flex; flex-direction: column; align-items: flex-start; gap: 0.7rem; padding: 1rem 0; }
-.ss-info-page__header h1 { margin: 0; font: 800 clamp(2rem, 5vw, 3.2rem)/1.08 var(--font-family-heading); letter-spacing: -0.03em; }
+.ss-info-page__header h1 { margin: 0; font: 800 var(--ss-type-title)/1.08 var(--font-family-heading); letter-spacing: -0.03em; }
 .ss-info-page__header p { max-width: 68ch; margin: 0; color: var(--color-text-secondary); font-size: 1.05rem; }
 .ss-info-page__kicker { color: var(--brand-accent); font-weight: 800; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
 
@@ -653,3 +653,18 @@
   outline: 2px solid var(--ss-focus);
   outline-offset: -2px;
 }
+
+/* Public guides share the same markup before and after React loads. */
+.ss-public-fallback { padding: var(--ss-space-gutter); padding-bottom: var(--ss-space-section); }
+.ss-topic-article { gap: var(--ss-space-section); font-size: var(--ss-type-body); }
+.ss-topic-article section { display: grid; gap: 1rem; }
+.ss-topic-article h2 { margin: 0; font-family: var(--font-family-heading); }
+.ss-topic-article p { max-width: 68ch; margin: 0; }
+.ss-topic-article pre { max-width: 100%; overflow-x: auto; padding: 1rem; border-radius: var(--radius-inner); background: var(--color-background-muted); font-size: 0.9rem; }
+.ss-topic-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 1rem; }
+.ss-topic-nav a, .ss-topic-links a, .ss-topic-article summary { min-height: 44px; align-content: center; }
+.ss-topic-links { display: grid; gap: 0.5rem; padding-left: 1.5rem; }
+.ss-topic-links a { display: inline-block; }
+.ss-topic-article summary:focus-visible, .ss-topic-article a:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 4px; }
+.ss-topic-article .topic-practice p { margin-top: 1rem; }
+.ss-topic-cta { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0.75rem 1rem; background: var(--brand-accent); color: var(--brand-on-accent); border-radius: var(--radius-element); font-weight: 700; text-decoration: none; }

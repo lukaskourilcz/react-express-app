@@ -31,6 +31,7 @@ export default function ErrorRetry({ message, onRetry, sx }: Props) {
       style={{
         display: 'flex',
         alignItems: 'center',
+        flexWrap: 'wrap',
         gap: 12,
         padding: '6px 16px',
         borderRadius: 'var(--radius-element)',
@@ -43,8 +44,8 @@ export default function ErrorRetry({ message, onRetry, sx }: Props) {
       }}
     >
       <ErrorGlyph />
-      <span style={{ flex: 1, padding: '8px 0' }}>{message}</span>
-      <Button size="sm" variant="ghost" label={t('quiz.retry')} onClick={onRetry} />
+      <span style={{ flex: '1 1 180px', padding: '8px 0' }}>{message}</span>
+      <Button size="md" variant="ghost" label={t('quiz.retry')} onClick={onRetry} />
     </div>
   );
 }

@@ -1,3 +1,5 @@
+import '@fontsource-variable/inter/wght.css';
+import '@fontsource-variable/manrope/wght.css';
 import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 // Global reset (replaces MUI's CssBaseline) + the Astryx design-system

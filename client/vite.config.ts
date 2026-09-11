@@ -5,7 +5,10 @@ import react from '@vitejs/plugin-react';
 import { visualizer } from 'rollup-plugin-visualizer';
 import { PurgeCSS } from 'purgecss';
 import { PRODUCT_CATALOG, resolveCatalogProductId } from './product-catalog';
-import { TOPIC_LANDINGS } from './src/lib/topicCatalog';
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { TopicArticle, topicPath } from './src/components/topics/TopicArticle';
+import { publicOrigin, publicTopics, topicSchema } from './src/lib/publicMetadata';
 
 // `ANALYZE=true npm run build` emits a treemap of the bundle to
 // dist/bundle-stats.html (open it to inspect the design-system/router/app split) plus a
@@ -109,27 +112,34 @@ function productMetadata(env: Record<string, string>): Plugin {
       const outDir = path.resolve(__dirname, 'dist');
       await writeFile(path.join(outDir, 'manifest.webmanifest'), manifest);
 
-      // Emit a metadata-specific HTML shell for each public topic. React still
-      // hydrates the shared application, but crawlers receive a useful title
-      // and description without exposing any scored-session question data.
       const indexHtml = await readFile(path.join(outDir, 'index.html'), 'utf8');
-      const topics = TOPIC_LANDINGS.filter((topic) =>
-        id === 'studyshark' ? topic.subject !== 'webdev' : topic.subject === product.subjectId,
-      );
-      for (const topic of topics) {
-        const topicTitle = `${topic.title.en} · ${product.brand}`;
-        const topicDescription = topic.description.en;
+      const topics = publicTopics(id);
+      const origin = publicOrigin(id);
+      const escape = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
+      const urls = [`${origin}/`];
+      for (const topic of topics) for (const locale of ['en', 'cs'] as const) {
+        const topicTitle = `${topic.title[locale]} · ${product.brand}`;
+        const description = topic.description[locale];
+        const url = origin + topicPath(topic.slug, locale);
+        const schema = JSON.stringify(topicSchema(topicTitle, description, url, locale)).replace(/</g, '\\u003c');
+        const links = `<link rel="canonical" href="${url}" />` + ['en', 'cs'].map(lang => `<link rel="alternate" hreflang="${lang}" href="${origin}${topicPath(topic.slug, lang as 'en' | 'cs')}" />`).join('');
+        const article = renderToStaticMarkup(createElement(TopicArticle, { topic, locale, brand: product.brand, related: topics }));
         const html = indexHtml
-          .replace(/<title>[^<]*<\/title>/, `<title>${topicTitle}</title>`)
-          .replace(/(<meta name="description" content=")[^"]*(" \/>)/, `$1${topicDescription}$2`)
-          .replace(/(<meta property="og:title" content=")[^"]*(" \/>)/, `$1${topicTitle}$2`)
-          .replace(/(<meta property="og:description" content=")[^"]*(" \/>)/, `$1${topicDescription}$2`)
-          .replace(/(<meta name="twitter:title" content=")[^"]*(" \/>)/, `$1${topicTitle}$2`)
-          .replace(/(<meta name="twitter:description" content=")[^"]*(" \/>)/, `$1${topicDescription}$2`);
-        const topicDir = path.join(outDir, 'topics', topic.slug);
+          .replace('<html lang="en">', `<html lang="${locale}" data-public-locale="${locale}">`)
+          .replace(/<title>[^<]*<\/title>/, `<title>${escape(topicTitle)}</title>`)
+          .replace(/(<meta (?:name|property)="(?:description|og:description|twitter:description)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(description) + end)
+          .replace(/(<meta (?:name|property)="(?:og:title|twitter:title)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(topicTitle) + end)
+          .replace('</head>', `${links}<meta property="og:url" content="${url}" /><script id="public-schema" type="application/ld+json">${schema}</script></head>`)
+          .replace('<div id="root"></div>', `<div id="root"><main class="ss-public-fallback">${article}</main></div>`);
+        const topicDir = path.join(outDir, topicPath(topic.slug, locale));
         await mkdir(topicDir, { recursive: true });
         await writeFile(path.join(topicDir, 'index.html'), html);
+        urls.push(url);
       }
+      const fallback = `<main class="ss-public-fallback ss-info-page"><h1>${escape(title)}</h1><p>${escape(description)}</p><ul class="ss-topic-links">${topics.map(topic => `<li><a href="${topicPath(topic.slug, 'en')}">${escape(topic.title.en)}</a></li>`).join('')}</ul></main>`;
+      await writeFile(path.join(outDir, 'index.html'), indexHtml.replace('</head>', `<link rel="canonical" href="${origin}/" /></head>`).replace('<div id="root"></div>', `<div id="root">${fallback}</div>`));
+      await writeFile(path.join(outDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(url => `<url><loc>${url}</loc></url>`).join('')}</urlset>`);
+      await writeFile(path.join(outDir, 'robots.txt'), `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /sandbox/\nDisallow: /dev\nSitemap: ${origin}/sitemap.xml\n`);
     },
   };
 }
@@ -168,6 +178,7 @@ export default defineConfig(({ mode }) => {
     },
   },
   build: {
+    manifest: true,
     target: 'es2020',
     // 'hidden' still emits .map files (for Sentry/source-map tooling) but
     // strips the //# sourceMappingURL comment so browsers don't fetch them

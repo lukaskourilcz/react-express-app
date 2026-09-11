@@ -1,0 +1,56 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "api/**/*.ts",
+        "scripts/*.{ts,mjs}",
+        "playwright.config.ts",
+        "tests/**/*.spec.ts"
+      ],
+      "project": [
+        "api/**/*.ts",
+        "lib/**/*.ts",
+        "shared/**/*.ts",
+        "scripts/*.{ts,mjs}",
+        "tests/**/*.ts"
+      ],
+      "ignoreDependencies": [
+        "lighthouse"
+      ]
+    },
+    "client": {
+      "entry": [
+        "src/main.tsx",
+        "sandbox/**/*.{ts,tsx}",
+        "stories/**/*.stories.tsx",
+        ".storybook/*.{ts,tsx}",
+        "tests/**/*.test.{ts,tsx}",
+        "vite*.config.ts",
+        "vitest.config.ts"
+      ],
+      "project": [
+        "src/**/*.{ts,tsx}",
+        "sandbox/**/*.{ts,tsx}",
+        "tests/**/*.{ts,tsx}",
+        "stories/**/*.tsx",
+        ".storybook/*.{ts,tsx}",
+        "*.ts"
+      ],
+      "vite": false,
+      "storybook": false,
+      "ignoreDependencies": [
+        "@astryxdesign/theme-neutral",
+        "@astryxdesign/cli",
+        "@babel/core",
+        "@storybook/addon-a11y"
+      ]
+    }
+  },
+  "ignore": [
+    "client/.storybook/public/mockServiceWorker.js"
+  ],
+  "ignoreBinaries": [
+    "vercel"
+  ]
+}

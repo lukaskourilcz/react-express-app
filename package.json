@@ -22,14 +22,28 @@
     "build:curation-registry": "esbuild scripts/build-curation-registry.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/curation-registry.mjs --log-level=warning && CURATION_REGISTRY_WRITE=1 node node_modules/.cache/shark/curation-registry.mjs",
     "build:coding-index": "esbuild scripts/build-coding-index.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/coding-index.mjs --log-level=warning && CODING_INDEX_WRITE=1 node node_modules/.cache/shark/coding-index.mjs",
     "import:interview-prepper": "esbuild scripts/import-interview-prepper-progress.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/import-progress.mjs --log-level=warning && node node_modules/.cache/shark/import-progress.mjs",
-    "seed:test-friends": "esbuild scripts/seed-test-friends.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/seed-test-friends.mjs --log-level=warning && node node_modules/.cache/shark/seed-test-friends.mjs"
+    "seed:test-friends": "esbuild scripts/seed-test-friends.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/seed-test-friends.mjs --log-level=warning && node node_modules/.cache/shark/seed-test-friends.mjs",
+    "test:client": "npm run test --prefix client",
+    "storybook": "npm run storybook --prefix client",
+    "build:storybook": "npm run build:storybook --prefix client",
+    "audit:unused": "knip --reporter json",
+    "check:unused": "node scripts/check-unused.mjs",
+    "check:public": "node scripts/check-public.mjs",
+    "check:security": "node scripts/check-security.mjs",
+    "audit:performance": "node scripts/audit-performance.mjs",
+    "test:browser": "playwright test",
+    "check:bundle": "node scripts/check-bundle.mjs"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
+    "@playwright/test": "1.63.0",
     "@types/jsdom": "^30.0.0",
     "@types/node": "^25.9.5",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "esbuild": "^0.25.12",
+    "knip": "6.35.1",
+    "lighthouse": "13.4.1",
     "typescript": "^5.9.3"
   },
   "dependencies": {

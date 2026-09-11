@@ -316,3 +316,10 @@ were.
 The one place data is deliberately not carried forward is the token wallet: the
 old browser-held balances are not converted, because they cannot be audited.
 `docs/rewards-launch.md` records why, and the cosmetics already owned stay owned.
+
+
+## 2026-09-11 — eight free-tool recommendations
+
+Implemented performance reporting and a 243,000-byte initial JS/CSS gzip budget, self-hosted Inter/Manrope, MSW/Vitest failure and recovery tests, reviewed Knip checks, an Astryx Storybook workshop, EN/CS public guide HTML with canonical/sitemap/schema, concrete homepage copy and activation events, shared fluid typography/spacing, and exact-hash document CSP regression checks.
+
+Local evidence at implementation review: API typecheck, launch contracts, coding content, learning paths, nine client tests, tooling typecheck, devShark production build, Storybook build, 11 public URLs, security policy contracts and Knip's three reviewed existing files passed. Initial devShark JS/CSS was 217,926 gzip bytes. Browser execution is blocked by the local environment (`socket() failed: Operation not permitted`), so local Lighthouse, responsive and browser results are not reported as passes. Product quality CI runs the browser matrix and records reports; final deployment evidence is appended after it completes.

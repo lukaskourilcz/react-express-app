@@ -145,3 +145,10 @@ Native iOS/Android work remains intentionally deferred; it is not a missing item
 curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
 rtk init --global
 ```
+
+
+### Free-tool implementation — 2026-09-11
+
+- [x] Add MSW client failure/retry tests, Knip reviewed inventory, Astryx Storybook, bilingual static topic guides and metadata, activation instrumentation, fluid public typography, performance/bundle checks and CSP regression checks. See `docs/quality/README.md`.
+- [ ] owner:user — Verify arrival of the new activation events in the existing PostHog project and save the funnel described in `docs/quality/activation.md`; account access was not available during implementation.
+- [ ] owner:user — Submit `/sitemap.xml` in the relevant Search Console properties when ready to request indexing.

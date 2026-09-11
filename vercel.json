@@ -34,7 +34,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'self'; child-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:"
+          "value": "default-src 'self'; script-src 'self' 'sha256-JM+ysqF5UCaNnTZNolsR4tAwCDI8tkTesBj06v/nBBo='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'self'; child-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:"
         }
       ]
     },
@@ -120,6 +120,22 @@
     {
       "source": "/ingest/(.*)",
       "destination": "https://eu.i.posthog.com/$1"
+    },
+    {
+      "source": "/cs/topics/:slug",
+      "destination": "/cs/topics/:slug/index.html"
+    },
+    {
+      "source": "/topics/:slug",
+      "destination": "/topics/:slug/index.html"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/sitemap.xml"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/robots.txt"
     },
     {
       "source": "/((?!api/|ingest/|sandbox/).*)",

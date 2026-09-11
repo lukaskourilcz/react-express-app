@@ -1,0 +1,12 @@
+import { useState } from 'react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import { Button } from '@astryxdesign/core/Button';
+import { BrandedConfirmDialog } from '../src/components/ui/BrandedConfirmDialog';
+import { AppToast } from '../src/components/ui/AppToast';
+import ErrorRetry from '../src/components/ErrorRetry';
+import { useT } from '../src/i18n/LanguageContext';
+export default { title: 'Astryx/Feedback' } satisfies Meta;
+type Story = StoryObj;
+export const Retry: Story = { render: () => { const t = useT(); return <ErrorRetry message={t('error.server')} onRetry={() => {}} />; } };
+export const SuccessToast: Story = { render: () => { const t = useT(); const [open, setOpen] = useState(true); return <><Button label={t('common.backOnline')} onClick={() => setOpen(true)} /><AppToast open={open} message={t('common.backOnline')} onClose={() => setOpen(false)} autoHideDuration={null} /></>; } };
+export const Confirmation: Story = { render: () => { const t = useT(); const [open, setOpen] = useState(false); return <><Button label={t('profile.deleteTitle')} onClick={() => setOpen(true)} /><BrandedConfirmDialog request={open ? { title: t('profile.deleteTitle'), description: t('profile.deleteConfirm'), actionLabel: t('profile.deleteTitle'), onConfirm: () => {} } : null} onClose={() => setOpen(false)} /></>; } };
