@@ -502,3 +502,20 @@ for a second reader rather than a second automated check.
   translated into Czech: testfix-15 says `mockReturnValue(Promise.resolve())`
   "makes `res.name` undefined" when it actually throws a TypeError, and
   testfix-3 calls a two-field object "the four-field object".
+- **Running both halves of a topic in parallel guarantees a glossary split.**
+  Each second-half translator was told to read the first half's file before
+  settling a shared term, which is the right instruction and was useless in
+  practice: both agents started at the same moment, so the file was empty when
+  the second one needed it. Git escaped it only because a message mid-run
+  reached its second half in time, and it then went back and re-aligned 30
+  spots across 26 already-written rows. Security did not: its halves split on
+  four terms, and each half turned out to be right on one and wrong on another
+  when counted against the rest of the product (`hash` 48 hits in 15 files
+  against `haš` 15 in 2; `session` 62 in 8 against `relace` 26 in 6). The fix
+  for the next wave is ordering, not instruction: translate a topic's first
+  batch alone, then fan the rest out with its finished file as the glossary.
+  The cost is one batch of wall-clock per topic and it removes the whole class.
+  Where a split has already happened, settle it by counting both candidates
+  across every finished file rather than by preference — and hand the edit back
+  to a translator, because find-and-replace on an inflected language is how you
+  turn a terminology problem into a grammar problem.
