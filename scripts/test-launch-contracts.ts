@@ -95,6 +95,7 @@ import {
 } from '../shared/rewards';
 import { normalizeSettings } from '../lib/settings-store';
 import { taskResources, CODING_DOC_LINKS } from '../shared/coding-docs';
+import { STREAK_PROTECTION_CAP } from '../shared/rewards';
 import {
   everyPlanHasAFirstStep,
   stepAlreadyPassed,
@@ -863,8 +864,43 @@ async function main() {
   const xpSource = readFileSync(join(process.cwd(), 'client/src/lib/xp.ts'), 'utf8');
   assert.doesNotMatch(xpSource, /\bconsumeDoubleXpCharge\b/, 'XP awards must remain independent of shop inventory');
 
+  // Streak protection is the one thing the shop sells that touches learning at
+  // all, and the exception is only defensible while it stays bounded. Each of
+  // these is one of the four bounds, asserted rather than promised.
+  {
+    const rewardsSource = readFileSync(join(process.cwd(), 'shared/rewards.ts'), 'utf8');
+    // 1. Capped, and the cap is two.
+    assert.equal(STREAK_PROTECTION_CAP, 2, 'the protection cap is what stops a purchase buying a deeper reserve');
+    // 2. Priced in tokens, which are earned. There is no money price for it.
+    assert.match(rewardsSource, /streakProtectionTokenPrice: number/);
+    assert.doesNotMatch(
+      rewardsSource,
+      /streakProtection(Price|Cash|Minor)/,
+      'streak protection must have no cash price — the currency is earned tokens',
+    );
+    // 3. The database restores toward the cap and never past it.
+    const migration = readFileSync(join(process.cwd(), 'supabase/supabase-schema-035.sql'), 'utf8');
+    assert.match(
+      migration,
+      /LEAST\(COALESCE\(v_row\.remaining, 0\) \+ 1, 2\)/,
+      'buying a protection must never raise the budget above the cap',
+    );
+    // 4. It buys a protection and nothing else. If any of these words ever
+    //    appear in the purchase routine, the exception has stopped being bounded.
+    const routine = migration.slice(
+      migration.indexOf('FUNCTION public.purchase_streak_protection'),
+      migration.indexOf('GRANT EXECUTE ON FUNCTION public.purchase_streak_protection'),
+    );
+    for (const forbidden of ['user_xp', 'user_stats', 'quest_xp', 'badge', 'leaderboard', 'roadmap_progress']) {
+      assert.ok(
+        !routine.toLowerCase().includes(forbidden),
+        `buying a protection must not touch ${forbidden}`,
+      );
+    }
+  }
+
   const profileSource = readFileSync(join(process.cwd(), 'client/src/components/Profile.tsx'), 'utf8');
-  const profileStreakIndex = profileSource.indexOf('<StreakCard stats={stats} />');
+  const profileStreakIndex = profileSource.indexOf('<StreakCard stats={stats}');
   const profileSectionsIndex = profileSource.indexOf('<Grid columns={{ minWidth: 360, max: 2 }}');
   assert.ok(
     profileStreakIndex >= 0 && profileSectionsIndex >= 0 && profileStreakIndex < profileSectionsIndex,
@@ -875,11 +911,22 @@ async function main() {
     /profile\.backToQuiz/,
     'Profile is an overview and must not end with a contextless Back to quiz action',
   );
-  assert.equal(
-    profileSource.match(/<ConsistencyTip/g)?.length,
-    1,
-    'Profile should keep exactly one consistency tip, drawn from the rotating pool',
+  // The tip is one line inside the streak card now, not a card of its own. The
+  // rule that matters is that it never repeats what it said last time: a plain
+  // random draw from ten repeats about one visit in ten, which is what "always
+  // different" is not.
+  assert.match(
+    profileSource,
+    /const pool = CONSISTENCY_TIPS\.filter\(\(key\) => key !== previous\)/,
+    'the consistency tip must exclude the one shown last time',
   );
+  assert.ok(
+    (profileSource.match(/'profile\.tip\.[a-zA-Z]+'/g) ?? []).length >= 8,
+    'the tip pool must be large enough that a learner does not recognise it',
+  );
+  // And the last-quiz date is gone: it is a fact nobody acts on, and the tip
+  // took its place.
+  assert.doesNotMatch(profileSource, /profile\.lastQuiz/, 'the last-quiz date should not come back');
   assert.match(
     profileSource,
     /<IdentitySettings \/>/,
@@ -973,6 +1020,29 @@ async function main() {
       (topic) => !tracks.some((track) => isTopicInPlan(withTrack(track), 'webdev', topic)),
     );
     assert.deepEqual(stranded, [], `every deployable topic needs a base track that plans it: ${stranded.join(', ')}`);
+  }
+
+  // TypeScript is a late topic, deliberately. It used to sit one stage after a
+  // learner's first JavaScript, which put a type system in front of people who
+  // had not written enough code for one to help yet. It now comes after the
+  // work it pays off against, and this fails if it drifts back to the front.
+  {
+    for (const [track, stages] of Object.entries(WEBDEV_PLAN_STAGES)) {
+      const indexOf = (topic: string) => stages.findIndex((stage) => stage.includes(topic));
+      const ts = indexOf('typescript');
+      assert.ok(ts >= 0, `${track} must still plan typescript`);
+      assert.ok(
+        ts >= Math.ceil(stages.length / 2),
+        `typescript is stage ${ts + 1} of ${stages.length} on ${track}; it belongs in the second half`,
+      );
+      // And after the thing it is types *for*: components on the browser tracks,
+      // handlers on the server one.
+      const after = track === 'backend' ? 'nodejs' : 'react';
+      assert.ok(
+        indexOf(after) >= 0 && indexOf(after) < ts,
+        `typescript must come after ${after} on ${track}`,
+      );
+    }
   }
 
   // Editing a plan narrows what is offered next; it never withdraws what was
@@ -1488,7 +1558,32 @@ async function main() {
       }
     }
 
-    // The pre-paint bootstrap has to run before anything that can block it.
+    // EN and CS must carry the same keys. The type system only catches one
+  // direction: TranslationKey is derived from the English file, so a missing
+  // Czech key is a compile error — but a key removed from English and left in
+  // Czech is invisible, and a Czech string nobody can reach is worse than no
+  // string, because it reads as translated work that is live and is not.
+  {
+    const keysOf = (file: string) => {
+      const source = readFileSync(join(process.cwd(), 'client/src/i18n', file), 'utf8');
+      return new Set((source.match(/^ {2}'[^']+':/gm) ?? []).map((line) => line.trim().slice(1, -2)));
+    };
+    const en = keysOf('translations.ts');
+    const cs = keysOf('translations.cs.ts');
+    assert.ok(en.size > 1500, `the English dictionary looks truncated: ${en.size} keys`);
+    assert.deepEqual(
+      [...en].filter((key) => !cs.has(key)),
+      [],
+      'every English key needs a Czech one',
+    );
+    assert.deepEqual(
+      [...cs].filter((key) => !en.has(key)),
+      [],
+      'a Czech key with no English counterpart is unreachable and should be deleted',
+    );
+  }
+
+  // The pre-paint bootstrap has to run before anything that can block it.
     // A pending stylesheet suspends every script after it, so a webfont link
     // above this one leaves the page in the default theme until a third-party
     // host answers — verified in a browser: with fonts.googleapis.com

@@ -49,8 +49,15 @@ type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => stri
 // Tinted Card variants cycle across the pillars so each knowledge area reads as
 // its own category — adapts to light/dark automatically. The tint alone is the
 // differentiator; pillar titles stay clean text.
-type CardVariant = 'green' | 'blue' | 'teal' | 'orange';
-const PILLAR_VARIANTS: CardVariant[] = ['green', 'blue', 'teal', 'orange', 'green'];
+// The pillars used to cycle through green, blue, teal and orange card
+// backgrounds — five banners in four colours, one under the other. It read as a
+// palette rather than as a page, and it said nothing: the colour was the
+// pillar's position in an array, not anything about the pillar.
+//
+// They share one surface now, and the colour that remains is the colour that
+// means something — each area's own topic accent on its dot, and the progress
+// bar that turns when the area is finished. Deep End keeps its accents
+// disciplined and its cards few; this is both.
 
 interface Area {
   topic: RoadmapTopic;
@@ -318,7 +325,7 @@ export default function CareerRoadmap() {
         </HStack>
 
         <Grid columns={{ minWidth: 300, max: 2 }} gap={2}>
-          {pillars.map((pillar, i) => {
+          {pillars.map((pillar) => {
             const areas = pillar.areas.filter((area) => inTrack(area.topic));
             if (areas.length === 0) return null;
             let pPassed = 0;
@@ -330,7 +337,7 @@ export default function CareerRoadmap() {
             const pPct = pct(pPassed, pTotal);
             return (
               <div key={pillar.id} className="ss-raised" style={{ display: 'flex', width: '100%' }}>
-              <Card variant={PILLAR_VARIANTS[i % PILLAR_VARIANTS.length]} padding={5} width="100%">
+              <Card variant="default" padding={5} width="100%">
                 <VStack gap={2}>
                   <HStack justify="between" align="center" gap={1} wrap="wrap">
                     <Heading level={3}>{pillar.title}</Heading>
@@ -384,7 +391,7 @@ export default function CareerRoadmap() {
         {/* The honest gap — Web Dev only (it's about engineering seniority). */}
         {isWebdev && (
           <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
-          <Card variant="orange" padding={5} width="100%">
+          <Card variant="muted" padding={5} width="100%">
             <VStack gap={1.5}>
               <Heading level={2}>{t('careerRoadmap.beyondTitle')}</Heading>
               <Text type="supporting" color="secondary">

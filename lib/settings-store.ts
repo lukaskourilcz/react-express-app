@@ -353,6 +353,11 @@ function cleanMerch(raw: unknown, fallback: MerchSettings): MerchSettings {
       && r.crownTokenPrice >= 0 && r.crownTokenPrice <= 1_000_000
       ? Math.round(r.crownTokenPrice)
       : fallback.crownTokenPrice,
+    streakProtectionTokenPrice:
+      typeof r.streakProtectionTokenPrice === 'number' && Number.isFinite(r.streakProtectionTokenPrice)
+      && r.streakProtectionTokenPrice >= 0 && r.streakProtectionTokenPrice <= 1_000_000
+        ? Math.round(r.streakProtectionTokenPrice)
+        : fallback.streakProtectionTokenPrice,
     policyUrl: cleanPublicUrl(r.policyUrl),
   };
 }

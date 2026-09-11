@@ -569,3 +569,14 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
   overflow-x: auto;
 }
 .lp-example__note { margin: 0; font-size: 0.78rem; color: var(--color-text-secondary); }
+
+/* The package a finished path earns. Kept quiet: it appears only once the path
+   is done, so it never competes with the work still to do. */
+.lp-reward { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: var(--radius-container); border: 1px solid var(--ss-card-line); background: var(--color-background-muted); }
+.lp-reward__lead { display: flex; flex-direction: column; gap: 2px; margin: 0; font-size: .9rem; }
+.lp-reward__lead span { color: var(--color-text-secondary); }
+.lp-reward__note { margin: 0; font-size: .82rem; color: var(--color-text-secondary); }
+.lp-reward__form { display: flex; flex-direction: column; gap: 10px; }
+.lp-reward__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.lp-input { min-height: 44px; padding: 8px 12px; border-radius: var(--radius-element); border: 1px solid var(--color-border-strong); background: var(--color-background); color: var(--color-text-primary); font: inherit; width: 100%; }
+.lp-input:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }

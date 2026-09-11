@@ -150,9 +150,9 @@ export const TOPIC_DETAIL: Partial<Record<RoadmapTopic, string>> = {
 // Only the stage titles live here (as English fallbacks behind the i18n keys),
 // so the map a learner sees and the map the API enforces cannot drift apart.
 const WEBDEV_STAGE_TITLES: Record<Track, string[]> = {
-  frontend: ['Foundations', 'Level up the language', 'The React stack', 'How the web works'],
-  backend: ['Foundations', 'The server & the web', 'Data & computer science', 'Production & scale'],
-  fullstack: ['Foundations', 'Level up the language', 'Frontend', 'Backend', 'Computer science', 'Production & scale'],
+  frontend: ['Foundations', 'Version control', 'The React stack', 'Types on top', 'How the web works'],
+  backend: ['Foundations', 'The server & the web', 'Data & computer science', 'Types on top', 'Production & scale'],
+  fullstack: ['Foundations', 'Version control', 'Frontend', 'Backend', 'Types on top', 'Computer science', 'Production & scale'],
 };
 
 const webdevStages = (track: Track): Stage[] =>

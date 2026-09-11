@@ -26,14 +26,16 @@ import { CODING_SUMMARIES } from '../../lib/coding/active';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
 import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
 import { handleCodingBookmarks, handleCodingSkip, handlePracticeSession } from '../../lib/coding/practice-handlers';
-import { creditVerifiedXp, handleCosmetic, handleFulfilment, handleOrders, handlePaymentWebhook, handleShopCatalogue, handleWallet } from '../../lib/rewards/handlers';
+import { creditVerifiedXp, handleCosmetic, handleStreakProtection, handleFulfilment, handleOrders, handlePaymentWebhook, handleShopCatalogue, handleWallet } from '../../lib/rewards/handlers';
 import {
   handleEnrollment,
   handleLearningPreference,
   handlePathDraft,
+  handlePathReward,
   handlePathProgress,
 } from '../../lib/learning-paths/handlers';
 import { handleGithub } from '../../lib/github-handlers';
+import { handleFriends } from '../../lib/friends-handlers';
 
 const supabase = createServiceClient();
 
@@ -76,13 +78,16 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'shop') return handleShopCatalogue(req, res, supabase);
   if (op === 'orders') return handleOrders(req, res, supabase);
   if (op === 'cosmetic') return handleCosmetic(req, res, supabase);
+  if (op === 'protection') return handleStreakProtection(req, res, supabase);
   if (op === 'payment-webhook') return handlePaymentWebhook(req, res, supabase);
   if (op === 'fulfilment') return handleFulfilment(req, res, supabase);
   if (op === 'learning-preference') return handleLearningPreference(req, res, supabase);
   if (op === 'learning-path-enrollment') return handleEnrollment(req, res, supabase);
   if (op === 'learning-path-progress') return handlePathProgress(req, res, supabase);
   if (op === 'learning-path-draft') return handlePathDraft(req, res, supabase);
+  if (op === 'learning-path-reward') return handlePathReward(req, res, supabase);
   if (op.startsWith('github-')) return handleGithub(op, req, res, supabase);
+  if (op.startsWith('friends-')) return handleFriends(op, req, res, supabase);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
 }
 
@@ -432,7 +437,6 @@ async function categoryStats(req: VercelRequest, res: VercelResponse) {
 // Server-authoritative: the pack gate is re-checked here, never trusted from
 // the client.
 const DAILY_TARGET = 3;
-const OFF_DAYS_DEFAULT = [0, 6];
 const ADVISOR_MIN_SAMPLE = 4;
 const ADVISOR_MAX_WEAK = 6;
 const ADVISOR_WEEK_DAYS = 7;
@@ -600,60 +604,69 @@ async function badges(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-function sanitizeOffDays(input: unknown): number[] | null {
-  if (!Array.isArray(input) || input.length > 7) return null;
-  const set = new Set<number>();
-  for (const value of input) {
-    if (!Number.isInteger(value) || (value as number) < 0 || (value as number) > 6) return null;
-    set.add(value as number);
-  }
-  return [...set].sort((a, b) => a - b);
-}
 
-// GET /api/user/[op]?op=freezes — the live monthly freeze budget + off-days.
-// PUT updates only the off-days; freezes themselves are never client-settable.
+// GET  /api/user/[op]?op=freezes — the monthly protection budget and any
+//                                   active shield.
+// POST                            — spend one protection to shield the streak
+//                                   for 48 hours.
+//
+// The budget, the spend and the expiry are all the server's. A client can ask
+// for a shield; it cannot grant itself one, cannot choose the window and cannot
+// set the balance. Off-days used to be settable here and are gone: a fixed
+// weekend that never counted against anyone was a second, invisible rule on top
+// of the two protections, and two rules for the same thing is one too many.
 async function freezes(req: VercelRequest, res: VercelResponse) {
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
-  if (req.method !== 'GET' && req.method !== 'PUT') {
-    res.setHeader('Allow', 'GET, PUT');
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 
   try {
-    if (req.method === 'PUT') {
-      const body = (req.body || {}) as { offDays?: unknown };
-      const offDays = sanitizeOffDays(body.offDays);
-      if (offDays === null) {
-        return jsonError(res, 400, 'bad_request', 'offDays must be integers 0–6 (at most 7 entries)');
+    // Spending goes through a routine that decides everything: it refuses an
+    // empty budget and returns the running window unchanged rather than
+    // charging twice, so a double click or two devices cost one protection.
+    if (req.method === 'POST') {
+      if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
+      const spent = await withTimeout(supabase!.rpc('activate_streak_shield', { p_user_id: userId }));
+      if (spent.error) {
+        if (isRpcMissing(spent.error)) {
+          return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-032.sql to enable the streak shield');
+        }
+        return jsonError(res, 500, 'db_error', 'Could not protect the streak');
       }
-      const up = await withTimeout(
-        supabase!.from('user_streak_config').upsert(
-          { user_id: userId, off_days: offDays, updated_at: new Date().toISOString() },
-          { onConflict: 'user_id' },
-        ),
-      );
-      if (up.error) return jsonError(res, 500, 'db_error', 'Could not save off-days');
+      const row = Array.isArray(spent.data) ? spent.data[0] : spent.data;
+      if (row?.granted === false && Number(row?.remaining ?? 0) <= 0 && !row?.shield_until) {
+        return jsonError(res, 409, 'no_protection_left', 'No protection left this month');
+      }
+      return res.json({
+        remaining: Number(row?.remaining ?? 0),
+        period: String(row?.period ?? utcMonth()),
+        used: Array.isArray(row?.used) ? (row.used as string[]) : [],
+        shieldUntil: row?.shield_until ?? null,
+        shieldSupported: true,
+      });
     }
 
     const refreshed = await withTimeout(supabase!.rpc('refresh_streak_freezes', { p_user_id: userId }));
     if (refreshed.error) {
-      if (isRpcMissing(refreshed.error)) return jsonError(res, 503, 'migration_required', 'Streak freezes are not configured');
-      return jsonError(res, 500, 'db_error', 'Could not load streak freezes');
+      if (isRpcMissing(refreshed.error)) return jsonError(res, 503, 'migration_required', 'Streak protection is not configured');
+      return jsonError(res, 500, 'db_error', 'Could not load streak protection');
     }
     const freezeRow = Array.isArray(refreshed.data) ? refreshed.data[0] : refreshed.data;
-    const remaining = Number(freezeRow?.remaining ?? 2);
-    const period = String(freezeRow?.period ?? utcMonth());
-    const used = Array.isArray(freezeRow?.used) ? (freezeRow.used as string[]) : [];
+    // `shield_until` arrives with migration 032. Until it is applied the budget
+    // still reads correctly and the client simply does not offer the control,
+    // rather than offering one that would fail.
+    const shieldSupported = freezeRow !== null && typeof freezeRow === 'object' && 'shield_until' in freezeRow;
 
-    const cfg = await withTimeout(
-      supabase!.from('user_streak_config').select('off_days').eq('user_id', userId).maybeSingle(),
-    );
-    const offDays = !cfg.error && Array.isArray(cfg.data?.off_days)
-      ? (cfg.data!.off_days as unknown[]).map(Number)
-      : OFF_DAYS_DEFAULT;
-
-    return res.json({ remaining, period, used, offDays });
+    return res.json({
+      remaining: Number(freezeRow?.remaining ?? 2),
+      period: String(freezeRow?.period ?? utcMonth()),
+      used: Array.isArray(freezeRow?.used) ? (freezeRow.used as string[]) : [],
+      shieldUntil: shieldSupported ? (freezeRow as { shield_until?: string | null }).shield_until ?? null : null,
+      shieldSupported,
+    });
   } catch {
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }

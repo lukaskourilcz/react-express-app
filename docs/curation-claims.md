@@ -151,19 +151,21 @@ a current record. There is no fallback sentence that sounds better.
 
 - **Landing.** One line beside the topic picker, about the criteria applied —
   not about a plan the visitor has not chosen.
-- **`/curation`.** The methodology, linked from the footer, from every "Why this
-  question?" note and from each path overview. Optional to read; no gate, no
-  acknowledgement.
-- **"Why this question?"** A disclosure beside the question — never inside an
-  answer option, for the same reason as the terms bar: a control inside an
-  option would select it. It shows the level's own title as the objective, the
-  item's own category as the topic, whether the topic is in the learner's plan
-  (the same check the progression graph uses), the item's own tags, the review
-  claim and the item version. Every line is omitted when its source is missing.
-- **Report a problem.** In the note, in the quiz toolbar, in the Learn view and
-  in the coding workbench, carrying the item id **and** the version that was on
-  screen (migration 029) so a fix can be matched to the wording the learner
-  actually saw. No account needed.
+- **`/curation`.** The methodology, linked from the footer and from each path
+  overview. Optional to read; no gate, no acknowledgement.
+- **Report a problem.** In the quiz toolbar, in the Learn view and in the coding
+  workbench, carrying the item id **and** the version that was on screen
+  (migration 029) so a fix can be matched to the wording the learner actually
+  saw. No account needed.
+
+  There used to be a fourth surface: a "Why this question?" disclosure beside
+  each item, showing the objective, the topic, plan membership, the tags, the
+  review claim and the version. It was dropped in September 2026 as clutter next
+  to the question itself. Only the display went: the item version still travels
+  on every question and coding-task payload and still reaches every report, so a
+  fix can still be matched to the wording that was on screen. Migration 029's
+  own comment names the note as where the version was shown, which is no longer
+  true of the note but remains true of the value.
 
 ## What is asserted, not just intended
 

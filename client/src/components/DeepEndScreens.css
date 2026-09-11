@@ -59,3 +59,35 @@
 }
 .de-mode-card[data-selected='true'] .de-mode-card__check { opacity: 1; }
 .de-gold-pill { background: var(--ss-warning-soft); color: var(--ss-warning); }
+
+/* Streak shield — the control and its two read-only states, inside the current
+   streak card. Sized to clear 44px so it is a real target on a phone, and it
+   says its state in words as well as in colour. */
+.de-shield{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin-top:6px;padding:6px 12px;border-radius:999px;font:650 .78rem/1.3 var(--font-family-body);text-align:center}
+.de-shield--action{border:1px solid var(--ss-warning);background:var(--color-background-surface);color:var(--color-text-primary);cursor:pointer}
+.de-shield--action:hover{background:var(--color-background-muted)}
+.de-shield--action:focus-visible{outline:2px solid var(--ss-focus);outline-offset:2px}
+.de-shield--action:disabled{cursor:progress;opacity:.65}
+.de-shield--on{border:1px solid var(--ss-success);background:var(--ss-success-soft);color:var(--color-text-primary)}
+.de-shield--spent{border:1px dashed var(--color-border);color:var(--color-text-secondary)}
+.de-shield__meta{font-size:.72rem;color:var(--color-text-secondary);text-align:center}
+.de-shield__meta--error{color:var(--ss-danger,var(--color-text-primary))}
+
+/* Profile tabs — the overview and the friends list. Underline rather than a
+   pill row: two tabs do not need a container, and the selected one says so with
+   weight and a rule, not with colour alone. */
+.de-tabs{display:flex;gap:4px;border-bottom:1px solid var(--ss-card-line)}
+.de-tab{min-height:44px;padding:8px 16px;border:0;border-bottom:2px solid transparent;background:none;color:var(--color-text-secondary);font:650 .92rem/1.4 var(--font-family-body);cursor:pointer}
+.de-tab:hover{color:var(--color-text-primary)}
+.de-tab:focus-visible{outline:2px solid var(--ss-focus);outline-offset:-2px}
+.de-tab[aria-selected=true]{color:var(--color-text-primary);font-weight:750;border-bottom-color:var(--brand-accent)}
+
+/* Starting-section chips. One surface, the topic's colour as a dot; locked and
+   unlocked differ in weight and border as well as in shade, so the state reads
+   without relying on colour. */
+.de-topic-chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 14px;border-radius:999px;border:1px solid var(--ss-card-line);background:var(--color-background-surface);color:var(--color-text-secondary);font:600 .8125rem/1.4 var(--font-family-body);cursor:pointer}
+.de-topic-chip[data-unlocked=true]{border-color:var(--color-border-strong);color:var(--color-text-primary);font-weight:750}
+.de-topic-chip:hover{background:var(--color-background-muted)}
+.de-topic-chip:focus-visible{outline:2px solid var(--ss-focus);outline-offset:2px}
+.de-topic-chip__dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.de-topic-chip[data-unlocked=false] .de-topic-chip__dot{opacity:.45}

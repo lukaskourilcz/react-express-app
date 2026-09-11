@@ -10,9 +10,10 @@
 // devShark only. On StudyShark the card renders nothing: there is no role
 // specialization and no learning path outside the developer product.
 
-import { useCallback, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+const PathRewardClaim = lazy(() => import('./PathRewardClaim'));
 import { Card } from '@astryxdesign/core/Card';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -233,6 +234,13 @@ export default function LearningPathsCard() {
                       : t('paths.availability.content_incomplete')}
                 </span>
               </Link>
+              {/* Only ever visible once the server says the path is finished,
+                  so a learner mid-path is not shown a prize they cannot take. */}
+              {enrollment && (
+                <Suspense fallback={null}>
+                  <PathRewardClaim pathId={manifest.id} />
+                </Suspense>
+              )}
             </li>
           ))}
         </ul>

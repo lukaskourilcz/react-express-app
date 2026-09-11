@@ -12,10 +12,33 @@
  * The crown is different: it is an SVG this repository draws, it ships nothing,
  * and it costs tokens alone.
  *
- * The invariant that outranks all of this: **rewards never touch learning.**
- * Buying anything, owning anything and equipping anything changes no access, no
- * content, no XP, no score, no streak, no rank, no leaderboard position and no
- * prerequisite. The crown is a picture. */
+ * The invariant that outranks all of this, and the one bounded exception to it.
+ *
+ * **Rewards never touch learning.** Buying, owning and equipping change no
+ * access, no content, no XP, no score, no rank, no leaderboard position and no
+ * prerequisite. The crown is a picture.
+ *
+ * The exception is **streak protection**, and it is written down here rather
+ * than left implicit because it is real. Two protections a month are granted
+ * free, and one bridges a missed day so a streak continues instead of resetting
+ * — that has been true since migration 024, long before any of it was for sale.
+ * Extra protections may now be bought, and four things keep the exception
+ * bounded:
+ *
+ *   * The currency is tokens, earned at 10% of verified XP. No money buys one.
+ *     The path is learn more, then protect a streak.
+ *   * The ceiling never rises. Buying restores the same two-a-month budget and
+ *     never exceeds it, so nobody can hold a deeper reserve than a learner who
+ *     spends nothing.
+ *   * A protection changes the day count of a streak and nothing else: no XP,
+ *     no score, no rank, no badge, no access, no content.
+ *   * No leaderboard in this product ranks by streak. Every one of them ranks
+ *     by correct answers and accuracy, so a protected streak moves nobody up
+ *     anything.
+ *
+ * And the reverse direction is not an exception at all: finishing a whole
+ * learning path earns the merchandise package. A reward *for* learning is not a
+ * purchase that affects learning, and it changes no progress. */
 
 /* ── the catalogue ─────────────────────────────────────────────────────── */
 
@@ -97,6 +120,10 @@ export interface MerchSettings {
   pricing: Partial<Record<MerchSku, MerchPricing>>;
   /** Token price of the crown. Cosmetic, so this one may ship with a value. */
   crownTokenPrice: number;
+  /** Token price of one streak protection. Consumable and capped at two, so it
+   * is priced far below the crown: roughly a fortnight of steady learning
+   * rather than a season of it. */
+  streakProtectionTokenPrice: number;
   /** Where the returns and delivery policy lives, shown beside every item. */
   policyUrl: string;
 }
@@ -107,8 +134,18 @@ export const DEFAULT_MERCH_SETTINGS: MerchSettings = {
   testMode: true,
   pricing: {},
   crownTokenPrice: 1200,
+  streakProtectionTokenPrice: 250,
   policyUrl: '',
 };
+
+/** How many protections a learner may hold at once. Granted monthly, and the
+ * ceiling a purchase restores toward but never past. */
+export const STREAK_PROTECTION_CAP = 2;
+
+/** Whether extra protections may be bought. Like the crown it needs no
+ * supplier, only a price and a wallet to pay it from. */
+export const streakProtectionAvailable = (settings: MerchSettings): boolean =>
+  settings.streakProtectionTokenPrice > 0;
 
 /* ── availability ──────────────────────────────────────────────────────── */
 

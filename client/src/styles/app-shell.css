@@ -465,56 +465,6 @@
   .ss-term__popover { left: auto; right: 0; }
 }
 
-/* "Why this question?" — the same rule as the terms bar: beside the block,
-   never inside an answer button, and closed until asked for. */
-.ss-why { position: relative; display: inline-flex; margin-top: 10px; }
-.ss-why__button {
-  min-height: 32px;
-  padding: 0 10px;
-  border: 1px dashed var(--color-border);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-text-secondary);
-  font: 600 0.74rem var(--font-family-body);
-  cursor: pointer;
-}
-.ss-why__button:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
-.ss-why__button:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
-.ss-why__panel {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  z-index: 30;
-  width: min(360px, 82vw);
-  padding: 12px 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 12px;
-  background: var(--color-background-surface);
-  box-shadow: 0 12px 28px rgba(23, 39, 46, 0.18);
-}
-.ss-why__rows { display: grid; gap: 6px; margin: 0; }
-.ss-why__rows > div { display: grid; grid-template-columns: minmax(72px, auto) 1fr; gap: 10px; }
-.ss-why__rows dt { font-size: 0.72rem; letter-spacing: 0.03em; text-transform: uppercase; color: var(--color-text-secondary); }
-.ss-why__rows dd { margin: 0; font-size: 0.82rem; color: var(--color-text-primary); }
-.ss-why__note, .ss-why__review { margin: 8px 0 0; font-size: 0.8rem; color: var(--color-text-primary); }
-.ss-why__version { margin: 6px 0 0; font-size: 0.72rem; color: var(--color-text-secondary); font-family: var(--font-family-mono, monospace); }
-.ss-why__actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 10px; }
-.ss-why__link {
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--brand-accent);
-  font: 600 0.78rem var(--font-family-body);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-}
-.ss-why__link:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
-@media (max-width: 30rem) {
-  .ss-why__panel { left: auto; right: 0; }
-  .ss-why__rows > div { grid-template-columns: 1fr; gap: 2px; }
-}
-
 /* The methodology page: the marker list and the plain-language checklists. */
 .ss-curation-markers { display: grid; gap: 10px; margin: 12px 0 0; }
 .ss-curation-markers > div { display: grid; gap: 2px; }
@@ -661,4 +611,45 @@
     padding-inline: 0.3rem;
   }
   .ss-brand-footer__brands { padding-block: 0.35rem; }
+}
+
+/* ── Account menu (the Profile / Log out popover) ───────────────────────────
+ *
+ * The rows fill the popover's content box rather than declaring a width of
+ * their own. They used to ask for 168px inside a 168px surface that carries
+ * 12px of padding on every side — 24px wider than the 144px available — so the
+ * hover fill painted outside the popover's rounded edge.
+ *
+ * The fill responds to focus as well as hover, because a keyboard user moving
+ * between Profile and Log out needs the same "you are here" the mouse gets.
+ */
+.ss-account-menu {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+.ss-account-menu__item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  margin: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+.ss-account-menu__item:hover,
+.ss-account-menu__item:focus-visible {
+  background: var(--color-background-muted);
+}
+.ss-account-menu__item:focus-visible {
+  outline: 2px solid var(--ss-focus);
+  outline-offset: -2px;
 }

@@ -16,9 +16,7 @@ import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, type LadderRung } 
 import { taskResources } from '../../../shared/coding-docs';
 import { skipTask } from './practice';
 import { TermsBar } from '../components/ui/Terms';
-import { WhyThis } from '../components/ui/WhyThis';
 import { ReportDialog } from '../components/ReportDialog';
-import { whyThisItem } from '../lib/curation';
 import { reportQuestion } from '../lib/supabase';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
@@ -671,17 +669,15 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             {/* Beside the brief, so nothing is injected into code the learner
                 is reading or about to run. */}
             <TermsBar texts={[L(task.prompt), L(task.title)]} domain={glossaryDomainFor(task.track)} />
-            {/* What this task is for, and what is actually known about it: the
-                execution evidence, never a review nobody performed. */}
-            <WhyThis
-              item={whyThisItem({
-                tags: task.focus,
-                category: task.track,
-                topicLabel: trackLabel,
-              })}
-              review={task.review}
-              onReport={() => setReportOpen(true)}
-            />
+            {/* The report path the note used to carry, kept as a control of its
+                own. The dialog still sends the version of the brief that was on
+                screen, so a fix can be matched to what the learner read — and
+                without this button nothing else in this file can open it. */}
+            <div className="cd-actions">
+              <button type="button" className="cd-btn cd-btn--quiet" onClick={() => setReportOpen(true)}>
+                {t('coding.reportTask')}
+              </button>
+            </div>
             {formatOf(task) === 'debug' && <p className="cd-note">{t('coding.format.debugHint')}</p>}
             {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{L(task.api.note)}</p>}
             {locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}

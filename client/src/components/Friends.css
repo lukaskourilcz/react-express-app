@@ -1,0 +1,145 @@
+/* Friends — the handle, the lookup and the list.
+ *
+ * Same surface language as the coding track cards and the profile cards: a
+ * paper surface on ocean ink, a hairline border, the container radius. No new
+ * tokens and no new colours; the crown is the only ornament and it is somebody
+ * else's, not the layout's.
+ */
+
+.fr { display: flex; flex-direction: column; gap: 12px; }
+
+.fr-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 18px;
+  border-radius: var(--radius-container);
+  background: var(--color-background-surface);
+  border: 1px solid var(--ss-card-line);
+}
+.fr-card__title {
+  margin: 0;
+  font-family: var(--font-family-heading, inherit);
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+
+.fr-note { margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--color-text-secondary); }
+.fr-note--error { color: var(--ss-danger, var(--color-text-primary)); }
+.fr-note--ok { color: var(--ss-success, var(--color-text-primary)); }
+
+/* The row wraps rather than shrinking the field: a 24-character handle needs
+   its width more than the button needs to sit beside it at 360px. */
+.fr-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.fr-input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: var(--radius-element);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+.fr-input:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+
+.fr-row--country { align-items: center; }
+.fr-label { font-size: 0.9rem; font-weight: 650; }
+/* The flag sits with the select rather than inside it: a native <select> can
+   render an option's text and nothing else, so the chosen flag has to live
+   beside the control to be visible at all. */
+.fr-country { display: inline-flex; align-items: center; gap: 8px; flex: 1 1 12rem; min-width: 0; }
+.fr-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: var(--radius-element);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+.fr-select:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+
+.fr-btn {
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: var(--radius-element);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-background-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.fr-btn:hover { background: var(--color-background-muted); }
+.fr-btn:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
+.fr-btn:disabled { opacity: 0.6; cursor: default; }
+.fr-btn--primary {
+  background: var(--brand-accent);
+  border-color: var(--brand-accent);
+  color: var(--brand-on-accent, #fff);
+}
+.fr-btn--primary:hover { background: var(--brand-accent-hover, var(--brand-accent)); }
+
+.fr-check { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 4px 0; cursor: pointer; }
+.fr-check input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--brand-accent); flex-shrink: 0; }
+.fr-check > span { display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; font-weight: 650; }
+
+.fr-result { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.fr-result__handle { font-weight: 700; font-variant-ligatures: none; }
+
+.fr-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.fr-item,
+.fr-friend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-top: 1px solid var(--ss-card-line);
+}
+.fr-list > :first-child { border-top: 0; }
+.fr-item__handle { font-weight: 650; }
+.fr-item__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* min-width:0 so a long row ellipsizes instead of pushing Remove off. */
+.fr-friend__who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 8rem; }
+.fr-friend__handle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+/* The flag and the crown: a friend's whole visible identity beside the avatar.
+   min-height keeps the row from shifting between a friend who has both and one
+   who has neither. */
+.fr-friend__marks {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 20px;
+}
+/* A glyph, not an image: line-height 1 stops the taller emoji metrics adding a
+   few pixels of leading that only some platforms would show. */
+.ss-flag { line-height: 1; }
+.fr-friend__meta { font-size: 0.8rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+/* A word as well as a colour: "today" reads the same to anyone. */
+.fr-today { font-weight: 700; color: var(--ss-success, var(--color-text-primary)); }
+
+.fr-empty { display: flex; flex-direction: column; gap: 6px; }
+
+.fr-visually-hidden {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

@@ -55,9 +55,14 @@ badges after the Profile stopped displaying a badge section), and
 collectible catalog with deterministic packs). Every new endpoint is a
 `resource=`/`op=` branch inside an existing handler, so the twelve-handler budget
 is unchanged, and all new storage lives in `supabase/supabase-schema-024.sql` (additive,
-idempotent; see `NEEDED.md` to apply it). Cards, freezes, and badges are cosmetic
-retention only and never affect access, content, XP, scores, streaks, ranks, or
-AI availability.
+idempotent; see `NEEDED.md` to apply it). Cards and badges are cosmetic retention only
+and never affect access, content, XP, scores, streaks, ranks, or AI
+availability. Streak protection is the one bounded exception, and it is written
+out in full in `shared/rewards.ts`: two a month free, extras bought with tokens
+earned at 10% of verified XP, a ceiling that never rises above two, and an
+effect limited to the day count of a streak. No leaderboard in this product
+ranks by streak — every one of them ranks by correct answers and accuracy — so a
+protected streak moves nobody up anything.
 
 ## Coding section (devShark)
 
