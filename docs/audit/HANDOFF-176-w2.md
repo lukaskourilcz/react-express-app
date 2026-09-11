@@ -28,6 +28,19 @@ Every repository gate passes on the branch as pushed: `npm run typecheck:api`,
 gate), `npm run test:coding`, `npm run test:paths`, `npm run build`, both
 `npm audit --omit=dev`, `git diff --check`.
 
+One more gate is the audit's own and has to pass before the branch merges:
+
+```bash
+npm run audit:devshark-inventory -- --out $S/inv-sweep
+python3 docs/audit/wip/tools/sweep-artifacts.py $S/inv-sweep
+```
+
+It scans every learner-visible field in both languages for the audit's own
+leavings — item ids, commit hashes, tool version strings, working notes,
+scratch paths, the reviewer's vocabulary, and references to an option by its
+position — and exits non-zero on a hit. Run it after every apply, not once at
+the end: it has caught a new class of leak on each of its first two runs.
+
 The report is `docs/audit/devshark-content-audit.md`. It is written and
 accurate as of this handoff; update its numbers when more topics land.
 
