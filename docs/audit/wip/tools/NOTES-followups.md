@@ -389,3 +389,21 @@ for a second reader rather than a second automated check.
   English list. A retired section hides it today; the same fallback in a live
   bank would be visible to every Czech learner, and nothing currently checks
   for it.
+- **Translation turns out to be a third reading.** Writing an item in another
+  language forces a reader to parse every option as a sentence, and the
+  translators are surfacing English defects that both readings passed:
+  - `rm-react-155` asks "What problem does Context solve?" and only the key is
+    phrased as a problem; the other three name capabilities. The shape decides
+    the item without the subject.
+  - `rm-react-171`'s explanation reads "the old one unmounts, its state and
+    effect cleanups run" — state does not run, so the sentence only parses if
+    you already know what it means.
+  - `rm-node-32`'s stem asks which identifiers are "available in a CommonJS
+    module" while `__dirname` is injected by the module wrapper rather than
+    global; the first pass recorded the defect and the rewrite kept it.
+  None of these is a wrong key and all three still clear both gates, so none is
+  fixed here: a rewrite served on one reading is exactly what this audit does
+  not do, and the reading that would have to accept it is the one that just
+  found it. They belong to the next wave, which should treat the localisation
+  pass as a reviewer rather than a scribe and give it a way to file a defect
+  against the English instead of a note in a row.
