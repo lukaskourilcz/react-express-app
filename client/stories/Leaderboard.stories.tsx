@@ -1,0 +1,11 @@
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import Leaderboard from '../src/components/Leaderboard';
+import { leaderboardHandlers } from '../tests/mocks/handlers';
+const meta = { title: 'Screens/Leaderboard', component: Leaderboard } satisfies Meta<typeof Leaderboard>;
+export default meta;
+type Story = StoryObj<typeof meta>;
+export const Populated: Story = { parameters: { msw: { handlers: [leaderboardHandlers.populated] } } };
+export const Empty: Story = { parameters: { msw: { handlers: [leaderboardHandlers.empty] } } };
+export const Loading: Story = { parameters: { msw: { handlers: [leaderboardHandlers.loading] } } };
+export const ServerError: Story = { parameters: { msw: { handlers: [leaderboardHandlers.error] } } };
+export const Offline: Story = { parameters: { msw: { handlers: [leaderboardHandlers.offline] } } };

@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
+  },
+  "include": [
+    "src",
+    "tests",
+    "stories",
+    ".storybook",
+    "vitest.config.ts"
+  ],
+  "references": []
+}

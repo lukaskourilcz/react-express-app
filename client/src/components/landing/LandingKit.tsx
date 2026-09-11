@@ -178,7 +178,7 @@ export interface SampleQuestion { text: string; code?: string; opts: string[]; a
  * (e.g. "JavaScript · Level 1 — Values & Math"); mount with a `key` so picking
  * resets when the parent swaps the question.
  */
-export function SampleCard({ chip, question }: { chip: string; question: SampleQuestion }) {
+export function SampleCard({ chip, question, onAnswered }: { chip: string; question: SampleQuestion; onAnswered?: () => void }) {
   const t = useT();
   const [picked, setPicked] = useState<number | null>(null);
   const answered = picked !== null;
@@ -207,7 +207,7 @@ export function SampleCard({ chip, question }: { chip: string; question: SampleQ
           return (
             <button
               key={i} type="button" disabled={answered}
-              onClick={() => { if (picked === null) setPicked(i); }}
+              onClick={() => { if (picked === null) { setPicked(i); onAnswered?.(); } }}
               className="ss-radio-card" data-tone={isCorrect ? 'success' : undefined}
               style={{
                 display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', fontSize: '0.95rem', opacity: dim ? 0.6 : 1,

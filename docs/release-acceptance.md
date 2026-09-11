@@ -316,3 +316,17 @@ were.
 The one place data is deliberately not carried forward is the token wallet: the
 old browser-held balances are not converted, because they cannot be audited.
 `docs/rewards-launch.md` records why, and the cosmetics already owned stay owned.
+
+
+## 2026-09-11 — eight free-tool recommendations
+
+Implemented performance reporting and a 243,000-byte initial JS/CSS gzip budget, self-hosted Inter/Manrope, MSW/Vitest failure and recovery tests, reviewed Knip checks, an Astryx Storybook workshop, EN/CS public guide HTML with canonical/sitemap/schema, concrete homepage copy and activation events, shared fluid typography/spacing, and exact-hash document CSP regression checks.
+
+Local evidence at implementation review: API typecheck, launch contracts, coding content, learning paths, nine client tests, tooling typecheck, devShark production build, Storybook build, 11 public URLs, security policy contracts and Knip's three reviewed existing files passed. Initial devShark JS/CSS was 217,926 gzip bytes. Browser execution is blocked by the local environment (`socket() failed: Operation not permitted`), so local Lighthouse, responsive and browser results are not reported as passes. Product quality CI runs the browser matrix and records reports.
+
+
+Final application source `ef954d1f2414536035d9a6ad88cbaa6a68f53403` passed both product jobs in [quality run 34605485210](https://github.com/lukaskourilcz/react-express-app/actions/runs/34605485210): API/tooling types, launch/coding/path contracts, nine client tests, both builds, public HTML, bundle budget, Knip, security and both production dependency audits. Each product passed five public browser tests, 34 responsive probes with zero issues, and the 23-assertion coding-frame harness; the devShark workshop additionally passed all five browser tests, including axe contrast and keyboard focus restoration. The final initial devShark JS/CSS graph is 217,962 gzip bytes, below the 243,000-byte budget.
+
+The final static-preview Lighthouse run scored mobile 75 / desktop 97 for performance, 100 for accessibility and SEO, and 96 for best practices. Mobile LCP was 3.53 seconds and CLS 0.222; desktop LCP was 0.80 seconds and CLS 0.090. These are individual lab runs without live API credentials, not field measurements or a demonstrated overall performance improvement. Mobile layout shift remains a measured follow-up. Complete reports and browser screenshots are retained in the workflow artifacts for 14 days; baseline and final summaries are committed under `docs/quality/`.
+
+This release changes no database schema, scoring authority, billing or handler count. PostHog account-level funnel setup and Search Console sitemap submission remain documented owner actions. The deployment result is recorded on PR #189 after production verification.

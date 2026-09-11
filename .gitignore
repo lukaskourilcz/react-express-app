@@ -20,3 +20,9 @@ client/vite.config.js
 
 # claude code: ui-ux-pro-max search script bytecode
 __pycache__/
+
+# Local quality tools and reports
+client/storybook-static/
+artifacts/
+playwright-report/
+test-results/

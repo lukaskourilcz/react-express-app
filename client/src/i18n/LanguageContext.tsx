@@ -9,6 +9,8 @@ const STORAGE_KEY = 'devquiz.lang';
 
 function detectInitialLang(): Lang {
   if (typeof window === 'undefined') return 'en';
+  const publicLocale = document.documentElement.dataset.publicLocale;
+  if (publicLocale === 'en' || publicLocale === 'cs') return publicLocale;
   const stored = readString(STORAGE_KEY);
   if (stored === 'cs' || stored === 'en') return stored;
   return navigator.language?.toLowerCase().startsWith('cs') ? 'cs' : 'en';
@@ -76,6 +78,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     document.documentElement.lang = lang;
+    delete document.documentElement.dataset.publicLocale;
   }, [lang]);
 
   useEffect(() => {

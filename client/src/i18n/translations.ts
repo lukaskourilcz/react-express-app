@@ -71,8 +71,8 @@ export const en = {
   'title.default': 'StudyShark',
 
   // Home / landing page
-  'home.title': 'Become a developer, one level at a time.',
-  'home.subtitle': 'The structured path from zero to job-ready: frontend, backend, or fullstack.',
+  'home.title': 'Build the skills you use when you write code.',
+  'home.subtitle': 'Work through guided lessons, test what you understand in a quiz, and put it into practice with coding tasks, whether you are learning frontend, backend or both.',
   'home.freeText': 'Every lesson, quiz and learning path is free. No paywalls, no trials, no credit card.',
   'home.ctaSignIn': 'Sign in to start',
   'home.ctaChoosePath': 'Choose your path',

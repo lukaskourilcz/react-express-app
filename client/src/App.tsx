@@ -1,3 +1,4 @@
+import { publicOrigin, topicFromPath, topicSchema } from './lib/publicMetadata';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { IconButton as AxIconButton } from '@astryxdesign/core/IconButton';
@@ -357,6 +358,7 @@ function App() {
   const showLeaderboardIcon = navItems.some((item) => item.to === '/leaderboard');
 
   useEffect(() => {
+    const publicTopic = topicFromPath(location.pathname, CURRENT_PRODUCT.id);
     const titleKey = ROUTE_TITLE_KEYS[location.pathname];
     const translatedTitle = titleKey
       ? t(titleKey)
@@ -365,10 +367,10 @@ function App() {
         : location.pathname.startsWith('/coding/')
           ? t('title.coding')
           : t('title.notFound');
-    document.title = location.pathname === '/'
+    document.title = publicTopic ? `${publicTopic.topic.title[publicTopic.locale]} · ${CURRENT_PRODUCT.brand}` : location.pathname === '/'
       ? productText(CURRENT_PRODUCT.title, lang)
       : translatedTitle.split('StudyShark').join(CURRENT_PRODUCT.brand);
-    const description = productText(CURRENT_PRODUCT.description, lang);
+    const description = publicTopic ? publicTopic.topic.description[publicTopic.locale] : productText(CURRENT_PRODUCT.description, lang);
     const setMeta = (selector: string, value: string) => {
       document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', value);
     };
@@ -377,6 +379,22 @@ function App() {
     setMeta('meta[property="og:description"]', description);
     setMeta('meta[name="twitter:title"]', document.title);
     setMeta('meta[name="twitter:description"]', description);
+    document.querySelectorAll('link[rel="canonical"], link[hreflang], #public-schema, meta[property="og:url"], meta[name="robots"]').forEach(node => node.remove());
+    const canonical = publicTopic ? publicOrigin(CURRENT_PRODUCT.id) + location.pathname.replace(/\/$/, '') : location.pathname === '/' ? publicOrigin(CURRENT_PRODUCT.id) + '/' : null;
+    if (canonical) {
+      const link = document.createElement('link'); link.rel = 'canonical'; link.href = canonical; document.head.append(link);
+    }
+    if (publicTopic && canonical) {
+      for (const locale of ['en', 'cs']) {
+        const link = document.createElement('link'); link.rel = 'alternate'; link.hreflang = locale;
+        link.href = `${publicOrigin(CURRENT_PRODUCT.id)}${locale === 'cs' ? '/cs' : ''}/topics/${publicTopic.topic.slug}`; document.head.append(link);
+      }
+      const schema = document.createElement('script'); schema.id = 'public-schema'; schema.type = 'application/ld+json';
+      schema.textContent = JSON.stringify(topicSchema(document.title, description, canonical, publicTopic.locale)); document.head.append(schema);
+    } else if (location.pathname.includes('/topics/')) {
+      const robots = document.createElement('meta'); robots.name = 'robots'; robots.content = 'noindex'; document.head.append(robots);
+    }
+
   }, [location.pathname, t, lang]);
 
   useEffect(() => {
@@ -703,6 +721,7 @@ function App() {
                 <Route path="/curation" element={<CurationPage />} />
                 <Route path="/classroom" element={<ClassroomPage />} />
                 <Route path="/topics/:slug" element={<TopicLandingPage />} />
+                <Route path="/cs/topics/:slug" element={<TopicLandingPage />} />
                 <Route path="/dev" element={<DevPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>

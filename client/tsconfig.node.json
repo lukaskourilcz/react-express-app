@@ -6,11 +6,16 @@
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "strict": true,
-    // Composite projects must emit declarations, but never emit JS: a
-    // vite.config.js landing next to vite.config.ts silently SHADOWS it
-    // (Vite resolves .js first), so config edits would stop applying.
     "emitDeclarationOnly": true,
-    "outDir": "./node_modules/.tmp/tsc-node"
+    "outDir": "./node_modules/.tmp/tsc-node",
+    "jsx": "react-jsx"
   },
-  "include": ["vite.config.ts", "vite.sandbox.config.ts", "product-catalog.ts", "src/lib/topicCatalog.ts"]
+  "include": [
+    "vite.config.ts",
+    "vite.sandbox.config.ts",
+    "product-catalog.ts",
+    "src/lib/topicCatalog.ts",
+    "src/components/topics/TopicArticle.tsx",
+    "src/lib/publicMetadata.ts"
+  ]
 }

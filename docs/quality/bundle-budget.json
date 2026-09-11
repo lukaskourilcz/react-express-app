@@ -1,0 +1,6 @@
+{
+  "initialGzipBytes": 243000,
+  "baselineGzipBytes": 217926,
+  "scope": "Initial static JS and CSS dependency graph, devShark build, excludes lazy routes and fonts",
+  "recorded": "2026-09-11"
+}

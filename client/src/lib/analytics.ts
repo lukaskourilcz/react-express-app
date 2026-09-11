@@ -1,4 +1,4 @@
-// PostHog product analytics - funnels, session replay, and event capture.
+// PostHog product analytics - explicit funnels and event capture.
 //
 // Mirrors the Sentry wiring (lib/sentry.ts): everything here is a no-op until
 // VITE_PUBLIC_POSTHOG_KEY is set, so local/preview builds and forks with no key
@@ -35,6 +35,9 @@ export function initAnalytics(): void {
         capture_pageview: false,
         capture_pageleave: true,
         respect_dnt: true,
+        autocapture: false,
+        disable_session_recording: true,
+        capture_dead_clicks: false,
       });
       return ph;
     })
@@ -114,4 +117,17 @@ export function capturePathEvent(event: PathFunnelEvent, properties: PathFunnelP
     if (value !== undefined) safe[key] = value;
   }
   capture(event, safe);
+}
+
+/** Activation events carry only catalogue identifiers, never code or answers. */
+export type ActivationEvent = 'landing_sample_completed' | 'learning_cta_clicked';
+export interface ActivationProperties {
+  product: string;
+  locale: 'en' | 'cs';
+  source: 'home' | 'topic_guide';
+  category?: string;
+}
+export function captureActivation(event: ActivationEvent, properties: ActivationProperties): void {
+  const { product, locale, source, category } = properties;
+  capture(event, { product, locale, source, ...(category ? { category } : {}) });
 }

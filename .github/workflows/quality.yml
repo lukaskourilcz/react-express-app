@@ -1,0 +1,69 @@
+name: Product quality
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        product: [devshark, studyshark]
+    env:
+      TEST_PRODUCT: ${{ matrix.product }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            client/package-lock.json
+      - run: npm ci && npm ci --prefix client
+      - run: npm run typecheck:api && npm run typecheck:tooling --prefix client
+      - run: npm run test:launch && npm run test:coding && npm run test:paths && npm run test:client
+      - run: npm run check:unused && npm run check:security
+      - run: npm run build && npm run check:public && npm run check:bundle
+        id: build
+        env:
+          VITE_PRODUCT: ${{ matrix.product }}
+          VITE_LOCK_SUBJECT: ${{ matrix.product == 'devshark' && 'webdev' || '' }}
+      - run: npm audit --omit=dev && npm audit --omit=dev --prefix client
+      - run: npx playwright install --with-deps chromium
+      - name: Browser checks
+        run: |
+          npm run preview --prefix client -- --host 0.0.0.0 --port 4173 > /tmp/preview.log 2>&1 &
+          node scripts/wait-for-preview.mjs
+          npm run test:browser -- tests/browser/public.spec.ts
+          export CHROME_BIN=$(node -e "console.log(require('@playwright/test').chromium.executablePath())")
+          TOPIC=capitals-of-europe
+          if [ "$TEST_PRODUCT" = devshark ]; then TOPIC=javascript-closures; fi
+          npm run check:responsive -- --routes /,/quiz,/topics/$TOPIC,/cs/topics/$TOPIC --widths 360,390,430,768,1024,1280,1440
+          RESPONSIVE_THEME=dark RESPONSIVE_LOCALE=cs npm run check:responsive -- --routes /,/cs/topics/$TOPIC --widths 390,768,1280
+          npm run test:harness
+      - if: matrix.product == 'devshark' && !cancelled() && steps.build.conclusion == 'success'
+        name: Storybook and performance
+        run: |
+          npm run audit:performance
+          npm run build:storybook
+          npm run storybook --prefix client -- --ci > /tmp/storybook.log 2>&1 &
+          TEST_BASE_URL=http://localhost:6006 node scripts/wait-for-preview.mjs
+          STORYBOOK_URL=http://localhost:6006 npm run test:browser -- tests/browser/storybook.spec.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-${{ matrix.product }}
+          path: |
+            artifacts/
+            playwright-report/
+            test-results/
+            client/storybook-static/
+          retention-days: 14

@@ -1,0 +1,33 @@
+{
+  "commit": "e4ba3582f61810bf9c8c0e08f3596f295a3c586c",
+  "workflowRun": 34604444975,
+  "environment": "GitHub Actions Ubuntu, Node 24; Vite production-mode static preview without live service credentials",
+  "requestedUrl": "http://localhost:4173",
+  "source": "https://github.com/lukaskourilcz/react-express-app/actions/runs/34604444975",
+  "profiles": [
+    {
+      "profile": "mobile",
+      "performance": 85,
+      "accessibility": 100,
+      "bestPractices": 96,
+      "seo": 100,
+      "lcpMs": 3533.7325999999994,
+      "cls": 0.014412383365216375,
+      "tbtMs": 64.5
+    },
+    {
+      "profile": "desktop",
+      "performance": 94,
+      "accessibility": 100,
+      "bestPractices": 96,
+      "seo": 100,
+      "lcpMs": 855.80575,
+      "cls": 0.1394700703747483,
+      "tbtMs": 0
+    }
+  ],
+  "notes": [
+    "Initial lab baseline before adding first-viewport font preloads; not field Core Web Vitals.",
+    "Complete Lighthouse JSON and HTML reports are retained with the quality-devshark workflow artifact."
+  ]
+}

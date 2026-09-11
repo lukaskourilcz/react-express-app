@@ -1,3 +1,4 @@
+import { captureActivation } from '../lib/analytics';
 // The landing page at "/" — the editorial "Deep End v2" redesign. Instead of a
 // generic hero + three feature cards, it opens with a product-forward pitch: an
 // interactive sample question wired to a real Level-1 question, a topic picker
@@ -248,7 +249,7 @@ export default function Home() {
       <section aria-label={t('home.introAria')} className="ss-hero-grid">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 20 }}>
           <Kicker>{brand} · {t('home.freeForever')}</Kicker>
-          <h1 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: 'clamp(2.6rem,4.8vw,3.5rem)', lineHeight: 1.06, letterSpacing: '-0.02em' }}>
+          <h1 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: 'var(--ss-type-display)', lineHeight: 1.06, letterSpacing: '-0.02em' }}>
             {heroTitle}
           </h1>
           <p style={{ margin: 0, fontSize: '1.125rem', color: 'var(--color-text-secondary)', maxWidth: '46ch' }}>{heroSubtitle}</p>
@@ -266,6 +267,7 @@ export default function Home() {
         </div>
         {selected && (
           <SampleCard
+            onAnswered={() => captureActivation('landing_sample_completed', { product: CURRENT_PRODUCT.id, locale: lang, source: 'home', category: selected?.id })}
             key={selected.id}
             chip={`${selected.name} · ${t('home.sampleChip', { level: selected.levels[0] })}`}
             question={selected.question}
@@ -319,7 +321,7 @@ export default function Home() {
       </section>
 
       {/* ── Roadmap preview ── */}
-      {selected && <RoadmapPreview topic={selected} onStart={() => navigate(`/learn?topic=${encodeURIComponent(selected.id)}`)} />}
+      {selected && <RoadmapPreview topic={selected} onStart={() => { captureActivation('learning_cta_clicked', { product: CURRENT_PRODUCT.id, locale: lang, source: 'home', category: selected.id }); navigate(`/learn?topic=${encodeURIComponent(selected.id)}`); }} />}
 
       {/* ── Everything-else feature strip (no hover) ── */}
       <section aria-label={t('home.moreKicker')} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>

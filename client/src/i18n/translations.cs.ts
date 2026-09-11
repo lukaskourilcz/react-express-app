@@ -72,8 +72,8 @@ export const cs: Record<TranslationKey, string> = {
   'title.default': 'StudyShark',
 
   // Home / landing page
-  'home.title': 'Staň se vývojářem, úroveň po úrovni.',
-  'home.subtitle': 'Strukturovaná cesta od nuly až k práci vývojáře, frontend, backend nebo fullstack.',
+  'home.title': 'Procvič si znalosti, které využiješ při psaní kódu.',
+  'home.subtitle': 'Projdi si vedené lekce, ověř si znalosti v kvízu a vyzkoušej je na programovacích úlohách, ať už se učíš frontend, backend nebo obojí.',
   'home.freeText': 'Každá lekce, kvíz i studijní cesta je zdarma. Žádné placené zdi, žádné zkušební verze, žádná platební karta.',
   'home.ctaSignIn': 'Přihlas se a začni',
   'home.ctaChoosePath': 'Vyber si směr',

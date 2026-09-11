@@ -31,20 +31,21 @@ export default function ErrorRetry({ message, onRetry, sx }: Props) {
       style={{
         display: 'flex',
         alignItems: 'center',
+        flexWrap: 'wrap',
         gap: 12,
         padding: '6px 16px',
         borderRadius: 'var(--radius-element)',
         border: '1px solid color-mix(in srgb, var(--ss-error) 26%, transparent)',
         background: 'var(--ss-error-soft)',
-        color: 'var(--ss-error)',
+        color: 'var(--ss-error-text)',
         fontSize: '0.875rem',
         lineHeight: 1.5,
         ...sxToStyle(sx),
       }}
     >
       <ErrorGlyph />
-      <span style={{ flex: 1, padding: '8px 0' }}>{message}</span>
-      <Button size="sm" variant="ghost" label={t('quiz.retry')} onClick={onRetry} />
+      <span style={{ flex: '1 1 180px', padding: '8px 0' }}>{message}</span>
+      <Button size="md" variant="ghost" label={t('quiz.retry')} onClick={onRetry} />
     </div>
   );
 }
