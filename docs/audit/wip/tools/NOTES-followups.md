@@ -436,3 +436,19 @@ for a second reader rather than a second automated check.
   neither should have — the stem's English was never rewritten, so there was no
   second reading to accept a change to it. Settling which convention wins is a
   one-line decision that belongs to the owner.
+- **Two Czech words for "repository", and the collision is the real problem.**
+  The Git track renders it `úložiště` (132 occurrences across both batches),
+  following the served Czech corpus, which already uses that word and never
+  uses the alternative. Security, System Design, Node.js and General render it
+  `repozitář` (17 occurrences). Neither is wrong on its own, and the Git
+  translators were right to follow what learners already read there.
+  What makes it worth a decision is that `úložiště` also means *storage*, and
+  the Databases and System Design tracks use it in exactly that sense — 13
+  occurrences in System Design alone, in the same file that calls a code
+  repository a `repozitář`. So the product now uses one word for two things and
+  two words for one thing. The tidy resolution is `repozitář` for a code
+  repository everywhere and `úložiště` reserved for storage, but that rewrites
+  the most frequent noun in the Git track away from what the served Czech has
+  always said, which is an owner's call rather than a translator's. Counted
+  with:
+  `grep -o -i "repozitář[a-zěščřžýáíéůú]*\|úložišt[a-zěščřžýáíéůú]*" <cs rows>`
