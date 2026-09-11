@@ -39,6 +39,9 @@ ALLOW = {
     # OWASP ranks password hashing functions; "first choice" is its ranking,
     # not this item's option order.
     ('rm-security-25', 'explanation', 'the first choice'),
+    # The Czech of the same item, same reason: OWASP's ranking of password
+    # hashing functions, not this item's option order.
+    ('rm-security-28', 'cs.explanation', 'první volba'),
 }
 
 
