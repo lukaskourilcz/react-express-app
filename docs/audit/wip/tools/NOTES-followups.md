@@ -367,3 +367,25 @@ for a second reader rather than a second automated check.
   nothing a checker compares had changed — the drift is in what the question
   asks, not in its shape. Any future parity check has to compare meaning on the
   stem, not just option count and key position.
+- **The code-snippets section found a gap in the live bank, not just in
+  itself.** Seven of its items (541, 542, 552, 553, 554, 767, 771) are correct,
+  well-built and duplicated nowhere — and have no destination, because no live
+  level in any topic teaches generators, symbols, `Proxy`, the prototype chain
+  or labeled statements. They are the only items in 319 retired ones that
+  retire for want of a home rather than for a defect or a twin. If the
+  JavaScript track ever gains a metaprogramming level, they are written and
+  waiting.
+- **One retired item's key is simply wrong.** Snippet 534 pins its code to a
+  non-module browser script, where top-level `this` is `window` and
+  `window.name` is the empty string, so the method logs `""` rather than the
+  keyed `undefined`; the explanation's claim that the global object has no
+  `name` property is false. It is retired rather than repaired, because
+  JavaScript level 14 already teaches both halves of the arrow-versus-method
+  contrast. Nothing served was affected — the section is refused by every
+  delivery request — but it is the fourth wrong key the audit has found, and
+  the only one outside the active bank.
+- **Forty-seven code-snippets items serve English options under a Czech
+  question.** Their `cs.options` is null, so the delivery falls back to the
+  English list. A retired section hides it today; the same fallback in a live
+  bank would be visible to every Czech learner, and nothing currently checks
+  for it.

@@ -6,7 +6,7 @@ worth keeping, and named a live level that does not already teach it.
 Nothing here is applied: the rewrite patcher skips a retired section, so
 every one of these needs a decision before it reaches a learner.
 
-40 candidates across 3 retired sections.
+43 candidates across 3 retired sections.
 
 | Candidate | From | Proposed destination | Objective |
 | --- | --- | --- | --- |
@@ -37,6 +37,7 @@ every one of these needs a decision before it reaches a learner.
 | `763` | code-snippets | javascript level 15 | Show that map passes the index as a second argument, which parseInt reads as a radix. |
 | `525` | code-snippets | javascript level 17 | Apply ToPrimitive under +: an empty array becomes "" and a plain object becomes "[object Object]". |
 | `539` | code-snippets | javascript level 19 | Filter an object by value and project the keys using Object.entries with destructured pairs. |
+| `780` | code-snippets | javascript level 19 | Show that JSON.stringify omits object properties whose values are functions or undefined. |
 | `770` | code-snippets | javascript level 20 | Show that ?. short-circuits the whole property chain, not just the step it guards. |
 | `546` | code-snippets | javascript level 21 | Show that Promise.allSettled reports a status for every input instead of short-circuiting on the first rejection. |
 | `527` | code-snippets | javascript level 22 | Order synchronous statements, a microtask and a timer callback. |
@@ -46,6 +47,8 @@ every one of these needs a decision before it reaches a learner.
 | `537` | code-snippets | javascript level 24 | Separate loose equality from relational comparison for null, including the null > 0 / null >= 0 asymmetry. |
 | `549` | code-snippets | javascript level 24 | Show that delete on an array clears the element but leaves a hole and the original length. |
 | `555` | code-snippets | javascript level 24 | Show that a return inside finally replaces the value the try block was already returning. |
+| `774` | code-snippets | javascript level 24 | Show that map skips array holes: the callback never runs for them and the hole survives in the result. |
+| `775` | code-snippets | javascript level 24 | Show that a plain object converts numeric subscripts to string keys, so o[1] and o["1"] are one property. |
 | `rm-testing-27` | testing | nodejs level 24 | Compare objects and arrays by structure rather than identity, so a separately built expected value still matches. |
 | `rm-testing-28` | testing | nodejs level 24 | Assert that a call throws by handing the matcher a function instead of the call's result. |
 | `rm-testing-48` | testing | nodejs level 24 | Clear a double's recorded calls between tests so a later assertion does not depend on run order. |
@@ -107,6 +110,8 @@ every one of these needs a decision before it reaches a learner.
 
 **`539` → javascript level 19.** Worth moving into javascript L19 (JSON & Objects) as a predict snippet: the entries-filter-map pattern for filtering an object by value is not taught there, though rm-js-194 in L25 covers the simpler entries-then-map step. The hint is filler.
 
+**`780` → javascript level 19.** Worth moving into javascript L19 (JSON & Objects) as a predict snippet: rm-js-150 covers only the undefined case, and the dropped function value is the half that bites when an object with methods is serialized. The hint must stop announcing the answer.
+
 **`770` → javascript level 20.** Belongs in javascript L20 (Optional & Nullish) as a predict snippet: rm-js-153 to rm-js-160 all guard a single step, so the whole-chain short-circuit and the undefined-not-null result are new. Only the hint and the missing distractor note need work.
 
 **`546` → javascript level 21.** Belongs in javascript L21 (Promises) as a predict snippet: L21 covers all, race, then and catch but never allSettled, and javascript is the only topic in all three learner plans (nodejs L14's rm-node-111 states the contrast but reaches backend learners only). The hint and the missing distractor note are local defects.
@@ -124,6 +129,10 @@ every one of these needs a decision before it reaches a learner.
 **`549` → javascript level 24.** Belongs in javascript L24 (Edge Cases & Gotchas) as a predict snippet: rm-js-190 shrinks an array through length but nothing covers delete leaving a hole, and the explanation already points at splice as the fix. Only the hint is a local defect.
 
 **`555` → javascript level 24.** Worth moving into javascript L24 (Edge Cases & Gotchas) as a predict snippet: no level teaches error-handling control flow, but this is a genuine gotcha that silently swallows both returns and exceptions, which fits that level's brief. The hint and the missing distractor note are local defects.
+
+**`774` → javascript level 24.** Belongs in javascript L24 (Edge Cases & Gotchas) as a predict snippet: nothing live covers holes, and this is the rule behind the common surprise that `new Array(3).map(...)` does nothing. Its prose options are the best written in the batch; only the hint spoils it.
+
+**`775` → javascript level 24.** Belongs in javascript L24 (Edge Cases & Gotchas) as a predict snippet: no live item shows key coercion, which explains why Object.keys hands back strings and why numeric ids compare oddly. The hint is the one local defect.
 
 **`rm-testing-27` → nodejs level 24.** Worth redistributing to nodejs, level 24 'Testing & Debugging': the identity-versus-structure trap is the one assertion mistake beginners hit on their first object test, and it is the same lesson as assert.strictEqual versus assert.deepStrictEqual in node:test. Naming the runner and making the stem concrete removes the term-matching shortcut.
 
