@@ -519,3 +519,25 @@ for a second reader rather than a second automated check.
   across every finished file rather than by preference — and hand the edit back
   to a translator, because find-and-replace on an inflected language is how you
   turn a terminology problem into a grammar problem.
+- **The Czech pipeline was reading English the bank no longer serves.**
+  `make-cs-batches.py` took each field from the review row's rewrite, falling
+  back to the inventory. That is backwards once the rewrites are applied: the
+  inventory is regenerated from the seed files at that point and is the only
+  copy carrying a correction made *after* the apply. Three items had their
+  explanations fixed by the artifact sweep after their rewrites landed, and
+  their translators were handed the pre-fix text — `rm-ai-13`, `rm-dsa-32` and
+  `rm-dsa-105`. No harm reached the Czech: all three translators named the
+  wrong answer by its content rather than by position or by the word
+  "distractors", independently, which is what the English should have said in
+  the first place. The tool now takes the English from the inventory and keeps
+  `changed` from the review row, which is the only thing that row is actually
+  authoritative about.
+- **A defect class that exists only in Czech.** `rm-dsa-92`'s served stem ended
+  "…je takzvaná:", and the feminine agreement narrows the four options to the
+  two feminine ones before a learner knows anything — `výška` and `šířka`
+  against `stupeň` and `řád`. English has no equivalent, so no reviewer could
+  have seen it and no parity check compares grammar. The translator found it,
+  rewrote the stem so all four options sit in the nominative with no gender
+  tell, and swept the rest of its batch for the same shape. Worth making an
+  explicit item in the Czech brief: a stem must not agree with only some of its
+  options.

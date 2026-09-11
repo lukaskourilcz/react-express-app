@@ -21,7 +21,15 @@ for f in sorted(glob.glob(f'{inv}/batch-*.json')):
         if not r or r['decision'] in ('retire','quarantine'): continue
         rw=(r.get('rewrite') or {}) if r['decision']=='rewrite' else {}
         changed=[k for k in ('hint','question','options','explanation') if k in rw]
-        en={'hint':rw.get('hint',it['hint']),'question':rw.get('question',it['question']),'options':rw.get('options',it['options']),'explanation':rw.get('explanation',it['explanation'])}
+        # The English comes from the inventory, never from the review row. This
+        # runs after the rewrites are applied, so the inventory IS the final
+        # English — and it is the only copy that carries a correction made to a
+        # seed file after the apply. Preferring the review row hands translators
+        # text the bank no longer serves; that happened to three items whose
+        # explanations were fixed by the artifact sweep after their rewrites
+        # landed. `changed` still comes from the review row, since what the
+        # audit rewrote is what tells a translator the served Czech is stale.
+        en={k:it[k] for k in ('hint','question','options','explanation')}
         cs=it.get('cs')
         batch.append({'id':it['id'],'category':it['category'],'level':it['level'],'levelTitle':it['levelTitle'],'en':en,
                       'cs': {k:cs[k] for k in ('hint','question','options','explanation')} if cs else None,
