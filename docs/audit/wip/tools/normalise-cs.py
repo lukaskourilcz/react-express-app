@@ -3,7 +3,7 @@
 # after it. An option that only names what happened takes its Czech form; an
 # option that is a value or a type stays English. Usage:
 #   python3 normalise-cs.py <csBatchDir> <csOutDir> [--dry]
-import json,glob,os,sys
+import json,glob,os,re,sys
 bdir, odir = sys.argv[1], sys.argv[2]
 dry = '--dry' in sys.argv
 # Only these batches, when named. A batch still being appended to by a
@@ -21,7 +21,27 @@ LABELS = {
     'function': 'funkce', 'a function': 'funkce', 'an object': 'objekt',
     'an array': 'pole', 'a string': 'řetězec', 'a number': 'číslo',
 }
-changed = 0; rows = 0; files = 0
+# Czech groups thousands with a space, not a comma: "100,000 prvky" is read as
+# one hundred, with a decimal comma. The English figures are carried through
+# verbatim by instruction, so this has to be undone afterwards — but only in
+# prose. Inside backticks or a fence the text is code a learner retypes, and
+# there the English grouping is what belongs.
+CODE = re.compile(r'```[\s\S]*?```|`[^`\n]+`')
+THOUSANDS = re.compile(r'(?<![\d.,])\d{1,3}(?:,\d{3})+(?![\d])')
+NBSP = '\u00a0'
+
+def degroup(text):
+    """Replace a comma thousands separator with a non-breaking space, outside code."""
+    out = []; last = 0; n = 0
+    for m in CODE.finditer(text):
+        piece, count = THOUSANDS.subn(lambda g: g.group(0).replace(',', NBSP), text[last:m.start()])
+        out.append(piece); n += count
+        out.append(m.group(0)); last = m.end()
+    piece, count = THOUSANDS.subn(lambda g: g.group(0).replace(',', NBSP), text[last:])
+    out.append(piece); n += count
+    return ''.join(out), n
+
+changed = 0; rows = 0; files = 0; regrouped = 0
 for bf in sorted(glob.glob(f'{bdir}/cs-batch-*.json')):
     name = os.path.basename(bf)[9:-5]
     if only and name not in only: continue
@@ -38,10 +58,19 @@ for bf in sorted(glob.glob(f'{bdir}/cs-batch-*.json')):
                 want = LABELS.get(eo.strip())
                 if want and co.strip() != want:
                     r['options'][j] = want; changed += 1; touched = True
+        for k in ('question', 'hint', 'explanation'):
+            if isinstance(r.get(k), str):
+                fixed, n = degroup(r[k])
+                if n: r[k] = fixed; regrouped += n; touched = True
+        if isinstance(r.get('options'), list):
+            for j, o in enumerate(r['options']):
+                if isinstance(o, str):
+                    fixed, n = degroup(o)
+                    if n: r['options'][j] = fixed; regrouped += n; touched = True
         out.append(r)
     if touched:
         files += 1
         if not dry:
             with open(of, 'w') as o:
                 for r in out: o.write(json.dumps(r, ensure_ascii=False) + '\n')
-print(json.dumps({'rows': rows, 'optionsNormalised': changed, 'filesTouched': files, 'dry': dry}))
+print(json.dumps({'rows': rows, 'optionsNormalised': changed, 'thousandsRegrouped': regrouped, 'filesTouched': files, 'dry': dry}))
