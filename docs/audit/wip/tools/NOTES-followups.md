@@ -340,3 +340,30 @@ for a second reader rather than a second automated check.
   Czech carried the same defect. All fixed by naming the content instead of the
   position. One match is allowlisted in the tool with its reason: OWASP's own
   ranking of password hashing functions calls Argon2id "the first choice".
+- **The retired sections were worth reading, and none of them should come
+  back whole.** Of the 180 items reviewed across testing level 2, abbreviations
+  and their second halves, 172 retire and 8 propose a destination. The
+  retirement reasons are not "old": they are that an expansion item tests
+  letters rather than a mechanism, and that the mechanism items duplicate a
+  live item in the destination bank — 24 of the abbreviations retirements name
+  the specific live twin, and several name a whole destination level.
+- **The abbreviations bank taught expansions that their own standards have
+  withdrawn.** SOAP 1.2 §1 states the name is no longer an acronym; the item
+  keys "Simple Object Access Protocol". OAuth is keyed as "Open Authorization",
+  a gloss neither RFC 6749 nor oauth.net uses. XML is spelled "eXtensible"
+  against the W3C's "Extensible". The URI/URL/URN taxonomy two items teach is
+  explicitly set aside by the WHATWG URL Standard ("Standardize on the term
+  URL"). One item keys BASE in the Pritchett wording while its own Czech keys a
+  competing variant, and OCI is the Open Container Initiative in one item and
+  Oracle Cloud Infrastructure in another's distractor. None of this ships —
+  the section is refused by every delivery request — but it is the clearest
+  evidence in the audit that an expansion item decays in a way a mechanism item
+  does not.
+- **A blind spot in the automated Czech drift detection.** All 120
+  abbreviations items are Czech-drifted in the same way: the English stems were
+  reformulated into scenarios with acronym options, while the served Czech is
+  still the older "Co znamená zkratka X?" with English expansions as options.
+  The automation flagged exactly one of the 120. Key indexes still line up, so
+  nothing a checker compares had changed — the drift is in what the question
+  asks, not in its shape. Any future parity check has to compare meaning on the
+  stem, not just option count and key position.
