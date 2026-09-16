@@ -682,6 +682,13 @@
 .ss-topic-article summary:focus-visible, .ss-topic-article a:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 4px; }
 .ss-topic-article .topic-practice p { margin-top: 1rem; }
 .ss-topic-cta { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0.75rem 1rem; background: var(--brand-accent); color: var(--brand-on-accent); border-radius: var(--radius-element); font-weight: 700; text-decoration: none; }
+/* A horizontal scroller a keyboard can actually reach. Same contract as
+   .ss-compare-scroll: the element is focusable and carries role="region" plus
+   a name, so arrow keys scroll it instead of it being pointer-only. The ring
+   is drawn inside the box because the strip sits flush inside a panel. */
+.ss-scroll-strip { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.ss-scroll-strip:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: -3px; border-radius: var(--radius-inner); }
+
 /* Keep scrollbar geometry stable; only the thumb's paint follows activity. */
 * { --ss-scrollbar-thumb: transparent; scrollbar-width: thin; scrollbar-color: var(--ss-scrollbar-thumb) transparent; }
 [data-scroll-active="true"] { --ss-scrollbar-thumb: color-mix(in srgb, var(--brand-accent) 65%, var(--color-text-secondary)); }

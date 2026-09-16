@@ -240,6 +240,32 @@ export function SampleCard({ chip, question, onAnswered }: { chip: string; quest
   );
 }
 
+/**
+ * The horizontal levels strip on the two landing previews.
+ *
+ * It overflows on every viewport narrower than its content, so it has to be
+ * reachable without a pointer: axe's scrollable-region-focusable rule found
+ * the Home copy of this strip with no focusable content and no tab stop, which
+ * left keyboard and switch users unable to see past the third level. Same
+ * contract as the comparison table's scroller — focusable, role="region", and
+ * a name from the dictionary.
+ */
+export function PathStrip({ label, align, children }: {
+  label: string; align: 'start' | 'center'; children: ReactNode;
+}) {
+  return (
+    <div
+      className="ss-scroll-strip"
+      role="region"
+      aria-label={label}
+      tabIndex={0}
+      style={{ display: 'flex', alignItems: align === 'start' ? 'flex-start' : 'center', gap: 0, padding: '6px 2px', position: 'relative' }}
+    >
+      {children}
+    </div>
+  );
+}
+
 /** Gold "checkpoint" node used at the end of a roadmap-preview path. */
 export function CheckpointNode({ label }: { label: string }) {
   return (

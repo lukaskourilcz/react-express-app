@@ -19,7 +19,7 @@ import {
 } from '../lib/subjects';
 import { LANDING_TOPICS } from '../lib/landingTopics';
 import {
-  Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, CheckpointNode, pathWave, type StatSpec, WaterlineRule } from './landing/LandingKit';
+  Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, CheckpointNode, PathStrip, pathWave, type StatSpec, WaterlineRule } from './landing/LandingKit';
 import { AppToast } from './ui/AppToast';
 import SubjectGlyph from './ui/SubjectGlyph';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
@@ -116,7 +116,7 @@ function SubjectPreview({ id, onStart }: { id: SubjectId; onStart: () => void })
         </span>
       </div>
       <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--color-text-secondary)', maxWidth: '70ch', position: 'relative' }}>{t(subjectBlurbKey(id))}</p>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 0, overflowX: 'auto', padding: '6px 2px', position: 'relative' }}>
+      <PathStrip label={t('home.pathRegion', { name })} align="center">
         {pathTopics.map((tp, i) => {
           const first = i === 0;
           return (
@@ -143,7 +143,7 @@ function SubjectPreview({ id, onStart }: { id: SubjectId; onStart: () => void })
             {t('subject.andMoreTopics', { n: moreCount })}
           </span>
         )}
-      </div>
+      </PathStrip>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
         <SwimCta label={t('home.startLevel1', { name })} onClick={onStart} dir={-1} />
         <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>{t('subject.roadmapNote')}</span>

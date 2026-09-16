@@ -151,6 +151,7 @@ export const cs: Record<TranslationKey, string> = {
   'home.seeAllTopics': 'Všechna témata v sekci Učení',
   'home.insideTopic': 'Uvnitř: {name}',
   'home.insideChip': 'Studijní cesta · kvízy · kartičky',
+  'home.pathRegion': 'Studijní cesta: {name}',
   'home.checkpoint': 'Kontrolní bod',
   'home.startLevel1': 'Začít {name} — úroveň 1',
   'home.roadmapNote': 'Každá úroveň končí kontrolním testem. Pokrok se ukládá k tvému účtu.',

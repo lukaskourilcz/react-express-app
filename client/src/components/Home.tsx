@@ -23,7 +23,7 @@ import { useActiveSubject, subjectNameKey, subjectBlurbKey, type SubjectId } fro
 import { TRACK_ORDER } from '../lib/tracks';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
 import { AppToast } from './ui/AppToast';
-import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, type StatSpec, WaterlineRule } from './landing/LandingKit';
+import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, type StatSpec, WaterlineRule } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { SPRINT_SUBJECTS } from '../../../shared/sprint';
@@ -137,7 +137,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
         </span>
       </div>
       <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--color-text-secondary)', maxWidth: '70ch', position: 'relative' }}>{topic.blurb}</p>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 0, overflowX: 'auto', padding: '6px 2px', position: 'relative' }}>
+      <PathStrip label={t('home.pathRegion', { name: topic.name })} align="start">
         {topic.levels.map((label, i) => {
           // Each connector gets its own swell (see DESIGN_RULES §4).
           const amp = 1.2 + ((i * 7) % 4) * 0.55;
@@ -174,7 +174,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
           </span>
           <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{t('home.checkpoint')}</span>
         </div>
-      </div>
+      </PathStrip>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
         <SwimCta label={t('home.startLevel1', { name: topic.name })} onClick={onStart} dir={-1} />
         <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>{t('home.roadmapNote')}</span>

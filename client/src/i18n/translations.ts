@@ -150,6 +150,8 @@ export const en = {
   'home.seeAllTopics': 'See every topic in Learn',
   'home.insideTopic': 'Inside {name}',
   'home.insideChip': 'Learn path · quizzes · flashcards',
+  // Names the levels strip, which is a focusable scroll region.
+  'home.pathRegion': 'Learn path for {name}',
   'home.checkpoint': 'Checkpoint',
   'home.startLevel1': 'Start {name} — Level 1',
   'home.roadmapNote': 'Each level ends in a checkpoint test. Progress syncs to your account.',
