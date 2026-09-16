@@ -213,6 +213,10 @@ export interface PlayableCodingTask extends CodingTaskSummary {
    * not answer material: none of them names an input or an expected value. */
   failureHints?: Partial<Record<FailureCategory, Localized>>;
   pitfall?: FailureCategory;
+  /** How many server-only checks (hidden tests and hidden type tests) run on
+   * submit, so the results panel can say they exist. A count and nothing
+   * else: the checks themselves never leave the server. */
+  hiddenChecks?: number;
   /** The code-ordering puzzle for narrow screens, lines already shuffled. The
    * accepted orders are not here and never leave the server. */
   puzzle?: PuzzleView;

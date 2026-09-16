@@ -1,7 +1,7 @@
 // The hint ladder gives the least help that gets someone moving again: one
-// rung per click, gentlest first, only after a real attempt. The last rung
-// before the reference solution is a documentation link, because devShark
-// ships no AI coach. Ported from interview-prepper and extended.
+// rung per click, gentlest first, open from the moment the task loads. The
+// last rung before the reference solution is a documentation link, because
+// devShark ships no AI coach. Ported from interview-prepper and extended.
 import type { PlayableCodingTask } from '../../../shared/coding-catalog';
 import { docsFor } from '../../../shared/coding-docs';
 import type { Lang } from '../i18n/LanguageContext';
@@ -13,8 +13,6 @@ export type LadderRung =
   | { kind: 'docs'; tag: string; url: string };
 
 export const MAX_HINTS = 5;
-/** A minute of editing counts as a genuine attempt. */
-export const MIN_ATTEMPT_MS = 60_000;
 
 export function ladderRungs(task: PlayableCodingTask, lang: Lang): LadderRung[] {
   const hints = task.hints[lang].length > 0 ? task.hints[lang] : task.hints.en;
@@ -28,12 +26,6 @@ export function ladderRungs(task: PlayableCodingTask, lang: Lang): LadderRung[] 
   const reference = task.references?.[0];
   rungs.push({ kind: 'docs', tag: reference ? reference.title[lang] || reference.title.en : docs.tag, url: reference?.url ?? docs.url });
   return rungs;
-}
-
-/** Either the learner spent a minute editing, or a run already failed. */
-export function attemptStarted(input: { code: string; starter: string; elapsedMs: number; failedRun: boolean }): boolean {
-  if (input.failedRun) return true;
-  return input.code.trim() !== input.starter.trim() && input.elapsedMs >= MIN_ATTEMPT_MS;
 }
 
 /** The solution opens once half the ladder is spent, never before two rungs. */

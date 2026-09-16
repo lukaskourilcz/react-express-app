@@ -6,6 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
 import { readString, removeStored, writeString } from '../../lib/storage';
+import { useRowCap } from '../../lib/useRowCap';
 import { Kicker } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
@@ -152,17 +153,8 @@ function EvolvingGallery({ passed, fullstack = false }: { passed: ReadonlySet<st
   const listRef = useRef<HTMLDivElement>(null);
   const challenges = EVOLVING_CHALLENGES.filter(challenge => (challenge.category === 'fullstack') === fullstack);
   const scrollable = challenges.length > 5;
-  useEffect(() => {
-    const list = listRef.current;
-    if (!list || !scrollable) return;
-    const rows = Array.from(list.children).slice(0, 5);
-    // Measure actual rows so Czech text, zoom and narrow layouts still show five.
-    const sizeList = () => list.style.setProperty('--cd-project-list-height', `${rows.reduce((height, row) => height + row.getBoundingClientRect().height, 0) + 1}px`);
-    sizeList();
-    const observer = new ResizeObserver(sizeList);
-    rows.forEach(row => observer.observe(row));
-    return () => observer.disconnect();
-  }, [scrollable, fullstack]);
+  // Measure actual rows so Czech text, zoom and narrow layouts still show five.
+  useRowCap(listRef, scrollable ? 5 : null, fullstack);
   return <section className="cd-projects" aria-labelledby={fullstack ? 'fullstack-title' : 'evolving-title'}>
     <div className="cd-projects__intro">
     <Kicker as="h2" id={fullstack ? 'fullstack-title' : 'evolving-title'}>{t(fullstack ? 'coding.evolving.fullstack' : 'coding.evolving.title')}</Kicker>

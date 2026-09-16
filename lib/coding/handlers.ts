@@ -180,10 +180,15 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   }
 
   const play = playable(task);
+  const authored = solutionFor(task.id);
   // What is known about this brief: the version of it, and the execution
   // evidence that a reference solution passes its own grader. Not a review —
   // nobody has read it for clarity or judged whether it is worth doing.
-  play.review = codingTaskReview(task, solutionFor(task.id));
+  play.review = codingTaskReview(task, authored);
+  // The results panel lists the public checks before a run and says how many
+  // more wait on the server. The number is all that crosses; the checks stay.
+  const hiddenChecks = (authored?.hiddenTests?.length ?? 0) + (authored?.hiddenTypeTests?.length ?? 0);
+  if (hiddenChecks > 0) play.hiddenChecks = hiddenChecks;
   // The puzzle's lines go out shuffled, and the accepted orders stay here. The
   // shuffle is per request, so reloading does not hand back the same start.
   const authoredPuzzle = puzzleFor(task.id);
