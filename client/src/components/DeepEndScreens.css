@@ -72,6 +72,11 @@
 .de-shield--spent{border:1px dashed var(--color-border);color:var(--color-text-secondary)}
 .de-shield__meta{font-size:.72rem;color:var(--color-text-secondary);text-align:center}
 .de-shield__meta--error{color:var(--ss-danger,var(--color-text-primary))}
+/* The seventh day, on the streak tile. A line rather than another badge: the
+   grid below already holds the earned one, and this describes the streak
+   running now. Static by choice — the moment that celebrates it is the toast
+   at the end of the session, and a marker that keeps moving is noise. */
+.de-milestone{display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:3px 10px;border:1px solid var(--ss-warning);border-radius:999px;font:700 .68rem/1.3 var(--font-family-body);letter-spacing:.02em;color:var(--ss-warning);background:var(--ss-warning-soft);text-align:center}
 
 /* Profile tabs — the overview and the friends list. Underline rather than a
    pill row: two tabs do not need a container, and the selected one says so with
@@ -91,3 +96,25 @@
 .de-topic-chip:focus-visible{outline:2px solid var(--ss-focus);outline-offset:2px}
 .de-topic-chip__dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
 .de-topic-chip[data-unlocked=false] .de-topic-chip__dot{opacity:.45}
+
+/* Puzzle sprint — one clock for the whole run and a combo bar under it. The
+   clock says its own state in figures, the bar says the combo in a number as
+   well as a width, and the time a step adds is written out, so nothing here is
+   carried by colour or by motion alone. */
+.de-sprint-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.de-sprint-clock{display:inline-flex;align-items:baseline;gap:8px;padding:4px 14px;border-radius:999px;font-family:var(--font-family-mono,monospace);font-weight:800;font-size:1.5rem;font-variant-numeric:tabular-nums;color:var(--brand-accent);background:color-mix(in srgb,var(--brand-accent) 12%,transparent)}
+.de-sprint-clock[data-low=true]{color:var(--ss-error);background:color-mix(in srgb,var(--ss-error) 15%,transparent)}
+.de-sprint-score{font-family:var(--font-family-heading);font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums}
+.de-combo{display:flex;flex-direction:column;gap:4px;margin:10px 0}
+.de-combo__row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:.78rem;color:var(--color-text-secondary)}
+.de-combo__count{font-weight:750;color:var(--color-text-primary);font-variant-numeric:tabular-nums}
+.de-combo__track{height:8px;border-radius:999px;background:var(--color-background-muted);border:1px solid var(--ss-card-line);overflow:hidden}
+.de-combo__fill{height:100%;background:var(--brand-accent);transition:width .25s ease}
+.de-combo[data-full=true] .de-combo__fill{background:var(--ss-warning)}
+/* The seconds an answer just won or cost. It replaces itself on every answer,
+   so it is announced politely rather than assertively. */
+.de-sprint-delta{display:inline-block;min-height:1.25rem;font-weight:750;font-variant-numeric:tabular-nums}
+.de-sprint-delta[data-tone=gain]{color:var(--ss-success)}
+.de-sprint-delta[data-tone=loss]{color:var(--ss-error)}
+.de-sprint-rules{margin:0;padding-left:1.1rem;display:flex;flex-direction:column;gap:4px;font-size:.88rem;color:var(--color-text-secondary);line-height:1.5}
+@media(prefers-reduced-motion:reduce){.de-combo__fill{transition:none}}

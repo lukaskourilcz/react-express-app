@@ -1,0 +1,41 @@
+/* The Turnstile host.
+ *
+ * Almost always invisible. The widget runs in `interaction-only` appearance,
+ * so Cloudflare renders nothing at all unless it decides a person has to click
+ * something; the panel below exists for that minority of attempts and is
+ * hidden the rest of the time.
+ *
+ * Deliberately plain: a paper surface, one hairline, no blur, no glow, no
+ * motion. It is a system prompt interrupting a learner mid-quiz, and it should
+ * read as part of the page rather than as an event.
+ */
+.ss-attestation {
+  position: fixed;
+  left: 50%;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 1300;
+  display: none;
+  padding: 0.75rem;
+  background: var(--ss-card-bg);
+  border: 1px solid var(--ss-card-edge);
+  color: var(--ss-ink);
+  max-width: min(22rem, calc(100vw - 2rem));
+}
+
+.ss-attestation[data-visible='true'] {
+  display: block;
+}
+
+.ss-attestation__label {
+  display: block;
+  margin: 0 0 0.5rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+@media (min-width: 48rem) {
+  .ss-attestation {
+    bottom: 1.5rem;
+  }
+}

@@ -45,6 +45,7 @@ const DEFAULT_ROUTES = [
   '/learn',
   '/today',
   '/challenge',
+  '/sprint',
   '/play',
   '/play/EXPIRED',
   '/leaderboard',

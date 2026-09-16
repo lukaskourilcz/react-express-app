@@ -43,6 +43,15 @@ export const RATE_LIMITS = {
   quizSubmit: { key: 'quiz_submit', capacity: 12, refillPerSecond: 12 / 60 },
   challengeScore: { key: 'challenge_score', capacity: 3, refillPerSecond: 10 / 3600 },
   challengeComplete: { key: 'challenge_complete', capacity: 12, refillPerSecond: 12 / 3600 },
+  // A challenge or sprint grades one answer per request, so the per-answer
+  // bucket has to hold a fast run: `quizSubmit` (12 a minute) would 429 a
+  // three-minute sprint around its thirty-sixth answer. Same shape as
+  // `roadmapAnswer`, which solved the same problem for a level.
+  challengeAnswer: { key: 'challenge_answer', capacity: 80, refillPerSecond: 80 / 60 },
+  // A finished sprint posts once to bank its run, and once more if the learner
+  // then puts a name on the board. Three minutes a run, two calls a run: one
+  // token every ninety seconds keeps a genuine player ahead of the bucket.
+  sprintComplete: { key: 'sprint_complete', capacity: 20, refillPerSecond: 40 / 3600 },
   questionReport: { key: 'question_report', capacity: 3, refillPerSecond: 20 / 3600 },
   userMutation: { key: 'user_mutation', capacity: 20, refillPerSecond: 20 / 60 },
   flashcardMutation: { key: 'flashcard_mutation', capacity: 20, refillPerSecond: 20 / 60 },
@@ -87,8 +96,11 @@ function maybeCleanup(now: number): void {
  * bucket key when nothing is available, which just means the whole
  * unknown-IP population shares one bucket — safe under abuse, mildly noisy
  * for legit users behind a shared proxy.
+ *
+ * Exported because Turnstile's siteverify takes the same address as an optional
+ * `remoteip`, and two ideas of "who is calling" would eventually disagree.
  */
-function clientIp(req: VercelRequest): string {
+export function clientIp(req: VercelRequest): string {
   const xff = req.headers['x-forwarded-for'];
   if (typeof xff === 'string' && xff.length > 0) return xff.split(',')[0].trim();
   if (Array.isArray(xff) && xff.length > 0) return String(xff[0]).split(',')[0].trim();

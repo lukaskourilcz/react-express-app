@@ -26,6 +26,7 @@ import { AppToast } from './ui/AppToast';
 import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, type StatSpec, WaterlineRule } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
+import { SPRINT_SUBJECTS } from '../../../shared/sprint';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 import SubjectPlate from './ui/SubjectPlate';
 import ComparisonTable from './landing/ComparisonTable';
@@ -239,6 +240,9 @@ export default function Home() {
         ]
       : [{ titleKey: 'subject.stripCardsTitle' as TranslationKey, textKey: 'subject.stripCardsText' as TranslationKey, color: 'var(--brand-accent)', to: '/cards', icon: STRIP_ICON(<><rect x="3" y="6" width="13" height="15" rx="2" /><path d="M8 3h11a2 2 0 0 1 2 2v13" /></>) }]),
     { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', color: 'var(--brand-accent)', to: '/challenge', icon: STRIP_ICON(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
+    ...(SPRINT_SUBJECTS.includes(subject.id)
+      ? [{ titleKey: 'sprint.title' as TranslationKey, textKey: 'sprint.stripText' as TranslationKey, color: 'var(--ss-info)', to: '/sprint', icon: STRIP_ICON(<><circle cx="12" cy="13" r="8" /><path d="M12 9v4l2.5 1.5" /><line x1="9" y1="2" x2="15" y2="2" /></>) }]
+      : []),
     { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', color: 'var(--ss-info)', to: '/play', icon: STRIP_ICON(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
     { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: 'var(--ss-warning)', to: '/leaderboard', icon: STRIP_ICON(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
   ];

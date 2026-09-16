@@ -31,8 +31,10 @@ import {
   recordQuizResult,
   getDailyChallenge,
   reportQuestion,
+  type UserStats,
 } from '../lib/supabase';
 import { apiFetch, friendlyError } from '../lib/api';
+import { withAttestation } from '../lib/turnstile';
 import { renderQuestion } from './CodeBlock';
 import { TermsBar } from './ui/Terms';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
@@ -44,7 +46,7 @@ import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useSettings, playCorrect, playComplete } from '../lib/settings';
 import { recordPerfectQuiz } from '../lib/achievements';
-import { announceVerifiedQuestXp, awardQuestXp, syncXpWithServer } from '../lib/xp';
+import { announceStreak, announceVerifiedQuestXp, awardQuestXp, syncXpWithServer } from '../lib/xp';
 import { useGameConfig } from '../lib/gameConfig';
 import { ReportDialog } from './ReportDialog';
 import { capture } from '../lib/analytics';
@@ -56,7 +58,8 @@ import { requestHint, type HintResponse } from '../lib/sharkira';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { createResultShareFile, downloadShareFile } from '../lib/shareCard';
 import { queryClient } from '../lib/queryClient';
-import { profileStatsQueryKey } from '../lib/queries';
+import { profileStatsQueryKey, useProfileStats } from '../lib/queries';
+import { streakMomentFor } from '../lib/streakMoment';
 import {
   SUPPORT_PROMPT_KEY,
   disableSupportPrompt,
@@ -245,6 +248,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const { isAuthenticated, user } = useAuth();
   // The saved plan, used only to say whether this topic is part of it.
   const profile = getUserProfile(user);
+  // Not rendered here. It warms the shared profile-stats cache so the streak
+  // this session started with is known by the time a result comes back; the
+  // Profile screen and the Today queue read the same key, so a learner who
+  // arrived from either costs nothing extra.
+  useProfileStats(
+    user?.id,
+    { email: profile.email, name: profile.name, picture: profile.picture },
+    isAuthenticated && !!user?.id,
+  );
   const visibleCategoryOptions = visibleCategoryOptionsFor(profile.email);
 
   // The /dev "default visible categories" setting picks which chips appear on
@@ -560,12 +572,17 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         // Which questions had a hint open. Reported so a hinted answer does not
         // lengthen a review interval; it can only weaken the outcome, never
         // strengthen it, which is why the server can take it as given.
-        body: JSON.stringify({
-          sessionId,
-          answers,
-          lang,
-          hinted: hintedIds,
-        }),
+        body: JSON.stringify(
+          // A Turnstile token when the deployment has one, and the identical
+          // body when it does not. Whether an unattested submission is accepted
+          // is the server's call, never this one's.
+          await withAttestation('quiz-submit', {
+            sessionId,
+            answers,
+            lang,
+            hinted: hintedIds,
+          }),
+        ),
       });
       setResult(data);
       setState('submitted');
@@ -602,11 +619,22 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           };
           writeJSON(PENDING_RECEIPT_KEY, pending);
           try {
+            // The streak before the server moved it. Read from the cache the
+            // profile query already fills, so nothing extra is fetched and the
+            // comparison is against a real previous value rather than a guess
+            // — `streakMomentFor` stays silent when there is none.
+            const before = queryClient.getQueryData<UserStats | null>(profileStatsQueryKey(user.id)) ?? null;
             const saved = await recordQuizResult(pending.receipt, pending.profile);
             if (saved.data) queryClient.setQueryData(profileStatsQueryKey(user.id), saved.data);
             removeStored(PENDING_RECEIPT_KEY);
             await syncXpWithServer();
             if (saved.applied) announceVerifiedQuestXp(data.questXp);
+            // Only for a result this session actually applied. A replayed
+            // receipt returns the stored stats and moved nothing.
+            if (saved.applied) {
+              const moment = streakMomentFor(before, saved.data);
+              if (moment) announceStreak(moment.days, moment.kind === 'milestone');
+            }
           } catch (writeError) {
             console.error('Stat write failed:', writeError);
             setSnack(t('quiz.streakWarning'));

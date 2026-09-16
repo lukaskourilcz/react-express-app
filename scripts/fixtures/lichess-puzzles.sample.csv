@@ -1,0 +1,10 @@
+PuzzleId,FEN,Moves,Rating,RatingDeviation,Popularity,NbPlays,Themes,GameUrl,OpeningTags
+FIXTBACKR,5k2/5ppp/8/8/8/8/5PPP/R5K1 b - - 0 1,f8g8 a1a8,900,72,94,4210,backRankMate mateIn1 endgame short,https://lichess.org/fixture0001/black#40,
+FIXTFORK1,3q2k1/pp3ppp/8/4N3/8/8/PPP2PPP/6K1 b - - 0 1,g8h8 e5f7 h8g8 f7d8,1450,58,92,9800,fork advantage middlegame short,https://lichess.org/fixture0002#37,
+FIXTSKEW1,7k/8/8/8/8/8/6q1/K6R b - - 0 1,g2h2 h1h2,1750,61,88,3300,rookEndgame endgame crushing oneMove,https://lichess.org/fixture0003/white#61,
+FIXTBACKR,5k2/5ppp/8/8/8/8/5PPP/R5K1 b - - 0 1,f8g8 a1a8,900,72,94,4210,backRankMate mateIn1 endgame short,https://lichess.org/fixture0001/black#40,
+FIXTBADMV,5k2/5ppp/8/8/8/8/5PPP/R5K1 b - - 0 1,a1a8 f8g8,1200,55,90,5100,fork middlegame short,https://lichess.org/fixture0004#22,
+FIXTLOWQ1,3q2k1/pp3ppp/8/4N3/8/8/PPP2PPP/6K1 b - - 0 1,g8h8 e5f7 h8g8 f7d8,1450,140,10,20,fork advantage middlegame short,https://lichess.org/fixture0005#37,
+FIXTNOTHM,7k/8/8/8/8/8/6q1/K6R b - - 0 1,g2h2 h1h2,1750,61,88,3300,mateIn5 veryLong,https://lichess.org/fixture0006#61,
+FIXTHIGH1,3q2k1/pp3ppp/8/4N3/8/8/PPP2PPP/6K1 b - - 0 1,g8h8 e5f7 h8g8 f7d8,2900,44,95,41000,fork crushing middlegame short,https://lichess.org/fixture0007#37,
+FIXTTRUNC,3q2k1/pp3ppp/8/4N3/8/8/PPP2PPP/6K1 b - - 0 1,g8h8

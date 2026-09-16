@@ -359,6 +359,25 @@ function cleanMerch(raw: unknown, fallback: MerchSettings): MerchSettings {
         ? Math.round(r.streakProtectionTokenPrice)
         : fallback.streakProtectionTokenPrice,
     policyUrl: cleanPublicUrl(r.policyUrl),
+    // The monthly package cap. Anything that is not a whole number from 0 to
+    // 10 000 reads as null, which is "undecided" rather than "unlimited": the
+    // package programme reports `cap_not_set` until the owner picks a number.
+    // Zero is a legitimate choice and is kept — it means no packages are posted
+    // this month, which is a decision, not a missing one.
+    packagesPerMonth:
+      typeof r.packagesPerMonth === 'number' && Number.isFinite(r.packagesPerMonth)
+      && r.packagesPerMonth >= 0 && r.packagesPerMonth <= 10_000
+        ? Math.round(r.packagesPerMonth)
+        : null,
+    packagePlatformFeeMinor:
+      typeof r.packagePlatformFeeMinor === 'number' && Number.isFinite(r.packagePlatformFeeMinor)
+      && r.packagePlatformFeeMinor >= 0 && r.packagePlatformFeeMinor <= 100_000_000
+        ? Math.round(r.packagePlatformFeeMinor)
+        : fallback.packagePlatformFeeMinor,
+    packagePlatformPlan:
+      typeof r.packagePlatformPlan === 'string' && r.packagePlatformPlan.trim().length > 0
+        ? r.packagePlatformPlan.trim().slice(0, 60)
+        : fallback.packagePlatformPlan,
   };
 }
 

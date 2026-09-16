@@ -26,8 +26,13 @@ export interface ChallengeLeaderboard {
 
 export class ChallengeStoreError extends Error {}
 
+/** Which timed mode a row belongs to. The classic run and the three-minute
+ * sprint share this table and are never mixed into one ranking. */
+export type ChallengeMode = 'classic' | 'sprint';
+
 const MAX_NAME = 40;
 const MAX_SCORE = 100_000;
+const MODE_MIGRATION_MESSAGE = 'Migration 042 is required for sprint scores';
 
 function rowToScore(row: Record<string, unknown>): ChallengeScore {
   return {
@@ -38,7 +43,7 @@ function rowToScore(row: Record<string, unknown>): ChallengeScore {
   };
 }
 
-export async function getChallengeLeaderboard(subject: ScopeSubjectId, limit = 10): Promise<ChallengeLeaderboard> {
+export async function getChallengeLeaderboard(subject: ScopeSubjectId, limit = 10, mode: ChallengeMode = 'classic'): Promise<ChallengeLeaderboard> {
   if (!supabase) throw new ChallengeStoreError('Challenge storage is not configured');
   try {
     let result = await withTimeout(
@@ -46,11 +51,29 @@ export async function getChallengeLeaderboard(subject: ScopeSubjectId, limit = 1
         .from(TABLE)
         .select('id, name, score, created_at')
         .eq('subject', subject)
+        .eq('mode', mode)
         .order('score', { ascending: false })
         .order('created_at', { ascending: true })
         .limit(limit),
       4000,
     );
+    // Before the mode column exists there is exactly one board, and it is the
+    // classic one. Reading it as classic keeps the Hall of Fame available;
+    // reading it as a sprint board would show classic runs under a sprint
+    // heading, which is worse than saying the board is not on yet.
+    if (result.error?.message?.includes('mode')) {
+      if (mode !== 'classic') throw new ChallengeStoreError(MODE_MIGRATION_MESSAGE);
+      result = await withTimeout(
+        supabase
+          .from(TABLE)
+          .select('id, name, score, created_at')
+          .eq('subject', subject)
+          .order('score', { ascending: false })
+          .order('created_at', { ascending: true })
+          .limit(limit),
+        4000,
+      );
+    }
     // Keep reads available during the code-first deployment window. Once 022
     // is installed every request is subject-scoped; old schemas only contain
     // the historic Web Development board.
@@ -81,6 +104,7 @@ export async function recordChallengeScore(input: {
   runId: string;
   subject: ScopeSubjectId;
   userId?: string | null;
+  mode?: ChallengeMode;
 }): Promise<ChallengeScore | null> {
   if (!supabase) throw new ChallengeStoreError('Challenge storage is not configured');
   const cleanName = (input.name ?? '').trim().slice(0, MAX_NAME);
@@ -99,6 +123,7 @@ export async function recordChallengeScore(input: {
           run_id: input.runId,
           subject: input.subject,
           user_id: input.userId ?? null,
+          mode: input.mode ?? 'classic',
         })
         .select('id, name, score, created_at')
         .single(),
@@ -109,6 +134,11 @@ export async function recordChallengeScore(input: {
         supabase.from(TABLE).select('id, name, score, created_at').eq('run_id', input.runId).single(),
         5000,
       );
+    } else if (result.error?.message?.includes('mode')) {
+      // A sprint row cannot be written as a classic one: the two boards would
+      // mix, and a three-minute score would outrank a strikes run on a board
+      // that never meant to hold it.
+      throw new ChallengeStoreError(MODE_MIGRATION_MESSAGE);
     } else if (result.error?.message?.includes('run_id') || result.error?.message?.includes('subject')) {
       throw new ChallengeStoreError('Migration 023 is required for verified challenge scores');
     }

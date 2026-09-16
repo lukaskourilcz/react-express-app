@@ -38,7 +38,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'sha256-JM+ysqF5UCaNnTZNolsR4tAwCDI8tkTesBj06v/nBBo='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; frame-src 'self'; child-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:"
+          "value": "default-src 'self'; script-src 'self' 'sha256-JM+ysqF5UCaNnTZNolsR4tAwCDI8tkTesBj06v/nBBo=' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://challenges.cloudflare.com; frame-src 'self' https://challenges.cloudflare.com; child-src 'self' https://challenges.cloudflare.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; worker-src 'self' blob:"
         }
       ]
     },

@@ -10,7 +10,13 @@ const questionLoaders: Record<ScopeSubjectId, () => Promise<Question[]>> = {
   math: async () => (await import('./roadmap-questions.math')).allRoadmapMathQuestions,
   history: async () => (await import('./roadmap-questions.history')).allRoadmapHistoryQuestions,
   biology: async () => (await import('./roadmap-questions.biology')).allRoadmapBiologyQuestions,
-  chess: async () => (await import('./roadmap-questions.chess')).allRoadmapChessQuestions,
+  // The authored chess bank, plus whatever the Lichess puzzle import has
+  // generated. The puzzle bank is empty until the import is run, so this is
+  // the authored bank unchanged until then.
+  chess: async () => [
+    ...(await import('./roadmap-questions.chess')).allRoadmapChessQuestions,
+    ...(await import('./chess-puzzle-questions')).chessPuzzleQuestions,
+  ],
   poker: async () => (await import('./roadmap-questions.poker')).allRoadmapPokerQuestions,
 };
 
@@ -20,7 +26,10 @@ const translationLoaders: Record<ScopeSubjectId, () => Promise<Record<string, Qu
   math: async () => (await import('./roadmap-questions.math.cs')).mathTranslationsCs,
   history: async () => (await import('./roadmap-questions.history.cs')).historyTranslationsCs,
   biology: async () => (await import('./roadmap-questions.biology.cs')).biologyTranslationsCs,
-  chess: async () => (await import('./roadmap-questions.chess.cs')).chessTranslationsCs,
+  chess: async () => ({
+    ...(await import('./roadmap-questions.chess.cs')).chessTranslationsCs,
+    ...(await import('./chess-puzzle-questions')).chessPuzzleTranslationsCs,
+  }),
   poker: async () => (await import('./roadmap-questions.poker.cs')).pokerTranslationsCs,
 };
 

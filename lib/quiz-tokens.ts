@@ -40,9 +40,14 @@ interface ChallengeRunPayload {
   runId: string;
   ranked: boolean;
   subject: ScopeSubjectId;
+  /** Which timed mode the run belongs to. Absent on runs minted before the
+   * sprint existed, which are classic by definition. */
+  mode?: ChallengeRunMode;
   iat: number;
   exp: number;
 }
+
+export type ChallengeRunMode = 'classic' | 'sprint';
 
 interface ScoreProofPayload {
   kind: 'score-proof';
@@ -300,16 +305,26 @@ export function stableAttemptId(...parts: string[]): string {
   return createHmac('sha256', TOKEN_KEY).update(parts.join('\u001f'), 'utf8').digest('base64url').slice(0, 32);
 }
 
-export function createChallengeRun(ranked = true, subject: ScopeSubjectId = 'webdev') {
+export function createChallengeRun(ranked = true, subject: ScopeSubjectId = 'webdev', mode: ChallengeRunMode = 'classic') {
   const now = Date.now();
   const runId = b64url(randomBytes(18));
-  return { runId, ranked, subject, runToken: sealToken({ kind: 'challenge-run', runId, ranked, subject, iat: now, exp: now + CHALLENGE_TTL_MS }) };
+  // `iat` is the sprint's start line. It is minted here, sealed, and never
+  // supplied by the browser, so the whole clock hangs off a server timestamp.
+  return {
+    runId,
+    ranked,
+    subject,
+    mode,
+    startedAt: now,
+    runToken: sealToken({ kind: 'challenge-run', runId, ranked, subject, mode, iat: now, exp: now + CHALLENGE_TTL_MS }),
+  };
 }
 
-export function decodeChallengeRun(token: string): { runId: string; ranked: boolean; subject: ScopeSubjectId } | null {
+export function decodeChallengeRun(token: string): { runId: string; ranked: boolean; subject: ScopeSubjectId; mode: ChallengeRunMode; startedAt: number } | null {
   const payload = openToken(token) as Partial<ChallengeRunPayload> | null;
-  if (!payload || payload.kind !== 'challenge-run' || !validLifetime(payload, CHALLENGE_TTL_MS) || typeof payload.runId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.runId) || typeof payload.ranked !== 'boolean' || !isScopeSubject(payload.subject)) return null;
-  return { runId: payload.runId, ranked: payload.ranked, subject: payload.subject };
+  if (!payload || payload.kind !== 'challenge-run' || !validLifetime(payload, CHALLENGE_TTL_MS) || typeof payload.runId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.runId) || typeof payload.ranked !== 'boolean' || !isScopeSubject(payload.subject) || typeof payload.iat !== 'number') return null;
+  if (payload.mode !== undefined && payload.mode !== 'classic' && payload.mode !== 'sprint') return null;
+  return { runId: payload.runId, ranked: payload.ranked, subject: payload.subject, mode: payload.mode ?? 'classic', startedAt: payload.iat };
 }
 
 export function encodeScoreProof(runId: string, questionId: string, subject: ScopeSubjectId, isCorrect: boolean): string {
@@ -317,10 +332,12 @@ export function encodeScoreProof(runId: string, questionId: string, subject: Sco
   return sealToken({ kind: 'score-proof', runId, questionId, subject, isCorrect, iat: now, exp: now + CHALLENGE_TTL_MS });
 }
 
-export function decodeScoreProof(token: string): { runId: string; questionId: string; subject: ScopeSubjectId; isCorrect: boolean } | null {
+export function decodeScoreProof(token: string): { runId: string; questionId: string; subject: ScopeSubjectId; isCorrect: boolean; issuedAt: number } | null {
   const payload = openToken(token) as Partial<ScoreProofPayload> | null;
-  if (!payload || payload.kind !== 'score-proof' || !validLifetime(payload, CHALLENGE_TTL_MS) || typeof payload.runId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.runId) || typeof payload.questionId !== 'string' || payload.questionId.length === 0 || payload.questionId.length > 64 || !isScopeSubject(payload.subject) || typeof payload.isCorrect !== 'boolean') return null;
-  return { runId: payload.runId, questionId: payload.questionId, subject: payload.subject, isCorrect: payload.isCorrect };
+  if (!payload || payload.kind !== 'score-proof' || !validLifetime(payload, CHALLENGE_TTL_MS) || typeof payload.runId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.runId) || typeof payload.questionId !== 'string' || payload.questionId.length === 0 || payload.questionId.length > 64 || !isScopeSubject(payload.subject) || typeof payload.isCorrect !== 'boolean' || typeof payload.iat !== 'number') return null;
+  // `issuedAt` is when the server graded the answer. The sprint replay uses it
+  // as the answer's time, which is why no client timestamp is ever accepted.
+  return { runId: payload.runId, questionId: payload.questionId, subject: payload.subject, isCorrect: payload.isCorrect, issuedAt: payload.iat };
 }
 
 export interface QuizResultReceipt {

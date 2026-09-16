@@ -25,6 +25,8 @@ import { subjectForCategory } from '../../shared/subject-catalog';
 import { aiFeaturesAllowed, deploymentSubjectIds } from '../../lib/product-scope';
 import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
 import { contentVersion } from '../../lib/curation';
+import { requireAttestation } from '../../lib/turnstile';
+import { evaluateVelocity, recordIntegrityFlag } from '../../lib/integrity';
 
 const MAX_ANSWERS = 50;
 
@@ -102,8 +104,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSubmit))) return;
-
   const body = req.body as { sessionId?: unknown; answers?: unknown; lang?: unknown };
   const lang = normalizeLang((body as { lang?: unknown })?.lang);
   if (!body || typeof body !== 'object') {
@@ -112,6 +112,17 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (typeof body.sessionId !== 'string' || body.sessionId.length === 0 || body.sessionId.length > 16_384) {
     return jsonError(res, 400, 'bad_request', 'sessionId is required');
   }
+
+  // Which bucket this submit belongs in is decided by the sealed session, not
+  // by anything the request claims: a challenge or sprint grades one answer per
+  // request and needs the per-answer bucket, while a solo quiz posts a whole
+  // attempt at once. Opening the envelope is pure crypto with no I/O, so doing
+  // it before the limiter costs nothing, and a token that will not open falls
+  // back to the strict bucket rather than skipping the limiter.
+  const session = decodeSessionEnvelope(body.sessionId);
+  const limit = session?.scope === 'challenge' ? RATE_LIMITS.challengeAnswer : RATE_LIMITS.quizSubmit;
+  if (!(await enforceRateLimit(req, res, limit))) return;
+
   if (!body.answers || typeof body.answers !== 'object' || Array.isArray(body.answers)) {
     return jsonError(res, 400, 'bad_request', 'answers must be an object');
   }
@@ -147,7 +158,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       : [],
   );
 
-  const session = decodeSessionEnvelope(body.sessionId);
   if (!session || !session.attemptId) {
     logEvent({ status: 400, reason: 'invalid_session', latency_ms: Date.now() - started });
     return jsonError(res, 400, 'invalid_session', 'Quiz session expired or invalid');
@@ -170,6 +180,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!subject || !deploymentSubjectIds().includes(subject)) {
     return jsonError(res, 400, 'invalid_session', 'Quiz session belongs to another product deployment');
   }
+
+  // Attestation, before the one-time claim is consumed: a refused submission
+  // must leave the attempt regradeable rather than burning it. A challenge run
+  // grades one answer per request, so it is attested once at the score
+  // submission instead of once per question.
+  if (session.scope !== 'challenge' && !(await requireAttestation(req, res, 'quiz-submit'))) return;
 
   let auth;
   try {
@@ -298,7 +314,29 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     );
   }
 
-  logEvent({ status: 200, total, correct, percentage, voided: voided.length, latency_ms: Date.now() - started });
+  // Progression velocity, measured entirely from the server's own clock: the
+  // distance between minting this session and receiving its answers. The
+  // verdict is written to the owner's review list and changes nothing about
+  // the result below — same grade, same XP, same receipt, same board.
+  const velocity = evaluateVelocity({ answered: total, correct, elapsedMs: Date.now() - session.issuedAt });
+  if (velocity.flagged) {
+    await recordIntegrityFlag(serviceSupabase, {
+      userId: auth?.sub ?? null,
+      surface: 'quiz',
+      subject,
+      signals: velocity.signals,
+      severity: velocity.severity,
+      evidence: {
+        scope: session.scope ?? 'quiz',
+        answered: total,
+        correct,
+        accuracyPct: velocity.accuracyPct,
+        msPerAnswer: velocity.msPerAnswer,
+      },
+    });
+  }
+
+  logEvent({ status: 200, total, correct, percentage, voided: voided.length, flagged: velocity.flagged, latency_ms: Date.now() - started });
 
   res.json({
     totalQuestions: total,

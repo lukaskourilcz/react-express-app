@@ -126,6 +126,20 @@ export interface MerchSettings {
   streakProtectionTokenPrice: number;
   /** Where the returns and delivery policy lives, shown beside every item. */
   policyUrl: string;
+  /** How many path-completion packages may be claimed in one calendar month,
+   * or `null` while the owner has not set a number.
+   *
+   * `null` does not mean unlimited. It means undecided, and it is why
+   * `packageProgramState` reports `cap_not_set`: a package is posted at a real
+   * cost, so the month's worst case has to be a number somebody chose rather
+   * than however many learners happen to finish. */
+  packagesPerMonth: number | null;
+  /** The print-on-demand plan's monthly fee, minor units. Zero is the honest
+   * default — the pay-per-order plans charge nothing monthly — and a
+   * subscription tier is entered here only once the owner is on one. */
+  packagePlatformFeeMinor: number;
+  /** Which plan that fee belongs to, for the audit trail. Empty until set. */
+  packagePlatformPlan: string;
 }
 
 export const DEFAULT_MERCH_SETTINGS: MerchSettings = {
@@ -136,6 +150,9 @@ export const DEFAULT_MERCH_SETTINGS: MerchSettings = {
   crownTokenPrice: 1200,
   streakProtectionTokenPrice: 250,
   policyUrl: '',
+  packagesPerMonth: null,
+  packagePlatformFeeMinor: 0,
+  packagePlatformPlan: '',
 };
 
 /** How many protections a learner may hold at once. Granted monthly, and the
@@ -183,14 +200,141 @@ export function merchAvailability(input: {
  * the wallet the price is paid from. */
 export const crownAvailable = (settings: MerchSettings): boolean => settings.crownTokenPrice > 0;
 
+/** What one unit costs to put through a letterbox: blank, print, postage and
+ * packaging. The price is not in it, because a package has no price. */
+export const merchLandedCostMinor = (pricing: MerchPricing): number =>
+  pricing.unitCostMinor
+  + pricing.printCostMinor
+  + pricing.shippingCostMinor
+  + pricing.packagingCostMinor;
+
 /** The margin a quote implies, in minor units. Negative means the item loses
  * money at that price, which the readiness report shows rather than hides. */
 export const merchMarginMinor = (pricing: MerchPricing): number =>
-  pricing.priceMinor
-  - pricing.unitCostMinor
-  - pricing.printCostMinor
-  - pricing.shippingCostMinor
-  - pricing.packagingCostMinor;
+  pricing.priceMinor - merchLandedCostMinor(pricing);
+
+/* ── the package a finished learning path earns ────────────────────── */
+
+/**
+ * Finishing a whole path earns a package, and a package is the one thing in
+ * this product that costs money every time somebody succeeds at learning.
+ *
+ * Nobody pays for it, so there is no price to get right — there is a cost, and
+ * two questions about it: what does one cost, and how many will there be. This
+ * section answers the first from the same owner-entered quotes the shop uses,
+ * and bounds the second with a cap the owner sets. Neither has a default
+ * figure. An unquoted package reports `unquoted` and an uncapped programme
+ * reports `cap_not_set`, in both cases instead of naming a number nobody
+ * stands behind.
+ *
+ * None of this touches learning. The cap decides how many parcels leave in a
+ * month; it changes no XP, no score, no rank and no access, and a learner who
+ * arrives after the month's cap still finished the path and still holds the
+ * claim — see `packageClaimOutcome`.
+ */
+
+/** Exactly what the claim puts in the box: the three SKUs `claim_path_reward`
+ * inserts, in the order it inserts them. The launch contract checks this list
+ * against the migration, so the two cannot drift. */
+export const PACKAGE_SKUS: readonly MerchSku[] = ['t-shirt', 'mug', 'sticker-set'];
+
+/** What one package costs, or why that cannot be said yet. */
+export type PackageCosting =
+  /** At least one item in the box has no quote. Half a quote is not a quote. */
+  | { status: 'unquoted'; missing: readonly MerchSku[] }
+  /** The items are quoted in different currencies, so they cannot be added up.
+   * One deployment, one currency — this reports the clash rather than picking
+   * a winner and silently understating the cost. */
+  | { status: 'mixed_currency'; currencies: readonly string[] }
+  | {
+      status: 'costed';
+      currency: string;
+      lines: readonly { sku: MerchSku; landedMinor: number }[];
+      /** One whole package, landed, minor units. */
+      unitCostMinor: number;
+    };
+
+export function packageCosting(settings: MerchSettings): PackageCosting {
+  const missing: MerchSku[] = [];
+  const lines: { sku: MerchSku; landedMinor: number }[] = [];
+  const currencies: string[] = [];
+  for (const sku of PACKAGE_SKUS) {
+    const pricing = settings.pricing[sku];
+    if (!pricing) {
+      missing.push(sku);
+      continue;
+    }
+    lines.push({ sku, landedMinor: merchLandedCostMinor(pricing) });
+    if (!currencies.includes(pricing.currency)) currencies.push(pricing.currency);
+  }
+  if (missing.length > 0) return { status: 'unquoted', missing };
+  if (currencies.length !== 1) return { status: 'mixed_currency', currencies };
+  return {
+    status: 'costed',
+    currency: currencies[0] as string,
+    lines,
+    unitCostMinor: lines.reduce((total, line) => total + line.landedMinor, 0),
+  };
+}
+
+/**
+ * The most a month of packages can cost: every slot the cap allows, filled,
+ * plus the plan's monthly fee whether or not anybody claims.
+ *
+ * `null` when either half is unanswered — an unquoted package or an unset cap
+ * has no worst case, and reporting one would be inventing it.
+ */
+export function packageMonthlyCeilingMinor(settings: MerchSettings): number | null {
+  const costing = packageCosting(settings);
+  if (costing.status !== 'costed') return null;
+  const cap = settings.packagesPerMonth;
+  if (cap === null) return null;
+  return costing.unitCostMinor * cap + settings.packagePlatformFeeMinor;
+}
+
+/** Whether the programme is ready to post anything, or what is missing.
+ *
+ * Deliberately independent of `settings.enabled`: that switch governs the shop,
+ * where things are sold. A package is earned, not sold, and gating it on the
+ * sales switch would tie a reward for learning to a decision about commerce. */
+export type PackageProgramState = 'ready' | 'cap_not_set' | 'unquoted' | 'mixed_currency';
+
+export function packageProgramState(settings: MerchSettings): PackageProgramState {
+  const costing = packageCosting(settings);
+  if (costing.status !== 'costed') return costing.status;
+  return settings.packagesPerMonth === null ? 'cap_not_set' : 'ready';
+}
+
+/** How many of the month's slots are left. `null` when no cap is set, which
+ * the caller must read as undecided rather than as room. */
+export function packagesRemainingThisMonth(
+  settings: MerchSettings,
+  claimedThisMonth: number,
+): number | null {
+  const cap = settings.packagesPerMonth;
+  if (cap === null) return null;
+  return Math.max(0, cap - Math.max(0, Math.trunc(claimedThisMonth)));
+}
+
+/**
+ * What happens when a learner who has finished a path claims now.
+ *
+ * `capped` is not a refusal of the reward. The path is finished, the claim is
+ * still theirs, and nothing about their progress changes; what is full is the
+ * month's posting budget. The server says so and the copy says so, because a
+ * queue somebody can see is the difference between a bounded cost and a broken
+ * promise.
+ */
+export type PackageClaimOutcome = 'claimable' | 'capped';
+
+export function packageClaimOutcome(
+  settings: MerchSettings,
+  claimedThisMonth: number,
+): PackageClaimOutcome {
+  const remaining = packagesRemainingThisMonth(settings, claimedThisMonth);
+  if (remaining === null) return 'claimable';
+  return remaining > 0 ? 'claimable' : 'capped';
+}
 
 /* ── the wallet ────────────────────────────────────────────────────────── */
 

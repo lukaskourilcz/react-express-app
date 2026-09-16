@@ -19,6 +19,8 @@ import { AuthError, tryAuth } from '../auth';
 import { createLogger, isRpcMissing, jsonError, requireAuthSub, withTimeout } from '../http';
 import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
+import { getGameSettings } from '../settings-store';
+import { packageClaimOutcome, packagesRemainingThisMonth } from '../../shared/rewards';
 import { secureShuffle } from '../quiz-runtime';
 import { shuffleWithOrder } from '../coding/grade';
 import { codingTaskById } from '../coding/active';
@@ -1065,20 +1067,43 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
   const missing = (error: { message?: string } | null) =>
     /does not exist|schema cache/i.test(error?.message ?? '');
 
+  // The monthly ceiling. The cap is the owner's figure from game settings and
+  // the count is the database's; neither is ever taken from the request. A
+  // database still on 035 has no count routine, so the count reads as `null` —
+  // unknown, which is reported as unknown rather than rendered as room. The
+  // claim itself is not decided here: the POST below hands the cap to the
+  // routine that writes, so the count and the insert happen in one transaction.
+  const settings = await getGameSettings();
+  const capPerMonth = settings.merch.packagesPerMonth;
+  const claimedThisMonth = async (): Promise<number | null> => {
+    if (capPerMonth === null) return null;
+    const counted = await withTimeout(supabase.rpc('path_rewards_claimed_this_month'));
+    if (counted.error || typeof counted.data !== 'number') return null;
+    return counted.data;
+  };
+
   if (req.method === 'GET') {
-    const [claim, complete] = await Promise.all([
+    const [claim, complete, month] = await Promise.all([
       withTimeout(supabase.from('path_reward_claims').select('order_id,claimed_at').eq('user_id', userId).eq('path_id', pathId).maybeSingle()),
       withTimeout(supabase.rpc('path_is_complete', { p_user_id: userId, p_path_id: pathId, p_modules: inventory.modules })),
+      claimedThisMonth(),
     ]);
     if (missing(claim.error) || missing(complete.error)) {
       return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-035.sql to enable path rewards');
     }
     if (claim.error || complete.error) return jsonError(res, 500, 'db_error', 'Could not read the reward state');
+    const remaining = month === null ? null : packagesRemainingThisMonth(settings.merch, month);
     return res.json({
       eligible: complete.data === true,
       claimed: Boolean(claim.data),
       orderId: claim.data?.order_id ?? null,
       modules: inventory.modules,
+      capPerMonth,
+      claimedThisMonth: month,
+      remainingThisMonth: remaining,
+      // Only ever true when both halves are known. An unknown count says
+      // nothing about the month and must not be rendered as a full one.
+      capReached: month !== null && packageClaimOutcome(settings.merch, month) === 'capped',
     });
   }
 
@@ -1092,6 +1117,12 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
   const text = (value: unknown, max: number): string =>
     (typeof value === 'string' ? value.trim() : '').slice(0, max);
 
+  // The cap travels with the claim so the count and the insert happen in one
+  // transaction. It is sent only when one is set, and that is deliberate:
+  // PostgREST resolves an overload by the argument names it is given, so
+  // omitting `p_cap` is what lets a database still on 035 keep claiming exactly
+  // as it did, while a request that carries a cap fails loudly there instead of
+  // quietly posting uncapped.
   const claimed = await withTimeout(
     supabase.rpc('claim_path_reward', {
       p_user_id: userId,
@@ -1104,11 +1135,24 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
       p_city: text(body.city, 80),
       p_postal: text(body.postal, 24),
       p_country: text(body.country, 2).toUpperCase(),
+      ...(capPerMonth === null ? {} : { p_cap: capPerMonth }),
     }),
   );
   if (claimed.error) {
     if (missing(claimed.error)) {
-      return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-035.sql to enable path rewards');
+      // The capped routine is not installed. With a cap set that is a refusal,
+      // not a fallback: posting parcels the owner asked to bound, because the
+      // thing that bounds them is missing, is the failure this cap exists to
+      // prevent.
+      const which = capPerMonth === null
+        ? 'supabase/supabase-schema-035.sql'
+        : 'supabase/supabase-schema-040.sql';
+      return jsonError(res, 503, 'migration_required', `Run ${which} to enable path rewards`);
+    }
+    if (/package_cap_reached/i.test(claimed.error.message ?? '')) {
+      // Nothing was written. The path is still finished and the claim is still
+      // theirs — this month's posting budget is what ran out.
+      return jsonError(res, 409, 'package_cap_reached', 'This month\'s packages are all claimed. Claim yours next month.');
     }
     if (/path_not_complete/i.test(claimed.error.message ?? '')) {
       return jsonError(res, 409, 'not_complete', 'Finish every module of the path first');

@@ -11,6 +11,12 @@
  * a claim produces is an order waiting to be fulfilled rather than a parcel on
  * its way: merchandise is unconfigured, and the copy says so instead of
  * promising a delivery nobody can make yet.
+ *
+ * A month can also be full. The owner may cap how many packages go out, and
+ * when the cap is reached this says so plainly rather than offering a button
+ * that fails: the path is still finished, the claim is still theirs, and the
+ * month is what ran out. The server decides all of that; the numbers here are
+ * read, never worked out locally.
  */
 
 import { useCallback, useEffect, useId, useState } from 'react';
@@ -23,7 +29,15 @@ interface RewardState {
   eligible: boolean;
   claimed: boolean;
   orderId: string | null;
+  /** Null when the owner has set no monthly cap, or when the count could not
+   * be read. Neither is "there is room" — only `capReached: false` is. */
+  remainingThisMonth?: number | null;
+  capReached?: boolean;
 }
+
+/** Below this, the number of slots left is worth saying out loud; above it,
+ * it is noise on a page about finishing a path. */
+const REMAINING_NOTICE_AT = 5;
 
 export function PathRewardClaim({ pathId }: { pathId: string }) {
   const t = useT();
@@ -58,6 +72,27 @@ export function PathRewardClaim({ pathId }: { pathId: string }) {
       </p>
     );
   }
+
+  // The month is full. Nothing has been taken away: the completion stands and
+  // the claim waits, so this is a notice rather than a disabled button with no
+  // explanation beside it.
+  if (state.capReached === true) {
+    return (
+      <div className="lp-reward">
+        <p className="lp-reward__lead">
+          <strong>{t('paths.rewardTitle')}</strong>
+          <span>{t('paths.rewardBlurb')}</span>
+        </p>
+        <p className="lp-notice lp-notice--info" role="status">
+          <span className="lp-notice__glyph" aria-hidden="true">○</span>
+          <span>{t('paths.rewardCapReached')}</span>
+        </p>
+      </div>
+    );
+  }
+
+  const remaining = state.remainingThisMonth;
+  const showRemaining = typeof remaining === 'number' && remaining > 0 && remaining <= REMAINING_NOTICE_AT;
 
   const submit = async () => {
     setBusy(true);
@@ -96,6 +131,11 @@ export function PathRewardClaim({ pathId }: { pathId: string }) {
         <strong>{t('paths.rewardTitle')}</strong>
         <span>{t('paths.rewardBlurb')}</span>
       </p>
+      {showRemaining && (
+        <p className="lp-reward__note" role="status">
+          {t('paths.rewardCapRemaining', { n: String(remaining) })}
+        </p>
+      )}
       {!open ? (
         <button type="button" className="lp-btn lp-btn--primary" onClick={() => setOpen(true)}>
           {t('paths.rewardClaim')}
