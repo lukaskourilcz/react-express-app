@@ -53,7 +53,9 @@ it.each(EVOLVING_CHALLENGES.map(project => [project.id, project] as const))('fin
     if (index === project.stages.length - 1) break;
     fireEvent.click(screen.getByText('Next stage'));
     const crossesToReact = project.category === 'fullstack' && !id.startsWith('react-') && project.stages[index+1].startsWith('react-');
-    expect(screen.getByLabelText('Stage code')).toHaveValue(code + (crossesToReact ? FULLSTACK_REACT_SCAFFOLD : ''));
+    // A standalone challenge opens every stage on its own starter; a growing
+    // project carries the code that just passed.
+    expect(screen.getByLabelText('Stage code')).toHaveValue(project.standalone ? '// starter' : code + (crossesToReact ? FULLSTACK_REACT_SCAFFOLD : ''));
   }
   expect(screen.queryByText('Next stage')).toBeNull();
 });

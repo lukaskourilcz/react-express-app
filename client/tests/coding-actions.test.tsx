@@ -108,9 +108,14 @@ it('keeps FullStack routes on real graders and preserves code across the React t
     expect(project.stages.map(evolvingTaskTrack)).toEqual(['javascript','typescript','typescript','typescript','typescript','react','react','react','react','react','react','react']);
   }
   const saved = 'function normalizeInput(value) { return null; }';
-  expect(prepareEvolvingDraft(saved,'fullstack',5)).toBe(saved+FULLSTACK_REACT_SCAFFOLD);
-  expect(prepareEvolvingDraft(saved,'fullstack',6)).toBe(saved);
-  expect(prepareEvolvingDraft(saved,undefined,4)).toBe(saved);
+  const fullstack = EVOLVING_CHALLENGES.find(p=>p.category==='fullstack')!;
+  const single = EVOLVING_CHALLENGES.find(p=>p.id==='js-evolving-calculator')!;
+  const standalone = EVOLVING_CHALLENGES.find(p=>p.standalone)!;
+  expect(prepareEvolvingDraft(saved,fullstack,5)).toBe(saved+FULLSTACK_REACT_SCAFFOLD);
+  expect(prepareEvolvingDraft(saved,fullstack,6)).toBe(saved);
+  expect(prepareEvolvingDraft(saved,single,4)).toBe(saved);
+  // A standalone challenge seeds nothing: every stage opens on its own starter.
+  expect(prepareEvolvingDraft(saved,standalone,1)).toBeNull();
 });
 
 it('formats TSX without discarding TypeScript annotations', async () => {
