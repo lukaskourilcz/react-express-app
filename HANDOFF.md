@@ -1,112 +1,99 @@
-# Handoff — the thirteen changes of 2026-09-09
+# Handoff — issues #193 to #205
 
-All thirteen are implemented, on `main`, and every migration they need is live
-in production. What is left is not code: nothing signed in has been seen by a
-human.
+Written at the end of the session of 2026-09-16. Branch: `claude/elegant-cori-h9cdgb`.
+Six of the thirteen issues were implemented; the rest were not started.
 
-Read `docs/release-acceptance.md` for what was verified and how. This file is
-only what is *left*.
+## What landed
 
-## Done and live
-
-| # | Change | Where |
+| Commit | Issues | Subject |
 | --- | --- | --- |
-| 1 | "Why this question?" note dropped from all three surfaces | `9a49faa` |
-| 2 | Practice mode gone — every quiz counts | `67ea854`, `2864d8f` |
-| 3 | TypeScript moved to a late stage of its own on all three tracks | `23a2b3a` |
-| 4 | Shark Cards, the last-quiz date and the streak-freeze card off the profile; the tip inlined as a one-liner; the shield in the streak container; days off removed | `fae617f` |
-| 5 | Friends: opt-in handle, consent-gated list, crown shown and never ordering | `76c9f70` |
-| 6 | Answering a Learn question is one database round trip, not three | `d37dc79` |
-| 7 | The account menu no longer escapes its popover | `a8d68e5` |
-| 8 | Coding techniques read as content rather than as bare pills | `f9b7b7e` |
-| 9 | The roadmap pillars and the profile chips stopped painting by position | `86cff67` |
+| `4e7e63b` | #193 | Streak extension moment, day-7 milestone, two armed protections |
+| `fa1d29f` | #194 | Weekly micro-leagues judged by one retention rate |
+| `8cccd83` | #195, #196, #202, #203 | Puzzle sprint, Lichess puzzle import, Turnstile integrity, merch cap |
 
-## Everything asked for is now implemented
+## Validation
 
-The three items this file was written to hand over were finished on the same
-day, and the two decisions it could not make were answered by the owner:
+On the committed tree, every one of these actually ran and exited 0:
+`npm run typecheck:api`, `npm run test:launch`, `npm run test:grading-integrity`,
+`npm run test:paths`, `npm run check:security`, `npm run check:unused`,
+`npm run test:client` (11 files, 72 tests), `npm run build`, `git diff --check`,
+and `npx tsc --noEmit` inside `client/`.
 
-- **The shop sells the crown, streak protection and merchandise.** The legacy
-  rings and flairs turned out to be unsellable already; they stay ownable and
-  keep rendering for anybody who has them. A protection costs 250 tokens —
-  against the crown's 1200, because it is consumable and capped at two.
-- **The merchandise package has its screen.** It appears on a path card only
-  once the server says the path is finished, collects a size and an address,
-  and claims once.
-- **The invariant now says what the code does**, in `CLAUDE.md`, `AGENTS.md`,
-  `docs/product-architecture.md` and `shared/rewards.ts` — and four bounds on
-  the exception are asserted by the launch contract rather than promised in
-  prose.
-- **Weekends are not free.** Every calendar day counts; the two monthly
-  protections are the whole story. There were no live accounts, so nothing
-  was lost when migration 032 landed.
+`npm run check:responsive` was **not** run to completion in the implementing
+lanes and no responsive, browser or axe result is claimed for the League tab,
+the sprint screen or the streak panel. A Chromium binary is available in this
+environment now, so that is a real next step rather than a blocked one.
 
-## Migrations — applied and verified
+The protected behaviour held: exactly twelve physical handlers under `api/`, the
+launch contract's fairness-neutral-rewards assertions pass, and the league
+routines are gated against ever naming `user_xp`, `quest_xp`, `user_badges`,
+`user_cards`, `token_balances`, `token_ledger`, `cosmetic_entitlements`,
+`roadmap_progress` or `coding_progress`, or reading `current_streak` /
+`longest_streak`.
 
-All four of 032-035 are in production on project `rvlybcjdpafwyeuojvhl`, applied
-2026-09-09. They were exercised first against a local Postgres 16 — the whole
-001-035 chain from an empty database, then re-applied to prove idempotency — and
-then applied to production and exercised again there.
+## The five migrations are NOT applied — read this before running them
 
-| File | What it does | State |
-| --- | --- | --- |
-| 032 | Streak shield; every day counts, no weekend exemption | Applied |
-| 033 | Friends: handles, friendships, the list | Applied |
-| 034 | One-round-trip Learn answers | Applied |
-| 035 | Bought protection, earned merch package | Applied |
+`supabase/supabase-schema-038.sql` through `042.sql` are committed and
+unapplied. This is a multi-user production database and an agent session has no
+business writing to it, so they were deliberately left for the owner.
 
-What was checked against production after applying, each in a transaction that
-was rolled back, leaving no rows behind:
+**Apply them in numeric order: 036 → 038 → 039 → 040 → 041 → 042.** There is no
+`037` in the tree — two concurrent lanes both planned it and the streak lane
+landed on `039`. Migration 038 is the league one and 039 is the streak one;
+confirm that before applying, because 039 restates
+`record_verified_quiz_result_v2` and 038 deliberately does not, so there is no
+conflict in this release but a third file restating it would have to be
+reconciled by hand.
 
-- **Friends.** A handle is claimed, found case-insensitively, requested,
-  answered, listed with the crown flag and removed. An unknown handle returns no
-  row rather than an error, which is what stops the lookup being an enumeration
-  oracle.
-- **The shield.** The month grants two. Raising one spends one and sets a
-  48-hour window; raising a second while the first is live is refused and spends
-  nothing.
-- **Buying a protection.** Refused outright on an empty wallet
-  (`insufficient_tokens`). With tokens it debits 250 and restores the budget to
-  two. At the cap it refuses *and takes no tokens* — the ceiling holds, so no
-  amount of spending buys a deeper reserve than a learner who spends nothing
-  has.
-- **The path reward.** Refused before the path is finished, on an invalid size,
-  and on an empty address field. Granted once; a second claim reports `already`
-  and creates no second order. The order carries the t-shirt at its size plus
-  the mug and the sticker set, priced at zero.
-- **Streaks count every day.** The production body of
-  `record_verified_quiz_result_v2` contains no off-day, weekend or
-  `user_streak_config` logic. `purchase_streak_protection` touches none of
-  `user_xp`, `user_badges`, `quest_xp`, leaderboards, `roadmap_progress` or
-  `user_category_stats`.
-- **Access.** RLS is on for `user_handles`, `friendships` and
-  `path_reward_claims`; each has one owner-scoped SELECT policy; `authenticated`
-  holds SELECT alone and `anon` holds nothing. All eighteen routines are
-  SECURITY DEFINER with an empty `search_path`, executable by `postgres` and
-  `service_role` only.
-- **Advisors.** Security: no errors, no warnings. Performance flags
-  `auth_rls_initplan` on the three new policies, but that is a false positive —
-  the stored quals are already the recommended `( SELECT auth.uid()::text )`
-  InitPlan form, as are the 29 pre-existing policies it flags identically.
+**One of them reverses a decision you verified in production.** Migration 032
+refused a second live shield by design, and `NEEDED.md` records that you
+confirmed that refusal on 2026-09-09. Migration 039 reverses it because #193
+asked for up to two armed protections. That is the one migration here that
+deserves a deliberate read rather than a routine apply. The ceiling itself does
+not move: two a month is still the whole budget.
 
-Four bugs came out of running the SQL that reading it had not found: a
-CREATE OR REPLACE cannot widen a function's return type; `remaining`,
-`shield_until` and `order_id` are ambiguous against their functions' own OUT
-parameters; `merch_orders` has no `subject` column and requires an address; and
-`variant` is part of the order-item primary key, so an item without one carries
-the empty string. Run the SQL. Do not read it and hope.
+Until they run, the features degrade honestly rather than break —
+`/api/user/freezes` answers `slotsSupported: false`, and `/leaderboard` → This
+week and `/dev` → Return rate both report `migration_required`.
 
-## What was checked
+## Not started — 7 issues
 
-- `npm run typecheck:api`, `cd client && tsc`, `npm run build`, `npm run
-  test:launch`, `npm run test:coding`, `npm run test:paths` — all pass.
-- `npm run check:responsive` over the changed routes at 360/390/768/1280 in
-  English, and at 360/390 in Czech and dark — no overflow, nothing escaping a
-  parent.
-- EN/CS key parity is now asserted by the launch contract in both directions.
-- The migrations: applied to production and exercised there, as above.
+#197 (FSRS scheduling with Again/Hard/Good/Easy), #198 (geoShark Czech map
+quizzes as indexable landing pages), #199 (teachers: NPI ČR, Učitelé+, a free
+live-class round), #200 (devShark grading runtime: quickjs-emscripten, Vercel
+Sandbox, Vitest type tests), #201 (offline quiz play with Workbox), #204
+(community mentoring and supporter perks), #205 (shark mascot short-video
+channel or creator sponsorship).
 
-Not checked, because it cannot be from here: anything signed in. The responsive
-sweep renders signed out, so the friends tab, the shield control and the claim
-form have never been seen with an account behind them. `NEEDED.md` carries that
-as an owner item.
+Note #200 overlaps work already on `main`: the head commit before this branch is
+"Keep QuickJS grading authority outside learner code and record live launch
+checks", so read that before re-deriving a plan.
+
+Each issue was triaged by its implementing agent rather than in advance, so
+there is no stored plan for these seven — the next session should read each
+issue directly.
+
+## Owner decisions the committed work is waiting on
+
+- **#194: a league room shows up to thirty strangers a name.** `league_board`
+  prefers `user_handles.handle` and falls back to the same `user_stats.name`
+  COALESCE the three existing boards already use — which migration 036 itself
+  called "what an OAuth provider handed us and nobody chose to publish". Keeping
+  the fallback regresses nothing; dropping it shows `Anonymous` to everyone
+  without a handle. It was flagged rather than decided.
+- **#193: Duolingo's reserve-until-miss semantics are not what this
+  implements.** StudyShark consumes a protection at arm time; Duolingo consumes
+  on the missed day. Keeping consume-at-arm was the smallest change that honours
+  the ceiling. The alternative is a larger migration.
+- **#194: judge it by the return rate, and say how small the sample is.** The
+  mechanism is wired; the judgement needs traffic. Record the sample size rather
+  than report a lift.
+
+## A note on merging
+
+`CLAUDE.md` says to push and merge to `main` at the end of every session and that
+this project auto-deploys from `main` on Vercel. This session's branch
+instruction was explicit that everything goes to `claude/elegant-cori-h9cdgb`,
+so the merge was left to the owner — and because a merge here **does** deploy,
+the five unapplied migrations above should land first, or the deployed client
+will ask for tables that do not exist.
