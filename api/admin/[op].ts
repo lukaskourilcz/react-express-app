@@ -14,6 +14,13 @@ import {
 import { listReports, dismissReport, reportCounts } from '../../lib/reports-store';
 import { listAuthEvents } from '../../lib/auth-events-store';
 import { getGameSettings, saveGameSettings } from '../../lib/settings-store';
+import {
+  INTEGRITY_STATUSES,
+  VELOCITY_RULES,
+  listIntegrityFlags,
+  resolveIntegrityFlag,
+  type IntegrityStatus,
+} from '../../lib/integrity';
 import { inspectQuestionQuality } from '../../lib/question-quality';
 import { allReadiness, pathEnabledInEnv } from '../../lib/learning-paths/catalog';
 
@@ -61,6 +68,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
         return await qualityOp(req, res);
       case 'learning-paths':
         return await learningPathsOp(req, res);
+      case 'retention':
+        return await retentionOp(req, res);
+      case 'integrity':
+        return await integrityOp(req, res);
       default:
         return jsonError(res, 404, 'unknown_op', `Unknown admin op: ${op}`);
     }
@@ -103,6 +114,120 @@ async function learningPathsOp(req: VercelRequest, res: VercelResponse) {
   log({ op: 'learning-paths', status: 200, paths: paths.length });
   res.setHeader('Cache-Control', 'private, no-store');
   return res.json({ paths });
+}
+
+/**
+ * Day-over-day return rate: of the people who learned something yesterday, how
+ * many came back today.
+ *
+ * Read-only, and operator-only on purpose. It is the one number the weekly
+ * league is judged by, and it is a fact about the product rather than about the
+ * learner reading it, so it appears on `/dev` and on no reader surface. Nothing
+ * here can be turned into a ranking: the rows carry counts and a percentage,
+ * never an account.
+ */
+async function retentionOp(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  }
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Retention data is not configured');
+
+  const requested = parseInt(String(req.query.days ?? ''), 10);
+  const days = Number.isFinite(requested) ? Math.min(Math.max(requested, 1), 90) : 14;
+
+  const { data, error } = await withTimeout(supabase.rpc('daily_return_rate', { p_days: days }));
+  if (error) {
+    if (/does not exist|schema cache/i.test(error.message ?? '')) {
+      log({ op: 'retention', status: 503, reason: 'migration_required' });
+      return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-038.sql to enable the return rate');
+    }
+    log({ op: 'retention', status: 500, error: error.message });
+    return jsonError(res, 500, 'db_error', 'Could not load the return rate');
+  }
+
+  const rows = (Array.isArray(data) ? data : []) as Record<string, unknown>[];
+  log({ op: 'retention', status: 200, days, rows: rows.length });
+  res.setHeader('Cache-Control', 'private, no-store');
+  return res.json({
+    days,
+    rows: rows.map((row) => ({
+      day: String(row.day ?? ''),
+      priorActive: Number(row.prior_active ?? 0),
+      returned: Number(row.returned ?? 0),
+      ratePct: Number(row.rate_pct ?? 0),
+    })),
+  });
+}
+
+/**
+ * The progression-velocity review list.
+ *
+ * Read and decide, and nothing else. There is deliberately no path from this
+ * endpoint to a score, a rank, an account or a board: the strongest verdict the
+ * owner can record here is "confirmed", which marks the row and leaves every
+ * number the flagged account earned exactly where it was. Removing a score, if
+ * it ever comes to that, stays a separate, deliberate act.
+ */
+async function integrityOp(req: VercelRequest, res: VercelResponse) {
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  }
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'The review list is not configured');
+
+  const migrationPending = (message: string | undefined): boolean =>
+    /does not exist|schema cache/i.test(message ?? '');
+
+  if (req.method === 'POST') {
+    const body = (req.body || {}) as { userId?: unknown; surface?: unknown; signal?: unknown; status?: unknown; note?: unknown };
+    const surface = boundedString(body.surface, 32);
+    const signal = boundedString(body.signal, 64);
+    const status = typeof body.status === 'string' && (INTEGRITY_STATUSES as readonly string[]).includes(body.status)
+      ? (body.status as IntegrityStatus)
+      : null;
+    if (!surface || !signal || !status) {
+      return jsonError(res, 400, 'bad_request', `surface, signal and a status of ${INTEGRITY_STATUSES.join(', ')} are required`);
+    }
+    const userId = typeof body.userId === 'string' ? body.userId.slice(0, 128) : '';
+    const note = typeof body.note === 'string' && body.note.trim().length > 0 ? body.note.trim().slice(0, 500) : null;
+    try {
+      const flag = await resolveIntegrityFlag(supabase, { userId, surface, signal, status, note });
+      if (!flag) return jsonError(res, 404, 'not_found', 'No such flag');
+      log({ op: 'integrity', status: 200, action: 'resolve', decision: status });
+      res.setHeader('Cache-Control', 'private, no-store');
+      return res.json({ flag });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'unknown';
+      if (migrationPending(message)) {
+        return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-041.sql to enable the review list');
+      }
+      log({ op: 'integrity', status: 500, action: 'resolve', error: message });
+      return jsonError(res, 500, 'db_error', 'Could not record the decision');
+    }
+  }
+
+  const requestedStatus = typeof req.query.status === 'string' ? req.query.status : 'open';
+  const status = (INTEGRITY_STATUSES as readonly string[]).includes(requestedStatus)
+    ? (requestedStatus as IntegrityStatus)
+    : 'all';
+  const requestedLimit = parseInt(String(req.query.limit ?? ''), 10);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 300) : 100;
+
+  try {
+    const flags = await listIntegrityFlags(supabase, { status, limit });
+    log({ op: 'integrity', status: 200, action: 'list', flags: flags.length });
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.json({ status, rules: VELOCITY_RULES, flags });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown';
+    if (migrationPending(message)) {
+      log({ op: 'integrity', status: 503, reason: 'migration_required' });
+      return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-041.sql to enable the review list');
+    }
+    log({ op: 'integrity', status: 500, action: 'list', error: message });
+    return jsonError(res, 500, 'db_error', 'Could not load the review list');
+  }
 }
 
 async function qualityOp(req: VercelRequest, res: VercelResponse) {

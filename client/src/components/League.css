@@ -1,0 +1,127 @@
+/* The weekly league room.
+ *
+ * Same surface language as the friends list and the profile cards: one paper
+ * surface on ocean ink, a hairline border, the container radius. Thirty rows
+ * separated by hairlines rather than thirty cards — a room is one object, and a
+ * card per person would read as thirty things to decide about.
+ *
+ * No new tokens, no new colours, no gradient, no glow. The only emphasis in the
+ * list is the reader's own row, and that emphasis is a word ("You") first and a
+ * tint second, so it survives a greyscale screen and a colour-blind reader.
+ */
+
+.lg { display: flex; flex-direction: column; gap: 12px; }
+
+.lg-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: var(--radius-container);
+  background: var(--color-background-surface);
+  border: 1px solid var(--ss-card-line);
+}
+
+.lg-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; }
+.lg-tier {
+  margin: 0;
+  font-family: var(--font-family-heading, inherit);
+  font-size: 1.02rem;
+  font-weight: 700;
+}
+.lg-deadline {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  /* Tabular figures keep the date from shifting as the week counts down. */
+  font-variant-numeric: tabular-nums;
+}
+.lg-note { margin: 0; font-size: 0.85rem; line-height: 1.5; color: var(--color-text-secondary); }
+.lg-note--error { color: var(--ss-danger, var(--color-text-primary)); }
+
+/* The room ----------------------------------------------------------------- */
+
+.lg-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.lg-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--ss-card-line);
+}
+.lg-list > .lg-row:first-child { border-top: none; }
+.lg-row[data-self='true'] {
+  /* A tint and an inset rule, so the row is still findable without colour —
+     and the word "You" below carries the same fact in text. */
+  background: var(--brand-accent-soft, transparent);
+  box-shadow: inset 3px 0 0 0 var(--brand-accent);
+  padding-left: 10px;
+  margin-left: -10px;
+  padding-right: 10px;
+  margin-right: -10px;
+}
+
+.lg-rank {
+  flex: 0 0 auto;
+  min-width: 2ch;
+  text-align: right;
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+.lg-who { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; }
+.lg-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.95rem;
+  font-weight: 650;
+}
+.lg-you {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.lg-score { flex: 0 0 auto; text-align: right; font-variant-numeric: tabular-nums; }
+.lg-correct { display: block; font-size: 1rem; font-weight: 700; line-height: 1.2; }
+.lg-accuracy { display: block; font-size: 0.76rem; color: var(--color-text-secondary); }
+
+/* Leaving and rejoining ---------------------------------------------------- */
+
+.lg-optout { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.lg-button {
+  min-height: 44px;
+  padding: 10px 16px;
+  border-radius: var(--radius-element);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+}
+.lg-button:hover:not(:disabled) { border-color: var(--brand-accent); }
+.lg-button:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+.lg-button:disabled { opacity: 0.6; cursor: default; }
+
+/* Narrow widths: 360px still has to fit a rank, a name and a score. The name
+   is the only elastic part, so it gets the whole remainder and truncates. */
+@media (max-width: 420px) {
+  .lg-card { padding: 14px; }
+  .lg-row { gap: 10px; }
+  .lg-name { font-size: 0.9rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lg-button { transition: none; }
+}

@@ -167,6 +167,61 @@ export interface AuthEvent {
 
 export const listAuthEvents = () => adminFetch<{ events: AuthEvent[] }>('logs');
 
+/** One day of the day-over-day return rate: of the people who learned something
+ *  the day before, how many came back. Counts only — never an account. */
+export interface RetentionDay {
+  day: string;
+  priorActive: number;
+  returned: number;
+  ratePct: number;
+}
+
+export const getRetention = (days = 14) =>
+  adminFetch<{ days: number; rows: RetentionDay[] }>(`retention?days=${days}`);
+
+/** One row of the progression-velocity review list. Counts, durations and a
+ *  decision — never an answer, a name or an address. */
+export interface IntegrityFlag {
+  userId: string | null;
+  surface: string;
+  signal: string;
+  severity: 'review' | 'urgent' | string;
+  status: 'open' | 'reviewed' | 'cleared' | 'confirmed' | string;
+  subject: string | null;
+  hits: number;
+  firstSeenAt: string | null;
+  lastSeenAt: string | null;
+  reviewedAt: string | null;
+  note: string | null;
+  evidence: Record<string, unknown>;
+  answersLastHour: number;
+}
+
+/** The floors the server applied, returned beside the rows so the console
+ *  never restates a threshold the server could have changed. */
+export interface VelocityRules {
+  minSample: number;
+  readingFloorMs: number;
+  accuracyFloorPct: number;
+  reactionFloorMs: number;
+  sustainedAnswersPerHour: number;
+}
+
+export const getIntegrityFlags = (status = 'open', limit = 100) =>
+  adminFetch<{ status: string; rules: VelocityRules; flags: IntegrityFlag[] }>(
+    `integrity?status=${encodeURIComponent(status)}&limit=${limit}`,
+  );
+
+/** Record the owner's decision on one flag. It writes to the review list and to
+ *  nothing else: no score, rank or account changes because of this call. */
+export const resolveIntegrityFlag = (input: {
+  userId: string | null;
+  surface: string;
+  signal: string;
+  status: 'open' | 'reviewed' | 'cleared' | 'confirmed';
+  note?: string | null;
+}) => adminFetch<{ flag: IntegrityFlag }>('integrity', { method: 'POST', body: input });
+
 export const resetQuestion = (id: string) =>
   adminFetch<{ ok: true }>('reset', { method: 'POST', body: { id } });
 

@@ -31,10 +31,15 @@ import { useT } from '../i18n/LanguageContext';
 import { visibleCategoryOptionsFor, categoryLabelKey, onCategoryColorText } from '../lib/categories';
 import { useActiveSubject, categoriesForSubject, subjectNameKey } from '../lib/subjects';
 import ErrorRetry from './ErrorRetry';
+import LeaguePanel from './LeaguePanel';
 import { IconTile, TrophyIcon } from './ui/icons';
 import { visuallyHidden } from '../theme/MuiTheme';
 
-type Tab = 'global' | 'daily' | 'category';
+// The three ranked boards, plus the weekly league. The league is a different
+// shape — one cohort of at most thirty, the reader's own — so it renders its own
+// panel instead of the shared ranked-rows table below.
+type Tab = 'global' | 'daily' | 'category' | 'league';
+type BoardTab = Exclude<Tab, 'league'>;
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -61,6 +66,10 @@ function Leaderboard() {
   const [tab, setTab] = useState<Tab>('global');
   const [category, setCategory] = useState<string>(() => CATEGORIES[0]?.value ?? '');
   const [date] = useState<string>(today());
+  // The league owns the screen when it is open, so the ranked board neither
+  // fetches nor renders behind it.
+  const showBoard = tab !== 'league';
+  const boardTab: BoardTab = tab === 'league' ? 'global' : tab;
 
   // Switching platform swaps the category list — reset the selection with it.
   useEffect(() => {
@@ -68,10 +77,11 @@ function Leaderboard() {
   }, [subject.id]);
 
   const { data, isLoading: loading, error: queryError, refetch } = useLeaderboard(
-    tab,
+    boardTab,
     date,
     category,
     categoriesForSubject(subject.id),
+    showBoard,
   );
   const entries = (data?.entries ?? []) as Entry[];
   const error = queryError ? friendlyError(queryError) : null;
@@ -79,7 +89,7 @@ function Leaderboard() {
 
   // The score column shares one label (all rows are the same metric), so it
   // lives in the header on desktop and beside each number on mobile.
-  const scoreLabel = tab === 'daily' ? t('leaderboard.todayLabel') : t('leaderboard.correct');
+  const scoreLabel = boardTab === 'daily' ? t('leaderboard.todayLabel') : t('leaderboard.correct');
 
   const rows: RankedRow[] = entries.map((entry, i) => {
     const rank = i + 1;
@@ -87,7 +97,7 @@ function Leaderboard() {
 
     let secondary = '';
     let score = '';
-    if (tab === 'daily') {
+    if (boardTab === 'daily') {
       const e = entry as LeaderboardDailyEntry;
       secondary = formatMs(e.duration_ms);
       score = `${e.correct}/${e.total}`;
@@ -102,7 +112,7 @@ function Leaderboard() {
     return { rank, medal, picture: entry.picture ?? null, name: entry.display_name, secondary, score };
   });
 
-  const hasRows = !loading && !error && rows.length > 0;
+  const hasRows = showBoard && !loading && !error && rows.length > 0;
 
   return (
     <div style={{ width: '100%', maxWidth: 880, margin: '0 auto' }}>
@@ -140,7 +150,10 @@ function Leaderboard() {
           <SegmentedControlItem value="global" label={t('leaderboard.allTime')} />
           <SegmentedControlItem value="daily" label={t('leaderboard.today')} />
           <SegmentedControlItem value="category" label={t('leaderboard.byCategory')} />
+          <SegmentedControlItem value="league" label={t('league.tab')} />
         </SegmentedControl>
+
+        {tab === 'league' && <LeaguePanel />}
 
         {tab === 'category' && (
           <HStack gap={1} wrap="wrap">
@@ -177,7 +190,7 @@ function Leaderboard() {
           </HStack>
         )}
 
-        {loading && (
+        {showBoard && loading && (
           <Card variant="default" padding={0} width="100%">
             <VStack gap={0} width="100%">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -203,9 +216,9 @@ function Leaderboard() {
           </Card>
         )}
 
-        {!loading && error && <ErrorRetry message={error} onRetry={reload} />}
+        {showBoard && !loading && error && <ErrorRetry message={error} onRetry={reload} />}
 
-        {!loading && !error && rows.length === 0 && (
+        {showBoard && !loading && !error && rows.length === 0 && (
           <Card variant="default" padding={6} width="100%">
             <VStack gap={2} align="center">
               <IconTile color={subject.accent} size={48}>
@@ -306,9 +319,11 @@ function Leaderboard() {
           </Card>
         )}
 
-        <Text type="supporting" size="xsm" color="secondary">
-          {tab === 'category' ? t('leaderboard.footerCategory') : t('leaderboard.footerDefault')}
-        </Text>
+        {showBoard && (
+          <Text type="supporting" size="xsm" color="secondary">
+            {tab === 'category' ? t('leaderboard.footerCategory') : t('leaderboard.footerDefault')}
+          </Text>
+        )}
       </VStack>
     </div>
   );

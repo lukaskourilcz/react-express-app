@@ -9,10 +9,12 @@ import DevLogs from './DevLogs';
 import DevSettings from './DevSettings';
 import DevQuality from './DevQuality';
 import DevLearningPaths from './DevLearningPaths';
+import DevRetention from './DevRetention';
+import DevIntegrity from './DevIntegrity';
 import './DevConsole.css';
 import { CURRENT_PRODUCT } from '../../lib/products';
 
-type Tab = 'questions' | 'triage' | 'quality' | 'paths' | 'flags' | 'logs' | 'settings';
+type Tab = 'questions' | 'triage' | 'quality' | 'paths' | 'flags' | 'logs' | 'retention' | 'integrity' | 'settings';
 
 const NAV: { id: Tab; label: string; description: string; icon: string }[] = [
   { id: 'questions', label: 'Question bank', description: 'Create, filter and edit', icon: '◫' },
@@ -21,6 +23,8 @@ const NAV: { id: Tab; label: string; description: string; icon: string }[] = [
   { id: 'paths', label: 'Learning paths', description: 'Content readiness and inventory', icon: '⌘' },
   { id: 'flags', label: 'Learner flags', description: 'Review reported questions', icon: '⚑' },
   { id: 'logs', label: 'Activity log', description: 'Track authentication events', icon: '≋' },
+  { id: 'retention', label: 'Return rate', description: 'Who came back the next day', icon: '↺' },
+  { id: 'integrity', label: 'Board integrity', description: 'Submissions no play loop explains', icon: '⌁' },
   { id: 'settings', label: 'App settings', description: 'Tune features and balance', icon: '⚙' },
 ];
 
@@ -94,7 +98,7 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
           </div>
 
           <section className="dev-workspace" aria-label={activeNav.label}>
-            {tab === 'questions' ? <DevQuestions /> : tab === 'triage' ? <DevTriage /> : tab === 'quality' ? <DevQuality /> : tab === 'paths' ? <DevLearningPaths /> : tab === 'flags' ? <DevReports /> : tab === 'logs' ? <DevLogs /> : <DevSettings />}
+            {tab === 'questions' ? <DevQuestions /> : tab === 'triage' ? <DevTriage /> : tab === 'quality' ? <DevQuality /> : tab === 'paths' ? <DevLearningPaths /> : tab === 'flags' ? <DevReports /> : tab === 'logs' ? <DevLogs /> : tab === 'retention' ? <DevRetention /> : tab === 'integrity' ? <DevIntegrity /> : <DevSettings />}
           </section>
         </div>
       </section>

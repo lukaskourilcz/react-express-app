@@ -1,0 +1,14 @@
+import type { Meta, StoryObj } from '@storybook/react-vite';
+import LeaguePanel from '../src/components/LeaguePanel';
+import { leagueHandlers } from '../tests/mocks/handlers';
+const meta = { title: 'Screens/League', component: LeaguePanel } satisfies Meta<typeof LeaguePanel>;
+export default meta;
+type Story = StoryObj<typeof meta>;
+export const Populated: Story = { parameters: { msw: { handlers: [leagueHandlers.populated] } } };
+export const Empty: Story = { parameters: { msw: { handlers: [leagueHandlers.empty] } } };
+export const Loading: Story = { parameters: { msw: { handlers: [leagueHandlers.loading] } } };
+export const OptedOut: Story = { parameters: { msw: { handlers: [leagueHandlers.optedOut, leagueHandlers.setOptout] } } };
+export const SignedOut: Story = { parameters: { msw: { handlers: [leagueHandlers.signedOut] } } };
+export const MigrationRequired: Story = { parameters: { msw: { handlers: [leagueHandlers.migrationRequired] } } };
+export const ServerError: Story = { parameters: { msw: { handlers: [leagueHandlers.error] } } };
+export const Offline: Story = { parameters: { msw: { handlers: [leagueHandlers.offline] } } };
