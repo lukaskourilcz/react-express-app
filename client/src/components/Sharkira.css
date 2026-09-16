@@ -23,6 +23,8 @@
 .sharkira-trigger:hover {
   border-color: var(--brand-accent);
   background: var(--brand-accent-soft, var(--color-accent-muted));
+  /* Hover moves the label onto the accent tint, so the label moves with it. */
+  color: var(--brand-accent-on-soft, var(--brand-accent));
 }
 .sharkira-trigger:focus-visible {
   outline: 2px solid var(--ss-focus, var(--brand-accent));

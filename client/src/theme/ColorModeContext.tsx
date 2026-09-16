@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { readString, writeString } from '../lib/storage';
 import { useSubject, SUBJECTS } from '../lib/subjects';
+import { accentOnSoft, accentSoft } from '../lib/contrast';
 
 /** Light/dark colour mode (was MUI's PaletteMode; now MUI-free). */
 export type ColorMode = 'light' | 'dark';
@@ -16,16 +17,6 @@ const ColorModeContext = createContext<ColorModeContextValue>({
 });
 
 const STORAGE_KEY = 'devquiz:color-mode';
-
-// Convert a #rrggbb hex to an rgba() string — used to derive the soft accent
-// (a translucent tint) for chip backgrounds and subtle fills.
-function hexToRgba(hex: string, alpha: number): string {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.slice(0, 2), 16);
-  const g = parseInt(h.slice(2, 4), 16);
-  const b = parseInt(h.slice(4, 6), 16);
-  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-}
 
 const resolveInitial = (): ColorMode => {
   if (typeof window === 'undefined') return 'light';
@@ -68,7 +59,12 @@ export function ColorModeProvider({ children }: { children: ReactNode }) {
     const main = mode === 'light' ? accent.main : accent.bright;
     root.setProperty('--brand-accent', main);
     root.setProperty('--brand-accent-hover', accent.hover);
-    root.setProperty('--brand-accent-soft', hexToRgba(accent.main, 0.12));
+    root.setProperty('--brand-accent-soft', accentSoft(accent.main));
+    // Accent text on the accent's own tint is the one pair that depends on the
+    // subject's hue: four of the seven accents miss 4.5:1 on it in light mode
+    // and one does in dark. This is that pair's colour, and it is used nowhere
+    // else — --brand-accent stays the brand colour it was.
+    root.setProperty('--brand-accent-on-soft', accentOnSoft(main, accent.main, mode));
   }, [accent, mode]);
 
   return <ColorModeContext.Provider value={value}>{children}</ColorModeContext.Provider>;

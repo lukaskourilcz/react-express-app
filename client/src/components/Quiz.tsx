@@ -866,7 +866,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     const pill = (on: boolean): CSSProperties => ({
       display: 'inline-flex', alignItems: 'center', gap: 6,
       background: on ? 'var(--brand-accent-soft)' : 'var(--ss-card-bg)',
-      color: on ? 'var(--brand-accent)' : 'var(--color-text-primary)',
+      color: on ? 'var(--brand-accent-on-soft)' : 'var(--color-text-primary)',
       border: `1px solid ${on ? 'var(--brand-accent)' : 'var(--ss-card-line)'}`,
       borderRadius: 999, padding: '7px 14px', minHeight: 44, width: 'auto', fontFamily: 'var(--font-family-body)',
       fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',

@@ -47,4 +47,10 @@ body {
   --brand-accent: #2d7a2d;
   --brand-accent-hover: #246124;
   --brand-accent-soft: rgba(45, 122, 45, 0.12);
+  /* Accent text on --brand-accent-soft only. The plain accent measures 4.06:1
+     on its own light tint, so it cannot carry 12px chip text; these are the
+     same-hue values lib/contrast.ts derives for Web Dev green, hard-coded here
+     because the first paint happens before the effect runs. Dark mode needs no
+     move (#4caf50 on the tint is 5.14:1). */
+  --brand-accent-on-soft: light-dark(#2a712a, #4caf50);
 }

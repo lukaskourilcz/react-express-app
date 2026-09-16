@@ -23,12 +23,27 @@ import {
 import { AppToast } from './ui/AppToast';
 import SubjectGlyph from './ui/SubjectGlyph';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
+import { accentOnSoft, accentSoft } from '../lib/contrast';
 import SubjectPlate from './ui/SubjectPlate';
 
 // A soft tint / accent override for a subject, so the sample card + roadmap
-// preview re-skin to whichever subject is selected.
-const accentVars = (accent: string): CSSProperties =>
-  ({ ['--brand-accent' as string]: accent, ['--brand-accent-soft' as string]: `${accent}1f` } as CSSProperties);
+// preview re-skin to whichever subject is selected. These cards preview a
+// subject the app has not switched to yet, so they set the accent tokens
+// locally instead of going through ColorModeContext.
+//
+// --brand-accent-on-soft is mode-aware even though --brand-accent here is not:
+// text on the tint has to answer to the surface underneath it, and on a dark
+// surface that answer is the subject's bright accent, exactly as SubjectCard's
+// own `accentText` already resolves it.
+const accentVars = (id: SubjectId): CSSProperties => {
+  const s = SUBJECTS[id];
+  return {
+    ['--brand-accent' as string]: s.accent,
+    ['--brand-accent-soft' as string]: accentSoft(s.accent),
+    ['--brand-accent-on-soft' as string]:
+      `light-dark(${accentOnSoft(s.accent, s.accent, 'light')}, ${accentOnSoft(s.accentBright, s.accent, 'dark')})`,
+  } as CSSProperties;
+};
 
 // ───────────────────────────── Subject card ───────────────────────────────
 
@@ -56,7 +71,7 @@ function SubjectCard({
         transition: 'box-shadow 0.15s ease, background 0.2s ease, border-color 0.2s ease',
       }}
     >
-      <span aria-hidden style={{ display: 'grid', placeItems: 'center', alignSelf: 'stretch', overflow: 'hidden', borderRadius: 'var(--radius-inner)', color: s.accent, lineHeight: 1, background: `${s.accent}14`, ...accentVars(s.accent) }}>
+      <span aria-hidden style={{ display: 'grid', placeItems: 'center', alignSelf: 'stretch', overflow: 'hidden', borderRadius: 'var(--radius-inner)', color: s.accent, lineHeight: 1, background: `${s.accent}14`, ...accentVars(id) }}>
         <SubjectPlate id={id} compact />
       </span>
       <span style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
@@ -87,7 +102,7 @@ function SubjectPreview({ id, onStart }: { id: SubjectId; onStart: () => void })
     <section
       aria-label={t('home.insideTopic', { name })}
       className="ss-panel"
-      style={{ ...accentVars(s.accent), padding: 28, display: 'flex', flexDirection: 'column', gap: 22, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-page)' }}
+      style={{ ...accentVars(id), padding: 28, display: 'flex', flexDirection: 'column', gap: 22, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-page)' }}
     >
       <div aria-hidden style={{ position: 'absolute', right: '-4%', bottom: '-42%', opacity: 0.04, transform: 'rotate(-8deg)', pointerEvents: 'none', color: 'var(--ss-ink)' }}>
         <svg width="420" height="420" viewBox="0 0 24 24" fill="none"><path d="M3 18 Q 6 6 15 3 Q 17 11 21 18 Z" fill="currentColor" /></svg>
@@ -96,7 +111,7 @@ function SubjectPreview({ id, onStart }: { id: SubjectId; onStart: () => void })
         <h2 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.015em' }}>
           {t('home.insideTopic', { name })}
         </h2>
-        <span style={{ borderRadius: 999, padding: '3px 10px', fontWeight: 600, fontSize: '0.75rem', color: 'var(--brand-accent)', background: 'var(--brand-accent-soft)' }}>
+        <span style={{ borderRadius: 999, padding: '3px 10px', fontWeight: 600, fontSize: '0.75rem', color: 'var(--brand-accent-on-soft)', background: 'var(--brand-accent-soft)' }}>
           {t('subject.meta', { count: s.topics.length })}
         </span>
       </div>
@@ -110,7 +125,7 @@ function SubjectPreview({ id, onStart }: { id: SubjectId; onStart: () => void })
                 <span style={{
                   display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%',
                   background: first ? 'var(--brand-accent)' : 'var(--brand-accent-soft)',
-                  color: first ? 'var(--brand-on-accent)' : 'var(--brand-accent)',
+                  color: first ? 'var(--brand-on-accent)' : 'var(--brand-accent-on-soft)',
                   border: `2px solid ${first ? 'var(--brand-accent)' : 'transparent'}`,
                   fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '0.95rem',
                 }}>{i + 1}</span>
@@ -217,7 +232,7 @@ export default function SubjectPicker() {
           </div>
         </div>
         {featured && (
-          <div style={accentVars(sel.accent)}>
+          <div style={accentVars(selectedId)}>
             <SampleCard key={selectedId} chip={`${featured.name} · ${t('home.sampleChip', { level: featured.levels[0] })}`} question={featured.question} />
           </div>
         )}

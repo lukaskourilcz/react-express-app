@@ -184,7 +184,7 @@ export function SampleCard({ chip, question, onAnswered }: { chip: string; quest
   return (
     <div className="ss-panel" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14, borderRadius: 'var(--radius-container)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ borderRadius: 999, padding: '3px 10px', background: 'var(--brand-accent-soft)', color: 'var(--brand-accent)', fontSize: '0.75rem', fontWeight: 600 }}>{chip}</span>
+        <span style={{ borderRadius: 999, padding: '3px 10px', background: 'var(--brand-accent-soft)', color: 'var(--brand-accent-on-soft)', fontSize: '0.75rem', fontWeight: 600 }}>{chip}</span>
         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginLeft: 'auto' }}>{t('home.tryOne')}</span>
       </div>
       <fieldset style={{ margin: 0, padding: 0, border: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>

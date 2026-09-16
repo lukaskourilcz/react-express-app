@@ -104,7 +104,9 @@ function TopicCard({
       <span style={{ fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em', color: 'var(--color-text-primary)', minWidth: 0 }}>
         {topic.name}
       </span>
-      <span style={{ marginLeft: 'auto', fontSize: '0.9rem', fontWeight: 700, color: 'var(--brand-accent)', opacity: selected ? 1 : 0 }}>✓</span>
+      {/* The tick sits on the selected card's accent tint, so it takes the
+          derived on-tint accent rather than the plain one. */}
+      <span style={{ marginLeft: 'auto', fontSize: '0.9rem', fontWeight: 700, color: 'var(--brand-accent-on-soft)', opacity: selected ? 1 : 0 }}>✓</span>
     </button>
   );
 }
@@ -130,7 +132,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
         <h2 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.015em' }}>
           {t('home.insideTopic', { name: topic.name })}
         </h2>
-        <span style={{ borderRadius: 999, padding: '3px 10px', fontWeight: 600, fontSize: '0.75rem', color: 'var(--brand-accent)', background: 'var(--brand-accent-soft)' }}>
+        <span style={{ borderRadius: 999, padding: '3px 10px', fontWeight: 600, fontSize: '0.75rem', color: 'var(--brand-accent-on-soft)', background: 'var(--brand-accent-soft)' }}>
           {t('home.insideChip')}
         </span>
       </div>
@@ -151,7 +153,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
                 <span style={{
                   display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%',
                   background: first ? 'var(--brand-accent)' : 'var(--brand-accent-soft)',
-                  color: first ? 'var(--brand-on-accent)' : 'var(--brand-accent)',
+                  color: first ? 'var(--brand-on-accent)' : 'var(--brand-accent-on-soft)',
                   border: `2px solid ${first ? 'var(--brand-accent)' : 'transparent'}`,
                   fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '0.95rem',
                 }}>{i + 1}</span>

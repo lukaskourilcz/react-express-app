@@ -72,7 +72,7 @@
   font-weight: 800;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--brand-accent);
+  color: var(--brand-accent-on-soft, var(--brand-accent));
   background: var(--brand-accent-soft, color-mix(in srgb, var(--brand-accent) 12%, transparent));
   vertical-align: middle;
 }
