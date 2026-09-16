@@ -73,7 +73,9 @@ async function main() {
       if (index > 0) {
         const prior = CODING_TASKS.find(task => task.id === project.stages[index-1])!;
         assert.deepEqual(task.previousRequirements?.[index-1], prior.prompt, 'earlier requirements remain available');
-        if (task.tests) assert.deepEqual(task.tests.slice(0, prior.tests!.length), prior.tests, 'earlier runtime checks remain');
+        // Newest checks first, earlier ones after them: the prior stage's list
+        // is the tail of this one, and the head is what this stage introduced.
+        if (task.tests) assert.deepEqual(prior.tests!.length ? task.tests.slice(-prior.tests!.length) : [], prior.tests, 'earlier runtime checks remain, after the new ones');
         if (task.suite && prior.suite) assert.ok(task.suite.startsWith(prior.suite), 'earlier UI checks remain');
       }
       passed.add(id);

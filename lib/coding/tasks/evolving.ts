@@ -95,7 +95,9 @@ export function buildEvolvingTasks(specs: Record<string, Spec>): CodingTask[] {
       hints: { en: [spec.hints[index].en], cs: [spec.hints[index].cs] },
       verify: 'tests', estimatedMinutes: 15 + index * 15,
       ...(spec.tests ? { tests: spec.tests.slice(0, index + 1).flat() } : {}),
-      ...(spec.typeTests ? { typeTests: spec.typeTests.slice(0, index + 1).flat().map(test => ({...test, code: `{ ${test.code} }`})) } : {}),
+      // Newest stage's type tests first, then the earlier ones, matching the
+      // order the runtime tests take once the checkpoints are expanded.
+      ...(spec.typeTests ? { typeTests: spec.typeTests.slice(0, index + 1).reverse().flat().map(test => ({...test, code: `{ ${test.code} }`})) } : {}),
       ...(spec.suites ? { suite: "import React from 'react';\nimport { render, screen, fireEvent, cleanup } from '@testing-library/react';\nimport App from './App';\nafterEach(cleanup);\n" + spec.suites.slice(0, index + 1).join('\n') } : {}),
     }));
   });

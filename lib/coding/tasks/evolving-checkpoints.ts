@@ -475,13 +475,24 @@ function fullstackCheckpoints(slug: string): Record<string, Checkpoint> {
 
 /** Insert smaller prerequisites without changing existing milestone IDs.
  * Test deltas accumulate in stage order, so every subsequent run checks earlier work. */
+/**
+ * Splits each cumulative project into checkpoints and milestones.
+ *
+ * Within a stage the tests it introduces come first and the earlier stages'
+ * tests follow, so the top of the results panel always shows what the new
+ * brief asks for; every earlier check is still there, further down, and still
+ * has to pass. Projects this module has no checkpoints for (a standalone
+ * course, for instance) pass through untouched.
+ */
 export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
   const byId = new Map(tasks.map((task) => [task.id, task]));
-  const out = tasks.filter(
-    (task) =>
-      !EVOLVING_CHALLENGES.some((project) => project.stages.includes(task.id)),
+  const owned = EVOLVING_CHALLENGES.filter(
+    (project) => project.category === 'fullstack' || project.id in CHECKPOINTS,
   );
-  for (const project of EVOLVING_CHALLENGES) {
+  const out = tasks.filter(
+    (task) => !owned.some((project) => project.stages.includes(task.id)),
+  );
+  for (const project of owned) {
     const milestones = project.stages.filter((id) => !id.endsWith('-start'));
     const fullstack =
       project.category === 'fullstack'
@@ -494,7 +505,7 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
       const base = byId.get(id)!;
       const checkpoint = fullstack
         ? fullstack[String(index + 1)]
-        : CHECKPOINTS[project.id][index];
+        : CHECKPOINTS[project.id]?.[index];
       if (checkpoint) {
         const firstReact = base.suite && !previous?.suite;
         const header = firstReact
@@ -519,8 +530,8 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
           ...(base.tests
             ? {
                 tests: [
-                  ...(previous?.tests ?? []),
                   ...(checkpoint.tests ?? []),
+                  ...(previous?.tests ?? []),
                 ],
               }
             : {}),
@@ -551,8 +562,8 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
         ...(base.tests
           ? {
               tests: [
-                ...(previous?.tests ?? []),
                 ...base.tests.slice(previousBase?.tests?.length ?? 0),
+                ...(previous?.tests ?? []),
               ],
             }
           : {}),
