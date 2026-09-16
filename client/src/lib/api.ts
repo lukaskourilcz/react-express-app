@@ -103,10 +103,16 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   too_few_questions: 'error.tooFewQuestions',
   finished: 'error.matchFinished',
   rate_limited: 'error.rateLimited',
+  // Two server codes, one remedy: reload and submit again. The difference
+  // between "no token" and "a token Cloudflare rejected" matters in the log,
+  // not to the learner staring at the screen.
+  attestation_required: 'error.attestation',
+  attestation_failed: 'error.attestation',
   not_configured: 'error.serviceUnavailable',
   migration_required: 'error.serviceUnavailable',
   step_unavailable: 'error.stepUnavailable',
   task_retired: 'error.taskRetired',
+  package_cap_reached: 'paths.rewardCapReached',
 };
 
 // not_found spans several endpoints whose English server messages are more

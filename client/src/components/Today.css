@@ -190,3 +190,60 @@
   .today-pack__cta { width: 100%; }
   .today-card__action-label { display: none; }
 }
+
+/* The streak standing on yesterday. Same paper stock and the same measure as
+   the progress panel above it — it is a sentence, not an alarm — with the
+   flame mark borrowed from the profile's streak tile so the two read as one
+   thing. No animation: nothing here is counting down. */
+.today-streak {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  border-left: 3px solid var(--ss-warning);
+}
+.today-streak__mark {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  color: var(--ss-warning);
+  background: var(--ss-warning-soft);
+}
+.today-streak__body { min-width: 0; }
+.today-streak__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 750;
+  color: var(--color-text-primary);
+}
+.today-streak__text {
+  margin: 4px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+/* 44 px of target without a button's weight: this is a quiet second option,
+   and padding is what makes it reachable on a thumb. */
+.today-streak__link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: 2px;
+  font-size: 0.9rem;
+  font-weight: 650;
+  color: var(--brand-accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.today-streak__link:focus-visible {
+  outline: 2px solid var(--ss-focus);
+  outline-offset: 3px;
+}
+@media (max-width: 420px) {
+  .today-streak { gap: 12px; padding: 14px 14px; }
+  .today-streak__mark { width: 32px; height: 32px; }
+}

@@ -32,7 +32,8 @@ import { computeLearningXp, levelForXp, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { apiFetch, friendlyError } from '../lib/api';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
-import { getStreakProtection, activateShield, shieldRemaining, type StreakProtection } from '../lib/streakFreezes';
+import { getStreakProtection, activateShield, shieldRemaining, STREAK_PROTECTION_CAP, type StreakProtection } from '../lib/streakFreezes';
+import { STREAK_MILESTONE_DAYS, dayUnitKey } from '../lib/streakMoment';
 import { getAdvice, advisorCategoryKey, type Advice } from '../lib/advisor';
 import { renderQuestion } from './CodeBlock';
 import { useT, useLanguage } from '../i18n/LanguageContext';
@@ -469,12 +470,7 @@ function StreakCard({
   const longestStreak = stats?.longest_streak ?? 0;
   const currentStreakDisplay = unavailable ? '—' : currentStreak;
   const longestStreakDisplay = unavailable ? '—' : longestStreak;
-  const dayUnit = (value: number) => {
-    if (lang === 'en') return t(value === 1 ? 'profile.day' : 'profile.days');
-    if (value === 1) return t('profile.day');
-    if (value >= 2 && value <= 4) return t('profile.daysFew');
-    return t('profile.days');
-  };
+  const dayUnit = (value: number) => t(dayUnitKey(value, lang));
 
   return (
     <Lift>
@@ -498,6 +494,17 @@ function StreakCard({
                     {t('profile.currentStreak')}
                   </Text>
                   {!unavailable && <MetaPill color="var(--ss-warning)">{dayUnit(currentStreak)}</MetaPill>}
+                  {/* The seventh day, marked where the number is rather than as
+                      another badge in the grid. The badge of the same name is a
+                      different thing and stays where it is: it is earned on the
+                      longest streak ever reached, and this describes the one
+                      running now. */}
+                  {!unavailable && currentStreak >= STREAK_MILESTONE_DAYS && (
+                    <span className="de-milestone">
+                      <TrophyIcon size={14} />
+                      {t('profile.milestone7')}
+                    </span>
+                  )}
                   {/* Protection lives inside the streak it protects. It used to
                       be a card of its own below, which read as a separate
                       feature rather than as part of this number. */}
@@ -548,17 +555,21 @@ function StreakCard({
 
 /**
  * The shield: spend one of the month's two protections and the streak survives
- * the next 48 hours.
+ * the next 48 hours. Both may be armed at once, for 96.
  *
- * Three states and nothing else. A shield is running (a countdown, in whole
- * hours and minutes, read once on load — a live clock on a two-day window is
- * decoration). A protection is available (the button). The month's two are
- * spent (a line saying when the next arrive). Everything is server-owned: the
- * budget, the spend and the expiry, so a client cannot grant itself either.
+ * What it can show, and nothing else. A window is running (a countdown, in
+ * whole hours and minutes, read once on load — a live clock on a two-day
+ * window is decoration) with how many protections it is made of. A protection
+ * is available (the button, which reads "add" while a window is already up).
+ * The month's two are spent (a line saying so). Everything is server-owned:
+ * the budget, the spend, the expiry and the ceiling, so a client cannot grant
+ * itself any of them.
  *
  * It renders nothing at all until the read lands, and nothing if the server
- * cannot offer it yet, so the streak card never shows a control that would
- * fail.
+ * cannot offer the shield yet. The second protection has a switch of its own:
+ * a database still on migration 032 answers `slotsSupported: false` and the
+ * add button is not drawn, because a control that spends nothing and changes
+ * nothing is worse than no control.
  */
 function StreakShield() {
   const t = useT();
@@ -575,27 +586,6 @@ function StreakShield() {
     return () => { active = false; };
   }, []);
 
-  if (!state || !state.shieldSupported) return null;
-
-  const left = shieldRemaining(state.shieldUntil, now);
-  if (left) {
-    return (
-      <span className="de-shield de-shield--on">
-        <ShieldIcon size={16} />
-        {t('profile.shieldActive', { h: left.hours, m: left.minutes })}
-      </span>
-    );
-  }
-
-  if (state.remaining <= 0) {
-    return (
-      <span className="de-shield de-shield--spent">
-        <ShieldIcon size={16} />
-        {t('profile.shieldNone')}
-      </span>
-    );
-  }
-
   const spend = async () => {
     setPending(true);
     setError(null);
@@ -608,13 +598,50 @@ function StreakShield() {
     }
   };
 
+  if (!state || !state.shieldSupported) return null;
+
+  const left = shieldRemaining(state.shieldUntil, now);
+  // A running window is worth at least the one protection it cost, whatever
+  // the server could tell us about its width.
+  const equipped = left ? Math.max(state.equipped, 1) : 0;
+  const atCeiling = equipped >= STREAK_PROTECTION_CAP;
+  // Arming the first needs only a budget; arming the second needs a server
+  // that can hold two.
+  const canArm = !atCeiling && state.remaining > 0 && (!left || state.slotsSupported);
+
   return (
     <VStack gap={0.5} align="center">
-      <button type="button" className="de-shield de-shield--action" onClick={spend} disabled={pending}>
-        <ShieldIcon size={16} />
-        {pending ? t('profile.shieldSpending') : t('profile.shieldAction')}
-      </button>
-      <span className="de-shield__meta">{t('profile.shieldLeft', { n: state.remaining })}</span>
+      {left && (
+        <span className="de-shield de-shield--on">
+          <ShieldIcon size={16} />
+          {t('profile.shieldActive', { h: left.hours, m: left.minutes })}
+        </span>
+      )}
+      {left && state.slotsSupported && (
+        <span className="de-shield__meta">
+          {atCeiling
+            ? t('profile.shieldFull')
+            : t('profile.shieldEquipped', { n: equipped, max: STREAK_PROTECTION_CAP })}
+        </span>
+      )}
+      {!left && state.remaining <= 0 && (
+        <span className="de-shield de-shield--spent">
+          <ShieldIcon size={16} />
+          {t('profile.shieldNone')}
+        </span>
+      )}
+      {canArm && (
+        <>
+          <button type="button" className="de-shield de-shield--action" onClick={spend} disabled={pending}>
+            <ShieldIcon size={16} />
+            {pending ? t('profile.shieldSpending') : left ? t('profile.shieldAdd') : t('profile.shieldAction')}
+          </button>
+          <span className="de-shield__meta">{t('profile.shieldLeft', { n: state.remaining })}</span>
+        </>
+      )}
+      {left && !canArm && !atCeiling && state.remaining <= 0 && (
+        <span className="de-shield__meta">{t('profile.shieldNone')}</span>
+      )}
       {error && <span className="de-shield__meta de-shield__meta--error" role="alert">{error}</span>}
     </VStack>
   );

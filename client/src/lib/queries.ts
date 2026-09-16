@@ -9,7 +9,9 @@ import { fetchRoadmapStructure } from './roadmap';
 import { fetchLeaderboard } from './play';
 import { getUserStats, createOrUpdateUserStats, type UserStats } from './supabase';
 import { listFlashcards } from './flashcards';
-import { getChallengeLeaderboard } from './challengeApi';
+import { getStreakProtection, type StreakProtection } from './streakFreezes';
+import { getChallengeLeaderboard, getSprintLeaderboard } from './challengeApi';
+import { getLeagueBoard } from './league';
 import { useSubject } from './subjects';
 
 type LeaderboardPeriod = 'global' | 'daily' | 'category';
@@ -26,8 +28,17 @@ export function useRoadmapStructure() {
 
 /** A leaderboard board. The key only includes the inputs that affect the result.
  *  `categories` scopes the all-time board to the active subject (platform). */
-export function useLeaderboard(period: LeaderboardPeriod, date: string, category: string, categories: string[]) {
+export function useLeaderboard(
+  period: LeaderboardPeriod,
+  date: string,
+  category: string,
+  categories: string[],
+  /** False while a sibling tab owns the screen, so no board is fetched for a
+   *  view nobody is looking at. */
+  enabled = true,
+) {
   return useQuery({
+    enabled,
     queryKey: [
       'leaderboard',
       period,
@@ -37,6 +48,20 @@ export function useLeaderboard(period: LeaderboardPeriod, date: string, category
     ],
     queryFn: () => fetchLeaderboard(period, { date, category, categories }),
     staleTime: 30_000,
+  });
+}
+
+/** The caller's own weekly league cohort. Authenticated, and the server is the
+ *  one that says so: a signed-out read comes back 401 and the panel renders the
+ *  sign-in state from that, rather than keeping a second copy of who is signed
+ *  in. Only mounted when the League tab is open, so nothing is fetched for a
+ *  tab nobody looked at. */
+export function useLeague(subject: string) {
+  return useQuery({
+    queryKey: ['league', subject],
+    queryFn: () => getLeagueBoard(subject),
+    staleTime: 30_000,
+    retry: false,
   });
 }
 
@@ -59,6 +84,25 @@ export function useProfileStats(
   });
 }
 
+/**
+ * The protection budget and any live shield.
+ *
+ * Gated rather than eager on purpose: Today only needs to know whether a
+ * protection is already on when the streak is actually standing on yesterday,
+ * so the request is made for the few learners it can change an answer for and
+ * for nobody else. `getStreakProtection` never throws, so a failure resolves
+ * to the unprotected state and the surface offers the protection instead of
+ * claiming one.
+ */
+export function useStreakProtection(enabled: boolean) {
+  return useQuery<StreakProtection>({
+    queryKey: ['streak-protection'],
+    enabled,
+    queryFn: getStreakProtection,
+    staleTime: 60_000,
+  });
+}
+
 /** The signed-in user's saved flashcards. */
 export function useFlashcards(enabled: boolean) {
   const [subject] = useSubject();
@@ -76,5 +120,17 @@ export function useChallengeLeaderboard() {
     queryKey: ['challenge', 'leaderboard', subject],
     queryFn: getChallengeLeaderboard,
     staleTime: 30_000,
+  });
+}
+
+/** The three-minute sprint's own board. Separate key, because a sprint score
+ *  and a strikes score are never ranked against each other. */
+export function useSprintLeaderboard(enabled = true) {
+  const [subject] = useSubject();
+  return useQuery({
+    queryKey: ['sprint', 'leaderboard', subject],
+    queryFn: getSprintLeaderboard,
+    staleTime: 30_000,
+    enabled,
   });
 }

@@ -43,6 +43,40 @@ scope before selecting questions or writing progress.
 Do not introduce another brand array, URL map, category ownership map, or footer
 list. Extend these sources instead.
 
+## chessShark puzzle import (Lichess, CC0)
+
+Lichess publishes its puzzle database as a CSV under CC0, which makes it usable
+commercially and redistributable. `shared/chess-puzzles.ts` owns every rule
+about turning it into chessShark content: the CSV column contract, which
+Lichess themes feed which chess topic, which rating band becomes which authored
+difficulty tier, the quality floor, and how one row becomes one question.
+`scripts/import-lichess-puzzles.ts` is the only impure part — it streams a local
+copy of the file and writes `lib/chess-puzzle-bank.ts`.
+
+Four things about it are load-bearing:
+
+- **The database is not in the repository and never will be.** It is hundreds
+  of megabytes. `npm run import:chess-puzzles -- --csv <file>` reports what it
+  would keep and writes nothing; `--write` generates the bank. The committed
+  bank is empty, and an empty bank is a working state: chessShark serves its
+  authored questions exactly as before.
+- **The position the learner sees is not the row's FEN.** A Lichess row's FEN
+  is the position before the opponent's move, and the first entry in `Moves` is
+  that move. `shared/chess-position.ts` — a dependency-free FEN parser, legal
+  move generator and SAN renderer, verified against published perft counts for
+  the five standard test positions — applies it. A row whose first move is not
+  legal in its own FEN is dropped rather than guessed at.
+- **The solution stays on the server.** `lib/chess-puzzle-bank.ts` carries
+  `solutionUci` and the full line; `lib/chess-puzzle-questions.ts` projects
+  into a plain `Question`, which has no field for either. The correct option's
+  index then travels in the signed session token like every other question's.
+  Options also carry no check or mate suffix — a lone `Ra8#` beside three quiet
+  rook moves would announce the answer in the notation.
+- **No board library was added.** Chessground is GPL-3.0, which is a copyleft
+  licence this repository cannot take a dependency on, so the position is read
+  out in coordinates instead. That is also what a screen reader can convey,
+  which a board graphic would not be without separate work.
+
 ## Daily-habit layer
 
 The spaced-mastery, Today queue, forgiving-streak, Sharkira-hint, badge, Shark
@@ -63,6 +97,100 @@ earned at 10% of verified XP, a ceiling that never rises above two, and an
 effect limited to the day count of a streak. No leaderboard in this product
 ranks by streak — every one of them ranks by correct answers and accuracy — so a
 protected streak moves nobody up anything.
+
+The other direction is the package a finished learning path earns: a t-shirt, a
+mug and a sticker set, granted once by the server on a completed path. A reward
+for learning is not a purchase that affects learning, and it changes no
+progress — but it is the one thing here that costs real money every time
+somebody succeeds, so `shared/rewards.ts` also costs it. `packageCosting` adds
+the landed cost of the three items from the owner's quotes and reports what is
+missing rather than a number, and `packagesPerMonth` bounds how many leave in a
+calendar month. The cap is enforced in `claim_path_reward` (migration 040),
+counted inside the claiming transaction under a month-keyed advisory lock and
+raised before any write, so a full month costs a parcel and never a claim
+record. It is unset by default, which is undecided rather than unlimited;
+`docs/rewards-launch.md` is what setting it needs.
+
+### Weekly micro-league
+
+The league is the fourth view on `/leaderboard` and adds a deadline to a ranking
+that already exists rather than a new thing to be good at. Twenty to thirty
+learners of similar recent activity share a cohort for one week; the score is
+weekly correct answers with answered as the tie-break, so the league ranks
+exactly what the other three boards rank and, like them, never ranks by streak.
+
+- **A tier grants nothing.** Five tiers, top five of a cohort up and bottom five
+  down at the week's end, and a tier changes no access, content, explanation,
+  path, XP, token, hint, badge, card or AI availability. Every question is free
+  at tier 1 and free at tier 5. `scripts/test-launch-contracts.ts` fails if the
+  league routines in the migration so much as name the XP, token, badge, card,
+  cosmetic or progress tables.
+- **Scoring is server-owned.** `league_record` is called from
+  `api/user/[op].ts` on the same condition as the verified XP credit — the
+  verified write reported this attempt id as applied for the first time — with
+  the counts the server graded. A replayed submission scores nothing and the
+  browser can send no score.
+- **Seating is lazy, not scheduled.** There is no cron and no Sunday job. A
+  learner is placed the first time they read the board in a new week, and their
+  tier is computed then from the previous week's finish. Only the immediately
+  preceding week carries standing.
+- **The week is ISO/UTC.** Monday 00:00 UTC to Sunday 23:59 UTC, matching every
+  other date in the schema. Thirty seats is a hard ceiling; twenty is a fill
+  target that a population too small to fill a room cannot meet, and nothing
+  rebalances.
+- **Leaving is one switch.** `league-optout` removes the learner from this
+  week's room, frees the seat and stops the counting. Their answers, XP and
+  streak are untouched.
+- **One number judges it.** `daily_return_rate` — of the people who learned
+  something the day before, the share who came back — is served by
+  `api/admin/[op].ts` behind the admin gate and shown on the `/dev` Return rate
+  tab. It is an operator fact and appears on no reader surface.
+
+Storage is `supabase/supabase-schema-038.sql` (additive, idempotent; see
+`NEEDED.md` to apply it). Until it is applied, the league tab and the retention
+tab report `migration_required` and nothing else changes.
+
+### Puzzle sprint (chessShark, mathShark)
+
+`/sprint` is a mode of the challenge, not a second challenge. One clock runs for
+the whole run, a correct answer is a point, a combo of 5, 12, 20 and 30 in a row
+adds 3, 5, 7 and 10 seconds, and a wrong answer costs ten seconds and empties
+the combo. It adds no physical handler and no session scope: the run token
+carries `mode: 'sprint'`, the session stays `scope: 'challenge'`, and the three
+new endpoints are `resource=sprint`, `resource=sprint-board` and
+`resource=sprint-complete` on `api/quiz/challenge.ts`.
+
+- **The clock is the server's.** The run's start is the run token's own sealed
+  timestamp and each answer's time is its score proof's. `replaySprint` in
+  `shared/sprint.ts` walks those timestamps to derive the score, the bonuses and
+  the deadline; the browser sends no score, no timing and no combo, and the
+  screen's clock is a rendering of the same arithmetic over the same inputs. An
+  answer graded after the deadline is dropped rather than counted, which is what
+  makes withholding an answer useless as a way to buy time.
+- **The proof set is checked against the ledger.** A withheld wrong answer would
+  be ten free seconds, so `sprint-complete` compares the proofs it was handed
+  against `count_attempt_submissions` — the grading ledger's row count for the
+  run — and refuses a short set with `incomplete_proofs`. Until migration 042 is
+  applied the count is unavailable and the submitted proofs are accepted, which
+  is the same limitation `docs/DEEP_END_HANDOFF.md` already records for the
+  classic run.
+- **The two modes never mix.** A sprint run is refused by the classic score POST
+  and by `resource=complete`, a classic run is refused by `sprint-complete`, and
+  a batch cannot change modes mid-run. The boards are the same table split by a
+  `mode` column, because three minutes against three strikes is not a ranking.
+- **It changes nothing about earning.** Five XP per server-proven correct
+  answer, the same rate the classic run pays, through the same
+  `record_verified_activity_xp` award keyed to the run. Unlimited and free, like
+  every other mode here; there is no daily cap to build.
+- **The per-answer rate limit.** A sprint grades one answer per request, so
+  `api/quiz/submit.ts` opens the sealed session before the limiter and picks
+  `challengeAnswer` (80 a minute) for a streamed run. The old `quizSubmit`
+  bucket would have refused a fast sprint around its thirty-sixth answer.
+
+Storage is `supabase/supabase-schema-042.sql` (additive, idempotent; see
+`NEEDED.md` to apply it). Until it is applied, the sprint board reports
+`migration_required`, the run itself still counts, and the classic Hall of Fame
+is unchanged.
 
 ## Coding section (devShark)
 
@@ -200,6 +328,55 @@ is served as before with no claim. See `docs/curation-claims.md`.
 level intros — deterministic HTML and CSS, never generated imagery, each
 carrying its content in words rather than a caption. See
 `docs/lesson-figures.md`.
+
+## Leaderboard integrity
+
+Every board in this product ranks correct answers and accuracy, and the server
+already owns both: answers never reach the client before submission, grading
+happens server-side, and each attempt is claimed once. What none of that
+establishes is that a browser was involved. Two guards cover the rest, and
+neither of them may ever change what a learner earned.
+
+**Attestation (Cloudflare Turnstile).** `lib/turnstile.ts` verifies a token in
+the handler for three actions: `quiz-submit` (the receipt-bearing grade, once
+per session rather than once per answer), `challenge-score` (the Hall of Fame
+write), and `signup`. It has three states, chosen by environment variable:
+
+| State | Set by | Behaviour |
+|---|---|---|
+| `off` | no `TURNSTILE_SECRET_KEY` | nothing fetched, nothing refused — the shipped default |
+| `observe` | secret set | tokens verified and logged, nothing refused |
+| `enforce` | secret set and `TURNSTILE_ENFORCE=true` | a missing or rejected token refuses the write with 403 |
+
+Only a failure on the caller's side may cost the caller their submission. A
+siteverify outage, a timeout, a malformed answer and a wrong secret of our own
+all resolve to `unavailable`, which refuses nothing in any state: one typo in an
+environment variable must not take every submission in the product down with it.
+The client half is `client/src/lib/turnstile.ts` — one widget per tab in
+`execution: 'execute'` and `appearance: 'interaction-only'` mode, so most
+learners never see a control, and `VITE_TURNSTILE_SITE_KEY` unset means no
+script is fetched at all.
+
+Sign-in is Google OAuth, so the account exists before this server hears about
+it and there is nothing left to refuse at `authevent`. An unattested first-ever
+sign-in while enforcing is therefore recorded as a flag rather than blocked; the
+learner keeps their account and every part of the product.
+
+**Progression velocity.** `lib/integrity.ts` judges each graded event against
+floors a play loop cannot cross: at least eight answers, averaging under 700 ms
+each at 95% accuracy or better, or under 250 ms each at any accuracy. Every
+number comes from the server's own clock — the distance between minting the
+session envelope (or the challenge run token) and the answers arriving back — so
+there is nothing in it for a client to forge. Speed without accuracy is a bored
+learner clicking through and is deliberately not flagged.
+
+A flag is a note for the owner and nothing else. It deletes no score, edits no
+XP, moves no rank, hides no board row, tightens no rate limit and blocks no
+later submission; `migration 041` stores it, `/dev` → Board integrity reads it,
+and the strongest verdict available there is "confirmed", which marks the row
+and leaves every number where it was. That restraint is what makes the floors
+safe to set strictly: a false positive costs the owner ten seconds of reading
+and costs the learner nothing.
 
 ## Deployment matrix
 

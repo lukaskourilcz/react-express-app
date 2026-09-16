@@ -20,6 +20,7 @@ import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import { useAuth } from './lib/auth';
 import { useHasChosenSubject, useActiveSubject, isSubjectLocked, subjectNameKey } from './lib/subjects';
+import { SPRINT_SUBJECTS } from '../../shared/sprint';
 import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m } from './lib/motion';
@@ -44,6 +45,7 @@ const Shop = lazy(() => import('./components/Shop'));
 const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayLanding })));
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 const Challenge = lazy(() => import('./components/Challenge'));
+const Sprint = lazy(() => import('./components/Sprint'));
 const DevPage = lazy(() => import('./components/dev/DevPage'));
 const SubjectPicker = lazy(() => import('./components/SubjectPicker'));
 const SupportPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.SupportPage })));
@@ -102,6 +104,7 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/shop': 'title.shop',
   '/play': 'title.play',
   '/challenge': 'title.challenge',
+  '/sprint': 'title.sprint',
   '/subjects': 'title.subjects',
   '/support': 'title.support',
   '/privacy': 'title.privacy',
@@ -140,11 +143,16 @@ const NAV_ITEMS: {
   key: TranslationKey;
   isActive: (path: string) => boolean;
   feature?: keyof GameConfig['features'];
+  /** When present, the item only appears for these subjects. */
+  subjects?: readonly string[];
 }[] = [
   { to: '/today', key: 'nav.today', isActive: (p) => p === '/today' },
   { to: '/quiz', key: 'nav.quiz', isActive: (p) => p === '/quiz' },
   { to: '/learn', key: 'nav.learn', isActive: (p) => p.startsWith('/learn') },
   { to: '/challenge', key: 'nav.challenge', isActive: (p) => p.startsWith('/challenge') },
+  // The three-minute sprint belongs to the subjects whose items can be read and
+  // answered in seconds, and is absent everywhere else rather than disabled.
+  { to: '/sprint', key: 'nav.sprint', isActive: (p) => p.startsWith('/sprint'), subjects: SPRINT_SUBJECTS },
   { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play'), feature: 'multiplayer' },
   { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard' },
   { to: '/collection', key: 'nav.cards', isActive: (p) => p === '/collection' || p === '/cards' },
@@ -158,6 +166,13 @@ const NAV_ITEMS: {
       ]
     : []),
 ];
+
+/** The sprint's subject gate. Reading the active subject here rather than at
+ *  module load means switching subjects moves the learner off the route. */
+const SprintRoute = () => {
+  const subject = useActiveSubject();
+  return SPRINT_SUBJECTS.includes(subject.id) ? <Sprint /> : <Navigate to="/challenge" replace />;
+};
 
 const RouteLoader = () => {
   const { t, lang } = useLanguage();
@@ -349,8 +364,13 @@ function App() {
     };
   }, [user]);
 
-  // Nav items for features that are currently enabled in /dev → Settings.
-  const navItems = NAV_ITEMS.filter((item) => !item.feature || config.features[item.feature]);
+  // Nav items for features that are currently enabled in /dev → Settings, and
+  // for the subject being studied.
+  const navItems = NAV_ITEMS.filter(
+    (item) =>
+      (!item.feature || config.features[item.feature]) &&
+      (!item.subjects || item.subjects.includes(activeSubject.id)),
+  );
   // Leaderboard & Shop aren't learning surfaces, so they don't crowd the centre
   // nav — they get compact icon buttons in the right slot instead (and stay in
   // the mobile drawer via navItems).
@@ -717,6 +737,9 @@ function App() {
                 <Route path="/play" element={<PlayLanding />} />
                 <Route path="/play/:code" element={<PlayMatch />} />
                 <Route path="/challenge" element={<Challenge />} />
+                {/* A sprint on a subject that does not run one is not a dead
+                    end: the classic challenge is the same questions. */}
+                <Route path="/sprint" element={<SprintRoute />} />
                 <Route path="/support" element={<SupportPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />

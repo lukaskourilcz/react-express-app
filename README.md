@@ -14,7 +14,7 @@ Current content: **7,953 authored questions** — 3,633 web development, 1,000 g
 - Configurable solo quizzes with category, difficulty, and question-count selection; weighted sampling; shuffled answers; an optional Socratic "Sharkira" hint coach; bookmarks; question reporting; keyboard controls; and a two-column desktop review.
 - A deterministic daily challenge and the timed Biggest Shark Challenge with subject-specific leaderboards.
 - Live free-for-all matches and host-led classroom rooms using Supabase Realtime with polling recovery, server-side timing, QR sharing, and subject-scoped question sets.
-- Subject-scoped all-time, daily, and category leaderboards; forgiving streaks (configurable off-days plus two monthly freezes); verified XP; ranks; collectible cosmetic Shark Cards earned by finishing the Today queue; and a fairness-neutral cosmetic token shop.
+- Subject-scoped all-time, daily, and category leaderboards; forgiving streaks (two protections a month — spent for you after a missed day, or armed in advance, both at once for a 96-hour window); verified XP; ranks; collectible cosmetic Shark Cards earned by finishing the Today queue; and a fairness-neutral cosmetic token shop.
 - A read-only study advisor that names your weakest areas from your own results, and a devShark touch-typing racer (accuracy-gated, WPM earns stars, private on-device best).
 - A devShark Coding section with 245 tasks across JavaScript, TypeScript, React, and system design: server-graded submissions (QuickJS sandbox, real TypeScript type tests, sealed design keys), authored hint ladders ending in documentation, coding tasks inside Learn levels, a short review ladder, coding badges, and an optional GitHub garden that commits every passed task to the learner's own repository.
 - Two optional devShark learning paths, both graded through the existing server sandbox and both awarding no XP: the **Forward Deployed Engineer** role specialization (customer discovery, integration, bounded AI, evaluation, security, operations, handoff and a staged capstone) that sits on top of the chosen Fullstack/Frontend/Backend track, and **DSA Foundations** (growth classes, arrays, maps, stacks, queues, linked lists, recursion, search, sorting, trees) entered directly with no track, role or XP rank required. Verified checks stay visibly apart from self-reviewed writing, and neither path claims a certification.
@@ -124,6 +124,7 @@ Production requires:
 Strongly recommended for a public deployment:
 
 - `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`.
+- `TURNSTILE_SECRET_KEY` with `VITE_TURNSTILE_SITE_KEY`, and `TURNSTILE_ENFORCE=true` only after a few days of watching the logs. Without the secret nothing is fetched and nothing is refused.
 - An external monitor for `GET /api/health`.
 - `VITE_SENTRY_DSN` and/or `VITE_PUBLIC_POSTHOG_KEY` only after privacy configuration is approved.
 
@@ -146,7 +147,7 @@ The twelve physical handlers multiplex related operations to stay within the dep
 | `/api/leaderboard` | Subject, daily, and category boards |
 | `/api/flashcards` | Subject-scoped flashcard CRUD |
 | `/api/user/[op]` | Stats, category stats, XP, streaks, badges, streak freezes, Shark Cards, study advisor, auth events, deletion; coding progress and drafts; learning preference, path enrollment, progress and drafts; GitHub garden connection, repository, sync, disconnect |
-| `/api/admin/[op]` | Role-gated control-room operations |
+| `/api/admin/[op]` | Role-gated control-room operations, including the progression-velocity review list |
 | `/api/settings` | Public safe configuration |
 | `/api/health` | Database, service-role migration, and limiter readiness |
 

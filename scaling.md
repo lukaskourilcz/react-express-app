@@ -10,6 +10,16 @@ A Vite React SPA plus Vercel functions and Supabase. The stack is in `about-proj
 - **Daily-habit layer (migration 024):** spaced mastery, the Today queue, forgiving streaks, badges, Shark Cards, the advisor, and the typing racer add **no new serverless functions** (all new endpoints ride inside the existing twelve handlers) and only small, mostly per-user tables — they do not change the baseline.
 - **Coding section (migration 025, devShark):** grading runs inside the existing roadmap handler in a QuickJS WebAssembly sandbox with a 2.5 s deadline and a 64 MB ceiling, so one submission is one short serverless invocation; the TypeScript compiler loads once per warm instance. Submissions are rate limited per IP (30 per 10 minutes). The GitHub garden makes one to three GitHub API calls per passed task, queues failures, and retries them on a manual sync; it needs no extra service. Neither changes the baseline.
 
+- **Merchandise packages (migrations 035 and 040):** the only cost in this
+  product that rises with learner success. One package is a t-shirt, a mug and a
+  sticker set, landed; `packageCosting` adds that up from the owner's quotes and
+  reports `unquoted` until all three exist. The month is bounded by
+  `packagesPerMonth` — unset today, which means claims behave as they always did
+  and nothing ships, because merchandise is still unconfigured. Once quotes and a
+  cap exist, the month's worst case is the cap times the unit cost plus the
+  print-on-demand plan's monthly fee, and that figure is the one to put in a
+  budget alert. No serverless functions and one small table.
+
 ## When to scale
 
 - Supabase Realtime connections/messages and DB compute are the first ceilings → raise compute or add retention/partitioning under sustained load, not by user count.

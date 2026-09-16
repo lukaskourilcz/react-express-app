@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { User } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
 import { apiFetch } from './api';
+import { withAttestation } from './turnstile';
 import { registerAccessTokenReader } from './roadmap';
 
 // Cache the latest access token in memory so the pagehide beacon (which can't
@@ -31,8 +32,15 @@ function reportSignIn(): void {
   } catch {
     // sessionStorage unavailable — fall through and still report once
   }
-  // Fire-and-forget: never let logging affect the sign-in UX.
-  void apiFetch('/api/user/authevent', { method: 'POST', body: '{}' }).catch(() => {});
+  // Fire-and-forget: never let logging affect the sign-in UX. The attestation
+  // rides along because this is the first moment the server hears about a new
+  // account — sign-in itself is Google OAuth and happens without us. The server
+  // records the outcome; it never refuses the report, so a learner whose check
+  // could not run still signs in and still gets their account.
+  void (async () => {
+    const body = await withAttestation('signup', {});
+    await apiFetch('/api/user/authevent', { method: 'POST', body: JSON.stringify(body) });
+  })().catch(() => {});
 }
 function clearSignInReport(): void {
   try {

@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Text } from '@astryxdesign/core/Text';
 import { onXpToast, type XpToast } from '../lib/xp';
-import { useT } from '../i18n/LanguageContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
+import { dayUnitKey } from '../lib/streakMoment';
 import { MotionPop, m, AnimatePresence, useReducedMotion, stillIfReduced } from '../lib/motion';
 import { useIsMobile } from '../lib/useMediaQuery';
-import { BoltIcon, TrophyIcon } from './ui/icons';
+import { BoltIcon, FlameIcon, TrophyIcon } from './ui/icons';
 
 // A global, self-contained listener for XP events. Mounted once at the app root
 // so XP gains and rank-ups toast from anywhere (quiz results, the learning path,
@@ -15,6 +16,16 @@ import { BoltIcon, TrophyIcon } from './ui/icons';
 
 const GAIN_MS = 2200;
 const RANKUP_MS = 4800;
+// A streak sentence is shorter than a rank title and longer than a number, and
+// the seventh day is the one worth reading twice.
+const STREAK_MS = 3000;
+const MILESTONE_MS = 4400;
+
+// Theme-independent on purpose. The flame token flips from a dark amber in
+// light mode to a bright one in dark, and white text cannot sit on both; the
+// rank-up toast solved the same problem the same way.
+const STREAK_INK = '#fff';
+const STREAK_SURFACE = '#8a5700';
 
 type GainSource = Extract<XpToast, { kind: 'gain' }>['source'];
 const GAIN_KEY: Record<GainSource, TranslationKey> = {
@@ -24,7 +35,7 @@ const GAIN_KEY: Record<GainSource, TranslationKey> = {
 };
 
 export default function XpToaster() {
-  const t = useT();
+  const { t, lang } = useLanguage();
   const isMobile = useIsMobile();
   const [queue, setQueue] = useState<XpToast[]>([]);
   const [current, setCurrent] = useState<XpToast | null>(null);
@@ -45,7 +56,10 @@ export default function XpToaster() {
   // Auto-hide, then let the exit transition run before clearing `current`.
   useEffect(() => {
     if (!open || !current) return;
-    const ms = current.kind === 'rankup' ? RANKUP_MS : GAIN_MS;
+    const ms =
+      current.kind === 'rankup' ? RANKUP_MS
+      : current.kind === 'streak' ? (current.milestone ? MILESTONE_MS : STREAK_MS)
+      : GAIN_MS;
     const id = window.setTimeout(() => setOpen(false), ms);
     return () => window.clearTimeout(id);
   }, [open, current]);
@@ -56,6 +70,7 @@ export default function XpToaster() {
 
   if (!current) return null;
   const isRankUp = current.kind === 'rankup';
+  const isStreak = current.kind === 'streak';
   seq.current += 1;
 
   return createPortal(
@@ -110,7 +125,40 @@ export default function XpToaster() {
                     </Text>
                   </div>
                 </div>
-              ) : (
+              ) : isStreak && current.kind === 'streak' ? (
+                /* The streak moment. One surface for both states: the seventh
+                   day is told apart by the kicker, the dwell and the celebrate
+                   class — which `Roadmap.css` already stops under
+                   prefers-reduced-motion — rather than by a second colour. */
+                <div
+                  role="status"
+                  className={current.milestone ? 'rm-celebrate' : undefined}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: current.milestone ? 10 : 8,
+                    padding: current.milestone ? '12px 20px' : '10px 18px',
+                    borderRadius: current.milestone ? 'var(--radius-element)' : 999,
+                    color: STREAK_INK, fontWeight: 700,
+                    background: STREAK_SURFACE,
+                    boxShadow: 'var(--shadow-med)',
+                  }}
+                >
+                  <span style={{ display: 'inline-flex' }} aria-hidden>
+                    <FlameIcon size={current.milestone ? 22 : 16} />
+                  </span>
+                  <div style={{ minWidth: 0 }}>
+                    {current.milestone && (
+                      <span style={{ display: 'block', fontWeight: 800, fontSize: '0.7rem', letterSpacing: 1, textTransform: 'uppercase', opacity: 0.85 }}>
+                        {t('streak.milestoneKicker')}
+                      </span>
+                    )}
+                    <Text as="div" color="inherit" weight="bold">
+                      {current.milestone
+                        ? t('streak.milestone')
+                        : t('streak.extended', { n: current.days, unit: t(dayUnitKey(current.days, lang)) })}
+                    </Text>
+                  </div>
+                </div>
+              ) : current.kind === 'gain' ? (
                 <div
                   role="status"
                   style={{
@@ -127,7 +175,7 @@ export default function XpToaster() {
                     {t(GAIN_KEY[current.source], { xp: current.amount })}
                   </Text>
                 </div>
-              )}
+              ) : null}
             </MotionPop>
           </m.div>
         )}

@@ -25,6 +25,18 @@ import {
   stableAttemptId,
 } from '../lib/quiz-tokens';
 import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS } from '../lib/rate-limit';
+import challengeHandler from '../api/quiz/challenge';
+import {
+  comboProgressPct,
+  nextComboStep,
+  replaySprint,
+  SPRINT_COMBO_STEPS,
+  SPRINT_DURATION_MS,
+  SPRINT_MAX_SCORE,
+  SPRINT_SUBJECTS,
+  SPRINT_WRONG_PENALTY_S,
+  type SprintEvent,
+} from '../shared/sprint';
 import healthHandler from '../api/health';
 import roadmapHandler from '../api/quiz/roadmap';
 import { selectPersonalizedReview, selectDueItems, DUE_SHARE } from '../lib/review-selection';
@@ -42,6 +54,32 @@ import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } fro
 import { contentVersion, contentHash, translationHash, itemReview, codingTaskReview, questionEligibility, isAuditedCategory } from '../lib/curation';
 import { AUDITED_CATEGORIES, REVIEW_REGISTRY } from '../lib/curation-registry';
 import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH } from './build-curation-registry';
+import {
+  generateMoves,
+  moveFromUci,
+  parseFen,
+  perft,
+  positionIsPlayable,
+  squareName,
+  toFen,
+  toSan,
+  STARTING_FEN,
+} from '../shared/chess-position';
+import {
+  headerMatches,
+  parseLichessRow,
+  puzzleQuestion,
+  puzzleTranslation,
+  selectPuzzles,
+  tierForRating,
+  withoutCheckSuffix,
+  PUZZLE_TIERS,
+  PUZZLE_TOPICS,
+  PUZZLE_TOPIC_THEMES,
+} from '../shared/chess-puzzles';
+import { renderBank } from './import-lichess-puzzles';
+import { buildChessPuzzleBank, chessPuzzleQuestions, chessPuzzleTranslationsCs } from '../lib/chess-puzzle-questions';
+import { CHESS_PUZZLE_IMPORT, IMPORTED_CHESS_PUZZLES } from '../lib/chess-puzzle-bank';
 import { applyEligibility, getEffectiveQuestions, getQuestionsForHistoryById } from '../lib/questions-store';
 import { buildLiveTopic, liveAvailability, MIN_LEVEL_QUESTIONS, unavailablePartsOf, partRanges as roadmapPartRanges } from '../lib/roadmap';
 import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRanges } from '../shared/progression';
@@ -88,10 +126,19 @@ import { GLOSSARY, termsIn } from '../shared/glossary';
 import {
   DEFAULT_MERCH_SETTINGS,
   MERCH_SKUS,
+  PACKAGE_SKUS,
   merchAvailability,
+  merchLandedCostMinor,
   merchMarginMinor,
+  packageClaimOutcome,
+  packageCosting,
+  packageMonthlyCeilingMinor,
+  packageProgramState,
+  packagesRemainingThisMonth,
   tokensForVerifiedXp,
   validateAddress,
+  type MerchPricing,
+  type MerchSettings,
 } from '../shared/rewards';
 import { normalizeSettings } from '../lib/settings-store';
 import { taskResources, CODING_DOC_LINKS } from '../shared/coding-docs';
@@ -136,6 +183,21 @@ import {
   SUPPORT_PROMPT_DISMISS_MS,
 } from '../client/src/lib/supportPrompt';
 import type { Question } from '../lib/quiz-runtime';
+import {
+  classifySiteverify,
+  isTurnstileConfigured,
+  readTurnstileToken,
+  refusesRequest,
+  requireAttestation,
+  turnstileMode,
+} from '../lib/turnstile';
+import {
+  INTEGRITY_SIGNALS,
+  INTEGRITY_STATUSES,
+  INTEGRITY_SURFACES,
+  VELOCITY_RULES,
+  evaluateVelocity,
+} from '../lib/integrity';
 
 function apiFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -373,6 +435,391 @@ async function auditGateContracts() {
   assert.equal(round.lastRoundSize, 1, 'the void item does not count in the round');
   assert.equal(round.lastRoundCorrect, 1);
   assert.equal(round.asked, 1, 'the run continues from what was actually graded');
+}
+
+/* ── the puzzle sprint (#195) ─────────────────────────────────────────────
+ *
+ * The sprint's whole score is its clock, so every rule here is one that stops
+ * the clock from being something the browser can influence: the curve is exact,
+ * an answer that lands after time is out is not counted, a run minted in one
+ * mode cannot be finished as the other, and the mode earns XP at the same rate
+ * as the run it sits beside. */
+async function sprintContracts() {
+  const start = 1_000_000;
+  const correctAt = (id: string, at: number): SprintEvent => ({ questionId: id, isCorrect: true, at });
+
+  // The curve fires at 5, 12, 20 and 30 — and nowhere else. Thirty answers one
+  // second apart all land inside the widening window.
+  {
+    const events = Array.from({ length: 30 }, (_, i) => correctAt(`q${i}`, start + (i + 1) * 1000));
+    const replay = replaySprint(start, events);
+    assert.equal(replay.score, 30);
+    assert.equal(replay.wrong, 0);
+    assert.equal(replay.longestCombo, 30);
+    assert.equal(replay.bonusMs, (3 + 5 + 7 + 10) * 1000, 'the combo curve adds exactly +3, +5, +7 and +10 seconds');
+    assert.equal(replay.deadlineAt, start + SPRINT_DURATION_MS + replay.bonusMs);
+    // One fewer answer stops short of the last step, so the last step is not
+    // granted early or granted twice.
+    const shortOfThirty = replaySprint(start, events.slice(0, 29));
+    assert.equal(shortOfThirty.bonusMs, (3 + 5 + 7) * 1000, 'the 30-answer step is granted at 30 and not before');
+  }
+
+  // A wrong answer costs ten seconds and empties the combo. It does not touch
+  // the score already earned, and the curve can be earned again from zero.
+  {
+    const events: SprintEvent[] = [
+      ...Array.from({ length: 5 }, (_, i) => correctAt(`a${i}`, start + (i + 1) * 1000)),
+      { questionId: 'miss', isCorrect: false, at: start + 6000 },
+      ...Array.from({ length: 5 }, (_, i) => correctAt(`b${i}`, start + 7000 + i * 1000)),
+    ];
+    const replay = replaySprint(start, events);
+    assert.equal(replay.score, 10, 'a wrong answer does not remove a point already scored');
+    assert.equal(replay.wrong, 1);
+    assert.equal(replay.longestCombo, 5, 'the combo restarts from zero after a miss');
+    assert.equal(replay.penaltyMs, SPRINT_WRONG_PENALTY_S * 1000);
+    assert.equal(replay.bonusMs, 3000 + 3000, 'the five-in-a-row step is earned twice, once per combo');
+    assert.equal(replay.deadlineAt, start + SPRINT_DURATION_MS + 6000 - SPRINT_WRONG_PENALTY_S * 1000);
+  }
+
+  // An answer graded after the clock ran out is dropped, not counted. This is
+  // what makes withholding an answer useless as a way to buy time.
+  {
+    const replay = replaySprint(start, [
+      correctAt('inside', start + 1000),
+      correctAt('outside', start + SPRINT_DURATION_MS + 1),
+    ]);
+    assert.equal(replay.score, 1, 'a late answer scores nothing');
+    assert.equal(replay.rejected, 1);
+  }
+
+  // Penalties move the deadline for everything after them, so ten seconds of
+  // clock really is ten seconds of clock.
+  {
+    const replay = replaySprint(start, [
+      { questionId: 'miss', isCorrect: false, at: start + 1000 },
+      correctAt('after', start + SPRINT_DURATION_MS - 5000),
+    ]);
+    assert.equal(replay.score, 0, 'the run was already over when the last answer landed');
+    assert.equal(replay.rejected, 1);
+  }
+
+  // A replayed request repeats a proof. The same question is one answer.
+  {
+    const replay = replaySprint(start, [correctAt('same', start + 1000), correctAt('same', start + 2000)]);
+    assert.equal(replay.score, 1, 'one question is one answer however many times its proof is sent');
+  }
+
+  // The ceiling holds even against a proof set no clock could produce.
+  {
+    const flood = Array.from({ length: 400 }, (_, i) => correctAt(`f${i}`, start));
+    assert.equal(replaySprint(start, flood).score, SPRINT_MAX_SCORE, 'the replayed score is clamped');
+  }
+
+  // The combo bar's own arithmetic: it fills between steps and reads full once
+  // the curve is finished.
+  assert.equal(nextComboStep(0)?.at, 5);
+  assert.equal(nextComboStep(5)?.at, 12);
+  assert.equal(nextComboStep(30), null);
+  assert.equal(comboProgressPct(0), 0);
+  assert.equal(comboProgressPct(5), 0, 'reaching a step empties the bar toward the next one');
+  assert.equal(comboProgressPct(30), 100);
+  assert.deepEqual(SPRINT_COMBO_STEPS.map((step) => step.at), [5, 12, 20, 30]);
+
+  // Only the subjects whose items can be answered in seconds run a sprint, and
+  // every one of them is a real subject.
+  assert.deepEqual([...SPRINT_SUBJECTS], ['chess', 'math']);
+  for (const subject of SPRINT_SUBJECTS) assert.ok(SUBJECT_SCOPE_CATALOG[subject], `${subject} must be a real subject`);
+
+  // The run token carries the mode, and a token minted before the sprint
+  // existed still reads as the classic run it was.
+  {
+    const sprintRun = createChallengeRun(true, 'chess', 'sprint');
+    const decoded = decodeChallengeRun(sprintRun.runToken);
+    assert.equal(decoded?.mode, 'sprint');
+    assert.ok(decoded && Math.abs(decoded.startedAt - sprintRun.startedAt) === 0, 'the run start is the token\'s own timestamp');
+    assert.equal(decodeChallengeRun(createChallengeRun(true, 'chess').runToken)?.mode, 'classic');
+  }
+
+  // The two modes refuse each other's runs. A sprint has no terminal strikes,
+  // and the classic run has no clock, so finishing one as the other would score
+  // a run under rules it never played by.
+  {
+    const sprintRun = createChallengeRun(true, 'chess', 'sprint');
+    const classicRun = createChallengeRun(true, 'chess');
+
+    const scoreRes = mockResponse();
+    await challengeHandler(
+      { method: 'POST', headers: {}, query: {}, body: { name: 'Contract', runToken: sprintRun.runToken, proofs: [] }, socket: {} } as never,
+      scoreRes as never,
+    );
+    assert.equal(scoreRes.statusCode, 400, JSON.stringify(scoreRes.body));
+    assert.equal((scoreRes.body as { error?: { code?: string } })?.error?.code, 'wrong_mode');
+
+    const completeRes = mockResponse();
+    await challengeHandler(
+      { method: 'POST', headers: {}, query: { resource: 'complete' }, body: { runToken: sprintRun.runToken, proofs: [] }, socket: {} } as never,
+      completeRes as never,
+    );
+    assert.equal(completeRes.statusCode, 400, JSON.stringify(completeRes.body));
+    assert.equal((completeRes.body as { error?: { code?: string } })?.error?.code, 'wrong_mode');
+
+    const sprintRes = mockResponse();
+    await challengeHandler(
+      { method: 'POST', headers: {}, query: { resource: 'sprint-complete' }, body: { runToken: classicRun.runToken, proofs: [] }, socket: {} } as never,
+      sprintRes as never,
+    );
+    assert.equal(sprintRes.statusCode, 400, JSON.stringify(sprintRes.body));
+    assert.equal((sprintRes.body as { error?: { code?: string } })?.error?.code, 'wrong_mode');
+  }
+
+  // A subject that does not run the sprint gets neither its questions nor its
+  // board, and says so rather than silently serving the classic ones.
+  {
+    const geographyCategories = SUBJECT_SCOPE_CATALOG.geography.categories.join(',');
+    const batchRes = mockResponse();
+    await challengeHandler(
+      { method: 'GET', headers: {}, query: { resource: 'sprint', categories: geographyCategories }, socket: {} } as never,
+      batchRes as never,
+    );
+    assert.equal(batchRes.statusCode, 400, JSON.stringify(batchRes.body));
+    assert.equal((batchRes.body as { error?: { code?: string } })?.error?.code, 'sprint_unavailable');
+
+    const boardRes = mockResponse();
+    await challengeHandler(
+      { method: 'GET', headers: {}, query: { resource: 'sprint-board', categories: geographyCategories }, socket: {} } as never,
+      boardRes as never,
+    );
+    assert.equal(boardRes.statusCode, 400, JSON.stringify(boardRes.body));
+    assert.equal((boardRes.body as { error?: { code?: string } })?.error?.code, 'sprint_unavailable');
+  }
+
+  // The per-answer bucket exists and is wide enough for a three-minute run, and
+  // the submit handler picks it from the sealed session rather than from
+  // anything the request says.
+  assert.ok('challengeAnswer' in RATE_LIMITS, 'rate limit challengeAnswer must exist');
+  assert.ok('sprintComplete' in RATE_LIMITS, 'rate limit sprintComplete must exist');
+  assert.ok(
+    RATE_LIMITS.challengeAnswer.capacity >= 60,
+    'a sprint grades one answer per request; a 12-a-minute bucket would 429 a fast run mid-clock',
+  );
+  {
+    const submitSource = readFileSync(join(process.cwd(), 'api/quiz/submit.ts'), 'utf8');
+    const decodeAt = submitSource.indexOf('decodeSessionEnvelope(body.sessionId)');
+    const limitAt = submitSource.indexOf('RATE_LIMITS.challengeAnswer');
+    assert.ok(decodeAt > 0 && limitAt > decodeAt, 'the session must be opened before the bucket is chosen');
+    assert.match(submitSource, /session\?\.scope === 'challenge' \? RATE_LIMITS\.challengeAnswer : RATE_LIMITS\.quizSubmit/);
+  }
+
+  // The sprint is not a faster way to earn: it pays the same five XP per
+  // server-proven correct answer the classic run pays, and nothing for showing up.
+  {
+    const challengeSource = readFileSync(join(process.cwd(), 'api/quiz/challenge.ts'), 'utf8');
+    assert.match(challengeSource, /const xp = Math\.min\(10_000, replay\.score \* 5\)/, 'the sprint pays the classic rate');
+    assert.match(challengeSource, /p_award_id: `sprint:\$\{run\.runId\}`/, 'the sprint XP award is keyed to the run, so a replay credits nothing');
+    // The score written to the board is the replay's, never the body's.
+    const completeBlock = challengeSource.slice(challengeSource.indexOf('async function handleSprintComplete'));
+    assert.match(completeBlock, /score: replay\.score/);
+    assert.doesNotMatch(completeBlock.split('const name =')[0] ?? '', /body\.score/, 'nothing the browser sent may become a sprint score');
+  }
+
+  // The sprint keeps `scope: 'challenge'`: a fifth session scope would have to
+  // re-earn every rule quiz/submit.ts already applies to a streamed run.
+  {
+    const sprintSource = readFileSync(join(process.cwd(), 'client/src/components/Sprint.tsx'), 'utf8');
+    // The screen's clock is a rendering of the server's: the deadline is built
+    // from the batch's own start, and "now" is corrected by the offset measured
+    // against it. A bare local start would drift from the run being scored.
+    assert.match(sprintSource, /deadlineRef\.current = batch\.startedAt \+ batch\.durationMs/);
+    assert.match(sprintSource, /clockOffsetRef\.current = Date\.now\(\) - batch\.startedAt/);
+    assert.match(sprintSource, /const serverNow = useCallback\(\(\) => Date\.now\(\) - clockOffsetRef\.current/);
+    // The run is finished through the sprint resource, carrying the tokens the
+    // server issued and no score of its own.
+    assert.doesNotMatch(sprintSource, /score:\s*score\s*\}/, 'the browser must not report a score to the server');
+  }
+
+  console.log('PASS puzzle sprint: the combo curve, the clock, mode isolation, the per-answer bucket and the XP rate');
+}
+
+/* ── leaderboard integrity: attestation and progression velocity (#202) ───
+ *
+ * Two independent guards with one shared property: neither of them may ever
+ * change what a learner earned. Attestation can refuse a write before it
+ * happens; the velocity check can only write a note for the owner. Nothing in
+ * either path deletes a score, edits XP, moves a rank or hides a board row, and
+ * the assertions below are what keeps that true. */
+async function integrityContracts() {
+  const secretWas = process.env.TURNSTILE_SECRET_KEY;
+  const enforceWas = process.env.TURNSTILE_ENFORCE;
+  const request = (body: Record<string, unknown> = {}, headers: Record<string, string> = {}) =>
+    ({ body, headers, socket: {} }) as unknown as Parameters<typeof readTurnstileToken>[0];
+
+  try {
+    // Switched off is the shipped state: no secret, nothing refused, and the
+    // handlers behave exactly as they did before attestation existed.
+    delete process.env.TURNSTILE_SECRET_KEY;
+    delete process.env.TURNSTILE_ENFORCE;
+    assert.equal(turnstileMode(), 'off', 'no secret means the feature is off');
+    assert.equal(isTurnstileConfigured(), false);
+    const offRes = mockResponse();
+    const allowed = await requireAttestation(request(), offRes as unknown as Parameters<typeof requireAttestation>[1], 'quiz-submit');
+    assert.ok(allowed, 'an unconfigured deployment refuses nothing');
+    assert.equal(allowed?.outcome, 'not-configured');
+    assert.equal(offRes.statusCode, 200, 'and writes no error response');
+
+    process.env.TURNSTILE_SECRET_KEY = 'test-secret';
+    assert.equal(turnstileMode(), 'observe', 'a secret alone observes; enforcing is a second, separate switch');
+    process.env.TURNSTILE_ENFORCE = 'true';
+    assert.equal(turnstileMode(), 'enforce');
+    process.env.TURNSTILE_ENFORCE = 'yes';
+    assert.equal(turnstileMode(), 'observe', 'only the exact string "true" enforces');
+
+    // A missing token never reaches the network, so this is safe to call.
+    process.env.TURNSTILE_ENFORCE = 'true';
+    const refusedRes = mockResponse();
+    const refused = await requireAttestation(request(), refusedRes as unknown as Parameters<typeof requireAttestation>[1], 'quiz-submit');
+    assert.equal(refused, null, 'enforcing refuses a submission with no token');
+    assert.equal(refusedRes.statusCode, 403);
+    assert.equal((refusedRes.body as { error: { code: string } }).error.code, 'attestation_required');
+
+    process.env.TURNSTILE_ENFORCE = 'false';
+    const observedRes = mockResponse();
+    const observed = await requireAttestation(request(), observedRes as unknown as Parameters<typeof requireAttestation>[1], 'quiz-submit');
+    assert.equal(observed?.outcome, 'missing', 'observing still classifies the attempt');
+    assert.equal(observedRes.statusCode, 200, 'but never refuses it');
+  } finally {
+    if (secretWas === undefined) delete process.env.TURNSTILE_SECRET_KEY;
+    else process.env.TURNSTILE_SECRET_KEY = secretWas;
+    if (enforceWas === undefined) delete process.env.TURNSTILE_ENFORCE;
+    else process.env.TURNSTILE_ENFORCE = enforceWas;
+  }
+
+  // Only the caller's own failures may cost the caller their submission. Our
+  // own misconfiguration and Cloudflare's bad day both resolve to 'unavailable',
+  // which refuses nothing in either mode — one wrong environment variable must
+  // not take every submission in the product down with it.
+  assert.equal(classifySiteverify({ success: true }).outcome, 'passed');
+  assert.equal(classifySiteverify({ success: false, 'error-codes': ['invalid-input-response'] }).outcome, 'failed');
+  assert.equal(classifySiteverify({ success: false, 'error-codes': ['timeout-or-duplicate'] }).outcome, 'failed', 'a replayed token is the caller replaying it');
+  assert.equal(classifySiteverify({ success: false, 'error-codes': ['invalid-input-secret'] }).outcome, 'unavailable', 'our own bad secret must never lock out a learner');
+  assert.equal(classifySiteverify({ success: false, 'error-codes': ['internal-error'] }).outcome, 'unavailable');
+  assert.equal(classifySiteverify({ success: false, 'error-codes': ['invalid-input-response', 'internal-error'] }).outcome, 'unavailable', 'a mixed verdict is not the caller\'s fault alone');
+  assert.equal(classifySiteverify({ success: false }).outcome, 'unavailable', 'a refusal with no reason is not evidence');
+  assert.equal(classifySiteverify('nonsense').outcome, 'unavailable');
+  assert.equal(classifySiteverify(null).outcome, 'unavailable');
+
+  for (const outcome of ['not-configured', 'passed', 'unavailable'] as const) {
+    assert.equal(refusesRequest({ mode: 'enforce', outcome, errorCodes: [] }), false, `${outcome} must never refuse a request`);
+  }
+  for (const outcome of ['missing', 'failed'] as const) {
+    assert.equal(refusesRequest({ mode: 'enforce', outcome, errorCodes: [] }), true);
+    assert.equal(refusesRequest({ mode: 'observe', outcome, errorCodes: [] }), false, 'observing never refuses');
+    assert.equal(refusesRequest({ mode: 'off', outcome, errorCodes: [] }), false);
+  }
+
+  // The token is validated for shape before it is ever forwarded upstream.
+  const token = 'abc.DEF-123_xyz~+/=';
+  assert.equal(readTurnstileToken(request({ turnstileToken: token })), token);
+  assert.equal(readTurnstileToken(request({}, { 'cf-turnstile-response': token })), token, 'the header form is accepted too');
+  assert.equal(readTurnstileToken(request({ turnstileToken: '  ' })), null);
+  assert.equal(readTurnstileToken(request({ turnstileToken: 'a b<script>' })), null, 'a token with unexpected characters is not forwarded');
+  assert.equal(readTurnstileToken(request({ turnstileToken: 'a'.repeat(2049) })), null, 'an oversized token is refused, not proxied');
+  assert.equal(readTurnstileToken(request({ turnstileToken: 42 })), null);
+  assert.equal(readTurnstileToken(request()), null);
+
+  // ── velocity ──
+  const rules = VELOCITY_RULES;
+  const perAnswer = (answered: number, msEach: number) => answered * msEach;
+
+  // A short set is never evidence, however fast it was.
+  assert.equal(
+    evaluateVelocity({ answered: rules.minSample - 1, correct: rules.minSample - 1, elapsedMs: 10 }).flagged,
+    false,
+    'below the minimum sample nothing is flagged',
+  );
+  // An ordinary good run: eight answers, five seconds each, all correct.
+  assert.equal(evaluateVelocity({ answered: 8, correct: 8, elapsedMs: perAnswer(8, 5000) }).flagged, false);
+  // A very fast, very good human still sits above the floor.
+  assert.equal(evaluateVelocity({ answered: 20, correct: 20, elapsedMs: perAnswer(20, rules.readingFloorMs + 1) }).flagged, false);
+  // Speed without accuracy is somebody clicking through a quiz they gave up on.
+  // That is not an integrity problem and must not be reported as one.
+  assert.equal(
+    evaluateVelocity({ answered: 20, correct: 4, elapsedMs: perAnswer(20, 400) }).flagged,
+    false,
+    'fast and wrong is a bored learner, not a bot',
+  );
+  const fast = evaluateVelocity({ answered: 20, correct: 20, elapsedMs: perAnswer(20, 400) });
+  assert.deepEqual(fast.signals, ['pace-below-reading-floor']);
+  assert.equal(fast.severity, 'review');
+  assert.equal(fast.accuracyPct, 100);
+  assert.equal(fast.msPerAnswer, 400);
+  // Under the reaction floor the accuracy stops mattering: that is not hand input.
+  const inhuman = evaluateVelocity({ answered: 20, correct: 3, elapsedMs: perAnswer(20, 20) });
+  assert.deepEqual(inhuman.signals, ['pace-below-reaction-floor']);
+  const both = evaluateVelocity({ answered: 20, correct: 20, elapsedMs: perAnswer(20, 20) });
+  assert.equal(both.signals.length, 2);
+  assert.equal(both.severity, 'urgent', 'two floors crossed at once is the only shape a replay has');
+  // Clock skew across serverless instances must not invent a verdict shape the
+  // rest of the code cannot read.
+  const skewed = evaluateVelocity({ answered: 20, correct: 1, elapsedMs: -5000 });
+  assert.equal(skewed.msPerAnswer, 0);
+  assert.ok(skewed.flagged);
+  assert.equal(evaluateVelocity({ answered: 20, correct: 20, elapsedMs: Number.NaN }).msPerAnswer, 0);
+  // Pure: the same sample always gives the same verdict, with no clock involved.
+  const sample = { answered: 12, correct: 12, elapsedMs: 3000 };
+  assert.deepEqual(evaluateVelocity(sample), evaluateVelocity(sample));
+  // The signal and status vocabularies are closed sets, so a flag can never
+  // name something the database will reject.
+  assert.ok(evaluateVelocity(sample).signals.every((signal) => (INTEGRITY_SIGNALS as readonly string[]).includes(signal)));
+  assert.deepEqual([...INTEGRITY_STATUSES], ['open', 'reviewed', 'cleared', 'confirmed']);
+  assert.deepEqual([...INTEGRITY_SURFACES], ['quiz', 'challenge', 'signup']);
+
+  // The fairness contract, read off the source: nothing in the integrity path
+  // may reach a score, an XP total, a rank or a leaderboard.
+  // Comments are stripped first: this is an assertion about what the module
+  // does, and a comment explaining what it must never do would otherwise fail it.
+  const integritySource = readFileSync(join(process.cwd(), 'lib', 'integrity.ts'), 'utf8')
+    .split('\n')
+    .filter((line) => !/^\s*(\/\/|\/?\*)/.test(line))
+    .join('\n');
+  for (const forbidden of ['challenge_scores', 'user_stats', 'user_xp', 'quest_xp', 'leaderboard', 'user_category_stats']) {
+    assert.ok(!integritySource.includes(forbidden), `lib/integrity.ts must not touch ${forbidden}: a flag is a note, not a penalty`);
+  }
+
+  const migration = readFileSync(join(process.cwd(), 'supabase', 'supabase-schema-041.sql'), 'utf8');
+  // The two vocabularies have to be the same on both sides of the wire, or a
+  // flag the server decides to write is a flag the database refuses to store.
+  for (const signal of INTEGRITY_SIGNALS) {
+    assert.ok(migration.includes(`'${signal}'`), `migration 041 does not accept the signal ${signal}`);
+  }
+  for (const surface of INTEGRITY_SURFACES) {
+    assert.ok(migration.includes(`'${surface}'`), `migration 041 does not accept the surface ${surface}`);
+  }
+  assert.ok(migration.includes('ENABLE ROW LEVEL SECURITY'), 'the review list is not readable by anon or authenticated');
+  assert.ok(migration.includes('REVOKE ALL ON public.integrity_flags FROM anon, authenticated;'));
+  for (const routine of ['record_integrity_flag', 'integrity_review_list', 'resolve_integrity_flag', 'delete_integrity_data']) {
+    assert.ok(migration.includes(`GRANT EXECUTE ON FUNCTION public.${routine}`), `${routine} must be granted to the service role only`);
+    assert.ok(migration.includes(`REVOKE ALL ON FUNCTION public.${routine}`), `${routine} must be revoked from PUBLIC`);
+  }
+  assert.equal(
+    (migration.match(/SECURITY DEFINER/g) ?? []).length,
+    4,
+    'every routine in the migration is SECURITY DEFINER',
+  );
+  assert.equal(
+    (migration.match(/SET search_path = ''/g) ?? []).length,
+    4,
+    "every routine pins an empty search_path",
+  );
+  for (const forbidden of ['DELETE FROM public.challenge_scores', 'UPDATE public.user_stats', 'DELETE FROM public.user_xp', 'UPDATE public.user_category_stats']) {
+    assert.ok(!migration.includes(forbidden), `migration 041 must not ${forbidden}: the review list decides nothing`);
+  }
+  // Account erasure has to reach the new table, and it does so through its own
+  // function rather than by restating delete_user_data.
+  assert.ok(migration.includes('CREATE OR REPLACE FUNCTION public.delete_integrity_data'));
+  const userOps = readFileSync(join(process.cwd(), 'api', 'user', '[op].ts'), 'utf8');
+  assert.ok(userOps.includes('purgeIntegrityData'), 'deleting an account must erase its flags');
+
+  console.log('PASS integrity: attestation states, failure attribution, token shape, velocity floors, and a review list that decides nothing');
 }
 
 async function main() {
@@ -816,6 +1263,86 @@ async function main() {
   assert.match(paths026, /DELETE FROM public\.user_xp WHERE user_id = p_user_id/);
   assert.match(paths026, /DELETE FROM public\.coding_progress WHERE user_id = p_user_id/);
 
+  /* ── weekly micro-leagues (migration 038) ───────────────────────────────
+   * A league is a deadline on a ranking that already exists. The four things
+   * asserted here are the four ways it could stop being that: a tier that is
+   * worth something, a room that is not bounded, a board that ranks by streak,
+   * or a table account erasure forgets.
+   */
+  {
+    const league = readFileSync(join(process.cwd(), 'supabase', 'supabase-schema-038.sql'), 'utf8');
+    for (const table of ['league_scores', 'league_cohorts', 'league_members', 'league_preferences']) {
+      assert.match(league, new RegExp(`CREATE TABLE IF NOT EXISTS public\\.${table}`), `migration 038 must create ${table}`);
+      assert.match(league, new RegExp(`ALTER TABLE public\\.${table} ENABLE ROW LEVEL SECURITY`), `${table} needs RLS`);
+      assert.match(league, new RegExp(`REVOKE ALL ON public\\.${table}\\s+FROM anon, authenticated`), `${table} must be unreachable with a browser key`);
+    }
+    // Erasure removes every row keyed to the account, and gives the seats back
+    // before the memberships go — a room that stays one short for the rest of
+    // the week ranks the people left in it against somebody who is not there.
+    for (const table of ['league_members', 'league_scores', 'league_preferences']) {
+      assert.match(league, new RegExp(`DELETE FROM public\\.${table} WHERE user_id = p_user_id`), `account erasure must reach ${table}`);
+    }
+    assert.ok(
+      league.indexOf('UPDATE public.league_cohorts c\n     SET member_count = GREATEST(c.member_count - seats.taken, 0)') <
+        league.indexOf('DELETE FROM public.league_members WHERE user_id = p_user_id'),
+      'account erasure must free the cohort seats before deleting the memberships that identify them',
+    );
+    for (const fn of ['league_record', 'league_assign', 'league_board', 'set_league_optout', 'league_optout', 'daily_return_rate', 'delete_user_data']) {
+      assert.match(league, new RegExp(`CREATE OR REPLACE FUNCTION public\\.${fn}\\(`), `migration 038 must define ${fn}`);
+      assert.match(league, new RegExp(`REVOKE ALL ON FUNCTION public\\.${fn}\\(`), `${fn} must be service-role only`);
+      assert.match(league, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${fn}\\(`), `${fn} is reached through a handler, so service_role needs it`);
+    }
+
+    // The room is bounded. Thirty is the seat ceiling and it is enforced in the
+    // table as well as in the query that takes a seat, so no write path can
+    // grow a cohort past it.
+    assert.match(league, /member_count >= 0 AND member_count <= 30/, 'the cohort ceiling belongs on the column');
+    assert.match(league, /AND o\.member_count < 30/, 'a seat may only be taken in a room below the ceiling');
+    assert.match(league, /tier BETWEEN 1 AND 5/, 'the ladder is five deep');
+
+    // Promotion and demotion move a label and nothing else. If any of these
+    // words ever appears between league_record and league_board, a tier has
+    // started to be worth something and the league has stopped being free.
+    const leagueRoutines = league.slice(
+      league.indexOf('FUNCTION public.league_record'),
+      league.indexOf('FUNCTION public.delete_user_data'),
+    );
+    assert.ok(leagueRoutines.length > 2000, 'expected the league routines before delete_user_data');
+    for (const forbidden of ['user_xp', 'quest_xp', 'user_badges', 'user_cards', 'token_balances', 'token_ledger', 'cosmetic_entitlements', 'roadmap_progress', 'coding_progress']) {
+      assert.ok(
+        !leagueRoutines.includes(forbidden),
+        `a league tier must grant nothing: ${forbidden} has no business in the league routines`,
+      );
+    }
+    // And no board in this product ranks by streak, this one included.
+    assert.ok(
+      !leagueRoutines.includes('current_streak') && !leagueRoutines.includes('longest_streak'),
+      'the league ranks weekly correct answers, never a streak',
+    );
+
+    // The retention number is the one the feature is judged by, and it is an
+    // operator fact: admin-gated on the server, and absent from reader copy.
+    const adminHandler = readFileSync(join(process.cwd(), 'api', 'admin', '[op].ts'), 'utf8');
+    assert.match(adminHandler, /case 'retention':/, 'the return rate is served from the admin handler');
+    assert.match(adminHandler, /daily_return_rate/);
+    const en = readFileSync(join(process.cwd(), 'client/src/i18n/translations.ts'), 'utf8');
+    assert.doesNotMatch(en, /'league\.[a-zA-Z]+': '[^']*retention/i, 'a retention rate is not reader copy');
+
+    // Scoring is server-owned and written once. The league score is recorded on
+    // the same condition as the verified XP credit — the verified write said
+    // this attempt id was applied for the first time — so a replay scores
+    // nothing, and no client value reaches it.
+    const userHandler = readFileSync(join(process.cwd(), 'api', 'user', '[op].ts'), 'utf8');
+    assert.match(userHandler, /recordLeagueResult\(supabase!, \{/, 'the league score is recorded by the verified path');
+    const recordCall = userHandler.slice(
+      userHandler.indexOf('recordLeagueResult(supabase!, {'),
+      userHandler.indexOf('recordLeagueResult(supabase!, {') + 400,
+    );
+    assert.match(recordCall, /correct: receipt\.correct/, 'the score comes from the verified receipt');
+    assert.match(recordCall, /answered: receipt\.total/);
+    assert.doesNotMatch(recordCall, /body\./, 'nothing the browser sent may become a league score');
+  }
+
   // Reference solutions and hidden tests never ship: nothing under client/
   // may import lib/coding, and the catalogue keeps solutions in their own module.
   const clientFiles = readdirSync(join(process.cwd(), 'client', 'src'), { recursive: true }) as string[];
@@ -899,6 +1426,55 @@ async function main() {
         `buying a protection must not touch ${forbidden}`,
       );
     }
+
+    // 5. Two of them may be armed at once (migration 039), and two is still
+    //    the whole of it: the column is constrained to the cap, the arm
+    //    routine refuses a third, and arming still buys days and nothing else.
+    const slots = readFileSync(join(process.cwd(), 'supabase/supabase-schema-039.sql'), 'utf8');
+    assert.match(
+      slots,
+      /CHECK \(shield_slots >= 0 AND shield_slots <= 2\)/,
+      'the armed-protection count must be capped in the schema, not only in the routine',
+    );
+    const armRoutine = slots.slice(
+      slots.indexOf('FUNCTION public.activate_streak_shield'),
+      slots.indexOf('GRANT EXECUTE ON FUNCTION public.activate_streak_shield'),
+    );
+    assert.ok(armRoutine.length > 0, 'migration 039 must define the arm routine it replaces');
+    assert.match(armRoutine, /IF v_slots >= 2 THEN/, 'arming a third protection must be refused');
+    for (const forbidden of ['user_xp', 'user_stats', 'quest_xp', 'badge', 'leaderboard', 'roadmap_progress']) {
+      assert.ok(
+        !armRoutine.toLowerCase().includes(forbidden),
+        `arming a protection must not touch ${forbidden}`,
+      );
+    }
+
+    // 6. The moment that celebrates a streak awards nothing. It rides the XP
+    //    toast queue because that is where the queue is, and that proximity is
+    //    exactly why this is asserted rather than assumed.
+    const announce = xpSource.slice(
+      xpSource.indexOf('export function announceStreak'),
+      xpSource.indexOf('export function announceVerifiedQuestXp'),
+    );
+    assert.ok(announce.length > 0, 'announceStreak must exist for the streak moment to be inert');
+    for (const forbidden of ['awardTokens', 'awardQuestXp', 'writeQuest', 'reconcileRank']) {
+      assert.ok(
+        !announce.includes(forbidden),
+        `announcing a streak must not call ${forbidden} — a streak is a day count, not a reward`,
+      );
+    }
+
+    // 7. The moment reads the streak running now; the badge of the same name
+    //    keeps reading the longest one ever reached. Two different questions,
+    //    and collapsing them would make a badge re-earnable.
+    const moment = readFileSync(join(process.cwd(), 'client/src/lib/streakMoment.ts'), 'utf8');
+    assert.doesNotMatch(moment, /longest_streak/, 'the streak moment must not read the badge’s number');
+    const badges = readFileSync(join(process.cwd(), 'shared/badges.ts'), 'utf8');
+    assert.match(
+      badges,
+      /id: 'streak-7'[^}]*longestStreak >= 7/,
+      'the seven-day badge stays earned on the longest streak',
+    );
   }
 
   const profileSource = readFileSync(join(process.cwd(), 'client/src/components/Profile.tsx'), 'utf8');
@@ -1202,6 +1778,141 @@ async function main() {
   });
   assert.equal(halfQuote.merch.pricing.mug, undefined, 'an incomplete quote must not price an item');
   assert.equal(halfQuote.merch.testMode, true, 'test mode stays on unless explicitly turned off');
+
+  // ── the path-completion package (#203) ───────────────────────────
+  // The package is the one thing in this product that costs real money every
+  // time somebody succeeds, so both halves of that cost are asserted: what one
+  // costs is never invented, and how many leave in a month is a number the
+  // owner chose rather than however many learners happen to finish.
+  {
+    const quote = (over: Partial<MerchPricing>): MerchPricing => ({
+      unitCostMinor: 1192, printCostMinor: 0, shippingCostMinor: 495, packagingCostMinor: 60,
+      priceMinor: 0, currency: 'EUR', taxIncluded: true, regions: ['CZ'],
+      vendor: 'example', effectiveFrom: '2026-09-16',
+      ...over,
+    });
+    const withPricing = (pricing: MerchSettings['pricing'], cap: number | null, fee = 0): MerchSettings => ({
+      ...DEFAULT_MERCH_SETTINGS, pricing, packagesPerMonth: cap, packagePlatformFeeMinor: fee,
+    });
+
+    // The box and the migration that fills it must name the same three items.
+    const rewardMigration = readFileSync(join(process.cwd(), 'supabase/supabase-schema-040.sql'), 'utf8');
+    const claimRoutine = rewardMigration.slice(
+      rewardMigration.indexOf('CREATE OR REPLACE FUNCTION public.claim_path_reward'),
+      rewardMigration.indexOf('REVOKE ALL ON FUNCTION public.claim_path_reward'),
+    );
+    assert.ok(claimRoutine.length > 500, 'migration 040 must restate the claim routine in full');
+    const inserted = Array.from(
+      claimRoutine.matchAll(/VALUES \(v_order, '([a-z-]+)'|\n\s+\(v_order, '([a-z-]+)'/g),
+      (match) => match[1] ?? match[2],
+    );
+    assert.deepEqual(
+      [...PACKAGE_SKUS].sort(),
+      Array.from(new Set(inserted)).sort(),
+      'PACKAGE_SKUS must be exactly what the claim routine puts in the box',
+    );
+
+    // An unquoted package reports what is missing instead of a number.
+    const bare = packageCosting(DEFAULT_MERCH_SETTINGS);
+    assert.equal(bare.status, 'unquoted');
+    assert.deepEqual(
+      bare.status === 'unquoted' ? [...bare.missing].sort() : [],
+      [...PACKAGE_SKUS].sort(),
+      'every item in the box must be named as missing while none is quoted',
+    );
+    // Two quotes out of three is still not a package cost.
+    assert.equal(
+      packageCosting(withPricing({ 't-shirt': quote({}), mug: quote({}) }, 10)).status,
+      'unquoted',
+    );
+    // Quotes in different currencies cannot be added up, and the clash is
+    // reported rather than resolved by picking one and understating the cost.
+    assert.equal(
+      packageCosting(withPricing({
+        't-shirt': quote({}), mug: quote({ currency: 'CZK' }), 'sticker-set': quote({}),
+      }, 10)).status,
+      'mixed_currency',
+    );
+
+    const full = withPricing({
+      't-shirt': quote({}),
+      mug: quote({ unitCostMinor: 300, shippingCostMinor: 400 }),
+      'sticker-set': quote({ unitCostMinor: 90, shippingCostMinor: 0, packagingCostMinor: 0 }),
+    }, null);
+    const costed = packageCosting(full);
+    assert.equal(costed.status, 'costed');
+    const expectedUnit = PACKAGE_SKUS.reduce(
+      (total, sku) => total + merchLandedCostMinor(full.pricing[sku] as MerchPricing),
+      0,
+    );
+    assert.equal(costed.status === 'costed' && costed.unitCostMinor, expectedUnit);
+    assert.equal(costed.status === 'costed' && costed.currency, 'EUR');
+
+    // A costed package with no cap has no worst case, and one is not invented.
+    assert.equal(packageMonthlyCeilingMinor(full), null, 'an uncapped month has no ceiling to report');
+    assert.equal(packageProgramState(full), 'cap_not_set');
+    assert.equal(packageProgramState(DEFAULT_MERCH_SETTINGS), 'unquoted');
+
+    const capped = { ...full, packagesPerMonth: 12, packagePlatformFeeMinor: 2499 };
+    assert.equal(packageMonthlyCeilingMinor(capped), expectedUnit * 12 + 2499);
+    assert.equal(packageProgramState(capped), 'ready');
+    // The monthly fee is charged whether or not anybody claims, so a cap of
+    // zero still costs it — and zero is honoured as a decision, not read as
+    // "unset".
+    assert.equal(packageMonthlyCeilingMinor({ ...capped, packagesPerMonth: 0 }), 2499);
+    assert.equal(packageProgramState({ ...capped, packagesPerMonth: 0 }), 'ready');
+
+    // The cap itself.
+    assert.equal(packagesRemainingThisMonth(capped, 0), 12);
+    assert.equal(packagesRemainingThisMonth(capped, 12), 0);
+    assert.equal(packagesRemainingThisMonth(capped, 99), 0, 'a cap lowered under the count never reads as negative');
+    assert.equal(packagesRemainingThisMonth(full, 99), null, 'no cap means undecided, not a number');
+    assert.equal(packageClaimOutcome(capped, 11), 'claimable');
+    assert.equal(packageClaimOutcome(capped, 12), 'capped');
+    assert.equal(packageClaimOutcome({ ...capped, packagesPerMonth: 0 }, 0), 'capped');
+    assert.equal(packageClaimOutcome(full, 10_000), 'claimable', 'an unset cap must behave exactly as before it existed');
+
+    // Settings: an unset or unusable cap reads as undecided, and zero survives.
+    assert.equal(normalizeSettings({}).merch.packagesPerMonth, null);
+    assert.equal(normalizeSettings({ merch: { packagesPerMonth: 'lots' } }).merch.packagesPerMonth, null);
+    assert.equal(normalizeSettings({ merch: { packagesPerMonth: -3 } }).merch.packagesPerMonth, null);
+    assert.equal(normalizeSettings({ merch: { packagesPerMonth: 0 } }).merch.packagesPerMonth, 0);
+    assert.equal(normalizeSettings({ merch: { packagesPerMonth: 25 } }).merch.packagesPerMonth, 25);
+
+    // The database is where the cap is actually kept, and these are the three
+    // properties that make it a guarantee rather than an intention.
+    assert.match(
+      claimRoutine,
+      /public\.path_is_complete\(p_user_id, p_path_id, p_modules\)/,
+      'the package must stay conditional on a completed path and nothing else',
+    );
+    assert.match(
+      claimRoutine,
+      /pg_advisory_xact_lock\(/,
+      'claimants in one month must serialize, or two can take the last slot',
+    );
+    assert.ok(
+      claimRoutine.indexOf("RAISE EXCEPTION 'package_cap_reached'") > 0
+      && claimRoutine.indexOf("RAISE EXCEPTION 'package_cap_reached'")
+         < claimRoutine.indexOf('INSERT INTO public.merch_orders'),
+      'a full month must be refused before any order, claim row or address is written',
+    );
+    // The package changes nothing a learner earned. If any of these words ever
+    // appears in the claiming routine, that has stopped being true.
+    for (const word of ['xp', 'score', 'rank', 'badge', 'leaderboard', 'streak']) {
+      assert.doesNotMatch(
+        claimRoutine,
+        new RegExp(`\\b${word}\\b`, 'i'),
+        `claiming a package must not touch ${word}`,
+      );
+    }
+    // And the shop's cheap cosmetic tier stays cheap and stays cosmetic: it is
+    // what a supporter gets, and it must never become the expensive thing.
+    assert.ok(
+      DEFAULT_MERCH_SETTINGS.crownTokenPrice > 0,
+      'the token-priced cosmetic is the supporter-facing reward and must stay priced',
+    );
+  }
 
   // Addresses: bounded, and refused when the obviously required parts are
   // missing, before anything is charged.
@@ -1698,9 +2409,265 @@ async function main() {
     }
   }
 
+  // ── chessShark: the Lichess puzzle import (#196) ──────────────────────
+  //
+  // Three separate promises are checked here, because each of them is a way
+  // the import could go wrong quietly:
+  //
+  //   1. The move generator is right. Everything downstream — which position
+  //      the learner sees, whether the recorded solution is even legal, what
+  //      the wrong options are — rests on it, and a move generator that is
+  //      95% right looks exactly like one that is right. Perft node counts at
+  //      fixed depths for the five standard test positions are the settled
+  //      way to tell them apart.
+  //   2. The filters reject for a reason. Every rejection path is exercised
+  //      against the fixture, so a future change that silently starts
+  //      importing illegal or low-confidence rows fails here.
+  //   3. The solution never reaches the client, and the notation does not
+  //      announce it either. An option list where only one move ends in "#"
+  //      is not a puzzle.
+  {
+    const perftCases: [string, string, number, number][] = [
+      ['start', STARTING_FEN, 3, 8902],
+      ['kiwipete', 'r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1', 3, 97862],
+      ['endgame with en passant', '8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1', 4, 43238],
+      ['promotion and pins', 'r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1', 3, 9467],
+      ['castling rights', 'rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8', 3, 62379],
+    ];
+    for (const [name, fen, depth, nodes] of perftCases) {
+      const position = parseFen(fen);
+      assert.ok(position, `${name}: FEN did not parse`);
+      assert.equal(toFen(position!), fen, `${name}: FEN does not round-trip`);
+      assert.equal(perft(position!, depth), nodes, `${name}: perft(${depth}) disagrees with the published count`);
+    }
+
+    // A FEN that cannot occur is refused rather than turned into a position.
+    assert.equal(parseFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq'), null, 'a four-field FEN needs its clocks');
+    assert.equal(parseFen('9/8/8/8/8/8/8/8 w - - 0 1'), null, 'a rank of nine squares is not a position');
+    assert.equal(parseFen('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNX w KQkq - 0 1'), null, 'an unknown piece letter is refused');
+    const noKing = parseFen('8/8/8/8/8/8/4P3/8 w - - 0 1');
+    assert.ok(noKing && !positionIsPlayable(noKing), 'a position without kings is not playable');
+    const pawnOnLastRank = parseFen('P6k/8/8/8/8/8/8/K7 w - - 0 1');
+    assert.ok(pawnOnLastRank && !positionIsPlayable(pawnOnLastRank), 'a pawn on the eighth rank is not playable');
+    const theyAreInCheck = parseFen('7k/8/8/8/8/8/8/K6R w - - 0 1');
+    assert.ok(theyAreInCheck && !positionIsPlayable(theyAreInCheck), 'the side that just moved may not be left in check');
+
+    // Notation: the suffix, the pawn capture, and the disambiguation that a
+    // wrong option would otherwise collide with.
+    const foolsMate = parseFen('rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq g3 0 2')!;
+    assert.equal(toSan(foolsMate, moveFromUci(foolsMate, 'd8h4')!), 'Qh4#', 'mate carries "#"');
+    const enPassant = parseFen('rnbqkbnr/ppp1p1pp/8/3pPp2/8/8/PPPP1PPP/RNBQKBNR w KQkq f6 0 3')!;
+    assert.ok(
+      generateMoves(enPassant).map((move) => toSan(enPassant, move)).includes('exf6'),
+      'an en-passant capture is generated and named',
+    );
+    const twoKnights = parseFen('4k3/8/8/8/8/2N1N3/8/4K3 w - - 0 1')!;
+    const toD5 = generateMoves(twoKnights).filter((move) => squareName(move.to) === 'd5').map((move) => toSan(twoKnights, move));
+    assert.deepEqual(toD5.sort(), ['Ncd5', 'Ned5'], 'two knights reaching one square are disambiguated by file');
+
+    // The file contract.
+    const fixturePath = join(process.cwd(), 'scripts', 'fixtures', 'lichess-puzzles.sample.csv');
+    const fixtureLines = readFileSync(fixturePath, 'utf8').split('\n').filter((line) => line.trim());
+    assert.ok(headerMatches(fixtureLines[0]!), 'the fixture carries the published header');
+    assert.equal(headerMatches('PuzzleId,FEN,Rating,Moves'), false, 'a reordered header is refused');
+
+    const parsed = fixtureLines.slice(1).map(parseLichessRow);
+    assert.equal(parsed.filter((row) => row === null).length, 1, 'exactly the truncated line fails to parse');
+    const rows = parsed.filter((row): row is NonNullable<typeof row> => row !== null);
+
+    // Every rejection path, one fixture row each.
+    const selection = selectPuzzles(rows, { perTier: 3 });
+    assert.deepEqual(
+      Object.fromEntries(Object.entries(selection.rejected).sort()),
+      {
+        below_quality_floor: 1,
+        duplicate_id: 1,
+        no_mapped_theme: 1,
+        rating_out_of_band: 1,
+        unplayable_or_too_few_options: 1,
+      },
+      'each filter rejects exactly the row written for it',
+    );
+    assert.equal(selection.puzzles.length, 3, 'the three importable fixture rows survive');
+    assert.deepEqual(
+      selection.puzzles.map((puzzle) => [puzzle.puzzleId, puzzle.topic, puzzle.tier]),
+      [['FIXTFORK1', 'tactics', 3], ['FIXTBACKR', 'combinations', 1], ['FIXTSKEW1', 'endgames', 4]],
+      'a motif theme wins over the phase theme, and the rating picks the tier',
+    );
+
+    // Determinism. Re-importing the same rows must not rewrite the bank.
+    const again = selectPuzzles(rows, { perTier: 3 });
+    assert.equal(
+      renderBank(selection.puzzles, { generatedAt: '2026-01-01', source: 'fixture.csv', perTier: 3 }),
+      renderBank(again.puzzles, { generatedAt: '2026-01-01', source: 'fixture.csv', perTier: 3 }),
+      'the generated bank is byte-identical for the same input',
+    );
+
+    for (const puzzle of selection.puzzles) {
+      const position = parseFen(puzzle.fen);
+      assert.ok(position, `${puzzle.id}: the stored position does not parse`);
+      // The position is the one after the opponent's move, and the recorded
+      // solution is legal in it. A row failing this was dropped, not guessed.
+      assert.ok(moveFromUci(position!, puzzle.solutionUci), `${puzzle.id}: the solution is not legal in the stored position`);
+      assert.equal(puzzle.sideToMove, position!.turn);
+
+      // The notation must not announce the answer.
+      for (const option of puzzle.optionsSan) {
+        assert.doesNotMatch(option, /[+#]/, `${puzzle.id}: an option carries a check or mate suffix`);
+      }
+      assert.equal(new Set(puzzle.optionsSan).size, puzzle.optionsSan.length, `${puzzle.id}: a repeated option`);
+      assert.equal(puzzle.optionsSan.length, 4, `${puzzle.id}: four options`);
+      assert.equal(
+        puzzle.optionsSan[puzzle.correctAnswer],
+        withoutCheckSuffix(puzzle.solutionSan),
+        `${puzzle.id}: the correct index does not point at the solution`,
+      );
+      // Every wrong option is a real move in the real position.
+      const legal = new Set(generateMoves(position!).map((move) => withoutCheckSuffix(toSan(position!, move))));
+      for (const option of puzzle.optionsSan) {
+        assert.ok(legal.has(option), `${puzzle.id}: "${option}" is not a legal move in the position`);
+      }
+
+      // The public projection has the fields of a Question and nothing else,
+      // so no solution can ride along into the response body.
+      const question = puzzleQuestion(puzzle);
+      assert.deepEqual(
+        Object.keys(question).sort(),
+        ['category', 'correctAnswer', 'difficulty', 'explanation', 'id', 'introduction', 'options', 'question', 'tags'],
+        `${puzzle.id}: the projection grew a field`,
+      );
+      // The API sends id, tags, introduction, question, options, category and
+      // difficulty — never the explanation, and never the correct index, which
+      // goes into the signed session token. Nothing in what it does send may
+      // name the solution.
+      const sent = JSON.stringify({
+        id: question.id,
+        tags: question.tags,
+        introduction: question.introduction,
+        question: question.question,
+        options: question.options,
+        category: question.category,
+        difficulty: question.difficulty,
+      });
+      assert.ok(!sent.includes(puzzle.solutionUci), `${puzzle.id}: the solution UCI is in the served question`);
+      for (const field of [question.question, question.introduction]) {
+        assert.ok(!field.includes(puzzle.solutionSan), `${puzzle.id}: the solution is named in the stem or the hint`);
+        assert.ok(
+          !field.includes(withoutCheckSuffix(puzzle.solutionSan)),
+          `${puzzle.id}: the solution is named in the stem or the hint`,
+        );
+      }
+      assert.ok(question.question.includes(puzzle.fen), `${puzzle.id}: the stem does not carry the position`);
+      // The source reference the issue asks for: the puzzle id and the game.
+      assert.ok(question.explanation.includes(puzzle.puzzleId), `${puzzle.id}: no puzzle id in the source reference`);
+      assert.ok(question.explanation.includes(puzzle.gameUrl), `${puzzle.id}: no game URL in the source reference`);
+      assert.ok(question.explanation.includes('CC0'), `${puzzle.id}: the licence is not stated`);
+      // Tags reach the client, so they may not name the motif.
+      for (const theme of puzzle.themes) {
+        assert.ok(!question.tags.includes(theme), `${puzzle.id}: a Lichess theme leaked into the tags`);
+      }
+
+      // EN/CS parity: a parallel options array keeps the stored index valid.
+      const translation = puzzleTranslation(puzzle);
+      assert.equal(translation.options.length, question.options.length, `${puzzle.id}: the Czech options are not parallel`);
+      assert.deepEqual(
+        translation.options.map((option) => option.replace(/^[KDVSJ]/, '')),
+        question.options.map((option) => option.replace(/^[KQRBN]/, '')),
+        `${puzzle.id}: Czech notation changed more than the piece letter`,
+      );
+      for (const value of [translation.introduction, translation.question, translation.explanation]) {
+        assert.ok(value.trim().length > 0, `${puzzle.id}: an empty Czech string`);
+      }
+      assert.notEqual(translation.question, question.question, `${puzzle.id}: the Czech stem is the English one`);
+
+      // A puzzle topic is a chess category, so an imported puzzle can never
+      // escape its subject scope or reach a devShark deployment.
+      assert.equal(subjectForCategory(puzzle.topic), 'chess', `${puzzle.id}: ${puzzle.topic} is not a chess category`);
+      assert.ok(
+        (SUBJECT_SCOPE_CATALOG.chess.topics as readonly string[]).includes(puzzle.topic),
+        `${puzzle.id}: ${puzzle.topic} is not a chessShark topic`,
+      );
+    }
+
+    // Every topic the mapping can produce is a real chess category, checked
+    // without needing an import to have happened.
+    for (const topic of PUZZLE_TOPICS) {
+      assert.equal(subjectForCategory(topic), 'chess', `${topic} is not owned by chessShark`);
+    }
+    assert.equal(new Set(PUZZLE_TOPICS).size, PUZZLE_TOPICS.length, 'a topic is claimed twice');
+    // No Lichess theme feeds two topics, or a puzzle's topic would depend on
+    // the order its themes happen to be listed in.
+    const claimedThemes = PUZZLE_TOPIC_THEMES.flatMap((entry) => entry.themes);
+    assert.equal(new Set(claimedThemes).size, claimedThemes.length, 'a theme is claimed by two topics');
+    // The tiers cover their range without a gap or an overlap.
+    PUZZLE_TIERS.forEach((band, index) => {
+      assert.ok(band.minRating <= band.maxRating, `tier ${band.tier} is inverted`);
+      const previous = PUZZLE_TIERS[index - 1];
+      if (previous) assert.equal(band.minRating, previous.maxRating + 1, `tier ${band.tier} does not follow tier ${previous.tier}`);
+      assert.equal(tierForRating(band.minRating)?.tier, band.tier);
+      assert.equal(tierForRating(band.maxRating)?.tier, band.tier);
+    });
+    assert.equal(tierForRating(PUZZLE_TIERS[0]!.minRating - 1), null, 'a rating below the first band is not imported');
+    assert.equal(tierForRating(PUZZLE_TIERS[PUZZLE_TIERS.length - 1]!.maxRating + 1), null, 'a rating above the last band is not imported');
+
+    // The filled path, run over the fixture puzzles, because the committed
+    // bank is empty and a projection that only ever sees an empty array is
+    // not a projection anybody has tested.
+    const filled = buildChessPuzzleBank(selection.puzzles);
+    assert.equal(filled.questions.length, 3);
+    assert.deepEqual(Object.keys(filled.translations).sort(), filled.questions.map((one) => one.id).sort());
+    for (const question of filled.questions) {
+      assert.equal(subjectForCategory(question.category), 'chess');
+      assert.ok(question.difficulty >= 1 && question.difficulty <= 5);
+      const translation = filled.translations[question.id]!;
+      assert.equal(translation.options?.length, question.options.length, `${question.id}: Czech options are not parallel`);
+      // The stored index must still name the same move after localization, or
+      // grading would mark the right answer wrong for Czech readers.
+      assert.equal(
+        translation.options?.[question.correctAnswer]?.replace(/^[KDVSJ]/, ''),
+        question.options[question.correctAnswer]?.replace(/^[KQRBN]/, ''),
+        `${question.id}: the correct index points at a different move in Czech`,
+      );
+    }
+    // A generated bank naming a category chessShark does not own is dropped,
+    // not served: the category decides subject scope.
+    const smuggled = buildChessPuzzleBank([{ ...selection.puzzles[0]!, topic: 'javascript' }]);
+    assert.equal(smuggled.questions.length, 0, 'a puzzle filed under a non-chess category is dropped');
+
+    // The committed bank. It is empty until somebody runs the import, and an
+    // empty bank must leave chessShark exactly as it was.
+    assert.equal(
+      chessPuzzleQuestions.length,
+      IMPORTED_CHESS_PUZZLES.length,
+      'every imported puzzle became a question, or one was dropped for an unknown category',
+    );
+    assert.equal(
+      Object.keys(chessPuzzleTranslationsCs).length,
+      chessPuzzleQuestions.length,
+      'every puzzle question has a Czech translation',
+    );
+    if (IMPORTED_CHESS_PUZZLES.length === 0) {
+      assert.equal(CHESS_PUZZLE_IMPORT.generatedAt, null, 'an empty bank must not claim an import date');
+    } else {
+      assert.ok(CHESS_PUZZLE_IMPORT.generatedAt, 'a filled bank records when it was generated');
+      const ids = new Set<string>();
+      for (const question of chessPuzzleQuestions) {
+        assert.ok(!ids.has(question.id), `${question.id} appears twice in the bank`);
+        ids.add(question.id);
+        assert.ok(question.correctAnswer >= 0 && question.correctAnswer < question.options.length);
+        assert.equal(subjectForCategory(question.category), 'chess');
+      }
+    }
+    console.log('PASS chess puzzles: move generation, filters, notation, the server boundary and EN/CS parity');
+  }
+
+  await sprintContracts();
+
+  await integrityContracts();
+
   await auditGateContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, lesson figures, and an unconfigured shop.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, lesson figures, the chess puzzle import, and an unconfigured shop.');
 }
 
 void main().catch((error) => {

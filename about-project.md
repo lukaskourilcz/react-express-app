@@ -17,9 +17,9 @@ server owns answers, grading, scores, and XP.
   challenge; the survival Biggest Shark Challenge; live multiplayer and classroom
   rooms; and subject-scoped leaderboards.
 - **Adaptive placement** that steps difficulty up and down over short rounds.
-- Retention layer: **forgiving streaks** (configurable off-days + two monthly
-  freezes), collectible cosmetic **Shark Cards**, and a read-only **study
-  advisor**.
+- Retention layer: **forgiving streaks** (two protections a month, spent for you
+  after a missed day or armed in advance, both at once for 96 hours),
+  collectible cosmetic **Shark Cards**, and a read-only **study advisor**.
 - A devShark **typing racer** and per-subject flashcards.
 - Two optional devShark **learning paths**: the **Forward Deployed Engineer**
   role specialization, which sits on top of the Fullstack/Frontend/Backend

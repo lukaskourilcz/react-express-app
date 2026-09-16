@@ -13,20 +13,24 @@ import { useRoadmapProgress, useExtraUnlocks, type RoadmapProgress,
   availabilityOf,
   type StepAvailability,
 } from '../lib/roadmap';
-import { useRoadmapStructure } from '../lib/queries';
+import { useRoadmapStructure, useProfileStats, useStreakProtection } from '../lib/queries';
+import { shieldRemaining } from '../lib/streakFreezes';
+import { streakAtRisk, dayUnitKey } from '../lib/streakMoment';
 import { ApiError } from '../lib/api';
 import { buildToday, type TodayItem, type TodayKind } from '../lib/today';
 import { masteryDayKey, type LevelMasteryEntry } from '../../../shared/mastery';
 import { getCategoryHexColor } from '../lib/categories';
 import { CategoryGlyph } from './ui/techIcons';
 import { SharkFin } from './SharkFin';
+import { FlameIcon } from './ui/icons';
 import { CURRENT_PRODUCT } from '../lib/products';
-import { useAuth } from '../lib/auth';
+import { useAuth, getUserProfile } from '../lib/auth';
 import type { RoadmapTopic, RoadmapStructure } from '../types/quiz';
 import './Today.css';
 import './DeepEndScreens.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
+type LangCode = Parameters<typeof dayUnitKey>[1];
 
 // devShark only: coding tasks due for a second pass. Lazy so the coding index
 // stays out of the StudyShark bundle.
@@ -106,8 +110,9 @@ function doneToday(progress: RoadmapProgress, subject: SubjectId, target: number
 }
 
 export default function Today() {
-  const { t } = useLanguage();
-  const { isAuthenticated } = useAuth();
+  const { t, lang } = useLanguage();
+  const { isAuthenticated, user } = useAuth();
+  const authProfile = getUserProfile(user);
   const [subject] = useSubject();
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
@@ -128,6 +133,21 @@ export default function Today() {
     [progress, subject, extraUnlocks, structure],
   );
   const done = useMemo(() => doneToday(progress, subject, plan.target), [progress, subject, plan.target]);
+
+  // The streak is the server's; this only asks whether the last recorded day
+  // was yesterday. Same query key the profile uses, so a learner who has been
+  // to either screen pays for one read between them, and a signed-out visitor
+  // makes none.
+  const statsQuery = useProfileStats(
+    user?.id,
+    { email: authProfile.email, name: authProfile.name, picture: authProfile.picture },
+    isAuthenticated && !!user?.id,
+  );
+  const stats = statsQuery.data ?? null;
+  const atRisk = isAuthenticated && streakAtRisk(stats);
+  // Only asked for when the answer can change what the panel says.
+  const protection = useStreakProtection(atRisk);
+  const shielded = shieldRemaining(protection.data?.shieldUntil ?? null) !== null;
 
   // Wait for the structure before showing a plan, so a fully-completed topic
   // can't flash a phantom "new" level. A warm cache resolves instantly.
@@ -166,6 +186,8 @@ export default function Today() {
           />
         </div>
       )}
+
+      {atRisk && stats && <StreakRiskPanel days={stats.current_streak} shielded={shielded} t={t} lang={lang} />}
 
       {completedToday ? (
         <DonePanel t={t} />
@@ -257,6 +279,42 @@ function ProgressPanel({ done, target, t }: { done: number; target: number; t: T
         aria-valuemax={100}
       >
         <div className="today-progress__fill" style={{ width: `${pct}%` }} />
+      </div>
+    </section>
+  );
+}
+
+/* ── the streak standing on yesterday ─────────────────────────────── */
+
+/**
+ * Shown only when the last recorded day was yesterday and the streak is still
+ * alive. It is a sentence and a way out, not a countdown: nothing here ticks,
+ * flashes or threatens, because the plan the learner needs is directly beneath
+ * it and a panel that shouts would only be in the way.
+ *
+ * The second line points at the protection rather than pretending the day can
+ * be bought back — arming one is a real thing a learner can do from the
+ * profile, and it is the honest answer to "I cannot do this today". A learner
+ * who has already armed one is told so instead of being sent to arm another.
+ */
+function StreakRiskPanel({
+  days,
+  shielded,
+  t,
+  lang,
+}: { days: number; shielded: boolean; t: TFn; lang: LangCode }) {
+  const unit = t(dayUnitKey(days, lang));
+  return (
+    <section className="today-streak ss-panel" aria-labelledby="today-streak-title">
+      <span className="today-streak__mark" aria-hidden="true"><FlameIcon size={22} /></span>
+      <div className="today-streak__body">
+        <h2 className="today-streak__title" id="today-streak-title">{t('streak.atRiskTitle')}</h2>
+        <p className="today-streak__text">{t('streak.atRiskBody', { n: days, unit })}</p>
+        {shielded ? (
+          <p className="today-streak__text">{t('streak.atRiskProtected')}</p>
+        ) : (
+          <Link to="/profile" className="today-streak__link">{t('streak.atRiskProtect')}</Link>
+        )}
       </div>
     </section>
   );

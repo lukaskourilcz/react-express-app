@@ -11,6 +11,13 @@ interface ImportMetaEnv {
   readonly VITE_SIBLING_URL?: string;
   readonly VITE_STUDYSHARK_URL?: string;
   readonly VITE_DEVSHARK_URL?: string;
+  /**
+   * Cloudflare Turnstile site key. Unset by default: without it no script is
+   * fetched, no widget is rendered and every submission goes out unattested,
+   * which is exactly how the product behaved before attestation existed. Its
+   * server-side pair is TURNSTILE_SECRET_KEY.
+   */
+  readonly VITE_TURNSTILE_SITE_KEY?: string;
 }
 
 interface ImportMeta {

@@ -113,7 +113,12 @@ export type XpToast =
   | { kind: 'gain'; amount: number; source: 'learn' | 'quiz' | 'practice' }
   // Rank titles are carried as an i18n key + vars (not a composed string) so
   // the toaster renders them in the user's current language.
-  | { kind: 'rankup'; titleKey: TranslationKey; titleVars: Record<string, string>; level: number };
+  | { kind: 'rankup'; titleKey: TranslationKey; titleVars: Record<string, string>; level: number }
+  // A streak the server has already extended. It rides this bus because the
+  // bus is a queue: a gain, a rank-up and a streak arriving together show one
+  // after another instead of clobbering each other. It carries no amount
+  // because it awards nothing.
+  | { kind: 'streak'; days: number; milestone: boolean };
 
 const toastListeners = new Set<(t: XpToast) => void>();
 
@@ -174,6 +179,20 @@ export function awardQuestXp(amount: number, source: 'quiz' | 'practice'): void 
   awardTokens(tokensFromXp(add));
   emitToast({ kind: 'gain', amount: add, source });
   reconcileRank(true);
+}
+
+/**
+ * Say that the streak moved. This is the whole of it.
+ *
+ * It awards nothing — no XP, no tokens, no rank reconciliation — because a
+ * streak is a day count the server already wrote, and celebrating it must not
+ * become a second way to earn. It lives in this module because the toast queue
+ * does, not because it has anything to do with XP.
+ */
+export function announceStreak(days: number, milestone: boolean): void {
+  const n = Math.floor(days);
+  if (!Number.isFinite(n) || n <= 0) return;
+  emitToast({ kind: 'streak', days: n, milestone });
 }
 
 /** Announce an award already committed by the verified server mutation. */

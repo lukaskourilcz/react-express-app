@@ -20,6 +20,7 @@ import {
 } from '../../shared/subject-catalog';
 import { deploymentSubjectIds } from '../../lib/product-scope';
 import { rollPack, subjectCardCount } from '../../shared/cards';
+import { STREAK_PROTECTION_CAP } from '../../shared/rewards';
 import { eligibleServerBadges, type BadgeStatsSummary } from '../../shared/badges';
 import { eligibleCodingBadges } from '../../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../../lib/coding/active';
@@ -35,7 +36,10 @@ import {
   handlePathProgress,
 } from '../../lib/learning-paths/handlers';
 import { handleGithub } from '../../lib/github-handlers';
+import { attest, refusesRequest } from '../../lib/turnstile';
+import { purgeIntegrityData, recordIntegrityFlag } from '../../lib/integrity';
 import { handleFriends } from '../../lib/friends-handlers';
+import { handleLeague, recordLeagueResult } from '../../lib/league-handlers';
 
 const supabase = createServiceClient();
 
@@ -88,6 +92,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'learning-path-reward') return handlePathReward(req, res, supabase);
   if (op.startsWith('github-')) return handleGithub(op, req, res, supabase);
   if (op.startsWith('friends-')) return handleFriends(op, req, res, supabase);
+  if (op.startsWith('league-')) return handleLeague(op, req, res, supabase);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
 }
 
@@ -117,6 +122,19 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
         return jsonError(res, 503, 'migration_required', 'Account deletion is not configured yet');
       }
       logEvent('delete-account', { status: 500, reason: 'cleanup_failed', error: cleanup.error.message });
+      return jsonError(res, 500, 'db_error', 'Could not delete account data');
+    }
+
+    // The review list is erased by its own function rather than from inside
+    // `delete_user_data`, and its failure is a real failure: erasure that
+    // quietly skipped a table is worse than an error the owner can see. A
+    // database that never got migration 041 reports 'not-installed', which
+    // means there was nothing of this account's to erase.
+    try {
+      await purgeIntegrityData(supabase!, auth.sub);
+    } catch (purgeError) {
+      const message = purgeError instanceof Error ? purgeError.message : 'unknown';
+      logEvent('delete-account', { status: 500, reason: 'integrity_purge_failed', error: message });
       return jsonError(res, 500, 'db_error', 'Could not delete account data');
     }
 
@@ -153,8 +171,26 @@ async function authEvent(req: VercelRequest, res: VercelResponse) {
   const email = typeof auth.payload.email === 'string' ? auth.payload.email : null;
   const meta = (auth.payload.app_metadata ?? {}) as { provider?: unknown };
   const provider = typeof meta.provider === 'string' ? meta.provider : null;
+  // Attested, not gated. Sign-in here is Google OAuth, so the account already
+  // exists by the time this server hears about it and there is nothing left to
+  // refuse — refusing would only lose the log entry. What the attestation is
+  // worth is the record: a first-ever sign-in that could not prove a browser,
+  // while Turnstile is enforcing, becomes a row in the owner's review list
+  // instead of an account nobody ever looks at. It changes nothing for the
+  // learner, who keeps their account and every part of the product.
+  const attestation = await attest(req, 'signup');
   const kind = await recordAuthEvent({ userId: auth.sub, email, provider });
-  logEvent('authevent', { status: 200, kind });
+  if (kind === 'register' && refusesRequest(attestation)) {
+    await recordIntegrityFlag(supabase, {
+      userId: auth.sub,
+      surface: 'signup',
+      subject: null,
+      signals: ['unattested-signup'],
+      severity: 'review',
+      evidence: { outcome: attestation.outcome, provider: provider ?? 'unknown' },
+    });
+  }
+  logEvent('authevent', { status: 200, kind, attestation: attestation.outcome });
   return res.json({ ok: true, kind });
 }
 
@@ -365,6 +401,18 @@ async function stats(req: VercelRequest, res: VercelResponse) {
             awardId: `quiz:${receipt.attemptId}`,
             subject: receipt.subject,
             xp: receipt.questXp,
+          });
+        }
+        // The weekly league score, on the same condition and for the same
+        // reason as the XP above: `data === true` means this attempt id was
+        // applied for the first time, so a replayed submission scores nothing.
+        // The numbers are the server's own verified counts, never the body's.
+        if (data === true) {
+          await recordLeagueResult(supabase!, {
+            userId: user_id,
+            subject: receipt.subject,
+            correct: receipt.correct,
+            answered: receipt.total,
           });
         }
         const [row, xpRow] = await Promise.all([
@@ -605,16 +653,33 @@ async function badges(req: VercelRequest, res: VercelResponse) {
 }
 
 
-// GET  /api/user/[op]?op=freezes — the monthly protection budget and any
-//                                   active shield.
-// POST                            — spend one protection to shield the streak
-//                                   for 48 hours.
+// GET  /api/user/[op]?op=freezes — the monthly protection budget, any active
+//                                   shield, and how many protections it is
+//                                   made of.
+// POST                            — spend one protection to extend the shield
+//                                   by 48 hours, up to the two the month
+//                                   grants.
 //
 // The budget, the spend and the expiry are all the server's. A client can ask
 // for a shield; it cannot grant itself one, cannot choose the window and cannot
 // set the balance. Off-days used to be settable here and are gone: a fixed
 // weekend that never counted against anyone was a second, invisible rule on top
 // of the two protections, and two rules for the same thing is one too many.
+//
+// `equipped` is derived here rather than read straight off the row. The column
+// migration 039 adds records how wide the window is, including after it has
+// lapsed, because the streak arithmetic works backwards from the expiry. The
+// question a learner asks is a different one — how many are protecting me
+// right now — and a lapsed window answers zero.
+const liveShieldSlots = (shieldUntil: unknown, slots: unknown): number => {
+  const until = typeof shieldUntil === 'string' ? Date.parse(shieldUntil) : NaN;
+  if (!Number.isFinite(until) || until <= Date.now()) return 0;
+  const counted = Math.floor(Number(slots));
+  // A window raised before 039 carries no count and cost one protection.
+  if (!Number.isFinite(counted) || counted < 1) return 1;
+  return Math.min(counted, STREAK_PROTECTION_CAP);
+};
+
 async function freezes(req: VercelRequest, res: VercelResponse) {
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
@@ -625,8 +690,9 @@ async function freezes(req: VercelRequest, res: VercelResponse) {
 
   try {
     // Spending goes through a routine that decides everything: it refuses an
-    // empty budget and returns the running window unchanged rather than
-    // charging twice, so a double click or two devices cost one protection.
+    // empty budget, refuses a third protection when both are already armed,
+    // and returns the running window unchanged rather than charging for a
+    // refusal. A double click or two devices cost one protection.
     if (req.method === 'POST') {
       if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
       const spent = await withTimeout(supabase!.rpc('activate_streak_shield', { p_user_id: userId }));
@@ -640,12 +706,15 @@ async function freezes(req: VercelRequest, res: VercelResponse) {
       if (row?.granted === false && Number(row?.remaining ?? 0) <= 0 && !row?.shield_until) {
         return jsonError(res, 409, 'no_protection_left', 'No protection left this month');
       }
+      const slotsSupported = row !== null && typeof row === 'object' && 'shield_slots' in row;
       return res.json({
         remaining: Number(row?.remaining ?? 0),
         period: String(row?.period ?? utcMonth()),
         used: Array.isArray(row?.used) ? (row.used as string[]) : [],
         shieldUntil: row?.shield_until ?? null,
+        equipped: liveShieldSlots(row?.shield_until, (row as { shield_slots?: unknown } | null)?.shield_slots),
         shieldSupported: true,
+        slotsSupported,
       });
     }
 
@@ -659,13 +728,21 @@ async function freezes(req: VercelRequest, res: VercelResponse) {
     // still reads correctly and the client simply does not offer the control,
     // rather than offering one that would fail.
     const shieldSupported = freezeRow !== null && typeof freezeRow === 'object' && 'shield_until' in freezeRow;
+    // `shield_slots` arrives with migration 039. Without it one shield can be
+    // raised and a second cannot, which is exactly what 032 does, so the
+    // client is told so rather than left to offer a control that would spend
+    // nothing.
+    const slotsSupported = freezeRow !== null && typeof freezeRow === 'object' && 'shield_slots' in freezeRow;
+    const shieldUntil = shieldSupported ? (freezeRow as { shield_until?: string | null }).shield_until ?? null : null;
 
     return res.json({
       remaining: Number(freezeRow?.remaining ?? 2),
       period: String(freezeRow?.period ?? utcMonth()),
       used: Array.isArray(freezeRow?.used) ? (freezeRow.used as string[]) : [],
-      shieldUntil: shieldSupported ? (freezeRow as { shield_until?: string | null }).shield_until ?? null : null,
+      shieldUntil,
+      equipped: liveShieldSlots(shieldUntil, (freezeRow as { shield_slots?: unknown } | null)?.shield_slots),
       shieldSupported,
+      slotsSupported,
     });
   } catch {
     return jsonError(res, 500, 'internal_error', 'Internal error');

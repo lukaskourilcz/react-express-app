@@ -65,6 +65,83 @@ nothing about what the person studied. Deleting an account removes unshipped
 orders entirely and redacts the person from shipped ones, so the books still
 balance without keeping someone who asked to be forgotten.
 
+## The package a finished path earns
+
+Everything above is about things people buy. The package is the opposite
+direction: finish every module of a learning path and the server grants a
+t-shirt, a mug and a sticker set, once, keyed to the pair of you and the path.
+Nobody pays for it, which removes the question of price and leaves a harder one.
+It is the only thing in this product that costs real money every time somebody
+succeeds at learning, and until now the number of them leaving in a month was
+whatever number of learners happened to finish.
+
+### What one costs
+
+`packageCosting` in `shared/rewards.ts` adds up the landed cost of the three
+items — blank, print, postage, packaging — from the same owner-entered quotes
+the shop uses. It reports `unquoted` and names what is missing while any of the
+three has no quote, and `mixed_currency` when the quotes disagree about the
+currency, because three numbers in two currencies are not a total. There is no
+default figure and no partial one: two quotes out of three is still not the cost
+of a box with three things in it.
+
+### How many go out
+
+`packagesPerMonth` is the ceiling, and `packageMonthlyCeilingMinor` reads the
+month's worst case off it: every slot filled, plus the print-on-demand plan's
+monthly fee, which is charged whether anybody claims or not.
+
+The cap is kept in the database rather than in front of it. Migration 040 counts
+the calendar month inside the claiming transaction, from the same
+`path_reward_claims` table the one-time guarantee lives in, and holds a
+transaction advisory lock keyed by that month so two people claiming at once
+cannot both take the last slot. A full month raises before anything is written,
+so a refused claim leaves no order, no claim row and no address behind.
+
+A full month does not withdraw the reward. The claim row is only ever written on
+a granted claim, so the completion that earned it is still there and the claim
+can be taken when the month turns over. The learner is told that, in both
+languages, instead of being shown a button that fails.
+
+### What is switched off
+
+No cap is set. `packagesPerMonth` defaults to `null`, which means undecided
+rather than unlimited: `packageProgramState` reports `cap_not_set`, the monthly
+ceiling reports nothing at all, and claiming behaves exactly as it did before
+any of this existed. Setting a number is what turns the guarantee on, and it is
+step 7 below.
+
+### The supplier decision this waits on
+
+Issue [#203](https://github.com/lukaskourilcz/react-express-app/issues/203)
+records the research behind the choice and cites
+[printful.com/pricing](https://www.printful.com/pricing),
+[printful.com/print-on-demand-europe](https://www.printful.com/print-on-demand-europe)
+and [printify.com/pricing](https://printify.com/pricing/). Two figures from it
+matter to the model above: a print-on-demand account with no monthly fee, where
+each parcel is billed per order, and a subscription tier that trades a monthly
+fee for a per-unit discount. The issue quotes Printful's Growth tier at USD
+24.99 a month and a Bella + Canvas 3001 tee from USD 11.92 plus EU shipping, as
+of 16 September 2026.
+
+**Those numbers were not re-checked here and none of them is in the code.** They
+are the shape of the decision, not the decision: print-on-demand pricing moves,
+shipping to your regions is not in either figure, and a quote that is a year old
+is not a quote. Get current per-unit prices for all three items from the vendor
+you actually open an account with, enter them the way section 1 describes, and
+the model will tell you what a month costs at the cap you set. The subscription
+tier only pays for itself above a volume the cap is what decides — so set the
+cap first and read the fee off it, not the other way round.
+
+### The cheap cosmetic stays cheap
+
+The package is the expensive reward and the cap is what makes it survivable.
+What supporters get is the other end: the crown is an SVG this repository draws,
+it costs tokens earned by learning, it ships nothing and it costs nothing to
+honour. Lichess sells Patron wings and Codewars a red badge on the same
+principle. Keep that tier as it is — it is the one that scales without a
+supplier, and a launch contract asserts it stays priced and stays cosmetic.
+
 ## What only you can do
 
 ### 1. Get real quotes — the blocking item
@@ -85,10 +162,18 @@ Each item needs, from an actual supplier, in writing:
 | `vendor` | Who supplies it |
 | `effectiveFrom` | The date these figures took effect |
 
-Enter them in `/dev` → Settings → Merchandise. An entry missing any field is
-dropped on read and the item goes back to **not on sale yet**: half a quote is
-not a quote. The readiness view shows the margin each quote implies, including
-when it is negative.
+Enter them under `merch.pricing.<sku>` in the game settings, which means
+`POST /api/admin/[op]?op=settings` with the whole settings object. There is no
+merchandise form on `/dev` → App settings and this document used to say there
+was: that page edits features, balance and cosmetic token prices, and none of
+the eleven commercial fields appears on it. Building the form is worth doing
+before a second person enters a quote; a single owner entering four quotes once
+does not need it, and a form that pretends a field is optional would be worse
+than the round trip.
+
+An entry missing any field is dropped on read and the item goes back to **not on
+sale yet**: half a quote is not a quote. `merchMarginMinor` gives the margin each
+quote implies, including when it is negative.
 
 Also decide, and write into the policy page you link from `policyUrl`: the
 returns window, who pays return postage, the delivery estimate per region, and
@@ -132,6 +217,25 @@ and answer the person whose mug did not arrive. The code makes each of those one
 click. It cannot do any of them. Do not enable the shop until a person has
 agreed to this and knows how often they will check.
 
+### 7. Set the monthly package cap
+
+`merch.packagesPerMonth` in the game settings, entered the same way the quotes
+are (section 1). It is the number of path-completion packages you are willing to
+pay for and pack in one calendar month, and nothing in the repository will pick
+it for you, because picking it is agreeing to spend that money.
+
+Work it out from the cost, not from a guess about demand: enter the three quotes
+first, read the per-unit figure the model gives you, and multiply by the number
+of parcels a month you can afford and physically post. Zero is a legitimate
+answer and is honoured as one — it means no packages go out this month, which is
+different from leaving the field unset.
+
+Leave it unset and nothing changes from today: claims are granted as they always
+were, and `packageProgramState` reports `cap_not_set` so the readiness view says
+out loud that the cost is unbounded. That is safe only while merchandise is
+unconfigured and nothing actually ships. Set the number before the first quote
+goes in.
+
 ## The order in which to switch things on
 
 1. Enter quotes for one item only. Confirm it shows a price and the margin reads
@@ -147,3 +251,7 @@ agreed to this and knows how often they will check.
 
 Each step is reversible: unsetting a quote returns the item to **not on sale
 yet** without touching an order already placed.
+
+The package cap belongs before step 1, not after step 7. It is the only figure
+here that bounds what a good month costs you, and the only one whose absence is
+invisible until the parcels are already owed.
