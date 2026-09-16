@@ -10,6 +10,7 @@ import { newQuickJSWASMModuleFromVariant, shouldInterruptAfterDeadline, type Qui
 import variant from '@jitl/quickjs-singlefile-cjs-release-sync';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
 import { TIMEOUT_MESSAGE, deepEqual, displayValue } from '../../shared/coding-evaluate';
+import { CONSOLE_SOURCE } from '../../shared/coding-console';
 
 let modulePromise: Promise<QuickJSWASMModule> | null = null;
 const getModule = () => (modulePromise ??= newQuickJSWASMModuleFromVariant(variant));
@@ -66,14 +67,9 @@ const encode = (value, depth = 0, seen = makeArray()) => {
   return packet(names ? 'object' : 'array', entries);
 };
 const message = error => { try { return string(error && error.message || error); } catch { return 'Evaluation failed'; } };
-const record = args => {
+const emit = line => {
   if (logs.length >= ${MAX_LOGS}) return;
-  let line = '';
-  for (let i = 0; i < args.length; i++) {
-    if (i) line += ' ';
-    try { line += typeof args[i] === 'string' ? args[i] : stringify(args[i]); } catch { line += '[unprintable]'; }
-  }
-  logs[logs.length] = line;
+  logs[logs.length] = string(line);
 };
 const schedule = (fn, ms, interval, args) => {
   const id = nextId++, delay = number(ms) || 0;
@@ -92,7 +88,10 @@ const parse = JSON.parse;
 globalThis.structuredClone = value => parse(stringify(value));
 Date.now = () => 1700000000000 + now;
 globalThis.performance = { now: () => now };
-globalThis.console = { log: (...args) => record(args), info: (...args) => record(args), warn: (...args) => record(args), error: (...args) => record(args), debug: (...args) => record(args) };
+// The same console the browser worker builds, from the same source, so Run
+// and Submit print identical lines. Its natives are captured here, before the
+// learner's code has run.
+globalThis.console = (${CONSOLE_SOURCE})(emit, () => now);
 const evaluate = NativeFunction(${JSON.stringify('"use strict";\n' + code + '\n;return [' + calls.map(call => '() => (' + call.trim().replace(/;+$/, '') + '\n)').join(',') + '];')})();
 const outcomes = makeArray();
 let remaining = ${calls.length};
@@ -121,7 +120,7 @@ return {
     now = timer.at > now ? timer.at : now;
     if (timer.interval !== null) { timer.at = now + timer.interval; timers[timers.length] = timer; }
     try { if (typeof timer.fn === 'function') apply(timer.fn, null, timer.args); }
-    catch (error) { record(['timer error: ' + message(error)]); }
+    catch (error) { emit('timer error: ' + message(error)); }
     return true;
   },
 };

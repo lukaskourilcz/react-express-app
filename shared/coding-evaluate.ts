@@ -4,6 +4,8 @@
  * solutions). The server never uses this: learner code there runs inside the
  * QuickJS sandbox in `lib/coding/sandbox.ts`. Ported from interview-prepper. */
 
+import { CONSOLE_SOURCE, type ConsoleFactory } from './coding-console';
+
 export const RUN_TIMEOUT_MS = 2_000;
 /** Timer- and promise-based tasks need longer than a synchronous one. */
 export const ASYNC_TIMEOUT_MS = 6_000;
@@ -51,13 +53,11 @@ export const displayValue = (value: unknown): string => {
   }
 };
 
-const formatArg = (value: unknown): string => {
-  if (typeof value === 'string') return value;
-  try {
-    return JSON.stringify(value) ?? String(value);
-  } catch {
-    return String(value);
-  }
+let cachedFactory: ConsoleFactory | null = null;
+/** The shared console, compiled once per worker from its single source. */
+const consoleFactory = (): ConsoleFactory => {
+  cachedFactory ??= new Function(`return (${CONSOLE_SOURCE});`)() as ConsoleFactory;
+  return cachedFactory;
 };
 
 const errorText = (error: unknown): string =>
@@ -71,10 +71,13 @@ const errorText = (error: unknown): string =>
  */
 export async function evaluateCalls(input: { code: string; calls: string[]; expectations?: unknown[] | null }): Promise<EvaluateResult> {
   const logs: string[] = [];
-  const record = (...args: unknown[]) => {
-    if (logs.length < MAX_LOGS) logs.push(args.map(formatArg).join(' '));
+  const emit = (line: string) => {
+    if (logs.length < MAX_LOGS) logs.push(line);
   };
-  const sink = { log: record, info: record, warn: record, error: record, debug: record };
+  // Built here rather than at module load: this file also reaches the page
+  // bundle for its types and constants, and the page's policy forbids eval.
+  // Only the worker (and the node content test) ever get this far.
+  const sink = consoleFactory()(emit, () => (typeof performance !== 'undefined' ? performance.now() : Date.now()));
   const grading = Array.isArray(input.expectations);
 
   let evaluate: (calls: string[], console: typeof sink) => Promise<{ ok: boolean; value?: unknown; error?: string }[]>;

@@ -335,6 +335,67 @@ async function main() {
     assert.equal(starterPasses, false, `${task.id}: the broken starter must fail its own tests`);
   }
 
+  // ── the shared console ─────────────────────────────────────────────────
+  // Both runtimes build their console from one source (shared/coding-console).
+  // A fixture that calls every method must print the same lines through the
+  // worker's evaluator and through the production QuickJS grader, minus the
+  // trace frames, which each engine names from its own stack. The debugging
+  // course relies on every one of these calls, so this is the proof that the
+  // grader allows them.
+  {
+    const fixture = `
+function applyDiscount(price, percent) { console.trace('applyDiscount', price, percent); return price - price * percent / 100; }
+function checkout(cart) { return cart.map((item) => applyDiscount(item.price, item.percent)); }
+function probe() {
+  console.log('plain', 1, 'two', { three: 3 }, [4], null, undefined, true);
+  console.info('info'); console.warn('warn'); console.error('error'); console.debug('debug');
+  console.table([{ sku: 'latte', price: 40 }, { sku: 'tea', price: 30, stock: 2 }]);
+  console.table(['a', 'b']);
+  console.table({ x: { n: 1 }, y: 2 });
+  console.table(5);
+  console.assert(1 === 1, 'never shown');
+  console.assert(false, 'shown', { why: 'because' });
+  console.assert(false);
+  console.group('outer'); console.log('in outer'); console.group(); console.log('in inner'); console.groupEnd(); console.groupEnd(); console.groupEnd(); console.log('back out');
+  console.count(); console.count('sku'); console.count('sku'); console.countReset('sku'); console.count('sku');
+  console.dir({ nested: { deep: [1, 2] } });
+  console.dir('text');
+  console.time('t'); console.timeEnd('t'); console.timeEnd('never started');
+  checkout([{ price: 100, percent: 10 }]);
+  return 'ok';
+}`;
+    const browserRun = await evaluateCalls({ code: fixture, calls: ['probe()'], expectations: ['ok'] });
+    const sandboxRun = await runInSandbox({ code: fixture, calls: ['probe()'], expectations: ['ok'] });
+    assert.ok(allPassed(browserRun), `the console fixture must run in the worker evaluator: ${browserRun.codeError}`);
+    assert.ok(allPassed(sandboxRun), `the console fixture must run in the QuickJS grader: ${sandboxRun.codeError}`);
+    const comparable = (lines: string[]) => lines.filter((line) => !/^\s+at /.test(line) && !/^t: [\d.]+ms$/.test(line));
+    assert.deepEqual(comparable(sandboxRun.logs), comparable(browserRun.logs), 'the QuickJS console prints the same lines as the worker console');
+    for (const run of [browserRun, sandboxRun]) {
+      assert.ok(run.logs.includes('Trace: applyDiscount 100 10'), 'trace prints its arguments');
+      assert.ok(run.logs.some((line) => /^\s+at applyDiscount$/.test(line)) && run.logs.some((line) => /^\s+at checkout$/.test(line)), `trace names the calling functions: ${JSON.stringify(run.logs)}`);
+      assert.ok(run.logs.includes('(index) | sku   | price | stock'), 'table lays out a header from the union of columns');
+      assert.ok(run.logs.includes('Assertion failed: shown {"why":"because"}') && run.logs.includes('Assertion failed'), 'assert prints only when its condition is falsy');
+      assert.ok(run.logs.includes('  in outer') && run.logs.includes('    in inner') && run.logs.includes('back out'), 'groups indent and unwind');
+      assert.ok(run.logs.includes('default: 1') && run.logs.includes('sku: 2') && run.logs.at(-1) !== undefined, 'count and countReset keep separate labels');
+      assert.ok(run.logs.some((line) => /^t: [\d.]+ms$/.test(line)), 'time and timeEnd print a duration');
+    }
+  }
+
+  // ── quiet tasks ───────────────────────────────────────────────────────────
+  // A task marked quiet is graded on an empty console as well as on its tests.
+  // Its reference solution must therefore print nothing, and its starter must
+  // print something, or the rule would never be exercised.
+  for (const task of CODING_TASKS.filter((one) => one.quiet)) {
+    const solution = solutionFor(task.id);
+    assert.ok(solution && task.tests, `${task.id}: a quiet task needs tests and a reference solution`);
+    const calls = task.tests!.map((one) => one.call);
+    const expectations = task.tests!.map((one) => one.expected);
+    const clean = await runInSandbox({ code: solution!.solution, calls, expectations });
+    assert.ok(allPassed(clean) && clean.logs.length === 0, `${task.id}: the reference solution must pass with an empty console, got ${JSON.stringify(clean.logs)}`);
+    const starterRun = await runInSandbox({ code: task.starter, calls, expectations });
+    assert.ok(starterRun.logs.length > 0, `${task.id}: the starter must leave output for the learner to remove`);
+  }
+
   console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 

@@ -113,6 +113,7 @@ export function playable(task: CodingTask): PlayableCodingTask {
     ...(task.api ? { api: task.api } : {}),
     ...(task.failureHints ? { failureHints: task.failureHints } : {}),
     ...(task.pitfall ? { pitfall: task.pitfall } : {}),
+    ...(task.quiet ? { quiet: true } : {}),
   };
   if (task.design) {
     out.design = {

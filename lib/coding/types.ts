@@ -75,6 +75,8 @@ export interface CodingTaskSource {
   /** The mistake this task is built around, used only when a run proves
    * nothing more specific. */
   pitfall?: FailureCategory;
+  /** A pass also needs an empty console. See `CodingTask.quiet`. */
+  quiet?: boolean;
   tests?: SourceCallTest[];
   typeTests?: SourceTypeTest[];
   suite?: string;
@@ -147,6 +149,7 @@ export function mergeTask(source: CodingTaskSource, cs: CodingTaskCs | undefined
     ...(source.format ? { format: source.format } : {}),
     ...(source.failureHints ? { failureHints: source.failureHints } : {}),
     ...(source.pitfall ? { pitfall: source.pitfall } : {}),
+    ...(source.quiet ? { quiet: true } : {}),
     estimatedMinutes: source.estimatedMinutes,
   };
   if (source.tests) {

@@ -22,6 +22,9 @@ export const FAILURE_CATEGORIES = [
   'output-shape',
   'boundary',
   'mutation',
+  /** Every check passed and the console still had output. Never inferred by
+   * the classifier: only a task marked `quiet` can fail this way. */
+  'console',
   'tests',
 ] as const;
 export type FailureCategory = (typeof FAILURE_CATEGORIES)[number];
@@ -143,6 +146,10 @@ export const DEFAULT_FAILURE_HINTS: Partial<Record<FailureCategory, Localized>> 
   mutation: {
     en: 'Something is being changed in place that should not be. Check whether you are modifying the value you were given instead of building a new one.',
     cs: 'Něco se mění na místě, i když by nemělo. Zkontroluj, jestli neupravuješ hodnotu, kterou jsi dostal, místo abys stavěl novou.',
+  },
+  console: {
+    en: 'The code is right and the Console tab is not empty. Remove every console call you added while debugging, or put it behind a switch that is off, and run again.',
+    cs: 'Kód je správně, jen záložka Konzole není prázdná. Odstraň všechna volání console, která jsi při ladění přidal, nebo je schovej za vypnutý přepínač, a spusť to znovu.',
   },
 };
 

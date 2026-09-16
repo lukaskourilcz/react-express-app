@@ -441,7 +441,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const trackLabel = t(`coding.track.${task.track}` as never);
 
   /* ── panels ─────────────────────────────────────────────────────────── */
-  const localPassed = run ? runPassed(run) : null;
+  // A quiet task passes only with an empty console, locally and on the server.
+  const noisy = Boolean(task.quiet && run && runPassed(run) && run.logs.length > 0);
+  const localPassed = run ? runPassed(run) && !noisy : null;
   // Server results replace the local run after Submit; otherwise a runner
   // startup error looked like a stale failed browser test with no explanation.
   const reactRun: HarnessRun | null = serverChecked && verdict && isReact && !checklist
@@ -475,7 +477,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // signals the browser does hold — same vocabulary, same authored text, so a
   // learner is never told two different stories about one failure.
   const localHint = useMemo(() => {
-    if (verdict || !run || runPassed(run)) return null;
+    if (verdict || !run) return null;
+    if (noisy) return failureHint('console', task.failureHints);
+    if (runPassed(run)) return null;
     const typesBroken = Boolean(run.check && (run.check.codeErrors.length > 0 || run.check.typeTests.some((one) => !one.pass)));
     return failureHint(
       classifyFailure({
@@ -486,7 +490,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       }),
       task.failureHints,
     );
-  }, [verdict, run, task.pitfall, task.failureHints]);
+  }, [verdict, run, noisy, task.pitfall, task.failureHints]);
   const shownHint = verdict?.failureHint ?? localHint;
   const tabs: { key: Tab; label: string; badge: string | null; good: boolean | null }[] = [
     { key: 'results', label: t('coding.tab.results'), badge: resultsBadge, good: isReact ? (reactRun ? reactRun.failed === 0 && reactRun.total > 0 : null) : localPassed },
@@ -605,6 +609,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         <p className="cd-summary">
           {t('coding.results.preview', { total })}
           {hiddenChecks > 0 && <small>{t('coding.results.hiddenPreview', { n: hiddenChecks })}</small>}
+          {task.quiet && <small>{t('coding.results.quietPreview')}</small>}
         </p>
         <ResultList count={total} label={t('coding.tab.results')}>
           {isReact

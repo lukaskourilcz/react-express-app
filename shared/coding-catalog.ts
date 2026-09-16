@@ -170,6 +170,11 @@ export interface CodingTask {
   /** The mistake this task is built around, when there is one. Used only when
    * the run proves nothing more specific — never to override evidence. */
   pitfall?: FailureCategory;
+  /** A pass also needs an empty console: the task is about removing the
+   * output that debugging leaves behind. Graded on the server and mirrored
+   * by the Run button; a run whose tests pass with output left fails as
+   * `console`. */
+  quiet?: boolean;
   estimatedMinutes: number;
 }
 
@@ -213,6 +218,8 @@ export interface PlayableCodingTask extends CodingTaskSummary {
    * not answer material: none of them names an input or an expected value. */
   failureHints?: Partial<Record<FailureCategory, Localized>>;
   pitfall?: FailureCategory;
+  /** See `CodingTask.quiet`: the Run button applies the same rule locally. */
+  quiet?: boolean;
   /** How many server-only checks (hidden tests and hidden type tests) run on
    * submit, so the results panel can say they exist. A count and nothing
    * else: the checks themselves never leave the server. */

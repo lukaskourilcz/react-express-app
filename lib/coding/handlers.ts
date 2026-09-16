@@ -293,6 +293,11 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
     : null;
   let verdict = codeOutcome({ visible, hidden: hiddenRun, check });
   if (verdict === 'passed' && hiddenTypeFailures > 0) verdict = 'failed';
+  // A quiet task is about removing the output that debugging leaves behind,
+  // so a run that passes every check with lines still in the console has not
+  // done what it was asked. The category is never inferred anywhere else.
+  const noisy = verdict === 'passed' && task.quiet === true && run.logs.length > 0;
+  if (noisy) verdict = 'failed';
   const hiddenPassed = (hiddenRun?.results.filter((r) => r.pass === true).length ?? 0) + (hiddenTypeTotal - hiddenTypeFailures);
   const hiddenTotal = hiddenTests.length + hiddenTypeTotal;
   const graded: Graded = {
@@ -305,7 +310,7 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
     design: null,
     designReference: null,
   };
-  return { ...graded, failureHint: hintForFailure(task, { ...graded, timedOut: run.timedOut }) };
+  return { ...graded, failureHint: noisy ? failureHint('console', task.failureHints) : hintForFailure(task, { ...graded, timedOut: run.timedOut }) };
 }
 
 /**
