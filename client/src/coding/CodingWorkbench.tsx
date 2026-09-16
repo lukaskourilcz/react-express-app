@@ -598,6 +598,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   /** Before anything has run: the checks themselves, with no verdict, so the
    * learner can read what goes into the function and what must come out.
    * Only the task's public tests are listed; hidden checks are a count. */
+  // One count string per language cannot carry both numbers: Czech inflects the
+  // noun and English the verb. Each has a one-variant and the count picks it.
+  const previewLine = (n: number) => (isReact
+    ? t(n === 1 ? 'coding.results.previewSuite.one' : 'coding.results.previewSuite', { total: n })
+    : t(n === 1 ? 'coding.results.preview.one' : 'coding.results.preview', { total: n }));
+  const hiddenLine = (n: number) => t(n === 1 ? 'coding.results.hiddenPreview.one' : 'coding.results.hiddenPreview', { n });
+  const moreLine = (n: number) => t(n === 1 ? 'coding.results.more.one' : 'coding.results.more', { n });
+
   const renderPlannedChecks = (): ReactNode => {
     const tests = task.tests ?? [];
     const cases = isReact ? suiteCaseNames(task.suite) : [];
@@ -607,8 +615,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     return (
       <>
         <p className="cd-summary">
-          {t('coding.results.preview', { total })}
-          {hiddenChecks > 0 && <small>{t('coding.results.hiddenPreview', { n: hiddenChecks })}</small>}
+          {previewLine(total)}
+          {hiddenChecks > 0 && <small>{hiddenLine(hiddenChecks)}</small>}
           {task.quiet && <small>{t('coding.results.quietPreview')}</small>}
         </p>
         <ResultList count={total} label={t('coding.tab.results')}>
@@ -621,7 +629,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             ))
             : tests.map((test, index) => renderCase(test, null, index))}
         </ResultList>
-        {total > RESULT_ROWS_VISIBLE && <p className="cd-shortcuts">{t('coding.results.more', { n: total - RESULT_ROWS_VISIBLE })}</p>}
+        {total > RESULT_ROWS_VISIBLE && <p className="cd-shortcuts">{moreLine(total - RESULT_ROWS_VISIBLE)}</p>}
       </>
     );
   };
@@ -660,7 +668,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               </li>
             ))}
           </ResultList>
-          {reactRun.cases.length > RESULT_ROWS_VISIBLE && <p className="cd-shortcuts">{t('coding.results.more', { n: reactRun.cases.length - RESULT_ROWS_VISIBLE })}</p>}
+          {reactRun.cases.length > RESULT_ROWS_VISIBLE && <p className="cd-shortcuts">{moreLine(reactRun.cases.length - RESULT_ROWS_VISIBLE)}</p>}
         </>
       );
     }
@@ -679,7 +687,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         <ResultList count={run.results.length} label={t('coding.tab.results')}>
           {run.results.map((result, index) => renderCase(task.tests?.[index], result, index))}
         </ResultList>
-        {run.results.length > RESULT_ROWS_VISIBLE && <p className="cd-shortcuts">{t('coding.results.more', { n: run.results.length - RESULT_ROWS_VISIBLE })}</p>}
+        {run.results.length > RESULT_ROWS_VISIBLE && <p className="cd-shortcuts">{moreLine(run.results.length - RESULT_ROWS_VISIBLE)}</p>}
       </>
     );
   };
@@ -692,7 +700,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       if (typeTests.length === 0) return <p className="cd-console__empty">{t('coding.results.idle')}</p>;
       return (
         <>
-          <p className="cd-summary">{t('coding.results.preview', { total: typeTests.length })}</p>
+          <p className="cd-summary">{t(typeTests.length === 1 ? 'coding.results.preview.one' : 'coding.results.preview', { total: typeTests.length })}</p>
           <ResultList count={typeTests.length} label={t('coding.tab.types')}>
             {typeTests.map((typeTest, index) => (
               <li key={index} className="cd-result cd-result--idle">
@@ -702,7 +710,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               </li>
             ))}
           </ResultList>
-          {typeTests.length > RESULT_ROWS_VISIBLE && <p className="cd-shortcuts">{t('coding.results.more', { n: typeTests.length - RESULT_ROWS_VISIBLE })}</p>}
+          {typeTests.length > RESULT_ROWS_VISIBLE && <p className="cd-shortcuts">{moreLine(typeTests.length - RESULT_ROWS_VISIBLE)}</p>}
         </>
       );
     }
@@ -734,7 +742,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             );
           })}
         </ResultList>
-        {check.typeTests.length > RESULT_ROWS_VISIBLE && <p className="cd-shortcuts">{t('coding.results.more', { n: check.typeTests.length - RESULT_ROWS_VISIBLE })}</p>}
+        {check.typeTests.length > RESULT_ROWS_VISIBLE && <p className="cd-shortcuts">{moreLine(check.typeTests.length - RESULT_ROWS_VISIBLE)}</p>}
       </>
     );
   };

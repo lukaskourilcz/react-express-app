@@ -1884,10 +1884,17 @@ export const en = {
   'coding.tab.preview': 'Preview',
   'coding.results.idle': 'Run your code to see results.',
   'coding.results.preview': '{total} checks will run. Each one shows what goes in and what must come out.',
+  'coding.results.preview.one': 'One check will run. It shows what goes in and what must come out.',
+  // A suite-graded task asserts behaviour rather than a return value, so its
+  // rows name what they look for and the summary must not promise otherwise.
+  'coding.results.previewSuite': '{total} checks will run. Each one names the behaviour it looks for in what you render.',
+  'coding.results.previewSuite.one': 'One check will run. It names the behaviour it looks for in what you render.',
   'coding.results.hiddenPreview': '{n} more hidden checks run on the server when you submit.',
+  'coding.results.hiddenPreview.one': 'One more hidden check runs on the server when you submit.',
   'coding.results.pending': 'Not run yet',
   'coding.results.quietPreview': 'This stage also needs an empty Console tab: leftover output fails it.',
   'coding.results.more': '{n} more below. Scroll the list to see them.',
+  'coding.results.more.one': 'One more below. Scroll the list to see it.',
   'coding.results.passing': '{passed} of {total} passing',
   'coding.status.working': 'Running your code…',
   'coding.results.hidden': 'Hidden checks: {passed} of {total}',
