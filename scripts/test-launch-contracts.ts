@@ -24,7 +24,7 @@ import {
   createChallengeRun,
   stableAttemptId,
 } from '../lib/quiz-tokens';
-import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS } from '../lib/rate-limit';
+import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import challengeHandler from '../api/quiz/challenge';
 import {
   comboProgressPct,
@@ -1540,6 +1540,64 @@ async function main() {
   assert.equal(rateRes.statusCode, 429);
   assert.ok(rateRes.headers.has('retry-after'));
   assert.equal(isDistributedRateLimitEnabled(), false, 'test environment exercises the safe local fallback');
+
+  // A classroom round is thirty pupils joining one room from one school
+  // address. Every `play` bucket used to be keyed by address alone and sized
+  // for one person, so the feature 429'd its own participants. The split is
+  // only correct if all three of these hold at once.
+  {
+    // 1. Two people behind one address do not share a budget.
+    const sharedAddress = { headers: { 'x-forwarded-for': `class-${Date.now()}` }, socket: {} } as never;
+    const perUser = { key: `class-user-${Date.now()}`, capacity: 1, refillPerSecond: 0.0001 };
+    const pupilA = mockResponse();
+    const pupilB = mockResponse();
+    assert.equal(checkRateLimit(sharedAddress, pupilA as never, perUser, 'pupil-a'), true);
+    assert.equal(checkRateLimit(sharedAddress, pupilB as never, perUser, 'pupil-b'), true,
+      'a second identity on the same address must have its own budget, or one NAT breaks a class');
+    assert.equal(checkRateLimit(sharedAddress, pupilA as never, perUser, 'pupil-a'), false,
+      'an identity must still be bounded once its own budget is spent');
+
+    // 2. A user id can never land in an address bucket, or the namespaces
+    //    would let one spoofable value drain the other.
+    const collide = { key: `class-ns-${Date.now()}`, capacity: 1, refillPerSecond: 0.0001 };
+    const asAddress = { headers: { 'x-forwarded-for': 'pupil-c' }, socket: {} } as never;
+    assert.equal(checkRateLimit(asAddress, mockResponse() as never, collide), true);
+    assert.equal(checkRateLimit(asAddress, mockResponse() as never, collide, 'pupil-c'), true,
+      'the identity and address namespaces must not collide');
+
+    // 3. No individual gained anything from widening the address buckets: each
+    //    per-identity limit is exactly what its address bucket used to carry,
+    //    and a signed-out `state` caller keeps the pre-split address rate.
+    for (const key of ['playCreatePerUser', 'playJoinPerUser', 'playStatePerUser',
+                       'playMutationPerUser', 'playStateAnonymous'] as const) {
+      assert.ok(key in RATE_LIMITS, `rate limit ${key} must exist`);
+    }
+    assert.equal(RATE_LIMITS.playCreatePerUser.capacity, 5, 'one host may open rooms at the pre-split rate');
+    assert.equal(RATE_LIMITS.playJoinPerUser.capacity, 12, 'one learner may join at the pre-split rate');
+    assert.equal(RATE_LIMITS.playStatePerUser.capacity, 60, 'one learner may poll at the pre-split rate');
+    assert.equal(RATE_LIMITS.playMutationPerUser.capacity, 30, 'one learner may answer at the pre-split rate');
+    assert.equal(RATE_LIMITS.playStateAnonymous.capacity, 60,
+      'a caller with no account must be no better off than before the class-sized bucket existed');
+
+    // 4. And a whole class actually fits in the address buckets.
+    assert.ok(RATE_LIMITS.playJoin.capacity >= SHARED_NETWORK_SEATS,
+      'every seat must be able to join inside one window');
+    assert.ok(RATE_LIMITS.playState.capacity >= SHARED_NETWORK_SEATS * 15,
+      'every seat must survive the 4s Realtime fallback poll in Play.tsx');
+    assert.ok(RATE_LIMITS.playMutation.capacity >= SHARED_NETWORK_SEATS,
+      'every seat must be able to answer one question');
+
+    // 5. The handler has to actually pass an identity, or none of the above
+    //    describes production.
+    const playSource = readFileSync(join(process.cwd(), 'api/play/[action].ts'), 'utf8');
+    for (const [cfg, subject] of [['playCreatePerUser', 'hostSub'], ['playJoinPerUser', 'sub'],
+                                  ['playStatePerUser', 'sub'], ['playMutationPerUser', 'sub']] as const) {
+      assert.ok(playSource.includes(`RATE_LIMITS.${cfg}, ${subject}`),
+        `play must consume ${cfg} keyed by a verified ${subject}`);
+    }
+    assert.match(playSource, /RATE_LIMITS\.playStateAnonymous\)/,
+      'the anonymous state branch must keep its own address bucket');
+  }
 
   const healthRes = mockResponse();
   await healthHandler({ method: 'POST', headers: {}, query: {} } as never, healthRes as never);

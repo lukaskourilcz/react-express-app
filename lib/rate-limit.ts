@@ -10,9 +10,10 @@
 //
 //   2. In-memory token bucket (`checkRateLimit`) — the fallback used when
 //      Upstash isn't configured, or if a Redis call fails so we never hard-fail
-//      a request on the limiter. Buckets are keyed per (endpoint, client IP)
-//      and live in the module's Map, which persists across warm invocations of
-//      the same instance. Not distributed, but enough to blunt the
+//      a request on the limiter. Buckets are keyed per (endpoint, caller) —
+//      the caller being a verified user id where one is passed and the client
+//      IP otherwise — and live in the module's Map, which persists across warm
+//      invocations of the same instance. Not distributed, but enough to blunt the
 //      "one script hammering one endpoint" abuse the app cares about
 //      (leaderboard spam, report spam, admin-password guessing).
 //
@@ -37,6 +38,20 @@ export interface RateLimitConfig {
   key: string;
 }
 
+/**
+ * How many people may legitimately share one public address inside one room.
+ *
+ * This is a statement about networks, not a product cap. A Czech school class
+ * is about thirty pupils and a school NATs all of them onto one address, so
+ * every `play` bucket below that is keyed by address has to hold a whole class
+ * or a classroom round 429s on its own participants. Thirty pupils, the
+ * teacher, and one spare.
+ *
+ * The per-person limits are enforced separately, per authenticated identity,
+ * so raising these does not widen what any one learner may do.
+ */
+export const SHARED_NETWORK_SEATS = 32;
+
 export const RATE_LIMITS = {
   admin: { key: 'admin_gate', capacity: 5, refillPerSecond: 1 },
   quizSession: { key: 'quiz_session', capacity: 20, refillPerSecond: 20 / 60 },
@@ -58,10 +73,38 @@ export const RATE_LIMITS = {
   roadmapMutation: { key: 'roadmap_mutation', capacity: 20, refillPerSecond: 20 / 60 },
   roadmapAnswer: { key: 'roadmap_answer', capacity: 80, refillPerSecond: 80 / 60 },
   roadmapComplete: { key: 'roadmap_complete', capacity: 12, refillPerSecond: 12 / 60 },
-  playCreate: { key: 'play_create', capacity: 5, refillPerSecond: 5 / 60 },
-  playJoin: { key: 'play_join', capacity: 12, refillPerSecond: 12 / 60 },
-  playState: { key: 'play_state', capacity: 60, refillPerSecond: 60 / 60 },
-  playMutation: { key: 'play_mutation', capacity: 30, refillPerSecond: 30 / 60 },
+  // A host opens one room per round, but several teachers in one school share
+  // one address, so the address bucket holds a handful of concurrent rooms and
+  // the per-identity bucket keeps one host at the rate it always had.
+  playCreate: { key: 'play_create', capacity: 20, refillPerSecond: 20 / 60 },
+  playCreatePerUser: { key: 'play_create_user', capacity: 5, refillPerSecond: 5 / 60 },
+  // The three buckets below are per ADDRESS and sized for a whole class behind
+  // one NAT, because that is the shape of the feature: a teacher reads a code
+  // aloud and thirty pupils join the same room from the same address within a
+  // minute. Each is paired with a per-identity bucket further down, which is
+  // what actually bounds one learner, and `playStateAnonymous` keeps the old
+  // tight address limit for a caller with no account. So a class fits and a
+  // signed-out flood is no better off than it was.
+  //
+  // A class arrives at once: one join each, plus retries on a bad code.
+  playJoin: { key: 'play_join', capacity: SHARED_NETWORK_SEATS + 16, refillPerSecond: (SHARED_NETWORK_SEATS + 16) / 60 },
+  // Worst legitimate case is every seat on the 4s Realtime fallback poll in
+  // `Play.tsx` — 15 reads a minute each — not the 30s healing poll.
+  playState: { key: 'play_state', capacity: SHARED_NETWORK_SEATS * 15 + 120, refillPerSecond: (SHARED_NETWORK_SEATS * 15 + 120) / 60 },
+  // One answer per seat per question, a brisk round being a few questions a
+  // minute, plus the host's heartbeat.
+  playMutation: { key: 'play_mutation', capacity: SHARED_NETWORK_SEATS * 5 + 40, refillPerSecond: (SHARED_NETWORK_SEATS * 5 + 40) / 60 },
+  // Per authenticated identity. These are the limits that bound one learner,
+  // and they are the values the per-address buckets used to carry, so no
+  // individual may do more than before this split existed.
+  playJoinPerUser: { key: 'play_join_user', capacity: 12, refillPerSecond: 12 / 60 },
+  playStatePerUser: { key: 'play_state_user', capacity: 60, refillPerSecond: 60 / 60 },
+  playMutationPerUser: { key: 'play_mutation_user', capacity: 30, refillPerSecond: 30 / 60 },
+  // `state` is the one play action a caller without an account may complete —
+  // it is readable by anyone holding the six-character code. Signed-out
+  // traffic is still limited per address at the pre-split rate, so widening
+  // `playState` above buys an anonymous caller nothing.
+  playStateAnonymous: { key: 'play_state_anon', capacity: 60, refillPerSecond: 60 / 60 },
   accountDelete: { key: 'account_delete', capacity: 2, refillPerSecond: 2 / 3600 },
   aiExplanation: { key: 'ai_explanation', capacity: 3, refillPerSecond: 5 / 3600 },
   codingRun: { key: 'coding_run', capacity: 30, refillPerSecond: 30 / 600 },
@@ -110,18 +153,35 @@ export function clientIp(req: VercelRequest): string {
 }
 
 /**
- * Consume one token from the (endpoint, IP) bucket. Returns true if allowed,
- * or false + writes a 429 response with a Retry-After header.
+ * The bucket a request consumes from: per authenticated identity when one is
+ * given, otherwise per client address.
+ *
+ * An identity is only ever passed after the caller's token has been verified,
+ * so it cannot be spoofed into a fresh bucket. The `u:`/`ip:` prefixes keep
+ * the two namespaces apart, so a user id can never collide with an address.
+ */
+function bucketFor(req: VercelRequest, config: RateLimitConfig, identity?: string): string {
+  return identity ? `${config.key}:u:${identity}` : `${config.key}:ip:${clientIp(req)}`;
+}
+
+/**
+ * Consume one token from the (endpoint, identity-or-IP) bucket. Returns true if
+ * allowed, or false + writes a 429 response with a Retry-After header.
+ *
+ * Pass `identity` — a verified user id — for an endpoint whose callers
+ * legitimately share one address, such as a classroom round. Without it the
+ * bucket is keyed by address, which is the right default for everything else.
  */
 export function checkRateLimit(
   req: VercelRequest,
   res: VercelResponse,
   config: RateLimitConfig,
+  identity?: string,
 ): boolean {
   const now = Date.now();
   maybeCleanup(now);
 
-  const key = `${config.key}:${clientIp(req)}`;
+  const key = bucketFor(req, config, identity);
   const b = buckets.get(key) ?? { tokens: config.capacity, updatedAt: now };
   const elapsedSeconds = (now - b.updatedAt) / 1000;
   const refilled = Math.min(config.capacity, b.tokens + elapsedSeconds * config.refillPerSecond);
@@ -218,17 +278,22 @@ async function withLimiterDeadline<T>(promise: Promise<T>, timeoutMs = 500): Pro
  * or false after writing a 429 (+ Retry-After) response.
  *
  *   if (!(await enforceRateLimit(req, res, { key: 'admin_gate', capacity: 5, refillPerSecond: 1 }))) return;
+ *
+ * Pass a verified user id as `identity` to bucket per person instead of per
+ * address. Both backends honour it, and the two namespaces stay separate, so
+ * an endpoint can hold an address bucket and an identity bucket at once.
  */
 export async function enforceRateLimit(
   req: VercelRequest,
   res: VercelResponse,
   config: RateLimitConfig,
+  identity?: string,
 ): Promise<boolean> {
   const limiter = await getUpstashLimiter(config);
-  if (!limiter) return checkRateLimit(req, res, config);
+  if (!limiter) return checkRateLimit(req, res, config, identity);
 
   try {
-    const id = clientIp(req);
+    const id = identity ? `u:${identity}` : `ip:${clientIp(req)}`;
     const { success, reset } = await withLimiterDeadline(limiter.limit(id));
     if (success) return true;
 

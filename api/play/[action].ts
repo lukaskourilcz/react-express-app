@@ -99,6 +99,15 @@ async function tryAdvance(match: {
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Match backend is not configured');
 
+  // Two tiers. These route-level buckets are keyed by client address and are
+  // sized for a whole class behind one NAT — a teacher reads a code aloud and
+  // thirty pupils join the same room from one address, which the old
+  // per-person-sized address buckets turned into a wall of 429s. They are a
+  // coarse backstop, not the real limit. Each handler below consumes a second
+  // token from a bucket keyed by the caller's verified identity, at the rates
+  // these buckets used to carry, so no one learner gained anything; and
+  // `state`, the only action a caller without an account may complete, keeps
+  // the old tight address limit for anonymous callers.
   const action = String(req.query.action || '').toLowerCase();
   if (req.method === 'GET' && action === 'state') {
     if (!(await enforceRateLimit(req, res, RATE_LIMITS.playState))) return;
@@ -142,6 +151,7 @@ async function create(req: VercelRequest, res: VercelResponse) {
   }
   const hostSub = await requireAuthSub(req, res);
   if (!hostSub) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.playCreatePerUser, hostSub))) return;
 
   const body = (req.body || {}) as {
     host_name?: unknown;
@@ -276,6 +286,7 @@ async function join(req: VercelRequest, res: VercelResponse) {
   }
   const sub = await requireAuthSub(req, res);
   if (!sub) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.playJoinPerUser, sub))) return;
 
   const body = (req.body || {}) as { code?: unknown; display_name?: unknown };
   if (!isShortString(body.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
@@ -347,6 +358,17 @@ async function state(req: VercelRequest, res: VercelResponse) {
   // optional remote authentication so malformed probes remain cheap.
   const auth = await tryAuth(req);
   const sub = auth?.sub ?? null;
+
+  // The route-level `playState` bucket is keyed by address and sized for a
+  // whole class behind one NAT, which is no use as an abuse limit on its own.
+  // Split it here, where we finally know who is asking: a participant is
+  // bounded per person, and a caller with no account keeps the tighter
+  // per-address limit this endpoint carried before the class-sized bucket
+  // existed. Both run before the match is read, so neither costs a query.
+  const stateLimit = sub
+    ? await enforceRateLimit(req, res, RATE_LIMITS.playStatePerUser, sub)
+    : await enforceRateLimit(req, res, RATE_LIMITS.playStateAnonymous);
+  if (!stateLimit) return;
 
   try {
     let { data: match, error: matchError } = await withTimeout(
@@ -454,6 +476,7 @@ async function control(req: VercelRequest, res: VercelResponse) {
   }
   const sub = await requireAuthSub(req, res);
   if (!sub) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.playMutationPerUser, sub))) return;
 
   const body = (req.body || {}) as { code?: unknown; action?: unknown };
   if (!isShortString(body.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
@@ -541,6 +564,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
   }
   const sub = await requireAuthSub(req, res);
   if (!sub) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.playMutationPerUser, sub))) return;
 
   const body = (req.body || {}) as {
     code?: unknown;
@@ -725,6 +749,7 @@ async function distribution(req: VercelRequest, res: VercelResponse) {
   }
   const sub = await requireAuthSub(req, res);
   if (!sub) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.playStatePerUser, sub))) return;
 
   const code = (req.query.code as string)?.toUpperCase();
   const qParam = parseInt(req.query.q as string, 10);
@@ -772,6 +797,7 @@ async function heartbeat(req: VercelRequest, res: VercelResponse) {
   }
   const sub = await requireAuthSub(req, res);
   if (!sub) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.playMutationPerUser, sub))) return;
 
   const body = (req.body || {}) as { code?: unknown };
   if (!isShortString(body.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
