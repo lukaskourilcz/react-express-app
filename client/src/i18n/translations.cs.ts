@@ -22,7 +22,7 @@ export const cs: Record<TranslationKey, string> = {
   'coding.draft.saving': 'Ukládám kód…',
   'coding.draft.saved': 'Kód uložen do účtu',
   'coding.draft.local': 'Kód zůstává na tomto zařízení. Pro synchronizaci se přihlas a připoj k internetu.',
-  'coding.evolving.body': 'Projekty s 10–12 stále náročnějšími etapami. Rozšiřuj svůj kód a vrať se, kdykoli chceš. Pro uložení pokroku se přihlas.',
+  'coding.evolving.body': 'Projekty, které rostou přes 10–12 etap, a patnáctietapový kurz ladění, kde každá etapa stojí sama za sebe. Vrať se, kdykoli chceš. Pro uložení pokroku se přihlas.',
   'coding.evolving.previous': 'Požadavky předchozích etap',
   'coding.evolving.stageShort': 'Etapa {n}',
   'coding.evolving.references': 'Dokumentace etapy',

@@ -265,4 +265,29 @@ are listed first, so the top of the Results panel always shows what the new
 brief asks for. Original task IDs retain their drafts and completion;
 a passed original milestone also covers its new prerequisite without synthesizing
 extra XP receipts. The shared evolving registry controls routes, unlocks and
-progress. The full catalogue contains 385 tasks.
+progress. The full catalogue contains 400 tasks.
+
+### The debugging course (September 2026)
+
+`js-evolving-debugging` is a fourteenth entry in the evolving registry and the
+first `standalone` one: fifteen stages that unlock in order like any project,
+where each stage opens on its own broken program instead of the previous
+stage's draft (`prepareEvolvingDraft` returns `null` for a standalone
+challenge, on the server and in the browser alike). Every stage is a `debug`
+task authored in `lib/coding/tasks/evolving-debugging.ts` with its repair and
+hidden checks in `lib/coding/solutions/`, and teaches one console move: reading
+the error, logging inputs, logging at the boundaries, labelling logs,
+`console.table`, logging inside loops with the counter, conditional logs,
+`console.assert`, `console.trace`, logging before and after a mutation,
+`JSON.stringify` snapshots, bisecting a pipeline, shrinking a failing input,
+checking a type with `typeof`, and cleaning up. The last stage is `quiet`: its
+tests pass only with an empty console, and a run that passes with output left
+fails under its own category, `console`, which the classifier never infers.
+
+The console those stages rely on is `shared/coding-console.ts`, one factory
+source that the browser worker compiles with `new Function` and the QuickJS
+sandbox embeds in its program, so Run and Submit print the same lines for
+`log`, `info`, `warn`, `error`, `debug`, `table`, `assert`, `trace`, `group`,
+`groupCollapsed`, `groupEnd`, `count`, `countReset`, `dir`, `time`, `timeLog`
+and `timeEnd`. The content contract runs a fixture through both runtimes and
+asserts the lines match, trace frames naming the calling functions included.

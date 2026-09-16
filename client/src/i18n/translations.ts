@@ -21,7 +21,7 @@ export const en = {
   'coding.draft.saving': 'Saving code…',
   'coding.draft.saved': 'Code saved to your account',
   'coding.draft.local': 'Code kept on this device. Sign in and stay online to sync it.',
-  'coding.evolving.body': 'Projects with 10–12 increasingly demanding stages. Build on your code and come back whenever you like. Sign in to save progress.',
+  'coding.evolving.body': 'Projects that grow over 10–12 stages, and a 15-stage debugging course where each stage stands on its own. Come back whenever you like. Sign in to save progress.',
   'coding.evolving.previous': 'Requirements from earlier stages',
   'coding.evolving.stageShort': 'Stage {n}',
   'coding.evolving.references': 'Stage references',

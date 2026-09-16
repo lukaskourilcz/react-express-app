@@ -30,7 +30,8 @@ import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { renderCodingIndex } from './build-coding-index';
-import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed } from '../shared/evolving';
+import { DEBUGGING_COURSE_ID, DEBUGGING_COURSE_STAGES, EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed } from '../shared/evolving';
+import { prepareEvolvingDraft } from '../shared/coding-fullstack-support';
 
 const SKIP_CS = process.env.CODING_SKIP_CS === '1';
 const ALLOW_GAPS = process.env.CODING_ALLOW_LEVEL_GAPS === '1';
@@ -59,7 +60,7 @@ async function main() {
   const stageIds = EVOLVING_CHALLENGES.flatMap(project => [...project.stages]);
   assert.equal(new Set(stageIds).size, stageIds.length, 'unique stable stage IDs');
   for (const project of EVOLVING_CHALLENGES) {
-    assert.ok(project.stages.length >= (project.category === 'fullstack' ? 6 : 5) && project.stages.length <= 12);
+    assert.ok(project.stages.length >= (project.category === 'fullstack' ? 6 : 5) && project.stages.length <= 15);
     const passed = new Set<string>();
     for (const [index,id] of project.stages.entries()) {
       const task = CODING_TASKS.find(task => task.id === id);
@@ -70,7 +71,9 @@ async function main() {
       assert.equal(evolvingUnlocked(id, passed), true, 'earlier verified passes unlock the next stage');
       if (index > 0) assert.equal(evolvingUnlocked(id, new Set()), false, 'deep links cannot skip prerequisites');
       assert.ok(!tasksForLevel(task.topic, task.level).some(item => item.id === id), 'optional projects never change Learn quotas');
-      if (index > 0) {
+      // A standalone challenge gives each stage its own starter and tests, so
+      // nothing accumulates and nothing from an earlier stage is required.
+      if (index > 0 && !project.standalone) {
         const prior = CODING_TASKS.find(task => task.id === project.stages[index-1])!;
         assert.deepEqual(task.previousRequirements?.[index-1], prior.prompt, 'earlier requirements remain available');
         // Newest checks first, earlier ones after them: the prior stage's list
@@ -381,10 +384,33 @@ function probe() {
     }
   }
 
+  // ── the debugging course ───────────────────────────────────────────────
+  // Fifteen standalone stages, each a repair task with its own starter, its
+  // own tests and a reference page. Every stage is unlocked in order like any
+  // other evolving challenge and carries no earlier requirements, because it
+  // carries no earlier code. The last stage is the quiet one.
+  {
+    const course = EVOLVING_CHALLENGES.find((project) => project.id === DEBUGGING_COURSE_ID);
+    assert.ok(course && course.standalone === true, 'the debugging course is a standalone challenge');
+    assert.equal(course.stages.length, DEBUGGING_COURSE_STAGES, 'the debugging course has fifteen stages');
+    const stages = course.stages.map((id) => CODING_TASKS.find((task) => task.id === id)!);
+    const starters = new Set(stages.map((stage) => stage.starter));
+    assert.equal(starters.size, stages.length, 'every stage of the course starts from its own program');
+    for (const stage of stages) {
+      assert.equal(formatOf(stage), 'debug', `${stage.id}: every course stage is a repair task`);
+      assert.equal(stage.previousRequirements, undefined, `${stage.id}: a standalone stage lists no earlier requirements`);
+      assert.ok(stage.hints.en.length >= 2 && stage.hints.cs.length >= 2, `${stage.id}: a course stage teaches with at least two hints`);
+      assert.ok(solutionFor(stage.id)?.hiddenTests?.length, `${stage.id}: a course stage has hidden checks`);
+    }
+    assert.equal(stages.at(-1)!.quiet, true, 'the course ends on the stage that removes the logging');
+    assert.equal(prepareEvolvingDraft('code', course, 1), null, 'a standalone challenge never seeds the next stage from the previous draft');
+  }
+
   // ── quiet tasks ───────────────────────────────────────────────────────────
   // A task marked quiet is graded on an empty console as well as on its tests.
   // Its reference solution must therefore print nothing, and its starter must
   // print something, or the rule would never be exercised.
+  assert.ok(CODING_TASKS.some((one) => one.quiet), 'at least one task exercises the quiet rule');
   for (const task of CODING_TASKS.filter((one) => one.quiet)) {
     const solution = solutionFor(task.id);
     assert.ok(solution && task.tests, `${task.id}: a quiet task needs tests and a reference solution`);

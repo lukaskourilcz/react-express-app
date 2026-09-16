@@ -516,7 +516,7 @@ export function CodingTaskScreen() {
   const localDraft = readString(draftKey(data.task.id));
   const previousLocal = stage?.previous ? readString(draftKey(stage.previous)) : null;
   const initialCode = localDraft ?? data.draft ?? (stage && previousLocal !== null
-    ? prepareEvolvingDraft(previousLocal, stage.challenge.category, stage.index)
+    ? prepareEvolvingDraft(previousLocal, stage.challenge, stage.index)
     : null);
 
   return (

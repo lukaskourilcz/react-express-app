@@ -6,6 +6,10 @@ export interface EvolvingChallenge {
   category?: 'fullstack';
   title: Localized;
   stages: readonly string[];
+  /** Each stage stands alone with its own starter and its own tests, so the
+   * previous stage's code never seeds the next editor. A project without
+   * this flag grows one codebase across its stages. */
+  standalone?: true;
 }
 
 const challenge = (id: string, track: CodingTrack, en: string, cs: string): EvolvingChallenge => ({
@@ -24,10 +28,20 @@ export function evolvingTaskTrack(id: string): CodingTrack {
 
 /** A stage is an ordinary server-graded task. Stable task IDs give every stage
  * its own existing account draft, completion record and idempotent XP receipt. */
+/** The debugging course: fifteen standalone stages, one console technique
+ * each, authored in `lib/coding/tasks/evolving-debugging.ts`. */
+export const DEBUGGING_COURSE_ID = 'js-evolving-debugging';
+export const DEBUGGING_COURSE_STAGES = 15;
+
 export const EVOLVING_CHALLENGES: readonly EvolvingChallenge[] = [
   fullstack('planner', 'Team task planner', 'Týmový plánovač úkolů'),
   fullstack('stockroom', 'Stockroom manager', 'Správa skladu'),
   fullstack('workshops', 'Workshop booking', 'Rezervace workshopů'),
+  {
+    id: DEBUGGING_COURSE_ID, track: 'javascript', standalone: true,
+    title: { en: 'Debugging with the console', cs: 'Ladění s konzolí' },
+    stages: Array.from({ length: DEBUGGING_COURSE_STAGES }, (_, index) => `${DEBUGGING_COURSE_ID}-${index + 1}`),
+  },
   challenge('js-evolving-calculator', 'javascript', 'Expression engine', 'Výrazový engine'),
   challenge('js-evolving-query', 'javascript', 'Query pipeline', 'Dotazovací pipeline'),
   challenge('js-evolving-events', 'javascript', 'Event bus', 'Sběrnice událostí'),
