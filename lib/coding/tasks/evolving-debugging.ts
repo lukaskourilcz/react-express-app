@@ -460,7 +460,7 @@ function markPaid(order) {
     ],
   },
   {
-    title: text('Bisect the pipeline', 'Půl hledání: bisekce pipeline'),
+    title: text('Bisect the pipeline', 'Rozpůl hledání v pipeline'),
     prompt: text(
       "`summarize(lines)` turns raw `'sku,price,qty'` lines into `{ sku, total }` records in four steps: parse, keep, group, sort. Some lines vanish. Do not read all four steps; halve the search instead. Log the data after step two, `console.log('after keep', kept)`. If the lost line is already gone, the fault is in the first half; if it is still there, in the second. Repeat once more and you are standing on the broken step.",
       "`summarize(lines)` převádí syrové řádky `'sku,price,qty'` na záznamy `{ sku, total }` ve čtyřech krocích: parse, keep, group, sort. Některé řádky se ztrácejí. Nečti všechny čtyři kroky; místo toho hledání rozpůl. Zaloguj data po druhém kroku, `console.log('after keep', kept)`. Pokud ztracený řádek už chybí, chyba je v první polovině; pokud tam ještě je, ve druhé. Zopakuj to ještě jednou a stojíš na rozbitém kroku.",

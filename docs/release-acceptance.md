@@ -567,3 +567,88 @@ The final static-preview Lighthouse run scored mobile 75 / desktop 97 for perfor
 This release changes no database schema, scoring authority, billing or handler count. PostHog account-level funnel setup and Search Console sitemap submission remain documented owner actions. The deployment result is recorded on PR #189 after production verification.
 
 Production verification on the initial merge confirmed both products’ guide HTML, locale metadata and HTTPS/sandbox headers, but exposed a missing-guide soft 404: the broad SPA fallback still matched unknown topic paths. The follow-up excludes `/topics/` and `/cs/topics/` from that fallback; production status verification is recorded on PR #189 after redeployment.
+
+## Coding workbench and the debugging course — 2026-09-16
+
+Branch `claude/busy-carson-lc5ise`. Six owner requests for the devShark Coding
+workbench plus a fifteen-stage debugging course, then a validation pass that
+drove the real UI rather than reading the diff.
+
+| Check | Result |
+|---|---|
+| `npm run typecheck:api` | PASS |
+| `npm run build` | PASS — both client bundles |
+| `npm run test:launch` | PASS |
+| `npm run test:coding` | PASS — 400 tasks (javascript 155, typescript 84, react 116, system-design 45) |
+| `npm run test:client` | PASS — 7 files, 43 tests |
+| `npm audit --omit=dev` | PASS — 0 vulnerabilities |
+| `npm audit --omit=dev --prefix client` | PASS — 0 vulnerabilities |
+| `git diff --check` | PASS |
+| `npm run check:responsive` over the coding routes | PASS — 237 probes, 0 issues, 0 unprobed; plus 9 EN and 9 CS probes after the fixes below |
+| Browser matrix, six owner requests | PASS — 360/768/1280 px (and 320 px) in EN and CS |
+
+### What the browser matrix actually showed
+
+A devShark production build was served locally and the coding-task response was
+fulfilled with payloads generated from the repository's own `playable()`,
+`solutionFor()` and `codingTaskReview()`, so the component under test received
+what the server would really send.
+
+- Planned checks render before any run with no verdict: the call, its label and
+  the expected value, the status column a `·` plus a screen-reader "Not run
+  yet" / "Zatím nespuštěno". The hidden-check count is truthful — it is the
+  same sum grading executes.
+- The one-minute hint sentence is gone from source and from the served bundle,
+  its translation keys are deleted, and the gate itself is gone: the Hint
+  button is enabled within 27 ms of load.
+- Keycaps are `<kbd>` elements carrying the glyph and the full word, with a
+  1 px border and a 3 px bottom edge at 5 px radius. An emulated Apple client
+  switches them to `⌘ CMD`.
+- Earlier-stage requirements sit in a disclosure with a count, each item
+  labelled `STAGE n` / `ETAPA n`: 13.44 px in `rgb(79,101,112)` against a
+  current brief of 16 px in `rgb(23,39,46)`, about 6.1:1 on white.
+- On an evolving stage the newest stage's checks lead. The subtraction stage
+  opens on `calculate("10-3-2") => 5`; the inherited addition case is third.
+- The results list caps at exactly eight visible rows in all six cells, scrolls
+  inside its own focusable region (`role="region"`, `tabIndex 0`, arrow keys,
+  PageDown and wheel all move it while the document stays put), and lists of
+  eight or fewer get no cap, no role and no stray tab stop.
+- No horizontal page overflow and no page errors at 320, 360, 768 or 1280 px in
+  either language.
+
+### Defects found by that pass and fixed here
+
+- **Count strings did not agree with their number.** The three strings added
+  with the planned-check panel interpolated a bare number into a fixed noun
+  phrase, and the interpolation layer has no plural mechanism. Czech read
+  "Spustí se 4 kontrol" where it needs "4 kontroly", and 132 of the 138 tasks
+  that carry hidden checks fell in the wrong band. English read "1 more hidden
+  checks" and "1 more below … to see them". The Czech strings now put the count
+  after a colon, where the noun form does not depend on it, and both languages
+  gained a one-variant that the call site selects.
+- **The summary over-promised on suite-graded React tasks.** All 106 of them
+  render case names, not inputs and expected values, under a sentence that
+  promised both. Those tasks now use their own sentence.
+- **Stage twelve's Czech title was not Czech.** "Půl hledání: bisekce pipeline"
+  became "Rozpůl hledání v pipeline", matching the other fourteen imperatives
+  and the stage's own prompt. `shared/coding-index.ts` was regenerated.
+
+### Not fixed here, left for the owner
+
+- `lib/coding/tasks/evolving.ts:6` stamps `edge: true` on every authored
+  evolving test, so the "edge case" marker sits on 100% of rows, including
+  `calculate("1 + 2") => 3`. It also disables a failure hint:
+  `shared/coding-failure.ts:106` gates the `boundary` category on at least one
+  non-edge check passing, which can never happen while the flag is universal.
+  The line predates this branch; what changed is that the marker is now visible
+  before a run. Choosing which rows are genuinely boundary cases is a content
+  decision across roughly 100 tests.
+
+### Not exercised
+
+Everything rendered signed out. There is no API and no Supabase in the build
+container, so Submit, the server verdict, progress, drafts and tier locks were
+never exercised; Run was, in the browser worker. Below 1024 px the workbench
+deliberately shows a pending notice instead of the editor, so the 360 and 768
+probes of a task route measure that notice. Dark mode was not measured and no
+axe scan was run.

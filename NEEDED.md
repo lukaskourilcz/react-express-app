@@ -4,6 +4,17 @@ The repository implementation is complete for the current web brief. This file l
 
 Production database migrations through `supabase/supabase-schema-035.sql` were applied and verified — 001–024 on 2026-07-28, and 026–035 on 2026-09-09. The two production Vercel projects, product scopes, canonical cross-links, Supabase credentials, and session secrets are configured; both `/api/health` probes report `database: ok`, `serviceRole: ok`, and `rateLimiter: configured` (Upstash Redis distributed rate limiting is live). Sentry error monitoring and PostHog analytics (EU cloud, reverse-proxied) are configured with privacy-forward defaults; admin ACL (`ADMIN_EMAILS`, `OWNER_EMAIL`) is set on both projects; Supabase leaked-password protection is on.
 
+## Coding workbench and the debugging course (2026-09-16)
+
+Branch `claude/busy-carson-lc5ise` carries the six workbench requests and the
+fifteen-stage debugging course, validated in a real browser at 360, 768 and
+1280 px in both languages. Every repository gate passes. Two decisions are
+yours.
+
+- [ ] **Decide the unmerged pull-request work** — the survey in [#208](https://github.com/lukaskourilcz/react-express-app/issues/208) lists what each open branch adds. Only `claude/elegant-cori-h9cdgb` carries real unmerged features (streak protections, weekly micro-leagues, sprint mode, Lichess puzzles, Turnstile, the merchandise cap). Its migrations 038 to 042 are unapplied and there is no 037, and migration 039 reverses 032's refusal of a second shield, so check it against the two-protection ceiling before merging. `[imp:4]` `[owner:me]` `[time:45m]` `[kind:decision]`
+- [ ] **Decide the "edge case" marker on evolving tests** — `lib/coding/tasks/evolving.ts:6` stamps `edge: true` on every authored evolving test, so the marker is on every row of every evolving stage, including ordinary calls like `calculate("1 + 2")`. It also silently disables the `boundary` failure hint, which `shared/coding-failure.ts:106` gates on at least one non-edge check passing. The line predates this branch; it became visible when the planned checks started rendering before a run. Marking only the genuine boundary rows is a content pass over roughly 100 tests. `[imp:3]` `[owner:me]` `[time:1h]` `[kind:content]`
+- [ ] **Read the fifteen-stage debugging course once before it reaches learners** — fifteen stages, one console technique each, four visible checks per stage, and a final stage that fails a correct but noisy submission. The content contract and a full reading in both languages passed; what no check can judge is whether the teaching order suits your learners. `[imp:2]` `[owner:me]` `[time:30m]` `[kind:content]`
+
 ## Before production launch
 
 - [ ] **Run the signed-in production smoke test** in English/Czech and desktop/mobile: Learn completion, Quiz replay rejection, Daily/Challenge idempotency, Flashcards, two-session Play/Classroom, leaderboards, `/dev`, deletion, and the daily-habit additions — the Today queue and its once-per-day Shark Card pack grant, a level going cleared→mastered over separate days, a streak freeze bridging a missed school day, the read-only advisor, adaptive placement (including the "I don't know yet" option), and the devShark typing racer. `[imp:4]` `[owner:me]` `[time:1h]` `[kind:deploy]`
