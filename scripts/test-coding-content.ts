@@ -24,7 +24,7 @@ import { docsFor } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
 import { formatOf } from '../shared/coding-catalog';
 import { runInSandbox } from '../lib/coding/sandbox';
-import { puzzleCoverage, puzzleFor } from '../lib/coding/puzzles';
+import { presentPuzzle, puzzleCoverage, puzzleFor, resolvePuzzleOrder } from '../lib/coding/puzzles';
 import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../shared/coding-puzzle';
 import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
@@ -344,6 +344,20 @@ async function main() {
     }
     assert.ok(puzzle.competencies.length > 0, `${id}: a puzzle must declare what it demonstrates`);
     assert.ok(puzzle.claim.en.length > 0 && puzzle.claim.cs.length > 0, `${id}: the claim needs EN and CS`);
+    // What the browser sees carries no authored id, and sorting what it sees
+    // never produces an accepted order — the ids say nothing about the answer.
+    const reversed = <T>(list: T[]) => [...list].reverse();
+    for (const shuffle of [reversed, <T>(list: T[]) => [...list.slice(1), ...list.slice(0, 1)]]) {
+      const presented = presentPuzzle(puzzle, shuffle);
+      const authored = new Set(puzzle.lines.map((line) => line.id));
+      assert.ok(presented.lines.every((line) => !authored.has(line.id)), `${id}: presented ids must not be the authored ids`);
+      const sorted = [...presented.lines.map((line) => line.id)].sort();
+      const resolved = resolvePuzzleOrder(sorted, presented.map).filter((one): one is string => one !== null);
+      assert.equal(isAcceptedOrder(resolved, puzzle.accepted), false, `${id}: sorting the presented ids must not solve the puzzle`);
+      const back = resolvePuzzleOrder(presented.lines.map((line) => line.id), presented.map);
+      assert.deepEqual(back, presented.map, `${id}: presentation ids resolve to the authored ids`);
+      assert.deepEqual(resolvePuzzleOrder(['zz', 'b0', 'b99'], presented.map), [null, null, null], `${id}: ids never issued resolve to nothing`);
+    }
   }
 
   // ── the debugging format (#163) ────────────────────────────────────────

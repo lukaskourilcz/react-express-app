@@ -13,6 +13,42 @@
 import type { Localized } from '../../shared/coding-catalog';
 import type { PuzzleCompetency, PuzzleLine } from '../../shared/coding-puzzle';
 
+/** What the browser is shown: the lines under presentation ids that say
+ * nothing about the solution, and — for the sealed session only — the
+ * authored id each presentation id stands for. */
+export interface PresentedPuzzle {
+  lines: PuzzleLine[];
+  /** `map[i]` is the authored id behind presentation id `b{i+1}`. Sealed
+   * into the session; never sent to the browser. */
+  map: string[];
+}
+
+/** Shuffle the lines and hide their authored ids.
+ *
+ * Authored ids are letters in solution order, and the alphabetical order is
+ * always an accepted one — convenient for authoring, and a giveaway if it ever
+ * reached the browser: sorting by id would solve every puzzle without reading
+ * a line. So the browser sees `b1..bn` in shuffled order, the session keeps
+ * the translation, and the submit handler maps it back before grading. */
+export function presentPuzzle(puzzle: AuthoredPuzzle, shuffle: <T>(list: T[]) => T[]): PresentedPuzzle {
+  const shuffled = shuffle([...puzzle.lines]);
+  return {
+    lines: shuffled.map((line, index) => ({ id: `b${index + 1}`, code: line.code })),
+    map: shuffled.map((line) => line.id),
+  };
+}
+
+/** Translate a submitted order of presentation ids back to authored ids.
+ * Anything that is not one of the ids this session issued comes back as
+ * `null`, and the caller refuses the whole submission. */
+export function resolvePuzzleOrder(order: readonly string[], map: readonly string[]): (string | null)[] {
+  return order.map((id) => {
+    const match = /^b([1-9][0-9]*)$/.exec(id);
+    const index = match ? Number(match[1]) - 1 : -1;
+    return index >= 0 && index < map.length ? map[index] : null;
+  });
+}
+
 export interface AuthoredPuzzle {
   lines: PuzzleLine[];
   /** Every order the author accepts. More than one is normal: independent

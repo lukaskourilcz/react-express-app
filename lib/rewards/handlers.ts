@@ -519,6 +519,42 @@ export async function handleStreakProtection(req: VercelRequest, res: VercelResp
  * deliveries are ordinary and handled: the state only moves forward, and a
  * second delivery of an event finds its work already done.
  */
+/** What a signed event may do to the order it names, decided from the event
+ * and the order's own row — never from the event alone. Pure, so the launch
+ * contracts can prove the table. */
+export type WebhookDecision =
+  | { action: 'paid' }
+  | { action: 'cancel' }
+  | { action: 'ignore'; reason: 'stale' | 'unhandled' }
+  | { action: 'refuse'; reason: 'amount_unreadable' | 'amount_mismatch' | 'currency_mismatch' };
+
+export function webhookDecision(
+  event: { type?: unknown; amountMinor?: unknown; currency?: unknown },
+  order: { state: string; totalMinor: number | null; currency: string | null },
+): WebhookDecision {
+  if (event.type === 'payment.succeeded') {
+    // A payment is only a payment for the amount the server asked for. An
+    // event that names no amount, a different amount, or another currency is
+    // refused with a status the provider will retry and a person will see.
+    const amount = Number.isInteger(event.amountMinor) ? Number(event.amountMinor) : null;
+    const currency = typeof event.currency === 'string' && /^[A-Z]{3}$/.test(event.currency) ? event.currency : null;
+    if (amount === null || currency === null) return { action: 'refuse', reason: 'amount_unreadable' };
+    if (order.totalMinor === null || amount !== order.totalMinor) return { action: 'refuse', reason: 'amount_mismatch' };
+    if (order.currency === null || currency !== order.currency) return { action: 'refuse', reason: 'currency_mismatch' };
+    return { action: 'paid' };
+  }
+  if (event.type === 'payment.failed' || event.type === 'checkout.expired') {
+    // A failure or expiry describes a checkout that never paid. Once the order
+    // is paid — say, a first checkout expired after a second one succeeded —
+    // it says nothing about this order and must not cancel it.
+    return order.state === 'awaiting_payment' ? { action: 'cancel' } : { action: 'ignore', reason: 'stale' };
+  }
+  if (event.type === 'payment.refunded') {
+    return order.state === 'awaiting_payment' || order.state === 'paid' ? { action: 'cancel' } : { action: 'ignore', reason: 'stale' };
+  }
+  return { action: 'ignore', reason: 'unhandled' };
+}
+
 export async function handlePaymentWebhook(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -551,7 +587,31 @@ export async function handlePaymentWebhook(req: VercelRequest, res: VercelRespon
     return jsonError(res, 400, 'bad_request', 'The event names no order');
   }
 
-  if (event.type === 'payment.succeeded') {
+  // The order's own row decides what the event may do. The event is signed,
+  // so it is genuine; it is not, on its own, right about the amount or about
+  // which checkout it describes.
+  const row = await withTimeout(
+    supabase.from('merch_orders').select('state,total_minor,currency').eq('order_id', orderId).maybeSingle(),
+  );
+  if (row.error) {
+    if (isRpcMissing(row.error)) return migrationRequired(res);
+    return jsonError(res, 500, 'db_error', 'Could not read the order');
+  }
+  if (!row.data) return jsonError(res, 404, 'not_found', 'Unknown order');
+  const decision = webhookDecision(event, {
+    state: String(row.data.state),
+    totalMinor: Number.isInteger(row.data.total_minor) ? Number(row.data.total_minor) : null,
+    currency: typeof row.data.currency === 'string' ? row.data.currency : null,
+  });
+
+  if (decision.action === 'refuse') {
+    // 409, not 200: the provider keeps retrying and the mismatch stays
+    // visible, which beats quietly marking an order paid for the wrong sum.
+    logEvent({ status: 409, kind: 'webhook_refused', reason: decision.reason });
+    return jsonError(res, 409, decision.reason, 'The event does not match the order');
+  }
+
+  if (decision.action === 'paid') {
     const paid = await withTimeout(
       supabase.rpc('mark_merch_order_paid', { p_order_id: orderId, p_provider: provider, p_provider_ref: providerRef }),
     );
@@ -564,7 +624,7 @@ export async function handlePaymentWebhook(req: VercelRequest, res: VercelRespon
     return res.json({ applied: paid.data === true });
   }
 
-  if (event.type === 'payment.refunded' || event.type === 'payment.failed') {
+  if (decision.action === 'cancel') {
     const cancelled = await withTimeout(
       supabase.rpc('cancel_merch_order', { p_order_id: orderId, p_user_id: null, p_subject: deploymentSubjectIds()[0] }),
     );
@@ -579,8 +639,9 @@ export async function handlePaymentWebhook(req: VercelRequest, res: VercelRespon
   }
 
   // An event we do not act on is still a delivered event: 200 so the provider
-  // stops retrying, and a log line so it is visible.
-  logEvent({ status: 200, kind: 'webhook_ignored', type: String(event.type ?? 'unknown') });
+  // stops retrying, and a log line so it is visible. A stale negative event
+  // about an order that has since been paid lands here too.
+  logEvent({ status: 200, kind: 'webhook_ignored', type: String(event.type ?? 'unknown'), reason: decision.reason });
   return res.json({ applied: false });
 }
 

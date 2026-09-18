@@ -26,7 +26,7 @@ import { afterCodingPass } from '../github-garden';
 import { approachesFor } from './approaches';
 import { evolvingStage, evolvingUnlocked } from '../../shared/evolving';
 import { prepareEvolvingDraft } from '../../shared/coding-fullstack-support';
-import { puzzleFor } from './puzzles';
+import { presentPuzzle, puzzleFor, resolvePuzzleOrder } from './puzzles';
 import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../../shared/coding-puzzle';
 import {
   CODING_TASK_XP,
@@ -185,22 +185,26 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   // evidence that a reference solution passes its own grader. Not a review —
   // nobody has read it for clarity or judged whether it is worth doing.
   play.review = codingTaskReview(task, solutionFor(task.id));
-  // The puzzle's lines go out shuffled, and the accepted orders stay here. The
-  // shuffle is per request, so reloading does not hand back the same start.
+  // The puzzle's lines go out shuffled under presentation ids, and both the
+  // accepted orders and the id translation stay here — the translation in the
+  // sealed session. The shuffle is per request, so reloading does not hand
+  // back the same start.
+  let key: CodingSession['key'];
   const authoredPuzzle = puzzleFor(task.id);
   if (authoredPuzzle) {
+    const presented = presentPuzzle(authoredPuzzle, secureShuffle);
     play.puzzle = {
       taskId: task.id,
       variantId: 'v1',
-      lines: secureShuffle([...authoredPuzzle.lines]),
+      lines: presented.lines,
       competencies: [...authoredPuzzle.competencies],
       claim: authoredPuzzle.claim,
     };
+    key = { puzzle: presented.map };
   }
-  let key: CodingSession['key'];
   if (task.track === 'system-design') {
     const prepared = prepareDesign(task, secureShuffle);
-    key = prepared.key;
+    key = { ...(key ?? {}), ...prepared.key };
     if (prepared.design) {
       play.design = {
         scenario: prepared.design.scenario,
@@ -490,8 +494,13 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   // and what it produces is ordering evidence, never a code pass.
   const puzzle = puzzleFor(task.id);
   if (Array.isArray(body.order) && puzzle) {
-    const order = body.order.filter((id): id is string => typeof id === 'string').slice(0, PUZZLE_MAX_LINES);
-    if (!isCompleteOrder(order, puzzle.lines)) {
+    // The browser arranged presentation ids; the session says what they stand
+    // for. An id this session never issued fails the whole submission.
+    const map = session.key?.puzzle;
+    if (!map) return jsonError(res, 400, 'invalid_session', 'This session did not issue a puzzle');
+    const resolved = resolvePuzzleOrder(body.order.filter((id): id is string => typeof id === 'string').slice(0, PUZZLE_MAX_LINES), map);
+    const order = resolved.filter((id): id is string => id !== null);
+    if (order.length !== resolved.length || !isCompleteOrder(order, puzzle.lines)) {
       return jsonError(res, 400, 'bad_request', 'Arrange every line exactly once');
     }
     const accepted = isAcceptedOrder(order, puzzle.accepted);

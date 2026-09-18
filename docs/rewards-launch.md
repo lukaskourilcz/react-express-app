@@ -106,8 +106,17 @@ it.
 
 Set `PAYMENT_PROVIDER` and `PAYMENT_WEBHOOK_SECRET`, point the provider's
 webhook at `POST /api/user/[op]?op=payment-webhook`, and send events shaped
-`{ type, orderId, providerRef }` signed as `x-payment-signature`
-(HMAC-SHA256, hex, over the raw body). Then set `cashCheckoutEnabled`.
+`{ type, orderId, providerRef, amountMinor, currency }` signed as
+`x-payment-signature` (HMAC-SHA256, hex, over the raw body). Then set
+`cashCheckoutEnabled`.
+
+The handler reads the order's own row before it acts. A `payment.succeeded`
+whose `amountMinor` or `currency` is missing or differs from the total the
+server computed is refused with 409, so the provider retries and the mismatch
+stays visible; it never marks the order paid. A `payment.failed` or
+`checkout.expired` cancels the order only while it is still awaiting payment —
+a stale failure from a first checkout cannot cancel an order a second checkout
+paid — and `payment.refunded` may cancel a paid order.
 
 Token redemption works without any of this. Cash does not.
 

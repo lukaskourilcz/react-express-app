@@ -110,6 +110,9 @@ interface PlacementRunPayload {
 // can make a replayed submit a no-op; for system-design tasks the sealed key
 // carries the shuffled answer positions the server grades against.
 export interface CodingDesignKey {
+  /** Code-ordering puzzle: the authored line id behind each presentation id,
+   * `puzzle[i]` for `b{i+1}`. The browser never sees authored ids. */
+  puzzle?: string[];
   /** Guided walkthrough: the correct option index per step, after shuffling. */
   steps?: number[];
   /** Drill: the correct option index (tradeoff/bottleneck) after shuffling. */
