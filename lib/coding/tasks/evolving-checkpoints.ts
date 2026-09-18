@@ -6,6 +6,7 @@ import type {
 } from '../../../shared/coding-catalog';
 import { EVOLVING_CHALLENGES } from '../../../shared/evolving';
 import { text, test } from './evolving';
+import { DEBUG_CHECKPOINTS } from './evolving-debug';
 import { FULLSTACK_APPS, fullstackSeed, fullstackSpec } from './fullstack';
 
 interface Checkpoint {
@@ -494,7 +495,7 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
       const base = byId.get(id)!;
       const checkpoint = fullstack
         ? fullstack[String(index + 1)]
-        : CHECKPOINTS[project.id][index];
+        : (CHECKPOINTS[project.id] ?? DEBUG_CHECKPOINTS[project.id])[index];
       if (checkpoint) {
         const firstReact = base.suite && !previous?.suite;
         const header = firstReact
@@ -580,6 +581,52 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
       previousBase = base;
       prompts.push(base.prompt);
     }
+    orderStageChecks(out, project.stages, fullstack
+      ? fullstackSpec(FULLSTACK_APPS.find((app) => project.id === `fullstack-${app.slug}`)!).prelude
+      : REACT_HEADER);
   }
   return out;
+}
+
+const samePrefix = <T>(prefix: readonly T[] | undefined, list: readonly T[] | undefined): boolean =>
+  Boolean(prefix && list && prefix.length <= list.length && prefix.every((item, index) => JSON.stringify(item) === JSON.stringify(list[index])));
+
+/**
+ * Put each stage's own checks first.
+ *
+ * The builders above accumulate: a stage's tests are every earlier stage's
+ * tests followed by the new ones, and a React suite is the header followed by
+ * every earlier block and then the new blocks. That order is right for
+ * proving nothing regressed and wrong for reading: the first rows in Results
+ * should show what the brief just asked for, with the inputs it takes and the
+ * output it wants. So each stage is rewritten as [its new checks, then the
+ * previous stage's checks in the previous stage's order], recursively, which
+ * keeps every earlier check and moves the new ones to the top. The suite's
+ * header stays first because the tests import through it.
+ */
+function orderStageChecks(out: CodingTask[], stages: readonly string[], header: string): void {
+  let original: CodingTask | undefined;
+  let ordered: CodingTask | undefined;
+  for (const id of stages) {
+    const index = out.findIndex((task) => task.id === id);
+    if (index < 0) continue;
+    const task = out[index];
+    const next: CodingTask = { ...task };
+    if (task.tests && samePrefix(original?.tests, task.tests)) {
+      const fresh = task.tests.slice(original?.tests?.length ?? 0);
+      next.tests = [...fresh, ...(ordered?.tests ?? [])];
+    }
+    if (task.typeTests && samePrefix(original?.typeTests, task.typeTests)) {
+      const fresh = task.typeTests.slice(original?.typeTests?.length ?? 0);
+      next.typeTests = [...fresh, ...(ordered?.typeTests ?? [])];
+    }
+    if (task.suite && task.suite.startsWith(header) && original?.suite && task.suite.startsWith(original.suite)) {
+      const fresh = task.suite.slice(original.suite.length);
+      const earlier = ordered?.suite?.startsWith(header) ? ordered.suite.slice(header.length) : '';
+      next.suite = header + fresh + earlier;
+    }
+    out[index] = next;
+    original = task;
+    ordered = next;
+  }
 }

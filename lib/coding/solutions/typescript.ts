@@ -7,12 +7,56 @@ import type { CodingSolution } from '../types';
 export const TYPESCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
   "ts-typed-slug": {
     solution: "const toSlug = (title: string): string => title.trim().toLowerCase().split(/\\s+/).filter(Boolean).join(\"-\");",
+    junior: `const toSlug = (title: string): string => {
+  const words = title.trim().split(" ");
+  let slug = "";
+  for (const word of words) {
+    if (word === "") {
+      continue;
+    }
+    if (slug !== "") {
+      slug += "-";
+    }
+    slug += word.toLowerCase();
+  }
+  return slug;
+};`,
+    senior: `const toSlug = (title: string): string => title.trim().toLowerCase().replace(/\\s+/g, "-");`,
   },
   "ts-top-three-scores": {
     solution: "const topThree = (scores: number[]): number[] => [...scores].sort((one, other) => other - one).slice(0, 3);",
+    junior: `const topThree = (scores: number[]): number[] => {
+  const sorted: number[] = [];
+  for (const score of scores) {
+    sorted.push(score);
+  }
+  sorted.sort((a, b) => b - a);
+  const best: number[] = [];
+  for (let i = 0; i < sorted.length && i < 3; i += 1) {
+    best.push(sorted[i]);
+  }
+  return best;
+};`,
+    senior: `const topThree = (scores: number[]): number[] =>
+  // Carry only the current best three, so the whole list is never sorted.
+  scores.reduce<number[]>((best, score) => [...best, score].sort((one, other) => other - one).slice(0, 3), []);`,
   },
   "ts-greeting-with-a-default": {
     solution: "const greet = (name: string, greeting = \"Hello\"): string => `${greeting}, ${name}!`;",
+    junior: `const greet = (name: string, greeting?: string): string => {
+  let opener: string;
+  if (greeting === undefined) {
+    opener = "Hello";
+  } else {
+    opener = greeting;
+  }
+  return opener + ", " + name + "!";
+};`,
+    senior: `const greet = (name: string, greeting?: string): string => {
+  // ?? treats only undefined as missing, so an explicit "" is kept as a blank opener.
+  const opener = greeting ?? "Hello";
+  return \`\${opener}, \${name}!\`;
+};`,
   },
   "ts-person-interface": {
     solution: `interface Person {
@@ -21,6 +65,27 @@ export const TYPESCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
 }
 
 const fullName = (person: Person): string => [person.first, person.last].filter(Boolean).join(" ");`,
+    junior: `interface Person {
+  first: string;
+  last: string;
+}
+
+const fullName = (person: Person): string => {
+  if (person.first === "") {
+    return person.last;
+  }
+  if (person.last === "") {
+    return person.first;
+  }
+  return person.first + " " + person.last;
+};`,
+    senior: `interface Person {
+  first: string;
+  last: string;
+}
+
+// A missing half leaves one stray space at an end, which trim() removes.
+const fullName = ({ first, last }: Person): string => \`\${first} \${last}\`.trim();`,
   },
   "ts-optional-nickname": {
     solution: `interface User {
@@ -29,9 +94,44 @@ const fullName = (person: Person): string => [person.first, person.last].filter(
 }
 
 const displayName = (user: User): string => user.nickname ?? user.name;`,
+    junior: `interface User {
+  name: string;
+  nickname?: string;
+}
+
+const displayName = (user: User): string => {
+  if (user.nickname !== undefined) {
+    return user.nickname;
+  }
+  return user.name;
+};`,
+    senior: `interface User {
+  name: string;
+  nickname?: string;
+}
+
+const displayName = (user: User): string => {
+  // A destructuring default only fills in for undefined, so "" stays a deliberate blank.
+  const { name, nickname = name } = user;
+  return nickname;
+};`,
   },
   "ts-padded-id": {
     solution: "const idText = (id: string | number): string => (typeof id === \"number\" ? String(id).padStart(4, \"0\") : id);",
+    junior: `const idText = (id: string | number): string => {
+  if (typeof id === "string") {
+    return id;
+  }
+  let text = String(id);
+  while (text.length < 4) {
+    text = "0" + text;
+  }
+  return text;
+};`,
+    senior: `const idText = (id: string | number): string => {
+  if (typeof id === "string") return id;
+  return id.toString().padStart(4, "0");
+};`,
   },
   "ts-shipping-speed": {
     solution: `type Speed = "standard" | "express" | "overnight";
@@ -40,18 +140,89 @@ const shippingDays = (speed: Speed, weekend: boolean): number => {
   const base = speed === "standard" ? 5 : speed === "express" ? 2 : 1;
   return weekend ? base + 1 : base;
 };`,
+    junior: `type Speed = "standard" | "express" | "overnight";
+
+const shippingDays = (speed: Speed, weekend: boolean): number => {
+  let days = 0;
+  if (speed === "standard") {
+    days = 5;
+  } else if (speed === "express") {
+    days = 2;
+  } else {
+    days = 1;
+  }
+  if (weekend) {
+    days = days + 1;
+  }
+  return days;
+};`,
+    senior: `type Speed = "standard" | "express" | "overnight";
+
+// Record<Speed, number> refuses a missing entry, so adding a speed is a one-line change here.
+const BASE_DAYS: Record<Speed, number> = { standard: 5, express: 2, overnight: 1 };
+
+const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed] + (weekend ? 1 : 0);`,
   },
   "ts-split-a-name": {
     solution: `const splitName = (text: string): [string, string] => {
   const space = text.indexOf(" ");
   return space === -1 ? [text, ""] : [text.slice(0, space), text.slice(space + 1)];
 };`,
+    junior: `const splitName = (text: string): [string, string] => {
+  let spaceAt = -1;
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] === " ") {
+      spaceAt = i;
+      break;
+    }
+  }
+  if (spaceAt === -1) {
+    return [text, ""];
+  }
+  const first = text.slice(0, spaceAt);
+  const rest = text.slice(spaceAt + 1);
+  return [first, rest];
+};`,
+    senior: `const splitName = (text: string): [string, string] => {
+  // Rest destructuring takes the first word and keeps everything after it, spaces included.
+  const [first, ...rest] = text.split(" ");
+  return [first, rest.join(" ")];
+};`,
   },
   "ts-tally-votes": {
     solution: "const tally = (votes: string[]): Record<string, number> => votes.reduce<Record<string, number>>((counts, vote) => ({...counts, [vote]: (counts[vote] ?? 0) + 1}), {});",
+    junior: `const tally = (votes: string[]): Record<string, number> => {
+  const counts: Record<string, number> = {};
+  for (const vote of votes) {
+    if (counts[vote] === undefined) {
+      counts[vote] = 1;
+    } else {
+      counts[vote] = counts[vote] + 1;
+    }
+  }
+  return counts;
+};`,
+    senior: `const tally = (votes: string[]): Record<string, number> => {
+  const counts = new Map<string, number>();
+  for (const vote of votes) counts.set(vote, (counts.get(vote) ?? 0) + 1);
+  return Object.fromEntries(counts);
+};`,
   },
   "ts-rotate-a-list": {
     solution: "const rotate = (items: readonly string[]): string[] => (items.length === 0 ? [] : [...items.slice(1), items[0]]);",
+    junior: `const rotate = (items: readonly string[]): string[] => {
+  if (items.length === 0) {
+    return [];
+  }
+  const moved: string[] = [];
+  for (let i = 1; i < items.length; i += 1) {
+    moved.push(items[i]);
+  }
+  moved.push(items[0]);
+  return moved;
+};`,
+    senior: `// Each slot takes the next item, and the modulo wraps the last slot back to the first.
+const rotate = (items: readonly string[]): string[] => items.map((_, index) => items[(index + 1) % items.length]);`,
   },
   "ts-describe-a-value": {
     solution: `const describeValue = (value: unknown): string => {
@@ -61,19 +232,109 @@ const shippingDays = (speed: Speed, weekend: boolean): number => {
   if (typeof value === "number") return "a number";
   return "something else";
 };`,
+    junior: `const describeValue = (value: unknown): string => {
+  let label = "";
+  if (value === null || value === undefined) {
+    label = "nothing";
+  } else if (Array.isArray(value)) {
+    label = "a list";
+  } else if (typeof value === "string") {
+    label = "text";
+  } else if (typeof value === "number") {
+    label = "a number";
+  } else {
+    label = "something else";
+  }
+  return label;
+};`,
+    senior: `const describeValue = (value: unknown): string => {
+  if (value == null) return "nothing"; // == null covers undefined as well
+  if (Array.isArray(value)) return "a list";
+  switch (typeof value) {
+    case "string":
+      return "text";
+    case "number":
+      return "a number";
+    default:
+      return "something else";
+  }
+};`,
   },
-  "ts-first-item": { solution: "const first = <T>(items: T[]): T | undefined => items[0];" },
+  "ts-first-item": {
+    solution: "const first = <T>(items: T[]): T | undefined => items[0];",
+    junior: `const first = <T>(items: T[]): T | undefined => {
+  if (items.length === 0) {
+    return undefined;
+  }
+  return items[0];
+};`,
+    senior: `// at(0) is typed T | undefined, so an empty list needs no separate branch.
+const first = <T>(items: T[]): T | undefined => items.at(0);`,
+  },
   "ts-fall-back-to-a-default": {
     solution: "const orDefault = <T>(value: T | null | undefined, fallback: T): T => value ?? fallback;",
+    junior: `const orDefault = <T>(value: T | null | undefined, fallback: T): T => {
+  if (value === null) {
+    return fallback;
+  }
+  if (value === undefined) {
+    return fallback;
+  }
+  return value;
+};`,
+    senior: `const orDefault = <T>(value: T | null | undefined, fallback: T): T => {
+  // Loose equality with null matches undefined too and nothing else, so 0 and "" survive.
+  if (value == null) return fallback;
+  return value;
+};`,
   },
   "ts-transform-a-list": {
     solution: "const transform = <T, R>(items: T[], change: (item: T) => R): R[] => items.map(item => change(item));",
+    junior: `const transform = <T, R>(items: T[], change: (item: T) => R): R[] => {
+  const changed: R[] = [];
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i];
+    const result = change(item);
+    changed.push(result);
+  }
+  return changed;
+};`,
+    senior: `// Array.from takes a mapper of its own, so the new list is built in one pass without a wrapper arrow.
+const transform = <T, R>(items: T[], change: (item: T) => R): R[] => Array.from(items, change);`,
   },
   "ts-sort-by-name": {
     solution: "const sortByName = <T extends {name: string}>(items: T[]): T[] => [...items].sort((one, other) => one.name.localeCompare(other.name));",
+    junior: `const sortByName = <T extends { name: string }>(items: T[]): T[] => {
+  const copy: T[] = [];
+  for (const item of items) {
+    copy.push(item);
+  }
+  copy.sort((one, other) => {
+    if (one.name < other.name) {
+      return -1;
+    }
+    if (one.name > other.name) {
+      return 1;
+    }
+    return 0;
+  });
+  return copy;
+};`,
+    senior: `// toSorted() returns a sorted copy, so the caller's list is never reordered under them.
+const sortByName = <T extends { name: string }>(items: T[]): T[] => items.toSorted((one, other) => one.name.localeCompare(other.name));`,
   },
   "ts-pluck-a-property": {
     solution: "const pluck = <T, K extends keyof T>(items: T[], key: K): T[K][] => items.map(item => item[key]);",
+    junior: `const pluck = <T, K extends keyof T>(items: T[], key: K): T[K][] => {
+  const values: T[K][] = [];
+  for (const item of items) {
+    const value = item[key];
+    values.push(value);
+  }
+  return values;
+};`,
+    senior: `// A computed key in the parameter pattern pulls out just the property asked for, typed T[K].
+const pluck = <T, K extends keyof T>(items: T[], key: K): T[K][] => items.map(({ [key]: value }) => value);`,
   },
   "ts-apply-a-patch": {
     solution: `interface Settings {
@@ -82,6 +343,32 @@ const shippingDays = (speed: Speed, weekend: boolean): number => {
 }
 
 const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => ({...settings, ...patch});`,
+    junior: `interface Settings {
+  theme: string;
+  fontSize: number;
+}
+
+const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {
+  let theme = settings.theme;
+  if (patch.theme !== undefined) {
+    theme = patch.theme;
+  }
+  let fontSize = settings.fontSize;
+  if (patch.fontSize !== undefined) {
+    fontSize = patch.fontSize;
+  }
+  return { theme: theme, fontSize: fontSize };
+};`,
+    senior: `interface Settings {
+  theme: string;
+  fontSize: number;
+}
+
+const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {
+  // A key the patch sets to undefined must not blank the setting, so those entries are dropped before the merge.
+  const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));
+  return { ...settings, ...defined };
+};`,
   },
   "ts-hide-the-password": {
     solution: `interface Account {
@@ -94,6 +381,33 @@ const publicUser = (account: Account): Omit<Account, "password"> => {
   const {password, ...rest} = account;
   return rest;
 };`,
+    junior: `interface Account {
+  id: number;
+  email: string;
+  password: string;
+}
+
+const publicUser = (account: Account): Omit<Account, "password"> => {
+  const safe = {
+    id: account.id,
+    email: account.email,
+  };
+  return safe;
+};`,
+    senior: `interface Account {
+  id: number;
+  email: string;
+  password: string;
+}
+
+// A generic omit keeps the "strip one key" rule in one place, typed so the removed key is gone for callers too.
+const omit = <T extends object, K extends keyof T>(source: T, key: K): Omit<T, K> => {
+  const copy = { ...source };
+  delete copy[key];
+  return copy;
+};
+
+const publicUser = (account: Account): Omit<Account, "password"> => omit(account, "password");`,
   },
   "ts-area-of-a-shape": {
     solution: `type Shape =
@@ -106,10 +420,66 @@ const area = (shape: Shape): number => {
   if (shape.kind === "rectangle") return shape.width * shape.height;
   return (shape.base * shape.height) / 2;
 };`,
+    junior: `type Shape =
+  | { kind: "square"; side: number }
+  | { kind: "rectangle"; width: number; height: number }
+  | { kind: "triangle"; base: number; height: number };
+
+const area = (shape: Shape): number => {
+  let result = 0;
+  if (shape.kind === "square") {
+    result = shape.side * shape.side;
+  } else if (shape.kind === "rectangle") {
+    result = shape.width * shape.height;
+  } else {
+    result = (shape.base * shape.height) / 2;
+  }
+  return result;
+};`,
+    senior: `type Shape =
+  | { kind: "square"; side: number }
+  | { kind: "rectangle"; width: number; height: number }
+  | { kind: "triangle"; base: number; height: number };
+
+const area = (shape: Shape): number => {
+  switch (shape.kind) {
+    case "square":
+      return shape.side ** 2;
+    case "rectangle":
+      return shape.width * shape.height;
+    case "triangle":
+      return (shape.base * shape.height) / 2;
+    default: {
+      // A new kind added to Shape fails to compile here instead of returning NaN at runtime.
+      const unreachable: never = shape;
+      return unreachable;
+    }
+  }
+};`,
   },
   "ts-only-the-strings": {
     solution: `const isString = (value: unknown): value is string => typeof value === "string";
 
 const onlyStrings = (values: unknown[]): string[] => values.filter(isString);`,
+    junior: `const isString = (value: unknown): value is string => {
+  if (typeof value === "string") {
+    return true;
+  }
+  return false;
+};
+
+const onlyStrings = (values: unknown[]): string[] => {
+  const words: string[] = [];
+  for (const value of values) {
+    if (isString(value)) {
+      words.push(value);
+    }
+  }
+  return words;
+};`,
+    senior: `const isString = (value: unknown): value is string => typeof value === "string";
+
+// flatMap doubles as a typed filter: the guard narrows value, and an empty array drops it.
+const onlyStrings = (values: unknown[]): string[] => values.flatMap((value) => (isString(value) ? [value] : []));`,
   },
 };

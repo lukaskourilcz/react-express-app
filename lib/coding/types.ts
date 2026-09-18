@@ -115,6 +115,15 @@ export interface CodingTaskCs {
 /** Reference solution and server-only hidden tests for one task. */
 export interface CodingSolution {
   solution: string;
+  /** Two more ways to solve the same task, shown side by side only after the
+   * server has verified a pass. `junior` is the way someone new to the
+   * language would write it: explicit loops, named intermediate values, one
+   * step per line. `senior` is the way an experienced engineer would: the
+   * idiomatic built-in, the edge case handled where it arises, nothing that
+   * does not earn its place. Both pass every visible and hidden test, which
+   * the content contract proves, and neither leaves the server before a pass. */
+  junior?: string;
+  senior?: string;
   hiddenTests?: SourceCallTest[];
   hiddenTypeTests?: SourceTypeTest[];
 }

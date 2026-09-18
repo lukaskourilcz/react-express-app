@@ -38,6 +38,10 @@ const ALLOW_GAPS = process.env.CODING_ALLOW_LEVEL_GAPS === '1';
 // in parallel, e.g. CODING_CS_TRACKS=javascript,typescript. Never set in CI.
 const CS_TRACKS = (process.env.CODING_CS_TRACKS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const SKIP_INDEX = process.env.CODING_SKIP_INDEX === '1';
+// Prove only the solutions whose task id matches, e.g. CODING_ONLY='^ts-'
+// while one file is being authored. The shape checks still cover everything.
+// Never set in CI.
+const ONLY = new RegExp(process.env.CODING_ONLY ?? '');
 const nodeRequire = createRequire(import.meta.url);
 
 const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
@@ -73,8 +77,21 @@ async function main() {
       if (index > 0) {
         const prior = CODING_TASKS.find(task => task.id === project.stages[index-1])!;
         assert.deepEqual(task.previousRequirements?.[index-1], prior.prompt, 'earlier requirements remain available');
-        if (task.tests) assert.deepEqual(task.tests.slice(0, prior.tests!.length), prior.tests, 'earlier runtime checks remain');
-        if (task.suite && prior.suite) assert.ok(task.suite.startsWith(prior.suite), 'earlier UI checks remain');
+        // The new stage's checks lead, so the first rows in Results show what
+        // the brief just asked for; every earlier check follows, unchanged.
+        if (task.tests) {
+          assert.deepEqual(task.tests.slice(task.tests.length - prior.tests!.length), prior.tests, 'earlier runtime checks remain, after the new ones');
+        }
+        if (task.suite && prior.suite) {
+          // The shared header is whatever both suites open with, cut back to
+          // a whole line: the imports, and for FullStack the runtime checks
+          // and seed the UI checks depend on.
+          let common = 0;
+          while (common < prior.suite.length && prior.suite[common] === task.suite[common]) common += 1;
+          const header = prior.suite.slice(0, prior.suite.lastIndexOf('\n', common - 1) + 1);
+          assert.ok(header.length > 0 && task.suite.startsWith(header), `${id}: the suite keeps its header first`);
+          assert.ok(task.suite.endsWith(prior.suite.slice(header.length)), `${id}: earlier UI checks remain, after the new ones`);
+        }
       }
       passed.add(id);
     }
@@ -159,7 +176,9 @@ async function main() {
       if (task.drill.explanation.en && play.includes(task.drill.explanation.en.slice(0, 40))) fail(`${where}: playable payload leaks the drill explanation`);
     }
     const solution = solutionFor(task.id);
-    if (solution && solution.solution.trim().length > 0 && play.includes(JSON.stringify(solution.solution).slice(1, -1))) fail(`${where}: playable payload leaks the solution`);
+    for (const code of [solution?.solution, solution?.junior, solution?.senior]) {
+      if (code && code.trim().length > 0 && play.includes(JSON.stringify(code).slice(1, -1))) fail(`${where}: playable payload leaks a solution`);
+    }
   }
   for (const id of solutionIds()) if (!ids.has(id)) fail(`solution ${id} has no task`);
 
@@ -200,37 +219,56 @@ async function main() {
   const libs = Object.fromEntries(readdirSync(libDir).filter(isCheckerLibFile).map((name) => [name, readFileSync(path.join(libDir, name), 'utf8')]));
   const checker = createTypeScript({ ts: nodeRequire('typescript'), libs });
 
+  // Every graded code task carries three solutions — the reference the
+  // learner can give up to, and the junior and senior versions shown after a
+  // pass — and all three have to pass the same visible and hidden checks.
+  const variants = (solution: NonNullable<ReturnType<typeof solutionFor>>, where: string): [string, string][] => {
+    const out: [string, string][] = [['reference', solution.solution]];
+    if (typeof solution.junior === 'string' && solution.junior.trim()) out.push(['junior', solution.junior]);
+    else fail(`${where}: missing the junior solution`);
+    if (typeof solution.senior === 'string' && solution.senior.trim()) out.push(['senior', solution.senior]);
+    else fail(`${where}: missing the senior solution`);
+    if (solution.junior && solution.senior && solution.junior.trim() === solution.senior.trim()) fail(`${where}: the junior and senior solutions are the same code`);
+    return out;
+  };
+
   for (const task of CODING_TASKS) {
     if (task.verify !== 'tests' || task.track === 'react' || !task.tests) continue;
+    if (!ONLY.test(task.id)) continue;
     const solution = solutionFor(task.id);
     if (!solution) continue;
     const where = `${task.id}`;
-    let code = solution.solution;
     let starterCode = task.starter;
     if (task.track === 'typescript') {
-      const check = checker.check(solution.solution, task.typeTests ?? []);
-      if (!typesPassed(check)) fail(`${where}: reference solution fails the type tests: ${JSON.stringify(check).slice(0, 300)}`);
-      if (solution.hiddenTypeTests?.length) {
-        const hidden = checker.check(solution.solution, solution.hiddenTypeTests);
-        if (!typesPassed(hidden)) fail(`${where}: reference solution fails the hidden type tests`);
-      }
       const starterCheck = checker.check(task.starter, task.typeTests ?? []);
       const starterRun = await withTimeout(evaluateCalls({ code: checker.toJavaScript(task.starter), calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, where);
       if (typesPassed(starterCheck) && allPassed(starterRun)) fail(`${where}: the untouched starter already passes`);
-      code = checker.toJavaScript(solution.solution);
       starterCode = checker.toJavaScript(task.starter);
     }
-    const run = await withTimeout(evaluateCalls({ code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, where);
-    const serverTests = [...task.tests, ...solution.hiddenTests ?? []];
-    const sandbox = await runInSandbox({code, calls:serverTests.map(test=>test.call), expectations:serverTests.map(test=>test.expected)});
-    if (!allPassed(sandbox)) fail(`${where}: reference fails the production QuickJS grader: ${JSON.stringify(sandbox).slice(0,500)}`);
-    if (!allPassed(run)) {
-      const wrong = run.results.map((r, i) => (r.pass ? null : `${task.tests![i].call} → ${r.error ?? r.actual}`)).filter(Boolean);
-      fail(`${where}: reference solution fails visible tests: ${run.codeError ?? wrong.join('; ')}`);
-    }
-    if (solution.hiddenTests?.length) {
-      const hidden = await withTimeout(evaluateCalls({ code, calls: solution.hiddenTests.map((t) => t.call), expectations: solution.hiddenTests.map((t) => t.expected) }), 8_000, where);
-      if (!allPassed(hidden)) fail(`${where}: reference solution fails hidden tests: ${hidden.codeError ?? hidden.results.map((r, i) => (r.pass ? null : solution.hiddenTests![i].call)).filter(Boolean).join('; ')}`);
+    for (const [name, source] of variants(solution, where)) {
+      const label = `${where} (${name})`;
+      let code = source;
+      if (task.track === 'typescript') {
+        const check = checker.check(source, task.typeTests ?? []);
+        if (!typesPassed(check)) fail(`${label}: solution fails the type tests: ${JSON.stringify(check).slice(0, 300)}`);
+        if (solution.hiddenTypeTests?.length) {
+          const hidden = checker.check(source, solution.hiddenTypeTests);
+          if (!typesPassed(hidden)) fail(`${label}: solution fails the hidden type tests`);
+        }
+        code = checker.toJavaScript(source);
+      }
+      const run = await withTimeout(evaluateCalls({ code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, label);
+      const serverTests = [...task.tests, ...solution.hiddenTests ?? []];
+      const sandbox = await runInSandbox({code, calls:serverTests.map(test=>test.call), expectations:serverTests.map(test=>test.expected)});
+      if (!allPassed(sandbox)) fail(`${label}: solution fails the production QuickJS grader: ${JSON.stringify(sandbox).slice(0,500)}`);
+      if (!allPassed(run)) {
+        const wrong = run.results.map((r, i) => (r.pass ? null : `${task.tests![i].call} → ${r.error ?? r.actual}`)).filter(Boolean);
+        fail(`${label}: solution fails visible tests: ${run.codeError ?? wrong.join('; ')}`);
+      }
+      if (solution.hiddenTests?.length) {
+        const hidden = await withTimeout(evaluateCalls({ code, calls: solution.hiddenTests.map((t) => t.call), expectations: solution.hiddenTests.map((t) => t.expected) }), 8_000, label);
+        if (!allPassed(hidden)) fail(`${label}: solution fails hidden tests: ${hidden.codeError ?? hidden.results.map((r, i) => (r.pass ? null : solution.hiddenTests![i].call)).filter(Boolean).join('; ')}`);
+      }
     }
     if (task.track === 'javascript') {
       const starterRun = await withTimeout(evaluateCalls({ code: starterCode, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, where);
@@ -241,12 +279,15 @@ async function main() {
   /* ── React solutions ────────────────────────────────────────────────── */
   for (const task of CODING_TASKS) {
     if (task.track !== 'react' || task.verify !== 'tests' || !task.suite) continue;
+    if (!ONLY.test(task.id)) continue;
     const solution = solutionFor(task.id);
     if (!solution) continue;
     const where = `${task.id}`;
-    const run = await withTimeout(runReactSuite({ suite: task.suite, appSource: solution.solution }), 20_000, where);
-    if (run.compileError || run.failed > 0) {
-      fail(`${where}: reference solution fails its suite: ${run.compileError ?? run.cases.filter((c) => c.status === 'fail').map((c) => `${c.name}: ${c.error}`).join('; ')}`);
+    for (const [name, source] of variants(solution, where)) {
+      const run = await withTimeout(runReactSuite({ suite: task.suite, appSource: source }), 20_000, `${where} (${name})`);
+      if (run.compileError || run.failed > 0) {
+        fail(`${where} (${name}): solution fails its suite: ${run.compileError ?? run.cases.filter((c) => c.status === 'fail').map((c) => `${c.name}: ${c.error}`).join('; ')}`);
+      }
     }
     const starter = await withTimeout(runReactSuite({ suite: task.suite, appSource: task.starter }), 20_000, where);
     if (!starter.compileError && starter.failed === 0) fail(`${where}: the untouched starter already passes its suite`);

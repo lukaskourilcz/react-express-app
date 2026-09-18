@@ -5,91 +5,823 @@
 import type { CodingSolution } from '../types';
 
 export const JAVASCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
-  "js-double-numbers": { solution: "const double = numbers => numbers.map(number => number * 2);" },
-  "js-even-numbers": { solution: "const evens = numbers => numbers.filter(number => number % 2 === 0);" },
-  "js-sum-array": { solution: "const sum = numbers => numbers.reduce((total, number) => total + number, 0);" },
+  "js-double-numbers": {
+    solution: "const double = numbers => numbers.map(number => number * 2);",
+    junior: `const double = numbers => {
+  const doubled = [];
+  for (const number of numbers) {
+    doubled.push(number * 2);
+  }
+  return doubled;
+};`,
+    senior: `// Array.from maps while it copies, and accepts any iterable, not only an array.
+const double = numbers => Array.from(numbers, number => number * 2);`,
+  },
+  "js-even-numbers": {
+    solution: "const evens = numbers => numbers.filter(number => number % 2 === 0);",
+    junior: `const evens = numbers => {
+  const evenNumbers = [];
+  for (const number of numbers) {
+    if (number % 2 === 0) {
+      evenNumbers.push(number);
+    }
+  }
+  return evenNumbers;
+};`,
+    senior: `// -2 % 2 is -0, and -0 === 0 holds, so negatives need no special case.
+const isEven = number => number % 2 === 0;
+
+const evens = numbers => numbers.filter(isEven);`,
+  },
+  "js-sum-array": {
+    solution: "const sum = numbers => numbers.reduce((total, number) => total + number, 0);",
+    junior: `const sum = numbers => {
+  let total = 0;
+  for (const number of numbers) {
+    total = total + number;
+  }
+  return total;
+};`,
+    senior: `const add = (total, number) => total + number;
+
+// The 0 seed is what makes an empty array total 0 instead of throwing.
+const sum = numbers => numbers.reduce(add, 0);`,
+  },
   "js-longest-word": {
     solution: "const longest = words => words.reduce((best, word) => word.length > best.length ? word : best, \"\");",
+    junior: `const longest = words => {
+  let longestWord = "";
+  for (const word of words) {
+    if (word.length > longestWord.length) {
+      longestWord = word;
+    }
+  }
+  return longestWord;
+};`,
+    senior: `const longest = words => {
+  const longestLength = Math.max(0, ...words.map(word => word.length));
+  // find returns the first word of that length, which settles a tie in favour of the earlier one
+  return words.find(word => word.length === longestLength) ?? "";
+};`,
   },
   "js-count-vowels": {
     solution: "const countVowels = text => [...text.toLowerCase()].filter(letter => \"aeiou\".includes(letter)).length;",
+    junior: `const countVowels = text => {
+  const vowels = ["a", "e", "i", "o", "u"];
+  let count = 0;
+  for (const character of text.toLowerCase()) {
+    if (vowels.includes(character)) {
+      count = count + 1;
+    }
+  }
+  return count;
+};`,
+    senior: `// match gives null rather than [] when nothing matches; the i flag covers uppercase.
+const countVowels = text => (text.match(/[aeiou]/gi) ?? []).length;`,
   },
-  "js-reverse-string": { solution: "const reverse = text => [...text].reverse().join(\"\");" },
-  "js-positive-numbers": { solution: "const positives = numbers => numbers.filter(number => number > 0);" },
-  "js-square-numbers": { solution: "const squares = numbers => numbers.map(number => number ** 2);" },
-  "js-largest-number": { solution: "const largest = numbers => Math.max(...numbers);" },
+  "js-reverse-string": {
+    solution: "const reverse = text => [...text].reverse().join(\"\");",
+    junior: `const reverse = text => {
+  let reversed = "";
+  for (let index = text.length - 1; index >= 0; index -= 1) {
+    reversed = reversed + text[index];
+  }
+  return reversed;
+};`,
+    senior: `// Spreading splits by code point, so an emoji stays whole where split("") would tear it in two.
+const reverse = text => [...text].reduceRight((reversed, character) => reversed + character, "");`,
+  },
+  "js-positive-numbers": {
+    solution: "const positives = numbers => numbers.filter(number => number > 0);",
+    junior: `const positives = numbers => {
+  const result = [];
+  for (const number of numbers) {
+    if (number > 0) {
+      result.push(number);
+    }
+  }
+  return result;
+};`,
+    senior: `const above = limit => number => number > limit;
+
+// Zero is the boundary, and above(0) says so at the call site.
+const positives = numbers => numbers.filter(above(0));`,
+  },
+  "js-square-numbers": {
+    solution: "const squares = numbers => numbers.map(number => number ** 2);",
+    junior: `const squares = numbers => {
+  const squared = [];
+  for (const number of numbers) {
+    squared.push(number * number);
+  }
+  return squared;
+};`,
+    senior: `const square = number => number ** 2;
+
+const squares = numbers => numbers.map(square);`,
+  },
+  "js-largest-number": {
+    solution: "const largest = numbers => Math.max(...numbers);",
+    junior: `const largest = numbers => {
+  let largestSoFar = numbers[0];
+  for (const number of numbers) {
+    if (number > largestSoFar) {
+      largestSoFar = number;
+    }
+  }
+  return largestSoFar;
+};`,
+    senior: `// reduce with no seed starts from the first value, and unlike Math.max(...numbers) it never spreads a huge array onto the call stack.
+const largest = numbers => numbers.reduce((best, number) => Math.max(best, number));`,
+  },
   "js-fizz-values": {
     solution: "const fizz = n => Array.from({length: n}, (_, index) => index + 1).map(number => number % 3 === 0 ? \"Fizz\" : number);",
+    junior: `const fizz = n => {
+  const result = [];
+  for (let number = 1; number <= n; number += 1) {
+    if (number % 3 === 0) {
+      result.push("Fizz");
+    } else {
+      result.push(number);
+    }
+  }
+  return result;
+};`,
+    senior: `const label = number => (number % 3 === 0 ? "Fizz" : number);
+
+// The rule lives apart from the counting, so adding Buzz later touches one line.
+const fizz = n => Array.from({ length: n }, (_, index) => label(index + 1));`,
   },
   "js-countdown": {
     solution: "const countDown = n => { const result = []; while (n > 0) result.push(n--); return result; };",
+    junior: `const countDown = n => {
+  const result = [];
+  for (let current = n; current >= 1; current -= 1) {
+    result.push(current);
+  }
+  return result;
+};`,
+    senior: `const countDown = n => Array.from({ length: n }, (_, index) => n - index);`,
   },
-  "js-first-letters": { solution: "const firstLetters = words => words.map(word => word[0]);" },
-  "js-has-adult": { solution: "const hasAdult = ages => ages.some(age => age >= 18);" },
-  "js-all-positive": { solution: "const allPositive = numbers => numbers.every(number => number > 0);" },
-  "js-total-price": { solution: "const total = items => items.reduce((sum, item) => sum + item.price, 0);" },
-  "js-capitalize": { solution: "const capitalize = word => word ? word[0].toUpperCase() + word.slice(1) : \"\";" },
-  "js-unique-values": { solution: "const unique = values => [...new Set(values)];" },
+  "js-first-letters": {
+    solution: "const firstLetters = words => words.map(word => word[0]);",
+    junior: `const firstLetters = words => {
+  const letters = [];
+  for (const word of words) {
+    const firstLetter = word.charAt(0);
+    letters.push(firstLetter);
+  }
+  return letters;
+};`,
+    senior: `// A string is iterable, so destructuring its first element gives its first character.
+const firstLetters = words => words.map(([first]) => first);`,
+  },
+  "js-has-adult": {
+    solution: "const hasAdult = ages => ages.some(age => age >= 18);",
+    junior: `const hasAdult = ages => {
+  for (const age of ages) {
+    if (age >= 18) {
+      return true;
+    }
+  }
+  return false;
+};`,
+    senior: `const ADULT_AGE = 18;
+const isAdult = age => age >= ADULT_AGE;
+
+const hasAdult = ages => ages.some(isAdult);`,
+  },
+  "js-all-positive": {
+    solution: "const allPositive = numbers => numbers.every(number => number > 0);",
+    junior: `const allPositive = numbers => {
+  for (const number of numbers) {
+    if (number <= 0) {
+      return false;
+    }
+  }
+  return true;
+};`,
+    senior: `// "All positive" is "none at or below zero"; some() on an empty array is false, so the result is true, as every() would give.
+const allPositive = numbers => !numbers.some(number => number <= 0);`,
+  },
+  "js-total-price": {
+    solution: "const total = items => items.reduce((sum, item) => sum + item.price, 0);",
+    junior: `const total = items => {
+  let sum = 0;
+  for (const item of items) {
+    sum = sum + item.price;
+  }
+  return sum;
+};`,
+    senior: `const total = items => items.map(({ price }) => price).reduce((sum, price) => sum + price, 0);`,
+  },
+  "js-capitalize": {
+    solution: "const capitalize = word => word ? word[0].toUpperCase() + word.slice(1) : \"\";",
+    junior: `const capitalize = text => {
+  if (text.length === 0) {
+    return "";
+  }
+  const firstLetter = text.charAt(0).toUpperCase();
+  const rest = text.substring(1);
+  return firstLetter + rest;
+};`,
+    senior: `// charAt(0) is "" on an empty string, and so is slice(1), so no guard is needed.
+const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);`,
+  },
+  "js-unique-values": {
+    solution: "const unique = values => [...new Set(values)];",
+    junior: `const unique = values => {
+  const seen = [];
+  for (const value of values) {
+    if (!seen.includes(value)) {
+      seen.push(value);
+    }
+  }
+  return seen;
+};`,
+    senior: `const unique = values => {
+  const seen = new Set();
+  // A seen-set inside filter generalises to "unique by key", which new Set(values) alone cannot do.
+  return values.filter(value => {
+    if (seen.has(value)) return false;
+    seen.add(value);
+    return true;
+  });
+};`,
+  },
   "js-word-count": {
     solution: "const wordCount = sentence => sentence.trim() ? sentence.trim().split(/\\s+/).length : 0;",
+    junior: `const wordCount = sentence => {
+  const pieces = sentence.trim().split(" ");
+  let count = 0;
+  for (const piece of pieces) {
+    if (piece !== "") {
+      count = count + 1;
+    }
+  }
+  return count;
+};`,
+    senior: `// \\S+ matches each run of non-whitespace; match gives null, not [], when there is none.
+const wordCount = sentence => (sentence.match(/\\S+/g) ?? []).length;`,
   },
-  "js-find-user": { solution: "const findUser = (users, name) => users.find(user => user.name === name);" },
+  "js-find-user": {
+    solution: "const findUser = (users, name) => users.find(user => user.name === name);",
+    junior: `const findUser = (users, name) => {
+  for (const user of users) {
+    if (user.name === name) {
+      return user;
+    }
+  }
+  return undefined;
+};`,
+    senior: `const byName = name => user => user.name === name;
+
+// find already gives undefined for no match and for an empty list.
+const findUser = (users, name) => users.find(byName(name));`,
+  },
   "js-odd-sum": {
     solution: "const oddSum = numbers => numbers.filter(number => number % 2 !== 0).reduce((sum, number) => sum + number, 0);",
+    junior: `const oddSum = numbers => {
+  let sum = 0;
+  for (const number of numbers) {
+    const isOdd = number % 2 !== 0;
+    if (isOdd) {
+      sum = sum + number;
+    }
+  }
+  return sum;
+};`,
+    senior: `// One pass: the reducer skips the evens itself instead of filtering into a second array first.
+const oddSum = numbers => numbers.reduce((sum, number) => (number % 2 === 0 ? sum : sum + number), 0);`,
   },
-  "js-repeat-word": { solution: "const repeat = (word, n) => Array.from({length: n}, () => word).join(\" \");" },
+  "js-repeat-word": {
+    solution: "const repeat = (word, n) => Array.from({length: n}, () => word).join(\" \");",
+    junior: `const repeat = (word, times) => {
+  let result = "";
+  for (let count = 0; count < times; count += 1) {
+    if (count > 0) {
+      result = result + " ";
+    }
+    result = result + word;
+  }
+  return result;
+};`,
+    senior: `// join puts the separator between items only, so once gives no space and zero gives "".
+const repeat = (word, times) => Array(times).fill(word).join(" ");`,
+  },
   "js-number-range": {
     solution: "const range = (start, end) => Array.from({length: end - start + 1}, (_, index) => start + index);",
+    junior: `const range = (start, end) => {
+  const numbers = [];
+  for (let current = start; current <= end; current += 1) {
+    numbers.push(current);
+  }
+  return numbers;
+};`,
+    senior: `// A generator yields lazily, so the same counting also serves a for...of that stops early.
+function* count(start, end) {
+  for (let value = start; value <= end; value += 1) yield value;
+}
+
+const range = (start, end) => [...count(start, end)];`,
   },
   "js-average": {
     solution: "const average = numbers => numbers.length ? numbers.reduce((sum, number) => sum + number, 0) / numbers.length : 0;",
+    junior: `const average = numbers => {
+  if (numbers.length === 0) {
+    return 0;
+  }
+  let total = 0;
+  for (const number of numbers) {
+    total = total + number;
+  }
+  return total / numbers.length;
+};`,
+    senior: `// An empty array sums to 0, and dividing by at least 1 keeps that 0 instead of producing NaN.
+const average = numbers => numbers.reduce((sum, number) => sum + number, 0) / Math.max(numbers.length, 1);`,
   },
-  "js-short-words": { solution: "const shortWords = words => words.filter(word => word.length < 5);" },
-  "js-object-keys": { solution: "const keys = object => Object.keys(object);" },
-  "js-object-values": { solution: "const values = object => Object.values(object);" },
-  "js-activate-user": { solution: "const activate = user => ({...user, active: true});" },
-  "js-palindrome": { solution: "const isPalindrome = word => word === [...word].reverse().join(\"\");" },
+  "js-short-words": {
+    solution: "const shortWords = words => words.filter(word => word.length < 5);",
+    junior: `const shortWords = words => {
+  const result = [];
+  for (const word of words) {
+    if (word.length < 5) {
+      result.push(word);
+    }
+  }
+  return result;
+};`,
+    senior: `// "Fewer than five" is at most four; naming the limit keeps the off-by-one out of the comparison.
+const MAX_SHORT_LENGTH = 4;
+
+const shortWords = words => words.filter(word => word.length <= MAX_SHORT_LENGTH);`,
+  },
+  "js-object-keys": {
+    solution: "const keys = object => Object.keys(object);",
+    junior: `const keys = object => {
+  const names = [];
+  for (const name in object) {
+    if (object.hasOwnProperty(name)) {
+      names.push(name);
+    }
+  }
+  return names;
+};`,
+    senior: `// entries keeps insertion order too; destructuring the pair takes the key and leaves the value unused.
+const keys = object => Object.entries(object).map(([key]) => key);`,
+  },
+  "js-object-values": {
+    solution: "const values = object => Object.values(object);",
+    junior: `const values = object => {
+  const result = [];
+  for (const key in object) {
+    if (object.hasOwnProperty(key)) {
+      result.push(object[key]);
+    }
+  }
+  return result;
+};`,
+    senior: `// keys + lookup was the values() idiom before ES2017 and follows the same insertion order.
+const values = object => Object.keys(object).map(key => object[key]);`,
+  },
+  "js-activate-user": {
+    solution: "const activate = user => ({...user, active: true});",
+    junior: `const activate = user => {
+  const copy = {};
+  for (const key in user) {
+    copy[key] = user[key];
+  }
+  copy.active = true;
+  return copy;
+};`,
+    senior: `// Assigning into a fresh {} is what protects the caller's object; the later source wins on active.
+const activate = user => Object.assign({}, user, { active: true });`,
+  },
+  "js-palindrome": {
+    solution: "const isPalindrome = word => word === [...word].reverse().join(\"\");",
+    junior: `const isPalindrome = text => {
+  let reversed = "";
+  for (let index = text.length - 1; index >= 0; index -= 1) {
+    reversed = reversed + text[index];
+  }
+  return reversed === text;
+};`,
+    senior: `// every stops at the first mismatch; its third argument is the same array, so nothing is copied or reversed.
+const isPalindrome = text =>
+  [...text].every((character, index, characters) => character === characters[characters.length - 1 - index]);`,
+  },
   "js-letter-counts": {
     solution: "const countLetters = text => [...text].reduce((counts, letter) => ({...counts, [letter]: (counts[letter] ?? 0) + 1}), {});",
+    junior: `const countLetters = text => {
+  const counts = {};
+  for (const letter of text) {
+    if (counts[letter] === undefined) {
+      counts[letter] = 1;
+    } else {
+      counts[letter] = counts[letter] + 1;
+    }
+  }
+  return counts;
+};`,
+    senior: `// Mutating the accumulator keeps this linear; spreading a new object per letter is quadratic.
+const countLetters = text =>
+  [...text].reduce((counts, letter) => {
+    counts[letter] = (counts[letter] ?? 0) + 1;
+    return counts;
+  }, {});`,
   },
   "js-flatten-arrays": {
     solution: "const flatten = arrays => arrays.reduce((result, array) => [...result, ...array], []);",
+    junior: `const flatten = arrays => {
+  const result = [];
+  for (const array of arrays) {
+    for (const item of array) {
+      result.push(item);
+    }
+  }
+  return result;
+};`,
+    senior: `// concat unwraps exactly one level of each argument, which is the single level the task asks for.
+const flatten = arrays => [].concat(...arrays);`,
   },
   "js-call-once": {
     solution: "const once = fn => { let called = false, value; return (...args) => { if (!called) { called = true; value = fn(...args); } return value; }; };",
+    junior: `const once = fn => {
+  let hasRun = false;
+  let savedResult;
+  return function (...args) {
+    if (hasRun) {
+      return savedResult;
+    }
+    hasRun = true;
+    savedResult = fn(...args);
+    return savedResult;
+  };
+};`,
+    senior: `const once = fn => {
+  let pending = fn;
+  let result;
+  return (...args) => {
+    if (pending) {
+      result = pending(...args);
+      pending = null; // the reference itself is the "already ran" flag, and dropping it lets fn be collected
+    }
+    return result;
+  };
+};`,
   },
   "js-counter-object": {
     solution: "const makeCounter = () => { let count = 0; const counter = {increment: () => (count += 1, counter), reset: () => (count = 0, counter), value: () => count}; return counter; };",
+    junior: `const makeCounter = () => {
+  let count = 0;
+  const counter = {};
+  counter.increment = function () {
+    count = count + 1;
+    return counter;
+  };
+  counter.reset = function () {
+    count = 0;
+    return counter;
+  };
+  counter.value = function () {
+    return count;
+  };
+  return counter;
+};`,
+    senior: `class Counter {
+  #count = 0; // private, so nothing outside can change it except through the methods
+
+  increment() {
+    this.#count += 1;
+    return this;
+  }
+
+  reset() {
+    this.#count = 0;
+    return this;
+  }
+
+  value() {
+    return this.#count;
+  }
+}
+
+const makeCounter = () => new Counter();`,
   },
   "js-debounce-calls": {
     solution: "const debounce = (fn, ms) => { let timer; return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); }; };",
+    junior: `const debounce = (fn, waitMs) => {
+  let timerId = null;
+  return (...args) => {
+    if (timerId !== null) {
+      clearTimeout(timerId);
+    }
+    timerId = setTimeout(() => {
+      timerId = null;
+      fn(...args);
+    }, waitMs);
+  };
+};`,
+    senior: `const debounce = (fn, waitMs) => {
+  let timer;
+  let lastArgs = [];
+  const fire = () => {
+    timer = undefined;
+    fn(...lastArgs);
+  };
+  return (...args) => {
+    lastArgs = args; // every call overwrites them, so the last call in the burst decides what fn sees
+    clearTimeout(timer);
+    timer = setTimeout(fire, waitMs);
+  };
+};`,
   },
   "js-throttle-calls": {
     solution: "const throttle = (fn, ms) => { let last = -Infinity; return (...args) => { if (Date.now() - last >= ms) { last = Date.now(); fn(...args); } }; };",
+    junior: `const throttle = (fn, waitMs) => {
+  let isWaiting = false;
+  return (...args) => {
+    if (isWaiting) {
+      return;
+    }
+    isWaiting = true;
+    fn(...args);
+    setTimeout(() => {
+      isWaiting = false;
+    }, waitMs);
+  };
+};`,
+    senior: `const throttle = (fn, waitMs) => {
+  let windowClosesAt = 0;
+  return (...args) => {
+    const now = Date.now();
+    if (now < windowClosesAt) return; // inside the window: drop the call, never queue it
+    windowClosesAt = now + waitMs;
+    fn(...args);
+  };
+};`,
   },
-  "js-sleep": { solution: "const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));" },
+  "js-sleep": {
+    solution: "const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));",
+    junior: `const sleep = ms => {
+  const promise = new Promise(resolve => {
+    setTimeout(() => {
+      resolve();
+    }, ms);
+  });
+  return promise;
+};`,
+    senior: `// An async function with no return resolves with undefined, whatever the timer hands to resolve.
+const sleep = async (ms = 0) => {
+  await new Promise(resolve => setTimeout(resolve, ms));
+};`,
+  },
   "js-retry-on-failure": {
     solution: "const retry = async (fn, attempts) => { let lastError; for (let attempt = 0; attempt < attempts; attempt += 1) { try { return await fn(); } catch (error) { lastError = error; } } throw lastError; };",
+    junior: `const retry = async (fn, attempts) => {
+  let lastError;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    let failed = false;
+    let result;
+    try {
+      result = await fn();
+    } catch (error) {
+      failed = true;
+      lastError = error;
+    }
+    if (!failed) {
+      return result;
+    }
+  }
+  throw lastError;
+};`,
+    senior: `const retry = async (fn, attempts) => {
+  try {
+    return await fn(); // await inside the try, or a rejection would slip past the catch
+  } catch (error) {
+    if (attempts <= 1) throw error;
+    return retry(fn, attempts - 1);
+  }
+};`,
   },
   "js-clone-promise-all": {
     solution: "const promiseAll = promises => new Promise((resolve, reject) => { const results = []; let settled = 0; if (!promises.length) resolve(results); promises.forEach((promise, index) => Promise.resolve(promise).then(value => { results[index] = value; settled += 1; if (settled === promises.length) resolve(results); }, reject)); });",
+    junior: `const promiseAll = promises => {
+  return new Promise((resolve, reject) => {
+    const results = [];
+    let finishedCount = 0;
+    if (promises.length === 0) {
+      resolve(results);
+      return;
+    }
+    for (let index = 0; index < promises.length; index += 1) {
+      Promise.resolve(promises[index])
+        .then(value => {
+          results[index] = value;
+          finishedCount = finishedCount + 1;
+          if (finishedCount === promises.length) {
+            resolve(results);
+          }
+        })
+        .catch(error => {
+          reject(error);
+        });
+    }
+  });
+};`,
+    senior: `const promiseAll = promises =>
+  new Promise((resolve, reject) => {
+    const results = [];
+    let remaining = promises.length;
+    if (remaining === 0) resolve(results);
+    // Each callback settles on its own; the shared countdown says when the last one has landed.
+    promises.forEach(async (item, index) => {
+      try {
+        results[index] = await item; // await takes plain values as well as promises
+        remaining -= 1;
+        if (remaining === 0) resolve(results);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });`,
   },
   "js-run-tasks-in-order": {
     solution: "const runSequentially = async tasks => { const results = []; for (const task of tasks) results.push(await task()); return results; };",
+    junior: `const runSequentially = async tasks => {
+  const results = [];
+  for (let index = 0; index < tasks.length; index += 1) {
+    const task = tasks[index];
+    const result = await task();
+    results.push(result);
+  }
+  return results;
+};`,
+    senior: `// Each task starts inside the then of the one before it, so no two can overlap.
+const runSequentially = tasks =>
+  tasks.reduce(
+    (chain, task) => chain.then(async results => [...results, await task()]),
+    Promise.resolve([]),
+  );`,
   },
   "js-chunk-an-array": {
     solution: "const chunk = (array, size) => Array.from({length: Math.ceil(array.length / size)}, (_, index) => array.slice(index * size, index * size + size));",
+    junior: `const chunk = (items, size) => {
+  const chunks = [];
+  for (let start = 0; start < items.length; start += size) {
+    const group = items.slice(start, start + size);
+    chunks.push(group);
+  }
+  return chunks;
+};`,
+    senior: `// Open a new group every size items and push into whichever group is current.
+const chunk = (items, size) =>
+  items.reduce((chunks, item, index) => {
+    if (index % size === 0) chunks.push([]);
+    chunks[chunks.length - 1].push(item);
+    return chunks;
+  }, []);`,
   },
   "js-group-by-key": {
     solution: "const groupBy = (array, keyFn) => array.reduce((groups, item) => { const key = keyFn(item); (groups[key] ??= []).push(item); return groups; }, {});",
+    junior: `const groupBy = (items, keyFn) => {
+  const groups = {};
+  for (const item of items) {
+    const key = keyFn(item);
+    if (groups[key] === undefined) {
+      groups[key] = [];
+    }
+    groups[key].push(item);
+  }
+  return groups;
+};`,
+    senior: `const groupBy = (items, keyFn) => {
+  const groups = new Map();
+  for (const item of items) {
+    const key = String(keyFn(item)); // an object key is a string anyway, so 1 and "1" share a group here too
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(item);
+  }
+  return Object.fromEntries(groups);
+};`,
   },
   "js-memoize-results": {
     solution: "const memoize = fn => { const cache = new Map(); return (...args) => { if (!cache.has(args[0])) cache.set(args[0], fn(...args)); return cache.get(args[0]); }; };",
+    junior: `const memoize = fn => {
+  const seenArguments = [];
+  const seenResults = [];
+  return (...args) => {
+    const firstArgument = args[0];
+    const position = seenArguments.indexOf(firstArgument);
+    if (position !== -1) {
+      return seenResults[position];
+    }
+    const result = fn(...args);
+    seenArguments.push(firstArgument);
+    seenResults.push(result);
+    return result;
+  };
+};`,
+    senior: `const memoizeBy = keyOf => fn => {
+  const cache = new Map();
+  return (...args) => {
+    const key = keyOf(args);
+    if (cache.has(key)) return cache.get(key); // has(), not get(): a cached undefined or 0 is still a hit
+    const value = fn(...args);
+    cache.set(key, value);
+    return value;
+  };
+};
+
+// The task keys on the first argument; the factory lets another caller key on all of them.
+const memoize = memoizeBy(([first]) => first);`,
   },
   "js-event-emitter": {
     solution: "const createEmitter = () => { const listeners = {}; const emitter = {on: (name, listener) => ((listeners[name] ??= []).push(listener), emitter), off: (name, listener) => (listeners[name] = listener ? (listeners[name] ?? []).filter(one => one !== listener) : [], emitter), emit: (name, payload) => (listeners[name] ?? []).map(listener => listener(payload))}; return emitter; };",
+    junior: `const createEmitter = () => {
+  const listeners = {};
+  const emitter = {};
+  emitter.on = function (name, listener) {
+    if (listeners[name] === undefined) {
+      listeners[name] = [];
+    }
+    listeners[name].push(listener);
+    return emitter;
+  };
+  emitter.off = function (name, listener) {
+    const current = listeners[name] || [];
+    const kept = [];
+    if (listener !== undefined) {
+      for (const one of current) {
+        if (one !== listener) {
+          kept.push(one);
+        }
+      }
+    }
+    listeners[name] = kept;
+    return emitter;
+  };
+  emitter.emit = function (name, payload) {
+    const current = listeners[name] || [];
+    const results = [];
+    for (const listener of current) {
+      results.push(listener(payload));
+    }
+    return results;
+  };
+  return emitter;
+};`,
+    senior: `const createEmitter = () => {
+  const listeners = new Map();
+  const emitter = {
+    on(name, listener) {
+      if (!listeners.has(name)) listeners.set(name, []);
+      listeners.get(name).push(listener);
+      return emitter;
+    },
+    off(name, listener) {
+      // off(name) alone clears the event; with a listener it removes that one by identity
+      const kept = listener ? (listeners.get(name) ?? []).filter(one => one !== listener) : [];
+      listeners.set(name, kept);
+      return emitter;
+    },
+    emit(name, payload) {
+      return (listeners.get(name) ?? []).map(listener => listener(payload));
+    },
+  };
+  return emitter;
+};`,
   },
   "js-lru-cache": {
     solution: "const LRUCache = strArr => { const cache = []; for (const letter of strArr) { const at = cache.indexOf(letter); if (at !== -1) cache.splice(at, 1); cache.push(letter); if (cache.length > 5) cache.shift(); } return cache.join(\"-\"); };",
+    junior: `const LRUCache = strArr => {
+  const limit = 5;
+  let cache = [];
+  for (const letter of strArr) {
+    const withoutLetter = [];
+    for (const item of cache) {
+      if (item !== letter) {
+        withoutLetter.push(item);
+      }
+    }
+    cache = withoutLetter;
+    cache.push(letter);
+    if (cache.length > limit) {
+      cache.shift();
+    }
+  }
+  return cache.join("-");
+};`,
+    senior: `const CAPACITY = 5;
+
+const LRUCache = strArr => {
+  const cache = new Set(); // a Set keeps insertion order, so delete-then-add moves a letter to the recent end
+  for (const letter of strArr) {
+    cache.delete(letter);
+    cache.add(letter);
+    if (cache.size > CAPACITY) cache.delete(cache.values().next().value); // the first entry is the least recent
+  }
+  return [...cache].join("-");
+};`,
   },
 };
