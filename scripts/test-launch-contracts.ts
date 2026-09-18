@@ -25,6 +25,8 @@ import {
   stableAttemptId,
 } from '../lib/quiz-tokens';
 import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS } from '../lib/rate-limit';
+import { buildQueue, parseScheduledFor } from '../lib/coding/practice-handlers';
+import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
 import roadmapHandler from '../api/quiz/roadmap';
 import { selectPersonalizedReview, selectDueItems, DUE_SHARE } from '../lib/review-selection';
@@ -1660,6 +1662,60 @@ async function main() {
     assert.ok(sessionSize(5) >= 4 && sessionSize(300) <= 20);
   }
 
+  // ── challenge runs (migration 037) ─────────────────────────────────────
+  // The queue is chosen server-side from what the learner can already open.
+  // Shaping it — a count, a track, a shuffle, a moment — only reorders or
+  // trims that set; it never reaches past the tier gate, and a shuffled run
+  // is a permutation of the sequential one.
+  {
+    const base = { minutes: 20, topic: null, passed: new Set<string>(), due: new Set<string>() };
+    const sequential = buildQueue({ ...base, count: 5, order: 'sequential' });
+    assert.equal(sequential.length, 5, 'a run sized by count holds that many challenges');
+    assert.deepEqual(buildQueue({ ...base, count: 5, order: 'sequential' }), sequential, 'sequential runs are deterministic');
+    const pool = buildQueue({ ...base, count: 20, order: 'sequential' });
+    const reversed = <T>(list: T[]) => [...list].reverse();
+    const shuffled = buildQueue({ ...base, count: 20, order: 'random', shuffle: reversed });
+    assert.deepEqual([...shuffled].sort(), [...buildQueue({ ...base, count: 20, order: 'random', shuffle: reversed })].sort());
+    assert.ok(shuffled.every((id) => codingTaskById(id)), 'a shuffled run holds only issuable tasks');
+    assert.notDeepEqual(shuffled, pool, 'the shuffle is applied');
+    const react = buildQueue({ ...base, count: 3, topic: 'react', order: 'sequential' });
+    assert.ok(react.length === 3 && react.every((id) => codingTaskById(id)?.track === 'react'), 'three from React means three React challenges');
+    assert.ok(buildQueue({ ...base, count: 3, topic: 'react', order: 'random' }).every((id) => codingTaskById(id)?.track === 'react'), 'a shuffled track run stays inside the track');
+    for (const id of [...sequential, ...react]) {
+      const task = codingTaskById(id)!;
+      assert.ok(task.tier <= 2, 'a fresh learner is only ever offered the open tiers');
+    }
+    assert.equal(buildQueue({ ...base, count: 200, order: 'sequential' }).length, 20, 'a count is capped');
+    assert.ok(buildQueue({ ...base, order: 'sequential' }).length >= 1, 'a run sized by minutes still offers something');
+
+    const now = Date.parse('2026-09-18T12:00:00Z');
+    assert.deepEqual(parseScheduledFor(undefined, now), { at: null }, 'no moment means now');
+    assert.deepEqual(parseScheduledFor('2026-09-18T11:00:00Z', now), { at: null }, 'a moment already past means now');
+    assert.deepEqual(parseScheduledFor('2026-09-18T12:00:30Z', now), { at: null }, 'a moment within the next minute means now');
+    const later = parseScheduledFor('2026-09-20T18:00:00Z', now);
+    assert.ok('at' in later && later.at?.toISOString() === '2026-09-20T18:00:00.000Z', 'a future moment is kept');
+    assert.ok('error' in parseScheduledFor('2027-01-01T00:00:00Z', now), 'a moment past the horizon is refused');
+    assert.ok('error' in parseScheduledFor('not a time', now) && 'error' in parseScheduledFor(12345, now), 'a non-time is refused');
+  }
+
+  // ── the payment webhook believes the order, not the event ───────────────
+  {
+    const awaiting = { state: 'awaiting_payment', totalMinor: 2490, currency: 'EUR' };
+    const paid = { ...awaiting, state: 'paid' };
+    assert.deepEqual(webhookDecision({ type: 'payment.succeeded', amountMinor: 2490, currency: 'EUR' }, awaiting), { action: 'paid' });
+    assert.equal(webhookDecision({ type: 'payment.succeeded' }, awaiting).action, 'refuse', 'an unreadable amount is refused, not waved through');
+    assert.equal(webhookDecision({ type: 'payment.succeeded', amountMinor: 2490 }, awaiting).action, 'refuse', 'a missing currency is refused');
+    assert.equal(webhookDecision({ type: 'payment.succeeded', amountMinor: 1, currency: 'EUR' }, awaiting).action, 'refuse', 'a forged amount is refused');
+    assert.equal(webhookDecision({ type: 'payment.succeeded', amountMinor: 2490, currency: 'CZK' }, awaiting).action, 'refuse', 'another currency is refused');
+    assert.equal(webhookDecision({ type: 'payment.succeeded', amountMinor: 0, currency: 'EUR' }, { ...awaiting, totalMinor: null }).action, 'refuse', 'an order with no cash total cannot be paid for');
+    assert.deepEqual(webhookDecision({ type: 'payment.failed' }, awaiting), { action: 'cancel' });
+    assert.deepEqual(webhookDecision({ type: 'payment.failed' }, paid), { action: 'ignore', reason: 'stale' }, 'a late failure never cancels a paid order');
+    assert.deepEqual(webhookDecision({ type: 'checkout.expired' }, paid), { action: 'ignore', reason: 'stale' });
+    assert.deepEqual(webhookDecision({ type: 'payment.refunded' }, paid), { action: 'cancel' }, 'a refund may cancel a paid order');
+    assert.deepEqual(webhookDecision({ type: 'payment.refunded' }, { ...paid, state: 'shipped' }), { action: 'ignore', reason: 'stale' });
+    assert.deepEqual(webhookDecision({ type: 'something.else' }, awaiting), { action: 'ignore', reason: 'unhandled' });
+  }
+
   // ── lesson figures (#183) ───────────────────────────────────────────────
   {
     assert.deepEqual(
@@ -1700,7 +1756,7 @@ async function main() {
 
   await auditGateContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, lesson figures, and an unconfigured shop.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, and an unconfigured shop.');
 }
 
 void main().catch((error) => {

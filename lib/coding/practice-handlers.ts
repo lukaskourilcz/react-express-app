@@ -19,17 +19,22 @@ import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } from '../http';
 import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
+import { secureShuffle } from '../quiz-runtime';
 import { CODING_SUMMARIES } from './active';
 import { evolvingStage } from '../../shared/evolving';
 import { isCodingSectionTrack, isCodingTaskId, tierUnlocked, type CodingTaskSummary } from '../../shared/coding-catalog';
 import {
+  isPracticeOrder,
   isPracticeSessionMinutes,
   isSkipReason,
+  PRACTICE_MAX_COUNT,
+  PRACTICE_SCHEDULE_HORIZON_DAYS,
   type CodingBookmarkRequest,
   type CodingBookmarksResponse,
   type CodingCollection,
   type CodingSkipRequest,
   type CodingSkipResponse,
+  type PracticeOrder,
   type PracticeSession,
   type PracticeSessionAdvanceRequest,
   type PracticeSessionResponse,
@@ -41,8 +46,8 @@ const logEvent = createLogger('practice');
 const available = () => deploymentSubjectIds().includes('webdev');
 const notAvailable = (res: VercelResponse) =>
   jsonError(res, 404, 'not_available', 'Coding practice is not part of this product');
-const migrationRequired = (res: VercelResponse) =>
-  jsonError(res, 503, 'migration_required', 'Practice migration 027 is not installed');
+const migrationRequired = (res: VercelResponse, migration = '027') =>
+  jsonError(res, 503, 'migration_required', `Practice migration ${migration} is not installed`);
 
 /** Ids are opaque and generated here: a client never names a row. */
 const newId = (): string => randomBytes(24).toString('base64url').slice(0, 32);
@@ -255,7 +260,7 @@ export async function handleCodingSkip(req: VercelRequest, res: VercelResponse, 
   return res.json(answer);
 }
 
-/* ── short practice sessions ──────────────────────────────────────────── */
+/* ── challenge runs (short practice sessions) ────────────────────────── */
 
 const estimatedMinutes = (ids: readonly string[]): number =>
   ids.reduce((total, id) => total + (SECTION_TASKS.find((task) => task.id === id)?.estimatedMinutes ?? 0), 0);
@@ -264,28 +269,41 @@ const toSession = (row: Record<string, unknown>): PracticeSession => {
   const queue = Array.isArray(row.queue) ? (row.queue as unknown[]).filter((id): id is string => typeof id === 'string') : [];
   return {
     sessionId: String(row.session_id),
-    minutes: Number(row.minutes) as PracticeSession['minutes'],
+    minutes: Number(row.minutes),
     topic: row.topic == null ? null : String(row.topic),
     queue,
     position: Number(row.position ?? 0),
     status: row.status as PracticeSession['status'],
     estimatedMinutes: estimatedMinutes(queue),
+    // Rows written before migration 037 carry none of these; they read as the
+    // run they were: catalogue order, sized by minutes, started at once.
+    order: isPracticeOrder(row.order_mode) ? row.order_mode : 'sequential',
+    count: Number.isInteger(row.task_count) ? Number(row.task_count) : null,
+    scheduledFor: typeof row.scheduled_for === 'string' ? row.scheduled_for : row.scheduled_for instanceof Date ? row.scheduled_for.toISOString() : null,
   };
 };
 
 /**
- * Build a queue that fits the time the learner has.
+ * Build the queue for a run.
  *
  * Review comes first — work that is already due is the point of a short
- * session — then new work, in catalogue order. Every candidate has already
- * passed the tier gate, so the queue can only reorder what was available.
- * The total is an estimate and the response says so.
+ * session — then new work: in catalogue order, one challenge after the next,
+ * or shuffled when the learner asked for that. Sized by a number of
+ * challenges when `count` is given, otherwise by the minutes budget. Every
+ * candidate has already passed the tier gate, so the queue can only reorder
+ * what was available. The total is an estimate and the response says so.
+ *
+ * Pure apart from the shuffle, which is injected so the contracts can prove
+ * a shuffled run is a permutation of the sequential one.
  */
-function buildQueue(input: {
+export function buildQueue(input: {
   minutes: number;
+  count?: number | null;
+  order?: PracticeOrder;
   topic: string | null;
   passed: Set<string>;
   due: Set<string>;
+  shuffle?: <T>(list: T[]) => T[];
 }): string[] {
   const eligible = SECTION_TASKS.filter((task) =>
     !evolvingStage(task.id) &&
@@ -297,9 +315,17 @@ function buildQueue(input: {
   );
   const review = eligible.filter((task) => input.due.has(task.id));
   const fresh = eligible.filter((task) => !input.due.has(task.id) && !input.passed.has(task.id));
+  const ordered = input.order === 'random' ? (input.shuffle ?? secureShuffle)([...review, ...fresh]) : [...review, ...fresh];
   const queue: string[] = [];
+  if (input.count) {
+    for (const task of ordered) {
+      if (queue.length >= Math.min(input.count, PRACTICE_MAX_COUNT)) break;
+      queue.push(task.id);
+    }
+    return queue;
+  }
   let budget = input.minutes;
-  for (const task of [...review, ...fresh]) {
+  for (const task of ordered) {
     if (queue.length >= 40) break;
     // Always offer at least one task, even when it is longer than the session:
     // an empty queue helps nobody, and the estimate is labelled as an estimate.
@@ -311,6 +337,25 @@ function buildQueue(input: {
   return queue;
 }
 
+/** The moment a run is planned for, or null for "now". A moment already past
+ * is "now" too; one too far ahead, or not a time at all, is refused. */
+export function parseScheduledFor(value: unknown, now = Date.now()): { at: Date | null } | { error: string } {
+  if (value === undefined || value === null || value === '') return { at: null };
+  if (typeof value !== 'string') return { error: 'scheduledFor must be an ISO timestamp' };
+  const at = new Date(value);
+  if (Number.isNaN(at.getTime())) return { error: 'scheduledFor must be an ISO timestamp' };
+  if (at.getTime() <= now + 60_000) return { at: null };
+  if (at.getTime() > now + PRACTICE_SCHEDULE_HORIZON_DAYS * 86_400_000) {
+    return { error: `A run can be planned up to ${PRACTICE_SCHEDULE_HORIZON_DAYS} days ahead` };
+  }
+  return { at };
+}
+
+/** The minutes column is the run's size in time. A run sized by count still
+ * records its estimate, within the column's bounds. */
+const minutesFor = (requested: number | null, queue: readonly string[]): number =>
+  requested ?? Math.max(5, Math.min(60, estimatedMinutes(queue) || 5));
+
 /** GET/POST/PUT /api/user/[op]?op=practice-session */
 export async function handlePracticeSession(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!available()) return notAvailable(res);
@@ -319,8 +364,11 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account storage is not configured');
 
   if (req.method === 'GET') {
+    // The one open run: active, or planned for later. Migration 037 is what
+    // makes `scheduled` a state; before it the filter simply matches nothing
+    // extra.
     const row = await withTimeout(
-      supabase.from('practice_sessions').select('*').eq('user_id', userId).eq('status', 'active')
+      supabase.from('practice_sessions').select('*').eq('user_id', userId).in('status', ['active', 'scheduled'])
         .order('started_at', { ascending: false }).limit(1).maybeSingle(),
     );
     if (row.error) {
@@ -335,35 +383,66 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
   if (req.method === 'POST') {
     if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
     const body = (req.body || {}) as Partial<PracticeSessionStartRequest>;
-    if (!isPracticeSessionMinutes(body.minutes)) {
-      return jsonError(res, 400, 'bad_request', 'Choose one of the offered session lengths');
+    const count = Number.isInteger(body.count) && Number(body.count) >= 1 && Number(body.count) <= PRACTICE_MAX_COUNT ? Number(body.count) : null;
+    if (body.count !== undefined && count === null) {
+      return jsonError(res, 400, 'bad_request', `Ask for 1 to ${PRACTICE_MAX_COUNT} challenges`);
     }
+    if (count === null && !isPracticeSessionMinutes(body.minutes)) {
+      return jsonError(res, 400, 'bad_request', 'Choose one of the offered session lengths, or a number of challenges');
+    }
+    const minutes = isPracticeSessionMinutes(body.minutes) ? body.minutes : null;
+    if (body.order !== undefined && !isPracticeOrder(body.order)) {
+      return jsonError(res, 400, 'bad_request', 'A run is sequential or random');
+    }
+    const order: PracticeOrder = body.order ?? 'sequential';
+    const when = parseScheduledFor(body.scheduledFor);
+    if ('error' in when) return jsonError(res, 400, 'bad_request', when.error);
     const topic = typeof body.topic === 'string' && isCodingSectionTrack(body.topic) ? body.topic : null;
 
     const passed = await passedTaskIds(supabase, userId);
     const due = new Set<string>();
 
-    const queue = buildQueue({ minutes: body.minutes, topic, passed, due });
+    const queue = buildQueue({ minutes: minutes ?? 0, count, order, topic, passed, due });
     if (queue.length === 0) {
       return jsonError(res, 409, 'nothing_eligible', 'There is nothing eligible to practise right now');
     }
     const sessionId = newId();
+    const storedMinutes = minutesFor(minutes, queue);
+    const shaped = order !== 'sequential' || count !== null || when.at !== null;
+    let status: PracticeSession['status'] = 'active';
     const started = await withTimeout(
-      supabase.rpc('start_practice_session', {
+      supabase.rpc('start_practice_session_v2', {
         p_session_id: sessionId, p_user_id: userId, p_subject: 'webdev',
-        p_minutes: body.minutes, p_topic: topic, p_queue: queue,
+        p_minutes: storedMinutes, p_topic: topic, p_queue: queue,
+        p_order_mode: order, p_task_count: count, p_scheduled_for: when.at ? when.at.toISOString() : null,
       }),
     );
     if (started.error) {
-      if (isRpcMissing(started.error)) return migrationRequired(res);
-      return jsonError(res, 500, 'db_error', 'Could not start the session');
+      if (!isRpcMissing(started.error)) return jsonError(res, 500, 'db_error', 'Could not start the run');
+      // Migration 037 is not installed. A plain session still works through
+      // the 027 routine; a shaped or scheduled run cannot be honoured, and
+      // saying so beats silently dropping the schedule.
+      if (shaped) return migrationRequired(res, '037');
+      const legacy = await withTimeout(
+        supabase.rpc('start_practice_session', {
+          p_session_id: sessionId, p_user_id: userId, p_subject: 'webdev',
+          p_minutes: storedMinutes, p_topic: topic, p_queue: queue,
+        }),
+      );
+      if (legacy.error) {
+        if (isRpcMissing(legacy.error)) return migrationRequired(res);
+        return jsonError(res, 500, 'db_error', 'Could not start the run');
+      }
+    } else if (started.data === 'scheduled') {
+      status = 'scheduled';
     }
-    logEvent({ status: 200, kind: 'session_started', minutes: body.minutes, size: queue.length });
+    logEvent({ status: 200, kind: status === 'scheduled' ? 'run_scheduled' : 'session_started', minutes: storedMinutes, size: queue.length, order, count: count ?? undefined });
     res.setHeader('Cache-Control', 'private, no-store');
     const answer: PracticeSessionResponse = {
       session: {
-        sessionId, minutes: body.minutes, topic, queue, position: 0, status: 'active',
+        sessionId, minutes: storedMinutes, topic, queue, position: 0, status,
         estimatedMinutes: estimatedMinutes(queue),
+        order, count, scheduledFor: status === 'scheduled' && when.at ? when.at.toISOString() : null,
       },
     };
     return res.json(answer);
@@ -373,8 +452,20 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
     if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
     const body = (req.body || {}) as Partial<PracticeSessionAdvanceRequest>;
     if (typeof body.sessionId !== 'string') return jsonError(res, 400, 'bad_request', 'A session is required');
-    if (body.status !== undefined && body.status !== 'finished' && body.status !== 'abandoned') {
-      return jsonError(res, 400, 'bad_request', 'A session ends as finished or abandoned');
+    if (body.status !== undefined && body.status !== 'finished' && body.status !== 'abandoned' && body.status !== 'active') {
+      return jsonError(res, 400, 'bad_request', 'A run starts as active, or ends as finished or abandoned');
+    }
+    if (body.status === 'active') {
+      // Starting a planned run, early or late. Only a scheduled row moves.
+      const begun = await withTimeout(
+        supabase.rpc('begin_scheduled_practice_session', { p_session_id: body.sessionId, p_user_id: userId }),
+      );
+      if (begun.error) {
+        if (isRpcMissing(begun.error)) return migrationRequired(res, '037');
+        return jsonError(res, 500, 'db_error', 'Could not start the run');
+      }
+      if (begun.data !== true) return jsonError(res, 409, 'not_scheduled', 'That run is not waiting to be started');
+      logEvent({ status: 200, kind: 'run_started' });
     }
     const moved = await withTimeout(
       supabase.rpc('advance_practice_session', {

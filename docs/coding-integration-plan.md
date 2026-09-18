@@ -164,6 +164,8 @@ Review queue: after a pass, the task returns at 4 h, then 24 h, then 48 h; two c
 
 Nav: `nav.coding` ("Coding" / "Kódování"), route titles under `title.coding.*`, a Home strip link next to Learn and Typing.
 
+Challenge runs (migration 037, `op=practice-session`): a signed-in learner shapes a run on the Coding home — any track or one of the three, three, five or ten challenges, in catalogue order or shuffled — and starts it now or plans it for a date and time. The server chooses the queue from what the learner can already open (the tier gate is applied exactly as everywhere else; a run reorders practice, never widens it) and stores it with the order, the count and the planned moment. One run is open at a time. A planned run waits in the `scheduled` state on Today and on Coding with a Start button and an "Add to calendar" file; nothing is sent. An active run carries the learner from one queued task to the next: a pass moves the position and Next points at the queue. The pure queue builder and the schedule parser are asserted by `npm run test:launch`; without migration 037 a plain run still starts through the 027 routine, and a shaped or planned one answers `migration_required` rather than dropping the schedule.
+
 ### 4.3 GitHub garden: one commit per completed challenge
 
 Opt-in. A learner connects a GitHub repository they own, and every first pass of a coding task commits one file into it, so their contribution graph turns green for each day they finish a challenge. Re-passing a task with changed code updates the file; identical code commits nothing.

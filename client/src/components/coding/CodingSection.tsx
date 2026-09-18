@@ -12,7 +12,8 @@ import LoadingScreen from '../LoadingScreen';
 import { CodingWorkbench } from '../../coding/CodingWorkbench';
 import { DesignRunner } from '../../coding/DesignRunner';
 import { codingKeys, saveCodingDraft, useCodingProgress, useCodingTask } from '../../coding/api';
-import { useBookmarks, useSaveChallenge } from '../../coding/practice';
+import { useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
+import { ChallengeRunPlanner, taskHref } from './ChallengeRunPlanner';
 import { CODING_INDEX } from '../../../../shared/coding-index';
 import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingTaskTrack, evolvingPassed, evolvingUnlocked, type EvolvingCategory } from '../../../../shared/evolving';
 import { prepareEvolvingDraft } from '../../../../shared/coding-fullstack-support';
@@ -218,6 +219,7 @@ export function CodingHome() {
         </div>
         {next && <SwimCta label={t('coding.continue')} onClick={()=>navigate(`/coding/${next.track}/${next.id}`)} />}
       </div>
+      <ChallengeRunPlanner signedIn={isAuthenticated} />
       <section aria-label={t('coding.title')} className="cd-track-directory">
         {CODING_SECTION_TRACKS.map((track) => {
           const tasks = SECTION_INDEX.filter((task) => task.track === track);
@@ -469,6 +471,12 @@ export function CodingTaskScreen() {
   const [draftState, setDraftState] = useState<'saved' | 'saving' | 'local' | null>(null);
   const bookmarks = useBookmarks(isAuthenticated);
   const save = useSaveChallenge();
+  // An active challenge run carries the learner from one queued task to the
+  // next: a pass moves the run's position, and Next points at the queue.
+  const run = usePracticeSession(isAuthenticated);
+  const advanceRun = useAdvanceSession();
+  const activeRun = run.data?.session?.status === 'active' ? run.data.session : null;
+  const runIndex = activeRun && taskId ? activeRun.queue.indexOf(taskId) : -1;
 
   useEffect(() => {
     if (task.data && track && task.data.task.track !== track) navigate(`/coding/${task.data.task.track}/${task.data.task.id}`, { replace: true });
@@ -489,6 +497,10 @@ export function CodingTaskScreen() {
 
   const onVerdict = useCallback((verdict: CodingVerdictResponse, submittedCode?: string) => {
     if (verdict.progress) void queryClient.invalidateQueries({ queryKey: codingKeys.progress() });
+    if (verdict.verdict === 'passed' && activeRun && runIndex >= 0 && runIndex >= activeRun.position) {
+      const position = runIndex + 1;
+      advanceRun.mutate({ sessionId: activeRun.sessionId, position, ...(position >= activeRun.queue.length ? { status: 'finished' as const } : {}) });
+    }
     if (verdict.verdict === 'passed' && taskId) {
       const stage = evolvingStage(taskId);
       if (stage) {
@@ -498,7 +510,7 @@ export function CodingTaskScreen() {
         if (stage.next) queryClient.removeQueries({queryKey:codingKeys.task(stage.next), exact:true, type:'inactive'});
       } else removeStored(draftKey(taskId));
     }
-  }, [queryClient, taskId]);
+  }, [queryClient, taskId, activeRun, runIndex, advanceRun]);
 
   const onRetry = useCallback(() => {
     void task.refetch();
@@ -524,9 +536,12 @@ export function CodingTaskScreen() {
   if (isRetiredSectionTrack(data.task.track)) return <RetiredTrackNotice track={data.task.track} />;
   const trackTasks = SECTION_INDEX.filter((one) => one.track === data.task.track);
   const next = nextOpenTask(trackTasks, statusOf, data.task.id);
-  const nextHref = stage
-    ? stage.next ? `/coding/${evolvingTaskTrack(stage.next)}/${stage.next}` : null
-    : next && next.id !== data.task.id ? `/coding/${next.track}/${next.id}` : null;
+  const runNext = runIndex >= 0 && activeRun ? activeRun.queue[runIndex + 1] ?? null : null;
+  const nextHref = runIndex >= 0
+    ? runNext ? taskHref(runNext) : '/coding'
+    : stage
+      ? stage.next ? `/coding/${evolvingTaskTrack(stage.next)}/${stage.next}` : null
+      : next && next.id !== data.task.id ? `/coding/${next.track}/${next.id}` : null;
   const backHref = stage?.challenge.category === 'fullstack' ? '/coding/fullstack' : stage?.challenge.category === 'debugging' ? '/coding' : `/coding/${data.task.track}`;
   const localDraft = readString(draftKey(data.task.id));
   const previousLocal = stage?.previous ? readString(draftKey(stage.previous)) : null;
@@ -539,6 +554,7 @@ export function CodingTaskScreen() {
       <div className="cd-actions">
         {draftState && <span role="status">{t(`coding.draft.${draftState}`)}</span>}
         {stage && <span>{stage.challenge.title[lang]} — {t('coding.evolving.stage', { n: stage.index + 1, total: stage.challenge.stages.length })}</span>}
+        {runIndex >= 0 && activeRun && <Link className="cd-link" to="/coding">{t('coding.run.stage', { n: runIndex + 1, total: activeRun.queue.length })}</Link>}
       </div>
       {(bookmarks.isError || save.isError) && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')} <button className="cd-btn" onClick={() => void bookmarks.refetch()}>{t('coding.retry')}</button></p>}
       {stage && <nav className="cd-actions cd-stage-nav" aria-label={t('coding.evolving.title')}>

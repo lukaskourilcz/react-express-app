@@ -31,6 +31,8 @@ type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => stri
 // devShark only: coding tasks due for a second pass. Lazy so the coding index
 // stays out of the StudyShark bundle.
 const CodingDueSection = lazy(() => import('./coding/CodingDueSection').then((m) => ({ default: m.CodingDueSection })));
+// devShark only: the learner's open challenge run, planned or under way.
+const ChallengeRunSection = lazy(() => import('./coding/ChallengeRunSection').then((m) => ({ default: m.ChallengeRunSection })));
 const PathResumeSection = lazy(() => import('./paths/PathResumeSection').then((m) => ({ default: m.PathResumeSection })));
 // Concepts whose spaced review is due. Lazy for the same reason: it fetches,
 // and Today must render without waiting for it.
@@ -202,6 +204,12 @@ export default function Today() {
       {isAuthenticated && (
         <Suspense fallback={null}>
           <ConceptDueSection />
+        </Suspense>
+      )}
+
+      {CURRENT_PRODUCT.id === 'devshark' && isAuthenticated && (
+        <Suspense fallback={null}>
+          <ChallengeRunSection />
         </Suspense>
       )}
 

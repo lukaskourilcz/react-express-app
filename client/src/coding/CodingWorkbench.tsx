@@ -873,7 +873,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       <div className="cd-workbench__grid" style={{ ['--cd-split' as string]: `${layout.split}%` }}>
           {puzzleMode && task.puzzle && (
             <section className="cd-pane cd-pane--editor">
-              <CodePuzzle puzzle={task.puzzle} busy={busy} onSubmit={(order) => void submitOrder(order)} />
+              {/* Keyed by the session: a re-issued task comes with a fresh
+                  shuffle and a fresh translation, so the arrangement starts
+                  over rather than being graded under the new one. */}
+              <CodePuzzle key={session ?? task.id} puzzle={task.puzzle} busy={busy} onSubmit={(order) => void submitOrder(order)} />
               {submitError && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
             </section>
           )}
@@ -972,7 +975,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                     {taken === 0 ? t('coding.hint') : t('coding.hintNext')}
                   </FinButton>
                 </Tooltip>
-                {session && !solution && (
+                {session && !solution && !solutions && (
                   <Tooltip content={giveUpUnavailable} placement="above" isEnabled={giveUpUnavailable !== ''}>
                     <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => { if (!giveUpUnavailable) setConfirming('reveal'); }} aria-disabled={giveUpUnavailable !== '' || undefined} disabled={busy}>
                       {t('coding.giveUp')}

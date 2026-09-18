@@ -214,17 +214,39 @@ export type PracticeSessionMinutes = (typeof PRACTICE_SESSION_MINUTES)[number];
 export const isPracticeSessionMinutes = (value: unknown): value is PracticeSessionMinutes =>
   typeof value === 'number' && (PRACTICE_SESSION_MINUTES as readonly number[]).includes(value);
 
+/** How a run's queue is ordered: the catalogue's order, one challenge after
+ * the next, or shuffled. Shuffling happens on the server when the run is
+ * created, so the queue is fixed from then on. */
+export const PRACTICE_ORDERS = ['sequential', 'random'] as const;
+export type PracticeOrder = (typeof PRACTICE_ORDERS)[number];
+export const isPracticeOrder = (value: unknown): value is PracticeOrder =>
+  typeof value === 'string' && (PRACTICE_ORDERS as readonly string[]).includes(value);
+
+/** The run sizes offered when the learner asks for a number of challenges
+ * rather than a number of minutes. Any integer from 1 to `PRACTICE_MAX_COUNT`
+ * is accepted by the API; these are the ones the planner shows. */
+export const PRACTICE_RUN_COUNTS = [3, 5, 10] as const;
+export const PRACTICE_MAX_COUNT = 20;
+/** A run may be scheduled up to this far ahead. */
+export const PRACTICE_SCHEDULE_HORIZON_DAYS = 60;
+
 /** GET/POST/PUT /api/user/[op]?op=practice-session */
 export interface PracticeSession {
   sessionId: string;
-  minutes: PracticeSessionMinutes;
+  minutes: number;
   topic: string | null;
   /** Task ids the server chose, in order. Every one was already eligible. */
   queue: string[];
   position: number;
-  status: 'active' | 'finished' | 'abandoned';
+  /** `scheduled` until the learner starts a run they planned for later. */
+  status: 'active' | 'scheduled' | 'finished' | 'abandoned';
   /** The sum of the queue's estimated minutes. An estimate, not a promise. */
   estimatedMinutes: number;
+  order: PracticeOrder;
+  /** The number of challenges asked for, when the run was sized by count. */
+  count: number | null;
+  /** ISO timestamp the run was planned for; null for a run started at once. */
+  scheduledFor: string | null;
 }
 
 export interface PracticeSessionResponse {
@@ -232,15 +254,23 @@ export interface PracticeSessionResponse {
 }
 
 export interface PracticeSessionStartRequest {
-  minutes: PracticeSessionMinutes;
+  /** Size the run by time, or leave it out and size it by `count`. */
+  minutes?: PracticeSessionMinutes;
+  /** Size the run by a number of challenges (1 to PRACTICE_MAX_COUNT). */
+  count?: number;
   /** Restrict the queue to one topic, or leave it out for the whole plan. */
   topic?: string;
+  /** Catalogue order (the default) or shuffled. */
+  order?: PracticeOrder;
+  /** ISO timestamp to plan the run for. In the past or absent means now. */
+  scheduledFor?: string;
 }
 
 export interface PracticeSessionAdvanceRequest {
   sessionId: string;
   position?: number;
-  status?: 'finished' | 'abandoned';
+  /** `active` starts a scheduled run; the other two end a run. */
+  status?: 'finished' | 'abandoned' | 'active';
 }
 
 /* ── curated approach comparisons ─────────────────────────────────────── */

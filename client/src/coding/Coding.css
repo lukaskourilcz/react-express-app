@@ -530,6 +530,30 @@
 @media (min-width: 1024px) { .cd-workbench .cd-save--toolbar { width: 32px; min-width: 32px; min-height: 32px; font-size: 1rem; } }
 .cd-save:disabled { opacity: 0.55; cursor: not-allowed; }
 
+/* The challenge-run planner on the Coding home: a form the learner shapes a
+   run with, or the one open run and its actions. Same paper as the panes. */
+.cd-run { gap: 16px; }
+.cd-run__head { display: grid; gap: 4px; }
+.cd-run__head .cd-lead { margin-top: 0; }
+.cd-run__form { display: grid; gap: 16px; }
+.cd-run__field { display: grid; gap: 8px; }
+.cd-run__label { font-size: 0.88rem; font-weight: 650; color: var(--color-text-secondary); }
+.cd-run__options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.cd-run__options legend { grid-column: 1 / -1; margin-bottom: 2px; padding: 0; font-size: 0.88rem; font-weight: 650; color: var(--color-text-secondary); }
+.cd-run__option { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 44px; padding: 9px 11px; border: 1px solid var(--ss-card-line); border-radius: var(--radius-element); background: var(--color-background-muted); cursor: pointer; line-height: 1.35; }
+.cd-run__option:has(input:checked) { border-color: var(--brand-accent); background: var(--brand-accent-soft); box-shadow: inset 0 0 0 1px var(--brand-accent); }
+.cd-run__option:focus-within { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
+.cd-run__option input { width: 18px; height: 18px; flex: none; margin: 0; accent-color: var(--brand-accent); }
+.cd-run__option small { color: var(--color-text-secondary); font-size: 0.8rem; }
+.cd-run__time { grid-column: 1 / -1; display: grid; gap: 6px; }
+.cd-run__time label { font-size: 0.88rem; font-weight: 650; color: var(--color-text-secondary); }
+.cd-run__time input { min-height: 44px; padding: 8px 10px; border: 1px solid var(--color-border-strong); border-radius: var(--radius-element); background: var(--color-background-surface); color: inherit; font: inherit; max-width: 320px; }
+.cd-run__time input:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
+.cd-run__card { display: grid; gap: 8px; }
+.cd-run__summary { margin: 0; font-family: var(--font-family-heading); font-size: 1.2rem; font-weight: 700; }
+.cd-run__when { margin: 0; color: var(--color-text-secondary); }
+@media (max-width: 560px) { .cd-run__options { grid-template-columns: minmax(0, 1fr); } }
+
 .cd-search { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 4px; }
 .cd-search input[type="search"] { flex: 1 1 220px; min-width: 0; }
 .cd-search input, .cd-search select {
