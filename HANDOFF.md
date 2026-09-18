@@ -43,6 +43,10 @@ day, and the two decisions it could not make were answered by the owner:
 
 ## Migrations — applied and verified
 
+Migration 037 (challenge runs) followed on 2026-09-18, applied through the
+Supabase connector, verified in a rolled-back transaction and re-applied to
+prove it is idempotent; see `NEEDED.md` for what was checked.
+
 All four of 032-035 are in production on project `rvlybcjdpafwyeuojvhl`, applied
 2026-09-09. They were exercised first against a local Postgres 16 — the whole
 001-035 chain from an empty database, then re-applied to prove idempotency — and
