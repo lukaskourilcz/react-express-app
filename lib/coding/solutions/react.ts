@@ -12,11 +12,80 @@ const App = () => {
   const [color, setColor] = useState(colors[0]);
   return <><select value={color} onChange={event => setColor(event.target.value)}>{colors.map(one => <option key={one}>{one}</option>)}</select><p>You have selected: {color}</p></>;
 };`,
+    junior: `const colors = ['Red', 'Blue', 'Green'];
+
+const App = () => {
+  const [selectedColor, setSelectedColor] = useState('Red');
+
+  const handleChange = (event) => {
+    setSelectedColor(event.target.value);
+  };
+
+  const options = [];
+  for (const color of colors) {
+    options.push(<option key={color} value={color}>{color}</option>);
+  }
+
+  return (
+    <main>
+      <select value={selectedColor} onChange={handleChange}>
+        {options}
+      </select>
+      <p>You have selected: {selectedColor}</p>
+    </main>
+  );
+};`,
+    senior: `const colors = ['Red', 'Blue', 'Green'];
+
+const ColorSelect = ({ value, options, onChange }) => (
+  <select value={value} onChange={event => onChange(event.target.value)}>
+    {options.map(option => <option key={option} value={option}>{option}</option>)}
+  </select>
+);
+
+const App = () => {
+  const [color, setColor] = useState(colors[0]);
+  return (
+    <main>
+      <ColorSelect value={color} options={colors} onChange={setColor} />
+      <p aria-live="polite">You have selected: {color}</p>
+    </main>
+  );
+};`,
   },
   "react-counter": {
     solution: `const App = () => {
   const [count, setCount] = useState(0);
   return <><p>{count}</p><button onClick={() => setCount(previous => previous + 1)}>Increment</button></>;
+};`,
+    junior: `const App = () => {
+  const [count, setCount] = useState(0);
+
+  const handleIncrement = () => {
+    setCount(count + 1);
+  };
+
+  return (
+    <main>
+      <p>{count}</p>
+      <button onClick={handleIncrement}>Increment</button>
+    </main>
+  );
+};`,
+    senior: `const useCounter = (initial = 0) => {
+  const [count, setCount] = useState(initial);
+  const increment = useCallback(() => setCount(current => current + 1), []);
+  return { count, increment };
+};
+
+const App = () => {
+  const { count, increment } = useCounter();
+  return (
+    <main>
+      <p>{count}</p>
+      <button type="button" onClick={increment}>Increment</button>
+    </main>
+  );
 };`,
   },
   "react-toggle-button": {
@@ -24,11 +93,81 @@ const App = () => {
   const [isOn, setIsOn] = useState(false);
   return <button onClick={() => setIsOn(value => !value)}>{isOn ? 'ON' : 'OFF'}</button>;
 };`,
+    junior: `const App = () => {
+  const [isOn, setIsOn] = useState(false);
+
+  const handleClick = () => {
+    if (isOn) {
+      setIsOn(false);
+    } else {
+      setIsOn(true);
+    }
+  };
+
+  let label = 'OFF';
+  if (isOn) {
+    label = 'ON';
+  }
+
+  return (
+    <main>
+      <button onClick={handleClick}>{label}</button>
+    </main>
+  );
+};`,
+    senior: `const useToggle = (initial = false) => {
+  const [on, setOn] = useState(initial);
+  const toggle = useCallback(() => setOn(current => !current), []);
+  return [on, toggle];
+};
+
+const App = () => {
+  const [on, toggle] = useToggle();
+  return (
+    <main>
+      <button type="button" aria-pressed={on} onClick={toggle}>
+        {on ? 'ON' : 'OFF'}
+      </button>
+    </main>
+  );
+};`,
   },
   "react-live-paragraph": {
     solution: `const App = () => {
   const [text, setText] = useState('');
   return <><input value={text} onChange={event => setText(event.target.value)} /><p>{text}</p></>;
+};`,
+    junior: `const App = () => {
+  const [text, setText] = useState('');
+
+  const handleChange = (event) => {
+    setText(event.target.value);
+  };
+
+  return (
+    <main>
+      <input type="text" value={text} onChange={handleChange} />
+      <p>{text}</p>
+    </main>
+  );
+};`,
+    senior: `const useInput = (initial = '') => {
+  const [value, setValue] = useState(initial);
+  const onChange = useCallback(event => setValue(event.target.value), []);
+  return { value, onChange };
+};
+
+const App = () => {
+  const text = useInput();
+  return (
+    <main>
+      <label>
+        Your text
+        <input type="text" {...text} />
+      </label>
+      <p aria-live="polite">{text.value}</p>
+    </main>
+  );
 };`,
   },
   "react-data-list": {
@@ -38,11 +177,81 @@ const App = () => {
 ];
 
 const App = () => <ul>{people.map(person => <li key={person.id}><span>{person.name}</span>{' '}<span>{person.age}</span></li>)}</ul>;`,
+    junior: `const people = [
+  { id: 1, name: 'Daniel', age: 25 },
+  { id: 2, name: 'John', age: 24 },
+];
+
+const App = () => {
+  const items = [];
+  for (const person of people) {
+    items.push(
+      <li key={person.id}>
+        <span>{person.name}</span> <span>{person.age}</span>
+      </li>
+    );
+  }
+
+  return (
+    <main>
+      <ul>{items}</ul>
+    </main>
+  );
+};`,
+    senior: `const people = [
+  { id: 1, name: 'Daniel', age: 25 },
+  { id: 2, name: 'John', age: 24 },
+];
+
+const PersonItem = ({ name, age }) => (
+  <li>
+    <span>{name}</span> <span>{age}</span>
+  </li>
+);
+
+const App = () => (
+  <main>
+    <ul>
+      {people.map(({ id, ...person }) => <PersonItem key={id} {...person} />)}
+    </ul>
+  </main>
+);`,
   },
   "react-show-and-hide": {
     solution: `const App = () => {
   const [visible, setVisible] = useState(false);
   return <><button onClick={() => setVisible(value => !value)}>Toggle</button>{visible && <p>Visible text</p>}</>;
+};`,
+    junior: `const App = () => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  const handleToggle = () => {
+    setIsVisible(!isVisible);
+  };
+
+  let paragraph = null;
+  if (isVisible) {
+    paragraph = <p>Visible text</p>;
+  }
+
+  return (
+    <main>
+      <button onClick={handleToggle}>Toggle</button>
+      {paragraph}
+    </main>
+  );
+};`,
+    senior: `const App = () => {
+  const [visible, setVisible] = useState(false);
+  const toggle = () => setVisible(current => !current);
+  return (
+    <main>
+      <button type="button" aria-expanded={visible} onClick={toggle}>
+        {visible ? 'Hide' : 'Show'}
+      </button>
+      {visible ? <p>Now you see it.</p> : null}
+    </main>
+  );
 };`,
   },
   "react-add-a-todo": {
@@ -51,6 +260,60 @@ const App = () => <ul>{people.map(person => <li key={person.id}><span>{person.na
   const [todos, setTodos] = useState([]);
   const addTodo = () => { if (!text.trim()) return; setTodos(items => [...items, {id: crypto.randomUUID(), text: text.trim()}]); setText(''); };
   return <><input value={text} onChange={event => setText(event.target.value)} /><button onClick={addTodo}>Add</button><ul>{todos.map(todo => <li key={todo.id}>{todo.text}</li>)}</ul></>;
+};`,
+    junior: `const App = () => {
+  const [text, setText] = useState('');
+  const [todos, setTodos] = useState([]);
+  const [nextId, setNextId] = useState(1);
+
+  const handleChange = (event) => {
+    setText(event.target.value);
+  };
+
+  const handleAdd = () => {
+    const trimmed = text.trim();
+    if (trimmed === '') {
+      return;
+    }
+    const newTodo = { id: nextId, text: trimmed };
+    const nextTodos = [...todos, newTodo];
+    setTodos(nextTodos);
+    setNextId(nextId + 1);
+    setText('');
+  };
+
+  return (
+    <main>
+      <input type="text" value={text} onChange={handleChange} />
+      <button onClick={handleAdd}>Add</button>
+      <ul>
+        {todos.map(todo => <li key={todo.id}>{todo.text}</li>)}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const App = () => {
+  const [text, setText] = useState('');
+  const [todos, setTodos] = useState([]);
+  const nextId = useRef(1);
+
+  const addTodo = event => {
+    event.preventDefault();
+    const title = text.trim();
+    if (!title) return;
+    setTodos(current => [...current, { id: nextId.current++, title }]);
+    setText('');
+  };
+
+  return (
+    <main>
+      <form onSubmit={addTodo}>
+        <input value={text} onChange={event => setText(event.target.value)} aria-label="New todo" />
+        <button type="submit">Add</button>
+      </form>
+      <ul>{todos.map(todo => <li key={todo.id}>{todo.title}</li>)}</ul>
+    </main>
+  );
 };`,
   },
   "react-remove-a-todo": {
@@ -65,6 +328,61 @@ const App = () => {
   const removeTodo = id => setTodos(items => items.filter(item => item.id !== id));
   return <ul>{todos.map(todo => <li key={todo.id}>{todo.text} <button onClick={() => removeTodo(todo.id)}>Remove</button></li>)}</ul>;
 };`,
+    junior: `const initialTodos = [
+  { id: 1, text: 'Practice hooks' },
+  { id: 2, text: 'Read the docs' },
+  { id: 3, text: 'Ship the app' },
+];
+
+const App = () => {
+  const [todos, setTodos] = useState(initialTodos);
+
+  const handleRemove = (id) => {
+    const remaining = [];
+    for (const todo of todos) {
+      if (todo.id !== id) {
+        remaining.push(todo);
+      }
+    }
+    setTodos(remaining);
+  };
+
+  return (
+    <main>
+      <ul>
+        {todos.map(todo => (
+          <li key={todo.id}>
+            {todo.text} <button onClick={() => handleRemove(todo.id)}>Remove</button>
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const initialTodos = [
+  { id: 1, text: 'Practice hooks' },
+  { id: 2, text: 'Read the docs' },
+  { id: 3, text: 'Ship the app' },
+];
+
+const TodoItem = ({ todo, onRemove }) => (
+  <li>
+    {todo.text}{' '}
+    <button type="button" aria-label={\`Remove \${todo.text}\`} onClick={() => onRemove(todo.id)}>Remove</button>
+  </li>
+);
+
+const App = () => {
+  const [todos, setTodos] = useState(initialTodos);
+  const removeTodo = useCallback(id => setTodos(current => current.filter(todo => todo.id !== id)), []);
+  return (
+    <main>
+      {todos.length === 0 ? <p>All done.</p> : (
+        <ul>{todos.map(todo => <TodoItem key={todo.id} todo={todo} onRemove={removeTodo} />)}</ul>
+      )}
+    </main>
+  );
+};`,
   },
   "react-search-a-list": {
     solution: `const names = ['Ana', 'Daniel', 'John'];
@@ -73,6 +391,49 @@ const App = () => {
   const [query, setQuery] = useState('');
   const filtered = names.filter(name => name.toLowerCase().includes(query.toLowerCase()));
   return <><input value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(name => <li key={name}>{name}</li>)}</ul></>;
+};`,
+    junior: `const names = ['Ana', 'Daniel', 'John'];
+
+const App = () => {
+  const [query, setQuery] = useState('');
+
+  const handleChange = (event) => {
+    setQuery(event.target.value);
+  };
+
+  const lowerQuery = query.toLowerCase();
+  const matches = [];
+  for (const name of names) {
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes(lowerQuery)) {
+      matches.push(name);
+    }
+  }
+
+  return (
+    <main>
+      <input type="text" value={query} onChange={handleChange} />
+      <ul>
+        {matches.map(name => <li key={name}>{name}</li>)}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const names = ['Ana', 'Daniel', 'John'];
+
+const matches = (name, query) => name.toLocaleLowerCase().includes(query.trim().toLocaleLowerCase());
+
+const App = () => {
+  const [query, setQuery] = useState('');
+  const visible = useMemo(() => names.filter(name => matches(name, query)), [query]);
+  return (
+    <main>
+      <input type="search" aria-label="Search names" value={query} onChange={event => setQuery(event.target.value)} />
+      {visible.length === 0
+        ? <p>No matches.</p>
+        : <ul>{visible.map(name => <li key={name}>{name}</li>)}</ul>}
+    </main>
+  );
 };`,
   },
   "react-controlled-form": {
@@ -83,12 +444,115 @@ const App = () => {
   const submit = event => { event.preventDefault(); setSubmitted(form); };
   return <><form onSubmit={submit}><input name="name" value={form.name} onChange={updateField} /><input name="email" value={form.email} onChange={updateField} /><button>Submit</button></form>{submitted && <p>{submitted.name} — {submitted.email}</p>}</>;
 };`,
+    junior: `const App = () => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [submittedName, setSubmittedName] = useState('');
+  const [submittedEmail, setSubmittedEmail] = useState('');
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+
+  const handleNameChange = (event) => {
+    setName(event.target.value);
+  };
+
+  const handleEmailChange = (event) => {
+    setEmail(event.target.value);
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    setSubmittedName(name);
+    setSubmittedEmail(email);
+    setHasSubmitted(true);
+  };
+
+  let result = null;
+  if (hasSubmitted) {
+    result = <p>{submittedName} — {submittedEmail}</p>;
+  }
+
+  return (
+    <main>
+      <form onSubmit={handleSubmit}>
+        <input type="text" value={name} onChange={handleNameChange} />
+        <input type="email" value={email} onChange={handleEmailChange} />
+        <button type="submit">Submit</button>
+      </form>
+      {result}
+    </main>
+  );
+};`,
+    senior: `const emptyForm = { name: '', email: '' };
+const formReducer = (state, { name, value }) => ({ ...state, [name]: value });
+
+const Field = ({ label, ...props }) => (
+  <label>
+    {label}
+    <input {...props} />
+  </label>
+);
+
+const App = () => {
+  const [form, updateField] = React.useReducer(formReducer, emptyForm);
+  const [submitted, setSubmitted] = useState(null);
+
+  const onChange = ({ target }) => updateField({ name: target.name, value: target.value });
+  const onSubmit = event => {
+    event.preventDefault();
+    setSubmitted(form);
+  };
+
+  return (
+    <main>
+      <form onSubmit={onSubmit}>
+        <Field label="Name" name="name" value={form.name} onChange={onChange} />
+        <Field label="Email" name="email" type="email" value={form.email} onChange={onChange} />
+        <button type="submit">Submit</button>
+      </form>
+      {submitted && <p>Thanks, {submitted.name}. We will write to {submitted.email}.</p>}
+    </main>
+  );
+};`,
   },
   "react-effect-on-mount": {
     solution: `const App = () => {
   const [status, setStatus] = useState('Waiting…');
   useEffect(() => setStatus('Ready!'), []);
   return <p>{status}</p>;
+};`,
+    junior: `const App = () => {
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    setIsReady(true);
+  }, []);
+
+  let message = 'Waiting…';
+  if (isReady) {
+    message = 'Ready!';
+  }
+
+  return (
+    <main>
+      <p>{message}</p>
+    </main>
+  );
+};`,
+    senior: `const useMounted = () => {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  return mounted;
+};
+
+const App = () => {
+  const mounted = useMounted();
+  return (
+    <main>
+      <p role="status">{mounted ? 'Ready!' : 'Waiting…'}</p>
+    </main>
+  );
 };`,
   },
   "react-document-title": {
@@ -97,12 +561,89 @@ const App = () => {
   useEffect(() => { document.title = \`Count: \${count}\`; }, [count]);
   return <button onClick={() => setCount(value => value + 1)}>{count}</button>;
 };`,
+    junior: `const App = () => {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    document.title = 'Count: ' + count;
+  }, [count]);
+
+  const handleClick = () => {
+    setCount(count + 1);
+  };
+
+  return (
+    <main>
+      <p>{count}</p>
+      <button onClick={handleClick}>Increment</button>
+    </main>
+  );
+};`,
+    senior: `const useDocumentTitle = title => {
+  useEffect(() => {
+    const previous = document.title;
+    document.title = title;
+    // Give the tab its old name back when this component goes away
+    return () => { document.title = previous; };
+  }, [title]);
+};
+
+const App = () => {
+  const [count, setCount] = useState(0);
+  useDocumentTitle(\`Count: \${count}\`);
+  return (
+    <main>
+      <button type="button" onClick={() => setCount(current => current + 1)}>{count}</button>
+    </main>
+  );
+};`,
   },
   "react-delayed-message": {
     solution: `const App = () => {
   const [message, setMessage] = useState('Waiting…');
   useEffect(() => { const timer = setTimeout(() => setMessage('Done!'), 1000); return () => clearTimeout(timer); }, []);
   return <p>{message}</p>;
+};`,
+    junior: `const App = () => {
+  const [isDone, setIsDone] = useState(false);
+
+  useEffect(() => {
+    const timerId = setTimeout(() => {
+      setIsDone(true);
+    }, 1000);
+
+    return () => {
+      clearTimeout(timerId);
+    };
+  }, []);
+
+  let message = 'Waiting…';
+  if (isDone) {
+    message = 'Done!';
+  }
+
+  return (
+    <main>
+      <p>{message}</p>
+    </main>
+  );
+};`,
+    senior: `const useDelayed = (value, delay) => {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setReady(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+  return ready ? value : null;
+};
+
+const App = () => {
+  const message = useDelayed('Done!', 1000);
+  return (
+    <main>
+      <p role="status">{message ?? 'Waiting…'}</p>
+    </main>
+  );
 };`,
   },
   "react-get-one-user": {
@@ -111,12 +652,114 @@ const App = () => {
   useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users/1').then(response => response.json()).then(setUser); }, []);
   return user ? <p>{user.name} — {user.email}</p> : <p>Loading…</p>;
 };`,
+    junior: `const App = () => {
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const response = await fetch('https://jsonplaceholder.typicode.com/users/1');
+      const data = await response.json();
+      setUser(data);
+      setIsLoading(false);
+    };
+    loadUser();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <main>
+        <p>Loading…</p>
+      </main>
+    );
+  }
+
+  return (
+    <main>
+      <p>{user.name}</p>
+      <p>{user.email}</p>
+    </main>
+  );
+};`,
+    senior: `const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
+
+const useUser = id => {
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    let active = true;
+    fetch(\`\${USERS_URL}/\${id}\`)
+      .then(response => response.json())
+      // A response that lands after unmount, or after the id changed, is ignored
+      .then(data => { if (active) setUser(data); });
+    return () => { active = false; };
+  }, [id]);
+  return user;
+};
+
+const UserCard = ({ user }) => (
+  <p>{user.name} — <a href={\`mailto:\${user.email}\`}>{user.email}</a></p>
+);
+
+const App = () => {
+  const user = useUser(1);
+  return <main>{user ? <UserCard user={user} /> : <p>Loading…</p>}</main>;
+};`,
   },
   "react-get-users-list": {
     solution: `const App = () => {
   const [users, setUsers] = useState([]);
   useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users').then(response => response.json()).then(setUsers); }, []);
   return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
+};`,
+    junior: `const App = () => {
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      const response = await fetch('https://jsonplaceholder.typicode.com/users');
+      const data = await response.json();
+      setUsers(data);
+    };
+    loadUsers();
+  }, []);
+
+  const items = [];
+  for (const user of users) {
+    items.push(<li key={user.id}>{user.name}</li>);
+  }
+
+  return (
+    <main>
+      <ul>{items}</ul>
+    </main>
+  );
+};`,
+    senior: `const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
+
+const useUsers = () => {
+  const [users, setUsers] = useState([]);
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      const response = await fetch(USERS_URL);
+      const data = await response.json();
+      if (active) setUsers(data);
+    };
+    load();
+    return () => { active = false; };
+  }, []);
+  return users;
+};
+
+const UserList = ({ users }) => (
+  <ul aria-label="Users">
+    {users.map(user => <li key={user.id}>{user.name}</li>)}
+  </ul>
+);
+
+const App = () => {
+  const users = useUsers();
+  return <main><UserList users={users} /></main>;
 };`,
   },
   "react-loading-state": {
@@ -126,6 +769,60 @@ const App = () => {
   if (loading) return <p>Loading…</p>;
   return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
 };`,
+    junior: `const App = () => {
+  const [users, setUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      const response = await fetch('https://jsonplaceholder.typicode.com/users');
+      const data = await response.json();
+      setUsers(data);
+      setIsLoading(false);
+    };
+    loadUsers();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <main>
+        <p>Loading…</p>
+      </main>
+    );
+  }
+
+  return (
+    <main>
+      <ul>
+        {users.map(user => <li key={user.id}>{user.name}</li>)}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
+
+const App = () => {
+  // null means "nothing has arrived yet", so the loading flag is derived, not stored twice
+  const [users, setUsers] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch(USERS_URL)
+      .then(response => response.json())
+      .then(data => { if (active) setUsers(data); });
+    return () => { active = false; };
+  }, []);
+
+  const loading = users === null;
+
+  return (
+    <main aria-busy={loading}>
+      {loading
+        ? <p role="status">Loading…</p>
+        : <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>}
+    </main>
+  );
+};`,
   },
   "react-fetch-error-state": {
     solution: `const App = () => {
@@ -134,12 +831,151 @@ const App = () => {
   if (error) return <p>{error}</p>;
   return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
 };`,
+    junior: `const App = () => {
+  const [users, setUsers] = useState([]);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users');
+        if (!response.ok) {
+          throw new Error('The request failed with status ' + response.status);
+        }
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        setErrorMessage(error.message);
+      }
+    };
+    loadUsers();
+  }, []);
+
+  if (errorMessage !== '') {
+    return (
+      <main>
+        <p>Something went wrong: {errorMessage}</p>
+      </main>
+    );
+  }
+
+  return (
+    <main>
+      <ul>
+        {users.map(user => <li key={user.id}>{user.name}</li>)}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
+
+const fetchJson = async (url, options) => {
+  const response = await fetch(url, options);
+  if (!response.ok) throw new Error(\`Request failed (\${response.status})\`);
+  return response.json();
+};
+
+const App = () => {
+  // One object with a status field: the screen can never be loading and failed at once
+  const [state, setState] = useState({ status: 'loading' });
+
+  useEffect(() => {
+    let active = true;
+    fetchJson(USERS_URL)
+      .then(users => { if (active) setState({ status: 'ready', users }); })
+      .catch(error => { if (active) setState({ status: 'error', message: error.message }); });
+    return () => { active = false; };
+  }, []);
+
+  if (state.status === 'loading') return <main><p role="status">Loading…</p></main>;
+  if (state.status === 'error') return <main><p role="alert">Could not load users: {state.message}</p></main>;
+  return (
+    <main>
+      <ul>{state.users.map(user => <li key={user.id}>{user.name}</li>)}</ul>
+    </main>
+  );
+};`,
   },
   "react-select-fetched-user": {
     solution: `const App = () => {
   const [users, setUsers] = useState([]); const [selected, setSelected] = useState(null);
   useEffect(() => { fetch('https://jsonplaceholder.typicode.com/users').then(r => r.json()).then(setUsers); }, []);
   return <>{users.map(user => <button key={user.id} onClick={() => setSelected(user)}>{user.name}</button>)}{selected && <p>{selected.email}</p>}</>;
+};`,
+    junior: `const App = () => {
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      const response = await fetch('https://jsonplaceholder.typicode.com/users');
+      const data = await response.json();
+      setUsers(data);
+    };
+    loadUsers();
+  }, []);
+
+  const handleSelect = (user) => {
+    setSelectedUser(user);
+  };
+
+  let details = null;
+  if (selectedUser !== null) {
+    details = (
+      <section>
+        <p>{selectedUser.name}</p>
+        <p>{selectedUser.email}</p>
+      </section>
+    );
+  }
+
+  return (
+    <main>
+      <div>
+        {users.map(user => (
+          <button key={user.id} onClick={() => handleSelect(user)}>{user.name}</button>
+        ))}
+      </div>
+      {details}
+    </main>
+  );
+};`,
+    senior: `const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
+
+const UserDetails = ({ user }) => (
+  <section aria-live="polite">
+    <h3>{user.name}</h3>
+    <p>{user.email}</p>
+  </section>
+);
+
+const App = () => {
+  const [users, setUsers] = useState([]);
+  // Only the id lives in state, so the details can never drift from the list
+  const [selectedId, setSelectedId] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch(USERS_URL)
+      .then(response => response.json())
+      .then(data => { if (active) setUsers(data); });
+    return () => { active = false; };
+  }, []);
+
+  const selected = users.find(user => user.id === selectedId);
+
+  return (
+    <main>
+      <div role="group" aria-label="Users">
+        {users.map(user => (
+          <button key={user.id} type="button" aria-pressed={user.id === selectedId} onClick={() => setSelectedId(user.id)}>
+            {user.name}
+          </button>
+        ))}
+      </div>
+      {selected && <UserDetails user={selected} />}
+    </main>
+  );
 };`,
   },
   "react-filter-fetched-users": {
@@ -149,6 +985,72 @@ const App = () => {
   const filtered = users.filter(user => user.name.toLowerCase().includes(query.toLowerCase()));
   return <><input value={query} onChange={event => setQuery(event.target.value)} /><ul>{filtered.map(user => <li key={user.id}>{user.name}</li>)}</ul></>;
 };`,
+    junior: `const App = () => {
+  const [users, setUsers] = useState([]);
+  const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      const response = await fetch('https://jsonplaceholder.typicode.com/users');
+      const data = await response.json();
+      setUsers(data);
+    };
+    loadUsers();
+  }, []);
+
+  const handleChange = (event) => {
+    setQuery(event.target.value);
+  };
+
+  const lowerQuery = query.toLowerCase();
+  const matchingUsers = [];
+  for (const user of users) {
+    const lowerName = user.name.toLowerCase();
+    if (lowerName.includes(lowerQuery)) {
+      matchingUsers.push(user);
+    }
+  }
+
+  return (
+    <main>
+      <input type="text" value={query} onChange={handleChange} />
+      <ul>
+        {matchingUsers.map(user => <li key={user.id}>{user.name}</li>)}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
+
+const useUsers = () => {
+  const [users, setUsers] = useState([]);
+  useEffect(() => {
+    let active = true;
+    fetch(USERS_URL)
+      .then(response => response.json())
+      .then(data => { if (active) setUsers(data); });
+    return () => { active = false; };
+  }, []);
+  return users;
+};
+
+const App = () => {
+  const users = useUsers();
+  const [query, setQuery] = useState('');
+
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return needle ? users.filter(user => user.name.toLowerCase().includes(needle)) : users;
+  }, [users, query]);
+
+  return (
+    <main>
+      <input type="search" aria-label="Filter users" value={query} onChange={event => setQuery(event.target.value)} />
+      <p role="status">{visible.length} of {users.length} shown</p>
+      <ul>{visible.map(user => <li key={user.id}>{user.name}</li>)}</ul>
+    </main>
+  );
+};`,
   },
   "react-refresh-data": {
     solution: `const App = () => {
@@ -157,12 +1059,144 @@ const App = () => {
   useEffect(() => { loadTodo(); }, []);
   return <><button onClick={loadTodo}>Refresh</button>{todo && <p>{todo.title}</p>}</>;
 };`,
+    junior: `const App = () => {
+  const [todo, setTodo] = useState(null);
+
+  const loadTodo = async () => {
+    const randomId = Math.floor(Math.random() * 20) + 1;
+    const response = await fetch('https://jsonplaceholder.typicode.com/todos/' + randomId);
+    const data = await response.json();
+    setTodo(data);
+  };
+
+  useEffect(() => {
+    loadTodo();
+  }, []);
+
+  const handleRefresh = () => {
+    loadTodo();
+  };
+
+  let content = <p>Loading…</p>;
+  if (todo !== null) {
+    content = <p>{todo.title}</p>;
+  }
+
+  return (
+    <main>
+      <button onClick={handleRefresh}>Refresh</button>
+      {content}
+    </main>
+  );
+};`,
+    senior: `const TODOS_URL = 'https://jsonplaceholder.typicode.com/todos';
+const randomId = () => Math.floor(Math.random() * 20) + 1;
+
+const useRandomTodo = () => {
+  const [todo, setTodo] = useState(null);
+  const requestId = useRef(0);
+
+  const refresh = useCallback(async () => {
+    const current = ++requestId.current;
+    const response = await fetch(\`\${TODOS_URL}/\${randomId()}\`);
+    const data = await response.json();
+    // Only the newest request may update the screen; a slow older one is dropped
+    if (current === requestId.current) setTodo(data);
+  }, []);
+
+  useEffect(() => { refresh(); }, [refresh]);
+  return { todo, refresh };
+};
+
+const App = () => {
+  const { todo, refresh } = useRandomTodo();
+  return (
+    <main>
+      <button type="button" onClick={refresh}>Refresh</button>
+      <p aria-live="polite">{todo ? todo.title : 'Loading…'}</p>
+    </main>
+  );
+};`,
   },
   "react-post-a-new-post": {
     solution: `const App = () => {
   const [title, setTitle] = useState(''); const [created, setCreated] = useState(null);
   const submit = async event => { event.preventDefault(); const response = await fetch('https://jsonplaceholder.typicode.com/posts', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({title})}); setCreated(await response.json()); };
   return <><form onSubmit={submit}><input value={title} onChange={event => setTitle(event.target.value)} /><button>Create</button></form>{created && <pre>{JSON.stringify(created, null, 2)}</pre>}</>;
+};`,
+    junior: `const App = () => {
+  const [title, setTitle] = useState('');
+  const [createdPost, setCreatedPost] = useState(null);
+
+  const handleChange = (event) => {
+    setTitle(event.target.value);
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title }),
+    });
+    const data = await response.json();
+    setCreatedPost(data);
+  };
+
+  let result = null;
+  if (createdPost !== null) {
+    result = <p>Created post #{createdPost.id}: {createdPost.title}</p>;
+  }
+
+  return (
+    <main>
+      <form onSubmit={handleSubmit}>
+        <input type="text" value={title} onChange={handleChange} />
+        <button type="submit">Create</button>
+      </form>
+      {result}
+    </main>
+  );
+};`,
+    senior: `const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+
+const postJson = async (url, body) => {
+  const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (!response.ok) throw new Error(\`Request failed (\${response.status})\`);
+  return response.json();
+};
+
+const App = () => {
+  const [title, setTitle] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [created, setCreated] = useState(null);
+  const [error, setError] = useState('');
+
+  const submit = async event => {
+    event.preventDefault();
+    if (!title.trim() || saving) return;
+    setSaving(true);
+    setError('');
+    try {
+      setCreated(await postJson(POSTS_URL, { title: title.trim() }));
+      setTitle('');
+    } catch (failure) {
+      setError(failure.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <main>
+      <form onSubmit={submit}>
+        <input value={title} onChange={event => setTitle(event.target.value)} aria-label="Title" />
+        <button type="submit" disabled={saving}>{saving ? 'Creating…' : 'Create'}</button>
+      </form>
+      {error && <p role="alert">{error}</p>}
+      {created && <p>Saved as post {created.id}: {created.title}</p>}
+    </main>
+  );
 };`,
   },
   "react-create-and-append": {
@@ -171,12 +1205,142 @@ const App = () => {
   const createTodo = async () => { const response = await fetch('https://jsonplaceholder.typicode.com/todos', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({title:'Practice', completed:false})}); const created = await response.json(); setTodos(items => [...items, created]); };
   return <><button onClick={createTodo}>Add</button><ul>{todos.map((todo, index) => <li key={todo.id ?? index}>{todo.title}</li>)}</ul></>;
 };`,
+    junior: `const App = () => {
+  const [todos, setTodos] = useState([]);
+
+  const handleAdd = async () => {
+    const response = await fetch('https://jsonplaceholder.typicode.com/todos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'New todo', completed: false }),
+    });
+    const createdTodo = await response.json();
+    setTodos((currentTodos) => {
+      const nextTodos = [...currentTodos, createdTodo];
+      return nextTodos;
+    });
+  };
+
+  return (
+    <main>
+      <button onClick={handleAdd}>Add</button>
+      <ul>
+        {todos.map((todo, index) => <li key={index}>{todo.title}</li>)}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const TODOS_URL = 'https://jsonplaceholder.typicode.com/todos';
+
+const createTodo = async title => {
+  const response = await fetch(TODOS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, completed: false }),
+  });
+  if (!response.ok) throw new Error(\`Request failed (\${response.status})\`);
+  return response.json();
+};
+
+const App = () => {
+  const [todos, setTodos] = useState([]);
+  const [saving, setSaving] = useState(false);
+
+  const add = async () => {
+    setSaving(true);
+    try {
+      const created = await createTodo(\`Todo \${todos.length + 1}\`);
+      // The training API answers with the same id every time, so key on a local one
+      setTodos(current => [...current, { ...created, key: crypto.randomUUID() }]);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <main>
+      <button type="button" onClick={add} disabled={saving}>{saving ? 'Adding…' : 'Add'}</button>
+      <ul>{todos.map(todo => <li key={todo.key}>{todo.title}</li>)}</ul>
+    </main>
+  );
+};`,
   },
   "react-user-by-id": {
     solution: `const App = () => {
   const [id, setId] = useState(1); const [user, setUser] = useState(null);
   useEffect(() => { fetch(\`https://jsonplaceholder.typicode.com/users/\${id}\`).then(r => r.json()).then(setUser); }, [id]);
   return <><select value={id} onChange={event => setId(Number(event.target.value))}><option value="1">1</option><option value="2">2</option></select>{user && <p>{user.name}</p>}</>;
+};`,
+    junior: `const App = () => {
+  const [selectedId, setSelectedId] = useState('1');
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const response = await fetch('https://jsonplaceholder.typicode.com/users/' + selectedId);
+      const data = await response.json();
+      setUser(data);
+    };
+    loadUser();
+  }, [selectedId]);
+
+  const handleChange = (event) => {
+    setSelectedId(event.target.value);
+  };
+
+  let details = <p>Loading…</p>;
+  if (user !== null) {
+    details = <p>{user.name}</p>;
+  }
+
+  return (
+    <main>
+      <select value={selectedId} onChange={handleChange}>
+        <option value="1">User 1</option>
+        <option value="2">User 2</option>
+      </select>
+      {details}
+    </main>
+  );
+};`,
+    senior: `const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
+const USER_IDS = [1, 2];
+
+const useUser = id => {
+  const [user, setUser] = useState(null);
+  const cache = useRef(new Map());
+
+  useEffect(() => {
+    const cached = cache.current.get(id);
+    if (cached) {
+      setUser(cached); // already seen: no round trip
+      return undefined;
+    }
+    let active = true;
+    setUser(null);
+    fetch(\`\${USERS_URL}/\${id}\`)
+      .then(response => response.json())
+      .then(data => {
+        cache.current.set(id, data);
+        if (active) setUser(data);
+      });
+    return () => { active = false; };
+  }, [id]);
+
+  return user;
+};
+
+const App = () => {
+  const [id, setId] = useState(USER_IDS[0]);
+  const user = useUser(id);
+  return (
+    <main>
+      <select value={id} onChange={event => setId(Number(event.target.value))}>
+        {USER_IDS.map(one => <option key={one} value={one}>User {one}</option>)}
+      </select>
+      <p aria-live="polite">{user ? user.name : 'Loading…'}</p>
+    </main>
+  );
 };`,
   },
   "react-debounced-search": {
@@ -185,12 +1349,124 @@ const App = () => {
   useEffect(() => { const timer = setTimeout(() => setSettledQuery(query), 500); return () => clearTimeout(timer); }, [query]);
   return <><input value={query} onChange={event => setQuery(event.target.value)} /><p>Search: {settledQuery}</p></>;
 };`,
+    junior: `const App = () => {
+  const [query, setQuery] = useState('');
+  const [settledQuery, setSettledQuery] = useState('');
+  const timerRef = useRef(null);
+
+  const handleChange = (event) => {
+    const nextQuery = event.target.value;
+    setQuery(nextQuery);
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      setSettledQuery(nextQuery);
+      timerRef.current = null;
+    }, 500);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  return (
+    <main>
+      <input type="text" value={query} onChange={handleChange} />
+      <p>Search: {settledQuery}</p>
+    </main>
+  );
+};`,
+    senior: `const useDebouncedValue = (value, delay = 500) => {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return settled;
+};
+
+const App = () => {
+  const [query, setQuery] = useState('');
+  const settledQuery = useDebouncedValue(query);
+  const pending = query !== settledQuery;
+  return (
+    <main>
+      <input type="search" aria-label="Search" value={query} onChange={event => setQuery(event.target.value)} />
+      <p aria-live="polite">Search: {settledQuery}{pending ? ' (typing…)' : ''}</p>
+    </main>
+  );
+};`,
   },
   "react-abort-a-request": {
     solution: `const App = () => {
   const [posts, setPosts] = useState([]);
   useEffect(() => { const controller = new AbortController(); fetch('https://jsonplaceholder.typicode.com/posts', {signal: controller.signal}).then(r => r.json()).then(setPosts).catch(error => { if (error.name !== 'AbortError') console.error(error); }); return () => controller.abort(); }, []);
   return <p>{posts.length} posts</p>;
+};`,
+    junior: `const App = () => {
+  const [posts, setPosts] = useState([]);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const loadPosts = async () => {
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts', { signal: controller.signal });
+        const data = await response.json();
+        setPosts(data);
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          setErrorMessage(error.message);
+        }
+      }
+    };
+    loadPosts();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
+  if (errorMessage !== '') {
+    return (
+      <main>
+        <p>Could not load: {errorMessage}</p>
+      </main>
+    );
+  }
+
+  return (
+    <main>
+      <p>{posts.length} posts</p>
+    </main>
+  );
+};`,
+    senior: `const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+
+const useJson = url => {
+  const [state, setState] = useState({ data: null, error: null });
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(url, { signal: controller.signal })
+      .then(response => response.json())
+      .then(data => setState({ data, error: null }))
+      // Unmounting aborts on purpose; that is not a failure worth reporting
+      .catch(error => { if (error.name !== 'AbortError') setState({ data: null, error }); });
+    return () => controller.abort();
+  }, [url]);
+  return state;
+};
+
+const App = () => {
+  const { data: posts, error } = useJson(POSTS_URL);
+  if (error) return <main><p role="alert">Could not load anything.</p></main>;
+  return <main><p>{posts ? posts.length : 0} posts</p></main>;
 };`,
   },
   "react-paginated-posts": {
@@ -200,12 +1476,161 @@ const App = () => {
   const visible = posts.slice((page - 1) * pageSize, page * pageSize);
   return <><ul>{visible.map(post => <li key={post.id}>{post.title}</li>)}</ul><button disabled={page === 1} onClick={() => setPage(value => value - 1)}>Previous</button><button disabled={page * pageSize >= posts.length} onClick={() => setPage(value => value + 1)}>Next</button></>;
 };`,
+    junior: `const App = () => {
+  const [posts, setPosts] = useState([]);
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
+
+  useEffect(() => {
+    const loadPosts = async () => {
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+      const data = await response.json();
+      setPosts(data);
+    };
+    loadPosts();
+  }, []);
+
+  const start = (page - 1) * pageSize;
+  const end = start + pageSize;
+  const postsOnPage = [];
+  for (let index = start; index < end; index++) {
+    if (index < posts.length) {
+      postsOnPage.push(posts[index]);
+    }
+  }
+
+  const lastPage = Math.ceil(posts.length / pageSize);
+  const isFirstPage = page === 1;
+  const isLastPage = page >= lastPage;
+
+  const handlePrevious = () => {
+    if (!isFirstPage) {
+      setPage(page - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (!isLastPage) {
+      setPage(page + 1);
+    }
+  };
+
+  return (
+    <main>
+      <ul>
+        {postsOnPage.map(post => <li key={post.id}>{post.title}</li>)}
+      </ul>
+      <button onClick={handlePrevious} disabled={isFirstPage}>Previous</button>
+      <button onClick={handleNext} disabled={isLastPage}>Next</button>
+    </main>
+  );
+};`,
+    senior: `const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+const PAGE_SIZE = 5;
+
+const usePagination = (items, pageSize) => {
+  const [page, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(items.length / pageSize));
+  const current = Math.min(page, pageCount); // stays valid even if the list shrinks
+  const slice = useMemo(() => items.slice((current - 1) * pageSize, current * pageSize), [items, current, pageSize]);
+  return {
+    page: current,
+    pageCount,
+    slice,
+    previous: () => setPage(value => Math.max(1, value - 1)),
+    next: () => setPage(value => Math.min(pageCount, value + 1)),
+  };
+};
+
+const App = () => {
+  const [posts, setPosts] = useState([]);
+  useEffect(() => {
+    let active = true;
+    fetch(POSTS_URL).then(response => response.json()).then(data => { if (active) setPosts(data); });
+    return () => { active = false; };
+  }, []);
+
+  const { page, pageCount, slice, previous, next } = usePagination(posts, PAGE_SIZE);
+
+  return (
+    <main>
+      <ul>{slice.map(post => <li key={post.id}>{post.title}</li>)}</ul>
+      <nav aria-label="Pagination">
+        <button type="button" onClick={previous} disabled={page === 1}>Previous</button>
+        <span>Page {page} of {pageCount}</span>
+        <button type="button" onClick={next} disabled={page === pageCount}>Next</button>
+      </nav>
+    </main>
+  );
+};`,
   },
   "react-dependent-fetch": {
     solution: `const App = () => {
   const [userId, setUserId] = useState(1); const [posts, setPosts] = useState([]);
   useEffect(() => { fetch(\`https://jsonplaceholder.typicode.com/posts?userId=\${userId}\`).then(r => r.json()).then(setPosts); }, [userId]);
   return <><select value={userId} onChange={event => setUserId(Number(event.target.value))}><option value="1">User 1</option><option value="2">User 2</option></select><ul>{posts.map(post => <li key={post.id}>{post.title}</li>)}</ul></>;
+};`,
+    junior: `const App = () => {
+  const [selectedUserId, setSelectedUserId] = useState('1');
+  const [posts, setPosts] = useState([]);
+
+  useEffect(() => {
+    const loadPosts = async () => {
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts?userId=' + selectedUserId);
+      const data = await response.json();
+      setPosts(data);
+    };
+    loadPosts();
+  }, [selectedUserId]);
+
+  const handleChange = (event) => {
+    setSelectedUserId(event.target.value);
+  };
+
+  return (
+    <main>
+      <select value={selectedUserId} onChange={handleChange}>
+        <option value="1">User 1</option>
+        <option value="2">User 2</option>
+      </select>
+      <ul>
+        {posts.map(post => <li key={post.id}>{post.title}</li>)}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+const USER_IDS = [1, 2];
+
+const usePostsByUser = userId => {
+  const [posts, setPosts] = useState([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    const params = new URLSearchParams({ userId: String(userId) });
+    fetch(\`\${POSTS_URL}?\${params}\`, { signal: controller.signal })
+      .then(response => response.json())
+      .then(setPosts)
+      .catch(error => { if (error.name !== 'AbortError') setPosts([]); });
+    // A newer selection cancels the older request, so answers cannot land out of order
+    return () => controller.abort();
+  }, [userId]);
+  return posts;
+};
+
+const App = () => {
+  const [userId, setUserId] = useState(USER_IDS[0]);
+  const posts = usePostsByUser(userId);
+  return (
+    <main>
+      <label>
+        Author
+        <select value={userId} onChange={event => setUserId(Number(event.target.value))}>
+          {USER_IDS.map(id => <option key={id} value={id}>User {id}</option>)}
+        </select>
+      </label>
+      <ul>{posts.map(post => <li key={post.id}>{post.title}</li>)}</ul>
+    </main>
+  );
 };`,
   },
   "react-optimistic-todo": {
@@ -228,6 +1653,118 @@ const App = () => {
   const submit = event => { event.preventDefault(); if (!text.trim()) return; addTodo(text.trim()); setText(''); };
   return <><form onSubmit={submit}><input value={text} onChange={event => setText(event.target.value)} /><button>Add</button></form><ul>{todos.map(todo => <li key={todo.id}>{todo.title}{todo.pending ? ' (saving…)' : ''}</li>)}</ul></>;
 };`,
+    junior: `const App = () => {
+  const [title, setTitle] = useState('');
+  const [todos, setTodos] = useState([]);
+  const [nextTempId, setNextTempId] = useState(1);
+
+  const handleChange = (event) => {
+    setTitle(event.target.value);
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const trimmedTitle = title.trim();
+    if (trimmedTitle === '') {
+      return;
+    }
+    const tempId = 'temp-' + nextTempId;
+    setNextTempId(nextTempId + 1);
+    setTodos([...todos, { id: tempId, title: trimmedTitle }]);
+    setTitle('');
+
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: trimmedTitle, completed: false }),
+      });
+      if (!response.ok) {
+        throw new Error('Request failed');
+      }
+      const savedTodo = await response.json();
+      setTodos((currentTodos) => {
+        const updated = [];
+        for (const todo of currentTodos) {
+          if (todo.id === tempId) {
+            updated.push({ id: savedTodo.id, title: trimmedTitle });
+          } else {
+            updated.push(todo);
+          }
+        }
+        return updated;
+      });
+    } catch (error) {
+      setTodos((currentTodos) => {
+        const remaining = [];
+        for (const todo of currentTodos) {
+          if (todo.id !== tempId) {
+            remaining.push(todo);
+          }
+        }
+        return remaining;
+      });
+    }
+  };
+
+  return (
+    <main>
+      <form onSubmit={handleSubmit}>
+        <input type="text" value={title} onChange={handleChange} />
+        <button type="submit">Add</button>
+      </form>
+      <ul>
+        {todos.map(todo => <li key={todo.id}>{todo.title}</li>)}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const TODOS_URL = 'https://jsonplaceholder.typicode.com/todos';
+
+const postTodo = async title => {
+  const response = await fetch(TODOS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title, completed: false }) });
+  if (!response.ok) throw new Error(\`Request failed (\${response.status})\`);
+  return response.json();
+};
+
+const replaceTodo = (todos, id, next) => todos.map(todo => (todo.id === id ? next : todo));
+const withoutTodo = (todos, id) => todos.filter(todo => todo.id !== id);
+
+const App = () => {
+  const [todos, setTodos] = useState([]);
+  const [title, setTitle] = useState('');
+  const [notice, setNotice] = useState('');
+
+  const addTodo = async event => {
+    event.preventDefault();
+    const text = title.trim();
+    if (!text) return;
+    const draft = { id: crypto.randomUUID(), title: text, status: 'saving' };
+    setTodos(current => [...current, draft]);
+    setTitle('');
+    try {
+      const saved = await postTodo(text);
+      // Keep the local id as the key: the training API hands back the same one every time
+      setTodos(current => replaceTodo(current, draft.id, { ...draft, serverId: saved.id, status: 'saved' }));
+    } catch {
+      setTodos(current => withoutTodo(current, draft.id));
+      setNotice(\`Could not save "\${text}".\`);
+    }
+  };
+
+  return (
+    <main>
+      <form onSubmit={addTodo}>
+        <input value={title} onChange={event => setTitle(event.target.value)} aria-label="New todo" />
+        <button type="submit">Add</button>
+      </form>
+      {notice && <p role="alert">{notice}</p>}
+      <ul>
+        {todos.map(todo => <li key={todo.id}>{todo.title}{todo.status === 'saving' ? ' (saving…)' : ''}</li>)}
+      </ul>
+    </main>
+  );
+};`,
   },
   "react-reusable-usefetch-hook": {
     solution: `const useFetch = url => {
@@ -249,6 +1786,98 @@ const App = () => {
   if (loading) return <p>Loading…</p>;
   if (error) return <p>{error}</p>;
   return <ul>{data.map(user => <li key={user.id}>{user.name}</li>)}</ul>;
+};`,
+    junior: `const useFetch = (url) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error('Request failed with status ' + response.status);
+        }
+        const json = await response.json();
+        setData(json);
+      } catch (requestError) {
+        setError(requestError.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [url]);
+
+  return { data, loading, error };
+};
+
+const App = () => {
+  const result = useFetch('https://jsonplaceholder.typicode.com/users');
+
+  if (result.loading) {
+    return (
+      <main>
+        <p>Loading…</p>
+      </main>
+    );
+  }
+
+  if (result.error !== '') {
+    return (
+      <main>
+        <p>Error: {result.error}</p>
+      </main>
+    );
+  }
+
+  return (
+    <main>
+      <ul>
+        {result.data.map(user => <li key={user.id}>{user.name}</li>)}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
+
+const initial = { status: 'loading', data: null, error: '' };
+const reducer = (state, action) => {
+  switch (action.type) {
+    case 'start': return initial;
+    case 'success': return { status: 'ready', data: action.data, error: '' };
+    case 'failure': return { status: 'error', data: null, error: action.error };
+    default: return state;
+  }
+};
+
+const useFetch = url => {
+  const [state, dispatch] = React.useReducer(reducer, initial);
+  useEffect(() => {
+    const controller = new AbortController();
+    dispatch({ type: 'start' });
+    (async () => {
+      try {
+        const response = await fetch(url, { signal: controller.signal });
+        if (!response.ok) throw new Error(\`Request failed (\${response.status})\`);
+        dispatch({ type: 'success', data: await response.json() });
+      } catch (error) {
+        if (error.name !== 'AbortError') dispatch({ type: 'failure', error: error.message });
+      }
+    })();
+    return () => controller.abort();
+  }, [url]);
+  return { data: state.data, loading: state.status === 'loading', error: state.error };
+};
+
+const App = () => {
+  const { data: users, loading, error } = useFetch(USERS_URL);
+  if (loading) return <main><p role="status">Loading…</p></main>;
+  if (error) return <main><p role="alert">{error}</p></main>;
+  return <main><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;
 };`,
   },
   "react-crud-mini-app": {
@@ -275,6 +1904,133 @@ const App = () => {
   if (loading) return <p>Loading…</p>;
   return <><form onSubmit={createPost}><input value={title} onChange={event => setTitle(event.target.value)} /><button>Create</button></form><ul>{posts.map(post => <li key={post.id}>{post.title} <button onClick={() => editPost(post.id, 'Edited')}>Edit</button> <button onClick={() => deletePost(post.id)}>Delete</button></li>)}</ul></>;
 };`,
+    junior: `const App = () => {
+  const [posts, setPosts] = useState([]);
+  const [title, setTitle] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadPosts = async () => {
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+      const data = await response.json();
+      setPosts(data);
+      setIsLoading(false);
+    };
+    loadPosts();
+  }, []);
+
+  const handleTitleChange = (event) => {
+    setTitle(event.target.value);
+  };
+
+  const handleCreate = async (event) => {
+    event.preventDefault();
+    const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: title }),
+    });
+    const created = await response.json();
+    const newPost = { id: created.id, title: title };
+    setPosts((currentPosts) => [...currentPosts, newPost]);
+    setTitle('');
+  };
+
+  const handleEdit = (id) => {
+    const updatedPosts = [];
+    for (const post of posts) {
+      if (post.id === id) {
+        updatedPosts.push({ ...post, title: 'Edited' });
+      } else {
+        updatedPosts.push(post);
+      }
+    }
+    setPosts(updatedPosts);
+  };
+
+  const handleDelete = (id) => {
+    const remainingPosts = [];
+    for (const post of posts) {
+      if (post.id !== id) {
+        remainingPosts.push(post);
+      }
+    }
+    setPosts(remainingPosts);
+  };
+
+  if (isLoading) {
+    return (
+      <main>
+        <p>Loading…</p>
+      </main>
+    );
+  }
+
+  return (
+    <main>
+      <form onSubmit={handleCreate}>
+        <input type="text" value={title} onChange={handleTitleChange} />
+        <button type="submit">Create</button>
+      </form>
+      <ul>
+        {posts.map(post => (
+          <li key={post.id}>
+            {post.title} <button onClick={() => handleEdit(post.id)}>Edit</button> <button onClick={() => handleDelete(post.id)}>Delete</button>
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+
+const fetchJson = async (url, options) => {
+  const response = await fetch(url, options);
+  if (!response.ok) throw new Error(\`Request failed (\${response.status})\`);
+  return response.json();
+};
+
+const PostItem = ({ post, onEdit, onDelete }) => (
+  <li>
+    {post.title}{' '}
+    <button type="button" onClick={() => onEdit(post.id, 'Edited')}>Edit</button>{' '}
+    <button type="button" onClick={() => onDelete(post.id)}>Delete</button>
+  </li>
+);
+
+const App = () => {
+  const [posts, setPosts] = useState(null); // null until the first load lands
+  const [title, setTitle] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    fetchJson(POSTS_URL).then(data => { if (active) setPosts(data); });
+    return () => { active = false; };
+  }, []);
+
+  const createPost = async event => {
+    event.preventDefault();
+    const text = title.trim();
+    if (!text) return;
+    const created = await fetchJson(POSTS_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: text }) });
+    // The training API hands back a fixed id, so mint a local one that cannot collide
+    setPosts(current => [...current, { ...created, id: crypto.randomUUID(), title: text }]);
+    setTitle('');
+  };
+  const editPost = useCallback((id, nextTitle) => setPosts(current => current.map(post => (post.id === id ? { ...post, title: nextTitle } : post))), []);
+  const deletePost = useCallback(id => setPosts(current => current.filter(post => post.id !== id)), []);
+
+  if (!posts) return <main><p role="status">Loading…</p></main>;
+  return (
+    <main>
+      <form onSubmit={createPost}>
+        <input value={title} onChange={event => setTitle(event.target.value)} aria-label="Title" />
+        <button type="submit">Create</button>
+      </form>
+      <ul>{posts.map(post => <PostItem key={post.id} post={post} onEdit={editPost} onDelete={deletePost} />)}</ul>
+    </main>
+  );
+};`,
   },
   "react-stopwatch": {
     solution: `const App = () => {
@@ -285,6 +2041,79 @@ const App = () => {
   const reset = () => { stop(); setSeconds(0); };
   useEffect(() => stop, []);
   return <><p>{seconds}s</p><button onClick={start}>Start</button><button onClick={stop}>Stop</button><button onClick={reset}>Reset</button></>;
+};`,
+    junior: `const App = () => {
+  const [seconds, setSeconds] = useState(0);
+  const [intervalId, setIntervalId] = useState(null);
+
+  const handleStart = () => {
+    if (intervalId !== null) {
+      return;
+    }
+    const id = setInterval(() => {
+      setSeconds((current) => current + 1);
+    }, 1000);
+    setIntervalId(id);
+  };
+
+  const handleStop = () => {
+    if (intervalId !== null) {
+      clearInterval(intervalId);
+      setIntervalId(null);
+    }
+  };
+
+  const handleReset = () => {
+    handleStop();
+    setSeconds(0);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [intervalId]);
+
+  return (
+    <main>
+      <p>{seconds} s</p>
+      <button onClick={handleStart}>Start</button>
+      <button onClick={handleStop}>Stop</button>
+      <button onClick={handleReset}>Reset</button>
+    </main>
+  );
+};`,
+    senior: `const useInterval = (callback, delay) => {
+  const saved = useRef(callback);
+  useEffect(() => { saved.current = callback; }, [callback]);
+  useEffect(() => {
+    if (delay === null) return undefined;
+    const id = setInterval(() => saved.current(), delay);
+    return () => clearInterval(id);
+  }, [delay]);
+};
+
+const App = () => {
+  const [seconds, setSeconds] = useState(0);
+  const [running, setRunning] = useState(false);
+  // A null delay pauses the interval; the hook owns setup and teardown, so Start cannot double up
+  useInterval(() => setSeconds(current => current + 1), running ? 1000 : null);
+
+  const reset = () => {
+    setRunning(false);
+    setSeconds(0);
+  };
+
+  return (
+    <main>
+      <p>{seconds}s</p>
+      <button type="button" onClick={() => setRunning(true)} disabled={running}>Start</button>
+      <button type="button" onClick={() => setRunning(false)} disabled={!running}>Stop</button>
+      <button type="button" onClick={reset}>Reset</button>
+    </main>
+  );
 };`,
   },
   "react-uselocalstorage-hook": {
@@ -297,6 +2126,69 @@ const App = () => {
 const App = () => {
   const [count, setCount] = useLocalStorage('count', 0);
   return <><p>Count: {count}</p><button onClick={() => setCount(value => value + 1)}>Increment</button></>;
+};`,
+    junior: `const useLocalStorage = (key, initialValue) => {
+  const storedValue = localStorage.getItem(key);
+  let startingValue = initialValue;
+  if (storedValue !== null) {
+    startingValue = JSON.parse(storedValue);
+  }
+  const [value, setValue] = useState(startingValue);
+
+  const saveValue = (nextValue) => {
+    setValue(nextValue);
+    localStorage.setItem(key, JSON.stringify(nextValue));
+  };
+
+  return [value, saveValue];
+};
+
+const App = () => {
+  const [count, setCount] = useLocalStorage('count', 0);
+
+  const handleIncrement = () => {
+    setCount(count + 1);
+  };
+
+  return (
+    <main>
+      <p>Count: {count}</p>
+      <button onClick={handleIncrement}>Increment</button>
+    </main>
+  );
+};`,
+    senior: `const readStorage = (key, fallback) => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw === null ? fallback : JSON.parse(raw);
+  } catch {
+    return fallback; // corrupt or blocked storage falls back to the initial value
+  }
+};
+
+const useLocalStorage = (key, initial) => {
+  const [value, setValue] = useState(() => readStorage(key, initial));
+
+  // Accepts a value or an updater, exactly like the setter from useState
+  const update = useCallback(next => {
+    setValue(current => {
+      const resolved = typeof next === 'function' ? next(current) : next;
+      localStorage.setItem(key, JSON.stringify(resolved));
+      return resolved;
+    });
+  }, [key]);
+
+  return [value, update];
+};
+
+const App = () => {
+  const [count, setCount] = useLocalStorage('count', 0);
+  return (
+    <main>
+      <p>Count: {count}</p>
+      <button type="button" onClick={() => setCount(current => current + 1)}>Increment</button>
+    </main>
+  );
 };`,
   },
   "react-tabs": {
@@ -311,6 +2203,86 @@ const App = () => {
   const active = tabs.find(tab => tab.id === activeId);
   return <><div role="tablist">{tabs.map(tab => <button key={tab.id} role="tab" aria-selected={tab.id === activeId} onClick={() => setActiveId(tab.id)}>{tab.label}</button>)}</div><div role="tabpanel">{active.panel}</div></>;
 };`,
+    junior: `const tabs = [
+  { id: 'profile', label: 'Profile', panel: 'Profile details' },
+  { id: 'billing', label: 'Billing', panel: 'Billing details' },
+  { id: 'alerts', label: 'Alerts', panel: 'Alert settings' },
+];
+
+const App = () => {
+  const [activeTabId, setActiveTabId] = useState('profile');
+
+  const handleSelect = (tabId) => {
+    setActiveTabId(tabId);
+  };
+
+  let activePanel = '';
+  for (const tab of tabs) {
+    if (tab.id === activeTabId) {
+      activePanel = tab.panel;
+    }
+  }
+
+  return (
+    <main>
+      <div role="tablist">
+        {tabs.map(tab => {
+          let isSelected = false;
+          if (tab.id === activeTabId) {
+            isSelected = true;
+          }
+          return (
+            <button key={tab.id} role="tab" aria-selected={isSelected} onClick={() => handleSelect(tab.id)}>
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+      <div role="tabpanel">{activePanel}</div>
+    </main>
+  );
+};`,
+    senior: `const tabs = [
+  { id: 'profile', label: 'Profile', panel: 'Profile details' },
+  { id: 'billing', label: 'Billing', panel: 'Billing details' },
+  { id: 'alerts', label: 'Alerts', panel: 'Alert settings' },
+];
+
+const Tab = ({ tab, selected, onSelect }) => (
+  <button
+    type="button"
+    role="tab"
+    id={\`tab-\${tab.id}\`}
+    aria-selected={selected}
+    aria-controls={\`panel-\${tab.id}\`}
+    tabIndex={selected ? 0 : -1}
+    onClick={() => onSelect(tab.id)}
+  >
+    {tab.label}
+  </button>
+);
+
+const App = () => {
+  const [activeId, setActiveId] = useState(tabs[0].id);
+  const active = tabs.find(tab => tab.id === activeId) ?? tabs[0];
+
+  // Left and Right move between tabs, as the WAI-ARIA tabs pattern expects
+  const onKeyDown = event => {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+    if (!step) return;
+    const index = tabs.findIndex(tab => tab.id === activeId);
+    setActiveId(tabs[(index + step + tabs.length) % tabs.length].id);
+  };
+
+  return (
+    <main>
+      <div role="tablist" aria-label="Account" onKeyDown={onKeyDown}>
+        {tabs.map(tab => <Tab key={tab.id} tab={tab} selected={tab.id === activeId} onSelect={setActiveId} />)}
+      </div>
+      <div role="tabpanel" id={\`panel-\${active.id}\`} aria-labelledby={\`tab-\${active.id}\`}>{active.panel}</div>
+    </main>
+  );
+};`,
   },
   "react-accordion": {
     solution: `const sections = [
@@ -324,6 +2296,72 @@ const App = () => {
   const toggle = id => setOpenId(current => current === id ? null : id);
   return <>{sections.map(section => <section key={section.id}><button onClick={() => toggle(section.id)}>{section.title}</button>{openId === section.id && <p>{section.body}</p>}</section>)}</>;
 };`,
+    junior: `const sections = [
+  { id: 1, title: 'Shipping', body: 'Ships within two days' },
+  { id: 2, title: 'Returns', body: 'Returns stay open for thirty days' },
+  { id: 3, title: 'Support', body: 'Support answers every weekday' },
+];
+
+const App = () => {
+  const [openSectionId, setOpenSectionId] = useState(null);
+
+  const handleToggle = (sectionId) => {
+    if (openSectionId === sectionId) {
+      setOpenSectionId(null);
+    } else {
+      setOpenSectionId(sectionId);
+    }
+  };
+
+  return (
+    <main>
+      {sections.map(section => {
+        let body = null;
+        if (section.id === openSectionId) {
+          body = <p>{section.body}</p>;
+        }
+        return (
+          <section key={section.id}>
+            <button onClick={() => handleToggle(section.id)}>{section.title}</button>
+            {body}
+          </section>
+        );
+      })}
+    </main>
+  );
+};`,
+    senior: `const sections = [
+  { id: 1, title: 'Shipping', body: 'Ships within two days' },
+  { id: 2, title: 'Returns', body: 'Returns stay open for thirty days' },
+  { id: 3, title: 'Support', body: 'Support answers every weekday' },
+];
+
+const AccordionItem = ({ section, open, onToggle }) => {
+  const panelId = \`panel-\${section.id}\`;
+  return (
+    <section>
+      <h3>
+        <button type="button" aria-expanded={open} aria-controls={panelId} onClick={() => onToggle(section.id)}>
+          {section.title}
+        </button>
+      </h3>
+      {open && <p id={panelId}>{section.body}</p>}
+    </section>
+  );
+};
+
+const App = () => {
+  const [openId, setOpenId] = useState(null);
+  // Clicking the open header closes it; clicking another swaps in one step
+  const toggle = useCallback(id => setOpenId(current => (current === id ? null : id)), []);
+  return (
+    <main>
+      {sections.map(section => (
+        <AccordionItem key={section.id} section={section} open={section.id === openId} onToggle={toggle} />
+      ))}
+    </main>
+  );
+};`,
   },
   "react-star-rating": {
     solution: `const stars = [1, 2, 3, 4, 5];
@@ -333,6 +2371,80 @@ const App = () => {
   const [hovered, setHovered] = useState(0);
   const shown = hovered || rating;
   return <><div onMouseLeave={() => setHovered(0)}>{stars.map(star => <button key={star} onMouseEnter={() => setHovered(star)} onClick={() => setRating(star)}>{star <= shown ? '★' : '☆'}</button>)}</div><p>Rating: {rating}</p></>;
+};`,
+    junior: `const stars = [1, 2, 3, 4, 5];
+
+const App = () => {
+  const [rating, setRating] = useState(0);
+  const [hoveredStar, setHoveredStar] = useState(0);
+
+  const handleMouseEnter = (star) => {
+    setHoveredStar(star);
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredStar(0);
+  };
+
+  const handleClick = (star) => {
+    setRating(star);
+  };
+
+  let shownRating = rating;
+  if (hoveredStar > 0) {
+    shownRating = hoveredStar;
+  }
+
+  return (
+    <main>
+      <div>
+        {stars.map(star => {
+          let symbol = '☆';
+          if (star <= shownRating) {
+            symbol = '★';
+          }
+          return (
+            <button key={star} onMouseEnter={() => handleMouseEnter(star)} onMouseLeave={handleMouseLeave} onClick={() => handleClick(star)}>
+              {symbol}
+            </button>
+          );
+        })}
+      </div>
+      <p>Rating: {rating}</p>
+    </main>
+  );
+};`,
+    senior: `const stars = [1, 2, 3, 4, 5];
+
+const Star = ({ value, filled, onHover, onSelect }) => (
+  <button
+    type="button"
+    aria-label={\`\${value} star\${value === 1 ? '' : 's'}\`}
+    aria-pressed={filled}
+    onMouseEnter={() => onHover(value)}
+    onFocus={() => onHover(value)}
+    onClick={() => onSelect(value)}
+  >
+    {filled ? '★' : '☆'}
+  </button>
+);
+
+const App = () => {
+  const [rating, setRating] = useState(0);
+  const [hovered, setHovered] = useState(null);
+  const preview = hovered ?? rating; // the hover wins while the pointer is over a star
+  const clearHover = () => setHovered(null);
+
+  return (
+    <main>
+      <div role="group" aria-label="Rating" onMouseLeave={clearHover} onBlur={clearHover}>
+        {stars.map(star => (
+          <Star key={star} value={star} filled={star <= preview} onHover={setHovered} onSelect={setRating} />
+        ))}
+      </div>
+      <p>Rating: {rating}</p>
+    </main>
+  );
 };`,
   },
   "react-modal": {
@@ -346,6 +2458,90 @@ const App = () => {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [open]);
   return <><button onClick={() => setOpen(true)}>Open</button>{open && <div className="backdrop" onClick={close}><div className="modal" role="dialog" onClick={event => event.stopPropagation()}><h3>Confirm</h3><button onClick={close}>Close</button></div></div>}</>;
+};`,
+    junior: `const App = () => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleOpen = () => {
+    setIsOpen(true);
+  };
+
+  const handleClose = () => {
+    setIsOpen(false);
+  };
+
+  const handleBackdropClick = (event) => {
+    if (event.target === event.currentTarget) {
+      handleClose();
+    }
+  };
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'Escape') {
+      handleClose();
+    }
+  };
+
+  let modal = null;
+  if (isOpen) {
+    modal = (
+      <div className="backdrop" onClick={handleBackdropClick} onKeyDown={handleKeyDown}>
+        <div className="modal" role="dialog" aria-modal="true" tabIndex={-1}>
+          <h3>Confirm</h3>
+          <p>Are you sure?</p>
+          <button onClick={handleClose}>Close</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <main>
+      <button onClick={handleOpen}>Open</button>
+      {modal}
+    </main>
+  );
+};`,
+    senior: `const Modal = ({ title, onClose, children }) => {
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    const opener = document.activeElement;
+    dialogRef.current?.focus();
+    return () => opener?.focus?.(); // hand focus back to whatever opened the dialog
+  }, []);
+
+  const onBackdropClick = event => {
+    if (!dialogRef.current.contains(event.target)) onClose();
+  };
+  const onKeyDown = event => {
+    if (event.key === 'Escape') onClose();
+  };
+
+  return (
+    <div className="backdrop" onClick={onBackdropClick} onKeyDown={onKeyDown}>
+      <div className="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabIndex={-1} ref={dialogRef}>
+        <h3 id="modal-title">{title}</h3>
+        {children}
+        <button type="button" onClick={onClose}>Close</button>
+      </div>
+    </div>
+  );
+};
+
+const App = () => {
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  return (
+    <main>
+      <button type="button" onClick={() => setOpen(true)}>Open</button>
+      {open && (
+        <Modal title="Confirm" onClose={close}>
+          <p>This action cannot be undone.</p>
+        </Modal>
+      )}
+    </main>
+  );
 };`,
   },
   "react-theme-context": {
@@ -363,6 +2559,61 @@ const App = () => {
   const toggleTheme = () => setTheme(value => value === 'light' ? 'dark' : 'light');
   return <ThemeContext.Provider value={{theme, toggleTheme}}><main data-theme={theme}><Toolbar /></main></ThemeContext.Provider>;
 };`,
+    junior: `const ThemeContext = React.createContext({ theme: 'light', setTheme: () => {} });
+
+const ThemeButton = () => {
+  const context = React.useContext(ThemeContext);
+
+  const handleClick = () => {
+    if (context.theme === 'light') {
+      context.setTheme('dark');
+    } else {
+      context.setTheme('light');
+    }
+  };
+
+  return <button onClick={handleClick}>Theme: {context.theme}</button>;
+};
+
+const App = () => {
+  const [theme, setTheme] = useState('light');
+
+  return (
+    <ThemeContext.Provider value={{ theme: theme, setTheme: setTheme }}>
+      <main>
+        <ThemeButton />
+      </main>
+    </ThemeContext.Provider>
+  );
+};`,
+    senior: `const ThemeContext = React.createContext(null);
+
+const ThemeProvider = ({ children }) => {
+  const [theme, setTheme] = useState('light');
+  const toggleTheme = useCallback(() => setTheme(current => (current === 'light' ? 'dark' : 'light')), []);
+  // Memoised so consumers only re-render when the theme itself changes
+  const value = useMemo(() => ({ theme, toggleTheme }), [theme, toggleTheme]);
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+};
+
+const useTheme = () => {
+  const context = React.useContext(ThemeContext);
+  if (!context) throw new Error('useTheme needs a ThemeProvider above it');
+  return context;
+};
+
+const ThemeToggle = () => {
+  const { theme, toggleTheme } = useTheme();
+  return <button type="button" onClick={toggleTheme}>Theme: {theme}</button>;
+};
+
+const Toolbar = () => <header><ThemeToggle /></header>;
+
+const App = () => (
+  <ThemeProvider>
+    <main><Toolbar /></main>
+  </ThemeProvider>
+);`,
   },
   "react-usedebounce-hook": {
     solution: `const fruits = ['Apple', 'Banana', 'Cherry'];
@@ -379,6 +2630,93 @@ const App = () => {
   const settledQuery = useDebounce(query, 300);
   const visible = fruits.filter(fruit => fruit.toLowerCase().includes(settledQuery.toLowerCase()));
   return <><input value={query} onChange={event => setQuery(event.target.value)} /><ul>{visible.map(fruit => <li key={fruit}>{fruit}</li>)}</ul></>;
+};`,
+    junior: `const fruits = ['Apple', 'Banana', 'Cherry'];
+
+const useDebounce = (value, delay) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+    }
+    timerRef.current = setTimeout(() => {
+      setDebouncedValue(value);
+      timerRef.current = null;
+    }, delay);
+  }, [value, delay]);
+
+  useEffect(() => {
+    return () => {
+      if (timerRef.current !== null) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  return debouncedValue;
+};
+
+const App = () => {
+  const [query, setQuery] = useState('');
+  const debouncedQuery = useDebounce(query, 300);
+
+  const handleChange = (event) => {
+    setQuery(event.target.value);
+  };
+
+  const lowerQuery = debouncedQuery.toLowerCase();
+  const matchingFruits = [];
+  for (const fruit of fruits) {
+    if (fruit.toLowerCase().includes(lowerQuery)) {
+      matchingFruits.push(fruit);
+    }
+  }
+
+  return (
+    <main>
+      <input type="text" value={query} onChange={handleChange} />
+      <ul>
+        {matchingFruits.map(fruit => <li key={fruit}>{fruit}</li>)}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const fruits = ['Apple', 'Banana', 'Cherry'];
+
+const useDebounce = (value, delay) => {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    if (value === settled) return undefined; // nothing to wait for
+    const timer = setTimeout(() => setSettled(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay, settled]);
+  return settled;
+};
+
+const normalize = text => text.trim().toLocaleLowerCase();
+
+const FruitList = ({ items }) => (
+  items.length === 0
+    ? <p>No fruit matches.</p>
+    : <ul>{items.map(item => <li key={item}>{item}</li>)}</ul>
+);
+
+const App = () => {
+  const [query, setQuery] = useState('');
+  const settledQuery = useDebounce(query, 300);
+  const visible = useMemo(() => {
+    const needle = normalize(settledQuery);
+    return fruits.filter(fruit => normalize(fruit).includes(needle));
+  }, [settledQuery]);
+
+  return (
+    <main>
+      <input type="search" aria-label="Filter fruit" value={query} onChange={event => setQuery(event.target.value)} />
+      <FruitList items={visible} />
+    </main>
+  );
 };`,
   },
   "react-todo-dashboard": {
@@ -418,6 +2756,114 @@ const App = () => {
     </main>
   );
 };`,
+    junior: `const App = () => {
+  const [todos, setTodos] = useState([]);
+  const [newTitle, setNewTitle] = useState('');
+  const [nextId, setNextId] = useState(1000);
+
+  useEffect(() => {
+    const loadTodos = async () => {
+      const response = await fetch('https://jsonplaceholder.typicode.com/todos?_limit=3');
+      const data = await response.json();
+      setTodos(data);
+    };
+    loadTodos();
+  }, []);
+
+  let doneCount = 0;
+  for (const todo of todos) {
+    if (todo.completed) {
+      doneCount = doneCount + 1;
+    }
+  }
+
+  const handleTitleChange = (event) => {
+    setNewTitle(event.target.value);
+  };
+
+  const handleAdd = () => {
+    const trimmedTitle = newTitle.trim();
+    if (trimmedTitle === '') {
+      return;
+    }
+    const newTodo = { id: nextId, title: trimmedTitle, completed: false };
+    setTodos([...todos, newTodo]);
+    setNextId(nextId + 1);
+    setNewTitle('');
+  };
+
+  const handleRemove = (id) => {
+    const remaining = [];
+    for (const todo of todos) {
+      if (todo.id !== id) {
+        remaining.push(todo);
+      }
+    }
+    setTodos(remaining);
+  };
+
+  return (
+    <main>
+      <p>Done: {doneCount} of {todos.length}</p>
+      <input type="text" value={newTitle} onChange={handleTitleChange} />
+      <button onClick={handleAdd}>Add</button>
+      <ul>
+        {todos.map(todo => {
+          let status = 'to do';
+          if (todo.completed) {
+            status = 'done';
+          }
+          return (
+            <li key={todo.id}>
+              {todo.title} — {status} <button onClick={() => handleRemove(todo.id)}>Remove</button>
+            </li>
+          );
+        })}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const TODOS_URL = 'https://jsonplaceholder.typicode.com/todos?_limit=3';
+
+const TodoItem = ({ todo, onRemove }) => (
+  <li>
+    {todo.title} — {todo.completed ? 'done' : 'to do'}{' '}
+    <button type="button" aria-label={\`Remove \${todo.title}\`} onClick={() => onRemove(todo.id)}>Remove</button>
+  </li>
+);
+
+const App = () => {
+  const [todos, setTodos] = useState([]);
+  const [title, setTitle] = useState('');
+
+  useEffect(() => {
+    let active = true;
+    fetch(TODOS_URL).then(response => response.json()).then(data => { if (active) setTodos(data); });
+    return () => { active = false; };
+  }, []);
+
+  const done = todos.filter(todo => todo.completed).length; // derived, never stored
+
+  const add = event => {
+    event.preventDefault();
+    const text = title.trim();
+    if (!text) return;
+    setTodos(current => [...current, { id: crypto.randomUUID(), title: text, completed: false }]);
+    setTitle('');
+  };
+  const remove = useCallback(id => setTodos(current => current.filter(todo => todo.id !== id)), []);
+
+  return (
+    <main>
+      <p role="status">Done: {done} of {todos.length}</p>
+      <form onSubmit={add}>
+        <input value={title} onChange={event => setTitle(event.target.value)} aria-label="New todo" />
+        <button type="submit">Add</button>
+      </form>
+      <ul>{todos.map(todo => <TodoItem key={todo.id} todo={todo} onRemove={remove} />)}</ul>
+    </main>
+  );
+};`,
   },
   "react-product-search": {
     solution: `const App = () => {
@@ -445,6 +2891,89 @@ const App = () => {
           <li key={product.id}>{product.title} — {product.price} — {product.category}</li>
         ))}
       </ul>
+    </main>
+  );
+};`,
+    junior: `const App = () => {
+  const [products, setProducts] = useState([]);
+  const [searchText, setSearchText] = useState('');
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      const response = await fetch('https://dummyjson.com/products');
+      const data = await response.json();
+      setProducts(data.products);
+    };
+    loadProducts();
+  }, []);
+
+  const handleSearchChange = (event) => {
+    setSearchText(event.target.value);
+  };
+
+  const lowerSearch = searchText.toLowerCase();
+  const visibleProducts = [];
+  for (const product of products) {
+    const titleMatches = product.title.toLowerCase().includes(lowerSearch);
+    const categoryMatches = product.category.toLowerCase().includes(lowerSearch);
+    if (titleMatches || categoryMatches) {
+      visibleProducts.push(product);
+    }
+  }
+
+  let total = 0;
+  for (const product of visibleProducts) {
+    total = total + product.price;
+  }
+
+  return (
+    <main>
+      <p>Total: {total}</p>
+      <input type="text" value={searchText} onChange={handleSearchChange} />
+      <ul>
+        {visibleProducts.map(product => (
+          <li key={product.id}>{product.title} — {product.price} — {product.category}</li>
+        ))}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const PRODUCTS_URL = 'https://dummyjson.com/products';
+
+const useProducts = () => {
+  const [products, setProducts] = useState([]);
+  useEffect(() => {
+    let active = true;
+    fetch(PRODUCTS_URL)
+      .then(response => response.json())
+      .then(data => { if (active) setProducts(data.products ?? []); }); // this API nests the array
+    return () => { active = false; };
+  }, []);
+  return products;
+};
+
+const matches = (product, needle) =>
+  [product.title, product.category].some(field => field.toLowerCase().includes(needle));
+
+const ProductRow = ({ product }) => (
+  <li>{product.title} — {product.price} — {product.category}</li>
+);
+
+const App = () => {
+  const products = useProducts();
+  const [search, setSearch] = useState('');
+
+  const shown = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return needle ? products.filter(product => matches(product, needle)) : products;
+  }, [products, search]);
+  const total = useMemo(() => shown.reduce((sum, product) => sum + product.price, 0), [shown]);
+
+  return (
+    <main>
+      <p role="status">Total: {total}</p>
+      <input type="search" aria-label="Search products" value={search} onChange={event => setSearch(event.target.value)} />
+      <ul>{shown.map(product => <ProductRow key={product.id} product={product} />)}</ul>
     </main>
   );
 };`,
