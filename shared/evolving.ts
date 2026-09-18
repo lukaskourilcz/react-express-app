@@ -1,15 +1,21 @@
 import type { CodingTrack, Localized } from './coding-catalog';
 
+/** `fullstack` groups the three app builds on their own screen; `debugging`
+ * marks the one path that is about finding bugs rather than writing features,
+ * listed on its own on the Coding home. No category means an ordinary
+ * evolving project. */
+export type EvolvingCategory = 'fullstack' | 'debugging';
+
 export interface EvolvingChallenge {
   id: string;
   track: CodingTrack;
-  category?: 'fullstack';
+  category?: EvolvingCategory;
   title: Localized;
   stages: readonly string[];
 }
 
-const challenge = (id: string, track: CodingTrack, en: string, cs: string): EvolvingChallenge => ({
-  id, track, title: { en, cs }, stages: [1, 2, 3, 4, 5].flatMap(stage => [`${id}-${stage}-start`, `${id}-${stage}`]),
+const challenge = (id: string, track: CodingTrack, en: string, cs: string, category?: EvolvingCategory): EvolvingChallenge => ({
+  id, track, ...(category ? { category } : {}), title: { en, cs }, stages: [1, 2, 3, 4, 5].flatMap(stage => [`${id}-${stage}-start`, `${id}-${stage}`]),
 });
 
 const fullstack = (slug: string, en: string, cs: string): EvolvingChallenge => ({
@@ -38,6 +44,7 @@ export const EVOLVING_CHALLENGES: readonly EvolvingChallenge[] = [
   challenge('react-evolving-board', 'react', 'Task board', 'Nástěnka úkolů'),
   challenge('react-evolving-catalog', 'react', 'Product explorer', 'Průzkumník produktů'),
   challenge('react-evolving-form', 'react', 'Form wizard', 'Průvodce formulářem'),
+  challenge('js-evolving-debug', 'javascript', 'Debugging path', 'Ladicí cesta', 'debugging'),
 ];
 
 export function evolvingStage(id: string) {
