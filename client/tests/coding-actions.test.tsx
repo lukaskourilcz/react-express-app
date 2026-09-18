@@ -89,7 +89,8 @@ it('groups all learning controls below the editor with revealed hints after the 
   const bar = run.closest('.cd-editor-actions')!;
   expect(within(bar as HTMLElement).getByRole('button',{name:'Solution'})).toBeInTheDocument();
   expect(within(bar as HTMLElement).getByRole('button',{name:'Next hint'})).toBeInTheDocument();
-  expect(within(bar as HTMLElement).getByRole('button',{name:'Focus'})).toHaveAttribute('aria-pressed','false');
+  // Focus mode is gone: nothing in the bar toggles the layout.
+  expect(within(bar as HTMLElement).queryByRole('button',{name:'Focus'})).toBeNull();
   expect(within(bar as HTMLElement).getByRole('button',{name:/Skip/i})).toBeInTheDocument();
   const hint = screen.getByText('Use a function.');
   expect(hint.closest('li')).toBeInTheDocument();

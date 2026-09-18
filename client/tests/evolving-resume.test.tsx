@@ -14,6 +14,9 @@ vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ isAuthenticated: true }) }
 vi.mock('../src/coding/practice', () => ({
   useBookmarks: () => ({ data: { saved: [] } }),
   useSaveChallenge: () => ({ mutate: vi.fn() }),
+  // No challenge run is open: the stage flow under test is the plain one.
+  usePracticeSession: () => ({ data: { session: null } }),
+  useAdvanceSession: () => ({ mutate: vi.fn() }),
 }));
 vi.mock('../src/coding/api', () => ({
   codingKeys: { task: (id: string) => ['task', id], progress: () => ['progress'] },
