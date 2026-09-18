@@ -1,9 +1,16 @@
 # Evolving challenges and Collection
 
 Ten optional projects, each with five cumulative stages, are listed on Coding.
-FullStack adds three applications with eight stages each (74 evolving stages).
+FullStack adds three applications with eight stages each, and the debugging
+path adds one more project of its own (84 evolving stages in all).
 Each stage has an individual EN/CS brief, targeted official reference links,
-and a collapsed list of the prior requirements. Tests remain cumulative.
+and a collapsed list of the prior requirements, drawn smaller and lighter and
+numbered by the stage that set them. Tests are cumulative, and each stage
+lists its own checks first: the top rows of Results show what the brief just
+asked for — the call that goes in and the value that should come out — and
+every earlier stage's checks follow, unchanged. Results shows every check
+before the first run, with no verdict, so the expected inputs and outputs are
+visible from the start; lists longer than eight rows scroll inside their box.
 The existing task catalog, browser runners, server graders and hint/reveal
 controls handle all stages. JavaScript/TypeScript have hidden edge cases;
 TypeScript also has positive and negative compiler assertions. React uses the
@@ -63,6 +70,31 @@ The first React stage appends an empty React scaffold to the preceding typed
 API draft; it does not replace the API with a reference solution. Existing
 stage drafts always take priority. Legacy stage IDs 1–3 remain unchanged.
 
+## The debugging path
+
+One JavaScript project in its own `debugging` category, listed on the Coding
+home above the other projects. It is about the skill every other challenge
+assumes: finding out what code actually does before changing it. Every stage
+starts from the same café-orders program, which runs and is wrong in four
+places; the fifth stage adds the input nobody planned for. The ten stages
+follow the rhythm of Cathy Lai's "How I finally learnt to solve coding
+interview questions" (the first stage's reference): verify the setup and
+write the assumptions down; trace an example by hand and say the roadblock
+out loud; validate the logic at its edges; write code in pieces with a
+`console.log` between them; and treat the bug you did not plant as ordinary
+work. Each stage is a `debug`-format task whose untouched starter fails its own
+tests, with a method ladder (Hint, then three steps), hidden checks, and
+reference, junior and senior solutions. Source: `lib/coding/tasks/evolving-debug.ts`
+and `lib/coding/solutions/evolving-debug.ts`.
+
+| Stage | The step it teaches | What is fixed or written |
+| --- | --- | --- |
+| 1 | Verify the setup; write the assumptions down | `parseOrder` trims and converts |
+| 2 | Trace by hand; say the roadblock out loud | `summarize` keeps one total per item |
+| 3 | Validate the logic at the edges | `applyDiscount`: inclusive threshold, whole-number percent, rounding |
+| 4 | Write code in pieces, log between them | `trace` returns its value; `report` composes the pieces |
+| 5 | Stay calm with the bug you did not plant | `safeReport` reports bad lines instead of throwing |
+
 ## Playground layout
 
 The task description spans the full width above the playground. Editor and
@@ -71,13 +103,23 @@ results panel is never sticky over the action bar. Hints start closed on each
 visit and are revealed only through Hint/Next hint, ignoring old saved counts.
 
 Run/Submit/Format/Reset and Hint/Next hint/Solution/Skip share a compact bottom
-action bar spanning the playground width. Focus and the report flag remain right-aligned. Revealed hints form
-an ordered list after the controls. The editor's desktop minimum height is
-480px. Common learning controls remain reachable for narrow/puzzle layouts.
-Focus mode only uses split columns at desktop widths.
+action bar spanning the playground width. The save star and the report flag
+remain right-aligned; there is no focus mode. Revealed hints form an ordered
+list after the controls. The editor's desktop minimum height is 480px. Common
+learning controls remain reachable for narrow/puzzle layouts. The keyboard
+guide draws real keycaps, each with the key's glyph and printed name.
 Stage-specific references are part of the existing Resources tab, alongside
 technique documentation. Hint labels are "Hint" before the first reveal and
-"Next hint" afterwards; the exhausted button remains disabled.
+"Next hint" afterwards. When Hint or Solution is unavailable the button stays
+focusable and an Astryx tooltip says why (a minute of editing or one failed
+run opens hints; the solution opens after half the ladder); nothing is
+explained in a helper sentence under the toolbar.
+
+A verified pass opens a Solution tab beside Resources with two more ways to
+write the task, labelled juniorDev and seniorDev. Every graded code task
+carries both on the server, proven against its visible and hidden checks by
+`npm run test:coding`, and they travel only with a passing verdict or, on a
+return visit, with a recorded pass.
 
 `generateFinHover` generates a stable per-button fin profile: shade, size,
 direction, speed, position and swim/rise/dive/fade/diagonal entrance. Coding

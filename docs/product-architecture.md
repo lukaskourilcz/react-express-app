@@ -257,10 +257,16 @@ StudyShark keeps the dormant AI wiring (deeper explanations, Sharkira hints) beh
 
 ### Evolving projects (September 2026)
 
-The thirteen projects now contain 136 stages: ten focused stages per single-track
+The fourteen projects now contain 146 stages: ten focused stages per single-track
 project, twelve per full-stack project. New `-start` checkpoints separate setup,
 data loading and form wiring from subsequent behavior. Earlier requirements and
-tests remain cumulative. Original task IDs retain their drafts and completion;
-a passed original milestone also covers its new prerequisite without synthesizing
-extra XP receipts. The shared evolving registry controls routes, unlocks and
-progress. The full catalogue contains 385 tasks.
+tests remain cumulative, and each stage lists its own checks first so Results
+opens on what the brief just asked for. The `debugging` category holds one
+JavaScript project whose every stage starts from code that runs and is wrong;
+it follows the tracing-before-fixing rhythm described in
+`docs/evolving-challenges.md`. Original task IDs retain their drafts and
+completion; a passed original milestone also covers its new prerequisite
+without synthesizing extra XP receipts. The shared evolving registry controls
+routes, unlocks and progress. The full catalogue contains 395 tasks, and every
+graded code task carries a reference, a junior and a senior solution on the
+server; the last two reach the browser only with a verified pass.

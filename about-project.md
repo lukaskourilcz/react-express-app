@@ -33,7 +33,11 @@ server owns answers, grading, scores, and XP.
   sealed design keys), with authored hint ladders that end in documentation,
   coding tasks inside the Learn levels, a short review ladder, coding badges,
   and an optional **GitHub garden** that commits every passed task to the
-  learner's own repository.
+  learner's own repository. Every graded task also carries a junior and a
+  senior solution that open after a verified pass; fourteen evolving projects
+  include a debugging path built on `console.log` and the habit of tracing
+  before fixing; and a signed-in learner can shape a **challenge run** (track,
+  count, order) and plan it for a date and time.
 
 ## Tech stack
 

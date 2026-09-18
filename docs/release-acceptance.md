@@ -567,3 +567,25 @@ The final static-preview Lighthouse run scored mobile 75 / desktop 97 for perfor
 This release changes no database schema, scoring authority, billing or handler count. PostHog account-level funnel setup and Search Console sitemap submission remain documented owner actions. The deployment result is recorded on PR #189 after production verification.
 
 Production verification on the initial merge confirmed both products’ guide HTML, locale metadata and HTTPS/sandbox headers, but exposed a missing-guide soft 404: the broad SPA fallback still matched unknown topic paths. The follow-up excludes `/topics/` and `/cs/topics/` from that fallback; production status verification is recorded on PR #189 after redeployment.
+
+
+## 2026-09-18 — workbench rework, junior/senior solutions, the debugging path, challenge runs
+
+What changed: Results lists every check before the first run and scrolls after eight rows; each evolving stage leads with its own checks; the keyboard guide draws real keycaps; earlier stage briefs read as context; Hint and Solution explain themselves in Astryx tooltips instead of a helper line; focus mode is gone and the save star sits in the toolbar. Every graded code task carries a junior and a senior solution, proven by the content contract and shown in a Solution tab after a verified pass. A fourteenth evolving project, the debugging path, teaches tracing-before-fixing with `console.log` across ten stages. Challenge runs (migration 037) let a signed-in learner shape a run — track, count, order — and start it now or plan it for a date and time. Two fixes were carried over from the stale modernization branch (PR #185): puzzle line ids are now presentation ids translated inside the sealed session, and the payment webhook checks the amount and currency against the order and ignores a stale failure on a paid order.
+
+Local evidence, all executed on the merged head:
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api` | pass |
+| `npm run test:coding` | pass — 395 tasks (javascript 150, typescript 84, react 116, system-design 45); reference, junior and senior solutions proven against visible and hidden checks; Czech parity; debug-format starters fail their own tests; presented puzzle ids never sort into an accepted order (1 min 41 s) |
+| `npm run test:launch` | pass — adds challenge-run queue and schedule assertions and the webhook decision table |
+| `npm run test:paths` | pass |
+| `npm run test:client` | pass — 7 files, 43 tests |
+| `npm run build` | pass (React runner, client, sandbox page) |
+| `npm run test:harness` | pass — 129 assertions against the built sandbox in Chromium |
+| `npm run check:responsive` (devShark build, `/`, `/today`, `/coding`, `/coding/javascript`, `/coding/react`, three task pages, `/coding/fullstack`, `/coding/review`) | pass — 70 probes, 0 issues |
+| `npm audit --omit=dev` (root and client) | 0 vulnerabilities |
+| `git diff --check` | clean |
+
+Screenshots taken with a mocked API (light and dark, English and Czech, 1440 and 390 px): the idle Results rows, the capped list, the keycaps and both tooltips, the previous-requirements block, the Solution tab, the debugging path on the Coding home, the run planner in its form, planned and active states, the planned-run card on Today, and the run line on a task page. Not exercised here, and listed in `NEEDED.md`: the account-bound flow end to end (plan a run, start it from Today, pass a queued task), the Solution tab on a return visit, and migration 037 itself, which has not been applied.
