@@ -46,6 +46,7 @@ import type {
   CodingTaskProgress,
   CodingTaskResponse,
   CodingApproachesResponse,
+  CodingSolutionPair,
   CodingVerdictResponse,
   DesignAnswer,
 } from '../../shared/coding-api';
@@ -439,7 +440,15 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   };
 }
 
-function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGardenStatus | null): CodingVerdictResponse {
+/** The junior and senior solutions for a task, when both are authored. Called
+ * only where a pass has been established: by the grader just now, or by the
+ * recorded progress row. */
+const solutionPairFor = (id: string): CodingSolutionPair | null => {
+  const record = solutionFor(id);
+  return record?.junior && record.senior ? { junior: record.junior, senior: record.senior } : null;
+};
+
+function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGardenStatus | null, solutions: CodingSolutionPair | null): CodingVerdictResponse {
   return {
     verdict: graded.verdict,
     results: graded.results,
@@ -456,6 +465,7 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     xpAwarded: recorded?.xpAwarded ?? 0,
     applied: recorded?.applied ?? false,
     github,
+    solutions,
   };
 }
 
@@ -507,7 +517,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
       design: null,
       designReference: null,
       puzzle: { accepted, competencies: puzzle.competencies, claim: puzzle.claim },
-    }, null, null));
+    }, null, null, null));
   }
   if (task.track === 'system-design') {
     if (!Array.isArray(body.answers) || body.answers.length > 12) return jsonError(res, 400, 'bad_request', 'answers must be an array');
@@ -551,7 +561,9 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   }
   logEvent({ status: 200, kind: 'submit', track: task.track, verdict: graded.verdict, hasUser: Boolean(userId) });
   res.setHeader('Cache-Control', 'private, no-store');
-  return res.json(verdictBody(graded, recorded, github));
+  // A pass opens the two authored solutions. The grader decided the pass a
+  // moment ago in this same request, which is the only reason they are here.
+  return res.json(verdictBody(graded, recorded, github, graded.verdict === 'passed' && code !== null ? solutionPairFor(task.id) : null));
 }
 
 /* ── POST ?resource=coding-reveal ────────────────────────────────────── */
@@ -686,6 +698,6 @@ export async function handleCodingApproaches(req: VercelRequest, res: VercelResp
   }
 
   res.setHeader('Cache-Control', 'private, no-store');
-  const body: CodingApproachesResponse = { taskId: id, approaches: approachesFor(id) };
+  const body: CodingApproachesResponse = { taskId: id, approaches: approachesFor(id), solutions: solutionPairFor(id) };
   return res.json(body);
 }

@@ -14,7 +14,7 @@ import { DesignRunner } from '../../coding/DesignRunner';
 import { codingKeys, saveCodingDraft, useCodingProgress, useCodingTask } from '../../coding/api';
 import { useBookmarks, useSaveChallenge } from '../../coding/practice';
 import { CODING_INDEX } from '../../../../shared/coding-index';
-import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingTaskTrack, evolvingPassed, evolvingUnlocked } from '../../../../shared/evolving';
+import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingTaskTrack, evolvingPassed, evolvingUnlocked, type EvolvingCategory } from '../../../../shared/evolving';
 import { prepareEvolvingDraft } from '../../../../shared/coding-fullstack-support';
 import { SwimCta } from '../landing/LandingKit';
 import {
@@ -96,12 +96,12 @@ function StatusText({ status }: { status: Status }) {
 /** A star that saves a challenge for later. Saving records interest, never
  * access: a locked item stays in the list with its explanation and still
  * refuses to open. */
-function SaveButton({ taskId, saved, onToggle, busy }: { taskId: string; saved: boolean; onToggle: (next: boolean) => void; busy: boolean }) {
+function SaveButton({ taskId, saved, onToggle, busy, toolbar = false }: { taskId: string; saved: boolean; onToggle: (next: boolean) => void; busy: boolean; toolbar?: boolean }) {
   const { t } = useLanguage();
   return (
     <button
       type="button"
-      className={`cd-save${saved ? ' cd-save--on' : ''}`}
+      className={`cd-save${saved ? ' cd-save--on' : ''}${toolbar ? ' cd-save--toolbar' : ''}`}
       aria-pressed={saved}
       disabled={busy}
       title={t(saved ? 'coding.saved.remove' : 'coding.saved.add')}
@@ -146,12 +146,18 @@ function TaskRow({ task, status, saved, onSave, saving }: {
 }
 
 /* ── /coding ──────────────────────────────────────────────────────────── */
-function EvolvingGallery({ passed, fullstack = false }: { passed: ReadonlySet<string>; fullstack?: boolean }) {
+/** The evolving projects of one category: the plain ones, the FullStack apps,
+ * or the debugging path. Each category is its own list with its own copy. */
+function EvolvingGallery({ passed, category }: { passed: ReadonlySet<string>; category?: EvolvingCategory }) {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const listRef = useRef<HTMLDivElement>(null);
-  const challenges = EVOLVING_CHALLENGES.filter(challenge => (challenge.category === 'fullstack') === fullstack);
+  const fullstack = category === 'fullstack';
+  const challenges = EVOLVING_CHALLENGES.filter(challenge => challenge.category === category);
   const scrollable = challenges.length > 5;
+  const titleId = `${category ?? 'evolving'}-title`;
+  const titleKey = category === 'fullstack' ? 'coding.evolving.fullstack' : category === 'debugging' ? 'coding.evolving.debugging' : 'coding.evolving.title';
+  const bodyKey = category === 'fullstack' ? 'coding.evolving.fullstackBody' : category === 'debugging' ? 'coding.evolving.debuggingBody' : 'coding.evolving.body';
   useEffect(() => {
     const list = listRef.current;
     if (!list || !scrollable) return;
@@ -162,18 +168,18 @@ function EvolvingGallery({ passed, fullstack = false }: { passed: ReadonlySet<st
     const observer = new ResizeObserver(sizeList);
     rows.forEach(row => observer.observe(row));
     return () => observer.disconnect();
-  }, [scrollable, fullstack]);
-  return <section className="cd-projects" aria-labelledby={fullstack ? 'fullstack-title' : 'evolving-title'}>
+  }, [scrollable, category]);
+  return <section className="cd-projects" aria-labelledby={titleId}>
     <div className="cd-projects__intro">
-    <Kicker as="h2" id={fullstack ? 'fullstack-title' : 'evolving-title'}>{t(fullstack ? 'coding.evolving.fullstack' : 'coding.evolving.title')}</Kicker>
-    <p className="cd-lead">{t(fullstack ? 'coding.evolving.fullstackBody' : 'coding.evolving.body')}</p>
+    <Kicker as="h2" id={titleId}>{t(titleKey)}</Kicker>
+    <p className="cd-lead">{t(bodyKey)}</p>
     </div>
-    <div ref={listRef} className={`cd-project-list${scrollable ? ' cd-project-list--scroll' : ''}`} tabIndex={scrollable ? 0 : undefined} role={scrollable ? 'region' : undefined} aria-label={scrollable ? t('coding.evolving.title') : undefined}>{challenges.map((challenge, index) => {
+    <div ref={listRef} className={`cd-project-list${scrollable ? ' cd-project-list--scroll' : ''}`} tabIndex={scrollable ? 0 : undefined} role={scrollable ? 'region' : undefined} aria-label={scrollable ? t(titleKey) : undefined}>{challenges.map((challenge, index) => {
       const completed = challenge.stages.filter(id => evolvingPassed(id, passed)).length;
       return <article key={challenge.id} className="cd-project">
         <span className="cd-project__number" aria-hidden>{String(index + 1).padStart(2, '0')}</span>
         <div className="cd-project__name">
-        <p className="cd-project__track">{fullstack ? 'JavaScript · TypeScript · React · API' : t(`coding.track.${challenge.track}` as never)}</p>
+        <p className="cd-project__track">{fullstack ? 'JavaScript · TypeScript · React · API' : category === 'debugging' ? `${t(`coding.track.${challenge.track}` as never)} · ${t('coding.format.debug')}` : t(`coding.track.${challenge.track}` as never)}</p>
         <h3>{challenge.title[lang]}</h3>
         </div>
         <div className="cd-project__progress">
@@ -232,6 +238,7 @@ export function CodingHome() {
           );
         })}
       </section>
+      <EvolvingGallery passed={passed} category="debugging" />
       <EvolvingGallery passed={passed} />
       <Link className="cd-fullstack-feature" to="/coding/fullstack">
         <div><Kicker>{t('coding.discovery.build')}</Kicker><h2>{t('coding.evolving.fullstack')}</h2><p>{t('coding.discovery.fullstack')}</p><span className="cd-link">{t('coding.discovery.explore')} <span aria-hidden>↗</span></span></div>
@@ -279,7 +286,7 @@ export function FullStackScreen() {
     <Link className="cd-link" to="/coding">{t('coding.title')}</Link>
     <h1>{t('coding.evolving.title')}</h1>
     {isAuthenticated && progress.isError && <p className="cd-note cd-note--error" role="alert">{t('coding.collections.failed')} <button className="cd-btn" onClick={()=>void progress.refetch()}>{t('coding.retry')}</button></p>}
-    <EvolvingGallery passed={passed} fullstack />
+    <EvolvingGallery passed={passed} category="fullstack" />
   </div>;
 }
 
@@ -520,7 +527,7 @@ export function CodingTaskScreen() {
   const nextHref = stage
     ? stage.next ? `/coding/${evolvingTaskTrack(stage.next)}/${stage.next}` : null
     : next && next.id !== data.task.id ? `/coding/${next.track}/${next.id}` : null;
-  const backHref = stage?.challenge.category === 'fullstack' ? '/coding/fullstack' : `/coding/${data.task.track}`;
+  const backHref = stage?.challenge.category === 'fullstack' ? '/coding/fullstack' : stage?.challenge.category === 'debugging' ? '/coding' : `/coding/${data.task.track}`;
   const localDraft = readString(draftKey(data.task.id));
   const previousLocal = stage?.previous ? readString(draftKey(stage.previous)) : null;
   const initialCode = localDraft ?? data.draft ?? (stage && previousLocal !== null
@@ -532,7 +539,6 @@ export function CodingTaskScreen() {
       <div className="cd-actions">
         {draftState && <span role="status">{t(`coding.draft.${draftState}`)}</span>}
         {stage && <span>{stage.challenge.title[lang]} — {t('coding.evolving.stage', { n: stage.index + 1, total: stage.challenge.stages.length })}</span>}
-        {isAuthenticated && <SaveButton taskId={data.task.id} saved={bookmarks.data?.saved.includes(data.task.id) ?? false} busy={bookmarks.isPending || bookmarks.isError || save.isPending} onToggle={saved => save.mutate({ op: 'save', taskId: data.task.id, saved })} />}
       </div>
       {(bookmarks.isError || save.isError) && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')} <button className="cd-btn" onClick={() => void bookmarks.refetch()}>{t('coding.retry')}</button></p>}
       {stage && <nav className="cd-actions cd-stage-nav" aria-label={t('coding.evolving.title')}>
@@ -547,7 +553,31 @@ export function CodingTaskScreen() {
       </nav>}
       {data.task.track === 'system-design'
         ? <DesignRunner key={`${data.task.id}-${attempt}`} task={data.task} session={data.session} locked={data.locked} signedIn={data.signedIn} mode="section" onVerdict={onVerdict} onRetry={onRetry} nextHref={nextHref} backHref={backHref} />
-        : <CodingWorkbench key={`${data.task.id}-${attempt}`} task={data.task} session={data.session} locked={data.locked} signedIn={data.signedIn} initialCode={initialCode} mode="section" onDraft={onDraft} onVerdict={onVerdict} nextHref={nextHref} backHref={backHref} />}
+        : <CodingWorkbench
+            key={`${data.task.id}-${attempt}`}
+            task={data.task}
+            session={data.session}
+            locked={data.locked}
+            signedIn={data.signedIn}
+            progress={data.progress}
+            initialCode={initialCode}
+            mode="section"
+            onDraft={onDraft}
+            onVerdict={onVerdict}
+            nextHref={nextHref}
+            backHref={backHref}
+            // The star sits with the workbench's own utilities, beside the
+            // report flag, rather than floating above the brief.
+            saveAction={isAuthenticated && (
+              <SaveButton
+                toolbar
+                taskId={data.task.id}
+                saved={bookmarks.data?.saved.includes(data.task.id) ?? false}
+                busy={bookmarks.isPending || bookmarks.isError || save.isPending}
+                onToggle={(saved) => save.mutate({ op: 'save', taskId: data.task.id, saved })}
+              />
+            )}
+          />}
     </div>
   );
 }

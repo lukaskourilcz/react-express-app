@@ -251,13 +251,6 @@
 @media (max-width: 1023px) {
   .cd-splitter { display: none; }
 }
-/* Focus mode: the task brief steps back so the editor and
-   its results have the room. Nothing is removed — the brief is one click away
-   again — and the reduced-motion rules are untouched because nothing moves. */
-.cd-workbench--focus .cd-pane--task { display: none; }
-@media (min-width: 1024px) {
-  .cd-workbench--focus .cd-workbench__grid { grid-template-columns: minmax(0, 1fr) 10px minmax(0, 1fr); }
-}
 /* Long results and long translated labels scroll inside their own pane rather
    than pushing the page sideways. */
 .cd-panel { overflow-x: auto; }
@@ -289,6 +282,16 @@
   border-radius: 4px;
   background: var(--color-background-muted);
 }
+/* Earlier stage briefs: still binding, no longer the task. Smaller, lighter and
+   numbered, so the current brief above keeps the weight. */
+.cd-previous { font-size: 0.86rem; color: var(--color-text-secondary); }
+.cd-previous > summary { cursor: pointer; font-weight: 600; font-size: 0.82rem; min-height: 32px; display: flex; align-items: center; gap: 6px; }
+.cd-previous > summary:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: 4px; }
+.cd-previous__list { list-style: none; margin: 8px 0 0; padding: 0 0 0 12px; display: grid; gap: 10px; border-left: 2px solid var(--color-border); }
+.cd-previous__list li { display: grid; gap: 2px; }
+.cd-previous__stage { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-secondary); }
+.cd-prompt--previous { font-size: 0.86rem; line-height: 1.5; font-weight: 400; color: var(--color-text-secondary); }
+.cd-prompt--previous code { padding: 0 3px; font-size: 0.9em; color: inherit; }
 .cd-api { margin: 0; padding: 10px 12px; border-radius: var(--radius-inner); background: var(--color-background-muted); font-size: 0.88rem; line-height: 1.5; overflow-wrap: anywhere; }
 .cd-api code { font-family: var(--cd-mono); }
 
@@ -331,7 +334,10 @@
 }
 .cd-btn:hover:not(:disabled) { border-color: var(--ss-ink); }
 .cd-btn:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
-.cd-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.cd-btn:disabled, .cd-btn[aria-disabled='true'] { opacity: 0.55; cursor: not-allowed; }
+/* A control that is unavailable for a reason stays hoverable and focusable so
+   the reason can be read; it just does nothing when pressed. */
+.cd-btn[aria-disabled='true']:hover { background: inherit; }
 .cd-btn--primary { background: var(--brand-accent); border-color: var(--brand-accent); color: var(--brand-on-accent, #fff); }
 .cd-btn--primary:hover:not(:disabled) { filter: brightness(1.05); }
 .cd-btn--quiet { border-color: transparent; background: transparent; }
@@ -373,6 +379,11 @@
 
 /* results */
 .cd-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+/* Eight rows show; the rest scroll inside this box, never the page. The cap is
+   measured from the rendered rows (see ResultList). */
+.cd-results-scroll { min-width: 0; }
+.cd-results-scroll--capped { max-height: var(--cd-results-max, 60vh); overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; border-radius: var(--radius-inner); }
+.cd-results-scroll--capped:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 .cd-result {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -385,6 +396,7 @@
 .cd-result--pass { border-left: 3px solid var(--ss-success); }
 .cd-result--fail { border-left: 3px solid var(--ss-error); }
 .cd-result--idle { border-left: 3px solid var(--color-border-strong); }
+.cd-result--idle .cd-result__status { color: var(--color-text-secondary); }
 .cd-result__status { grid-row: 1 / span 3; font-weight: 700; padding-top: 2px; white-space: nowrap; }
 .cd-result--pass .cd-result__status { color: var(--ss-success-strong, var(--ss-success)); }
 .cd-result--fail .cd-result__status { color: var(--ss-error); }
@@ -415,6 +427,11 @@
 .cd-hint a { color: var(--color-text-accent); font-weight: 600; }
 
 .cd-solution pre { margin: 0; padding: 12px; border-radius: var(--radius-inner); background: var(--cd-editor-bg); color: var(--cd-editor-fg); font-family: var(--cd-mono); font-size: 0.82rem; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow: auto; }
+/* The Solution tab: two ways to write it, one after the other, each named for
+   the engineer who would write it that way. */
+.cd-solutions { display: grid; gap: 12px; }
+.cd-solution__title { margin: 0; font-family: var(--cd-mono); font-size: 0.9rem; font-weight: 700; letter-spacing: 0.01em; }
+.cd-solution__note { margin: 2px 0 8px; font-size: 0.82rem; color: var(--color-text-secondary); }
 
 .cd-checklist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .cd-checklist label { display: flex; gap: 10px; align-items: flex-start; min-height: 44px; padding: 8px 10px; border-radius: var(--radius-inner); border: 1px solid var(--ss-card-line); cursor: pointer; }
@@ -508,6 +525,10 @@
 .cd-save:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
 .cd-save--on { color: var(--brand-accent); border-color: var(--brand-accent); }
 .cd-save:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+/* The same star in the workbench toolbar, sized like the report flag beside it. */
+.cd-save--toolbar { min-width: 44px; width: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius-element); font-size: 1.15rem; }
+@media (min-width: 1024px) { .cd-workbench .cd-save--toolbar { width: 32px; min-width: 32px; min-height: 32px; font-size: 1rem; } }
+.cd-save:disabled { opacity: 0.55; cursor: not-allowed; }
 
 .cd-search { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 4px; }
 .cd-search input[type="search"] { flex: 1 1 220px; min-width: 0; }
@@ -611,9 +632,29 @@
 .cd-keyboard-guide { display: grid; gap: 6px; }
 .cd-keyboard-guide__row, .cd-keyboard-guide__chord { display: flex; align-items: center; justify-content: flex-end; gap: 3px; white-space: nowrap; }
 .cd-keyboard-guide__row { gap: 6px; font-size: 0.72rem; }
-.cd-keycap { width: 18px; height: 18px; flex: none; overflow: visible; }
-.cd-keycap rect { fill: var(--color-background-muted); stroke: var(--color-border-strong); }
-.cd-keycap path { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+/* A keycap: glyph and printed name on a cap with a lip, like the key itself. */
+.cd-keycap {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  min-height: 20px;
+  padding: 1px 5px 2px;
+  border: 1px solid var(--color-border-strong);
+  border-bottom-width: 3px;
+  border-radius: 5px;
+  background: var(--color-background-muted);
+  color: var(--color-text-primary);
+  font-family: var(--font-family-body);
+  font-size: 0.68rem;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent);
+}
+.cd-keycap svg { width: 11px; height: 11px; flex: none; overflow: visible; }
+.cd-keycap path { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.cd-keyboard-guide__chord > .cd-keycap + .cd-keycap { margin-left: 1px; }
 
 /* Keep 10–12 stage controls reachable without pushing the brief below a phone screen. */
 .cd-stage-nav { flex-wrap: nowrap; overflow-x: auto; padding: 4px 2px; }

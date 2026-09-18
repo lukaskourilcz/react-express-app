@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { Kicker, SwimCta, FinButton } from '../components/landing/LandingKit';
 import { Link } from 'react-router-dom';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useLanguage } from '../i18n/LanguageContext';
 import { readJSON, writeJSON } from '../lib/storage';
 import { ApiError } from '../lib/api';
@@ -27,7 +28,7 @@ import { SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint } from '../../../shared/coding-failure';
 import { revealCoding, submitCoding, useCodingApproaches } from './api';
 import { CODING_TIERS, formatOf, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
-import type { CodingLockReason, CodingVerdictResponse } from '../../../shared/coding-api';
+import type { CodingLockReason, CodingSolutionPair, CodingTaskProgress, CodingVerdictResponse } from '../../../shared/coding-api';
 import './Coding.css';
 
 export interface CodingWorkbenchProps {
@@ -35,8 +36,13 @@ export interface CodingWorkbenchProps {
   session: string | null;
   locked: CodingLockReason | null;
   signedIn: boolean;
+  /** The learner's recorded progress on this task, when the parent has it. A
+   * recorded pass opens the Solution tab on a return visit. */
+  progress?: CodingTaskProgress | null;
   initialCode: string | null;
   mode: 'section' | 'lesson';
+  /** The parent's save-for-later control, rendered beside the report flag. */
+  saveAction?: ReactNode;
   onDraft?: (code: string) => void;
   onVerdict?: (verdict: CodingVerdictResponse, submittedCode?: string) => void;
   onRevealed?: () => void;
@@ -45,7 +51,7 @@ export interface CodingWorkbenchProps {
   onContinue?: () => void;
 }
 
-type Tab = 'results' | 'types' | 'console' | 'preview' | 'resources' | 'approaches';
+type Tab = 'results' | 'types' | 'console' | 'preview' | 'resources' | 'solution' | 'approaches';
 type Phase = 'idle' | 'running' | 'submitting';
 
 const DRAFT_DEBOUNCE_MS = 900;
@@ -57,29 +63,78 @@ const SPLIT_MIN = 35;
 const SPLIT_MAX = 75;
 const SPLIT_DEFAULT = 58;
 const SPLIT_STEP = 5;
-interface WorkbenchLayout { split: number; focus: boolean }
+interface WorkbenchLayout { split: number }
 const readLayout = (): WorkbenchLayout => {
   const stored = readJSON<Partial<WorkbenchLayout>>(LAYOUT_KEY, {});
   const split = typeof stored.split === 'number' && Number.isFinite(stored.split)
     ? Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, Math.round(stored.split)))
     : SPLIT_DEFAULT;
-  return { split, focus: stored.focus === true };
+  return { split };
 };
 
-/** Prompt text with `code` spans rendered as code. */
-function Keycap({ name }: { name: 'control' | 'enter' | 'shift' | 'escape' | 'tab' }) {
-  const paths = {
-    control: 'M7 14l5-5 5 5',
-    enter: 'M17 7v7H7m4-4-4 4 4 4',
-    shift: 'M8 18v-6H5l7-7 7 7h-3v6Z',
-    escape: 'M16 8a6 6 0 1 1-8 8M7 7h6M7 7v6m0-6 7 7',
-    tab: 'M6 12h11m-4-4 4 4-4 4m5-9v10',
-  };
-  return <svg className="cd-keycap" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-    <rect x="1" y="1" width="22" height="22" rx="4" />
-    <path d={paths[name]} />
-  </svg>;
+/** A keycap drawn the way the key is printed: its glyph and its name, on a
+ * cap with a lip, so "Ctrl" reads as the key and not as a word. */
+const KEYCAPS = {
+  control: { label: 'Ctrl', path: 'M7 14l5-5 5 5' },
+  enter: { label: 'Enter', path: 'M17 7v7H7m4-4-4 4 4 4' },
+  shift: { label: 'Shift', path: 'M8 18v-6H5l7-7 7 7h-3v6Z' },
+  escape: { label: 'Esc', path: 'M5 5l14 14M19 5 5 19' },
+  tab: { label: 'Tab', path: 'M4 12h12m-4-4 4 4-4 4m8-9v10' },
+} as const;
+function Keycap({ name }: { name: keyof typeof KEYCAPS }) {
+  const { label, path } = KEYCAPS[name];
+  return (
+    <kbd className="cd-keycap">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d={path} /></svg>
+      <span>{label}</span>
+    </kbd>
+  );
 }
+
+/** How many result rows show before the list scrolls inside its own box. */
+const RESULT_ROWS_SHOWN = 8;
+
+/** A results list that shows its first eight rows and scrolls for the rest,
+ * inside its own box rather than the page. The cap is measured from the real
+ * rows, so wrapped calls, Czech labels and zoom all still show eight. */
+function ResultList({ count, label, children }: { count: number; label: string; children: ReactNode }) {
+  const boxRef = useRef<HTMLDivElement>(null);
+  const capped = count > RESULT_ROWS_SHOWN;
+  useEffect(() => {
+    const box = boxRef.current;
+    const list = box?.firstElementChild;
+    if (!box || !list) return;
+    if (!capped) { box.style.removeProperty('--cd-results-max'); return; }
+    const size = () => {
+      const rows = Array.from(list.children) as HTMLElement[];
+      const cut = rows[RESULT_ROWS_SHOWN];
+      if (!cut) return;
+      const top = cut.getBoundingClientRect().top - list.getBoundingClientRect().top;
+      // Everything above the ninth row, minus the gap that separates it.
+      box.style.setProperty('--cd-results-max', `${Math.max(48, Math.round(top - 6))}px`);
+    };
+    size();
+    const observer = new ResizeObserver(size);
+    (Array.from(list.children) as HTMLElement[]).slice(0, RESULT_ROWS_SHOWN + 1).forEach((row) => observer.observe(row));
+    return () => observer.disconnect();
+  }, [capped, count]);
+  return (
+    <div
+      ref={boxRef}
+      className={`cd-results-scroll${capped ? ' cd-results-scroll--capped' : ''}`}
+      tabIndex={capped ? 0 : undefined}
+      role={capped ? 'region' : undefined}
+      aria-label={capped ? label : undefined}
+    >
+      <ul className="cd-results">{children}</ul>
+    </div>
+  );
+}
+
+/** The names a React suite gives its cases, in order, so Results can list them
+ * before the first run. The suite is read, never executed, here. */
+const suiteCaseNames = (suite: string | undefined): string[] =>
+  Array.from((suite ?? '').matchAll(/\btest\(\s*(["'`])((?:\\.|(?!\1)[^\\])*)\1/g), (match) => match[2]);
 
 function Prompt({ text, className }: { text: string; className?: string }) {
   const parts = text.split('`');
@@ -103,7 +158,7 @@ function useOnline(): boolean {
 }
 
 export function CodingWorkbench(props: CodingWorkbenchProps) {
-  const { task, session, locked, signedIn, initialCode, mode, onDraft, onVerdict, onRevealed, nextHref, backHref, onContinue } = props;
+  const { task, session, locked, signedIn, progress, initialCode, mode, onDraft, onVerdict, onRevealed, nextHref, backHref, onContinue, saveAction } = props;
   const evolution = evolvingStage(task.id);
   const { t, lang } = useLanguage();
   const [reportOpen, setReportOpen] = useState(false);
@@ -378,7 +433,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
   const attemptReady = attemptStarted({ code, starter: task.starter, elapsedMs: Date.now() - startedAt.current, failedRun });
   const nextRung: LadderRung | null = rungs[taken] ?? null;
-  const takeHint = () => { if (nextRung && attemptReady) setHintsTaken(taken + 1); };
+  // Why a control is unavailable is said beside it, not hidden in a disabled
+  // button: the buttons stay focusable and hoverable and carry the reason as a
+  // tooltip, and a click on one does nothing.
+  const hintUnavailable = solution ? t('coding.hintTip.solutionShown') : !nextRung ? t('coding.hintExhausted') : !attemptReady ? t('coding.hintTip.locked') : '';
+  const giveUpUnavailable = !canGiveUp(taken, rungs.length) ? t('coding.giveUpLocked', { n: giveUpAfter(rungs.length) }) : '';
+  const takeHint = () => { if (!hintUnavailable && nextRung) setHintsTaken(taken + 1); };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -419,8 +479,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // Giving up and reading the reference solution is a different thing: it does
   // not open this, which is why the flag below is the verdict and not `solution`.
   const passedNow = verdict?.verdict === 'passed';
-  const approaches = useCodingApproaches(task.id, passedNow);
+  const approaches = useCodingApproaches(task.id, signedIn && (passedNow || progress?.status === 'passed'));
   const approachList = approaches.data?.approaches ?? [];
+  // The junior and senior solutions arrive with a verified pass — this one, or
+  // a recorded earlier one — and from nowhere else.
+  const solutions: CodingSolutionPair | null = verdict?.solutions ?? approaches.data?.solutions ?? null;
+  const suiteCases = useMemo(() => suiteCaseNames(task.suite), [task.suite]);
 
   // What went wrong, said once, in the learner's language.
   //
@@ -451,6 +515,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     // Reading the documentation is not asking for help: this tab is open from
     // the moment the task loads, costs no hint rung, and needs no failed run.
     { key: 'resources', label: t('coding.tab.resources'), badge: resourceCount > 0 ? String(resourceCount) : null, good: null },
+    // Opens with a verified pass: two more ways to write what was just solved.
+    ...(solutions ? [{ key: 'solution' as Tab, label: t('coding.tab.solution'), badge: '2', good: null }] : []),
     // Only when there is something to compare. A tab that opens on nothing is
     // worse than no tab.
     ...(approachList.length > 0
@@ -524,6 +590,40 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     </div>
   );
 
+  /** The junior and senior ways to write what the learner just solved. Both
+   * pass every check the learner's own code did, and the point is the
+   * distance between them. */
+  const renderSolution = (): ReactNode => solutions && (
+    <div className="cd-solutions">
+      <p className="cd-shortcuts">{t('coding.solution.intro')}</p>
+      {([['junior', solutions.junior], ['senior', solutions.senior]] as const).map(([level, code]) => (
+        <article key={level} className="cd-hint cd-solution">
+          <h4 className="cd-solution__title">{t(`coding.solution.${level}`)}</h4>
+          <p className="cd-solution__note">{t(`coding.solution.${level}Note`)}</p>
+          <pre>{code}</pre>
+        </article>
+      ))}
+    </div>
+  );
+
+  /** One row of the Results list. Before a run the row still says what goes
+   * in and what should come out; only the verdict column waits. */
+  const codeRow = (test: NonNullable<PlayableCodingTask['tests']>[number], result: RunOutcome['results'][number] | undefined, index: number): ReactNode => {
+    const status = result?.pass === true ? 'pass' : result?.pass === false ? 'fail' : 'idle';
+    return (
+      <li key={index} className={`cd-result cd-result--${status}`}>
+        <span className="cd-result__status">{status === 'pass' ? t('coding.results.pass') : status === 'fail' ? t('coding.results.fail') : <><span aria-hidden="true">—</span><span className="cd-visually-hidden">{t('coding.results.pending')}</span></>}</span>
+        <span className="cd-result__call">{test.call}{test.edge && <span className="cd-result__label"> · {t('coding.results.edge')}</span>}</span>
+        {test.label && <span className="cd-result__label">{L(test.label)}</span>}
+        <span className="cd-result__detail">
+          {result?.error
+            ? <><b>{t('coding.results.error')}:</b> {result.error}</>
+            : <><b>{t('coding.results.expected')}:</b> {JSON.stringify(test.expected)}{result && <> · <b>{t('coding.results.actual')}:</b> {result.actual}</>}</>}
+        </span>
+      </li>
+    );
+  };
+
   const renderResults = (): ReactNode => {
     if (isReact) {
       if (checklist) {
@@ -543,13 +643,32 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           </>
         );
       }
-      if (!reactRun) return <p className="cd-console__empty">{t('coding.results.idle')}</p>;
+      if (!reactRun) {
+        // Nothing has run, so the cases are listed by name with no verdict:
+        // the learner sees what the suite will ask before writing a line.
+        return (
+          <>
+            <p className="cd-console__empty">{t('coding.results.idle')}</p>
+            {suiteCases.length > 0 && (
+              <ResultList count={suiteCases.length} label={t('coding.tab.results')}>
+                {suiteCases.map((name, index) => (
+                  <li key={index} className="cd-result cd-result--idle">
+                    <span className="cd-result__status"><span aria-hidden="true">—</span><span className="cd-visually-hidden">{t('coding.results.pending')}</span></span>
+                    <span className="cd-result__call">{name}</span>
+                  </li>
+                ))}
+              </ResultList>
+            )}
+            {suiteCases.length > RESULT_ROWS_SHOWN && <p className="cd-shortcuts">{t('coding.results.more', { n: suiteCases.length - RESULT_ROWS_SHOWN })}</p>}
+          </>
+        );
+      }
       if (reactRun.status === 'compile-error') return <p className="cd-note cd-note--error">{t('coding.preview.compileError', { message: reactRun.compileError ?? '' })}</p>;
       if (reactRun.status === 'timeout') return <p className="cd-note cd-note--warn">{t('coding.preview.timeout')}</p>;
       return (
         <>
           {reactRun.status === 'done' && <p className="cd-summary">{t('coding.results.passing', { passed: reactRun.passed, total: reactRun.total })}{serverChecked && <small>{t('coding.results.serverNote')}</small>}{stale && <small>{t('coding.results.stale')}</small>}</p>}
-          <ul className="cd-results">
+          <ResultList count={reactRun.cases.length} label={t('coding.tab.results')}>
             {reactRun.cases.map((one, index) => (
               <li key={index} className={`cd-result cd-result--${one.status}`}>
                 <span className="cd-result__status">{one.status === 'pass' ? t('coding.results.pass') : t('coding.results.fail')}</span>
@@ -557,11 +676,27 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 {one.error && <span className="cd-result__detail"><b>{t('coding.results.error')}:</b> {one.error}</span>}
               </li>
             ))}
-          </ul>
+          </ResultList>
+          {reactRun.cases.length > RESULT_ROWS_SHOWN && <p className="cd-shortcuts">{t('coding.results.more', { n: reactRun.cases.length - RESULT_ROWS_SHOWN })}</p>}
         </>
       );
     }
-    if (!run) return <p className="cd-console__empty">{t('coding.results.idle')}</p>;
+    const tests = task.tests ?? [];
+    if (!run) {
+      // Before the first run every test is already on the board — the call
+      // that goes in and the value that should come out — with no verdict.
+      return (
+        <>
+          <p className="cd-console__empty">{t('coding.results.idle')}</p>
+          {tests.length > 0 && (
+            <ResultList count={tests.length} label={t('coding.tab.results')}>
+              {tests.map((test, index) => codeRow(test, undefined, index))}
+            </ResultList>
+          )}
+          {tests.length > RESULT_ROWS_SHOWN && <p className="cd-shortcuts">{t('coding.results.more', { n: tests.length - RESULT_ROWS_SHOWN })}</p>}
+        </>
+      );
+    }
     if (run.timedOut) return <p className="cd-note cd-note--warn">{t('coding.results.timeout')}</p>;
     if (run.codeError) return <p className="cd-note cd-note--error">{t('coding.results.codeError')} <code className="cd-inline-code">{run.codeError}</code></p>;
     const passedCount = run.results.filter((r) => r.pass === true).length;
@@ -573,31 +708,35 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {serverChecked && <small>{t('coding.results.serverNote')}</small>}
           {stale && <small>{t('coding.results.stale')}</small>}
         </p>
-        <ul className="cd-results">
-          {run.results.map((result, index) => {
-            const test = task.tests?.[index];
-            const status = result.pass === true ? 'pass' : result.pass === false ? 'fail' : 'idle';
-            return (
-              <li key={index} className={`cd-result cd-result--${status}`}>
-                <span className="cd-result__status">{status === 'pass' ? t('coding.results.pass') : status === 'fail' ? t('coding.results.fail') : '·'}</span>
-                <span className="cd-result__call">{test?.call ?? ''}{test?.edge && <span className="cd-result__label"> · {t('coding.results.edge')}</span>}</span>
-                {test?.label && <span className="cd-result__label">{L(test.label)}</span>}
-                <span className="cd-result__detail">
-                  {result.error
-                    ? <><b>{t('coding.results.error')}:</b> {result.error}</>
-                    : <><b>{t('coding.results.expected')}:</b> {JSON.stringify(test?.expected)} · <b>{t('coding.results.actual')}:</b> {result.actual}</>}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
+        <ResultList count={run.results.length} label={t('coding.tab.results')}>
+          {run.results.map((result, index) => codeRow(tests[index] ?? { call: '', expected: undefined }, result, index))}
+        </ResultList>
+        {run.results.length > RESULT_ROWS_SHOWN && <p className="cd-shortcuts">{t('coding.results.more', { n: run.results.length - RESULT_ROWS_SHOWN })}</p>}
       </>
     );
   };
 
   const renderTypes = (): ReactNode => {
     const check = run?.check;
-    if (!check) return <p className="cd-console__empty">{t('coding.results.idle')}</p>;
+    if (!check) {
+      const typeTests = task.typeTests ?? [];
+      return (
+        <>
+          <p className="cd-console__empty">{t('coding.results.idle')}</p>
+          {typeTests.length > 0 && (
+            <ResultList count={typeTests.length} label={t('coding.types.tests')}>
+              {typeTests.map((typeTest, index) => (
+                <li key={index} className="cd-result cd-result--idle">
+                  <span className="cd-result__status"><span aria-hidden="true">—</span><span className="cd-visually-hidden">{t('coding.results.pending')}</span></span>
+                  <span className="cd-result__call">{typeTest.code}{typeTest.rejects && <span className="cd-result__label"> · {t('coding.types.rejects')}</span>}</span>
+                  {typeTest.label && <span className="cd-result__label">{L(typeTest.label)}</span>}
+                </li>
+              ))}
+            </ResultList>
+          )}
+        </>
+      );
+    }
     const failing = check.typeTests.filter((one) => !one.pass).length;
     return (
       <>
@@ -613,7 +752,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           </ul>
         )}
         <p className="cd-editor-label">{t('coding.types.tests')}</p>
-        <ul className="cd-results">
+        <ResultList count={check.typeTests.length} label={t('coding.types.tests')}>
           {check.typeTests.map((one, index) => {
             const typeTest = task.typeTests?.[index];
             return (
@@ -625,7 +764,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               </li>
             );
           })}
-        </ul>
+        </ResultList>
       </>
     );
   };
@@ -694,7 +833,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
   return (
     <div
-      className={`cd-workbench cd-workbench--${mode}${layout.focus ? ' cd-workbench--focus' : ''}`}
+      className={`cd-workbench cd-workbench--${mode}`}
       onKeyDown={onKeyDown}
     >
       <span className="cd-visually-hidden" role="status" aria-live="polite">{announcement}</span>
@@ -709,9 +848,18 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               )}
             </div>
             <Prompt className="cd-prompt" text={L(task.prompt)} />
-            {Boolean(task.previousRequirements?.length) && <details>
+            {/* Earlier briefs still apply, but they are context now, not the
+                task: smaller, lighter, and numbered by the stage that set them. */}
+            {Boolean(task.previousRequirements?.length) && <details className="cd-previous">
               <summary>{t('coding.evolving.previous')}</summary>
-              {task.previousRequirements!.map((brief,index) => <Prompt key={index} className="cd-prompt" text={L(brief)} />)}
+              <ol className="cd-previous__list">
+                {task.previousRequirements!.map((brief, index) => (
+                  <li key={index}>
+                    <span className="cd-previous__stage">{t('coding.evolving.stageShort', { n: index + 1 })}</span>
+                    <Prompt className="cd-prompt cd-prompt--previous" text={L(brief)} />
+                  </li>
+                ))}
+              </ol>
             </details>}
             {/* Beside the brief, so nothing is injected into code the learner
                 is reading or about to run. */}
@@ -795,6 +943,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               {one.key === 'console' && renderConsole()}
               {one.key === 'preview' && renderPreview()}
               {one.key === 'resources' && renderResources()}
+              {one.key === 'solution' && renderSolution()}
               {one.key === 'approaches' && renderApproaches()}
             </div>
           ))}
@@ -818,13 +967,17 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => setConfirming('reset')} disabled={resetDisabled}>{t('coding.reset')}</FinButton>
                 </>}
 
-                <FinButton type="button" className="cd-btn" onClick={takeHint} disabled={!nextRung || !attemptReady || Boolean(solution)} aria-describedby={`${baseId}-hint-note`}>
-                  {taken === 0 ? t('coding.hint') : t('coding.hintNext')}
-                </FinButton>
-                {session && !solution && (
-                  <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => setConfirming('reveal')} disabled={!canGiveUp(taken, rungs.length) || busy}>
-                    {t('coding.giveUp')}
+                <Tooltip content={hintUnavailable} placement="above" isEnabled={hintUnavailable !== ''}>
+                  <FinButton type="button" className="cd-btn" onClick={takeHint} aria-disabled={hintUnavailable !== '' || undefined}>
+                    {taken === 0 ? t('coding.hint') : t('coding.hintNext')}
                   </FinButton>
+                </Tooltip>
+                {session && !solution && (
+                  <Tooltip content={giveUpUnavailable} placement="above" isEnabled={giveUpUnavailable !== ''}>
+                    <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => { if (!giveUpUnavailable) setConfirming('reveal'); }} aria-disabled={giveUpUnavailable !== '' || undefined} disabled={busy}>
+                      {t('coding.giveUp')}
+                    </FinButton>
+                  </Tooltip>
                 )}
                 {signedIn && mode === 'section' && !skipResult && (
                   <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => setSkipping((open) => !open)} aria-expanded={skipping}>
@@ -832,14 +985,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                   </FinButton>
                 )}
                 <div className="cd-actions cd-actions--utility">
-                  <FinButton
-                    type="button"
-                    className="cd-btn cd-btn--quiet"
-                    aria-pressed={layout.focus}
-                    onClick={() => setLayout((current) => ({ ...current, focus: !current.focus }))}
-                  >
-                    {t('coding.layout.focusOn')}
-                  </FinButton>
+                  {saveAction}
                   <FinButton
                     type="button"
                     className="cd-btn cd-btn--icon cd-btn--flag"
@@ -852,16 +998,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 </div>
               </div>
               <div className="cd-action-guidance">
-                <p id={`${baseId}-hint-note`} className="cd-shortcuts">
-                  {!attemptReady && nextRung ? t('coding.hintLocked') : ''}
-                </p>
                 <div className="cd-shortcuts cd-keyboard-guide" role="img" aria-label={t('coding.shortcuts')}>
                   <span className="cd-keyboard-guide__row" aria-hidden="true">
                     <span className="cd-keyboard-guide__chord"><Keycap name="control" />+<Keycap name="enter" /> {t('coding.run')}</span>
                     <span className="cd-keyboard-guide__chord"><Keycap name="control" />+<Keycap name="shift" />+<Keycap name="enter" /> {t('coding.submit')}</span>
                   </span>
                   <span className="cd-keyboard-guide__row" aria-hidden="true">
-                    <Keycap name="escape" /><span>→</span><Keycap name="tab" /><span>{t('coding.shortcuts.leave')}</span>
+                    <Keycap name="escape" /><span>→</span><Keycap name="tab" /> {t('coding.shortcuts.leave')}
                   </span>
                 </div>
               </div>

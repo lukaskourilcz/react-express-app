@@ -58,6 +58,15 @@ export interface CodingSubmitRequest {
  * format: option index, estimate number, or the chosen order of step indices. */
 export type DesignAnswer = number | number[];
 
+/** Two more ways to write a task: how someone new to the language would, and
+ * how an experienced engineer would. Both are proven against every visible and
+ * hidden check by the content contract, and they travel only with a verified
+ * pass — this submission's, or one recorded earlier. */
+export interface CodingSolutionPair {
+  junior: string;
+  senior: string;
+}
+
 export interface CodingVerdictResponse {
   verdict: CodingOutcome;
   /** Visible tests, in task order (code tracks). */
@@ -85,6 +94,9 @@ export interface CodingVerdictResponse {
   xpAwarded: number;
   applied: boolean;
   github: CodingGardenStatus | null;
+  /** The junior and senior solutions, on a passed code submission. Null on
+   * any other verdict, on a puzzle, and for tasks without authored pairs. */
+  solutions: CodingSolutionPair | null;
 }
 
 export interface DesignStepVerdict {
@@ -253,6 +265,8 @@ export interface CuratedApproachView {
 export interface CodingApproachesResponse {
   taskId: string;
   approaches: CuratedApproachView[];
+  /** The same pair a passing submission returns, for a task passed earlier. */
+  solutions: CodingSolutionPair | null;
 }
 
 /** The result of arranging a puzzle. `accepted` says the order is one the
