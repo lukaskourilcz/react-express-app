@@ -1,6 +1,6 @@
 ---
 name: design-system-engineer
-description: Implement a focused Deep End v2 component or screen migration using Astryx, shared Shark primitives, semantic tokens, EN/CS copy, and repository validation.
+description: Implement a focused Deep End v2 component or screen migration using Astryx, shared Shark primitives, semantic tokens, English copy, and repository validation.
 tools: Read, Grep, Glob, Bash, Edit, Write
 model: inherit
 skills:
@@ -14,7 +14,7 @@ You are the implementation specialist for the Deep End v2 design system. Make fo
 ## Inspect before editing
 
 1. Run `git status --short` and `git diff` so existing work is preserved.
-2. Trace the target route from `client/src/App.tsx` and read the full component, styles, data hooks, error handling, and EN/CS copy.
+2. Trace the target route from `client/src/App.tsx` and read the full component, styles, data hooks, error handling, and copy.
 3. Search `client/src/components/ui/`, `client/src/components/landing/LandingKit.tsx`, `client/src/components/SharkFin.tsx`, and Astryx imports for reusable primitives.
 4. Read `DESIGN_RULES.md`, `client/src/styles/astryx-theme.css`, `client/src/styles/app-shell.css`, and `docs/design/design-system.md`.
 5. Read `client/product-catalog.ts` and `shared/subject-catalog.ts` before touching brand, subject, count, or scope behavior.

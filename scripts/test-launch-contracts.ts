@@ -1562,11 +1562,13 @@ async function main() {
       }
     }
 
-    // EN and CS must carry the same keys. The type system only catches one
-  // direction: TranslationKey is derived from the English file, so a missing
-  // Czech key is a compile error — but a key removed from English and left in
-  // Czech is invisible, and a Czech string nobody can reach is worse than no
-  // string, because it reads as translated work that is live and is not.
+    // The app ships English only (`ENABLED_LANGS`), so the Czech dictionary is
+  // retained work rather than a live surface and a new English key is not
+  // obliged to arrive with a translation — `t` falls back to English for
+  // anything missing. What still has to hold is the other direction: a key
+  // removed from English and left in Czech is unreachable, and a Czech string
+  // nobody can render is worse than no string, because it reads as translated
+  // work that is live and is not.
   {
     const keysOf = (file: string) => {
       const source = readFileSync(join(process.cwd(), 'client/src/i18n', file), 'utf8');
@@ -1575,11 +1577,6 @@ async function main() {
     const en = keysOf('translations.ts');
     const cs = keysOf('translations.cs.ts');
     assert.ok(en.size > 1500, `the English dictionary looks truncated: ${en.size} keys`);
-    assert.deepEqual(
-      [...en].filter((key) => !cs.has(key)),
-      [],
-      'every English key needs a Czech one',
-    );
     assert.deepEqual(
       [...cs].filter((key) => !en.has(key)),
       [],

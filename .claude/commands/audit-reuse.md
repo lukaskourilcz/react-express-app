@@ -15,7 +15,7 @@ Audit reuse in `$ARGUMENTS` with behavior preservation as the primary constraint
    - state/data: `client/src/lib/`, existing query/API helpers, and `client/src/i18n/`
 3. Classify each candidate as intentional specialization, safe composition, safe generalization, or risky coupling. Cite exact paths and callers. Do not centralize unique art direction merely for purity.
 4. Prioritize removal of duplicate brand arrays, subject arrays, URL maps, count literals, dialog/toast/icon/motion/localization systems, semantic colors, loading/error patterns, and nearly identical layout components.
-5. If `--fix` is present, make the smallest safe refactor: extend the most authoritative existing abstraction, migrate all in-scope callers, preserve exports/compatibility where needed, and remove code only after verifying it is unused. Keep EN/CS and all product/subject behavior identical.
+5. If `--fix` is present, make the smallest safe refactor: extend the most authoritative existing abstraction, migrate all in-scope callers, preserve exports/compatibility where needed, and remove code only after verifying it is unused. Keep copy and all product/subject behavior identical.
 6. Trace any changed data flow through its existing API handler and tests. Confirm no answer key, score, XP, admin, auth, product, or subject authority moved to the browser.
 7. Run focused searches for leftover callers, then:
 

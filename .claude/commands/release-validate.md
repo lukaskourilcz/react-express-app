@@ -20,7 +20,7 @@ Validate `$ARGUMENTS` as a release candidate. Do not turn command failures into 
    git diff --check
    ```
 
-5. When UI changed, build/serve the client and run relevant real-browser and `scripts/check-responsive.mjs` coverage. Check both products, every touched subject accent, EN/CS, light/dark, reduced motion, and representative widths. When API/security code changed, trace authorization, schema validation, product/subject scope, rate limits, safe errors, and answer secrecy through the existing handler.
+5. When UI changed, build/serve the client and run relevant real-browser and `scripts/check-responsive.mjs` coverage. Check both products, every touched subject accent, light/dark, reduced motion, and representative widths. When API/security code changed, trace authorization, schema validation, product/subject scope, rate limits, safe errors, and answer secrecy through the existing handler.
 6. If `--fix` is present, fix failures caused by the scoped work, rerun the failing check, then rerun dependent release checks. Never edit applied migrations to make a check pass; add a forward migration only when genuinely required.
 7. Reinspect status and documentation consistency. Remove only temporary files created by this run; do not reset, checkout, stash, or overwrite unrelated work.
 8. Return a release report listing pass/fail/not-run for each command, visual/accessibility matrix actually covered, 12-handler count, critical flow evidence, dependency findings, residual concrete limitations, intended tracked changes, and unrelated pre-existing changes.

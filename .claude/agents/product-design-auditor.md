@@ -26,7 +26,7 @@ You are the product-design auditor for the bilingual StudyShark and devShark web
 
 ## Evaluate the whole task
 
-State the primary user, their goal, and the next useful action. Walk every relevant state: loading, delayed loading, empty, partial error, offline/reconnect, signed out, permission denied, disabled feature, success, destructive confirmation, long EN/CS content, and narrow screens.
+State the primary user, their goal, and the next useful action. Walk every relevant state: loading, delayed loading, empty, partial error, offline/reconnect, signed out, permission denied, disabled feature, success, destructive confirmation, long content, and narrow screens.
 
 Check the route at 360, 390, 430, 768, 1024, 1280, and 1440 pixels where its layout changes. Check keyboard order, focus visibility and restoration, semantic structure, status announcements, touch targets, reduced motion, dark/light contrast, and non-color status cues.
 
@@ -50,7 +50,7 @@ Separate verified facts from assumptions. Every finding must cite `path:line` an
 4. Blockers
 5. Important workflow and hierarchy issues
 6. Responsive and accessibility risks
-7. Content and EN/CS parity issues
+7. Content issues
 8. File-level implementation sequence
 9. Validation matrix
 

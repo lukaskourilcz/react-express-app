@@ -5,14 +5,36 @@ import { readString, writeString } from '../lib/storage';
 
 export type Lang = 'en' | 'cs';
 
+/** The languages the app ships.
+ *
+ * The product is English-only for now. The Czech dictionary, the question
+ * translations and the coding overlays all stay in the repository — they are
+ * finished work, and deleting them would mean retranslating from scratch —
+ * but nothing offers them to a visitor and nothing requires new copy to be
+ * written twice. Putting `'cs'` back in this list is the whole switch: the
+ * footer and profile controls reappear, a stored or browser preference is
+ * honoured again, and the lazy Czech chunk starts loading on demand.
+ *
+ * While the list holds one language the Czech chunk is never imported, so it
+ * does not reach the browser at all. */
+export const ENABLED_LANGS: readonly Lang[] = ['en'];
+export const MULTILINGUAL = ENABLED_LANGS.length > 1;
+const isEnabled = (value: unknown): value is Lang =>
+  typeof value === 'string' && (ENABLED_LANGS as readonly string[]).includes(value);
+
 const STORAGE_KEY = 'devquiz.lang';
 
 function detectInitialLang(): Lang {
   if (typeof window === 'undefined') return 'en';
+  // A single shipped language settles it: a stored choice, a prerendered
+  // locale and a browser preference are all answers to a question nobody is
+  // being asked. The stored value is left alone so it still means something
+  // the day the language comes back.
+  if (!MULTILINGUAL) return ENABLED_LANGS[0];
   const publicLocale = document.documentElement.dataset.publicLocale;
-  if (publicLocale === 'en' || publicLocale === 'cs') return publicLocale;
+  if (isEnabled(publicLocale)) return publicLocale;
   const stored = readString(STORAGE_KEY);
-  if (stored === 'cs' || stored === 'en') return stored;
+  if (isEnabled(stored)) return stored;
   return navigator.language?.toLowerCase().startsWith('cs') ? 'cs' : 'en';
 }
 
@@ -55,10 +77,10 @@ function interpolate(template: string, vars?: Vars): string {
 
 // Czech is loaded on demand so EN-only sessions (the majority) don't pay the
 // ~15-20 KB gzip cost of the cs dictionary on first paint. Cached once fetched.
-let csCache: Record<TranslationKey, string> | null = null;
-let csInflight: Promise<Record<TranslationKey, string>> | null = null;
+let csCache: Partial<Record<TranslationKey, string>> | null = null;
+let csInflight: Promise<Partial<Record<TranslationKey, string>>> | null = null;
 
-function loadCs(): Promise<Record<TranslationKey, string>> {
+function loadCs(): Promise<Partial<Record<TranslationKey, string>>> {
   if (csCache) return Promise.resolve(csCache);
   if (csInflight) return csInflight;
   csInflight = import('./translations.cs').then((mod) => {
@@ -91,6 +113,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   }, [lang]);
 
   const setLang = useCallback((next: Lang) => {
+    // A language the build does not ship is ignored rather than half-applied,
+    // so a stale deep link or a saved account preference cannot strand a
+    // visitor in a dictionary that is not there.
+    if (!isEnabled(next)) return;
     setLangState(next);
     writeString(STORAGE_KEY, next);
   }, []);

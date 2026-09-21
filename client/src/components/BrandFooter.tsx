@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useLanguage, useT } from '../i18n/LanguageContext';
+import { MULTILINGUAL, useLanguage, useT } from '../i18n/LanguageContext';
 import type { Lang } from '../i18n/LanguageContext';
 import { CURRENT_PRODUCT, PRODUCTS, SHARK_BRANDS, productUrl } from '../lib/products';
 import { capture } from '../lib/analytics';
@@ -93,17 +93,19 @@ export default function BrandFooter() {
             language and in a comfortable contrast, so the same three settings
             stay reachable here. */}
         <div className="ss-footer-settings" role="group" aria-label={t('profile.preferences')}>
-          <button
-            type="button"
-            onClick={() => {
-              const next: Lang = lang === 'en' ? 'cs' : 'en';
-              setLang(next);
-              void savePreferredLanguage(next);
-            }}
-            aria-label={t(lang === 'en' ? 'lang.switchToCzech' : 'lang.switchToEnglish')}
-          >
-            {lang === 'en' ? 'CS' : 'EN'}
-          </button>
+          {MULTILINGUAL && (
+            <button
+              type="button"
+              onClick={() => {
+                const next: Lang = lang === 'en' ? 'cs' : 'en';
+                setLang(next);
+                void savePreferredLanguage(next);
+              }}
+              aria-label={t(lang === 'en' ? 'lang.switchToCzech' : 'lang.switchToEnglish')}
+            >
+              {lang === 'en' ? 'CS' : 'EN'}
+            </button>
+          )}
           <button type="button" onClick={toggle} aria-label={mode === 'light' ? t('common.darkMode') : t('common.lightMode')}>
             {mode === 'light' ? t('common.darkMode') : t('common.lightMode')}
           </button>

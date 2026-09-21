@@ -1,10 +1,10 @@
 # StudyShark + devShark
 
-StudyShark is a free, bilingual learning platform for geography, mathematics, history, human biology, chess, and poker. devShark is the separate, web-development-focused product built from the same repository. Product identity, public navigation, question delivery, progression, leaderboards, flashcards, multiplayer rooms, and API access are scoped so StudyShark never exposes the developer bank and devShark never exposes StudyShark subjects.
+StudyShark is a free learning platform for geography, mathematics, history, human biology, chess, and poker. devShark is the separate, web-development-focused product built from the same repository. Product identity, public navigation, question delivery, progression, leaderboards, flashcards, multiplayer rooms, and API access are scoped so StudyShark never exposes the developer bank and devShark never exposes StudyShark subjects.
 
 Production: [StudyShark](https://studyshark-app.vercel.app) hosts all six general subjects on one domain; [devShark](https://devshark.app) is the standalone web-development platform. Both deploy from `main` into separate Vercel projects with independent product scopes and shared Supabase data infrastructure.
 
-The web experience uses the Deep End shark identity across the landing pages, Learn, Quiz, Challenge, Play, Profile, Flashcards, the career roadmap, dialogs, progress indicators, and the `/dev` control room. It supports English and Czech, light and dark themes, keyboard navigation, reduced motion, and responsive mobile/desktop layouts.
+The web experience uses the Deep End shark identity across the landing pages, Learn, Quiz, Challenge, Play, Profile, Flashcards, the career roadmap, dialogs, progress indicators, and the `/dev` control room. It ships in English, with light and dark themes, keyboard navigation, reduced motion, and responsive mobile/desktop layouts. The Czech dictionaries and translations are retained in the repository but are not offered in the UI; `ENABLED_LANGS` in `client/src/i18n/LanguageContext.tsx` is the single switch that brings them back.
 
 Current content: **7,953 authored questions** — 3,633 web development, 1,000 geography, 1,000 mathematics, 1,000 history, 600 chess, 400 human biology, and 320 poker.
 
@@ -21,7 +21,7 @@ Current content: **7,953 authored questions** — 3,633 web development, 1,000 g
 - Per-user, per-subject flashcards with optimistic updates and offline-safe query caching.
 - Google sign-in through Supabase Auth, cross-device progress, profile settings, language preference, and permanent account deletion.
 - Optional voluntary support, post-answer AI explanations, Socratic Sharkira hints, Sentry monitoring, and PostHog analytics. Every optional integration is gated and disabled by default.
-- A role-gated `/dev` control room for question CRUD/overrides, EN/CS editing, importance tuning, quality and parity checks, report triage, auth logs, feature settings, support disclosure, and app-context switching.
+- A role-gated `/dev` control room for question CRUD/overrides, importance tuning, quality and parity checks, report triage, auth logs, feature settings, support disclosure, and app-context switching.
 - Two deployments from one source tree: one multi-subject StudyShark domain and one locked devShark domain, with a central subject/product registry and shared Shark-family footer.
 
 Correct answers are not sent with unanswered questions. Quiz and learning sessions use authenticated AES-256-GCM envelopes, submissions are claimed once in Postgres, result receipts are idempotent, and competitive/progression mutations are performed through service-only APIs and atomic database functions.

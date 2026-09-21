@@ -1,6 +1,6 @@
 ---
 name: shark-screen-implementation
-description: Implement or refactor a complete StudyShark/devShark web screen with reuse, Deep End v2, EN/CS parity, responsive behavior, accessibility, states, and repository validation.
+description: Implement or refactor a complete StudyShark/devShark web screen with reuse, Deep End v2, English copy, responsive behavior, accessibility, states, and repository validation.
 ---
 
 # Shark Screen Implementation

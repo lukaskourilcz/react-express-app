@@ -1,12 +1,12 @@
 ---
-description: Implement or refine one screen end to end with Deep End components, complete states, EN/CS parity, and validation.
+description: Implement or refine one screen end to end with Deep End components, complete states, English copy, and validation.
 argument-hint: <route-or-component> <desired-outcome> [--commit]
 allowed-tools: Read, Grep, Glob, Bash, Edit, Write
 ---
 
 Implement `$ARGUMENTS` in the existing application rather than creating a parallel example.
 
-1. Inspect `git status --short`, `git diff`, route ownership in `client/src/App.tsx`, the full current component/styles, its data flow, and relevant EN/CS keys. Preserve unrelated edits.
+1. Inspect `git status --short`, `git diff`, route ownership in `client/src/App.tsx`, the full current component/styles, its data flow, and relevant translation keys. Preserve unrelated edits.
 2. Read `docs/product-architecture.md`, `DESIGN_RULES.md`, `docs/design/design-system.md`, `client/src/styles/astryx-theme.css`, and `client/src/styles/app-shell.css`.
 3. Search before creating: Astryx imports, `client/src/components/ui/`, `client/src/components/SharkFin.tsx`, `client/src/components/landing/LandingKit.tsx`, shared dialogs/toasts, registries, hooks, and sibling route patterns.
 4. Write a short implementation intent covering user goal, primary action, product/subject scope, reuse, changed states, responsive transformations, and accessibility behavior.
@@ -22,5 +22,5 @@ Implement `$ARGUMENTS` in the existing application rather than creating a parall
    git diff --check
    ```
 
-9. For visual changes, render the affected route in light/dark and EN/CS at the breakpoint matrix. Use `npm run preview --prefix client` and `node scripts/check-responsive.mjs` where applicable; never claim unexecuted matrix cells.
+9. For visual changes, render the affected route in light/dark at the breakpoint matrix. Use `npm run preview --prefix client` and `node scripts/check-responsive.mjs` where applicable; never claim unexecuted matrix cells.
 10. Report files, reused/refactored components, states added, and exact validation results. If `--commit` is present and all relevant checks pass, stage only this coherent scope and create one imperative commit; otherwise leave it uncommitted.

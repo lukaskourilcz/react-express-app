@@ -1,11 +1,16 @@
 // Czech translation dictionary, kept in its own module so it is lazy-loaded
-// only when the user actually switches to Czech (or has Czech as their browser
-// language). Saves ~15-20 KB gzip from the critical-path bundle for the EN
-// majority. The shape stays parallel to en via the TranslationKey type.
+// only when the user actually switches to Czech. The app ships English only
+// for now (`ENABLED_LANGS` in LanguageContext), so nothing imports this and it
+// reaches no browser — it is retained finished work, not dead code.
+//
+// `Partial` rather than a full Record: while Czech is not shipped, a new
+// English key is not obliged to arrive with a translation, and `t` already
+// falls back to English for any key missing here. Restoring Czech means
+// filling the gaps and tightening this back to `Record`.
 
 import type { TranslationKey } from './translations';
 
-export const cs: Record<TranslationKey, string> = {
+export const cs: Partial<Record<TranslationKey, string>> = {
   // App shell / navigation
   'nav.quiz': 'Kvíz',
   'nav.learn': 'Učení',

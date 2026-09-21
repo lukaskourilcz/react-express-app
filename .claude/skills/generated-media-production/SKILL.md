@@ -35,13 +35,13 @@ Use this skill with `shark-product-context` and `deep-end-design-system`. Read `
 
 - Download only selected outputs. Keep discarded generations out of Git.
 - Use AVIF or WebP for stills; use PNG only when transparency or tooling requires it. Include intrinsic dimensions and responsive sources.
-- Add real EN/CS typography, code, equations, labels, product UI, and screenshots deterministically. Never ask a generator to reproduce them.
+- Add real typography, code, equations, labels, product UI, and screenshots deterministically. Never ask a generator to reproduce them.
 - Keep expressive media on public discovery and campaign surfaces. Do not load it in Quiz, Learn, Play, Profile, or `/dev` bundles.
 - Give decorative media empty alt text. Give informative media concise localized alt text. Motion requires a poster and must freeze under reduced motion.
 - Preserve product-aware metadata and environment URL registries; do not hard-code deployment URLs.
 
 ## Validate and record
 
-Inspect the integrated result in StudyShark and devShark, EN/CS, light/dark, reduced motion, and relevant widths from 360 through 1440. Measure output bytes and verify lazy/preload behavior, crop stability, contrast behind deterministic text, and lack of layout shift.
+Inspect the integrated result in StudyShark and devShark, light/dark, reduced motion, and relevant widths from 360 through 1440. Measure output bytes and verify lazy/preload behavior, crop stability, contrast behind deterministic text, and lack of layout shift.
 
 Update `docs/design/generated-media-manifest.md` with the provider, model/version, dated official pricing/license/privacy sources, actual workflow, cost, complete prompt, negative prompt, references, job IDs when available, three reviewed directions, rejection reasons, selected variant, dimensions, crops, output paths, optimization, alt classification, fallback, provenance, restrictions, and regeneration steps. Never record credentials or claim a generation/check that did not succeed.

@@ -35,7 +35,7 @@ import { useBookmarks, removeBookmark } from '../lib/bookmarks';
 import { getStreakProtection, activateShield, shieldRemaining, type StreakProtection } from '../lib/streakFreezes';
 import { getAdvice, advisorCategoryKey, type Advice } from '../lib/advisor';
 import { renderQuestion } from './CodeBlock';
-import { useT, useLanguage } from '../i18n/LanguageContext';
+import { MULTILINGUAL, useT, useLanguage } from '../i18n/LanguageContext';
 import type { Lang } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
@@ -112,15 +112,17 @@ function IdentitySettings() {
 
   return (
     <div className="de-identity-settings" role="group" aria-label={t('profile.preferences')}>
-      <button
-        type="button"
-        className="de-identity-settings__button"
-        onClick={() => { setLang(nextLang); void savePreferredLanguage(nextLang); }}
-        aria-label={langLabel}
-        title={langLabel}
-      >
-        <span aria-hidden="true">{nextLang.toUpperCase()}</span>
-      </button>
+      {MULTILINGUAL && (
+        <button
+          type="button"
+          className="de-identity-settings__button"
+          onClick={() => { setLang(nextLang); void savePreferredLanguage(nextLang); }}
+          aria-label={langLabel}
+          title={langLabel}
+        >
+          <span aria-hidden="true">{nextLang.toUpperCase()}</span>
+        </button>
+      )}
       <button
         type="button"
         className="de-identity-settings__button"

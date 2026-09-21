@@ -1,6 +1,6 @@
 # StudyShark + devShark
 
-Two bilingual web-learning products from one React/Vite client and twelve
+Two English web-learning products from one React/Vite client and twelve
 serverless handlers: **StudyShark** (geo, math, history, bio, chess, poker) and
 the standalone **devShark** developer-learning sibling. All learning is free; the
 server owns answers, grading, scores, and XP.

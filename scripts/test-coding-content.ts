@@ -1,9 +1,10 @@
 // Content contract for the coding catalogue.
 //   npm run test:coding
+// Opt-in:
+//   CODING_REQUIRE_CS=1         check Czech parity (the app ships English only)
+//   CODING_CS_TRACKS=a,b        with the above, check only these tracks
 // Local aids while content is being authored (never set in CI):
-//   CODING_SKIP_CS=1            skip the Czech parity checks
 //   CODING_ALLOW_LEVEL_GAPS=1   allow Learn levels without a task
-//   CODING_CS_TRACKS=a,b        check Czech parity for these tracks only
 //   CODING_SKIP_INDEX=1         do not require shared/coding-index.ts to be fresh
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
@@ -33,10 +34,15 @@ import { runReactSuite } from '../lib/coding/react-runner';
 import { renderCodingIndex } from './build-coding-index';
 import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed } from '../shared/evolving';
 
-const SKIP_CS = process.env.CODING_SKIP_CS === '1';
+// The app ships English only (`ENABLED_LANGS` in the client's LanguageContext),
+// so Czech copy is retained work rather than a shipped surface and a new task
+// is not obliged to arrive with an overlay. The parity check is kept and can
+// still be run over whatever Czech exists — `CODING_REQUIRE_CS=1` — so the day
+// the language comes back the gaps are one command away from being listed.
+const REQUIRE_CS = process.env.CODING_REQUIRE_CS === '1';
 const ALLOW_GAPS = process.env.CODING_ALLOW_LEVEL_GAPS === '1';
-// Restrict the Czech parity check to some tracks while overlays are authored
-// in parallel, e.g. CODING_CS_TRACKS=javascript,typescript. Never set in CI.
+// Restrict the Czech parity check to some tracks, e.g.
+// CODING_CS_TRACKS=javascript,typescript.
 const CS_TRACKS = (process.env.CODING_CS_TRACKS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const SKIP_INDEX = process.env.CODING_SKIP_INDEX === '1';
 // Prove only the solutions whose task id matches, e.g. CODING_ONLY='^ts-'
@@ -197,7 +203,7 @@ async function main() {
   }
 
   /* ── parity ─────────────────────────────────────────────────────────── */
-  if (!SKIP_CS) {
+  if (REQUIRE_CS) {
     for (const task of CODING_TASKS) {
       if (CS_TRACKS.length > 0 && !CS_TRACKS.includes(task.track)) continue;
       const where = `${task.id}`;
@@ -402,7 +408,7 @@ async function main() {
     assert.equal(starterPasses, false, `${task.id}: the broken starter must fail its own tests`);
   }
 
-  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, payloads answer-free${SKIP_CS ? ', Czech parity skipped' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
+  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 
 void main().catch((error) => {
