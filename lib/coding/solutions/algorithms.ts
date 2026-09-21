@@ -293,7 +293,7 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   'alg-reverse-words': {
     solution: `const reverseWords = text => text.trim().split(/\\s+/).reverse().join(" ");`,
     junior: `const reverseWords = text => {
-  const pieces = text.split(" ");
+  const pieces = text.split(/\\s+/);
   const words = [];
   for (let index = 0; index < pieces.length; index += 1) {
     if (pieces[index] !== "") {
@@ -1201,8 +1201,8 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
 };`,
     hiddenTests: [
       { call: '(() => { let runs = 0; return retryWithBackoff(async () => { runs += 1; if (runs < 2) throw new Error("once"); return runs; }, 4); })()', expected: 2 },
-      { call: '(async () => { const started = Date.now(); let runs = 0; await retryWithBackoff(async () => { runs += 1; if (runs < 2) throw new Error("once"); return runs; }, 4); const elapsed = Date.now() - started; return elapsed >= 100 && elapsed < 1000; })()', expected: true },
-      { call: '(async () => { const started = Date.now(); await retryWithBackoff(async () => { throw new Error("down"); }, 2).catch(() => "failed"); const elapsed = Date.now() - started; return elapsed >= 100 && elapsed < 1000; })()', expected: true },
+      { call: '(async () => { const started = Date.now(); let runs = 0; await retryWithBackoff(async () => { runs += 1; if (runs < 2) throw new Error("once"); return runs; }, 4); const elapsed = Date.now() - started; return elapsed >= 80 && elapsed < 250; })()', expected: true },
+      { call: '(async () => { const started = Date.now(); await retryWithBackoff(async () => { throw new Error("down"); }, 2).catch(() => "failed"); const elapsed = Date.now() - started; return elapsed >= 80 && elapsed < 250; })()', expected: true },
       { call: 'retryWithBackoff(async () => 0, 1)', expected: 0 },
     ],
   },

@@ -613,3 +613,37 @@ Local evidence, all executed on the merged head:
 Rendered and asserted in Chromium against the devShark preview, English and Czech: the Coding home lists the track with its blurb and "0 of 25 passed"; `/coding/algorithms` lists all twenty-five under four tier headings (Foundations, Fluency, Combine, Interview / Základy, Jistota, Kombinace, Pohovor) with nothing locked, every row linking into the track, and no row claiming a Learn level.
 
 Not exercised here, and listed in `NEEDED.md`: anything account-bound, since no Supabase project is reachable from the build container — a recorded pass on an Algorithms challenge, and the Solution tab showing the two stripped boards after that pass. Migration 038 has not been applied to production; until it is, a signed-in pass on an Algorithms challenge is graded correctly and then refused by `record_coding_verdict`.
+
+## 2026-09-21 — English only, wider challenge coverage, migration 038 applied
+
+What changed, after the Algorithms track landed earlier the same day:
+
+- **English only.** `ENABLED_LANGS` in the client's LanguageContext lists what the build ships. While it holds one entry the footer and profile language buttons do not render, a stored preference, a browser preference and a prerendered locale are all ignored, `setLang` refuses a language the build does not carry, and the lazy Czech chunk is never requested. Nothing Czech is deleted: the dictionary is now `Partial`, the launch contract no longer demands a Czech string for every English key, and the coding content contract checks Czech parity only under `CODING_REQUIRE_CS=1`. CLAUDE.md, AGENTS.md, the skills, the agents and the commands no longer ask for Czech copy or EN/CS parity.
+- **Every Algorithms challenge now shows 10 to 12 visible checks**, up from five or six. The additions are the cases the first pass left to hidden checks or missed: a size that is negative and one that is fractional, a rotation of two whole turns, tabs as whitespace, a priority of 10 against 9, an empty array between two values, `undefined` returned unchanged by a deep clone, a route the long way round a cycle, a pool limit of one that must never overlap.
+- **Migration 038 applied to production.**
+
+Three of the new checks failed on first run, which is what they were for:
+
+| Failure | Cause | Fix |
+| --- | --- | --- |
+| `reverseWords("\tone\ttwo\t")` | The junior reading split on a single space, so a tab-separated line came back as one word. A real defect in a shipped board, invisible to the old tests. | Split on whitespace, keeping the longhand filter and reverse. |
+| `deepClone(undefined)` | The check expected `null`; the function returns `undefined`, as the brief says it should. | Corrected the expectation. |
+| `retryWithBackoff` elapsed time | `elapsed >= 100` against a 100 ms timer sits exactly on the boundary, and a real timer may fire a fraction early. | Banded each wait so it separates no wait from one wait from two, without hugging the edge. |
+
+Local evidence, all executed on the merged head:
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api` | pass |
+| `npm run test:coding` | pass — 420 tasks; run three times for the timing-sensitive async checks, stable each time |
+| `npm run test:launch` | pass — 12-function budget unchanged |
+| `npm run test:client` | pass — 7 files, 43 tests |
+| `npm run build` | pass (React runner, client, sandbox page) |
+| `npm run check:responsive` (devShark build, full route list, 7 widths) | pass — 231 probes, 0 issues |
+| `git diff --check` | clean |
+
+Verified in Chromium against a devShark build: a visitor with a stored `cs` preference on a cs-CZ browser gets `<html lang="en">` and English throughout, `/`, `/coding` and `/profile` render no language control between them, and the Czech chunk is never fetched.
+
+Migration 038 was applied to production (`rvlybcjdpafwyeuojvhl`) through the Supabase connector: both track checks admit `algorithms` with exactly one check per table, both routines remain SECURITY DEFINER with an empty `search_path` and `service_role`-only execute, and a rolled-back exercise recorded an `algorithms` verdict and reveal, confirmed both rows carried the new track, and confirmed an unknown track is still refused. No probe rows survived and the advisor reports only the pre-existing RLS notices.
+
+Not exercised here: anything account-bound, since no Supabase project is reachable from the build container. The prerendered Czech topic guides at `/cs/topics/:slug` still render and are still indexed; what to do about them is an owner decision in `NEEDED.md`.
