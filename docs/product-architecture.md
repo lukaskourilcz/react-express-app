@@ -242,7 +242,8 @@ branded subject contexts linking to `/subjects?subject=…` on StudyShark. The
 shared footer marks the active context accessibly; “Coming soon” is reserved
 for an unconfigured devShark link. Those brand rows render on StudyShark only:
 devShark promotes no sibling product, so its footer keeps the legal links and
-the language, appearance and sound controls and nothing else. The registries
+the appearance and sound controls and nothing else. The language control is
+gone from both footers while the app ships English only (`ENABLED_LANGS`). The registries
 stay whole either way — the metadata generator and StudyShark both read them.
 
 ## Adding a future subject

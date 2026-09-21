@@ -1,6 +1,6 @@
 # StudyShark + devShark control document
 
-This repository ships two bilingual web-learning products from one React/Vite client and twelve Vercel/Supabase handlers:
+This repository ships two English web-learning products from one React/Vite client and twelve Vercel/Supabase handlers:
 
 - **StudyShark** is the umbrella for geoShark, mathShark, historyShark, bioShark, chessShark, and pokerShark.
 - **devShark** is the standalone `webdev` developer-learning sibling, never a StudyShark subject.
@@ -12,7 +12,7 @@ Read [the product architecture](docs/product-architecture.md), [the design contr
 - All learning is free. Support, cosmetic shop items, collectible Shark Cards and badges never change access, content, explanations, paths, XP, scores, streaks, ranks, leaderboards, matchmaking, or AI availability. Streak protection is the one bounded exception: two a month are granted free, extra ones cost tokens earned by learning, the ceiling never rises above two, and a protection changes the day count of a streak and nothing else — no leaderboard here ranks by streak. Finishing a whole learning path earns the merchandise package, which is a reward *for* learning and changes no progress. Sharkira hints follow the AI rules: off by default, capped/cached, and never reveal the answer. devShark ships no AI feature at all: its coding hints are authored and end in documentation links.
 - The server owns answers, grading, score/XP, product scope, subject scope, admin roles, and one-time claims. Correct answers never reach the client before submission.
 - Keep exactly twelve physical TypeScript handlers under `api/`; preserve validation, auth, authorization, rate limits, request IDs, safe errors, RLS, and service-role isolation.
-- Keep devShark out of StudyShark discovery. StudyShark keeps the all-family footer; devShark's footer carries only legal links and the language, appearance and sound controls.
+- Keep devShark out of StudyShark discovery. StudyShark keeps the all-family footer; devShark's footer carries only legal links and the appearance and sound controls.
 - The app ships English only. Do not write Czech copy, add Czech keys, or author `*.cs.ts` overlays: `ENABLED_LANGS` in `client/src/i18n/LanguageContext.tsx` lists the shipped languages, and while it holds one entry no Czech reaches a browser. The existing Czech dictionaries, question translations and coding overlays stay in the repository as finished work — leave them alone rather than deleting or extending them. Keep responsive web accessibility. Native/Expo work is out of scope.
 - Public legacy `DevQuiz` copy is stale; compatibility storage keys, migrations, package names, fixtures, and history may remain.
 
