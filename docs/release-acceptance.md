@@ -589,3 +589,27 @@ Local evidence, all executed on the merged head:
 | `git diff --check` | clean |
 
 Screenshots taken with a mocked API (light and dark, English and Czech, 1440 and 390 px): the idle Results rows, the capped list, the keycaps and both tooltips, the previous-requirements block, the Solution tab, the debugging path on the Coding home, the run planner in its form, planned and active states, the planned-run card on Today, and the run line on a task page. Not exercised here, and listed in `NEEDED.md`: the account-bound flow end to end (plan a run, start it from Today, pass a queued task) and the Solution tab on a return visit. Migration 037 was applied to production later the same day through the Supabase connector: structure, privileges and a rolled-back functional exercise verified, re-application a no-op, advisor unchanged.
+
+## 2026-09-21 — the Algorithms track, and comment-free solution boards
+
+What changed: the Coding section lists a fourth track, `algorithms` — twenty-five interview problems in plain JavaScript, from Two sum to a promise pool and an exponential-backoff retry. It grades, awards XP and enters the review ladder like any other track, but it carries its own topic so no challenge can be drawn into a Learn level's quota, and it is unladdered, so every tier is open from the start. Widening the track union named three places where a question had been answered inline; each became one predicate (`hasLearnLevel`, `UNLADDERED_TRACKS`, the parser choice inside `formatCode`). Separately, the junior and senior boards shown after a verified pass no longer carry their authoring comments: 313 senior boards and 18 junior ones opened with a note that buried the code underneath it. Migration 038 widens the two track constraints and the two routines that record a verdict and a reveal.
+
+Local evidence, all executed on the merged head:
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api` | pass |
+| `npm run test:coding` | pass — 420 tasks (javascript 150, typescript 84, react 116, system-design 45, algorithms 25); reference, junior and senior solutions proven against visible and hidden checks and the production QuickJS grader; Czech parity; every shipped board asserted comment-free |
+| `npm run test:launch` | pass — 12-function budget unchanged at twelve handlers |
+| `npm run test:paths` | pass |
+| `npm run test:client` | pass — 7 files, 43 tests |
+| `npm run build` | pass (React runner, client, sandbox page) |
+| `npm run test:harness` | pass — 129 assertions against the built sandbox in Chromium |
+| `npm run check:responsive` (devShark build, full route list including `/coding/algorithms` and a task page, 7 widths) | pass — 231 probes, 0 issues |
+| `npm run check:responsive` (devShark build, Czech + dark, the four Algorithms routes) | pass — 28 probes, 0 issues |
+| `npm audit --omit=dev` (root and client) | 0 vulnerabilities |
+| `git diff --check` | clean |
+
+Rendered and asserted in Chromium against the devShark preview, English and Czech: the Coding home lists the track with its blurb and "0 of 25 passed"; `/coding/algorithms` lists all twenty-five under four tier headings (Foundations, Fluency, Combine, Interview / Základy, Jistota, Kombinace, Pohovor) with nothing locked, every row linking into the track, and no row claiming a Learn level.
+
+Not exercised here, and listed in `NEEDED.md`: anything account-bound, since no Supabase project is reachable from the build container — a recorded pass on an Algorithms challenge, and the Solution tab showing the two stripped boards after that pass. Migration 038 has not been applied to production; until it is, a signed-in pass on an Algorithms challenge is graded correctly and then refused by `record_coding_verdict`.

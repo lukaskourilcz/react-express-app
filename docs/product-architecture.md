@@ -85,15 +85,33 @@ button's immediate feedback, but the verdict of record is the server's.
 Reference solutions never leave the server:
 `resource=coding-reveal` returns one only after a pass or after the authored
 hint ladder is exhausted, and a reveal ends the current Learn level attempt.
+The junior and senior readings shown beside each other after a pass are
+stripped of their authoring comments in `lib/coding/solutions/index.ts`, so the
+boards carry code alone; the content contract executes the stripped text and
+asserts none of it still holds a comment.
+
+The section lists four tracks. Three of them — `javascript`, `typescript` and
+`react` — are also Learn topics. The fourth, `algorithms`, is twenty-five
+interview problems in plain JavaScript: an ordinary graded track with the same
+XP, review ladder and one-award-per-task ledger, but a topic of its own, so
+none of its challenges can be drawn into a Learn level's quota. Its `level` is
+an ordering key rather than a Learn level, which `hasLearnLevel` is what the
+row, the workbench and the GitHub commit message read before naming one.
+System design still grades and still owns its history but has left the section
+(`CODING_SECTION_TRACKS`).
 
 Learn levels of the `javascript`, `typescript`, and `react` topics carry one to
 three coding tasks sealed into the level session; completion requires a passed
 verdict for each. Coding completion is permanent: the API ignores legacy review
 dates, returns an empty due queue, and never selects passed tasks for scheduled
 coding review. Question/concept review is unchanged. Tiers
-open in order (`tierUnlocked`), XP follows `CODING_TASK_XP` once per task, and
+open in order (`tierUnlocked`) except in the unladdered tracks — system design
+is drilled rather than climbed, and `algorithms` is interview preparation a
+learner arrives at with a date in the diary, where a locked tier would withhold
+the very challenge they came for. XP follows `CODING_TASK_XP` once per task, and
 the five coding badges join the shared badge sync for `webdev`. All storage is
-in `supabase/supabase-schema-025.sql`. devShark ships no AI feature; the last
+in `supabase/supabase-schema-025.sql`, whose track constraints and routines
+`supabase/supabase-schema-038.sql` widens to admit `algorithms`. devShark ships no AI feature; the last
 hint rung is a documentation link from `shared/coding-docs.ts`.
 
 The GitHub garden is an optional GitHub App integration (`lib/github-app.ts`,

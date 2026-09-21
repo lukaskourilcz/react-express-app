@@ -54,6 +54,8 @@ const DEFAULT_ROUTES = [
   '/coding',
   '/coding/javascript',
   '/coding/javascript/js-double-numbers',
+  '/coding/algorithms',
+  '/coding/algorithms/alg-two-sum',
   '/coding/system-design',
   '/coding/review',
   '/roadmap/paths/dsa-foundations',
