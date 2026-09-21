@@ -27,7 +27,7 @@ import { useIsNarrowForEditor } from '../lib/useMediaQuery';
 import { SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint } from '../../../shared/coding-failure';
 import { revealCoding, submitCoding, useCodingApproaches } from './api';
-import { CODING_TIERS, formatOf, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
+import { CODING_TIERS, formatOf, hasLearnLevel, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import type { CodingLockReason, CodingSolutionPair, CodingTaskProgress, CodingVerdictResponse } from '../../../shared/coding-api';
 import './Coding.css';
 
@@ -213,7 +213,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     let active = true;
     const timer = window.setTimeout(() => {
       if (!code.trim()) { setFormattedCode(code); setFormatSource(code); return; }
-      void formatCode(code, task.track === 'system-design' ? 'javascript' : task.track).then(formatted => {
+      void formatCode(code, task.track).then(formatted => {
         if (active) { setFormattedCode(formatted); setFormatSource(code); }
       }).catch(() => {
         if (active) { setFormattedCode(code); setFormatSource(code); }
@@ -365,7 +365,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
   const format = useCallback(async () => {
     try {
-      const formatted = await formatCode(code, task.track === 'system-design' ? 'javascript' : task.track);
+      const formatted = await formatCode(code, task.track);
       setCode(current => current === code ? formatted : current);
       setFormattedCode(formatted);
       setFormatError(null);
@@ -839,7 +839,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       <span className="cd-visually-hidden" role="status" aria-live="polite">{announcement}</span>
           <section className="cd-pane cd-pane--task" aria-labelledby={`${baseId}-title`}>
             <div className="cd-pane__head">
-              <Kicker>{evolution ? t('coding.evolving.stage', { n: evolution.index + 1, total: evolution.challenge.stages.length }) : <>{trackLabel} · {tierLabel}{task.level > 0 ? ` · ${t('coding.level', { n: task.level })}` : ''}</>}</Kicker>
+              <Kicker>{evolution ? t('coding.evolving.stage', { n: evolution.index + 1, total: evolution.challenge.stages.length }) : <>{trackLabel} · {tierLabel}{hasLearnLevel(task) ? ` · ${t('coding.level', { n: task.level })}` : ''}</>}</Kicker>
               {mode === 'section' ? <h1 id={`${baseId}-title`}>{L(task.title)}</h1> : <h2 id={`${baseId}-title`}>{L(task.title)}</h2>}
               {formatOf(task) === 'debug' && (
                 <div className="cd-pane__meta">

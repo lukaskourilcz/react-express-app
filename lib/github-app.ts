@@ -9,7 +9,7 @@
 import { createSign } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { CodingGardenStatus } from '../shared/coding-api';
-import { gardenPathFor, type CodingTask, type Localized } from '../shared/coding-catalog';
+import { gardenPathFor, hasLearnLevel, type CodingTask, type Localized } from '../shared/coding-catalog';
 import type { GardenPassInput } from './github-garden';
 import { withTimeout } from './http';
 
@@ -151,9 +151,17 @@ export async function putFile(token: string, repo: string, path: string, input: 
 
 const pick = (value: Localized, locale: 'en' | 'cs') => value[locale] || value.en;
 
+const TRACK_NAMES: Record<CodingTask['track'], string> = {
+  javascript: 'JavaScript',
+  typescript: 'TypeScript',
+  react: 'React',
+  'system-design': 'System design',
+  algorithms: 'Algorithms',
+};
+
 export function commitMessageFor(task: CodingTask): string {
-  const track = { javascript: 'JavaScript', typescript: 'TypeScript', react: 'React', 'system-design': 'System design' }[task.track];
-  return `Complete "${task.title.en}" (${track}${task.level > 0 ? `, level ${task.level}` : ''})`;
+  const track = TRACK_NAMES[task.track];
+  return `Complete "${task.title.en}" (${track}${hasLearnLevel(task) ? `, level ${task.level}` : ''})`;
 }
 
 const LEVEL_TITLES: Record<string, string[]> = {
@@ -164,7 +172,7 @@ const LEVEL_TITLES: Record<string, string[]> = {
 
 export function buildTaskFile(task: CodingTask, code: string, verdict: { passed: number; total: number }, locale: 'en' | 'cs', date = new Date()): string {
   const day = date.toISOString().slice(0, 10);
-  const trackName = { javascript: 'JavaScript', typescript: 'TypeScript', react: 'React', 'system-design': 'System design' }[task.track];
+  const trackName = TRACK_NAMES[task.track];
   const levelName = task.level > 0 ? LEVEL_TITLES[task.track]?.[task.level - 1] : undefined;
   const link = `https://devshark.app/coding/${task.track}/${task.id}`;
   const tests = verdict.total > 0 ? `${verdict.passed}/${verdict.total} ${locale === 'cs' ? 'testů' : 'tests'}` : locale === 'cs' ? 'splněno' : 'passed';

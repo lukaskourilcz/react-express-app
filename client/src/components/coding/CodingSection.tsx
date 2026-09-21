@@ -23,6 +23,7 @@ import {
   CODING_TECHNIQUE_GROUPS,
   CODING_TIERS,
   formatOf,
+  hasLearnLevel,
   isCodingSectionTrack,
   isCodingTrack,
   isRetiredSectionTrack,
@@ -127,7 +128,7 @@ function TaskRow({ task, status, saved, onSave, saving }: {
     <>
       <span className="cd-row__title">{task.title[lang] || task.title.en}</span>
       <span className="cd-row__meta">
-        {task.level > 0 && <span>{t('coding.level', { n: task.level })}</span>}
+        {hasLearnLevel(task) && <span>{t('coding.level', { n: task.level })}</span>}
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
       </span>
       <StatusText status={status} />
@@ -226,7 +227,7 @@ export function CodingHome() {
           const done = tasks.filter((task) => passed.has(task.id)).length;
           return (
             <Link key={track} className="cd-track-entry" to={`/coding/${track}`}>
-              <span className="cd-track-entry__symbol" aria-hidden>{track === 'javascript' ? 'JS' : track === 'typescript' ? 'TS' : '⚛'}</span>
+              <span className="cd-track-entry__symbol" aria-hidden>{track === 'javascript' ? 'JS' : track === 'typescript' ? 'TS' : track === 'algorithms' ? 'Σ' : '⚛'}</span>
               <div className="cd-track-entry__body">
               <div className="cd-track__title">
                 <h2>{t(`coding.track.${track}` as never)}</h2>

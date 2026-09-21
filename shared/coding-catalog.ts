@@ -12,7 +12,7 @@ import type { PuzzleView } from './coding-puzzle';
 import type { PublicItemReview } from './curation';
 import { evolvingStage } from './evolving';
 
-export type CodingTrack = 'javascript' | 'typescript' | 'react' | 'system-design';
+export type CodingTrack = 'javascript' | 'typescript' | 'react' | 'system-design' | 'algorithms';
 export type CodingTier = 1 | 2 | 3 | 4 | 5;
 export type CodingVerify = 'tests' | 'checklist' | 'guided' | 'drill';
 
@@ -38,7 +38,7 @@ export interface LocalizedList {
   cs: string[];
 }
 
-export const CODING_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript', 'react', 'system-design'];
+export const CODING_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript', 'react', 'system-design', 'algorithms'];
 export const isCodingTrack = (value: unknown): value is CodingTrack =>
   typeof value === 'string' && (CODING_TRACKS as readonly string[]).includes(value);
 
@@ -48,12 +48,20 @@ export const isCodingTrack = (value: unknown): value is CodingTrack =>
  * sessions and every record already earned against them stay exactly as they
  * are. `CODING_TRACKS` remains the full grading vocabulary; only this list
  * decides what the section shows. */
-export const CODING_SECTION_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript', 'react'];
+export const CODING_SECTION_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript', 'react', 'algorithms'];
 export const isCodingSectionTrack = (value: unknown): value is CodingTrack =>
   typeof value === 'string' && (CODING_SECTION_TRACKS as readonly string[]).includes(value);
 /** A track that still grades and still owns history, but has left the section. */
 export const isRetiredSectionTrack = (value: unknown): value is CodingTrack =>
   isCodingTrack(value) && !isCodingSectionTrack(value);
+
+/** Tracks whose `level` is a Learn level, and so worth naming to the learner.
+ * System design carries no level at all, and `algorithms` carries one only to
+ * order its challenges — calling it "Level 6" would claim a place in a
+ * curriculum the challenge is not part of. */
+const LEARN_LEVEL_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript', 'react'];
+export const hasLearnLevel = (task: { track: CodingTrack; level: number }): boolean =>
+  task.level > 0 && LEARN_LEVEL_TRACKS.includes(task.track);
 
 /** Tier ids, used as translation-key suffixes (`coding.tier.<id>`). */
 export const CODING_TIERS: Record<CodingTier, string> = {
@@ -129,13 +137,15 @@ export interface DesignDrill {
 
 export interface CodingTask {
   /** Stable slug with the track prefix: `js-double-numbers`, `ts-typed-slug`,
-   * `react-counter`, `sd-url-shortener`, `dd-qps-basic`. */
+   * `react-counter`, `sd-url-shortener`, `dd-qps-basic`, `alg-two-sum`. */
   id: string;
   /** interview-prepper id (`j12`, `t3`, `r7`, `c2`, `s1`, `d4`) for the progress import. */
   legacyId?: string;
   track: CodingTrack;
-  /** Learn topic the task belongs to; system design tasks carry no Learn level. */
-  topic: 'javascript' | 'typescript' | 'react' | 'system-design';
+  /** Learn topic the task belongs to; system design tasks carry no Learn level.
+   * `algorithms` is a topic of its own so an interview-prep challenge can
+   * never be drawn into a Learn level's quota. */
+  topic: 'javascript' | 'typescript' | 'react' | 'system-design' | 'algorithms';
   /** Learn level 1–25 (index into LEVEL_TITLES). 0 for system design. */
   level: number;
   tier: CodingTier;
@@ -293,12 +303,19 @@ const tierPassRatio = (tier: CodingTier, input: CodingLadderInput): number => {
   return passed / inTier.length;
 };
 
+/** Tracks that are practised rather than progressed through, so none of their
+ * tiers is ever gated. System design is taught in Learn and drilled here;
+ * `algorithms` is interview preparation a learner comes to with a date in the
+ * diary, where a locked tier would withhold the very challenge they came for.
+ * Both still grade, award XP and record history exactly like any other task. */
+const UNLADDERED_TRACKS: readonly CodingTrack[] = ['system-design', 'algorithms'];
+
 /** The difficulty ladder. Tiers 1 and 2 are always open; 3 opens after the
  * Learn foundations or a clean sweep of tiers 1–2 in that track; 4 after 80 %
- * of tier 3; 5 (React capstones) after 80 % of tier 4. System design has no
- * ladder: every drill and walkthrough is open. */
+ * of tier 3; 5 (React capstones) after 80 % of tier 4. The unladdered tracks
+ * have no ladder: every one of their challenges is open. */
 export function tierUnlocked(input: CodingLadderInput): boolean {
-  if (input.track === 'system-design') return true;
+  if (UNLADDERED_TRACKS.includes(input.track)) return true;
   switch (input.tier) {
     case 1:
     case 2:
@@ -347,12 +364,14 @@ const TRACK_PREFIX: Record<CodingTrack, string[]> = {
   typescript: ['ts-'],
   react: ['react-'],
   'system-design': ['sd-', 'dd-'],
+  algorithms: ['alg-'],
 };
 const TRACK_EXTENSION: Record<CodingTrack, string> = {
   javascript: 'js',
   typescript: 'ts',
   react: 'jsx',
   'system-design': 'md',
+  algorithms: 'js',
 };
 
 /** `javascript/04-queue-with-push-shift.js`: one folder per track, one file per task. */
@@ -364,4 +383,4 @@ export function gardenPathFor(task: Pick<CodingTaskSummary, 'id' | 'track' | 'le
 }
 
 export const isCodingTaskId = (value: unknown): value is string =>
-  typeof value === 'string' && /^(js|ts|react|sd|dd)-[a-z0-9]+(-[a-z0-9]+)*$/.test(value) && value.length <= 64;
+  typeof value === 'string' && /^(js|ts|react|sd|dd|alg)-[a-z0-9]+(-[a-z0-9]+)*$/.test(value) && value.length <= 64;

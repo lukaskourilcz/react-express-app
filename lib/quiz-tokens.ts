@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from 'node:crypto';
 import { isScopeSubject, type ScopeSubjectId } from '../shared/subject-catalog';
 import { isLearningPathId, type LearningPathId } from '../shared/learning-paths';
+import type { CodingTrack } from '../shared/coding-catalog';
 
 const SECRET = process.env.SESSION_SECRET;
 const IS_PROD = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
@@ -125,7 +126,7 @@ export interface CodingDesignKey {
 interface CodingSessionPayload {
   kind: 'coding-session';
   taskId: string;
-  track: 'javascript' | 'typescript' | 'react' | 'system-design';
+  track: CodingTrack;
   attemptId: string;
   userId: string | null;
   roadmapAttemptId?: string;
