@@ -3,6 +3,7 @@
 
 import { EVOLVING_CHALLENGES } from '../../../shared/evolving';
 import type { CodingSolution } from '../types';
+import { stripComments } from './strip-comments';
 import { JAVASCRIPT_SOLUTIONS } from './javascript';
 import { TYPESCRIPT_SOLUTIONS } from './typescript';
 import { REACT_SOLUTIONS } from './react';
@@ -16,7 +17,7 @@ import { DEBUG_EVOLVING_SOLUTIONS } from './evolving-debug';
 import { REACT_EVOLVING_SOLUTIONS } from './evolving-react';
 import { FULLSTACK_SOLUTIONS } from './fullstack';
 
-const ALL: Record<string, CodingSolution> = {
+const AUTHORED: Record<string, CodingSolution> = {
   ...EVOLVING_SOLUTIONS, ...REACT_EVOLVING_SOLUTIONS, ...DEBUG_EVOLVING_SOLUTIONS,
   ...FULLSTACK_SOLUTIONS,
   ...JAVASCRIPT_SOLUTIONS, ...JAVASCRIPT_LOOP_SOLUTIONS, ...JAVASCRIPT_DEBUG_SOLUTIONS,
@@ -24,6 +25,19 @@ const ALL: Record<string, CodingSolution> = {
   ...REACT_SOLUTIONS, ...REACT_LOOP_SOLUTIONS,
   ...ALGORITHM_SOLUTIONS,
 };
+
+// The junior and senior boards are read as code, so the authoring notes that
+// explain them in the source do not travel. Stripping here rather than at the
+// API boundary means the content contract proves the exact text that ships.
+// The reference solution keeps its comments: it is the answer a learner reads
+// after giving up, where the reasoning is the point.
+const ALL: Record<string, CodingSolution> = Object.fromEntries(
+  Object.entries(AUTHORED).map(([id, record]) => [id, {
+    ...record,
+    ...(record.junior ? { junior: stripComments(record.junior) } : {}),
+    ...(record.senior ? { senior: stripComments(record.senior) } : {}),
+  }]),
+);
 
 for (const id of EVOLVING_CHALLENGES.flatMap(project => project.stages).filter(id => id.endsWith('-start'))) {
   // A checkpoint checks only its smaller public contract, never future hidden requirements.

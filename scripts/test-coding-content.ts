@@ -12,6 +12,7 @@ import path from 'node:path';
 import { CODING_TASKS, playable } from '../lib/coding/catalog';
 import { CODING_SUMMARIES, levelCodingTasks, tasksForLevel } from '../lib/coding/active';
 import { solutionFor, solutionIds } from '../lib/coding/solutions';
+import { stripComments } from '../lib/coding/solutions/strip-comments';
 import { localizedFields, localizedLists } from '../lib/coding/types';
 import {
   CODING_TRACKS,
@@ -181,6 +182,19 @@ async function main() {
     }
   }
   for (const id of solutionIds()) if (!ids.has(id)) fail(`solution ${id} has no task`);
+
+  // The junior and senior boards are read as code after a pass, so the notes
+  // that explain them in the source must not travel. `solutionFor` strips
+  // them; this asserts the text that actually ships is clean, and that
+  // stripping it again would change nothing — a stripper that ate real code
+  // would fail the solution proofs below instead.
+  for (const id of solutionIds()) {
+    const solution = solutionFor(id)!;
+    for (const [kind, code] of [['junior', solution.junior], ['senior', solution.senior]] as const) {
+      if (!code) continue;
+      if (stripComments(code) !== code) fail(`${id}: the ${kind} board still carries a comment`);
+    }
+  }
 
   /* ── parity ─────────────────────────────────────────────────────────── */
   if (!SKIP_CS) {
