@@ -35,6 +35,8 @@ import { REACT_LOOP_TASKS } from './tasks/react-loops';
 import { REACT_LOOP_TASKS_CS } from './tasks/react-loops.cs';
 import { JAVASCRIPT_DEBUG_TASKS } from './tasks/javascript-debug';
 import { JAVASCRIPT_DEBUG_TASKS_CS } from './tasks/javascript-debug.cs';
+import { ALGORITHM_TASKS } from './tasks/algorithms';
+import { ALGORITHM_TASKS_CS } from './tasks/algorithms.cs';
 import { SPECS, buildEvolvingTasks } from './tasks/evolving';
 import { TYPESCRIPT_EVOLVING } from './tasks/evolving-typescript';
 import { REACT_EVOLVING } from './tasks/evolving-react';
@@ -52,11 +54,12 @@ const sources: { tasks: CodingTaskSource[]; cs: Record<string, CodingTaskCs> }[]
   { tasks: REACT_TASKS, cs: REACT_TASKS_CS },
   { tasks: REACT_LOOP_TASKS, cs: REACT_LOOP_TASKS_CS },
   { tasks: SYSTEM_DESIGN_TASKS, cs: SYSTEM_DESIGN_TASKS_CS },
+  { tasks: ALGORITHM_TASKS, cs: ALGORITHM_TASKS_CS },
 ];
 
 /** Every task: tracks in catalogue order, then level, tier, and authored order
  * within a track, so a Learn level always picks its gentlest tasks first. */
-const TRACK_ORDER: Record<string, number> = { javascript: 0, typescript: 1, react: 2, 'system-design': 3 };
+const TRACK_ORDER: Record<string, number> = { javascript: 0, typescript: 1, react: 2, 'system-design': 3, algorithms: 4 };
 export const CODING_TASKS: readonly CodingTask[] = sources
   .flatMap(({ tasks, cs }) => tasks.map((task, order) => ({ task: mergeTask(task, cs[task.id]), order })))
   .concat(expandEvolvingTasks([...buildEvolvingTasks({ ...extendSpecs({ ...SPECS, ...TYPESCRIPT_EVOLVING, ...REACT_EVOLVING }), ...DEBUG_EVOLVING }), ...buildFullStackTasks()]).map((task, order) => ({ task, order })))
