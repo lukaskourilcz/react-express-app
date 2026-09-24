@@ -6,9 +6,6 @@
 // says which one failed and offers to retry that one, because "saved" when
 // only half of it landed is the kind of quiet lie that costs a learner their
 // work later.
-//
-// devShark only. On StudyShark the card renders nothing: there is no role
-// specialization and no learning path outside the developer product.
 
 import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -20,7 +17,6 @@ import { Text } from '@astryxdesign/core/Text';
 import { useAuth } from '../../lib/auth';
 import { useT } from '../../i18n/LanguageContext';
 import { friendlyError } from '../../lib/api';
-import { CURRENT_PRODUCT } from '../../lib/products';
 import { useSubject } from '../../lib/subjects';
 import { trackLabelKey, useTrack, type Track } from '../../lib/tracks';
 import { learnerProfileOf, preferredLearningOf, profileGapsOf, saveLearningPreference } from '../../lib/trackPref';
@@ -45,7 +41,7 @@ export default function LearningPathsCard() {
   const { user, isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
   const [track, setTrack] = useTrack();
-  const catalog = usePathCatalog(CURRENT_PRODUCT.id === 'devshark');
+  const catalog = usePathCatalog();
   const enrollments = useEnrollments(isAuthenticated ? user?.id : undefined);
 
   const [open, setOpen] = useState(false);
@@ -158,8 +154,6 @@ export default function LearningPathsCard() {
     },
     [dsaEntry, enrollmentFor, fdeEntry, queryClient, setTrack, subject, t, user?.id],
   );
-
-  if (CURRENT_PRODUCT.id !== 'devshark') return null;
 
   const activePaths = [fdeEntry, dsaEntry].filter(Boolean).map((entry) => {
     const manifest = entry!.manifest;

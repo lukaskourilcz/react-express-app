@@ -1,5 +1,5 @@
 /**
- * StudyShark brand constants. (Formerly the MUI theme factory — the app is now
+ * devShark brand constants. (Formerly the MUI theme factory — the app is now
  * MUI-free; only these plain, framework-agnostic tokens remain.)
  *
  *   green   #2d7a2d  brand / primary actions / success moments ("shark green")

@@ -40,7 +40,6 @@ const IS_LINUX = platform() === 'linux';
 const DEFAULT_BASE = 'http://localhost:4173';
 const DEFAULT_ROUTES = [
   '/',
-  '/subjects',
   '/quiz',
   '/learn',
   '/today',
@@ -69,7 +68,7 @@ const DEFAULT_ROUTES = [
   '/privacy',
   '/terms',
   '/classroom',
-  '/topics/capitals-of-europe',
+  '/topics/javascript-closures',
   '/dev',
   '/not-found-responsive-check',
 ];

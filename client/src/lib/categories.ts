@@ -45,89 +45,6 @@ export const CATEGORY_OPTIONS: CategoryOption[] = [
   { value: 'security', label: 'Security', color: '#b02a37' },
   { value: 'dev-world', label: 'Dev World', color: '#8b5cf6' },
   { value: 'code-snippets', label: 'Code Snippets', color: '#ec4899' },
-  // Geography
-  { value: 'continents', label: 'Continents & Oceans', color: '#ea580c' },
-  { value: 'capitals', label: 'Countries & Capitals', color: '#f97316' },
-  { value: 'flags', label: 'Flags & Symbols', color: '#fb923c' },
-  { value: 'landforms', label: 'Landforms', color: '#9a3412' },
-  { value: 'climate', label: 'Climate & Biomes', color: '#d97706' },
-  { value: 'population', label: 'Population & Cities', color: '#b45309' },
-  { value: 'political', label: 'Political Geography', color: '#c2410c' },
-  { value: 'economic', label: 'Economic Geography', color: '#f59e0b' },
-  { value: 'cartography', label: 'Maps & Cartography', color: '#e8590c' },
-  { value: 'earth', label: 'Earth & Geology', color: '#92400e' },
-  // Math
-  { value: 'arithmetic', label: 'Arithmetic', color: '#1565c0' },
-  { value: 'fractions', label: 'Fractions & Decimals', color: '#0e7490' },
-  { value: 'prealgebra', label: 'Pre-Algebra', color: '#2563eb' },
-  { value: 'algebra', label: 'Algebra', color: '#7c3aed' },
-  { value: 'geometry', label: 'Geometry', color: '#0891b2' },
-  { value: 'trigonometry', label: 'Trigonometry', color: '#d97706' },
-  { value: 'statistics', label: 'Statistics & Probability', color: '#db2777' },
-  { value: 'precalculus', label: 'Pre-Calculus', color: '#059669' },
-  { value: 'calculus', label: 'Calculus', color: '#4338ca' },
-  { value: 'linear-algebra', label: 'Linear Algebra', color: '#0284c7' },
-  // History
-  { value: 'prehistory', label: 'Prehistory', color: '#a97142' },
-  { value: 'ancient', label: 'Ancient Civilizations', color: '#64748b' },
-  { value: 'classical', label: 'The Classical World', color: '#b08d57' },
-  { value: 'medieval', label: 'The Middle Ages', color: '#6b7d4a' },
-  { value: 'renaissance', label: 'Renaissance & Exploration', color: '#5b7a99' },
-  { value: 'earlymodern', label: 'Early Modern & Revolutions', color: '#8c4a4a' },
-  { value: 'industrial', label: 'The Industrial Age', color: '#b5651d' },
-  { value: 'worldwars', label: 'The World Wars', color: '#7d7466' },
-  { value: 'coldwar', label: 'The Cold War', color: '#5f8a8b' },
-  { value: 'modern', label: 'The Modern World', color: '#6d5577' },
-  // Chess
-  { value: 'openings', label: 'Opening Principles', color: '#c8935f' },
-  { value: 'tactics', label: 'Basic Tactics', color: '#d98a3d' },
-  { value: 'strategy', label: 'Positional Strategy', color: '#8c5a3c' },
-  { value: 'endgames', label: 'Essential Endgames', color: '#a0522d' },
-  { value: 'combinations', label: 'Advanced Combinations', color: '#5e3820' },
-  // Math (advanced)
-  { value: 'discrete-math', label: 'Discrete Math', color: '#7c3aed' },
-  { value: 'number-theory', label: 'Number Theory', color: '#b45309' },
-  { value: 'multivariable-calculus', label: 'Multivariable Calculus', color: '#a21caf' },
-  { value: 'differential-equations', label: 'Differential Equations', color: '#0891b2' },
-  { value: 'real-analysis', label: 'Real Analysis', color: '#be123c' },
-  // Geography (advanced)
-  { value: 'geomorphology', label: 'Geomorphology', color: '#a16207' },
-  { value: 'oceanography', label: 'Oceanography', color: '#0369a1' },
-  { value: 'biogeography', label: 'Biogeography', color: '#15803d' },
-  { value: 'geopolitics', label: 'Geopolitics', color: '#7c2d12' },
-  { value: 'gis', label: 'GIS & Mapping', color: '#6d28d9' },
-  // History (thematic)
-  { value: 'historiography', label: 'Historiography', color: '#57534e' },
-  { value: 'history-of-science', label: 'History of Science', color: '#0e7490' },
-  { value: 'economic-history', label: 'Economic History', color: '#a16207' },
-  { value: 'intellectual-history', label: 'Intellectual History', color: '#6d28d9' },
-  { value: 'military-history', label: 'Military History', color: '#7f1d1d' },
-  // Human Biology
-  { value: 'cell-biology', label: 'Cell Biology', color: '#0d9488' },
-  { value: 'skeletal-system', label: 'Skeletal System', color: '#64748b' },
-  { value: 'muscular-system', label: 'Muscular System', color: '#dc2626' },
-  { value: 'nervous-system', label: 'Nervous System', color: '#7c3aed' },
-  { value: 'endocrine-system', label: 'Endocrine System', color: '#d946ef' },
-  { value: 'cardiovascular-system', label: 'Cardiovascular System', color: '#e11d48' },
-  { value: 'respiratory-system', label: 'Respiratory System', color: '#0891b2' },
-  { value: 'digestive-system', label: 'Digestive System', color: '#ca8a04' },
-  { value: 'immune-system', label: 'Immune System', color: '#16a34a' },
-  { value: 'reproductive-system', label: 'Reproductive & Urinary', color: '#db2777' },
-  // Chess (advanced)
-  { value: 'opening-theory', label: 'Opening Theory', color: '#166534' },
-  { value: 'middlegame', label: 'Middlegame', color: '#9a3412' },
-  { value: 'pawn-structures', label: 'Pawn Structures', color: '#a16207' },
-  { value: 'endgame-technique', label: 'Endgame Technique', color: '#7c2d12' },
-  { value: 'chess-history', label: 'Chess History', color: '#4d7c0f' },
-  // Poker
-  { value: 'positions', label: 'Position', color: '#ea580c' },
-  { value: 'starting-hands', label: 'Starting Hands', color: '#d97706' },
-  { value: 'pot-odds', label: 'Pot Odds & Equity', color: '#ca8a04' },
-  { value: 'betting-strategy', label: 'Betting Strategy', color: '#65a30d' },
-  { value: 'postflop', label: 'Postflop Play', color: '#0d9488' },
-  { value: 'tournament-play', label: 'Tournaments', color: '#0891b2' },
-  { value: 'psychology', label: 'Psychology', color: '#7c3aed' },
-  { value: 'gto-advanced', label: 'GTO & Theory', color: '#4338ca' },
 ];
 
 export const CATEGORY_LOOKUP = new Map(CATEGORY_OPTIONS.map((c) => [c.value, c]));
@@ -143,9 +60,8 @@ export const PLAY_ONLY_CATEGORIES: CategoryType[] = ['cool-stuff'];
 
 // Categories whose logo color is light, so they need dark text for contrast.
 // Text colour for content sitting on a category's brand hex. Computed from
-// WCAG relative luminance instead of a hand-kept allowlist — with ~100
-// category colours across subjects, the list drifted and ~40% of pairs failed
-// the 4.5:1 contrast bar (e.g. white on Node green #339933 = 3.66:1).
+// WCAG relative luminance instead of a hand-kept allowlist, which drifted and
+// failed the 4.5:1 contrast bar (e.g. white on Node green #339933 = 3.66:1).
 const onColorTextCache = new Map<string, string>();
 function textOnColor(hex: string): string {
   const cached = onColorTextCache.get(hex);
@@ -177,8 +93,8 @@ export const visibleCategoryOptionsFor = (
   email?: string | null,
   opts: { includePlayOnly?: boolean } = {},
 ): CategoryOption[] => {
-  // Scope to the active subject so each subject's picker shows only its own
-  // categories (subjects are disjoint, so this is an exact partition).
+  // Scope to the subject's categories: the option list also names categories
+  // that are not offered as quiz topics.
   const inSubject = new Set<string>(categoriesForSubject(getSubject()));
   // A retired section keeps its category — history and scope checks depend on
   // it — but it is never offered as something to choose. The label and colour

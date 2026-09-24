@@ -183,9 +183,9 @@ function Pill({
   );
 }
 
-/** What the content audit says about this exact wording. `not-in-scope` is a
- * StudyShark item the audit does not cover; everything else is a devShark
- * verdict, and only `reviewed` is served. An edit turns a reviewed item into
+/** What the content audit says about this exact wording. `not-in-scope` is an
+ * item the audit does not cover; everything else is an audit verdict, and only
+ * `reviewed` is served. An edit turns a reviewed item into
  * `superseded` until a review of the new wording is recorded in the ledger. */
 const REVIEW_COLOR: Record<AdminQuestion['review']['reason'], string> = {
   reviewed: '#15803d',

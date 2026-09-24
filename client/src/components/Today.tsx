@@ -20,7 +20,6 @@ import { masteryDayKey, type LevelMasteryEntry } from '../../../shared/mastery';
 import { getCategoryHexColor } from '../lib/categories';
 import { CategoryGlyph } from './ui/techIcons';
 import { SharkFin } from './SharkFin';
-import { CURRENT_PRODUCT } from '../lib/products';
 import { useAuth } from '../lib/auth';
 import type { RoadmapTopic, RoadmapStructure } from '../types/quiz';
 import './Today.css';
@@ -28,10 +27,10 @@ import './DeepEndScreens.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
-// devShark only: coding tasks due for a second pass. Lazy so the coding index
-// stays out of the StudyShark bundle.
+// Coding tasks due for a second pass. Lazy so the coding index stays out of
+// the Today bundle until it is needed.
 const CodingDueSection = lazy(() => import('./coding/CodingDueSection').then((m) => ({ default: m.CodingDueSection })));
-// devShark only: the learner's open challenge run, planned or under way.
+// The learner's open challenge run, planned or under way.
 const ChallengeRunSection = lazy(() => import('./coding/ChallengeRunSection').then((m) => ({ default: m.ChallengeRunSection })));
 const PathResumeSection = lazy(() => import('./paths/PathResumeSection').then((m) => ({ default: m.PathResumeSection })));
 // Concepts whose spaced review is due. Lazy for the same reason: it fetches,
@@ -207,19 +206,19 @@ export default function Today() {
         </Suspense>
       )}
 
-      {CURRENT_PRODUCT.id === 'devshark' && isAuthenticated && (
+      {isAuthenticated && (
         <Suspense fallback={null}>
           <ChallengeRunSection />
         </Suspense>
       )}
 
-      {CURRENT_PRODUCT.id === 'devshark' && isAuthenticated && (
+      {isAuthenticated && (
         <Suspense fallback={null}>
           <CodingDueSection />
         </Suspense>
       )}
 
-      {CURRENT_PRODUCT.id === 'devshark' && isAuthenticated && (
+      {isAuthenticated && (
         <Suspense fallback={null}>
           <PathResumeSection />
         </Suspense>

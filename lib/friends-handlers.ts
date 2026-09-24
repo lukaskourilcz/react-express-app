@@ -192,8 +192,8 @@ export async function handleFriends(
       res.setHeader('Allow', 'GET');
       return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
     }
-    // The categories are this deployment's own, never the browser's: a
-    // devShark friend list sums webdev and a geoShark one sums geography.
+    // The categories are this deployment's own, never the browser's, so a
+    // friend list sums webdev activity only.
     const categories = defaultDeploymentCategories();
     const [list, requests] = await Promise.all([
       withTimeout(supabase.rpc('friend_list', { p_user_id: userId, p_categories: categories })),

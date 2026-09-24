@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-const slug = process.env.TEST_PRODUCT === 'studyshark' ? 'capitals-of-europe' : 'javascript-closures';
+const slug = 'javascript-closures';
 for (const locale of ['en', 'cs']) for (const theme of ['light', 'dark']) {
   test(`${locale} ${theme}: guide, keyboard practice and accessible content`, async ({ page }, testInfo) => {
     await page.setViewportSize({ width: 390, height: 844 });

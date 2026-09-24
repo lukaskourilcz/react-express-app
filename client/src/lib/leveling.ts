@@ -123,49 +123,11 @@ const RANK_META: ReadonlyArray<{ title: string }> = [
 /** Rank titles in order — used to label the dev configuration UI. */
 export const RANK_TITLES: string[] = RANK_META.map((r) => r.title);
 
-// Per-subject rank ladders, index-aligned with RANK_META (same 10 XP tiers,
-// subject-appropriate titles). Web Dev keeps RANK_META and composes
-// the track specialization on top; every other subject uses its own complete
-// titles (no specialization). See rankLabelKeyFor() in tracks.ts.
+// The rank ladder per subject, index-aligned with RANK_META (the same ten XP
+// tiers). devShark's one ladder composes the track specialization on top; see
+// rankLabelKeyFor() in tracks.ts.
 const SUBJECT_RANK_LADDER: Record<SubjectId, ReadonlyArray<{ title: string }>> = {
   webdev: RANK_META,
-  geography: [
-    { title: 'Wanderer' }, { title: 'Junior Explorer' }, { title: 'Explorer' },
-    { title: 'Navigator' }, { title: 'Cartographer' }, { title: 'Senior Geographer' },
-    { title: 'Regional Expert' }, { title: 'Continental Scholar' },
-    { title: 'World Authority' }, { title: 'Master Geographer' },
-  ],
-  math: [
-    { title: 'Counter' }, { title: 'Junior Mathematician' },
-    { title: 'Student Mathematician' }, { title: 'Mathematician' },
-    { title: 'Problem Solver' }, { title: 'Senior Mathematician' },
-    { title: 'Analyst' }, { title: 'Theorist' },
-    { title: 'Distinguished Mathematician' }, { title: 'Master Mathematician' },
-  ],
-  history: [
-    { title: 'Novice' }, { title: 'Junior Historian' }, { title: 'Student of History' },
-    { title: 'Historian' }, { title: 'Chronicler' }, { title: 'Senior Historian' },
-    { title: 'Scholar' }, { title: 'Distinguished Historian' },
-    { title: 'Master Historian' }, { title: 'Sage' },
-  ],
-  chess: [
-    { title: 'Beginner' }, { title: 'Novice' }, { title: 'Casual Player' },
-    { title: 'Club Player' }, { title: 'Intermediate' }, { title: 'Advanced' },
-    { title: 'Expert' }, { title: 'Candidate Master' }, { title: 'Master' },
-    { title: 'Grandmaster' },
-  ],
-  biology: [
-    { title: 'Student' }, { title: 'Junior Biologist' }, { title: 'Biology Student' },
-    { title: 'Biologist' }, { title: 'Physiologist' }, { title: 'Senior Biologist' },
-    { title: 'Anatomist' }, { title: 'Researcher' },
-    { title: 'Distinguished Biologist' }, { title: 'Master Biologist' },
-  ],
-  poker: [
-    { title: 'Beginner' }, { title: 'Novice' }, { title: 'Casual Player' },
-    { title: 'Amateur' }, { title: 'Regular' }, { title: 'Winning Player' },
-    { title: 'Shark' }, { title: 'Pro' }, { title: 'High Roller' },
-    { title: 'Poker Master' },
-  ],
 };
 
 /**

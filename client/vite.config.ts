@@ -8,7 +8,8 @@ import { PRODUCT_CATALOG, resolveCatalogProductId } from './product-catalog';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { TopicArticle, topicPath } from './src/components/topics/TopicArticle';
-import { publicOrigin, publicTopics, topicSchema } from './src/lib/publicMetadata';
+import { PUBLIC_ORIGIN, topicSchema } from './src/lib/publicMetadata';
+import { TOPIC_LANDINGS } from './src/lib/topicCatalog';
 
 // `ANALYZE=true npm run build` emits a treemap of the bundle to
 // dist/bundle-stats.html (open it to inspect the design-system/router/app split) plus a
@@ -130,8 +131,8 @@ function productMetadata(env: Record<string, string>): Plugin {
       await writeFile(path.join(outDir, 'manifest.webmanifest'), manifest);
 
       const indexHtml = await readFile(path.join(outDir, 'index.html'), 'utf8');
-      const topics = publicTopics(id);
-      const origin = publicOrigin(id);
+      const topics = TOPIC_LANDINGS;
+      const origin = PUBLIC_ORIGIN;
       const escape = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
       const urls = [`${origin}/`];
       for (const topic of topics) for (const locale of ['en', 'cs'] as const) {

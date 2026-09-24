@@ -670,8 +670,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       correct: result.correctAnswers,
       total: result.totalQuestions,
     });
-    const brandedText = text.split('StudyShark').join(CURRENT_PRODUCT.brand);
-    const shareData = { title: CURRENT_PRODUCT.brand, text: brandedText, url: window.location.origin };
+    const shareData = { title: CURRENT_PRODUCT.brand, text, url: window.location.origin };
     try {
       capture('share_initiated', { kind: mode === 'daily' ? 'daily_result' : 'quiz_result' });
       const accent = getComputedStyle(document.documentElement).getPropertyValue('--brand-accent').trim();
@@ -689,7 +688,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         await navigator.share(file && navigator.canShare?.(withFile) ? withFile : shareData);
         return;
       }
-      await navigator.clipboard.writeText(`${brandedText} ${window.location.origin}`);
+      await navigator.clipboard.writeText(`${text} ${window.location.origin}`);
       if (file) {
         downloadShareFile(file);
         setSnack(t('quiz.shareSaved'));

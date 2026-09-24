@@ -28,7 +28,6 @@ import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
 import { trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tracks';
 import { useSubject } from '../lib/subjects';
-import { CURRENT_PRODUCT } from '../lib/products';
 import { useT } from '../i18n/LanguageContext';
 import { RadioCard, RadioCardGroup } from './ui/RadioCards';
 import {
@@ -59,7 +58,7 @@ export interface PathPickerResult {
   studyTime: StudyTime;
 }
 
-/** The steps devShark asks, in order. StudyShark asks only the first. */
+/** The steps the picker asks, in order. */
 const DEV_STEPS = ['track', 'role', 'paths', 'profile'] as const;
 type Step = (typeof DEV_STEPS)[number];
 
@@ -92,9 +91,6 @@ export default function PathPickerDialog({
 }) {
   const t = useT();
   const [subject] = useSubject();
-  // devShark is the only product with a role specialization. Everywhere else
-  // the dialog is the single-step track picker it has always been.
-  const offersRole = CURRENT_PRODUCT.id === 'devshark';
 
   const [step, setStep] = useState<Step>('track');
   const [track, setTrack] = useState<Track>(current);
@@ -119,12 +115,12 @@ export default function PathPickerDialog({
       : null);
   }, [open, current, currentSpecialization, currentProfile]);
 
-  const steps: Step[] = offersRole ? [...DEV_STEPS] : ['track'];
+  const steps: Step[] = [...DEV_STEPS];
   const index = Math.max(0, steps.indexOf(step));
   const isLast = index === steps.length - 1;
   // The final step is the only one that can commit, and only once the three
   // required answers are there. Nothing is guessed on the learner's behalf.
-  const canCommit = !offersRole || (goals.length > 0 && experience !== null && studyTime !== null);
+  const canCommit = goals.length > 0 && experience !== null && studyTime !== null;
 
   const toggleGoal = (goal: LearnerGoal) =>
     setGoals((current) => current.includes(goal)

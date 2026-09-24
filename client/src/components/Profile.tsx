@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useEffect, useId, useState, type ReactNode } from 'react';
 import { Kicker } from './landing/LandingKit';
 import { useNavigate } from 'react-router-dom';
 import { Grid } from '@astryxdesign/core/Grid';
@@ -11,22 +11,12 @@ import { Button } from '@astryxdesign/core/Button';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { Banner } from '@astryxdesign/core/Banner';
-import { ToggleButton } from '@astryxdesign/core/ToggleButton';
-import { ToggleButtonGroup } from '@astryxdesign/core/ToggleButton';
 import { AppToast } from './ui/AppToast';
 import type { UserStats } from '../lib/supabase';
 import { useProfileStats } from '../lib/queries';
-import {
-  useRoadmapProgress,
-  syncProgressWithServer,
-  useExtraUnlocks,
-  isTopicUnlocked,
-  unlockExtraTopics,
-  pushProgressToServer,
-} from '../lib/roadmap';
-import { useTrack, trackStarterTopics, rankLabelKeyFor, trackLabelKey, TRACK_ORDER, type Track } from '../lib/tracks';
+import { useRoadmapProgress, syncProgressWithServer } from '../lib/roadmap';
+import { useTrack, rankLabelKeyFor } from '../lib/tracks';
 import LearningPathsCard from './paths/LearningPathsCard';
-import { getCategoryHexColor, categoryLabelKey } from '../lib/categories';
 import { useQuestXp, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp, levelForXp, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
@@ -39,15 +29,13 @@ import { MULTILINGUAL, useT, useLanguage } from '../i18n/LanguageContext';
 import type { Lang } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
-import { SIBLING_PLATFORMS_URL, useActiveSubject, topicSetForSubject } from '../lib/subjects';
-import { CURRENT_PRODUCT } from '../lib/products';
+import { useActiveSubject, topicSetForSubject } from '../lib/subjects';
 import { savePreferredLanguage } from '../lib/languagePref';
 import { useColorMode } from '../theme/ColorModeContext';
 import { useSettings } from '../lib/settings';
 const FriendsPanel = lazy(() => import('./FriendsPanel'));
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
-import { SwimmingFin } from './SharkFin';
 import { FlameIcon, BoltIcon, TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, SoundOffIcon } from './ui/icons';
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
@@ -332,44 +320,15 @@ function ProfileBody({
             a useful zero state. It must not be buried below track/stat cards. */}
         <StreakCard stats={stats} tipKey={tipKey} />
 
-        {/* On a standalone deploy (e.g. devShark) point learners at the umbrella
-            site so they can discover the other Shark platforms. Hidden when
-            VITE_SIBLING_URL is unset (i.e. on StudyShark itself). */}
-        {SIBLING_PLATFORMS_URL && (
-          <a
-            href={SIBLING_PLATFORMS_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-          >
-            <Card variant="muted" padding={2} width="100%">
-              <HStack gap={1.5} align="center" justify="between">
-                <HStack gap={1.5} align="center">
-                  <SwimmingFin size={24} />
-                  <VStack gap={0}>
-                    <Text weight="bold">{t('profile.otherPlatforms')}</Text>
-                    <Text type="supporting" size="xsm" color="secondary">
-                      {t('profile.otherPlatformsSub')}
-                    </Text>
-                  </VStack>
-                </HStack>
-                <span aria-hidden style={{ color: 'var(--brand-accent)', fontWeight: 800, fontSize: '1.25rem', flexShrink: 0 }}>→</span>
-              </HStack>
-            </Card>
-          </a>
-        )}
-
         {/* On desktop the cards split into two columns so the profile lands close
             to one viewport instead of one long scroll. On mobile they stack. */}
         <Grid columns={{ minWidth: 360, max: 2 }} gap={2} align="start" width="100%">
           <VStack gap={2}>
             <CareerCard />
 
-            {/* One card owns the track. On devShark that is the paths card,
-                which carries the specialization and the picker as well; the
-                simpler chooser below is for the subjects that have no paths.
-                Rendering both put the same decision on the page twice. */}
-            {CURRENT_PRODUCT.id === 'devshark' ? <LearningPathsCard /> : <LearningTrackCard />}
+            {/* One card owns the track: the paths card, which carries the
+                specialization and the picker as well. */}
+            <LearningPathsCard />
 
             <AdvisorCard />
           </VStack>
@@ -429,7 +388,7 @@ function ProfileBody({
               </Lift>
             )}
 
-            {CURRENT_PRODUCT.id === 'devshark' && <GithubGardenCard />}
+            <GithubGardenCard />
 
             <AccountDeletionCard />
           </VStack>
@@ -751,97 +710,6 @@ function CareerCard() {
           </HStack>
         </VStack>
       </VStack>
-    </Card>
-    </Lift>
-  );
-}
-
-// Learning track: the learner picks Frontend / Backend / Fullstack and we unlock
-// that path's first learning sections (its first two stages) so they can dive
-// straight in. The choice is shared (via useTrack) with the /roadmap page, and
-// unlocks are additive — switching tracks never re-locks anything.
-function LearningTrackCard() {
-  const t = useT();
-  const navigate = useNavigate();
-  const subject = useActiveSubject();
-  const [track, setTrack] = useTrack();
-  const progress = useRoadmapProgress();
-  const extraUnlocks = useExtraUnlocks();
-  const extraSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
-  const [snack, setSnack] = useState<string | null>(null);
-
-  const sections = trackStarterTopics(track);
-
-  const applyTrack = (next: string | null) => {
-    // Clicking the already-selected track re-applies (re-unlocks) it rather than
-    // deselecting, so the starting sections are always ensured.
-    const target = (next as Track) || track;
-    if (target !== track) setTrack(target);
-    unlockExtraTopics(trackStarterTopics(target));
-    // Best-effort: persist the new unlocks to the account.
-    pushProgressToServer().catch(() => {});
-    setSnack(t('profile.trackSet', { label: t(trackLabelKey(subject.id, target)) }));
-  };
-
-  return (
-    <Lift>
-    <Card variant="default" padding={3} width="100%">
-      <VStack gap={2}>
-        <VStack gap={0.5}>
-          <SectionLabel>{t('profile.trackTitle')}</SectionLabel>
-          <Text type="supporting" color="secondary">{t('profile.trackHelp')}</Text>
-        </VStack>
-
-        <ToggleButtonGroup
-          label={t('profile.trackTitle')}
-          type="single"
-          value={track}
-          onChange={applyTrack}
-        >
-          {TRACK_ORDER.map((tk) => (
-            <ToggleButton key={tk} value={tk} label={t(trackLabelKey(subject.id, tk))} />
-          ))}
-        </ToggleButtonGroup>
-
-        <VStack gap={1}>
-          <Text type="supporting" size="xsm" color="secondary">
-            {t('profile.trackSectionsLabel')}
-          </Text>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {sections.map((topic) => {
-              const unlocked = isTopicUnlocked(progress, topic, extraSet);
-              const color = getCategoryHexColor(topic);
-              return (
-                <button
-                  key={topic}
-                  type="button"
-                  className="de-topic-chip"
-                  data-unlocked={unlocked}
-                  onClick={() => navigate(`/learn?topic=${topic}`)}
-                >
-                  {/* The topic's colour, as a mark rather than a flood. Locked
-                      and unlocked differ in weight and border too, so the state
-                      is not carried by colour alone. */}
-                  <span aria-hidden className="de-topic-chip__dot" style={{ backgroundColor: color }} />
-                  {t(categoryLabelKey(topic))}
-                </button>
-              );
-            })}
-          </div>
-        </VStack>
-
-        <HStack>
-          <Button variant="secondary" size="sm" label={t('profile.trackGoLearn')} onClick={() => navigate('/learn')} />
-        </HStack>
-      </VStack>
-
-      <AppToast
-        open={!!snack}
-        onClose={() => setSnack(null)}
-        severity="info"
-        message={snack ?? ''}
-        autoHideDuration={3000}
-      />
     </Card>
     </Lift>
   );

@@ -1,4 +1,4 @@
-// The honest "pricing page": everything StudyShark gives away free, next to
+// The honest "pricing page": everything devShark gives away free, next to
 // what the same things typically cost in paid learning apps. No competitor
 // names and no invented prices — only qualitative "often paid / usually
 // limited" language, all sourced from the landing.compare.* translation keys.
@@ -42,7 +42,7 @@ interface CompareRow {
   other: 'paid' | 'limited' | 'no';
 }
 
-// StudyShark is a full column of ✓s; the right column qualifies each with the
+// devShark is a full column of ✓s; the right column qualifies each with the
 // exact honest phrasing from the dictionary. Order runs access → extras → the
 // two "we simply don't do this" rows (no ads, no card) that get a hard ✗.
 const ROWS: CompareRow[] = [
@@ -103,7 +103,7 @@ export default function ComparisonTable({ startHref = '/learn', onStart }: Compa
               <tr>
                 <th scope="col">{t('landing.compare.colFeature')}</th>
                 <th scope="col" className="ss-compare__herocell">
-                  {t('landing.compare.colStudyShark')}
+                  {t('landing.compare.colBrand')}
                   <span className="ss-compare-free">{t('landing.compare.freeLabel')}</span>
                 </th>
                 <th scope="col">{t('landing.compare.colOthers')}</th>

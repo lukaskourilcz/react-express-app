@@ -27,58 +27,6 @@ export const KNOWN_CATEGORIES: CategoryType[] = [
   'nextjs', 'nodejs', 'git', 'dsa', 'algorithms',
   'abbreviations', 'general', 'ai',
   'dev-world', 'code-snippets',
-  // Geography
-  'continents', 'capitals', 'flags', 'landforms', 'climate', 'population', 'political', 'economic', 'cartography', 'earth',
-  // Math
-  'arithmetic', 'fractions', 'prealgebra', 'algebra', 'geometry', 'trigonometry', 'statistics', 'precalculus', 'calculus', 'linear-algebra',
-  // History
-  'prehistory', 'ancient', 'classical', 'medieval', 'renaissance', 'earlymodern', 'industrial', 'worldwars', 'coldwar', 'modern',
-  // Chess
-  'openings', 'tactics', 'strategy', 'endgames', 'combinations',
-  // Math (advanced)
-  'discrete-math',
-  'number-theory',
-  'multivariable-calculus',
-  'differential-equations',
-  'real-analysis',
-  // Geography (advanced)
-  'geomorphology',
-  'oceanography',
-  'biogeography',
-  'geopolitics',
-  'gis',
-  // History (thematic)
-  'historiography',
-  'history-of-science',
-  'economic-history',
-  'intellectual-history',
-  'military-history',
-  // Human Biology
-  'cell-biology',
-  'skeletal-system',
-  'muscular-system',
-  'nervous-system',
-  'endocrine-system',
-  'cardiovascular-system',
-  'respiratory-system',
-  'digestive-system',
-  'immune-system',
-  'reproductive-system',
-  // Chess (advanced)
-  'opening-theory',
-  'middlegame',
-  'pawn-structures',
-  'endgame-technique',
-  'chess-history',
-  // Poker
-  'positions',
-  'starting-hands',
-  'pot-odds',
-  'betting-strategy',
-  'postflop',
-  'tournament-play',
-  'psychology',
-  'gto-advanced',
 ];
 
 export interface QuestionEditRow {

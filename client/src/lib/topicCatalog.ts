@@ -1,6 +1,6 @@
 export interface TopicLandingDefinition {
   slug: string;
-  subject: 'webdev' | 'geography' | 'history' | 'math' | 'biology' | 'chess';
+  subject: 'webdev';
   category: string;
   title: { en: string; cs: string };
   description: { en: string; cs: string };
@@ -61,41 +61,6 @@ export const TOPIC_LANDINGS: TopicLandingDefinition[] = [
     description: { en: 'Rebase replays commits onto a new base and rewrites their identities, producing a linear history.', cs: 'Rebase přehraje commity na nový základ, přepíše jejich identity a vytvoří lineární historii.' },
     misconception: { en: 'Rebase does more than move a pointer: replayed commits receive new hashes.', cs: 'Rebase pouze neposune ukazatel: přehrané commity dostanou nové hashe.' },
     practice: { en: [['What does rebase rewrite?', 'Commit history.'], ['When is it safest?', 'On unpublished commits.'], ['How do you cancel it?', 'git rebase --abort']], cs: [['Co rebase přepisuje?', 'Historii commitů.'], ['Kdy je nejbezpečnější?', 'U nezveřejněných commitů.'], ['Jak ho zrušíš?', 'git rebase --abort']] },
-  },
-  {
-    slug: 'capitals-of-europe', subject: 'geography', category: 'capitals',
-    title: { en: 'Capitals of Europe practice', cs: 'Procvičování hlavních měst Evropy' },
-    description: { en: 'Connect each capital with its country, region and a memorable geographic clue.', cs: 'Propoj každé hlavní město se státem, regionem a zapamatovatelnou zeměpisnou stopou.' },
-    misconception: { en: 'The largest city is not always the capital; Switzerland uses Bern rather than Zürich.', cs: 'Největší město nemusí být hlavní; Švýcarsko má Bern, nikoli Curych.' },
-    practice: { en: [['Capital of Portugal?', 'Lisbon'], ['Capital of Slovenia?', 'Ljubljana'], ['Capital of Switzerland?', 'Bern']], cs: [['Hlavní město Portugalska?', 'Lisabon'], ['Hlavní město Slovinska?', 'Lublaň'], ['Hlavní město Švýcarska?', 'Bern']] },
-  },
-  {
-    slug: 'major-historical-periods', subject: 'history', category: 'modern',
-    title: { en: 'Major historical periods', cs: 'Hlavní historická období' },
-    description: { en: 'Period labels organize change over time, but their boundaries vary by region and historical question.', cs: 'Názvy období uspořádávají změny v čase, jejich hranice se však liší podle regionu i historické otázky.' },
-    misconception: { en: 'Historical periods do not begin everywhere on one exact date.', cs: 'Historická období nezačínají všude jedním přesným datem.' },
-    practice: { en: [['What conventionally ends prehistory?', 'Written records.'], ['One global medieval start date?', 'No.'], ['What is periodization?', 'Dividing history into analytical periods.']], cs: [['Co obvykle ukončuje pravěk?', 'Písemné záznamy.'], ['Má středověk jedno světové počáteční datum?', 'Ne.'], ['Co je periodizace?', 'Rozdělení historie do analytických období.']] },
-  },
-  {
-    slug: 'foundational-mathematics', subject: 'math', category: 'prealgebra',
-    title: { en: 'Foundational mathematics practice', cs: 'Procvičování základů matematiky' },
-    description: { en: 'Build number sense through fractions, ratios, operations and explaining why a method works.', cs: 'Buduj cit pro čísla pomocí zlomků, poměrů, operací a vysvětlování, proč postup funguje.' },
-    misconception: { en: 'Memorizing a rule is not the same as understanding it; estimate first.', cs: 'Zapamatovat si pravidlo není totéž jako mu rozumět; nejprve odhaduj.' },
-    practice: { en: [['25% of 80?', '20'], ['Is 3/4 larger than 2/3?', 'Yes.'], ['Meaning of equals?', 'Both sides have the same value.']], cs: [['Kolik je 25 % z 80?', '20'], ['Je 3/4 větší než 2/3?', 'Ano.'], ['Co znamená rovnítko?', 'Obě strany mají stejnou hodnotu.']] },
-  },
-  {
-    slug: 'basic-human-biology', subject: 'biology', category: 'cell-biology',
-    title: { en: 'Basic human biology', cs: 'Základy biologie člověka' },
-    description: { en: 'Connect cells, tissues, organs and coordinated body systems that maintain internal balance.', cs: 'Propoj buňky, tkáně, orgány a spolupracující tělní soustavy, které udržují vnitřní rovnováhu.' },
-    misconception: { en: 'Body systems are interconnected rather than isolated modules.', cs: 'Tělní soustavy jsou propojené, nikoli izolované moduly.' },
-    practice: { en: [['Basic unit of life?', 'The cell'], ['What transports oxygen?', 'The cardiovascular system.'], ['What is homeostasis?', 'Stable internal conditions.']], cs: [['Základní jednotka života?', 'Buňka'], ['Co přenáší kyslík?', 'Oběhová soustava.'], ['Co je homeostáza?', 'Stabilní vnitřní podmínky.']] },
-  },
-  {
-    slug: 'chess-rules-and-tactics', subject: 'chess', category: 'tactics',
-    title: { en: 'Chess rules and tactical patterns', cs: 'Šachová pravidla a taktické motivy' },
-    description: { en: 'Build tactical vision from legal moves, checks, captures, threats, forks and pins.', cs: 'Buduj taktické vidění od legálních tahů, šachů, braní a hrozeb po vidličky a vazby.' },
-    misconception: { en: 'Spotting a pattern is not enough; check the opponent’s forcing replies.', cs: 'Rozpoznat motiv nestačí; prověř soupeřovy vynucující odpovědi.' },
-    practice: { en: [['What is a fork?', 'One piece attacks multiple targets.'], ['Can an absolute pin move?', 'Not legally if it exposes the king.'], ['Scan first for?', 'Checks, captures and threats.']], cs: [['Co je vidlička?', 'Jedna figura napadá více cílů.'], ['Může se absolutně vázaná figura pohnout?', 'Ne, pokud odkryje krále.'], ['Co hledat nejdřív?', 'Šachy, braní a hrozby.']] },
   },
 ];
 

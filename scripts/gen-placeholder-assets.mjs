@@ -3,7 +3,7 @@
 // solid-colour PNGs, with no external dependencies (pure Node zlib).
 //
 // Why this exists: the PWA/OG pipeline needs real PNG files at specific paths
-// and sizes, but the actual artwork (the StudyShark mascot) comes from
+// and sizes, but the actual artwork (the devShark mascot) comes from
 // Recraft/Ideogram — see NEEDED.md. These placeholders make every path resolve
 // so the web app builds and links don't 404.
 // Replace each file in place with the real artwork; keep the filenames.

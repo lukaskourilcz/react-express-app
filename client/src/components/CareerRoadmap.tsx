@@ -32,9 +32,9 @@ import {
   syncProgressWithServer,
 } from '../lib/roadmap';
 import { useRoadmapStructure } from '../lib/queries';
-import { useTrack, isTopicInTrack, rankLabelKeyFor, trackLabelKey, trackBlurbKey, stageTitleKey, localizedTopicDetail, TRACK_ORDER, tracksForSubject } from '../lib/tracks';
-import { getCategoryHexColor, categoryLabelKey } from '../lib/categories';
-import { useSubject, subjectNameKey, type SubjectId } from '../lib/subjects';
+import { useTrack, isTopicInTrack, rankLabelKeyFor, trackLabelKey, trackBlurbKey, TRACK_ORDER } from '../lib/tracks';
+import { getCategoryHexColor } from '../lib/categories';
+import { useSubject } from '../lib/subjects';
 import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
 import { levelForXp, getCareerRanks } from '../lib/leveling';
@@ -93,27 +93,6 @@ function webdevPillars(t: TFn): Pillar[] {
   ];
 }
 
-// Every other subject derives its pillars from its "fullstack" track: each
-// stage becomes a pillar, each topic an area, labelled from the shared category
-// / topic-detail translation keys.
-function derivedPillars(subject: SubjectId, t: TFn): Pillar[] {
-  const full = tracksForSubject(subject).fullstack;
-  return full.stages.map((stage, i) => ({
-    id: `stage-${i}`,
-    title: t(stageTitleKey(subject, 'fullstack', i)),
-    intro: '',
-    areas: stage.topics.map((topic) => ({
-      topic,
-      label: t(categoryLabelKey(topic)),
-      blurb: localizedTopicDetail(t, topic) ?? '',
-    })),
-  }));
-}
-
-function buildPillars(subject: SubjectId, t: TFn): Pillar[] {
-  return subject === 'webdev' ? webdevPillars(t) : derivedPillars(subject, t);
-}
-
 // The honest part: things a quiz app genuinely cannot give you. Seniority is
 // mostly this list plus years of shipping.
 const BEYOND: { id: string; labelKey: TranslationKey; detailKey: TranslationKey }[] = [
@@ -138,17 +117,12 @@ export default function CareerRoadmap() {
   const structure = structureQuery.data ?? null;
   // The chosen track drives this whole page — map, pillars and headline %.
   const [track, setTrack] = useTrack();
-  // Subject scopes the tracks, pillars and (web-dev-only) career framing.
   const [subject] = useSubject();
-  const isWebdev = subject === 'webdev';
-  const pillars = useMemo(() => buildPillars(subject, t), [subject, t]);
+  const pillars = useMemo(() => webdevPillars(t), [t]);
 
-  // Header copy: Web Dev keeps its curated career framing; other subjects get a
-  // clean, subject-branded header (the fullstack track blurb is the pitch).
-  const subjectName = t(subjectNameKey(subject));
-  const kicker = isWebdev ? t('roadmapPage.kicker') : t('careerRoadmap.subjectKicker', { subject: subjectName });
-  const pageTitle = isWebdev ? t('roadmapPage.title') : t('careerRoadmap.subjectTitle', { subject: subjectName });
-  const headerBody = isWebdev ? t('careerRoadmap.headerBody') : t(trackBlurbKey(subject, 'fullstack'));
+  const kicker = t('roadmapPage.kicker');
+  const pageTitle = t('roadmapPage.title');
+  const headerBody = t('careerRoadmap.headerBody');
 
   // Sync account progress so the percentages are accurate even on a fresh device.
   useEffect(() => {
@@ -200,15 +174,13 @@ export default function CareerRoadmap() {
           </VStack>
         </div>
 
-        {/* Honesty banner — the career/seniority framing is Web Dev specific. */}
-        {isWebdev && (
-          <Banner
-            status="info"
-            container="card"
-            title={t('careerRoadmap.honestyLead')}
-            description={t('careerRoadmap.honestyBody')}
-          />
-        )}
+        {/* Honesty banner about what the career framing can and cannot claim. */}
+        <Banner
+          status="info"
+          container="card"
+          title={t('careerRoadmap.honestyLead')}
+          description={t('careerRoadmap.honestyBody')}
+        />
 
         {/* Track chooser — drives the headline %, the map and the pillars below. */}
         <VStack gap={1.5} align="center">
@@ -266,20 +238,12 @@ export default function CareerRoadmap() {
             />
 
             <HStack gap={1} align="center" wrap="wrap">
-              {isWebdev ? (
-                <>
-                  <Badge variant="neutral" label={rankTitle} />
-                  <Text type="supporting" size="xsm" color="secondary">
-                    {reachedSenior
-                      ? t('careerRoadmap.seniorReached')
-                      : t('careerRoadmap.xpToSenior', { xp: xpToSenior.toLocaleString() })}
-                  </Text>
-                </>
-              ) : (
-                // Other subjects use a neutral XP chip — the "senior engineer"
-                // career ranks are Web Dev specific.
-                <Badge variant="neutral" label={`${totalXp.toLocaleString()} XP`} />
-              )}
+              <Badge variant="neutral" label={rankTitle} />
+              <Text type="supporting" size="xsm" color="secondary">
+                {reachedSenior
+                  ? t('careerRoadmap.seniorReached')
+                  : t('careerRoadmap.xpToSenior', { xp: xpToSenior.toLocaleString() })}
+              </Text>
             </HStack>
           </VStack>
         </Card>
@@ -306,12 +270,10 @@ export default function CareerRoadmap() {
 
         {/* Optional paths, above the pillars because they answer a different
             question: the pillars are "what is left in my track", these are
-            "what else could I take on". devShark only. */}
-        {isWebdev && (
-          <Suspense fallback={null}>
-            <PathDiscovery />
-          </Suspense>
-        )}
+            "what else could I take on". */}
+        <Suspense fallback={null}>
+          <PathDiscovery />
+        </Suspense>
 
         {/* The pillars, filtered to the chosen track (empty pillars are hidden).
             One shared CTA up top instead of repeating it under every pillar. */}
@@ -388,31 +350,29 @@ export default function CareerRoadmap() {
           })}
         </Grid>
 
-        {/* The honest gap — Web Dev only (it's about engineering seniority). */}
-        {isWebdev && (
-          <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
-          <Card variant="muted" padding={5} width="100%">
+        {/* The honest gap: what engineering seniority takes beyond this app. */}
+        <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
+        <Card variant="muted" padding={5} width="100%">
+          <VStack gap={1.5}>
+            <Heading level={2}>{t('careerRoadmap.beyondTitle')}</Heading>
+            <Text type="supporting" color="secondary">
+              {t('careerRoadmap.beyondIntro')}
+            </Text>
+            <Divider variant="subtle" />
             <VStack gap={1.5}>
-              <Heading level={2}>{t('careerRoadmap.beyondTitle')}</Heading>
-              <Text type="supporting" color="secondary">
-                {t('careerRoadmap.beyondIntro')}
-              </Text>
-              <Divider variant="subtle" />
-              <VStack gap={1.5}>
-                {BEYOND.map((b) => (
-                  <HStack key={b.id} gap={1.5} align="start">
-                    <span aria-hidden style={{ color: 'var(--brand-accent)', fontWeight: 700, lineHeight: 1.4 }}>○</span>
-                    <VStack gap={0}>
-                      <Text type="body" weight="semibold">{t(b.labelKey)}</Text>
-                      <Text type="supporting" size="xsm" color="secondary">{t(b.detailKey)}</Text>
-                    </VStack>
-                  </HStack>
-                ))}
-              </VStack>
+              {BEYOND.map((b) => (
+                <HStack key={b.id} gap={1.5} align="start">
+                  <span aria-hidden style={{ color: 'var(--brand-accent)', fontWeight: 700, lineHeight: 1.4 }}>○</span>
+                  <VStack gap={0}>
+                    <Text type="body" weight="semibold">{t(b.labelKey)}</Text>
+                    <Text type="supporting" size="xsm" color="secondary">{t(b.detailKey)}</Text>
+                  </VStack>
+                </HStack>
+              ))}
             </VStack>
-          </Card>
-          </div>
-        )}
+          </VStack>
+        </Card>
+        </div>
 
         <Text type="supporting" size="xsm" color="secondary" justify="center">
           {t('careerRoadmap.footer')}

@@ -6,22 +6,10 @@ export type BankBundle = { questions: Question[]; translations: Record<string, Q
 
 const questionLoaders: Record<ScopeSubjectId, () => Promise<Question[]>> = {
   webdev: async () => (await import('./webdev-bank')).loadWebdevQuestions(),
-  geography: async () => (await import('./roadmap-questions.geography')).allRoadmapGeographyQuestions,
-  math: async () => (await import('./roadmap-questions.math')).allRoadmapMathQuestions,
-  history: async () => (await import('./roadmap-questions.history')).allRoadmapHistoryQuestions,
-  biology: async () => (await import('./roadmap-questions.biology')).allRoadmapBiologyQuestions,
-  chess: async () => (await import('./roadmap-questions.chess')).allRoadmapChessQuestions,
-  poker: async () => (await import('./roadmap-questions.poker')).allRoadmapPokerQuestions,
 };
 
 const translationLoaders: Record<ScopeSubjectId, () => Promise<Record<string, QuestionTranslation>>> = {
   webdev: async () => (await import('./webdev-bank')).loadWebdevTranslations(),
-  geography: async () => (await import('./roadmap-questions.geography.cs')).geographyTranslationsCs,
-  math: async () => (await import('./roadmap-questions.math.cs')).mathTranslationsCs,
-  history: async () => (await import('./roadmap-questions.history.cs')).historyTranslationsCs,
-  biology: async () => (await import('./roadmap-questions.biology.cs')).biologyTranslationsCs,
-  chess: async () => (await import('./roadmap-questions.chess.cs')).chessTranslationsCs,
-  poker: async () => (await import('./roadmap-questions.poker.cs')).pokerTranslationsCs,
 };
 
 const questionPromises = new Map<ScopeSubjectId, Promise<Question[]>>();

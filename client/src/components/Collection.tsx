@@ -2,7 +2,6 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { lazy, Suspense, useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
-import { CURRENT_PRODUCT } from '../lib/products';
 import { useBookmarks, useSaveChallenge } from '../coding/practice';
 import { CODING_INDEX } from '../../../shared/coding-index';
 import LoadingScreen from './LoadingScreen';
@@ -35,8 +34,7 @@ function SavedChallenges() {
 export default function Collection() {
   const { t } = useLanguage();
   const [params, setParams] = useSearchParams();
-  const coding = CURRENT_PRODUCT.id === 'devshark';
-  const tabs = coding ? ['questions', 'challenges'] as const : ['questions'] as const;
+  const tabs = ['questions', 'challenges'] as const;
   const selected = tabs.find(tab => tab === params.get('tab')) ?? 'questions';
   return <div className="cd-page ss-pop">
     <header><Kicker>{t('collection.heading')}</Kicker><h1>{t('collection.heading')}</h1><p className="cd-lead">{t('collection.subtitle')}</p></header>

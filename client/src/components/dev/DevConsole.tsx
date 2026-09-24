@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { useColorMode } from '../../theme/ColorModeContext';
-import { SUBJECT_ORDER, SUBJECTS, isSubjectLocked, useSubject, type SubjectId } from '../../lib/subjects';
+import { useActiveSubject } from '../../lib/subjects';
 import DevQuestions from './DevQuestions';
 import DevTriage from './DevTriage';
 import DevReports from './DevReports';
@@ -32,8 +32,7 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
   const [params, setParams] = useSearchParams();
   const requestedTab = params.get('section') as Tab | null;
   const tab = requestedTab && TAB_IDS.has(requestedTab) ? requestedTab : 'questions';
-  const [subject, setSubject] = useSubject();
-  const activeSubject = SUBJECTS[subject];
+  const activeSubject = useActiveSubject();
   const { mode, toggle: toggleColorMode } = useColorMode();
   const activeNav = NAV.find((item) => item.id === tab) ?? NAV[0];
 
@@ -51,12 +50,6 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
 
         <div className="dev-context-card">
           <span className="dev-eyebrow">App context</span>
-          <label htmlFor="dev-subject">Preview and edit as</label>
-          <div className="dev-context-select-wrap">
-            <select id="dev-subject" value={subject} disabled={isSubjectLocked()} onChange={(event) => setSubject(event.target.value as SubjectId)}>
-              {SUBJECT_ORDER.map((id) => <option key={id} value={id}>{SUBJECTS[id].label}</option>)}
-            </select>
-          </div>
           <p>{activeSubject.topics.length} paths · {activeSubject.categories.length} categories</p>
           <Link className="dev-open-app" to="/">Open learner app <span aria-hidden="true">↗</span></Link>
         </div>
@@ -84,7 +77,6 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
         </header>
         <div className="dev-mobile-controls">
           <label><span>Section</span><select value={tab} onChange={(event) => selectTab(event.target.value as Tab)}>{NAV.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-          <label><span>App context</span><select value={subject} disabled={isSubjectLocked()} onChange={(event) => setSubject(event.target.value as SubjectId)}>{SUBJECT_ORDER.map((id) => <option key={id} value={id}>{SUBJECTS[id].label}</option>)}</select></label>
         </div>
 
         <div className="dev-main-inner">

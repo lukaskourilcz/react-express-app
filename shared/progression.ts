@@ -74,16 +74,10 @@ export function firstUnfinishedLevel(
 
 /* ── the topic graph ───────────────────────────────────────────────────── */
 
-/** Topics that need nothing before them. Every subject has at least one, which
- * is what makes every valid selection reachable from a standing start. */
+/** Topics that need nothing before them, which is what makes every valid
+ * selection reachable from a standing start. */
 export const STARTER_TOPICS: readonly string[] = [
   'html', 'css', 'javascript',
-  'continents', 'capitals', 'flags',
-  'arithmetic', 'fractions', 'prealgebra',
-  'prehistory', 'ancient', 'classical',
-  'openings',
-  'cell-biology',
-  'positions',
 ];
 
 /** Levels of each prerequisite topic that must be passed before the topic that
@@ -119,85 +113,6 @@ export const TOPIC_PREREQS: Record<string, readonly string[]> = {
   databases: ['nodejs'],
   'system-design': ['nodejs'],
   devops: ['nodejs'],
-  // Geography
-  continents: [],
-  capitals: [],
-  flags: [],
-  landforms: ['continents'],
-  climate: ['continents'],
-  cartography: ['continents'],
-  population: ['capitals'],
-  political: ['capitals'],
-  economic: ['population'],
-  earth: ['landforms'],
-  geomorphology: ['landforms'],
-  oceanography: ['earth'],
-  biogeography: ['climate'],
-  geopolitics: ['political'],
-  gis: ['cartography'],
-  // Math
-  arithmetic: [],
-  fractions: [],
-  prealgebra: [],
-  algebra: ['prealgebra'],
-  geometry: ['prealgebra'],
-  statistics: ['fractions'],
-  trigonometry: ['geometry', 'algebra'],
-  precalculus: ['algebra'],
-  calculus: ['precalculus', 'trigonometry'],
-  'linear-algebra': ['algebra'],
-  'discrete-math': ['algebra'],
-  'number-theory': ['algebra'],
-  'multivariable-calculus': ['calculus'],
-  'differential-equations': ['calculus'],
-  'real-analysis': ['calculus'],
-  // History
-  prehistory: [],
-  ancient: [],
-  classical: [],
-  medieval: ['classical'],
-  renaissance: ['medieval'],
-  earlymodern: ['renaissance'],
-  industrial: ['earlymodern'],
-  worldwars: ['industrial'],
-  coldwar: ['worldwars'],
-  modern: ['coldwar'],
-  historiography: ['ancient'],
-  'history-of-science': ['renaissance'],
-  'economic-history': ['industrial'],
-  'intellectual-history': ['classical'],
-  'military-history': ['classical'],
-  // Biology
-  'cell-biology': [],
-  'skeletal-system': ['cell-biology'],
-  'muscular-system': ['skeletal-system'],
-  'nervous-system': ['cell-biology'],
-  'endocrine-system': ['nervous-system'],
-  'cardiovascular-system': ['cell-biology'],
-  'respiratory-system': ['cardiovascular-system'],
-  'digestive-system': ['cell-biology'],
-  'immune-system': ['cell-biology'],
-  'reproductive-system': ['endocrine-system'],
-  // Chess
-  openings: [],
-  tactics: [],
-  endgames: [],
-  strategy: ['openings', 'tactics'],
-  combinations: ['tactics'],
-  'opening-theory': ['openings'],
-  middlegame: ['strategy'],
-  'pawn-structures': ['strategy'],
-  'endgame-technique': ['endgames'],
-  'chess-history': [],
-  // Poker
-  positions: [],
-  'starting-hands': ['positions'],
-  'pot-odds': ['positions'],
-  'betting-strategy': ['starting-hands'],
-  postflop: ['betting-strategy'],
-  'tournament-play': ['betting-strategy'],
-  psychology: ['positions'],
-  'gto-advanced': ['pot-odds'],
 };
 
 /** Every prerequisite of `topic` has cleared its first checkpoint. */
@@ -537,8 +452,8 @@ export function planTopics(profile: LearnerProfile | null): string[] {
   return ordered;
 }
 
-/** Only devShark has plans. StudyShark's subjects keep every topic they own,
- * so the plan filter has to know when not to apply. */
+/** The subject learner plans apply to. Any other subject value (an old row or
+ * a stale token) keeps every topic it owns, so the plan filter checks first. */
 export const PLANNED_SUBJECT = 'webdev';
 export const subjectHasPlans = (subject: string): boolean => subject === PLANNED_SUBJECT;
 

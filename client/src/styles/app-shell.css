@@ -53,15 +53,6 @@
   .ss-show-desktop { display: inline-flex; }
 }
 
-/* Brand variants: the compact subject wordmark is for small phones only; the
-   full StudyShark wordmark appears from 600px (independent of the nav). */
-.ss-brand-full { display: none; }
-.ss-brand-compact { display: inline-flex; }
-@media (min-width: 600px) {
-  .ss-brand-full { display: inline-flex; }
-  .ss-brand-compact { display: none; }
-}
-
 /* Extras that only fit on genuinely wide desktops (account name/rank column):
    brand + nav + icons + full widget need ~1250px before nothing squeezes. */
 .ss-show-wide { display: none; }
@@ -291,8 +282,8 @@
   .devshark-tip { animation: none; }
 }
 
-/* Compact, shared product-family footer. It stays deliberately quiet so it
-   supports discovery without interrupting learning flows. */
+/* Compact footer: the legal links and the appearance and sound controls. It
+   stays deliberately quiet so it never interrupts a learning flow. */
 .ss-brand-footer {
   margin-top: 3.5rem;
   padding: 1.25rem 0 1rem;
@@ -300,7 +291,6 @@
   color: var(--color-text-secondary);
   font-size: 0.78rem;
 }
-.ss-brand-footer__heading,
 .ss-brand-footer__meta,
 .ss-brand-footer__meta nav {
   display: flex;
@@ -308,20 +298,9 @@
   gap: 0.75rem;
   flex-wrap: wrap;
 }
-.ss-brand-footer__heading { justify-content: space-between; }
-.ss-brand-footer__heading strong { color: var(--color-text-primary); }
 .ss-brand-footer a { color: inherit; text-underline-offset: 3px; }
-.ss-brand-footer a:hover { color: var(--footer-brand-accent, var(--brand-accent)); }
+.ss-brand-footer a:hover { color: var(--brand-accent); }
 .ss-brand-footer a:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 3px; border-radius: 3px; }
-.ss-brand-footer__brands {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem 1rem;
-  flex-wrap: wrap;
-  list-style: none;
-  padding: 0.9rem 0;
-  margin: 0;
-}
 .ss-footer-settings { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 .ss-footer-settings button {
   min-height: 32px;
@@ -336,13 +315,7 @@
 .ss-footer-settings button:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
 .ss-footer-settings button:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 
-.ss-brand-footer__pending { display: inline-flex; align-items: baseline; gap: 0.35rem; }
-.ss-brand-footer__pending small { font-size: 0.62rem; opacity: 0.75; }
-.ss-brand-footer__meta { justify-content: space-between; padding-top: 0.8rem; border-top: 1px solid var(--ss-header-border); }
-/* devShark ships no family heading or sibling list, so the meta row is the
-   whole footer: the second rule directly under the first one would read as a
-   stray line. */
-.ss-brand-footer--utility .ss-brand-footer__meta { padding-top: 0; border-top: 0; }
+.ss-brand-footer__meta { justify-content: space-between; }
 @media (max-width: 599px) {
   .ss-brand-footer { margin-top: 2.5rem; }
   .ss-brand-footer__meta { align-items: flex-start; flex-direction: column; }
@@ -575,10 +548,10 @@
 /* ── Touch targets ──────────────────────────────────────────────────────────
  *
  * The design contract asks for 44px targets. The app's own controls meet it;
- * the ones that did not were the shared Astryx controls and the family footer,
+ * the ones that did not were the shared Astryx controls and the footer links,
  * measured in a headless browser at 390px across nineteen routes: the mobile
  * navigation toggle at 36×36, primary and secondary buttons at 32px tall,
- * segmented-control items at 28px, and the sibling-brand links at 14px — text
+ * segmented-control items at 28px, and the footer links at 14px — text
  * height, no padding at all. The navigation toggle is the most-tapped control
  * on a phone and was the smallest thing on the page.
  *
@@ -607,11 +580,8 @@
     min-width: 44px;
   }
 
-  /* The footer links are bare text in wrapped rows — sibling brands in one,
-     the legal links in the other. Height is what gives them a target; the
-     rows' own gaps keep them from touching. */
-  .ss-brand-footer__brands a,
-  .ss-brand-footer__brands strong,
+  /* The footer links are bare text in a wrapped row. Height is what gives
+     them a target; the row's own gap keeps them from touching. */
   .ss-brand-footer__meta a {
     display: inline-flex;
     align-items: center;
@@ -622,7 +592,6 @@
        hit areas touching. */
     padding-inline: 0.3rem;
   }
-  .ss-brand-footer__brands { padding-block: 0.35rem; }
 }
 
 /* ── Account menu (the Profile / Log out popover) ───────────────────────────

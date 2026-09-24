@@ -1,5 +1,5 @@
 /*
- * StudyShark × Astryx — professional design foundation.
+ * devShark × Astryx — professional design foundation.
  *
  * We import Astryx's component styles + the neutral token theme, then override
  * the design TOKENS Astryx components consume (radius, colour, shadow, font) to
@@ -28,7 +28,7 @@
   --ss-space-section: clamp(2rem, 1.3333rem + 2.963vw, 4rem);
 
   /* ————————————————————————— Brand: The Deep End —————————————————————————
-     StudyShark's identity commits to the ocean the product already owns:
+     devShark's identity commits to the ocean the product already owns:
      · INK, not gray — every neutral is a deep blue-green "ocean ink".
      · PAPER, not vector-flat — surfaces carry a whisper of grain.
      · THE WATERLINE — a fine sine wave is the recurring mark (header fins,

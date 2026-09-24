@@ -1,9 +1,6 @@
 import { Link } from 'react-router-dom';
 import { MULTILINGUAL, useLanguage, useT } from '../i18n/LanguageContext';
 import type { Lang } from '../i18n/LanguageContext';
-import { CURRENT_PRODUCT, PRODUCTS, SHARK_BRANDS, productUrl } from '../lib/products';
-import { capture } from '../lib/analytics';
-import { useSubject } from '../lib/subjects';
 import { useColorMode } from '../theme/ColorModeContext';
 import { useSettings } from '../lib/settings';
 import { savePreferredLanguage } from '../lib/languagePref';
@@ -13,73 +10,11 @@ export default function BrandFooter() {
   const { lang, setLang } = useLanguage();
   const { mode, toggle } = useColorMode();
   const [settings, updateSettings] = useSettings();
-  const [activeSubject] = useSubject();
-  const studySharkUrl = productUrl(PRODUCTS.studyshark);
-  // devShark is a standalone product, not a shelf for its siblings: it shows no
-  // family heading and no sibling-brand list. StudyShark keeps both, and the
-  // product registry stays intact for it (and for the metadata generator).
-  const showFamily = CURRENT_PRODUCT.id !== 'devshark';
 
+  // The footer carries the legal links and the appearance and sound controls.
+  // devShark promotes no other product here.
   return (
-    <footer
-      className={`ss-brand-footer${showFamily ? '' : ' ss-brand-footer--utility'}`}
-      aria-label={t(showFamily ? 'footer.aria' : 'footer.ariaUtility')}
-    >
-      {showFamily && (
-      <div className="ss-brand-footer__heading">
-        <span>{t('footer.family')}</span>
-        {CURRENT_PRODUCT.id === 'studyshark' ? (
-          <strong aria-current="page">StudyShark</strong>
-        ) : studySharkUrl ? (
-          <a href={studySharkUrl} onClick={() => capture('sibling_brand_visited', { product: 'studyshark' })}>StudyShark</a>
-        ) : (
-          <span>StudyShark</span>
-        )}
-      </div>
-      )}
-      {showFamily && (
-      <ul className="ss-brand-footer__brands">
-        {SHARK_BRANDS.map((product) => {
-          const subjectBrand = product.relationship === 'studyshark-subject' ? product.subjectId : null;
-          const active = product.id === CURRENT_PRODUCT.id ||
-            (CURRENT_PRODUCT.id === 'studyshark' && subjectBrand === activeSubject);
-          const url = productUrl(product);
-          const subjectPath = subjectBrand ? `/subjects?subject=${subjectBrand}` : '';
-          const remoteSubjectUrl = subjectBrand && studySharkUrl
-            ? `${studySharkUrl}${subjectPath}`
-            : '';
-          return (
-            <li key={product.id}>
-              {active ? (
-                <strong aria-current="page" style={{ color: product.accent }}>{product.brand}</strong>
-              ) : subjectBrand && CURRENT_PRODUCT.id === 'studyshark' ? (
-                <Link
-                  to={subjectPath}
-                  onClick={() => capture('subject_brand_visited', { product: product.id, subject: subjectBrand })}
-                  style={{ ['--footer-brand-accent' as string]: product.accent }}
-                >
-                  {product.brand}
-                </Link>
-              ) : remoteSubjectUrl ? (
-                <a
-                  href={remoteSubjectUrl}
-                  onClick={() => capture('subject_brand_visited', { product: product.id, subject: subjectBrand })}
-                  style={{ ['--footer-brand-accent' as string]: product.accent }}
-                >
-                  {product.brand}
-                </a>
-              ) : url ? (
-                <a href={url} onClick={() => capture('sibling_brand_visited', { product: product.id })} style={{ ['--footer-brand-accent' as string]: product.accent }}>{product.brand}</a>
-              ) : (
-                <span className="ss-brand-footer__pending">
-                  {product.brand}<small>{t('footer.comingSoon')}</small>
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      )}
+    <footer className="ss-brand-footer" aria-label={t('footer.ariaUtility')}>
       <div className="ss-brand-footer__meta">
         <span>{t('footer.free')}</span>
         <nav aria-label={t('footer.legal')}>

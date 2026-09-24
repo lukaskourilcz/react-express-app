@@ -1,8 +1,7 @@
-import { publicOrigin, topicFromPath, topicSchema } from './lib/publicMetadata';
+import { PUBLIC_ORIGIN, topicFromPath, topicSchema } from './lib/publicMetadata';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import { IconButton as AxIconButton } from '@astryxdesign/core/IconButton';
-import { Badge as AxBadge } from '@astryxdesign/core/Badge';
 import { AppToast } from './components/ui/AppToast';
 import { useIsMobile } from './lib/useMediaQuery';
 import './styles/app-shell.css';
@@ -19,7 +18,7 @@ import { primeRankMarker } from './lib/xp';
 import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import { useAuth } from './lib/auth';
-import { useHasChosenSubject, useActiveSubject, isSubjectLocked, subjectNameKey } from './lib/subjects';
+import { useActiveSubject } from './lib/subjects';
 import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m } from './lib/motion';
@@ -45,7 +44,6 @@ const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ defaul
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 const Challenge = lazy(() => import('./components/Challenge'));
 const DevPage = lazy(() => import('./components/dev/DevPage'));
-const SubjectPicker = lazy(() => import('./components/SubjectPicker'));
 const SupportPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.SupportPage })));
 const PrivacyPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.PrivacyPage })));
 const TermsPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.TermsPage })));
@@ -66,13 +64,6 @@ const FdeModule = lazy(() => import('./components/paths/LearningPathScreens').th
 const DsaOverview = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.DsaOverview })));
 const DsaModule = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.DsaModule })));
 const NotFoundPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.NotFoundPage })));
-
-// The landing gate: show the subject picker until the learner has chosen a
-// subject, then the normal home. Both are lazy and render inside the shared
-// route <Suspense>.
-function Landing() {
-  return useHasChosenSubject() ? <Home /> : <SubjectPicker />;
-}
 
 // Route-transition variants, hoisted so the m.div props keep a stable identity
 // across App re-renders (App re-renders on every navigation — hottest path).
@@ -102,7 +93,6 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/shop': 'title.shop',
   '/play': 'title.play',
   '/challenge': 'title.challenge',
-  '/subjects': 'title.subjects',
   '/support': 'title.support',
   '/privacy': 'title.privacy',
   '/terms': 'title.terms',
@@ -149,14 +139,8 @@ const NAV_ITEMS: {
   { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard' },
   { to: '/collection', key: 'nav.cards', isActive: (p) => p === '/collection' || p === '/cards' },
   { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop' },
-  // Coding challenges and the developer career roadmap belong only to the
-  // standalone devShark product.
-  ...(CURRENT_PRODUCT.id === 'devshark'
-    ? [
-        { to: '/coding', key: 'nav.coding' as TranslationKey, isActive: (p: string) => p.startsWith('/coding') },
-        { to: '/roadmap', key: 'nav.roadmap' as TranslationKey, isActive: (p: string) => p === '/roadmap' },
-      ]
-    : []),
+  { to: '/coding', key: 'nav.coding', isActive: (p) => p.startsWith('/coding') },
+  { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap' },
 ];
 
 const RouteLoader = () => {
@@ -174,68 +158,20 @@ const RouteLoader = () => {
   return <LoadingScreen label={t('common.loading')} size={28} tips={localizedDevTips(config.devTips, lang)} sx={{ minHeight: 'auto', py: 6 }} />;
 };
 
-// Compact active-subject indicator in the header; tapping it opens the subject
-// picker so the learner can switch what they're studying.
-function SubjectSwitcher() {
+// The header brand: the fin and the devShark wordmark, in the accent.
+function HeaderBrand() {
   const subject = useActiveSubject();
   const t = useT();
   return (
     <Link
-      to="/subjects"
-      style={{ marginLeft: 4, display: 'inline-flex', textDecoration: 'none', borderRadius: 999 }}
+      to="/"
+      aria-label={t('nav.home', { brand: CURRENT_PRODUCT.brand })}
+      className="ss-drawer-brand"
+      style={{ padding: 0, color: subject.accent }}
     >
-      <AxBadge label={t(subjectNameKey(subject.id))} />
+      <SwimmingFin size={22} />
+      {CURRENT_PRODUCT.brand}
     </Link>
-  );
-}
-
-// The header brand. On desktop it's the umbrella StudyShark wordmark with the
-// active-subject chip beside it; on mobile (where space is tight and the chip
-// is easy to miss) the wordmark itself becomes the logo of the platform the
-// learner is currently on — its name in the subject accent.
-function HeaderBrand() {
-  const subject = useActiveSubject();
-  const t = useT();
-  const locked = isSubjectLocked();
-  // On the standalone devShark deploy the umbrella "StudyShark"
-  // wordmark is replaced by this subject's own brand, and there's no chip to
-  // switch subjects because there's nothing to switch to.
-  if (locked) {
-    return (
-      <Link
-        to="/"
-        aria-label={t('nav.home', { brand: CURRENT_PRODUCT.brand })}
-        className="ss-drawer-brand"
-        style={{ padding: 0, color: subject.accent }}
-      >
-        <SwimmingFin size={22} />
-        {CURRENT_PRODUCT.brand}
-      </Link>
-    );
-  }
-  return (
-    <>
-      <Link
-        to="/"
-        aria-label={t('nav.home', { brand: CURRENT_PRODUCT.brand })}
-        className="ss-drawer-brand"
-        style={{ padding: 0, color: 'var(--color-text-primary)' }}
-      >
-        <span className="ss-brand-full" style={{ alignItems: 'center', gap: 6 }}>
-          <SwimmingFin size={22} />
-          {CURRENT_PRODUCT.brand}
-        </span>
-        <span className="ss-brand-compact" style={{ alignItems: 'center', gap: 4, color: subject.accent, whiteSpace: 'nowrap' }}>
-          <SharkFin size={20} />
-          {t(subjectNameKey(subject.id))}
-        </span>
-      </Link>
-      {/* The subject chip is redundant on small screens (the drawer shows it),
-          so it rides with the full brand. */}
-      <span className="ss-brand-full">
-        <SubjectSwitcher />
-      </span>
-    </>
   );
 }
 
@@ -359,7 +295,7 @@ function App() {
   const showLeaderboardIcon = navItems.some((item) => item.to === '/leaderboard');
 
   useEffect(() => {
-    const publicTopic = topicFromPath(location.pathname, CURRENT_PRODUCT.id);
+    const publicTopic = topicFromPath(location.pathname);
     const titleKey = ROUTE_TITLE_KEYS[location.pathname];
     const translatedTitle = titleKey
       ? t(titleKey)
@@ -370,7 +306,7 @@ function App() {
           : t('title.notFound');
     document.title = publicTopic ? `${publicTopic.topic.title[publicTopic.locale]} · ${CURRENT_PRODUCT.brand}` : location.pathname === '/'
       ? productText(CURRENT_PRODUCT.title, lang)
-      : translatedTitle.split('StudyShark').join(CURRENT_PRODUCT.brand);
+      : translatedTitle;
     const description = publicTopic ? publicTopic.topic.description[publicTopic.locale] : productText(CURRENT_PRODUCT.description, lang);
     const setMeta = (selector: string, value: string) => {
       document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', value);
@@ -381,14 +317,14 @@ function App() {
     setMeta('meta[name="twitter:title"]', document.title);
     setMeta('meta[name="twitter:description"]', description);
     document.querySelectorAll('link[rel="canonical"], link[hreflang], #public-schema, meta[property="og:url"], meta[name="robots"]').forEach(node => node.remove());
-    const canonical = publicTopic ? publicOrigin(CURRENT_PRODUCT.id) + location.pathname.replace(/\/$/, '') : location.pathname === '/' ? publicOrigin(CURRENT_PRODUCT.id) + '/' : null;
+    const canonical = publicTopic ? PUBLIC_ORIGIN + location.pathname.replace(/\/$/, '') : location.pathname === '/' ? PUBLIC_ORIGIN + '/' : null;
     if (canonical) {
       const link = document.createElement('link'); link.rel = 'canonical'; link.href = canonical; document.head.append(link);
     }
     if (publicTopic && canonical) {
       for (const locale of ['en', 'cs']) {
         const link = document.createElement('link'); link.rel = 'alternate'; link.hreflang = locale;
-        link.href = `${publicOrigin(CURRENT_PRODUCT.id)}${locale === 'cs' ? '/cs' : ''}/topics/${publicTopic.topic.slug}`; document.head.append(link);
+        link.href = `${PUBLIC_ORIGIN}${locale === 'cs' ? '/cs' : ''}/topics/${publicTopic.topic.slug}`; document.head.append(link);
       }
       const schema = document.createElement('script'); schema.id = 'public-schema'; schema.type = 'application/ld+json';
       schema.textContent = JSON.stringify(topicSchema(document.title, description, canonical, publicTopic.locale)); document.head.append(schema);
@@ -577,32 +513,16 @@ function App() {
               >
                 <CloseIcon size={20} />
               </button>
-              {/* Drawer header shows the platform the learner is on, and tapping
-                  it opens the subject picker to switch. */}
               <Link
-                to={isSubjectLocked() ? '/' : '/subjects'}
+                to="/"
                 className="ss-drawer-brand"
                 style={{ color: activeSubject.accent }}
               >
                 <SharkFin size={22} />
-                {isSubjectLocked() ? (activeSubject.standaloneBrand ?? activeSubject.label) : t(subjectNameKey(activeSubject.id))}
+                {CURRENT_PRODUCT.brand}
               </Link>
               <div style={{ height: 1, background: 'var(--color-border)' }} />
               <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {/* No "switch subject" on a standalone deploy — there's only one. */}
-                {!isSubjectLocked() && (
-                  <>
-                    <Link
-                      to="/subjects"
-                      className="ss-drawer-link"
-                      data-active={location.pathname === '/subjects'}
-                      aria-current={location.pathname === '/subjects' ? 'page' : undefined}
-                    >
-                      {t('nav.switchSubject')}
-                    </Link>
-                    <div style={{ height: 1, background: 'var(--color-border)', margin: '4px 0' }} />
-                  </>
-                )}
                 {navItems.map((item) => (
                   <Link
                     key={item.to}
@@ -688,29 +608,28 @@ function App() {
           >
             <Suspense fallback={<RouteLoader />}>
               <Routes location={location}>
-                <Route path="/" element={<Landing />} />
-                <Route path="/subjects" element={isSubjectLocked() ? <Navigate to="/" replace /> : <SubjectPicker />} />
+                <Route path="/" element={<Home />} />
                 <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
                 <Route path="/learn" element={<Roadmap />} />
                 <Route path="/today" element={<Today />} />
                 <Route path="/collection" element={<Collection />} />
                 <Route path="/typing" element={<TypingRacer />} />
-                <Route path="/roadmap" element={CURRENT_PRODUCT.id === 'devshark' ? <CareerRoadmap /> : <Navigate to="/learn" replace />} />
-                <Route path="/coding" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingHome /> : <Navigate to="/learn" replace />} />
-                <Route path="/coding/review" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingReviewScreen /> : <Navigate to="/learn" replace />} />
-                <Route path="/coding/fullstack" element={CURRENT_PRODUCT.id === 'devshark' ? <FullStackScreen /> : <Navigate to="/learn" replace />} />
-                <Route path="/coding/:track" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingTrackScreen /> : <Navigate to="/learn" replace />} />
-                <Route path="/coding/:track/:taskId" element={CURRENT_PRODUCT.id === 'devshark' ? <CodingTaskScreen /> : <Navigate to="/learn" replace />} />
+                <Route path="/roadmap" element={<CareerRoadmap />} />
+                <Route path="/coding" element={<CodingHome />} />
+                <Route path="/coding/review" element={<CodingReviewScreen />} />
+                <Route path="/coding/fullstack" element={<FullStackScreen />} />
+                <Route path="/coding/:track" element={<CodingTrackScreen />} />
+                <Route path="/coding/:track/:taskId" element={<CodingTaskScreen />} />
                 {/* Learning paths are devShark-only, like /coding and /roadmap.
                     The role specialization and the standalone skill path get
                     separate entry routes so the career flow and the focused
                     paths stay visibly apart, though they share one workspace. */}
-                <Route path="/roadmap/specializations/fde" element={CURRENT_PRODUCT.id === 'devshark' ? <FdeOverview /> : <Navigate to="/learn" replace />} />
-                <Route path="/roadmap/specializations/fde/:moduleId" element={CURRENT_PRODUCT.id === 'devshark' ? <FdeModule /> : <Navigate to="/learn" replace />} />
-                <Route path="/roadmap/paths/dsa-foundations" element={CURRENT_PRODUCT.id === 'devshark' ? <DsaOverview /> : <Navigate to="/learn" replace />} />
-                <Route path="/roadmap/paths/dsa-foundations/:moduleId" element={CURRENT_PRODUCT.id === 'devshark' ? <DsaModule /> : <Navigate to="/learn" replace />} />
+                <Route path="/roadmap/specializations/fde" element={<FdeOverview />} />
+                <Route path="/roadmap/specializations/fde/:moduleId" element={<FdeModule />} />
+                <Route path="/roadmap/paths/dsa-foundations" element={<DsaOverview />} />
+                <Route path="/roadmap/paths/dsa-foundations/:moduleId" element={<DsaModule />} />
                 <Route path="/profile" element={<Profile />} />
-                <Route path="/settings/github" element={CURRENT_PRODUCT.id === 'devshark' ? <GithubSettingsPage /> : <Navigate to="/profile" replace />} />
+                <Route path="/settings/github" element={<GithubSettingsPage />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/cards" element={<Flashcards />} />
                 <Route path="/shop" element={<Shop />} />
@@ -733,7 +652,7 @@ function App() {
         </div>
       </main>
 
-      {/* StudyShark ocean: pinned to the bottom of the fixed-height shell, so the
+      {/* The ocean: pinned to the bottom of the fixed-height shell, so the
           waterline + surfacing fins are visible on every page, always. Hidden
           only in the /dev admin console. */}
       {!isDev && (

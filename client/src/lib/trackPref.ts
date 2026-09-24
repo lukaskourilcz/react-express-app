@@ -91,8 +91,8 @@ export const profileGapsOf = (user: User | null): RequiredProfileField[] =>
 
 /* ── the device cache ──────────────────────────────────────────────────── */
 
-// Scoped by product AND account, so two people sharing a browser never inherit
-// each other's choice, and StudyShark never reads devShark's.
+// Scoped by account, so two people sharing a browser never inherit each other's
+// choice. The product id stays in the key so existing cached choices still load.
 const cacheKey = (userId: string | null) =>
   `devquiz:${CURRENT_PRODUCT.id}:learning-preference:${userId ?? 'guest'}`;
 

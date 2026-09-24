@@ -2,11 +2,10 @@
  *
  * Cards are earned only by finishing a subject's daily Today queue and never
  * bought, sold, or traded for anything that affects learning, XP, or ranking —
- * they are a pure collection layer. Each subject's album is its real topics
- * (banded into rarities) plus a small shared shark-family chase set. Visuals are
- * procedural (a rarity glyph + a hue derived from the id), so no raster art is
- * shipped. Localized names live in the client i18n tables: topic cards reuse the
- * existing topic label, family cards use `card.family.<slug>.name`. */
+ * they are a pure collection layer. A subject's album is its real topics,
+ * banded into rarities. Visuals are procedural (a rarity glyph + a hue derived
+ * from the id), so no raster art is shipped. Topic cards reuse the existing
+ * topic label for their localized name. */
 
 import { SUBJECT_SCOPE_CATALOG, type ScopeSubjectId } from './subject-catalog';
 
@@ -19,10 +18,8 @@ export interface CardDef {
   glyph: string;
   /** 0–359 hue for the procedural card gradient. */
   hue: number;
-  /** Topic id for a topic card; the client resolves its localized label. */
-  topic?: string;
-  /** i18n name slug for a shared family card. */
-  family?: string;
+  /** Topic id; the client resolves its localized label. */
+  topic: string;
 }
 
 export const PACK_SIZE = 3;
@@ -35,16 +32,6 @@ const RARITY_GLYPH: Record<CardRarity, string> = {
   epic: '✦',
   legendary: '❖',
 };
-
-// Shared chase cards: the StudyShark family plus the Sharkira coach. They appear
-// in every subject's album so the rarest pulls feel special across subjects.
-const FAMILY_CARDS: { slug: string; rarity: CardRarity; hue: number }[] = [
-  { slug: 'sharkira', rarity: 'legendary', hue: 268 },
-  { slug: 'geo', rarity: 'epic', hue: 150 },
-  { slug: 'quant', rarity: 'epic', hue: 210 },
-  { slug: 'chrono', rarity: 'epic', hue: 28 },
-  { slug: 'reef', rarity: 'rare', hue: 190 },
-];
 
 function hashSeed(input: string): number {
   let h = 2166136261 >>> 0;
@@ -76,7 +63,7 @@ function topicRarity(index: number, count: number): CardRarity {
 
 const CACHE = new Map<ScopeSubjectId, CardDef[]>();
 
-/** The complete, finite album for a subject (topic cards + family chase set). */
+/** The complete, finite album for a subject. */
 export function subjectCards(subject: ScopeSubjectId): CardDef[] {
   const cached = CACHE.get(subject);
   if (cached) return cached;
@@ -92,17 +79,8 @@ export function subjectCards(subject: ScopeSubjectId): CardDef[] {
       topic,
     };
   });
-  const familyCards: CardDef[] = FAMILY_CARDS.map((f) => ({
-    id: `family-${f.slug}`,
-    subject,
-    rarity: f.rarity,
-    glyph: RARITY_GLYPH[f.rarity],
-    hue: f.hue,
-    family: f.slug,
-  }));
-  const all = [...topicCards, ...familyCards];
-  CACHE.set(subject, all);
-  return all;
+  CACHE.set(subject, topicCards);
+  return topicCards;
 }
 
 export function cardById(subject: ScopeSubjectId, id: string): CardDef | undefined {

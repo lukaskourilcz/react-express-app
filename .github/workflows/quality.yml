@@ -12,12 +12,6 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        product: [devshark, studyshark]
-    env:
-      TEST_PRODUCT: ${{ matrix.product }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -34,8 +28,8 @@ jobs:
       - run: npm run build && npm run check:public && npm run check:bundle
         id: build
         env:
-          VITE_PRODUCT: ${{ matrix.product }}
-          VITE_LOCK_SUBJECT: ${{ matrix.product == 'devshark' && 'webdev' || '' }}
+          VITE_PRODUCT: devshark
+          VITE_LOCK_SUBJECT: webdev
       - run: npm audit --omit=dev && npm audit --omit=dev --prefix client
       - run: npx playwright install --with-deps chromium
       - name: Browser checks
@@ -43,14 +37,13 @@ jobs:
           npm run preview --prefix client -- --host 0.0.0.0 --port 4173 > /tmp/preview.log 2>&1 &
           node scripts/wait-for-preview.mjs
           npm run test:browser -- tests/browser/public.spec.ts
-          if [ "$TEST_PRODUCT" = devshark ]; then npm run test:browser -- tests/browser/evolving.spec.ts; fi
+          npm run test:browser -- tests/browser/evolving.spec.ts
           export CHROME_BIN=$(node -e "console.log(require('@playwright/test').chromium.executablePath())")
-          TOPIC=capitals-of-europe
-          if [ "$TEST_PRODUCT" = devshark ]; then TOPIC=javascript-closures; fi
+          TOPIC=javascript-closures
           npm run check:responsive -- --routes /,/quiz,/topics/$TOPIC,/cs/topics/$TOPIC --widths 360,390,430,768,1024,1280,1440
           RESPONSIVE_THEME=dark RESPONSIVE_LOCALE=cs npm run check:responsive -- --routes /,/cs/topics/$TOPIC --widths 390,768,1280
           npm run test:harness
-      - if: matrix.product == 'devshark' && !cancelled() && steps.build.conclusion == 'success'
+      - if: ${{ !cancelled() && steps.build.conclusion == 'success' }}
         name: Storybook and performance
         run: |
           npm run audit:performance
@@ -61,7 +54,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: quality-${{ matrix.product }}
+          name: quality
           path: |
             artifacts/
             playwright-report/

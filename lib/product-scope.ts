@@ -8,8 +8,8 @@ import {
 } from '../shared/subject-catalog';
 import { isRetiredTopic } from '../shared/retired-content';
 
-const deploymentSubjects = allowedDeploymentSubjects(process.env);
-const deploymentCategories = allowedDeploymentCategories(process.env);
+const deploymentSubjects = allowedDeploymentSubjects();
+const deploymentCategories = allowedDeploymentCategories();
 
 export function isDeploymentCategory(category: string): boolean {
   return deploymentCategories.has(category);

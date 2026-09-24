@@ -20,12 +20,12 @@ for (const url of urls) {
     const schema = JSON.parse(doc.querySelector('#public-schema').textContent);
     assert.equal(schema['@type'], 'LearningResource'); assert.equal(schema.url, url.href); assert.equal(schema.inLanguage, lang);
     assert.equal(schema.name, doc.title); assert.equal(schema.isAccessibleForFree, true);
-    if (url.hostname === 'devshark.app') { assert(doc.querySelector('pre code')); assert(!url.pathname.includes('capitals')); }
-    else assert(!url.pathname.includes('react-hooks'));
+    assert.equal(url.hostname, 'devshark.app');
+    assert(doc.querySelector('pre code'), `${url}: the guide carries its code example`);
     assert.equal(doc.querySelector('.ss-topic-cta').getAttribute('href').startsWith('/quiz?category='), true);
   }
 }
 assert(readFileSync(`${dir}/robots.txt`, 'utf8').includes(`Sitemap: ${urls[0].origin}/sitemap.xml`));
 assert(!existsSync(`${dir}/mockServiceWorker.js`), 'Mocks must never ship with the app');
 assert(!readdirSync(`${dir}/assets`).some(file => /storybook|mocks|\.stories\./i.test(file)));
-console.log(`Public HTML passed: ${urls.length} URLs, locale pairs, canonical, schema, teaching content and product isolation.`);
+console.log(`Public HTML passed: ${urls.length} URLs, locale pairs, canonical, schema and teaching content.`);

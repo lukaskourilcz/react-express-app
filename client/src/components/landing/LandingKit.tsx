@@ -1,6 +1,4 @@
-// Shared primitives for the two editorial "Deep End v2" landings — the
-// per-subject Home (topics) and the umbrella SubjectPicker (subjects). Both
-// screens are the same layout with a different card set, so the kicker, fins,
+// Shared primitives for the editorial "Deep End v2" landing: the kicker, fins,
 // stat tiles, fade-in / swim-through CTAs and the interactive sample-question
 // card all live here and re-skin from var(--brand-accent).
 //

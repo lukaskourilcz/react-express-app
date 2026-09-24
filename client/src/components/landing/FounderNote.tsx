@@ -1,5 +1,5 @@
 // A short, warm "why I built this" note for the public landing. Deliberately
-// generic — the signoff is "the StudyShark maker", never an invented real
+// generic — the signoff is "the devShark maker", never an invented real
 // person, photo or brand. All copy comes from the landing.founder.* keys and
 // the support link makes the "support never unlocks anything" promise explicit.
 

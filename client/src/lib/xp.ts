@@ -56,9 +56,8 @@ function sanitizeQuestMap(raw: unknown): QuestMap {
 function readQuestMap(): QuestMap {
   const raw = readJSON<Record<string, unknown> | null>(QUEST_KEY, null);
   if (raw !== null) return sanitizeQuestMap(raw);
-  // One-time migration: pre-split quest XP was a single accumulator shared by
-  // all subjects. Attribute it to the subject active right now — exact on a
-  // standalone deploy, and the learner's main platform on StudyShark.
+  // One-time migration: pre-split quest XP was a single accumulator. Attribute
+  // it to the subject.
   const legacy = clampXp(readJSON<number>(QUEST_KEY_LEGACY, 0));
   const migrated: QuestMap = legacy > 0 ? { [getSubject()]: legacy } : {};
   writeJSON(QUEST_KEY, migrated);

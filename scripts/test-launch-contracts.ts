@@ -3,12 +3,10 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   PRODUCT_CATALOG,
-  SHARK_BRAND_ORDER,
   resolveCatalogProductId,
 } from '../client/product-catalog';
 import {
   SUBJECT_SCOPE_CATALOG,
-  STUDYSHARK_SCOPE_SUBJECTS,
   allowedDeploymentSubjects,
   subjectForCategory,
   subjectForTopic,
@@ -293,9 +291,8 @@ async function auditGateContracts() {
     assert.equal(questionEligibility(item).reason, retiredRow.hash === contentHash(item) ? 'retired' : 'not-in-scope');
     assert.ok(!servedIds.has(retiredRow.id) || retiredRow.hash !== contentHash(item), `${retiredRow.id} was retired in a category still in progress and is still served`);
   }
-  const geography = (await getEffectiveQuestions('geography', false))[0];
-  assert.ok(geography, 'StudyShark subjects are unaffected');
-  assert.equal(questionEligibility(geography).reason, 'not-in-scope', 'StudyShark subjects are outside the audit and served as before');
+  const firstServed = (await getEffectiveQuestions('webdev', false))[0];
+  assert.ok(firstServed, 'the webdev bank serves questions');
 
   // Levels keep their authored membership. A retired question thins its own
   // level; it never slides a neighbour under another title. Below the floor a
@@ -341,10 +338,10 @@ async function auditGateContracts() {
 
   // An answer to a question that is no longer served is void: neither for nor
   // against, no proof minted, and reported so the result screen can say why.
-  const sample = geography;
+  const sample = firstServed;
   const session = encodeSession(
     [{ questionId: sample.id, correctAnswer: 1 }, { questionId: 'retired-while-open', correctAnswer: 2 }],
-    { subject: 'geography' },
+    { subject: 'webdev' },
   );
   const submitRes = mockResponse();
   await submitHandler({ method: 'POST', headers: {}, query: {}, body: { sessionId: session, answers: { [sample.id]: 1, 'retired-while-open': 2 } } } as never, submitRes as never);
@@ -357,9 +354,9 @@ async function auditGateContracts() {
 
   // A placement round voids a retired item and tops the run up instead of
   // ending it short of the budget.
-  const pool = (await getEffectiveQuestions('geography', false)).slice(0, 3);
+  const pool = (await getEffectiveQuestions('webdev', false)).slice(0, 3);
   const placementToken = encodePlacementRun({
-    subject: 'geography', attemptId: 'placement-void-contract-1234', round: 1, difficulty: 3, history: [],
+    subject: 'webdev', attemptId: 'placement-void-contract-1234', round: 1, difficulty: 3, history: [],
     items: [
       { questionId: pool[0].id, correctAnswer: 0, category: pool[0].category },
       { questionId: 'retired-while-open', correctAnswer: 0, category: pool[0].category },
@@ -379,21 +376,18 @@ async function auditGateContracts() {
 async function main() {
   assert.equal(apiFiles(join(process.cwd(), 'api')).length, 12, 'Vercel function budget must remain exactly 12');
 
+  // devShark is the only product this repository builds. An unset identity
+  // resolves to it; any other product or subject lock fails the build instead
+  // of shipping devShark under someone else's name.
+  assert.deepEqual(Object.keys(PRODUCT_CATALOG), ['devshark']);
   assert.equal(resolveCatalogProductId({ product: 'devshark' }), 'devshark');
   assert.equal(resolveCatalogProductId({ lockSubject: 'webdev' }), 'devshark');
-  assert.equal(resolveCatalogProductId({ lockSubject: 'geography' }), 'studyshark');
-  assert.equal(resolveCatalogProductId({ product: 'geoshark' }), 'studyshark');
-  assert.equal(resolveCatalogProductId({}), 'studyshark');
-  assert.equal(SHARK_BRAND_ORDER.length, 7);
-  assert.equal(new Set(SHARK_BRAND_ORDER).size, SHARK_BRAND_ORDER.length);
-  assert.ok(SHARK_BRAND_ORDER.every((id) => PRODUCT_CATALOG[id]));
-  assert.deepEqual(allowedDeploymentSubjects({ VITE_PRODUCT: 'devshark' }), ['webdev']);
-  assert.deepEqual(allowedDeploymentSubjects({ VITE_LOCK_SUBJECT: 'webdev' }), ['webdev']);
-  assert.deepEqual(allowedDeploymentSubjects({ VITE_LOCK_SUBJECT: 'geography' }), [
-    'geography', 'math', 'history', 'chess', 'biology', 'poker',
-  ]);
-  assert.ok(!allowedDeploymentSubjects({ VITE_PRODUCT: 'studyshark' }).includes('webdev'));
-  assert.ok(SUBJECT_SCOPE_CATALOG.geography.categories.includes('capitals'));
+  assert.equal(resolveCatalogProductId({}), 'devshark');
+  for (const input of [{ product: 'studyshark' }, { product: 'geoshark' }, { lockSubject: 'geography' }]) {
+    assert.throws(() => resolveCatalogProductId(input), /builds devShark only/, `${JSON.stringify(input)} must fail`);
+  }
+  assert.deepEqual(Object.keys(SUBJECT_SCOPE_CATALOG), ['webdev']);
+  assert.deepEqual(allowedDeploymentSubjects(), ['webdev']);
 
   const session = encodeSession([{ questionId: 'private-answer-check', correctAnswer: 3 }]);
   assert.match(session, /^v2\./);
@@ -404,31 +398,30 @@ async function main() {
   parts[2] = `${parts[2].slice(0, middle)}${parts[2][middle] === 'A' ? 'B' : 'A'}${parts[2].slice(middle + 1)}`;
   assert.equal(decodeSession(parts.join('.')), null, 'tampered token must fail closed');
 
-  const dailyAttempt = stableAttemptId('daily', 'user-0001', 'geography', '2026-07-21');
+  const dailyAttempt = stableAttemptId('daily', 'user-0001', 'webdev', '2026-07-21');
   assert.match(dailyAttempt, /^[A-Za-z0-9_-]{32}$/);
   assert.equal(
-    stableAttemptId('daily', 'user-0001', 'geography', '2026-07-21'),
+    stableAttemptId('daily', 'user-0001', 'webdev', '2026-07-21'),
     dailyAttempt,
     'the same server-defined daily attempt must receive the same claim id',
   );
-  assert.notEqual(stableAttemptId('daily', 'user-0002', 'geography', '2026-07-21'), dailyAttempt);
-  assert.notEqual(stableAttemptId('daily', 'user-0001', 'geography', '2026-07-22'), dailyAttempt);
-  assert.notEqual(stableAttemptId('daily', 'user-0001', 'math', '2026-07-21'), dailyAttempt);
+  assert.notEqual(stableAttemptId('daily', 'user-0002', 'webdev', '2026-07-21'), dailyAttempt);
+  assert.notEqual(stableAttemptId('daily', 'user-0001', 'webdev', '2026-07-22'), dailyAttempt);
 
   const run = createChallengeRun();
   assert.equal(decodeChallengeRun(run.runToken)?.runId, run.runId);
-  const proof = encodeAnswerProof('q-1', 'geography', true);
-  assert.deepEqual(decodeAnswerProof(proof), { questionId: 'q-1', subject: 'geography', isCorrect: true });
+  const proof = encodeAnswerProof('q-1', 'webdev', true);
+  assert.deepEqual(decodeAnswerProof(proof), { questionId: 'q-1', subject: 'webdev', isCorrect: true });
   const receipt = encodeQuizResultReceipt({
     userId: 'user-0001', correct: 1, total: 2,
-    breakdown: { capitals: { correct: 1, total: 2 } },
-    outcomes: [{ questionId: 'capital-1', category: 'capitals', isCorrect: true }],
-    subject: 'geography',
+    breakdown: { javascript: { correct: 1, total: 2 } },
+    outcomes: [{ questionId: 'closure-1', category: 'javascript', isCorrect: true }],
+    subject: 'webdev',
     questXp: 6,
     purpose: 'quiz',
   });
-  assert.deepEqual(decodeQuizResultReceipt(receipt)?.breakdown, { capitals: { correct: 1, total: 2 } });
-  assert.equal(decodeQuizResultReceipt(receipt)?.subject, 'geography');
+  assert.deepEqual(decodeQuizResultReceipt(receipt)?.breakdown, { javascript: { correct: 1, total: 2 } });
+  assert.equal(decodeQuizResultReceipt(receipt)?.subject, 'webdev');
 
   const now = Date.UTC(2026, 6, 21);
   const ninth = recordSupportMilestone({ completions: 8 }, 100, true, now);
@@ -443,9 +436,9 @@ async function main() {
   assert.equal(recordSupportMilestone({ ...disableSupportPrompt({ completions: 9 }) }, 100, true, now).show, false);
 
   const reviewQuestions = [
-    { id: 'weak-high', category: 'capitals', difficulty: 2, importance: 10 },
-    { id: 'strong-low', category: 'flags', difficulty: 2, importance: 3 },
-    { id: 'weak-recent', category: 'capitals', difficulty: 3, importance: 8 },
+    { id: 'weak-high', category: 'javascript', difficulty: 2, importance: 10 },
+    { id: 'strong-low', category: 'css', difficulty: 2, importance: 3 },
+    { id: 'weak-recent', category: 'javascript', difficulty: 3, importance: 8 },
   ].map((item) => ({
     ...item, tags: [item.category], introduction: '', question: item.id,
     options: ['a', 'b'], correctAnswer: 0, explanation: '',
@@ -453,11 +446,11 @@ async function main() {
   const review = selectPersonalizedReview(
     reviewQuestions,
     [
-      { category: 'capitals', total_correct: 2, total_questions: 10 },
-      { category: 'flags', total_correct: 9, total_questions: 10 },
+      { category: 'javascript', total_correct: 2, total_questions: 10 },
+      { category: 'css', total_correct: 9, total_questions: 10 },
     ],
     [{
-      question_id: 'weak-recent', category: 'capitals', times_seen: 2, times_missed: 2,
+      question_id: 'weak-recent', category: 'javascript', times_seen: 2, times_missed: 2,
       last_seen_at: new Date(now - 5 * 86400000).toISOString(),
       last_missed_at: new Date(now - 5 * 86400000).toISOString(),
     }],
@@ -465,11 +458,8 @@ async function main() {
     now,
   );
   assert.equal(review.questions.length, 2);
-  assert.equal(review.weakAreas[0]?.category, 'capitals');
-  assert.ok(review.questions.every((question) => question.category === 'capitals'));
-  assert.ok(assessmentUnlocks('geography', 18).every((topic) => SUBJECT_SCOPE_CATALOG.geography.topics.includes(topic as never)));
-  assert.ok(assessmentUnlocks('math', 18).every((topic) => SUBJECT_SCOPE_CATALOG.math.topics.includes(topic as never)));
-  assert.ok(!assessmentUnlocks('geography', 18).includes('typescript'));
+  assert.equal(review.weakAreas[0]?.category, 'javascript');
+  assert.ok(review.questions.every((question) => question.category === 'javascript'));
   assert.ok(assessmentUnlocks('webdev', 18).every((topic) => ROADMAP_TOPICS.includes(topic as never)));
 
   // Retired paths must be gone from every catalog, so no skill-check tier,
@@ -624,11 +614,6 @@ async function main() {
   });
   assert.equal(reactStuck.timedOut, true, 'a case that never settles is reported as a timeout');
 
-  // Coding resources are devShark-only: the StudyShark scope this test runs in refuses them.
-  const codingRes = mockResponse();
-  await roadmapHandler({ method: 'GET', headers: {}, query: { resource: 'coding-task', id: 'js-double-numbers' } } as never, codingRes as never);
-  assert.equal(codingRes.statusCode, 404, 'coding tasks are not served outside devShark');
-
   const qualityIssues = inspectQuestionQuality([{
     ...reviewQuestions[0],
     source: 'base', deleted: false,
@@ -645,8 +630,6 @@ async function main() {
   assert.match(migration, /ENABLE ROW LEVEL SECURITY/g);
   assert.match(migration, /REVOKE ALL ON FUNCTION public\.record_verified_activity_xp/);
   assert.match(migration, /claim_ai_generation_budget/);
-  assert.match(migration, /'math'.*'chess'.*'poker'/);
-  assert.doesNotMatch(migration, /'mathematics'|'physics'|'chemistry'/);
 
   const hardening = readFileSync(join(process.cwd(), 'supabase', 'supabase-schema-023.sql'), 'utf8');
   assert.match(hardening, /CREATE TABLE IF NOT EXISTS public\.quiz_submissions/);
@@ -963,24 +946,21 @@ async function main() {
   assert.equal(healthRes.headers.get('allow'), 'GET');
   assert.ok(healthRes.headers.has('x-request-id'));
 
-  // Learn must be browsable for every StudyShark subject without a database
-  // write. This exercises the same structure and first-level GETs used by the
-  // client, and catches accidental subject locks or question-bank failures.
+  // Learn must be browsable without a database write. This exercises the same
+  // structure and first-level GET the client uses, and catches an accidental
+  // subject lock or a question-bank failure.
   const structureRes = mockResponse();
   await roadmapHandler({ method: 'GET', headers: {}, query: {} } as never, structureRes as never);
   assert.equal(structureRes.statusCode, 200);
   const structure = structureRes.body as { topics?: string[] };
   assert.ok(Array.isArray(structure.topics));
-  assert.ok(STUDYSHARK_SCOPE_SUBJECTS.every((subject) =>
-    SUBJECT_SCOPE_CATALOG[subject].topics.every((topic) => structure.topics?.includes(topic)),
-  ));
-  for (const subject of STUDYSHARK_SCOPE_SUBJECTS) {
-    const topic = SUBJECT_SCOPE_CATALOG[subject].topics[0];
+  assert.ok(SUBJECT_SCOPE_CATALOG.webdev.topics.every((topic) => structure.topics?.includes(topic)), 'the structure lists every webdev topic');
+  {
     const lessonRes = mockResponse();
     await roadmapHandler({
-      method: 'GET', headers: {}, query: { topic, level: '1', lang: 'cs' },
+      method: 'GET', headers: {}, query: { topic: 'javascript', level: '1', lang: 'en' },
     } as never, lessonRes as never);
-    assert.equal(lessonRes.statusCode, 200, `${subject} Learn level must load`);
+    assert.equal(lessonRes.statusCode, 200, 'the first JavaScript Learn level must load');
     const lesson = lessonRes.body as { sessionId?: string; questions?: Array<Record<string, unknown>> };
     assert.match(lesson.sessionId ?? '', /^v2\./);
     assert.ok((lesson.questions?.length ?? 0) > 0);
@@ -1078,10 +1058,10 @@ async function main() {
     };
     assert.ok(planTopics(profile).length > 0, `${track} plan must contain topics`);
     assert.equal(isLearnerProfileComplete(profile), true, 'a fully answered profile is complete');
-    // A plan excludes what the learner did not choose, and StudyShark, which
-    // has no plans, keeps everything its subjects own.
-    assert.equal(isTopicInPlan(profile, 'webdev', 'chess-history'), false);
-    assert.equal(isTopicInPlan(profile, 'geography', 'continents'), true);
+    // A plan excludes what the learner did not choose, and a subject without
+    // plans keeps everything it owns.
+    assert.equal(isTopicInPlan(profile, 'webdev', 'cool-stuff'), false);
+    assert.equal(isTopicInPlan(profile, 'legacy-subject', 'anything'), true);
   }
 
   // Experience is advisory: the most experienced answer opens nothing.
@@ -1123,9 +1103,7 @@ async function main() {
     assert.equal(subjectForCategory(topic), 'webdev', `${topic} must still resolve as a category for history`);
     assert.ok(retirementOf(topic), `${topic} needs a recorded destination`);
     // Discovery no longer offers it, and an explicit request cannot rebuild
-    // the pool either. (This suite runs in the StudyShark scope, where these
-    // devShark categories are out of deployment anyway; the retirement check is
-    // the one that holds on devShark too.)
+    // the pool either.
     assert.ok(!defaultDeploymentCategories().includes(topic), `${topic} must not be drawn by default`);
     assert.equal(
       validateCategoryScope([topic], { forDelivery: true }).ok,

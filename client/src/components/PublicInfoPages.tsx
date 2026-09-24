@@ -12,7 +12,6 @@ const COPY = {
     supportKicker: 'Optional support',
     supportTitle: 'Keep learning free and independent.',
     supportDev: 'Support helps maintain the developer question bank, keep technical content current, cover infrastructure, and improve accessibility and localization.',
-    supportStudy: 'Support helps create and fact-check educational content, add subjects and translations, improve classroom tools, and cover infrastructure.',
     fairness: 'Every lesson, quiz, learning path, explanation, challenge and multiplayer feature remains free. Support never changes access, XP, streaks, scores or rankings.',
     disabled: 'Financial support is not enabled on this deployment. The platform remains fully available for free.',
     costs: 'Monthly running costs', target: 'Target', covered: 'Net amount covered', carry: 'Carried forward', updated: 'Last updated',
@@ -42,7 +41,6 @@ const COPY = {
   cs: {
     supportKicker: 'Dobrovolná podpora', supportTitle: 'Pomoz udržet učení zdarma a nezávislé.',
     supportDev: 'Podpora pomáhá udržovat vývojářskou databázi otázek, aktualizovat technický obsah, hradit infrastrukturu a zlepšovat přístupnost i překlady.',
-    supportStudy: 'Podpora pomáhá vytvářet a ověřovat vzdělávací obsah, přidávat předměty a překlady, zlepšovat nástroje pro třídy a hradit infrastrukturu.',
     fairness: 'Každá lekce, kvíz, studijní cesta, vysvětlení, výzva i hra více hráčů zůstává zdarma. Podpora nikdy nemění přístup, XP, série, skóre ani pořadí.',
     disabled: 'Finanční podpora na tomto nasazení není zapnutá. Celá platforma zůstává dostupná zdarma.',
     costs: 'Měsíční provozní náklady', target: 'Cíl', covered: 'Čistá pokrytá částka', carry: 'Převod do dalšího období', updated: 'Poslední aktualizace',
@@ -91,7 +89,7 @@ export function SupportPage() {
   const covered = support.amountCovered;
   const percentage = target > 0 ? Math.min(100, Math.round((covered / target) * 100)) : 0;
   const carry = Math.max(0, covered - target);
-  const explanation = CURRENT_PRODUCT.supportVariant === 'devshark' ? c.supportDev : c.supportStudy;
+  const explanation = c.supportDev;
   const formatter = new Intl.NumberFormat(lang === 'cs' ? 'cs-CZ' : 'en-US', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 });
   useEffect(() => capture('support_page_viewed', { product: CURRENT_PRODUCT.id }), []);
   return <Page kicker={c.supportKicker} title={c.supportTitle} lead={explanation}>

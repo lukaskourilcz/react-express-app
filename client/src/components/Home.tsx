@@ -3,10 +3,9 @@ import { captureActivation } from '../lib/analytics';
 // generic hero + three feature cards, it opens with a product-forward pitch: an
 // interactive sample question wired to a real Level-1 question, a topic picker
 // whose cards host schools of shark fins on hover, a live "Inside <Topic>"
-// roadmap preview, the everything-else feature strip, the free pledge, and the
-// shared product-family footer. The whole page re-skins per active subject from
-// var(--brand-accent) + lib/subjects.ts — layout identical, accent + topic set
-// swap. The app shell (App.tsx) supplies the header and the ocean footer.
+// roadmap preview, the everything-else feature strip and the free pledge. The
+// accent comes from var(--brand-accent). The app shell (App.tsx) supplies the
+// header and the ocean footer.
 //
 // See DESIGN_RULES.md for the fin baseline, wave-variation and accent rules
 // this file is the reference implementation of.
@@ -15,11 +14,10 @@ import { useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SharkFin, Waterline } from './SharkFin';
 import { CategoryGlyph } from './ui/techIcons';
-import SubjectGlyph from './ui/SubjectGlyph';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
-import { useActiveSubject, subjectNameKey, subjectBlurbKey, type SubjectId } from '../lib/subjects';
+import { useActiveSubject } from '../lib/subjects';
 import { TRACK_ORDER } from '../lib/tracks';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
 import { AppToast } from './ui/AppToast';
@@ -33,25 +31,18 @@ import FounderNote from './landing/FounderNote';
 
 // ─────────────────────────────── Topic card ───────────────────────────────
 
-function TopicIcon({ topic, subjectId }: { topic: LandingTopic; subjectId: SubjectId }) {
-  if (subjectId === 'webdev') {
-    return (
-      <span className="ss-float" style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-        <CategoryGlyph category={topic.id} color="var(--brand-accent)" size={30} />
-      </span>
-    );
-  }
+function TopicIcon({ topic }: { topic: LandingTopic }) {
   return (
-    <span className="ss-float" aria-hidden style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', flexShrink: 0, color: 'var(--brand-accent)', lineHeight: 1 }}>
-      <SubjectGlyph id={subjectId} size={28} />
+    <span className="ss-float" style={{ width: 36, height: 36, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+      <CategoryGlyph category={topic.id} color="var(--brand-accent)" size={30} />
     </span>
   );
 }
 
 function TopicCard({
-  topic, subjectId, selected, onSelect,
+  topic, selected, onSelect,
 }: {
-  topic: LandingTopic; subjectId: SubjectId; selected: boolean; onSelect: () => void;
+  topic: LandingTopic; selected: boolean; onSelect: () => void;
 }) {
   const [hover, setHover] = useState(false);
   const t = useT();
@@ -99,7 +90,7 @@ function TopicCard({
           </span>
         );
       })}
-      <TopicIcon topic={topic} subjectId={subjectId} />
+      <TopicIcon topic={topic} />
       <span style={{ fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em', color: 'var(--color-text-primary)', minWidth: 0 }}>
         {topic.name}
       </span>
@@ -112,7 +103,6 @@ function TopicCard({
 
 function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () => void }) {
   const t = useT();
-  const subject = useActiveSubject();
   return (
     <section
       aria-label={t('home.insideTopic', { name: topic.name })}
@@ -123,7 +113,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
         <SharkFin size={420} color="currentColor" />
       </div>
       <div aria-hidden style={{ position: 'absolute', right: 18, top: 12, opacity: 0.18, pointerEvents: 'none' }}>
-        <SubjectPlate id={subject.id} />
+        <SubjectPlate />
       </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', position: 'relative' }}>
         <h2 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.015em' }}>
@@ -202,10 +192,9 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState<string>(featured[0]?.id ?? '');
   const selected = featured.find((x) => x.id === selectedId) ?? featured[0];
 
-  const subjectName = t(subjectNameKey(subject.id));
   const brand = CURRENT_PRODUCT.brand;
-  const heroTitle = subject.id === 'webdev' ? t('home.title') : t('home.titleSubject', { label: subjectName });
-  const heroSubtitle = subject.id === 'webdev' ? t('home.subtitle') : t(subjectBlurbKey(subject.id));
+  const heroTitle = t('home.title');
+  const heroSubtitle = t('home.subtitle');
   const moreCount = subject.topics.length - featured.length;
 
   // Stats derived from the real roadmap shape: 25 levels per topic.
@@ -231,13 +220,9 @@ export default function Home() {
   const strip: StripItem[] = [
     { titleKey: 'today.title', textKey: 'today.subtitle', color: 'var(--brand-accent)', to: '/today', icon: STRIP_ICON(<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /><path d="m9 16 2 2 4-4" /></>) },
     { titleKey: 'cards.title', textKey: 'cards.subtitle', color: 'var(--ss-warning)', to: '/collection', icon: STRIP_ICON(<><rect x="3" y="5" width="14" height="16" rx="2" /><path d="M7 5V3h12a2 2 0 0 1 2 2v14" /></>) },
-    ...(subject.id === 'webdev'
-      ? [
-          { titleKey: 'home.stripCareerTitle' as TranslationKey, textKey: 'home.stripCareerText' as TranslationKey, color: 'var(--brand-accent)', to: '/roadmap', icon: STRIP_ICON(<><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></>) },
-          { titleKey: 'home.stripCodingTitle' as TranslationKey, textKey: 'home.stripCodingText' as TranslationKey, color: 'var(--ss-success)', to: '/coding', icon: STRIP_ICON(<><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /><line x1="14" y1="4" x2="10" y2="20" /></>) },
-          { titleKey: 'typing.title' as TranslationKey, textKey: 'typing.subtitle' as TranslationKey, color: 'var(--ss-info)', to: '/typing', icon: STRIP_ICON(<><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" /></>) },
-        ]
-      : [{ titleKey: 'subject.stripCardsTitle' as TranslationKey, textKey: 'subject.stripCardsText' as TranslationKey, color: 'var(--brand-accent)', to: '/cards', icon: STRIP_ICON(<><rect x="3" y="6" width="13" height="15" rx="2" /><path d="M8 3h11a2 2 0 0 1 2 2v13" /></>) }]),
+    { titleKey: 'home.stripCareerTitle', textKey: 'home.stripCareerText', color: 'var(--brand-accent)', to: '/roadmap', icon: STRIP_ICON(<><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></>) },
+    { titleKey: 'home.stripCodingTitle', textKey: 'home.stripCodingText', color: 'var(--ss-success)', to: '/coding', icon: STRIP_ICON(<><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /><line x1="14" y1="4" x2="10" y2="20" /></>) },
+    { titleKey: 'typing.title', textKey: 'typing.subtitle', color: 'var(--ss-info)', to: '/typing', icon: STRIP_ICON(<><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" /></>) },
     { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', color: 'var(--brand-accent)', to: '/challenge', icon: STRIP_ICON(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
     { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', color: 'var(--ss-info)', to: '/play', icon: STRIP_ICON(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
     { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: 'var(--ss-warning)', to: '/leaderboard', icon: STRIP_ICON(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
@@ -297,7 +282,6 @@ export default function Home() {
             <TopicCard
               key={topic.id}
               topic={topic}
-              subjectId={subject.id}
               selected={topic.id === selected?.id}
               onSelect={() => setSelectedId(topic.id)}
             />
