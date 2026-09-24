@@ -647,3 +647,33 @@ Verified in Chromium against a devShark build: a visitor with a stored `cs` pref
 Migration 038 was applied to production (`rvlybcjdpafwyeuojvhl`) through the Supabase connector: both track checks admit `algorithms` with exactly one check per table, both routines remain SECURITY DEFINER with an empty `search_path` and `service_role`-only execute, and a rolled-back exercise recorded an `algorithms` verdict and reveal, confirmed both rows carried the new track, and confirmed an unknown track is still refused. No probe rows survived and the advisor reports only the pre-existing RLS notices.
 
 Not exercised here: anything account-bound, since no Supabase project is reachable from the build container. The prerendered Czech topic guides at `/cs/topics/:slug` still render and are still indexed; what to do about them is an owner decision in `NEEDED.md`.
+
+## 2026-09-24 — Algorithms submits, a quieter quiz, drafts on Run, the fin in the water
+
+What changed:
+
+- **Algorithms submits no longer expire.** `decodeCodingSession` checked a sealed session's track against its own list of four tracks, and the Algorithms track never joined that list. Every Algorithms session therefore decoded to nothing, and every Submit answered `invalid_session`, which the workbench shows as "This session expired. Reload the task and submit again." The decoder and the coding handlers now read the track list from `shared/coding-catalog`, and the launch contract seals and opens a session on every track. Replaying the reference solution to `alg-two-sum` through the real handler returned HTTP 400 `invalid_session` before the fix and 200 `passed` after it; `alg-promise-pool`, `alg-retry-backoff` and `js-double-numbers` also pass. A session still expires after three hours, and signing out mid-task still invalidates it; both are intended.
+- **Quiz.** The rotating coaching line ("Before choosing, name the behavior or requirement being tested", and four others) is gone, with its strings and the `RotatingTip` component. The keyboard tip no longer shows under a coarse pointer or below 600px. The hint popover no longer carries the design system's hidden "Close popover" button, which a tap revealed and which then hid itself instead of the hint. A visible × icon button now closes the hint, and it measures 44×44 on touch. The popover is aligned to the end of its trigger and capped at `min(320px, 100% − 16px)`, so it stays on screen at 360px.
+- **Drafts.** The coding workbench no longer saves while the learner types or when they leave, and it says nothing about saving. Run and Submit hand the current code to the draft store: the device, and the account when signed in. Edits made after the last Run or Submit are not kept.
+- **Results height.** From 1024px up, the output pane takes the editor's height and its checks scroll inside it, so Run and Submit sit directly under the editor. At 1280px the panes of `alg-deep-clone` went from 1035px to 538px and those of `alg-two-sum` from 804px to 538px; `js-double-numbers` stayed at 538px. The same held at 1024px and 1440px, with the last check still reachable by scrolling the pane.
+- **The fin mark.** `SharkFin` sweeps back to a hooked tip, and its base is cut into a wave, so the fin sits in the water. The wave's mean height stays on the old base line, so fins placed on waterlines still sit on them. `client/public/favicon.svg` repeats the same paths.
+- **Docs.** The visual QA matrix and the brand voice no longer ask for Czech.
+
+Local evidence, all executed on the branch head:
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api` | pass |
+| `npm run test:coding` | pass — 440 tasks (javascript 170, typescript 84, react 116, system-design 45, algorithms 25) |
+| `npm run test:launch` | pass — includes the new every-track session round trip; 12-function budget unchanged |
+| `npm run test:paths` | pass |
+| `npm run test:client` | pass — 7 files, 45 tests; the draft test now checks that typing and leaving save nothing and that Run and Submit save the current code |
+| `npm run build` (devShark) | pass (React runner, client, sandbox page) |
+| `npm run test:harness` | pass — 129 assertions against the built sandbox in Chromium |
+| `npm run check:responsive` | pass — 231 probes, 0 issues |
+| `npm audit --omit=dev` (root and client) | 0 vulnerabilities |
+| `git diff --check` | clean |
+
+Rendered in Chromium against a devShark build, with the API mocked from real handler payloads: the quiz at 1280, 768, 390 and 360px, with and without touch (no coaching line, keyboard tip only with a fine pointer, hint popover on screen, × closes it); the workbench at 1024, 1280 and 1440px (Run directly under the editor); the header fin in light and dark at 1280px and on a phone, and the favicon at 16 to 48px.
+
+Not exercised here: anything account-bound, since no Supabase project is reachable from the build container. A signed-in Algorithms pass and the account copy of a draft are listed in `NEEDED.md`.
