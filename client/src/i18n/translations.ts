@@ -1921,7 +1921,6 @@ export const en = {
   'coding.tab.preview': 'Preview',
   'coding.results.idle': 'Run your code to see results.',
   'coding.results.pending': 'Not run yet',
-  'coding.results.more': 'Scroll for {n} more.',
   'coding.results.passing': '{passed} of {total} passing',
   'coding.status.working': 'Running your code…',
   'coding.results.hidden': 'Hidden checks: {passed} of {total}',

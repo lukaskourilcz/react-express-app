@@ -233,7 +233,19 @@
     grid-template-columns: minmax(0, var(--cd-split, 58%)) 10px minmax(0, 1fr);
     align-items: stretch;
   }
-  .cd-pane--output { position: static; }
+  /* The output pane takes the editor's height and no more. Size containment
+     stops its content from growing the row, so the row is as tall as the
+     editor, the pane stretches to fill it, and Run and Submit below stay where
+     the editor ends however many checks a task has. As the code grows the
+     editor grows, and the pane shows more checks with it. Scoped to this
+     layout: stacked, the pane has a row of its own and would collapse. */
+  .cd-pane--output { position: static; contain: size; }
+  .cd-output-scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  /* Inside it, the open panel takes whatever the verdict and the failure hint
+     leave and scrolls within that, so a long list of checks scrolls while the
+     verdict under it stays in view — it never has to be scrolled to. The outer
+     scroll is only the fallback for a verdict and hint taller than the pane. */
+  .cd-output-scroll > .cd-panel { flex: 1 1 auto; min-height: 160px; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
   .cd-splitter {
     align-self: stretch;
     min-height: 120px;
@@ -374,6 +386,7 @@
 .cd-tab__badge { font-size: 0.78rem; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--color-background-muted); color: var(--color-text-primary); }
 .cd-tab__badge--good { background: var(--ss-success-soft); }
 .cd-tab__badge--bad { background: var(--ss-error-soft); }
+.cd-output-scroll { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .cd-panel { display: flex; flex-direction: column; gap: 10px; min-height: 160px; }
 .cd-panel[hidden] { display: none; }
 
@@ -381,9 +394,6 @@
 .cd-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 /* Eight rows show; the rest scroll inside this box, never the page. The cap is
    measured from the rendered rows (see ResultList). */
-.cd-results-scroll { min-width: 0; }
-.cd-results-scroll--capped { max-height: var(--cd-results-max, 60vh); overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; border-radius: var(--radius-inner); }
-.cd-results-scroll--capped:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 .cd-result {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

@@ -93,46 +93,6 @@ function Keycap({ name }: { name: keyof typeof KEYCAPS }) {
   );
 }
 
-/** How many result rows show before the list scrolls inside its own box. */
-const RESULT_ROWS_SHOWN = 8;
-
-/** A results list that shows its first eight rows and scrolls for the rest,
- * inside its own box rather than the page. The cap is measured from the real
- * rows, so wrapped calls, Czech labels and zoom all still show eight. */
-function ResultList({ count, label, children }: { count: number; label: string; children: ReactNode }) {
-  const boxRef = useRef<HTMLDivElement>(null);
-  const capped = count > RESULT_ROWS_SHOWN;
-  useEffect(() => {
-    const box = boxRef.current;
-    const list = box?.firstElementChild;
-    if (!box || !list) return;
-    if (!capped) { box.style.removeProperty('--cd-results-max'); return; }
-    const size = () => {
-      const rows = Array.from(list.children) as HTMLElement[];
-      const cut = rows[RESULT_ROWS_SHOWN];
-      if (!cut) return;
-      const top = cut.getBoundingClientRect().top - list.getBoundingClientRect().top;
-      // Everything above the ninth row, minus the gap that separates it.
-      box.style.setProperty('--cd-results-max', `${Math.max(48, Math.round(top - 6))}px`);
-    };
-    size();
-    const observer = new ResizeObserver(size);
-    (Array.from(list.children) as HTMLElement[]).slice(0, RESULT_ROWS_SHOWN + 1).forEach((row) => observer.observe(row));
-    return () => observer.disconnect();
-  }, [capped, count]);
-  return (
-    <div
-      ref={boxRef}
-      className={`cd-results-scroll${capped ? ' cd-results-scroll--capped' : ''}`}
-      tabIndex={capped ? 0 : undefined}
-      role={capped ? 'region' : undefined}
-      aria-label={capped ? label : undefined}
-    >
-      <ul className="cd-results">{children}</ul>
-    </div>
-  );
-}
-
 /** The names a React suite gives its cases, in order, so Results can list them
  * before the first run. The suite is read, never executed, here. */
 const suiteCaseNames = (suite: string | undefined): string[] =>
@@ -638,16 +598,15 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           <>
             <p className="cd-console__empty">{t('coding.results.idle')}</p>
             {suiteCases.length > 0 && (
-              <ResultList count={suiteCases.length} label={t('coding.tab.results')}>
+              <ul className="cd-results">
                 {suiteCases.map((name, index) => (
                   <li key={index} className="cd-result cd-result--idle">
                     <span className="cd-result__status"><span aria-hidden="true">—</span><span className="cd-visually-hidden">{t('coding.results.pending')}</span></span>
                     <span className="cd-result__call">{name}</span>
                   </li>
                 ))}
-              </ResultList>
+              </ul>
             )}
-            {suiteCases.length > RESULT_ROWS_SHOWN && <p className="cd-shortcuts">{t('coding.results.more', { n: suiteCases.length - RESULT_ROWS_SHOWN })}</p>}
           </>
         );
       }
@@ -656,7 +615,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       return (
         <>
           {reactRun.status === 'done' && <p className="cd-summary">{t('coding.results.passing', { passed: reactRun.passed, total: reactRun.total })}{serverChecked && <small>{t('coding.results.serverNote')}</small>}{stale && <small>{t('coding.results.stale')}</small>}</p>}
-          <ResultList count={reactRun.cases.length} label={t('coding.tab.results')}>
+          <ul className="cd-results">
             {reactRun.cases.map((one, index) => (
               <li key={index} className={`cd-result cd-result--${one.status}`}>
                 <span className="cd-result__status">{one.status === 'pass' ? t('coding.results.pass') : t('coding.results.fail')}</span>
@@ -664,8 +623,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 {one.error && <span className="cd-result__detail"><b>{t('coding.results.error')}:</b> {one.error}</span>}
               </li>
             ))}
-          </ResultList>
-          {reactRun.cases.length > RESULT_ROWS_SHOWN && <p className="cd-shortcuts">{t('coding.results.more', { n: reactRun.cases.length - RESULT_ROWS_SHOWN })}</p>}
+          </ul>
         </>
       );
     }
@@ -677,11 +635,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         <>
           <p className="cd-console__empty">{t('coding.results.idle')}</p>
           {tests.length > 0 && (
-            <ResultList count={tests.length} label={t('coding.tab.results')}>
+            <ul className="cd-results">
               {tests.map((test, index) => codeRow(test, undefined, index))}
-            </ResultList>
+            </ul>
           )}
-          {tests.length > RESULT_ROWS_SHOWN && <p className="cd-shortcuts">{t('coding.results.more', { n: tests.length - RESULT_ROWS_SHOWN })}</p>}
         </>
       );
     }
@@ -696,10 +653,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {serverChecked && <small>{t('coding.results.serverNote')}</small>}
           {stale && <small>{t('coding.results.stale')}</small>}
         </p>
-        <ResultList count={run.results.length} label={t('coding.tab.results')}>
+        <ul className="cd-results">
           {run.results.map((result, index) => codeRow(tests[index] ?? { call: '', expected: undefined }, result, index))}
-        </ResultList>
-        {run.results.length > RESULT_ROWS_SHOWN && <p className="cd-shortcuts">{t('coding.results.more', { n: run.results.length - RESULT_ROWS_SHOWN })}</p>}
+        </ul>
       </>
     );
   };
@@ -712,7 +668,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         <>
           <p className="cd-console__empty">{t('coding.results.idle')}</p>
           {typeTests.length > 0 && (
-            <ResultList count={typeTests.length} label={t('coding.types.tests')}>
+            <ul className="cd-results">
               {typeTests.map((typeTest, index) => (
                 <li key={index} className="cd-result cd-result--idle">
                   <span className="cd-result__status"><span aria-hidden="true">—</span><span className="cd-visually-hidden">{t('coding.results.pending')}</span></span>
@@ -720,7 +676,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                   {typeTest.label && <span className="cd-result__label">{L(typeTest.label)}</span>}
                 </li>
               ))}
-            </ResultList>
+            </ul>
           )}
         </>
       );
@@ -740,7 +696,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           </ul>
         )}
         <p className="cd-editor-label">{t('coding.types.tests')}</p>
-        <ResultList count={check.typeTests.length} label={t('coding.types.tests')}>
+        <ul className="cd-results">
           {check.typeTests.map((one, index) => {
             const typeTest = task.typeTests?.[index];
             return (
@@ -752,7 +708,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               </li>
             );
           })}
-        </ResultList>
+        </ul>
       </>
     );
   };
@@ -925,6 +881,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               </FinButton>
             ))}
           </div>
+          {/* Everything under the tab strip scrolls as one: the panel, the
+              verdict and the failure hint. On the two-column layout the pane is
+              exactly as tall as the editor beside it (see Coding.css), so this
+              is where a long list of checks goes instead of below Run. */}
+          <div className="cd-output-scroll">
           {tabs.map((one) => (
             // The panel takes focus itself: its content is often plain text,
             // so without this a keyboard user tabs straight past the results.
@@ -945,6 +906,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               <Prompt text={shownHint.body[lang] || shownHint.body.en} />
             </div>
           )}
+          </div>
         </section>
         <section className="cd-pane cd-pane--controls">
             <div className="cd-editor-actions">

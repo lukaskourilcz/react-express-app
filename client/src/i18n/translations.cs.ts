@@ -1921,7 +1921,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'coding.tab.preview': 'Náhled',
   'coding.results.idle': 'Spusť kód a uvidíš výsledky.',
   'coding.results.pending': 'Zatím nespuštěno',
-  'coding.results.more': 'Posuň se pro dalších {n}.',
   'coding.results.passing': '{passed} z {total} prochází',
   'coding.status.working': 'Spouštím tvůj kód…',
   'coding.results.hidden': 'Skryté kontroly: {passed} z {total}',
