@@ -16,6 +16,7 @@ import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { Popover } from '@astryxdesign/core/Popover';
 import { AlertDialog } from '@astryxdesign/core/AlertDialog';
 import { AppToast } from './ui/AppToast';
+import { CloseIcon } from './ui/icons';
 import { useAuth, getUserProfile } from '../lib/auth';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { visuallyHidden } from '../theme/MuiTheme';
@@ -37,7 +38,6 @@ import { renderQuestion } from './CodeBlock';
 import { TermsBar } from './ui/Terms';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
-import { RotatingTip } from './reactbits/RotatingTip';
 import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
 import { addFlashcard, removeFlashcard } from '../lib/flashcards';
 import { useLanguage, useT } from '../i18n/LanguageContext';
@@ -1300,11 +1300,35 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                     })
                   }
                   placement="below"
-                  width={320}
+                  // The hint button sits at the right of the question, so the
+                  // popover hangs from its right edge and opens leftwards. With
+                  // `alignment="end"` the anchored area runs from the viewport's
+                  // left edge to that button, and the percentage below resolves
+                  // against it: 320px where there is room, and on a phone the
+                  // width that fits, 16px clear of the edge. Centred at a fixed
+                  // 320px it ran up to 199px off a 390px screen.
+                  alignment="end"
+                  width="min(320px, calc(100% - 16px))"
                   label={t('quiz.showHint')}
+                  // Astryx's own close button is visually hidden until it has
+                  // focus. Here the hint is plain text, so autofocus landed on
+                  // that button and it surfaced as a "Close popover" label; on
+                  // touch, the tap moved focus before the click arrived, the
+                  // button collapsed back to one pixel, and the click missed —
+                  // the label vanished and the hint stayed open. An always
+                  // visible × that closes the hint replaces it.
+                  hasCloseButton={false}
                   content={
-                    <div style={{ fontSize: '0.82rem', lineHeight: 1.6 }}>
-                      {currentQuestion.introduction}
+                    <div className="quiz-hint">
+                      <div className="quiz-hint__text">{currentQuestion.introduction}</div>
+                      <Button
+                        isIconOnly
+                        icon={<CloseIcon size={18} />}
+                        variant="ghost"
+                        size="sm"
+                        label={t('quiz.closeHint')}
+                        onClick={() => setRevealedHints((prev) => ({ ...prev, [currentQuestion.id]: false }))}
+                      />
                     </div>
                   }
                 >
@@ -1394,42 +1418,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               </VStack>
             </RadioCardGroup>
 
-            <div style={{ marginTop: 8, flexShrink: 0 }}>
+            <div className="quiz-keyboard-tip" style={{ marginTop: 8, flexShrink: 0 }}>
               <Text type="supporting" size="xsm" color="secondary">
                 {t('quiz.keyboardTip', { max: currentQuestion.options.length })}
               </Text>
             </div>
           </fieldset>
         </div>
-      </div>
-
-      {/* Small coaching strip: nudges the learner toward good habits. Rotates
-          every 10s so the same tip never lingers. */}
-      <div
-        style={{
-          marginTop: 10,
-          padding: '6px 12px',
-          borderRadius: 8,
-          borderLeft: '3px solid var(--brand-accent)',
-          background: 'var(--color-background-muted)',
-          minHeight: '2.2em',
-          flexShrink: 0,
-          display: 'flex',
-          alignItems: 'center',
-        }}
-      >
-        <Text type="supporting" size="xsm" color="secondary">
-          <RotatingTip
-            tips={[
-              t('quiz.tip1'),
-              t('quiz.tip2'),
-              t('quiz.tip3'),
-              t('quiz.tip4'),
-              t('quiz.tip5'),
-            ]}
-            intervalMs={10000}
-          />
-        </Text>
       </div>
 
       {/* Nav row shares the card's edges: Previous hugs the left, Next the
