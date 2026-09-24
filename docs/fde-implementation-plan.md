@@ -6,7 +6,7 @@ Companions: [research and product decisions](fde-learning-path-research.md), [cu
 
 ## Scope and invariants
 
-Add optional FDE specialization after the existing Fullstack/Frontend/Backend choice, with experienced-engineer placement and practical evidence. Non-goals: implementing application code in this planning change; shipping other specializations or changing StudyShark; requiring paid APIs, a new AI tutor or a remote execution platform.
+Add optional FDE specialization after the existing Fullstack/Frontend/Backend choice, with experienced-engineer placement and practical evidence. Non-goals: implementing application code in this planning change; shipping other specializations; requiring paid APIs, a new AI tutor or a remote execution platform.
 
 Keep all learning free, `webdev` scope, existing base-track IDs, twelve physical API handlers, EN/CS parity, existing foundations/XP, and the current Astryx/Deep End design. Do not confuse the existing `Specialization` career-label type in `leveling.ts` with the new role ID. Name the new concept `RoleSpecializationId`.
 

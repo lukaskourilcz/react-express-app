@@ -6,17 +6,15 @@ without it.
 
 ## Public topic pages
 
-The build emits metadata-specific HTML shells under `/topics/<slug>/` for topics
-allowed by that deployment. StudyShark currently publishes concise pages for
-European capitals, historical periods, foundational mathematics, human biology,
-and chess tactics. devShark publishes closures, TypeScript narrowing, React
-Hooks, SQL joins, and Git rebase. Every page includes original teaching copy,
-one misconception, small public practice prompts, and a category-scoped quiz
-CTA. No private question bank or answer key is rendered in static HTML.
+The build emits metadata-specific HTML shells under `/topics/<slug>/` for
+devShark's five guides: closures, TypeScript narrowing, React Hooks, SQL joins,
+and Git rebase. Every page includes original teaching copy, one misconception,
+small public practice prompts, and a category-scoped quiz CTA. No private
+question bank or answer key is rendered in static HTML.
 
-Review pages quarterly for accuracy, search usefulness, Czech parity, internal
-links, and stale terminology. Add a topic only when it has a clear learner need
-and enough original teaching value to stand alone.
+Review pages quarterly for accuracy, search usefulness, internal links, and
+stale terminology. Add a topic only when it has a clear learner need and enough
+original teaching value to stand alone.
 
 ## Product loops
 
@@ -27,15 +25,13 @@ and enough original teaching value to stand alone.
 - Support prompts appear only after repeated completed quizzes, are dismissible,
   stay hidden for at least 90 days, can be disabled permanently, and appear only while truthful support configuration
   is enabled. Payment never changes learning access or scores.
-- Sibling-brand clicks explain the product relationship and respect “coming
-  soon” states instead of leading to empty domains.
 
 ## Minimal event taxonomy
 
 Measure aggregate funnels with anonymous/session-scoped identifiers and short
-retention. Current useful events include sibling-brand visits, support page and
-provider clicks, multiplayer create/join, and result shares. Add quiz start,
-quiz complete, Learn lesson complete, and topic-page CTA only if their payloads
+retention. Current useful events include support page and provider clicks,
+multiplayer create/join, and result shares. Add quiz start, quiz complete, Learn
+lesson complete, and topic-page CTA only if their payloads
 contain product, subject/category, locale, and coarse result counts—not identity
 or question content.
 

@@ -3,8 +3,6 @@
 ## Matrix
 
 - Widths: 360, 390, 430, 768, 1024, 1280, 1440px.
-- Products: StudyShark and devShark.
-- StudyShark subjects: geography, math, history, biology, chess, poker.
 - Locale: English, the only shipped language (`ENABLED_LANGS`). The retained Czech files are not part of the matrix.
 - Themes: light and dark.
 - Motion: normal and `prefers-reduced-motion: reduce`.
@@ -12,9 +10,8 @@
 
 ## Representative routes and states
 
-- StudyShark picker and selected subject preview.
 - devShark landing and career roadmap.
-- Subject home and topic landing.
+- Topic landing.
 - Quiz setup, active text/code question, submit error, results and two-column review.
 - Learn overview, locked/current/completed level, lesson feedback, skill check, missing structure.
 - Challenge intro, active timer, timeout, verified result, unavailable board.
@@ -32,7 +29,7 @@
 2. Primary action is obvious and unique.
 3. Loading, empty, error, offline/partial, permission, success and destructive states are distinguishable.
 4. Keyboard reaches every control in logical order; radio arrows/Home/End work; Escape and restoration work.
-5. Focus remains visible in both themes and every subject accent.
+5. Focus remains visible in both themes against the accent.
 6. Status is not color-only; timers do not chatter; live updates are purposeful.
 7. 44px target goal, readable line lengths, no clipped long copy or code, no hidden horizontal overflow.
 8. No content sits under the bottom waterline; answer positions stay stable.

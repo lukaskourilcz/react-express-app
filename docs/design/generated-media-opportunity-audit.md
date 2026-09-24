@@ -1,10 +1,10 @@
 # Generated media opportunity audit
 
-Audit date: 22 July 2026.
+Audit date: 22 July 2026. Updated 24 September 2026 for devShark alone.
 
 No external generator is selected. Pricing, free tiers, licenses, privacy terms, and model availability change frequently, so provider selection must be based on fresh official sources rather than remembered capabilities or affiliate roundups.
 
-Agents must not buy a plan, create an external account, accept paid terms, enable auto-refill, expose credentials, or upload sensitive material without explicit owner authorization. Keep deterministic SVG marks, CSS/SVG subject plates, factual diagrams, and authentic interface captures regardless of provider; never use a fake placeholder.
+Agents must not buy a plan, create an external account, accept paid terms, enable auto-refill, expose credentials, or upload sensitive material without explicit owner authorization. Keep deterministic SVG marks, the SVG devShark plate, factual diagrams, and authentic interface captures regardless of provider; never use a fake placeholder.
 
 ## Mandatory provider research
 
@@ -28,18 +28,17 @@ Prefer a no-card free tier or low capped cost with clear commercial rights and c
 
 | Candidate | Classification | Decision |
 |---|---|---|
-| Family fin/waterline logo, favicon, PWA icons | High-value, but deterministic | Refine existing SVG primitives; do not ship a raw raster-generated logo. |
-| StudyShark OG / launch art | High-value | Generate editorial environment only; overlay real brand text deterministically. |
+| Fin/waterline logo, favicon, PWA icons | High-value, but deterministic | Refine existing SVG primitives; do not ship a raw raster-generated logo. |
 | devShark OG / launch art | High-value | Technical editorial environment without code text; overlay authentic code/text. |
-| Subject chapter plates | High-value | Keep deterministic lightweight SVG/CSS plates; evaluate generated texture variants only when they add clear value. |
-| Social square/portrait/landscape campaigns | High-value for launch | Produce from selected product directions; compose real screenshots and real EN/CS text deterministically. |
+| devShark plate (`SubjectPlate`) | High-value | Keep the deterministic lightweight SVG plate; evaluate generated texture variants only when they add clear value. |
+| Social square/portrait/landscape campaigns | High-value for launch | Produce from the selected devShark direction; compose real screenshots and real English text deterministically. |
 | Small shared onboarding/empty-state illustration | Potentially useful | Use one reusable family only where it improves emotion or orientation. |
 | Subtle landing background loop | Potentially useful | Reject by default; require a static poster, reduced-motion fallback, and measured LCP. |
 | Topic-page covers | Potentially useful | Use sparingly for priority editorial topics, never as factual diagrams. |
 | Classroom campaign video | Potentially useful | Marketing-only, authentic UI, and never part of the core bundle. |
 | Texture / paper grain | Unnecessary | Existing deterministic SVG grain is tiny, theme-safe, and sufficient. |
-| Functional icons / subject glyphs | Inappropriate | Keep deterministic SVG and the current icon language. |
-| Factual maps, equations, anatomy, chess positions, poker hands | Harmful | Generate from verified data or deterministic code only. |
+| Functional icons / technology glyphs | Inappropriate | Keep deterministic SVG and the current icon language. |
+| Factual diagrams, equations, code | Harmful | Generate from verified data or deterministic code only. |
 | Fake UI, users, leaderboards, charts, testimonials, classrooms | Harmful | Never generate. |
 | Hero video in Quiz, Learn, Play, Profile, or `/dev` | Harmful | Core learning state must remain quiet and fast. |
 
@@ -47,4 +46,4 @@ Prefer a no-card free tier or low capped cost with clear commercial rights and c
 
 An asset is accepted only when it solves a named placement problem, has at least three meaningfully different reviewed directions, contains no text, artifacts, external logos, or factual claims, supports required crops and themes, stays outside core route bundles, has an optimized static fallback, and is recorded in `generated-media-manifest.md`.
 
-The current solid-green `client/public/og-image.png` is a temporary deterministic fallback, not accepted launch art. Replace it only when both product variants exist and the metadata pipeline can point each deployment at a real committed file.
+The current solid-green `client/public/og-image.png` is a temporary deterministic fallback, not accepted launch art. Replace it only when an accepted devShark variant exists and the metadata pipeline points at a real committed file.

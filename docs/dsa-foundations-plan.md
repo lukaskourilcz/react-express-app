@@ -78,7 +78,7 @@ Completion records identify verified code and objective reasoning. A follow-up r
 
 Use the shared `LearningPathId` and manifest kind from the FDE plan: `dsa-foundations` is `skill_path`; `fde` is `role_specialization`. Reuse `learning_path_*` storage, `learning-path-*` API dispatch and existing coding runtimes. DSA enrollment has nullable base-track context and does not change `devquiz_learning_preference_v1.specialization`. Keep role IDs restricted to FDE.
 
-A path-neutral client workspace can be shared below separate role/skill entry routes. Per-path availability/version flags let DSA launch without waiting for FDE content. Today deduplicates reused tasks and can resume either active path. Preserve legacy question IDs/levels/checkpoints/XP, ordinary coding tiers, StudyShark isolation and all old progress. New path completion is separate, with no new XP in v1.
+A path-neutral client workspace can be shared below separate role/skill entry routes. Per-path availability/version flags let DSA launch without waiting for FDE content. Today deduplicates reused tasks and can resume either active path. Preserve legacy question IDs/levels/checkpoints/XP, ordinary coding tiers and all old progress. New path completion is separate, with no new XP in v1.
 
 Existing DSA questions need targeted correctness/tone review before reuse; do not blindly import all levels or mirror their simple distractors. Sources and EN/CS overlays belong in the manifest/content quality workflow. Deterministic diagrams need keyboard operation, reduced motion, textual descriptions and zoom/reflow at 360–1440px.
 

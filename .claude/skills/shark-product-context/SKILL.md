@@ -1,6 +1,6 @@
 ---
 name: shark-product-context
-description: Protect StudyShark/devShark product architecture, business rules, terminology, scope, localization, and integrity. Use for any feature, route, API, copy, settings, or data-flow change.
+description: Protect devShark product architecture, business rules, terminology, scope, localization, and integrity. Use for any feature, route, API, copy, settings, or data-flow change.
 ---
 
 # Shark Product Context
@@ -9,18 +9,18 @@ Read `docs/product-architecture.md`, `client/product-catalog.ts`, `shared/subjec
 
 ## Product model
 
-- StudyShark is one general-learning ecosystem containing geoShark, mathShark, historyShark, bioShark, chessShark, and pokerShark.
-- devShark is the standalone `webdev` developer-learning sibling. It is never a StudyShark subject.
-- Both deployments share this repository and infrastructure. Resolve identity and links through environment-backed registries.
-- Preserve the shared Shark-family footer: general brands link to StudyShark contexts; devShark remains the sibling product.
+- devShark is a developer-learning product with one subject, `webdev`. Progress, XP, tokens, and the database stay keyed by that subject.
+- This repository builds devShark alone. `resolveCatalogProductId` throws for any other product or subject lock, so a misconfigured build fails. StudyShark moved to its own repository, `lukaskourilcz/studyshark`, on 2026-09-24. Add no other product, subject, brand, or cross-link here.
+- The footer carries the legal links and the appearance and sound controls. It promotes no other product.
 
 ## Protected rules
 
 - All learning is free. Support and cosmetics never change access, questions, explanations, paths, AI availability, XP, scores, streaks, ranks, leaderboards, or matchmaking.
+- devShark ships no AI feature. Coding hints are authored and end in documentation links.
 - The server owns product scope, subject scope, answers, grading, scores, XP, admin roles, and one-time claims. Never expose correct answers before submission.
 - Keep exactly 12 physical TypeScript handlers under `api/`; extend typed multiplexing rather than adding a handler.
 - Keep Supabase service-role isolation, RLS, request IDs, schema/method validation, rate limiting, and safe errors.
-- The app ships English only (`ENABLED_LANGS`). Write no Czech copy and add no Czech keys; the existing Czech files are retained work, neither extended nor deleted. Public `DevQuiz` copy is stale, but storage keys, migrations, package/repository names, fixtures, and history may remain for compatibility.
+- The app ships English only (`ENABLED_LANGS`). Write no Czech copy and add no Czech keys; the existing Czech files are retained work, neither extended nor deleted. Public `DevQuiz` copy is stale, but storage keys (the `studyshark:*` keys among them), migrations, package/repository names, fixtures, and history may remain for compatibility.
 - Native/Expo work is out of scope.
 
 ## Reuse order

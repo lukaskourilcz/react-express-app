@@ -1,6 +1,6 @@
 ---
 name: generated-media-production
-description: Research providers, generate, select, optimize, integrate, and document StudyShark/devShark production media using a verified cheap or free service.
+description: Research providers, generate, select, optimize, integrate, and document devShark production media using a verified cheap or free service.
 ---
 
 # Generated Media Production
@@ -11,7 +11,7 @@ Use this skill with `shark-product-context` and `deep-end-design-system`. Read `
 
 1. Inspect Git state and the real target component, metadata path, current asset, crop behavior, bundle boundary, theme behavior, and responsive placement.
 2. Classify the candidate as high-value, potentially useful, unnecessary, harmful, or inappropriate. Generate only when it solves a named product or communication problem.
-3. Keep logos, functional icons, authentic UI, code, equations, factual maps, medical diagrams, meaningful chess positions, poker hands, charts, testimonials, users, and product data deterministic.
+3. Keep logos, functional icons, authentic UI, code, equations, system and data-structure diagrams, charts, testimonials, users, and product data deterministic.
 4. Define placement, aspect ratios, intrinsic dimensions, text-safe and crop-safe regions, light/dark behavior, mobile behavior, alt classification, performance budget, and static fallback before generation.
 
 ## Research and select a provider
@@ -42,6 +42,6 @@ Use this skill with `shark-product-context` and `deep-end-design-system`. Read `
 
 ## Validate and record
 
-Inspect the integrated result in StudyShark and devShark, light/dark, reduced motion, and relevant widths from 360 through 1440. Measure output bytes and verify lazy/preload behavior, crop stability, contrast behind deterministic text, and lack of layout shift.
+Inspect the integrated result in light and dark, with reduced motion, at relevant widths from 360 through 1440. Measure output bytes and verify lazy/preload behavior, crop stability, contrast behind deterministic text, and lack of layout shift.
 
 Update `docs/design/generated-media-manifest.md` with the provider, model/version, dated official pricing/license/privacy sources, actual workflow, cost, complete prompt, negative prompt, references, job IDs when available, three reviewed directions, rejection reasons, selected variant, dimensions, crops, output paths, optimization, alt classification, fallback, provenance, restrictions, and regeneration steps. Never record credentials or claim a generation/check that did not succeed.

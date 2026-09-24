@@ -47,7 +47,6 @@ in waves, and a category the current wave has reached only in part keeps
 serving its unreviewed items as before, with no review claim, while the
 decisions already recorded for it hold. Adding a category to the scope without
 all of its rows withholds the rest of it, which is the intended failure.
-StudyShark subjects are outside the audit entirely.
 
 Retirement is not deletion. A withheld item stays in its source file and in
 `getQuestionsForHistoryById`, so an old attempt still finds its explanation

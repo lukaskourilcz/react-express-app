@@ -1,13 +1,13 @@
 ---
 name: shark-release-validation
-description: Run the StudyShark/devShark release contract after implementation. Use before commits, handoff, deployment, or when checking scope, security, tests, builds, dependencies, documentation, and Git state.
+description: Run the devShark release contract after implementation. Use before commits, handoff, deployment, or when checking scope, security, tests, builds, dependencies, documentation, and Git state.
 ---
 
 # Shark Release Validation
 
 1. Inspect branch, status, unstaged/staged diffs, and recent commit style. Separate pre-existing work.
 2. Confirm exactly 12 `api/**/*.ts` handlers and no native app.
-3. Search for public DevQuiz copy, product relationship errors, duplicate registries/URLs/counts/colors, EN-only UI, unsafe client answers/scores/XP, paid learning advantages, heavy global media, and motion without reduced-motion handling.
+3. Search for public DevQuiz copy, references or links to another product, duplicate registries/URLs/counts/colors, user-visible strings that bypass `translations.ts`, unsafe client answers/scores/XP, paid learning advantages, heavy global media, and motion without reduced-motion handling.
 4. Run the actual project contract:
 
    ```sh
@@ -24,4 +24,4 @@ description: Run the StudyShark/devShark release contract after implementation. 
 7. Reconcile README, `DESIGN_RULES.md`, `docs/product-architecture.md`, design docs, and agent instructions with implementation.
 8. Stage coherent scopes only. Do not stage unrelated untracked `.agents` or `.codex` work.
 
-Report pass/fail/not-run exactly. Include 12-handler count, actual visual cells, audits, final status, intended commits, unrelated changes, and concrete limitations. Never claim external configuration, legal review, backups, support, AI, or deployment actions without verification.
+Report pass/fail/not-run exactly. Include 12-handler count, actual visual cells, audits, final status, intended commits, unrelated changes, and concrete limitations. Never claim external configuration, legal review, backups, support, or deployment actions without verification.

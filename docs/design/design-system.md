@@ -72,12 +72,12 @@ Do not use a semantic name that is not defined. Do not move unique, factual visu
 - Status uses text/icon plus semantic color.
 - Timers announce only meaningful thresholds.
 - Dialog/drawer focus traps, Escape, close button and restoration are mandatory.
-- Validate at 400% reflow, 360px width, both themes and both locales.
+- Validate at 400% reflow, 360px width and both themes.
 
 ## Content rules
 
-- All reusable UI copy uses EN/CS translation keys.
+- All reusable UI copy uses translation keys in `translations.ts`; the app ships English only.
 - Public facts come from registries/content, not repeated literals.
-- Curated explanations are authoritative; AI is labelled additional and post-answer.
+- Curated explanations are authoritative. devShark ships no AI feature.
 - Never generate product screens, scores, users, testimonials or factual teaching diagrams.
 

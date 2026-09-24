@@ -1,6 +1,6 @@
 ---
 name: visual-qa-accessibility
-description: Validate Shark routes across responsive widths, products, themes, locales, keyboard, focus, reduced motion, state handling, and WCAG-oriented behavior. Use after UI changes or for a focused visual/accessibility review.
+description: Validate devShark routes across responsive widths, themes, keyboard, focus, reduced motion, state handling, and WCAG-oriented behavior. Use after UI changes or for a focused visual/accessibility review.
 ---
 
 # Visual QA and Accessibility
@@ -10,8 +10,7 @@ Read `docs/design/visual-qa-checklist.md` and inspect real rendered behavior whe
 ## Matrix
 
 - Widths: 360, 390, 430, 768, 1024, 1280, and 1440.
-- Products: StudyShark and devShark where applicable.
-- Presentation: light, dark, EN, CS, reduced motion, zoom/reflow.
+- Presentation: light, dark, reduced motion, zoom/reflow. English is the only shipped language (`ENABLED_LANGS`).
 - States: loading, empty, error, offline/reconnect, auth/permission, disabled, success, destructive, stale/expired, long content.
 
 ## Checks

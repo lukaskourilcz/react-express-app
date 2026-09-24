@@ -84,14 +84,14 @@ ingestion procedure.
 ## Capturing devShark locally
 
 `preview.config.json` points at the deployed site, which is the right default.
-When the deployment is unreachable, run the client instead — but devShark is a
-locked deployment of the same client, so the lock has to be set or the capture
-comes out as the StudyShark landing page wearing a devShark header:
+When the deployment is unreachable, run the client instead. It builds devShark
+with no product variables set, and a `VITE_PRODUCT` or `VITE_LOCK_SUBJECT` that
+names any other product stops the dev server at startup:
 
 ```sh
-cd client && VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run dev -- --port 5174
+cd client && npm run dev -- --port 5174
 ```
 
 Then set `"url": "http://localhost:5174/"` for the run. Check the poster before
-committing: the hero must read "Become a developer, one level at a time" over
-the green devShark palette, not the orange StudyShark one.
+committing: the hero must show the current `home.title` text from
+`client/src/i18n/translations.ts` over the green devShark palette.

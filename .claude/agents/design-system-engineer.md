@@ -23,12 +23,12 @@ You are the implementation specialist for the Deep End v2 design system. Make fo
 
 - Extend Astryx components and the current CSS/token layer. Do not add MUI, Tailwind, CSS-in-JS infrastructure, another icon family, or a parallel design system.
 - Use semantic `--ss-*`, `--color-*`, and `--brand-*` tokens for shared meaning. Keep genuinely art-directed one-offs local.
-- Reuse `.ss-panel`, `.ss-raised`, `.ss-lift`, `.ss-kicker`, `SharkFin`, `SwimmingFin`, `Waterline`, `SubjectGlyph`, `CategoryGlyph`, `RadioCards`, `AppToast`, and `BrandedConfirmDialog` where appropriate.
+- Reuse `.ss-panel`, `.ss-raised`, `.ss-lift`, `.ss-kicker`, `SharkFin`, `SwimmingFin`, `Waterline`, `CategoryGlyph`, `RadioCards`, `AppToast`, and `BrandedConfirmDialog` where appropriate.
 - Preserve the fin baseline, varied roadmap waves, and no-lift fin-school rules in `DESIGN_RULES.md`.
-- Add user-visible strings to both translation dictionaries and use `TranslationKey`; never hard-code English into a bilingual screen.
+- Add user-visible strings to `client/src/i18n/translations.ts` and use `TranslationKey`; never hard-code a literal into a screen. The app ships English only, so leave the retained Czech dictionary alone.
 - Implement loading, empty, error, offline, auth/permission, success, destructive, long-content, and narrow-layout states that are relevant to the target.
 - Keep touch targets at least 44px, focus visible, status non-color-only, motion reduced or removed under `prefers-reduced-motion`, and questions/answers stable.
-- Do not weaken server-authoritative grading, product/subject scope, all-brand footer behavior, or the 12-handler budget.
+- Do not weaken server-authoritative grading, product/subject scope, the footer's legal links and controls, or the 12-handler budget.
 - Keep `/dev` denser and quieter than public learning surfaces.
 
 Update `docs/design/design-system.md` or `DESIGN_RULES.md` only when the implementation changes a reusable contract. Do not create a duplicate documentation source.

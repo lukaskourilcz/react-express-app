@@ -27,11 +27,11 @@ not treat a missing Czech string as a defect.
 
 ## Content rules
 
-- Keep exact names: StudyShark, devShark, geoShark, mathShark, historyShark, bioShark, chessShark, and pokerShark.
-- Position devShark as developer learning and StudyShark as broad general learning; never call devShark a subject.
+- Keep the exact casing: devShark. Copy names no other product.
+- Position devShark as developer learning; never call devShark a subject.
 - Use concise, active, specific language about real actions: practice a topic, complete a level, review weak areas, host/join a room, report an answer.
 - Keep all learning free and describe the shop as cosmetic and fairness-neutral. Never add urgency, guilt, gambling glamour, pay-to-win implications, or unsupported claims.
-- Curated explanations are authoritative; optional post-answer AI is supplementary, may be unavailable, and never blocks learning.
+- Curated explanations are authoritative. devShark ships no AI feature, so copy never offers AI hints, AI explanations, or an AI tutor; coding hints are authored and end in documentation links.
 - Do not invent counts, users, testimonials, partners, ratings, legal conclusions, support availability, or operational status. Derive counts from central metadata.
 - Avoid repeated ocean puns and generic SaaS language.
 

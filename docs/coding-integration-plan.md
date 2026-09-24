@@ -15,7 +15,7 @@ Firebase is retired. Supabase becomes the only database; the owner's existing pr
 
 A fourth surface follows: the **system-design track** (five guided walkthroughs and forty drills) joins the Coding section as its own track (section 4.4).
 
-Retired, by owner decision (2026-09-03): the mock/runs mode and the AI coach. devShark ships no AI feature at all: the hint ladder is authored content, and its last rung before the solution points the learner at the relevant MDN documentation. The Sharkira hint, the deeper AI explanation, and their endpoints are switched off for the devShark product scope (section 6a).
+Retired, by owner decision (2026-09-03): the mock/runs mode and the AI coach. devShark ships no AI feature at all: the hint ladder is authored content, and its last rung before the solution points the learner at the relevant MDN documentation. The Sharkira hint, the deeper AI explanation, and their endpoints are gone from this repository (section 6a).
 
 ## 2. Product rules that bind this work
 
@@ -23,7 +23,6 @@ Retired, by owner decision (2026-09-03): the mock/runs mode and the AI coach. de
 - No AI in devShark. No model calls, no AI copy, no AI settings in the devShark product scope; documentation links replace them.
 - The server owns grading, XP, scope, and one-time claims. Reference solutions never reach the client before a pass or an explicit give-up. Visible tests are not answers and may ship to the client; hidden tests stay on the server.
 - Exactly twelve physical handlers remain under `api/`. Coding endpoints are new `resource=` values on existing handlers, delegating to `lib/coding/`.
-- devShark stays out of StudyShark discovery. Every new route, nav item, and catalog entry is gated the same way `/typing` and `/roadmap` are today (`CURRENT_PRODUCT.id === 'devshark'`).
 - EN/CS parity for every string, including prompts and hints.
 - Deep End v2 design: ocean ink, tactile paper, editorial type, disciplined accents, restrained motion, visible focus. No Sandpack default theme, no glass, no neon.
 
@@ -258,13 +257,10 @@ The interview-prepper issue for this bug carries a fix recipe against the curren
 
 ## 6a. Retiring AI from devShark
 
-The devShark product scope carries no AI feature. Implementation, all gated on the product scope so StudyShark keeps its dormant wiring:
+devShark carries no AI feature. The first implementation gated the Sharkira hint, the deeper explanation, and the AI settings on the product scope and left the code in place. When StudyShark moved to its own repository, `lukaskourilcz/studyshark`, on 2026-09-24, this repository removed that wiring: `lib/ai-provider.ts`, the Sharkira component, the `hint` and `explanation` resources in `api/quiz/submit.ts`, and the AI flag in `api/settings.ts`.
 
-- `client/src/components/Quiz.tsx`: Sharkira is not rendered and the deeper-explanation request is not offered when `CURRENT_PRODUCT.id === 'devshark'`.
-- `api/quiz/submit.ts`: `resource=hint` and `resource=explanation` answer `403 feature_disabled` under the devShark deployment scope before touching any provider or budget.
-- `api/settings.ts` and `/dev`: the AI settings block reports `available: false` for devShark and the toggle is hidden.
 - The coding hint ladder ends with a documentation rung: a link to the MDN page for the task's focus (`shared/coding-docs.ts` maps focus tags to MDN URLs), then the reference solution.
-- Copy: no AI wording in devShark screens; `docs/product-architecture.md` records the split.
+- Copy: no AI wording in devShark screens; `docs/product-architecture.md` records the rule.
 
 ## 7. Supabase migration 025
 
