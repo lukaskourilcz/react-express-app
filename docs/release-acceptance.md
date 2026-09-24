@@ -677,3 +677,37 @@ Local evidence, all executed on the branch head:
 Rendered in Chromium against a devShark build, with the API mocked from real handler payloads: the quiz at 1280, 768, 390 and 360px, with and without touch (no coaching line, keyboard tip only with a fine pointer, hint popover on screen, × closes it); the workbench at 1024, 1280 and 1440px (Run directly under the editor); the header fin in light and dark at 1280px and on a phone, and the favicon at 16 to 48px.
 
 Not exercised here: anything account-bound, since no Supabase project is reachable from the build container. A signed-in Algorithms pass and the account copy of a draft are listed in `NEEDED.md`.
+
+## 2026-09-24 — devShark alone: StudyShark moves to its own repository
+
+What changed (#211, #213, #216):
+
+- **This repository builds devShark only.** `client/product-catalog.ts` holds one entry. `resolveCatalogProductId` returns devShark when no product is set and throws when `VITE_PRODUCT` or `VITE_LOCK_SUBJECT` names anything else, and the message names `lukaskourilcz/studyshark`. The StudyShark Vercel project built this same code, so its builds now fail and its last deployment keeps serving until the owner removes it (#214).
+- **Removed:** the six general subjects' 158 bank files with their Czech overlays, and their slices of the shared tables and unions; the subject picker, `/subjects`, the subject glyphs and switcher; the family rows of the footer; the Profile link to StudyShark; the AI wiring devShark never switched on (`lib/ai-provider.ts`, Sharkira, the `hint` and `explanation` resources, the AI settings block); 425 keys from each dictionary. In all, 170 files deleted and about 58,500 lines.
+- **Kept:** the `webdev` subject key everything is stored under, the compatibility storage keys (`studyshark:*`), every applied migration and the database's seven-subject checks. The production database still holds StudyShark's rows; what happens to them is #215.
+- **Fixed on the way:** `typecheck:tooling` had failed CI on every push since 2026-09-18, on a React verdict fixture without `solutions`. The home page's comparison table and founder note said "StudyShark" on devShark; they say devShark. The Czech guides at `/cs/topics/:slug` hydrate into the English interface, so their article now carries `lang="cs"`; a screen reader had been reading them with an English voice.
+- **CI** runs one devShark job. The launch contracts run in `webdev` scope and assert that StudyShark, geoShark and a geography lock are refused.
+- **Documentation, skills, agents and commands** describe devShark alone, with one line saying where StudyShark went.
+- **StudyShark** lives in `lukaskourilcz/studyshark`: private, deployed nowhere, started from a snapshot of `d71150c`. #195, #196, #198 and #199 moved there as studyshark#1 to #4.
+
+Local evidence, all executed on the branch head:
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | pass |
+| `npm run test:launch` | pass — twelve handlers; StudyShark, geoShark and a geography lock refused |
+| `npm run test:coding-auth`, `test:grading-integrity`, `test:coding`, `test:paths` | pass |
+| `npm run test:client` | pass — 7 files, 45 tests |
+| `npm run check:unused`, `npm run check:security` | pass |
+| `npm run build` (devShark), `check:public`, `check:bundle` | pass — 11 public URLs |
+| `npm audit --omit=dev` (root and client) | 0 vulnerabilities |
+| `tests/browser/public.spec.ts`, `tests/browser/evolving.spec.ts` | pass — 7 tests |
+| `npm run check:responsive` (the two CI sweeps) | pass — 28 and 6 probes, 0 issues |
+| `npm run test:harness` | pass — 129 assertions |
+| `npm run audit:performance` | runs; mobile 0.91, desktop 0.75 with CLS 0.98 (the open desktop-CLS item in `NEEDED.md`) |
+| `npm run build:storybook`, `tests/browser/storybook.spec.ts` | pass — 5 tests |
+| Browser pass over `/`, `/learn`, `/quiz`, `/coding`, `/roadmap`, `/today`, `/profile`, `/leaderboard`, `/play` at 1280 and 390 px, light and dark | pass — 36 checks: devShark title, `lang="en"`, no other product named, no overflow, no page errors |
+| `VITE_PRODUCT=studyshark npm run build` | fails as intended when Vite loads its config, before any client output is written: "This repository builds devShark only, but the environment asks for product "studyshark" and subject lock "". StudyShark lives in lukaskourilcz/studyshark." |
+| `git diff --check` | clean |
+
+Not exercised here: anything account-bound, since no Supabase project is reachable from the build container, and nothing on Vercel, since the Vercel connector needs re-authorizing.
