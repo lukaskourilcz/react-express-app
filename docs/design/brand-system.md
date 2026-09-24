@@ -33,7 +33,7 @@ The public names are exact. `webdev` is never a StudyShark picker subject. Gener
 
 ## Voice
 
-Concise, direct, active, specific, encouraging, honest, technically accurate, and natural in English and Czech. Prefer real actions: practise a topic, complete a level, review weak areas, join a classroom, report an answer. Avoid generic “unlock,” “revolutionize,” “supercharge,” “AI-powered,” and “future of education” claims.
+Concise, direct, active, specific, encouraging, honest, technically accurate, and natural in English. Prefer real actions: practise a topic, complete a level, review weak areas, join a classroom, report an answer. Avoid generic “unlock,” “revolutionize,” “supercharge,” “AI-powered,” and “future of education” claims.
 
 ## Free-forever rule
 

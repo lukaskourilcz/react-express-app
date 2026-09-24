@@ -5,7 +5,7 @@
 - Widths: 360, 390, 430, 768, 1024, 1280, 1440px.
 - Products: StudyShark and devShark.
 - StudyShark subjects: geography, math, history, biology, chess, poker.
-- Locales: English and Czech.
+- Locale: English, the only shipped language (`ENABLED_LANGS`). The retained Czech files are not part of the matrix.
 - Themes: light and dark.
 - Motion: normal and `prefers-reduced-motion: reduce`.
 - Zoom/reflow: 200% and 400% where practical.
@@ -34,7 +34,7 @@
 4. Keyboard reaches every control in logical order; radio arrows/Home/End work; Escape and restoration work.
 5. Focus remains visible in both themes and every subject accent.
 6. Status is not color-only; timers do not chatter; live updates are purposeful.
-7. 44px target goal, readable line lengths, no clipped Czech or code, no hidden horizontal overflow.
+7. 44px target goal, readable line lengths, no clipped long copy or code, no hidden horizontal overflow.
 8. No content sits under the bottom waterline; answer positions stay stable.
 9. Motion freezes without losing state; fins meet their container baseline.
 10. Media has intrinsic dimensions, correct crop, alt classification, static fallback and no generated defects.
