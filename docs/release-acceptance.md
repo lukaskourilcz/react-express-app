@@ -703,10 +703,12 @@ Local evidence, all executed on the branch head:
 | `npm audit --omit=dev` (root and client) | 0 vulnerabilities |
 | `tests/browser/public.spec.ts`, `tests/browser/evolving.spec.ts` | pass — 7 tests |
 | `npm run check:responsive` (the two CI sweeps) | pass — 28 and 6 probes, 0 issues |
+| `npm run check:responsive` (full route list, 7 widths) | pass — 224 probes, 0 issues; seven fewer than before because `/subjects` is gone |
 | `npm run test:harness` | pass — 129 assertions |
 | `npm run audit:performance` | runs; mobile 0.91, desktop 0.75 with CLS 0.98 (the open desktop-CLS item in `NEEDED.md`) |
 | `npm run build:storybook`, `tests/browser/storybook.spec.ts` | pass — 5 tests |
 | Browser pass over `/`, `/learn`, `/quiz`, `/coding`, `/roadmap`, `/today`, `/profile`, `/leaderboard`, `/play` at 1280 and 390 px, light and dark | pass — 36 checks: devShark title, `lang="en"`, no other product named, no overflow, no page errors |
+| Before/after: the `d71150c` devShark build beside this one, 20 routes at 1280 and 390 px, signed out | 34 of 40 pairs identical in text, headings, footer placement and width. The home page, and `/profile`, which sends a signed-out visitor home, name devShark instead of StudyShark in the comparison table and the founder note. `/typing` differs only in its randomly drawn snippet. No page errors on either build |
 | `VITE_PRODUCT=studyshark npm run build` | fails as intended when Vite loads its config, before any client output is written: "This repository builds devShark only, but the environment asks for product "studyshark" and subject lock "". StudyShark lives in lukaskourilcz/studyshark." |
 | `git diff --check` | clean |
 
