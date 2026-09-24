@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from 'node:crypto';
 import { isScopeSubject, type ScopeSubjectId } from '../shared/subject-catalog';
 import { isLearningPathId, type LearningPathId } from '../shared/learning-paths';
-import type { CodingTrack } from '../shared/coding-catalog';
+import { isCodingTrack, type CodingTrack } from '../shared/coding-catalog';
 
 const SECRET = process.env.SESSION_SECRET;
 const IS_PROD = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
@@ -478,7 +478,11 @@ export function decodeCodingSession(token: string): CodingSession | null {
   const payload = openToken(token) as Partial<CodingSessionPayload> | null;
   if (!payload || payload.kind !== 'coding-session' || !validLifetime(payload, CODING_TTL_MS) || typeof payload.iat !== 'number') return null;
   if (typeof payload.taskId !== 'string' || !/^[a-z0-9-]{3,64}$/.test(payload.taskId)) return null;
-  if (!['javascript', 'typescript', 'react', 'system-design'].includes(payload.track ?? '')) return null;
+  // The track vocabulary lives in one place. A list written out here drifts
+  // the moment a track is added: the Algorithms track shipped with this line
+  // still naming four, so every Algorithms session sealed correctly and then
+  // failed to open, and every submit came back as an expired session.
+  if (!isCodingTrack(payload.track)) return null;
   if (typeof payload.attemptId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId)) return null;
   if (payload.userId !== null && (typeof payload.userId !== 'string' || payload.userId.length === 0 || payload.userId.length > 128)) return null;
   if (payload.roadmapAttemptId !== undefined && (typeof payload.roadmapAttemptId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.roadmapAttemptId))) return null;

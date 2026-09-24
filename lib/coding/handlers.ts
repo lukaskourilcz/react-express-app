@@ -30,6 +30,7 @@ import { presentPuzzle, puzzleFor, resolvePuzzleOrder } from './puzzles';
 import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../../shared/coding-puzzle';
 import {
   CODING_TASK_XP,
+  CODING_TRACKS,
   isCodingTaskId,
   tierLockReason,
   type CodingTask,
@@ -55,7 +56,6 @@ import type { TypeCheckResult } from '../../shared/coding-ts-check';
 
 const logEvent = createLogger('coding');
 const MAX_CODE_BYTES = 20 * 1024;
-const TRACKS: CodingTrack[] = ['javascript', 'typescript', 'react', 'system-design'];
 
 const codingAvailable = () => deploymentSubjectIds().includes('webdev');
 const notAvailable = (res: VercelResponse) => jsonError(res, 404, 'not_available', 'Coding challenges are not part of this product');
@@ -628,10 +628,10 @@ export async function handleCodingProgress(req: VercelRequest, res: VercelRespon
   try {
     const [rows, cleared] = await Promise.all([loadProgressRows(supabase, userId), javascriptLevelsCleared(supabase, userId)]);
     const tasks: Record<string, CodingTaskProgress> = {};
-    const passedByTrack = Object.fromEntries(TRACKS.map((track) => [track, 0])) as Record<CodingTrack, number>;
+    const passedByTrack = Object.fromEntries(CODING_TRACKS.map((track) => [track, 0])) as Record<CodingTrack, number>;
     for (const row of rows) {
       tasks[row.task_id] = toProgress(row);
-      if (row.status === 'passed' && TRACKS.includes(row.track as CodingTrack)) passedByTrack[row.track as CodingTrack] += 1;
+      if (row.status === 'passed' && CODING_TRACKS.includes(row.track as CodingTrack)) passedByTrack[row.track as CodingTrack] += 1;
     }
     const due: string[] = [];
     res.setHeader('Cache-Control', 'private, no-store');

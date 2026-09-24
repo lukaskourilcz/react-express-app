@@ -124,7 +124,7 @@ import {
   pathGuidedComplete,
   pathInventory,
 } from '../shared/learning-paths';
-import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS, formatOf, isCodingSectionTrack } from '../shared/coding-catalog';
+import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS, CODING_TRACKS, formatOf, isCodingSectionTrack } from '../shared/coding-catalog';
 import { CODING_BADGES } from '../shared/badges';
 import { CODING_INDEX } from '../shared/coding-index';
 import { inspectQuestionQuality } from '../lib/question-quality';
@@ -539,6 +539,15 @@ async function main() {
   const connectState = encodeGithubConnectState('user-0001');
   assert.equal(decodeGithubConnectState(connectState)?.userId, 'user-0001');
   assert.equal(decodeCodingSession(connectState), null);
+  // Every track a task can belong to must survive the round trip. The decoder
+  // once carried its own list of four, so the Algorithms track sealed its
+  // sessions and then refused to open them: every submit on it read as an
+  // expired session, and nothing here noticed, because this block only ever
+  // tried JavaScript.
+  for (const track of CODING_TRACKS) {
+    const sealed = encodeCodingSession({ taskId: 'alg-two-sum', track, userId: 'user-0001' });
+    assert.equal(decodeCodingSession(sealed)?.track, track, `a coding session on the ${track} track must decode`);
+  }
 
   const doubleTask = codingTaskById('js-double-numbers');
   assert.ok(doubleTask && doubleTask.tests && doubleTask.tests.length >= 4);
