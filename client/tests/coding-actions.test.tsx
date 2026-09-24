@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingWorkbench } from '../src/coding/CodingWorkbench';
@@ -16,6 +16,10 @@ vi.mock('../src/coding/Editor', () => ({
     <textarea aria-label="Test editor" value={value} onChange={event => onChange(event.target.value)} />,
 }));
 vi.mock('../src/coding/api', () => ({ useCodingApproaches: () => ({ data: undefined }), submitCoding: vi.fn(), revealCoding: vi.fn() }));
+vi.mock('../src/coding/runner/run-tests', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../src/coding/runner/run-tests')>(),
+  runCodeTests: vi.fn(async () => ({ results: [], logs: [], check: null, timedOut: false })),
+}));
 
 const task: PlayableCodingTask = {
   id: 'js-test-editor', track: 'javascript', level: 1, tier: 1,
@@ -64,11 +68,26 @@ it('Reset clears exhausted hints even when the code is unchanged', async () => {
   expect(reset).toBeDisabled();
 });
 
-it('flushes edits when leaving before the draft debounce finishes', () => {
+it('saves the draft on Run and Submit, never while typing or on leaving', async () => {
   const { unmount, onDraft } = mount();
   fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one = () => 3;' } });
   unmount();
-  expect(onDraft).toHaveBeenCalledWith('const one = () => 3;');
+  expect(onDraft).not.toHaveBeenCalled();
+
+  const { onDraft: onRunDraft } = mount();
+  fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one = () => 4;' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Run' }));
+  expect(onRunDraft).toHaveBeenCalledWith('const one = () => 4;');
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Run' })).toBeEnabled());
+  cleanup();
+
+  const onSubmitDraft = vi.fn();
+  render(<MemoryRouter><LanguageProvider><CodingWorkbench initialCode={null} task={task} session="test-session" locked={null} signedIn mode="section" onDraft={onSubmitDraft} /></LanguageProvider></MemoryRouter>);
+  fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one = () => 5;' } });
+  expect(onSubmitDraft).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  expect(onSubmitDraft).toHaveBeenCalledWith('const one = () => 5;');
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled());
 });
 
 it('uses a visible, accessible branded loading status', () => {
