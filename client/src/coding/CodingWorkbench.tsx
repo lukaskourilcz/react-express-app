@@ -43,6 +43,9 @@ export interface CodingWorkbenchProps {
   mode: 'section' | 'lesson';
   /** The parent's save-for-later control, rendered beside the report flag. */
   saveAction?: ReactNode;
+  /** Called with the current code when the learner presses Run or Submit —
+   * the two moments they have said the code is worth keeping. Nothing is
+   * saved while they type, and nothing when they leave. */
   onDraft?: (code: string) => void;
   onVerdict?: (verdict: CodingVerdictResponse, submittedCode?: string) => void;
   onRevealed?: () => void;
@@ -54,7 +57,6 @@ export interface CodingWorkbenchProps {
 type Tab = 'results' | 'types' | 'console' | 'preview' | 'resources' | 'solution' | 'approaches';
 type Phase = 'idle' | 'running' | 'submitting';
 
-const DRAFT_DEBOUNCE_MS = 900;
 // Layout is a preference of the person, not of the task, and it is not their
 // work: it lives on the device beside the drafts but under its own key, so
 // clearing one never touches the other.
@@ -207,8 +209,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const rungs = useMemo(() => ladderRungs(task, lang), [task, lang]);
   const taken = Math.min(hintsTaken, rungs.length);
 
-  // Draft: hand the code to the parent after the learner stops typing.
-  const firstRender = useRef(true);
+  // Format the code for display once the learner pauses.
   useEffect(() => {
     let active = true;
     const timer = window.setTimeout(() => {
@@ -221,21 +222,6 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     }, 350);
     return () => { active = false; window.clearTimeout(timer); };
   }, [code, task.track]);
-  const draftLatest = useRef({ code, onDraft, dirty: false });
-  draftLatest.current = { code, onDraft, dirty: draftLatest.current.dirty || code !== (initialCode ?? task.starter) };
-  useEffect(() => {
-    const flush = () => {
-      const latest = draftLatest.current;
-      if (latest.dirty) latest.onDraft?.(latest.code);
-    };
-    window.addEventListener('pagehide', flush);
-    return () => { window.removeEventListener('pagehide', flush); flush(); };
-  }, []);
-  useEffect(() => {
-    if (firstRender.current) { firstRender.current = false; return; }
-    const timer = window.setTimeout(() => onDraft?.(code), DRAFT_DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
-  }, [code, onDraft]);
 
   useEffect(() => { writeJSON(LAYOUT_KEY, layout); }, [layout]);
   useEffect(() => { if (verdict) verdictRef.current?.focus(); }, [verdict]);
@@ -282,6 +268,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
   const runLocal = useCallback(async () => {
     if (phase !== 'idle') return;
+    onDraft?.(code);
     setPhase('running');
     setServerChecked(false);
     setFormatError(null);
@@ -307,10 +294,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setRunPhase(null);
       setPhase('idle');
     }
-  }, [phase, isReact, harness, files, task.suite, task.tests, task.typeTests, codeTrack, code]);
+  }, [phase, isReact, harness, files, task.suite, task.tests, task.typeTests, codeTrack, code, onDraft]);
 
   const submit = useCallback(async () => {
     if (phase !== 'idle' || !session) return;
+    onDraft?.(code);
     setPhase('submitting');
     setSubmitError(null);
     setFormatError(null);
@@ -361,7 +349,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setRunPhase(null);
       setPhase('idle');
     }
-  }, [phase, session, isReact, checklist, checked, code, runCount, taken, harness, files, codeTrack, task.tests, task.typeTests, onVerdict, t]);
+  }, [phase, session, isReact, checklist, checked, code, runCount, taken, harness, files, codeTrack, task.tests, task.typeTests, onVerdict, onDraft, t]);
 
   const format = useCallback(async () => {
     try {

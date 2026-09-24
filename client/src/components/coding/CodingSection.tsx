@@ -470,7 +470,6 @@ export function CodingTaskScreen() {
   const retired = track !== null && isRetiredSectionTrack(track);
   const task = useCodingTask(retired ? undefined : taskId);
   const [attempt, setAttempt] = useState(0);
-  const [draftState, setDraftState] = useState<'saved' | 'saving' | 'local' | null>(null);
   const bookmarks = useBookmarks(isAuthenticated);
   const save = useSaveChallenge();
   // An active challenge run carries the learner from one queued task to the
@@ -484,17 +483,17 @@ export function CodingTaskScreen() {
     if (task.data && track && task.data.task.track !== track) navigate(`/coding/${task.data.task.track}/${task.data.task.id}`, { replace: true });
   }, [task.data, track, navigate]);
 
+  // Runs on Run and Submit, silently. The device copy is written first so a
+  // failed account save still leaves the code recoverable here; a successful
+  // one lets the device copy go, since the account now holds it.
   const onDraft = useCallback((code: string) => {
     if (!taskId) return;
     writeString(draftKey(taskId), code);
-    if (isAuthenticated) {
-      setDraftState('saving');
-      saveCodingDraft(taskId, code).then(() => {
-        // Evolving code is also the offline starting point of the next stage.
-        if (!evolvingStage(taskId) && readString(draftKey(taskId)) === code) removeStored(draftKey(taskId));
-        setDraftState('saved');
-      }).catch(() => setDraftState('local'));
-    } else setDraftState('local');
+    if (!isAuthenticated) return;
+    saveCodingDraft(taskId, code).then(() => {
+      // Evolving code is also the offline starting point of the next stage.
+      if (!evolvingStage(taskId) && readString(draftKey(taskId)) === code) removeStored(draftKey(taskId));
+    }).catch(() => { /* the device copy above stands */ });
   }, [taskId, isAuthenticated]);
 
   const onVerdict = useCallback((verdict: CodingVerdictResponse, submittedCode?: string) => {
@@ -507,7 +506,8 @@ export function CodingTaskScreen() {
       const stage = evolvingStage(taskId);
       if (stage) {
         // Capture the submitted snapshot synchronously, before Next can navigate
-        // and before a delayed autosave finishes. Never seed over a next-stage draft.
+        // and before the account save started by Submit settles. Never seed
+        // over a next-stage draft.
         if (submittedCode !== undefined) writeString(draftKey(taskId), submittedCode);
         if (stage.next) queryClient.removeQueries({queryKey:codingKeys.task(stage.next), exact:true, type:'inactive'});
       } else removeStored(draftKey(taskId));
@@ -553,11 +553,12 @@ export function CodingTaskScreen() {
 
   return (
     <div className="cd-page ss-pop">
-      <div className="cd-actions">
-        {draftState && <span role="status">{t(`coding.draft.${draftState}`)}</span>}
+      {/* Rendered only when it has something to say: an empty row would still
+          take a gap in the page's column and push the brief down for nothing. */}
+      {(stage || (runIndex >= 0 && activeRun)) && <div className="cd-actions">
         {stage && <span>{stage.challenge.title[lang]} — {t('coding.evolving.stage', { n: stage.index + 1, total: stage.challenge.stages.length })}</span>}
         {runIndex >= 0 && activeRun && <Link className="cd-link" to="/coding">{t('coding.run.stage', { n: runIndex + 1, total: activeRun.queue.length })}</Link>}
-      </div>
+      </div>}
       {(bookmarks.isError || save.isError) && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')} <button className="cd-btn" onClick={() => void bookmarks.refetch()}>{t('coding.retry')}</button></p>}
       {stage && <nav className="cd-actions cd-stage-nav" aria-label={t('coding.evolving.title')}>
         {stage.challenge.stages.map((id, index) => {
