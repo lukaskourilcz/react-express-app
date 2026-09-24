@@ -25,7 +25,7 @@ function mount() {
 }
 const result = (extra: Partial<CodingVerdictResponse>): CodingVerdictResponse => ({
   verdict:'passed',results:[{pass:true,actual:null,error:null}],hidden:null,check:null,logs:[],codeError:null,
-  design:null,designReference:null,failureHint:null,puzzle:null,progress:null,firstPass:false,xpAwarded:0,applied:false,github:null,...extra,
+  design:null,designReference:null,failureHint:null,puzzle:null,progress:null,firstPass:false,xpAwarded:0,applied:false,github:null,solutions:null,...extra,
 });
 it('shows the server React results after Submit instead of stale browser failures', async () => {
   vi.mocked(submitCoding).mockResolvedValue(result({}));
