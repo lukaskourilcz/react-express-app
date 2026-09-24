@@ -1,9 +1,9 @@
-# StudyShark + devShark
+# devShark
 
-Two English web-learning products from one React/Vite client and twelve
-serverless handlers: **StudyShark** (geo, math, history, bio, chess, poker) and
-the standalone **devShark** developer-learning sibling. All learning is free; the
-server owns answers, grading, scores, and XP.
+An English developer-learning product from one React/Vite client and twelve
+serverless handlers. All learning is free; the server owns answers, grading,
+scores, and XP. StudyShark, which shared this code, moved to its own repository
+(`lukaskourilcz/studyshark`) on 2026-09-24.
 
 ## Learning features
 
@@ -13,9 +13,8 @@ server owns answers, grading, scores, and XP.
 - An auto-composed **"Today"** queue that folds carried-over work, due-for-review
   levels, and new material into one daily plan, and grants a cosmetic card pack
   when finished.
-- Solo quizzes with an optional Socratic **Sharkira** hint coach; a daily
-  challenge; the survival Biggest Shark Challenge; live multiplayer and classroom
-  rooms; and subject-scoped leaderboards.
+- Solo quizzes; a daily challenge; the survival Biggest Shark Challenge; live
+  multiplayer and classroom rooms; and leaderboards.
 - **Adaptive placement** that steps difficulty up and down over short rounds.
 - Retention layer: **forgiving streaks** (configurable off-days + two monthly
   freezes), collectible cosmetic **Shark Cards**, and a read-only **study
@@ -51,8 +50,7 @@ server owns answers, grading, scores, and XP.
 ## Connected third parties
 
 - **Supabase** — Postgres database, auth, and RLS; server-authoritative scores and grading.
-- **OpenAI-compatible provider** — StudyShark only: optional, off-by-default post-answer explanations and Socratic Sharkira hints; capped by a shared daily budget and cached. Curated content stays authoritative and hints never reveal the answer. devShark has no AI feature.
-- **GitHub App (devShark garden)** — optional; commits passed coding tasks to the learner's own repository through installation tokens. No user token is stored, and the learner can disconnect from the profile.
+- **GitHub App (the garden)** — optional; commits passed coding tasks to the learner's own repository through installation tokens. No user token is stored, and the learner can disconnect from the profile.
 - **Stripe** — optional support and cosmetic shop; never changes access or gameplay.
 - **Upstash Redis** — rate limiting on API endpoints.
 - **Sentry** — client and server error monitoring.

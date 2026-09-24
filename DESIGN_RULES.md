@@ -1,4 +1,4 @@
-# Design Rules — StudyShark "Deep End v2"
+# Design Rules — devShark "Deep End v2"
 
 These rules govern every visual change in this codebase. They come from the
 `Deep End v2` design handoff (the `.dc.html` references + README). Read them
@@ -12,9 +12,9 @@ In ANY hover effect that reveals a shark fin — ghost-fin backgrounds,
 swim-through fins, fade-in fins — the fin's **visual base must TOUCH the bottom
 edge of its container**, never float above it.
 
-The fin glyph (`M3 18 Q 6 6 15 3 Q 17 11 21 18 Z`, in a 24-unit box, from
-`SharkFin.tsx`) has its base at `y=18`, so **25% of the box is empty below the
-base**. To make the base ride the bottom edge, sink the fin downward by
+The fin glyph (a swept-back fin in a 24-unit box, from `SharkFin.tsx`) has a
+wave-cut base whose mean line sits at `y=18`, so **25% of the box is empty below
+the base**. To make the base ride the bottom edge, sink the fin downward by
 `size × 0.25`:
 
 - a `58px` fin needs `bottom: -15px` (58 × 0.25 ≈ 14.5)
@@ -25,26 +25,16 @@ Fins may be cropped by `overflow: hidden` past the sides or the bottom, but the
 base always rides the bottom edge like a waterline. A fin floating in the middle
 of a button or card is a bug.
 
-## 2. Per-platform accent swapping
+## 2. One accent variable
 
-The whole kit re-skins per subject from a **single** accent variable. Never
-hard-code a subject's hex. Fins, waterlines, kickers, selected states, progress
-and primary CTAs all read `var(--brand-accent)` (and `var(--brand-accent-soft)`
-for tints). `ColorModeContext` writes these from `lib/subjects.ts` when the
-active subject changes, so a correctly-built surface re-skins for free:
+The whole kit reads a **single** accent variable. Never hard-code the accent's
+hex. Fins, waterlines, kickers, selected states, progress and primary CTAs all
+read `var(--brand-accent)` (and `var(--brand-accent-soft)` for tints).
+`ColorModeContext` writes these from `lib/subjects.ts`:
 
-| Platform      | Accent    | Bright (dark) |
-|---------------|-----------|---------------|
-| devShark      | `#2d7a2d` | `#4caf50`     |
-| geoShark      | `#c2410c` | `#fb923c`     |
-| mathShark     | `#1565c0` | `#42a5f5`     |
-| historyShark  | `#4b5563` | `#9ca3af`     |
-| chessShark    | `#7b4b2a` | `#c8935f`     |
-| bioShark      | `#0f766e` | `#2dd4bf`     |
-| pokerShark    | `#b91c1c` | `#ef4444`     |
-
-When adding a subject-specific surface, change ONLY the accent, the wordmark and
-the topic set — the layout stays identical across platforms.
+| Product  | Accent    | Bright (dark) |
+|----------|-----------|---------------|
+| devShark | `#2d7a2d` | `#4caf50`     |
 
 ## 3. Fin reveals — never animate `background-position`
 
@@ -105,8 +95,8 @@ mark as it has always looked.
 
 **What the bank does not touch.** The animated fin waterline
 (`WaterlineProgress` in `SharkFin.tsx`) has its own geometry and its own
-motion. The roadmap and picker connectors (`pathWave`, `Home.tsx`,
-`SubjectPicker.tsx`) already vary per segment under rule 4 above. The dialog
+motion. The roadmap and landing connectors (`pathWave`, `Home.tsx`) already
+vary per segment under rule 4 above. The dialog
 surface reads `--ss-wave` as a background texture rather than as an underline.
 None of the three is part of this bank, and none of them should be routed
 through it.

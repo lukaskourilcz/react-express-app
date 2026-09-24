@@ -1,28 +1,29 @@
-# StudyShark + devShark
+# devShark
 
-StudyShark is a free learning platform for geography, mathematics, history, human biology, chess, and poker. devShark is the separate, web-development-focused product built from the same repository. Product identity, public navigation, question delivery, progression, leaderboards, flashcards, multiplayer rooms, and API access are scoped so StudyShark never exposes the developer bank and devShark never exposes StudyShark subjects.
+devShark is a free learning platform for web developers: guided Learn paths, quizzes, coding challenges, learning paths and a career roadmap across frontend, backend, databases, DevOps, testing, security, system design and AI.
 
-Production: [StudyShark](https://studyshark-app.vercel.app) hosts all six general subjects on one domain; [devShark](https://devshark.app) is the standalone web-development platform. Both deploy from `main` into separate Vercel projects with independent product scopes and shared Supabase data infrastructure.
+Production: [devShark](https://devshark.app) deploys from `main` to Vercel, with Supabase for data and identity.
 
-The web experience uses the Deep End shark identity across the landing pages, Learn, Quiz, Challenge, Play, Profile, Flashcards, the career roadmap, dialogs, progress indicators, and the `/dev` control room. It ships in English, with light and dark themes, keyboard navigation, reduced motion, and responsive mobile/desktop layouts. The Czech dictionaries and translations are retained in the repository but are not offered in the UI; `ENABLED_LANGS` in `client/src/i18n/LanguageContext.tsx` is the single switch that brings them back.
+StudyShark, the general-subject product that shared this code, moved to its own repository (`lukaskourilcz/studyshark`) on 2026-09-24. This repository builds devShark only; a build configured for any other product fails.
 
-Current content: **7,953 authored questions** — 3,633 web development, 1,000 geography, 1,000 mathematics, 1,000 history, 600 chess, 400 human biology, and 320 poker.
+The web experience uses the Deep End shark identity across the landing page, Learn, Quiz, Challenge, Play, Profile, Flashcards, the career roadmap, dialogs, progress indicators, and the `/dev` control room. It ships in English, with light and dark themes, keyboard navigation, reduced motion, and responsive mobile/desktop layouts. The Czech dictionaries and translations are retained in the repository but are not offered in the UI; `ENABLED_LANGS` in `client/src/i18n/LanguageContext.tsx` is the single switch that brings them back.
+
+Current content: **2,447 authored questions**, of which 2,293 are served (the content audit retired the rest), and **440 coding tasks** — 170 JavaScript, 84 TypeScript, 116 React, 45 system design and 25 Algorithms.
 
 ## What the app can do
 
 - Guided Learn paths with short levels, checkpoints, adaptive skill checks, prerequisites, saved progress, and server-observed grading — plus spaced mastery (a level goes cleared → mastered over three separate days) and an auto-composed "Today" queue that folds unfinished work, due-for-review levels, and new material into one daily plan.
-- Configurable solo quizzes with category, difficulty, and question-count selection; weighted sampling; shuffled answers; an optional Socratic "Sharkira" hint coach; bookmarks; question reporting; keyboard controls; and a two-column desktop review.
-- A deterministic daily challenge and the timed Biggest Shark Challenge with subject-specific leaderboards.
-- Live free-for-all matches and host-led classroom rooms using Supabase Realtime with polling recovery, server-side timing, QR sharing, and subject-scoped question sets.
-- Subject-scoped all-time, daily, and category leaderboards; forgiving streaks (configurable off-days plus two monthly freezes); verified XP; ranks; collectible cosmetic Shark Cards earned by finishing the Today queue; and a fairness-neutral cosmetic token shop.
-- A read-only study advisor that names your weakest areas from your own results, and a devShark touch-typing racer (accuracy-gated, WPM earns stars, private on-device best).
-- A devShark Coding section with 420 tasks across JavaScript, TypeScript, React, an Algorithms interview track, and system design: server-graded submissions (QuickJS sandbox, real TypeScript type tests, sealed design keys), authored hint ladders ending in documentation, coding tasks inside Learn levels, a short review ladder, coding badges, and an optional GitHub garden that commits every passed task to the learner's own repository.
-- Two optional devShark learning paths, both graded through the existing server sandbox and both awarding no XP: the **Forward Deployed Engineer** role specialization (customer discovery, integration, bounded AI, evaluation, security, operations, handoff and a staged capstone) that sits on top of the chosen Fullstack/Frontend/Backend track, and **DSA Foundations** (growth classes, arrays, maps, stacks, queues, linked lists, recursion, search, sorting, trees) entered directly with no track, role or XP rank required. Verified checks stay visibly apart from self-reviewed writing, and neither path claims a certification.
-- Per-user, per-subject flashcards with optimistic updates and offline-safe query caching.
+- Configurable solo quizzes with category, difficulty, and question-count selection; weighted sampling; shuffled answers; bookmarks; question reporting; keyboard controls; and a two-column desktop review.
+- A deterministic daily challenge and the timed Biggest Shark Challenge with leaderboards.
+- Live free-for-all matches and host-led classroom rooms using Supabase Realtime with polling recovery, server-side timing, and QR sharing.
+- All-time, daily, and category leaderboards; forgiving streaks (configurable off-days plus two monthly freezes); verified XP; ranks; collectible cosmetic Shark Cards earned by finishing the Today queue; and a fairness-neutral cosmetic token shop.
+- A read-only study advisor that names your weakest areas from your own results, and a touch-typing racer (accuracy-gated, WPM earns stars, private on-device best).
+- A Coding section with 440 tasks across JavaScript, TypeScript, React, an Algorithms interview track, and system design: server-graded submissions (QuickJS sandbox, real TypeScript type tests, sealed design keys), authored hint ladders ending in documentation, coding tasks inside Learn levels, a short review ladder, coding badges, and an optional GitHub garden that commits every passed task to the learner's own repository.
+- Two optional learning paths, both graded through the existing server sandbox and both awarding no XP: the **Forward Deployed Engineer** role specialization (customer discovery, integration, bounded AI, evaluation, security, operations, handoff and a staged capstone) that sits on top of the chosen Fullstack/Frontend/Backend track, and **DSA Foundations** (growth classes, arrays, maps, stacks, queues, linked lists, recursion, search, sorting, trees) entered directly with no track, role or XP rank required. Verified checks stay visibly apart from self-reviewed writing, and neither path claims a certification.
+- Per-user flashcards with optimistic updates and offline-safe query caching.
 - Google sign-in through Supabase Auth, cross-device progress, profile settings, language preference, and permanent account deletion.
-- Optional voluntary support, post-answer AI explanations, Socratic Sharkira hints, Sentry monitoring, and PostHog analytics. Every optional integration is gated and disabled by default.
-- A role-gated `/dev` control room for question CRUD/overrides, importance tuning, quality and parity checks, report triage, auth logs, feature settings, support disclosure, and app-context switching.
-- Two deployments from one source tree: one multi-subject StudyShark domain and one locked devShark domain, with a central subject/product registry and shared Shark-family footer.
+- Optional voluntary support, Sentry monitoring, and PostHog analytics. Every optional integration is gated and disabled by default. devShark ships no AI feature.
+- A role-gated `/dev` control room for question CRUD/overrides, importance tuning, quality and parity checks, report triage, auth logs, feature settings, and support disclosure.
 
 Correct answers are not sent with unanswered questions. Quiz and learning sessions use authenticated AES-256-GCM envelopes, submissions are claimed once in Postgres, result receipts are idempotent, and competitive/progression mutations are performed through service-only APIs and atomic database functions.
 
@@ -31,7 +32,7 @@ Correct answers are not sent with unanswered questions. Quiz and learning sessio
 | Layer | Current implementation |
 |---|---|
 | Web client | React 19.2, TypeScript 5.9, Vite 6.4, React Router 7.18 |
-| Design and motion | Astryx Design 0.1.6, subject/product CSS tokens, Motion 12 |
+| Design and motion | Astryx Design 0.1.6, product CSS tokens, Motion 12 |
 | Server state | TanStack Query 5.101 |
 | Backend | 12 Vercel Node/TypeScript serverless handlers |
 | Data and identity | Supabase Postgres, Auth, Row Level Security, RPCs, Realtime |
@@ -48,7 +49,7 @@ React/Vite SPA
   ├─ Supabase Auth session + Realtime room channels
   └─ authenticated /api requests
        └─ 12 Vercel functions
-            ├─ deployment/subject validation
+            ├─ product and subject validation
             ├─ request limits, timeouts, structured errors/logs
             ├─ encrypted quiz/learning session verification
             └─ service-role calls to Supabase
@@ -56,7 +57,7 @@ React/Vite SPA
                  └─ atomic scoring/progression/leaderboard RPCs
 ```
 
-The question bank is split by subject and Czech translations are loaded only when needed. Static questions are merged with cached `/dev` overrides. Public deployments are resolved from `VITE_PRODUCT`/`PRODUCT_ID` and optionally locked with `VITE_LOCK_SUBJECT`/`PRODUCT_SUBJECT`.
+Czech translations are loaded only when requested. Static questions are merged with cached `/dev` overrides. The product is always devShark and the subject always `webdev`; `VITE_PRODUCT`/`VITE_LOCK_SUBJECT` may name them, and any other value fails the build.
 
 ## Repository map
 
@@ -72,7 +73,7 @@ client/sandbox/              self-hosted React grading iframe
 lib/                         server auth, tokens, bank loaders, stores, rate limits
 lib/coding/                  coding catalogue, solutions (server-only), sandbox, grading
 lib/github-app.ts            GitHub App JWT, installation tokens, garden commits
-shared/                      product/subject ownership registry, coding catalogue types and browser index
+shared/                      product and subject registry, coding catalogue types and browser index
 supabase/supabase-schema*.sql         baseline plus migrations through 025
 docs/                        launch, architecture, backup, growth, content sources, coding integration plan
 scripts/test-launch-contracts.ts
@@ -115,8 +116,7 @@ Production requires:
 - `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, and server equivalents where used.
 - `SUPABASE_SERVICE_ROLE_KEY` — server only.
 - `SESSION_SECRET` — at least 32 random bytes.
-- `VITE_PRODUCT` and `PRODUCT_ID`; add the `webdev` subject lock variables only for devShark.
-- `VITE_STUDYSHARK_URL` and `VITE_DEVSHARK_URL`; general subject brands use internal StudyShark links.
+- `VITE_PRODUCT=devshark`, `VITE_LOCK_SUBJECT=webdev`, `PRODUCT_ID=devshark` and `PRODUCT_SUBJECT=webdev` (or leave them unset; they may not name anything else).
 - `ADMIN_EMAILS` or Supabase `app_metadata.role=admin` for `/dev`.
 - Google OAuth origins and callback URLs for every production domain.
 - All migrations through **`supabase/supabase-schema-026.sql`**.
@@ -129,7 +129,7 @@ Strongly recommended for a public deployment:
 
 The devShark learning paths are off unless the deployment says otherwise: `LEARNING_PATH_DSA_ENABLED=true` and `LEARNING_PATH_FDE_ENABLED=true` are independent, so either path can open while the other is still being written. A path opens only when its switch is on, its content validates and migration 026 is installed; anything else is previewable and says which of the three is missing.
 
-Optional support needs both `SUPPORT_ENABLED=true` and enabled, truthful values saved through `/dev`. Optional AI (StudyShark only) needs `AI_EXPLANATIONS_ENABLED=true`, `OPENAI_API_KEY`, `OPENAI_MODEL`, and a positive `AI_DAILY_GENERATION_LIMIT`. The devShark GitHub garden needs `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, and `GITHUB_APP_PRIVATE_KEY` (PEM or base64); without them the profile reports the garden as not enabled.
+Optional support needs both `SUPPORT_ENABLED=true` and enabled, truthful values saved through `/dev`. The GitHub garden needs `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, and `GITHUB_APP_PRIVATE_KEY` (PEM or base64); without them the profile reports the garden as not enabled.
 
 ## API surface
 
@@ -138,13 +138,13 @@ The twelve physical handlers multiplex related operations to stay within the dep
 | Handler | Purpose |
 |---|---|
 | `/api/quiz/questions` | Standard/review question sessions |
-| `/api/quiz/submit` | One-time grading, result proofs, reports, and optional AI explanations and Socratic Sharkira hints |
+| `/api/quiz/submit` | One-time grading, result proofs, and reports |
 | `/api/quiz/daily` | UTC daily session |
 | `/api/quiz/challenge` | Challenge batches, scoring, completion, leaderboard |
 | `/api/quiz/roadmap` | Structure, attempts, answers, completion, adaptive placement, progress; coding tasks, submissions, reports, and reveals; learning-path catalogue, activity start and submit |
 | `/api/play/[action]` | Multiplayer and classroom lifecycle |
-| `/api/leaderboard` | Subject, daily, and category boards |
-| `/api/flashcards` | Subject-scoped flashcard CRUD |
+| `/api/leaderboard` | All-time, daily, and category boards |
+| `/api/flashcards` | Flashcard CRUD |
 | `/api/user/[op]` | Stats, category stats, XP, streaks, badges, streak freezes, Shark Cards, study advisor, auth events, deletion; coding progress and drafts; learning preference, path enrollment, progress and drafts; GitHub garden connection, repository, sync, disconnect |
 | `/api/admin/[op]` | Role-gated control-room operations |
 | `/api/settings` | Public safe configuration |
@@ -152,7 +152,7 @@ The twelve physical handlers multiplex related operations to stay within the dep
 
 ## Database and operations
 
-Apply `supabase/supabase-schema.sql`, then numbered migrations in order through 025. Migration 023 adds the one-time submission ledger, subject-scopes multiplayer and flashcards, hardens service-only functions and leaderboard identity, makes roadmap answer recording atomic, enforces complete attempts/prerequisites, adds retention helpers, and adds production indexes. Migration 024 adds the daily-habit backing — spaced-mastery pass tracking inside verified roadmap completion, freeze-aware streaks, server-synced badges, Shark Cards, and the Sharkira hint cache — additively and idempotently. Migration 025 adds coding progress, attempts, drafts, the per-level coding gate, and the GitHub garden connection and commit queue, with the service-only `record_coding_verdict` and `record_coding_reveal` functions.
+Apply `supabase/supabase-schema.sql`, then numbered migrations in order through 025. Migration 023 adds the one-time submission ledger, subject-scopes multiplayer and flashcards, hardens service-only functions and leaderboard identity, makes roadmap answer recording atomic, enforces complete attempts/prerequisites, adds retention helpers, and adds production indexes. Migration 024 adds the daily-habit backing — spaced-mastery pass tracking inside verified roadmap completion, freeze-aware streaks, server-synced badges, Shark Cards, and a hint cache — additively and idempotently. Migration 025 adds coding progress, attempts, drafts, the per-level coding gate, and the GitHub garden connection and commit queue, with the service-only `record_coding_verdict` and `record_coding_reveal` functions.
 
 `npm run test:harness` drives the built React sandbox in headless Chromium and asserts the postMessage contract the workbench depends on: one `ready`, one `done` per run, tokens that keep a superseded run from settling, compile and render errors reported as such, and the fetch stub answering in place of the network. It needs an existing client build and a Chromium (set `CHROME_BIN` if it is not on a usual path); with no browser available it prints a notice and exits 0.
 
@@ -164,11 +164,10 @@ Operational instructions are in [docs/launch-runbook.md](./docs/launch-runbook.m
 
 ## Product principles
 
-- Learning, quizzes, explanations, hints, challenges, multiplayer, and progression are free. Support never buys access or rank, and cosmetic Shark Cards, badges, and streak freezes never change access, content, XP, scores, streaks, ranks, or AI availability.
-- StudyShark and devShark are separate public contexts even though they share code and infrastructure.
+- Learning, quizzes, explanations, hints, challenges, multiplayer, and progression are free. Support never buys access or rank, and cosmetic Shark Cards, badges, and streak freezes never change access, content, XP, scores, streaks, or ranks.
 - The server owns answers, scoring, progression, and public identity labels.
 - Anonymous local learning remains useful; account-backed competitive and classroom features require sign-in.
-- AI is a capped, cached enhancement — post-answer explanations and pre-answer Socratic hints. Curated content stays authoritative, and hints never reveal the answer.
+- devShark ships no AI feature. Coding hints are authored and end in documentation links.
 - Native mobile work is intentionally deferred until the web release is stable.
 
 ## Marketing (external, read-only)

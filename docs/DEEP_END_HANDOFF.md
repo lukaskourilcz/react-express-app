@@ -3,7 +3,9 @@
 Updated: 2026-07-23
 Branch: `codex/deep-end-handoff`
 
-This file is the continuation point for the interrupted autonomous StudyShark/devShark overhaul. Read it with `CLAUDE.md`, `AGENTS.md`, `DESIGN_RULES.md`, and `docs/design/` before editing.
+This file is the continuation point for the interrupted autonomous Deep End overhaul. Read it with `CLAUDE.md`, `AGENTS.md`, `DESIGN_RULES.md`, and `docs/design/` before editing.
+
+The milestones below were recorded when this repository still built StudyShark as well. StudyShark moved to its own repository (`lukaskourilcz/studyshark`) on 2026-09-24; the StudyShark items stay here as history, and nothing below asks for StudyShark work.
 
 ## Completed milestones
 
@@ -117,10 +119,10 @@ Final validation for the current handoff used `/opt/homebrew/bin/node` 23.1.0 (t
 
 ## Continue in this order
 
-1. Use Node 22–24 (`PATH=/opt/homebrew/bin:$PATH` on this machine). Dependencies and the StudyShark production build are currently validated; reinstall only if the restarted environment requires it.
-2. Build and visually inspect the devShark product configuration as well as signed-in deterministic fixtures for active Quiz/review, a live/classroom room, Profile, Shop inventory, and the authenticated `/dev` console. Do not claim those states were browser-verified from this handoff.
+1. Use Node 22–24 (`PATH=/opt/homebrew/bin:$PATH` on this machine). Reinstall dependencies only if the restarted environment requires it.
+2. Build and visually inspect signed-in deterministic fixtures for active Quiz/review, a live/classroom room, Profile, Shop inventory, and the authenticated `/dev` console. Do not claim those states were browser-verified from this handoff.
 3. Continue lower-priority sweep findings: Challenge result-leaderboard partial error, DevSettings unsaved-change protection, flashcard undo, profile preference-save failure, live-room timing accommodation documentation, and performance work that can be proved safe (auth loading and roadmap intro chunking were not changed here).
-4. Recheck Czech copy, both themes, keyboard/focus, reduced motion, 400% reflow, and fixed-waterline clearance in those authenticated/deterministic states.
+4. Recheck both themes, keyboard/focus, reduced motion, 400% reflow, and fixed-waterline clearance in those authenticated/deterministic states.
 5. Run the full release contract again after further edits, reconcile documentation, and create coherent new commits rather than amending existing history.
 
 ## Known technical limitation to keep visible
@@ -137,14 +139,13 @@ Before recommending or using a generator, the next agent must perform current we
 
 Produce these items only where the real interface still benefits:
 
-1. Shark-family fin-and-waterline mark studies for favicon/PWA/social-avatar refinement; convert the selected geometry into reviewed deterministic SVG rather than shipping a raw raster.
-2. StudyShark Open Graph/launch composition representing geography, math, history, biology, chess, and poker with text-safe negative space; place through product-aware metadata and overlay real EN/CS text deterministically.
-3. devShark Open Graph/launch composition using authentic system/code structure without generated code or terminal text; place through the same product-aware metadata path.
-4. Seven optional subject chapter plates for geography, mathematics, history, biology, chess, poker, and web development; integrate only in existing `SubjectPlate`/landing hooks, with responsive still crops and decorative alt treatment.
-5. One restrained classroom promotional composition for the public classroom page, using a deterministic capture of the real interface if UI appears in the artwork.
-6. A small reusable empty/onboarding editorial set (not one image per card) for genuinely emotional empty states such as no flashcards or no progress.
-7. StudyShark and devShark campaign crops in landscape, portrait, and square formats; EN/CS messaging must be real overlay text, never generated text.
-8. Optional motion studies only after stills succeed: a subtle water/current or fin pass for public landings, with optimized WebM/MP4, poster still, reduced-motion fallback, and no loading in core learning/admin bundles.
+1. Fin-and-waterline mark studies for favicon/PWA/social-avatar refinement; convert the selected geometry into reviewed deterministic SVG rather than shipping a raw raster.
+2. devShark Open Graph/launch composition using authentic system/code structure without generated code or terminal text; place through the product metadata path.
+3. An optional web-development chapter plate; integrate only in the existing `SubjectPlate`/landing hooks, with responsive still crops and decorative alt treatment.
+4. One restrained classroom promotional composition for the public classroom page, using a deterministic capture of the real interface if UI appears in the artwork.
+5. A small reusable empty/onboarding editorial set (not one image per card) for genuinely emotional empty states such as no flashcards or no progress.
+6. devShark campaign crops in landscape, portrait, and square formats; messaging must be real overlay text, never generated text.
+7. Optional motion studies only after stills succeed: a subtle water/current or fin pass for public landings, with optimized WebM/MP4, poster still, reduced-motion fallback, and no loading in core learning/admin bundles.
 
 For every accepted asset, record the provider, model/version, dated pricing/license sources, actual tool/workflow, prompts, job IDs, rejected variants, crop behavior, optimization, provenance, accessibility classification, output path, usage restrictions and regeneration steps in `docs/design/generated-media-manifest.md`. Do not create output directories or runtime references until a production asset actually exists.
 

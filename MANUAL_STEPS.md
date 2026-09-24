@@ -3,7 +3,7 @@
 Each step is owner-only (accounts, credentials, licensing, or a physical smoke test). Do them in order of **importance**: `[imp:5]` blocks a safe public launch. Where the step ends with **→ tell me** you can hand a fact back to me and I can continue from there.
 
 Supabase project ref: `rvlybcjdpafwyeuojvhl`
-Vercel projects: StudyShark at `https://studyshark-app.vercel.app`, devShark at `https://devshark.app`
+Vercel project: devShark at `https://devshark.app`. The StudyShark project that also built this repository is to be removed (issue #214); StudyShark now lives in `lukaskourilcz/studyshark` and is not deployed.
 
 Resolved on 2026-07-28 (do not repeat): migration 024 applied, Google OAuth enabled and working, Supabase Auth Site URL + Redirect URLs allowlist fixed, Upstash Redis provisioned and wired, admin ACL env vars set on both projects, Sentry + PostHog live on both projects with EU regions and privacy-forward defaults, Supabase leaked-password protection enabled. Admin-ACL end-to-end verification and legal/privacy review were dropped from this tracked list by owner decision; see "Recorded decisions (2026-07-28)" in `NEEDED.md` for context on both.
 
@@ -60,13 +60,13 @@ The domain string on Google's "Sign in — to continue to X" screen comes from t
 
 **Quick fix — brand the consent screen (free, does not change the domain line but improves the top of the screen):**
 Google Cloud Console → APIs & Services → OAuth consent screen → Edit App:
-- App name: `devShark` (or `StudyShark`, whichever is your primary brand)
+- App name: `devShark`
 - User support email: your gmail
 - App logo: upload the same asset used in step 7
 - Application home page: `https://devshark.app`
 - Application privacy policy: link to your privacy page once written
 - Application terms of service: link to your terms page once written
-- Authorized domains: add `devshark.app` and `studyshark-app.vercel.app`
+- Authorized domains: add `devshark.app`
 
 Save. The screen now reads "Sign in to devShark" at the top; the "to continue to …supabase.co" line stays because that's the callback host.
 
@@ -80,33 +80,23 @@ Requires Supabase Pro tier or higher. Custom Domains lets you serve Supabase Aut
 
 Not worth doing pre-launch unless the current Supabase-domain string is a real blocker.
 
-### 6. Custom StudyShark domain (NEEDED #26)
-
-If you want one instead of the current `studyshark-app.vercel.app`:
-1. Buy / point the DNS at Vercel.
-2. Vercel → StudyShark project → Settings → Domains → add domain.
-3. Update `VITE_STUDYSHARK_URL` env var on **both** Vercel projects.
-4. Add the new origin + `/auth/v1/callback` to Google OAuth authorized redirects and to the Supabase Auth Redirect URLs list.
-5. Redeploy both.
-6. Verify cross-links in the shared footer point at the new domain.
-
 ### 7. Replace placeholder icons + social artwork (NEEDED #27)
 
 Files to swap: `client/public/icon.svg`, `client/public/apple-touch-icon.png`, `client/public/pwa-*.png`, `client/public/og-image.png`. Use **licensed** Shark-family assets (I cannot generate these without confirmed rights per CLAUDE.md).
 
-Verify: `/` on both domains → view page source → `og:image` resolves; iOS "Add to Home Screen" preview looks right; Chrome install prompt icon looks right.
+Verify: `/` → view page source → `og:image` resolves; iOS "Add to Home Screen" preview looks right; Chrome install prompt icon looks right.
 
 → **tell me** the licensed source and I can drop them in + verify metadata.
 
 ### 8. Compare committed portfolio preview to live devShark (NEEDED #36)
 
-Open `media/preview-poster.png` (in the repo) and `https://devshark.app` (live) side by side. Confirm they match. If they don't, re-record per `.claude/skills/preview-video/SKILL.md` — specifically, make sure `VITE_LOCK_SUBJECT=webdev` is set before capture; without it the client silently renders the StudyShark landing under devShark branding.
+Open `media/preview-poster.png` (in the repo) and `https://devshark.app` (live) side by side. Confirm they match. If they don't, re-record per `.claude/skills/preview-video/SKILL.md`.
 
 → **tell me** the outcome. If mismatched I can re-record from a local run.
 
 ### 9. Voluntary support toggle (NEEDED #40)
 
-Set `SUPPORT_ENABLED=true` on both projects, then use `/dev` to enter provider URLs, target, amount covered, cost breakdown, update date, and public-thanks policy. Support has no effect on access or ranking — that constraint is server-owned. Make sure your legal/terms page reflects the third-party providers before this ships publicly.
+Set `SUPPORT_ENABLED=true` on the Vercel project, then use `/dev` to enter provider URLs, target, amount covered, cost breakdown, update date, and public-thanks policy. Support has no effect on access or ranking — that constraint is server-owned. Make sure your legal/terms page reflects the third-party providers before this ships publicly.
 
 ---
 

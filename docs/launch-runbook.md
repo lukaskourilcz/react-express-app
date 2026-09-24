@@ -1,4 +1,4 @@
-# Shark ecosystem launch runbook
+# devShark launch runbook
 
 This is the operational source of truth for the current web launch. `LAUNCH.md`
 is a historical audit and may describe issues that have since been resolved.
@@ -7,37 +7,28 @@ is a historical audit and may describe issues that have since been resolved.
 
 - The repository must contain exactly 12 files below `api/` so the Vercel Hobby
   function budget is not exceeded.
-- StudyShark contains geography, mathematics, history, biology, chess, and
-  poker. It never serves `webdev` categories or public developer-topic pages.
-- devShark is the same web codebase deployed with a locked `webdev` scope. It
-  never serves a StudyShark subject.
+- The repository builds devShark only, with the `webdev` subject. A build or
+  deployment configured for any other product fails in
+  `resolveCatalogProductId`. StudyShark moved to its own repository
+  (`lukaskourilcz/studyshark`) on 2026-09-24 and is not deployed.
 - Support is optional and disabled by default. No learning flow, score, feature,
   or account action is conditioned on payment.
-- AI explanations are optional, post-answer only, and absent unless all four
-  server gates (`AI_EXPLANATIONS_ENABLED`, `OPENAI_API_KEY`, `OPENAI_MODEL`,
-  `AI_DAILY_GENERATION_LIMIT`) are present. The database enforces the UTC-day
-  generation ceiling atomically. Curated answers remain authoritative.
+- devShark ships no AI feature. Coding hints are authored and end in
+  documentation links.
 - Native mobile apps are out of scope for this release.
 
-## Deployment matrix
+## Deployment identity
 
-| Setting | StudyShark | devShark |
-|---|---|---|
-| `VITE_PRODUCT` | `studyshark` | `devshark` |
-| `PRODUCT_ID` | `studyshark` | `devshark` |
-| `VITE_LOCK_SUBJECT` | unset | `webdev` |
-| `PRODUCT_SUBJECT` | unset | `webdev` |
-| Canonical URL | `VITE_STUDYSHARK_URL` | `VITE_DEVSHARK_URL` |
+| Setting | Value |
+|---|---|
+| `VITE_PRODUCT` | `devshark` (or unset) |
+| `PRODUCT_ID` | `devshark` (or unset) |
+| `VITE_LOCK_SUBJECT` | `webdev` (or unset) |
+| `PRODUCT_SUBJECT` | `webdev` (or unset) |
 
-Apply this matrix to **both Production and Preview** on each project; Vercel does
-not inherit Production-only variables in previews. Without the devShark preview
-identity, the default StudyShark build rejects coding requests.
-
-Set `VITE_STUDYSHARK_URL` and `VITE_DEVSHARK_URL` on both deployments. General
-subject brands are internal StudyShark links and have no separate deployment or
-URL. Configure the same Supabase project only if shared accounts and progress
-are intended. Product scope is still enforced independently by every
-question-producing API.
+Apply these to **both Production and Preview**; Vercel does not inherit
+Production-only variables in previews. Any other value fails the build. Product
+scope is still enforced independently by every question-producing API.
 
 ## Required production environment
 
@@ -131,29 +122,29 @@ shells for only the public topic pages allowed on that deployment.
 
 ## Preview smoke test
 
-Test in English and Czech, desktop and a narrow mobile viewport:
+Test in English, desktop and a narrow mobile viewport:
 
-1. Open Home, Subject Picker, Learn, Quiz, Flashcards, Play, Profile, Support,
+1. Open Home, Learn, Quiz, Coding, Roadmap, Flashcards, Play, Profile, Support,
    Privacy, and Terms. Verify header/footer branding and keyboard focus.
-2. On StudyShark, verify no developer subject/topic appears. On devShark,
-   verify no geography, math, history, biology, chess, or poker question appears.
-3. Complete a quiz. Refresh and confirm subject-scoped XP/stats increment once.
+2. Confirm no geography, math, history, biology, chess, or poker question or
+   link appears anywhere.
+3. Complete a quiz. Refresh and confirm XP/stats increment once.
    Re-submit the same receipt and confirm totals do not increment again. Start
-   “Review weak areas” and confirm only the active subject is selected.
-4. Confirm review answers use the two-column desktop grid, readable status
-   colors, and optional AI only after grading.
+   “Review weak areas” and confirm it draws from your own weak categories.
+4. Confirm review answers use the two-column desktop grid and readable status
+   colors.
 5. Create and join a multiplayer room in two sessions. Test start, answer,
    reconnect, finish, and a Realtime-disconnected fallback.
-6. Complete a Daily and a Challenge run. Confirm each leaderboard is scoped to
-   the active subject and repeated completion cannot award XP twice.
+6. Complete a Daily and a Challenge run. Confirm each leaderboard updates and
+   repeated completion cannot award XP twice.
 7. Sign into `/dev` as an allowed admin and confirm a normal user is rejected.
 8. Delete a disposable account and verify auth identity plus owned rows are gone.
 9. Request `/api/health`; production must return 200 only when its public
    database check and service-role migration-023 check succeed. Confirm the
    response reports distributed rate limiting as configured and alert on 503.
 10. If Support is enabled, verify the public target, costs, received amount,
-    carry, provider, and separate StudyShark/devShark explanation are truthful.
-11. On devShark, walk one learning path end to end with the deployment switch
+    carry, provider, and explanation are truthful.
+11. Walk one learning path end to end with the deployment switch
     on: read the outline signed out, sign in, start the path, open an activity,
     submit a wrong answer and a right one, close the tab mid-draft and reopen
     it, then submit the same idempotency key twice and confirm the second call
