@@ -149,7 +149,7 @@ function TaskRow({ task, status, saved, onSave, saving }: {
 
 /* ── /coding ──────────────────────────────────────────────────────────── */
 /** The evolving projects of one category: the plain ones, the FullStack apps,
- * or the debugging path. Each category is its own list with its own copy. */
+ * the debugging path, or the Custom practice paths. Each category is its own list with its own copy. */
 function EvolvingGallery({ passed, category }: { passed: ReadonlySet<string>; category?: EvolvingCategory }) {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
@@ -158,8 +158,8 @@ function EvolvingGallery({ passed, category }: { passed: ReadonlySet<string>; ca
   const challenges = EVOLVING_CHALLENGES.filter(challenge => challenge.category === category);
   const scrollable = challenges.length > 5;
   const titleId = `${category ?? 'evolving'}-title`;
-  const titleKey = category === 'fullstack' ? 'coding.evolving.fullstack' : category === 'debugging' ? 'coding.evolving.debugging' : 'coding.evolving.title';
-  const bodyKey = category === 'fullstack' ? 'coding.evolving.fullstackBody' : category === 'debugging' ? 'coding.evolving.debuggingBody' : 'coding.evolving.body';
+  const titleKey = category === 'fullstack' ? 'coding.evolving.fullstack' : category === 'debugging' ? 'coding.evolving.debugging' : category === 'custom' ? 'coding.evolving.custom' : 'coding.evolving.title';
+  const bodyKey = category === 'fullstack' ? 'coding.evolving.fullstackBody' : category === 'debugging' ? 'coding.evolving.debuggingBody' : category === 'custom' ? 'coding.evolving.customBody' : 'coding.evolving.body';
   useEffect(() => {
     const list = listRef.current;
     if (!list || !scrollable) return;
@@ -220,6 +220,7 @@ export function CodingHome() {
         </div>
         {next && <SwimCta label={t('coding.continue')} onClick={()=>navigate(`/coding/${next.track}/${next.id}`)} />}
       </div>
+      <EvolvingGallery passed={passed} category="custom" />
       <ChallengeRunPlanner signedIn={isAuthenticated} />
       <section aria-label={t('coding.title')} className="cd-track-directory">
         {CODING_SECTION_TRACKS.map((track) => {
@@ -543,7 +544,7 @@ export function CodingTaskScreen() {
     : stage
       ? stage.next ? `/coding/${evolvingTaskTrack(stage.next)}/${stage.next}` : null
       : next && next.id !== data.task.id ? `/coding/${next.track}/${next.id}` : null;
-  const backHref = stage?.challenge.category === 'fullstack' ? '/coding/fullstack' : stage?.challenge.category === 'debugging' ? '/coding' : `/coding/${data.task.track}`;
+  const backHref = stage?.challenge.category === 'fullstack' ? '/coding/fullstack' : stage?.challenge.category === 'debugging' || stage?.challenge.category === 'custom' ? '/coding' : `/coding/${data.task.track}`;
   const localDraft = readString(draftKey(data.task.id));
   const previousLocal = stage?.previous ? readString(draftKey(stage.previous)) : null;
   const initialCode = localDraft ?? data.draft ?? (stage && previousLocal !== null

@@ -27,6 +27,8 @@ export const en = {
   'coding.evolving.references': 'Stage references',
   'coding.evolving.debugging': 'Debugging path',
   'coding.evolving.debuggingBody': 'One project about the skill the others assume: finding out what your code actually does. Five stages, each starting from code that runs and is wrong, worked the way Cathy Lai describes — verify the setup, trace by hand, test the edges, build in pieces with console.log between them, and stay calm when it breaks.',
+  'coding.evolving.custom': 'Custom',
+  'coding.evolving.customBody': 'Two short paths for interview foundations: Map and Set first, then building and grouping objects, ending with a breadth-first crawl. Each path has ten small steps of 5–10 minutes, and every step adds one function to the same file.',
   'coding.evolving.fullstack': 'FullStack',
   'coding.evolving.fullstackBody': 'Build complete app exercises with JavaScript logic, TypeScript contracts, React screens and fetch-based APIs. Each app has twelve stages. APIs run locally in the isolated training sandbox—not on a deployed server.',
   'coding.evolving.stage': 'Evolving · Stage {n} of {total}',
