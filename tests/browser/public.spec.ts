@@ -7,8 +7,10 @@ for (const locale of ['en', 'cs']) for (const theme of ['light', 'dark']) {
     await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: theme as 'light' | 'dark' });
     await page.addInitScript(({ locale, theme }) => { localStorage.setItem('devquiz.lang', locale); localStorage.setItem('devquiz:color-mode', theme); }, { locale, theme });
     await page.goto(`${locale === 'cs' ? '/cs' : ''}/topics/${slug}`);
-    await expect(page.locator('html')).toHaveAttribute('lang', locale);
     const article = page.locator('article.ss-topic-article');
+    // The interface ships English only, but the Czech guides stay published,
+    // so the article names its own language instead of borrowing the page's.
+    await expect(article).toHaveAttribute('lang', locale);
     await expect(article.locator('h1')).toBeVisible();
     await article.locator('summary').first().focus();
     await page.keyboard.press('Enter');

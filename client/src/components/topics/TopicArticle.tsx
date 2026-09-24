@@ -12,7 +12,7 @@ export function TopicArticle({ topic, locale, brand, related, onPractice }: {
   related: TopicLandingDefinition[]; onPractice?: MouseEventHandler<HTMLAnchorElement>;
 }) {
   const copy = topicLabels[locale];
-  return <article className="ss-info-page ss-topic-article">
+  return <article className="ss-info-page ss-topic-article" lang={locale}>
     <nav className="ss-topic-nav" aria-label={copy.language}>
       <a href="/">{brand} · {copy.home}</a>
       <a href={topicPath(topic.slug, 'en')} hrefLang="en" lang="en" aria-current={locale === 'en' ? 'page' : undefined}>English</a>

@@ -5,7 +5,9 @@ import { solutionFor } from '../../lib/coding/solutions';
 
 // Real built editor/iframe/navigation with deterministic API fixtures. Actual
 // server grading is independently covered by test:coding and test:react-isolation.
-for (const lang of ['en', 'cs']) for (const theme of ['light', 'dark']) {
+// The languages loop over what the app ships (ENABLED_LANGS in the client's
+// LanguageContext); a stored Czech preference renders English today.
+for (const lang of ['en']) for (const theme of ['light', 'dark']) {
   test(`${lang} ${theme}: React stage handoff, rerun and accessible workbench`, async ({ page }, info) => {
     test.setTimeout(60_000);
     page.on('pageerror',error=>console.error(error.message));
