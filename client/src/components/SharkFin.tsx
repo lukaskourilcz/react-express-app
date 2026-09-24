@@ -15,13 +15,17 @@ interface FinProps {
 // The swim/cruise/wake keyframes live in styles/app-shell.css (one static
 // copy) — previously each mount injected its own duplicate <style> tag.
 
-/** A static dorsal shark fin. `aria-hidden` — it's decorative. */
+/**
+ * A static dorsal shark fin. `aria-hidden` — it's decorative. The fin sweeps
+ * back to a hooked tip, and its base is cut into a wave on y=18, so the fin
+ * sits in the water. favicon.svg carries the same paths.
+ */
 export function SharkFin({ size = 22, color = 'var(--brand-accent)' }: FinProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <path d="M3 18 Q 6 6 15 3 Q 17 11 21 18 Z" style={{ fill: color }} />
+      <path d="M2.4 18 C 4.5 11.4 9.5 4.1 18 2.1 C 15.2 6.1 15.4 12.2 21.6 18 Q 19.25 15.5 16.9 18 T 12.2 18 T 7.5 18 T 2.4 18 Z" style={{ fill: color }} />
       {/* subtle inner shading down the trailing edge */}
-      <path d="M15 3 Q 17 11 21 18 L 16 18 Q 14 10 15 3 Z" fill="#000" opacity="0.12" />
+      <path d="M18 2.1 C 15.2 6.1 15.4 12.2 21.6 18 Q 19.25 15.5 16.9 18 C 14.3 14.2 13.6 7.2 18 2.1 Z" fill="#000" opacity="0.12" />
     </svg>
   );
 }

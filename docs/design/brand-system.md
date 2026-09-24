@@ -12,7 +12,7 @@ The public names are exact. `webdev` is never a StudyShark picker subject. Gener
 
 ## Shared identity
 
-- Mark: a fin whose base meets a waterline. Use the existing deterministic SVG primitives and favicon family.
+- Mark: a swept-back fin with a hooked tip, its base cut into a wave so it sits in the water. `SharkFin` (`client/src/components/SharkFin.tsx`) holds the paths and `client/public/favicon.svg` repeats them. Use these deterministic SVG primitives; do not redraw the fin elsewhere.
 - Neutrals: ocean ink, off-white paper, muted blue-green surfaces.
 - Surface: restrained grain, hairline edge, tactile bottom edge, quiet shadow.
 - Typography: Manrope for editorial headings, Inter for reading/UI/code metadata with system fallbacks.
