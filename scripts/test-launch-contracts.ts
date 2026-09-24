@@ -30,8 +30,7 @@ import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
 import roadmapHandler from '../api/quiz/roadmap';
 import { selectPersonalizedReview, selectDueItems, DUE_SHARE } from '../lib/review-selection';
-import { aiDailyGenerationLimit, isAiExplanationConfigured } from '../lib/ai-provider';
-import { aiFeaturesAllowed, defaultDeploymentCategories, validateCategoryScope } from '../lib/product-scope';
+import { defaultDeploymentCategories, validateCategoryScope } from '../lib/product-scope';
 import { playable as playableCodingTask, CODING_TASKS } from '../lib/coding/catalog';
 import { codingTaskById, levelCodingTasks } from '../lib/coding/active';
 import { solutionFor } from '../lib/coding/solutions';
@@ -497,29 +496,11 @@ async function main() {
     'an already-unlocked grant must not be duplicated',
   );
 
-  const savedAiEnv = {
-    enabled: process.env.AI_EXPLANATIONS_ENABLED,
-    key: process.env.OPENAI_API_KEY,
-    model: process.env.OPENAI_MODEL,
-    budget: process.env.AI_DAILY_GENERATION_LIMIT,
-  };
-  process.env.AI_EXPLANATIONS_ENABLED = 'true';
-  process.env.OPENAI_API_KEY = 'test-key';
-  process.env.OPENAI_MODEL = 'test-model';
-  delete process.env.AI_DAILY_GENERATION_LIMIT;
-  assert.equal(isAiExplanationConfigured(), false, 'AI stays disabled without a hard daily budget');
-  process.env.AI_DAILY_GENERATION_LIMIT = '25';
-  assert.equal(aiDailyGenerationLimit(), 25);
-  assert.equal(isAiExplanationConfigured(), true);
-  for (const [key, value] of Object.entries(savedAiEnv)) {
-    const envKey = { enabled: 'AI_EXPLANATIONS_ENABLED', key: 'OPENAI_API_KEY', model: 'OPENAI_MODEL', budget: 'AI_DAILY_GENERATION_LIMIT' }[key];
-    if (value === undefined) delete process.env[envKey];
-    else process.env[envKey] = value;
-  }
-
-  assert.equal(aiFeaturesAllowed({ PRODUCT_ID: 'devshark' }), false, 'devShark ships no AI feature');
-  assert.equal(aiFeaturesAllowed({ VITE_LOCK_SUBJECT: 'webdev' }), false);
-  assert.equal(aiFeaturesAllowed({ VITE_PRODUCT: 'studyshark' }), true);
+  // devShark ships no AI feature: no provider module and no explanation or
+  // hint route on the quiz submit handler.
+  assert.ok(!readdirSync(join(process.cwd(), 'lib')).includes('ai-provider.ts'), 'devShark carries no AI provider');
+  const submitHandlerSource = readFileSync(join(process.cwd(), 'api', 'quiz', 'submit.ts'), 'utf8');
+  assert.ok(!/resource === '(explanation|hint)'/.test(submitHandlerSource), 'the quiz submit handler routes no AI resource');
 
   // Coding challenges: sealed sessions, answer-free payloads, server grading.
   const codingSession = encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: 'user-0001', roadmapAttemptId: 'attempt-0123456789abcd' });

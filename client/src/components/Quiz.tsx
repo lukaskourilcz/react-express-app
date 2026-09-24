@@ -51,8 +51,6 @@ import { capture } from '../lib/analytics';
 import { MotionPop, MotionItem } from '../lib/motion';
 import { RadioCardGroup, RadioCard } from './ui/RadioCards';
 import { CategoryGlyph } from './ui/techIcons';
-import Sharkira, { type SharkiraStatus } from './Sharkira';
-import { requestHint, type HintResponse } from '../lib/sharkira';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { createResultShareFile, downloadShareFile } from '../lib/shareCard';
 import { queryClient } from '../lib/queryClient';
@@ -233,14 +231,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
   const [showSupportPrompt, setShowSupportPrompt] = useState(false);
   const [settings] = useSettings();
-  // Sharkira (optional Socratic hint). Presentational state only — the server
-  // owns the guardrail and the content.
-  const [hintStatus, setHintStatus] = useState<SharkiraStatus>('idle');
-  const [hintResponse, setHintResponse] = useState<HintResponse | null>(null);
 
   const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
-  const hintAbortRef = useRef<AbortController | null>(null);
 
   const { isAuthenticated, user } = useAuth();
   // The saved plan, used only to say whether this topic is part of it.
@@ -711,49 +704,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   const currentQuestion = questions[currentIndex];
 
-  // ── Sharkira: optional Socratic hint ──────────────────────────────────
-  // Pre-answer help offered only on plain-quiz and review sessions. The daily
-  // challenge is scope 'daily' server-side (hints disabled), so we never even
-  // show the affordance there. The server is still authoritative — a stray
-  // disabled response collapses to Sharkira's "sitting this one out" note.
-  //
-  // Temporarily hidden by owner. Drop the leading `false &&` to restore on
-  // StudyShark; devShark never shows it (the product ships no AI feature).
-  const sharkiraEligible = false && CURRENT_PRODUCT.id !== 'devshark' && mode !== 'daily' && !!sessionId && !!currentQuestion;
-
-  const askSharkira = useCallback(() => {
-    if (!sessionId || !currentQuestion) return;
-    // One request in flight at a time; a re-ask/retry cancels the previous.
-    hintAbortRef.current?.abort();
-    const controller = new AbortController();
-    hintAbortRef.current = controller;
-    setHintResponse(null);
-    setHintStatus('thinking');
-    void requestHint(sessionId, currentQuestion.id, lang, controller.signal).then((res) => {
-      if (controller.signal.aborted) return;
-      setHintResponse(res);
-      setHintStatus('result');
-    });
-  }, [sessionId, currentQuestion, lang]);
-
-  const closeSharkira = useCallback(() => {
-    hintAbortRef.current?.abort();
-    hintAbortRef.current = null;
-    setHintStatus('idle');
-    setHintResponse(null);
-  }, []);
-
-  // A new question cancels any in-flight hint and closes Sharkira, so one
-  // question's guidance never bleeds into the next. Answering is untouched.
-  useEffect(() => {
-    hintAbortRef.current?.abort();
-    hintAbortRef.current = null;
-    setHintStatus('idle');
-    setHintResponse(null);
-  }, [currentQuestion?.id]);
-
-  useEffect(() => () => hintAbortRef.current?.abort(), []);
-
   // Move focus to result heading + announce
   useEffect(() => {
     if (state === 'submitted' && resultHeadingRef.current) {
@@ -766,7 +716,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     if (state !== 'in-progress' || !currentQuestion) return;
     const handler = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, button, a, [contenteditable="true"], [role="textbox"], [role="radio"], [role="checkbox"], .sharkira-panel')) return;
+      if (target?.closest('input, textarea, select, button, a, [contenteditable="true"], [role="textbox"], [role="radio"], [role="checkbox"]')) return;
 
       if (e.key === 'ArrowRight') {
         e.preventDefault();
@@ -1138,14 +1088,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       </Text>
                     </div>
                   )}
-                  {CURRENT_PRODUCT.id !== 'devshark' && config.ai.explanationsEnabled && questionResult?.answerProof && (
-                    <AiExplanationPanel
-                      answerProof={questionResult.answerProof}
-                      selectedAnswer={question.options[questionResult.selectedIndex] ?? ''}
-                      lang={lang}
-                      onReport={() => setReportTarget({ id: question.id, version: question.review?.version })}
-                    />
-                  )}
                 </VStack>
               </Card>
             </MotionItem>
@@ -1361,21 +1303,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               </button>
             </div>
 
-            {/* Optional Socratic hint. Sits above the answers, which stay
-                anchored to the bottom (marginTop:auto on the radio group) so
-                asking never shifts an answer under the learner's finger. */}
-            {sharkiraEligible && (
-              <div style={{ flexShrink: 0, marginTop: 12 }}>
-                <Sharkira
-                  status={hintStatus}
-                  response={hintResponse}
-                  onAsk={askSharkira}
-                  onRetry={askSharkira}
-                  onClose={closeSharkira}
-                />
-              </div>
-            )}
-
             {/* Answer options as radio cards (one Tab stop, arrow keys move +
                 select). Raised off the wave on phones so they sit mid-lower
                 screen. */}
@@ -1480,85 +1407,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         onAction={confirmAbandon}
         width="min(460px, calc(100vw - 32px))"
       />
-    </div>
-  );
-}
-
-interface AiExplanationContent {
-  whyCorrect: string;
-  whySelected: string;
-  misconception: string;
-  relatedConcept: string;
-}
-
-function AiExplanationPanel({
-  answerProof,
-  selectedAnswer,
-  lang,
-  onReport,
-}: {
-  answerProof: string;
-  selectedAnswer: string;
-  lang: string;
-  onReport: () => void;
-}) {
-  const t = useT();
-  const [content, setContent] = useState<AiExplanationContent | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [unavailable, setUnavailable] = useState(false);
-
-  const load = async () => {
-    if (loading || content) return;
-    setLoading(true);
-    setUnavailable(false);
-    try {
-      const response = await apiFetch<{
-        available: boolean;
-        content?: AiExplanationContent;
-      }>('/api/quiz/submit?resource=explanation', {
-        method: 'POST',
-        body: JSON.stringify({ answerProof, selectedAnswer, lang }),
-        timeoutMs: 10_000,
-      });
-      if (response.available && response.content) setContent(response.content);
-      else setUnavailable(true);
-    } catch {
-      setUnavailable(true);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!content) {
-    return (
-      <VStack gap={1} align="start">
-        <Button
-          variant="secondary"
-          size="sm"
-          label={loading ? t('quiz.aiLoading') : t('quiz.aiExplain')}
-          isLoading={loading}
-          isDisabled={loading}
-          onClick={() => void load()}
-        />
-        {unavailable && (
-          <Text type="supporting" size="xsm" color="secondary">{t('quiz.aiUnavailable')}</Text>
-        )}
-      </VStack>
-    );
-  }
-
-  return (
-    <div className="quiz-ai-explanation">
-      <VStack gap={1}>
-        <HStack justify="between" align="center" gap={1} wrap="wrap">
-          <Text weight="bold" size="sm">{t('quiz.aiTitle')}</Text>
-          <Button variant="ghost" size="sm" label={t('quiz.aiReport')} onClick={onReport} />
-        </HStack>
-        <Text type="body" size="sm"><strong>{t('quiz.aiWhyCorrect')}</strong> {content.whyCorrect}</Text>
-        {content.whySelected && <Text type="body" size="sm"><strong>{t('quiz.aiWhySelected')}</strong> {content.whySelected}</Text>}
-        {content.misconception && <Text type="body" size="sm"><strong>{t('quiz.aiMisconception')}</strong> {content.misconception}</Text>}
-        <Text type="body" size="sm"><strong>{t('quiz.aiRelated')}</strong> {content.relatedConcept}</Text>
-      </VStack>
     </div>
   );
 }

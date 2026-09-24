@@ -1349,15 +1349,6 @@ export const en = {
 
   // ── Misc previously-hardcoded strings ─────────────────────────────────
   'quiz.shareText': 'I scored {pct}% on StudyShark ({correct}/{total}). Try it!',
-  'quiz.aiExplain': 'Explain this more deeply',
-  'quiz.aiLoading': 'Building explanation…',
-  'quiz.aiUnavailable': 'The optional deeper explanation is unavailable. The curated explanation above remains available.',
-  'quiz.aiTitle': 'Deeper explanation',
-  'quiz.aiWhyCorrect': 'Why it is correct:',
-  'quiz.aiWhySelected': 'About your answer:',
-  'quiz.aiMisconception': 'Likely misconception:',
-  'quiz.aiRelated': 'Related concept:',
-  'quiz.aiReport': 'Report explanation',
   'quiz.supportTitle': 'Help keep the platform available',
   'quiz.supportBody': 'Optional support helps cover transparent running costs. It never unlocks features or changes scores.',
   'quiz.supportCta': 'See running costs',
@@ -1431,24 +1422,6 @@ export const en = {
   'mastery.masteredTooltip': 'Mastered — passed on {days} different days.',
   'mastery.dueTooltip': 'It’s been a while. A quick review will keep this sharp.',
   'mastery.legendTitle': 'Roadmap key',
-
-  // ── Sharkira (optional Socratic hint) ─────────────────────────────────
-  'sharkira.name': 'Sharkira',
-  'sharkira.tagline': 'Your study coach',
-  'sharkira.askHint': 'Ask Sharkira',
-  'sharkira.askHintAria': 'Ask Sharkira for a hint',
-  'sharkira.thinking': 'Sharkira is thinking…',
-  'sharkira.hintLabel': 'Sharkira’s hint',
-  'sharkira.nudgeLabel': 'Try this next',
-  'sharkira.curatedNote': 'A quick nudge to get you moving.',
-  'sharkira.principle': 'Never the answer — just the next small step.',
-  'sharkira.hidden': 'Hints are off for this round.',
-  'sharkira.hiddenHint': 'Sharkira sits out placement, the daily challenge and matches — those are all you.',
-  'sharkira.error': 'Sharkira couldn’t help just now. Try again in a moment.',
-  'sharkira.unavailable': 'Sharkira is unavailable right now.',
-  'sharkira.offline': 'You’re offline — Sharkira needs a connection.',
-  'sharkira.retry': 'Ask again',
-  'sharkira.close': 'Close hint',
 
   // ── Shark Cards (cosmetic collectible album) ──────────────────────────
   'cards.title': 'Shark Cards',

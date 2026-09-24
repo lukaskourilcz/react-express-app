@@ -1349,15 +1349,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
 
   // ── Dříve natvrdo zadrátované texty ───────────────────────────────────
   'quiz.shareText': 'Dal jsem {pct} % na StudySharku ({correct}/{total}). Zkus to taky!',
-  'quiz.aiExplain': 'Vysvětlit podrobněji',
-  'quiz.aiLoading': 'Připravuji vysvětlení…',
-  'quiz.aiUnavailable': 'Volitelné podrobnější vysvětlení teď není dostupné. Ověřené vysvětlení výše zůstává k dispozici.',
-  'quiz.aiTitle': 'Podrobnější vysvětlení',
-  'quiz.aiWhyCorrect': 'Proč je odpověď správná:',
-  'quiz.aiWhySelected': 'K tvé odpovědi:',
-  'quiz.aiMisconception': 'Pravděpodobné nedorozumění:',
-  'quiz.aiRelated': 'Související pojem:',
-  'quiz.aiReport': 'Nahlásit vysvětlení',
   'quiz.supportTitle': 'Pomoz udržet platformu dostupnou',
   'quiz.supportBody': 'Dobrovolná podpora pomáhá pokrýt transparentní provozní náklady. Nikdy neodemyká funkce ani nemění skóre.',
   'quiz.supportCta': 'Zobrazit provozní náklady',
@@ -1431,24 +1422,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'mastery.masteredTooltip': 'Zvládnuto — prošel jsi ve {days} různých dnech.',
   'mastery.dueTooltip': 'Už je to nějakou dobu. Krátké opakování to udrží v hlavě.',
   'mastery.legendTitle': 'Legenda plánu',
-
-  // ── Sharkira (volitelná sokratovská nápověda) ─────────────────────────
-  'sharkira.name': 'Sharkira',
-  'sharkira.tagline': 'Tvůj studijní kouč',
-  'sharkira.askHint': 'Zeptej se Sharkiry',
-  'sharkira.askHintAria': 'Požádej Sharkiru o nápovědu',
-  'sharkira.thinking': 'Sharkira přemýšlí…',
-  'sharkira.hintLabel': 'Nápověda od Sharkiry',
-  'sharkira.nudgeLabel': 'Zkus dál tohle',
-  'sharkira.curatedNote': 'Krátké postrčení, ať se pohneš dál.',
-  'sharkira.principle': 'Nikdy odpověď — jen další malý krok.',
-  'sharkira.hidden': 'Nápovědy jsou pro toto kolo vypnuté.',
-  'sharkira.hiddenHint': 'Sharkira vynechává zařazovací test, denní výzvu i zápasy — ty zvládneš sám.',
-  'sharkira.error': 'Sharkira teď nedokázala pomoct. Zkus to za chvíli znovu.',
-  'sharkira.unavailable': 'Sharkira je teď nedostupná.',
-  'sharkira.offline': 'Jsi offline — Sharkira potřebuje připojení.',
-  'sharkira.retry': 'Zeptat se znovu',
-  'sharkira.close': 'Zavřít nápovědu',
 
   // ── Shark Cards (kosmetické sběratelské album) ────────────────────────
   'cards.title': 'Shark Cards',

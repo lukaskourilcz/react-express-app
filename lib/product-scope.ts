@@ -60,10 +60,3 @@ export function validateCategoryScope(categories: string[], opts: { forDelivery?
 export function deploymentSubjectIds(): ScopeSubjectId[] {
   return [...deploymentSubjects];
 }
-
-/** AI-backed features (deeper explanations, Sharkira hints) are a StudyShark
- * concern. The devShark product ships none of them: authored coding hints end
- * in documentation links instead. Pure so the contract tests can cover it. */
-export function aiFeaturesAllowed(env: Record<string, string | undefined> = process.env): boolean {
-  return !allowedDeploymentSubjects(env).includes('webdev');
-}

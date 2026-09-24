@@ -34,7 +34,6 @@ export interface GameConfig {
     costBreakdown: Array<{ label: string; amount: number }>;
     publicThanksEnabled: boolean;
   };
-  ai: { explanationsEnabled: boolean };
   /** One-liner dev tips shown on the full-page loading screen; empty = none. */
   devTips: string[];
 }
@@ -122,7 +121,6 @@ export const DEFAULT_CONFIG: GameConfig = {
     costBreakdown: [],
     publicThanksEnabled: false,
   },
-  ai: { explanationsEnabled: false },
   devTips: [...DEFAULT_DEV_TIPS],
 };
 
@@ -138,7 +136,6 @@ async function fetchConfig(): Promise<GameConfig> {
     ...c,
     shop: c.shop ?? DEFAULT_CONFIG.shop,
     support: c.support ?? DEFAULT_CONFIG.support,
-    ai: c.ai ?? DEFAULT_CONFIG.ai,
   };
 }
 
