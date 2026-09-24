@@ -95,6 +95,25 @@ and `lib/coding/solutions/evolving-debug.ts`.
 | 4 | Write code in pieces, log between them | `trace` returns its value; `report` composes the pieces |
 | 5 | Stay calm with the bug you did not plant | `safeReport` reports bad lines instead of throwing |
 
+## The Custom category
+
+Two short JavaScript paths in their own `custom` category, listed first on the
+Coding home. They cover the foundations for an algorithm screening interview.
+Each path has ten steps: a checkpoint (about 5 minutes) that adds one small
+function, then a milestone (about 10 minutes) that builds on it. Every step
+keeps the earlier functions and their checks, so the whole category fits into
+about two and a half hours. The copy is English only, with empty Czech fields.
+Source: `lib/coding/tasks/evolving-custom.ts` and
+`lib/coding/solutions/evolving-custom.ts`.
+
+| Stage | Map and Set basics (`js-custom-mapset`) | Objects and grouping (`js-custom-catalog`) |
+| --- | --- | --- |
+| 1 | `unique`, then `common` | `countByCategory`, then `groupByCategory` |
+| 2 | `countAll`, then `mostCommon` | `totalRuns`, then `summarize` |
+| 3 | `firstRepeat`, then `twoSum` | `sortActors`, then `topPerCategory` |
+| 4 | `countsToPairs`, then `topK` | `indexById`, then `diffCatalog` |
+| 5 | `firstUnique`, then `groupAnagrams` | `linksToGraph`, then `crawlOrder` (BFS) |
+
 ## Playground layout
 
 The task description spans the full width above the playground. Editor and

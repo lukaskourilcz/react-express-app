@@ -2,9 +2,10 @@ import type { CodingTrack, Localized } from './coding-catalog';
 
 /** `fullstack` groups the three app builds on their own screen; `debugging`
  * marks the one path that is about finding bugs rather than writing features,
- * listed on its own on the Coding home. No category means an ordinary
- * evolving project. */
-export type EvolvingCategory = 'fullstack' | 'debugging';
+ * listed on its own on the Coding home; `custom` holds the short foundations
+ * paths picked for current interview practice, listed first on the Coding
+ * home. No category means an ordinary evolving project. */
+export type EvolvingCategory = 'fullstack' | 'debugging' | 'custom';
 
 export interface EvolvingChallenge {
   id: string;
@@ -45,6 +46,9 @@ export const EVOLVING_CHALLENGES: readonly EvolvingChallenge[] = [
   challenge('react-evolving-catalog', 'react', 'Product explorer', 'Průzkumník produktů'),
   challenge('react-evolving-form', 'react', 'Form wizard', 'Průvodce formulářem'),
   challenge('js-evolving-debug', 'javascript', 'Debugging path', 'Ladicí cesta', 'debugging'),
+  // English only: the Custom paths carry no Czech title.
+  challenge('js-custom-mapset', 'javascript', 'Map and Set basics', '', 'custom'),
+  challenge('js-custom-catalog', 'javascript', 'Objects and grouping', '', 'custom'),
 ];
 
 export function evolvingStage(id: string) {

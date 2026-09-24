@@ -7,6 +7,7 @@ import type {
 import { EVOLVING_CHALLENGES } from '../../../shared/evolving';
 import { text, test } from './evolving';
 import { DEBUG_CHECKPOINTS } from './evolving-debug';
+import { CUSTOM_CHECKPOINTS } from './evolving-custom';
 import { FULLSTACK_APPS, fullstackSeed, fullstackSpec } from './fullstack';
 
 interface Checkpoint {
@@ -495,7 +496,7 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
       const base = byId.get(id)!;
       const checkpoint = fullstack
         ? fullstack[String(index + 1)]
-        : (CHECKPOINTS[project.id] ?? DEBUG_CHECKPOINTS[project.id])[index];
+        : (CHECKPOINTS[project.id] ?? DEBUG_CHECKPOINTS[project.id] ?? CUSTOM_CHECKPOINTS[project.id])[index];
       if (checkpoint) {
         const firstReact = base.suite && !previous?.suite;
         const header = firstReact

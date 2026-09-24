@@ -76,7 +76,7 @@ async function main() {
       const task = CODING_TASKS.find(task => task.id === id);
       assert.ok(task, `${id}: authored task exists`);
       assert.equal(task.track, evolvingTaskTrack(id));
-      assert.ok(task.references?.length && task.references.every(ref=>ref.title.en && ref.title.cs && ref.url.startsWith('https://')), 'each stage has localized references');
+      assert.ok(task.references?.length && task.references.every(ref=>ref.title.en && (!REQUIRE_CS || ref.title.cs) && ref.url.startsWith('https://')), 'each stage has localized references');
       assert.equal(evolvingResume(project, passed), id, 'resume is the first unfinished stage');
       assert.equal(evolvingUnlocked(id, passed), true, 'earlier verified passes unlock the next stage');
       if (index > 0) assert.equal(evolvingUnlocked(id, new Set()), false, 'deep links cannot skip prerequisites');
