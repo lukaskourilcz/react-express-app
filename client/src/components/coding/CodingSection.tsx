@@ -44,7 +44,7 @@ import '../../coding/Coding.css';
 
 type Status = 'open' | 'in_progress' | 'passed' | 'revealed' | 'due' | 'locked' | 'premium';
 
-/** Premium opens this task and the account is free: open the upgrade sheet. */
+/** Premium opens this task and the account holds the free plan: open the upgrade sheet. */
 const askForPremium = (taskId: string) => {
   const content = codingContent(taskId);
   openUpgradeSheet({ kind: content.kind, ref: gatedRef(content) });
@@ -206,7 +206,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
     <div ref={listRef} className={`cd-project-list${scrollable ? ' cd-project-list--scroll' : ''}`} tabIndex={scrollable ? 0 : undefined} role={scrollable ? 'region' : undefined} aria-label={scrollable ? t(titleKey) : undefined}>{challenges.map((challenge, index) => {
       const completed = challenge.stages.filter(id => evolvingPassed(id, passed)).length;
       const resumeId = evolvingResume(challenge, passed);
-      // Stage one is free; on a free account the later stages read "Premium".
+      // Stage one comes with the free plan; on a free account the later stages read "Premium".
       const laterLocked = challenge.stages.length > 1 && premiumOf(challenge.stages[1]) === 'locked';
       return <article key={challenge.id} className="cd-project">
         <span className="cd-project__number" aria-hidden>{String(index + 1).padStart(2, '0')}</span>
@@ -555,9 +555,9 @@ export function CodingTaskScreen() {
   if (retired && track) return <RetiredTrackNotice track={track} />;
   if (!track || !taskId) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p></div>;
   if (task.isLoading) return <LoadingScreen label={t('coding.loading')} />;
-  // Premium opens this task and the account is free. The API client already
-  // opened the upgrade sheet; the page says the same thing in words, and keeps
-  // a way back that does not depend on the sheet.
+  // Premium opens this task and the account holds the free plan. The API
+  // client already opened the upgrade sheet; the page says the same thing in
+  // words, and keeps a way back that does not depend on the sheet.
   if (task.isError && isPremiumRequired(task.error)) {
     return (
       <div className="cd-page">

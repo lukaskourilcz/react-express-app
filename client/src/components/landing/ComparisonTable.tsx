@@ -1,9 +1,10 @@
-// The honest "pricing page": everything devShark gives away free, next to
-// what the same things typically cost in paid learning apps. No competitor
-// names and no invented prices — only qualitative "often paid / usually
-// limited" language, all sourced from the landing.compare.* translation keys.
+// The plan table: what every account gets next to what Premium opens. It sits
+// on the landing and on /premium. The free column mirrors `shared/tiers.ts`
+// (the three free topics, React up to FREE_LEARN_LEVELS.react, a starter set
+// of challenges and stage one of every project); the counts come from the
+// registries, and every word from the landing.compare.* keys.
 //
-// Deep End v2: an editorial section (kicker-less h2 + subtitle), one .ss-panel
+// Deep End v2: an editorial section (kicker, h2, subtitle), one .ss-panel
 // wrapping a real <table> that scrolls sideways INSIDE its own container on
 // narrow widths so the page body never scrolls horizontally. Status is a
 // ✓ / – / ✗ glyph PLUS a word, so it never relies on colour alone.
@@ -12,12 +13,16 @@ import { useId } from 'react';
 import { Link } from 'react-router-dom';
 import { useT } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
+import { FREE_LEARN_LEVELS, PREMIUM_PRICE } from '../../../../shared/tiers';
+import { SUBJECT_SCOPE_CATALOG } from '../../../../shared/subject-catalog';
 import { Kicker } from './LandingKit';
 import './landingSections.css';
 
+type MarkKind = 'yes' | 'partial' | 'no';
+
 /** Tiny inline status marks (feather geometry, currentColor). Decorative — the
  *  neighbouring word is the accessible text. */
-function Mark({ kind }: { kind: 'yes' | 'partial' | 'no' }) {
+function Mark({ kind }: { kind: MarkKind }) {
   const common = {
     width: 14,
     height: 14,
@@ -35,51 +40,60 @@ function Mark({ kind }: { kind: 'yes' | 'partial' | 'no' }) {
   return (<svg {...common}><line x1="5" y1="12" x2="19" y2="12" /></svg>); // partial: a minus
 }
 
-interface CompareRow {
-  labelKey: TranslationKey;
-  descKey: TranslationKey;
-  ss: 'included' | 'yes';
-  other: 'paid' | 'limited' | 'no';
-}
+interface Cell { mark: MarkKind; key: TranslationKey }
+interface PlanRow { labelKey: TranslationKey; free: Cell; premium: Cell }
 
-// devShark is a full column of ✓s; the right column qualifies each with the
-// exact honest phrasing from the dictionary. Order runs access → extras → the
-// two "we simply don't do this" rows (no ads, no card) that get a hard ✗.
-const ROWS: CompareRow[] = [
-  { labelKey: 'landing.compare.rowLessons', descKey: 'landing.compare.othersLessons', ss: 'included', other: 'paid' },
-  { labelKey: 'landing.compare.rowQuizzes', descKey: 'landing.compare.othersQuizzes', ss: 'included', other: 'limited' },
-  { labelKey: 'landing.compare.rowStreaks', descKey: 'landing.compare.othersStreaks', ss: 'included', other: 'paid' },
-  { labelKey: 'landing.compare.rowLeaderboards', descKey: 'landing.compare.othersLeaderboards', ss: 'included', other: 'paid' },
-  { labelKey: 'landing.compare.rowAi', descKey: 'landing.compare.othersAi', ss: 'included', other: 'limited' },
-  { labelKey: 'landing.compare.rowBilingual', descKey: 'landing.compare.othersBilingual', ss: 'included', other: 'limited' },
-  { labelKey: 'landing.compare.rowCards', descKey: 'landing.compare.othersCards', ss: 'included', other: 'paid' },
-  { labelKey: 'landing.compare.rowNoAds', descKey: 'landing.compare.othersNoAds', ss: 'yes', other: 'no' },
-  { labelKey: 'landing.compare.rowNoCard', descKey: 'landing.compare.othersNoCard', ss: 'yes', other: 'no' },
+const YES: Cell = { mark: 'yes', key: 'landing.compare.yes' };
+const NO: Cell = { mark: 'no', key: 'landing.compare.no' };
+const NONE: Cell = { mark: 'yes', key: 'landing.compare.none' };
+
+// Access first, then what both plans share, then the two rows about money.
+// The FDE and DSA paths and coins are Premium; the AI and bilingual rows of
+// the old table are gone, because devShark ships neither.
+export const PLAN_ROWS: readonly PlanRow[] = [
+  { labelKey: 'landing.compare.rowLessons', free: { mark: 'partial', key: 'landing.compare.othersLessons' }, premium: { mark: 'yes', key: 'landing.compare.premiumLessons' } },
+  { labelKey: 'landing.compare.rowReact', free: { mark: 'partial', key: 'landing.compare.freeReact' }, premium: { mark: 'yes', key: 'landing.compare.premiumReact' } },
+  { labelKey: 'landing.compare.rowCoding', free: { mark: 'partial', key: 'landing.compare.freeCoding' }, premium: { mark: 'yes', key: 'landing.compare.premiumCoding' } },
+  { labelKey: 'landing.compare.rowPaths', free: NO, premium: { mark: 'yes', key: 'landing.compare.premiumPaths' } },
+  { labelKey: 'landing.compare.rowQuizzes', free: YES, premium: YES },
+  { labelKey: 'landing.compare.rowLeaderboards', free: YES, premium: YES },
+  { labelKey: 'landing.compare.rowCoins', free: NO, premium: YES },
+  { labelKey: 'landing.compare.rowNoAds', free: NONE, premium: NONE },
+  { labelKey: 'landing.compare.rowNoCard', free: { mark: 'yes', key: 'landing.compare.othersNoCard' }, premium: { mark: 'partial', key: 'landing.compare.premiumNoCard' } },
 ];
 
 export interface ComparisonTableProps {
-  /** Where the "Start learning free" CTA navigates. Defaults to /learn. */
+  /** Where the "Start free" CTA navigates. Defaults to /learn. */
   startHref?: string;
   /** If provided, the CTA becomes a button calling this instead of a link
    *  (e.g. to scroll to the topic picker on the same page). */
   onStart?: () => void;
+  /** /premium has its own plan actions, so it leaves the CTA out. */
+  showCta?: boolean;
 }
 
-export default function ComparisonTable({ startHref = '/learn', onStart }: ComparisonTableProps) {
+export default function ComparisonTable({ startHref = '/learn', onStart, showCta = true }: ComparisonTableProps) {
   const t = useT();
   const headingId = useId();
+  const vars = {
+    topics: SUBJECT_SCOPE_CATALOG.webdev.topics.length,
+    level: FREE_LEARN_LEVELS.react ?? 0,
+    symbol: PREMIUM_PRICE.symbol,
+    monthly: PREMIUM_PRICE.monthly,
+    annual: PREMIUM_PRICE.annual,
+  };
 
-  const otherTag = (other: CompareRow['other']): string =>
-    other === 'paid'
-      ? t('landing.compare.oftenPaid')
-      : other === 'limited'
-        ? t('landing.compare.usuallyLimited')
-        : t('landing.compare.no');
+  const cell = ({ mark, key }: Cell) => (
+    <span className={`ss-compare-mark ss-compare-mark--${mark}`}>
+      <Mark kind={mark} />
+      {t(key, vars)}
+    </span>
+  );
 
   return (
     <section aria-labelledby={headingId} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <Kicker>{t('landing.compare.freeLabel')}</Kicker>
+        <Kicker>{t('landing.compare.kicker')}</Kicker>
         <h2
           id={headingId}
           style={{ margin: '4px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.015em' }}
@@ -87,7 +101,7 @@ export default function ComparisonTable({ startHref = '/learn', onStart }: Compa
           {t('landing.compare.title')}
         </h2>
         <p style={{ margin: 0, fontSize: '1rem', color: 'var(--color-text-secondary)', maxWidth: '70ch' }}>
-          {t('landing.compare.subtitle')}
+          {t('landing.compare.subtitle', vars)}
         </p>
       </div>
 
@@ -102,30 +116,22 @@ export default function ComparisonTable({ startHref = '/learn', onStart }: Compa
             <thead>
               <tr>
                 <th scope="col">{t('landing.compare.colFeature')}</th>
-                <th scope="col" className="ss-compare__herocell">
+                <th scope="col">
                   {t('landing.compare.colBrand')}
-                  <span className="ss-compare-free">{t('landing.compare.freeLabel')}</span>
+                  <span className="ss-compare-caption">{t('landing.compare.freeCaption')}</span>
                 </th>
-                <th scope="col">{t('landing.compare.colOthers')}</th>
+                <th scope="col" className="ss-compare__herocell">
+                  {t('landing.compare.colOthers')}
+                  <span className="ss-compare-caption">{t('landing.compare.premiumCaption', vars)}</span>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {ROWS.map((row) => (
+              {PLAN_ROWS.map((row) => (
                 <tr key={row.labelKey}>
                   <th scope="row">{t(row.labelKey)}</th>
-                  <td className="ss-compare__herocell">
-                    <span className="ss-compare-mark ss-compare-mark--yes">
-                      <Mark kind="yes" />
-                      {row.ss === 'included' ? t('landing.compare.includedLabel') : t('landing.compare.yes')}
-                    </span>
-                  </td>
-                  <td>
-                    <span className={`ss-compare-mark ss-compare-mark--${row.other === 'no' ? 'no' : 'partial'}`}>
-                      <Mark kind={row.other === 'no' ? 'no' : 'partial'} />
-                      {otherTag(row.other)}
-                    </span>
-                    <p className="ss-compare-desc">{t(row.descKey)}</p>
-                  </td>
+                  <td>{cell(row.free)}</td>
+                  <td className="ss-compare__herocell">{cell(row.premium)}</td>
                 </tr>
               ))}
             </tbody>
@@ -137,17 +143,19 @@ export default function ComparisonTable({ startHref = '/learn', onStart }: Compa
         {t('landing.compare.footnote')}
       </p>
 
-      <div>
-        {onStart ? (
-          <button type="button" className="ss-link-button ss-cta" onClick={onStart}>
-            {t('landing.compare.cta')}
-          </button>
-        ) : (
-          <Link to={startHref} className="ss-link-button ss-cta">
-            {t('landing.compare.cta')}
-          </Link>
-        )}
-      </div>
+      {showCta && (
+        <div>
+          {onStart ? (
+            <button type="button" className="ss-link-button ss-cta" onClick={onStart}>
+              {t('landing.compare.cta')}
+            </button>
+          ) : (
+            <Link to={startHref} className="ss-link-button ss-cta">
+              {t('landing.compare.cta')}
+            </Link>
+          )}
+        </div>
+      )}
     </section>
   );
 }

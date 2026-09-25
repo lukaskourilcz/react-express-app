@@ -2,7 +2,8 @@
 //
 // The server decides: it refuses locked content with 402 and the browser only
 // mirrors that. Locks come from `contentTier` in shared/tiers.ts, the same
-// function the server calls, so the two cannot disagree about what is free.
+// function the server calls, so the two cannot disagree about what the free
+// plan includes.
 //
 // Four lock states, because "locked" is only one of them:
 //   open     free content, or a Premium account

@@ -3,9 +3,9 @@ import { captureActivation } from '../lib/analytics';
 // generic hero + three feature cards, it opens with a product-forward pitch: an
 // interactive sample question wired to a real Level-1 question, a topic picker
 // whose cards host schools of shark fins on hover, a live "Inside <Topic>"
-// roadmap preview, the everything-else feature strip and the free pledge. The
-// accent comes from var(--brand-accent). The app shell (App.tsx) supplies the
-// header and the ocean footer.
+// roadmap preview, the everything-else feature strip, the plan table and the
+// pricing pledge. The accent comes from var(--brand-accent). The app shell
+// (App.tsx) supplies the header and the ocean footer.
 //
 // See DESIGN_RULES.md for the fin baseline, wave-variation and accent rules
 // this file is the reference implementation of.
@@ -27,6 +27,7 @@ import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 import SubjectPlate from './ui/SubjectPlate';
 import ComparisonTable from './landing/ComparisonTable';
+import { FREE_LEARN_TOPICS, PREMIUM_PRICE } from '../../../shared/tiers';
 import FounderNote from './landing/FounderNote';
 
 // ─────────────────────────────── Topic card ───────────────────────────────
@@ -197,12 +198,13 @@ export default function Home() {
   const heroSubtitle = t('home.subtitle');
   const moreCount = subject.topics.length - featured.length;
 
-  // Stats derived from the real roadmap shape: 25 levels per topic.
+  // Stats from the registries: topic count, question count, career paths and
+  // the topics every account gets in full (shared/tiers.ts).
   const stats: StatSpec[] = [
     { value: String(subject.topics.length), label: t('home.statTracks'), pos: 'right top', size: 40 },
     { value: SUBJECT_SCOPE_CATALOG[subject.id].questionCount.toLocaleString(), label: t('home.statQuestions'), pos: 'left bottom', size: 34 },
     { value: String(TRACK_ORDER.length), label: t('home.statPaths'), pos: 'center top', size: 32 },
-    { value: '$0', label: t('home.statForever'), pos: 'right bottom', size: 38 },
+    { value: String(FREE_LEARN_TOPICS.length), label: t('home.statForever'), pos: 'right bottom', size: 38 },
   ];
 
   const handleSignIn = async () => {
@@ -330,15 +332,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Free vs typically-paid comparison + founder note ── */}
+      {/* ── Free and Premium plan table + founder note ── */}
       <ComparisonTable onStart={scrollToTopics} />
       <FounderNote />
 
-      {/* ── Free pledge ── */}
-      <section aria-label={t('home.pledge')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '8px 0 0' }}>
+      {/* ── Pricing pledge ── */}
+      <section aria-label={t('home.pledgeLabel')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '8px 0 0' }}>
         <WaterlineRule width={84} />
         <p style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1.25rem', letterSpacing: '-0.01em', textAlign: 'center', maxWidth: '34ch' }}>
-          {t('home.pledge')}
+          {t('home.pledge', { symbol: PREMIUM_PRICE.symbol, monthly: PREMIUM_PRICE.monthly })}
         </p>
         <SwimCta label={t('home.startFree')} onClick={scrollToTopics} dir={1} />
       </section>

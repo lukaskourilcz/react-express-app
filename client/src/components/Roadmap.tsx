@@ -169,7 +169,7 @@ interface PlacedNode {
   part?: number;
   range?: PartRange;
   unavailable?: boolean;
-  /** Premium opens this step and the account is free: the node reads
+  /** Premium opens this step and the account holds the free plan: the node reads
    * "Premium", stays focusable and opens the upgrade sheet. */
   premium?: boolean;
 }
