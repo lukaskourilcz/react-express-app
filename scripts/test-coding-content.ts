@@ -407,7 +407,8 @@ async function main() {
         if (!allPassed(hidden)) fail(`${label}: solution fails hidden tests: ${hidden.codeError ?? hidden.results.map((r, i) => (r.pass ? null : solution.hiddenTests![i].call)).filter(Boolean).join('; ')}`);
       }
     }
-    if (task.track === 'javascript') {
+    // Algorithms challenges are plain JavaScript too, so their starters must fail the same way.
+    if (task.track === 'javascript' || task.track === 'algorithms') {
       const starterRun = await withTimeout(evaluateCalls({ code: starterCode, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, where);
       if (allPassed(starterRun)) fail(`${where}: the untouched starter already passes`);
     }
