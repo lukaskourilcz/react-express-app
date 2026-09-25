@@ -4,6 +4,16 @@ The repository implementation is complete for the current web brief. This file l
 
 Production database migrations through `supabase/supabase-schema-035.sql` were applied and verified — 001–024 on 2026-07-28, and 026–035 on 2026-09-09. The devShark Vercel project, its product scope, Supabase credentials, and session secret are configured; `/api/health` reports `database: ok`, `serviceRole: ok`, and `rateLimiter: configured` (Upstash Redis distributed rate limiting is live). Sentry error monitoring and PostHog analytics (EU cloud, reverse-proxied) are configured with privacy-forward defaults; admin ACL (`ADMIN_EMAILS`, `OWNER_EMAIL`) is set; Supabase leaked-password protection is on. StudyShark, which this repository also built until 2026-09-24, moved to `lukaskourilcz/studyshark` and is not deployed; its Vercel project still has to go (#214).
 
+## Second handoff, 25 September 2026: the freemium launch
+
+`SECOND-HANDOFF-25-9-2026.md` records the decision that devShark becomes freemium (free tier, Premium at 3.99 a month, merchandise through Spreadshop, coins, a 30-day leaderboard, relabelled and doubled coding challenges) and the design behind it. Its section 11 lists what only you can do; the implementation issues are #219 to #230 (label `second-handoff-25-9-2026`). The items that block the paid launch:
+
+- [ ] **Create the Stripe account, enable Managed Payments, create the Product and two Prices with `tax_behavior: inclusive`, configure the Customer Portal and the webhook, set the environment variables** — handoff section 3. [imp:5] [owner:me] [time:1h] [kind:setup]
+- [ ] **Have the Terms, the checkout consent text and the order-button wording checked by a lawyer** (§ 1826a OZ, § 1837 l) OZ, § 312k BGB). [imp:4] [owner:me] [time:1h] [kind:legal]
+- [ ] **Register the EU Spreadshop, upload designs, enable a t-shirt, a hoodie, a mug and two sticker sizes, set margins, order one sample, export product mockups** — handoff section 8. [imp:4] [owner:me] [time:3h] [kind:setup]
+- [ ] **Decide the currency, the voluntary 14-day refund, the Support-page redirect and the social click-through grant** — handoff sections 3, 4 and 7. [imp:3] [owner:me] [time:30m] [kind:decision]
+- [ ] **Create the devShark LinkedIn Page, Instagram professional account and Threads profile and record the URLs in `client/product-catalog.ts`** — the BoardlessAI handoff has the checklist. [imp:4] [owner:me] [time:1h] [kind:setup]
+
 ## Before production launch
 
 - [ ] **Delete the paused StudyShark Vercel project, after removing its URL from Supabase Auth** — the `studyshark-app` project was paused on 2026-09-25 and answers 503, but the connector cannot delete a project. First remove `https://studyshark-app.vercel.app/**`, and any StudyShark preview pattern, from Supabase → Authentication → URL Configuration, and the StudyShark origin from the Google OAuth client: once the project is deleted anyone can claim that `vercel.app` subdomain, and a leftover redirect entry would hand them sign-in tokens. Then delete the project (Settings → Advanced → Delete Project) and remove `VITE_STUDYSHARK_URL` from the devShark project. Steps in [#214](https://github.com/lukaskourilcz/react-express-app/issues/214). `[imp:4]` `[owner:me]` `[time:15m]` `[kind:deploy]`
