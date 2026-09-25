@@ -6,6 +6,11 @@
 // chunk after first paint. initSentry() stays a sync fire-and-forget call for
 // main.tsx; reportError() no-ops until the SDK has loaded.
 //
+// The SDK posts straight to the DSN's ingest host. The CSP `connect-src` in
+// vercel.json allows only the EU one (`https://*.ingest.de.sentry.io`), and
+// `npm run check:security` asserts it; a DSN in another region needs its host
+// added there, or every event is refused by the browser.
+//
 // Source maps are already emitted as 'hidden' in vite.config.ts; upload them
 // with @sentry/vite-plugin + SENTRY_AUTH_TOKEN in CI for readable stack traces
 // (optional, not required at runtime). To shrink the prod bundle further, drop

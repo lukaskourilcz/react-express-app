@@ -11,6 +11,10 @@ const scripts = csp.split(';').find(part => part.trim().startsWith('script-src '
 assert(scripts.includes(hash), 'Prepaint script must match its CSP hash');
 assert(!scripts.includes("'unsafe-inline'") && !scripts.includes("'unsafe-eval'"), 'App scripts must not allow inline execution or eval');
 for (const directive of ["frame-ancestors 'none'", "base-uri 'self'", "form-action 'self'"]) assert(csp.includes(directive));
+const connections = csp.split(';').map(part => part.trim()).find(part => part.startsWith('connect-src '))?.split(/\s+/) ?? [];
+// The Sentry SDK posts errors straight to its EU ingest host (the DSN in client/src/lib/sentry.ts sets no tunnel).
+assert(connections.includes('https://*.ingest.de.sentry.io'), 'connect-src must allow the Sentry EU ingest host, or browser errors never arrive');
+assert(!connections.some(source => source === '*' || source === 'https:' || source === 'https://*.sentry.io'), 'connect-src must name hosts, not open every origin');
 assert.equal(header(app, 'X-Content-Type-Options'), 'nosniff');
 assert.equal(header(app, 'X-Frame-Options'), 'DENY');
 assert.match(header(app, 'Strict-Transport-Security'), /max-age=63072000/);
