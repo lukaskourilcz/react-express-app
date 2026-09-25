@@ -877,6 +877,76 @@ async function main() {
     }
   }
 
+  // The dated boards (migration 040, #223). Every board ranks correct answers,
+  // then accuracy: never XP and never a streak. Answers are dated only inside
+  // the three verified answer routines, and a coding pass is not an answer.
+  {
+    const migration = readFileSync(join(process.cwd(), 'supabase/supabase-schema-040.sql'), 'utf8');
+    const routineOf = (name: string) => {
+      const start = migration.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`);
+      assert.ok(start >= 0, `migration 040 must define ${name}`);
+      return migration.slice(start, migration.indexOf('$$;', migration.indexOf('AS $$', start)));
+    };
+    for (const name of ['window_leaderboard', 'window_leaderboard_rank']) {
+      const body = routineOf(name).toLowerCase();
+      assert.ok(!body.includes('streak'), `${name} must never read a streak column`);
+      assert.ok(!/\bxp\b|quest_xp|user_xp/.test(body), `${name} must never read XP`);
+    }
+    assert.match(
+      routineOf('window_leaderboard'),
+      /RANK\(\) OVER \(ORDER BY t\.correct DESC, t\.answered ASC\)/,
+      'the window ranks correct answers, then fewer answers for the same number correct',
+    );
+    const friendOrder = routineOf('friend_list').split('ORDER BY').pop() ?? '';
+    assert.ok(!/streak/i.test(friendOrder), 'friend_list must never order by a streak');
+    assert.match(friendOrder, /total_correct/, 'friend_list orders by correct answers first');
+
+    assert.equal(migration.match(/INSERT INTO public\.user_activity_days/g)?.length, 1, 'one upsert writes dated activity');
+    assert.equal(
+      migration.match(/PERFORM public\.add_activity_day\(/g)?.length,
+      3,
+      'only the quiz, Learn and challenge routines date answers',
+    );
+    for (const name of ['record_verified_quiz_result_v2', 'record_roadmap_answer_v2', 'record_challenge_completion']) {
+      assert.match(routineOf(name), /PERFORM public\.add_activity_day\(/, `${name} must date its answers`);
+    }
+    assert.doesNotMatch(migration, /FUNCTION public\.record_coding/, 'a coding pass must not reach the dated boards');
+    for (const file of apiFiles(join(process.cwd(), 'api'))) {
+      const source = readFileSync(file, 'utf8');
+      assert.doesNotMatch(source, /from\(['"]user_activity_days/, `${file} must not write dated activity directly`);
+      assert.doesNotMatch(source, /rpc\(['"]add_activity_day/, `${file} must not date answers outside a verified routine`);
+    }
+
+    assert.match(migration, /ALTER TABLE public\.user_activity_days ENABLE ROW LEVEL SECURITY/);
+    for (const fn of [
+      'add_activity_day', 'record_verified_quiz_result_v2', 'record_roadmap_answer_v2', 'record_challenge_completion',
+      'window_leaderboard', 'window_leaderboard_rank', 'friend_list', 'delete_user_activity_days',
+    ]) {
+      assert.match(
+        migration,
+        new RegExp(`REVOKE ALL ON FUNCTION public\\.${fn}\\([^)]*\\)\\s+FROM PUBLIC, anon, authenticated`),
+        `${fn} must be service-role only`,
+      );
+    }
+
+    // The shared board stays cacheable; a personal one never is.
+    const boardHandler = readFileSync(join(process.cwd(), 'api/leaderboard.ts'), 'utf8');
+    assert.match(boardHandler, /'private, no-store'/);
+    assert.match(boardHandler, /'public, s-maxage=60, stale-while-revalidate=300'/);
+    assert.match(boardHandler, /RATE_LIMITS\.leaderboardPersonal/);
+
+    // The screen: a rank is a number, never a medal colour, and the
+    // multi-subject pill is gone.
+    const screen = ['client/src/components/Leaderboard.tsx', 'client/src/components/Leaderboard.css']
+      .map((file) => readFileSync(join(process.cwd(), file), 'utf8'))
+      .join('\n')
+      .toLowerCase();
+    for (const hex of ['#f5b301', '#9aa4b2', '#cd7f32']) {
+      assert.ok(!screen.includes(hex), `the leaderboard must not use the medal colour ${hex}`);
+    }
+    assert.ok(!screen.includes('subjectnamekey'), 'the leaderboard must not show a subject pill');
+  }
+
   const profileSource = readFileSync(join(process.cwd(), 'client/src/components/Profile.tsx'), 'utf8');
   const profileStreakIndex = profileSource.indexOf('<StreakCard stats={stats}');
   const profileSectionsIndex = profileSource.indexOf('<Grid columns={{ minWidth: 360, max: 2 }}');
