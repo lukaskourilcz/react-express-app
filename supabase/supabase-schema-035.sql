@@ -27,6 +27,14 @@
 --     gets free. Money cannot buy a deeper reserve than a learner who spends
 --     nothing.
 --
+-- Note added on 25 September 2026, when the owner made devShark freemium
+-- (SECOND-HANDOFF-25-9-2026.md). The product now calls tokens coins, and
+-- migration 041 doubles the rate at which verified XP earns them for a
+-- Premium account, so Premium reaches a protection sooner. No cash price buys
+-- one, the ceiling of two is unchanged, and a protection still changes the
+-- day count and nothing else. The paragraphs above are this migration as it
+-- was applied on 2026-09-09; 041 holds the current rate.
+--
 -- ── The merchandise package ────────────────────────────────────────────────
 --
 -- Finishing a whole learning path earns the package: a t-shirt, a mug and a

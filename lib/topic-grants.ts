@@ -6,9 +6,10 @@
 // the browser can never mint one for itself — the same rule the skill-check
 // unlocks follow.
 //
-// A grant only opens a path early. Learning stays free for everyone, and a
-// grant never touches content, explanations, XP, scores, streaks, ranks, or
-// leaderboards.
+// A grant only lifts the prerequisite ladder for a path. It opens no Premium
+// content: `shared/tiers.ts` and `lib/access.ts` still decide what an account
+// may start. It never touches content, explanations, XP, scores, streaks,
+// ranks, or leaderboards.
 
 import { isRoadmapTopic, type RoadmapTopic } from './roadmap';
 

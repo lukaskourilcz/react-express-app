@@ -250,9 +250,9 @@ export const en = {
   'shop.reason.adjustment': 'Adjustment',
   'shop.signInForWallet': 'Sign in to see your coins. They are recorded on your account, not on this device.',
   'shop.loadError': 'The shop could not load. Try again in a moment.',
-  'shop.fairnessNote': 'Nothing here changes what you can learn. No purchase affects access, XP, scores, streaks, ranks or the leaderboard.',
+  'shop.fairnessNote': 'Nothing on this page changes what you can open, your XP, your scores or your rank. A streak protection changes only the day count of your streak, and no leaderboard ranks by streak.',
   'shop.title': 'Rewards',
-  'shop.subtitle': 'Learning earns coins. Spend them on the crown or a streak protection, and on Premium, redeem them for devShark merchandise.',
+  'shop.subtitle': 'Learning earns coins. Spend them on the crown or a streak protection, and with Premium, redeem them for devShark merchandise.',
   'shop.syncing': 'Syncing your wallet and cosmetics…',
   'shop.balanceLabel': 'Your coins',
   'shop.tokensUnit': 'coins',
@@ -1087,9 +1087,12 @@ export const en = {
 
   // ── Misc previously-hardcoded strings ─────────────────────────────────
   'quiz.shareText': 'I scored {pct}% on devShark ({correct}/{total}). Try it!',
-  'quiz.supportTitle': 'Help keep the platform available',
-  'quiz.supportBody': 'Optional support helps cover transparent running costs. It never unlocks features or changes scores.',
-  'quiz.supportCta': 'See running costs',
+  // Unrendered since #230: the quiz prompt that asked for voluntary support
+  // left with the support page (#222). The keys stay because the retained
+  // Czech file still has them, and their values say what is true now.
+  'quiz.supportTitle': 'devShark Premium',
+  'quiz.supportBody': 'Premium opens every Learn topic and coding challenge. It never changes grading, XP, scores or ranks.',
+  'quiz.supportCta': 'See what Premium includes',
   'quiz.supportDismiss': 'Not now',
   'quiz.supportNever': 'Do not show this again',
   'quiz.reviewWeakAreas': 'Review weak areas',

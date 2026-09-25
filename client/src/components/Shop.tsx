@@ -16,8 +16,10 @@
 // its URL, and a tile shows a mockup only when the build found one under
 // client/public/merch.
 //
-// Nothing here changes access, content, XP, scores, streaks, ranks,
-// leaderboards or what is unlocked.
+// Nothing here changes access, content, XP, scores, ranks or leaderboards.
+// The one exception is bounded in shared/rewards.ts: a streak protection
+// changes the day count of a streak and nothing else. Premium, which decides
+// what a learner may open, is sold on /premium and never for coins.
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { VStack } from '@astryxdesign/core/VStack';
