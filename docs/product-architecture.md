@@ -434,6 +434,25 @@ production (issue #227, step D8).
   orders and claims, and Find devShark elsewhere, which also sits on the
   Profile. Its links come from `SOCIAL_PROFILES` in `client/product-catalog.ts`
   and show only once the owner records them.
+- **Invitations (step D8b, #228, migration 042).** The compliant substitute for
+  paying for follows: devShark's own server verifies the event it pays for.
+  Every account has an eight-letter code (`referral_codes`), and its invite link
+  is `/?ref=<code>`. `client/src/main.tsx` keeps the code in local storage and
+  takes it out of the address bar; after sign-in `ReferralBinder` offers it to
+  `op=referral` POST. `record_referral` binds it once (`referrals`, keyed by the
+  invited account), only while the account is at most 48 hours old by the
+  creation time Supabase Auth reported for the verified token, and refuses the
+  account's own code or a pair that already runs the other way. When the invited
+  friend has a passed Learn level, `credit_referral` pays both sides
+  `referralGrant` coins (100) once: the friend under `referral:<account>`, the
+  inviter under `referral:friend:<random key>`, so the inviter's ledger never
+  carries the friend's id. An inviter is paid for at most `referralCap` friends
+  (20), counted from the inviter's own ledger; past it the friend is still paid.
+  A first Learn pass and the wallet read settle it. The routine writes the
+  ledger and the referral row and nothing else. `op=referral` GET returns the
+  code and counts only; `referrals` has no browser policy. "Invite a friend"
+  sits after How to earn on `/shop`. A grant of 0 in `/dev` turns invitations
+  off.
 
 ## Deployment
 

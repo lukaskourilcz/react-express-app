@@ -47,6 +47,12 @@ first wallet read, so a second device grants nothing and there is no
 `user_metadata` flag to forge. The rates live in `shared/rewards.ts` and in
 `/dev` → Settings → Coins.
 
+Invitations pay too (migration 042, #228). A friend who signs up through a
+learner's invite link and finishes a first Learn level earns 100 coins for each
+of the two accounts, once. An inviter is paid for at most 20 friends, and a code
+binds only to an account at most 48 hours old. Count those coins in the
+calibration below: 20 friends are 2,000 coins, a third of a mug.
+
 **Redeeming is Premium only.** A free account sees the merchandise and the
 upgrade sheet; `op=orders` answers its redemption with 402 before it asks for
 an address. The crown and streak protection stay open to every account.
