@@ -276,7 +276,7 @@ tests remain cumulative, and each stage lists its own checks first so Results
 opens on what the brief just asked for. Original task IDs retain their drafts and
 completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
-routes, unlocks and progress. The full catalogue contains 610 tasks, and every
+routes, unlocks and progress. The full catalogue contains 635 tasks, and every
 graded code task carries a reference, a junior and a senior solution on the
 server; the last two reach the browser only with a verified pass.
 

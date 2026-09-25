@@ -173,6 +173,7 @@ prints is the live count.
 | JavaScript B (`js-easy3-*`) | 30 | none were short; recursion, nested-loops and for-in rose from 3 to 5, flat and timers from 3 to 4, promises and async-await by 2 each | JavaScript none of its 17, fewest 4 Easy; TypeScript 17, React 11, Algorithms 5 |
 | JavaScript C (`js-easy4-*`) | 30 | none were short; callbacks, two-pointer, flat and timers rose from 4 to 6, and higher-order, nested-loops, push, for-in, recursion and slice from 5 to 6 | JavaScript none of its 17, fewest 6 Easy; TypeScript 17, React 11, Algorithms 5 |
 | TypeScript A (`ts-easy2-*`) | 25 | all 17 short tags: utility-types, constraints, destructuring, map-set and two-pointer from 0 to 3; filter, keyof, map, spread, while, sort, strings and type-guards from 1 to 3, reduce to 4; readonly from 2 to 5, literal-types and record to 4 | JavaScript none; TypeScript none of its 24, fewest 3 Easy; React 11, Algorithms 5 |
+| TypeScript B (`ts-easy3-*`) | 25 | none were short; the fourteen tags at 3 rose to 5 or more: utility-types and spread to 7, filter and strings to 6, the other ten to 5; record, generics and tuples rose to 7 | JavaScript none; TypeScript none of its 24, fewest 5 Easy; React 11, Algorithms 5 |
 
 JavaScript B also covers techniques the Coding home lists but no Medium
 challenge uses yet, so the matrix leaves them out. Regex went from 0 Easy
@@ -195,6 +196,18 @@ type predicate, and a type check that assigns to it or reads through it passes
 only when the declaration is right. Hidden type checks (`hiddenTypeTests`)
 close the gaps the visible ones leave, such as a `Weekday` that still allows
 Saturday.
+
+TypeScript B thickens the rows the first wave left at three. Four utility types
+had no Easy challenge before it: `Omit`, `Extract`, `Required` and
+`ReturnType`. Two keyof challenges teach indexed access: a setting read back as
+`Settings[K]`, and an update whose `value: Product[K]` refuses a price written
+as text. Two sorting details matter for authors. QuickJS compares strings in
+`localeCompare` by code point where the browser follows the locale, so the
+case-insensitive sort asks for `<` and `>` on lower-cased titles. A comparator
+that never returns 0 can keep a short tie in order in one engine and break it
+in the other. The two sorting challenges hide a longer tie (eight equal scores,
+and eight titles in two case groups), and the server grader breaks on those
+too.
 
 A wave is one file per track under `lib/coding/tasks/easy-<track>-<wave>.ts`,
 its solutions under the same name in `lib/coding/solutions/`, and one line in
