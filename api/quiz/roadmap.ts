@@ -98,6 +98,7 @@ import { isRetiredTopic } from '../../shared/retired-content';
 import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
 import { refuseLocked } from '../../lib/access';
 import { creditLearnPass, settleMilestones } from '../../lib/rewards/coins';
+import { creditReferral } from '../../lib/rewards/referral';
 import type { GatedContent } from '../../shared/tiers';
 
 // One function for the whole roadmap to stay within the Vercel Hobby
@@ -1195,6 +1196,9 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       });
       // The last level of a topic is a Premium milestone.
       if (session.roadmapKind === 'level') await settleMilestones(supabase, userId, session.subject!);
+      // A friend's first passed Learn level pays both sides of an invitation
+      // once; the routine reads the verified progress itself (#228).
+      await creditReferral(supabase, userId, session.subject!);
     }
   } else if (!attempt.completed_at) {
     await withTimeout(

@@ -27,6 +27,7 @@ import { deploymentSubjectIds } from '../product-scope';
 import { refuseLocked } from '../access';
 import { isScopeSubject } from '../../shared/subject-catalog';
 import { creditSocialVisit, settleFinishedMonth, settleMilestones, type MilestoneReport } from './coins';
+import { creditReferral } from './referral';
 import {
   crownAvailable,
   isSocialPlatform,
@@ -71,11 +72,12 @@ function walletSubject(req: VercelRequest): string | null {
  * The entries are the point: a wallet whose owner cannot see why it holds what
  * it holds is the thing this replaced.
  *
- * A read also settles, before it answers, the three credits that have no
- * request of their own: the one-time welcome grant (an event id derived from
- * the account, so a second device grants nothing), the top three of a month
- * that has just ended, and any Premium milestone the learner's verified
- * progress has reached. Each is idempotent, so reading twice credits nothing.
+ * A read also settles, before it answers, the credits that have no request of
+ * their own: the one-time welcome grant (an event id derived from the account,
+ * so a second device grants nothing), the top three of a month that has just
+ * ended, any Premium milestone the learner's verified progress has reached,
+ * and the learner's own invitation once a Learn level is passed (#228). Each
+ * is idempotent, so reading twice credits nothing.
  */
 export async function handleWallet(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   const userId = await requireAuthSub(req, res);
@@ -95,6 +97,9 @@ export async function handleWallet(req: VercelRequest, res: VercelResponse, supa
         : Promise.resolve(null),
       settleFinishedMonth(supabase, subject),
       settleMilestones(supabase, userId, subject),
+      // An invitation whose first level was passed outside a Learn completion
+      // (or whose credit failed there) settles here (#228).
+      creditReferral(supabase, userId, subject),
     ]);
     if (welcome?.error && isRpcMissing(welcome.error)) return migrationRequired(res);
 
@@ -179,6 +184,8 @@ function earnSummary(coins: CoinSettings, report: MilestoneReport | null) {
       shortPathComplete: coins.shortPathComplete,
       monthTop: coins.monthTop,
       socialVisitGrant: coins.socialVisitGrant,
+      referralGrant: coins.referralGrant,
+      referralCap: coins.referralCap,
     },
     progress: report
       ? {

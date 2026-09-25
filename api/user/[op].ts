@@ -27,6 +27,7 @@ import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
 import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
 import { handleCodingBookmarks, handleCodingSkip, handlePracticeSession } from '../../lib/coding/practice-handlers';
 import { deleteCoinData, settleMilestones } from '../../lib/rewards/coins';
+import { deleteReferralData, handleReferral } from '../../lib/rewards/referral';
 import { creditVerifiedXp, handleCosmetic, handleStreakProtection, handleFulfilment, handleOrders, handlePaymentWebhook, handleShopCatalogue, handleWallet } from '../../lib/rewards/handlers';
 import {
   handleEnrollment,
@@ -87,6 +88,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'coding-skip') return handleCodingSkip(req, res, supabase);
   if (op === 'practice-session') return handlePracticeSession(req, res, supabase);
   if (op === 'wallet') return handleWallet(req, res, supabase);
+  if (op === 'referral') return handleReferral(req, res, supabase);
   if (op === 'shop') return handleShopCatalogue(req, res, supabase);
   if (op === 'orders') return handleOrders(req, res, supabase);
   if (op === 'cosmetic') return handleCosmetic(req, res, supabase);
@@ -154,6 +156,12 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
     // Coin credit records and any month's winner line (migration 041, #227).
     if (!(await deleteCoinData(supabase!, auth.sub))) {
       logEvent('delete-account', { status: 500, reason: 'coin_cleanup_failed' });
+      return jsonError(res, 500, 'db_error', 'Could not delete account data');
+    }
+
+    // The invite code and referral rows (migration 042, #228).
+    if (!(await deleteReferralData(supabase!, auth.sub))) {
+      logEvent('delete-account', { status: 500, reason: 'referral_cleanup_failed' });
       return jsonError(res, 500, 'db_error', 'Could not delete account data');
     }
 
