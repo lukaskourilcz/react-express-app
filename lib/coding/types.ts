@@ -9,6 +9,7 @@ import type {
   CodingTrack,
   CodingFormat,
   CodingVerify,
+  Difficulty,
   DesignDrillFormat,
   Localized,
   LocalizedList,
@@ -58,6 +59,8 @@ export interface CodingTaskSource {
   topic: CodingTask['topic'];
   level: number;
   tier: CodingTier;
+  /** Only where the label derived from the tier would mislead; it must fit the tier. */
+  difficulty?: Difficulty;
   focus: string[];
   title: string;
   prompt: string;
@@ -126,6 +129,9 @@ export interface CodingSolution {
   senior?: string;
   hiddenTests?: SourceCallTest[];
   hiddenTypeTests?: SourceTypeTest[];
+  /** React only: more Testing Library cases, test blocks with no imports,
+   * which the server runs after the visible suite (`./react-hidden`). */
+  hiddenSuite?: string;
 }
 
 const loc = (en: string, cs: string | undefined): Localized => ({ en, cs: cs ?? '' });
@@ -145,6 +151,7 @@ export function mergeTask(source: CodingTaskSource, cs: CodingTaskCs | undefined
     topic: source.topic,
     level: source.level,
     tier: source.tier,
+    ...(source.difficulty ? { difficulty: source.difficulty } : {}),
     focus: source.focus,
     title: loc(source.title, cs?.title),
     prompt: loc(source.prompt, cs?.prompt),

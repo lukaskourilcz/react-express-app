@@ -11,7 +11,7 @@ import {
 import { encodeSession, createChallengeRun, decodeChallengeRun, decodeScoreProof } from '../../lib/quiz-tokens';
 import { jsonError, createLogger, createServiceClient, withTimeout, isRpcMissing, withRequestContext } from '../../lib/http';
 import { AuthError, tryAuth } from '../../lib/auth';
-import { getEffectiveQuestions } from '../../lib/questions-store';
+import { getEffectiveQuestions, getEffectiveQuestionsById } from '../../lib/questions-store';
 import { getChallengeLeaderboard, recordChallengeScore } from '../../lib/challenge-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { defaultDeploymentCategories, deploymentSubjectIds, validateCategoryScope } from '../../lib/product-scope';
@@ -238,6 +238,7 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
   }
 
   const seen = new Set<string>();
+  const outcomes: { questionId: string; isCorrect: boolean }[] = [];
   let score = 0;
   let failures = 0;
   for (const value of body.proofs) {
@@ -246,6 +247,7 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
     if (!proof || proof.runId !== run.runId || proof.subject !== run.subject) return jsonError(res, 400, 'invalid_proof', 'Invalid score proof');
     if (seen.has(proof.questionId)) continue;
     seen.add(proof.questionId);
+    outcomes.push({ questionId: proof.questionId, isCorrect: proof.isCorrect });
     if (proof.isCorrect) score++;
     else failures++;
   }
@@ -266,14 +268,29 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
   // (including an all-timeout run) must never be a farmable base award.
   const xp = Math.min(10_000, score * 5);
   if (xp <= 0) return res.json({ ok: true, awarded: false, score, xp: 0 });
-  const { data, error } = await withTimeout(
-    supabase.rpc('record_verified_activity_xp', {
+  // Migration 040's completion step applies the same award under the same id
+  // and also dates the run's answers for the 30-day board. Until it is
+  // installed, fall back to the award alone.
+  const breakdown = await runBreakdown(run.subject, outcomes);
+  let { data, error } = await withTimeout(
+    supabase.rpc('record_challenge_completion', {
       p_user_id: auth.sub,
-      p_award_id: `challenge:${run.runId}`,
+      p_run_id: run.runId,
       p_subject: run.subject,
       p_xp: xp,
+      p_breakdown: breakdown,
     }),
   );
+  if (isRpcMissing(error)) {
+    ({ data, error } = await withTimeout(
+      supabase.rpc('record_verified_activity_xp', {
+        p_user_id: auth.sub,
+        p_award_id: `challenge:${run.runId}`,
+        p_subject: run.subject,
+        p_xp: xp,
+      }),
+    ));
+  }
   if (error) {
     if (isRpcMissing(error)) return jsonError(res, 503, 'migration_required', 'Verified progression migration is not installed');
     return jsonError(res, 500, 'db_error', 'Could not record challenge progress');
@@ -284,6 +301,34 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
     await creditVerifiedXp(supabase, { userId: auth.sub, awardId: `challenge:${run.runId}`, subject: run.subject, xp });
   }
   return res.json({ ok: true, awarded: data === true, score, xp });
+}
+
+/**
+ * A finished run's answers by category, for the dated boards. A score proof
+ * names its question and not its category, so the category comes from the
+ * server's own bank. A question that has left the bank since the run was
+ * served is left out rather than guessed, and a bank that cannot be read
+ * leaves the whole breakdown out: the award still applies either way.
+ */
+async function runBreakdown(
+  subject: Parameters<typeof getEffectiveQuestionsById>[0],
+  outcomes: { questionId: string; isCorrect: boolean }[],
+): Promise<Record<string, { correct: number; total: number }> | null> {
+  try {
+    const bank = await getEffectiveQuestionsById(subject, false);
+    const breakdown: Record<string, { correct: number; total: number }> = {};
+    for (const outcome of outcomes) {
+      const category = bank.get(outcome.questionId)?.category;
+      if (!category) continue;
+      const entry = (breakdown[category] ??= { correct: 0, total: 0 });
+      entry.total += 1;
+      if (outcome.isCorrect) entry.correct += 1;
+    }
+    return Object.keys(breakdown).length > 0 ? breakdown : null;
+  } catch (error) {
+    logEvent({ status: 200, kind: 'complete', warn: 'breakdown_unavailable', error: error instanceof Error ? error.message : 'unknown' });
+    return null;
+  }
 }
 
 function requestedScope(req: VercelRequest, opts: { forDelivery: boolean }) {

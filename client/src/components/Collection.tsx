@@ -4,6 +4,8 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
 import { useBookmarks, useSaveChallenge } from '../coding/practice';
 import { CODING_INDEX } from '../../../shared/coding-index';
+import { difficultyOf } from '../../../shared/coding-catalog';
+import { DifficultyBadge } from '../coding/DifficultyBadge';
 import LoadingScreen from './LoadingScreen';
 import { Kicker } from './landing/LandingKit';
 import '../coding/Coding.css';
@@ -24,7 +26,12 @@ function SavedChallenges() {
     <ul className="cd-rows">{query.data.saved.map(id => {
       const task = CODING_INDEX.find(task => task.id === id);
       return <li key={id} className="cd-row-item">
-        {task ? <Link className="cd-row" to={`/coding/${task.track}/${task.id}`}>{task.title[lang] || task.title.en}</Link> : <span className="cd-row">{t('collection.unavailable')} ({id})</span>}
+        {task
+          ? <Link className="cd-row" to={`/coding/${task.track}/${task.id}`}>
+            <span className="cd-row__title">{task.title[lang] || task.title.en}</span>
+            <span className="cd-row__meta"><DifficultyBadge difficulty={difficultyOf(task)} /><span>{t(`coding.track.${task.track}` as never)}</span></span>
+          </Link>
+          : <span className="cd-row">{t('collection.unavailable')} ({id})</span>}
         <button className="cd-btn" disabled={save.isPending} onClick={() => save.mutate({ op: 'save', taskId: id, saved: false })}>{t('coding.saved.remove')}</button>
       </li>;
     })}</ul>

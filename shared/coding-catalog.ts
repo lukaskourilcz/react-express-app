@@ -3,9 +3,9 @@
  * Task bodies (prompts, starters, tests, hints) live under `lib/coding/tasks`
  * and reach the browser only through the API. Reference solutions and hidden
  * tests live under `lib/coding/solutions` and never leave the server. This
- * module owns the types, the track and tier vocabulary, the technique index,
- * XP amounts, the difficulty ladder, the badge ids, and the GitHub garden path
- * rules, so every surface computes them the same way. */
+ * module owns the types, the track and tier vocabulary, the Easy/Medium/Hard
+ * labels, the technique index, XP amounts, the difficulty ladder, the badge ids,
+ * and the GitHub garden path rules, so every surface computes them the same way. */
 
 import type { FailureCategory } from './coding-failure';
 import type { PuzzleView } from './coding-puzzle';
@@ -73,6 +73,57 @@ export const CODING_TIERS: Record<CodingTier, string> = {
 };
 export const isCodingTier = (value: unknown): value is CodingTier =>
   value === 1 || value === 2 || value === 3 || value === 4 || value === 5;
+
+/* ──── Difficulty labels ─────────────────────────────────────────────────
+ * Easy, Medium and Hard are what a learner reads on every listed challenge.
+ * They are a projection of the tier ladder, not a second ladder: `tierUnlocked`,
+ * `CODING_TASK_XP` and the badge rules keep reading the tier, and nothing
+ * opens, locks or pays by label. The ids double as translation-key suffixes
+ * (`coding.difficulty.<id>`). */
+export const CODING_DIFFICULTIES = ['easy', 'medium', 'hard'] as const;
+export type Difficulty = (typeof CODING_DIFFICULTIES)[number];
+export const isDifficulty = (value: unknown): value is Difficulty =>
+  typeof value === 'string' && (CODING_DIFFICULTIES as readonly string[]).includes(value);
+
+/** A standalone task's label: tiers 1 and 2 are Easy, 3 is Medium, 4 and 5 are Hard. */
+export const TIER_DIFFICULTY: Record<CodingTier, Difficulty> = { 1: 'easy', 2: 'easy', 3: 'medium', 4: 'hard', 5: 'hard' };
+
+/** Where Easy and Medium end in a stage list, by its length: the last Easy
+ * position and the last Medium position, one-based. Every project stage and
+ * short-path level is tier 2 today, so a stage's label comes from how far along
+ * its path it sits. Five-level paths split 2/2/1, ten-stage projects 3/4/3 and
+ * the twelve-stage FullStack apps 4/5/3. */
+export const STAGE_DIFFICULTY_BANDS: Readonly<Record<number, readonly [number, number]>> = {
+  5: [2, 4],
+  10: [3, 7],
+  12: [4, 9],
+};
+
+/** The label of the stage at zero-based `index` in a path of `length` stages.
+ * A length with no authored band splits into rough thirds; the content test
+ * requires a band for every length the catalogue actually uses. */
+export function stageDifficulty(index: number, length: number): Difficulty {
+  const [easyLast, mediumLast] = STAGE_DIFFICULTY_BANDS[length]
+    ?? [Math.ceil(length / 3), length - Math.floor(length / 3)];
+  const position = index + 1;
+  return position <= easyLast ? 'easy' : position <= mediumLast ? 'medium' : 'hard';
+}
+
+/** Whether an authored label agrees with the tier it overrides. An Easy task
+ * cannot sit at tier 3 or above, and a Hard task cannot sit at tier 1 or 2;
+ * Medium fits any tier. `npm run test:coding` refuses an override that fails. */
+export const difficultyFitsTier = (difficulty: Difficulty, tier: CodingTier): boolean =>
+  difficulty === 'easy' ? tier <= 2 : difficulty === 'hard' ? tier >= 3 : true;
+
+/** The label for a task or summary. An authored `difficulty` wins (the index
+ * carries the resolved one); otherwise a project stage or path level reads its
+ * position and a standalone task reads its tier. */
+export function difficultyOf(task: { id: string; tier: CodingTier; difficulty?: Difficulty }): Difficulty {
+  if (task.difficulty) return task.difficulty;
+  const stage = evolvingStage(task.id);
+  if (stage) return stageDifficulty(stage.index, stage.challenge.stages.length);
+  return TIER_DIFFICULTY[task.tier];
+}
 
 /** One runtime assertion: `call` is evaluated against the learner's code and
  * compared with `expected` by deep equality. Async calls are awaited. */
@@ -149,6 +200,9 @@ export interface CodingTask {
   /** Learn level 1–25 (index into LEVEL_TITLES). 0 for system design. */
   level: number;
   tier: CodingTier;
+  /** An authored label, only where the derived one would mislead. It must fit
+   * the tier (see `difficultyFitsTier`); absent means `difficultyOf` derives it. */
+  difficulty?: Difficulty;
   /** Technique tags from CODING_TECHNIQUES. */
   focus: string[];
   title: Localized;
@@ -190,6 +244,8 @@ export interface CodingTaskSummary {
   track: CodingTrack;
   level: number;
   tier: CodingTier;
+  /** The resolved label (`difficultyOf`), written into the index at build time. */
+  difficulty: Difficulty;
   focus: string[];
   title: Localized;
   verify: CodingVerify;

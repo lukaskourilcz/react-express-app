@@ -5,6 +5,8 @@ const meta = { title: 'Screens/Leaderboard', component: Leaderboard } satisfies 
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Populated: Story = { parameters: { msw: { handlers: [leaderboardHandlers.populated] } } };
+export const Pinned: Story = { parameters: { msw: { handlers: [leaderboardHandlers.pinned] } } };
+export const NoActivity: Story = { parameters: { msw: { handlers: [leaderboardHandlers.noActivity] } } };
 export const Empty: Story = { parameters: { msw: { handlers: [leaderboardHandlers.empty] } } };
 export const Loading: Story = { parameters: { msw: { handlers: [leaderboardHandlers.loading] } } };
 export const ServerError: Story = { parameters: { msw: { handlers: [leaderboardHandlers.error] } } };

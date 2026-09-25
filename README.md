@@ -16,9 +16,9 @@ Current content: **2,447 authored questions**, of which 2,293 are served (the co
 - Configurable solo quizzes with category, difficulty, and question-count selection; weighted sampling; shuffled answers; bookmarks; question reporting; keyboard controls; and a two-column desktop review.
 - A deterministic daily challenge and the timed Biggest Shark Challenge with leaderboards.
 - Live free-for-all matches and host-led classroom rooms using Supabase Realtime with polling recovery, server-side timing, and QR sharing.
-- All-time, daily, and category leaderboards; forgiving streaks (configurable off-days plus two monthly freezes); verified XP; ranks; collectible cosmetic Shark Cards earned by finishing the Today queue; and a fairness-neutral cosmetic token shop.
+- 30-day, all-time, daily and per-topic leaderboards; forgiving streaks (configurable off-days plus two monthly freezes); verified XP; ranks; collectible cosmetic Shark Cards earned by finishing the Today queue; and a fairness-neutral cosmetic token shop.
 - A read-only study advisor that names your weakest areas from your own results, and a touch-typing racer (accuracy-gated, WPM earns stars, private on-device best).
-- A Coding section with 440 tasks across JavaScript, TypeScript, React, an Algorithms interview track, and system design: server-graded submissions (QuickJS sandbox, real TypeScript type tests, sealed design keys), authored hint ladders ending in documentation, coding tasks inside Learn levels, a short review ladder, coding badges, and an optional GitHub garden that commits every passed task to the learner's own repository.
+- A Coding section with 695 tasks across JavaScript, TypeScript, React, an Algorithms interview track, and system design: server-graded submissions (QuickJS sandbox, real TypeScript type tests, sealed design keys), authored hint ladders ending in documentation, three debugging paths that teach the console as a tool, Easy, Medium and Hard labels projected from the tier ladder, coding tasks inside Learn levels, a short review ladder, coding badges, and an optional GitHub garden that commits every passed task to the learner's own repository.
 - Two optional learning paths, both graded through the existing server sandbox and both awarding no XP: the **Forward Deployed Engineer** role specialization (customer discovery, integration, bounded AI, evaluation, security, operations, handoff and a staged capstone) that sits on top of the chosen Fullstack/Frontend/Backend track, and **DSA Foundations** (growth classes, arrays, maps, stacks, queues, linked lists, recursion, search, sorting, trees) entered directly with no track, role or XP rank required. Verified checks stay visibly apart from self-reviewed writing, and neither path claims a certification.
 - Per-user flashcards with optimistic updates and offline-safe query caching.
 - Google sign-in through Supabase Auth, cross-device progress, profile settings, language preference, and permanent account deletion.
@@ -77,7 +77,7 @@ shared/                      product and subject registry, coding catalogue type
 supabase/supabase-schema*.sql         baseline plus migrations through 025
 docs/                        launch, architecture, backup, growth, content sources, coding integration plan
 scripts/test-launch-contracts.ts
-scripts/test-coding-content.ts        content contract: solutions proven, payloads answer-free
+scripts/test-coding-content.ts        content contract: solutions proven, payloads answer-free, difficulty labels, Easy-band coverage matrix
 scripts/test-harness.ts               React sandbox protocol check, driven in a real browser
 scripts/import-interview-prepper-progress.ts   one-time owner import
 ```
@@ -143,7 +143,7 @@ The twelve physical handlers multiplex related operations to stay within the dep
 | `/api/quiz/challenge` | Challenge batches, scoring, completion, leaderboard |
 | `/api/quiz/roadmap` | Structure, attempts, answers, completion, adaptive placement, progress; coding tasks, submissions, reports, and reveals; learning-path catalogue, activity start and submit |
 | `/api/play/[action]` | Multiplayer and classroom lifecycle |
-| `/api/leaderboard` | All-time, daily, and category boards |
+| `/api/leaderboard` | 30-day, all-time, daily, and category boards |
 | `/api/flashcards` | Flashcard CRUD |
 | `/api/user/[op]` | Stats, category stats, XP, streaks, badges, streak freezes, Shark Cards, study advisor, auth events, deletion; coding progress and drafts; learning preference, path enrollment, progress and drafts; GitHub garden connection, repository, sync, disconnect |
 | `/api/admin/[op]` | Role-gated control-room operations |

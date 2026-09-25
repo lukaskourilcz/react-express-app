@@ -6,10 +6,12 @@ import { JAVASCRIPT_PATHS } from './paths-javascript';
 import { TYPESCRIPT_PATHS } from './paths-typescript';
 import { REACT_PATHS } from './paths-react';
 import { ALGORITHM_PATHS } from './paths-algorithms';
+import { DEBUGGING_PATHS } from './paths-debugging';
 
 export const PATH_SPECS: Record<string, Spec> = {
   ...JAVASCRIPT_PATHS,
   ...TYPESCRIPT_PATHS,
   ...REACT_PATHS,
   ...ALGORITHM_PATHS,
+  ...DEBUGGING_PATHS,
 };

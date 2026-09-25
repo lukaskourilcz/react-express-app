@@ -4,14 +4,27 @@ import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingHome } from '../src/components/coding/CodingSection';
 import type { CodingProgressResponse } from '../../shared/coding-api';
+import { CODING_INDEX } from '../../shared/coding-index';
+import type { Tier } from '../../shared/tiers';
 
 // The Coding home's next-challenge card, in each state a reload goes through.
-// Auth and progress are what the card waits on, so they are the mocks here.
+// Auth, the plan and progress are what the card waits on, so they are the mocks here.
 const state = vi.hoisted(() => ({
   auth: { isAuthenticated: true, isLoading: false },
+  plan: { tier: 'premium' as Tier | null, loading: false },
   progress: { data: undefined as CodingProgressResponse | undefined, isLoading: true, isError: false, refetch: () => {} },
 }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => state.auth }));
+vi.mock('../src/lib/entitlement', () => ({
+  useEntitlement: () => ({
+    tier: state.auth.isLoading ? null : state.auth.isAuthenticated ? state.plan.tier : 'free',
+    signedIn: state.auth.isAuthenticated,
+    loading: state.auth.isLoading || (state.auth.isAuthenticated && state.plan.loading),
+    failed: false,
+    data: null,
+    refetch: () => {},
+  }),
+}));
 vi.mock('../src/coding/api', () => ({
   codingKeys: { task: (id: string) => ['task', id], progress: () => ['progress'] },
   saveCodingDraft: vi.fn(),
@@ -35,6 +48,7 @@ beforeEach(() => {
   // jsdom has no ResizeObserver; the project lists further down the page size themselves with one.
   vi.stubGlobal('ResizeObserver', class { observe() {} unobserve() {} disconnect() {} });
   state.auth = { isAuthenticated: true, isLoading: false };
+  state.plan = { tier: 'premium', loading: false };
   state.progress = { data: undefined, isLoading: true, isError: false, refetch: () => {} };
 });
 
@@ -89,4 +103,21 @@ it('keeps the card to the next challenge and Continue, beside the heading', () =
   expect(next.querySelector('a')).toBeNull();
   // The track line and the review count are gone from the card.
   expect(next).not.toHaveTextContent('JavaScript');
+});
+
+it('waits for a free account’s plan, then names a challenge the free plan opens', () => {
+  state.plan = { tier: null, loading: true };
+  state.progress = { data: passedDigitSum, isLoading: false, isError: false, refetch: () => {} };
+  const view = mount();
+  // Until the plan is known the card cannot tell a Premium challenge from a free one.
+  expect(card()).toHaveAttribute('aria-busy', 'true');
+  expect(within(card()).getByRole('button', { name: 'Continue' })).toBeDisabled();
+
+  state.plan = { tier: 'free', loading: false };
+  view.rerender(<MemoryRouter><LanguageProvider><CodingHome /></LanguageProvider></MemoryRouter>);
+  expect(card()).not.toHaveAttribute('aria-busy');
+  const title = card().querySelector('.cd-next__title')?.textContent ?? '';
+  const named = CODING_INDEX.find((task) => task.title.en === title);
+  expect(named?.free).toBe(true);
+  expect(within(card()).getByRole('button', { name: 'Continue' })).toBeEnabled();
 });

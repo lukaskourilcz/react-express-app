@@ -19,6 +19,7 @@ import type {
   PlayableCodingTask,
 } from '../../shared/coding-catalog';
 import { isFreeCodingTask } from '../../shared/tiers';
+import { difficultyOf } from '../../shared/coding-catalog';
 import { mergeTask, type CodingTaskCs, type CodingTaskSource } from './types';
 import { JAVASCRIPT_TASKS } from './tasks/javascript';
 import { JAVASCRIPT_TASKS_CS } from './tasks/javascript.cs';
@@ -38,6 +39,14 @@ import { JAVASCRIPT_DEBUG_TASKS } from './tasks/javascript-debug';
 import { JAVASCRIPT_DEBUG_TASKS_CS } from './tasks/javascript-debug.cs';
 import { ALGORITHM_TASKS } from './tasks/algorithms';
 import { ALGORITHM_TASKS_CS } from './tasks/algorithms.cs';
+import { EASY_JAVASCRIPT_A_TASKS } from './tasks/easy-javascript-a';
+import { EASY_JAVASCRIPT_B_TASKS } from './tasks/easy-javascript-b';
+import { EASY_JAVASCRIPT_C_TASKS } from './tasks/easy-javascript-c';
+import { EASY_TYPESCRIPT_A_TASKS } from './tasks/easy-typescript-a';
+import { EASY_TYPESCRIPT_B_TASKS } from './tasks/easy-typescript-b';
+import { EASY_REACT_A_TASKS } from './tasks/easy-react-a';
+import { EASY_REACT_B_TASKS } from './tasks/easy-react-b';
+import { EASY_ALGORITHMS_A_TASKS } from './tasks/easy-algorithms-a';
 import { SPECS, buildEvolvingTasks } from './tasks/evolving';
 import { TYPESCRIPT_EVOLVING } from './tasks/evolving-typescript';
 import { REACT_EVOLVING } from './tasks/evolving-react';
@@ -47,6 +56,26 @@ import { expandEvolvingTasks } from './tasks/evolving-checkpoints';
 import { DEBUG_EVOLVING } from './tasks/evolving-debug';
 import { PATH_SPECS } from './tasks/paths';
 import { buildFullStackPathTasks } from './tasks/paths-fullstack';
+
+/** The Easy-band waves of #226, one file per track and wave
+ * (`tasks/easy-<track>-<wave>.ts`, solutions under the same name). They fill
+ * the Coding section's Easy band and stay out of every Learn level's quota:
+ * that quota takes the first tasks of a level in catalogue order, so a new
+ * tier 1 task would otherwise replace the one a level has always asked for.
+ * English only, with no Czech overlay. */
+const EASY_BAND: CodingTaskSource[][] = [
+  EASY_JAVASCRIPT_A_TASKS,
+  EASY_JAVASCRIPT_B_TASKS,
+  EASY_JAVASCRIPT_C_TASKS,
+  EASY_TYPESCRIPT_A_TASKS,
+  EASY_TYPESCRIPT_B_TASKS,
+  EASY_REACT_A_TASKS,
+  EASY_REACT_B_TASKS,
+  EASY_ALGORITHMS_A_TASKS,
+];
+
+/** Ids of the Easy-band tasks; `tasksForLevel` in `./active` skips them. */
+export const EASY_BAND_TASK_IDS: ReadonlySet<string> = new Set(EASY_BAND.flat().map((task) => task.id));
 
 const sources: { tasks: CodingTaskSource[]; cs: Record<string, CodingTaskCs> }[] = [
   { tasks: JAVASCRIPT_TASKS, cs: JAVASCRIPT_TASKS_CS },
@@ -58,6 +87,7 @@ const sources: { tasks: CodingTaskSource[]; cs: Record<string, CodingTaskCs> }[]
   { tasks: REACT_LOOP_TASKS, cs: REACT_LOOP_TASKS_CS },
   { tasks: SYSTEM_DESIGN_TASKS, cs: SYSTEM_DESIGN_TASKS_CS },
   { tasks: ALGORITHM_TASKS, cs: ALGORITHM_TASKS_CS },
+  ...EASY_BAND.map((tasks) => ({ tasks, cs: {} })),
 ];
 
 /** Every task: tracks in catalogue order, then level, tier, and authored order
@@ -92,6 +122,7 @@ export function summarize(task: CodingTask): CodingTaskSummary {
     track: task.track,
     level: task.level,
     tier: task.tier,
+    difficulty: difficultyOf(task),
     focus: task.focus,
     title: task.title,
     verify: task.verify,

@@ -39,6 +39,7 @@ import { solutionFor } from '../lib/coding/solutions';
 import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
 import { runInSandbox } from '../lib/coding/sandbox';
 import { runReactSuite } from '../lib/coding/react-runner';
+import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
@@ -126,7 +127,7 @@ import {
   pathGuidedComplete,
   pathInventory,
 } from '../shared/learning-paths';
-import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS, CODING_TRACKS, formatOf, isCodingSectionTrack } from '../shared/coding-catalog';
+import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS, CODING_TRACKS, formatOf, isCodingSectionTrack, isDifficulty } from '../shared/coding-catalog';
 import { CODING_BADGES } from '../shared/badges';
 import { CODING_INDEX } from '../shared/coding-index';
 import { inspectQuestionQuality } from '../lib/question-quality';
@@ -1319,6 +1320,14 @@ async function main() {
   assert.deepEqual(eligibleCodingBadges(new Set(), CODING_INDEX), []);
   assert.deepEqual(CODING_BADGES.map((badge) => badge.id), [...CODING_BADGE_IDS], 'every coding badge has display metadata');
   assert.ok(CODING_TASK_XP[1] < CODING_TASK_XP[5]);
+  // Easy, Medium and Hard are labels projected from the tier ladder (#224).
+  // Every listed challenge carries one, and nothing that opens, locks or pays
+  // reads it: the ladder and the XP table stay keyed by tier.
+  assert.ok(CODING_INDEX.every((row) => isDifficulty(row.difficulty)), 'every indexed challenge carries Easy, Medium or Hard');
+  assert.deepEqual(CODING_TASK_XP, { 1: 25, 2: 35, 3: 50, 4: 75, 5: 120 }, 'coding XP stays keyed by tier');
+  const codingCatalogSource = readFileSync(join(process.cwd(), 'shared', 'coding-catalog.ts'), 'utf8');
+  const ladderSource = codingCatalogSource.slice(codingCatalogSource.indexOf('export function tierUnlocked'), codingCatalogSource.indexOf('/** Cosmetic badge ids'));
+  assert.ok(ladderSource.includes('tierPassRatio') && !/difficulty/i.test(ladderSource.replace(/\/\*\*[\s\S]*?\*\//g, '')), 'the tier ladder never reads the difficulty label');
 
   // React tasks are graded on the server like every other track: the reference
   // solution passes, a component that renders nothing fails, and a case that
@@ -1339,6 +1348,27 @@ async function main() {
     appSource: 'function App() { return null; }',
   });
   assert.equal(reactStuck.timedOut, true, 'a case that never settles is reported as a timeout');
+  // Hidden React cases (#226) decide the verdict but reach the learner only as
+  // a count: Submit appends them to the visible suite and splits them out.
+  const reactHidden = await runReactSuite({
+    suite: withHiddenCases(reactTask!.suite!, "test('a hidden case', () => { expect(1).toBe(2); });"),
+    appSource: reactSolution!,
+  });
+  const reactSplit = splitHiddenCases(reactHidden.cases);
+  assert.equal(reactSplit.hidden.length, 1, 'the hidden case runs after the visible suite');
+  assert.ok(reactSplit.visible.length === reactPass.total && reactSplit.visible.every((one) => one.status === 'pass'), 'the visible cases keep their names and verdicts');
+  assert.ok(reactHidden.failed > 0, 'a failing hidden case fails the run');
+  const codingHandlersSource = readFileSync(join(process.cwd(), 'lib', 'coding', 'handlers.ts'), 'utf8');
+  const gradeReactSource = codingHandlersSource.slice(codingHandlersSource.indexOf('async function gradeReact'), codingHandlersSource.indexOf('function gradeDesignTask'));
+  assert.match(gradeReactSource, /withHiddenCases\(task\.suite, solutionFor\(task\.id\)\?\.hiddenSuite\)/, 'Submit runs the hidden React cases');
+  assert.match(gradeReactSource, /const results = visible\.map/, 'only the visible React cases go back with names and errors');
+  // A rejection the component leaves unhandled only logs in the browser; the
+  // server runner must reach a verdict too instead of ending the process.
+  const reactRejected = await runReactSuite({
+    suite: "import React from 'react';\nimport { render } from '@testing-library/react';\nimport App from './App';\ntest('renders', async () => { render(<App />); await new Promise((resolve) => setTimeout(resolve, 20)); });",
+    appSource: "const App = () => { useEffect(() => { Promise.reject(new Error('left unhandled')); }, []); return null; };",
+  });
+  assert.equal(reactRejected.failed, 0, 'an unhandled rejection in the component does not end the React runner');
 
   const qualityIssues = inspectQuestionQuality([{
     ...reviewQuestions[0],
@@ -1600,6 +1630,76 @@ async function main() {
         `buying a protection must not touch ${forbidden}`,
       );
     }
+  }
+
+  // The dated boards (migration 040, #223). Every board ranks correct answers,
+  // then accuracy: never XP and never a streak. Answers are dated only inside
+  // the three verified answer routines, and a coding pass is not an answer.
+  {
+    const migration = readFileSync(join(process.cwd(), 'supabase/supabase-schema-040.sql'), 'utf8');
+    const routineOf = (name: string) => {
+      const start = migration.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`);
+      assert.ok(start >= 0, `migration 040 must define ${name}`);
+      return migration.slice(start, migration.indexOf('$$;', migration.indexOf('AS $$', start)));
+    };
+    for (const name of ['window_leaderboard', 'window_leaderboard_rank']) {
+      const body = routineOf(name).toLowerCase();
+      assert.ok(!body.includes('streak'), `${name} must never read a streak column`);
+      assert.ok(!/\bxp\b|quest_xp|user_xp/.test(body), `${name} must never read XP`);
+    }
+    assert.match(
+      routineOf('window_leaderboard'),
+      /RANK\(\) OVER \(ORDER BY t\.correct DESC, t\.answered ASC\)/,
+      'the window ranks correct answers, then fewer answers for the same number correct',
+    );
+    const friendOrder = routineOf('friend_list').split('ORDER BY').pop() ?? '';
+    assert.ok(!/streak/i.test(friendOrder), 'friend_list must never order by a streak');
+    assert.match(friendOrder, /total_correct/, 'friend_list orders by correct answers first');
+
+    assert.equal(migration.match(/INSERT INTO public\.user_activity_days/g)?.length, 1, 'one upsert writes dated activity');
+    assert.equal(
+      migration.match(/PERFORM public\.add_activity_day\(/g)?.length,
+      3,
+      'only the quiz, Learn and challenge routines date answers',
+    );
+    for (const name of ['record_verified_quiz_result_v2', 'record_roadmap_answer_v2', 'record_challenge_completion']) {
+      assert.match(routineOf(name), /PERFORM public\.add_activity_day\(/, `${name} must date its answers`);
+    }
+    assert.doesNotMatch(migration, /FUNCTION public\.record_coding/, 'a coding pass must not reach the dated boards');
+    for (const file of apiFiles(join(process.cwd(), 'api'))) {
+      const source = readFileSync(file, 'utf8');
+      assert.doesNotMatch(source, /from\(['"]user_activity_days/, `${file} must not write dated activity directly`);
+      assert.doesNotMatch(source, /rpc\(['"]add_activity_day/, `${file} must not date answers outside a verified routine`);
+    }
+
+    assert.match(migration, /ALTER TABLE public\.user_activity_days ENABLE ROW LEVEL SECURITY/);
+    for (const fn of [
+      'add_activity_day', 'record_verified_quiz_result_v2', 'record_roadmap_answer_v2', 'record_challenge_completion',
+      'window_leaderboard', 'window_leaderboard_rank', 'friend_list', 'delete_user_activity_days',
+    ]) {
+      assert.match(
+        migration,
+        new RegExp(`REVOKE ALL ON FUNCTION public\\.${fn}\\([^)]*\\)\\s+FROM PUBLIC, anon, authenticated`),
+        `${fn} must be service-role only`,
+      );
+    }
+
+    // The shared board stays cacheable; a personal one never is.
+    const boardHandler = readFileSync(join(process.cwd(), 'api/leaderboard.ts'), 'utf8');
+    assert.match(boardHandler, /'private, no-store'/);
+    assert.match(boardHandler, /'public, s-maxage=60, stale-while-revalidate=300'/);
+    assert.match(boardHandler, /RATE_LIMITS\.leaderboardPersonal/);
+
+    // The screen: a rank is a number, never a medal colour, and the
+    // multi-subject pill is gone.
+    const screen = ['client/src/components/Leaderboard.tsx', 'client/src/components/Leaderboard.css']
+      .map((file) => readFileSync(join(process.cwd(), file), 'utf8'))
+      .join('\n')
+      .toLowerCase();
+    for (const hex of ['#f5b301', '#9aa4b2', '#cd7f32']) {
+      assert.ok(!screen.includes(hex), `the leaderboard must not use the medal colour ${hex}`);
+    }
+    assert.ok(!screen.includes('subjectnamekey'), 'the leaderboard must not show a subject pill');
   }
 
   const profileSource = readFileSync(join(process.cwd(), 'client/src/components/Profile.tsx'), 'utf8');

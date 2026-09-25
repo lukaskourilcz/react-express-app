@@ -18,6 +18,7 @@ import { codingTaskForHistory, playable } from './catalog';
 import { CODING_SUMMARIES, codingTaskById } from './active';
 import { codingTaskReview } from '../curation';
 import { solutionFor } from './solutions';
+import { splitHiddenCases, withHiddenCases } from './react-hidden';
 import { runInSandbox } from './sandbox';
 import { nodeTypeScriptChecker } from './ts-check-node';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
@@ -354,7 +355,7 @@ async function gradeReact(task: CodingTask, code: string): Promise<Graded> {
   try {
     const { runIsolatedReactSuite } = await import('./react-isolated');
     loaded = true;
-    run = await runIsolatedReactSuite({ suite: task.suite, appSource: code });
+    run = await runIsolatedReactSuite({ suite: withHiddenCases(task.suite, solutionFor(task.id)?.hiddenSuite), appSource: code });
   } catch (error) {
     // The runtime itself could not start; that is ours, not the learner's.
     const code = (error as { code?: unknown } | undefined)?.code;
@@ -372,7 +373,10 @@ async function gradeReact(task: CodingTask, code: string): Promise<Graded> {
       design: null, designReference: null,
     };
   }
-  const results = run.cases.map((one) => ({ pass: one.status === 'pass', actual: null, error: one.error }));
+  // Hidden cases decide the verdict with the rest but go back only as a count,
+  // never with their names or errors.
+  const { visible, hidden } = splitHiddenCases(run.cases);
+  const results = visible.map((one) => ({ pass: one.status === 'pass', actual: null, error: one.error }));
   const verdict: CodingOutcome = run.compileError
     ? 'error'
     : run.timedOut
@@ -381,7 +385,7 @@ async function gradeReact(task: CodingTask, code: string): Promise<Graded> {
   const graded: Graded = {
     verdict,
     results,
-    hidden: null,
+    hidden: hidden.length > 0 ? { passed: hidden.filter((one) => one.status === 'pass').length, total: hidden.length } : null,
     check: null,
     logs: [],
     codeError: run.compileError,

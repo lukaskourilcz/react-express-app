@@ -9,7 +9,8 @@ import { useLanguage } from '../i18n/LanguageContext';
 import { RadioCard, RadioCardGroup } from '../components/ui/RadioCards';
 import { ApiError } from '../lib/api';
 import { submitCoding } from './api';
-import type { Localized, PlayableCodingTask } from '../../../shared/coding-catalog';
+import { difficultyOf, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
+import { DifficultyBadge } from './DifficultyBadge';
 import type { CodingLockReason, CodingVerdictResponse, DesignAnswer } from '../../../shared/coding-api';
 import './Coding.css';
 
@@ -89,6 +90,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
       <Kicker>{t('coding.track.system-design')} · {design ? t('coding.design.step', { n: Math.min(stepIndex + 1, steps.length), total: steps.length }) : t(`coding.design.format.${drill?.format ?? 'tradeoff'}` as never)}</Kicker>
       <h2>{L(task.title)}</h2>
       <div className="cd-pane__meta">
+        <DifficultyBadge difficulty={difficultyOf(task)} />
         <span>{t('coding.minutes', { n: task.estimatedMinutes })}</span>
         {task.focus.map((tag) => <span key={tag} className="cd-tag">{tag}</span>)}
       </div>

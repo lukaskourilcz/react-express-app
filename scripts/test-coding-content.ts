@@ -6,24 +6,35 @@
 // Local aids while content is being authored (never set in CI):
 //   CODING_ALLOW_LEVEL_GAPS=1   allow Learn levels without a task
 //   CODING_SKIP_INDEX=1         do not require shared/coding-index.ts to be fresh
+//   CODING_COVERAGE_ENFORCED=1  fail on Easy-band technique gaps even while COVERAGE_ENFORCED is off
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { CODING_TASKS, playable } from '../lib/coding/catalog';
+import { CODING_TASKS, EASY_BAND_TASK_IDS, playable } from '../lib/coding/catalog';
 import { CODING_SUMMARIES, levelCodingTasks, tasksForLevel } from '../lib/coding/active';
 import { solutionFor, solutionIds } from '../lib/coding/solutions';
 import { stripComments } from '../lib/coding/solutions/strip-comments';
 import { localizedFields, localizedLists } from '../lib/coding/types';
 import {
+  CODING_DIFFICULTIES,
   CODING_SECTION_TRACKS,
   CODING_TRACKS,
+  STAGE_DIFFICULTY_BANDS,
+  TIER_DIFFICULTY,
+  difficultyFitsTier,
+  difficultyOf,
   gardenPathFor,
   isCodingTaskId,
   isCodingTechnique,
   isCodingTier,
+  isDifficulty,
+  stageDifficulty,
+  type CodingTier,
+  type Difficulty,
 } from '../shared/coding-catalog';
-import { docsFor } from '../shared/coding-docs';
+import { COVERAGE_ENFORCED, COVERAGE_MIN_EASY, coverageGaps, renderCoverage, techniqueCoverage } from './coding-coverage';
+import { docsFor, taskResources } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
 import { formatOf } from '../shared/coding-catalog';
 import { runInSandbox } from '../lib/coding/sandbox';
@@ -32,8 +43,9 @@ import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../shared/co
 import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { runReactSuite } from '../lib/coding/react-runner';
+import { HIDDEN_CASE_PREFIX, splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
 import { renderCodingIndex } from './build-coding-index';
-import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed } from '../shared/evolving';
+import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, listedChallenges } from '../shared/evolving';
 
 // The app ships English only (`ENABLED_LANGS` in the client's LanguageContext),
 // so Czech copy is retained work rather than a shipped surface and a new task
@@ -46,6 +58,7 @@ const ALLOW_GAPS = process.env.CODING_ALLOW_LEVEL_GAPS === '1';
 // CODING_CS_TRACKS=javascript,typescript.
 const CS_TRACKS = (process.env.CODING_CS_TRACKS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const SKIP_INDEX = process.env.CODING_SKIP_INDEX === '1';
+const ENFORCE_COVERAGE = COVERAGE_ENFORCED || process.env.CODING_COVERAGE_ENFORCED === '1';
 // Prove only the solutions whose task id matches, e.g. CODING_ONLY='^ts-'
 // while one file is being authored. The shape checks still cover everything.
 // Never set in CI.
@@ -54,6 +67,10 @@ const nodeRequire = createRequire(import.meta.url);
 
 const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
   Promise.race([promise, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label}: timed out after ${ms} ms`)), ms))]);
+
+// The cases a hidden React suite declares, counted from its source. The React
+// proofs below check the count against the cases the run registered.
+const hiddenCaseCount = (hiddenSuite: string | undefined): number => (hiddenSuite?.match(/^\s*(?:test|it)\(/gm) ?? []).length;
 
 async function main() {
   const failures: string[] = [];
@@ -139,6 +156,11 @@ async function main() {
       if (!Number.isInteger(task.level) || task.level < 1 || task.level > 25) fail(`${where}: level must be 1–25`);
     }
     if (!isCodingTier(task.tier)) fail(`${where}: bad tier`);
+    // An authored label may only move a task within what its tier allows.
+    if (task.difficulty !== undefined) {
+      if (!isDifficulty(task.difficulty)) fail(`${where}: unknown difficulty ${String(task.difficulty)}`);
+      else if (!difficultyFitsTier(task.difficulty, task.tier)) fail(`${where}: ${task.difficulty} contradicts tier ${task.tier}`);
+    }
     if (task.focus.length === 0) fail(`${where}: needs at least one technique tag`);
     for (const tag of task.focus) if (!isCodingTechnique(tag)) fail(`${where}: unknown technique tag ${tag}`);
     if (!(task.estimatedMinutes > 0)) fail(`${where}: estimatedMinutes must be positive`);
@@ -211,6 +233,48 @@ async function main() {
     }
   }
 
+  /* ── difficulty labels ─────────────────────────────────────────────── */
+  // Easy, Medium and Hard are derived, so they are proven rather than read.
+  // An override that contradicts its tier is refused.
+  const refused: [Difficulty, CodingTier][] = [['easy', 3], ['easy', 4], ['easy', 5], ['hard', 1], ['hard', 2]];
+  for (const [label, tier] of refused) assert.equal(difficultyFitsTier(label, tier), false, `an ${label} override cannot sit at tier ${tier}`);
+  for (const tier of [1, 2, 3, 4, 5] as CodingTier[]) assert.equal(difficultyFitsTier('medium', tier), true, `a Medium override fits tier ${tier}`);
+  assert.equal(difficultyOf({ id: 'js-count-multiples', tier: 3, difficulty: 'medium' }), 'medium', 'an authored label wins');
+  // Stages and levels read their position, in the bands the handoff fixed.
+  const bandOf = (length: number) => Array.from({ length }, (_, index) => stageDifficulty(index, length)[0].toUpperCase()).join('');
+  assert.equal(bandOf(5), 'EEMMH', 'five-level paths: 1–2 Easy, 3–4 Medium, 5 Hard');
+  assert.equal(bandOf(10), 'EEEMMMMHHH', 'ten-stage projects: 1–3, 4–7, 8–10');
+  assert.equal(bandOf(12), 'EEEEMMMMMHHH', 'twelve-stage FullStack apps: 1–4, 5–9, 10–12');
+  const byId = new Map(CODING_TASKS.map((task) => [task.id, task]));
+  for (const project of EVOLVING_CHALLENGES) {
+    const length = project.stages.length;
+    if (!STAGE_DIFFICULTY_BANDS[length]) { fail(`${project.id}: no difficulty band for a path of ${length} stages; add one to STAGE_DIFFICULTY_BANDS`); continue; }
+    project.stages.forEach((id, index) => {
+      const task = byId.get(id);
+      if (!task || task.difficulty) return; // missing stages fail above; an authored label is bounded by its tier
+      const expected = stageDifficulty(index, length);
+      if (difficultyOf(task) !== expected) fail(`${id}: stage ${index + 1} of ${length} should be ${expected}, not ${difficultyOf(task)}`);
+    });
+  }
+  // Standalone tasks read their tier: 1–2 Easy, 3 Medium, 4–5 Hard.
+  for (const task of CODING_TASKS) {
+    if (evolvingStage(task.id) || task.difficulty) continue;
+    const label = difficultyOf(task);
+    if (label !== TIER_DIFFICULTY[task.tier]) fail(`${task.id}: tier ${task.tier} should read ${TIER_DIFFICULTY[task.tier]}, not ${label}`);
+    if (label === 'easy' && task.tier > 2) fail(`${task.id}: Easy at tier ${task.tier}`);
+    if (label === 'hard' && task.tier < 3) fail(`${task.id}: Hard at tier ${task.tier}`);
+  }
+  // Every summary the browser reads carries exactly the label the task resolves to.
+  const labelCounts = new Map<Difficulty, number>(CODING_DIFFICULTIES.map((label) => [label, 0]));
+  for (const summary of CODING_SUMMARIES) {
+    const task = byId.get(summary.id);
+    if (!isDifficulty(summary.difficulty)) { fail(`${summary.id}: summary has no difficulty`); continue; }
+    if (task && summary.difficulty !== difficultyOf(task)) fail(`${summary.id}: summary says ${summary.difficulty}, the task resolves to ${difficultyOf(task)}`);
+    labelCounts.set(summary.difficulty, (labelCounts.get(summary.difficulty) ?? 0) + 1);
+  }
+  const labelTotal = [...labelCounts.values()].reduce((sum, n) => sum + n, 0);
+  if (labelTotal !== CODING_SUMMARIES.length) fail(`difficulty labels cover ${labelTotal} of ${CODING_SUMMARIES.length} summaries`);
+
   /* ── parity ─────────────────────────────────────────────────────────── */
   if (REQUIRE_CS) {
     for (const task of CODING_TASKS) {
@@ -241,6 +305,50 @@ async function main() {
   const indexPath = path.join(process.cwd(), 'shared', 'coding-index.ts');
   if (!SKIP_INDEX && (!existsSync(indexPath) || readFileSync(indexPath, 'utf8') !== renderCodingIndex(CODING_SUMMARIES))) {
     fail('shared/coding-index.ts is stale: run npm run build:coding-index');
+  }
+
+  /* ── technique coverage of the Easy band (#226) ─────────────────────── */
+  // The check itself must bite: three Easy challenges cover a Medium tag, and
+  // taking one away opens a gap.
+  const probe = [
+    { id: 'js-probe-medium', track: 'javascript' as const, tier: 3 as const, focus: ['closures'] },
+    ...[1, 2, 3].map((n) => ({ id: `js-probe-easy-${n}`, track: 'javascript' as const, tier: 1 as const, focus: ['closures'] })),
+  ];
+  assert.equal(coverageGaps(techniqueCoverage(probe, ['javascript'])).length, 0, `${COVERAGE_MIN_EASY} Easy challenges cover a Medium tag`);
+  assert.deepEqual(
+    coverageGaps(techniqueCoverage(probe.slice(0, -1), ['javascript'])).map((row) => [row.tag, row.easy]),
+    [['closures', COVERAGE_MIN_EASY - 1]],
+    'removing an Easy challenge opens a gap',
+  );
+  const coverage = techniqueCoverage(CODING_SUMMARIES);
+  console.log(renderCoverage(coverage, ENFORCE_COVERAGE));
+  if (ENFORCE_COVERAGE) {
+    for (const gap of coverageGaps(coverage)) fail(`${gap.track}: ${gap.tag} is on ${gap.medium} Medium challenge(s) and only ${gap.easy} Easy one(s); it needs ${COVERAGE_MIN_EASY}`);
+  }
+
+  /* ── the Easy-band waves (#226) ─────────────────────────────────────── */
+  // What every wave promises: a standalone Easy challenge on one technique
+  // (two focus tags at most) that fits in ten minutes, a hint ladder whose
+  // last rung is the documentation page of its first tag, hidden checks
+  // beside the visible ones, and no seat in a Learn level's quota. The
+  // solution proofs below cover the three solutions and the failing starter.
+  assert.ok(EASY_BAND_TASK_IDS.size > 0, 'the Easy-band waves are registered');
+  const summarized = new Set(CODING_SUMMARIES.map((summary) => summary.id));
+  for (const id of EASY_BAND_TASK_IDS) {
+    const task = byId.get(id);
+    if (!task) { fail(`${id}: an Easy-band id with no task`); continue; }
+    if (!summarized.has(id)) fail(`${id}: an Easy-band task must be issued`);
+    if (evolvingStage(id)) fail(`${id}: an Easy-band task is standalone`);
+    if (task.difficulty !== undefined || difficultyOf(task) !== 'easy') fail(`${id}: an Easy-band task reads Easy from its tier`);
+    if (task.focus.length > 2) fail(`${id}: at most two focus tags, one technique`);
+    if (task.estimatedMinutes > 10) fail(`${id}: an Easy-band task fits in ten minutes`);
+    if (task.verify !== 'tests') fail(`${id}: an Easy-band task is graded by its tests`);
+    const [page] = taskResources(task.focus);
+    if (!page || page.tag !== task.focus[0] || docsFor(task.focus).url !== page.url) fail(`${id}: the first focus tag must have a documentation page to end the hint ladder`);
+    if (task.hints.en.length === 0 || (task.approach?.en.length ?? 0) < 2) fail(`${id}: a hint and at least two method steps before the documentation`);
+    const hiddenChecks = task.track === 'react' ? hiddenCaseCount(solutionFor(id)?.hiddenSuite) : (solutionFor(id)?.hiddenTests?.length ?? 0);
+    if (hiddenChecks < 3) fail(`${id}: at least three hidden checks`);
+    if (tasksForLevel(task.topic, task.level).some((one) => one.id === id)) fail(`${id}: an Easy-band task never enters a Learn level's quota`);
   }
 
   /* ── JavaScript and TypeScript solutions ────────────────────────────── */
@@ -299,7 +407,8 @@ async function main() {
         if (!allPassed(hidden)) fail(`${label}: solution fails hidden tests: ${hidden.codeError ?? hidden.results.map((r, i) => (r.pass ? null : solution.hiddenTests![i].call)).filter(Boolean).join('; ')}`);
       }
     }
-    if (task.track === 'javascript') {
+    // Algorithms challenges are plain JavaScript too, so their starters must fail the same way.
+    if (task.track === 'javascript' || task.track === 'algorithms') {
       const starterRun = await withTimeout(evaluateCalls({ code: starterCode, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, where);
       if (allPassed(starterRun)) fail(`${where}: the untouched starter already passes`);
     }
@@ -312,11 +421,18 @@ async function main() {
     const solution = solutionFor(task.id);
     if (!solution) continue;
     const where = `${task.id}`;
+    // Hidden cases are test blocks appended to the visible suite; the server
+    // runs both, and every solution has to pass both.
+    if (task.suite.includes(HIDDEN_CASE_PREFIX)) fail(`${where}: a visible suite never uses the hidden case prefix`);
+    if (solution.hiddenSuite !== undefined && /^\s*import\s/m.test(solution.hiddenSuite)) fail(`${where}: a hidden suite shares the visible suite's imports and declares none`);
+    const suite = withHiddenCases(task.suite, solution.hiddenSuite);
     for (const [name, source] of variants(solution, where)) {
-      const run = await withTimeout(runReactSuite({ suite: task.suite, appSource: source }), 20_000, `${where} (${name})`);
+      const run = await withTimeout(runReactSuite({ suite, appSource: source }), 20_000, `${where} (${name})`);
       if (run.compileError || run.failed > 0) {
         fail(`${where} (${name}): solution fails its suite: ${run.compileError ?? run.cases.filter((c) => c.status === 'fail').map((c) => `${c.name}: ${c.error}`).join('; ')}`);
       }
+      const { hidden } = splitHiddenCases(run.cases);
+      if (hidden.length !== hiddenCaseCount(solution.hiddenSuite)) fail(`${where} (${name}): the hidden suite declares ${hiddenCaseCount(solution.hiddenSuite)} case(s) and ran ${hidden.length}`);
     }
     const starter = await withTimeout(runReactSuite({ suite: task.suite, appSource: task.starter }), 20_000, where);
     if (!starter.compileError && starter.failed === 0) fail(`${where}: the untouched starter already passes its suite`);
@@ -394,7 +510,7 @@ async function main() {
   // fail its own visible tests, or the format is a label rather than an
   // exercise. Each one also declares the misconception it is built around.
   const debugTasks = CODING_TASKS.filter((task) => formatOf(task) === 'debug');
-  assert.ok(debugTasks.length >= 4, 'the debugging format needs an authored set, not one example');
+  assert.ok(debugTasks.filter((task) => !evolvingStage(task.id)).length >= 4, 'the four standalone repair tasks stay beside the debugging paths');
   for (const task of debugTasks) {
     assert.equal(task.track, 'javascript', 'the first debugging set is JavaScript; extend this check when others land');
     assert.ok((task.tests?.length ?? 0) >= 3, `${task.id}: a debugging task needs tests that pin the behaviour down`);
@@ -417,7 +533,88 @@ async function main() {
     assert.equal(starterPasses, false, `${task.id}: the broken starter must fail its own tests`);
   }
 
-  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
+  // ── the debugging paths (#225) ─────────────────────────────────────────
+  // Three short paths replace the café-orders project on the Coding home.
+  // Every level starts from code that runs and is wrong: the starter for the
+  // first level, then the previous level's repair, which is what a learner
+  // carries forward. The first hint rung names the logging technique and the
+  // ladder ends in documentation before the solution.
+  const debugPaths = listedChallenges({ category: 'debugging' });
+  assert.deepEqual(debugPaths.map((project) => project.id), ['js-path-logging', 'js-path-tracing', 'js-path-edges'], 'the Coding home lists the three debugging paths');
+  const promised: Record<string, string> = { 'js-path-logging': 'EEEEE', 'js-path-tracing': 'MMMMM', 'js-path-edges': 'MMMMH' };
+  for (const project of debugPaths) {
+    assert.ok(project.short && project.track === 'javascript' && project.stages.length === 5, `${project.id}: a JavaScript path of five levels`);
+    assert.equal(project.stages.map((id) => difficultyOf(byId.get(id)!)[0].toUpperCase()).join(''), promised[project.id], `${project.id}: the difficulty the path promises`);
+    for (const [index, id] of project.stages.entries()) {
+      const task = byId.get(id)!;
+      assert.equal(formatOf(task), 'debug', `${id}: a debugging level`);
+      assert.match(task.hints.en[0] ?? '', /console\.[a-zA-Z]+\(|structuredClone\(/, `${id}: the first hint rung names the logging technique`);
+      assert.ok(task.approach && task.approach.en.length >= 3, `${id}: method steps between the hint and the documentation`);
+      assert.ok(task.references?.[0]?.url.startsWith('https://developer.mozilla.org/'), `${id}: the ladder ends in documentation`);
+      const earlier = index > 0 ? byId.get(project.stages[index - 1])!.tests!.length : 0;
+      const own = task.tests!.slice(0, task.tests!.length - earlier);
+      const startingCode = index === 0 ? task.starter : solutionFor(project.stages[index - 1])!.solution;
+      const start = await runInSandbox({ code: startingCode, calls: own.map((one) => one.call), expectations: own.map((one) => one.expected) });
+      assert.equal(start.codeError, null, `${id}: the code this level starts from runs`);
+      assert.ok(start.results.some((one) => one.pass !== true), `${id}: the code this level starts from fails the level's own checks`);
+    }
+  }
+  // The debug helper's hidden check reads what the call printed, so it tells
+  // a helper that logs and returns from one that only does half the job.
+  const printed = solutionFor('js-path-logging-5')!.hiddenTests!.find((one) => one.call.includes('printed'))!;
+  const helper = async (code: string) => allPassed(await runInSandbox({ code, calls: [printed.call], expectations: [printed.expected] }));
+  assert.equal(await helper('function debug(label, value) { console.log(label, value); return value; }'), true, 'console.log(label, value) and a return pass');
+  assert.equal(await helper('function debug(label, value) { console.log({ [label]: value }); return value; }'), true, 'the object shorthand passes too');
+  assert.equal(await helper('function debug(label, value) { console.debug(label, value); return value; }'), true, 'console.debug passes too');
+  assert.equal(await helper('function debug(label, value) { return value; }'), false, 'returning without logging fails');
+  assert.equal(await helper('function debug(label, value) { console.log(label, value); }'), false, 'logging without returning fails');
+  assert.equal(await helper('function debug(label, value) { console.log(label); console.log(value); return value; }'), false, 'two lines for one value fail');
+  // The café-orders project leaves every list and nothing else: its ten
+  // stages still open, grade and keep their drafts and passes (#225).
+  const retiredProject = EVOLVING_CHALLENGES.find((project) => project.id === 'js-evolving-debug')!;
+  assert.equal(retiredProject.unlisted, true, 'js-evolving-debug is unlisted');
+  const everyList = [undefined, 'fullstack', 'debugging'].map((category) => listedChallenges({ category: category as 'fullstack' | 'debugging' | undefined }))
+    .concat(CODING_SECTION_TRACKS.map((track) => listedChallenges({ track })));
+  assert.ok(everyList.every((list) => !list.includes(retiredProject)), 'no list shows js-evolving-debug');
+  const issued = new Set(CODING_SUMMARIES.map((summary) => summary.id));
+  assert.equal(retiredProject.stages.length, 10, 'the retired project keeps its ten stages');
+  for (const id of retiredProject.stages) {
+    assert.ok(issued.has(id), `${id}: still issued, so a draft, a pass or a bookmark still opens`);
+    assert.ok(solutionFor(id), `${id}: still graded`);
+    assert.ok(evolvingStage(id)?.challenge === retiredProject, `${id}: still unlocks in order`);
+  }
+
+  // ── the learner console ────────────────────────────────────────────────
+  // The Run button's worker and the grading sandbox print the same lines for
+  // every console method the debugging paths teach. Timings differ (the
+  // sandbox clock is virtual), so they are checked on their own.
+  const consoleProgram = [
+    'console.log({ total: 12 }, "label", [1, 2], undefined);',
+    'console.table([{ name: "tea", price: 3 }, { name: "cake", price: 2.5, qty: 1 }]);',
+    'console.table([1, "two"]);',
+    'console.group("checkout"); console.count("addPoints"); console.count("addPoints"); console.table({ a: { x: 1 } }); console.groupEnd();',
+    'console.countReset("addPoints"); console.count("addPoints"); console.count();',
+    'console.assert(false, "broken", 3); console.assert(true, "fine");',
+    'console.dir({ deep: { er: 1 } }); console.trace("here"); console.info("i"); console.warn("w"); console.error("e"); console.debug("d");',
+    'console.timeEnd("never"); console.time("t"); console.time("t"); console.groupCollapsed(); console.log("inside"); console.groupEnd();',
+  ].join('\n');
+  const inSandbox = await runInSandbox({ code: consoleProgram, calls: [], expectations: null });
+  const inWorker = await evaluateCalls({ code: consoleProgram, calls: [], expectations: null });
+  assert.equal(inSandbox.codeError, null, 'every taught console method exists in the sandbox');
+  assert.equal(inWorker.codeError, null, 'every taught console method exists in the worker');
+  assert.deepEqual(inWorker.logs, inSandbox.logs, 'both runners print the same lines');
+  assert.deepEqual(inSandbox.logs.slice(0, 5), [
+    '{"total":12} label [1,2] undefined',
+    '(index) | name   | price | qty\n--------+--------+-------+----\n0       | "tea"  | 3     |\n1       | "cake" | 2.5   | 1',
+    '(index) | Values\n--------+-------\n0       | 1\n1       | "two"',
+    'checkout',
+    '  addPoints: 1',
+  ], 'console.table draws rows under their index, and a group indents');
+  const timed = await runInSandbox({ code: 'console.time("wait"); setTimeout(() => console.timeEnd("wait"), 100);', calls: ['new Promise((done) => setTimeout(done, 150))'], expectations: null });
+  assert.deepEqual(timed.logs, ['wait: 100ms'], 'console.time reads the sandbox\'s virtual clock');
+
+  const byLabel = CODING_DIFFICULTIES.map((label) => `${label} ${labelCounts.get(label) ?? 0}`).join(', ');
+  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}; ${byLabel}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 
 void main().catch((error) => {

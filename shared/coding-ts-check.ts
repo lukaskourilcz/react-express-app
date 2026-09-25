@@ -14,14 +14,27 @@ const ANSWER_FILE = 'answer.ts';
 const GLOBALS_FILE = 'globals.d.ts';
 
 // The lib files describe the language, not the host. `console` and the timers
-// come from the DOM lib, which is 2.5 MB of browser API for five signatures,
-// so they are declared here instead.
+// come from the DOM lib, which is 2.5 MB of browser API for a few signatures,
+// so they are declared here instead. The console methods are the ones both
+// runners provide (`shared/coding-console.ts`).
 const GLOBALS = `declare const console: {
   log(...values: unknown[]): void;
   info(...values: unknown[]): void;
   warn(...values: unknown[]): void;
   error(...values: unknown[]): void;
   debug(...values: unknown[]): void;
+  dir(value?: unknown): void;
+  trace(...values: unknown[]): void;
+  assert(condition?: unknown, ...values: unknown[]): void;
+  table(data?: unknown): void;
+  group(...label: unknown[]): void;
+  groupCollapsed(...label: unknown[]): void;
+  groupEnd(): void;
+  count(label?: string): void;
+  countReset(label?: string): void;
+  time(label?: string): void;
+  timeLog(label?: string, ...values: unknown[]): void;
+  timeEnd(label?: string): void;
 };
 declare function setTimeout(handler: (...args: never[]) => void, ms?: number): number;
 declare function clearTimeout(handle?: number): void;

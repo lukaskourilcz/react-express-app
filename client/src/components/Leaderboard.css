@@ -1,0 +1,227 @@
+/* Leaderboard — Deep End v2.
+ *
+ * Canvas, one panel, rows. The panel is the shared .ss-panel card stock; every
+ * colour below is a theme token, so light and dark come from the tokens and
+ * this file holds none of its own. Ranks are ink discs with the number as
+ * text: the top three are filled, the rest are outlined, and no rank is told
+ * apart by hue. Nothing here animates.
+ */
+
+.lb { display: flex; flex-direction: column; gap: 20px; }
+
+.lb-head { display: flex; flex-direction: column; gap: 6px; max-width: 46rem; }
+.lb-lede {
+  margin: 0;
+  font-size: var(--ss-type-body);
+  line-height: 1.55;
+  color: var(--color-text-secondary);
+}
+
+.lb-controls { display: flex; flex-direction: column; gap: 12px; }
+/* Astryx leaves an unselected segment's background to the browser, which
+   paints it ButtonFace: a mid grey in dark mode that the secondary label fails
+   against (axe: color-contrast). Let the track show through instead, and keep
+   Astryx's hover wash. The selected segment is untouched. */
+.lb-controls .astryx-segmented-control-item:not([data-selected]) { background-color: transparent; }
+@media (hover: hover) {
+  .lb-controls .astryx-segmented-control-item:not([data-selected]):hover { background-color: var(--color-overlay-hover); }
+}
+
+/* The topic filter. A native select: it is keyboard- and screen-reader-complete
+   on every platform, and the label sits beside it rather than inside it. */
+.lb-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.lb-filter__label { font-size: 0.9rem; font-weight: 650; color: var(--color-text-primary); }
+.lb-select {
+  flex: 1 1 14rem;
+  max-width: 22rem;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: var(--radius-element);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-background-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+.lb-select:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
+
+.lb-scope { margin: 0; max-width: 46rem; font-size: 0.875rem; line-height: 1.5; color: var(--color-text-secondary); }
+
+/* Offline with a board to show: the board stays, and this says how old it is. */
+.lb-stale {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 4px 8px 4px 16px;
+  border-radius: var(--radius-element);
+  border: 1px solid color-mix(in srgb, var(--ss-warning) 35%, transparent);
+  background: var(--ss-warning-soft);
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+.lb-stale > span { flex: 1 1 16rem; padding: 8px 0; }
+
+.lb-board { overflow: hidden; }
+
+/* ── Rank discs ───────────────────────────────────────────────────────────── */
+
+.lb-rank {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1.5px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+  font-weight: 700;
+  font-size: 0.875rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.lb-rank--top {
+  border-color: var(--ss-ink);
+  background: var(--ss-ink);
+  color: var(--color-background-surface);
+  font-weight: 800;
+}
+
+/* ── Identity ─────────────────────────────────────────────────────────────── */
+
+.lb-who { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.lb-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 650;
+  color: var(--color-text-primary);
+}
+/* "You" is a word, not a tint: the row's background only repeats it. */
+.lb-you {
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--ss-ink);
+  color: var(--ss-ink);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+}
+.lb-score {
+  font-family: var(--font-family-heading);
+  font-weight: 750;
+  font-size: 1.05rem;
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Desktop and tablet: the table ────────────────────────────────────────── */
+
+.lb-table { width: 100%; border-collapse: collapse; }
+.lb-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  border-bottom: 1px solid var(--ss-card-line);
+}
+.lb-table td {
+  height: 56px;
+  padding: 6px 16px;
+  vertical-align: middle;
+  border-top: 1px solid var(--ss-card-line);
+}
+.lb-table tbody tr:first-child td { border-top: 0; }
+.lb-table tfoot td { border-top: 1px dashed var(--color-border-strong); }
+.lb-table .lb-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lb-col-rank { width: 72px; }
+.lb-col-num { width: 120px; }
+.lb-table tr.is-viewer { background: var(--ss-selected); }
+.lb-table tr.is-viewer td:first-child { box-shadow: inset 3px 0 0 var(--brand-accent); }
+
+/* ── Phones: stacked rows ─────────────────────────────────────────────────── */
+
+.lb-cards { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.lb-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 64px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--ss-card-line);
+}
+.lb-card:first-child { border-top: 0; }
+.lb-card.is-viewer { background: var(--ss-selected); box-shadow: inset 3px 0 0 var(--brand-accent); }
+.lb-card__avatar { display: inline-flex; flex-shrink: 0; }
+.lb-card__main { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
+.lb-card__name { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.lb-card__detail { font-size: 0.8rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.lb-card__score { display: flex; flex-shrink: 0; flex-direction: column; align-items: flex-end; }
+/* Below 400px the avatar gives its width to the name and the line under it;
+   the rank and the name still say whose row it is. */
+@media (max-width: 399.95px) {
+  .lb-card__avatar { display: none; }
+}
+.lb-card__label { font-size: 0.7rem; color: var(--color-text-secondary); }
+
+.lb-pinned { border-top: 1px dashed var(--color-border-strong); }
+.lb-pinned__label {
+  margin: 0;
+  padding: 10px 14px 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+/* ── Empty, note and loading ─────────────────────────────────────────────── */
+
+.lb-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 20px;
+  text-align: center;
+}
+.lb-empty__text { margin: 0; max-width: 32rem; line-height: 1.55; color: var(--color-text-secondary); }
+
+.lb-note {
+  margin: 0;
+  padding: 12px 16px;
+  border-top: 1px dashed var(--color-border-strong);
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.lb-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 56px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--ss-card-line);
+}
+.lb-skeleton:nth-child(2) { border-top: 0; }
+.lb-skeleton__name { flex: 1; }
+
+.lb-vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

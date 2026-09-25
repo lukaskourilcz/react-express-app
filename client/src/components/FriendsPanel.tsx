@@ -19,8 +19,9 @@
  *
  * Every number on a friend's row comes from the server. The crown is a picture
  * somebody spent earned tokens on: it is shown and it changes nothing, least of
- * all the order of this list, which is by streak. The flag is the same — where
- * somebody is from moves them up nothing.
+ * all the order of this list, which is by correct answers and then accuracy
+ * (migration 040; never by streak). The flag is the same — where somebody is
+ * from moves them up nothing.
  */
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
@@ -365,7 +366,8 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
                 <span className="fr-friend__marks">
                   <CountryFlag code={friend.country} locale={lang} size={16} />
                   {/* Owned and worn. It says nothing about anybody's learning
-                      and it does not move this row: the order is by streak. */}
+                      and it does not move this row: the order is by correct
+                      answers, then accuracy. */}
                   {friend.crown && <CrownBadge size={16} />}
                 </span>
                 <span className="fr-friend__meta">

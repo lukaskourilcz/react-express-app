@@ -4,6 +4,8 @@
  * solutions). The server never uses this: learner code there runs inside the
  * QuickJS sandbox in `lib/coding/sandbox.ts`. Ported from interview-prepper. */
 
+import { learnerConsoleFactory } from './coding-console';
+
 export const RUN_TIMEOUT_MS = 2_000;
 /** Timer- and promise-based tasks need longer than a synchronous one. */
 export const ASYNC_TIMEOUT_MS = 6_000;
@@ -71,10 +73,11 @@ const errorText = (error: unknown): string =>
  */
 export async function evaluateCalls(input: { code: string; calls: string[]; expectations?: unknown[] | null }): Promise<EvaluateResult> {
   const logs: string[] = [];
-  const record = (...args: unknown[]) => {
-    if (logs.length < MAX_LOGS) logs.push(args.map(formatArg).join(' '));
+  const emit = (line: string) => {
+    if (logs.length < MAX_LOGS) logs.push(line);
   };
-  const sink = { log: record, info: record, warn: record, error: record, debug: record };
+  // The same console the grading sandbox gives the code, on the real clock.
+  const sink = learnerConsoleFactory()(emit, formatArg, () => (typeof performance === 'undefined' ? Date.now() : performance.now()));
   const grading = Array.isArray(input.expectations);
 
   let evaluate: (calls: string[], console: typeof sink) => Promise<{ ok: boolean; value?: unknown; error?: string }[]>;

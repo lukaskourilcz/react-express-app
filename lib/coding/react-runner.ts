@@ -111,6 +111,26 @@ function runModule(source: string, resolve: (request: string) => unknown, extra:
   return module.exports;
 }
 
+// A promise the component leaves rejected with no handler, such as an aborted
+// fetch with no catch, only logs a line in the browser. In Node it would end
+// the whole process, and the learner would read a runner failure instead of a
+// verdict. So while a suite runs, one listener takes those rejections and the
+// checks decide. It stays until a turn after the last run ends, because a
+// rejection from the last case's cleanup is reported after the run returns.
+let runsInFlight = 0;
+const ignoreRejection = () => {};
+function holdRejections(starting: boolean) {
+  if (starting) {
+    runsInFlight += 1;
+    if (!process.listeners('unhandledRejection').includes(ignoreRejection)) process.on('unhandledRejection', ignoreRejection);
+    return;
+  }
+  runsInFlight -= 1;
+  setTimeout(() => {
+    if (runsInFlight === 0) process.off('unhandledRejection', ignoreRejection);
+  }, 0);
+}
+
 export interface ReactSuiteOutcome extends MiniJestRun {
   /** Set when the component or the suite could not be compiled or loaded. */
   compileError: string | null;
@@ -150,7 +170,13 @@ export async function runReactSuite(input: { suite: string; appSource: string })
       compileError: `compiling suite: ${(error as Error).message.split('\n')[0]}`,
     };
   }
-  const run = await jest.run({ afterEach: () => testing.cleanup(), timeoutMs: REACT_SUITE_TIMEOUT_MS });
+  let run: MiniJestRun;
+  holdRejections(true);
+  try {
+    run = await jest.run({ afterEach: () => testing.cleanup(), timeoutMs: REACT_SUITE_TIMEOUT_MS });
+  } finally {
+    holdRejections(false);
+  }
   const timedOut = run.cases.some((one) => one.status === 'fail' && /timed out/i.test(one.error ?? ''));
   if (run.total === 0) {
     return { ...run, failed: 1, total: 1, timedOut, compileError: compileError ?? 'suite registered no test cases' };

@@ -17,7 +17,7 @@ import type { CodingTask, CodingTaskSummary, CodingTrack } from '../../shared/co
 import { formatOf } from '../../shared/coding-catalog';
 import type { EligibilityReason } from '../../shared/curation';
 import { codingTaskEligibility } from '../curation';
-import { CODING_TASKS, levelTaskQuota, summarize } from './catalog';
+import { CODING_TASKS, EASY_BAND_TASK_IDS, levelTaskQuota, summarize } from './catalog';
 import { solutionFor } from './solutions';
 import { evolvingStage } from '../../shared/evolving';
 
@@ -50,6 +50,10 @@ export const tasksForTrack = (track: CodingTrack): CodingTask[] => ACTIVE_CODING
  * repair tasks were added — JavaScript level 3, whose quota is one, swapped
  * `js-fizz-values` for `js-debug-average`, and level 10 dropped
  * `js-activate-user`. The launch contract now asserts no level can gate on one.
+ *
+ * The Easy-band tasks of #226 stay out for the same reason: they carry the
+ * Learn level of the technique they practise, and a tier 1 one would push the
+ * level's own task out of its quota.
  */
 export function tasksForLevel(topic: CodingTask['topic'], level: number): CodingTask[] {
   return ACTIVE_CODING_TASKS.filter(
@@ -58,7 +62,8 @@ export function tasksForLevel(topic: CodingTask['topic'], level: number): Coding
       !evolvingStage(task.id) &&
       task.level === level &&
       task.verify !== 'checklist' &&
-      formatOf(task) !== 'debug',
+      formatOf(task) !== 'debug' &&
+      !EASY_BAND_TASK_IDS.has(task.id),
   );
 }
 

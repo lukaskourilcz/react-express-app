@@ -59,6 +59,26 @@ effect limited to the day count of a streak. No leaderboard in this product
 ranks by streak — every one of them ranks by correct answers and accuracy — so a
 protected streak moves nobody up anything.
 
+## Leaderboards
+
+`/leaderboard` opens on the last 30 days, so a new learner can reach the top;
+the all-time board is one tab away and Today is the daily challenge.
+`supabase/supabase-schema-040.sql` adds `user_activity_days` (user, UTC day,
+category, correct, answered). Three verified routines write it and nothing else
+does: `record_verified_quiz_result_v2` for quizzes and the daily challenge,
+`record_roadmap_answer_v2` for a signed-in learner's first answer to a Learn
+question, and `record_challenge_completion` for a finished Biggest Shark
+Challenge run. Each write sits behind the receipt that already makes its routine
+idempotent. Coding passes are not answers and are not counted.
+`window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
+fewer answers for the same number correct, and equal results share a rank. The
+all-time board keeps its sources (`subject_leaderboard`, `category_leaderboard`
+over `user_category_stats`), so it counts quiz and daily answers and not Learn.
+`api/leaderboard.ts` serves `period=30d` to everyone with `s-maxage=60`; a
+request with a Bearer token or `me=1` also gets the learner's own line and is
+answered `Cache-Control: private, no-store`. `friend_list` orders friends by
+correct answers and accuracy. No board ranks by XP or by streak.
+
 ## Coding section
 
 The `/coding` section, the coding phase inside Learn levels, and the GitHub
@@ -73,7 +93,9 @@ and an externally enforced command deadline. The dependency-only snapshot is
 selected by `REACT_RUNNER_SNAPSHOT_ID`; the current grader bundle is uploaded
 on each run. `lib/coding/react-runner.ts` is trusted test/guest code only and
 must never evaluate learner code inside an API process. Both Coding and
-learning-path React submissions use this boundary. See
+learning-path React submissions use this boundary. A React challenge can keep
+hidden test cases beside its solution; Submit runs them after the visible suite
+and returns only their count. See
 [`react-grading-operations.md`](./react-grading-operations.md). The
 self-hosted `client/sandbox/` iframe stays for the preview and for the Run
 button's immediate feedback, but the verdict of record is the server's.
@@ -86,8 +108,9 @@ boards carry code alone; the content contract executes the stripped text and
 asserts none of it still holds a comment.
 
 The section lists four tracks. Three of them — `javascript`, `typescript` and
-`react` — are also Learn topics. The fourth, `algorithms`, is twenty-five
-interview problems in plain JavaScript: an ordinary graded track with the same
+`react` — are also Learn topics. The fourth, `algorithms`, is forty-five
+interview problems in plain JavaScript, twenty of them the Easy warm-ups of
+#226, plus two short paths: an ordinary graded track with the same
 XP, review ladder and one-award-per-task ledger, but a topic of its own, so
 none of its challenges can be drawn into a Learn level's quota. Its `level` is
 an ordering key rather than a Learn level, which `hasLearnLevel` is what the
@@ -97,13 +120,18 @@ System design still grades and still owns its history but has left the section
 
 Learn levels of the `javascript`, `typescript`, and `react` topics carry one to
 three coding tasks sealed into the level session; completion requires a passed
-verdict for each. Coding completion is permanent: the API ignores legacy review
+verdict for each. The Easy-band challenges of #226 (`EASY_BAND` in
+`lib/coding/catalog.ts`) never join that quota, so adding them leaves every
+level's coding tasks as they were. Coding completion is permanent: the API ignores legacy review
 dates, returns an empty due queue, and never selects passed tasks for scheduled
 coding review. Question/concept review is unchanged. Tiers
 open in order (`tierUnlocked`) except in the unladdered tracks — system design
 is drilled rather than climbed, and `algorithms` is interview preparation a
 learner arrives at with a date in the diary, where a locked tier would withhold
-the very challenge they came for. XP follows `CODING_TASK_XP` once per task, and
+the very challenge they came for. Each challenge also carries Easy, Medium or
+Hard (`difficultyOf`), projected from its tier, or for a project stage from its
+position; the label gates and pays nothing (see
+`docs/interactive-content-manifest.md`). XP follows `CODING_TASK_XP` once per task, and
 the five coding badges join the shared badge sync for `webdev`. All storage is
 in `supabase/supabase-schema-025.sql`, whose track constraints and routines
 `supabase/supabase-schema-038.sql` widens to admit `algorithms`. devShark ships no AI feature; the last
@@ -508,20 +536,23 @@ The fourteen projects now contain 146 stages: ten focused stages per single-trac
 project, twelve per full-stack project. New `-start` checkpoints separate setup,
 data loading and form wiring from subsequent behavior. Earlier requirements and
 tests remain cumulative, and each stage lists its own checks first so Results
-opens on what the brief just asked for. The `debugging` category holds one
-JavaScript project whose every stage starts from code that runs and is wrong;
-it follows the tracing-before-fixing rhythm described in
-`docs/evolving-challenges.md`. Original task IDs retain their drafts and
+opens on what the brief just asked for. Original task IDs retain their drafts and
 completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
-routes, unlocks and progress. The full catalogue contains 480 tasks, and every
+routes, unlocks and progress. The full catalogue contains 695 tasks, and every
 graded code task carries a reference, a junior and a senior solution on the
 server; the last two reach the browser only with a verified pass.
 
-Since 2026-09-25 the registry also holds twelve short paths of five levels
-each, marked `short`, with no checkpoints. Each is listed on the page of the
-section it belongs to: five on JavaScript, two each on TypeScript, React and
-Algorithms, and a link shortener that leads the FullStack screen. They
+Since 2026-09-25 the registry also holds fifteen short paths of five levels
+each, marked `short`, with no checkpoints. Twelve are listed on the page of
+the section they belong to: five on JavaScript, two each on TypeScript, React
+and Algorithms, and a link shortener that leads the FullStack screen. They
 replace the one-day-old Custom category; its two ten-step paths became four
-of the JavaScript paths. The longer projects stay where they were: ten and
-the debugging path on the Coding home, the three apps on the FullStack screen.
+of the JavaScript paths. The other three are the debugging paths (#225), on
+the Coding home: Log it right, Trace the state, and Edges and inputs, each
+five levels that start from code that runs and is wrong. They replace the
+ten-stage café-orders debugging project, which is marked `unlisted`: no list
+shows it, and its ten task IDs still open, grade and keep their drafts and
+passes, by the rule above. The longer projects stay where they were: ten on
+the Coding home and the three apps on the FullStack screen. So the registry
+counts fourteen projects with 146 stages and fifteen paths with 75 levels.

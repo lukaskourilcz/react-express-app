@@ -27,7 +27,8 @@ import { useIsNarrowForEditor } from '../lib/useMediaQuery';
 import { SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint } from '../../../shared/coding-failure';
 import { revealCoding, submitCoding, useCodingApproaches } from './api';
-import { CODING_TIERS, formatOf, hasLearnLevel, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
+import { CODING_TIERS, difficultyOf, formatOf, hasLearnLevel, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
+import { DifficultyBadge } from './DifficultyBadge';
 import type { CodingLockReason, CodingSolutionPair, CodingTaskProgress, CodingVerdictResponse } from '../../../shared/coding-api';
 import './Coding.css';
 
@@ -599,7 +600,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       if (reactRun.status === 'timeout') return <p className="cd-note cd-note--warn">{t('coding.preview.timeout')}</p>;
       return (
         <>
-          {reactRun.status === 'done' && <p className="cd-summary">{t('coding.results.passing', { passed: reactRun.passed, total: reactRun.total })}{serverChecked && <small>{t('coding.results.serverNote')}</small>}{stale && <small>{t('coding.results.stale')}</small>}</p>}
+          {reactRun.status === 'done' && <p className="cd-summary">{t('coding.results.passing', { passed: reactRun.passed, total: reactRun.total })}{verdict?.hidden && serverChecked && <small>{t('coding.results.hidden', { passed: verdict.hidden.passed, total: verdict.hidden.total })}</small>}{serverChecked && <small>{t('coding.results.serverNote')}</small>}{stale && <small>{t('coding.results.stale')}</small>}</p>}
           <ul className="cd-results">
             {reactRun.cases.map((one, index) => (
               <li key={index} className={`cd-result cd-result--${one.status}`}>
@@ -773,6 +774,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       <div className="cd-brief__line">
         <span className="cd-brief__meta">{briefMeta}</span>
         <Title id={titleId} className="cd-brief__title">{L(task.title)}</Title>
+        <DifficultyBadge difficulty={difficultyOf(task)} />
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
       </div>
       <Prompt className="cd-prompt" text={L(task.prompt)} />

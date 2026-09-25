@@ -22,7 +22,7 @@ vi.mock('../src/coding/runner/run-tests', async (importOriginal) => ({
 }));
 
 const task: PlayableCodingTask = {
-  id: 'js-test-editor', track: 'javascript', level: 1, tier: 1,
+  id: 'js-test-editor', track: 'javascript', level: 1, tier: 1, difficulty: 'easy',
   focus: ['functions'], title: { en: 'Test task', cs: 'Testovací úloha' },
   prompt: { en: 'Return one.', cs: 'Vrať jedničku.' },
   starter: 'const one = () => 1;\n', hints: { en: ['Use a function.'], cs: ['Použij funkci.'] },
