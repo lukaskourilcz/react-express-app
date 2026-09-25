@@ -3,6 +3,7 @@ import { jsonError, withRequestContext } from '../lib/http';
 import { getGameSettings } from '../lib/settings-store';
 import { learningPathCapability } from '../lib/learning-paths/handlers';
 import { publicBillingSettings } from '../lib/billing/config';
+import { getMerchPromo } from '../lib/rewards/spreadshop';
 
 // Public, read-only subset of the game settings, so the client can render the
 // configured count/time options and hide disabled features. Deliberately omits
@@ -13,7 +14,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 
-  const s = await getGameSettings();
+  const [s, merchPromo] = await Promise.all([getGameSettings(), getMerchPromo()]);
   // This server-only flag is the production master switch. An administrator
   // may prepare truthful amounts and provider URLs in app_settings, but no
   // financial link can become public until the deployment explicitly opts in.
@@ -57,6 +58,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     // Whether checkout sells Premium (BILLING_ENABLED and a complete Stripe
     // configuration) and whether the cancellation page can reach Stripe.
     billing: publicBillingSettings(),
+    // Spreadshop's own promotion for the devShark shop this month (#229), or
+    // null. Read server-side and cached; see lib/rewards/spreadshop.ts.
+    merchPromo,
   });
 }
 
