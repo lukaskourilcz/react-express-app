@@ -17,6 +17,7 @@ import { useGameConfig, localizedDevTips, type GameConfig } from './lib/gameConf
 import { primeRankMarker } from './lib/xp';
 import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
+import ReferralBinder from './components/ReferralBinder';
 import { useAuth } from './lib/auth';
 import { useActiveSubject } from './lib/subjects';
 import { useWallet } from './lib/rewards';
@@ -739,6 +740,7 @@ function App() {
       <ConnectionStatus />
       <UpgradeSheetHost />
       <RegisterPromptSnackbar />
+      <ReferralBinder />
       <AppToast
         open={signupBonusOpen}
         onClose={() => setSignupBonusOpen(false)}

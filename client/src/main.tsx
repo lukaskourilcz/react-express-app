@@ -19,6 +19,7 @@ import { initSentry } from './lib/sentry';
 import { initAnalytics } from './lib/analytics';
 import { MotionProvider } from './lib/motion';
 import { installScrollbarActivity } from './lib/scrollbarActivity';
+import { captureReferralFromUrl } from './lib/referral';
 
 const disposeScrollbarActivity = installScrollbarActivity();
 if (import.meta.hot) import.meta.hot.dispose(disposeScrollbarActivity);
@@ -28,6 +29,9 @@ initSentry();
 // Load PostHog product analytics in the background (no-op without a key; the
 // SDK is dynamically imported so it never lands in the initial bundle).
 initAnalytics();
+// Keep an invite code (`/?ref=<code>`, #228) and take it out of the address
+// bar before the router reads the URL. The server binds it after sign-in.
+captureReferralFromUrl();
 // Register wallet + inventory into the account-synced blob so any sign-in
 // pulls the balance/owned/equipped that was earned on other devices. Runs at
 // module load, before any component mounts.
