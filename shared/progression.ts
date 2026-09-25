@@ -143,6 +143,22 @@ export const LEVELS_PER_CHECKPOINT = 5;
 export const isCheckpointPassed = (progress: VerifiedProgress, topic: string, checkpoint: number): boolean =>
   entryPassed(progress[topic]?.checkpoints?.[String(checkpoint)]);
 
+/* ── learning XP ───────────────────────────────────────────────────────── */
+
+/** XP for passing a Learn level the first time: 50 × its difficulty tier, and
+ * the tier is one per five levels (1 … 5). The browser derives the learner's
+ * learning XP from verified progress with these; the server uses the same
+ * numbers when a first pass credits coins. */
+export const LEVEL_XP_PER_DIFFICULTY = 50;
+/** XP for passing a part test (checkpoint *n*) the first time: 300 × n. */
+export const CHECKPOINT_XP_PER_PART = 300;
+
+/** Difficulty tier (1–5) of a 1-based Learn level: levels 1–5 → 1, 6–10 → 2, … */
+export const learnLevelDifficulty = (level: number): number =>
+  Number.isFinite(level) ? Math.min(5, Math.max(1, Math.ceil(level / 5))) : 1;
+export const learnLevelXp = (level: number): number => LEVEL_XP_PER_DIFFICULTY * learnLevelDifficulty(level);
+export const learnCheckpointXp = (checkpoint: number): number => CHECKPOINT_XP_PER_PART * Math.max(1, checkpoint);
+
 /* ── parts and availability ────────────────────────────────────────────── */
 
 /** Every topic is presented as this many sequential parts, each ending with

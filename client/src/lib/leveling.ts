@@ -14,6 +14,7 @@
 // from the learner's chosen track (set in their profile).
 
 import type { RoadmapProgress } from './roadmap';
+import { learnCheckpointXp, learnLevelDifficulty, learnLevelXp } from '../../../shared/progression';
 import type { SubjectId } from './subjects';
 import type { TranslationKey } from '../i18n/translations';
 
@@ -30,9 +31,9 @@ export const rankTitleKey = (subject: SubjectId, index: number): TranslationKey 
 
 // Learning rewards (first pass only — recomputed from progress, so replays add
 // nothing here). A level is 8 questions; a checkpoint is a 40-question exam, so
-// checkpoints are worth far more. Both scale with difficulty (1–5).
-const LEVEL_XP_PER_DIFFICULTY = 50; // level d → 50·d  (50 … 250)
-const CHECKPOINT_XP_PER_DIFFICULTY = 300; // checkpoint n → 300·n  (300 … 1500)
+// checkpoints are worth far more. Both scale with difficulty (1–5): level d is
+// 50·d and checkpoint n is 300·n, from shared/progression.ts, which the server
+// reads too when a first pass credits coins.
 
 // Quiz rewards, per CORRECT answer, scaled by that question's difficulty. Tuned
 // so a quiz question is worth meaningfully less than a learning question.
@@ -47,11 +48,7 @@ export const PRACTICE_XP = 12;
 const clampDifficulty = (d: number): number => Math.min(5, Math.max(1, Math.round(d) || 1));
 
 /** Difficulty tier (1–5) of a 1-based roadmap level: levels 1–5 → 1, 6–10 → 2, … */
-export const difficultyForLevel = (level: number): number => Math.min(5, Math.max(1, Math.ceil(level / 5)));
-
-const levelXp = (difficulty: number): number => LEVEL_XP_PER_DIFFICULTY * clampDifficulty(difficulty);
-// Checkpoint n covers levels (n-1)·5+1 … n·5, whose difficulty tier is exactly n.
-const checkpointXp = (checkpoint: number): number => CHECKPOINT_XP_PER_DIFFICULTY * Math.max(1, checkpoint);
+export const difficultyForLevel = learnLevelDifficulty;
 
 /**
  * Total learning XP implied by a progress blob (only PASSED items count).
@@ -64,10 +61,10 @@ export function computeLearningXp(progress: RoadmapProgress, topics?: ReadonlySe
     if (!tp) continue;
     if (topics && !topics.has(topic)) continue;
     for (const [lvl, entry] of Object.entries(tp.levels ?? {})) {
-      if (entry?.passed) xp += levelXp(difficultyForLevel(Number(lvl)));
+      if (entry?.passed) xp += learnLevelXp(Number(lvl));
     }
     for (const [cp, entry] of Object.entries(tp.checkpoints ?? {})) {
-      if (entry?.passed) xp += checkpointXp(Number(cp));
+      if (entry?.passed) xp += learnCheckpointXp(Number(cp));
     }
   }
   return xp;

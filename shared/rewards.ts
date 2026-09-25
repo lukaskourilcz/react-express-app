@@ -35,8 +35,11 @@
  * Extra protections may now be bought, and four things keep the exception
  * bounded:
  *
- *   * The currency is tokens, earned at 10% of verified XP. No money buys one.
- *     The path is learn more, then protect a streak.
+ *   * The currency is coins (tokens in code), earned from verified XP at 10%,
+ *     doubled on Premium, and from learning milestones. No money buys a
+ *     protection: it has no cash price, and a subscription only changes how
+ *     fast learning earns the coins. The path is learn more, then protect a
+ *     streak.
  *   * The ceiling never rises. Buying restores the same two-a-month budget and
  *     never exceeds it, so nobody can hold a deeper reserve than a learner who
  *     spends nothing.
@@ -205,13 +208,16 @@ export const merchMarginMinor = (pricing: MerchPricing): number =>
 /* ── the wallet ────────────────────────────────────────────────────────── */
 
 /** Why tokens moved. Every ledger entry carries one, and every entry is
- * attributable to something the server itself verified. */
+ * attributable to something the server itself verified. `milestone` and
+ * `social` arrived with migration 041. */
 export const TOKEN_REASONS = [
   'signup',
   'verified-xp',
   'purchase',
   'refund',
   'adjustment',
+  'milestone',
+  'social',
 ] as const;
 export type TokenReason = (typeof TOKEN_REASONS)[number];
 export const isTokenReason = (value: unknown): value is TokenReason =>
@@ -225,6 +231,84 @@ export const MAX_TOKEN_BALANCE = 100_000_000;
 
 export const tokensForVerifiedXp = (xp: number): number =>
   Number.isFinite(xp) && xp > 0 ? Math.floor(xp * TOKENS_PER_XP) : 0;
+
+/* ── coins: what earns them ────────────────────────────────────────────── */
+
+/**
+ * The earning rules (SECOND-HANDOFF-25-9-2026.md, section 7.2). These are the
+ * defaults; `lib/settings-store.ts` mirrors them as `coins` in the game
+ * settings, so the owner can tune a rate in `/dev` without a deploy. Every
+ * credit is a ledger entry written by a service-role routine of migration 041
+ * under a deterministic event id, so replaying an award, a milestone or a
+ * grant credits nothing. A browser never names an amount.
+ */
+export interface CoinSettings {
+  /** Coins per verified XP, for every account. */
+  xpRate: number;
+  /** Premium multiplies the XP credit, at credit time. */
+  premiumMultiplier: number;
+  /** Most coins one account earns from XP in one UTC day, after the
+   * multiplier. Milestones sit outside it. */
+  dailyXpCap: number;
+  /** The one-time welcome grant, on the first wallet read. */
+  welcomeGrant: number;
+  /** Premium: a live streak of `days` pays `coins`, once per account. */
+  streakMilestones: { days: number; coins: number }[];
+  /** Premium: every level of a Learn topic passed. */
+  topicComplete: number;
+  /** Premium: every stage of an evolving project passed. */
+  projectComplete: number;
+  /** Premium: every level of a short path passed. */
+  shortPathComplete: number;
+  /** Premium: ranks one to three on the board of a finished calendar month. */
+  monthTop: number[];
+  /**
+   * Coins for opening one of devShark's social profiles. Zero by default, and
+   * zero is the recommendation: Meta's spam rules forbid "offering to provide
+   * anything of monetary value in exchange for engagement", coins buy
+   * merchandise, and no platform can tell anyone whether a click became a
+   * follow. The owner may set it knowing that (handoff section 1, item 2).
+   * When it is above zero the copy says "thanks for visiting", never
+   * "follow to earn".
+   */
+  socialVisitGrant: number;
+}
+
+export const DEFAULT_COIN_SETTINGS: CoinSettings = {
+  xpRate: TOKENS_PER_XP,
+  premiumMultiplier: 2,
+  dailyXpCap: 400,
+  welcomeGrant: SIGNUP_TOKEN_GRANT,
+  streakMilestones: [
+    { days: 7, coins: 25 },
+    { days: 30, coins: 100 },
+    { days: 100, coins: 300 },
+  ],
+  topicComplete: 100,
+  projectComplete: 150,
+  shortPathComplete: 50,
+  monthTop: [300, 200, 100],
+  socialVisitGrant: 0,
+};
+
+/** The three profiles "Find devShark elsewhere" links to. The URLs live in
+ * `client/product-catalog.ts` and nowhere else. */
+export const SOCIAL_PLATFORMS = ['linkedin', 'instagram', 'threads'] as const;
+export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
+export const isSocialPlatform = (value: unknown): value is SocialPlatform =>
+  typeof value === 'string' && (SOCIAL_PLATFORMS as readonly string[]).includes(value);
+
+/** What one XP award credits before the daily cap: the rate, then the Premium
+ * multiplier. `credit_verified_xp_tokens` does the same sum in the database,
+ * which is the one that counts; this copy is for tests and for display. */
+export function coinsForVerifiedXp(xp: number, premium: boolean, settings: CoinSettings = DEFAULT_COIN_SETTINGS): number {
+  if (!Number.isFinite(xp) || xp <= 0) return 0;
+  return Math.floor(xp * settings.xpRate) * (premium ? settings.premiumMultiplier : 1);
+}
+
+/** What the day's cap still allows. */
+export const coinsUnderDailyCap = (amount: number, earnedToday: number, settings: CoinSettings = DEFAULT_COIN_SETTINGS): number =>
+  Math.max(0, Math.min(amount, settings.dailyXpCap - earnedToday));
 
 /* ── orders ────────────────────────────────────────────────────────────── */
 

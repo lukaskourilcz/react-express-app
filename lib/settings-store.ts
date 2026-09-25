@@ -5,7 +5,13 @@
 
 import { createServiceClient, withTimeout } from './http';
 import type { DifficultyMode } from './quiz-data';
-import { DEFAULT_MERCH_SETTINGS, MERCH_SKUS, type MerchSettings } from '../shared/rewards';
+import {
+  DEFAULT_COIN_SETTINGS,
+  DEFAULT_MERCH_SETTINGS,
+  MERCH_SKUS,
+  type CoinSettings,
+  type MerchSettings,
+} from '../shared/rewards';
 
 const supabase = createServiceClient();
 const TABLE = 'app_settings';
@@ -68,6 +74,10 @@ export interface GameSettings {
    * physical product is an invented one. An item with no pricing entry reports
    * `unconfigured` and cannot be ordered through any route. */
   merch: MerchSettings;
+  /** What earns coins (step D8). Defaults from shared/rewards.ts; the owner
+   * tunes them in /dev → Settings → Coins. `socialVisitGrant` stays 0 unless
+   * the owner decides otherwise: see the policy note on CoinSettings. */
+  coins: CoinSettings;
   support: {
     /** Hard production guard: provider links stay hidden unless explicitly enabled. */
     enabled: boolean;
@@ -168,6 +178,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   // Nothing priced, nothing enabled, test mode on. Every figure here arrives
   // from a real quote through /dev, or the item stays unavailable.
   merch: { ...DEFAULT_MERCH_SETTINGS, pricing: {} },
+  coins: { ...DEFAULT_COIN_SETTINGS, streakMilestones: DEFAULT_COIN_SETTINGS.streakMilestones.map((one) => ({ ...one })), monthTop: [...DEFAULT_COIN_SETTINGS.monthTop] },
   support: {
     enabled: false,
     kofiUrl: '',
@@ -362,6 +373,45 @@ function cleanMerch(raw: unknown, fallback: MerchSettings): MerchSettings {
   };
 }
 
+/**
+ * Read the coin rules defensively. Every figure is clamped; a malformed
+ * milestone list falls back to the defaults as a whole rather than half of it.
+ * The social grant defaults to 0 and a missing or bad value reads as 0, never
+ * as the last number someone typed.
+ */
+function cleanCoins(raw: unknown, fallback: CoinSettings): CoinSettings {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
+  const rate = typeof r.xpRate === 'number' && Number.isFinite(r.xpRate) && r.xpRate >= 0 && r.xpRate <= 1
+    ? Math.round(r.xpRate * 1000) / 1000
+    : fallback.xpRate;
+  const milestones = Array.isArray(r.streakMilestones)
+    ? r.streakMilestones.flatMap((entry) => {
+        const e = (entry && typeof entry === 'object' ? entry : {}) as Record<string, unknown>;
+        const days = typeof e.days === 'number' && Number.isInteger(e.days) && e.days >= 1 && e.days <= 10_000 ? e.days : null;
+        const coins = typeof e.coins === 'number' && Number.isInteger(e.coins) && e.coins >= 0 && e.coins <= 100_000 ? e.coins : null;
+        return days !== null && coins !== null ? [{ days, coins }] : [];
+      })
+    : [];
+  const uniqueDays = new Set(milestones.map((one) => one.days));
+  const monthTop = Array.isArray(r.monthTop)
+    ? r.monthTop.filter((n): n is number => typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= 100_000).slice(0, 3)
+    : [];
+  return {
+    xpRate: rate,
+    premiumMultiplier: clampInt(r.premiumMultiplier, 1, 5, fallback.premiumMultiplier),
+    dailyXpCap: clampInt(r.dailyXpCap, 0, 100_000, fallback.dailyXpCap),
+    welcomeGrant: clampInt(r.welcomeGrant, 0, 100_000, fallback.welcomeGrant),
+    streakMilestones: milestones.length > 0 && milestones.length <= 10 && uniqueDays.size === milestones.length
+      ? milestones.sort((a, b) => a.days - b.days)
+      : fallback.streakMilestones.map((one) => ({ ...one })),
+    topicComplete: clampInt(r.topicComplete, 0, 100_000, fallback.topicComplete),
+    projectComplete: clampInt(r.projectComplete, 0, 100_000, fallback.projectComplete),
+    shortPathComplete: clampInt(r.shortPathComplete, 0, 100_000, fallback.shortPathComplete),
+    monthTop: monthTop.length === 3 ? monthTop : [...fallback.monthTop],
+    socialVisitGrant: clampInt(r.socialVisitGrant, 0, 100_000, 0),
+  };
+}
+
 // Coerce arbitrary stored/posted JSON into a valid GameSettings, clamping every
 // field so a bad value can never break the endpoints that consume it.
 export function normalizeSettings(raw: unknown): GameSettings {
@@ -406,6 +456,7 @@ export function normalizeSettings(raw: unknown): GameSettings {
       ),
     },
     merch: cleanMerch(r.merch, d.merch),
+    coins: cleanCoins(r.coins, d.coins),
     shop: {
       prices: cleanShopPrices((r.shop as Record<string, unknown> | undefined)?.prices, d.shop.prices),
       pathUnlockPrice: clampInt(

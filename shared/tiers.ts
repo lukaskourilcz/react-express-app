@@ -111,7 +111,10 @@ export type GatedContent =
   | { kind: 'learn-part-test'; topic: string; part: number }
   | { kind: 'coding-task'; taskId: string }
   | { kind: 'evolving-stage'; challengeId: string; stage: number }
-  | { kind: 'learning-path'; pathId: LearningPathId };
+  | { kind: 'learning-path'; pathId: LearningPathId }
+  // Redeeming coins for shipped merchandise (step D8). Not content, but refused
+  // with the same 402 so the browser answers it with the same upgrade sheet.
+  | { kind: 'merch-redemption'; sku: string };
 export type GatedKind = GatedContent['kind'];
 
 /** The pure data `contentTier` needs. The server builds it from `lib/`, the
@@ -193,6 +196,10 @@ export function contentTier(content: GatedContent, index: ContentIndex): Tier {
     case 'learning-path':
       // The FDE and DSA paths are Premium in full, once their switches are on.
       return 'premium';
+    case 'merch-redemption':
+      // Premium members redeem coins for merchandise; the crown and streak
+      // protection stay open to every account.
+      return 'premium';
     default:
       return 'premium';
   }
@@ -222,6 +229,8 @@ export function gatedRef(content: GatedContent): string {
       return `${content.challengeId}:${content.stage}`;
     case 'learning-path':
       return content.pathId;
+    case 'merch-redemption':
+      return content.sku;
   }
 }
 
