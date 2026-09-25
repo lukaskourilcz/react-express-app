@@ -6,6 +6,7 @@
 // Local aids while content is being authored (never set in CI):
 //   CODING_ALLOW_LEVEL_GAPS=1   allow Learn levels without a task
 //   CODING_SKIP_INDEX=1         do not require shared/coding-index.ts to be fresh
+//   CODING_COVERAGE_ENFORCED=1  fail on Easy-band technique gaps before COVERAGE_ENFORCED is switched on
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -32,6 +33,7 @@ import {
   type CodingTier,
   type Difficulty,
 } from '../shared/coding-catalog';
+import { COVERAGE_ENFORCED, COVERAGE_MIN_EASY, coverageGaps, renderCoverage, techniqueCoverage } from './coding-coverage';
 import { docsFor } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
 import { formatOf } from '../shared/coding-catalog';
@@ -55,6 +57,7 @@ const ALLOW_GAPS = process.env.CODING_ALLOW_LEVEL_GAPS === '1';
 // CODING_CS_TRACKS=javascript,typescript.
 const CS_TRACKS = (process.env.CODING_CS_TRACKS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const SKIP_INDEX = process.env.CODING_SKIP_INDEX === '1';
+const ENFORCE_COVERAGE = COVERAGE_ENFORCED || process.env.CODING_COVERAGE_ENFORCED === '1';
 // Prove only the solutions whose task id matches, e.g. CODING_ONLY='^ts-'
 // while one file is being authored. The shape checks still cover everything.
 // Never set in CI.
@@ -297,6 +300,25 @@ async function main() {
   const indexPath = path.join(process.cwd(), 'shared', 'coding-index.ts');
   if (!SKIP_INDEX && (!existsSync(indexPath) || readFileSync(indexPath, 'utf8') !== renderCodingIndex(CODING_SUMMARIES))) {
     fail('shared/coding-index.ts is stale: run npm run build:coding-index');
+  }
+
+  /* ── technique coverage of the Easy band (#226) ─────────────────────── */
+  // The check itself must bite: three Easy challenges cover a Medium tag, and
+  // taking one away opens a gap.
+  const probe = [
+    { id: 'js-probe-medium', track: 'javascript' as const, tier: 3 as const, focus: ['closures'] },
+    ...[1, 2, 3].map((n) => ({ id: `js-probe-easy-${n}`, track: 'javascript' as const, tier: 1 as const, focus: ['closures'] })),
+  ];
+  assert.equal(coverageGaps(techniqueCoverage(probe, ['javascript'])).length, 0, `${COVERAGE_MIN_EASY} Easy challenges cover a Medium tag`);
+  assert.deepEqual(
+    coverageGaps(techniqueCoverage(probe.slice(0, -1), ['javascript'])).map((row) => [row.tag, row.easy]),
+    [['closures', COVERAGE_MIN_EASY - 1]],
+    'removing an Easy challenge opens a gap',
+  );
+  const coverage = techniqueCoverage(CODING_SUMMARIES);
+  console.log(renderCoverage(coverage, ENFORCE_COVERAGE));
+  if (ENFORCE_COVERAGE) {
+    for (const gap of coverageGaps(coverage)) fail(`${gap.track}: ${gap.tag} is on ${gap.medium} Medium challenge(s) and only ${gap.easy} Easy one(s); it needs ${COVERAGE_MIN_EASY}`);
   }
 
   /* ── JavaScript and TypeScript solutions ────────────────────────────── */
