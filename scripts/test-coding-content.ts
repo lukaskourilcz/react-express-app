@@ -16,12 +16,21 @@ import { solutionFor, solutionIds } from '../lib/coding/solutions';
 import { stripComments } from '../lib/coding/solutions/strip-comments';
 import { localizedFields, localizedLists } from '../lib/coding/types';
 import {
+  CODING_DIFFICULTIES,
   CODING_SECTION_TRACKS,
   CODING_TRACKS,
+  STAGE_DIFFICULTY_BANDS,
+  TIER_DIFFICULTY,
+  difficultyFitsTier,
+  difficultyOf,
   gardenPathFor,
   isCodingTaskId,
   isCodingTechnique,
   isCodingTier,
+  isDifficulty,
+  stageDifficulty,
+  type CodingTier,
+  type Difficulty,
 } from '../shared/coding-catalog';
 import { docsFor } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
@@ -139,6 +148,11 @@ async function main() {
       if (!Number.isInteger(task.level) || task.level < 1 || task.level > 25) fail(`${where}: level must be 1–25`);
     }
     if (!isCodingTier(task.tier)) fail(`${where}: bad tier`);
+    // An authored label may only move a task within what its tier allows.
+    if (task.difficulty !== undefined) {
+      if (!isDifficulty(task.difficulty)) fail(`${where}: unknown difficulty ${String(task.difficulty)}`);
+      else if (!difficultyFitsTier(task.difficulty, task.tier)) fail(`${where}: ${task.difficulty} contradicts tier ${task.tier}`);
+    }
     if (task.focus.length === 0) fail(`${where}: needs at least one technique tag`);
     for (const tag of task.focus) if (!isCodingTechnique(tag)) fail(`${where}: unknown technique tag ${tag}`);
     if (!(task.estimatedMinutes > 0)) fail(`${where}: estimatedMinutes must be positive`);
@@ -210,6 +224,48 @@ async function main() {
       if (stripComments(code) !== code) fail(`${id}: the ${kind} board still carries a comment`);
     }
   }
+
+  /* ── difficulty labels ─────────────────────────────────────────────── */
+  // Easy, Medium and Hard are derived, so they are proven rather than read.
+  // An override that contradicts its tier is refused.
+  const refused: [Difficulty, CodingTier][] = [['easy', 3], ['easy', 4], ['easy', 5], ['hard', 1], ['hard', 2]];
+  for (const [label, tier] of refused) assert.equal(difficultyFitsTier(label, tier), false, `an ${label} override cannot sit at tier ${tier}`);
+  for (const tier of [1, 2, 3, 4, 5] as CodingTier[]) assert.equal(difficultyFitsTier('medium', tier), true, `a Medium override fits tier ${tier}`);
+  assert.equal(difficultyOf({ id: 'js-count-multiples', tier: 3, difficulty: 'medium' }), 'medium', 'an authored label wins');
+  // Stages and levels read their position, in the bands the handoff fixed.
+  const bandOf = (length: number) => Array.from({ length }, (_, index) => stageDifficulty(index, length)[0].toUpperCase()).join('');
+  assert.equal(bandOf(5), 'EEMMH', 'five-level paths: 1–2 Easy, 3–4 Medium, 5 Hard');
+  assert.equal(bandOf(10), 'EEEMMMMHHH', 'ten-stage projects: 1–3, 4–7, 8–10');
+  assert.equal(bandOf(12), 'EEEEMMMMMHHH', 'twelve-stage FullStack apps: 1–4, 5–9, 10–12');
+  const byId = new Map(CODING_TASKS.map((task) => [task.id, task]));
+  for (const project of EVOLVING_CHALLENGES) {
+    const length = project.stages.length;
+    if (!STAGE_DIFFICULTY_BANDS[length]) { fail(`${project.id}: no difficulty band for a path of ${length} stages; add one to STAGE_DIFFICULTY_BANDS`); continue; }
+    project.stages.forEach((id, index) => {
+      const task = byId.get(id);
+      if (!task || task.difficulty) return; // missing stages fail above; an authored label is bounded by its tier
+      const expected = stageDifficulty(index, length);
+      if (difficultyOf(task) !== expected) fail(`${id}: stage ${index + 1} of ${length} should be ${expected}, not ${difficultyOf(task)}`);
+    });
+  }
+  // Standalone tasks read their tier: 1–2 Easy, 3 Medium, 4–5 Hard.
+  for (const task of CODING_TASKS) {
+    if (evolvingStage(task.id) || task.difficulty) continue;
+    const label = difficultyOf(task);
+    if (label !== TIER_DIFFICULTY[task.tier]) fail(`${task.id}: tier ${task.tier} should read ${TIER_DIFFICULTY[task.tier]}, not ${label}`);
+    if (label === 'easy' && task.tier > 2) fail(`${task.id}: Easy at tier ${task.tier}`);
+    if (label === 'hard' && task.tier < 3) fail(`${task.id}: Hard at tier ${task.tier}`);
+  }
+  // Every summary the browser reads carries exactly the label the task resolves to.
+  const labelCounts = new Map<Difficulty, number>(CODING_DIFFICULTIES.map((label) => [label, 0]));
+  for (const summary of CODING_SUMMARIES) {
+    const task = byId.get(summary.id);
+    if (!isDifficulty(summary.difficulty)) { fail(`${summary.id}: summary has no difficulty`); continue; }
+    if (task && summary.difficulty !== difficultyOf(task)) fail(`${summary.id}: summary says ${summary.difficulty}, the task resolves to ${difficultyOf(task)}`);
+    labelCounts.set(summary.difficulty, (labelCounts.get(summary.difficulty) ?? 0) + 1);
+  }
+  const labelTotal = [...labelCounts.values()].reduce((sum, n) => sum + n, 0);
+  if (labelTotal !== CODING_SUMMARIES.length) fail(`difficulty labels cover ${labelTotal} of ${CODING_SUMMARIES.length} summaries`);
 
   /* ── parity ─────────────────────────────────────────────────────────── */
   if (REQUIRE_CS) {
@@ -417,7 +473,8 @@ async function main() {
     assert.equal(starterPasses, false, `${task.id}: the broken starter must fail its own tests`);
   }
 
-  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
+  const byLabel = CODING_DIFFICULTIES.map((label) => `${label} ${labelCounts.get(label) ?? 0}`).join(', ');
+  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}; ${byLabel}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 
 void main().catch((error) => {

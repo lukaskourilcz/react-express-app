@@ -18,6 +18,7 @@ import type {
   CodingTrack,
   PlayableCodingTask,
 } from '../../shared/coding-catalog';
+import { difficultyOf } from '../../shared/coding-catalog';
 import { mergeTask, type CodingTaskCs, type CodingTaskSource } from './types';
 import { JAVASCRIPT_TASKS } from './tasks/javascript';
 import { JAVASCRIPT_TASKS_CS } from './tasks/javascript.cs';
@@ -91,6 +92,7 @@ export function summarize(task: CodingTask): CodingTaskSummary {
     track: task.track,
     level: task.level,
     tier: task.tier,
+    difficulty: difficultyOf(task),
     focus: task.focus,
     title: task.title,
     verify: task.verify,

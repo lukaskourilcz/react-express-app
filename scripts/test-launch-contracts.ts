@@ -122,7 +122,7 @@ import {
   pathGuidedComplete,
   pathInventory,
 } from '../shared/learning-paths';
-import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS, CODING_TRACKS, formatOf, isCodingSectionTrack } from '../shared/coding-catalog';
+import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS, CODING_TRACKS, formatOf, isCodingSectionTrack, isDifficulty } from '../shared/coding-catalog';
 import { CODING_BADGES } from '../shared/badges';
 import { CODING_INDEX } from '../shared/coding-index';
 import { inspectQuestionQuality } from '../lib/question-quality';
@@ -594,6 +594,14 @@ async function main() {
   assert.deepEqual(eligibleCodingBadges(new Set(), CODING_INDEX), []);
   assert.deepEqual(CODING_BADGES.map((badge) => badge.id), [...CODING_BADGE_IDS], 'every coding badge has display metadata');
   assert.ok(CODING_TASK_XP[1] < CODING_TASK_XP[5]);
+  // Easy, Medium and Hard are labels projected from the tier ladder (#224).
+  // Every listed challenge carries one, and nothing that opens, locks or pays
+  // reads it: the ladder and the XP table stay keyed by tier.
+  assert.ok(CODING_INDEX.every((row) => isDifficulty(row.difficulty)), 'every indexed challenge carries Easy, Medium or Hard');
+  assert.deepEqual(CODING_TASK_XP, { 1: 25, 2: 35, 3: 50, 4: 75, 5: 120 }, 'coding XP stays keyed by tier');
+  const codingCatalogSource = readFileSync(join(process.cwd(), 'shared', 'coding-catalog.ts'), 'utf8');
+  const ladderSource = codingCatalogSource.slice(codingCatalogSource.indexOf('export function tierUnlocked'), codingCatalogSource.indexOf('/** Cosmetic badge ids'));
+  assert.ok(ladderSource.includes('tierPassRatio') && !/difficulty/i.test(ladderSource.replace(/\/\*\*[\s\S]*?\*\//g, '')), 'the tier ladder never reads the difficulty label');
 
   // React tasks are graded on the server like every other track: the reference
   // solution passes, a component that renders nothing fails, and a case that
