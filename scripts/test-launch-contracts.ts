@@ -136,6 +136,24 @@ import {
   SUPPORT_PROMPT_DISMISS_MS,
 } from '../client/src/lib/supportPrompt';
 import type { Question } from '../lib/quiz-runtime';
+import {
+  FREE_CODING_SHARE,
+  FREE_CODING_TASK_IDS,
+  FREE_EVOLVING_STAGES,
+  FREE_LEARN_LEVELS,
+  FREE_LEARN_TOPICS,
+  PREMIUM_REQUIRED,
+  codingContent,
+  contentTier,
+  isFreeCodingTask,
+  isOpenTo,
+} from '../shared/tiers';
+import { EVOLVING_CHALLENGES } from '../shared/evolving';
+import { techniqueGroup } from '../shared/coding-catalog';
+import { CODING_SUMMARIES } from '../lib/coding/active';
+import { serverContentIndex } from '../lib/access';
+import { jsonPremiumRequired, PremiumRequiredError } from '../lib/http';
+import { parseValidUntil, toEntitlementResponse } from '../lib/entitlements';
 
 function apiFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -372,6 +390,173 @@ async function auditGateContracts() {
   assert.equal(round.lastRoundSize, 1, 'the void item does not count in the round');
   assert.equal(round.lastRoundCorrect, 1);
   assert.equal(round.asked, 1, 'the run continues from what was actually graded');
+}
+
+/* ── the free tier and Premium (#220) ─────────────────────────────────────
+ *
+ * shared/tiers.ts is the one contract for what each tier opens, the server
+ * refuses locked content with 402, and Premium changes which content a
+ * learner may start and nothing else. Each assertion below is one of the
+ * handoff's section 2.5 rules. */
+async function tierContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+
+  // 1. The contract is pure: the browser and the server import the same file.
+  const tiersSource = read('shared/tiers.ts');
+  const tiersImports = [...tiersSource.matchAll(/^import[^;]*?from\s+'([^']+)'/gms)].map((match) => match[1]);
+  assert.ok(tiersImports.length > 0);
+  for (const specifier of tiersImports) {
+    assert.ok(specifier.startsWith('./'), `shared/tiers.ts may import only from shared/, not ${specifier}`);
+  }
+
+  // 2. The free coding share stays inside its bounds, and 3. every free task exists.
+  const index = serverContentIndex();
+  const indexIds = new Set(CODING_INDEX.map((task) => task.id));
+  for (const id of FREE_CODING_TASK_IDS) assert.ok(indexIds.has(id), `free task ${id} is not in the coding index`);
+  assert.equal(new Set(FREE_CODING_TASK_IDS).size, FREE_CODING_TASK_IDS.length, 'the free pick lists each task once');
+  const freeCount = CODING_INDEX.filter((task) => task.free === true).length;
+  const share = freeCount / CODING_INDEX.length;
+  assert.ok(
+    share >= FREE_CODING_SHARE.min && share <= FREE_CODING_SHARE.max,
+    `the free coding share is ${(share * 100).toFixed(1)} %, outside ${FREE_CODING_SHARE.min * 100}-${FREE_CODING_SHARE.max * 100} %`,
+  );
+  // The browser's flags are the server's flags: both are the projection of one list.
+  for (const task of CODING_INDEX) {
+    assert.equal(task.free === true, isFreeCodingTask(task.id), `${task.id}: the index flag disagrees with shared/tiers.ts`);
+  }
+  assert.deepEqual(
+    CODING_SUMMARIES.filter((task) => task.free).map((task) => task.id),
+    CODING_INDEX.filter((task) => task.free).map((task) => task.id),
+    'the server summaries and the browser index open the same tasks',
+  );
+  // Stage one of every evolving project and short path is open; stage two never is.
+  for (const challenge of EVOLVING_CHALLENGES) {
+    assert.equal(contentTier({ kind: 'coding-task', taskId: challenge.stages[0] }, index), 'free', `${challenge.id} stage one`);
+    if (challenge.stages[FREE_EVOLVING_STAGES]) {
+      assert.equal(contentTier({ kind: 'coding-task', taskId: challenge.stages[FREE_EVOLVING_STAGES] }, index), 'premium', `${challenge.id} stage two`);
+    }
+  }
+  // Each tier-1 technique group of every section track has its first task open.
+  for (const track of ['javascript', 'typescript', 'react', 'algorithms'] as const) {
+    const seen = new Set<string>();
+    for (const task of CODING_INDEX.filter((one) => one.track === track && one.tier === 1 && !codingContent(one.id).kind.startsWith('evolving'))) {
+      for (const tag of task.focus) {
+        const group = techniqueGroup(tag);
+        if (!group || seen.has(group)) continue;
+        seen.add(group);
+        assert.equal(task.free, true, `${task.id} is the first ${track} tier-1 task in ${group} and must be free`);
+      }
+    }
+  }
+
+  // What the free tier opens, and what it does not.
+  for (const topic of FREE_LEARN_TOPICS) {
+    for (let level = 1; level <= topicLevelCount(topic); level++) {
+      assert.equal(contentTier({ kind: 'learn-level', topic, level }, index), 'free', `${topic} ${level}`);
+    }
+    for (let part = 1; part <= 3; part++) assert.equal(contentTier({ kind: 'learn-part-test', topic, part }, index), 'free');
+  }
+  assert.equal(FREE_LEARN_LEVELS.react, 12);
+  assert.equal(contentTier({ kind: 'learn-level', topic: 'react', level: 12 }, index), 'free');
+  assert.equal(contentTier({ kind: 'learn-level', topic: 'react', level: 13 }, index), 'premium');
+  assert.equal(contentTier({ kind: 'learn-part-test', topic: 'react', part: 1 }, index), 'free', "React's first part is open");
+  assert.equal(contentTier({ kind: 'learn-part-test', topic: 'react', part: 2 }, index), 'premium', "React's second part ends above level 12");
+  assert.equal(contentTier({ kind: 'learn-level', topic: 'typescript', level: 1 }, index), 'premium');
+  assert.equal(contentTier({ kind: 'learning-path', pathId: 'fde' }, index), 'premium');
+  assert.equal(contentTier({ kind: 'coding-task', taskId: 'js-no-such-task' }, index), 'premium', 'unknown content can only lock');
+  assert.equal(isOpenTo('premium', { kind: 'learning-path', pathId: 'dsa-foundations' }, index), true);
+  assert.equal(isOpenTo('free', { kind: 'learn-level', topic: 'html', level: 3 }, index), true);
+
+  // 4. The entitlement routines read no learning, score or streak table, and
+  //    5. a grant writes none. Comments are stripped so the header may name them.
+  const migration = read('supabase/supabase-schema-039.sql').replace(/--[^\n]*/g, '').toLowerCase();
+  for (const table of ['user_xp', 'user_stats', 'user_category_stats', 'user_streak', 'roadmap_progress', 'coding_progress', 'token_ledger', 'token_balances']) {
+    assert.ok(!migration.includes(table), `migration 039 must not touch ${table}`);
+  }
+  for (const routine of ['is_premium', 'entitlement_summary', 'upsert_provider_entitlement', 'grant_manual_entitlement', 'revoke_manual_entitlement', 'record_billing_event', 'finish_billing_event', 'link_billing_customer', 'delete_entitlement_data']) {
+    const start = migration.indexOf(`function public.${routine}(`);
+    assert.ok(start >= 0, `migration 039 defines ${routine}`);
+    const body = migration.slice(start, migration.indexOf('grant execute', start));
+    assert.match(body, /security definer/, `${routine} is SECURITY DEFINER`);
+    assert.match(body, /set search_path = ''/, `${routine} pins an empty search_path`);
+    assert.match(migration, new RegExp(`grant execute on function public\\.${routine}\\([^)]*\\) to service_role;`), `${routine} is executable by service_role`);
+    assert.match(migration, new RegExp(`revoke all on function public\\.${routine}\\([^)]*\\) from public, anon, authenticated;`), `${routine} is revoked from browsers`);
+  }
+  assert.doesNotMatch(migration, /create or replace function public\.delete_user_data/, 'migration 039 redefines no earlier routine');
+  for (const table of ['billing_customers', 'entitlement_grants', 'billing_events']) {
+    assert.match(migration, new RegExp(`alter table public\\.${table}\\s+enable row level security`), `${table} has RLS`);
+    assert.match(migration, new RegExp(`revoke all on public\\.${table}\\s+from public, anon, authenticated`), `${table} revokes browser privileges`);
+  }
+  assert.doesNotMatch(migration, /grant select on public\.billing_events/, 'billing_events is service-role only');
+  assert.doesNotMatch(migration, /to anon/, 'anon holds nothing');
+
+  // Premium changes which content a learner may start and nothing else:
+  // grading, XP, scores, streaks, ranks and matchmaking never read a tier.
+  const tierReaders = new Set([
+    'lib/access.ts', 'lib/http.ts', 'lib/entitlements.ts', 'lib/coding/catalog.ts', 'lib/coding/handlers.ts',
+    'lib/learning-paths/handlers.ts', 'api/quiz/roadmap.ts',
+  ]);
+  const serverFiles = [...apiFiles(join(process.cwd(), 'api')), ...apiFiles(join(process.cwd(), 'lib'))]
+    .map((path) => path.slice(process.cwd().length + 1));
+  for (const file of serverFiles) {
+    const source = read(file);
+    if (/from '[^']*shared\/tiers'|from '[^']*lib\/access'|from '\.\.?\/access'|refuseLocked|resolveTier/.test(source)) {
+      assert.ok(tierReaders.has(file), `${file} reads the tier; only the content gates may`);
+    }
+  }
+  for (const file of ['lib/coding/grade.ts', 'api/leaderboard.ts', 'api/quiz/submit.ts', 'api/play/[action].ts', 'api/quiz/daily.ts', 'api/quiz/challenge.ts']) {
+    assert.doesNotMatch(read(file), /shared\/tiers|\/access'|is_premium|resolveTier|premium_required/, `${file} grades or ranks and must not read a tier`);
+  }
+
+  // 7. The 402 body: the standard envelope, the code, what was refused.
+  {
+    const res = mockResponse();
+    jsonPremiumRequired(res as never, new PremiumRequiredError({ kind: 'learn-level', topic: 'react', level: 13 }));
+    assert.equal(res.statusCode, 402);
+    assert.deepEqual(
+      res.body,
+      { error: { code: PREMIUM_REQUIRED, message: 'Premium opens this', kind: 'learn-level', ref: 'react:13' } },
+    );
+    assert.equal(PREMIUM_REQUIRED, 'premium_required');
+  }
+  assert.deepEqual(toEntitlementResponse(null), { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null });
+  assert.equal(toEntitlementResponse({ premium: true, source: 'manual', validUntil: null }).tier, 'premium');
+  assert.equal(toEntitlementResponse({ premium: 'yes' }).tier, 'free', 'only a literal true opens Premium');
+  const now = Date.parse('2026-09-25T12:00:00Z');
+  assert.deepEqual(parseValidUntil(undefined, now), { ok: true, value: null }, 'no end date means open-ended');
+  assert.equal(parseValidUntil('2026-09-24', now).ok, false, 'a grant cannot end in the past');
+  assert.equal(parseValidUntil('2040-01-01', now).ok, false, 'a grant is at most five years long');
+  assert.deepEqual(parseValidUntil('2026-10-25T12:00:00Z', now), { ok: true, value: '2026-10-25T12:00:00.000Z' });
+
+  // The handlers themselves, where they can run without a database: a signed-in
+  // account with no grant is free, a guest keeps the previews it had.
+  if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+    const signedIn = (query: Record<string, string>) => ({
+      method: 'GET', headers: { authorization: 'Bearer contract' }, query: { ...query, user_id: 'contract-free-account' },
+    });
+    const lockedTask = CODING_INDEX.find((task) => task.track === 'javascript' && !task.free && !codingContent(task.id).kind.startsWith('evolving'))!;
+    const freeTask = CODING_INDEX.find((task) => task.free && task.track === 'javascript')!;
+    const locked = mockResponse();
+    await roadmapHandler(signedIn({ resource: 'coding-task', id: lockedTask.id }) as never, locked as never);
+    assert.equal(locked.statusCode, 402, 'a free account is refused a Premium task');
+    assert.deepEqual(
+      { code: (locked.body as { error: { code: string } }).error.code, kind: (locked.body as { error: { kind: string } }).error.kind, ref: (locked.body as { error: { ref: string } }).error.ref },
+      { code: PREMIUM_REQUIRED, kind: 'coding-task', ref: lockedTask.id },
+    );
+    const lockedStage = mockResponse();
+    await roadmapHandler(signedIn({ resource: 'coding-task', id: EVOLVING_CHALLENGES[0].stages[1] }) as never, lockedStage as never);
+    assert.equal(lockedStage.statusCode, 402, 'a free account is refused stage two');
+    assert.equal((lockedStage.body as { error: { kind: string } }).error.kind, 'evolving-stage');
+    const open = mockResponse();
+    await roadmapHandler(signedIn({ resource: 'coding-task', id: freeTask.id }) as never, open as never);
+    assert.equal(open.statusCode, 200, 'a free account opens a free task');
+    const guest = mockResponse();
+    await roadmapHandler({ method: 'GET', headers: {}, query: { resource: 'coding-task', id: lockedTask.id } } as never, guest as never);
+    assert.equal(guest.statusCode, 200, 'a guest keeps the preview it had');
+    const guestLevel = mockResponse();
+    await roadmapHandler({ method: 'GET', headers: {}, query: { topic: 'react', level: '13', lang: 'en' } } as never, guestLevel as never);
+    assert.notEqual(guestLevel.statusCode, 402, 'a guest preview of a Learn level is never a 402');
+  }
 }
 
 async function main() {
@@ -1734,8 +1919,9 @@ async function main() {
   }
 
   await auditGateContracts();
+  await tierContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, and an unconfigured shop.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, and an unconfigured shop.');
 }
 
 void main().catch((error) => {
