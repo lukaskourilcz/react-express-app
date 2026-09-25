@@ -66,6 +66,13 @@ export const RATE_LIMITS = {
   learningPathSubmit: { key: 'learning_path_submit', capacity: 30, refillPerSecond: 30 / 600 },
   learningPathDraft: { key: 'learning_path_draft', capacity: 60, refillPerSecond: 60 / 600 },
   learningPathEnroll: { key: 'learning_path_enroll', capacity: 10, refillPerSecond: 10 / 600 },
+  // Billing (#221). Checkout, the portal and the success-page lookup are keyed
+  // by account (the `identity` argument); the public cancellation page by
+  // address. The Stripe webhook has no limit: its signature is the gate.
+  billingCheckout: { key: 'billing_checkout', capacity: 10, refillPerSecond: 10 / 60 },
+  billingPortal: { key: 'billing_portal', capacity: 10, refillPerSecond: 10 / 60 },
+  billingSession: { key: 'billing_session', capacity: 20, refillPerSecond: 20 / 60 },
+  billingCancel: { key: 'billing_cancel', capacity: 5, refillPerSecond: 5 / 3600 },
 } satisfies Record<string, RateLimitConfig>;
 
 const buckets = new Map<string, Bucket>();
@@ -105,11 +112,12 @@ export function checkRateLimit(
   req: VercelRequest,
   res: VercelResponse,
   config: RateLimitConfig,
+  identity?: string,
 ): boolean {
   const now = Date.now();
   maybeCleanup(now);
 
-  const key = `${config.key}:${clientIp(req)}`;
+  const key = `${config.key}:${identity ?? clientIp(req)}`;
   const b = buckets.get(key) ?? { tokens: config.capacity, updatedAt: now };
   const elapsedSeconds = (now - b.updatedAt) / 1000;
   const refilled = Math.min(config.capacity, b.tokens + elapsedSeconds * config.refillPerSecond);
@@ -211,12 +219,14 @@ export async function enforceRateLimit(
   req: VercelRequest,
   res: VercelResponse,
   config: RateLimitConfig,
+  /** Who the bucket belongs to, such as `user:<id>`; the client IP when omitted. */
+  identity?: string,
 ): Promise<boolean> {
   const limiter = await getUpstashLimiter(config);
-  if (!limiter) return checkRateLimit(req, res, config);
+  if (!limiter) return checkRateLimit(req, res, config, identity);
 
   try {
-    const id = clientIp(req);
+    const id = identity ?? clientIp(req);
     const { success, reset } = await withLimiterDeadline(limiter.limit(id));
     if (success) return true;
 
@@ -227,6 +237,6 @@ export async function enforceRateLimit(
   } catch {
     // Redis unreachable mid-request — never hard-fail on the limiter; fall back
     // to the in-memory bucket so the endpoint stays available.
-    return checkRateLimit(req, res, config);
+    return checkRateLimit(req, res, config, identity);
   }
 }
