@@ -51,8 +51,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
 
   // ── GET ?resource=leaderboard: top scores + champion ──
+  // A read over history, so a retired category in the list is no reason to
+  // refuse it; the categories only name the subject whose board to show.
   if (resource === 'leaderboard') {
-    const scope = requestedScope(req);
+    const scope = requestedScope(req, { forDelivery: false });
     if (!scope.ok) {
       return jsonError(res, 400, 'invalid_subject_scope', 'Categories must belong to this deployment and one subject');
     }
@@ -91,7 +93,7 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
   // Optional subject scoping: the client sends the active subject's categories
   // so a challenge never mixes subjects. Old clients default to the
   // deployment's first subject rather than spanning the shared question bank.
-  const scope = requestedScope(req);
+  const scope = requestedScope(req, { forDelivery: true });
   if (!scope.ok) {
     return jsonError(res, 400, 'invalid_subject_scope', 'Categories must belong to this deployment and one subject');
   }
@@ -284,10 +286,10 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
   return res.json({ ok: true, awarded: data === true, score, xp });
 }
 
-function requestedScope(req: VercelRequest) {
+function requestedScope(req: VercelRequest, opts: { forDelivery: boolean }) {
   const catRaw = typeof req.query.categories === 'string' ? req.query.categories : '';
   const requested = catRaw
     ? catRaw.split(',').map((s) => s.trim()).filter(Boolean)
     : defaultDeploymentCategories();
-  return validateCategoryScope(requested, { forDelivery: true });
+  return validateCategoryScope(requested, opts);
 }

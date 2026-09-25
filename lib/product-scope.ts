@@ -1,7 +1,7 @@
 import {
-  SUBJECT_SCOPE_CATALOG,
   allowedDeploymentCategories,
   allowedDeploymentSubjects,
+  deliveryCategories,
   subjectForCategory,
   subjectForTopic,
   type ScopeSubjectId,
@@ -29,8 +29,7 @@ export function isDeploymentTopic(topic: string): boolean {
  * retiring a section and deleting one.
  */
 export function defaultDeploymentCategories(): string[] {
-  const subject = deploymentSubjects[0];
-  return SUBJECT_SCOPE_CATALOG[subject].categories.filter((category) => !isRetiredTopic(category));
+  return deliveryCategories(deploymentSubjects[0]);
 }
 
 /**

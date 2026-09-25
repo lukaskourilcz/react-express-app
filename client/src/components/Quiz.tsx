@@ -21,12 +21,12 @@ import { useAuth, getUserProfile } from '../lib/auth';
 import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } from '../types/quiz';
 import { visuallyHidden } from '../theme/MuiTheme';
 import {
-  CATEGORY_OPTIONS,
   visibleCategoryOptionsFor,
   onCategoryColorText,
   getCategoryHexColor,
   categoryLabelKey,
 } from '../lib/categories';
+import { getSubject, deliveryCategoriesForSubject } from '../lib/subjects';
 import { readJSON, writeJSON, removeStored } from '../lib/storage';
 import {
   recordQuizResult,
@@ -200,13 +200,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     const linkedCategory = typeof window !== 'undefined'
       ? new URLSearchParams(window.location.search).get('category')
       : null;
-    const known = new Set(CATEGORY_OPTIONS.map((c) => c.value));
-    if (linkedCategory && known.has(linkedCategory as CategoryType)) {
+    // Only categories the server still serves. A saved setup or an old link
+    // can name a retired section, and one of those gets the whole quiz refused.
+    const known = new Set<string>(deliveryCategoriesForSubject(getSubject()));
+    if (linkedCategory && known.has(linkedCategory)) {
       return [linkedCategory as CategoryType];
     }
     const saved = readJSON<SavedSetup>(SETUP_KEY, {});
     if (!Array.isArray(saved.categories)) return [];
-    return saved.categories.filter((c): c is CategoryType => known.has(c as CategoryType));
+    return saved.categories.filter((c): c is CategoryType => known.has(c));
   });
   const [revealedHints, setRevealedHints] = useState<Record<string, boolean>>({});
   // Whether a hint was *ever* opened for a question, which is not the same as

@@ -1,6 +1,6 @@
 import { apiFetch } from './api';
 import type { Question } from '../types/quiz';
-import { getSubject, categoriesForSubject } from './subjects';
+import { getSubject, deliveryCategoriesForSubject } from './subjects';
 
 // Biggest Shark Challenge client. All resources live on one Vercel function
 // (to stay within the 12-function Hobby limit), differentiated by method +
@@ -37,9 +37,9 @@ export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string; r
   if (opts.runToken) params.set('runToken', opts.runToken);
   if (opts.ranked === false) params.set('ranked', '0');
   if (opts.assessment) params.set('resource', 'assessment');
-  // Scope the challenge mix to the active subject so a Geography challenge never
-  // surfaces a Chess question.
-  params.set('categories', categoriesForSubject(getSubject()).join(','));
+  // Scope the challenge mix to the subject's served categories. A retired
+  // section in the list gets the whole request refused.
+  params.set('categories', deliveryCategoriesForSubject(getSubject()).join(','));
   const qs = params.toString();
   return apiFetch<ChallengeBatch>(`/api/quiz/challenge${qs ? `?${qs}` : ''}`);
 }
@@ -47,7 +47,7 @@ export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string; r
 export function getChallengeLeaderboard(): Promise<ChallengeLeaderboard> {
   const params = new URLSearchParams({
     resource: 'leaderboard',
-    categories: categoriesForSubject(getSubject()).join(','),
+    categories: deliveryCategoriesForSubject(getSubject()).join(','),
   });
   return apiFetch<ChallengeLeaderboard>(`/api/quiz/challenge?${params}`);
 }

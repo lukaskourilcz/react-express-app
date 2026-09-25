@@ -8,6 +8,7 @@ import {
 import {
   SUBJECT_SCOPE_CATALOG,
   allowedDeploymentSubjects,
+  deliveryCategories,
   subjectForCategory,
   subjectForTopic,
 } from '../shared/subject-catalog';
@@ -1111,6 +1112,19 @@ async function main() {
       `${topic} must not be requestable for delivery`,
     );
   }
+  // Requests for questions are built from `deliveryCategories`, and the server
+  // must accept that list whole: one retired category refuses a request, which
+  // is how the challenge and the daily set failed from 2026-09-08 to 2026-09-25.
+  // Reads over history still accept the full catalogue.
+  assert.deepEqual(defaultDeploymentCategories(), deliveryCategories('webdev'));
+  assert.equal(validateCategoryScope(deliveryCategories('webdev'), { forDelivery: true }).ok, true, 'the delivery list must be requestable');
+  assert.equal(
+    validateCategoryScope([...SUBJECT_SCOPE_CATALOG.webdev.categories], { forDelivery: true }).ok,
+    false,
+    'the full catalogue names retired sections, so it must not be sent for delivery',
+  );
+  assert.equal(validateCategoryScope([...SUBJECT_SCOPE_CATALOG.webdev.categories]).ok, true, 'a read may name a retired category');
+
   // The skill-check cannot grant a retired topic, however well the learner did.
   for (const correct of [10, 14, 18, 20]) {
     for (const granted of assessmentUnlocks('webdev', correct)) {

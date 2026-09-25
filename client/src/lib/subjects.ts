@@ -4,7 +4,7 @@
 
 import type { CategoryType, RoadmapTopic } from '../types/quiz';
 import type { TranslationKey } from '../i18n/translations';
-import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
+import { SUBJECT_SCOPE_CATALOG, deliveryCategories } from '../../../shared/subject-catalog';
 
 /**
  * i18n keys for a subject's display name / blurb — the registry's `label` and
@@ -52,6 +52,11 @@ export const isSubjectId = (v: unknown): v is SubjectId =>
 
 export const topicsForSubject = (id: SubjectId): RoadmapTopic[] => SUBJECTS[id].topics;
 export const categoriesForSubject = (id: SubjectId): CategoryType[] => SUBJECTS[id].categories;
+/** The categories to ask the server for questions from. `categoriesForSubject`
+ * still lists the retired sections, which is right for reading history (the
+ * leaderboards) and wrong for a request for questions: the server refuses a
+ * retired category, and with it the whole request. */
+export const deliveryCategoriesForSubject = (id: SubjectId): CategoryType[] => deliveryCategories(id) as CategoryType[];
 
 // Cached topic set, for scoping XP computations to the subject.
 const TOPIC_SETS = new Map<SubjectId, ReadonlySet<string>>();

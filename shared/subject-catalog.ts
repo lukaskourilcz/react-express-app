@@ -1,3 +1,5 @@
+import { isRetiredTopic } from './retired-content';
+
 /** Pure subject ownership data shared by browser and server code. Keep visual,
  * localized, and persistence concerns out of this module. devShark teaches one
  * subject, `webdev`. It stays an explicit key because progress, XP, tokens and
@@ -30,13 +32,22 @@ export const subjectForTopic = (topic: string): ScopeSubjectId | undefined => TO
 export const isScopeSubject = (value: unknown): value is ScopeSubjectId =>
   typeof value === 'string' && Object.prototype.hasOwnProperty.call(SUBJECT_SCOPE_CATALOG, value);
 
-/** The subjects this deployment serves: devShark's one subject. The shared
- * database still holds rows for subjects this repository no longer knows, and
- * nothing here reads them. */
+/** The subjects this deployment serves: devShark's one subject. The
+ * database's subject checks still accept subjects this repository no longer
+ * knows; it holds no rows for them, and nothing here would read one. */
 export function allowedDeploymentSubjects(): ScopeSubjectId[] {
   return ['webdev'];
 }
 
 export function allowedDeploymentCategories(): Set<string> {
   return new Set(allowedDeploymentSubjects().flatMap((id) => [...SUBJECT_SCOPE_CATALOG[id].categories]));
+}
+
+/** The categories a subject serves questions from: its catalogue without the
+ * retired sections. Those stay in `categories` so old rows still resolve, but
+ * the server refuses them for delivery, and one retired category in a request
+ * gets the whole request refused. Build every request for questions (quiz,
+ * challenge, daily set) from this list, not from `categories`. */
+export function deliveryCategories(subject: ScopeSubjectId): string[] {
+  return SUBJECT_SCOPE_CATALOG[subject].categories.filter((category) => !isRetiredTopic(category));
 }

@@ -1,5 +1,5 @@
 import { apiFetch } from './api';
-import { getSubject, categoriesForSubject } from './subjects';
+import { getSubject, deliveryCategoriesForSubject } from './subjects';
 
 // Re-export the shared browser client so existing importers (e.g. realtime.ts)
 // keep working. The client itself lives in supabaseClient.ts to avoid an
@@ -73,8 +73,9 @@ export interface DailyChallenge {
 }
 
 export async function getDailyChallenge(lang = 'en'): Promise<DailyChallenge> {
-  // Scope the daily mix to the active subject's categories.
-  const categories = categoriesForSubject(getSubject()).join(',');
+  // Scope the daily mix to the subject's served categories. A retired section
+  // in the list gets the whole request refused.
+  const categories = deliveryCategoriesForSubject(getSubject()).join(',');
   return apiFetch<DailyChallenge>(
     `/api/quiz/daily?lang=${encodeURIComponent(lang)}&categories=${encodeURIComponent(categories)}`,
   );
