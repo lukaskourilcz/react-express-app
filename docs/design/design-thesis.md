@@ -24,7 +24,9 @@ Ocean language is occasional. Use a waterline, fin, or understated phrase when i
 
 ## Trust contract
 
-Show real authored counts, free-forever access, fair rankings, curated-answer authority, question reporting, privacy controls, and account deletion. Do not invent testimonials, partner logos, ratings, activity, success percentages, classrooms, users, or supporter benefits.
+Show real authored counts, what the free tier opens and what Premium opens (the price with VAT included), fair rankings, curated-answer authority, question reporting, privacy controls, and account deletion. Do not invent testimonials, partner logos, ratings, activity, success percentages, classrooms, users, discounts, or deadlines.
+
+The trust contract promised free-forever access until the owner made devShark freemium on 25 September 2026 (`SECOND-HANDOFF-25-9-2026.md`).
 
 ## Decision test
 

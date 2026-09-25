@@ -351,6 +351,12 @@ Free learning does not wait on any of it — the two rollouts are independent, a
 nothing in the learning path, the practice session or the reward ladder consults
 the shop.
 
+*25 September 2026:* the paragraph above describes the product of 9 September.
+The owner made devShark freemium on 25 September 2026: `shared/tiers.ts` now
+decides what each account may start, and the shop still gates no learning.
+Spreadshop sells the merchandise for cash, and coins redeem it for Premium
+accounts; cash checkout in this app stays off.
+
 **Learning-path features are behind their own switches.**
 `LEARNING_PATH_DSA_ENABLED` and `LEARNING_PATH_FDE_ENABLED` are independent, and
 the API refuses both outside the `webdev` scope regardless of the variable.

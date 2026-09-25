@@ -19,8 +19,9 @@
 - Profile no-progress/populated/delete failure.
 - Leaderboard skeleton/empty/error/populated.
 - Flashcards signed out/empty/reveal/remove error.
-- Shop owned/equipped/unaffordable.
-- Support disabled/unconfigured/configured; privacy; terms; classroom; 404.
+- Rewards (`/shop`) signed out/loading/error; coins and ledger; free account's Premium merchandise lock; redemption form; crown and streak protection owned/unaffordable/at cap.
+- Premium locks: a Learn node, a coding row and a later stage read "Premium" in text and open the upgrade sheet.
+- `/premium` billing off/signed out/free/paying/settings error; `/premium/success` checking/done/pending/expired; `/premium/cancel` both steps; privacy; terms; classroom; 404.
 - `/dev` denied, list, bilingual editor, quality, report, logs, settings, destructive action.
 
 ## Per-screen checks

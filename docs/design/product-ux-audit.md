@@ -1,6 +1,6 @@
 # Product and UX audit
 
-Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone.
+Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, and 25 September 2026 for the free tier and Premium (`/shop`, `/premium` and `/support` rows).
 
 ## Executive summary
 
@@ -23,7 +23,7 @@ Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone.
 | `/play/:code` | Yes | Room-owned | Participate, host, reconnect, finish | lobby, live, presenter, reconnect, polling fallback, expired/stale room, result | `PlayMatch` | Preserve Realtime recovery and server timing; expose stale/disconnected state; keep QR ticket printable; reduce timer announcements. |
 | `/leaderboard` | No | Yes | Compare fair results, with the last 30 days first | skeleton, empty, error, offline with the last board, no activity in the window, own row pinned, topic filter | `Leaderboard` | Preserve mobile cards/desktop table and scoped API; keep rank readable as a number without medal colours; verify long names. |
 | `/cards` | Yes | Yes | Review saved questions | auth loading, signed out, loading, empty, error, remove error, deck | `Flashcards` | Preserve optimistic rollback; show sign-in errors; keep reveal keyboard/touch friendly. |
-| `/shop` | Optional | Yes | Preview and obtain fairness-neutral cosmetics | loading/sync, owned, equipped, unaffordable, error | `Shop` | Explicitly state cosmetics never affect scoring; use calm ownership states; test small screens and long item copy. |
+| `/shop` | Optional | Yes | Rewards: see coins and their ledger, buy the crown or a streak protection, redeem merchandise with Premium | signed out, loading/sync, error, owned, unaffordable, at the protection cap, a free account's merchandise lock, redemption form, orders | `Shop` | State that coins change what a learner owns and never scoring; the Premium lock reads as text and opens the upgrade sheet; test small screens and long item copy. |
 | `/roadmap` | Optional | `webdev` | Understand a practical developer path | empty progress, in progress, complete | `CareerRoadmap` | Use developer-specific copy; keep it distinct from `/learn`. |
 | `/coding` | Optional | `webdev` | Pick a track; see passed counts and, beside the heading, the next challenge with Continue | loading (no title until progress arrives), signed out, empty progress, populated, error with retry | `CodingHome` | Keep tier locks explained in words; no AI affordance; verify strip and track cards at 360px. |
 | `/coding/:track` | Optional | `webdev` | Choose a task by level and tier | loading, locked tier, passed/due/revealed states, empty track | `CodingTrackScreen` | Non-color status glyphs; keep the ladder reason visible; long titles. |
@@ -31,7 +31,9 @@ Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone.
 | `/coding/review` | Yes | `webdev` | Clear due reviews in order | loading, signed out, nothing due, populated | `CodingReviewScreen` | Explain the two-clean-passes rule; link back to tracks. |
 | `/settings/github` | Yes | `webdev` | Finish the GitHub App installation | working, sign-in needed, missing params, GitHub error, organisation request | `GithubSettingsPage` | Always offer a way back to the profile; never loop on a failed finish. |
 | `/profile` | Yes | Yes | Understand progress and next action; manage account | auth loading, signed out, no progress, populated, sync error, delete confirm/failure, GitHub garden states | `Profile`, `GithubGardenCard` | Add an `h1`; prioritize actionable progress; retain subject scope, privacy, and deletion confirmation. |
-| `/support` | No | No | Understand costs, free pledge, optional support | disabled, unconfigured, configured | `SupportPage` | Preserve disabled-by-default support and no guilt; verify the copy makes no invented claims. |
+| `/support` | No | No | Redirects to `/premium`; the voluntary-support page and its free pledge were retired on 25 September 2026 (#222) | redirect | `Navigate` in `App.tsx` | Keep the redirect for old links. |
+| `/premium` | Optional | No | Compare Free and Premium; start Checkout or manage billing | billing off, signed out, free, paying, complimentary grant, settings error | `PremiumPage` | Show "VAT included" beside every price; no urgency; keep the renewal, waiver and cancel links beside the buttons. |
+| `/premium/success`, `/premium/cancel` | Success: yes; cancel: no | No | Confirm a purchase; cancel or withdraw without signing in | checking, done, pending, expired, signed out; cancel email step, email error, confirm, receipt, error, unavailable | `PremiumSuccessPage`, `PremiumCancelPage` | Move focus to each step heading; never reveal whether an email has a subscription. |
 | `/privacy` | No | No | Understand data practices | owner-review markers | `PrivacyPage` | Improve reading hierarchy without inventing legal review; retain explicit owner action where unresolved. |
 | `/terms` | No | No | Understand terms | owner-review markers | `TermsPage` | Same legal constraint; test 400% reflow and headings. |
 | `/classroom` | No | Yes | Understand hosting/joining and privacy | public explanation, CTA | `ClassroomPage` | Use authentic workflow, not fake screenshots; explain sign-in, scope, QR and privacy. |
@@ -75,7 +77,7 @@ Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone.
 - One-screen shell, internal main scroll, bottom-waterline clearance, skip link, route titles and route focus.
 - Astryx primitives, `SharkFin`, `LandingKit`, technology glyphs (`CategoryGlyph`), `RadioCards`, dialogs, toast system, and query helpers.
 - Existing loading/error/empty treatment in Quiz, Flashcards, Leaderboard, Profile and much of `/dev`.
-- Lazy routes, lazy Prism Light languages, optional analytics/Sentry/support, and build-time CSS purging.
+- Lazy routes, lazy Prism Light languages, optional analytics and Sentry, and build-time CSS purging.
 - Realtime polling fallback and server-side match timing.
 
 ## Deliberately rejected rewrites

@@ -22,7 +22,11 @@ devShark is a developer-learning product with one subject, `webdev`, and the onl
 
 Concise, direct, active, specific, encouraging, honest, technically accurate, and natural in English. Prefer real actions: practise a topic, complete a level, review weak areas, join a classroom, report an answer. Avoid generic “unlock,” “revolutionize,” “supercharge,” “AI-powered,” and “future of education” claims.
 
-## Free-forever rule
+## Freemium rule
 
-Support is voluntary and never affects content, explanations, paths, challenges, multiplayer, cards, scoring, XP, streaks, ranks, leaderboards, matching, or accounts. Cosmetics remain fairness-neutral. Support stays disabled until externally configured and owner-approved.
+devShark is freemium. `shared/tiers.ts` sets what every account opens (HTML, CSS and JavaScript in full, React levels 1 to 12, stage one of every project and short path, and a starter set of about 15 % of the coding challenges) and what Premium opens for 3.99 EUR a month or 39.99 EUR a year. Copy states the price with "VAT included" beside it and never calls devShark free for everyone; "Free to start" is the claim. A lock reads "Premium" in text, so colour or an icon never carries it alone.
+
+Premium, coins, cosmetics and merchandise decide which content a learner may start. They leave explanations, grading, XP amounts, scores, streaks, ranks, leaderboards, matching and accounts as they are. Voluntary support is retired: `/support` redirects to `/premium`.
+
+History: this section was the "Free-forever rule" until the owner made devShark freemium on 25 September 2026 (`SECOND-HANDOFF-25-9-2026.md`).
 

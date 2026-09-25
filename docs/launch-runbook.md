@@ -10,8 +10,12 @@ This is the operational source of truth for the current web launch.
   deployment configured for any other product fails in
   `resolveCatalogProductId`. StudyShark moved to its own repository
   (`lukaskourilcz/studyshark`) on 2026-09-24 and is not deployed.
-- Support is optional and disabled by default. No learning flow, score, feature,
-  or account action is conditioned on payment.
+- devShark is freemium (since 25 September 2026). `shared/tiers.ts` decides what
+  every account may start and what needs Premium, and the server answers locked
+  content with 402. Payment changes which content an account may start and
+  nothing else: grading, XP, scores, streaks and ranks ignore it. Checkout stays
+  off until `BILLING_ENABLED=true`. The voluntary-support page is retired and
+  `/support` redirects to `/premium`.
 - devShark ships no AI feature. Coding hints are authored and end in
   documentation links.
 - Native mobile apps are out of scope for this release.
@@ -132,8 +136,8 @@ shells for only the public topic pages allowed on that deployment.
 
 Test in English, desktop and a narrow mobile viewport:
 
-1. Open Home, Learn, Quiz, Coding, Roadmap, Flashcards, Play, Profile, Support,
-   Privacy, and Terms. Verify header/footer branding and keyboard focus.
+1. Open Home, Learn, Quiz, Coding, Roadmap, Flashcards, Play, Profile, Rewards,
+   Premium, Privacy, and Terms. Verify header/footer branding and keyboard focus.
 2. Confirm no geography, math, history, biology, chess, or poker question or
    link appears anywhere.
 3. Complete a quiz. Refresh and confirm XP/stats increment once.
@@ -150,8 +154,10 @@ Test in English, desktop and a narrow mobile viewport:
 9. Request `/api/health`; production must return 200 only when its public
    database check and service-role migration-023 check succeed. Confirm the
    response reports distributed rate limiting as configured and alert on 503.
-10. If Support is enabled, verify the public target, costs, received amount,
-    carry, provider, and explanation are truthful.
+10. With a free account, confirm React level 13, a Premium coding challenge and
+    stage 2 of a project each open the upgrade sheet. If `BILLING_ENABLED=true`,
+    buy Premium in Stripe test mode, confirm the plan line and
+    `/premium/success`, then cancel at `/premium/cancel` and check the end date.
 11. Walk one learning path end to end with the deployment switch
     on: read the outline signed out, sign in, start the path, open an activity,
     submit a wrong answer and a right one, close the tab mid-draft and reopen
@@ -211,5 +217,6 @@ The in-app Privacy and Terms pages are implementation-ready templates, not a
 substitute for jurisdiction-specific legal review. Before public launch, the
 operator must confirm controller identity/contact, lawful bases, retention,
 processors, international transfers, age policy, analytics consent behavior,
-and the support provider’s terms. Keep optional analytics off until the
+the Stripe (Link) terms for Premium, and the Spreadshop (sprd.net AG) terms for
+merchandise. Keep optional analytics off until the
 published disclosure matches its actual configuration.

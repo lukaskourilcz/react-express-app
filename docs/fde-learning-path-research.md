@@ -35,7 +35,7 @@ Inspected baseline: [`85544c705d0d7d6c7721b03cb26df8055654ba26`](https://github.
 | `client/src/lib/roadmap.ts`, `RoadmapTree.tsx`, `CareerRoadmap.tsx` | Existing level and topic progress stays intact. Add role milestones alongside it; avoid forcing projects into a fixed multiple-choice level ladder. |
 | `docs/product-architecture.md`, `lib/product-scope.ts` | devShark is `webdev` and ships no AI tutor feature. Learning about AI does not require one. |
 | `AGENTS.md`, `package.json`, `vercel.json` | Actual stack is React 19, Vite, Astryx and Vercel handlers; `npm run dev` uses `vercel dev`. No `server/src` exists. The repository planning agent's Express/MUI instructions are stale and must not drive implementation. Keep twelve physical handlers. |
-| `translations.ts`, `translations.cs.ts`, product/design documents | Preserve EN/CS parity, existing design primitives and free access. Some landing copy still frames the journey as starting from zero or reaching senior; make the developer-wide promise accurate. |
+| `translations.ts`, `translations.cs.ts`, product/design documents | Preserve EN/CS parity, existing design primitives and free access (free access held until 25 September 2026, when devShark became freemium and the learning paths became Premium; the app has shipped English only since 21 September 2026). Some landing copy still frames the journey as starting from zero or reaching senior; make the developer-wide promise accurate. |
 
 ## Learner experience
 

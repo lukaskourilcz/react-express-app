@@ -20,6 +20,7 @@ Retired, by owner decision (2026-09-03): the mock/runs mode and the AI coach. de
 ## 2. Product rules that bind this work
 
 - All learning stays free. Coding tasks never sit behind support, cosmetics, or cards.
+  *25 September 2026:* the owner made devShark freemium that day, so the first half of this rule no longer holds. `shared/tiers.ts` opens a starter set of about 15 % of the coding challenges and stage one of every project and short path to every account; Premium opens the rest. Support, cosmetics and cards still gate nothing.
 - No AI in devShark. No model calls, no AI copy, no AI settings in the devShark product scope; documentation links replace them.
 - The server owns grading, XP, scope, and one-time claims. Reference solutions never reach the client before a pass or an explicit give-up. Visible tests are not answers and may ship to the client; hidden tests stay on the server.
 - Exactly twelve physical handlers remain under `api/`. Coding endpoints are new `resource=` values on existing handlers, delegating to `lib/coding/`.
