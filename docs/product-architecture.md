@@ -121,7 +121,10 @@ coding review. Question/concept review is unchanged. Tiers
 open in order (`tierUnlocked`) except in the unladdered tracks — system design
 is drilled rather than climbed, and `algorithms` is interview preparation a
 learner arrives at with a date in the diary, where a locked tier would withhold
-the very challenge they came for. XP follows `CODING_TASK_XP` once per task, and
+the very challenge they came for. Each challenge also carries Easy, Medium or
+Hard (`difficultyOf`), projected from its tier, or for a project stage from its
+position; the label gates and pays nothing (see
+`docs/interactive-content-manifest.md`). XP follows `CODING_TASK_XP` once per task, and
 the five coding badges join the shared badge sync for `webdev`. All storage is
 in `supabase/supabase-schema-025.sql`, whose track constraints and routines
 `supabase/supabase-schema-038.sql` widens to admit `algorithms`. devShark ships no AI feature; the last

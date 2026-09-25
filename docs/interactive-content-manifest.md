@@ -4,7 +4,8 @@ Four formats were added alongside the ordinary "write this function" task, each
 answering a different complaint about a catalogue made only of implementation
 exercises. This document is the coverage record for all four. It is deliberately
 explicit about gaps: a partial rollout described as complete is worse than a
-partial rollout.
+partial rollout. Section 5 records the Easy, Medium and Hard label that every
+format shares.
 
 Every count here is enforced by a test, not asserted by hand. `npm run
 test:coding` proves the coding-side manifests and `npm run test:paths` proves
@@ -110,6 +111,48 @@ something. JavaScript, TypeScript and React have no lessons of this kind at all
 — their teaching lives in Learn levels, which use the question format rather
 than the lesson format, so extending this there is a larger piece of work than
 authoring more examples.
+
+## 5. Difficulty labels (#224)
+
+Every challenge in the index carries Easy, Medium or Hard, whatever its
+format. `difficultyOf` in `shared/coding-catalog.ts` derives the label, and
+`npm run build:coding-index` writes it into `shared/coding-index.ts`, so the
+browser reads it without a task body.
+
+| Challenge | Easy | Medium | Hard |
+| --- | --- | --- | --- |
+| Standalone task, by tier | 1 Foundations, 2 Fluency | 3 Combine | 4 Interview, 5 Capstones |
+| Five-level path, by level | 1–2 | 3–4 | 5 |
+| Ten-stage project, by stage | 1–3 | 4–7 | 8–10 |
+| Twelve-stage FullStack app, by stage | 1–4 | 5–9 | 10–12 |
+
+Every stage and level is tier 2, which is why they read their position. A task
+may carry an authored `difficulty` where the derived label would mislead.
+`npm run test:coding` refuses an Easy task at tier 3 or above and a Hard task
+at tier 1 or 2, requires a band for every path length in use, checks that each
+summary in the index carries the label its task resolves to, and prints the
+count per label. The label opens, locks and pays nothing: `tierUnlocked`,
+`CODING_TASK_XP` and the coding badges read the tier, and `npm run
+test:launch` fails if the ladder starts reading the label.
+
+Learners read it as text on the Coding home's next challenge, in the workbench
+and design-runner headers, on saved challenges in Collection, on Today's review
+cards and in a project's stage list. A track page lists Easy, Medium and Hard
+in that order with the tier name as a sub-heading, and its difficulty filter
+offers the three labels (`?difficulty=easy`; an old `?tier=` link opens on the
+matching label).
+
+**Technique coverage.** `npm run test:coding` also prints a matrix per section
+track: each `focus` tag on a Medium standalone challenge, and how many Easy
+ones carry it (`scripts/coding-coverage.ts`). The target is three Easy
+challenges per tag, so a learner who passes the Easy band has met every
+technique the Medium band combines. The run only reports gaps until the last
+Easy-authoring wave of #226 sets `COVERAGE_ENFORCED`; `CODING_COVERAGE_ENFORCED=1`
+previews the failures, and a probe in the test proves that removing an Easy
+challenge opens a gap.
+
+**Gaps.** The coverage matrix is the gap list: #226 authors Easy challenges
+against it, one track per wave.
 
 ## What none of these change
 

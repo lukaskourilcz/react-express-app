@@ -136,6 +136,25 @@ prelude re-runs every API check. Its first React level appends its own
 scaffold (`LINKS_REACT_SCAFFOLD`), which exports `normalizeLink` and
 `createApi`.
 
+## Difficulty
+
+Each stage and level carries Easy, Medium or Hard, and a task page's stage
+list sets its numbered stages under those labels. Every stage is tier 2, so
+the label comes from the stage's position (`stageDifficulty` in
+`shared/coding-catalog.ts`):
+
+| Path | Easy | Medium | Hard |
+| --- | --- | --- | --- |
+| Five-level short path | 1–2 | 3–4 | 5 |
+| Ten-stage project, the debugging path included | 1–3 | 4–7 | 8–10 |
+| Twelve-stage FullStack app | 1–4 | 5–9 | 10–12 |
+
+The label unlocks nothing and pays nothing: stages still open in order and earn
+the tier-2 first-pass XP. A stage may carry an authored `difficulty` like any
+task, and `npm run test:coding` refuses one its tier does not allow, and any
+path length without a band. The rule for standalone tasks is in
+[the interactive-content manifest](interactive-content-manifest.md#5-difficulty-labels-224).
+
 ## Playground layout
 
 The task description spans the full width above the playground. Editor and
