@@ -45,8 +45,9 @@ looking complete.
 - **`Cleanup` in React.** Every question carrying it also carries `useEffect`,
   which resolves first, so a separate concept would match nothing. It is folded
   into `react-useeffect` instead, with a comment saying why.
-- **Coding tasks** are not concepts here. They have their own review ladder
-  (migration 025), keyed by task, and this schedule does not touch it.
+- **Coding tasks** are not concepts here. A passed task stays passed: the
+  coding review ladder of migration 025 has returned an empty queue since
+  2026-09-15, and this schedule does not touch it.
 
 ## Spacing: what counts as having remembered
 

@@ -111,7 +111,7 @@ The section lists four tracks. Three of them — `javascript`, `typescript` and
 `react` — are also Learn topics. The fourth, `algorithms`, is forty-five
 interview problems in plain JavaScript, twenty of them the Easy warm-ups of
 #226, plus two short paths: an ordinary graded track with the same
-XP, review ladder and one-award-per-task ledger, but a topic of its own, so
+XP and one-award-per-task ledger, but a topic of its own, so
 none of its challenges can be drawn into a Learn level's quota. Its `level` is
 an ordering key rather than a Learn level, which `hasLearnLevel` is what the
 row, the workbench and the GitHub commit message read before naming one.
