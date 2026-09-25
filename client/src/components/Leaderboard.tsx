@@ -122,7 +122,7 @@ function Leaderboard() {
       : { period: 'global', categories: subjectCategories };
   const cacheKey = `${request.period}:${request.period === '30d' || request.period === 'category' ? request.category ?? '' : ''}`;
 
-  const { data, error, isLoading, dataUpdatedAt, refetch } = useLeaderboard(request);
+  const { data, error, isLoading, fetchStatus, dataUpdatedAt, refetch } = useLeaderboard(request);
   const reload = () => void refetch();
 
   useEffect(() => {
@@ -138,14 +138,16 @@ function Leaderboard() {
     setTab('all');
   }, [missingWindow]);
 
-  const offline = !!error && isOffline(error);
+  // Offline shows up two ways: a request that failed on the network, or one
+  // React Query holds back because the browser already reports no connection.
+  const offline = fetchStatus === 'paused' || (!!error && isOffline(error));
   const stale: CachedBoard | null = offline
     ? data
       ? { savedAt: dataUpdatedAt, data }
       : readCachedBoard(cacheKey)
     : null;
-  const board: LeaderboardResponse | null = error ? stale?.data ?? null : data ?? null;
-  const me: LeaderboardMe | null = !error && tab === '30d' ? data?.me ?? null : null;
+  const board: LeaderboardResponse | null = offline ? stale?.data ?? null : error ? null : data ?? null;
+  const me: LeaderboardMe | null = !error && !offline && tab === '30d' ? data?.me ?? null : null;
 
   const rows = board ? toRows(tab, board, t) : [];
   const viewerListed = rows.some((row) => row.isViewer);
@@ -187,9 +189,9 @@ function Leaderboard() {
       : t('leaderboard.emptyToday');
 
   let body: ReactNode;
-  if (isLoading && !board) {
+  if (missingWindow || (isLoading && !board)) {
     body = <BoardSkeleton label={t('leaderboard.loading')} />;
-  } else if (error && !board) {
+  } else if ((error || offline) && !board) {
     body = <ErrorRetry message={offline ? t('leaderboard.offline') : friendlyError(error)} onRetry={reload} />;
   } else if (rows.length === 0) {
     body = (

@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { http, HttpResponse } from 'msw';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -110,6 +110,21 @@ it('shows the last board it loaded, marked stale, when offline', async () => {
   server.use(leaderboardHandlers.offline); mount();
   expect(await screen.findByRole('alert')).toHaveTextContent(/offline\. This is the board as it was at/);
   expect(screen.getByText('Workshop learner')).toBeVisible();
+});
+
+it('shows the cached board when the browser already reports no connection', async () => {
+  server.use(leaderboardHandlers.populated);
+  const first = mount();
+  await screen.findByText('Workshop learner');
+  first.unmount();
+  onlineManager.setOnline(false);
+  try {
+    mount();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/This is the board as it was at/);
+    expect(screen.getByText('Workshop learner')).toBeVisible();
+  } finally {
+    onlineManager.setOnline(true);
+  }
 });
 
 it('says so when offline with nothing cached', async () => {
