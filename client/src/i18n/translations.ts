@@ -22,8 +22,9 @@ export const en = {
   'coding.evolving.previous': 'Requirements from earlier stages',
   'coding.evolving.stageShort': 'Stage {n}',
   'coding.evolving.references': 'Stage references',
-  'coding.evolving.debugging': 'Debugging path',
-  'coding.evolving.debuggingBody': 'One project about the skill the others assume: finding out what your code actually does. Five stages, each starting from code that runs and is wrong, worked the way Cathy Lai describes — verify the setup, trace by hand, test the edges, build in pieces with console.log between them, and stay calm when it breaks.',
+  // Debugging paths (#225): three short paths replace the one long project.
+  'coding.evolving.debugging': 'Debugging paths',
+  'coding.evolving.debuggingBody': 'Three paths of five levels that train you to see what code does before you change it. Every level starts from code that runs and gives the wrong answer. Log it right covers the console itself. Trace the state and Edges and inputs use it on loops, callbacks, async code and awkward input.',
   'coding.evolving.paths': 'Paths',
   'coding.evolving.pathsBody': 'Short paths of up to five levels, about ten minutes each. Every level adds one piece to the same code, and the checks from earlier levels run again. Sign in to save progress.',
   'coding.evolving.level': 'Level {n} of {total}',

@@ -16,7 +16,7 @@ import { codingKeys, saveCodingDraft, useCodingProgress, useCodingTask } from '.
 import { useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
 import { ChallengeRunPlanner, taskHref } from './ChallengeRunPlanner';
 import { CODING_INDEX } from '../../../../shared/coding-index';
-import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingTaskTrack, evolvingPassed, evolvingUnlocked, type EvolvingCategory } from '../../../../shared/evolving';
+import { evolvingResume, evolvingStage, evolvingTaskTrack, evolvingPassed, evolvingUnlocked, listedChallenges, type EvolvingCategory } from '../../../../shared/evolving';
 import { prepareEvolvingDraft } from '../../../../shared/coding-fullstack-support';
 import { SwimCta } from '../landing/LandingKit';
 import {
@@ -167,18 +167,17 @@ function TaskRow({ task, status, saved, onSave, saving }: {
 
 /* ── /coding ──────────────────────────────────────────────────────────── */
 /** The evolving projects of one category (the plain ones, the FullStack
- * builds or the debugging path), or with `track`, the short paths of one
+ * builds or the debugging paths), or with `track`, the short paths of one
  * section, listed on that section's page. Each list has its own copy. The
- * FullStack list holds its short path and its long apps together; the plain
- * list on the Coding home holds the long projects only. */
+ * FullStack list holds its short path and its long apps together; the
+ * debugging list holds its three short paths; the plain list on the Coding
+ * home holds the long projects only. `listedChallenges` decides. */
 function EvolvingGallery({ passed, category, track }: { passed: ReadonlySet<string>; category?: EvolvingCategory; track?: CodingTrack }) {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const listRef = useRef<HTMLDivElement>(null);
   const fullstack = category === 'fullstack';
-  const challenges = track
-    ? EVOLVING_CHALLENGES.filter(challenge => challenge.short && !challenge.category && challenge.track === track)
-    : EVOLVING_CHALLENGES.filter(challenge => challenge.category === category && (fullstack || !challenge.short));
+  const challenges = useMemo(() => listedChallenges({ category, track }), [category, track]);
   const scrollable = challenges.length > 5;
   const titleId = `${track ? `${track}-paths` : category ?? 'evolving'}-title`;
   const titleKey = track ? 'coding.evolving.paths' : category === 'fullstack' ? 'coding.evolving.fullstack' : category === 'debugging' ? 'coding.evolving.debugging' : 'coding.evolving.title';
