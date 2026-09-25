@@ -807,3 +807,10 @@ Local evidence, all executed on the branch head:
 | `npm run check:responsive` on the CI routes at 7 widths and in dark Czech, then `/coding`, `/coding/javascript`, two challenge pages and `/coding/fullstack` at 6 widths, and dark `/coding` and a challenge page at 3 widths | 0 issues (the sweep has no API, so there the challenge pages show their load-error state; the workbench itself is covered by the fixture runs above) |
 | Lighthouse on `/` | mobile 0.85, accessibility 1. Desktop varies on one build: 0.99 with CLS 0.066 in two of three repeat runs, 0.75 in the third, where `main#main-content` shifts (CLS 0.98). The July baseline recorded the same shift in production (0.959). This change touches the home page only through the footer line. |
 | `git diff --check` | clean |
+
+In production after the deploy of `0910d1e`, whose "Product quality" run passed on GitHub (the run for `9ecaf04` was cancelled by that newer push, which carries the same code):
+
+| Check | Result |
+| --- | --- |
+| Chromium on devshark.app with every GET replayed through curl, at 1440 and 390, bundle `main-Dkp2Rm6y.js` | 20 of 20 checks pass. The card reads "Your next challenge", the task and Continue, beside the heading on desktop and under it on the phone. The brief line reads "JavaScript · Foundations · Level 6", then "Largest number", in `rgb(45, 122, 45)` with no kicker wave. The brief and the actions sit in the pane that shows. No "Your code", no printed shortcuts. The footer holds Support, How we curate, Privacy, Terms and the two controls. No overflow, no page errors. |
+| Signed in | not checked here; the owner step is in `NEEDED.md` |
