@@ -70,6 +70,41 @@ export interface LeaderboardDailyEntry {
   attempted_at: string;
 }
 
+/** One row of a windowed board (the 30-day default). The server ranks it:
+ *  equal results share a rank, so `rank` is not always the row's position. */
+export interface WindowLeaderboardEntry {
+  rank: number;
+  display_name: string;
+  picture: string | null;
+  correct: number;
+  answered: number;
+  accuracy_pct: number;
+  /** True only on the signed-in learner's own row of a personal request. */
+  is_viewer?: boolean;
+}
+
+/** The signed-in learner's own line on a windowed board. `rank` is null when
+ *  they have fewer answers in the window than the board's minimum. */
+export interface LeaderboardMe {
+  rank: number | null;
+  correct: number;
+  answered: number;
+  accuracy_pct: number;
+}
+
+export type LeaderboardPeriod = '30d' | 'global' | 'daily' | 'category';
+
+export interface LeaderboardResponse {
+  period: string;
+  date?: string;
+  category?: string | null;
+  days?: number;
+  min_answers?: number;
+  entries: LeaderboardGlobalEntry[] | LeaderboardDailyEntry[] | CategoryLeaderboardEntry[] | WindowLeaderboardEntry[];
+  /** Present on a personal 30-day request; null when the session was not verified. */
+  me?: LeaderboardMe | null;
+}
+
 export const createMatch = (input: {
   host_id: string;
   host_name: string;
@@ -128,24 +163,23 @@ export const sendHeartbeat = (code: string, host_id: string) =>
   });
 
 export const fetchLeaderboard = (
-  period: 'global' | 'daily' | 'category' = 'global',
-  options: { date?: string; category?: string; categories?: string[] } = {},
+  period: LeaderboardPeriod = 'global',
+  options: { date?: string; category?: string | null; categories?: string[]; personal?: boolean; signal?: AbortSignal } = {},
 ) => {
   const qs = new URLSearchParams({ period });
   if (options.date && period === 'daily') qs.set('date', options.date);
-  if (options.category && period === 'category') qs.set('category', options.category);
+  if (options.category && (period === 'category' || period === '30d')) qs.set('category', options.category);
   // Scope both cumulative and daily boards to the active subject. Subjects'
   // categories are disjoint, so the server can validate a single owner and
   // never blend results from two products.
   if (options.categories?.length && (period === 'global' || period === 'daily')) {
     qs.set('categories', options.categories.join(','));
   }
-  return apiFetch<{
-    period: string;
-    date?: string;
-    category?: string;
-    entries: LeaderboardGlobalEntry[] | LeaderboardDailyEntry[] | CategoryLeaderboardEntry[];
-  }>(`/api/leaderboard?${qs}`);
+  // A signed-in learner's 30-day board carries their own line. `me=1` gives
+  // that personal variant its own URL, so a shared cache never serves the
+  // anonymous board in its place.
+  if (options.personal && period === '30d') qs.set('me', '1');
+  return apiFetch<LeaderboardResponse>(`/api/leaderboard?${qs}`, { signal: options.signal });
 };
 
 export const fetchDistribution = (code: string, questionIdx: number, hostId: string) =>

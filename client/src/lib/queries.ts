@@ -6,13 +6,11 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { fetchRoadmapStructure } from './roadmap';
-import { fetchLeaderboard } from './play';
+import { fetchLeaderboard, type LeaderboardPeriod } from './play';
 import { getUserStats, createOrUpdateUserStats, type UserStats } from './supabase';
 import { listFlashcards } from './flashcards';
 import { getChallengeLeaderboard } from './challengeApi';
 import { useSubject } from './subjects';
-
-type LeaderboardPeriod = 'global' | 'daily' | 'category';
 
 /** The roadmap level/checkpoint map. Shared by the Learn path and the roadmap tree. */
 export function useRoadmapStructure() {
@@ -24,18 +22,34 @@ export function useRoadmapStructure() {
   });
 }
 
-/** A leaderboard board. The key only includes the inputs that affect the result.
- *  `categories` scopes the all-time board to the active subject (platform). */
-export function useLeaderboard(period: LeaderboardPeriod, date: string, category: string, categories: string[]) {
+/** What one board needs from the server. The 30-day board is the default. */
+export type LeaderboardRequest =
+  | { period: '30d'; category: string | null; viewer: string | null }
+  | { period: 'global'; categories: string[] }
+  | { period: 'category'; category: string }
+  | { period: 'daily'; date: string; categories: string[] };
+
+/** A leaderboard board. The key holds only the inputs that change the result,
+ *  plus the viewer on the 30-day board, whose response carries their own line. */
+export function useLeaderboard(request: LeaderboardRequest) {
+  const period: LeaderboardPeriod = request.period;
   return useQuery({
     queryKey: [
       'leaderboard',
       period,
-      period === 'daily' ? date : null,
-      period === 'category' ? category : null,
-      period === 'global' || period === 'daily' ? categories.join(',') : null,
+      request.period === 'daily' ? request.date : null,
+      request.period === 'category' || request.period === '30d' ? request.category : null,
+      request.period === 'global' || request.period === 'daily' ? request.categories.join(',') : null,
+      request.period === '30d' ? request.viewer : null,
     ],
-    queryFn: () => fetchLeaderboard(period, { date, category, categories }),
+    queryFn: ({ signal }) =>
+      fetchLeaderboard(period, {
+        signal,
+        date: request.period === 'daily' ? request.date : undefined,
+        category: request.period === 'category' || request.period === '30d' ? request.category : undefined,
+        categories: request.period === 'global' || request.period === 'daily' ? request.categories : undefined,
+        personal: request.period === '30d' && !!request.viewer,
+      }),
     staleTime: 30_000,
   });
 }

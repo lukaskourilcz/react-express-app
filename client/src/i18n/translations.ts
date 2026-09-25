@@ -158,7 +158,7 @@ export const en = {
   'home.stripLiveTitle': 'Live matches & classroom',
   'home.stripLiveText': 'Free-for-all races or a host-driven classroom mode.',
   'home.stripXpTitle': 'XP, streaks & leaderboards',
-  'home.stripXpText': 'Earn XP per level, keep a daily streak, and climb global and per-topic boards.',
+  'home.stripXpText': 'Earn XP per level, keep a daily streak, and climb the 30-day and all-time boards.',
 
   // Quiz setup ("Deep End v2")
   'quiz.kicker': 'Solo quiz',
@@ -407,7 +407,7 @@ export const en = {
   // Leaderboard
   'leaderboard.title': 'Leaderboard',
   'leaderboard.period': 'Leaderboard period',
-  'leaderboard.allTime': 'All-time',
+  'leaderboard.allTime': 'All time',
   'leaderboard.today': 'Today',
   'leaderboard.byCategory': 'By category',
   'leaderboard.categoryAria': '{label} leaderboard',
@@ -420,6 +420,37 @@ export const en = {
   'leaderboard.todayLabel': 'today',
   'leaderboard.globalSecondary': '{quizzes} quizzes · {streak}-day best streak',
   'leaderboard.categorySecondary': '{attempts} attempts · {accuracy}% accuracy',
+
+  // Leaderboard, 30-day board (D4, #223). Ranked by correct answers, then
+  // accuracy; never XP, never streak. Each tab says what it counts.
+  'leaderboard.heading': 'Who learned the most',
+  'leaderboard.rule': 'Ranked by correct answers, then accuracy. The board opens on the last 30 days, so a new learner can reach the top.',
+  'leaderboard.last30': 'Last 30 days',
+  'leaderboard.last30Short': '30 days',
+  'leaderboard.scope30d': 'Counts quiz, daily challenge, Biggest Shark Challenge and Learn answers from the last 30 days. Coding challenges are not answers, so they do not count. Five answers put you on the board.',
+  'leaderboard.scopeAllTime': 'Counts every quiz and daily challenge answer since the board began. Learn answers and coding challenges do not count here. Five answers put you on the board.',
+  'leaderboard.scopeToday': 'Today’s daily challenge: most correct answers first, then the faster time.',
+  'leaderboard.topic': 'Topic',
+  'leaderboard.allTopics': 'All topics',
+  'leaderboard.caption': '{period}, {topic}',
+  'leaderboard.rank': 'Rank',
+  'leaderboard.learner': 'Learner',
+  'leaderboard.correctHeader': 'Correct',
+  'leaderboard.accuracyHeader': 'Accuracy',
+  'leaderboard.scoreHeader': 'Score',
+  'leaderboard.timeHeader': 'Time',
+  'leaderboard.answersDetail': '{answered} answers · {accuracy}% accuracy',
+  'leaderboard.you': 'You',
+  'leaderboard.yourPlace': 'Your place',
+  'leaderboard.noActivity': 'Answer a few questions to appear here.',
+  'leaderboard.empty30d': 'Nobody has answered a question in the last 30 days yet.',
+  'leaderboard.empty30dTopic': 'Nobody has answered a {label} question in the last 30 days yet.',
+  'leaderboard.emptyAllTime': 'Nobody is on this board yet.',
+  'leaderboard.emptyToday': 'Nobody has finished today’s daily challenge yet.',
+  'leaderboard.loading': 'Loading the leaderboard',
+  'leaderboard.offline': 'You’re offline, so the board can’t load. Reconnect and try again.',
+  'leaderboard.offlineStale': 'You’re offline. This is the board as it was at {time}.',
+  'leaderboard.windowUnavailable': 'The 30-day board isn’t switched on yet, so this is the all-time board.',
 
   // Profile
   'profile.loading': 'Loading your profile…',
