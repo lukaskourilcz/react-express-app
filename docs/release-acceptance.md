@@ -780,3 +780,30 @@ In production after the deploy of `5f865a0`, whose "Product quality" run passed 
 | Anonymous submit of the reference solution to level 1 of a JavaScript, TypeScript, Algorithms, React and FullStack path (graded, never recorded) | all passed; React levels 1 of both React paths went through the isolated grader in about 5 s |
 | The same for a level above 1 | refused as designed: a signed-out visitor gets `locked: "evolving"` and no session |
 | Chromium on the deployed pages, with every GET replayed through curl | `/coding` has no Custom block; each section lists its paths in the requested order; the Link shortener leads FullStack; `js-path-mapset-1` loads as "Level 1 of 5"; no page errors |
+
+## 2026-09-25 — the next challenge beside the Coding heading, the brief inside the code pane
+
+The owner asked why reloading `/coding` first showed "Your next challenge: Digit sum" and a second later "Largest number", and asked for that banner to become a small card to the right of the page heading holding only the next challenge and Continue. On a challenge page, the banner above the playground (track, tier, level, name, prompt) was to move into the code container in place of "Your code", with a green first line and no wave, the action buttons at the foot of that container, and the printed keyboard shortcuts removed. Then the footer was to lose "Learning stays free. Optional support never changes access, XP or rankings."
+
+The cause of the swap: the Coding home worked out the next task before the account and its progress had loaded. With no progress every task is open, so it named the first task in the catalogue until the progress request returned.
+
+What changed:
+
+- The next-challenge card waits for the account and the progress. While they load it shows a placeholder and a disabled Continue; if progress fails it says so and offers Try again; otherwise it names the challenge. It sits to the right of the heading and moves under it below 860px. The track line and the due count are gone; the count linked to `/coding/review`, which redirects to `/coding`. The sign-in hint waits for the account too.
+- The code pane opens with the green line (track, tier and level, or a path's level, then a rule and the task's name as the page heading), the prompt and the rest of the brief, then the editor, then the action bar. Hints, the skip form, confirmations and errors follow in a pane under the grid, only while they hold something. Below 1024px the puzzle or the pending note carries the brief and the actions.
+- The keyboard guide and its keycaps are gone. The shortcuts still work, and the editor's `aria-describedby` points at them.
+- The footer line is removed, and its key with it in English and in the retained Czech file, as the launch contract requires of an orphaned Czech key. The same goes for `coding.review.count` and `coding.shortcuts.leave`.
+
+Local evidence, all executed on the branch head:
+
+| Check | Result |
+| --- | --- |
+| Every CI step: types (API and tooling), launch contracts, coding auth, grading integrity, coding content, paths, client tests, unused, security, devShark build, public HTML, bundle, both audits | pass; coding content 480 tasks; client tests 9 files, 65 tests; initial JS and CSS 203,640 gzip bytes of 243,000; 0 vulnerabilities in both audits |
+| New `client/tests/coding-home.test.tsx`: progress loading, the account loading, a visitor, a failed progress request, the card's contents | 4 of 4 pass; while loading the card names no task and Continue is disabled |
+| Built client in Chromium with API fixtures: `/coding` and `js-largest-number`, `js-path-map-2`, `ts-path-generics-3`, light and dark, 1440 and 390 | the card beside the heading on desktop and under it on the phone; the green line, the prompt, the editor and the actions in one pane; no "Your code", no keyboard guide, no footer line; no overflow |
+| Run, Hint and Skip at 1024, 1180 and 1440 | the action bar is one row at the foot of the pane; the results pane ends level with it; the hint and the skip form open under the grid; Ctrl+Enter still runs; the editor's description reads the shortcuts |
+| A puzzle task (`js-sum-array`) at 390 | brief, puzzle and actions in one pane; ids unique; no overflow |
+| Browser specs `public` and `evolving`, the harness check, Storybook | pass; harness 141 assertions; Storybook 5 of 5 |
+| `npm run check:responsive` on the CI routes at 7 widths and in dark Czech, then `/coding`, `/coding/javascript`, two challenge pages and `/coding/fullstack` at 6 widths, and dark `/coding` and a challenge page at 3 widths | 0 issues (the sweep has no API, so there the challenge pages show their load-error state; the workbench itself is covered by the fixture runs above) |
+| Lighthouse on `/` | mobile 0.85, accessibility 1. Desktop varies on one build: 0.99 with CLS 0.066 in two of three repeat runs, 0.75 in the third, where `main#main-content` shifts (CLS 0.98). The July baseline recorded the same shift in production (0.959). This change touches the home page only through the footer line. |
+| `git diff --check` | clean |
