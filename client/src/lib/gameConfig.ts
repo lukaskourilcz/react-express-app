@@ -37,8 +37,10 @@ export interface GameConfig {
   /** One-liner dev tips shown on the full-page loading screen; empty = none. */
   devTips: string[];
   /** Billing (#221): whether checkout sells Premium, and whether the
-   * cancellation page can reach Stripe. Both false until the server says so. */
-  billing: { enabled: boolean; cancellable: boolean };
+   * cancellation page can reach Stripe. Both false until the server says so.
+   * `seller` (#222) names the seller of record for the Terms: Stripe as Link
+   * under Managed Payments, or the trader; null or absent means unsaid. */
+  billing: { enabled: boolean; cancellable: boolean; seller?: 'link' | 'trader' | null };
 }
 
 const DEFAULT_QUIZ_CATEGORY_IDS = [
@@ -125,7 +127,7 @@ export const DEFAULT_CONFIG: GameConfig = {
     publicThanksEnabled: false,
   },
   devTips: [...DEFAULT_DEV_TIPS],
-  billing: { enabled: false, cancellable: false },
+  billing: { enabled: false, cancellable: false, seller: null },
 };
 
 export const GAME_CONFIG_KEY = ['game-config'] as const;

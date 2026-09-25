@@ -335,20 +335,20 @@
 .ss-info-card { padding: clamp(1rem, 3vw, 1.5rem); border: 1px solid var(--ss-card-line); border-bottom: 2px solid var(--ss-card-edge); border-radius: var(--radius-container); background: var(--ss-card-bg); }
 .ss-info-card h2 { margin: 0 0 0.65rem; font: 750 1.05rem var(--font-family-heading); }
 .ss-info-card p { margin: 0.5rem 0; color: var(--color-text-secondary); line-height: 1.65; }
-.ss-info-note, .ss-thanks { padding: 0.85rem 1rem; border-radius: var(--radius-inner); background: var(--color-background-muted); }
-.ss-cost-meter { height: 10px; overflow: hidden; margin: 1.2rem 0; border-radius: 999px; background: var(--color-background-muted); }
-.ss-cost-meter span { display: block; height: 100%; border-radius: inherit; background: var(--brand-accent); transition: width 0.4s ease; }
+.ss-info-note { padding: 0.85rem 1rem; border-radius: var(--radius-inner); background: var(--color-background-muted); }
 .ss-cost-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 0.75rem; margin: 0; }
 .ss-cost-grid div { padding: 0.75rem; border-radius: var(--radius-inner); background: var(--color-background-muted); }
 .ss-cost-grid dt { color: var(--color-text-secondary); font-size: 0.7rem; }
 .ss-cost-grid dd { margin: 0.25rem 0 0; color: var(--color-text-primary); font: 750 1rem var(--font-family-heading); }
-.ss-cost-list { list-style: none; padding: 0; margin: 1rem 0; }
-.ss-cost-list li { display: flex; justify-content: space-between; gap: 1rem; padding: 0.55rem 0; border-bottom: 1px solid var(--ss-card-line); }
 .ss-info-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
+/* A row of standalone text links (legal pages, /premium): 44px targets and a
+   visible focus ring, in the accent. */
+.ss-text-links { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin: 0.5rem 0 0; }
+.ss-text-links a { display: inline-flex; align-items: center; min-height: 44px; color: var(--brand-accent); font-weight: 700; text-underline-offset: 3px; }
+.ss-text-links a:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
 .ss-link-button { display: inline-flex; min-height: 44px; align-items: center; padding: 0 1rem; border-radius: var(--radius-element); background: var(--brand-accent); color: var(--brand-on-accent); font-weight: 750; text-decoration: none; }
 .ss-link-button--secondary { background: var(--color-background-muted); color: var(--color-text-primary); border: 1px solid var(--color-border); }
 @media (max-width: 700px) { .ss-info-sections { grid-template-columns: 1fr; } .ss-cost-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
-@media (prefers-reduced-motion: reduce) { .ss-cost-meter span { transition: none; } }
 
 /* The crown, worn. It sits on the avatar rather than beside it, tilted very
    slightly so it reads as placed rather than pasted. Decorative: the avatar

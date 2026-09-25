@@ -63,7 +63,7 @@ export function PremiumSmallPrint({ t, link, headingId }: { t: Translate; link: 
           {t('premium.page.smallPrint.refund')}
         </li>
       </ul>
-      <p className="ss-premium-links">
+      <p className="ss-text-links">
         {link('/terms', t('premium.page.termsLink'))}
         {link('/premium/cancel', t('premium.page.cancelLink'))}
       </p>

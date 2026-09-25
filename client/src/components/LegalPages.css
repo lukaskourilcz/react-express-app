@@ -1,0 +1,48 @@
+/* The Terms and the privacy policy (#222): one reading column of sections on
+ * the public info-page layout. Plain type, one rule between sections, and the
+ * waiver sentence and the model form set apart so a reader finds them. */
+.ss-legal-updated { margin: -0.5rem 0 0; font-size: 0.85rem; color: var(--color-text-secondary); }
+.ss-legal { display: flex; flex-direction: column; }
+.ss-legal-section { padding: 1.35rem 0; border-top: 1px solid var(--ss-card-line); scroll-margin-top: 1rem; }
+.ss-legal-section h2 { margin: 0 0 0.6rem; font: 750 1.15rem/1.3 var(--font-family-heading); letter-spacing: -0.01em; }
+.ss-legal-section p { max-width: 68ch; margin: 0.55rem 0; color: var(--color-text-secondary); line-height: 1.65; overflow-wrap: anywhere; }
+.ss-legal-section > .ss-info-note { max-width: 68ch; color: var(--color-text-primary); }
+
+.ss-legal-quote {
+  max-width: 68ch;
+  margin: 0.75rem 0;
+  padding: 0.75rem 1rem;
+  border-left: 3px solid var(--brand-accent);
+  border-radius: 0 var(--radius-inner) var(--radius-inner) 0;
+  background: var(--color-background-muted);
+}
+.ss-legal-section .ss-legal-quote p { margin: 0; color: var(--color-text-primary); }
+
+.ss-legal-trader { max-width: 68ch; margin: 0.75rem 0; }
+.ss-legal-trader div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
+  gap: 0.25rem 1rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--ss-card-line);
+}
+.ss-legal-trader dt { color: var(--color-text-secondary); font-size: 0.9rem; }
+.ss-legal-trader dd { margin: 0; color: var(--color-text-primary); overflow-wrap: anywhere; }
+.ss-legal-trader a { color: var(--brand-accent); text-underline-offset: 3px; }
+
+/* The model withdrawal form: a sheet a reader can copy, not a live form. */
+.ss-legal-form {
+  max-width: 68ch;
+  margin: 0.9rem 0 0;
+  padding: 1rem 1.1rem;
+  border: 1px dashed var(--ss-card-edge);
+  border-radius: var(--radius-inner);
+  background: var(--ss-card-bg);
+}
+.ss-legal-form h3 { margin: 0 0 0.35rem; font: 750 1rem var(--font-family-heading); }
+.ss-legal-section .ss-legal-form p { margin: 0.35rem 0; color: var(--color-text-primary); }
+.ss-legal-section .ss-legal-form .ss-legal-form__intro { color: var(--color-text-secondary); font-style: italic; }
+
+@media (max-width: 479px) {
+  .ss-legal-trader div { grid-template-columns: 1fr; }
+}

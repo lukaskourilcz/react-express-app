@@ -90,8 +90,22 @@ export function billingConfig(env: Env = process.env): BillingConfig {
   };
 }
 
+/** Who sells Premium, as the Terms and the privacy policy state it: Stripe
+ * as Link under Managed Payments, or the trader with plain Stripe. Null until
+ * Stripe is connected and the owner has said which. */
+export type SellerOfRecord = 'link' | 'trader';
+
 /** What the browser may know, through the public settings route. */
-export function publicBillingSettings(env: Env = process.env): { enabled: boolean; cancellable: boolean } {
+export function publicBillingSettings(env: Env = process.env): {
+  enabled: boolean;
+  cancellable: boolean;
+  seller: SellerOfRecord | null;
+} {
   const config = billingConfig(env);
-  return { enabled: config.checkoutEnabled, cancellable: config.connected };
+  const managedSet = !config.missing.includes('STRIPE_MANAGED_PAYMENTS');
+  return {
+    enabled: config.checkoutEnabled,
+    cancellable: config.connected,
+    seller: config.connected && managedSet ? (config.managedPayments ? 'link' : 'trader') : null,
+  };
 }

@@ -575,7 +575,7 @@ function billingContracts() {
   });
   // Checkout is off unless the deployment says otherwise, and only the server
   // holds a Stripe key.
-  assert.deepEqual(publicBillingSettings({}), { enabled: false, cancellable: false }, 'billing defaults to off');
+  assert.deepEqual(publicBillingSettings({}), { enabled: false, cancellable: false, seller: null }, 'billing defaults to off');
   assert.equal(publicBillingSettings({ BILLING_ENABLED: 'true' }).enabled, false, 'BILLING_ENABLED alone sells nothing');
   assert.equal(
     DEFAULT_PUBLIC_ORIGIN,

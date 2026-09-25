@@ -11,11 +11,13 @@ export type CancelAction = 'cancel' | 'withdraw';
 
 const USER = (op: string) => `/api/user/${op}`;
 
-/** Whether checkout sells Premium and whether cancellation can reach Stripe.
- * Both read false until the server's settings arrive; `known` says they have. */
-export function useBilling(): { enabled: boolean; cancellable: boolean; known: boolean } {
+/** Whether checkout sells Premium, whether cancellation can reach Stripe,
+ * and who sells it. All read false or null until the server's settings
+ * arrive; `known` says they have. */
+export function useBilling(): { enabled: boolean; cancellable: boolean; seller: 'link' | 'trader' | null; known: boolean } {
   const { config, fromServer } = useGameConfigStatus();
-  return { ...config.billing, known: fromServer };
+  const { enabled, cancellable, seller } = config.billing;
+  return { enabled, cancellable, seller: seller === 'link' || seller === 'trader' ? seller : null, known: fromServer };
 }
 
 /** Stripe's hosted pages, and nothing else, may receive the learner. */

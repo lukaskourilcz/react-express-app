@@ -44,17 +44,8 @@
 .ss-premium-smallprint ul { margin: 0; padding-left: 1.15rem; display: grid; gap: 0.4rem; }
 .ss-premium-smallprint q { color: var(--color-text-primary); }
 
-/* Standalone text links: 44px targets, a visible focus ring. */
-.ss-premium-links { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin: 0.5rem 0 0; }
-.ss-premium-links a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  color: var(--brand-accent);
-  font-weight: 700;
-  text-underline-offset: 3px;
-}
-.ss-premium-links a:focus-visible,
+/* The FAQ disclosure gets the same focus ring as the links (.ss-text-links
+   in app-shell.css). */
 .ss-premium-faq__item summary:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
 
 .ss-premium-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.45rem; line-height: 1.5; max-width: 68ch; }
@@ -81,7 +72,7 @@
 }
 .ss-premium-faq__item[open] summary::after { content: '−'; }
 .ss-premium-faq__item p { margin: 0 0.25rem 0.75rem; max-width: 68ch; color: var(--color-text-secondary); line-height: 1.6; }
-.ss-premium-faq__item .ss-premium-links { margin: -0.25rem 0.25rem 0.5rem; }
+.ss-premium-faq__item .ss-text-links { margin: -0.25rem 0.25rem 0.5rem; }
 
 @media (max-width: 639px) {
   .ss-premium-plan-grid { grid-template-columns: 1fr; }

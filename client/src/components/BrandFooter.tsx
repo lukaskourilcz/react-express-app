@@ -22,7 +22,8 @@ export default function BrandFooter() {
       <div className="ss-brand-footer__meta">
         <span>{t('footer.free')}</span>
         <nav aria-label={t('footer.legal')}>
-          <Link to="/support">{t('footer.support')}</Link>
+          {/* The plans and prices; /support redirects here since #222. */}
+          <Link to="/premium">{t('nav.premium')}</Link>
           <Link to="/curation">{t('footer.curation')}</Link>
           <Link to="/privacy">{t('footer.privacy')}</Link>
           <Link to="/terms">{t('footer.terms')}</Link>

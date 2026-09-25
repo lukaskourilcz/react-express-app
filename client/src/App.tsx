@@ -46,8 +46,8 @@ const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ defaul
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 const Challenge = lazy(() => import('./components/Challenge'));
 const DevPage = lazy(() => import('./components/dev/DevPage'));
-const PrivacyPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.PrivacyPage })));
-const TermsPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.TermsPage })));
+const PrivacyPage = lazy(() => import('./components/LegalPages').then((m) => ({ default: m.PrivacyPage })));
+const TermsPage = lazy(() => import('./components/LegalPages').then((m) => ({ default: m.TermsPage })));
 const CurationPage = lazy(() => import('./components/CurationPage').then((m) => ({ default: m.CurationPage })));
 const ClassroomPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.ClassroomPage })));
 const TopicLandingPage = lazy(() => import('./components/TopicLandingPage'));

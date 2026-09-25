@@ -11,6 +11,30 @@ export const PRODUCT_CATALOG = {
 
 export type CatalogProductId = keyof typeof PRODUCT_CATALOG;
 
+/** The trader who sells devShark Premium, as the Terms identify them under
+ * "Who runs devShark" and the model withdrawal form addresses them. */
+export interface TraderIdentity {
+  /** Full legal name of the trader (a sole trader's own name). */
+  name: string | null;
+  /** Czech company identification number (IČO). */
+  companyId: string | null;
+  /** Registered address (sídlo), one line. */
+  registeredAddress: string | null;
+  /** The contact and complaints email. */
+  email: string | null;
+}
+
+/** Each field renders only when it is set. The owner fills them in before
+ * Premium goes on sale (NEEDED.md, #222). Never guess a value: an empty field
+ * reads as missing on the Terms page, and a wrong one would be a false legal
+ * statement. */
+export const TRADER: TraderIdentity = {
+  name: null,
+  companyId: null,
+  registeredAddress: null,
+  email: null,
+};
+
 /** Resolve the product a build asks for. Only devShark resolves: a build or
  * deployment still configured for another product fails here instead of
  * shipping devShark under that product's name. */

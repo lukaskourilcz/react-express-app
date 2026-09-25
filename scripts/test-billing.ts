@@ -966,10 +966,12 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(await lib.endBillingForDeletedAccount(supabase, e.userId), false, 'an outage stops the deletion');
   });
 
-  await check('settings expose only the two switches, and the origin is never taken from a guess', async () => {
-    assert.deepEqual(lib.publicBillingSettings({}), { enabled: false, cancellable: false });
-    assert.deepEqual(lib.publicBillingSettings({ ...BASE_ENV }), { enabled: true, cancellable: true });
-    assert.deepEqual(lib.publicBillingSettings({ ...BASE_ENV, BILLING_ENABLED: 'false' }), { enabled: false, cancellable: true });
+  await check('settings expose the two switches and the seller, and the origin is never taken from a guess', async () => {
+    assert.deepEqual(lib.publicBillingSettings({}), { enabled: false, cancellable: false, seller: null });
+    assert.deepEqual(lib.publicBillingSettings({ ...BASE_ENV }), { enabled: true, cancellable: true, seller: 'link' });
+    assert.deepEqual(lib.publicBillingSettings({ ...BASE_ENV, BILLING_ENABLED: 'false' }), { enabled: false, cancellable: true, seller: 'link' });
+    assert.equal(lib.publicBillingSettings({ ...BASE_ENV, STRIPE_MANAGED_PAYMENTS: 'false' }).seller, 'trader', 'plain Stripe: the trader sells');
+    assert.equal(lib.publicBillingSettings({ ...BASE_ENV, STRIPE_MANAGED_PAYMENTS: undefined }).seller, null, 'unsaid: the Terms name no seller');
     assert.equal(lib.parseOrigin('javascript:alert(1)'), lib.DEFAULT_PUBLIC_ORIGIN);
     assert.equal(lib.parseOrigin('http://evil.example'), lib.DEFAULT_PUBLIC_ORIGIN);
     assert.equal(lib.parseOrigin('http://localhost:5173/path'), 'http://localhost:5173');

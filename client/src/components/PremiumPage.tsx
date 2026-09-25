@@ -111,7 +111,7 @@ export default function PremiumPage() {
               <details key={item.q} className="ss-premium-faq__item">
                 <summary>{t(item.q)}</summary>
                 <p>{t(item.a)}</p>
-                {item.link && <p className="ss-premium-links">{routerLink(item.link.to, t(item.link.label))}</p>}
+                {item.link && <p className="ss-text-links">{routerLink(item.link.to, t(item.link.label))}</p>}
               </details>
             ))}
           </div>
