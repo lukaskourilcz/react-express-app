@@ -201,32 +201,55 @@ function EvolvingGallery({ passed, category, track }: { passed: ReadonlySet<stri
   </section>;
 }
 
-export function CodingHome() {
+/** Which challenge is next, and a way into it, beside the page heading. For a
+ * signed-in learner it waits for their progress: worked out from nothing, it
+ * would name the first challenge and then swap it for the real one. */
+function NextChallenge({ next, state, onRetry }: { next: CodingTaskSummary | null; state: 'loading' | 'error' | 'ready'; onRetry: () => void }) {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
+  return (
+    <section className="cd-next" aria-labelledby="cd-next-label" aria-busy={state === 'loading' || undefined}>
+      <div className="cd-next__text">
+        <h2 id="cd-next-label" className="cd-next__label">{t('coding.discovery.next')}</h2>
+        {state === 'loading' && (
+          <p className="cd-next__title">
+            <span className="cd-next__placeholder" aria-hidden="true" />
+            <span className="cd-visually-hidden">{t('coding.discovery.loading')}</span>
+          </p>
+        )}
+        {state === 'error' && <p className="cd-next__title cd-next__title--error" role="alert">{t('coding.discovery.failed')}</p>}
+        {state === 'ready' && <p className="cd-next__title">{next ? next.title[lang] || next.title.en : t('coding.allDone')}</p>}
+      </div>
+      {state === 'error' && <button type="button" className="cd-btn" onClick={onRetry}>{t('coding.retry')}</button>}
+      {/* Held disabled while loading, so the card keeps its size when the title arrives. */}
+      {state !== 'error' && (state === 'loading' || next) && (
+        <SwimCta label={t('coding.continue')} disabled={state === 'loading'} onClick={() => { if (next) navigate(`/coding/${next.track}/${next.id}`); }} />
+      )}
+    </section>
+  );
+}
+
+export function CodingHome() {
+  const { t } = useLanguage();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { passed, statusOf } = useStatuses(progress.data);
   const next = useMemo(() => nextOpenTask(SECTION_INDEX, statusOf), [statusOf]);
-  const dueCount = useMemo(() => (progress.data?.due ?? []).filter((id) => SECTION_INDEX.some((task) => task.id === id)).length, [progress.data]);
+  const nextState = authLoading || (isAuthenticated && progress.isLoading)
+    ? 'loading'
+    : isAuthenticated && progress.isError && !progress.data ? 'error' : 'ready';
 
   return (
     <div className="cd-page cd-discovery ss-pop">
-      <header>
-        <Kicker>{t('coding.kicker')}</Kicker>
-        <h1>{t('coding.title')}</h1>
-        <p className="cd-lead">{t('coding.subtitle')}</p>
-      </header>
-      {!isAuthenticated && <p className="cd-note">{t('coding.signInHint')}</p>}
-      <div className="cd-continue cd-resume">
-        <div>
-          <Kicker>{t('coding.discovery.next')}</Kicker>
-          <h2>{next ? next.title[lang] || next.title.en : t('coding.allDone')}</h2>
-          {next && <p className="cd-lead">{t(`coding.track.${next.track}` as never)}</p>}
-          {dueCount > 0 && <p style={{ margin: '4px 0 0' }}><Link className="cd-link" to="/coding/review">{t('coding.review.count', { n: dueCount })}</Link></p>}
-        </div>
-        {next && <SwimCta label={t('coding.continue')} onClick={()=>navigate(`/coding/${next.track}/${next.id}`)} />}
+      <div className="cd-home-head">
+        <header>
+          <Kicker>{t('coding.kicker')}</Kicker>
+          <h1>{t('coding.title')}</h1>
+          <p className="cd-lead">{t('coding.subtitle')}</p>
+        </header>
+        <NextChallenge next={next} state={nextState} onRetry={() => void progress.refetch()} />
       </div>
+      {!authLoading && !isAuthenticated && <p className="cd-note">{t('coding.signInHint')}</p>}
       <ChallengeRunPlanner signedIn={isAuthenticated} />
       <section aria-label={t('coding.title')} className="cd-track-directory">
         {CODING_SECTION_TRACKS.map((track) => {

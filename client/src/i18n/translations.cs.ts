@@ -1323,7 +1323,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'coding.review.title': 'K zopakování',
   'coding.review.subtitle': 'Splněná úloha se vrátí po čtyřech hodinách, pak po dni a po dvou dnech. Dvě čistá splnění v různých sezeních ji vyřadí.',
   'coding.review.empty': 'Nic není na řadě. Splň úlohu a později se sem vrátí.',
-  'coding.review.count': '{n} k zopakování',
   'coding.progress': '{passed} z {total} splněno',
   'coding.minutes': '{n} min',
   'coding.level': 'Úroveň {n}',
