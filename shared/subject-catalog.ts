@@ -6,7 +6,10 @@ import { isRetiredTopic } from './retired-content';
  * the database are all keyed by subject. */
 export const SUBJECT_SCOPE_CATALOG = {
   webdev: {
-    questionCount: 2487,
+    // The landing prints this as the number of questions. It counts what a
+    // learner can be served from the static bank: the audit's gate applied,
+    // the retired sections left out. `npm run test:launch` recomputes it.
+    questionCount: 1974,
     // `abbreviations`, `testing` and `code-snippets` are gone from `topics`:
     // they are no longer taught as paths of their own (see
     // shared/retired-content.ts). They stay in `categories` on purpose, so

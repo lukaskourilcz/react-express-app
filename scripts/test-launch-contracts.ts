@@ -285,6 +285,11 @@ async function auditGateContracts() {
   const withheldByDecision = REVIEW_REGISTRY.filter((row) => row.decision === 'retire' || row.decision === 'quarantine' || !passesBothGates(row.relevance, row.quality));
   const servedIds = new Set(served.map((q) => q.id));
   for (const row of withheldByDecision) assert.ok(!servedIds.has(row.id), `${row.id} was retired or quarantined and is still served`);
+  // The landing's question count is what a learner can be served from the
+  // static bank: the gated set without the retired sections, whose categories
+  // stay in the catalogue only so old rows resolve (#230).
+  const deliverable = served.filter((q) => deliveryCategories('webdev').includes(q.category)).length;
+  assert.equal(SUBJECT_SCOPE_CATALOG.webdev.questionCount, deliverable, `questionCount must be the ${deliverable} questions the bank can serve`);
   for (const row of REVIEW_REGISTRY) {
     if (row.kind !== 'question') continue;
     const item = history.get(row.id);

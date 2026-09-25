@@ -73,7 +73,7 @@ Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, and 2
 - Central `client/product-catalog.ts`, `shared/subject-catalog.ts`, `client/src/lib/products.ts`, and `client/src/lib/subjects.ts` sources of truth.
 - Product identity resolved in `client/product-catalog.ts`, which refuses any product but devShark; a footer of legal links and appearance and sound controls.
 - Server-issued encrypted sessions, one-time grading claims, result receipts, answer proofs, atomic XP/streak/progression, product/subject validation, RLS, and service-role isolation.
-- Real authored content counts from `SUBJECT_SCOPE_CATALOG`, an on-demand question bank, and lazy Czech loading.
+- Real content counts from `SUBJECT_SCOPE_CATALOG` (the questions a learner can be served, checked by `test:launch`), an on-demand question bank, and lazy Czech loading.
 - One-screen shell, internal main scroll, bottom-waterline clearance, skip link, route titles and route focus.
 - Astryx primitives, `SharkFin`, `LandingKit`, technology glyphs (`CategoryGlyph`), `RadioCards`, dialogs, toast system, and query helpers.
 - Existing loading/error/empty treatment in Quiz, Flashcards, Leaderboard, Profile and much of `/dev`.
