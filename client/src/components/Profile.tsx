@@ -40,6 +40,7 @@ import { FlameIcon, BoltIcon, TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOn
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import PlanLine from './PlanLine';
+import { SocialProfiles } from './SocialProfiles';
 import './DeepEndScreens.css';
 
 // Astryx Card colour variants used for the tinted stat / streak tiles.
@@ -391,6 +392,9 @@ function ProfileBody({
             )}
 
             <GithubGardenCard />
+
+            {/* devShark's own profiles, when the owner has created them (#227). */}
+            <SocialProfiles framed />
 
             <AccountDeletionCard />
           </VStack>

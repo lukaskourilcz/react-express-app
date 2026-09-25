@@ -1,4 +1,5 @@
-// The wallet, the shop and the orders, as the browser sees them.
+// The wallet, the shop and the orders, as the browser sees them. Product copy
+// calls the wallet's unit coins; the API and these types keep `token`.
 //
 // Every number here is read from the server and none of it is computed locally.
 // That is the whole point of the change: a balance that the browser could add
@@ -7,7 +8,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
-import type { MerchAvailability, MerchSku, ShippingAddress } from '../../../shared/rewards';
+import type { CoinSettings, MerchAvailability, MerchSku, ShippingAddress, SocialPlatform } from '../../../shared/rewards';
 
 const USER = '/api/user/[op]';
 
@@ -19,12 +20,33 @@ export interface WalletEntry {
   createdAt: string;
 }
 
+/** "How to earn": the rules as the owner configured them, and the learner's
+ * progress toward each milestone (null until migration 041 is installed). */
+export interface EarnSummary {
+  rules: CoinSettings;
+  progress: {
+    premium: boolean;
+    /** Coins from XP so far today, against `rules.dailyXpCap`. */
+    todayXpCoins: number;
+    streak: number;
+    topics: { id: string; passed: number; total: number }[];
+    projects: { id: string; passed: number; total: number }[];
+    /** Milestone references already paid: `streak:7`, `topic:html`, … */
+    earned: string[];
+  } | null;
+}
+
 export interface WalletResponse {
   subject: string;
+  /** Coins. The API keeps the `token` names of migration 028. */
   balance: number;
   /** The most recent movements, so the balance can be accounted for. */
   entries: WalletEntry[];
   cosmetics: { id: string; equipped: boolean }[];
+  /** `granted` is true only on the read that paid the welcome coins. Absent
+   * from a server that predates #227. */
+  welcome?: { granted: boolean; coins: number };
+  earn?: EarnSummary;
 }
 
 export interface ShopItem {
@@ -78,8 +100,11 @@ export const rewardKeys = {
 export const fetchWallet = (signal?: AbortSignal): Promise<WalletResponse> =>
   apiFetch<WalletResponse>(`${USER}?op=wallet`, { signal });
 
-export const claimSignupTokens = (): Promise<{ granted: boolean; balance: number }> =>
-  apiFetch<{ granted: boolean; balance: number }>(`${USER}?op=wallet`, { method: 'POST', body: JSON.stringify({}) });
+/** Report that a social profile was opened. The server pays the owner's
+ * `socialVisitGrant` once per platform when it is above zero, and nothing
+ * otherwise; the request names only the platform. */
+export const claimSocialVisit = (platform: SocialPlatform): Promise<{ granted: boolean; coins: number }> =>
+  apiFetch(`${USER}?op=wallet`, { method: 'POST', body: JSON.stringify({ claim: 'social', platform }) });
 
 export const fetchShop = (signal?: AbortSignal): Promise<ShopResponse> =>
   apiFetch<ShopResponse>(`${USER}?op=shop`, { signal });
@@ -144,6 +169,16 @@ export function useOrders(enabled: boolean) {
     enabled,
     queryFn: ({ signal }) => fetchOrders(signal),
     staleTime: 30_000,
+  });
+}
+
+export function useSocialVisitMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (platform: SocialPlatform) => claimSocialVisit(platform),
+    onSuccess: (result) => {
+      if (result.granted) void queryClient.invalidateQueries({ queryKey: rewardKeys.wallet() });
+    },
   });
 }
 

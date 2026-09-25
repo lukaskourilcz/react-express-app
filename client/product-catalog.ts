@@ -35,6 +35,18 @@ export const TRADER: TraderIdentity = {
   email: null,
 };
 
+/** devShark's own profiles (the handoff's `socialProfiles`), linked from
+ * "Find devShark elsewhere" on the Profile and the Rewards screen. Each stays
+ * null until the owner creates the profile (NEEDED.md), and a null profile is
+ * not shown. Opening one earns nothing unless the owner sets
+ * `socialVisitGrant` in /dev (shared/rewards.ts has the policy note). No other
+ * file defines these URLs. */
+export const SOCIAL_PROFILES: Readonly<Record<'linkedin' | 'instagram' | 'threads', string | null>> = {
+  linkedin: null,
+  instagram: null,
+  threads: null,
+};
+
 /** Resolve the product a build asks for. Only devShark resolves: a build or
  * deployment still configured for another product fails here instead of
  * shipping devShark under that product's name. */
