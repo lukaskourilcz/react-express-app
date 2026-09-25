@@ -18,6 +18,7 @@ import type {
   CodingTrack,
   PlayableCodingTask,
 } from '../../shared/coding-catalog';
+import { isFreeCodingTask } from '../../shared/tiers';
 import { mergeTask, type CodingTaskCs, type CodingTaskSource } from './types';
 import { JAVASCRIPT_TASKS } from './tasks/javascript';
 import { JAVASCRIPT_TASKS_CS } from './tasks/javascript.cs';
@@ -96,6 +97,7 @@ export function summarize(task: CodingTask): CodingTaskSummary {
     verify: task.verify,
     ...(task.format ? { format: task.format } : {}),
     estimatedMinutes: task.estimatedMinutes,
+    ...(isFreeCodingTask(task.id) ? { free: true as const } : {}),
   };
 }
 

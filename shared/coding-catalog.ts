@@ -196,6 +196,9 @@ export interface CodingTaskSummary {
   /** Absent means `implement`; the section reads it to offer a format filter. */
   format?: CodingFormat;
   estimatedMinutes: number;
+  /** On the free tier. Projected from `shared/tiers.ts` by
+   * `npm run build:coding-index`; absent means Premium. */
+  free?: true;
 }
 
 /** What the browser receives to play a task: everything except the answers. */
