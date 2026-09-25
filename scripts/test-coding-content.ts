@@ -6,7 +6,7 @@
 // Local aids while content is being authored (never set in CI):
 //   CODING_ALLOW_LEVEL_GAPS=1   allow Learn levels without a task
 //   CODING_SKIP_INDEX=1         do not require shared/coding-index.ts to be fresh
-//   CODING_COVERAGE_ENFORCED=1  fail on Easy-band technique gaps before COVERAGE_ENFORCED is switched on
+//   CODING_COVERAGE_ENFORCED=1  fail on Easy-band technique gaps even while COVERAGE_ENFORCED is off
 import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';

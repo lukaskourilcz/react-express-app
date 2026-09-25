@@ -8,14 +8,16 @@
 // appear on at least COVERAGE_MIN_EASY Easy challenges of the same track.
 //
 // `npm run test:coding` prints the matrix on every run so the gaps are visible
-// before anyone authors against them. It fails on a gap only while
-// COVERAGE_ENFORCED is true. That stays false until the last Easy wave lands;
-// `CODING_COVERAGE_ENFORCED=1` previews the failures locally in the meantime.
+// before anyone authors against them, and fails on a gap while
+// COVERAGE_ENFORCED is true. The last Easy wave of #226 (Algorithms A) closed
+// the last five gaps and switched it on. From then on a new Medium challenge
+// whose tag has fewer than three Easy challenges in its track fails the run,
+// and so does an Easy challenge taken away from under a tag.
 import { CODING_SECTION_TRACKS, difficultyOf, type CodingTaskSummary, type CodingTrack } from '../shared/coding-catalog';
 import { evolvingStage } from '../shared/evolving';
 
-/** Switched on by the last Easy-authoring wave of #226, not before. */
-export const COVERAGE_ENFORCED = false;
+/** On since the last Easy-authoring wave of #226 closed every gap. */
+export const COVERAGE_ENFORCED = true;
 export const COVERAGE_MIN_EASY = 3;
 
 type CoverageTask = Pick<CodingTaskSummary, 'id' | 'track' | 'tier' | 'focus'> & Partial<Pick<CodingTaskSummary, 'difficulty'>>;
