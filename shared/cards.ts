@@ -83,10 +83,6 @@ export function subjectCards(subject: ScopeSubjectId): CardDef[] {
   return topicCards;
 }
 
-export function cardById(subject: ScopeSubjectId, id: string): CardDef | undefined {
-  return subjectCards(subject).find((c) => c.id === id);
-}
-
 /** Total collectible cards in a subject's album. */
 export function subjectCardCount(subject: ScopeSubjectId): number {
   return subjectCards(subject).length;

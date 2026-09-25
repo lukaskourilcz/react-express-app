@@ -25,8 +25,6 @@ export type CodingVerify = 'tests' | 'checklist' | 'guided' | 'drill';
  * its meaning without being edited. */
 export const CODING_FORMATS = ['implement', 'debug'] as const;
 export type CodingFormat = (typeof CODING_FORMATS)[number];
-export const isCodingFormat = (value: unknown): value is CodingFormat =>
-  typeof value === 'string' && (CODING_FORMATS as readonly string[]).includes(value);
 export const formatOf = (task: { format?: CodingFormat }): CodingFormat => task.format ?? 'implement';
 
 export interface Localized {
@@ -331,11 +329,6 @@ export const METHOD_TAGS: readonly string[] = CODING_TECHNIQUE_GROUPS['array-met
 /** XP for a first verified pass, by tier. Level XP in Learn is 50 × difficulty,
  * so a foundation task is worth half a level. */
 export const CODING_TASK_XP: Record<CodingTier, number> = { 1: 25, 2: 35, 3: 50, 4: 75, 5: 120 };
-
-/** The review ladder: a passed task comes back after these gaps, and two
- * clean passes in separate sittings retire it. */
-export const CODING_REVIEW_STEPS_HOURS = [4, 24, 48] as const;
-export const CODING_REVIEW_CLEAN_PASSES = 2;
 
 /** Learn levels of the `javascript` topic that count as the foundations. */
 export const CODING_FOUNDATION_LEVELS = 10;

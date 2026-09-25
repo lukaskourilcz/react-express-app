@@ -268,15 +268,6 @@ export function topicCheckpoints(topic: RoadmapTopic): RoadmapCheckpointMeta[] {
   });
 }
 
-/** Full structure (every topic → its levels + checkpoints), sent to the client. */
-export function roadmapStructure(): Record<RoadmapTopic, RoadmapTopicStructure> {
-  const out = {} as Record<RoadmapTopic, RoadmapTopicStructure>;
-  for (const topic of ROADMAP_TOPICS) {
-    out[topic] = { levels: topicLevels(topic), checkpoints: topicCheckpoints(topic) };
-  }
-  return out;
-}
-
 /* ──── dynamic ("live") structure ───────────────────────────────────────────
  * The functions above describe the *authored* path (a fixed N levels × 8). The
  * served set is smaller: the owner can hide a question from /dev, and the
@@ -306,13 +297,6 @@ export function roadmapStructure(): Record<RoadmapTopic, RoadmapTopicStructure> 
  * the smallest count at which the 75% pass mark still means something (a
  * miss fails the level, as it would with eight). */
 export const MIN_LEVEL_QUESTIONS = 3;
-
-/** All authored question ids for a topic, in canonical order (ignoring deletes). */
-export function topicAllQuestionIds(topic: RoadmapTopic): string[] {
-  const max = topicLevelCount(topic) * QUESTIONS_PER_LEVEL;
-  const prefix = ID_PREFIX[topic];
-  return Array.from({ length: max }, (_, i) => `${prefix}-${i + 1}`);
-}
 
 export interface LiveTopic {
   levels: RoadmapLevelMeta[];

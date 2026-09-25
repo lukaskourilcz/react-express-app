@@ -42,13 +42,6 @@ export function activityIn(path: MergedPath, activityId: string): { module: Merg
   return null;
 }
 
-export function lessonIn(path: MergedPath, lessonId: string) {
-  for (const module of path.modules) {
-    const lesson = module.lessons.find((one) => one.id === lessonId);
-    if (lesson) return lesson;
-  }
-  return undefined;
-}
 
 /* ── public projections ───────────────────────────────────────────────── */
 

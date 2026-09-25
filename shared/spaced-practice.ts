@@ -43,8 +43,6 @@ export const RETRIEVAL_KINDS = [
 ] as const;
 export type RetrievalKind = (typeof RETRIEVAL_KINDS)[number];
 
-export const isRetrievalKind = (value: unknown): value is RetrievalKind =>
-  typeof value === 'string' && (RETRIEVAL_KINDS as readonly string[]).includes(value);
 
 /** Only one kind advances a concept. */
 export const advancesInterval = (kind: RetrievalKind): boolean => kind === 'independent';

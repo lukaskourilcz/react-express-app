@@ -32,8 +32,6 @@ export interface PuzzleLine {
  * could produce the lines unaided. */
 export const PUZZLE_COMPETENCIES = ['sequence', 'control-flow', 'api-usage', 'edge-handling'] as const;
 export type PuzzleCompetency = (typeof PUZZLE_COMPETENCIES)[number];
-export const isPuzzleCompetency = (value: unknown): value is PuzzleCompetency =>
-  typeof value === 'string' && (PUZZLE_COMPETENCIES as readonly string[]).includes(value);
 
 /** The public view: the lines in the order the server shuffled them, and what
  * a correct arrangement would demonstrate. The accepted orders are not here. */
@@ -45,11 +43,6 @@ export interface PuzzleView {
   /** The plain-language claim shown beside the result, so nobody mistakes an
    * ordering pass for having written the code. */
   claim: Localized;
-}
-
-/** What the learner sends back: the line ids, in the order they arranged. */
-export interface PuzzleSubmission {
-  order: string[];
 }
 
 export const PUZZLE_MAX_LINES = 14;
@@ -79,7 +72,3 @@ export function isAcceptedOrder(order: readonly string[], accepted: readonly (re
   return accepted.some((candidate) =>
     candidate.length === order.length && candidate.every((id, index) => id === order[index]));
 }
-
-/** The learner's arrangement as source, for showing what they built. */
-export const orderToCode = (order: readonly string[], lines: readonly PuzzleLine[]): string =>
-  order.map((id) => lines.find((line) => line.id === id)?.code ?? '').join('\n');

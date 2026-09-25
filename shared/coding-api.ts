@@ -307,8 +307,3 @@ export interface PuzzleVerdict {
   competencies: PuzzleCompetency[];
   claim: Localized;
 }
-
-/** The puzzle a task offers, if it has one. Present on the task payload so a
- * narrow screen can decide what to mount without a second request; the accepted
- * orders stay on the server. */
-export type CodingPuzzleView = PuzzleView;

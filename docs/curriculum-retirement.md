@@ -110,9 +110,10 @@ make. It is **declared**, not inferred — a fenced code block is not by itself 
 snippet question, and guessing from the text would make both the coverage report
 and the pacing rule meaningless.
 
-Pacing is a guideline with a rule attached: roughly one snippet in four, never
-three in a row, and never two of the same subtype adjacent. A run of one shape
-teaches the shape; a strict alternation teaches the pattern of the quiz.
+Pacing is an authoring guideline: roughly one snippet in four, never three in a
+row, and never two of the same subtype adjacent. A run of one shape teaches the
+shape; a strict alternation teaches the pattern of the quiz. No code checks it;
+#235 removed the uncalled validator on 2026-09-25.
 
 Reading is not writing. A snippet question is evidence that the learner can
 follow code; the coding tasks remain the evidence that they can produce it, and

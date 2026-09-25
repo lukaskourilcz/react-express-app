@@ -81,13 +81,3 @@ export function isDueForReview(
   const due = nextReviewDayKey(entry);
   return due !== null && today >= due;
 }
-
-/** Progress toward mastery, for a "2 / 3 days" style indicator. */
-export function masteryProgress(entry: LevelMasteryEntry | undefined): {
-  days: number;
-  required: number;
-  mastered: boolean;
-} {
-  const days = Math.min(distinctPassDays(entry), MASTERY_REQUIRED_DAYS);
-  return { days, required: MASTERY_REQUIRED_DAYS, mastered: isMastered(entry) };
-}

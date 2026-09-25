@@ -432,8 +432,6 @@ export function gradeArtifact(
 
 /* ── shared helpers ───────────────────────────────────────────────────── */
 
-export const verificationFor = (activity: MergedActivity): VerificationKind => activity.verification;
-
 /** Stable hash of a submitted payload, so replaying an idempotency key with a
  * different body conflicts instead of silently returning the old result. */
 export const requestHash = (payload: unknown): string =>

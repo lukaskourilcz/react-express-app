@@ -25,8 +25,6 @@ export const FAILURE_CATEGORIES = [
   'tests',
 ] as const;
 export type FailureCategory = (typeof FAILURE_CATEGORIES)[number];
-export const isFailureCategory = (value: unknown): value is FailureCategory =>
-  typeof value === 'string' && (FAILURE_CATEGORIES as readonly string[]).includes(value);
 
 /** What the classifier is allowed to see. Everything here is either the
  * learner's own output or a fact about the task's shape. */

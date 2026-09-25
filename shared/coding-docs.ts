@@ -139,11 +139,6 @@ const BY_TAG = new Map<string, CodingDocLink>(
 /** Every documentation entry, for the readiness report and the tests. */
 export const CODING_DOC_LINKS: readonly CodingDocLink[] = [...BY_TAG.values()];
 
-/** The URL map the older callers still read. */
-export const CODING_DOCS: Record<string, string> = Object.fromEntries(
-  [...BY_TAG.entries()].map(([tag, entry]) => [tag, entry.url]),
-);
-
 /** The JavaScript reference, used when a task declares nothing we document. */
 export const CODING_DOCS_FALLBACK: CodingDocLink = {
   tag: 'javascript',

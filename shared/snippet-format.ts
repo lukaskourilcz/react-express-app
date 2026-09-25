@@ -33,8 +33,6 @@ export const SNIPPET_SUBTYPES = [
   'complete',
 ] as const;
 export type SnippetSubtype = (typeof SNIPPET_SUBTYPES)[number];
-export const isSnippetSubtype = (value: unknown): value is SnippetSubtype =>
-  typeof value === 'string' && (SNIPPET_SUBTYPES as readonly string[]).includes(value);
 
 /** The notation the code is written in. `pseudocode` and `sql` are here because
  * not every readable snippet is a program in a language we run. */
@@ -42,8 +40,6 @@ export const SNIPPET_LANGUAGES = [
   'javascript', 'typescript', 'jsx', 'html', 'css', 'sql', 'bash', 'yaml', 'diff', 'pseudocode',
 ] as const;
 export type SnippetLanguage = (typeof SNIPPET_LANGUAGES)[number];
-export const isSnippetLanguage = (value: unknown): value is SnippetLanguage =>
-  typeof value === 'string' && (SNIPPET_LANGUAGES as readonly string[]).includes(value);
 
 /** Versioned so a later change to what the metadata means is a new version
  * rather than a silent reinterpretation of what authors already wrote. */
@@ -62,39 +58,4 @@ export interface SnippetMeta {
   /** Anything the reader has to assume — a runtime, a version, an ordering —
    * stated rather than left for them to guess wrong. */
   assumes?: string;
-}
-
-/* ── pacing ────────────────────────────────────────────────────────────── */
-
-/**
- * How many snippet questions a level of `total` questions should hold.
- *
- * Roughly one in four, which is an authoring guideline and not a quota: a
- * topic whose material does not suit code reading should have fewer, and the
- * validator reports a shortfall rather than failing on it. Filling a level with
- * weak snippets to reach a number is worse than having none.
- */
-export const suggestedSnippetCount = (total: number): number => Math.max(1, Math.round(total / 4));
-
-/**
- * Whether an ordering of questions paces its snippets acceptably: never more
- * than two in a row, and no two identical subtypes adjacent.
- *
- * Both rules exist for the same reason — a run of the same shape teaches the
- * shape rather than the material, and a strictly alternating sequence teaches
- * the pattern of the quiz.
- */
-export function pacingProblems(sequence: readonly (SnippetMeta | undefined)[]): string[] {
-  const problems: string[] = [];
-  let run = 0;
-  for (let index = 0; index < sequence.length; index++) {
-    const current = sequence[index];
-    run = current ? run + 1 : 0;
-    if (run > 2) problems.push(`three snippets in a row at position ${index + 1}`);
-    const previous = sequence[index - 1];
-    if (current && previous && current.subtype === previous.subtype) {
-      problems.push(`two ${current.subtype} snippets in a row at position ${index + 1}`);
-    }
-  }
-  return problems;
 }

@@ -256,7 +256,6 @@ for (const concept of CONCEPTS) {
 }
 
 export const conceptById = (id: string): Concept | null => BY_ID.get(id) ?? null;
-export const groupOfConcept = (id: string): ConceptGroup | null => GROUP_OF.get(id) ?? null;
 
 /**
  * The concept an item is about, or null.
@@ -273,14 +272,6 @@ export function conceptOf(item: { category?: string; tags?: readonly string[] })
     if (id) return id;
   }
   return null;
-}
-
-/** The other concepts in this one's group — the ones worth contrasting it
- * with. Empty for a concept that belongs to no group. */
-export function contrastPartners(conceptId: string): string[] {
-  const group = GROUP_OF.get(conceptId);
-  if (!group) return [];
-  return group.concepts.filter((concept) => concept.id !== conceptId).map((concept) => concept.id);
 }
 
 /** Whether two concepts are worth putting side by side. */

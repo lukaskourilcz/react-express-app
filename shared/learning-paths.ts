@@ -45,10 +45,6 @@ export type BaseTrack = (typeof BASE_TRACKS)[number];
 export const isBaseTrack = (value: unknown): value is BaseTrack =>
   typeof value === 'string' && (BASE_TRACKS as readonly string[]).includes(value);
 
-/** Every learning path is devShark-only. Kept as a constant rather than a
- * literal at each call site so the scope check reads the same everywhere. */
-export const LEARNING_PATH_SUBJECT = 'webdev';
-
 /* ── activities and evidence ───────────────────────────────────────────── */
 
 /** What a learner does. `lesson` is reading; `check` is a set of objective
@@ -75,8 +71,6 @@ export const EVIDENCE_STATES = [
   'needs_revision',
 ] as const;
 export type EvidenceState = (typeof EVIDENCE_STATES)[number];
-export const isEvidenceState = (value: unknown): value is EvidenceState =>
-  typeof value === 'string' && (EVIDENCE_STATES as readonly string[]).includes(value);
 
 /** The states that satisfy a module requirement, per requirement. A required
  * `verified_pass` cannot be met by `self_reviewed`; that is the whole point of
@@ -337,16 +331,6 @@ export function moduleComplete(
   );
 }
 
-/** Modules whose required evidence is complete, in manifest order. */
-export function completedModuleIds(
-  manifest: LearningPathManifest,
-  states: ReadonlyMap<string, EvidenceState>,
-): string[] {
-  return manifest.modules
-    .filter((module) => !module.optional && moduleComplete(module, states))
-    .map((module) => module.id);
-}
-
 /** Guided completion: every required module's evidence is in place. Optional
  * placement and bridge modules never count, and artifacts that only ever reach
  * `self_reviewed` are reported separately rather than folded into this flag. */
@@ -463,16 +447,6 @@ export type StudyTime = (typeof STUDY_TIMES)[number];
 export const isStudyTime = (value: unknown): value is StudyTime =>
   typeof value === 'string' && (STUDY_TIMES as readonly string[]).includes(value);
 
-/** Roughly how many minutes a study day holds, for sizing a session. The upper
- * band is bounded on purpose: a learner who studies for hours still gets a
- * session they can finish. */
-export const STUDY_TIME_MINUTES: Record<StudyTime, number> = {
-  'under-15': 10,
-  '15-30': 20,
-  '30-60': 45,
-  '60-plus': 75,
-};
-
 /** Skill paths the learner opted into. A skill path is entered directly and
  * holds no preference slot, so it lives beside the role rather than inside it:
  * DSA Foundations can run with or without FDE, and with any base track. */
@@ -563,14 +537,6 @@ export function missingProfileFields(profile: LearnerProfile | null): RequiredPr
 export const isLearnerProfileComplete = (profile: LearnerProfile | null): boolean =>
   profile !== null && missingProfileFields(profile).length === 0;
 
-/** The v1 preference this profile implies. Written beside the profile on every
- * save so nothing that already reads the preference has to change. */
-export const learningPreferenceOf = (profile: LearnerProfile): LearningPreference => ({
-  schemaVersion: 1,
-  baseTrack: profile.baseTrack,
-  specialization: profile.specialization,
-});
-
 /** The profile an account that only ever saved a v1 preference implies: the
  * plan it already chose, and the required answers still outstanding. */
 export const profileFromPreference = (preference: LearningPreference | null): LearnerProfile | null =>
@@ -599,5 +565,3 @@ export const isPathContentId = (value: unknown): value is string =>
 export const activityIdPrefix = (pathId: LearningPathId, version: number): string =>
   `${pathId === 'dsa-foundations' ? 'dsa' : pathId}-v${version}-`;
 
-export const isCurriculumVersion = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 999;
