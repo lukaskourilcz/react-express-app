@@ -170,6 +170,13 @@ prints is the live count.
 | Wave | Challenges | Tags it brought to three or more Easy | Short tags after it |
 | --- | --- | --- | --- |
 | JavaScript A (`js-easy2-*`) | 30 | flat, for-in, promises, recursion, timers, callbacks, higher-order, nested-loops, two-pointer | JavaScript none of its 17; TypeScript 17, React 11, Algorithms 5 |
+| JavaScript B (`js-easy3-*`) | 30 | none were short; recursion, nested-loops and for-in rose from 3 to 5, flat and timers from 3 to 4, promises and async-await by 2 each | JavaScript none of its 17, fewest 4 Easy; TypeScript 17, React 11, Algorithms 5 |
+
+JavaScript B also covers techniques the Coding home lists but no Medium
+challenge uses yet, so the matrix leaves them out. Regex went from 0 Easy
+challenges to 3, JSON from 0 to 2 and sort from 1 to 3. Concat, join and
+forEach got their first Easy challenge, and includes, indexOf, findIndex and
+every one more each.
 
 A wave is one file per track under `lib/coding/tasks/easy-<track>-<wave>.ts`,
 its solutions under the same name in `lib/coding/solutions/`, and one line in
