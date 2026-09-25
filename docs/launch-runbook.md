@@ -1,7 +1,6 @@
 # devShark launch runbook
 
-This is the operational source of truth for the current web launch. `LAUNCH.md`
-is a historical audit and may describe issues that have since been resolved.
+This is the operational source of truth for the current web launch.
 
 ## Release contract
 
