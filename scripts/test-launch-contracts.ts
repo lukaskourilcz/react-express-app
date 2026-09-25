@@ -42,6 +42,7 @@ import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } fro
 import { contentVersion, contentHash, translationHash, itemReview, codingTaskReview, questionEligibility, isAuditedCategory } from '../lib/curation';
 import { AUDITED_CATEGORIES, REVIEW_REGISTRY } from '../lib/curation-registry';
 import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH } from './build-curation-registry';
+import { webdevBankContracts } from './webdev-bank-contract';
 import { applyEligibility, getEffectiveQuestions, getQuestionsForHistoryById } from '../lib/questions-store';
 import { buildLiveTopic, liveAvailability, MIN_LEVEL_QUESTIONS, unavailablePartsOf, partRanges as roadmapPartRanges } from '../lib/roadmap';
 import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRanges } from '../shared/progression';
@@ -1734,8 +1735,9 @@ async function main() {
   }
 
   await auditGateContracts();
+  await webdevBankContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, and an unconfigured shop.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, and the webdev-bank contract BoardlessAI imports.');
 }
 
 void main().catch((error) => {
