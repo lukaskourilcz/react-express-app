@@ -853,3 +853,27 @@ Local evidence, all executed on the lane branch head:
 | `git diff --check` | clean |
 
 Not verified here: production and migration 041 there, which are owner items in `NEEDED.md`, and the month settlement against 040's real table, which lives on the other lane (the proof used a table of the same shape from handoff section 5.1).
+
+## 2026-09-25 — invitations (D8b, #228)
+
+What changed: every account has an invite link, `/?ref=<code>`. The browser keeps the code from the link and offers it after sign-in; the server binds it once, and only while the account is at most 48 hours old by the creation time Supabase Auth reported. When the invited friend finishes a first Learn level, both accounts get 100 coins, once. An inviter is paid for at most 20 friends; past that the friend is still paid. Rewards gains "Invite a friend" with the link, a copy button and the counts, and the ledger reads "Referral: a friend finished their first level". Migration 042 adds `referral_codes`, `referrals`, the `referral` ledger reason and four service-role routines.
+
+Local evidence, all executed on the lane branch head:
+
+| Check | Result |
+| --- | --- |
+| Migration 042 on Postgres 16 (template with the shim and 001–038, then 039 and 041) | applied twice with `ON_ERROR_STOP=1`, exit 0 both times |
+| Rolled-back exercise of 042 | exit 0, 59 checks: the reason check keeps `milestone` and `social`; one stable eight-letter code per account; a bind inside the window, a second bind and a move to another inviter refused, the account's own code and a reversed pair refused (`self`), an unknown or malformed code, an account older than 48 hours and a missing creation time bind nothing; `waiting` before a passed level and for a failed one; then 100 to each side, the friend under `referral:<account>` and the inviter under `referral:friend:<random key>` with no trace of the friend's id; a second completion `already`, balances unchanged; no XP, stats, award or XP-credit row written; 21 friends of one inviter: 20 paid, the 21st `capped` and still paid, raising the cap later reopens nothing, a friend's deletion frees no place; `authenticated` and `anon` cannot call any routine or read `referrals`, and read only their own code; deletion removes the code and the account's own row and pays a waiting friend of a deleted inviter (`orphaned`) with nothing for the deleted account |
+| Two sessions at once, committed scratch database | the same friend settled twice: `credited` and `already`, 100 each; two friends competing for the inviter's last place under the cap: `credited` and `capped`, the inviter ends at exactly 20 lines |
+| Real handlers against that database through a PostgREST/Auth stand-in | 31/31: the link carries a code and counts and no account id; a 5-minute-old account binds an upper-case code, a second bind is `already`; the inviter sees one waiting and nobody's id; own code `self`; a 5-day-old account `closed`, also with a creation time in the body; malformed 400; unknown `unknown`; nothing paid before a level; a first HTML level pays the friend 5 XP coins plus 100 and the inviter 100, with the inviter's wallet showing no friend id; a replayed completion, a re-pass, a second level and a wallet read pay nothing more; an inviter at 20 is not paid while the friend is; grant 0 turns the link off and a claim answers `off`; account deletion of inviter and friend |
+| `npm run typecheck:api` | exit 0 |
+| `npm run test:launch` | exit 0; adds the invitation contracts: the defaults and the clamp, service-role routines with a pinned `search_path`, no browser policy on `referrals`, `credit_referral` writing only ledger tables (the referral row, and the wallet through `credit_tokens`), the replay guard, the passed-level wait, the cap lock, the self check and the window, and the handler against a stand-in (counts without ids, a body creation time or amount ignored, a malformed code reaching no routine); two were mutation-checked to fail when their rule is removed |
+| `npm run test:client` | exit 0; 13 files, 127 tests (16 new in `client/tests/referral.test.tsx`) |
+| `npm run build`, `npm run check:bundle`, `npm run check:unused` | exit 0; 216,675 of 243,000 gzip bytes |
+| `npm run test:billing`, `npm run test:coding-auth` | exit 0 |
+| `npm run check:responsive` over `/shop`, `/profile` and `/` at 360, 390, 768 and 1280, light and dark | exit 0; 12 probes each, 0 issues |
+| Chromium, the real client build signed in against the real handlers, 360 and 1280, light and dark | no page errors, no overflow; the headings run Your coins, How to earn, Invite a friend, Merchandise; the link field holds `/?ref=<code>`, "Copy link" works from the keyboard with a 3px focus ring and the clipboard holds the link; "3 of 20" and one waiting; nothing in the section under 44px; a new account opening the link signed in sees "Invitation accepted", the address bar loses `ref`, the stored code is cleared and the row names the inviter; its Rewards shows the invited note and a 46px "Go to Learn" |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client` | exit 0; 0 vulnerabilities |
+| `git diff --check` | clean |
+
+Not verified here: production and migration 042 there, which are owner items in `NEEDED.md`, and a real Google sign-up carrying the code through the OAuth redirect (the browser check restored a session instead of running Google's consent screen).
