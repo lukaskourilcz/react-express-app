@@ -64,4 +64,3 @@ export const TOPIC_LANDINGS: TopicLandingDefinition[] = [
   },
 ];
 
-export const TOPIC_BY_SLUG = new Map(TOPIC_LANDINGS.map((topic) => [topic.slug, topic]));

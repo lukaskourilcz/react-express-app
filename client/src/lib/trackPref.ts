@@ -103,10 +103,6 @@ export const writeCachedPreference = (userId: string | null, preference: Learnin
   writeJSON(cacheKey(userId), preference);
 };
 
-/** A guest's draft choice, applied to an account only through an explicit
- * action. Signing in never silently overwrites what the account already says. */
-export const readGuestPreference = (): LearningPreference | null => readCachedPreference(null);
-
 /* ── saving ────────────────────────────────────────────────────────────── */
 
 export type SaveOutcome =
@@ -151,15 +147,4 @@ export async function saveLearningPreference(
       message: error instanceof Error ? error.message : 'network',
     };
   }
-}
-
-/** Persist just the track, keeping any specialization already chosen. Kept for
- * the existing Profile track toggle, which does not offer a role. */
-export async function savePreferredTrack(track: Track, userId: string | null, user: User | null): Promise<SaveOutcome> {
-  const current = preferredLearningOf(user);
-  return saveLearningPreference(userId, {
-    schemaVersion: 1,
-    baseTrack: track,
-    specialization: current?.specialization ?? null,
-  });
 }

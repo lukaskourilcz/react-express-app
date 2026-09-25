@@ -74,8 +74,6 @@ const ACTIVE_SUBJECT: SubjectId = 'webdev';
 
 /** Imperative snapshot of the active subject (for non-React callers). */
 export const getSubject = (): SubjectId => ACTIVE_SUBJECT;
-/** The active subject's definition (accent, topics, categories, …). */
-export const getActiveSubject = (): SubjectDef => SUBJECTS[ACTIVE_SUBJECT];
 
 /** The active subject, in the tuple shape the per-subject stores destructure. */
 export function useSubject(): [SubjectId] {

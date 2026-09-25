@@ -108,17 +108,3 @@ export const visibleCategoryOptionsFor = (
   return opts.includePlayOnly ? base : base.filter((c) => !PLAY_ONLY_CATEGORIES.includes(c.value));
 };
 
-// Build a progress-bar fill from the categories actually present in a quiz.
-// One category → its solid logo color (e.g. React → #61dafb); several → a
-// gradient blending those categories' logo colors, ordered to match the picker.
-const CATEGORY_ORDER = CATEGORY_OPTIONS.map((c) => c.value);
-export function categoryProgressBackground(categories: string[]): string {
-  const unique = Array.from(new Set(categories)).sort(
-    (a, b) =>
-      CATEGORY_ORDER.indexOf(a as CategoryType) - CATEGORY_ORDER.indexOf(b as CategoryType),
-  );
-  const colors = unique.map(getCategoryHexColor);
-  if (colors.length === 0) return 'var(--brand-accent)';
-  if (colors.length === 1) return colors[0];
-  return `linear-gradient(90deg, ${colors.join(', ')})`;
-}

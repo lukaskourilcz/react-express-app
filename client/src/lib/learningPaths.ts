@@ -9,7 +9,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from './api';
 import type {
-  DraftGetResponse,
   DraftSaveRequest,
   DraftSaveResponse,
   EnrollmentCreateRequest,
@@ -76,15 +75,6 @@ export function saveLearningPreference(input: LearningPreferenceRequest): Promis
   return apiFetch<LearningPreferenceResponse>(`${USER}?op=learning-preference`, {
     method: 'PUT',
     body: JSON.stringify(input),
-  });
-}
-
-export function useLearningPreference(userId: string | undefined) {
-  return useQuery({
-    queryKey: learningPathKeys.preference(userId),
-    enabled: Boolean(userId),
-    queryFn: ({ signal }) => fetchLearningPreference(signal),
-    staleTime: 60_000,
   });
 }
 
@@ -163,17 +153,6 @@ export function newIdempotencyKey(): string {
 }
 
 /* ── drafts ────────────────────────────────────────────────────────────── */
-
-export function fetchPathDraft(
-  enrollmentId: string,
-  activityId: string,
-  signal?: AbortSignal,
-): Promise<DraftGetResponse> {
-  return apiFetch<DraftGetResponse>(
-    `${USER}?op=learning-path-draft&enrollmentId=${encodeURIComponent(enrollmentId)}&activityId=${encodeURIComponent(activityId)}`,
-    { signal },
-  );
-}
 
 export function savePathDraft(input: DraftSaveRequest): Promise<DraftSaveResponse> {
   return apiFetch<DraftSaveResponse>(`${USER}?op=learning-path-draft`, {

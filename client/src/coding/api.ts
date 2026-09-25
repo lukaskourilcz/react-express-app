@@ -6,7 +6,6 @@ import { apiFetch } from '../lib/api';
 import { getStoredLang } from '../i18n/LanguageContext';
 import type {
   CodingApproachesResponse,
-  CodingDraftResponse,
   CodingProgressResponse,
   CodingRevealRequest,
   CodingRevealResponse,
@@ -46,10 +45,6 @@ export function revealCoding(input: CodingRevealRequest): Promise<CodingRevealRe
 
 export function fetchCodingProgress(signal?: AbortSignal): Promise<CodingProgressResponse> {
   return apiFetch<CodingProgressResponse>(`${USER}?op=coding-progress`, { signal });
-}
-
-export function fetchCodingDraft(id: string, signal?: AbortSignal): Promise<CodingDraftResponse> {
-  return apiFetch<CodingDraftResponse>(`${USER}?op=coding-draft&id=${encodeURIComponent(id)}`, { signal });
 }
 
 export function saveCodingDraft(id: string, code: string): Promise<{ ok: boolean }> {

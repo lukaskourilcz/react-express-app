@@ -98,32 +98,4 @@ export function MotionPop({ children, className }: { children: ReactNode; classN
   );
 }
 
-/**
- * Gently pulse a wrapped element to draw the eye (e.g. the "start learning" CTA
- * once a path is chosen). Transform-only so it never reflows siblings. Renders
- * children untouched when inactive or under prefers-reduced-motion.
- */
-export function MotionPulse({
-  children,
-  active = true,
-  className,
-}: {
-  children: ReactNode;
-  active?: boolean;
-  className?: string;
-}) {
-  const reduce = useReducedMotion();
-  if (!active || reduce) return <>{children}</>;
-  return (
-    <m.div
-      className={className}
-      style={{ display: 'inline-flex', borderRadius: 8 }}
-      animate={{ scale: [1, 1.04, 1] }}
-      transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-    >
-      {children}
-    </m.div>
-  );
-}
-
 export { m, AnimatePresence, useReducedMotion };

@@ -57,48 +57,6 @@ export const CheckCircleIcon = ({ size = 20, style }: IconProps) => (
   </svg>
 );
 
-export const ClipboardIcon = ({ size = 20, style }: IconProps) => (
-  <svg {...base(size)} style={style}>
-    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
-    <rect x="8" y="2" width="8" height="4" rx="1" />
-  </svg>
-);
-
-export const HelpCircleIcon = ({ size = 20, style }: IconProps) => (
-  <svg {...base(size)} style={style}>
-    <circle cx="12" cy="12" r="10" />
-    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
-    <line x1="12" y1="17" x2="12.01" y2="17" />
-  </svg>
-);
-
-export const LightbulbIcon = ({ size = 20, style }: IconProps) => (
-  <svg {...base(size)} style={style}>
-    <path d="M9 18h6M10 22h4" />
-    <path d="M12 2a7 7 0 0 1 4.9 12 4.6 4.6 0 0 0-1.4 3v1H8.5v-1a4.6 4.6 0 0 0-1.4-3A7 7 0 0 1 12 2z" />
-  </svg>
-);
-
-export const KeyIcon = ({ size = 20, style }: IconProps) => (
-  <svg {...base(size)} style={style}>
-    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4" />
-  </svg>
-);
-
-export const UsersIcon = ({ size = 20, style }: IconProps) => (
-  <svg {...base(size)} style={style}>
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-);
-
-export const SparkleIcon = ({ size = 20, style }: IconProps) => (
-  <svg {...base(size)} style={style}>
-    <path d="M12 3l1.9 5.7a2 2 0 0 0 1.3 1.3L21 12l-5.8 1.9a2 2 0 0 0-1.3 1.3L12 21l-1.9-5.8a2 2 0 0 0-1.3-1.3L3 12l5.8-1.9a2 2 0 0 0 1.3-1.3L12 3z" />
-  </svg>
-);
-
 export const BookmarkIcon = ({ size = 20, style }: IconProps) => (
   <svg {...base(size)} style={style}>
     <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />

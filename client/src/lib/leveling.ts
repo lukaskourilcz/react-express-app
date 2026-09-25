@@ -120,24 +120,6 @@ const RANK_META: ReadonlyArray<{ title: string }> = [
 /** Rank titles in order — used to label the dev configuration UI. */
 export const RANK_TITLES: string[] = RANK_META.map((r) => r.title);
 
-// The rank ladder per subject, index-aligned with RANK_META (the same ten XP
-// tiers). devShark's one ladder composes the track specialization on top; see
-// rankLabelKeyFor() in tracks.ts.
-const SUBJECT_RANK_LADDER: Record<SubjectId, ReadonlyArray<{ title: string }>> = {
-  webdev: RANK_META,
-};
-
-/**
- * The subject-appropriate title for a rank index. Falls back
- * to the Web Dev ladder for an out-of-range index. Track specialization (for
- * Web Dev) is composed separately by rankLabelKeyFor() in tracks.ts.
- */
-export function subjectRankLabel(subjectId: SubjectId, index: number): { title: string } {
-  const ladder = SUBJECT_RANK_LADDER[subjectId] ?? RANK_META;
-  const entry = ladder[index] ?? RANK_META[index] ?? RANK_META[0];
-  return { title: entry.title };
-}
-
 export const MAX_RANK = RANK_META.length;
 
 // Total XP required to reach each rank (ascending; first is 0). Tuned so that
