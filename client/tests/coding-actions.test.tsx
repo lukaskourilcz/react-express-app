@@ -185,3 +185,11 @@ it('keeps a randomized fin stable across button updates without changing its acc
   expect(gentle.shade).not.toBe(fast.shade);
   expect(gentle.duration).not.toBe(fast.duration);
 });
+
+it('names the difficulty in the code pane’s first line, beside the title', () => {
+  mount();
+  const title = screen.getByRole('heading', { level: 1, name: 'Test task' });
+  const line = title.closest('.cd-brief__line')!;
+  expect(line).not.toBeNull();
+  expect(within(line as HTMLElement).getByText('Easy').closest('.cd-difficulty')).toHaveAttribute('data-difficulty', 'easy');
+});
