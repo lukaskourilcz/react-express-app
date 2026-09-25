@@ -16,12 +16,12 @@ Current content: **2,447 authored questions**, of which 2,293 are served (the co
 - Configurable solo quizzes with category, difficulty, and question-count selection; weighted sampling; shuffled answers; bookmarks; question reporting; keyboard controls; and a two-column desktop review.
 - A deterministic daily challenge and the timed Biggest Shark Challenge with leaderboards.
 - Live free-for-all matches and host-led classroom rooms using Supabase Realtime with polling recovery, server-side timing, and QR sharing.
-- 30-day, all-time, daily and per-topic leaderboards; forgiving streaks (configurable off-days plus two monthly freezes); verified XP; ranks; collectible cosmetic Shark Cards earned by finishing the Today queue; and a fairness-neutral cosmetic token shop.
+- 30-day, all-time, daily and per-topic leaderboards; forgiving streaks (two free protections a month, spent on a missed day or in advance as a 48-hour shield); verified XP; ranks; and a fairness-neutral cosmetic token shop.
 - A read-only study advisor that names your weakest areas from your own results, and a touch-typing racer (accuracy-gated, WPM earns stars, private on-device best).
-- A Coding section with 695 tasks across JavaScript, TypeScript, React, an Algorithms interview track, and system design: server-graded submissions (QuickJS sandbox, real TypeScript type tests, sealed design keys), authored hint ladders ending in documentation, three debugging paths that teach the console as a tool, Easy, Medium and Hard labels projected from the tier ladder, coding tasks inside Learn levels, a short review ladder, coding badges, and an optional GitHub garden that commits every passed task to the learner's own repository.
+- A Coding section with 695 tasks across JavaScript, TypeScript, React, an Algorithms interview track, and system design: server-graded submissions (QuickJS sandbox, real TypeScript type tests, an isolated Vercel Sandbox for React, sealed design keys), authored hint ladders ending in documentation, three debugging paths that teach the console as a tool, Easy, Medium and Hard labels projected from the tier ladder, coding tasks inside Learn levels, and an optional GitHub garden that commits every passed task to the learner's own repository.
 - Two optional learning paths, both graded through the existing server sandbox and both awarding no XP: the **Forward Deployed Engineer** role specialization (customer discovery, integration, bounded AI, evaluation, security, operations, handoff and a staged capstone) that sits on top of the chosen Fullstack/Frontend/Backend track, and **DSA Foundations** (growth classes, arrays, maps, stacks, queues, linked lists, recursion, search, sorting, trees) entered directly with no track, role or XP rank required. Verified checks stay visibly apart from self-reviewed writing, and neither path claims a certification.
 - Per-user flashcards with optimistic updates and offline-safe query caching.
-- Google sign-in through Supabase Auth, cross-device progress, profile settings, language preference, and permanent account deletion.
+- Google sign-in through Supabase Auth, cross-device progress, profile settings, and permanent account deletion.
 - Optional voluntary support, Sentry monitoring, and PostHog analytics. Every optional integration is gated and disabled by default. devShark ships no AI feature.
 - A role-gated `/dev` control room for question CRUD/overrides, importance tuning, quality and parity checks, report triage, auth logs, feature settings, and support disclosure.
 
@@ -40,7 +40,7 @@ Correct answers are not sent with unanswered questions. Quiz and learning sessio
 | Observability | Sentry 10 and PostHog, both opt-in |
 | Other client capabilities | QR generation, lazy Prism syntax highlighting, Web Share/download fallbacks |
 
-Node.js **22–24** is required. The production application does not rely on the legacy compiled `server/dist` artifact; Vercel serves `api/` and the Vite SPA.
+Node.js **22–24** is required. Vercel serves `api/` and the Vite SPA.
 
 ## Architecture
 
@@ -74,7 +74,7 @@ lib/                         server auth, tokens, bank loaders, stores, rate lim
 lib/coding/                  coding catalogue, solutions (server-only), sandbox, grading
 lib/github-app.ts            GitHub App JWT, installation tokens, garden commits
 shared/                      product and subject registry, coding catalogue types and browser index
-supabase/supabase-schema*.sql         baseline plus migrations through 025
+supabase/supabase-schema*.sql         baseline plus migrations through 044
 docs/                        launch, architecture, backup, growth, content sources, coding integration plan
 scripts/test-launch-contracts.ts
 scripts/test-coding-content.ts        content contract: solutions proven, payloads answer-free, difficulty labels, Easy-band coverage matrix
@@ -119,7 +119,7 @@ Production requires:
 - `VITE_PRODUCT=devshark`, `VITE_LOCK_SUBJECT=webdev`, `PRODUCT_ID=devshark` and `PRODUCT_SUBJECT=webdev` (or leave them unset; they may not name anything else).
 - `ADMIN_EMAILS` or Supabase `app_metadata.role=admin` for `/dev`.
 - Google OAuth origins and callback URLs for every production domain.
-- All migrations through **`supabase/supabase-schema-026.sql`**.
+- All migrations through **`supabase/supabase-schema-044.sql`**, in numeric order.
 
 Strongly recommended for a public deployment:
 
@@ -152,7 +152,7 @@ The twelve physical handlers multiplex related operations to stay within the dep
 
 ## Database and operations
 
-Apply `supabase/supabase-schema.sql`, then numbered migrations in order through 025. Migration 023 adds the one-time submission ledger, subject-scopes multiplayer and flashcards, hardens service-only functions and leaderboard identity, makes roadmap answer recording atomic, enforces complete attempts/prerequisites, adds retention helpers, and adds production indexes. Migration 024 adds the daily-habit backing — spaced-mastery pass tracking inside verified roadmap completion, freeze-aware streaks, server-synced badges, Shark Cards, and a hint cache — additively and idempotently. Migration 025 adds coding progress, attempts, drafts, the per-level coding gate, and the GitHub garden connection and commit queue, with the service-only `record_coding_verdict` and `record_coding_reveal` functions.
+Apply `supabase/supabase-schema.sql`, then numbered migrations in order through 044 (each file's header says what it adds; `docs/release-acceptance.md` records how each was verified). Migration 023 adds the one-time submission ledger, subject-scopes multiplayer and flashcards, hardens service-only functions and leaderboard identity, makes roadmap answer recording atomic, enforces complete attempts/prerequisites, adds retention helpers, and adds production indexes. Migration 024 adds the daily-habit backing — spaced-mastery pass tracking inside verified roadmap completion, freeze-aware streaks, server-synced badges, Shark Cards, and a hint cache — additively and idempotently. Migration 025 adds coding progress, attempts, drafts, the per-level coding gate, and the GitHub garden connection and commit queue, with the service-only `record_coding_verdict` and `record_coding_reveal` functions.
 
 `npm run test:harness` drives the built React sandbox in headless Chromium and asserts the postMessage contract the workbench depends on: one `ready`, one `done` per run, tokens that keep a superseded run from settling, compile and render errors reported as such, and the fetch stub answering in place of the network. It needs an existing client build and a Chromium (set `CHROME_BIN` if it is not on a usual path); with no browser available it prints a notice and exits 0.
 

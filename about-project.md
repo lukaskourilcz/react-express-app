@@ -11,15 +11,14 @@ scores, and XP. StudyShark, which shared this code, moved to its own repository
   mastery** — a level is "cleared" on its first pass and "mastered" only after
   three correct passes on three separate days.
 - An auto-composed **"Today"** queue that folds carried-over work, due-for-review
-  levels, and new material into one daily plan, and grants a cosmetic card pack
-  when finished.
+  levels, and new material into one daily plan.
 - Solo quizzes; a daily challenge; the survival Biggest Shark Challenge; live
   multiplayer and classroom rooms; and leaderboards.
 - **Adaptive placement** that steps difficulty up and down over short rounds.
-- Retention layer: **forgiving streaks** (configurable off-days + two monthly
-  freezes), collectible cosmetic **Shark Cards**, and a read-only **study
+- Retention layer: **forgiving streaks** (two free protections a month, spent
+  on a missed day or in advance as a 48-hour shield) and a read-only **study
   advisor**.
-- A devShark **typing racer** and per-subject flashcards.
+- A devShark **typing racer** and flashcards.
 - Two optional devShark **learning paths**: the **Forward Deployed Engineer**
   role specialization, which sits on top of the Fullstack/Frontend/Backend
   track a learner already chose, and **DSA Foundations**, a focused skill path
@@ -27,22 +26,23 @@ scores, and XP. StudyShark, which shared this code, moved to its own repository
   the existing server sandbox, keep verified checks visibly apart from
   self-reviewed writing, and award no XP — so a task reused from the coding
   catalogue is never rewarded twice. Neither claims a certification.
-- A devShark **Coding** section: 245 tasks across JavaScript, TypeScript, React,
-  and system design, graded on the server (QuickJS sandbox, TypeScript compiler,
-  sealed design keys), with authored hint ladders that end in documentation,
-  coding tasks inside the Learn levels, a short review ladder, coding badges,
-  and an optional **GitHub garden** that commits every passed task to the
-  learner's own repository. Every graded task also carries a junior and a
-  senior solution that open after a verified pass; fourteen evolving projects
-  include a debugging path built on `console.log` and the habit of tracing
-  before fixing; and a signed-in learner can shape a **challenge run** (track,
-  count, order) and plan it for a date and time.
+- A devShark **Coding** section: 695 tasks across JavaScript, TypeScript, React,
+  Algorithms and system design, labelled Easy, Medium or Hard, graded on the
+  server (QuickJS sandbox, TypeScript compiler, an isolated Vercel Sandbox for
+  React, sealed design keys), with authored hint ladders that end in
+  documentation, coding tasks inside the Learn levels, and an optional **GitHub
+  garden** that commits every passed task to the learner's own repository.
+  Every graded task also carries a junior and a senior solution that open after
+  a verified pass; fourteen evolving projects and fifteen short paths hold the
+  multi-stage work, three of them debugging paths built on `console.log` and
+  the habit of tracing before fixing; and a signed-in learner can shape a
+  **challenge run** (track, count, order) and plan it for a date and time.
 
 ## Tech stack
 
 - **Client:** React + Vite + TypeScript, React Router, TanStack Query
 - **API:** twelve Vercel serverless functions (TypeScript)
-- **Design:** Astryx design system, Tailwind-based tokens
+- **Design:** Astryx design system (`@astryxdesign/core` 0.1.6) with product CSS tokens in `client/src/styles/astryx-theme.css`
 - **Testing/build:** TypeScript, launch tests, content contract, responsive checks
 - **Coding runtime:** QuickJS (WebAssembly) sandbox on the server, the TypeScript
   compiler for type tests, CodeMirror in the browser, a self-hosted React harness
