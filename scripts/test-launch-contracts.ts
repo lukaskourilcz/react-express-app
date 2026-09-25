@@ -134,12 +134,6 @@ import { inspectQuestionQuality } from '../lib/question-quality';
 import { assessmentUnlocks, roadmapEndedOnHearts, ROADMAP_MAX_HEARTS } from '../shared/assessment';
 import { grantedTopicsFor, withGrantedTopics } from '../lib/topic-grants';
 import { ROADMAP_TOPICS, isRoadmapTopic, topicLevelCount, ROADMAP_LEVELS } from '../lib/roadmap';
-import {
-  disableSupportPrompt,
-  dismissSupportPrompt,
-  recordSupportMilestone,
-  SUPPORT_PROMPT_DISMISS_MS,
-} from '../client/src/lib/supportPrompt';
 import type { Question } from '../lib/quiz-runtime';
 import {
   FREE_CODING_SHARE,
@@ -654,6 +648,15 @@ function publicCopyContracts() {
     assert.match(app, new RegExp(`<Route path="${path}" element=`), `${path} is a route`);
   }
   assert.match(app, /<Route path="\/support" element={<Navigate to="\/premium" replace \/>} \/>/, '/support redirects to /premium');
+  // The voluntary-support page is retired (#222), and the quiz prompt that
+  // sent learners to it went too (#230): no screen links to /support.
+  const clientSources = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    return statSync(path).isDirectory() ? clientSources(path) : /\.tsx?$/.test(name) ? [path] : [];
+  });
+  for (const file of clientSources(join(process.cwd(), 'client/src'))) {
+    assert.doesNotMatch(readFileSync(file, 'utf8'), /navigate\(\s*['"]\/support['"]|\bto[=:]\s*\{?\s*['"]\/support['"]|href=["']\/support["']/, `${file} links to the retired /support page`);
+  }
   assert.match(app, /to: '\/premium', key: 'nav\.premium'/, 'Premium sits in the navigation');
   const rewrites = (JSON.parse(read('vercel.json')) as { rewrites: { source: string; destination: string }[] }).rewrites;
   for (const page of PUBLIC_PAGES) {
@@ -1210,17 +1213,6 @@ async function main() {
   assert.equal(decodeQuizResultReceipt(receipt)?.subject, 'webdev');
 
   const now = Date.UTC(2026, 6, 21);
-  const ninth = recordSupportMilestone({ completions: 8 }, 100, true, now);
-  assert.equal(ninth.show, false);
-  const tenth = recordSupportMilestone({ completions: 9 }, 80, true, now);
-  assert.equal(tenth.show, true);
-  assert.equal(recordSupportMilestone({ completions: 19 }, 50, true, now).show, false, 'low scores never prompt');
-  assert.equal(recordSupportMilestone({ completions: 9 }, 100, false, now).show, false, 'support is disabled by default');
-  const dismissed = dismissSupportPrompt(tenth.state, now);
-  assert.equal(dismissed.dismissedUntil, now + SUPPORT_PROMPT_DISMISS_MS);
-  assert.equal(recordSupportMilestone({ ...dismissed, completions: 19 }, 100, true, now + 15 * 86400000).show, false);
-  assert.equal(recordSupportMilestone({ ...disableSupportPrompt({ completions: 9 }) }, 100, true, now).show, false);
-
   const reviewQuestions = [
     { id: 'weak-high', category: 'javascript', difficulty: 2, importance: 10 },
     { id: 'strong-low', category: 'css', difficulty: 2, importance: 3 },

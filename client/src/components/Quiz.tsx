@@ -55,13 +55,6 @@ import { CURRENT_PRODUCT } from '../lib/products';
 import { createResultShareFile, downloadShareFile } from '../lib/shareCard';
 import { queryClient } from '../lib/queryClient';
 import { profileStatsQueryKey } from '../lib/queries';
-import {
-  SUPPORT_PROMPT_KEY,
-  disableSupportPrompt,
-  dismissSupportPrompt,
-  recordSupportMilestone,
-  type SupportPromptPreference,
-} from '../lib/supportPrompt';
 import './Quiz.css';
 
 type QuizMode = 'standard' | 'daily' | 'review';
@@ -231,7 +224,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   // screen, so a fix can be matched to what the learner actually saw.
   const [reportTarget, setReportTarget] = useState<{ id: string; version?: string } | null>(null);
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
-  const [showSupportPrompt, setShowSupportPrompt] = useState(false);
   const [settings] = useSettings();
 
   const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
@@ -574,14 +566,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         correct: data.correctAnswers,
         total: data.totalQuestions,
       });
-      const supportState = readJSON<SupportPromptPreference>(SUPPORT_PROMPT_KEY, {});
-      const supportMilestone = recordSupportMilestone(
-        supportState,
-        data.percentage,
-        config.support.enabled,
-      );
-      writeJSON(SUPPORT_PROMPT_KEY, supportMilestone.state);
-      setShowSupportPrompt(supportMilestone.show);
       if (data.percentage === 100) recordPerfectQuiz();
 
       // Every quiz counts. There is no unranked kind any more, so the only
@@ -617,7 +601,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     } finally {
       setSubmitting(false);
     }
-  }, [answers, clearProgress, config.support.enabled, isAuthenticated, sessionId, submitting, user, lang, t, questions, mode, hintedIds]);
+  }, [answers, clearProgress, isAuthenticated, sessionId, submitting, user, lang, t, questions, mode, hintedIds]);
 
   const handleRestart = () => {
     clearProgress();
@@ -967,47 +951,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </HStack>
           </div>
         </div>
-
-        {config.support.enabled && showSupportPrompt && (
-          <Card variant="muted" padding={3} width="100%" className="quiz-support-prompt">
-            <VStack gap={1.5}>
-              <Text weight="bold">{t('quiz.supportTitle')}</Text>
-              <Text type="supporting" size="sm" color="secondary">{t('quiz.supportBody')}</Text>
-              <HStack gap={1} wrap="wrap">
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  label={t('quiz.supportCta')}
-                  onClick={() => {
-                    capture('support_prompt_opened', { product: CURRENT_PRODUCT.id });
-                    setShowSupportPrompt(false);
-                    navigate('/support');
-                  }}
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  label={t('quiz.supportDismiss')}
-                  onClick={() => {
-                    const state = readJSON<SupportPromptPreference>(SUPPORT_PROMPT_KEY, {});
-                    writeJSON(SUPPORT_PROMPT_KEY, dismissSupportPrompt(state));
-                    setShowSupportPrompt(false);
-                  }}
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  label={t('quiz.supportNever')}
-                  onClick={() => {
-                    const state = readJSON<SupportPromptPreference>(SUPPORT_PROMPT_KEY, {});
-                    writeJSON(SUPPORT_PROMPT_KEY, disableSupportPrompt(state));
-                    setShowSupportPrompt(false);
-                  }}
-                />
-              </HStack>
-            </VStack>
-          </Card>
-        )}
 
         <h3 id="quiz-review" className={`quiz-review-header ${reviewWave}`}>
           {t('quiz.reviewYourAnswers', { count: questions.length })}

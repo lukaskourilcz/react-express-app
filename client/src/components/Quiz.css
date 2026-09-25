@@ -72,7 +72,6 @@
 @media (pointer: coarse), (max-width: 599px) {
   .quiz-keyboard-tip { display: none; }
 }
-.quiz-support-prompt { max-width: 680px; margin: 18px auto 0; }
 
 /* The hint popover: the text, with a close button that is always on screen.
    The button keeps its own size — 44px under a coarse pointer, from the shared
