@@ -24,6 +24,17 @@ const STATIC_PAGE_BODIES = { '/premium': PremiumStaticArticle, '/premium/cancel'
 // machine-readable dist/bundle-stats.json. No effect on a normal build.
 const analyze = process.env.ANALYZE === 'true';
 
+// Class names the app composes at runtime (`prefix--${value}`), so they never
+// appear whole in the bundle. The purge must keep every one of them that the
+// source stylesheet defines; the build fails if one goes missing.
+const RUNTIME_COMPOSED_CLASSES = [
+  'lp-state--verified_pass', 'lp-state--self_reviewed', 'lp-state--needs_revision', 'lp-state--in_progress',
+  'lp-criterion--passed', 'lp-criterion--failed',
+  'lp-trace__cell--active', 'lp-trace__cell--compare', 'lp-trace__cell--settled', 'lp-trace__cell--excluded',
+  'ss-typing__ch--done', 'ss-compare-mark--partial', 'cd-result--pass', 'cd-verdict--timeout', 'cd-status--revealed',
+] as const;
+const hasClassRule = (css: string, name: string) => new RegExp(`\\.${name}(?![\\w-])`).test(css);
+
 // Astryx ships ONE monolithic astryx.css covering ~100 components while the
 // app imports ~40, and CSS has no per-component entry to import selectively.
 // This post-build pass purges the emitted stylesheet against the emitted,
@@ -47,7 +58,8 @@ function purgeAstryxCss(): Plugin {
       ];
       for (const cssFile of cssFiles) {
         const cssPath = path.join(assetsDir, cssFile);
-        const before = (await readFile(cssPath, 'utf8')).length;
+        const source = await readFile(cssPath, 'utf8');
+        const before = source.length;
         const [result] = await new PurgeCSS().purge({
           content,
           css: [cssPath],
@@ -62,7 +74,10 @@ function purgeAstryxCss(): Plugin {
             // app's overrides of them — a rule that worked in dev and was gone
             // in production, which is the worst shape a bug can take. Twelve
             // such classes exist in total, so keeping them costs almost nothing.
-            standard: [/^ss-/, /^rm-/, /^quiz-/, /^devshark/, /^cd-/, /^cm-/, /^astryx-/, 'html', 'body'],
+            // `lp-` is the learning paths: `lp-state--${state}`,
+            // `lp-criterion--${…}` and `lp-trace__cell--${role}` are composed
+            // at runtime, and all ten of their modifier rules were being purged.
+            standard: [/^ss-/, /^rm-/, /^quiz-/, /^devshark/, /^cd-/, /^cm-/, /^lp-/, /^astryx-/, 'html', 'body'],
             // Attribute/state selectors composed at runtime.
             // Preserve compound hover/focus selectors: PurgeCSS otherwise drops
             // :is(...):not(:disabled) even when its classes are safelisted.
@@ -71,6 +86,10 @@ function purgeAstryxCss(): Plugin {
         });
         if (result.css.includes('.ss-fin-hover__swimmer') && !/ss-fin-button[^{}]*:hover[^{}]*\{/.test(result.css)) {
           throw new Error('CSS cleanup removed the shark fin hover activation rule');
+        }
+        const purged = RUNTIME_COMPOSED_CLASSES.filter((name) => hasClassRule(source, name) && !hasClassRule(result.css, name));
+        if (purged.length) {
+          throw new Error(`CSS cleanup removed runtime-composed classes: ${purged.join(', ')}. Add their prefix to the safelist.`);
         }
         await writeFile(cssPath, result.css);
         const after = result.css.length;
