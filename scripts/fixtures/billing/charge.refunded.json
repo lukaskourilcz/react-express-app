@@ -1,0 +1,43 @@
+{
+  "id": "evt_1FixtureChargeRefunded",
+  "object": "event",
+  "api_version": "2026-08-26.dahlia",
+  "created": 1790340000,
+  "data": {
+    "object": {
+      "id": "ch_3FixturePremium0001",
+      "object": "charge",
+      "amount": 399,
+      "amount_captured": 399,
+      "amount_refunded": 399,
+      "balance_transaction": "txn_FixturePremium01",
+      "billing_details": {
+        "email": "premium.buyer@example.com",
+        "name": "Premium Buyer"
+      },
+      "captured": true,
+      "created": 1790340000,
+      "currency": "eur",
+      "customer": "cus_FixturePremium01",
+      "disputed": false,
+      "livemode": false,
+      "metadata": {},
+      "paid": true,
+      "payment_intent": "pi_3FixturePremium0001",
+      "payment_method": "pm_1FixturePremium0001",
+      "refunded": true,
+      "status": "succeeded"
+    },
+    "previous_attributes": {
+      "amount_refunded": 0,
+      "refunded": false
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "charge.refunded"
+}

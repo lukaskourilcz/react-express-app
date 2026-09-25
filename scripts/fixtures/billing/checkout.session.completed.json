@@ -1,0 +1,94 @@
+{
+  "id": "evt_1FixtureCheckoutCompleted",
+  "object": "event",
+  "api_version": "2026-08-26.dahlia",
+  "created": 1790340000,
+  "data": {
+    "object": {
+      "id": "cs_test_a1FixturePremiumCheckout0001",
+      "object": "checkout.session",
+      "allow_promotion_codes": true,
+      "amount_subtotal": 399,
+      "amount_total": 399,
+      "automatic_tax": {
+        "enabled": false,
+        "liability": null,
+        "provider": null,
+        "status": null
+      },
+      "billing_address_collection": null,
+      "cancel_url": "https://devshark.app/premium",
+      "client_reference_id": "00000000-0000-4000-8000-00000000f1a1",
+      "consent": {
+        "promotions": null,
+        "terms_of_service": "accepted"
+      },
+      "consent_collection": {
+        "payment_method_reuse_agreement": null,
+        "promotions": "none",
+        "terms_of_service": "required"
+      },
+      "created": 1790339880,
+      "currency": "eur",
+      "custom_text": {
+        "after_submit": null,
+        "shipping_address": null,
+        "submit": {
+          "message": "Pay starts a subscription at the price shown, VAT included, renewed every month until you cancel. Cancel any time from your profile or at https://devshark.app/premium/cancel; Premium stays open until the end of the period you paid for."
+        },
+        "terms_of_service_acceptance": {
+          "message": "I want Premium to start now and I understand that I lose my 14-day right of withdrawal for digital content. I accept the [Terms](https://devshark.app/terms)."
+        }
+      },
+      "customer": "cus_FixturePremium01",
+      "customer_creation": null,
+      "customer_details": {
+        "address": {
+          "city": null,
+          "country": "CZ",
+          "line1": null,
+          "line2": null,
+          "postal_code": null,
+          "state": null
+        },
+        "email": "premium.buyer@example.com",
+        "name": "Premium Buyer",
+        "phone": null,
+        "tax_exempt": "none",
+        "tax_ids": []
+      },
+      "customer_email": null,
+      "expires_at": 1790426400,
+      "invoice": "in_1FixturePremium0001",
+      "livemode": false,
+      "locale": "auto",
+      "managed_payments": {
+        "enabled": true
+      },
+      "metadata": {
+        "supabase_user_id": "00000000-0000-4000-8000-00000000f1a1",
+        "plan": "monthly"
+      },
+      "mode": "subscription",
+      "payment_status": "paid",
+      "status": "complete",
+      "submit_type": "pay",
+      "subscription": "sub_1FixturePremium0001",
+      "success_url": "https://devshark.app/premium/success?session_id={CHECKOUT_SESSION_ID}",
+      "total_details": {
+        "amount_discount": 0,
+        "amount_shipping": 0,
+        "amount_tax": 69
+      },
+      "ui_mode": "hosted",
+      "url": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "checkout.session.completed"
+}

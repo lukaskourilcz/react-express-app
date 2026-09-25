@@ -1,0 +1,25 @@
+{
+  "id": "evt_1FixtureEarlyFraudWarning",
+  "object": "event",
+  "api_version": "2026-08-26.dahlia",
+  "created": 1790340000,
+  "data": {
+    "object": {
+      "id": "issfr_1FixturePremium0001",
+      "object": "radar.early_fraud_warning",
+      "actionable": true,
+      "charge": "ch_3FixturePremium0001",
+      "created": 1790340000,
+      "fraud_type": "unauthorized_use_of_card",
+      "livemode": false,
+      "payment_intent": "pi_3FixturePremium0001"
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "radar.early_fraud_warning.created"
+}

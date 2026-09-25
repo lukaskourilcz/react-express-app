@@ -154,6 +154,7 @@ import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
 import { jsonPremiumRequired, PremiumRequiredError } from '../lib/http';
 import { parseValidUntil, toEntitlementResponse } from '../lib/entitlements';
+import { DEFAULT_PUBLIC_ORIGIN, publicBillingSettings } from '../lib/billing/config';
 
 function apiFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -561,6 +562,46 @@ async function tierContracts() {
     const guestLevel = mockResponse();
     await roadmapHandler({ method: 'GET', headers: {}, query: { topic: 'react', level: '13', lang: 'en' } } as never, guestLevel as never);
     assert.notEqual(guestLevel.statusCode, 402, 'a guest preview of a Learn level is never a 402');
+  }
+}
+
+/** Billing (#221, handoff section 3). The behaviour itself is proven by
+ * `npm run test:billing`; these are the structural rules around it. */
+function billingContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const listFiles = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    return statSync(path).isDirectory() ? listFiles(path) : [path];
+  });
+  // Checkout is off unless the deployment says otherwise, and only the server
+  // holds a Stripe key.
+  assert.deepEqual(publicBillingSettings({}), { enabled: false, cancellable: false }, 'billing defaults to off');
+  assert.equal(publicBillingSettings({ BILLING_ENABLED: 'true' }).enabled, false, 'BILLING_ENABLED alone sells nothing');
+  assert.equal(
+    DEFAULT_PUBLIC_ORIGIN,
+    read('client/src/lib/publicMetadata.ts').match(/PUBLIC_ORIGIN = '([^']+)'/)?.[1],
+    'Stripe returns buyers to the canonical origin',
+  );
+  const userOps = read('api/user/[op].ts');
+  for (const op of ['billing-checkout', 'billing-portal', 'billing-webhook', 'billing-cancel']) {
+    assert.match(userOps, new RegExp(`op === '${op}'`), `${op} is a branch of api/user/[op].ts, not a new handler`);
+  }
+  assert.match(userOps, /op !== 'billing-webhook' &&\s*!\(await enforceRateLimit/, 'the signed webhook skips the per-address limiter');
+  // Hosted Checkout and Portal only: no Stripe.js, no iframe, the CSP untouched.
+  const clientPackage = read('client/package.json');
+  assert.doesNotMatch(clientPackage, /stripe/i, 'the browser bundle carries no Stripe library');
+  for (const file of listFiles(join(process.cwd(), 'client/src')).filter((path) => /\.(tsx?|css|html)$/.test(path))) {
+    assert.doesNotMatch(read(file.slice(process.cwd().length + 1)), /js\.stripe\.com|@stripe\//, `${file} loads no Stripe script`);
+  }
+  const csp = read('vercel.json');
+  assert.doesNotMatch(csp, /stripe/i, 'the CSP names no Stripe host');
+  // Billing changes entitlements and nothing else.
+  for (const file of listFiles(join(process.cwd(), 'lib/billing'))) {
+    const source = read(file.slice(process.cwd().length + 1));
+    assert.doesNotMatch(source, /user_xp|user_stats|user_category_stats|user_streak|roadmap_progress|coding_progress|token_ledger|token_balances|creditVerifiedXp|coding\/grade/, `${file} touches no learning, score or wallet data`);
+  }
+  for (const file of ['lib/coding/grade.ts', 'api/leaderboard.ts', 'api/quiz/submit.ts', 'api/play/[action].ts']) {
+    assert.doesNotMatch(read(file), /lib\/billing/, `${file} grades or ranks and never reads billing`);
   }
 }
 
@@ -1925,8 +1966,9 @@ async function main() {
 
   await auditGateContracts();
   await tierContracts();
+  billingContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, and an unconfigured shop.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, and an unconfigured shop.');
 }
 
 void main().catch((error) => {

@@ -1,0 +1,65 @@
+{
+  "id": "evt_1FixtureInvoicePaid",
+  "object": "event",
+  "api_version": "2026-08-26.dahlia",
+  "created": 1790340000,
+  "data": {
+    "object": {
+      "id": "in_1FixturePremium0001",
+      "object": "invoice",
+      "account_country": "CZ",
+      "amount_due": 399,
+      "amount_paid": 399,
+      "amount_remaining": 0,
+      "attempt_count": 1,
+      "attempted": true,
+      "billing_reason": "subscription_cycle",
+      "collection_method": "charge_automatically",
+      "created": 1790340000,
+      "currency": "eur",
+      "customer": "cus_FixturePremium01",
+      "customer_email": "premium.buyer@example.com",
+      "hosted_invoice_url": null,
+      "lines": {
+        "object": "list",
+        "data": [],
+        "has_more": false,
+        "total_count": 1,
+        "url": "/v1/invoices/in_1FixturePremium0001/lines"
+      },
+      "livemode": false,
+      "metadata": {},
+      "next_payment_attempt": null,
+      "number": "FIXTURE-0001",
+      "parent": {
+        "quote_details": null,
+        "subscription_details": {
+          "metadata": {
+            "supabase_user_id": "00000000-0000-4000-8000-00000000f1a1",
+            "plan": "monthly"
+          },
+          "subscription": "sub_1FixturePremium0001"
+        },
+        "type": "subscription_details"
+      },
+      "period_end": 1790340000,
+      "period_start": 1787748000,
+      "status": "paid",
+      "status_transitions": {
+        "finalized_at": 1790340000,
+        "marked_uncollectible_at": null,
+        "paid_at": 1790340000,
+        "voided_at": null
+      },
+      "subtotal": 399,
+      "total": 399
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "invoice.paid"
+}
