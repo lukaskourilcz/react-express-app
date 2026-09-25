@@ -1350,7 +1350,6 @@ export const en = {
   'coding.format': 'Format',
   'coding.reset': 'Reset',
   'coding.resetConfirm': 'Replace your code with the starter?',
-  'coding.shortcuts.leave': 'Leave the editor',
   'coding.shortcuts': 'Ctrl+Enter runs, Ctrl+Shift+Enter submits. Escape then Tab leaves the editor.',
   'coding.hint': 'Hint',
   'coding.hintNext': 'Next hint',

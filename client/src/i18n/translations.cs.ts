@@ -1344,7 +1344,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'coding.format': 'Formátovat',
   'coding.reset': 'Vrátit výchozí',
   'coding.resetConfirm': 'Nahradit tvůj kód výchozím?',
-  'coding.shortcuts.leave': 'Opustit editor',
   'coding.shortcuts': 'Ctrl+Enter spustí, Ctrl+Shift+Enter odevzdá. Escape a pak Tab opustí editor.',
   'coding.hint': 'Nápověda',
   'coding.hintNext': 'Další nápověda',

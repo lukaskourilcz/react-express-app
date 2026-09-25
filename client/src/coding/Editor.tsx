@@ -61,19 +61,21 @@ export interface EditorProps {
   onChange: (value: string) => void;
   track: CodingTrack;
   ariaLabel: string;
+  /** The id of text that describes the editor to a screen reader. */
+  describedBy?: string;
   readOnly?: boolean;
   minHeight?: number;
 }
 
-export function Editor({ value, onChange, track, ariaLabel, readOnly, minHeight = 240 }: EditorProps) {
+export function Editor({ value, onChange, track, ariaLabel, describedBy, readOnly, minHeight = 240 }: EditorProps) {
   const extensions = useMemo<Extension[]>(() => [
     javascript({ jsx: track === 'react', typescript: track === 'typescript' || track === 'react' }),
     syntaxHighlighting(highlight),
     theme,
     keymap.of([indentWithTab]),
     EditorView.lineWrapping,
-    EditorView.contentAttributes.of({ 'aria-label': ariaLabel, 'aria-multiline': 'true', role: 'textbox' }),
-  ], [track, ariaLabel]);
+    EditorView.contentAttributes.of({ 'aria-label': ariaLabel, 'aria-multiline': 'true', role: 'textbox', ...(describedBy ? { 'aria-describedby': describedBy } : {}) }),
+  ], [track, ariaLabel, describedBy]);
 
   return (
     <div className="cd-editor" style={{ minHeight }}>
