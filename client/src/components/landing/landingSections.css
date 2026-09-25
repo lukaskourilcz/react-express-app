@@ -101,6 +101,23 @@
   color: var(--color-text-secondary);
 }
 
+/* A phone shows all three columns: the Premium column is the one a reader
+   came for, so it must not hide behind a sideways scroll. The cells wrap
+   instead, and the scroll container stays as a fallback for zoomed text. */
+@media (max-width: 599px) {
+  .ss-compare { min-width: 0; table-layout: fixed; }
+  .ss-compare th,
+  .ss-compare td { padding: 10px 8px; overflow-wrap: break-word; hyphens: auto; }
+  .ss-compare th:first-child,
+  .ss-compare td:first-child { padding-left: 12px; }
+  .ss-compare thead th { white-space: normal; font-size: 0.88rem; }
+  .ss-compare thead th:first-child { width: 36%; }
+  .ss-compare tbody th[scope='row'] { min-width: 0; font-size: 0.84rem; }
+  .ss-compare-mark { gap: 5px; font-size: 0.8rem; max-width: none; }
+  .ss-compare-mark svg { width: 12px; height: 12px; margin-top: 2px; }
+  .ss-compare-caption { font-size: 0.72rem; }
+}
+
 /* ── Shared CTA affordance (reuses .ss-link-button look, adds themed focus) ─ */
 .ss-cta {
   border: none;
