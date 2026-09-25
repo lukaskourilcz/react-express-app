@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  MERCH_SHOP,
   PRODUCT_CATALOG,
   SOCIAL_PROFILES,
   TRADER,
@@ -170,6 +171,8 @@ import { learnCheckpointXp, learnLevelXp } from '../shared/progression';
 import { accountKey, codingAwardId, learnAwardId, milestoneConfig, previousMonth } from '../lib/rewards/coins';
 import { REFERRAL_SIGNUP_WINDOW_HOURS, isReferralCode } from '../shared/rewards';
 import { accountCreatedAt, handleReferral } from '../lib/rewards/referral';
+import { getMerchPromo, parseSpreadshopPromotion, resetMerchPromoCache, spreadshopConfig } from '../lib/rewards/spreadshop';
+import { MERCH_CATALOGUE, SHIRT_SIZES } from '../shared/rewards';
 
 function apiFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -961,6 +964,138 @@ async function referralContracts() {
   assert.equal(ENGLISH['rewards.ledger.referralFriend'], 'Referral: a friend finished their first level');
   assert.equal(ENGLISH['shop.reason.referral'], 'Referral');
   assert.match(read('client/src/components/Shop.tsx'), /reference === 'referral:friend' \? t\('rewards\.ledger\.referralFriend'\)/);
+}
+
+/** Merchandise through Spreadshop (#229, handoff section 8). */
+async function merchContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const listFiles = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    return statSync(path).isDirectory() ? listFiles(path) : [path];
+  });
+
+  // 1. The catalogue: a hoodie in the t-shirt sizes, the cap kept and unpriced,
+  // nothing priced by default and cash checkout off.
+  assert.ok(MERCH_SKUS.includes('hoodie'), 'the hoodie is a SKU');
+  assert.deepEqual(MERCH_CATALOGUE.find((item) => item.sku === 'hoodie')?.variants, SHIRT_SIZES);
+  assert.ok(MERCH_SKUS.includes('cap'), 'the cap stays in the catalogue');
+  assert.deepEqual(normalizeSettings({}).merch.pricing, {}, 'no item ships with a price, the cap included');
+  assert.equal(DEFAULT_MERCH_SETTINGS.cashCheckoutEnabled, false, 'cash is paid in the Spreadshop checkout');
+  assert.equal(normalizeSettings({}).merch.cashCheckoutEnabled, false);
+
+  // 2. Migration 043: both SKU checks name exactly the catalogue, the stock
+  // routine takes the catalogue's sizes, and every routine is service-role only.
+  const migration = read('supabase/supabase-schema-043.sql');
+  const checks = [...migration.matchAll(/ADD CONSTRAINT (merch_stock_sku_check|merch_order_items_sku_check)\s+CHECK \(sku IN \(([^)]*)\)\)/g)];
+  assert.equal(checks.length, 2, 'migration 043 restates both SKU checks');
+  for (const [, name, list] of checks) {
+    assert.deepEqual(list.split(',').map((one) => one.trim().replace(/'/g, '')), [...MERCH_SKUS], `${name} lists exactly MERCH_SKUS`);
+  }
+  assert.match(migration, /v_variant NOT IN \('S', 'M', 'L', 'XL', 'XXL'\)/);
+  assert.deepEqual([...SHIRT_SIZES], ['S', 'M', 'L', 'XL', 'XXL'], 'set_merch_stock and the catalogue agree on sizes');
+  for (const name of ['set_merch_stock', 'advance_merch_order', 'cancel_merch_order']) {
+    const start = migration.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`);
+    assert.ok(start >= 0, `migration 043 defines ${name}`);
+    const body = migration.slice(start, migration.indexOf('$$;', start));
+    assert.match(body, /SECURITY DEFINER\s+SET search_path = ''/, `${name} is a definer routine with an empty search_path`);
+    assert.match(migration, new RegExp(`REVOKE ALL ON FUNCTION public\\.${name}\\([^)]*\\) FROM PUBLIC, anon, authenticated;`), `${name} is revoked from browsers`);
+    assert.match(migration, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${name}\\([^)]*\\) TO service_role;`), `${name} runs as the service role`);
+  }
+  assert.match(migration, /IF FOUND AND p_on_hand < v_reserved THEN\s+RAISE EXCEPTION 'below_reserved'/, 'a cap never drops below paid orders');
+  assert.match(migration, /path_reward_claims c WHERE c\.order_id = p_order_id/, 'a package is known by its claim, not by its id');
+  assert.doesNotMatch(migration, /CREATE POLICY|user_xp|roadmap_progress|coding_progress|token_ledger/, '043 adds no policy and touches no learning table or wallet row');
+
+  // 3. The shop links live in client/product-catalog.ts alone, empty until the
+  // owner sets them, https when set, and nothing embeds Spreadshop.
+  assert.deepEqual(Object.keys(MERCH_SHOP.products).sort(), [...MERCH_SKUS].sort(), 'one product URL per SKU, in the catalogue');
+  for (const url of [MERCH_SHOP.shopUrl, ...Object.values(MERCH_SHOP.products)]) {
+    if (url !== null) assert.match(url, /^https:\/\/[^\s"'<>]+$/, `${url} must be an https URL`);
+  }
+  const clientFiles = [
+    ...listFiles(join(process.cwd(), 'client/src')).filter((path) => /\.(tsx?|css|html)$/.test(path)),
+    join(process.cwd(), 'client/index.html'),
+  ];
+  for (const file of clientFiles) {
+    const source = read(file.slice(process.cwd().length + 1));
+    assert.doesNotMatch(source, /https?:\/\/[^\s"'`]*(spreadshop|spreadshirt|sprd\.net)/i, `${file} defines no Spreadshop URL; client/product-catalog.ts does`);
+    assert.doesNotMatch(source, /currentPromotion|SPREADSHOP_API_KEY/, `${file} never calls the Spreadshop API`);
+  }
+  assert.doesNotMatch(read('vercel.json'), /spread|sprd/i, 'the CSP names no Spreadshop host');
+  assert.match(read('client/src/lib/merchImages.ts'), /: \{\};/, 'a SKU without a mockup gets no image, not a placeholder');
+  let merchFiles: string[] = [];
+  try { merchFiles = readdirSync(join(process.cwd(), 'client/public/merch')); } catch { merchFiles = []; }
+  for (const file of merchFiles) {
+    assert.match(file, new RegExp(`^(${MERCH_SKUS.join('|')})\\.(webp|avif|png|jpe?g)$`), `client/public/merch/${file} must be named <sku>.<ext>`);
+  }
+
+  // 4. Spreadshop's promotion: read on the server only, parsed defensively,
+  // cached, and absent without configuration.
+  const now = new Date('2026-09-25T12:00:00Z');
+  assert.equal(parseSpreadshopPromotion(404, null, now), null, 'no promotion running');
+  assert.deepEqual(
+    parseSpreadshopPromotion(200, { description: '15% off everything', validUntil: '2026-09-30T23:59:59', code: 'SHARK15' }, now),
+    { description: '15% off everything', code: 'SHARK15', validUntil: '2026-09-30T23:59:59.000Z' },
+    'Spreadshop sends UTC without a zone',
+  );
+  assert.equal(parseSpreadshopPromotion(200, { description: 'Old', validUntil: '2026-09-01T00:00:00', code: 'X1' }, now), null, 'an expired promotion is dropped');
+  assert.equal(parseSpreadshopPromotion(200, { description: '', validUntil: '2026-09-30T23:59:59' }, now), null);
+  assert.equal(parseSpreadshopPromotion(200, { description: 'x'.repeat(200), validUntil: '2026-09-30T23:59:59' }, now), null);
+  assert.equal(parseSpreadshopPromotion(200, { description: 'Deal', validUntil: 'soon' }, now), null);
+  assert.equal(parseSpreadshopPromotion(200, { description: 'Deal', validUntil: '2026-09-30T23:59:59', code: '<b>x</b>' }, now)?.code, null);
+  assert.equal(spreadshopConfig({}), null);
+  assert.equal(spreadshopConfig({ SPREADSHOP_API_KEY: 'dd30b4db-8cd6-4fb8-86b3-e680984b9e18', SPREADSHOP_SHOP_ID: 'not-a-number' }), null);
+  const config = spreadshopConfig({
+    SPREADSHOP_API_KEY: 'dd30b4db-8cd6-4fb8-86b3-e680984b9e18', SPREADSHOP_SHOP_ID: '100488332', SPREADSHOP_CONTACT_EMAIL: 'shop@example.com',
+  });
+  assert.equal(config?.url, 'https://api.spreadshirt.net/api/v1/shops/100488332/currentPromotion?mediaType=json');
+  assert.equal(config?.headers.Authorization, 'SprdAuth apiKey="dd30b4db-8cd6-4fb8-86b3-e680984b9e18"');
+  assert.equal(config?.headers['User-Agent'], 'devShark/1.0 ( https://devshark.app ; shop@example.com )');
+  let calls = 0;
+  const env = { SPREADSHOP_API_KEY: 'dd30b4db-8cd6-4fb8-86b3-e680984b9e18', SPREADSHOP_SHOP_ID: '100488332' };
+  const fakeFetch = (async () => {
+    calls += 1;
+    return new Response(JSON.stringify({ description: '15% off everything', validUntil: '2026-09-30T23:59:59', code: 'SHARK15' }), { status: 200 });
+  }) as typeof fetch;
+  resetMerchPromoCache();
+  assert.equal(await getMerchPromo({ env: {}, fetchImpl: fakeFetch }), null);
+  assert.equal(calls, 0, 'nothing is fetched without a key and a shop id');
+  const clock = { at: now.getTime() };
+  const first = await getMerchPromo({ env, fetchImpl: fakeFetch, now: () => new Date(clock.at) });
+  const second = await getMerchPromo({ env, fetchImpl: fakeFetch, now: () => new Date(clock.at) });
+  assert.equal(first?.code, 'SHARK15');
+  assert.deepEqual(second, first);
+  assert.equal(calls, 1, 'the answer is cached');
+  clock.at += 31 * 60 * 1000;
+  await getMerchPromo({ env, fetchImpl: fakeFetch, now: () => new Date(clock.at) });
+  assert.equal(calls, 2, 'and refreshed after 30 minutes');
+  resetMerchPromoCache();
+  const failing = (async () => { throw new Error('offline'); }) as typeof fetch;
+  assert.equal(await getMerchPromo({ env, fetchImpl: failing }), null, 'an unreachable Spreadshop means no promotion, never an error');
+  resetMerchPromoCache();
+  assert.match(read('api/settings.ts'), /merchPromo,/, '/api/settings reports the promotion');
+
+  // 5. Copy: coins redeem items, never discounts. Only Spreadshop's own offer
+  // may speak of one, and its note says coins never do.
+  for (const [key, value] of Object.entries(ENGLISH)) {
+    if (!/^(shop|rewards)\./.test(key) || key.startsWith('shop.promo')) continue;
+    assert.doesNotMatch(value, /discount|coupon|voucher|promo code|% off/i, `${key} must not promise a discount`);
+  }
+  assert.match(ENGLISH['shop.promoNote'], /Coins redeem a whole item, never a discount\./);
+  assert.match(ENGLISH['shop.addressNote'], /sprd\.net AG/, 'the form says where the address goes');
+  assert.match(ENGLISH['shop.addressNote'], /Deleting your account deletes them/, 'and that it goes with the account');
+  assert.equal(ENGLISH['shop.availability.unconfigured'], 'Not on sale yet');
+  for (const sku of MERCH_SKUS) {
+    assert.ok(ENGLISH[`shop.merch.${sku}.name` as keyof typeof ENGLISH], `${sku} has a name`);
+    assert.ok(ENGLISH[`shop.merch.${sku}.alt` as keyof typeof ENGLISH], `${sku} has alt text for its mockup`);
+  }
+
+  // 6. The handlers: the 402 still comes before the address, a size is the
+  // item's own, and the fulfilment op stays admin-only.
+  const handlers = read('lib/rewards/handlers.ts');
+  assert.match(handlers, /if \(!item\.variants\.includes\(variant\)\) return null;/, 'a size must be one the item has');
+  const fulfilment = handlers.slice(handlers.indexOf('export async function handleFulfilment('));
+  assert.match(fulfilment.slice(0, 200), /if \(!\(await requireAdmin\(req, res\)\)\) return;/, 'op=fulfilment checks the admin first');
+  assert.match(fulfilment, /supabase\.rpc\('set_merch_stock'/, 'the cap is written by the 043 routine');
 }
 
 async function main() {
@@ -2328,8 +2463,9 @@ async function main() {
   publicCopyContracts();
   coinsContracts();
   await referralContracts();
+  await merchContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, and invitations.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, and merchandise through Spreadshop.');
 }
 
 void main().catch((error) => {
