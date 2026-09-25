@@ -13,6 +13,8 @@ function mount() {
   return render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Leaderboard /></LanguageProvider></MemoryRouter></QueryClientProvider>);
 }
 
+const last = <T,>(items: T[]): T => items[items.length - 1];
+
 /** Records every leaderboard request's query string, answering with the populated fixtures. */
 function recordRequests(): URLSearchParams[] {
   const seen: URLSearchParams[] = [];
@@ -53,21 +55,21 @@ it('keeps the all-time board one click away, and filters it by topic', async () 
   await screen.findByText('Workshop learner');
   fireEvent.click(screen.getByRole('radio', { name: 'All time' }));
   expect(await screen.findByText('Long-time learner')).toBeVisible();
-  expect(seen.at(-1)?.get('period')).toBe('global');
+  expect(last(seen).get('period')).toBe('global');
   fireEvent.change(screen.getByLabelText('Topic'), { target: { value: 'css' } });
-  await waitFor(() => expect(seen.at(-1)?.get('period')).toBe('category'));
-  expect(seen.at(-1)?.get('category')).toBe('css');
+  await waitFor(() => expect(last(seen).get('period')).toBe('category'));
+  expect(last(seen).get('category')).toBe('css');
 });
 
 it('filters the 30-day board by topic and hides the filter on Today', async () => {
   const seen = recordRequests(); mount();
   await screen.findByText('Workshop learner');
   fireEvent.change(screen.getByLabelText('Topic'), { target: { value: 'html' } });
-  await waitFor(() => expect(seen.at(-1)?.get('category')).toBe('html'));
-  expect(seen.at(-1)?.get('period')).toBe('30d');
+  await waitFor(() => expect(last(seen).get('category')).toBe('html'));
+  expect(last(seen).get('period')).toBe('30d');
   fireEvent.click(screen.getByRole('radio', { name: 'Today' }));
   expect(await screen.findByText(/finished today’s daily challenge/)).toBeVisible();
-  expect(seen.at(-1)?.get('period')).toBe('daily');
+  expect(last(seen).get('period')).toBe('daily');
   expect(screen.queryByLabelText('Topic')).toBeNull();
 });
 
