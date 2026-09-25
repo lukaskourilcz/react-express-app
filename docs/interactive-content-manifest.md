@@ -174,6 +174,7 @@ prints is the live count.
 | JavaScript C (`js-easy4-*`) | 30 | none were short; callbacks, two-pointer, flat and timers rose from 4 to 6, and higher-order, nested-loops, push, for-in, recursion and slice from 5 to 6 | JavaScript none of its 17, fewest 6 Easy; TypeScript 17, React 11, Algorithms 5 |
 | TypeScript A (`ts-easy2-*`) | 25 | all 17 short tags: utility-types, constraints, destructuring, map-set and two-pointer from 0 to 3; filter, keyof, map, spread, while, sort, strings and type-guards from 1 to 3, reduce to 4; readonly from 2 to 5, literal-types and record to 4 | JavaScript none; TypeScript none of its 24, fewest 3 Easy; React 11, Algorithms 5 |
 | TypeScript B (`ts-easy3-*`) | 25 | none were short; the fourteen tags at 3 rose to 5 or more: utility-types and spread to 7, filter and strings to 6, the other ten to 5; record, generics and tuples rose to 7 | JavaScript none; TypeScript none of its 24, fewest 5 Easy; React 11, Algorithms 5 |
+| React A (`react-easy2-*`) | 20 | all 11 short tags: custom-hook, pagination, abort, accessibility, splice, useContext and useRef from 0 to 3; effect-cleanup from 1 to 4, timers and slice from 1 to 3, derived-state from 2 to 3 | JavaScript, TypeScript and React none; React fewest 3 Easy of its 18; Algorithms 5 |
 
 JavaScript B also covers techniques the Coding home lists but no Medium
 challenge uses yet, so the matrix leaves them out. Regex went from 0 Easy
@@ -209,6 +210,30 @@ in the other. The two sorting challenges hide a longer tie (eight equal scores,
 and eight titles in two case groups), and the server grader breaks on those
 too.
 
+React A is graded by Testing Library suites, like every React challenge, and
+brings hidden checks to React. A JavaScript or TypeScript challenge hides extra
+calls; a React one hides extra test cases in `hiddenSuite`, beside its
+solutions on the server (`lib/coding/react-hidden.ts`). The browser's Run
+button runs the visible suite. Submit runs both, and the hidden cases come back
+as a count, never with their names or errors. Several suites import a named
+export as well as `App`, so a check can render the piece the technique lives
+in: `Badge` under a provider of its own, or a hook inside a probe component.
+The hidden cases catch a value that is right only at mount, a hard-coded page
+count, a seed array spliced in place, a listener or interval left behind, and
+an aborted request whose rejection nobody handles.
+
+Three things came up while proving the wave against wrong answers. A test that
+watches `clearInterval` also sees the calls `waitFor` makes, so the countdown
+records the ids its own component starts and checks only those. A probe that
+passes a new array literal on every render turns a hook written with
+`useEffect` and `useState` into a loop that never yields, so the probes keep
+their arrays outside the component. And a promise rejection that nobody
+handles, such as an aborted `fetch` with no `catch`, ended the whole Node
+process, so the learner read "The React runner could not start". The browser
+only logs such a rejection. `lib/coding/react-runner.ts` now does the same while
+a suite runs, and "Only the latest search" checks for the rejection in both
+runners.
+
 A wave is one file per track under `lib/coding/tasks/easy-<track>-<wave>.ts`,
 its solutions under the same name in `lib/coding/solutions/`, and one line in
 `EASY_BAND` in `lib/coding/catalog.ts`. `npm run test:coding` holds each of its
@@ -219,7 +244,8 @@ challenges to the Easy-band contract:
 - It fits in ten minutes and is graded by its tests.
 - Its hint ladder has a hint and at least two method steps, then ends on the
   documentation page of its first tag.
-- It carries at least three hidden checks.
+- It carries at least three hidden checks: calls for JavaScript and
+  TypeScript, test cases in `hiddenSuite` for React.
 - Its reference, junior and senior solutions pass, and its starter fails.
 - It never enters a Learn level's quota. The quota takes a level's first tasks
   in catalogue order, and a new tier 1 challenge would push out the one the
