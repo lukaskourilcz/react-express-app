@@ -2,6 +2,7 @@
 // current Supabase token; a legacy password can additionally be kept in
 // sessionStorage when that migration fallback is explicitly enabled server-side.
 
+import type { CoinSettings } from '../../../shared/rewards';
 import { apiFetch, ApiError } from './api';
 
 const PW_KEY = 'devquiz:dev-password';
@@ -129,6 +130,11 @@ export interface GameSettings {
   /** One-liner dev tips shown on the loading screen (empty = none). */
   devTips: string[];
   ownerEmail: string;
+  /** The merchandise configuration. /dev has no editor for it yet, so the form
+   * sends it back unchanged; leaving it out would reset it on every save. */
+  merch?: unknown;
+  /** What earns coins (#227). */
+  coins: CoinSettings;
 }
 
 /** Check a password against the server. Returns false on 401, throws on network errors. */

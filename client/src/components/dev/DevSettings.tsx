@@ -66,6 +66,19 @@ interface FormState {
   /** One-liner loading-screen dev tips, one per line while editing. */
   devTips: string;
   ownerEmail: string;
+  /** Coins (#227): the XP rate in percent, and the milestones as text. */
+  coinsXpRatePct: string;
+  coinsPremiumMultiplier: string;
+  coinsDailyCap: string;
+  coinsWelcome: string;
+  /** "7:25, 30:100, 100:300" — days:coins. */
+  coinsStreak: string;
+  coinsTopic: string;
+  coinsProject: string;
+  coinsShortPath: string;
+  /** "300, 200, 100" — ranks one to three. */
+  coinsMonthTop: string;
+  coinsSocial: string;
 }
 
 // Friendly labels for the configurable shop products (ids match the catalogue).
@@ -109,7 +122,25 @@ const toForm = (s: GameSettings): FormState => ({
   shopPrices: Object.fromEntries(Object.entries(s.shop.prices).map(([k, v]) => [k, String(v)])),
   devTips: s.devTips.join('\n'),
   ownerEmail: s.ownerEmail,
+  coinsXpRatePct: String(Math.round(s.coins.xpRate * 1000) / 10),
+  coinsPremiumMultiplier: String(s.coins.premiumMultiplier),
+  coinsDailyCap: String(s.coins.dailyXpCap),
+  coinsWelcome: String(s.coins.welcomeGrant),
+  coinsStreak: s.coins.streakMilestones.map((one) => `${one.days}:${one.coins}`).join(', '),
+  coinsTopic: String(s.coins.topicComplete),
+  coinsProject: String(s.coins.projectComplete),
+  coinsShortPath: String(s.coins.shortPathComplete),
+  coinsMonthTop: s.coins.monthTop.join(', '),
+  coinsSocial: String(s.coins.socialVisitGrant),
 });
+
+// "7:25, 30:100" → [{ days: 7, coins: 25 }, …]. The server re-validates and
+// keeps the old list when this one is malformed.
+const parseMilestones = (s: string): Array<{ days: number; coins: number }> =>
+  s.split(',').flatMap((part) => {
+    const [days, coins] = part.split(':').map((one) => parseInt(one.trim(), 10));
+    return Number.isFinite(days) && Number.isFinite(coins) ? [{ days, coins }] : [];
+  });
 
 // Split the multiline tips editor into a clean list: trim each line, drop blanks.
 const parseTips = (s: string): string[] =>
@@ -172,6 +203,22 @@ const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
   },
   devTips: parseTips(f.devTips),
   ownerEmail: f.ownerEmail.trim(),
+  merch: base.merch,
+  coins: {
+    xpRate: (() => {
+      const pct = parseFloat(f.coinsXpRatePct);
+      return Number.isFinite(pct) ? pct / 100 : base.coins.xpRate;
+    })(),
+    premiumMultiplier: parseNum(f.coinsPremiumMultiplier, base.coins.premiumMultiplier),
+    dailyXpCap: parseNum(f.coinsDailyCap, base.coins.dailyXpCap),
+    welcomeGrant: parseNum(f.coinsWelcome, base.coins.welcomeGrant),
+    streakMilestones: parseMilestones(f.coinsStreak),
+    topicComplete: parseNum(f.coinsTopic, base.coins.topicComplete),
+    projectComplete: parseNum(f.coinsProject, base.coins.projectComplete),
+    shortPathComplete: parseNum(f.coinsShortPath, base.coins.shortPathComplete),
+    monthTop: parseList(f.coinsMonthTop),
+    socialVisitGrant: parseNum(f.coinsSocial, 0),
+  },
 });
 
 const captionStyle: React.CSSProperties = {
@@ -403,6 +450,42 @@ export default function DevSettings() {
         <Switch label="Multiplayer / Play" value={form.featMulti} onChange={(c) => set('featMulti', c)} />
         <Switch label="Leaderboard" value={form.featLeader} onChange={(c) => set('featLeader', c)} />
         <Switch label="Flashcards" value={form.featFlash} onChange={(c) => set('featFlash', c)} />
+      </Section>
+
+      <Section title="Coins">
+        <span style={{ ...captionStyle, width: '100%', marginBottom: 4 }}>
+          Coins buy the crown, streak protection and, for Premium members, merchandise. They never change access, XP,
+          scores, streaks or ranks. The XP rate and the daily cap apply to every verified XP award; Premium multiplies
+          the rate and the cap applies after that. Milestones pay Premium members once per account.
+        </span>
+        <TextInput label="XP rate (%)" value={form.coinsXpRatePct} onChange={(v) => set('coinsXpRatePct', v)} size="sm" style={{ width: 160 }} />
+        {num('coinsPremiumMultiplier', 'Premium multiplier')}
+        {num('coinsDailyCap', 'Daily cap from XP')}
+        {num('coinsWelcome', 'Welcome coins')}
+        <TextInput
+          label="Streak milestones (days:coins)"
+          value={form.coinsStreak}
+          onChange={(v) => set('coinsStreak', v)}
+          size="sm"
+          style={{ flex: 1, minWidth: 220 }}
+        />
+        {num('coinsTopic', 'Learn topic finished')}
+        {num('coinsProject', 'Evolving project finished')}
+        {num('coinsShortPath', 'Short path finished')}
+        <TextInput
+          label="Month top three (1st, 2nd, 3rd)"
+          value={form.coinsMonthTop}
+          onChange={(v) => set('coinsMonthTop', v)}
+          size="sm"
+          style={{ flex: 1, minWidth: 220 }}
+        />
+        {num('coinsSocial', 'Social visit grant')}
+        <span style={{ ...captionStyle, width: '100%', marginTop: 4 }}>
+          Social visit grant: coins for opening one of devShark&apos;s LinkedIn, Instagram or Threads profiles, once per
+          profile. Keep it at 0 unless you have decided otherwise. Meta&apos;s spam rules forbid offering anything of
+          monetary value for engagement, coins buy merchandise, and no platform tells us whether a click became a follow.
+          Above 0 the app thanks the learner for visiting and never asks anyone to follow.
+        </span>
       </Section>
 
       <Section title="Voluntary support (disabled by default)">
