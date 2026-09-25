@@ -80,6 +80,16 @@ format cannot become a label on a task that was never broken.
 Each carries an authored failure hint keyed to the category the run will
 produce, so the feedback names the misconception rather than a line number.
 
+**The debugging paths (#225).** Fifteen more `debug`-format tasks come as
+three short paths on the Coding home: Log it right, Trace the state, and
+Edges and inputs. Each level starts from code that runs and is wrong, names
+the misconception as a `pitfall`, and opens its hint ladder with the console
+technique that shows the bug. The content test proves that the code each
+level starts from fails that level's own checks, and requires the three
+paths and at least four standalone tasks. The levels, the console both
+runners share and the retired café-orders project are described in
+[the evolving-challenges page](evolving-challenges.md#the-debugging-paths).
+
 **Gaps.** JavaScript only. TypeScript (narrowing that looks right and is not)
 and React (stale closures, missing dependencies) are the obvious next sets, and
 neither exists yet. The format filter still offers "Find the bug" on every

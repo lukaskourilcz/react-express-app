@@ -271,20 +271,23 @@ The fourteen projects now contain 146 stages: ten focused stages per single-trac
 project, twelve per full-stack project. New `-start` checkpoints separate setup,
 data loading and form wiring from subsequent behavior. Earlier requirements and
 tests remain cumulative, and each stage lists its own checks first so Results
-opens on what the brief just asked for. The `debugging` category holds one
-JavaScript project whose every stage starts from code that runs and is wrong;
-it follows the tracing-before-fixing rhythm described in
-`docs/evolving-challenges.md`. Original task IDs retain their drafts and
+opens on what the brief just asked for. Original task IDs retain their drafts and
 completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
-routes, unlocks and progress. The full catalogue contains 480 tasks, and every
+routes, unlocks and progress. The full catalogue contains 495 tasks, and every
 graded code task carries a reference, a junior and a senior solution on the
 server; the last two reach the browser only with a verified pass.
 
-Since 2026-09-25 the registry also holds twelve short paths of five levels
-each, marked `short`, with no checkpoints. Each is listed on the page of the
-section it belongs to: five on JavaScript, two each on TypeScript, React and
-Algorithms, and a link shortener that leads the FullStack screen. They
+Since 2026-09-25 the registry also holds fifteen short paths of five levels
+each, marked `short`, with no checkpoints. Twelve are listed on the page of
+the section they belong to: five on JavaScript, two each on TypeScript, React
+and Algorithms, and a link shortener that leads the FullStack screen. They
 replace the one-day-old Custom category; its two ten-step paths became four
-of the JavaScript paths. The longer projects stay where they were: ten and
-the debugging path on the Coding home, the three apps on the FullStack screen.
+of the JavaScript paths. The other three are the debugging paths (#225), on
+the Coding home: Log it right, Trace the state, and Edges and inputs, each
+five levels that start from code that runs and is wrong. They replace the
+ten-stage café-orders debugging project, which is marked `unlisted`: no list
+shows it, and its ten task IDs still open, grade and keep their drafts and
+passes, by the rule above. The longer projects stay where they were: ten on
+the Coding home and the three apps on the FullStack screen. So the registry
+counts fourteen projects with 146 stages and fifteen paths with 75 levels.
