@@ -22,18 +22,21 @@ original teaching value to stand alone.
   selected answers, email, user id, or tokens.
 - Multiplayer room links are explicit invitations. Do not publish room codes or
   participant names to analytics.
-- Support prompts appear only after repeated completed quizzes, are dismissible,
-  stay hidden for at least 90 days, can be disabled permanently, and appear only while truthful support configuration
-  is enabled. Payment never changes learning access or scores.
+- devShark has been freemium since 25 September 2026. The upgrade sheet opens
+  only when a learner chooses something Premium or asks what Premium includes,
+  and `/premium` shows the price with VAT included and no countdown or
+  scarcity. Premium changes which content
+  an account may start and never scores. The quiz prompt that asked for
+  voluntary support went in #230, and `/support` redirects to `/premium`.
 
 ## Minimal event taxonomy
 
 Measure aggregate funnels with anonymous/session-scoped identifiers and short
-retention. Current useful events include support page and provider clicks,
-multiplayer create/join, and result shares. Add quiz start, quiz complete, Learn
-lesson complete, and topic-page CTA only if their payloads
-contain product, subject/category, locale, and coarse result counts—not identity
-or question content.
+retention. The client sends `quiz_started`, `quiz_submitted`,
+`classroom_or_match_joined`, `share_initiated`, `curation_page_viewed` and
+`premium_page_viewed`. Add Learn lesson complete and topic-page CTA only if their
+payloads contain product, subject/category, locale, and coarse result counts—not
+identity or question content.
 
 Never send email, display name, access/session/answer tokens, room codes, free
 text, question text, or selected answers. Disable session replay on auth, admin,
@@ -44,6 +47,6 @@ reviewed masking configuration proves those values cannot be captured.
 
 Review activation (first completed learning action), return rate, Learn/Quiz
 completion, multiplayer success/error rate, topic-page-to-practice conversion,
-support prompt dismissal/visit ratio, and API reliability together. A conversion
-gain that increases errors, confusion, privacy risk, or forced support pressure
-is not a launch win.
+Premium page visits against upgrades, and API reliability together. A conversion
+gain that increases errors, confusion, privacy risk, or pressure to pay is not a
+launch win.
