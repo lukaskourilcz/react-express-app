@@ -115,7 +115,9 @@ System design still grades and still owns its history but has left the section
 
 Learn levels of the `javascript`, `typescript`, and `react` topics carry one to
 three coding tasks sealed into the level session; completion requires a passed
-verdict for each. Coding completion is permanent: the API ignores legacy review
+verdict for each. The Easy-band challenges of #226 (`EASY_BAND` in
+`lib/coding/catalog.ts`) never join that quota, so adding them leaves every
+level's coding tasks as they were. Coding completion is permanent: the API ignores legacy review
 dates, returns an empty due queue, and never selects passed tasks for scheduled
 coding review. Question/concept review is unchanged. Tiers
 open in order (`tierUnlocked`) except in the unladdered tracks — system design
@@ -274,7 +276,7 @@ tests remain cumulative, and each stage lists its own checks first so Results
 opens on what the brief just asked for. Original task IDs retain their drafts and
 completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
-routes, unlocks and progress. The full catalogue contains 495 tasks, and every
+routes, unlocks and progress. The full catalogue contains 525 tasks, and every
 graded code task carries a reference, a junior and a senior solution on the
 server; the last two reach the browser only with a verified pass.
 

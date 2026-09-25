@@ -164,6 +164,31 @@ challenge opens a gap.
 **Gaps.** The coverage matrix is the gap list: #226 authors Easy challenges
 against it, one track per wave.
 
+The table records each wave as it landed; the matrix that `npm run test:coding`
+prints is the live count.
+
+| Wave | Challenges | Tags it brought to three or more Easy | Short tags after it |
+| --- | --- | --- | --- |
+| JavaScript A (`js-easy2-*`) | 30 | flat, for-in, promises, recursion, timers, callbacks, higher-order, nested-loops, two-pointer | JavaScript none of its 17; TypeScript 17, React 11, Algorithms 5 |
+
+A wave is one file per track under `lib/coding/tasks/easy-<track>-<wave>.ts`,
+its solutions under the same name in `lib/coding/solutions/`, and one line in
+`EASY_BAND` in `lib/coding/catalog.ts`. `npm run test:coding` holds each of its
+challenges to the Easy-band contract:
+
+- It is standalone, issued, and Easy by its tier (1 or 2).
+- It practises one technique: at most two `focus` tags.
+- It fits in ten minutes and is graded by its tests.
+- Its hint ladder has a hint and at least two method steps, then ends on the
+  documentation page of its first tag.
+- It carries at least three hidden checks.
+- Its reference, junior and senior solutions pass, and its starter fails.
+- It never enters a Learn level's quota. The quota takes a level's first tasks
+  in catalogue order, and a new tier 1 challenge would push out the one the
+  level has always asked for.
+
+The waves are English only, with no Czech overlay.
+
 ## What none of these change
 
 None of the four awards XP, completes a level, or opens anything. A puzzle pass
