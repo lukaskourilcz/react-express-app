@@ -212,6 +212,72 @@ level intros — deterministic HTML and CSS, never generated imagery, each
 carrying its content in words rather than a caption. See
 `docs/lesson-figures.md`.
 
+## Tiers and billing
+
+The owner made devShark freemium on 2026-09-25 (`SECOND-HANDOFF-25-9-2026.md`,
+sections 0, 2 and 3). Every registered account gets the free tier. Premium
+costs 3.99 EUR a month or 39.99 EUR a year, VAT included, and also lets a
+learner redeem coins for merchandise. Premium changes which content a learner
+may start. Grading, explanations, XP amounts, scores, streaks, ranks,
+leaderboards and matchmaking work the same on both tiers.
+
+Status on 2026-09-25: designed, not built. Issue #220 (step D1) builds the
+tiers and issue #221 (step D2) builds billing; each updates this line when it
+lands.
+
+- **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
+  and JavaScript in full, React levels 1 to 12 of 25 (`FREE_LEARN_LEVELS`),
+  stage one of every evolving project and short path (`FREE_EVOLVING_STAGES`),
+  and the coding tasks flagged `free: true` in `lib/coding/tasks/*.ts`, about
+  15 % of the catalogue (`FREE_CODING_SHARE`, held between 12 and 18 % by the
+  launch contracts). Quizzes, the daily challenge, the Biggest Shark
+  Challenge, multiplayer, flashcards, the typing racer, leaderboards, streaks,
+  friends and the token shop stay open (`QUIZ_FREE_CATEGORIES = 'all'`).
+  `contentTier` and `isOpenTo` take a `GatedContent` value and pure index
+  data. The module imports nothing from `lib/`, so the browser draws its locks
+  and the server refuses with the same function. Signed-out visitors keep the
+  landing sample question, "Try one, no signup" and stage one of a project.
+- **`lib/access.ts`** resolves the tier once per request (`resolveTier`), and
+  `assertOpen` throws `PremiumRequiredError` for locked content. The call sites
+  are existing branches: the Learn level, part-test and checkpoint seals and
+  their answers, `coding-task`, `coding-submit`, `coding-reveal`, evolving
+  stage two and up, `learning-path-start` and `learning-path-submit` in
+  `api/quiz/roadmap.ts`, and `learning-path-enrollment` in `api/user/[op].ts`.
+  Premium gates starting new content. Drafts, bookmarks, skips and reviews of
+  cleared content stay open, a lapsed account keeps everything it passed, and
+  placement checks stay open.
+- **The 402 contract.** `jsonError` maps `PremiumRequiredError` to HTTP 402
+  with the body `{ error: 'premium_required', kind, ref }`. The API client in
+  `client/src/lib/api.ts` turns that one response into the upgrade sheet, so a
+  stale client never shows a raw error. `op=entitlement` (GET, signed in)
+  returns `{ tier, source, currentPeriodEnd, cancelAtPeriodEnd, inGrace }`.
+- **Three billing tables** in `supabase/supabase-schema-039.sql`:
+  `billing_customers` (one Stripe customer per user), `entitlement_grants`
+  (provider, manual and promo grants; the webhook never touches a manual or
+  promo row) and `billing_events` (provider event ids, so a repeated delivery
+  changes nothing). `is_premium(p_user)` is true for an active, unexpired
+  manual or promo grant, an `active` or `trialing` provider grant, or a
+  `past_due` one within seven days of `current_period_end`. RLS is on for all
+  three, with an owner-scoped SELECT policy on the first two and none on
+  `billing_events`. The routines are SECURITY DEFINER, executable by
+  `service_role` only, and none of them reads or writes XP, stats, streak or
+  progress tables. Admins test Premium with manual grants through
+  `op=entitlements` in `api/admin/[op].ts`.
+- **Stripe** Checkout, Billing and the Customer Portal take the payments, with
+  Managed Payments making Stripe the merchant of record; plain Stripe with
+  Stripe Tax is the fallback if the eligibility review declines. The routes are
+  `op=` branches of `api/user/[op].ts`: `billing-checkout`, `billing-portal`,
+  `billing-webhook` (verifies `Stripe-Signature` over the raw body, records the
+  event id first, refetches the subscription and upserts), `billing-cancel`
+  (the public two-step cancellation and withdrawal page at `/premium/cancel`)
+  and `entitlement`. The handler count stays at twelve.
+- **Stripe environment:** `BILLING_ENABLED`, `STRIPE_SECRET_KEY`,
+  `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PREMIUM_MONTHLY`,
+  `STRIPE_PRICE_PREMIUM_ANNUAL`, `STRIPE_MANAGED_PAYMENTS` and
+  `PUBLIC_ORIGIN`. The secret key and the webhook secret stay on the server.
+  With `BILLING_ENABLED=false` the checkout entry points disappear and the
+  `/premium` button reads "Premium opens soon"; the locks still apply.
+
 ## Deployment
 
 One Vercel project builds this repository for `https://devshark.app`. Set
