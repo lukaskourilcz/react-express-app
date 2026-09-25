@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   PRODUCT_CATALOG,
+  SOCIAL_PROFILES,
   TRADER,
   resolveCatalogProductId,
 } from '../client/product-catalog';
@@ -159,6 +160,14 @@ import { DEFAULT_PUBLIC_ORIGIN, publicBillingSettings } from '../lib/billing/con
 import { WAIVER_TEXT } from '../lib/billing/sync';
 import { en as ENGLISH } from '../client/src/i18n/translations';
 import { NOINDEX_PATHS, PUBLIC_PAGES, premiumSchema } from '../client/src/lib/publicMetadata';
+import {
+  DEFAULT_COIN_SETTINGS,
+  SOCIAL_PLATFORMS,
+  coinsForVerifiedXp,
+  coinsUnderDailyCap,
+} from '../shared/rewards';
+import { learnCheckpointXp, learnLevelXp } from '../shared/progression';
+import { accountKey, codingAwardId, learnAwardId, milestoneConfig, previousMonth } from '../lib/rewards/coins';
 
 function apiFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -653,6 +662,164 @@ function publicCopyContracts() {
   }
   // The EU ODR platform closed on 20 July 2025; linking to it now misleads.
   assert.doesNotMatch(read('client/src/components/LegalPages.tsx'), /ec\.europa\.eu\/consumers\/odr/, 'no link to the closed ODR platform');
+}
+
+/** Coins (#227, handoff section 7). Replays credit nothing, only
+ * service-role routines credit, Premium doubles at credit time, and the
+ * four streak-protection bounds still hold. The behaviour against a real
+ * database is proven by the migration 041 proof (docs/release-acceptance.md). */
+function coinsContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const listFiles = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    return statSync(path).isDirectory() ? listFiles(path) : [path];
+  });
+
+  // 1. The rates are the handoff's, and the social grant pays nothing.
+  assert.deepEqual(DEFAULT_COIN_SETTINGS, {
+    xpRate: 0.1,
+    premiumMultiplier: 2,
+    dailyXpCap: 400,
+    welcomeGrant: 200,
+    streakMilestones: [{ days: 7, coins: 25 }, { days: 30, coins: 100 }, { days: 100, coins: 300 }],
+    topicComplete: 100,
+    projectComplete: 150,
+    shortPathComplete: 50,
+    monthTop: [300, 200, 100],
+    socialVisitGrant: 0,
+  });
+  assert.equal(coinsForVerifiedXp(100, false), 10, 'every account earns 10 % of verified XP');
+  assert.equal(coinsForVerifiedXp(100, true), 20, 'Premium doubles it');
+  assert.equal(coinsUnderDailyCap(200, 300), 100, 'the daily cap applies after the doubling');
+  assert.equal(coinsUnderDailyCap(50, 400), 0);
+  // The game settings mirror the rates; a missing or bad social grant is 0.
+  assert.deepEqual(normalizeSettings({}).coins, DEFAULT_COIN_SETTINGS);
+  assert.equal(normalizeSettings({ coins: { socialVisitGrant: 'lots' } }).coins.socialVisitGrant, 0);
+  assert.equal(normalizeSettings({ coins: { socialVisitGrant: 5, xpRate: 7, premiumMultiplier: 50 } }).coins.socialVisitGrant, 5);
+  assert.equal(normalizeSettings({ coins: { xpRate: 7 } }).coins.xpRate, 0.1, 'a rate above 100 % is refused');
+  assert.equal(normalizeSettings({ coins: { premiumMultiplier: 50 } }).coins.premiumMultiplier, 5, 'the multiplier is clamped');
+  assert.deepEqual(
+    normalizeSettings({ coins: { streakMilestones: [{ days: 7 }] } }).coins.streakMilestones,
+    DEFAULT_COIN_SETTINGS.streakMilestones,
+    'a malformed milestone list falls back as a whole',
+  );
+
+  // 2. Replaying any award, milestone or grant credits nothing: every event id
+  // is derived from what the server verified, never drawn at random.
+  const user = '00000000-0000-0000-0000-0000000000aa';
+  assert.equal(learnAwardId(user, 'html', 'level', 3), learnAwardId(user, 'html', 'level', 3));
+  assert.equal(learnAwardId(user, 'html', 'level', 3), `learn:${user}:html:L3`);
+  assert.notEqual(learnAwardId(user, 'html', 'level', 3), learnAwardId(user, 'html', 'checkpoint', 3));
+  assert.equal(codingAwardId(user, 'js-digit-sum'), `coding:${user}:js-digit-sum`);
+  assert.match(accountKey('x'.repeat(100)), /^[0-9a-f]{32}$/, 'a long account id is hashed, as token_account_key does');
+  assert.equal(learnLevelXp(1), 50);
+  assert.equal(learnLevelXp(25), 250);
+  assert.equal(learnCheckpointXp(3), 900);
+  assert.equal(previousMonth(new Date('2026-01-03T00:00:00Z')), '2025-12');
+  assert.equal(previousMonth(new Date('2026-09-25T12:00:00Z')), '2026-08');
+  const migration = read('supabase/supabase-schema-041.sql');
+  const routine = (name: string) => {
+    const start = migration.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`);
+    assert.ok(start >= 0, `migration 041 defines ${name}`);
+    return migration.slice(start, migration.indexOf('$$;', start));
+  };
+  const credit = routine('credit_verified_xp_tokens');
+  assert.match(credit, /FROM public\.token_xp_credits WHERE event_id = v_event;\s*IF FOUND THEN RETURN 0;/, 'a replayed award returns 0');
+  assert.match(credit, /FROM public\.token_ledger WHERE event_id = v_event;\s*IF FOUND THEN RETURN 0;/, 'an award credited before 041 is not credited again');
+  assert.match(credit, /v_event := 'xp:' \|\| p_award_id;/, 'the ledger event is the award id, as before');
+  assert.match(credit, /pg_advisory_xact_lock/, 'one account credits one at a time, so the cap cannot be raced');
+  // Premium doubles at credit time, inside the routine and nowhere else.
+  assert.match(credit, /IF public\.is_premium\(p_user_id\) THEN v_mult := p_premium_multiplier;/);
+  assert.match(credit, /LEAST\(v_base \* v_mult, p_daily_cap - v_used\)/, 'the cap applies after the doubling');
+  const milestones = routine('settle_coin_milestones');
+  for (const key of ["'streak:' || v_days || ':' || v_key", "'topic:' || v_topic || ':' || v_key", "'project:' || v_id || ':' || v_key"]) {
+    assert.ok(milestones.includes(key), `milestone event ${key} is one per account`);
+  }
+  assert.match(milestones, /v_premium := public\.is_premium\(p_user_id\);/, 'milestones read the plan in the database');
+  const month = routine('settle_month_top3');
+  assert.match(month, /ON CONFLICT \(month\) DO NOTHING;[\s\S]*IF v_inserted = 0 THEN/, 'a month settles once');
+  assert.ok(month.includes("'month-top:' || p_month || ':' || v_row.rnk"), 'one event per month and rank');
+  assert.match(month, /ORDER BY SUM\(a\.correct\) DESC, SUM\(a\.answered\) ASC/, 'the month board ranks like every other board');
+  assert.doesNotMatch(month, /streak|quest_xp|user_xp/i, 'the month board never ranks by streak or XP');
+  assert.match(routine('credit_social_visit'), /IF p_amount = 0 THEN RETURN FALSE;/, 'a zero grant credits nothing');
+  assert.match(routine('record_coding_verdict'), /'coding:' \|\| public\.token_account_key\(p_user_id\) \|\| ':' \|\| p_task_id/,
+    'coding XP is awarded once per account and task, not once per task');
+  // Every credit goes through the ledger routine whose event id is its key.
+  const ledger = read('supabase/supabase-schema-028.sql');
+  assert.match(ledger, /ON CONFLICT \(event_id\) DO NOTHING;\s*GET DIAGNOSTICS v_applied = ROW_COUNT;\s*IF v_applied = 0 THEN RETURN FALSE;/);
+
+  // 3. Only service-role routines credit, and they write no learning table.
+  for (const name of ['credit_verified_xp_tokens', 'settle_coin_milestones', 'settle_month_top3', 'credit_social_visit', 'delete_coin_data', 'record_coding_verdict']) {
+    assert.match(migration, new RegExp(`REVOKE ALL ON FUNCTION public\\.${name}\\([^;]*\\)\\s*FROM PUBLIC, anon, authenticated;`), `${name} is revoked from browsers`);
+    assert.match(migration, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${name}\\([^;]*\\)\\s*TO service_role;`), `${name} is service-role only`);
+    assert.match(routine(name), /SECURITY DEFINER\s*SET search_path = ''/, `${name} pins its search_path`);
+  }
+  for (const name of ['credit_verified_xp_tokens', 'settle_coin_milestones', 'settle_month_top3', 'credit_social_visit']) {
+    assert.doesNotMatch(routine(name), /(INSERT INTO|UPDATE|DELETE FROM) public\.(user_xp|user_stats|user_streak|roadmap_progress|coding_progress|user_category_stats|user_activity_days)/,
+      `${name} reads progress and never writes it`);
+  }
+  assert.match(migration, /ALTER TABLE public\.token_xp_credits\s+ENABLE ROW LEVEL SECURITY;/);
+  assert.match(migration, /REVOKE ALL ON public\.token_xp_credits\s+FROM PUBLIC, anon, authenticated;/);
+  // The browser cannot post a credit: no client file names a credit routine,
+  // and the wallet's POST takes a platform, never an amount.
+  for (const file of listFiles(join(process.cwd(), 'client/src')).filter((path) => /\.tsx?$/.test(path))) {
+    assert.doesNotMatch(read(file.slice(process.cwd().length + 1)),
+      /credit_tokens|credit_verified_xp_tokens|settle_coin_milestones|settle_month_top3|credit_social_visit|grant_signup_tokens/,
+      `${file} calls no credit routine`);
+  }
+  const rewardsHandlers = read('lib/rewards/handlers.ts');
+  const walletPost = rewardsHandlers.slice(rewardsHandlers.indexOf("if (req.method === 'POST') {", rewardsHandlers.indexOf('export async function handleWallet')));
+  assert.doesNotMatch(walletPost.slice(0, walletPost.indexOf('res.setHeader(\'Allow\'')), /body\.(amount|coins|tokens|xp)/, 'the wallet POST never reads an amount');
+  assert.match(read('client/src/lib/rewards.ts'), /JSON\.stringify\(\{ claim: 'social', platform \}\)/);
+
+  // 4. Merchandise is Premium only, and the refusal comes before the address.
+  const orders = rewardsHandlers.slice(rewardsHandlers.indexOf('export async function handleOrders'));
+  const gate = orders.indexOf("refuseLocked(res, userId, { kind: 'merch-redemption'");
+  assert.ok(gate > 0 && gate < orders.indexOf('validateAddress(body.address)'), 'a free account gets 402 before it is asked for an address');
+  assert.equal(contentTier({ kind: 'merch-redemption', sku: 'mug' }, serverContentIndex()), 'premium');
+  // The crown and streak protection stay open to every account.
+  for (const handler of ['handleCosmetic', 'handleStreakProtection']) {
+    const body = rewardsHandlers.slice(rewardsHandlers.indexOf(`export async function ${handler}`));
+    assert.doesNotMatch(body.slice(0, body.indexOf('\n}\n')), /refuseLocked|resolveTier/, `${handler} is not Premium only`);
+  }
+
+  // 5. The browser wallet is retired, and the welcome coins are the server's.
+  const tokens = read('client/src/lib/tokens.ts');
+  assert.doesNotMatch(tokens, /export function (awardTokens|spendTokens|grantRegistrationBonusIfNew|useTokens|getTokens)/);
+  assert.doesNotMatch(read('client/src/lib/xp.ts'), /awardTokens|tokensFromXp/, 'XP gains award no browser tokens');
+  assert.doesNotMatch(read('client/src/App.tsx'), /grantRegistrationBonusIfNew/);
+  assert.match(rewardsHandlers, /supabase\.rpc\('grant_signup_tokens'/, 'the wallet read pays the welcome coins');
+
+  // 6. The UI says coins and Rewards; the code keeps `token`.
+  assert.equal(ENGLISH['nav.shop'], 'Rewards');
+  assert.equal(ENGLISH['shop.tokensUnit'], 'coins');
+  for (const [key, value] of Object.entries(ENGLISH)) {
+    if (!/^(shop\.|rewards\.|register\.|auth\.signupBonus)/.test(key) || /^shop\.item\./.test(key)) continue;
+    assert.doesNotMatch(value.replace(/\{\w+\}/g, ''), /\btokens?\b/i, `${key} says tokens; the product says coins`);
+  }
+  assert.match(read('docs/product-architecture.md'), /the UI calls it \*\*Coins\*\*/, 'the naming rule is written down');
+
+  // 7. The social links reward nothing by default and never ask for a follow.
+  assert.deepEqual(Object.keys(SOCIAL_PROFILES).sort(), [...SOCIAL_PLATFORMS].sort(), 'one URL per platform, in the catalogue');
+  for (const [key, value] of Object.entries(ENGLISH)) {
+    assert.doesNotMatch(value, /follow (us )?to earn|follow .* (for|to get) (coins|a reward)/i, `${key} pays for a follow`);
+  }
+
+  // 8. Milestones cover every evolving project and short path, priced by kind.
+  const config = milestoneConfig(DEFAULT_COIN_SETTINGS) as { projects: { id: string; coins: number }[] };
+  assert.equal(config.projects.length, EVOLVING_CHALLENGES.length);
+  for (const challenge of EVOLVING_CHALLENGES) {
+    const entry = config.projects.find((one) => one.id === challenge.id);
+    assert.equal(entry?.coins, challenge.short ? 50 : 150, `${challenge.id} pays ${challenge.short ? 'a short path' : 'a project'}`);
+  }
+
+  // 9. Streak protection keeps its four bounds with coins in place of tokens:
+  // the cap is two, there is no cash price, a protection changes the day count
+  // only, and no board ranks by streak. (The bounds themselves are asserted
+  // above; this checks the coin work did not reopen them.)
+  assert.equal(STREAK_PROTECTION_CAP, 2);
+  assert.doesNotMatch(read('shared/rewards.ts'), /streakProtection(Price|Cash|Minor)/);
+  assert.match(read('shared/rewards.ts'), /No money buys a\s+\*\s+protection/);
 }
 
 async function main() {
@@ -2018,8 +2185,9 @@ async function main() {
   await tierContracts();
   billingContracts();
   publicCopyContracts();
+  coinsContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, and an unconfigured shop.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, and coins.');
 }
 
 void main().catch((error) => {

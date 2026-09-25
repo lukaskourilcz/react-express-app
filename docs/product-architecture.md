@@ -51,8 +51,9 @@ is unchanged, and all new storage lives in `supabase/supabase-schema-024.sql` (a
 idempotent; see `NEEDED.md` to apply it). Cards and badges are cosmetic retention only
 and never affect access, content, XP, scores, streaks, ranks, or AI
 availability. Streak protection is the one bounded exception, and it is written
-out in full in `shared/rewards.ts`: two a month free, extras bought with tokens
-earned at 10% of verified XP, a ceiling that never rises above two, and an
+out in full in `shared/rewards.ts`: two a month free, extras bought with coins
+earned from verified learning (10% of verified XP, doubled on Premium, plus
+milestones; no cash price), a ceiling that never rises above two, and an
 effect limited to the day count of a streak. No leaderboard in this product
 ranks by streak — every one of them ranks by correct answers and accuracy — so a
 protected streak moves nobody up anything.
@@ -379,6 +380,60 @@ a local Postgres and waits for production.
   portal, the webhook and the cancel page need only the key, so people who
   already pay keep them after sales are switched off. With billing off the
   locks still apply.
+
+## Coins
+
+The server token ledger of migration 028 is the wallet; the UI calls it **Coins**
+and the code keeps its `token` identifiers (tables, ops, `shared/rewards.ts`).
+Do not rename the schema. The browser wallet that `client/src/lib/xp.ts` used to
+fill is retired: nothing awards or shows a `localStorage` balance, and the old
+numbers stay in the account blob unread (`docs/rewards-launch.md`).
+
+Status on 2026-09-25: built on the lane branch with migration 041
+(`supabase/supabase-schema-041.sql`), proven on a local Postgres, waiting for
+production (issue #227, step D8).
+
+- **Rules.** `shared/rewards.ts` holds the defaults (`DEFAULT_COIN_SETTINGS`)
+  and the game settings mirror them as `coins`, clamped on read, so the owner
+  tunes them in `/dev` → Settings → Coins without a deploy. Every account earns
+  10 % of verified XP; Premium doubles it at credit time; one account earns at
+  most 400 coins a day from XP, counted after the doubling. The welcome grant is
+  200. Premium milestones: a live streak of 7, 30 and 100 days (25, 100, 300), a
+  Learn topic with every level passed (100), an evolving project (150) or short
+  path (50) with every stage passed, and the top three of a finished calendar
+  month on the dated board of migration 040 (300, 200, 100). Milestones sit
+  outside the daily cap. The social click-through grant (`socialVisitGrant`)
+  defaults to 0: see the policy note on `CoinSettings`.
+- **Credits.** Every credit is a ledger event with a deterministic id, written
+  by a service-role routine, so a replay credits nothing:
+  `credit_verified_xp_tokens` (`xp:<award id>`, with `token_xp_credits`
+  recording each decision, a capped one included), `settle_coin_milestones`
+  (`streak:<n>:<account>`, `topic:<id>:<account>`, `project:<id>:<account>`),
+  `settle_month_top3` (`month-top:<yyyy-mm>:<rank>`, once per month in
+  `token_month_settlements`), `grant_signup_tokens` (`signup:<account>`) and
+  `credit_social_visit` (`social:<platform>:<account>`). The routines read
+  `is_premium()` themselves; none writes a learning, score or streak table.
+- **Where credits happen.** `lib/rewards/coins.ts` is the server side. A quiz
+  or daily result and a Biggest Shark Challenge run credit their XP award as
+  before; a Learn level or part test passed for the first time credits
+  `learn:<account>:<topic>:L<n>` (or `P<n>`) at 50 × the level's tier or 300 ×
+  the part (`shared/progression.ts`); a coding challenge's first pass credits
+  `coding:<account>:<task>`, the same id its XP now uses. A verified quiz, a
+  first Learn pass and a first evolving stage pass then settle the milestones.
+  The first wallet read (`op=wallet` GET) pays the welcome coins, settles the
+  month that just ended and the learner's milestones, and returns the rules and
+  progress for "How to earn". Before 041 is installed the XP credit falls back
+  to the old flat rate.
+- **Spending.** The crown (1,200) and streak protection (250) stay open to every
+  account. Shipped merchandise is Premium only: `op=orders` POST answers a free
+  account with 402 `premium_required` (`kind: 'merch-redemption'`) before it
+  asks for an address. `merch_stock` is a monthly cap on what the owner will
+  post, not a count of goods on a shelf.
+- **Screen.** `/shop` reads Rewards in the navigation: the coins with the last
+  25 ledger lines, How to earn, merchandise, the crown and streak protection,
+  orders and claims, and Find devShark elsewhere, which also sits on the
+  Profile. Its links come from `SOCIAL_PROFILES` in `client/product-catalog.ts`
+  and show only once the owner records them.
 
 ## Deployment
 
