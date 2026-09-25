@@ -26,8 +26,8 @@ import { CODING_SUMMARIES } from '../../lib/coding/active';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
 import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
 import { handleCodingBookmarks, handleCodingSkip, handlePracticeSession } from '../../lib/coding/practice-handlers';
-import { deleteCoinData, settleMilestones } from '../../lib/rewards/coins';
-import { deleteReferralData, handleReferral } from '../../lib/rewards/referral';
+import { routineMissing, settleMilestones } from '../../lib/rewards/coins';
+import { handleReferral } from '../../lib/rewards/referral';
 import { creditVerifiedXp, handleCosmetic, handleStreakProtection, handleFulfilment, handleOrders, handlePaymentWebhook, handleShopCatalogue, handleWallet } from '../../lib/rewards/handlers';
 import {
   handleEnrollment,
@@ -114,6 +114,10 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   return withRequestContext(req, res, () => routeHandler(req, res));
 }
 
+/** The erasure routines of migrations 040, 039, 041 and 042, which 044 folds
+ * into delete_user_data. */
+const LATER_ERASURE_ROUTINES = ['delete_user_activity_days', 'delete_entitlement_data', 'delete_coin_data', 'delete_referral_data'] as const;
+
 async function deleteAccount(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'DELETE') {
     res.setHeader('Allow', 'DELETE');
@@ -144,36 +148,18 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
       logEvent('delete-account', { status: 500, reason: 'cleanup_failed', error: cleanup.error.message });
       return jsonError(res, 500, 'db_error', 'Could not delete account data');
     }
-    // The dated activity behind the 30-day board (migration 040) has its own
-    // erasure routine; the top of that migration says why. Before 040 is
-    // applied there is no such table and nothing to erase.
-    const activity = await withTimeout(
-      supabase!.rpc('delete_user_activity_days', { p_user_id: auth.sub }),
-      8000,
-    );
-    if (activity.error && !isRpcMissing(activity.error)) {
-      logEvent('delete-account', { status: 500, reason: 'activity_cleanup_failed', error: activity.error.message });
-      return jsonError(res, 500, 'db_error', 'Could not delete account data');
-    }
-
-    // Grants and the billing-customer link go with the account (migration 039).
-    // A separate routine, so no migration has to redefine delete_user_data.
-    const entitlements = await withTimeout(supabase!.rpc('delete_entitlement_data', { p_user_id: auth.sub }), 8000);
-    if (entitlements.error && !isRpcMissing(entitlements.error)) {
-      logEvent('delete-account', { status: 500, reason: 'entitlement_cleanup_failed' });
-      return jsonError(res, 500, 'db_error', 'Could not delete account data');
-    }
-
-    // Coin credit records and any month's winner line (migration 041, #227).
-    if (!(await deleteCoinData(supabase!, auth.sub))) {
-      logEvent('delete-account', { status: 500, reason: 'coin_cleanup_failed' });
-      return jsonError(res, 500, 'db_error', 'Could not delete account data');
-    }
-
-    // The invite code and referral rows (migration 042, #228).
-    if (!(await deleteReferralData(supabase!, auth.sub))) {
-      logEvent('delete-account', { status: 500, reason: 'referral_cleanup_failed' });
-      return jsonError(res, 500, 'db_error', 'Could not delete account data');
+    // Migrations 039 to 042 each shipped their own erasure routine, and 044
+    // folds all four into delete_user_data. Until 044 is in production a
+    // database may hold those tables without it, so they are still called;
+    // after 044 each deletes nothing. A routine that is not installed yet has
+    // no table to erase: PostgREST answers PGRST202 for it. Remove this loop
+    // once 044 is applied.
+    for (const routine of LATER_ERASURE_ROUTINES) {
+      const erased = await withTimeout(supabase!.rpc(routine, { p_user_id: auth.sub }), 8000);
+      if (erased.error && !routineMissing(erased.error)) {
+        logEvent('delete-account', { status: 500, reason: 'cleanup_failed', routine, error: erased.error.message });
+        return jsonError(res, 500, 'db_error', 'Could not delete account data');
+      }
     }
 
     const { error } = await withTimeout(supabase!.auth.admin.deleteUser(auth.sub), 8000);

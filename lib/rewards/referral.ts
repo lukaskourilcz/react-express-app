@@ -150,12 +150,3 @@ export async function handleReferral(req: VercelRequest, res: VercelResponse, su
   res.setHeader('Allow', 'GET, POST');
   return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
 }
-
-/* ── account deletion ──────────────────────────────────────────────────── */
-
-/** Remove the account's code and its own referral row, and take its id off
- * the referrals it made. The ledger lines go with `delete_user_data`. */
-export async function deleteReferralData(supabase: SupabaseClient, userId: string): Promise<boolean> {
-  const deleted = await withTimeout(supabase.rpc('delete_referral_data', { p_user_id: userId }), 8000);
-  return !deleted.error || routineMissing(deleted.error);
-}

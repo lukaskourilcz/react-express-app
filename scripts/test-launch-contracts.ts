@@ -907,7 +907,7 @@ async function referralContracts() {
   // 4. The server: credits ride on verified work, and the code's creation time
   // comes from the verified token.
   assert.match(read('api/user/[op].ts'), /if \(op === 'referral'\) return handleReferral\(req, res, supabase\);/);
-  assert.match(read('api/user/[op].ts'), /deleteReferralData\(supabase!, auth\.sub\)/, 'account deletion removes the referral data');
+  assert.match(read('supabase/supabase-schema-044.sql'), /DELETE FROM public\.referral_codes WHERE user_id = p_user_id;/, 'account deletion removes the referral data');
   assert.match(read('api/quiz/roadmap.ts'), /await creditReferral\(supabase, userId, session\.subject!\);/, 'a first Learn pass settles an invitation');
   assert.match(read('lib/rewards/handlers.ts'), /creditReferral\(supabase, userId, subject\)/, 'the wallet read settles an invitation');
   assert.equal(accountCreatedAt({ created_at: '2026-09-25T10:00:00Z' }), '2026-09-25T10:00:00.000Z');
@@ -1098,6 +1098,65 @@ async function merchContracts() {
   const fulfilment = handlers.slice(handlers.indexOf('export async function handleFulfilment('));
   assert.match(fulfilment.slice(0, 200), /if \(!\(await requireAdmin\(req, res\)\)\) return;/, 'op=fulfilment checks the admin first');
   assert.match(fulfilment, /supabase\.rpc\('set_merch_stock'/, 'the cap is written by the 043 routine');
+}
+
+/* ── one erasure routine (migration 044) ──────────────────────────────────
+ *
+ * delete_user_data erases every table that holds an account id, including the
+ * ones later migrations added with routines of their own, and question_edits
+ * carries the importance check migration 014 meant to add. */
+function erasureContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const migrations = readdirSync(join(process.cwd(), 'supabase'))
+    .filter((name) => /^supabase-schema-\d{3}\.sql$/.test(name))
+    .sort();
+  const bodyOf = (sql: string) => {
+    const start = sql.indexOf('CREATE OR REPLACE FUNCTION public.delete_user_data(');
+    return start < 0 ? '' : sql.slice(start, sql.indexOf('$$;', sql.indexOf('AS $$', start)));
+  };
+  const erased = (body: string) => new Set([...body.matchAll(/\bpublic\.([a-z_]+)\b/g)].map((match) => match[1]));
+
+  // The newest restatement is the one that runs, so it is the one checked.
+  const latest = [...migrations].reverse().find((name) => bodyOf(read(`supabase/${name}`)));
+  assert.ok(latest && latest >= 'supabase-schema-044.sql', 'delete_user_data was last restated by 044 or later');
+  const latestSql = read(`supabase/${latest}`);
+  const body = bodyOf(latestSql);
+  const covered = erased(body);
+
+  // It keeps every table migration 033's body erased.
+  for (const table of erased(bodyOf(read('supabase/supabase-schema-033.sql')))) {
+    assert.ok(covered.has(table), `delete_user_data still erases ${table}`);
+  }
+  // Every table a later migration created with an account column is erased or anonymised.
+  for (const name of migrations.filter((one) => one > 'supabase-schema-033.sql')) {
+    const sql = read(`supabase/${name}`);
+    for (const match of sql.matchAll(/CREATE TABLE IF NOT EXISTS public\.([a-z_]+) \(([\s\S]*?)\n\);/g)) {
+      if (!/\b(user_id|invitee_user_id|referrer_user_id)\b/.test(match[2])) continue;
+      assert.ok(covered.has(match[1]), `${name} created ${match[1]} with an account column and delete_user_data does not erase it`);
+    }
+  }
+  // A settled month keeps its ranks and loses the person.
+  assert.ok(covered.has('token_month_settlements'), 'a month settlement loses the deleted account');
+  assert.match(body, /SECURITY DEFINER\s+SET search_path = ''/, 'delete_user_data is a definer with an empty search_path');
+  assert.match(latestSql, /REVOKE ALL ON FUNCTION public\.delete_user_data\(TEXT\) FROM PUBLIC, anon, authenticated;/);
+  assert.match(latestSql, /GRANT EXECUTE ON FUNCTION public\.delete_user_data\(TEXT\) TO service_role;/);
+  assert.doesNotMatch(body, /\b(INSERT INTO|user_xp SET|user_stats SET)\b/, 'erasure only deletes and anonymises');
+
+  // The importance check is added once, whatever 014 left behind.
+  const migration044 = read('supabase/supabase-schema-044.sql');
+  assert.match(migration044, /IF NOT EXISTS \([\s\S]*?conname = 'question_edits_importance_check'/, 'the importance check is guarded');
+  assert.match(migration044, /ADD CONSTRAINT question_edits_importance_check\s+CHECK \(importance IS NULL OR importance BETWEEN 1 AND 10\)/);
+
+  // The API: delete_user_data first, then the four routines 044 folded in,
+  // each tolerated when missing, until 044 is in production.
+  const userOps = read('api/user/[op].ts');
+  const deletion = userOps.slice(userOps.indexOf('async function deleteAccount('));
+  assert.ok(deletion.indexOf('endBillingForDeletedAccount') < deletion.indexOf("rpc('delete_user_data'"), 'billing ends before the data goes');
+  assert.ok(deletion.indexOf("rpc('delete_user_data'") < deletion.indexOf('of LATER_ERASURE_ROUTINES'), 'delete_user_data runs first');
+  for (const routine of ['delete_user_activity_days', 'delete_entitlement_data', 'delete_coin_data', 'delete_referral_data']) {
+    assert.match(userOps, new RegExp(`LATER_ERASURE_ROUTINES = \\[[^\\]]*'${routine}'`), `${routine} still runs until 044 is applied`);
+  }
+  assert.match(deletion, /if \(erased\.error && !routineMissing\(erased\.error\)\)/, 'a routine that is not installed has nothing to erase');
 }
 
 async function main() {
@@ -2565,9 +2624,10 @@ async function main() {
   coinsContracts();
   await referralContracts();
   await merchContracts();
+  erasureContracts();
   await webdevBankContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, and the webdev-bank contract BoardlessAI imports.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, and the webdev-bank contract BoardlessAI imports.');
 }
 
 void main().catch((error) => {

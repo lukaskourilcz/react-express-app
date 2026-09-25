@@ -243,12 +243,3 @@ export async function creditSocialVisit(
   }
   return credited.data === true ? { granted: true, coins: amount } : { granted: false, coins: 0 };
 }
-
-/* ── account deletion ──────────────────────────────────────────────────── */
-
-/** Remove the account's XP credit records and its name from any month's
- * settlement. The ledger and the balance go with `delete_user_data`. */
-export async function deleteCoinData(supabase: SupabaseClient, userId: string): Promise<boolean> {
-  const deleted = await withTimeout(supabase.rpc('delete_coin_data', { p_user_id: userId }), 8000);
-  return !deleted.error || routineMissing(deleted.error);
-}

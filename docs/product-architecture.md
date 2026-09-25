@@ -500,6 +500,23 @@ production (issue #227, step D8).
   and `SPREADSHOP_SHOP_ID` are set, and `/api/settings` returns it as
   `merchPromo`; coins never buy a discount.
 
+## Account erasure
+
+`DELETE /api/user/delete-account` ends any live Stripe subscription first and
+stops with 503 if Stripe cannot be reached. It then calls `delete_user_data`,
+which since migration 044 erases every table that holds an account id in one
+routine, including the ones 035 and 039 to 042 added. A few rows stay without
+the person: a merchandise order already with Spreadshop and its package claim
+(the claim's account part becomes `deleted-account:<order id>`), a settled
+month's ranks, and a referral the account made (`deleted-account`). Until 044
+is in production the handler also calls the four routines those migrations
+shipped (`delete_user_activity_days`, `delete_entitlement_data`,
+`delete_coin_data`, `delete_referral_data`); after 044 they delete nothing,
+and a routine that is not installed yet is skipped. The Auth identity goes
+last. `erasureContracts()` in `scripts/test-launch-contracts.ts` fails when a
+migration creates a table with an account column that the newest
+`delete_user_data` does not erase.
+
 ## Deployment
 
 One Vercel project builds this repository for `https://devshark.app`. Set
