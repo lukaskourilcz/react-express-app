@@ -26,4 +26,4 @@ Build on Astryx and the existing Shark primitives. Read `DESIGN_RULES.md`, `docs
 5. Verify keyboard/focus, non-color status, 44px targets, reduced motion, reflow, fixed-shell clearance, and dark/light contrast.
 6. Run relevant checks from `package.json`, including `npm run test:launch`, `npm run build`, and `git diff --check`.
 
-Do not weaken answer integrity, product/subject scope, free learning, the footer's legal links and controls, or the 12-handler budget for visual convenience.
+Do not weaken answer integrity, product/subject scope, the free/Premium boundary set in `shared/tiers.ts`, the footer's legal links and controls, or the 12-handler budget for visual convenience. A Premium lock carries the word "Premium" as text, never colour alone, and stays focusable.

@@ -8,15 +8,25 @@
  * quoted them; until then every item reports `unconfigured` and cannot be
  * ordered by anyone, through any route. There is no placeholder price and no
  * pretend checkout — see `docs/rewards-launch.md` for what has to be obtained.
+ * Spreadshop (sprd.net AG) prints and ships the merchandise. It cannot issue
+ * discount codes, so coins redeem a whole item and never buy a discount.
  *
  * The crown is different: it is an SVG this repository draws, it ships nothing,
  * and it costs tokens alone.
  *
+ * Product copy calls the tokens this module counts coins. The tables, the ops
+ * and the identifiers here keep the `token` spelling.
+ *
  * The invariant that outranks all of this, and the one bounded exception to it.
  *
- * **Rewards never touch learning.** Buying, owning and equipping change no
- * access, no content, no XP, no score, no rank, no leaderboard position and no
- * prerequisite. The crown is a picture.
+ * **devShark is freemium, and rewards never touch learning.** `shared/tiers.ts`
+ * is the only place that says what the free tier includes and what Premium
+ * opens; the server refuses locked content with 402 and the client only
+ * mirrors it. Premium changes which content a learner may start and nothing
+ * else. Coins, the crown, collectible Shark Cards and badges change even less:
+ * buying, owning and equipping change no access, no content, no grading, no
+ * explanation, no XP amount, no score, no rank, no leaderboard position, no
+ * matchmaking and no prerequisite. The crown is a picture.
  *
  * The exception is **streak protection**, and it is written down here rather
  * than left implicit because it is real. Two protections a month are granted

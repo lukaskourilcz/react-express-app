@@ -30,7 +30,7 @@ not treat a missing Czech string as a defect.
 - Keep the exact casing: devShark. Copy names no other product.
 - Position devShark as developer learning; never call devShark a subject.
 - Use concise, active, specific language about real actions: practice a topic, complete a level, review weak areas, host/join a room, report an answer.
-- Keep all learning free and describe the shop as cosmetic and fairness-neutral. Never add urgency, guilt, gambling glamour, pay-to-win implications, or unsupported claims.
+- devShark is freemium. Describe the free tier and Premium exactly as `shared/tiers.ts` defines them, state the price with VAT included, and never call devShark free for everyone. Premium opens content; copy never says it buys XP, ranks, streaks or better grading. Describe the shop as cosmetic and fairness-neutral, and coins as redeemable for merchandise items, never discounts. Never add urgency, countdowns, guilt, gambling glamour, pay-to-win implications, or unsupported claims.
 - Curated explanations are authoritative. devShark ships no AI feature, so copy never offers AI hints, AI explanations, or an AI tutor; coding hints are authored and end in documentation links.
 - Do not invent counts, users, testimonials, partners, ratings, legal conclusions, support availability, or operational status. Derive counts from central metadata.
 - Avoid repeated ocean puns and generic SaaS language.

@@ -10,7 +10,7 @@ finished work to leave alone, not a parity obligation.
 
 1. Inspect the current diff, trace the route/component in `client/src/App.tsx`, and read every relevant use site plus the matching section of `client/src/i18n/translations.ts`.
 2. Read `client/product-catalog.ts`, `docs/product-architecture.md`, and `docs/design/brand-system.md`. Search every changed phrase and legacy `DevQuiz` occurrence so metadata, navigation, dialogs, errors, and historical identifiers are classified correctly.
-3. Check the exact devShark casing and that copy names no other product; real action-oriented outcomes; free/fair support and cosmetic language; curated explanations with no promise of AI help; honest counts/settings; and button clarity.
+3. Check the exact devShark casing and that copy names no other product; real action-oriented outcomes; freemium language that matches `shared/tiers.ts` (the price with VAT included, no claim that everything is free, no promise that Premium buys XP, ranks or streaks, no urgency); fair cosmetic and coin language; curated explanations with no promise of AI help; honest counts/settings; and button clarity.
 4. Reject generic SaaS claims, repeated ocean puns, guilt/urgency, casino framing, and invented metrics, users or legal conclusions.
 5. Check interpolation placeholders, heading hierarchy, screen-reader wording, error specificity without secret leakage, and the longest plausible label at the narrowest supported width.
 6. If `--fix` is present, edit `translations.ts` and all affected call sites. Reuse an existing key only when its meaning is truly identical; preserve compatibility/storage/database identifiers unless evidence shows they are public copy.
