@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { CODING_TASKS, playable } from '../lib/coding/catalog';
+import { CODING_TASKS, EASY_BAND_TASK_IDS, playable } from '../lib/coding/catalog';
 import { CODING_SUMMARIES, levelCodingTasks, tasksForLevel } from '../lib/coding/active';
 import { solutionFor, solutionIds } from '../lib/coding/solutions';
 import { stripComments } from '../lib/coding/solutions/strip-comments';
@@ -34,7 +34,7 @@ import {
   type Difficulty,
 } from '../shared/coding-catalog';
 import { COVERAGE_ENFORCED, COVERAGE_MIN_EASY, coverageGaps, renderCoverage, techniqueCoverage } from './coding-coverage';
-import { docsFor } from '../shared/coding-docs';
+import { docsFor, taskResources } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
 import { formatOf } from '../shared/coding-catalog';
 import { runInSandbox } from '../lib/coding/sandbox';
@@ -319,6 +319,30 @@ async function main() {
   console.log(renderCoverage(coverage, ENFORCE_COVERAGE));
   if (ENFORCE_COVERAGE) {
     for (const gap of coverageGaps(coverage)) fail(`${gap.track}: ${gap.tag} is on ${gap.medium} Medium challenge(s) and only ${gap.easy} Easy one(s); it needs ${COVERAGE_MIN_EASY}`);
+  }
+
+  /* ── the Easy-band waves (#226) ─────────────────────────────────────── */
+  // What every wave promises: a standalone Easy challenge on one technique
+  // (two focus tags at most) that fits in ten minutes, a hint ladder whose
+  // last rung is the documentation page of its first tag, hidden checks
+  // beside the visible ones, and no seat in a Learn level's quota. The
+  // solution proofs below cover the three solutions and the failing starter.
+  assert.ok(EASY_BAND_TASK_IDS.size > 0, 'the Easy-band waves are registered');
+  const summarized = new Set(CODING_SUMMARIES.map((summary) => summary.id));
+  for (const id of EASY_BAND_TASK_IDS) {
+    const task = byId.get(id);
+    if (!task) { fail(`${id}: an Easy-band id with no task`); continue; }
+    if (!summarized.has(id)) fail(`${id}: an Easy-band task must be issued`);
+    if (evolvingStage(id)) fail(`${id}: an Easy-band task is standalone`);
+    if (task.difficulty !== undefined || difficultyOf(task) !== 'easy') fail(`${id}: an Easy-band task reads Easy from its tier`);
+    if (task.focus.length > 2) fail(`${id}: at most two focus tags, one technique`);
+    if (task.estimatedMinutes > 10) fail(`${id}: an Easy-band task fits in ten minutes`);
+    if (task.verify !== 'tests') fail(`${id}: an Easy-band task is graded by its tests`);
+    const [page] = taskResources(task.focus);
+    if (!page || page.tag !== task.focus[0] || docsFor(task.focus).url !== page.url) fail(`${id}: the first focus tag must have a documentation page to end the hint ladder`);
+    if (task.hints.en.length === 0 || (task.approach?.en.length ?? 0) < 2) fail(`${id}: a hint and at least two method steps before the documentation`);
+    if ((solutionFor(id)?.hiddenTests?.length ?? 0) < 3) fail(`${id}: at least three hidden checks`);
+    if (tasksForLevel(task.topic, task.level).some((one) => one.id === id)) fail(`${id}: an Easy-band task never enters a Learn level's quota`);
   }
 
   /* ── JavaScript and TypeScript solutions ────────────────────────────── */
