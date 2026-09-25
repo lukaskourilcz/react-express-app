@@ -3,6 +3,7 @@ import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import {
   PRODUCT_CATALOG,
+  TRADER,
   resolveCatalogProductId,
 } from '../client/product-catalog';
 import {
@@ -155,6 +156,9 @@ import { serverContentIndex } from '../lib/access';
 import { jsonPremiumRequired, PremiumRequiredError } from '../lib/http';
 import { parseValidUntil, toEntitlementResponse } from '../lib/entitlements';
 import { DEFAULT_PUBLIC_ORIGIN, publicBillingSettings } from '../lib/billing/config';
+import { WAIVER_TEXT } from '../lib/billing/sync';
+import { en as ENGLISH } from '../client/src/i18n/translations';
+import { NOINDEX_PATHS, PUBLIC_PAGES, premiumSchema } from '../client/src/lib/publicMetadata';
 
 function apiFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -603,6 +607,50 @@ function billingContracts() {
   for (const file of ['lib/coding/grade.ts', 'api/leaderboard.ts', 'api/quiz/submit.ts', 'api/play/[action].ts']) {
     assert.doesNotMatch(read(file), /lib\/billing/, `${file} grades or ranks and never reads billing`);
   }
+}
+
+/** Public copy, /premium and the legal pages (#222, handoff section 4). */
+function publicCopyContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  // devShark is freemium: no shipped English string may still promise that
+  // everything is free (the Czech dictionary is retained and unshipped).
+  for (const [key, value] of Object.entries(ENGLISH)) {
+    assert.doesNotMatch(value, /free forever|\bis free\b|free, forever|\$0\b|charges for none/i, `${key} still says devShark is free`);
+  }
+  // The sentence the buyer ticks in Checkout is the one /premium and the
+  // Terms quote, word for word.
+  assert.equal(ENGLISH['premium.page.waiver'], WAIVER_TEXT, 'the waiver on /premium and in the Terms matches Checkout');
+  // Every price the pages print says VAT included next to it.
+  for (const key of ['home.pledge', 'landing.compare.premiumCaption', 'premium.page.monthlyRenews', 'premium.page.annualRenews', 'premium.sheet.price'] as const) {
+    assert.match(ENGLISH[key], /VAT included/, `${key} states the price with VAT`);
+  }
+  // No urgency, countdowns or fake scarcity on the pages that sell.
+  for (const [key, value] of Object.entries(ENGLISH)) {
+    if (!/^(premium\.|landing\.compare\.|landing\.founder\.|home\.pledge|billing\.checkout\.)/.test(key)) continue;
+    assert.doesNotMatch(value, /\b(hurry|only \d+ left|limited time|ends soon|last chance|act now|today only)\b/i, `${key} uses urgency copy`);
+  }
+  // The routes exist, the public ones have static HTML on Vercel, and the
+  // Stripe return page stays out of search.
+  const app = read('client/src/App.tsx');
+  for (const path of ['/premium', '/premium/success', '/premium/cancel']) {
+    assert.match(app, new RegExp(`<Route path="${path}" element=`), `${path} is a route`);
+  }
+  assert.match(app, /<Route path="\/support" element={<Navigate to="\/premium" replace \/>} \/>/, '/support redirects to /premium');
+  assert.match(app, /to: '\/premium', key: 'nav\.premium'/, 'Premium sits in the navigation');
+  const rewrites = (JSON.parse(read('vercel.json')) as { rewrites: { source: string; destination: string }[] }).rewrites;
+  for (const page of PUBLIC_PAGES) {
+    assert.ok(rewrites.some((rule) => rule.source === page.path && rule.destination === `${page.path}/index.html`), `${page.path} serves its static HTML`);
+  }
+  assert.deepEqual([...NOINDEX_PATHS], ['/premium/success']);
+  const schema = premiumSchema('Premium', 'Premium', 'https://devshark.app/premium');
+  assert.equal(schema.isAccessibleForFree, false, 'Premium is not free to access');
+  assert.ok(schema.offers.every((offer) => offer.priceSpecification.valueAddedTaxIncluded), 'the offers include VAT');
+  // The trader is either unset or set, never a placeholder the page would print.
+  for (const [field, value] of Object.entries(TRADER)) {
+    assert.ok(value === null || (typeof value === 'string' && value.trim().length > 2 && !/todo|tbd|xxx|example|\[/i.test(value)), `TRADER.${field} is null or a real value`);
+  }
+  // The EU ODR platform closed on 20 July 2025; linking to it now misleads.
+  assert.doesNotMatch(read('client/src/components/LegalPages.tsx'), /ec\.europa\.eu\/consumers\/odr/, 'no link to the closed ODR platform');
 }
 
 async function main() {
@@ -1967,8 +2015,9 @@ async function main() {
   await auditGateContracts();
   await tierContracts();
   billingContracts();
+  publicCopyContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, and an unconfigured shop.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, and an unconfigured shop.');
 }
 
 void main().catch((error) => {
