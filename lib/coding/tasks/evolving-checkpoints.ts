@@ -7,7 +7,6 @@ import type {
 import { EVOLVING_CHALLENGES } from '../../../shared/evolving';
 import { text, test } from './evolving';
 import { DEBUG_CHECKPOINTS } from './evolving-debug';
-import { CUSTOM_CHECKPOINTS } from './evolving-custom';
 import { FULLSTACK_APPS, fullstackSeed, fullstackSpec } from './fullstack';
 
 interface Checkpoint {
@@ -475,6 +474,10 @@ function fullstackCheckpoints(slug: string): Record<string, Checkpoint> {
   };
 }
 
+/** "Title · 3". An English-only path has no Czech title, so its stages get none. */
+const stageTitle = (title: Localized, n: number): Localized =>
+  text(`${title.en} · ${n}`, title.cs ? `${title.cs} · ${n}` : '');
+
 /** Insert smaller prerequisites without changing existing milestone IDs.
  * Test deltas accumulate in stage order, so every subsequent run checks earlier work. */
 export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
@@ -485,8 +488,10 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
   );
   for (const project of EVOLVING_CHALLENGES) {
     const milestones = project.stages.filter((id) => !id.endsWith('-start'));
+    // A short path has no checkpoints: every level is a milestone of its own.
+    const checkpointed = milestones.length < project.stages.length;
     const fullstack =
-      project.category === 'fullstack'
+      project.category === 'fullstack' && checkpointed
         ? fullstackCheckpoints(project.id.slice(10))
         : null;
     let previousBase: CodingTask | undefined;
@@ -494,9 +499,11 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
     const prompts: Localized[] = [];
     for (const [index, id] of milestones.entries()) {
       const base = byId.get(id)!;
-      const checkpoint = fullstack
-        ? fullstack[String(index + 1)]
-        : (CHECKPOINTS[project.id] ?? DEBUG_CHECKPOINTS[project.id] ?? CUSTOM_CHECKPOINTS[project.id])[index];
+      const checkpoint = !checkpointed
+        ? undefined
+        : fullstack
+          ? fullstack[String(index + 1)]
+          : (CHECKPOINTS[project.id] ?? DEBUG_CHECKPOINTS[project.id])[index];
       if (checkpoint) {
         const firstReact = base.suite && !previous?.suite;
         const header = firstReact
@@ -514,10 +521,7 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
           prompt: checkpoint.prompt,
           previousRequirements: [...prompts],
           estimatedMinutes: 5,
-          title: text(
-            `${project.title.en} · ${prompts.length + 1}`,
-            `${project.title.cs} · ${prompts.length + 1}`,
-          ),
+          title: stageTitle(project.title, prompts.length + 1),
           ...(base.tests
             ? {
                 tests: [
@@ -546,10 +550,7 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
         ...base,
         previousRequirements: [...prompts],
         estimatedMinutes: 10,
-        title: text(
-          `${project.title.en} · ${prompts.length + 1}`,
-          `${project.title.cs} · ${prompts.length + 1}`,
-        ),
+        title: stageTitle(project.title, prompts.length + 1),
         ...(base.tests
           ? {
               tests: [

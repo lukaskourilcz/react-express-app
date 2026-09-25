@@ -783,7 +783,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       <span className="cd-visually-hidden" role="status" aria-live="polite">{announcement}</span>
           <section className="cd-pane cd-pane--task" aria-labelledby={`${baseId}-title`}>
             <div className="cd-pane__head">
-              <Kicker>{evolution ? t('coding.evolving.stage', { n: evolution.index + 1, total: evolution.challenge.stages.length }) : <>{trackLabel} · {tierLabel}{hasLearnLevel(task) ? ` · ${t('coding.level', { n: task.level })}` : ''}</>}</Kicker>
+              <Kicker>{evolution ? t(evolution.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: evolution.index + 1, total: evolution.challenge.stages.length }) : <>{trackLabel} · {tierLabel}{hasLearnLevel(task) ? ` · ${t('coding.level', { n: task.level })}` : ''}</>}</Kicker>
               {mode === 'section' ? <h1 id={`${baseId}-title`}>{L(task.title)}</h1> : <h2 id={`${baseId}-title`}>{L(task.title)}</h2>}
               {formatOf(task) === 'debug' && (
                 <div className="cd-pane__meta">
@@ -799,7 +799,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               <ol className="cd-previous__list">
                 {task.previousRequirements!.map((brief, index) => (
                   <li key={index}>
-                    <span className="cd-previous__stage">{t('coding.evolving.stageShort', { n: index + 1 })}</span>
+                    <span className="cd-previous__stage">{t(evolution?.challenge.short ? 'coding.evolving.levelShort' : 'coding.evolving.stageShort', { n: index + 1 })}</span>
                     <Prompt className="cd-prompt cd-prompt--previous" text={L(brief)} />
                   </li>
                 ))}

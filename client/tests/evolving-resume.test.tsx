@@ -87,8 +87,7 @@ it.each(['local', 'server'])('preserves an existing next-stage %s draft', source
   expect(screen.getByLabelText('Stage code')).toHaveValue('// further edits');
 });
 
-it('keeps the API implementation and appends the React scaffold at the FullStack transition', () => {
-  const project = EVOLVING_CHALLENGES.find(item => item.category === 'fullstack')!;
+it.each(EVOLVING_CHALLENGES.filter(item => item.category === 'fullstack').map(project => [project.id, project] as const))('keeps the API implementation and appends the React scaffold at the %s transition', (_id, project) => {
   mount(project.stages[project.stages.findIndex(id => id.startsWith('react-'))-1]);
   fireEvent.change(screen.getByLabelText('Stage code'), { target: { value: '// my API implementation' } });
   fireEvent.click(screen.getByText('Pass stage'));

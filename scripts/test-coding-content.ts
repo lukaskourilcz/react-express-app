@@ -16,6 +16,7 @@ import { solutionFor, solutionIds } from '../lib/coding/solutions';
 import { stripComments } from '../lib/coding/solutions/strip-comments';
 import { localizedFields, localizedLists } from '../lib/coding/types';
 import {
+  CODING_SECTION_TRACKS,
   CODING_TRACKS,
   gardenPathFor,
   isCodingTaskId,
@@ -70,7 +71,15 @@ async function main() {
   const stageIds = EVOLVING_CHALLENGES.flatMap(project => [...project.stages]);
   assert.equal(new Set(stageIds).size, stageIds.length, 'unique stable stage IDs');
   for (const project of EVOLVING_CHALLENGES) {
-    assert.ok(project.stages.length >= (project.category === 'fullstack' ? 6 : 5) && project.stages.length <= 12);
+    if (project.short) {
+      // A short path lives on its section's page: five levels at most, no
+      // checkpoints, and a section that exists to list it.
+      assert.ok(project.stages.length >= 3 && project.stages.length <= 5, `${project.id}: a short path has three to five levels`);
+      assert.ok(project.stages.every(id => !id.endsWith('-start')), `${project.id}: a short path has no checkpoints`);
+      assert.ok(project.category === 'fullstack' || CODING_SECTION_TRACKS.includes(project.track), `${project.id}: a short path belongs to a listed section`);
+    } else {
+      assert.ok(project.stages.length >= (project.category === 'fullstack' ? 6 : 5) && project.stages.length <= 12);
+    }
     const passed = new Set<string>();
     for (const [index,id] of project.stages.entries()) {
       const task = CODING_TASKS.find(task => task.id === id);

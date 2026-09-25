@@ -1,4 +1,4 @@
-import { EVOLVING_CHALLENGES } from './evolving';
+import type { EvolvingChallenge } from './evolving';
 
 /** Transport only: responses are produced by the learner's own handler.
  * No network, backend solution, persistent data or privileged APIs here. */
@@ -24,7 +24,8 @@ export default function App({fetcher}) {
 }
 `;
 
-export function prepareEvolvingDraft(code: string, category: string | undefined, stageIndex: number): string {
+export function prepareEvolvingDraft(code: string, challenge: EvolvingChallenge | undefined, stageIndex: number): string {
   // Only append at the first React stage. Never rewrite an existing stage draft.
-  return category === 'fullstack' && stageIndex === EVOLVING_CHALLENGES.find(project => project.category === 'fullstack')?.stages.findIndex(id => id.startsWith('react-')) ? code + FULLSTACK_REACT_SCAFFOLD : code;
+  if (challenge?.category !== 'fullstack') return code;
+  return stageIndex === challenge.stages.findIndex(id => id.startsWith('react-')) ? code + FULLSTACK_REACT_SCAFFOLD : code;
 }
