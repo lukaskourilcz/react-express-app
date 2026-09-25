@@ -87,6 +87,10 @@ export interface BuildTodayOptions {
   /** Skill-check-unlocked topics (`getExtraUnlocks()`), so their "new" levels
    * can appear. Starter + prereq-met topics are unlocked without this. */
   extraUnlocks?: RoadmapTopic[];
+  /** Whether the account may start this level now. A level Premium opens on
+   * a free account is left out of "unfinished" and "new"; reviews of levels
+   * already passed stay, whatever the plan. Omitted, every level may start. */
+  canStart?: (topic: RoadmapTopic, level: number) => boolean;
 }
 
 const REASON: Record<TodayKind, TranslationKey> = {
@@ -171,7 +175,7 @@ export function buildToday(
       const state = masteryState(entry);
       if (state === 'notStarted') {
         // Has an entry but was never passed → unfinished (guard: still unlocked).
-        if (isLevelUnlocked(progress, topic, level, opts.availability?.[topic])) {
+        if (isLevelUnlocked(progress, topic, level, opts.availability?.[topic]) && (opts.canStart?.(topic, level) ?? true)) {
           unfinished.push(makeItem(topic, level, 'unfinished'));
         }
       } else if (state === 'cleared' && isDueForReview(entry, today)) {
@@ -184,7 +188,7 @@ export function buildToday(
     if (isTopicUnlocked(progress, topic, extra)) {
       const cap = opts.levelCounts?.[topic] ?? ROADMAP_LEVELS;
       const next = nextNewLevel(progress, topic, levels, cap, opts.availability?.[topic]);
-      if (next !== null) fresh.push(makeItem(topic, next, 'new'));
+      if (next !== null && (opts.canStart?.(topic, next) ?? true)) fresh.push(makeItem(topic, next, 'new'));
     }
   }
 

@@ -72,7 +72,10 @@ import { BRAND } from '../theme/MuiTheme';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
-import { friendlyError } from '../lib/api';
+import { friendlyError, isPremiumRequired } from '../lib/api';
+import { useLocks } from '../lib/locks';
+import { openUpgradeSheet } from '../lib/upgradeSheet';
+import { gatedRef, type GatedContent } from '../../../shared/tiers';
 import { reportQuestion } from '../lib/supabase';
 import { shuffleDifferentFrom } from '../lib/shuffle';
 import { readString, removeStored, writeString } from '../lib/storage';
@@ -166,6 +169,9 @@ interface PlacedNode {
   part?: number;
   range?: PartRange;
   unavailable?: boolean;
+  /** Premium opens this step and the account is free: the node reads
+   * "Premium", stays focusable and opens the upgrade sheet. */
+  premium?: boolean;
 }
 
 // Track an element's width so the path can lay itself out responsively. Uses a
@@ -300,7 +306,15 @@ function Roadmap() {
   // tree, cancellable, with built-in loading/error state and retry.
   const structureQuery = useRoadmapStructure();
   const structure: RoadmapStructure | null = structureQuery.data ?? null;
-  const loadingStructure = structureQuery.isPending;
+  // The plan decides which nodes read "Premium". The map waits for it, so a
+  // Premium account never sees a flash of locks; offline it reads as unknown
+  // and nothing is drawn as locked (the server's 402 still opens the sheet).
+  const levelCounts = useMemo(
+    () => Object.fromEntries(Object.entries(structure?.structure ?? {}).map(([id, one]) => [id, one.levels.length])),
+    [structure],
+  );
+  const { lockOf, loading: planLoading } = useLocks(levelCounts);
+  const loadingStructure = structureQuery.isPending || planLoading;
   const structureError = structureQuery.error ? friendlyError(structureQuery.error) : null;
   // Topics for the active subject, in path order. The first is the default/
   // fallback landing topic.
@@ -455,9 +469,25 @@ function Roadmap() {
       })
       .catch((err) => {
         if (controller.signal.aborted) return;
+        // Premium opens this step: the API client already opened the upgrade
+        // sheet, so the learner stays on the map rather than an error screen.
+        if (isPremiumRequired(err)) {
+          setActive(null);
+          setLoadingLesson(false);
+          return;
+        }
         setLessonError(friendlyError(err));
         setLoadingLesson(false);
       });
+  };
+
+  // A Premium step opens the upgrade sheet instead of a lesson.
+  const stepContent = (a: Active): GatedContent =>
+    a.kind === 'level' ? { kind: 'learn-level', topic, level: a.ref } : { kind: 'learn-part-test', topic, part: a.ref };
+  const openOrUpgrade = (a: Active) => {
+    const content = stepContent(a);
+    if (lockOf(content) === 'locked') openUpgradeSheet({ kind: content.kind, ref: gatedRef(content) });
+    else open(a);
   };
 
   // Deep link from the Today plan (/learn?topic=…&level=…) opens that level's
@@ -544,10 +574,11 @@ function Roadmap() {
         const passed = isPartTestPassed(progress, topic, node.part);
         const unavailable = availability.unavailableCheckpoints?.has(node.part) ?? false;
         const unlocked = !unavailable && isPartTestUnlocked(progress, topic, node.range, availability);
+        const premium = !passed && !unavailable && lockOf({ kind: 'learn-part-test', topic, part: node.part }) === 'locked';
         return {
           i, kind: 'test', key: `test-${node.part}`, cx, cy, half: 25,
           accent: CHECKPOINT_GOLD, grad: CHECKPOINT_GRAD, part: node.part, range: node.range,
-          unlocked, passed, isCurrent: unlocked && !passed, unavailable,
+          unlocked, passed, isCurrent: unlocked && !passed && !premium, unavailable, premium,
           best: partTestBestPct(progress, topic, node.part),
         };
       }
@@ -557,7 +588,8 @@ function Roadmap() {
       const passed = isLevelPassed(progress, topic, meta.level);
       const unavailable = meta.unavailable === true;
       const unlocked = !unavailable && isPartLevelUnlocked(progress, topic, nodeRange, meta.level, availability);
-      const isCurrent = unlocked && !passed;
+      const premium = !passed && !unavailable && lockOf({ kind: 'learn-level', topic, level: meta.level }) === 'locked';
+      const isCurrent = unlocked && !passed && !premium;
       // Spaced mastery reads the stored level entry (migration-024 fields are
       // additive; older/guest rows without passDays resolve to "cleared").
       const entry = progress[topic]?.levels?.[String(meta.level)] as LevelMasteryEntry | undefined;
@@ -565,7 +597,7 @@ function Roadmap() {
         i, kind: 'level', key: `lvl-${meta.level}`, cx, cy, half: isCurrent ? 23 : 20,
         accent: band.solid, grad: band.grad, level: meta,
         displayNum: meta.level,
-        unlocked, passed, isCurrent: unlocked && !passed, unavailable,
+        unlocked, passed, isCurrent, unavailable, premium,
         best: levelBestPct(progress, topic, meta.level),
         mastery: masteryState(entry),
         due: isDueForReview(entry),
@@ -581,7 +613,7 @@ function Roadmap() {
       return { x1: a.cx, y1: a.cy, x2: b.cx, y2: b.cy, color: done || active ? b.accent : null, active };
     });
     return { width: pathWidth, height, cellW, nodes: placed, segments };
-  }, [pathWidth, levels, ranges, progress, topic, availability]);
+  }, [pathWidth, levels, ranges, progress, topic, availability, lockOf]);
 
   /* ──── skill check view ─────────────────────────────────────────────── */
   if (skillCheckOpen) {
@@ -774,7 +806,7 @@ function Roadmap() {
               <div style={{ height: '100%', width: `${levels.length ? (topicDone / levels.length) * 100 : 0}%`, backgroundColor: topicColor, borderRadius: 4, transition: 'width 0.5s ease' }} />
               </div>
             {continueLevel && (
-              <SwimCta label={t('roadmap.continueLevel', { n: continueLevel.level })} dir={-1} onClick={() => open({ kind: 'level', ref: continueLevel.level })} />
+              <SwimCta label={t('roadmap.continueLevel', { n: continueLevel.level })} dir={-1} onClick={() => openOrUpgrade({ kind: 'level', ref: continueLevel.level })} />
             )}
             </div>
           </div>
@@ -825,8 +857,9 @@ function Roadmap() {
                           passed={n.passed}
                           best={n.best}
                           isCurrent={n.isCurrent}
+                          premium={n.premium ?? false}
                           cellW={layout.cellW}
-                          onClick={() => open({ kind: 'test', ref: n.part! })}
+                          onClick={() => openOrUpgrade({ kind: 'test', ref: n.part! })}
                           t={t}
                         />
                       ) : (
@@ -842,8 +875,9 @@ function Roadmap() {
                           mastery={n.mastery ?? 'notStarted'}
                           due={n.due ?? false}
                           masteryDays={n.masteryDays ?? 0}
+                          premium={n.premium ?? false}
                           cellW={layout.cellW}
-                          onClick={() => open({ kind: 'level', ref: n.level!.level })}
+                          onClick={() => openOrUpgrade({ kind: 'level', ref: n.level!.level })}
                           t={t}
                         />
                       )}
@@ -912,13 +946,27 @@ function MasteryLegend({ t }: { t: TFn }) {
 /* ──── level node ───────────────────────────────────────────────────────── */
 
 function LevelNode({
-  meta, displayNum, accent, unlocked, unavailable, passed, best, isCurrent, mastery, due, masteryDays, onClick, t, cellW,
+  meta, displayNum, accent, unlocked, unavailable, passed, best, isCurrent, mastery, due, masteryDays, premium, onClick, t, cellW,
 }: {
   meta: RoadmapLevelMeta; displayNum: number; accent: string;
   unlocked: boolean; unavailable: boolean; passed: boolean; best: number; isCurrent: boolean;
   mastery: MasteryState; due: boolean; masteryDays: number;
+  /** Premium opens this level: focusable, aria-disabled, "Premium" in text. */
+  premium: boolean;
   onClick: () => void; t: TFn; cellW: number;
 }) {
+  if (premium) {
+    return (
+      <PremiumNode
+        shape="level"
+        label={t('premium.levelLabel', { n: displayNum, title: meta.title })}
+        title={meta.title}
+        cellW={cellW}
+        onClick={onClick}
+        t={t}
+      />
+    );
+  }
   // Within a shown part levels gate sequentially; the first level of a part is
   // gated by the previous part's test at the part selector, never here. An
   // unavailable level is a different thing from a locked one: nothing the
@@ -1003,13 +1051,17 @@ function LevelNode({
 /* ──── part-test (boss) node ────────────────────────────────────────────── */
 
 function PartTestNode({
-  part, range, accent, grad, unlocked, unavailable, passed, best, isCurrent, onClick, t, cellW,
+  part, range, accent, grad, unlocked, unavailable, passed, best, isCurrent, premium, onClick, t, cellW,
 }: {
   part: number; range: PartRange; accent: string; grad: [string, string];
   unlocked: boolean; unavailable: boolean; passed: boolean; best: number; isCurrent: boolean;
+  premium: boolean;
   onClick: () => void; t: TFn; cellW: number;
 }) {
   const title = t('roadmap.partTestTitle', { n: part });
+  if (premium) {
+    return <PremiumNode shape="test" label={t('premium.partLabel', { title })} title={title} cellW={cellW} onClick={onClick} t={t} />;
+  }
   const label = unlocked
     ? `${title}${passed ? ` — ${t('roadmap.passed')} ${best}%` : ''}`
     : `${title}: ${unavailable ? t('roadmap.unavailable') : t('roadmap.locked')}`;
@@ -1062,6 +1114,59 @@ function PartTestNode({
       >
         {title}
       </div>
+    </div>
+  );
+}
+
+/* ──── Premium node ─────────────────────────────────────────────────────── */
+
+/** A level or part test that Premium opens, on a free account. It keeps its
+ * place and title on the map, reads "Premium" as text rather than colour,
+ * stays in the tab order with `aria-disabled`, and opens the upgrade sheet. */
+function PremiumNode({ shape, label, title, cellW, onClick, t }: {
+  shape: 'level' | 'test'; label: string; title: string; cellW: number; onClick: () => void; t: TFn;
+}) {
+  const size = shape === 'test' ? 50 : 40;
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+      <Tooltip content={t('premium.lockHint')} placement="above">
+        <button
+          type="button"
+          className="rm-level-btn rm-premium-btn"
+          aria-disabled="true"
+          aria-label={label}
+          onClick={onClick}
+          style={{
+            position: 'relative', width: size, height: size, borderRadius: shape === 'test' ? '14px' : '50%',
+            border: '2px dashed var(--color-border)',
+            background: 'var(--color-background-muted)',
+            color: 'var(--color-text-secondary)',
+            cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontFamily: 'inherit',
+          }}
+        >
+          <LockIcon size={shape === 'test' ? 22 : undefined} />
+        </button>
+      </Tooltip>
+      <div
+        style={{
+          fontSize: '0.75rem',
+          fontWeight: shape === 'test' ? 700 : 500,
+          color: 'var(--color-text-secondary)',
+          maxWidth: Math.max(72, Math.min(150, cellW - 10)),
+          textAlign: 'center',
+          lineHeight: 1.15,
+          // One line of title, so the "Premium" line fits the row's label band.
+          display: '-webkit-box',
+          WebkitLineClamp: 1,
+          WebkitBoxOrient: 'vertical',
+          overflow: 'hidden',
+        }}
+      >
+        {title}
+      </div>
+      <span className="ss-premium-label" aria-hidden="true">{t('premium.badge')}</span>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Suspense, lazy, useMemo, type ReactNode } from 'react';
+import { Suspense, lazy, useCallback, useMemo, type ReactNode } from 'react';
 import { Kicker } from './landing/LandingKit';
 import { Link } from 'react-router-dom';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -21,6 +21,7 @@ import { getCategoryHexColor } from '../lib/categories';
 import { CategoryGlyph } from './ui/techIcons';
 import { SharkFin } from './SharkFin';
 import { useAuth } from '../lib/auth';
+import { useLocks } from '../lib/locks';
 import type { RoadmapTopic, RoadmapStructure } from '../types/quiz';
 import './Today.css';
 import './DeepEndScreens.css';
@@ -114,6 +115,12 @@ export default function Today() {
   const extraUnlocks = useExtraUnlocks();
   const structureQuery = useRoadmapStructure();
   const structure: RoadmapStructure | null = structureQuery.data ?? null;
+  // The plan leaves out levels Premium opens on a free account.
+  const { lockOf, loading: planLoading } = useLocks();
+  const canStart = useCallback(
+    (topic: RoadmapTopic, level: number) => lockOf({ kind: 'learn-level', topic, level }) !== 'locked',
+    [lockOf],
+  );
 
   // buildToday is pure and offline: it reads local roadmap progress + the shared
   // spaced-mastery rules, so the plan renders even when the structure fetch
@@ -125,14 +132,15 @@ export default function Today() {
         levelCounts: levelCountsFor(structure, subject),
         availability: availabilityFor(structure, subject),
         extraUnlocks,
+        canStart,
       }),
-    [progress, subject, extraUnlocks, structure],
+    [progress, subject, extraUnlocks, structure, canStart],
   );
   const done = useMemo(() => doneToday(progress, subject, plan.target), [progress, subject, plan.target]);
 
   // Wait for the structure before showing a plan, so a fully-completed topic
   // can't flash a phantom "new" level. A warm cache resolves instantly.
-  if (structureQuery.isPending) {
+  if (structureQuery.isPending || planLoading) {
     return (
       <TodayShell t={t}>
         <div className="today-loading" role="status" aria-live="polite">

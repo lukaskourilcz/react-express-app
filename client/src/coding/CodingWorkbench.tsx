@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useLanguage } from '../i18n/LanguageContext';
 import { readJSON, writeJSON } from '../lib/storage';
-import { ApiError } from '../lib/api';
+import { ApiError, isPremiumRequired } from '../lib/api';
 import { Editor } from './Editor';
 import { formatCode } from './runner/format';
 import { runCodeTests, runPassed, type RunOutcome, type RunPhase } from './runner/run-tests';
@@ -304,6 +304,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       onVerdict?.(result, code);
     } catch (error) {
       if (error instanceof ApiError && error.code === 'invalid_session') setSubmitError(t('coding.verdict.sessionExpired'));
+      // The upgrade sheet is already open; the line beside the button says why.
+      else if (isPremiumRequired(error)) setSubmitError(t('error.premiumRequired'));
       else setSubmitError(t('coding.verdict.submitError'));
     } finally {
       setRunPhase(null);
@@ -336,7 +338,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setVerdict(result);
       onVerdict?.(result);
     } catch (error) {
-      setSubmitError(error instanceof ApiError ? error.message : t('coding.verdict.submitError'));
+      setSubmitError(isPremiumRequired(error) ? t('error.premiumRequired') : error instanceof ApiError ? error.message : t('coding.verdict.submitError'));
     } finally {
       setPhase('idle');
     }
@@ -375,7 +377,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setSolution(response.solution);
       onRevealed?.();
     } catch (error) {
-      setSubmitError(error instanceof ApiError && error.code === 'reveal_locked' ? t('coding.giveUpLocked', { n: giveUpAfter(rungs.length) }) : t('coding.verdict.submitError'));
+      setSubmitError(error instanceof ApiError && error.code === 'reveal_locked'
+        ? t('coding.giveUpLocked', { n: giveUpAfter(rungs.length) })
+        : isPremiumRequired(error) ? t('error.premiumRequired') : t('coding.verdict.submitError'));
     }
   }, [session, taken, onRevealed, rungs.length, t]);
 

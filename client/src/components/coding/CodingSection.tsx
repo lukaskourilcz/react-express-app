@@ -35,9 +35,20 @@ import {
   type CodingTrack,
 } from '../../../../shared/coding-catalog';
 import type { CodingProgressResponse, CodingTaskProgress, CodingVerdictResponse } from '../../../../shared/coding-api';
+import { Badge } from '@astryxdesign/core/Badge';
+import { isPremiumRequired } from '../../lib/api';
+import { useLocks, type LockState } from '../../lib/locks';
+import { openUpgradeSheet } from '../../lib/upgradeSheet';
+import { codingContent, gatedRef } from '../../../../shared/tiers';
 import '../../coding/Coding.css';
 
-type Status = 'open' | 'in_progress' | 'passed' | 'revealed' | 'due' | 'locked';
+type Status = 'open' | 'in_progress' | 'passed' | 'revealed' | 'due' | 'locked' | 'premium';
+
+/** Premium opens this task and the account is free: open the upgrade sheet. */
+const askForPremium = (taskId: string) => {
+  const content = codingContent(taskId);
+  openUpgradeSheet({ kind: content.kind, ref: gatedRef(content) });
+};
 
 const draftKey = (id: string) => `devshark:coding:draft:${id}`;
 const GROUPS = Object.keys(CODING_TECHNIQUE_GROUPS) as CodingTechniqueGroup[];
@@ -71,16 +82,20 @@ function useStatuses(progress: CodingProgressResponse | undefined) {
   const passed = useMemo(() => new Set(Object.entries(progress?.tasks ?? {}).filter(([, p]) => p.status === 'passed').map(([id]) => id)), [progress]);
   const due = useMemo(() => new Set(progress?.due ?? []), [progress]);
   const cleared = progress?.javascriptLevelsCleared ?? 0;
+  const { lockOf, loading: planLoading } = useLocks();
+  /** The Premium state of a task. A task already passed stays open on any plan. */
+  const premiumOf = useCallback((taskId: string): LockState => (evolvingPassed(taskId, passed) ? 'open' : lockOf(codingContent(taskId))), [lockOf, passed]);
   const unlocked = useCallback((task: CodingTaskSummary) => tierUnlocked({ track: task.track, tier: task.tier, progress: { passed }, tasks: CODING_INDEX, javascriptLevelsCleared: cleared }), [passed, cleared]);
   const lockReason = useCallback((track: CodingTrack, tier: CodingTier) => tierLockReason({ track, tier, progress: { passed }, tasks: CODING_INDEX, javascriptLevelsCleared: cleared }), [passed, cleared]);
   const statusOf = useCallback((task: CodingTaskSummary): Status => {
+    if (premiumOf(task.id) === 'locked') return 'premium';
     if (!unlocked(task)) return 'locked';
     if (due.has(task.id)) return 'due';
     const row: CodingTaskProgress | undefined = progress?.tasks[task.id];
     if (!row) return 'open';
     return row.status;
-  }, [unlocked, due, progress]);
-  return { passed, due, statusOf, unlocked, lockReason };
+  }, [unlocked, due, progress, premiumOf]);
+  return { passed, due, statusOf, unlocked, lockReason, premiumOf, planLoading };
 }
 
 const nextOpenTask = (tasks: readonly CodingTaskSummary[], statusOf: (t: CodingTaskSummary) => Status, after?: string): CodingTaskSummary | null => {
@@ -91,7 +106,7 @@ const nextOpenTask = (tasks: readonly CodingTaskSummary[], statusOf: (t: CodingT
 
 function StatusText({ status }: { status: Status }) {
   const { t } = useLanguage();
-  const glyph = status === 'passed' ? '✓' : status === 'due' ? '↻' : status === 'locked' ? '●' : status === 'revealed' ? '◐' : status === 'in_progress' ? '◔' : '○';
+  const glyph = status === 'passed' ? '✓' : status === 'due' ? '↻' : status === 'locked' || status === 'premium' ? '●' : status === 'revealed' ? '◐' : status === 'in_progress' ? '◔' : '○';
   return <span className={`cd-row__status cd-status--${status}`}><span aria-hidden>{glyph}</span>{t(`coding.status.${status}` as never)}</span>;
 }
 
@@ -115,9 +130,11 @@ function SaveButton({ taskId, saved, onToggle, busy, toolbar = false }: { taskId
   );
 }
 
-function TaskRow({ task, status, saved, onSave, saving }: {
+function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
   task: CodingTaskSummary;
   status: Status;
+  /** Anything but 'open' shows the "Premium" badge; 'locked' also refuses. */
+  premium?: LockState;
   saved?: boolean;
   onSave?: (taskId: string, next: boolean) => void;
   saving?: boolean;
@@ -130,6 +147,7 @@ function TaskRow({ task, status, saved, onSave, saving }: {
       <span className="cd-row__meta">
         {hasLearnLevel(task) && <span>{t('coding.level', { n: task.level })}</span>}
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
+        {premium !== 'open' && status !== 'premium' && <Badge variant="neutral" label={t('premium.badge')} />}
       </span>
       <StatusText status={status} />
     </>
@@ -139,9 +157,12 @@ function TaskRow({ task, status, saved, onSave, saving }: {
     : null;
   return (
     <li className="cd-row-item">
-      {locked
-        ? <div className="cd-row" aria-disabled="true">{inner}</div>
-        : <Link className="cd-row" to={`/coding/${task.track}/${task.id}`}>{inner}</Link>}
+      {status === 'premium'
+        // Focusable and announced as unavailable; activating it explains why.
+        ? <button type="button" className="cd-row cd-row--premium" aria-disabled="true" onClick={() => askForPremium(task.id)}>{inner}</button>
+        : locked
+          ? <div className="cd-row" aria-disabled="true">{inner}</div>
+          : <Link className="cd-row" to={`/coding/${task.track}/${task.id}`}>{inner}</Link>}
       {save}
     </li>
   );
@@ -153,7 +174,7 @@ function TaskRow({ task, status, saved, onSave, saving }: {
  * section, listed on that section's page. Each list has its own copy. The
  * FullStack list holds its short path and its long apps together; the plain
  * list on the Coding home holds the long projects only. */
-function EvolvingGallery({ passed, category, track }: { passed: ReadonlySet<string>; category?: EvolvingCategory; track?: CodingTrack }) {
+function EvolvingGallery({ passed, premiumOf, category, track }: { passed: ReadonlySet<string>; premiumOf: (taskId: string) => LockState; category?: EvolvingCategory; track?: CodingTrack }) {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const listRef = useRef<HTMLDivElement>(null);
@@ -184,6 +205,9 @@ function EvolvingGallery({ passed, category, track }: { passed: ReadonlySet<stri
     </div>
     <div ref={listRef} className={`cd-project-list${scrollable ? ' cd-project-list--scroll' : ''}`} tabIndex={scrollable ? 0 : undefined} role={scrollable ? 'region' : undefined} aria-label={scrollable ? t(titleKey) : undefined}>{challenges.map((challenge, index) => {
       const completed = challenge.stages.filter(id => evolvingPassed(id, passed)).length;
+      const resumeId = evolvingResume(challenge, passed);
+      // Stage one is free; on a free account the later stages read "Premium".
+      const laterLocked = challenge.stages.length > 1 && premiumOf(challenge.stages[1]) === 'locked';
       return <article key={challenge.id} className="cd-project">
         <span className="cd-project__number" aria-hidden>{String(index + 1).padStart(2, '0')}</span>
         <div className="cd-project__name">
@@ -194,8 +218,9 @@ function EvolvingGallery({ passed, category, track }: { passed: ReadonlySet<stri
         <div className="cd-project__progress">
           <div className="cd-stage-meter" aria-hidden>{challenge.stages.map(id => <span key={id} data-complete={evolvingPassed(id, passed)} />)}</div>
           <p>{t(challenge.short ? 'coding.evolving.levelsProgress' : 'coding.evolving.progress', { n: completed, total: challenge.stages.length })}</p>
+          {laterLocked && <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {t(challenge.short ? 'premium.levelsNote' : 'premium.stagesNote')}</p>}
         </div>
-        <SwimCta label={completed === challenge.stages.length ? t(challenge.short ? 'coding.evolving.levelsComplete' : 'coding.evolving.complete') : t('coding.continue')} onClick={() => {const id=evolvingResume(challenge,passed);navigate(`/coding/${evolvingTaskTrack(id)}/${id}`);}} />
+        <SwimCta label={completed === challenge.stages.length ? t(challenge.short ? 'coding.evolving.levelsComplete' : 'coding.evolving.complete') : t('coding.continue')} onClick={() => { if (premiumOf(resumeId) === 'locked') askForPremium(resumeId); else navigate(`/coding/${evolvingTaskTrack(resumeId)}/${resumeId}`); }} />
       </article>;
     })}</div>
   </section>;
@@ -206,7 +231,7 @@ export function CodingHome() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
-  const { passed, statusOf } = useStatuses(progress.data);
+  const { passed, statusOf, premiumOf } = useStatuses(progress.data);
   const next = useMemo(() => nextOpenTask(SECTION_INDEX, statusOf), [statusOf]);
   const dueCount = useMemo(() => (progress.data?.due ?? []).filter((id) => SECTION_INDEX.some((task) => task.id === id)).length, [progress.data]);
 
@@ -248,8 +273,8 @@ export function CodingHome() {
           );
         })}
       </section>
-      <EvolvingGallery passed={passed} category="debugging" />
-      <EvolvingGallery passed={passed} />
+      <EvolvingGallery passed={passed} premiumOf={premiumOf} category="debugging" />
+      <EvolvingGallery passed={passed} premiumOf={premiumOf} />
       <Link className="cd-fullstack-feature" to="/coding/fullstack">
         <div><Kicker>{t('coding.discovery.build')}</Kicker><h2>{t('coding.evolving.fullstack')}</h2><p>{t('coding.discovery.fullstack')}</p><span className="cd-link">{t('coding.discovery.explore')} <span aria-hidden>↗</span></span></div>
         <div className="cd-stack-path" aria-hidden><span>JS</span><i>→</i><span>TS</span><i>→</i><span>API</span><i>→</i><span>React</span></div>
@@ -290,13 +315,13 @@ export function FullStackScreen() {
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
-  const { passed } = useStatuses(progress.data);
-  if (isAuthenticated && progress.isLoading) return <LoadingScreen label={t('coding.loading')} />;
+  const { passed, premiumOf, planLoading } = useStatuses(progress.data);
+  if ((isAuthenticated && progress.isLoading) || planLoading) return <LoadingScreen label={t('coding.loading')} />;
   return <div className="cd-page ss-pop">
     <Link className="cd-link" to="/coding">{t('coding.title')}</Link>
     <h1>{t('coding.evolving.title')}</h1>
     {isAuthenticated && progress.isError && <p className="cd-note cd-note--error" role="alert">{t('coding.collections.failed')} <button className="cd-btn" onClick={()=>void progress.refetch()}>{t('coding.retry')}</button></p>}
-    <EvolvingGallery passed={passed} category="fullstack" />
+    <EvolvingGallery passed={passed} premiumOf={premiumOf} category="fullstack" />
   </div>;
 }
 
@@ -307,7 +332,7 @@ export function CodingTrackScreen() {
   const [params, setParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
-  const { passed, statusOf, lockReason } = useStatuses(progress.data);
+  const { passed, statusOf, lockReason, premiumOf } = useStatuses(progress.data);
   const track = isCodingTrack(trackParam) ? trackParam : null;
   const group = params.get('group');
   const statusFilter = params.get('status') ?? 'all';
@@ -377,7 +402,7 @@ export function CodingTrackScreen() {
           <p className="cd-track__count" style={{ margin: '6px 0 0' }}>{t('coding.progress', { passed: done, total: tasks.length })}</p>
         </div>
       </header>
-      <EvolvingGallery passed={passed} track={track} />
+      <EvolvingGallery passed={passed} premiumOf={premiumOf} track={track} />
       <div className="cd-chips" role="group" aria-label={t('coding.techniques')}>
         <button type="button" className="cd-chip" aria-pressed={!group} onClick={() => setFilter('group', null)}>{t('coding.techniques.all')}</button>
         {groupsHere.map((g) => <button key={g} type="button" className="cd-chip" aria-pressed={group === g} onClick={() => setFilter('group', g)}>{t(`coding.group.${g}` as never)}</button>)}
@@ -448,6 +473,7 @@ export function CodingTrackScreen() {
                   key={task.id}
                   task={task}
                   status={statusOf(task)}
+                  premium={premiumOf(task.id)}
                   saved={savedIds.has(task.id)}
                   onSave={isAuthenticated ? onSave : undefined}
                   saving={save.isPending}
@@ -470,7 +496,7 @@ export function CodingTaskScreen() {
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
-  const { statusOf } = useStatuses(progress.data);
+  const { statusOf, premiumOf } = useStatuses(progress.data);
   const track = isCodingTrack(trackParam) ? trackParam : null;
   // A retired track's deep link explains where the material went. The task is
   // never fetched, so no session is issued and nothing is started.
@@ -529,6 +555,24 @@ export function CodingTaskScreen() {
   if (retired && track) return <RetiredTrackNotice track={track} />;
   if (!track || !taskId) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p></div>;
   if (task.isLoading) return <LoadingScreen label={t('coding.loading')} />;
+  // Premium opens this task and the account is free. The API client already
+  // opened the upgrade sheet; the page says the same thing in words, and keeps
+  // a way back that does not depend on the sheet.
+  if (task.isError && isPremiumRequired(task.error)) {
+    return (
+      <div className="cd-page">
+        <header>
+          <Kicker><Link className="cd-link" to={`/coding/${track}`}>{t(`coding.track.${track}` as never)}</Link></Kicker>
+          <h1>{t('premium.taskTitle')}</h1>
+        </header>
+        <p className="cd-lead">{t('premium.taskBody')}</p>
+        <div className="cd-actions">
+          <button type="button" className="cd-btn cd-btn--primary" onClick={() => askForPremium(taskId)}>{t('profile.plan.see')}</button>
+          <Link className="cd-btn" to={`/coding/${track}`}>{t('coding.verdict.back')}</Link>
+        </div>
+      </div>
+    );
+  }
   if (task.isError || !task.data) {
     return (
       <div className="cd-page">
@@ -567,11 +611,18 @@ export function CodingTaskScreen() {
         {runIndex >= 0 && activeRun && <Link className="cd-link" to="/coding">{t('coding.run.stage', { n: runIndex + 1, total: activeRun.queue.length })}</Link>}
       </div>}
       {(bookmarks.isError || save.isError) && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')} <button className="cd-btn" onClick={() => void bookmarks.refetch()}>{t('coding.retry')}</button></p>}
+      {stage && stage.challenge.stages.length > 1 && premiumOf(stage.challenge.stages[1]) === 'locked' && (
+        <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {t(stage.challenge.short ? 'premium.levelsNote' : 'premium.stagesNote')}</p>
+      )}
       {stage && <nav className="cd-actions cd-stage-nav" aria-label={t(stage.challenge.short ? 'coding.evolving.levels' : 'coding.evolving.title')}>
         {stage.challenge.stages.map((id, index) => {
           const passed = new Set(Object.entries(progress.data?.tasks ?? {}).filter(([, task]) => task.status === 'passed').map(([id]) => id));
           const available = evolvingUnlocked(id, passed);
           const label = t(stage.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: index + 1, total: stage.challenge.stages.length });
+          if (id !== data.task.id && premiumOf(id) === 'locked') {
+            const premiumLabel = t('premium.stageLabel', { label });
+            return <button key={id} type="button" className="cd-btn" aria-disabled="true" aria-label={premiumLabel} title={premiumLabel} onClick={() => askForPremium(id)}>{index + 1}</button>;
+          }
           return available || id === data.task.id
             ? <Link key={id} className={`cd-btn${id === data.task.id ? ' cd-btn--primary' : ''}`} aria-label={label} title={label} aria-current={id === data.task.id ? 'step' : undefined} to={`/coding/${evolvingTaskTrack(id)}/${id}`}>{evolvingPassed(id, passed) ? '✓ ' : ''}{index + 1}</Link>
             : <button key={id} className="cd-btn" aria-label={label} title={label} disabled>{index + 1}</button>;
