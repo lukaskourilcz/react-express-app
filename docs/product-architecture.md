@@ -57,6 +57,26 @@ effect limited to the day count of a streak. No leaderboard in this product
 ranks by streak — every one of them ranks by correct answers and accuracy — so a
 protected streak moves nobody up anything.
 
+## Leaderboards
+
+`/leaderboard` opens on the last 30 days, so a new learner can reach the top;
+the all-time board is one tab away and Today is the daily challenge.
+`supabase/supabase-schema-040.sql` adds `user_activity_days` (user, UTC day,
+category, correct, answered). Three verified routines write it and nothing else
+does: `record_verified_quiz_result_v2` for quizzes and the daily challenge,
+`record_roadmap_answer_v2` for a signed-in learner's first answer to a Learn
+question, and `record_challenge_completion` for a finished Biggest Shark
+Challenge run. Each write sits behind the receipt that already makes its routine
+idempotent. Coding passes are not answers and are not counted.
+`window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
+fewer answers for the same number correct, and equal results share a rank. The
+all-time board keeps its sources (`subject_leaderboard`, `category_leaderboard`
+over `user_category_stats`), so it counts quiz and daily answers and not Learn.
+`api/leaderboard.ts` serves `period=30d` to everyone with `s-maxage=60`; a
+request with a Bearer token or `me=1` also gets the learner's own line and is
+answered `Cache-Control: private, no-store`. `friend_list` orders friends by
+correct answers and accuracy. No board ranks by XP or by streak.
+
 ## Coding section
 
 The `/coding` section, the coding phase inside Learn levels, and the GitHub
