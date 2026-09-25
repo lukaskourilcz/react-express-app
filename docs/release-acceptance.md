@@ -771,3 +771,12 @@ Local evidence, all executed on the branch head:
 | Browser specs `public` and `evolving`, the harness check, Storybook, Lighthouse | pass; harness 141 assertions; Storybook 5 of 5; performance 0.86 mobile and 0.99 desktop, accessibility 1 |
 | `npm run check:responsive` on the CI routes at 7 widths and in dark Czech, then on `/coding`, the four sections and `/coding/fullstack` at 7 widths and in dark at 360, 390 and 1280 | 28, 6, 42 and 9 probes, 0 issues |
 | `git diff --check` | clean |
+
+In production after the deploy of `5f865a0`, whose "Product quality" run passed on GitHub:
+
+| Check | Result |
+| --- | --- |
+| `GET /api/quiz/roadmap?resource=coding-task` for new levels in every section, and for `js-custom-mapset-1` | 200 for the new levels; 404 for the Custom id |
+| Anonymous submit of the reference solution to level 1 of a JavaScript, TypeScript, Algorithms, React and FullStack path (graded, never recorded) | all passed; React levels 1 of both React paths went through the isolated grader in about 5 s |
+| The same for a level above 1 | refused as designed: a signed-out visitor gets `locked: "evolving"` and no session |
+| Chromium on the deployed pages, with every GET replayed through curl | `/coding` has no Custom block; each section lists its paths in the requested order; the Link shortener leads FullStack; `js-path-mapset-1` loads as "Level 1 of 5"; no page errors |
