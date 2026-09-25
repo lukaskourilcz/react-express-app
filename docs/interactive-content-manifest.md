@@ -175,6 +175,7 @@ prints is the live count.
 | TypeScript A (`ts-easy2-*`) | 25 | all 17 short tags: utility-types, constraints, destructuring, map-set and two-pointer from 0 to 3; filter, keyof, map, spread, while, sort, strings and type-guards from 1 to 3, reduce to 4; readonly from 2 to 5, literal-types and record to 4 | JavaScript none; TypeScript none of its 24, fewest 3 Easy; React 11, Algorithms 5 |
 | TypeScript B (`ts-easy3-*`) | 25 | none were short; the fourteen tags at 3 rose to 5 or more: utility-types and spread to 7, filter and strings to 6, the other ten to 5; record, generics and tuples rose to 7 | JavaScript none; TypeScript none of its 24, fewest 5 Easy; React 11, Algorithms 5 |
 | React A (`react-easy2-*`) | 20 | all 11 short tags: custom-hook, pagination, abort, accessibility, splice, useContext and useRef from 0 to 3; effect-cleanup from 1 to 4, timers and slice from 1 to 3, derived-state from 2 to 3 | JavaScript, TypeScript and React none; React fewest 3 Easy of its 18; Algorithms 5 |
+| React B (`react-easy3-*`) | 20 | none were short; the ten tags at 3 rose to 6: useRef, useContext, custom-hook, timers, pagination, slice, abort, accessibility, derived-state and splice; effect-cleanup and useEffect from 4 to 5 | JavaScript, TypeScript and React none; React fewest 5 Easy of its 18; Algorithms 5 |
 
 JavaScript B also covers techniques the Coding home lists but no Medium
 challenge uses yet, so the matrix leaves them out. Regex went from 0 Easy
@@ -233,6 +234,20 @@ process, so the learner read "The React runner could not start". The browser
 only logs such a rejection. `lib/coding/react-runner.ts` now does the same while
 a suite runs, and "Only the latest search" checks for the rejection in both
 runners.
+
+React B thickens the ten rows the first wave left at three, with techniques the
+Medium challenges combine: a ref that keeps the latest draft for a timeout,
+focus handed back to the button that opened a form, a `useTheme` hook that
+throws when its provider is missing, a timeout that aborts a slow request, and
+one `AbortController` signal that cancels two requests or removes two
+listeners. Two findings matter for authors. React empties `ref.current` when a
+component unmounts, so a mousedown listener that `useOutsideClick` leaves
+behind stays quiet in a click test; that hidden case watches the listeners on
+`document` and `window` instead, and accepts one removed through an aborted
+signal. And a harness that drives `/sandbox/index.html` in Chromium needs the
+workbench frame's `allow-forms` flag beside `allow-scripts`: without it a
+click on a submit button submits nothing, and every form challenge fails in the
+browser while it passes on the server.
 
 A wave is one file per track under `lib/coding/tasks/easy-<track>-<wave>.ts`,
 its solutions under the same name in `lib/coding/solutions/`, and one line in
