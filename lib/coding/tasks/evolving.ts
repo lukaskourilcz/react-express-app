@@ -1,4 +1,4 @@
-import type { CodingFormat, CodingTask, CallTest, Localized, TypeTest } from '../../../shared/coding-catalog';
+import type { CodingFormat, CodingTask, CallTest, Difficulty, Localized, TypeTest } from '../../../shared/coding-catalog';
 import type { FailureCategory } from '../../../shared/coding-failure';
 import { EVOLVING_CHALLENGES } from '../../../shared/evolving';
 import { stageReferences } from './evolving-references';
@@ -17,6 +17,11 @@ interface Spec {
   format?: CodingFormat;
   /** The misconception each stage is built around, for the failure hints. */
   pitfalls?: FailureCategory[];
+  /** An authored label per stage, where the position band is wrong for the
+   * path. Every stage is tier 2, so an entry may say Easy or Medium only; a
+   * stage left out keeps its position label, which is how a fifth level of a
+   * Medium path still reads Hard. `npm run test:coding` enforces the bound. */
+  difficulties?: readonly Difficulty[];
   tests?: CallTest[][];
   typeTests?: TypeTest[][];
   suites?: string[];
@@ -103,6 +108,7 @@ export function buildEvolvingTasks(specs: Record<string, Spec>): CodingTask[] {
       ...(spec.approaches?.[index] ? { approach: { en: spec.approaches[index].map(step => step.en), cs: spec.approaches[index].map(step => step.cs) } } : {}),
       ...(spec.format ? { format: spec.format } : {}),
       ...(spec.pitfalls?.[index] ? { pitfall: spec.pitfalls[index] } : {}),
+      ...(spec.difficulties?.[index] ? { difficulty: spec.difficulties[index] } : {}),
       verify: 'tests', estimatedMinutes: 15 + index * 15,
       ...(spec.tests ? { tests: spec.tests.slice(0, index + 1).flat() } : {}),
       ...(spec.typeTests ? { typeTests: spec.typeTests.slice(0, index + 1).flat().map(test => ({...test, code: `{ ${test.code} }`})) } : {}),

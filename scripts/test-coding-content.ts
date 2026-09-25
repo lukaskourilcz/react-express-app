@@ -44,7 +44,7 @@ import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { renderCodingIndex } from './build-coding-index';
-import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed } from '../shared/evolving';
+import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, listedChallenges } from '../shared/evolving';
 
 // The app ships English only (`ENABLED_LANGS` in the client's LanguageContext),
 // so Czech copy is retained work rather than a shipped surface and a new task
@@ -472,7 +472,7 @@ async function main() {
   // fail its own visible tests, or the format is a label rather than an
   // exercise. Each one also declares the misconception it is built around.
   const debugTasks = CODING_TASKS.filter((task) => formatOf(task) === 'debug');
-  assert.ok(debugTasks.length >= 4, 'the debugging format needs an authored set, not one example');
+  assert.ok(debugTasks.filter((task) => !evolvingStage(task.id)).length >= 4, 'the four standalone repair tasks stay beside the debugging paths');
   for (const task of debugTasks) {
     assert.equal(task.track, 'javascript', 'the first debugging set is JavaScript; extend this check when others land');
     assert.ok((task.tests?.length ?? 0) >= 3, `${task.id}: a debugging task needs tests that pin the behaviour down`);
@@ -493,6 +493,57 @@ async function main() {
       && starterRun.results.length > 0
       && starterRun.results.every((one) => one.pass === true);
     assert.equal(starterPasses, false, `${task.id}: the broken starter must fail its own tests`);
+  }
+
+  // ── the debugging paths (#225) ─────────────────────────────────────────
+  // Three short paths replace the café-orders project on the Coding home.
+  // Every level starts from code that runs and is wrong: the starter for the
+  // first level, then the previous level's repair, which is what a learner
+  // carries forward. The first hint rung names the logging technique and the
+  // ladder ends in documentation before the solution.
+  const debugPaths = listedChallenges({ category: 'debugging' });
+  assert.deepEqual(debugPaths.map((project) => project.id), ['js-path-logging', 'js-path-tracing', 'js-path-edges'], 'the Coding home lists the three debugging paths');
+  const promised: Record<string, string> = { 'js-path-logging': 'EEEEE', 'js-path-tracing': 'MMMMM', 'js-path-edges': 'MMMMH' };
+  for (const project of debugPaths) {
+    assert.ok(project.short && project.track === 'javascript' && project.stages.length === 5, `${project.id}: a JavaScript path of five levels`);
+    assert.equal(project.stages.map((id) => difficultyOf(byId.get(id)!)[0].toUpperCase()).join(''), promised[project.id], `${project.id}: the difficulty the path promises`);
+    for (const [index, id] of project.stages.entries()) {
+      const task = byId.get(id)!;
+      assert.equal(formatOf(task), 'debug', `${id}: a debugging level`);
+      assert.match(task.hints.en[0] ?? '', /console\.[a-zA-Z]+\(|structuredClone\(/, `${id}: the first hint rung names the logging technique`);
+      assert.ok(task.approach && task.approach.en.length >= 3, `${id}: method steps between the hint and the documentation`);
+      assert.ok(task.references?.[0]?.url.startsWith('https://developer.mozilla.org/'), `${id}: the ladder ends in documentation`);
+      const earlier = index > 0 ? byId.get(project.stages[index - 1])!.tests!.length : 0;
+      const own = task.tests!.slice(0, task.tests!.length - earlier);
+      const startingCode = index === 0 ? task.starter : solutionFor(project.stages[index - 1])!.solution;
+      const start = await runInSandbox({ code: startingCode, calls: own.map((one) => one.call), expectations: own.map((one) => one.expected) });
+      assert.equal(start.codeError, null, `${id}: the code this level starts from runs`);
+      assert.ok(start.results.some((one) => one.pass !== true), `${id}: the code this level starts from fails the level's own checks`);
+    }
+  }
+  // The debug helper's hidden check reads what the call printed, so it tells
+  // a helper that logs and returns from one that only does half the job.
+  const printed = solutionFor('js-path-logging-5')!.hiddenTests!.find((one) => one.call.includes('printed'))!;
+  const helper = async (code: string) => allPassed(await runInSandbox({ code, calls: [printed.call], expectations: [printed.expected] }));
+  assert.equal(await helper('function debug(label, value) { console.log(label, value); return value; }'), true, 'console.log(label, value) and a return pass');
+  assert.equal(await helper('function debug(label, value) { console.log({ [label]: value }); return value; }'), true, 'the object shorthand passes too');
+  assert.equal(await helper('function debug(label, value) { console.debug(label, value); return value; }'), true, 'console.debug passes too');
+  assert.equal(await helper('function debug(label, value) { return value; }'), false, 'returning without logging fails');
+  assert.equal(await helper('function debug(label, value) { console.log(label, value); }'), false, 'logging without returning fails');
+  assert.equal(await helper('function debug(label, value) { console.log(label); console.log(value); return value; }'), false, 'two lines for one value fail');
+  // The café-orders project leaves every list and nothing else: its ten
+  // stages still open, grade and keep their drafts and passes (#225).
+  const retiredProject = EVOLVING_CHALLENGES.find((project) => project.id === 'js-evolving-debug')!;
+  assert.equal(retiredProject.unlisted, true, 'js-evolving-debug is unlisted');
+  const everyList = [undefined, 'fullstack', 'debugging'].map((category) => listedChallenges({ category: category as 'fullstack' | 'debugging' | undefined }))
+    .concat(CODING_SECTION_TRACKS.map((track) => listedChallenges({ track })));
+  assert.ok(everyList.every((list) => !list.includes(retiredProject)), 'no list shows js-evolving-debug');
+  const issued = new Set(CODING_SUMMARIES.map((summary) => summary.id));
+  assert.equal(retiredProject.stages.length, 10, 'the retired project keeps its ten stages');
+  for (const id of retiredProject.stages) {
+    assert.ok(issued.has(id), `${id}: still issued, so a draft, a pass or a bookmark still opens`);
+    assert.ok(solutionFor(id), `${id}: still graded`);
+    assert.ok(evolvingStage(id)?.challenge === retiredProject, `${id}: still unlocks in order`);
   }
 
   // ── the learner console ────────────────────────────────────────────────

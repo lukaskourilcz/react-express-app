@@ -1,9 +1,8 @@
 import type { CodingTrack, Localized } from './coding-catalog';
 
 /** `fullstack` groups the app builds on their own screen; `debugging` marks
- * the one path that is about finding bugs rather than writing features,
- * listed on its own on the Coding home. No category means an ordinary
- * evolving project. */
+ * the paths about finding bugs rather than writing features, listed on their
+ * own on the Coding home. No category means an ordinary evolving project. */
 export type EvolvingCategory = 'fullstack' | 'debugging';
 
 export interface EvolvingChallenge {
@@ -14,9 +13,12 @@ export interface EvolvingChallenge {
   stages: readonly string[];
   /** A short path: five levels at most and no checkpoints, each level adding
    * one function or feature to the same file. Short paths are listed on their
-   * section's own page (a FullStack one on the FullStack screen), not on the
-   * Coding home, which keeps the longer projects. */
+   * section's own page (a FullStack one on the FullStack screen, the
+   * debugging ones on the Coding home), not beside the longer projects. */
   short?: true;
+  /** Retired from every list, and nothing else: its stages still open from a
+   * link, grade, unlock in order and keep their drafts, passes and XP. */
+  unlisted?: true;
 }
 
 const challenge = (id: string, track: CodingTrack, en: string, cs: string, category?: EvolvingCategory): EvolvingChallenge => ({
@@ -28,6 +30,10 @@ const challenge = (id: string, track: CodingTrack, en: string, cs: string, categ
 const path = (id: string, track: CodingTrack, en: string): EvolvingChallenge => ({
   id, track, short: true, title: { en, cs: '' }, stages: [1, 2, 3, 4, 5].map(level => `${id}-${level}`),
 });
+
+/** A short debugging path: JavaScript, listed with the debugging category on
+ * the Coding home. Every level starts from code that runs and is wrong. */
+const debugPath = (id: string, en: string): EvolvingChallenge => ({ ...path(id, 'javascript', en), category: 'debugging' });
 
 /** A short FullStack path: JavaScript first, then TypeScript, then React, one
  * level each in the order `tracks` gives. */
@@ -61,6 +67,9 @@ export const EVOLVING_CHALLENGES: readonly EvolvingChallenge[] = [
   path('react-path-effects', 'react', 'Effects and loading'),
   path('alg-path-pointers', 'algorithms', 'Two pointers and windows'),
   path('alg-path-stacks', 'algorithms', 'Stacks and queues'),
+  debugPath('js-path-logging', 'Log it right'),
+  debugPath('js-path-tracing', 'Trace the state'),
+  debugPath('js-path-edges', 'Edges and inputs'),
   fullstackPath('links', 'Link shortener', ['js', 'ts', 'ts', 'react', 'react']),
   fullstack('planner', 'Team task planner', 'Týmový plánovač úkolů'),
   fullstack('stockroom', 'Stockroom manager', 'Správa skladu'),
@@ -75,8 +84,19 @@ export const EVOLVING_CHALLENGES: readonly EvolvingChallenge[] = [
   challenge('react-evolving-board', 'react', 'Task board', 'Nástěnka úkolů'),
   challenge('react-evolving-catalog', 'react', 'Product explorer', 'Průzkumník produktů'),
   challenge('react-evolving-form', 'react', 'Form wizard', 'Průvodce formulářem'),
-  challenge('js-evolving-debug', 'javascript', 'Debugging path', 'Ladicí cesta', 'debugging'),
+  // Replaced on the Coding home by the three debugging paths above (#225).
+  // Its ten stages stay, so a draft, a pass or a bookmark on one still opens.
+  { ...challenge('js-evolving-debug', 'javascript', 'Debugging path', 'Ladicí cesta', 'debugging'), unlisted: true },
 ];
+
+/** The projects one list shows: with `track`, that section's own short paths;
+ * with `category`, that category's projects and paths; with neither, the
+ * longer projects the Coding home lists. An unlisted project is in none. */
+export function listedChallenges(where: { category?: EvolvingCategory; track?: CodingTrack }): EvolvingChallenge[] {
+  return EVOLVING_CHALLENGES.filter(challenge => !challenge.unlisted && (where.track
+    ? challenge.short && !challenge.category && challenge.track === where.track
+    : challenge.category === where.category && (where.category !== undefined || !challenge.short)));
+}
 
 export function evolvingStage(id: string) {
   const challenge = EVOLVING_CHALLENGES.find(item => item.stages.includes(id));
