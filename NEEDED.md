@@ -4,6 +4,12 @@ The repository implementation is complete for the current web brief. This file l
 
 Production database migrations through `supabase/supabase-schema-035.sql` were applied and verified — 001–024 on 2026-07-28, and 026–035 on 2026-09-09. The devShark Vercel project, its product scope, Supabase credentials, and session secret are configured; `/api/health` reports `database: ok`, `serviceRole: ok`, and `rateLimiter: configured` (Upstash Redis distributed rate limiting is live). Sentry error monitoring and PostHog analytics (EU cloud, reverse-proxied) are configured with privacy-forward defaults; admin ACL (`ADMIN_EMAILS`, `OWNER_EMAIL`) is set; Supabase leaked-password protection is on. StudyShark, which this repository also built until 2026-09-24, moved to `lukaskourilcz/studyshark` and is not deployed; its Vercel project still has to go (#214).
 
+## Kickoff 2026-09-25 · devShark as marketingShark's only brand
+
+`KICKOFF-25-9-2026.md` at the repository root is the order; issues #217 and #218 are the steps.
+
+- [ ] **Rename `lukaskourilcz/react-express-app` to `lukaskourilcz/devShark`** — the first of the three renames (order in quorum's kickoff), after own-dashboard #75 is live; confirm the `devShark` Vercel project still deploys from the renamed repository. #217 does the repository side. [imp:3] [owner:me] [time:15m] [kind:setup]
+
 ## Before production launch
 
 - [ ] **Delete the paused StudyShark Vercel project, after removing its URL from Supabase Auth** — the `studyshark-app` project was paused on 2026-09-25 and answers 503, but the connector cannot delete a project. First remove `https://studyshark-app.vercel.app/**`, and any StudyShark preview pattern, from Supabase → Authentication → URL Configuration, and the StudyShark origin from the Google OAuth client: once the project is deleted anyone can claim that `vercel.app` subdomain, and a leftover redirect entry would hand them sign-in tokens. Then delete the project (Settings → Advanced → Delete Project) and remove `VITE_STUDYSHARK_URL` from the devShark project. Steps in [#214](https://github.com/lukaskourilcz/react-express-app/issues/214). `[imp:4]` `[owner:me]` `[time:15m]` `[kind:deploy]`
