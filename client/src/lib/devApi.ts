@@ -2,7 +2,7 @@
 // current Supabase token; a legacy password can additionally be kept in
 // sessionStorage when that migration fallback is explicitly enabled server-side.
 
-import type { CoinSettings } from '../../../shared/rewards';
+import type { CoinSettings, MerchSettings, MerchSku } from '../../../shared/rewards';
 import { apiFetch, ApiError } from './api';
 
 const PW_KEY = 'devquiz:dev-password';
@@ -130,9 +130,10 @@ export interface GameSettings {
   /** One-liner dev tips shown on the loading screen (empty = none). */
   devTips: string[];
   ownerEmail: string;
-  /** The merchandise configuration. /dev has no editor for it yet, so the form
-   * sends it back unchanged; leaving it out would reset it on every save. */
-  merch?: unknown;
+  /** The merchandise configuration, edited under /dev → Merchandise (#229).
+   * The Settings form sends it back unchanged; leaving it out would reset it
+   * on every save. */
+  merch?: MerchSettings;
   /** What earns coins (#227). */
   coins: CoinSettings;
 }
@@ -252,3 +253,64 @@ export interface LearningPathReadiness {
 
 export const listLearningPathReadiness = () =>
   adminFetch<{ paths: LearningPathReadiness[] }>('learning-paths');
+
+/* ── merchandise operations (#229) ─────────────────────────────────────── */
+
+/** One order in the fulfilment queue: what a parcel needs, and nothing more. */
+export interface FulfilmentOrder {
+  order_id: string;
+  payment_kind: string;
+  state: string;
+  total_minor: number | null;
+  currency: string | null;
+  token_total: number | null;
+  ship_name: string;
+  ship_line1: string;
+  ship_line2: string | null;
+  ship_city: string;
+  ship_postal: string;
+  ship_country: string;
+  carrier: string | null;
+  tracking_ref: string | null;
+  test_mode: boolean;
+  created_at: string;
+  /** A claimed learning-path package, paid at zero. */
+  package: boolean;
+}
+
+export interface MerchStockRow {
+  sku: MerchSku;
+  variant: string;
+  /** Units the owner will still post this month. */
+  onHand: number;
+  /** Units paid orders already hold. */
+  reserved: number;
+  updatedAt?: string;
+}
+
+export interface FulfilmentResponse {
+  orders: FulfilmentOrder[];
+  items: { order_id: string; sku: MerchSku; variant: string; quantity: number }[];
+  stock: MerchStockRow[];
+}
+
+/** `queue` is the picking list (paid redemptions and claimed packages); any
+ * other value is one order state. */
+export type FulfilmentView = 'queue' | 'submitted' | 'shipped' | 'awaiting_payment' | 'cancelled' | 'refunded';
+
+// op=fulfilment lives on the user handler and checks the same admin identity.
+const fulfilmentFetch = <T,>(init: { method?: string; body?: unknown; query?: string } = {}) =>
+  apiFetch<T>(`/api/user/[op]?op=fulfilment${init.query ?? ''}`, {
+    method: init.method ?? 'GET',
+    headers: { 'x-dev-password': getDevPassword() },
+    body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+  });
+
+export const getFulfilment = (view: FulfilmentView = 'queue') =>
+  fulfilmentFetch<FulfilmentResponse>({ query: `&state=${encodeURIComponent(view)}` });
+
+export const advanceOrder = (orderId: string, op: 'submit' | 'ship' | 'cancel', tracking?: { carrier: string; trackingRef: string }) =>
+  fulfilmentFetch<{ applied?: boolean; outcome?: string }>({ method: 'POST', body: { orderId, op, ...(tracking ?? {}) } });
+
+export const setMerchStock = (sku: MerchSku, variant: string, onHand: number) =>
+  fulfilmentFetch<{ stock: MerchStockRow }>({ method: 'POST', body: { op: 'stock', sku, variant, onHand } });

@@ -228,7 +228,7 @@ const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
   },
 });
 
-const captionStyle: React.CSSProperties = {
+export const captionStyle: React.CSSProperties = {
   fontSize: '0.75rem',
   color: 'var(--color-text-secondary)',
 };
@@ -601,7 +601,7 @@ export default function DevSettings() {
   );
 }
 
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
+export function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div
       style={{

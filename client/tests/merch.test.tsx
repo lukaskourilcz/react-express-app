@@ -178,3 +178,60 @@ describe('the Rewards merchandise section', () => {
     expect(screen.queryByText('Awaiting payment')).toBeNull();
   });
 });
+
+describe('/dev → Merchandise', () => {
+  it('turns a Spreadshop quote into minor units and names the first missing field', async () => {
+    const { draftToPricing } = await import('../src/components/dev/DevMerch');
+    const draft = {
+      priced: true, base: '29.99', print: '0', shipping: '4,90', packaging: '0', retail: '39.99', currency: 'eur',
+      taxIncluded: true, coins: '10000', regions: 'cz, sk', vendor: 'sprd.net AG', effectiveFrom: '2026-10-01',
+    };
+    expect(draftToPricing(draft)).toEqual({
+      pricing: {
+        unitCostMinor: 2999, printCostMinor: 0, shippingCostMinor: 490, packagingCostMinor: 0, priceMinor: 3999,
+        currency: 'EUR', taxIncluded: true, tokenPrice: 10000, regions: ['CZ', 'SK'], vendor: 'sprd.net AG', effectiveFrom: '2026-10-01',
+      },
+    });
+    expect(draftToPricing({ ...draft, shipping: '' })).toEqual({ missing: 'shipping' });
+    expect(draftToPricing({ ...draft, regions: 'Czechia' })).toEqual({ missing: 'countries' });
+    expect(draftToPricing({ ...draft, coins: '0' })).toEqual({ missing: 'coin price' });
+  });
+
+  it('lists a claimed package in the picking list and records the carrier and tracking', async () => {
+    const posted: unknown[] = [];
+    const order = {
+      order_id: 'reward-0123456789abcdef01234567', payment_kind: 'tokens', state: 'awaiting_payment', total_minor: 0,
+      currency: 'EUR', token_total: 0, ship_name: 'A Learner', ship_line1: '1 Street', ship_line2: null, ship_city: 'Brno',
+      ship_postal: '60200', ship_country: 'CZ', carrier: null, tracking_ref: null, test_mode: false,
+      created_at: '2026-09-24T10:00:00Z', package: true,
+    };
+    server.use(
+      http.get('*/api/admin/settings', () => HttpResponse.json({ settings: { merch: { enabled: false, cashCheckoutEnabled: false, testMode: true, pricing: {}, crownTokenPrice: 1200, streakProtectionTokenPrice: 250, policyUrl: '' } } })),
+      http.get('*/api/user/*', () => HttpResponse.json({
+        orders: [order],
+        items: [{ order_id: order.order_id, sku: 't-shirt', variant: 'M', quantity: 1 }, { order_id: order.order_id, sku: 'mug', variant: '', quantity: 1 }],
+        stock: [{ sku: 'mug', variant: '', onHand: 5, reserved: 1 }],
+      })),
+      http.post('*/api/user/*', async ({ request }) => {
+        posted.push(await request.json());
+        return HttpResponse.json({ applied: true });
+      }),
+    );
+    const { default: DevMerch } = await import('../src/components/dev/DevMerch');
+    render(<DevMerch />, { wrapper });
+    const card = await screen.findByRole('article', { name: /Order reward-/ });
+    expect(within(card).getByText('Learning-path package')).toBeInTheDocument();
+    expect(within(card).getByText('T-shirt · M × 1')).toBeInTheDocument();
+    expect(card.querySelector('address')).toHaveTextContent('A Learner1 Street60200 BrnoCZ');
+    const ship = within(card).getByRole('button', { name: 'Mark shipped' });
+    expect(ship).toBeDisabled();
+    fireEvent.change(within(card).getByLabelText('Carrier'), { target: { value: 'DHL' } });
+    fireEvent.change(within(card).getByLabelText('Tracking number'), { target: { value: 'JJD000123' } });
+    await waitFor(() => expect(ship).toBeEnabled());
+    fireEvent.click(ship);
+    await waitFor(() => expect(posted).toContainEqual({ orderId: order.order_id, op: 'ship', carrier: 'DHL', trackingRef: 'JJD000123' }));
+    // The month's cap for the mug: 5 left to post, 1 held, 4 free.
+    const mugRow = (await screen.findByLabelText('Mug')).closest('tr')!;
+    expect(within(mugRow).getAllByRole('cell').map((cell) => cell.textContent)).toEqual(expect.arrayContaining(['1', '4']));
+  });
+});
