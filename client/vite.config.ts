@@ -8,8 +8,14 @@ import { PRODUCT_CATALOG, resolveCatalogProductId } from './product-catalog';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { TopicArticle, topicPath } from './src/components/topics/TopicArticle';
-import { PUBLIC_ORIGIN, topicSchema } from './src/lib/publicMetadata';
+import { PUBLIC_ORIGIN, PUBLIC_PAGES, premiumSchema, topicSchema } from './src/lib/publicMetadata';
 import { TOPIC_LANDINGS } from './src/lib/topicCatalog';
+import { PremiumCancelStaticArticle, PremiumStaticArticle, type Translate } from './src/components/PremiumFacts';
+import { en } from './src/i18n/translations';
+
+/** The English dictionary for the static pages, with the app's {name} slots. */
+const translate: Translate = (key, vars) => en[key].replace(/\{(\w+)\}/g, (slot, name: string) => (vars && name in vars ? String(vars[name]) : slot));
+const STATIC_PAGE_BODIES = { '/premium': PremiumStaticArticle, '/premium/cancel': PremiumCancelStaticArticle } as const;
 
 // `ANALYZE=true npm run build` emits a treemap of the bundle to
 // dist/bundle-stats.html (open it to inspect the design-system/router/app split) plus a
@@ -116,7 +122,7 @@ function productMetadata(env: Record<string, string>): Plugin {
       // the same public HTML that production serves.
       server.middlewares.use((req, _res, next) => {
         const [pathname, search] = (req.url || '').split('?');
-        if (/^\/(?:cs\/)?topics\/[a-z0-9-]+\/?$/.test(pathname)) {
+        if (/^\/(?:cs\/)?topics\/[a-z0-9-]+\/?$/.test(pathname) || /^\/premium(?:\/cancel)?\/?$/.test(pathname)) {
           req.url = `${pathname.replace(/\/$/, '')}/index.html${search ? `?${search}` : ''}`;
         }
         next();
@@ -152,6 +158,29 @@ function productMetadata(env: Record<string, string>): Plugin {
         const topicDir = path.join(outDir, topicPath(topic.slug, locale));
         await mkdir(topicDir, { recursive: true });
         await writeFile(path.join(topicDir, 'index.html'), html);
+        urls.push(url);
+      }
+      // The app pages with public HTML (#222): /premium and /premium/cancel.
+      // Same shell, their own title, description, canonical and body, so the
+      // price with VAT, the renewal terms and the cancellation route read the
+      // same without JavaScript.
+      for (const page of PUBLIC_PAGES) {
+        const url = origin + page.path;
+        const pageTitle = en[page.titleKey];
+        const description = en[page.descriptionKey];
+        const schema = page.schema === 'premium'
+          ? `<script id="public-schema" type="application/ld+json">${JSON.stringify(premiumSchema(pageTitle, description, url)).replace(/</g, '\\u003c')}</script>`
+          : '';
+        const body = renderToStaticMarkup(createElement(STATIC_PAGE_BODIES[page.path], { t: translate }));
+        const html = indexHtml
+          .replace(/<title>[^<]*<\/title>/, `<title>${escape(pageTitle)}</title>`)
+          .replace(/(<meta (?:name|property)="(?:description|og:description|twitter:description)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(description) + end)
+          .replace(/(<meta (?:name|property)="(?:og:title|twitter:title)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(pageTitle) + end)
+          .replace('</head>', `<link rel="canonical" href="${url}" /><meta property="og:url" content="${url}" />${schema}</head>`)
+          .replace('<div id="root"></div>', `<div id="root"><main class="ss-public-fallback">${body}</main></div>`);
+        const pageDir = path.join(outDir, page.path);
+        await mkdir(pageDir, { recursive: true });
+        await writeFile(path.join(pageDir, 'index.html'), html);
         urls.push(url);
       }
       const fallback = `<main class="ss-public-fallback ss-info-page"><h1>${escape(title)}</h1><p>${escape(description)}</p><ul class="ss-topic-links">${topics.map(topic => `<li><a href="${topicPath(topic.slug, 'en')}">${escape(topic.title.en)}</a></li>`).join('')}</ul></main>`;

@@ -8,6 +8,9 @@
     "strict": true,
     "emitDeclarationOnly": true,
     "outDir": "./node_modules/.tmp/tsc-node",
+    "rootDir": "..",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
     "jsx": "react-jsx"
   },
   "include": [
@@ -16,6 +19,9 @@
     "product-catalog.ts",
     "src/lib/topicCatalog.ts",
     "src/components/topics/TopicArticle.tsx",
-    "src/lib/publicMetadata.ts"
+    "src/lib/publicMetadata.ts",
+    "src/components/PremiumFacts.tsx",
+    "src/i18n/translations.ts",
+    "../shared/**/*.ts"
   ]
 }

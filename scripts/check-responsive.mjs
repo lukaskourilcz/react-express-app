@@ -63,7 +63,7 @@ const DEFAULT_ROUTES = [
   '/roadmap/specializations/fde/fde-v1-m01',
   '/settings/github',
   '/profile',
-  '/support',
+  '/premium',
   '/curation',
   '/privacy',
   '/terms',

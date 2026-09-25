@@ -1,4 +1,4 @@
-import { PUBLIC_ORIGIN, topicFromPath, topicSchema } from './lib/publicMetadata';
+import { NOINDEX_PATHS, PUBLIC_ORIGIN, premiumSchema, publicPage, topicFromPath, topicSchema } from './lib/publicMetadata';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { IconButton as AxIconButton } from '@astryxdesign/core/IconButton';
@@ -333,7 +333,12 @@ function App() {
     document.title = publicTopic ? `${publicTopic.topic.title[publicTopic.locale]} · ${CURRENT_PRODUCT.brand}` : location.pathname === '/'
       ? productText(CURRENT_PRODUCT.title, lang)
       : translatedTitle;
-    const description = publicTopic ? publicTopic.topic.description[publicTopic.locale] : productText(CURRENT_PRODUCT.description, lang);
+    // /premium and /premium/cancel carry their own description and canonical,
+    // the same ones the build writes into their static HTML.
+    const page = publicPage(location.pathname);
+    const description = publicTopic
+      ? publicTopic.topic.description[publicTopic.locale]
+      : page ? t(page.descriptionKey) : productText(CURRENT_PRODUCT.description, lang);
     const setMeta = (selector: string, value: string) => {
       document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', value);
     };
@@ -343,7 +348,9 @@ function App() {
     setMeta('meta[name="twitter:title"]', document.title);
     setMeta('meta[name="twitter:description"]', description);
     document.querySelectorAll('link[rel="canonical"], link[hreflang], #public-schema, meta[property="og:url"], meta[name="robots"]').forEach(node => node.remove());
-    const canonical = publicTopic ? PUBLIC_ORIGIN + location.pathname.replace(/\/$/, '') : location.pathname === '/' ? PUBLIC_ORIGIN + '/' : null;
+    const canonical = publicTopic
+      ? PUBLIC_ORIGIN + location.pathname.replace(/\/$/, '')
+      : location.pathname === '/' ? PUBLIC_ORIGIN + '/' : page ? PUBLIC_ORIGIN + page.path : null;
     if (canonical) {
       const link = document.createElement('link'); link.rel = 'canonical'; link.href = canonical; document.head.append(link);
     }
@@ -354,7 +361,10 @@ function App() {
       }
       const schema = document.createElement('script'); schema.id = 'public-schema'; schema.type = 'application/ld+json';
       schema.textContent = JSON.stringify(topicSchema(document.title, description, canonical, publicTopic.locale)); document.head.append(schema);
-    } else if (location.pathname.includes('/topics/')) {
+    } else if (page?.schema === 'premium' && canonical) {
+      const schema = document.createElement('script'); schema.id = 'public-schema'; schema.type = 'application/ld+json';
+      schema.textContent = JSON.stringify(premiumSchema(document.title, description, canonical)); document.head.append(schema);
+    } else if (location.pathname.includes('/topics/') || NOINDEX_PATHS.includes(location.pathname)) {
       const robots = document.createElement('meta'); robots.name = 'robots'; robots.content = 'noindex'; document.head.append(robots);
     }
 

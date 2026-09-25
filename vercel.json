@@ -134,6 +134,14 @@
       "destination": "/topics/:slug/index.html"
     },
     {
+      "source": "/premium",
+      "destination": "/premium/index.html"
+    },
+    {
+      "source": "/premium/cancel",
+      "destination": "/premium/cancel/index.html"
+    },
+    {
       "source": "/sitemap.xml",
       "destination": "/sitemap.xml"
     },
