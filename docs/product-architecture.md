@@ -221,8 +221,9 @@ learner redeem coins for merchandise. Premium changes which content a learner
 may start. Grading, explanations, XP amounts, scores, streaks, ranks,
 leaderboards and matchmaking work the same on both tiers.
 
-Status on 2026-09-25: the tiers (issue #220, step D1) and billing (issue #221,
-step D2) are built. Billing stays off until the owner's Stripe account, Prices
+Status on 2026-09-25: the tiers (issue #220, step D1), billing (issue #221,
+step D2) and the public copy, `/premium` and the legal pages (issue #222, step
+D3) are built. Billing stays off until the owner's Stripe account, Prices
 and environment exist (`NEEDED.md`); until then an admin opens Premium by hand
 with a manual grant. Migration 039, including its billing section, is proven on
 a local Postgres and waits for production.
@@ -347,18 +348,34 @@ a local Postgres and waits for production.
   asks the server to apply the session; `/premium/cancel` is the public two-step
   cancellation and withdrawal page, linked from the footer whenever Stripe is
   connected. `PremiumCheckoutButton` is the only way into Checkout: with billing
-  off it reads "Premium opens soon" and shows no button, signed out it signs in,
-  a paying account gets "Manage billing", anyone else continues to Stripe. The
-  `/premium` page (#222) uses it. The Profile plan line offers "Manage billing"
-  for a paid subscription. Deleting an account ends its subscriptions at Stripe
-  first and stops if Stripe cannot be reached.
+  off it reads "Premium opens soon" and shows no button, signed out it signs in
+  and comes back to the same page (`client/src/lib/authReturn.ts`), a paying
+  account gets "Manage billing", anyone else continues to Stripe. The Profile
+  plan line offers "Manage billing" for a paid subscription. Deleting an account
+  ends its subscriptions at Stripe first and stops if Stripe cannot be reached.
+- **Public copy and legal pages (#222).** `/premium` (`PremiumPage.tsx`) shows
+  the two plans with "VAT included", the renewal, the waiver sentence and the
+  14-day refund beside the buttons (`PremiumFacts.tsx`), what Premium opens,
+  the plan table and six questions; a subscriber sees the plan line instead of
+  a second checkout. The plan table (`landing/ComparisonTable.tsx`) compares
+  Free and Premium on the landing and on `/premium`. Premium sits next to
+  Leaderboard in the header's icon group and in the drawer, and `/support`
+  redirects to `/premium`. The Terms and the privacy policy (`LegalPages.tsx`)
+  read the trader from `TRADER` in `client/product-catalog.ts`, whose fields
+  render only when set, and the seller of record from `billing.seller`. The
+  build prerenders `/premium` and `/premium/cancel` into static HTML listed in
+  the sitemap (`PUBLIC_PAGES` in `client/src/lib/publicMetadata.ts`); `/premium`
+  carries `isAccessibleForFree: false` with both prices as offers, the topic
+  guides keep `true`, and `/premium/success` is `noindex`.
 - **Stripe environment:** `BILLING_ENABLED`, `STRIPE_SECRET_KEY`,
   `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PREMIUM_MONTHLY`,
   `STRIPE_PRICE_PREMIUM_ANNUAL`, `STRIPE_MANAGED_PAYMENTS` (`true` or `false`,
   no default) and `PUBLIC_ORIGIN` (defaults to `https://devshark.app`), plus the
   optional `RESEND_API_KEY` and `RESEND_FROM`. Checkout sells Premium only with
   `BILLING_ENABLED=true` and every value present; `/api/settings` tells the
-  browser `billing.enabled` and `billing.cancellable` and nothing else. The
+  browser `billing.enabled`, `billing.cancellable` and `billing.seller` (`link`
+  under Managed Payments, `trader` with plain Stripe, `null` until both the key
+  and `STRIPE_MANAGED_PAYMENTS` are set) and nothing else. The
   portal, the webhook and the cancel page need only the key, so people who
   already pay keep them after sales are switched off. With billing off the
   locks still apply.

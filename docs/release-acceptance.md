@@ -806,3 +806,27 @@ Local evidence, all executed on the lane branch head:
 Billing simulation, run locally rather than in Stripe: `npm run test:billing` moves one subscription through `invoice.payment_failed` with the live subscription `past_due` and its period three days past (Premium stays, the plan line's `inGrace` is true), then eight days past (Free), then `customer.subscription.deleted` (canceled). The run with a Stripe test clock against a sandbox needs the owner's account and is listed in `NEEDED.md`. So are the fixture payloads: they were written from Stripe's API reference for `2026-08-26.dahlia`, not captured, because no account exists yet.
 
 Not verified here: anything against Stripe itself (Checkout's rendering of the consent and the order-button text, Managed Payments approval, the portal configuration, real webhook delivery through Vercel's raw-body replay), and production. Each is an owner item in `NEEDED.md`.
+
+## 2026-09-25 — public copy, `/premium` and the legal pages (D3, #222)
+
+What changed: the landing stops saying devShark is free. The hero reads "Free to start", the `$0` stat became the three free topics, and the pledge, the footer line, the plan table (Free against Premium, without the AI and bilingual rows) and the founder note carry the handoff's section 4.1 copy. `/premium` shows both plans with "VAT included", the renewal, the waiver sentence and the 14-day refund beside the buttons, what Premium opens, the plan table and six questions; Premium sits next to Leaderboard in the header's icon group, and `/support` redirects to it. The Terms and the privacy policy were rewritten for Premium, Stripe and Link, and Spreadshop. The trader's details render from `TRADER` in `client/product-catalog.ts` only when set, and none is set yet. The build prerenders `/premium` and `/premium/cancel`, which the sitemap now lists (13 URLs).
+
+Local evidence, all executed on the lane branch head:
+
+| Check | Result |
+| --- | --- |
+| `grep -rn "free forever\|Free forever\|is free\|zdarma" client/src --include=*.ts --include=*.tsx` | 11 matches, all in the retained `translations.cs.ts` |
+| `npm run typecheck:api` | exit 0 |
+| `npm run test:launch` | exit 0; adds the public copy contracts: no English string promising free, the waiver on `/premium` equal to the one Checkout stores, "VAT included" beside every price, no urgency copy, the routes, rewrites, `noindex` and Premium schema, `TRADER` null or real |
+| `npm run test:billing` | exit 0; 24 checks, now with the seller of record in the public settings |
+| `npm run test:client` | exit 0; 11 files, 99 tests (13 new in `client/tests/premium-page.test.tsx`) |
+| `npm run build`, `npm run check:bundle` | exit 0; 214,735 of 243,000 gzip bytes (209,176 before; the legal copy lives in the English dictionary) |
+| `npm run check:public` | exit 0; 13 URLs; `/premium` is a LearningResource with `isAccessibleForFree: false` and both prices as offers with VAT included, the guides keep `true` |
+| `npm run check:security`, `npm run check:unused` | exit 0 |
+| `npm run check:responsive` over `/`, `/premium`, `/premium/cancel`, `/terms`, `/privacy` at 360, 390, 768 and 1280, light and dark | exit 0; 20 probes each, 0 issues |
+| `npm run check:responsive`, every route at 360, 390, 768 and 1024 (the header gained an icon, text fields gained a touch floor) | exit 0; 68 probes each, 0 issues |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client` | exit 0; 0 vulnerabilities |
+| `git diff --check` | clean |
+| Chromium, the same five routes and eight width and theme pairs, phones with touch | every link, button and disclosure at least 44px tall on a phone, a focus ring on each text link and question; the Astryx email field is 32px with a mouse, by the same desktop-density rule as the buttons, and 44px on touch; at 360px all three plan-table columns show with no sideways scroll |
+
+Not verified here: production, the Stripe Checkout page itself, and the legal wording, which waits for the owner's lawyer. The trader's name, IČO, registered address and email are owner items in `NEEDED.md`; there is no EU ODR link because the platform closed on 20 July 2025.
