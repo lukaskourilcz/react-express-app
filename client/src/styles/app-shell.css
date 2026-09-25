@@ -680,3 +680,31 @@
 @media (prefers-reduced-motion: reduce) {
   .ss-fin-hover__swimmer { transform: none !important; transition: none; }
 }
+
+/* ── Free tier and Premium (shared/tiers.ts, #220) ──────────────────────────
+ *
+ * A Premium lock is a word, never a colour alone: the "Premium" label rides
+ * with every locked control, and the control stays focusable so the upgrade
+ * sheet can open from the keyboard. The sheet itself is one Astryx dialog on
+ * the Deep End surface above; this adds its list and nothing else. */
+.ss-upgrade-sheet__kicker { margin: 0 0 8px; }
+.ss-upgrade-sheet__list {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 4px;
+  line-height: 1.45;
+}
+.ss-premium-label {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+.ss-premium-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--color-text-secondary);
+}

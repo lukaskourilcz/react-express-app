@@ -39,6 +39,7 @@ import ErrorRetry from './ErrorRetry';
 import { FlameIcon, BoltIcon, TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, SoundOffIcon } from './ui/icons';
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
+import PlanLine from './PlanLine';
 import './DeepEndScreens.css';
 
 // Astryx Card colour variants used for the tinted stat / streak tiles.
@@ -265,6 +266,7 @@ function ProfileBody({
                 </HStack>
                 <IdentitySettings />
               </div>
+              <PlanLine />
             </Card>
           </div>
         </div>

@@ -26,6 +26,7 @@ import BrandFooter from './components/BrandFooter';
 import { CURRENT_PRODUCT, productText } from './lib/products';
 import { CloseIcon } from './components/ui/icons';
 import ConnectionStatus from './components/ui/ConnectionStatus';
+import UpgradeSheetHost from './components/UpgradeSheetHost';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
 // modules — heavy for the initial bundle. Lazy-load it so the app shell
@@ -693,6 +694,7 @@ function App() {
 
       <XpToaster />
       <ConnectionStatus />
+      <UpgradeSheetHost />
       <RegisterPromptSnackbar />
       <AppToast
         open={signupBonusOpen}

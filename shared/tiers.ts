@@ -36,6 +36,10 @@ export const FREE_EVOLVING_STAGES = 1;
 export const FREE_CODING_SHARE = { target: 0.15, min: 0.12, max: 0.18 } as const;
 /** Quizzes stay open in every category. Set to 'free-topics' to tighten later. */
 export const QUIZ_FREE_CATEGORIES: 'all' | 'free-topics' = 'all';
+/** The prices shown to a learner, VAT included. Billing charges the provider's
+ * Price objects (section 3.1 of the second handoff); this is the display copy
+ * and must match them. */
+export const PREMIUM_PRICE = { currency: 'EUR', symbol: '€', monthly: '3.99', annual: '39.99' } as const;
 
 /** The standalone coding challenges open on the free tier: the starter set.
  *

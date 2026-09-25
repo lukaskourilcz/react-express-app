@@ -10,7 +10,8 @@ export const queryClient = new QueryClient({
     queries: {
       staleTime: 60_000,
       gcTime: 5 * 60_000,
-      retry: 1,
+      // A 402 is an answer (Premium opens this), not a transient failure.
+      retry: (failures, error) => (error as { status?: unknown } | null)?.status !== 402 && failures < 1,
       refetchOnWindowFocus: false,
     },
   },

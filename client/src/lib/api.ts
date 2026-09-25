@@ -1,6 +1,8 @@
 import { supabase } from './supabaseClient';
 import { getStoredLang, translateStatic } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
+import { openUpgradeSheet } from './upgradeSheet';
+import { PREMIUM_REQUIRED, type GatedKind } from '../../../shared/tiers';
 
 const DEFAULT_TIMEOUT_MS = 15_000;
 
@@ -32,6 +34,10 @@ async function getAccessToken(): Promise<string | null> {
   }
 }
 
+/** The server refused locked content; the upgrade sheet is already open. */
+export const isPremiumRequired = (err: unknown): boolean =>
+  err instanceof ApiError && err.status === 402 && err.code === PREMIUM_REQUIRED;
+
 export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
   const { timeoutMs = DEFAULT_TIMEOUT_MS, signal, ...rest } = opts;
   const controller = new AbortController();
@@ -58,11 +64,16 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
     });
 
     if (!res.ok) {
-      let body: { error?: { code?: string; message?: string } } = {};
+      let body: { error?: { code?: string; message?: string; kind?: GatedKind; ref?: string } } = {};
       try {
         body = await res.json();
       } catch {
         // non-JSON body, keep default
+      }
+      // Locked content, in one place: whatever asked, the learner sees the
+      // upgrade sheet rather than an error, even from a stale client.
+      if (res.status === 402 && body?.error?.code === PREMIUM_REQUIRED) {
+        openUpgradeSheet({ kind: body.error.kind, ref: body.error.ref });
       }
       throw new ApiError(
         body?.error?.message || res.statusText || 'Request failed',
@@ -107,6 +118,8 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   migration_required: 'error.serviceUnavailable',
   step_unavailable: 'error.stepUnavailable',
   task_retired: 'error.taskRetired',
+  premium_required: 'error.premiumRequired',
+  entitlement_unavailable: 'error.entitlementUnavailable',
 };
 
 // not_found spans several endpoints whose English server messages are more
