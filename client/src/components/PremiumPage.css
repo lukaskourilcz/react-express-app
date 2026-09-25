@@ -1,0 +1,88 @@
+/* /premium (#222). It sits on the public info-page layout (.ss-info-page,
+ * .ss-info-card, .ss-info-note) and adds the plan pair, the small print, the
+ * included list and the questions. Tokens only; the accent marks the price and
+ * nothing else. */
+.ss-premium-page { display: flex; flex-direction: column; gap: clamp(1.75rem, 4vw, 2.5rem); }
+.ss-premium-section-title {
+  margin: 0 0 0.85rem;
+  font: 800 1.35rem/1.2 var(--font-family-heading);
+  letter-spacing: -0.015em;
+}
+
+/* Your plan: the Profile's plan line, without its separator rule. */
+.ss-premium-current .ss-premium-section-title { font-size: 1.05rem; margin-bottom: 0.25rem; }
+.ss-premium-current .de-plan-line { margin-top: 0; padding-top: 0; border-top: none; }
+
+/* The two plans side by side, stacked below 640px. */
+.ss-premium-plan-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.ss-premium-plan { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+.ss-premium-plan h3 { margin: 0; font: 750 1.05rem var(--font-family-heading); }
+.ss-info-card .ss-premium-plan__price { margin: 0.25rem 0 0; color: var(--color-text-secondary); line-height: 1.2; }
+.ss-premium-plan__price strong {
+  font: 800 2.25rem/1 var(--font-family-heading);
+  letter-spacing: -0.02em;
+  color: var(--color-text-primary);
+}
+.ss-info-card .ss-premium-plan__saving { margin: 0; font-size: 0.85rem; font-weight: 700; color: var(--brand-accent); }
+.ss-info-card .ss-premium-plan__terms { margin: 0.25rem 0 0; font-size: 0.9rem; line-height: 1.5; }
+.ss-premium-plan__action { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; margin-top: auto; padding-top: 0.75rem; }
+.ss-premium-plan__action > * { max-width: 100%; }
+.ss-premium-plans > .ss-info-note,
+.ss-premium-plans > .ss-premium-note { margin-top: 0.85rem; }
+
+/* The small print before paying: plain text, never hidden behind a toggle. */
+.ss-premium-smallprint {
+  margin-top: 1rem;
+  padding: 1rem 1.1rem;
+  border-radius: var(--radius-inner);
+  background: var(--color-background-muted);
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.ss-premium-smallprint h3 { margin: 0 0 0.5rem; font: 750 0.95rem var(--font-family-heading); color: var(--color-text-primary); }
+.ss-premium-smallprint ul { margin: 0; padding-left: 1.15rem; display: grid; gap: 0.4rem; }
+.ss-premium-smallprint q { color: var(--color-text-primary); }
+
+/* Standalone text links: 44px targets, a visible focus ring. */
+.ss-premium-links { display: flex; flex-wrap: wrap; gap: 0 1.25rem; margin: 0.5rem 0 0; }
+.ss-premium-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--brand-accent);
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+.ss-premium-links a:focus-visible,
+.ss-premium-faq__item summary:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+
+.ss-premium-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.45rem; line-height: 1.5; max-width: 68ch; }
+
+/* Questions: native disclosure, so keyboard and screen readers get it free. */
+.ss-premium-faq__list { display: flex; flex-direction: column; border-top: 1px solid var(--ss-card-line); }
+.ss-premium-faq__item { border-bottom: 1px solid var(--ss-card-line); }
+.ss-premium-faq__item summary {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.6rem 0.25rem;
+  cursor: pointer;
+  font-weight: 700;
+  list-style: none;
+}
+.ss-premium-faq__item summary::-webkit-details-marker { display: none; }
+.ss-premium-faq__item summary::after {
+  content: '+';
+  margin-left: auto;
+  font: 700 1.1rem/1 var(--font-family-heading);
+  color: var(--color-text-secondary);
+}
+.ss-premium-faq__item[open] summary::after { content: '−'; }
+.ss-premium-faq__item p { margin: 0 0.25rem 0.75rem; max-width: 68ch; color: var(--color-text-secondary); line-height: 1.6; }
+.ss-premium-faq__item .ss-premium-links { margin: -0.25rem 0.25rem 0.5rem; }
+
+@media (max-width: 639px) {
+  .ss-premium-plan-grid { grid-template-columns: 1fr; }
+}

@@ -1,6 +1,6 @@
 import { PUBLIC_ORIGIN, topicFromPath, topicSchema } from './lib/publicMetadata';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { IconButton as AxIconButton } from '@astryxdesign/core/IconButton';
 import { AppToast } from './components/ui/AppToast';
 import { useIsMobile } from './lib/useMediaQuery';
@@ -27,6 +27,7 @@ import { CURRENT_PRODUCT, productText } from './lib/products';
 import { CloseIcon } from './components/ui/icons';
 import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
+import { takeAuthReturn } from './lib/authReturn';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
 // modules — heavy for the initial bundle. Lazy-load it so the app shell
@@ -45,7 +46,6 @@ const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ defaul
 const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
 const Challenge = lazy(() => import('./components/Challenge'));
 const DevPage = lazy(() => import('./components/dev/DevPage'));
-const SupportPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.SupportPage })));
 const PrivacyPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.PrivacyPage })));
 const TermsPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.TermsPage })));
 const CurationPage = lazy(() => import('./components/CurationPage').then((m) => ({ default: m.CurationPage })));
@@ -65,6 +65,7 @@ const FdeModule = lazy(() => import('./components/paths/LearningPathScreens').th
 const DsaOverview = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.DsaOverview })));
 const DsaModule = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.DsaModule })));
 const NotFoundPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.NotFoundPage })));
+const PremiumPage = lazy(() => import('./components/PremiumPage'));
 const PremiumSuccessPage = lazy(() => import('./components/PremiumBillingPages').then((m) => ({ default: m.PremiumSuccessPage })));
 const PremiumCancelPage = lazy(() => import('./components/PremiumBillingPages').then((m) => ({ default: m.PremiumCancelPage })));
 
@@ -96,9 +97,11 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/shop': 'title.shop',
   '/play': 'title.play',
   '/challenge': 'title.challenge',
-  '/support': 'title.support',
   '/privacy': 'title.privacy',
   '/terms': 'title.terms',
+  '/premium': 'title.premium',
+  '/premium/success': 'title.premiumSuccess',
+  '/premium/cancel': 'title.premiumCancel',
   '/classroom': 'title.classroom',
   '/dev': 'title.dev',
 };
@@ -115,6 +118,15 @@ const TrophyNavIcon = () => (
   <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" />
     <path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
+  </svg>
+);
+
+// Premium: a cut gem, the one plan mark in the header. Decorative; the
+// button carries the word "Premium" as its accessible name and tooltip.
+const PremiumNavIcon = () => (
+  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 3h12l4 6-10 12L2 9z" />
+    <path d="M2 9h20M12 21 8 9l2-6M12 21l4-12-2-6" />
   </svg>
 );
 
@@ -140,6 +152,7 @@ const NAV_ITEMS: {
   { to: '/challenge', key: 'nav.challenge', isActive: (p) => p.startsWith('/challenge') },
   { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play'), feature: 'multiplayer' },
   { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard' },
+  { to: '/premium', key: 'nav.premium', isActive: (p) => p === '/premium' || p.startsWith('/premium/') },
   { to: '/collection', key: 'nav.cards', isActive: (p) => p === '/collection' || p === '/cards' },
   { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop' },
   { to: '/coding', key: 'nav.coding', isActive: (p) => p.startsWith('/coding') },
@@ -276,6 +289,15 @@ function App() {
     lastUserId.current = id;
   }, [user]);
 
+  // Back to the page that asked for the sign-in (/premium, the checkout
+  // success page). Supabase always returns to the origin; lib/authReturn.ts
+  // holds the path for fifteen minutes in this tab only.
+  useEffect(() => {
+    if (!user) return;
+    const path = takeAuthReturn();
+    if (path && path !== window.location.pathname + window.location.search) navigate(path, { replace: true });
+  }, [user, navigate]);
+
   // One-time 200-token welcome bonus on first sign-in. Idempotent across
   // devices via a user_metadata flag inside grantRegistrationBonusIfNew.
   useEffect(() => {
@@ -291,10 +313,10 @@ function App() {
 
   // Nav items for features that are currently enabled in /dev → Settings.
   const navItems = NAV_ITEMS.filter((item) => !item.feature || config.features[item.feature]);
-  // Leaderboard & Shop aren't learning surfaces, so they don't crowd the centre
-  // nav — they get compact icon buttons in the right slot instead (and stay in
-  // the mobile drawer via navItems).
-  const SECONDARY_ROUTES = ['/leaderboard', '/shop'];
+  // Leaderboard, Premium & Shop aren't learning surfaces, so they don't crowd
+  // the centre nav — they get compact icon buttons in the right slot instead
+  // (and stay in the mobile drawer via navItems).
+  const SECONDARY_ROUTES = ['/leaderboard', '/premium', '/shop'];
   const primaryNavItems = navItems.filter((item) => !SECONDARY_ROUTES.includes(item.to));
   const showLeaderboardIcon = navItems.some((item) => item.to === '/leaderboard');
 
@@ -373,7 +395,7 @@ function App() {
     location.pathname === '/collection' ||
     location.pathname === '/leaderboard' ||
     location.pathname === '/shop' ||
-    location.pathname === '/support' ||
+    location.pathname === '/premium' ||
     location.pathname === '/privacy' ||
     location.pathname === '/terms' ||
     location.pathname === '/classroom' ||
@@ -460,7 +482,7 @@ function App() {
               ))}
             </nav>
 
-            {/* Right slot: Leaderboard + Shop icons, sound/theme toggles, and
+            {/* Right slot: Leaderboard + Premium + Shop icons, sound/theme toggles, and
                 the auth widget. On mobile the sound/theme toggles live in the
                 nav drawer (not here), so they never crowd the account avatar. */}
             <div className="ss-slot ss-slot-end">
@@ -477,6 +499,14 @@ function App() {
                     icon={<TrophyNavIcon />}
                   />
                 )}
+                <AxIconButton
+                  variant="ghost"
+                  size="sm"
+                  label={t('nav.premium')}
+                  tooltip={t('nav.premium')}
+                  onClick={() => navigate('/premium')}
+                  icon={<PremiumNavIcon />}
+                />
                 <AxIconButton
                   variant="ghost"
                   size="sm"
@@ -640,9 +670,11 @@ function App() {
                 <Route path="/play" element={<PlayLanding />} />
                 <Route path="/play/:code" element={<PlayMatch />} />
                 <Route path="/challenge" element={<Challenge />} />
-                <Route path="/support" element={<SupportPage />} />
+                {/* The voluntary-support page is retired (#222): Premium replaced it. */}
+                <Route path="/support" element={<Navigate to="/premium" replace />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
+                <Route path="/premium" element={<PremiumPage />} />
                 <Route path="/premium/success" element={<PremiumSuccessPage />} />
                 <Route path="/premium/cancel" element={<PremiumCancelPage />} />
                 <Route path="/curation" element={<CurationPage />} />

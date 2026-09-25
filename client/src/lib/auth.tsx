@@ -3,6 +3,7 @@ import type { User } from '@supabase/supabase-js';
 import { supabase } from './supabaseClient';
 import { apiFetch } from './api';
 import { registerAccessTokenReader } from './roadmap';
+import { clearAuthReturn, rememberAuthReturn } from './authReturn';
 
 // Cache the latest access token in memory so the pagehide beacon (which can't
 // await getSession()) can attach the Authorization header synchronously.
@@ -46,7 +47,10 @@ interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  signInWithGoogle: () => Promise<void>;
+  /** Sign in with Google. `returnTo` is a path on this site to come back to
+   * after the round trip (see lib/authReturn.ts); without it the visitor lands
+   * on the home page. */
+  signInWithGoogle: (returnTo?: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -98,8 +102,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (returnTo?: string) => {
+    // A sign-in from anywhere else must not inherit an older page's return.
+    clearAuthReturn();
+    if (returnTo) rememberAuthReturn(returnTo);
     if (!supabase) {
+      clearAuthReturn();
       throw new Error('Sign-in is not available in this deployment.');
     }
     // On success supabase-js redirects to Google; on failure (e.g. the Google
@@ -110,7 +118,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       provider: 'google',
       options: { redirectTo: window.location.origin },
     });
-    if (error) throw error;
+    if (error) {
+      clearAuthReturn();
+      throw error;
+    }
   };
 
   const signOut = async () => {

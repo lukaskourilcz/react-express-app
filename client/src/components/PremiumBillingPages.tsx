@@ -157,7 +157,12 @@ export function PremiumSuccessPage() {
             <Button
               variant="primary"
               label={t('auth.logIn')}
-              onClick={() => { setSignInError(null); void signInWithGoogle().catch((error) => setSignInError(friendlyError(error))); }}
+              onClick={() => {
+                setSignInError(null);
+                // Come back to this checkout after the Google round trip.
+                void signInWithGoogle(`/premium/success?session_id=${encodeURIComponent(sessionId)}`)
+                  .catch((error) => setSignInError(friendlyError(error)));
+              }}
             />
           )}
         </div>

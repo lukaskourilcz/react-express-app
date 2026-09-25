@@ -3,13 +3,14 @@
 // no caller can show a checkout entry point that the server would refuse:
 //
 //   billing off (BILLING_ENABLED unset)   "Premium opens soon", no button
-//   signed out                            sign in first
+//   signed out                            sign in first, then come back here
 //   a paid subscription already           "Manage billing" (the portal)
 //   otherwise                             continue to Stripe for this plan
 //
 // The button only leads to Stripe's hosted page. The order button that
 // commits to paying is Stripe's, with the wording set on the server.
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { useLanguage } from '../i18n/LanguageContext';
 import { friendlyError } from '../lib/api';
@@ -22,6 +23,7 @@ export default function PremiumCheckoutButton({ plan }: { plan: BillingPlan }) {
   const billing = useBilling();
   const { isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
   const entitlement = useEntitlement();
+  const location = useLocation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,7 +47,9 @@ export default function PremiumCheckoutButton({ plan }: { plan: BillingPlan }) {
     : paying
       ? t('profile.plan.manage')
       : t(plan === 'annual' ? 'billing.checkout.annual' : 'billing.checkout.monthly');
-  const action = !isAuthenticated ? signInWithGoogle : paying ? openBillingPortal : () => startCheckout(plan);
+  const action = !isAuthenticated
+    ? () => signInWithGoogle(location.pathname + location.search)
+    : paying ? openBillingPortal : () => startCheckout(plan);
 
   return (
     <>
