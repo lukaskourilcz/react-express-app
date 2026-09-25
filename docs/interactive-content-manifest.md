@@ -344,6 +344,74 @@ Four points for authors:
   loader, limiter or history inside its call and shares nothing with the
   others.
 
+TypeScript A (`ts-mh-*`) is 6 Medium and 4 Hard challenges, and the first
+TypeScript challenges at tier 4. The Medium ones apply discounts told apart by
+a union tag, with a `never` check for a kind nobody handled; hand out the page
+after a cursor; group chat messages into bubbles by sender; check a form whose
+rules are typed per field through a mapped type; sort commit subjects into
+release notes behind a type guard; and fill in the missing days of a chart. The
+Hard ones print a text table whose formats receive each column's own type, pick
+an order from three warehouses, import tab-separated rows through a schema of
+parsers typed with `ReturnType`, and apply a formatter's edits given against
+the original text. Each one has visible and hidden type tests beside its
+runtime checks. The wave took the TypeScript matrix from 24 tags on Medium
+challenges to 25, none of them short: slice joins, with three Easy challenges.
+The Hard challenges add one tag no Medium one uses, optional, with three.
+
+React A (`react-mh-*`) is 9 Medium challenges, 4 Hard ones at tier 4 and 2
+capstones at tier 5, beside the track's ten checklist capstones. The Medium
+ones share a basket through context and a reducer, load photos page by page,
+sort a table by any column with `aria-sort`, show notices that dismiss
+themselves, turn typed text into tags, select all or some messages with an
+indeterminate box, bind keyboard shortcuts through a hook that keeps the newest
+handler in a ref, rename a file in place and hand the focus back, and ask about
+an export job until it is done. The Hard ones build a menu button and a city
+combobox the way the ARIA Authoring Practices describe them, a sign-up form
+that shows an error once its field has been left, and a carousel that stops for
+the pointer, the focus and its Pause button. The capstones search as you type,
+with a debounce, an abort and a cache, and autosave a note one save at a time,
+with a last save when the page closes. The wave took the React matrix from 18
+tags on Medium challenges to 20, none of them short: useReducer, with three
+Easy challenges, and conditional, with four.
+
+Without the quota skip the two waves would change eleven Learn levels, six in
+TypeScript and five in React. React level 21 would ask for the basket and the
+shortcut challenges instead of the useFetch and useLocalStorage hooks, and
+TypeScript level 15 would drop `ts-write-reduce` for the cursor page.
+
+Six more points for authors:
+
+- A React starter must not leave a timer or listener running once the suite
+  unmounts it. The first carousel starter started a `setInterval` with no
+  cleanup: every proof passed, and then `npm run test:coding` never exited,
+  because the interval kept Node alive. The starter now clears its interval and
+  is still wrong in the ways the checks look for.
+- A check that means "this notice" must pick one that is not also the oldest.
+  The first notices suite only ever dismissed the oldest notice, so a list that
+  removed the oldest on every Dismiss and every timeout passed it. The visible
+  check now dismisses the newer one.
+- A hidden case that watches timers filters by the delay the prompt names (300
+  ms for the notices, 200 ms for the carousel), so Testing Library's own waits
+  never count, and patches both `globalThis` and `window`, because a component
+  may call either. `timersClearedOnUnmount` in the React A solutions builds that
+  case.
+- In production a React submission runs in a microVM whose whole command,
+  loading jsdom and React included, has 10 seconds
+  (`lib/coding/react-isolated.ts`). The slowest suite before this wave took 3.2
+  seconds against its reference solution in the Node runner. The first drafts of four React A suites took 3.4
+  to 5.9, so their prompts now name shorter delays (a 100 ms debounce, a 150 ms
+  autosave wait, 200 ms slides, 300 ms notices) and say that a real app would
+  wait longer. Every check keeps a margin of at least 50 ms on each side of a
+  timer.
+- Each type test is one line appended to the answer, so two type tests that
+  declare the same name collide. A destructured `__value` and a later
+  `const __value` in one list failed with "Cannot redeclare" before either could
+  test anything. Give every type-test variable a name of its own.
+- An `<input type="email">` strips the spaces around its value, as HTML's value
+  sanitization requires, so jsdom hands the change handler a trimmed email. With
+  that field type a check cannot tell a solution that trims from one that does
+  not; the sign-up checks accept both.
+
 ## What none of these change
 
 None of the four awards XP, completes a level, or opens anything. A puzzle pass
