@@ -134,8 +134,9 @@ export function parseValidUntil(value: unknown, now = Date.now()): { ok: true; v
 }
 
 /** Whether the account exists. An unconfigured admin API (local development)
- * cannot tell, and does not block the grant. */
-async function accountExists(supabase: SupabaseClient, userId: string): Promise<boolean> {
+ * cannot tell, and does not block the grant. The billing webhook asks the same
+ * question before it mirrors a subscription (`lib/billing/sync.ts`). */
+export async function accountExists(supabase: SupabaseClient, userId: string): Promise<boolean> {
   try {
     const { data, error } = await withTimeout(supabase.auth.admin.getUserById(userId));
     if (error) return !/not.?found|invalid/i.test(error.message ?? '');
