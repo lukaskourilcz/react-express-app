@@ -59,7 +59,6 @@ export const en = {
   'nav.menu': 'Open navigation menu',
   'nav.menuTitle': 'Navigation',
   'footer.ariaUtility': 'Legal information and site settings',
-  'footer.free': 'Learning stays free. Optional support never changes access, XP or rankings.',
   'footer.legal': 'Legal and support',
   'footer.support': 'Support',
   'figure.inWords': 'This figure in words',

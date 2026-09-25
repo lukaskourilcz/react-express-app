@@ -16,7 +16,6 @@ export default function BrandFooter() {
   return (
     <footer className="ss-brand-footer" aria-label={t('footer.ariaUtility')}>
       <div className="ss-brand-footer__meta">
-        <span>{t('footer.free')}</span>
         <nav aria-label={t('footer.legal')}>
           <Link to="/support">{t('footer.support')}</Link>
           <Link to="/curation">{t('footer.curation')}</Link>

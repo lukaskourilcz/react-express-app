@@ -56,7 +56,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'nav.menu': 'Otevřít navigační menu',
   'nav.menuTitle': 'Navigace',
   'footer.ariaUtility': 'Právní informace a nastavení webu',
-  'footer.free': 'Učení zůstává zdarma. Dobrovolná podpora nikdy nemění přístup, XP ani pořadí.',
   'footer.legal': 'Právní informace a podpora',
   'footer.support': 'Podpora',
   'figure.inWords': 'Tenhle obrázek slovy',
