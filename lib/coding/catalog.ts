@@ -38,6 +38,7 @@ import { JAVASCRIPT_DEBUG_TASKS } from './tasks/javascript-debug';
 import { JAVASCRIPT_DEBUG_TASKS_CS } from './tasks/javascript-debug.cs';
 import { ALGORITHM_TASKS } from './tasks/algorithms';
 import { ALGORITHM_TASKS_CS } from './tasks/algorithms.cs';
+import { EASY_JAVASCRIPT_A_TASKS } from './tasks/easy-javascript-a';
 import { SPECS, buildEvolvingTasks } from './tasks/evolving';
 import { TYPESCRIPT_EVOLVING } from './tasks/evolving-typescript';
 import { REACT_EVOLVING } from './tasks/evolving-react';
@@ -47,6 +48,19 @@ import { expandEvolvingTasks } from './tasks/evolving-checkpoints';
 import { DEBUG_EVOLVING } from './tasks/evolving-debug';
 import { PATH_SPECS } from './tasks/paths';
 import { buildFullStackPathTasks } from './tasks/paths-fullstack';
+
+/** The Easy-band waves of #226, one file per track and wave
+ * (`tasks/easy-<track>-<wave>.ts`, solutions under the same name). They fill
+ * the Coding section's Easy band and stay out of every Learn level's quota:
+ * that quota takes the first tasks of a level in catalogue order, so a new
+ * tier 1 task would otherwise replace the one a level has always asked for.
+ * English only, with no Czech overlay. */
+const EASY_BAND: CodingTaskSource[][] = [
+  EASY_JAVASCRIPT_A_TASKS,
+];
+
+/** Ids of the Easy-band tasks; `tasksForLevel` in `./active` skips them. */
+export const EASY_BAND_TASK_IDS: ReadonlySet<string> = new Set(EASY_BAND.flat().map((task) => task.id));
 
 const sources: { tasks: CodingTaskSource[]; cs: Record<string, CodingTaskCs> }[] = [
   { tasks: JAVASCRIPT_TASKS, cs: JAVASCRIPT_TASKS_CS },
@@ -58,6 +72,7 @@ const sources: { tasks: CodingTaskSource[]; cs: Record<string, CodingTaskCs> }[]
   { tasks: REACT_LOOP_TASKS, cs: REACT_LOOP_TASKS_CS },
   { tasks: SYSTEM_DESIGN_TASKS, cs: SYSTEM_DESIGN_TASKS_CS },
   { tasks: ALGORITHM_TASKS, cs: ALGORITHM_TASKS_CS },
+  ...EASY_BAND.map((tasks) => ({ tasks, cs: {} })),
 ];
 
 /** Every task: tracks in catalogue order, then level, tier, and authored order
