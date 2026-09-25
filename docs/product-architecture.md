@@ -15,7 +15,8 @@ subjects; the API's subject scope refuses them.
 ## Sources of truth
 
 - `client/product-catalog.ts` owns the product name, localized SEO copy and
-  product resolution. `resolveCatalogProductId` returns devShark for an unset
+  product resolution, and the outside URLs: `SOCIAL_PROFILES`, `MERCH_SHOP`
+  (the Spreadshop shop and items) and the trader details in `TRADER`. `resolveCatalogProductId` returns devShark for an unset
   environment and throws for any other product or subject lock, so a build
   still configured for another product fails instead of shipping devShark
   under its name.
@@ -453,6 +454,23 @@ production (issue #227, step D8).
   code and counts only; `referrals` has no browser policy. "Invite a friend"
   sits after How to earn on `/shop`. A grant of 0 in `/dev` turns invitations
   off.
+- **Merchandise through Spreadshop (step D9, #229, migration 043).** Spreadshop
+  (sprd.net AG) prints, sells and ships devShark merchandise and has no order
+  API, so the app links out and embeds nothing: no Spreadshop script, iframe or
+  CSP entry. `MERCH_SHOP` in `client/product-catalog.ts` holds the shop's URL
+  and one URL per item, all null until the owner sets them; a tile shows "Buy
+  at the devShark shop" only for a set URL, and a mockup only when the build
+  finds `client/public/merch/<sku>.<ext>` (`vite.config.ts` lists them). Cash is
+  paid in the Spreadshop checkout and `cashCheckoutEnabled` stays off. A coin
+  redemption or a claimed learning-path package is a `merch_orders` row; the
+  owner orders it at base price from the shop preview and works the queue in
+  `/dev` → Merchandise, which also edits the quotes and the monthly caps
+  (`op=fulfilment`, `set_merch_stock`). 043 adds the hoodie (t-shirt sizes) to
+  both SKU checks and lets a claimed package, which 035 leaves awaiting payment
+  at zero, ship without touching `reserved`. `lib/rewards/spreadshop.ts` reads
+  Spreadshop's own monthly promotion on the server when `SPREADSHOP_API_KEY`
+  and `SPREADSHOP_SHOP_ID` are set, and `/api/settings` returns it as
+  `merchPromo`; coins never buy a discount.
 
 ## Deployment
 
