@@ -157,8 +157,7 @@
   .rm-path-canvas { min-width: 100%; }
 }
 
-/* Finish-screen title picks up h5 sizing without needing the MUI Typography
-   wrapper, so SplitText can render the per-word spans directly. */
+/* Finish-screen title: an h1 at h5 sizing. */
 .rm-finish-title {
   font-size: clamp(1.25rem, 4vw, 1.5rem);
   font-weight: 800;

@@ -23,7 +23,7 @@ Do not add MSW initialization to `src/main.tsx` or copy its worker into `client/
 
 ## Reviewed Knip inventory
 
-Two pre-existing files have no current entry-point consumers: `src/lib/eligibility.ts` is a proposed server-eligibility adapter whose adoption requires a product decision, and `src/components/reactbits/SplitText.tsx` is an optional unused celebration effect. They remain visible in the baseline rather than being automatically deleted. Export/type findings from the full audit are advisory because registries and compatibility contracts can intentionally expose more than the current UI consumes.
+One pre-existing file has no current entry-point consumer: `src/lib/eligibility.ts` is a proposed server-eligibility adapter whose adoption requires a product decision. It remains visible in the baseline rather than being automatically deleted. The unused `SplitText` celebration effect was deleted on 2026-09-25 (#235). Export/type findings from the full audit are advisory because registries and compatibility contracts can intentionally expose more than the current UI consumes.
 
 Knip config declares Vercel handlers, maintenance scripts, the isolated sandbox, stories and tests as entries. Vite and Storybook config execution is disabled in Knip because the build config imports a TSX renderer; their sources are still entries and are independently typechecked/built. Explicit dependency exceptions are the Astryx CSS theme, the manually used Astryx CLI, Babel's Vite peer, the Storybook accessibility addon and the Lighthouse executable; `vercel` is an externally installed development CLI.
 

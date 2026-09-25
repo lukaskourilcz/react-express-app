@@ -46,7 +46,7 @@ Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone.
 1. Lesson and skill-check choices implement roving radio tab stops without Arrow/Home/End navigation (`Roadmap.tsx`). Reuse `ui/RadioCards.tsx`.
 2. Challenge and path-picker mutually exclusive choices use checkbox-emitting `SelectableCard`s inside radio-like flows. Migrate to `RadioCardGroup`/`RadioCard`.
 3. Challenge contains invalid list structures (`li` without a list, `div` directly inside `ol`). Correct the semantics.
-4. `SplitText` ignores its requested semantic tag in the animated path. Preserve real heading semantics while animating only descendant spans.
+4. ~~`SplitText` ignores its requested semantic tag in the animated path.~~ Closed 2026-09-25: no screen rendered it, and #235 deleted it.
 
 ### P1 — product, resilience, and contrast
 
