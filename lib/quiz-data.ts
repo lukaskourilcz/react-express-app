@@ -22,10 +22,6 @@ import {
 
 export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets';
 
-// Categories that are private to the owner: never served to other users
-// (not via /api/quiz/questions for non-owners, and never in the daily mix).
-export const PRIVATE_CATEGORIES: CategoryType[] = [];
-
 export interface Question {
   id: string;
   tags: string[];
@@ -58,10 +54,6 @@ export type DifficultyMode = 'basics' | 'easy' | 'zero-to-hero' | 'advanced' | '
 // languages are stored as per-question overrides and fall back to English.
 export type QuestionLang = 'en' | 'cs';
 
-export function normalizeLang(raw: unknown): QuestionLang {
-  return raw === 'cs' ? 'cs' : 'en';
-}
-
 // A translation only overrides the human-readable text fields. `options` must
 // be a parallel array (same length AND same order as the English options) so
 // that the stored correctAnswer index stays valid after localization.
@@ -70,26 +62,6 @@ export interface QuestionTranslation {
   question?: string;
   options?: string[];
   explanation?: string;
-}
-
-// Returns a copy of the question with translated text applied where available,
-// falling back to English for any missing field. `tags` and `correctAnswer`
-// are never translated. Option translations are only applied when the array
-// length matches, keeping answer grading correct.
-export function localizeQuestion<T extends Question>(q: T, lang: QuestionLang): T {
-  if (lang === 'en') return q;
-  // The deployment-aware bank loader attaches the static Czech translation.
-  // A /dev override can replace it with an object or explicitly disable it
-  // with null, while avoiding a static import of every translation here.
-  const tr = q.csTranslation;
-  if (!tr) return q;
-  return {
-    ...q,
-    introduction: tr.introduction ?? q.introduction,
-    question: tr.question ?? q.question,
-    options: tr.options && tr.options.length === q.options.length ? tr.options : q.options,
-    explanation: tr.explanation ?? q.explanation,
-  };
 }
 
 const coreQuestions: Question[] = [
