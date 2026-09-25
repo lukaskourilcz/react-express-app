@@ -772,4 +772,522 @@ inBatches(["a.jpg", "b.jpg", "c.jpg"], 2, upload).then(console.log);
       { call: '(async () => { const echo = query => new Promise(done => setTimeout(() => done(query), 10)); const runA = latestOnly(echo); const runB = latestOnly(echo); const a = runA("a"); const b = runB("b"); return [await a, await b]; })()', expected: [{ stale: false, value: 'a' }, { stale: false, value: 'b' }], label: 'two wrapped functions count separately', edge: true, async: true },
     ],
   },
+
+  /* ── Hard: algorithms on lists and grids ──────────────────────────── */
+  {
+    id: 'js-mh-settle-up',
+    track: 'javascript',
+    topic: 'javascript',
+    level: 24,
+    tier: 4,
+    focus: ['sort', 'while', 'two-pointer', 'objects'],
+    title: 'Settle up after a trip',
+    prompt: 'After a trip, `balances` maps each person to a balance in cents: positive means the group owes them, negative means they owe the group, and the balances add up to 0. Write `settleUp(balances)`, returning the payments that settle every debt, as `{ from, to, amount }` objects in the order they are made. Follow one greedy rule, so everyone gets the same answer. Put the people who owe in one list and the people who are owed in another, leave out anyone at 0, and `sort` each list from the largest amount to the smallest, breaking a tie by name from A to Z. Then walk both lists with two indexes in a `while` loop: the current debtor pays the current creditor the smaller of what one owes and the other is owed. Whoever that brings to 0 is done, and their index moves on. Whoever still has an amount left stays current, even if someone later in the list now has more. Leave `balances` unchanged.',
+    starter: `const settleUp = balances => {
+
+};
+
+// Scratch pad. Change this and press Run.
+console.log(settleUp({ Ada: 1400, Ben: -400, Cy: -1000 }));
+`,
+    skeleton: `const settleUp = balances => {
+  const debtors = [];
+  const creditors = [];
+  // one { name, amount } per person who owes or is owed, amounts positive
+  const byAmountThenName = (a, b) => /* largest first, then A to Z */;
+  debtors.sort(byAmountThenName);
+  creditors.sort(byAmountThenName);
+  const payments = [];
+  let d = 0;
+  let c = 0;
+  while (d < debtors.length && c < creditors.length) {
+    // the smaller amount moves from debtors[d] to creditors[c]
+    // whoever reaches 0 is done: move that index on
+  }
+  return payments;
+};`,
+    hints: [
+      'Copy each person into a new `{ name, amount }` object with a positive amount, and change only the copies as payments are made. That keeps `balances` as it was and makes both lists sort the same way.',
+      'A compare function can chain two rules with `||`: `b.amount - a.amount` is 0 for a tie, and then the name comparison decides. Compare names with `<` and `>`, returning `-1`, `1` or `0`.',
+    ],
+    approach: [
+      'Go through `Object.entries(balances)`. A negative balance goes into the debtors as a positive amount; a positive one into the creditors; 0 goes nowhere.',
+      'Sort both lists from the largest amount down, and by name from A to Z on a tie.',
+      'While both indexes are inside their lists, pay the smaller of the two current amounts, record `{ from, to, amount }`, and take it off both.',
+      'Move the debtor’s index on if they reach 0, and the creditor’s if they do. Both can reach 0 in the same payment.',
+    ],
+    verify: 'tests',
+    estimatedMinutes: 30,
+    tests: [
+      { call: 'settleUp({ Ada: 1400, Ben: -400, Cy: -1000 })', expected: [{ from: 'Cy', to: 'Ada', amount: 1000 }, { from: 'Ben', to: 'Ada', amount: 400 }] },
+      { call: 'settleUp({ a: 500, b: 300, c: -600, d: -200 })', expected: [{ from: 'c', to: 'a', amount: 500 }, { from: 'c', to: 'b', amount: 100 }, { from: 'd', to: 'b', amount: 200 }], label: 'one debtor pays two creditors' },
+      { call: 'settleUp({ Zoe: 100, Amy: 100, Max: -100, Bob: -100 })', expected: [{ from: 'Bob', to: 'Amy', amount: 100 }, { from: 'Max', to: 'Zoe', amount: 100 }], label: 'equal amounts go in name order', edge: true },
+      { call: 'settleUp({ Ann: 0, Ben: 0 })', expected: [], label: 'nobody at 0 pays or is paid', edge: true },
+      { call: 'settleUp({})', expected: [], label: 'no balances', edge: true },
+      { call: '(() => { const balances = { x: 50, y: -50 }; settleUp(balances); return balances; })()', expected: { x: 50, y: -50 }, label: 'balances is not changed', edge: true },
+    ],
+  },
+  {
+    id: 'js-mh-line-diff',
+    track: 'javascript',
+    topic: 'javascript',
+    level: 25,
+    tier: 4,
+    focus: ['nested-loops', 'while', 'push'],
+    title: 'What changed between two versions',
+    prompt: 'Write `diffLines(before, after)`, comparing two arrays of lines and returning the edit that turns the first into the second, as a list of `[mark, line]` pairs: `" "` for a line both keep, `"-"` for a line only `before` has and `"+"` for a line only `after` has. Read in order, the `" "` and `"-"` lines spell out `before`, and the `" "` and `"+"` lines spell out `after`. Keep as many lines as possible: the kept lines must be a longest common subsequence of the two arrays. Fill a table with two nested loops, where `table[i][j]` is the length of the longest common subsequence of `before.slice(i)` and `after.slice(j)`, working backwards from the ends. Then walk forwards from `[0, 0]` in a `while` loop and `push` one pair per step. Keep the line when both sides match. Otherwise remove the line from `before` if that keeps the table’s best length, and add the line from `after` if it does not. Removing wins a tie, so a changed line shows its `-` before its `+`.',
+    starter: `const diffLines = (before, after) => {
+
+};
+
+// Scratch pad. Change this and press Run.
+console.log(diffLines(["a", "b", "c"], ["a", "c", "d"]));
+`,
+    skeleton: `const diffLines = (before, after) => {
+  // (before.length + 1) rows of (after.length + 1) zeros
+  const table = [];
+  for (let i = before.length - 1; i >= 0; i--) {
+    for (let j = after.length - 1; j >= 0; j--) {
+      // equal lines: one more than the cell diagonally below
+      // otherwise: the better of skipping a line of before or of after
+    }
+  }
+  const edit = [];
+  let i = 0;
+  let j = 0;
+  while (i < before.length || j < after.length) {
+    // keep, remove or add, and move i, j or both
+  }
+  return edit;
+};`,
+    hints: [
+      'The table has one extra row and column of zeros: once one side has run out, nothing more can be kept. Fill it from the bottom right, so `table[i + 1][j]`, `table[i][j + 1]` and `table[i + 1][j + 1]` are ready when you need them.',
+      'In the walk, removing `before[i]` keeps the best length exactly when `table[i + 1][j] >= table[i][j + 1]`. Once one array has run out, every step takes from the other one.',
+    ],
+    approach: [
+      'Make the table with `before.length + 1` rows of `after.length + 1` zeros.',
+      'Loop `i` down from the last line of `before` and, inside, `j` down from the last line of `after`. Equal lines give `table[i + 1][j + 1] + 1`; different ones give the larger of `table[i + 1][j]` and `table[i][j + 1]`.',
+      'Walk with `i` and `j` from 0. Matching lines push `[" ", line]` and move both on.',
+      'Otherwise push `["-", before[i]]` and move `i` when `after` has run out or removing keeps the best length; else push `["+", after[j]]` and move `j`.',
+    ],
+    verify: 'tests',
+    estimatedMinutes: 40,
+    tests: [
+      { call: 'diffLines(["a", "b", "c"], ["a", "c", "d"])', expected: [[' ', 'a'], ['-', 'b'], [' ', 'c'], ['+', 'd']] },
+      { call: '(() => { const before = ["title", "intro", "body", "outro", "sign-off"]; const after = ["title", "body", "extra", "outro", "thanks", "sign-off"]; const edit = diffLines(before, after); const kept = edit.filter(([mark]) => mark === " ").length; return [kept, edit.filter(([mark]) => mark !== "+").map(([, line]) => line), edit.filter(([mark]) => mark !== "-").map(([, line]) => line)]; })()', expected: [4, ['title', 'intro', 'body', 'outro', 'sign-off'], ['title', 'body', 'extra', 'outro', 'thanks', 'sign-off']], label: 'the edit spells out both versions and keeps the most lines' },
+      { call: 'diffLines(["same"], ["same"])', expected: [[' ', 'same']], label: 'nothing changed' },
+      { call: 'diffLines(["old"], ["new"])', expected: [['-', 'old'], ['+', 'new']], label: 'a changed line: the removal comes first', edge: true },
+      { call: 'diffLines([], ["x", "y"])', expected: [['+', 'x'], ['+', 'y']], label: 'everything added', edge: true },
+      { call: 'diffLines(["x", "y"], [])', expected: [['-', 'x'], ['-', 'y']], label: 'everything removed', edge: true },
+    ],
+  },
+  {
+    id: 'js-mh-word-search',
+    track: 'javascript',
+    topic: 'javascript',
+    level: 25,
+    tier: 4,
+    focus: ['recursion', 'nested-loops', 'some'],
+    title: 'Find a word in a letter grid',
+    prompt: 'In a word search, a word is traced through a grid of letters by stepping from each letter to the next one up, down, left or right, never diagonally, and without using any cell twice. Write `findWord(grid, word)`, where `grid` is an array of equal-length strings, one per row. Return the `[row, column]` cells that spell the word, in order, or `null` if it cannot be traced. Try every cell as a start with two nested loops, row by row from the top left. From each start, follow the word with a recursive function that marks its cell as used, tries the neighbours in the order up, right, down, left with `some`, and unmarks the cell again if no path from it works, so that another path can use it. Return the first path found in that order. An empty word gives `[]`.',
+    starter: `const findWord = (grid, word) => {
+
+};
+
+// Scratch pad. Change this and press Run.
+console.log(findWord(["ABCE", "SFCS", "ADEE"], "ABCCED"));
+`,
+    skeleton: `const STEPS = [[-1, 0], [0, 1], [1, 0], [0, -1]]; // up, right, down, left
+
+const findWord = (grid, word) => {
+  if (word === "") return [];
+  const used = new Set();
+  const path = [];
+  const follow = (row, col, index) => {
+    // false off the grid, on a used cell, or on the wrong letter
+    // mark the cell and add it to the path
+    // the last letter? then the word is found
+    // otherwise try the neighbours; if none works, unmark and remove the cell
+  };
+  // try every cell as a start, row by row
+  return null;
+};`,
+    hints: [
+      '`some` stops at the first neighbour whose call returns `true`, which is exactly the first path in the order the prompt gives. Return `true` or `false` from the recursive function, and keep the path in one array you `push` to and `pop` from.',
+      'Unmarking is what makes this backtracking: a cell that led nowhere on one path may be the cell another path needs. Store used cells as `"row,col"` strings in a `Set`.',
+    ],
+    approach: [
+      'Return `[]` for an empty word. Otherwise make a `Set` of used cells and an empty path.',
+      'Write `follow(row, col, index)`: return `false` outside the grid, on a used cell, or when the letter is not `word[index]`.',
+      'Mark the cell and push it onto the path. If `index` is the last letter, return `true`. Otherwise ask `some` of the four neighbours whether `follow` succeeds from there with `index + 1`.',
+      'If none does, unmark the cell, pop it off the path and return `false`. Loop over every cell as a start and return the path the first time `follow` succeeds, or `null` after the loops.',
+    ],
+    verify: 'tests',
+    estimatedMinutes: 35,
+    tests: [
+      { call: 'findWord(["ABCE", "SFCS", "ADEE"], "ABCCED")', expected: [[0, 0], [0, 1], [0, 2], [1, 2], [2, 2], [2, 1]] },
+      { call: 'findWord(["ABCE", "SFCS", "ADEE"], "SEE")', expected: [[1, 3], [2, 3], [2, 2]], label: 'a dead end on the way' },
+      { call: 'findWord(["XY", "ZX"], "X")', expected: [[0, 0]], label: 'starts are tried from the top left' },
+      { call: 'findWord(["ABCE", "SFCS", "ADEE"], "ABCB")', expected: null, label: 'a cell is used once', edge: true },
+      { call: 'findWord(["AB", "CD"], "AD")', expected: null, label: 'no diagonal steps', edge: true },
+      { call: 'findWord(["AB", "CD"], "")', expected: [], label: 'an empty word', edge: true },
+    ],
+  },
+  {
+    id: 'js-mh-arrangements',
+    track: 'javascript',
+    topic: 'javascript',
+    level: 25,
+    tier: 4,
+    focus: ['recursion', 'map-set', 'sort'],
+    title: 'Every arrangement, once',
+    prompt: 'Write `arrangements(letters)`, returning every different order of the letters of a string, each order once, sorted the way `sort` orders strings when no compare function is given. `arrangements("aab")` gives `["aab", "aba", "baa"]`: the two `a`s are the same letter, so swapping them makes nothing new. Build the orders recursively: an order is one of the letters followed by an order of the letters that are left. Count each letter in a `Map`, so each position picks each different letter once, taking one from its count before going deeper and putting it back afterwards. Never make a repeat and remove it later: for `"aaaaaaaaab"`, making every order first would mean 3,628,800 of them to find 10. The empty string has one order, `""`.',
+    starter: `const arrangements = letters => {
+
+};
+
+// Scratch pad. Change this and press Run.
+console.log(arrangements("aab"));
+`,
+    skeleton: `const arrangements = letters => {
+  const counts = new Map();
+  // count every letter
+  const results = [];
+  const build = prefix => {
+    // every letter used: record the prefix
+    // otherwise, for each letter with some left: take one, build, put it back
+  };
+  build("");
+  return results.sort();
+};`,
+    hints: [
+      'Iterating over the Map visits each different letter once, however many copies of it there are. That is what stops two `a`s from producing the same order twice.',
+      'Change the count before the recursive call and restore it straight after. Every branch then sees the counts as they were when it started.',
+    ],
+    approach: [
+      'Count the letters: `counts.set(letter, (counts.get(letter) ?? 0) + 1)` for each one.',
+      'Write `build(prefix)`. When `prefix` is as long as `letters`, push it onto the results and return.',
+      'Otherwise loop over the Map’s entries. For each letter with a count above 0, lower the count by one, call `build(prefix + letter)`, then set the count back.',
+      'Call `build("")`, then sort the results and return them.',
+    ],
+    verify: 'tests',
+    estimatedMinutes: 30,
+    tests: [
+      { call: 'arrangements("abc")', expected: ['abc', 'acb', 'bac', 'bca', 'cab', 'cba'] },
+      { call: 'arrangements("aab")', expected: ['aab', 'aba', 'baa'], label: 'repeated letters make no repeats' },
+      { call: 'arrangements("abab")', expected: ['aabb', 'abab', 'abba', 'baab', 'baba', 'bbaa'] },
+      { call: 'arrangements("zzz")', expected: ['zzz'], label: 'one letter three times', edge: true },
+      { call: 'arrangements("x")', expected: ['x'], edge: true },
+      { call: 'arrangements("")', expected: [''], label: 'the empty string has one order', edge: true },
+    ],
+  },
+  {
+    id: 'js-mh-justify-text',
+    track: 'javascript',
+    topic: 'javascript',
+    level: 24,
+    tier: 4,
+    focus: ['strings', 'split', 'push'],
+    title: 'Justify a paragraph',
+    prompt: 'Write `justify(text, width)`, laying the words of `text` out in lines of exactly `width` characters, like a newspaper column. Split the text into words on runs of whitespace. Fill each line greedily: take as many words as fit with one space between each pair. Then widen the line to `width` by adding spaces between its words, as evenly as possible; when they cannot be even, the gaps on the left get one more. A line with a single word, and the last line, are not widened: they keep single spaces and are padded with spaces at the end up to `width`. A word longer than `width` sits alone on its line with no padding. Empty text gives `[]`.',
+    starter: `const justify = (text, width) => {
+
+};
+
+// Scratch pad. Change this and press Run.
+console.log(justify("This is an example of text justification.", 16));
+`,
+    skeleton: `const justify = (text, width) => {
+  const words = /* the words, split on runs of whitespace, no empty ones */;
+  const lines = [];
+  let line = [];
+  let letters = 0;
+  for (const word of words) {
+    // if the word does not fit after one space, finish the line first
+    // then add the word to the line
+  }
+  // the last line is left-aligned
+  return lines;
+};`,
+    hints: [
+      'A line of `n` words needs at least `n - 1` spaces. So a word fits when the letters so far, plus the spaces between the words already there and the one before it, plus its own length, is at most `width`.',
+      'For a line with `gaps` gaps and `spaces` spaces to share out, every gap gets `Math.floor(spaces / gaps)`, and the first `spaces % gaps` gaps get one more. `" ".repeat(n)` and `padEnd` build the spacing.',
+    ],
+    approach: [
+      'Split on `/\\s+/` and drop the empty strings, which leading or trailing spaces leave behind.',
+      'Collect words for the current line while they fit. When the next word does not, push the finished line, widened, and start a new line with that word.',
+      'To widen a line of two or more words, share `width` minus its letters among its gaps, giving the left gaps the extra spaces. A single word is padded at the end instead.',
+      'After the loop, push the last line with single spaces, padded at the end.',
+    ],
+    verify: 'tests',
+    estimatedMinutes: 35,
+    tests: [
+      { call: 'justify("This is an example of text justification.", 16)', expected: ['This    is    an', 'example  of text', 'justification.  '] },
+      { call: 'justify("What must be acknowledgment shall be", 16)', expected: ['What   must   be', 'acknowledgment  ', 'shall be        '], label: 'a single word on a line is padded at the end' },
+      { call: 'justify("aa b c dd eeee", 10)', expected: ['aa  b c dd', 'eeee      '], label: 'the left gaps take the extra spaces' },
+      { call: 'justify("  a   b  ", 5)', expected: ['a b  '], label: 'runs of spaces separate words', edge: true },
+      { call: 'justify("tiny supercalifragilistic word", 10)', expected: ['tiny      ', 'supercalifragilistic', 'word      '], label: 'a word longer than the line', edge: true },
+      { call: 'justify("", 10)', expected: [], label: 'no text', edge: true },
+    ],
+  },
+
+  /* ── Hard: routes, settings and JSON ──────────────────────────────── */
+  {
+    id: 'js-mh-match-route',
+    track: 'javascript',
+    topic: 'javascript',
+    level: 24,
+    tier: 4,
+    focus: ['split', 'every', 'sort', 'objects'],
+    title: 'Match a URL to a route',
+    prompt: 'A router picks the page that answers a URL. Write `matchRoute(routes, path)`, where each route is a pattern such as `"/users/:id/posts/:postId"`. Split patterns and paths on `"/"` into segments; a trailing slash on a path is ignored, so `"/about/"` is `"/about"`. A segment that starts with `:` matches any one segment that is not empty and records it under that name. A final `*` matches the rest of the path, one segment or more, and records it as `rest`, joined with `/`. Any other segment must match exactly. Return `{ route, params }` for the best matching route, or `null` if none matches. When several routes match, the most specific wins: compare their segments from the left, where an exact segment beats a `:name` segment and a `:name` segment beats `*`, and the first difference decides. Routes that are equally specific keep their order, so the one listed first wins. Test each pattern with `every`, `sort` the matches with a compare function, and leave `routes` unchanged.',
+    starter: `const matchRoute = (routes, path) => {
+
+};
+
+// Scratch pad. Change this and press Run.
+console.log(matchRoute(["/users/:id", "/users/me"], "/users/me"));
+`,
+    skeleton: `const segmentsOf = text => {
+  // split on "/" and drop one empty segment at the end, but keep "/" as [""]
+};
+
+const matchRoute = (routes, path) => {
+  const parts = segmentsOf(path);
+  const tryRoute = route => {
+    // null unless every segment matches; otherwise { route, params }
+  };
+  const rank = segment => /* 0 exact, 1 :name, 2 * */;
+  const moreSpecific = (a, b) => {
+    // compare the ranks of a.route and b.route from the left
+  };
+  const matches = routes.map(tryRoute).filter(match => match !== null);
+  return /* the first match after sorting, or null */;
+};`,
+    hints: [
+      '`"/users/7".split("/")` gives `["", "users", "7"]`, and `"/users/7/"` gives one more empty segment at the end. Drop that one, but keep the single empty segment that `"/"` leaves, so the root still has a segment to match.',
+      'Turn each pattern into ranks, 0 for an exact segment, 1 for `:name` and 2 for `*`. The compare function returns the first difference between the two lists of ranks, or 0 when there is none, and `sort` keeps equal routes in their order.',
+    ],
+    approach: [
+      'Split the path into segments once. For a pattern ending in `*`, the path needs more segments than the pattern has before the `*`; for any other, exactly as many.',
+      'Check the segments with `every`: a `:name` segment needs a segment that is not empty, and any other must be equal.',
+      'For a match, record each `:name` in `params`, and for `*` record the remaining segments joined with `/` as `params.rest`.',
+      'Sort the matches by comparing rank lists from the left, and return the first, or `null` when nothing matched. `map` and `filter` make new arrays, so `routes` is never sorted.',
+    ],
+    verify: 'tests',
+    estimatedMinutes: 35,
+    tests: [
+      { call: 'matchRoute(["/users", "/users/:id", "/users/:id/posts/:postId"], "/users/42/posts/7")', expected: { route: '/users/:id/posts/:postId', params: { id: '42', postId: '7' } } },
+      { call: 'matchRoute(["/users/:id", "/users/me"], "/users/me")', expected: { route: '/users/me', params: {} }, label: 'an exact segment beats a :name segment' },
+      { call: 'matchRoute(["/files/*", "/files/:name"], "/files/2026/q3/report.pdf")', expected: { route: '/files/*', params: { rest: '2026/q3/report.pdf' } }, label: '* takes the rest of the path' },
+      { call: 'matchRoute(["/files/*", "/files/:name"], "/files/report.pdf")', expected: { route: '/files/:name', params: { name: 'report.pdf' } }, label: 'a :name segment beats *', edge: true },
+      { call: 'matchRoute(["/users/:id"], "/users")', expected: null, label: 'a :name segment needs a segment to match', edge: true },
+      { call: 'matchRoute(["/about"], "/about/")', expected: { route: '/about', params: {} }, label: 'a trailing slash is ignored', edge: true },
+    ],
+  },
+  {
+    id: 'js-mh-settings-diff',
+    track: 'javascript',
+    topic: 'javascript',
+    level: 24,
+    tier: 4,
+    focus: ['recursion', 'for-in', 'objects', 'sort'],
+    title: 'What changed in the settings',
+    prompt: 'Two versions of a settings object are nested plain objects whose leaves are strings, numbers, booleans, `null`, or arrays of those. Keys never contain a dot. Write `diffSettings(before, after)`, returning every leaf that differs as a `{ path, change }` object. `path` is the keys from the top down, joined with dots, and `change` is `"added"` (only in `after`), `"removed"` (only in `before`) or `"changed"`. Walk both objects with `for...in`, and recurse where both hold a plain object under the same key. An object that is only on one side is reported leaf by leaf, so an empty one reports nothing. Where one side holds an object and the other a leaf, the object’s leaves count as removed or added, and the leaf as added or removed. Leaves are compared with `===`, and arrays are equal when they have the same length and `===` items in the same order. Return the list sorted by `path`, the way `sort` orders strings when no compare function is given.',
+    starter: `const diffSettings = (before, after) => {
+
+};
+
+// Scratch pad. Change this and press Run.
+console.log(diffSettings({ theme: "dark", font: { size: 14 } }, { theme: "light", font: { size: 14, weight: 400 } }));
+`,
+    skeleton: `const isObject = value => /* a plain object: not null, not an array */;
+
+const diffSettings = (before, after) => {
+  const changes = [];
+  const everyLeaf = (value, path, change) => {
+    // an object: go into each key; a leaf: record { path, change }
+  };
+  const walk = (a, b, prefix) => {
+    for (const key in a) {
+      // only in a, both objects, one object, or two leaves that differ
+    }
+    for (const key in b) {
+      // only in b
+    }
+  };
+  walk(before, after, "");
+  return /* changes, sorted by path */;
+};`,
+    hints: [
+      '`typeof` says `"object"` for `null` and for arrays too, and both are leaves here. Write one `isObject` helper that rules them out, and use it everywhere.',
+      'Two helpers keep this short. One reports every leaf under a value with a single kind of change; the other walks two objects side by side and calls the first one wherever only one side has something.',
+    ],
+    approach: [
+      'For each key of `before`: if `after` does not have it as its own property, report every leaf under it as removed.',
+      'If both values are plain objects, recurse with the longer path. If exactly one is, report its leaves as removed or added and the other side’s leaf as added or removed.',
+      'If both are leaves and differ, arrays compared item by item, report `"changed"`.',
+      'Then report every leaf under a key only `after` has as added. Sort the list by `path` and return it.',
+    ],
+    verify: 'tests',
+    estimatedMinutes: 35,
+    tests: [
+      { call: 'diffSettings({ theme: "dark", font: { size: 14, family: "Inter" } }, { theme: "light", font: { size: 14, family: "Inter", weight: 400 } })', expected: [{ path: 'font.weight', change: 'added' }, { path: 'theme', change: 'changed' }] },
+      { call: 'diffSettings({ a: 1, b: { c: 2 } }, { a: 1 })', expected: [{ path: 'b.c', change: 'removed' }], label: 'a removed object reports its leaves' },
+      { call: 'diffSettings({}, { editor: { tabs: { size: 2, spaces: true } } })', expected: [{ path: 'editor.tabs.size', change: 'added' }, { path: 'editor.tabs.spaces', change: 'added' }], label: 'an added object, two levels deep' },
+      { call: 'diffSettings({ z: 1, a: 1, m: { b: 1, a: 1 } }, { z: 2, a: 2, m: { b: 2, a: 2 } })', expected: [{ path: 'a', change: 'changed' }, { path: 'm.a', change: 'changed' }, { path: 'm.b', change: 'changed' }, { path: 'z', change: 'changed' }], label: 'sorted by path' },
+      { call: 'diffSettings({ tags: ["a", "b"], keep: [1] }, { tags: ["b", "a"], keep: [1] })', expected: [{ path: 'tags', change: 'changed' }], label: 'arrays compare item by item', edge: true },
+      { call: 'diffSettings({ n: 0, x: { y: null } }, { n: false, x: { y: null } })', expected: [{ path: 'n', change: 'changed' }], label: '0 is not false, and null equals null', edge: true },
+    ],
+  },
+  {
+    id: 'js-mh-safe-stringify',
+    track: 'javascript',
+    topic: 'javascript',
+    level: 22,
+    tier: 4,
+    focus: ['json', 'recursion', 'map-set'],
+    title: 'JSON that survives a loop',
+    prompt: '`JSON.stringify` throws on an object that contains itself, and real data does that: a tree node with a `parent` link, or a user whose friends list leads back to them. Write `safeStringify(value)`, returning the JSON text of `value` with every reference back to an object that contains it replaced by the string `"[Circular]"`. An object that appears twice without containing itself, such as one address used for billing and shipping, is not a loop and is written out both times. Walk the value recursively and build a copy. Keep the objects on the current path from the root in a `Set`: add an object before visiting its children and delete it afterwards, and put `"[Circular]"` in place of a child that is already in the set. Then pass the copy to `JSON.stringify`. The values are plain objects, arrays, strings, numbers, booleans and `null`. Leave `value` unchanged.',
+    starter: `const safeStringify = value => {
+
+};
+
+// Scratch pad. Change this and press Run.
+const node = { name: "root", children: [] };
+node.children.push({ name: "leaf", parent: node });
+console.log(safeStringify(node));
+`,
+    skeleton: `const safeStringify = value => {
+  const path = new Set();
+  const copy = current => {
+    // a primitive or null is its own copy
+    // an object already on the path is a loop
+    // otherwise: add it to the path, copy its children, take it off again
+  };
+  return JSON.stringify(copy(value));
+};`,
+    hints: [
+      'A `Set` of every object seen so far is not enough: it would call the second use of a shared address a loop. Only an object that is still being visited, higher up the current path, makes a loop.',
+      'Delete the object from the set after its children are copied. The next sibling then starts from the right path, and may use the same object again.',
+    ],
+    approach: [
+      'Write `copy(current)`: return `current` itself when it is not an object or is `null`.',
+      'If the path set already has `current`, return `"[Circular]"`.',
+      'Otherwise add `current` to the set, build a new array with `map` or a new object from `Object.entries`, calling `copy` on every child, and delete `current` from the set before returning the new value.',
+      'Return `JSON.stringify(copy(value))`. The original is never touched.',
+    ],
+    verify: 'tests',
+    estimatedMinutes: 30,
+    tests: [
+      { call: '(() => { const node = { name: "root", children: [] }; node.children.push({ name: "leaf", parent: node }); return safeStringify(node); })()', expected: '{"name":"root","children":[{"name":"leaf","parent":"[Circular]"}]}' },
+      { call: 'safeStringify({ a: [1, "two", null, true] })', expected: '{"a":[1,"two",null,true]}', label: 'plain data comes out as JSON.stringify writes it' },
+      { call: '(() => { const address = { city: "Brno" }; return safeStringify({ billing: address, shipping: address }); })()', expected: '{"billing":{"city":"Brno"},"shipping":{"city":"Brno"}}', label: 'the same object twice is not a loop', edge: true },
+      { call: '(() => { const list = [1]; list.push(list); return safeStringify(list); })()', expected: '[1,"[Circular]"]', label: 'an array that holds itself', edge: true },
+      { call: '(() => { const me = { name: "me" }; me.self = me; return safeStringify(me); })()', expected: '{"name":"me","self":"[Circular]"}', label: 'an object that holds itself', edge: true },
+      { call: 'safeStringify("text")', expected: '"text"', label: 'a string on its own', edge: true },
+    ],
+  },
+
+  /* ── Hard: promises that share work ───────────────────────────────── */
+  {
+    id: 'js-mh-batch-loader',
+    track: 'javascript',
+    topic: 'javascript',
+    level: 23,
+    tier: 4,
+    focus: ['promises', 'timers', 'map-set', 'closures'],
+    title: 'Batch requests into one',
+    prompt: 'A page asks for many users one at a time, and every request is a round trip to the server. Write `createLoader(loadMany, waitMs)`, returning a function `load(id)` that returns a promise of one user. `load` does not fetch straight away: the first `load` of a batch starts a `setTimeout` of `waitMs`, and every `load` before it fires joins the same batch. When the timer fires, call `loadMany(ids)` once with the batch’s ids, each id once, in the order they were first asked for. `loadMany` returns a promise of an array with one result per id, in the same order. Each `load` promise resolves with the result for its id, so an id asked for twice gets the same result both times. If `loadMany` rejects, every promise in that batch rejects with the same error. A `load` after the timer has fired starts a new batch. Keep the batch being gathered in a `Map` inside the closure, from each id to the callers waiting for it.',
+    starter: `const createLoader = (loadMany, waitMs) => {
+
+};
+
+// Scratch pad. Uncomment once your function returns something.
+// const load = createLoader(async ids => { console.log("loading", ids); return ids.map(id => "user " + id); }, 10);
+// Promise.all([load(1), load(2), load(1)]).then(console.log);
+`,
+    skeleton: `const createLoader = (loadMany, waitMs) => {
+  let batch = null; // the Map being gathered, or null between batches
+  return id => new Promise((resolve, reject) => {
+    if (batch === null) {
+      const current = new Map();
+      batch = current;
+      setTimeout(async () => {
+        batch = null; // any load from now on starts a new batch
+        // call loadMany with the ids of current, then settle every caller
+      }, waitMs);
+    }
+    // add { resolve, reject } to the callers waiting for this id
+  });
+};`,
+    hints: [
+      'Create the promise with `new Promise((resolve, reject) => ...)` and keep its two functions in the Map. The timer can call them much later, which is how one `loadMany` call settles many promises.',
+      'Set the gathering Map back to `null` when the timer fires, before `loadMany` is even called. Hold on to the fired batch in a local variable, so a new batch cannot mix with the one in flight.',
+    ],
+    approach: [
+      'Keep a variable for the batch being gathered, `null` when there is none. In `load`, if it is `null`, make a new Map and start the timer.',
+      'Add the caller’s `resolve` and `reject` to the list for its id, creating the list the first time the id is asked for. The Map’s keys stay in first-asked order.',
+      'When the timer fires, clear the variable, then call `loadMany([...current.keys()])` and await it.',
+      'Resolve every caller of the id at index `i` with result `i`. If `loadMany` rejects, reject every caller of the batch with the error.',
+    ],
+    verify: 'tests',
+    estimatedMinutes: 35,
+    tests: [
+      { call: '(async () => { const calls = []; const load = createLoader(async ids => { calls.push(ids); return ids.map(id => "user " + id); }, 10); const users = await Promise.all([load(1), load(2), load(3)]); return [users, calls]; })()', expected: [['user 1', 'user 2', 'user 3'], [[1, 2, 3]]], async: true },
+      { call: '(async () => { const calls = []; const load = createLoader(async ids => { calls.push(ids); return ids; }, 10); await load("a"); await Promise.all([load("b"), load("c")]); return calls; })()', expected: [['a'], ['b', 'c']], label: 'a load after the timer starts a new batch', async: true },
+      { call: '(async () => { const calls = []; const load = createLoader(async ids => { calls.push(ids); return ids; }, 40); const first = load(1); await new Promise(done => setTimeout(done, 5)); const second = load(2); await Promise.all([first, second]); return calls; })()', expected: [[1, 2]], label: 'a load while the timer waits joins the batch', async: true },
+      { call: '(async () => { const calls = []; const load = createLoader(async ids => { calls.push(ids); return ids.map(id => id * 10); }, 10); const values = await Promise.all([load(5), load(7), load(5)]); return [values, calls]; })()', expected: [[50, 70, 50], [[5, 7]]], label: 'an id asked for twice is loaded once', edge: true, async: true },
+      { call: '(async () => { let calls = 0; const load = createLoader(async ids => { calls++; return ids; }, 30); const pending = load(1); const before = calls; await pending; return [before, calls]; })()', expected: [0, 1], label: 'nothing is fetched before the timer fires', edge: true, async: true },
+      { call: '(async () => { const load = createLoader(async () => { throw new Error("server down"); }, 10); const results = await Promise.allSettled([load(1), load(2)]); return results.map(result => result.status + ": " + result.reason.message); })()', expected: ['rejected: server down', 'rejected: server down'], label: 'a failed batch rejects every caller', edge: true, async: true },
+    ],
+  },
+  {
+    id: 'js-mh-shared-request',
+    track: 'javascript',
+    topic: 'javascript',
+    level: 23,
+    tier: 4,
+    focus: ['promises', 'map-set', 'closures'],
+    title: 'One request, shared',
+    prompt: 'Three widgets on a page ask for the same exchange rate at the same moment, and the app should send one request, not three. Write `shareRequests(fetchRate, ttlMs, now)`, returning a function `get(key)` that returns a promise of `fetchRate(key)`’s result. `now()` returns the current time in milliseconds: call it instead of `Date.now()`, so the checks can move time. Keep a `Map` inside the closure from each key to `{ promise, at }`. `get` returns the stored promise when the key has one that was stored less than `ttlMs` ago. Otherwise it calls `fetchRate(key)`, stores the promise with the time, and returns it. So callers share a request while it is in flight, and share its result until it is `ttlMs` old. A request that fails must not be remembered: when its promise rejects, delete its entry so the next `get` tries again, but only if the entry is still that request’s, because a newer request for the same key may have replaced it.',
+    starter: `const shareRequests = (fetchRate, ttlMs, now) => {
+
+};
+
+// Scratch pad. Uncomment once your function returns something.
+// const get = shareRequests(async key => { console.log("fetching", key); return 1.1; }, 1000, Date.now);
+// Promise.all([get("EUR"), get("EUR")]).then(console.log);
+`,
+    skeleton: `const shareRequests = (fetchRate, ttlMs, now) => {
+  const entries = new Map(); // key -> { promise, at }
+  return key => {
+    const stored = entries.get(key);
+    // a fresh stored promise is shared
+    const entry = /* a new request and the time it was made */;
+    entries.set(key, entry);
+    // when it fails, forget it, but only if the Map still holds this entry
+    return entry.promise;
+  };
+};`,
+    hints: [
+      'Store the promise, not the value. A promise exists from the moment the request starts, so a second caller can share it before any answer has arrived.',
+      'Attach the clean-up with `entry.promise.catch(...)` and compare `entries.get(key) === entry` inside it. The caller still receives the original promise, so they see the rejection too.',
+    ],
+    approach: [
+      'Make a `Map` inside `shareRequests`, so each one keeps its own entries.',
+      'In `get`, read the entry for the key. If there is one and `now() - entry.at < ttlMs`, return its promise.',
+      'Otherwise call `fetchRate(key)`, store `{ promise, at: now() }` under the key, and attach a `catch` that deletes the key if the Map still holds this same entry.',
+      'Return the stored promise.',
+    ],
+    verify: 'tests',
+    estimatedMinutes: 30,
+    tests: [
+      { call: '(async () => { let calls = 0; const get = shareRequests(async key => { calls++; return key + " rate"; }, 1000, () => 0); const results = await Promise.all([get("EUR"), get("EUR"), get("USD")]); return [results, calls]; })()', expected: [['EUR rate', 'EUR rate', 'USD rate'], 2], async: true },
+      { call: '(() => { const get = shareRequests(async key => key, 1000, () => 0); return get("a") === get("a"); })()', expected: true, label: 'callers share one promise' },
+      { call: '(async () => { let time = 0; let calls = 0; const get = shareRequests(async () => { calls++; return calls; }, 100, () => time); const first = await get("k"); time = 99; const second = await get("k"); time = 100; const third = await get("k"); return [first, second, third]; })()', expected: [1, 1, 2], label: 'a result is shared until it is ttlMs old', edge: true, async: true },
+      { call: '(async () => { let calls = 0; const get = shareRequests(async () => { calls++; if (calls === 1) throw new Error("timeout"); return "ok"; }, 1000, () => 0); const first = await get("k").catch(error => error.message); const second = await get("k"); return [first, second, calls]; })()', expected: ['timeout', 'ok', 2], label: 'a failed request is tried again', edge: true, async: true },
+      { call: '(async () => { let calls = 0; const get = shareRequests(() => { calls++; return Promise.reject(new Error("down")); }, 1000, () => 0); const results = await Promise.allSettled([get("x"), get("x")]); return [results.map(result => result.reason.message), calls]; })()', expected: [['down', 'down'], 1], label: 'callers in flight share the failure too', edge: true, async: true },
+    ],
+  },
 ];

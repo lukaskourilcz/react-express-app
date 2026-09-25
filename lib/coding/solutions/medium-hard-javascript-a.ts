@@ -970,4 +970,1049 @@ const deepEqual = (a, b) => {
       { call: '(async () => { const run = latestOnly(query => (query === "boom" ? Promise.reject(new Error("broken")) : Promise.resolve(query))); const answer = await run("fine"); const failure = await run("boom").catch(error => error.message); return [answer, failure]; })()', expected: [{ stale: false, value: 'fine' }, 'broken'], async: true },
     ],
   },
+
+  /* ── Hard: algorithms on lists and grids ──────────────────────────── */
+  'js-mh-settle-up': {
+    solution: `const settleUp = balances => {
+  // Largest amount first; a tie goes by name, A to Z.
+  const byAmountThenName = (a, b) => b.amount - a.amount || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+  // New objects with positive amounts: the payments change these, never balances.
+  const debtors = [];
+  const creditors = [];
+  for (const [name, balance] of Object.entries(balances)) {
+    if (balance < 0) debtors.push({ name, amount: -balance });
+    else if (balance > 0) creditors.push({ name, amount: balance });
+  }
+  debtors.sort(byAmountThenName);
+  creditors.sort(byAmountThenName);
+  const payments = [];
+  let d = 0;
+  let c = 0;
+  while (d < debtors.length && c < creditors.length) {
+    const debtor = debtors[d];
+    const creditor = creditors[c];
+    const amount = Math.min(debtor.amount, creditor.amount);
+    payments.push({ from: debtor.name, to: creditor.name, amount });
+    debtor.amount -= amount;
+    creditor.amount -= amount;
+    // Whoever still has an amount left stays current: the lists are not re-sorted.
+    if (debtor.amount === 0) d++;
+    if (creditor.amount === 0) c++;
+  }
+  return payments;
+};`,
+    junior: `const settleUp = balances => {
+  const owes = [];
+  const owed = [];
+  const names = Object.keys(balances);
+  for (const name of names) {
+    const balance = balances[name];
+    if (balance < 0) {
+      owes.push({ name: name, amount: -balance });
+    }
+    if (balance > 0) {
+      owed.push({ name: name, amount: balance });
+    }
+  }
+  const compare = (a, b) => {
+    if (a.amount !== b.amount) {
+      return b.amount - a.amount;
+    }
+    if (a.name < b.name) {
+      return -1;
+    }
+    if (a.name > b.name) {
+      return 1;
+    }
+    return 0;
+  };
+  owes.sort(compare);
+  owed.sort(compare);
+  const payments = [];
+  while (owes.length > 0 && owed.length > 0) {
+    const debtor = owes[0];
+    const creditor = owed[0];
+    let amount = debtor.amount;
+    if (creditor.amount < amount) {
+      amount = creditor.amount;
+    }
+    payments.push({ from: debtor.name, to: creditor.name, amount: amount });
+    debtor.amount = debtor.amount - amount;
+    creditor.amount = creditor.amount - amount;
+    if (debtor.amount === 0) {
+      owes.shift();
+    }
+    if (creditor.amount === 0) {
+      owed.shift();
+    }
+  }
+  return payments;
+};`,
+    senior: `const byAmountThenName = (a, b) => b.amount - a.amount || (a.name < b.name ? -1 : Number(a.name > b.name));
+
+const side = (balances, sign) =>
+  Object.entries(balances)
+    .filter(([, balance]) => Math.sign(balance) === sign)
+    .map(([name, balance]) => ({ name, amount: Math.abs(balance) }))
+    .sort(byAmountThenName);
+
+const settleUp = balances => {
+  const debtors = side(balances, -1);
+  const creditors = side(balances, 1);
+  const payments = [];
+  let d = 0;
+  let c = 0;
+  while (d < debtors.length && c < creditors.length) {
+    const amount = Math.min(debtors[d].amount, creditors[c].amount);
+    payments.push({ from: debtors[d].name, to: creditors[c].name, amount });
+    debtors[d].amount -= amount;
+    creditors[c].amount -= amount;
+    if (debtors[d].amount === 0) d++;
+    if (creditors[c].amount === 0) c++;
+  }
+  return payments;
+};`,
+    hiddenTests: [
+      { call: 'settleUp({ A: 600, B: 500, C: -700, D: -400 })', expected: [{ from: 'C', to: 'A', amount: 600 }, { from: 'C', to: 'B', amount: 100 }, { from: 'D', to: 'B', amount: 400 }] },
+      { call: 'settleUp({ p: 700, q: -250, r: -250, s: -100, t: -100 })', expected: [{ from: 'q', to: 'p', amount: 250 }, { from: 'r', to: 'p', amount: 250 }, { from: 's', to: 'p', amount: 100 }, { from: 't', to: 'p', amount: 100 }] },
+      { call: 'settleUp({ A: 300, B: 300, C: -500, D: -100 })', expected: [{ from: 'C', to: 'A', amount: 300 }, { from: 'C', to: 'B', amount: 200 }, { from: 'D', to: 'B', amount: 100 }] },
+      { call: 'settleUp({ a: 1234, b: -1000, c: 567, d: -801 })', expected: [{ from: 'b', to: 'a', amount: 1000 }, { from: 'd', to: 'a', amount: 234 }, { from: 'd', to: 'c', amount: 567 }] },
+    ],
+  },
+  'js-mh-line-diff': {
+    solution: `const diffLines = (before, after) => {
+  const rows = before.length;
+  const cols = after.length;
+  // table[i][j]: the longest common subsequence of before.slice(i) and
+  // after.slice(j). The extra row and column of zeros is "one side ran out".
+  const table = [];
+  for (let i = 0; i <= rows; i++) table.push(new Array(cols + 1).fill(0));
+  for (let i = rows - 1; i >= 0; i--) {
+    for (let j = cols - 1; j >= 0; j--) {
+      table[i][j] = before[i] === after[j]
+        ? table[i + 1][j + 1] + 1
+        : Math.max(table[i + 1][j], table[i][j + 1]);
+    }
+  }
+  const edit = [];
+  let i = 0;
+  let j = 0;
+  while (i < rows || j < cols) {
+    if (i < rows && j < cols && before[i] === after[j]) {
+      edit.push([" ", before[i]]);
+      i++;
+      j++;
+    } else if (j === cols || (i < rows && table[i + 1][j] >= table[i][j + 1])) {
+      edit.push(["-", before[i]]); // on a tie the removal goes first
+      i++;
+    } else {
+      edit.push(["+", after[j]]);
+      j++;
+    }
+  }
+  return edit;
+};`,
+    junior: `const diffLines = (before, after) => {
+  const table = [];
+  for (let i = 0; i <= before.length; i++) {
+    const row = [];
+    for (let j = 0; j <= after.length; j++) {
+      row.push(0);
+    }
+    table.push(row);
+  }
+  for (let i = before.length - 1; i >= 0; i--) {
+    for (let j = after.length - 1; j >= 0; j--) {
+      if (before[i] === after[j]) {
+        table[i][j] = table[i + 1][j + 1] + 1;
+      } else {
+        const skipBefore = table[i + 1][j];
+        const skipAfter = table[i][j + 1];
+        if (skipBefore >= skipAfter) {
+          table[i][j] = skipBefore;
+        } else {
+          table[i][j] = skipAfter;
+        }
+      }
+    }
+  }
+  const result = [];
+  let i = 0;
+  let j = 0;
+  while (i < before.length && j < after.length) {
+    if (before[i] === after[j]) {
+      result.push([" ", before[i]]);
+      i = i + 1;
+      j = j + 1;
+    } else if (table[i + 1][j] >= table[i][j + 1]) {
+      result.push(["-", before[i]]);
+      i = i + 1;
+    } else {
+      result.push(["+", after[j]]);
+      j = j + 1;
+    }
+  }
+  while (i < before.length) {
+    result.push(["-", before[i]]);
+    i = i + 1;
+  }
+  while (j < after.length) {
+    result.push(["+", after[j]]);
+    j = j + 1;
+  }
+  return result;
+};`,
+    senior: `const lcsTable = (a, b) => {
+  const table = Array.from({ length: a.length + 1 }, () => new Array(b.length + 1).fill(0));
+  for (let i = a.length - 1; i >= 0; i--) {
+    for (let j = b.length - 1; j >= 0; j--) {
+      table[i][j] = a[i] === b[j] ? table[i + 1][j + 1] + 1 : Math.max(table[i + 1][j], table[i][j + 1]);
+    }
+  }
+  return table;
+};
+
+const diffLines = (before, after) => {
+  const table = lcsTable(before, after);
+  const edit = [];
+  let i = 0;
+  let j = 0;
+  while (i < before.length || j < after.length) {
+    if (i < before.length && j < after.length && before[i] === after[j]) {
+      edit.push([" ", before[i]]);
+      i++;
+      j++;
+    } else if (j === after.length || (i < before.length && table[i + 1][j] >= table[i][j + 1])) {
+      edit.push(["-", before[i++]]);
+    } else {
+      edit.push(["+", after[j++]]);
+    }
+  }
+  return edit;
+};`,
+    hiddenTests: [
+      { call: 'diffLines(["title", "intro", "body", "outro", "sign-off"], ["title", "body", "extra", "outro", "thanks", "sign-off"])', expected: [[' ', 'title'], ['-', 'intro'], [' ', 'body'], ['+', 'extra'], [' ', 'outro'], ['+', 'thanks'], [' ', 'sign-off']] },
+      { call: 'diffLines(["a", "b", "a", "b"], ["b", "a", "b", "a"])', expected: [['-', 'a'], [' ', 'b'], [' ', 'a'], [' ', 'b'], ['+', 'a']] },
+      { call: 'diffLines(["a", "x", "c"], ["a", "y", "c"])', expected: [[' ', 'a'], ['-', 'x'], ['+', 'y'], [' ', 'c']] },
+      { call: '(() => { const before = [..."ABCBDAB"]; const after = [..."BDCABA"]; const edit = diffLines(before, after); return [edit.filter(([mark]) => mark === " ").length, edit.filter(([mark]) => mark !== "+").map(([, line]) => line).join(""), edit.filter(([mark]) => mark !== "-").map(([, line]) => line).join("")]; })()', expected: [4, 'ABCBDAB', 'BDCABA'] },
+      { call: '(() => { const before = Array.from({ length: 60 }, (_, i) => "line " + (i % 7)); const after = Array.from({ length: 60 }, (_, i) => "line " + (i % 5)); const edit = diffLines(before, after); return [edit.filter(([mark]) => mark === " ").length, edit.filter(([mark]) => mark !== "+").map(([, line]) => line).join() === before.join(), edit.filter(([mark]) => mark !== "-").map(([, line]) => line).join() === after.join()]; })()', expected: [44, true, true] },
+      { call: 'diffLines([], [])', expected: [] },
+    ],
+  },
+  'js-mh-word-search': {
+    solution: `const STEPS = [[-1, 0], [0, 1], [1, 0], [0, -1]]; // up, right, down, left
+
+const findWord = (grid, word) => {
+  if (word === "") return [];
+  const used = new Set();
+  const path = [];
+  const follow = (row, col, index) => {
+    if (row < 0 || row >= grid.length || col < 0 || col >= grid[row].length) return false;
+    const key = row + "," + col;
+    if (used.has(key) || grid[row][col] !== word[index]) return false;
+    used.add(key);
+    path.push([row, col]);
+    if (index === word.length - 1) return true;
+    // some stops at the first neighbour that finishes the word.
+    const found = STEPS.some(([dr, dc]) => follow(row + dr, col + dc, index + 1));
+    if (!found) {
+      // A dead end from here: free the cell, another path may need it.
+      used.delete(key);
+      path.pop();
+    }
+    return found;
+  };
+  for (let row = 0; row < grid.length; row++) {
+    for (let col = 0; col < grid[row].length; col++) {
+      if (follow(row, col, 0)) return path;
+    }
+  }
+  return null;
+};`,
+    junior: `const findWord = (grid, word) => {
+  if (word.length === 0) {
+    return [];
+  }
+  const visited = [];
+  for (let r = 0; r < grid.length; r++) {
+    const row = [];
+    for (let c = 0; c < grid[r].length; c++) {
+      row.push(false);
+    }
+    visited.push(row);
+  }
+  const path = [];
+  const search = (r, c, index) => {
+    if (r < 0 || r >= grid.length) {
+      return false;
+    }
+    if (c < 0 || c >= grid[r].length) {
+      return false;
+    }
+    if (visited[r][c]) {
+      return false;
+    }
+    if (grid[r][c] !== word[index]) {
+      return false;
+    }
+    visited[r][c] = true;
+    path.push([r, c]);
+    if (index === word.length - 1) {
+      return true;
+    }
+    if (search(r - 1, c, index + 1)) {
+      return true;
+    }
+    if (search(r, c + 1, index + 1)) {
+      return true;
+    }
+    if (search(r + 1, c, index + 1)) {
+      return true;
+    }
+    if (search(r, c - 1, index + 1)) {
+      return true;
+    }
+    visited[r][c] = false;
+    path.pop();
+    return false;
+  };
+  for (let r = 0; r < grid.length; r++) {
+    for (let c = 0; c < grid[r].length; c++) {
+      if (search(r, c, 0)) {
+        return path;
+      }
+    }
+  }
+  return null;
+};`,
+    senior: `const STEPS = [[-1, 0], [0, 1], [1, 0], [0, -1]];
+
+const findWord = (grid, word) => {
+  if (word === "") return [];
+  const trace = (row, col, path) => {
+    if (grid[row]?.[col] !== word[path.length] || path.some(([r, c]) => r === row && c === col)) return null;
+    const next = [...path, [row, col]]; // a new path per step, so a dead end needs no undoing
+    if (next.length === word.length) return next;
+    for (const [dr, dc] of STEPS) {
+      const found = trace(row + dr, col + dc, next);
+      if (found) return found;
+    }
+    return null;
+  };
+  for (let row = 0; row < grid.length; row++) {
+    for (let col = 0; col < grid[row].length; col++) {
+      const found = trace(row, col, []);
+      if (found) return found;
+    }
+  }
+  return null;
+};`,
+    hiddenTests: [
+      { call: 'findWord(["CAA", "AAA", "BCD"], "AAB")', expected: [[1, 1], [1, 0], [2, 0]] },
+      { call: 'findWord(["BX", "AB"], "AB")', expected: [[1, 0], [0, 0]] },
+      { call: 'findWord(["XA", "AX"], "A")', expected: [[0, 1]] },
+      { call: 'findWord(["AXX", "BXX", "CDE"], "EDCBA")', expected: [[2, 2], [2, 1], [2, 0], [1, 0], [0, 0]] },
+      { call: 'findWord(["AAAA"], "AAAA")', expected: [[0, 0], [0, 1], [0, 2], [0, 3]] },
+      { call: 'findWord(["AB"], "ABA")', expected: null },
+    ],
+  },
+  'js-mh-arrangements': {
+    solution: `const arrangements = letters => {
+  const counts = new Map();
+  for (const letter of letters) counts.set(letter, (counts.get(letter) ?? 0) + 1);
+  const results = [];
+  const build = prefix => {
+    if (prefix.length === letters.length) {
+      results.push(prefix);
+      return;
+    }
+    // Each different letter once per position: that is what stops repeats,
+    // before they are made rather than after.
+    for (const [letter, count] of counts) {
+      if (count === 0) continue;
+      counts.set(letter, count - 1);
+      build(prefix + letter);
+      counts.set(letter, count); // put it back for the next branch
+    }
+  };
+  build("");
+  return results.sort();
+};`,
+    junior: `const arrangements = letters => {
+  const sorted = letters.split("").sort();
+  const used = [];
+  for (let i = 0; i < sorted.length; i++) {
+    used.push(false);
+  }
+  const results = [];
+  const build = current => {
+    if (current.length === sorted.length) {
+      results.push(current);
+      return;
+    }
+    for (let i = 0; i < sorted.length; i++) {
+      if (used[i]) {
+        continue;
+      }
+      if (i > 0 && sorted[i] === sorted[i - 1] && !used[i - 1]) {
+        continue;
+      }
+      used[i] = true;
+      build(current + sorted[i]);
+      used[i] = false;
+    }
+  };
+  build("");
+  results.sort();
+  return results;
+};`,
+    senior: `const arrangements = letters => {
+  if (letters.length <= 1) return [letters];
+  const orders = [];
+  for (const letter of new Set(letters)) {
+    const at = letters.indexOf(letter);
+    const rest = letters.slice(0, at) + letters.slice(at + 1);
+    for (const tail of arrangements(rest)) orders.push(letter + tail);
+  }
+  return orders.sort();
+};`,
+    hiddenTests: [
+      { call: 'arrangements("aaaaaaaaab").length', expected: 10 },
+      { call: 'arrangements("aaaaaaaabb").length', expected: 45 },
+      { call: 'arrangements("cba")', expected: ['abc', 'acb', 'bac', 'bca', 'cab', 'cba'] },
+      { call: 'arrangements("aabc")', expected: ['aabc', 'aacb', 'abac', 'abca', 'acab', 'acba', 'baac', 'baca', 'bcaa', 'caab', 'caba', 'cbaa'] },
+      { call: 'arrangements("1a1")', expected: ['11a', '1a1', 'a11'] },
+    ],
+  },
+  'js-mh-justify-text': {
+    solution: `const justify = (text, width) => {
+  // Leading or trailing whitespace leaves empty strings behind: drop them.
+  const words = text.split(/\\s+/).filter(word => word !== "");
+  const lines = [];
+  const widen = lineWords => {
+    if (lineWords.length === 1) return lineWords[0].padEnd(width);
+    const gaps = lineWords.length - 1;
+    const spaces = width - lineWords.reduce((sum, word) => sum + word.length, 0);
+    let out = lineWords[0];
+    for (let i = 1; i < lineWords.length; i++) {
+      // Every gap gets the even share; the first (spaces % gaps) get one more.
+      out += " ".repeat(Math.floor(spaces / gaps) + (i <= spaces % gaps ? 1 : 0)) + lineWords[i];
+    }
+    return out;
+  };
+  let line = [];
+  let letters = 0;
+  for (const word of words) {
+    // The word fits after the gaps already there plus one more space.
+    if (line.length > 0 && letters + line.length + word.length > width) {
+      lines.push(widen(line));
+      line = [];
+      letters = 0;
+    }
+    line.push(word);
+    letters += word.length;
+  }
+  if (line.length > 0) lines.push(line.join(" ").padEnd(width)); // the last line is not widened
+  return lines;
+};`,
+    junior: `const justify = (text, width) => {
+  const pieces = text.split(/\\s+/);
+  const words = [];
+  for (const piece of pieces) {
+    if (piece.length > 0) {
+      words.push(piece);
+    }
+  }
+  const lines = [];
+  let index = 0;
+  while (index < words.length) {
+    const lineWords = [words[index]];
+    let lineLength = words[index].length;
+    index = index + 1;
+    while (index < words.length && lineLength + 1 + words[index].length <= width) {
+      lineWords.push(words[index]);
+      lineLength = lineLength + 1 + words[index].length;
+      index = index + 1;
+    }
+    const isLastLine = index === words.length;
+    let line = "";
+    if (isLastLine || lineWords.length === 1) {
+      line = lineWords.join(" ");
+      while (line.length < width) {
+        line = line + " ";
+      }
+    } else {
+      let letterCount = 0;
+      for (const word of lineWords) {
+        letterCount = letterCount + word.length;
+      }
+      const gapCount = lineWords.length - 1;
+      const spaceCount = width - letterCount;
+      const evenShare = Math.floor(spaceCount / gapCount);
+      let extra = spaceCount % gapCount;
+      line = lineWords[0];
+      for (let i = 1; i < lineWords.length; i++) {
+        let gap = evenShare;
+        if (extra > 0) {
+          gap = gap + 1;
+          extra = extra - 1;
+        }
+        line = line + " ".repeat(gap) + lineWords[i];
+      }
+    }
+    lines.push(line);
+  }
+  return lines;
+};`,
+    senior: `const justify = (text, width) => {
+  const lines = [];
+  for (const word of text.split(/\\s+/).filter(Boolean)) {
+    const line = lines.at(-1);
+    if (line && line.join(" ").length + 1 + word.length <= width) line.push(word);
+    else lines.push([word]);
+  }
+  return lines.map((line, index) => {
+    if (index === lines.length - 1 || line.length === 1) return line.join(" ").padEnd(width);
+    const gaps = line.length - 1;
+    const spaces = width - line.join("").length;
+    return line.reduce((out, word, i) => out + " ".repeat(Math.floor(spaces / gaps) + (i <= spaces % gaps ? 1 : 0)) + word);
+  });
+};`,
+    hiddenTests: [
+      { call: 'justify("Science is what we understand well enough to explain to a computer. Art is everything else we do", 20)', expected: ['Science  is  what we', 'understand      well', 'enough to explain to', 'a  computer.  Art is', 'everything  else  we', 'do                  '] },
+      { call: 'justify("abc def", 7)', expected: ['abc def'] },
+      { call: 'justify("one\\ntwo\\tthree", 9)', expected: ['one   two', 'three    '] },
+      { call: 'justify("a b c", 1)', expected: ['a', 'b', 'c'] },
+      { call: 'justify("ab cd ef gh", 6)', expected: ['ab  cd', 'ef gh '] },
+      { call: 'justify("   ", 4)', expected: [] },
+    ],
+  },
+
+  /* ── Hard: routes, settings and JSON ──────────────────────────────── */
+  'js-mh-match-route': {
+    solution: `// "/about/" and "/about" are the same page, but "/" keeps its one empty segment.
+const segmentsOf = text => {
+  const parts = text.split("/");
+  if (parts.length > 1 && parts[parts.length - 1] === "") parts.pop();
+  return parts;
+};
+// Lower is more specific: 0 for an exact segment, 1 for :name, 2 for *.
+const rank = segment => (segment === "*" ? 2 : segment.startsWith(":") ? 1 : 0);
+
+const matchRoute = (routes, path) => {
+  const parts = segmentsOf(path);
+  const tryRoute = route => {
+    const pattern = segmentsOf(route);
+    const wildcard = pattern[pattern.length - 1] === "*";
+    const fixed = wildcard ? pattern.slice(0, -1) : pattern;
+    // * needs at least one segment of its own; otherwise the lengths must agree.
+    if (wildcard ? parts.length <= fixed.length : parts.length !== fixed.length) return null;
+    const fits = fixed.every((segment, i) => (segment.startsWith(":") ? parts[i] !== "" : segment === parts[i]));
+    if (!fits) return null;
+    const params = {};
+    fixed.forEach((segment, i) => {
+      if (segment.startsWith(":")) params[segment.slice(1)] = parts[i];
+    });
+    if (wildcard) params.rest = parts.slice(fixed.length).join("/");
+    return { route, params };
+  };
+  const moreSpecific = (a, b) => {
+    const left = segmentsOf(a.route).map(rank);
+    const right = segmentsOf(b.route).map(rank);
+    for (let i = 0; i < Math.min(left.length, right.length); i++) {
+      if (left[i] !== right[i]) return left[i] - right[i];
+    }
+    return 0; // equally specific: sort is stable, so the route listed first stays first
+  };
+  // map and filter build a new array, so routes itself is never sorted.
+  const matches = routes.map(tryRoute).filter(match => match !== null);
+  return matches.sort(moreSpecific)[0] ?? null;
+};`,
+    junior: `const splitPath = text => {
+  const parts = text.split("/");
+  if (parts.length > 1 && parts[parts.length - 1] === "") {
+    parts.pop();
+  }
+  return parts;
+};
+
+const segmentRank = segment => {
+  if (segment === "*") {
+    return 2;
+  }
+  if (segment.startsWith(":")) {
+    return 1;
+  }
+  return 0;
+};
+
+const matchRoute = (routes, path) => {
+  const pathParts = splitPath(path);
+  const matches = [];
+  for (const route of routes) {
+    const routeParts = splitPath(route);
+    const last = routeParts[routeParts.length - 1];
+    const hasRest = last === "*";
+    let fixedParts = routeParts;
+    if (hasRest) {
+      fixedParts = routeParts.slice(0, routeParts.length - 1);
+    }
+    let lengthOk = pathParts.length === fixedParts.length;
+    if (hasRest) {
+      lengthOk = pathParts.length > fixedParts.length;
+    }
+    if (!lengthOk) {
+      continue;
+    }
+    const allMatch = fixedParts.every((part, i) => {
+      if (part.startsWith(":")) {
+        return pathParts[i] !== "";
+      }
+      return part === pathParts[i];
+    });
+    if (!allMatch) {
+      continue;
+    }
+    const params = {};
+    for (let i = 0; i < fixedParts.length; i++) {
+      if (fixedParts[i].startsWith(":")) {
+        const name = fixedParts[i].slice(1);
+        params[name] = pathParts[i];
+      }
+    }
+    if (hasRest) {
+      params.rest = pathParts.slice(fixedParts.length).join("/");
+    }
+    matches.push({ route: route, params: params });
+  }
+  if (matches.length === 0) {
+    return null;
+  }
+  matches.sort((a, b) => {
+    const aParts = splitPath(a.route);
+    const bParts = splitPath(b.route);
+    let shorter = aParts.length;
+    if (bParts.length < shorter) {
+      shorter = bParts.length;
+    }
+    for (let i = 0; i < shorter; i++) {
+      const difference = segmentRank(aParts[i]) - segmentRank(bParts[i]);
+      if (difference !== 0) {
+        return difference;
+      }
+    }
+    return 0;
+  });
+  return matches[0];
+};`,
+    senior: `const segmentsOf = text => (text.length > 1 && text.endsWith("/") ? text.slice(0, -1) : text).split("/");
+const rankOf = segment => (segment === "*" ? 2 : segment[0] === ":" ? 1 : 0);
+
+const matchRoute = (routes, path) => {
+  const parts = segmentsOf(path);
+  const candidates = [];
+  for (const route of routes) {
+    const pattern = segmentsOf(route);
+    const hasRest = pattern.at(-1) === "*";
+    const fixed = hasRest ? pattern.slice(0, -1) : pattern;
+    const lengthFits = hasRest ? parts.length > fixed.length : parts.length === fixed.length;
+    if (!lengthFits || !fixed.every((segment, i) => (segment[0] === ":" ? parts[i] !== "" : segment === parts[i]))) continue;
+    const params = Object.fromEntries(fixed.flatMap((segment, i) => (segment[0] === ":" ? [[segment.slice(1), parts[i]]] : [])));
+    if (hasRest) params.rest = parts.slice(fixed.length).join("/");
+    candidates.push({ route, params, ranks: pattern.map(rankOf) });
+  }
+  candidates.sort((a, b) => {
+    const i = a.ranks.findIndex((rank, k) => rank !== b.ranks[k]);
+    return i === -1 || b.ranks[i] === undefined ? 0 : a.ranks[i] - b.ranks[i];
+  });
+  const [best] = candidates;
+  return best ? { route: best.route, params: best.params } : null;
+};`,
+    hiddenTests: [
+      { call: 'matchRoute(["/:section/new", "/posts/:id"], "/posts/new")', expected: { route: '/posts/:id', params: { id: 'new' } } },
+      { call: 'matchRoute(["/items/:id", "/items/:slug"], "/items/9")', expected: { route: '/items/:id', params: { id: '9' } } },
+      { call: '[matchRoute(["/docs/*"], "/docs"), matchRoute(["/docs/*"], "/docs/")]', expected: [null, null] },
+      { call: '[matchRoute(["/", "/:page"], "/"), matchRoute(["/", "/:page"], "/pricing")]', expected: [{ route: '/', params: {} }, { route: '/:page', params: { page: 'pricing' } }] },
+      { call: 'matchRoute(["/a/:b"], "/a/x/y")', expected: null },
+      { call: 'matchRoute(["/:a/:b", "/shop/:b", "/shop/cart"], "/shop/cart")', expected: { route: '/shop/cart', params: {} } },
+      { call: '(() => { const routes = ["/x/*", "/x/:id", "/x/y"]; matchRoute(routes, "/x/y"); return routes; })()', expected: ['/x/*', '/x/:id', '/x/y'] },
+      { call: 'matchRoute(["/files/:dir/*"], "/files/img/a/b.png")', expected: { route: '/files/:dir/*', params: { dir: 'img', rest: 'a/b.png' } } },
+    ],
+  },
+  'js-mh-settings-diff': {
+    solution: `// typeof says "object" for null and arrays too; both are leaves here.
+const isObject = value => typeof value === "object" && value !== null && !Array.isArray(value);
+const sameLeaf = (a, b) =>
+  Array.isArray(a) && Array.isArray(b)
+    ? a.length === b.length && a.every((item, i) => item === b[i])
+    : a === b;
+
+const diffSettings = (before, after) => {
+  const changes = [];
+  const join = (prefix, key) => (prefix === "" ? key : prefix + "." + key);
+  // Every leaf under value, reported with one kind of change.
+  const everyLeaf = (value, path, change) => {
+    if (!isObject(value)) {
+      changes.push({ path, change });
+      return;
+    }
+    for (const key in value) everyLeaf(value[key], join(path, key), change);
+  };
+  const walk = (a, b, prefix) => {
+    for (const key in a) {
+      const path = join(prefix, key);
+      if (!Object.hasOwn(b, key)) everyLeaf(a[key], path, "removed");
+      else if (isObject(a[key]) && isObject(b[key])) walk(a[key], b[key], path);
+      else if (isObject(a[key]) || isObject(b[key])) {
+        // An object on one side and a leaf on the other: both sides are reported.
+        everyLeaf(a[key], path, "removed");
+        everyLeaf(b[key], path, "added");
+      } else if (!sameLeaf(a[key], b[key])) changes.push({ path, change: "changed" });
+    }
+    for (const key in b) {
+      if (!Object.hasOwn(a, key)) everyLeaf(b[key], join(prefix, key), "added");
+    }
+  };
+  walk(before, after, "");
+  return changes.sort((x, y) => (x.path < y.path ? -1 : x.path > y.path ? 1 : 0));
+};`,
+    junior: `const isPlainObject = value => {
+  if (value === null) {
+    return false;
+  }
+  if (Array.isArray(value)) {
+    return false;
+  }
+  return typeof value === "object";
+};
+
+const leavesEqual = (a, b) => {
+  if (Array.isArray(a) && Array.isArray(b)) {
+    if (a.length !== b.length) {
+      return false;
+    }
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return a === b;
+};
+
+const diffSettings = (before, after) => {
+  const changes = [];
+  const pathFor = (prefix, key) => {
+    if (prefix === "") {
+      return key;
+    }
+    return prefix + "." + key;
+  };
+  const reportAll = (value, path, change) => {
+    if (isPlainObject(value)) {
+      for (const key in value) {
+        reportAll(value[key], pathFor(path, key), change);
+      }
+    } else {
+      changes.push({ path: path, change: change });
+    }
+  };
+  const compare = (a, b, prefix) => {
+    for (const key in a) {
+      const path = pathFor(prefix, key);
+      const inB = Object.prototype.hasOwnProperty.call(b, key);
+      if (!inB) {
+        reportAll(a[key], path, "removed");
+        continue;
+      }
+      const aIsObject = isPlainObject(a[key]);
+      const bIsObject = isPlainObject(b[key]);
+      if (aIsObject && bIsObject) {
+        compare(a[key], b[key], path);
+      } else if (aIsObject || bIsObject) {
+        reportAll(a[key], path, "removed");
+        reportAll(b[key], path, "added");
+      } else if (!leavesEqual(a[key], b[key])) {
+        changes.push({ path: path, change: "changed" });
+      }
+    }
+    for (const key in b) {
+      const inA = Object.prototype.hasOwnProperty.call(a, key);
+      if (!inA) {
+        reportAll(b[key], pathFor(prefix, key), "added");
+      }
+    }
+  };
+  compare(before, after, "");
+  changes.sort((x, y) => {
+    if (x.path < y.path) {
+      return -1;
+    }
+    if (x.path > y.path) {
+      return 1;
+    }
+    return 0;
+  });
+  return changes;
+};`,
+    senior: `const isObject = value => typeof value === "object" && value !== null && !Array.isArray(value);
+
+const leaves = (value, prefix = "", out = new Map()) => {
+  for (const key in value) {
+    const path = prefix ? \`\${prefix}.\${key}\` : key;
+    if (isObject(value[key])) leaves(value[key], path, out);
+    else out.set(path, value[key]);
+  }
+  return out;
+};
+
+const sameLeaf = (a, b) =>
+  Array.isArray(a) && Array.isArray(b) ? a.length === b.length && a.every((item, i) => item === b[i]) : a === b;
+
+const diffSettings = (before, after) => {
+  const old = leaves(before);
+  const next = leaves(after);
+  const changes = [];
+  for (const [path, value] of old) {
+    if (!next.has(path)) changes.push({ path, change: "removed" });
+    else if (!sameLeaf(value, next.get(path))) changes.push({ path, change: "changed" });
+  }
+  for (const path of next.keys()) if (!old.has(path)) changes.push({ path, change: "added" });
+  return changes.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+};`,
+    hiddenTests: [
+      { call: 'diffSettings({ proxy: { host: "x", port: 1 } }, { proxy: null })', expected: [{ path: 'proxy', change: 'added' }, { path: 'proxy.host', change: 'removed' }, { path: 'proxy.port', change: 'removed' }] },
+      { call: 'diffSettings({ cache: false }, { cache: { size: 10 } })', expected: [{ path: 'cache', change: 'removed' }, { path: 'cache.size', change: 'added' }] },
+      { call: 'diffSettings({ list: [1, 2], mixed: [1, "1"] }, { list: [1, 2, 3], mixed: [1, 1] })', expected: [{ path: 'list', change: 'changed' }, { path: 'mixed', change: 'changed' }] },
+      { call: 'diffSettings({ a: { b: { c: { d: 1 } } } }, { a: { b: { c: { d: 1, e: 2 } } } })', expected: [{ path: 'a.b.c.e', change: 'added' }] },
+      { call: 'diffSettings({ gone: {}, stay: 1 }, { stay: 1, fresh: {} })', expected: [] },
+      { call: 'diffSettings({ ui: { dark: true, size: "m" }, beta: false }, { ui: { dark: true, size: "l", font: null }, beta: false, lang: "en" })', expected: [{ path: 'lang', change: 'added' }, { path: 'ui.font', change: 'added' }, { path: 'ui.size', change: 'changed' }] },
+    ],
+  },
+  'js-mh-safe-stringify': {
+    solution: `const safeStringify = value => {
+  // The objects on the path from the root to where we are now. A child that
+  // is already on the path points back up: that is the loop.
+  const path = new Set();
+  const copy = current => {
+    if (current === null || typeof current !== "object") return current;
+    if (path.has(current)) return "[Circular]";
+    path.add(current);
+    const result = Array.isArray(current)
+      ? current.map(child => copy(child))
+      : Object.fromEntries(Object.entries(current).map(([key, child]) => [key, copy(child)]));
+    path.delete(current); // leaving it: a later sibling may use the same object freely
+    return result;
+  };
+  return JSON.stringify(copy(value));
+};`,
+    junior: `const safeStringify = value => {
+  const ancestors = [];
+  const copy = current => {
+    if (current === null) {
+      return null;
+    }
+    if (typeof current !== "object") {
+      return current;
+    }
+    if (ancestors.includes(current)) {
+      return "[Circular]";
+    }
+    ancestors.push(current);
+    let result;
+    if (Array.isArray(current)) {
+      result = [];
+      for (const item of current) {
+        result.push(copy(item));
+      }
+    } else {
+      result = {};
+      for (const key of Object.keys(current)) {
+        result[key] = copy(current[key]);
+      }
+    }
+    ancestors.pop();
+    return result;
+  };
+  return JSON.stringify(copy(value));
+};`,
+    senior: `const safeStringify = value => {
+  const ancestors = [];
+  return JSON.stringify(value, function (key, current) {
+    if (typeof current !== "object" || current === null) return current;
+    // this is the object that holds current: drop every ancestor below it.
+    while (ancestors.length > 0 && ancestors[ancestors.length - 1] !== this) ancestors.pop();
+    if (ancestors.includes(current)) return "[Circular]";
+    ancestors.push(current);
+    return current;
+  });
+};`,
+    hiddenTests: [
+      { call: '(() => { const a = { name: "a" }; const b = { name: "b", back: a }; a.next = b; return safeStringify({ start: a }); })()', expected: '{"start":{"name":"a","next":{"name":"b","back":"[Circular]"}}}' },
+      { call: '(() => { const tag = { id: 1 }; return safeStringify([tag, tag, [tag]]); })()', expected: '[{"id":1},{"id":1},[{"id":1}]]' },
+      { call: '(() => { const shared = { v: 1 }; return safeStringify({ first: { inner: shared }, second: shared }); })()', expected: '{"first":{"inner":{"v":1}},"second":{"v":1}}' },
+      { call: '(() => { const ada = { name: "Ada", friends: [] }; const ben = { name: "Ben", friends: [ada] }; ada.friends.push(ben); return safeStringify([ada, ben]); })()', expected: '[{"name":"Ada","friends":[{"name":"Ben","friends":["[Circular]"]}]},{"name":"Ben","friends":[{"name":"Ada","friends":["[Circular]"]}]}]' },
+      { call: '(() => { const node = { id: 1 }; node.self = node; safeStringify(node); return node.self === node; })()', expected: true },
+      { call: '[safeStringify(null), safeStringify(42), safeStringify([])]', expected: ['null', '42', '[]'] },
+    ],
+  },
+
+  /* ── Hard: promises that share work ───────────────────────────────── */
+  'js-mh-batch-loader': {
+    solution: `const createLoader = (loadMany, waitMs) => {
+  // The batch being gathered, id -> callers waiting for it; null between batches.
+  let gathering = null;
+  const send = async batch => {
+    const ids = [...batch.keys()]; // a Map keeps the order ids were first asked for
+    try {
+      const results = await loadMany(ids);
+      ids.forEach((id, index) => {
+        for (const { resolve } of batch.get(id)) resolve(results[index]);
+      });
+    } catch (error) {
+      for (const waiting of batch.values()) {
+        for (const { reject } of waiting) reject(error);
+      }
+    }
+  };
+  return id => new Promise((resolve, reject) => {
+    if (gathering === null) {
+      const batch = new Map();
+      gathering = batch;
+      setTimeout(() => {
+        gathering = null; // a load from now on starts a new batch
+        send(batch);
+      }, waitMs);
+    }
+    if (!gathering.has(id)) gathering.set(id, []);
+    gathering.get(id).push({ resolve, reject });
+  });
+};`,
+    junior: `const createLoader = (loadMany, waitMs) => {
+  let currentBatch = null;
+  const load = id => {
+    return new Promise((resolve, reject) => {
+      if (currentBatch === null) {
+        const batch = { ids: [], waiting: new Map() };
+        currentBatch = batch;
+        setTimeout(async () => {
+          currentBatch = null;
+          try {
+            const results = await loadMany(batch.ids);
+            for (let i = 0; i < batch.ids.length; i++) {
+              const callers = batch.waiting.get(batch.ids[i]);
+              for (const caller of callers) {
+                caller.resolve(results[i]);
+              }
+            }
+          } catch (error) {
+            for (const id of batch.ids) {
+              const callers = batch.waiting.get(id);
+              for (const caller of callers) {
+                caller.reject(error);
+              }
+            }
+          }
+        }, waitMs);
+      }
+      if (!currentBatch.waiting.has(id)) {
+        currentBatch.ids.push(id);
+        currentBatch.waiting.set(id, []);
+      }
+      currentBatch.waiting.get(id).push({ resolve: resolve, reject: reject });
+    });
+  };
+  return load;
+};`,
+    senior: `const createLoader = (loadMany, waitMs) => {
+  let batch = null;
+  return id => {
+    if (batch === null) {
+      const current = { promises: new Map() };
+      current.results = new Promise(done => setTimeout(done, waitMs)).then(() => {
+        batch = null;
+        return loadMany([...current.promises.keys()]);
+      });
+      batch = current;
+    }
+    if (!batch.promises.has(id)) {
+      const index = batch.promises.size; // one shared promise per id, picking its own result
+      batch.promises.set(id, batch.results.then(results => results[index]));
+    }
+    return batch.promises.get(id);
+  };
+};`,
+    hiddenTests: [
+      { call: '(async () => { const calls = []; const load = createLoader(async ids => { calls.push(ids); return ids.map(id => -id); }, 10); const values = await Promise.all([load(3), load(1), load(3), load(2)]); return [values, calls]; })()', expected: [[-3, -1, -3, -2], [[3, 1, 2]]], async: true },
+      { call: '(async () => { const calls = []; const a = createLoader(async ids => { calls.push("a:" + ids.join()); return ids; }, 10); const b = createLoader(async ids => { calls.push("b:" + ids.join()); return ids; }, 10); await Promise.all([a(1), b(2), a(3)]); return calls.sort(); })()', expected: ['a:1,3', 'b:2'], async: true },
+      { call: '(async () => { let fail = true; const load = createLoader(async ids => { if (fail) { fail = false; throw new Error("once"); } return ids.map(id => id + "!"); }, 10); const first = await load("x").catch(error => error.message); const second = await load("x"); return [first, second]; })()', expected: ['once', 'x!'], async: true },
+      { call: '(async () => { const load = createLoader(async ids => ids.map(id => (id === "zero" ? 0 : null)), 5); return Promise.all([load("zero"), load("none")]); })()', expected: [0, null], async: true },
+      { call: '(async () => { const calls = []; const load = createLoader(async ids => { calls.push(ids.length); return ids; }, 10); const wait = ms => new Promise(done => setTimeout(done, ms)); const all = [load(1), load(2)]; await wait(30); all.push(load(3)); await wait(30); all.push(load(4), load(5), load(4)); await Promise.all(all); return calls; })()', expected: [2, 1, 2], async: true },
+      { call: '(async () => { const calls = []; const load = createLoader(ids => { calls.push(ids); return new Promise(done => setTimeout(() => done(ids.map(String)), 50)); }, 5); const first = load(1); await new Promise(done => setTimeout(done, 20)); const second = load(2); return [await first, await second, calls]; })()', expected: ['1', '2', [[1], [2]]], async: true },
+    ],
+  },
+  'js-mh-shared-request': {
+    solution: `const shareRequests = (fetchRate, ttlMs, now) => {
+  const entries = new Map(); // key -> { promise, at }
+  return key => {
+    const stored = entries.get(key);
+    // The promise exists from the moment the request starts, so a second
+    // caller shares it before any answer has arrived.
+    if (stored && now() - stored.at < ttlMs) return stored.promise;
+    const entry = { promise: fetchRate(key), at: now() };
+    entries.set(key, entry);
+    entry.promise.catch(() => {
+      // Forget a failure, but only this one: a newer request for the same key
+      // may have replaced it while it was in flight.
+      if (entries.get(key) === entry) entries.delete(key);
+    });
+    return entry.promise;
+  };
+};`,
+    junior: `const shareRequests = (fetchRate, ttlMs, now) => {
+  const cache = new Map();
+  const get = key => {
+    if (cache.has(key)) {
+      const saved = cache.get(key);
+      const age = now() - saved.at;
+      if (age < ttlMs) {
+        return saved.promise;
+      }
+    }
+    const promise = fetchRate(key);
+    const entry = { promise: promise, at: now() };
+    cache.set(key, entry);
+    promise.catch(() => {
+      const current = cache.get(key);
+      if (current === entry) {
+        cache.delete(key);
+      }
+    });
+    return promise;
+  };
+  return get;
+};`,
+    senior: `const shareRequests = (fetchRate, ttlMs, now) => {
+  const entries = new Map();
+  const isFresh = entry => entry !== undefined && now() - entry.at < ttlMs;
+  return key => {
+    const stored = entries.get(key);
+    if (isFresh(stored)) return stored.promise;
+    const entry = { promise: Promise.resolve(fetchRate(key)), at: now() };
+    entries.set(key, entry);
+    entry.promise.catch(() => {
+      if (entries.get(key) === entry) entries.delete(key);
+    });
+    return entry.promise;
+  };
+};`,
+    hiddenTests: [
+      { call: '(async () => { let time = 0; let calls = 0; const get = shareRequests(() => { calls++; const mine = calls; return new Promise((done, fail) => setTimeout(() => (mine === 1 ? fail(new Error("slow failure")) : done("fresh")), mine === 1 ? 50 : 10)); }, 20, () => time); const first = get("k").catch(error => error.message); time = 30; const second = get("k"); const firstResult = await first; const third = get("k"); return [firstResult, await second, await third, calls]; })()', expected: ['slow failure', 'fresh', 'fresh', 2], async: true },
+      { call: '(async () => { let time = 0; let calls = 0; const get = shareRequests(async () => ++calls, 100, () => time); const first = get("k"); time = 150; const second = get("k"); return [await first, await second]; })()', expected: [1, 2], async: true },
+      { call: '(async () => { let time = 0; const seen = []; const get = shareRequests(async key => { seen.push(key); return key; }, 50, () => time); await get("a"); time = 40; await get("b"); time = 60; await get("a"); await get("b"); return seen; })()', expected: ['a', 'b', 'a'], async: true },
+      { call: '(async () => { let calls = 0; const fetchRate = async key => { calls++; return key; }; const one = shareRequests(fetchRate, 1000, () => 0); const two = shareRequests(fetchRate, 1000, () => 0); await Promise.all([one("x"), two("x")]); return calls; })()', expected: 2, async: true },
+      { call: '(async () => { let calls = 0; const get = shareRequests(async () => { calls++; return 0; }, 1000, () => 0); await get("z"); const again = await get("z"); return [again, calls]; })()', expected: [0, 1], async: true },
+    ],
+  },
 };
