@@ -138,17 +138,24 @@ scaffold (`LINKS_REACT_SCAFFOLD`), which exports `normalizeLink` and
 
 ## Playground layout
 
-The task description spans the full width above the playground. Editor and
-results share one stretched grid row and scroll together with the page; the
-results panel is never sticky over the action bar. Hints start closed on each
-visit and are revealed only through Hint/Next hint, ignoring old saved counts.
+The brief opens the code pane. Its first line is green: where the task sits
+(track, tier and level, or the level of a path) and, after a rule, the task's
+name, which is the page heading. The prompt, earlier requirements and notes
+follow, then the editor, which fills the pane. The pane has no "Your code"
+label. Editor and results share one stretched grid row and scroll together with
+the page; the results panel is never sticky over the action bar. Hints start
+closed on each visit and are revealed only through Hint/Next hint, ignoring old
+saved counts.
 
-Run/Submit/Format/Reset and Hint/Next hint/Solution/Skip share a compact bottom
-action bar spanning the playground width. The save star and the report flag
-remain right-aligned; there is no focus mode. Revealed hints form an ordered
-list after the controls. The editor's desktop minimum height is 480px. Common
-learning controls remain reachable for narrow/puzzle layouts. The keyboard
-guide draws real keycaps, each with the key's glyph and printed name.
+Run/Submit/Format/Reset and Hint/Next hint/Solution/Skip form the action bar at
+the foot of the code pane. The save star and the report flag remain
+right-aligned; there is no focus mode. Revealed hints, the skip form,
+confirmations and errors follow in a full-width pane under the grid, and it
+exists only while it holds one of them. The editor's desktop minimum height is
+480px. Below 1024px the puzzle or the pending note takes the editor's place
+and carries the brief and the action bar. The keyboard shortcuts are not
+printed: Ctrl+Enter runs, Ctrl+Shift+Enter submits, and Escape then Tab leaves
+the editor, and the editor's accessible description says so.
 Stage-specific references are part of the existing Resources tab, alongside
 technique documentation. Hint labels are "Hint" before the first reveal and
 "Next hint" afterwards. When Hint or Solution is unavailable the button stays

@@ -190,5 +190,36 @@ What that means for this repository, precisely:
 - **Nothing is posted automatically.** Each carousel is stored as a draft behind an approval
   queue; marketingShark owns no social account and has no publishing path.
 
-Re-importing the bank after it grows is one command on the quorum side and does not disturb which
-questions have already been used.
+### The contract
+
+The importer in quorum reads `lib/webdev-bank.ts` and nothing else. Keep these names and shapes,
+or change the importer upstream first.
+
+- **Exports:** `loadWebdevQuestions()` resolves to the question array and
+  `loadWebdevTranslations()` to the Czech overlays keyed by question id. The importer loads both
+  by name.
+- **Question fields:** `id` (a unique string), `introduction`, `question`, `options` (two or more
+  strings), `correctAnswer` (an index into `options`), `category`, `explanation`, `difficulty`
+  (an integer from 1 to 5) and an optional `importance` (an integer from 1 to 10).
+- **Czech overlay:** optional `introduction`, `question`, `options` and `explanation`. Czech
+  `options` must match the English array's length, because `correctAnswer` indexes both.
+- **Code detection:** the importer marks a question as code when its `question` or
+  `introduction` contains a fenced block (```` ``` ````). A question with `snippet` metadata keeps
+  its code there.
+
+`npm run test:launch` checks every question and its Czech overlay against this list
+(`scripts/webdev-bank-contract.ts`). When it fails, fix the bank. If the contract itself has to
+change, change the quorum adapter first and then this test.
+
+marketingShark reads a pinned snapshot, `state/marketingshark/question-banks/devshark.json`,
+whose envelope records the source commit and a content hash. A bank change reaches marketing
+only after someone re-imports it from a clean checkout on the quorum side and confirms the
+result with `--check`:
+
+```sh
+pnpm marketingshark:import-bank -- --brand devshark --source ../react-express-app
+pnpm marketingshark:import-bank -- --brand devshark --source ../react-express-app --check
+```
+
+The importer refuses uncommitted changes under `lib/` and `shared/`. A re-import keeps the ledger
+of used questions.

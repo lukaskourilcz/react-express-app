@@ -37,8 +37,20 @@
 
 /* ── section lists ─────────────────────────────────────────────────────── */
 .cd-discovery { gap: 40px; }
-.cd-discovery .cd-resume { padding: clamp(24px, 4vw, 44px); border: 0; border-left: 4px solid var(--brand-accent); background: color-mix(in srgb, var(--brand-accent) 8%, var(--color-background-surface)); }
-.cd-resume h2 { margin-top: 10px; font-size: clamp(1.5rem, 3vw, 2.3rem); }
+.cd-home-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 20px 40px; }
+/* The next challenge, beside the heading: its name and a way in, nothing else. */
+.cd-next { display: flex; align-items: center; gap: 12px 20px; width: min(100%, 400px); padding: 14px 16px 14px 18px; border-left: 3px solid var(--brand-accent); border-radius: 0 var(--radius-element) var(--radius-element) 0; background: color-mix(in srgb, var(--brand-accent) 7%, var(--color-background-surface)); }
+.cd-next__text { flex: 1; display: grid; gap: 4px; min-width: 0; }
+.cd-page .cd-next__label { margin: 0; font-family: var(--font-family-body); font-size: 0.72rem; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; color: var(--color-text-accent); }
+.cd-next__title { margin: 0; min-height: 1.3em; font-family: var(--font-family-heading); font-size: 1.1rem; font-weight: 700; line-height: 1.3; overflow-wrap: anywhere; }
+.cd-next__title--error { font-family: var(--font-family-body); font-size: 0.9rem; font-weight: 600; }
+/* Where the title will be while progress loads; still, so reduced motion needs nothing. */
+.cd-next__placeholder { display: inline-block; width: 9ch; height: 0.85em; border-radius: 4px; background: var(--color-border-strong); vertical-align: -0.05em; }
+.cd-next > .ss-swim-cta, .cd-next > .cd-btn { flex: none; }
+@media (max-width: 860px) {
+  .cd-home-head { grid-template-columns: minmax(0, 1fr); }
+  .cd-next { width: 100%; }
+}
 .cd-track-directory { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block: 1px solid var(--ss-card-line); }
 .cd-track-entry { display: flex; gap: 14px; padding: 24px 18px; color: inherit; text-decoration: none; min-width: 0; }
 .cd-track-entry + .cd-track-entry { border-left: 1px solid var(--ss-card-line); }
@@ -106,18 +118,6 @@
 .cd-track__title h2 { font-size: 1.15rem; }
 .cd-track__blurb { margin: 0; color: var(--color-text-secondary); font-size: 0.92rem; line-height: 1.5; }
 .cd-track__count { font-size: 0.85rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
-
-.cd-continue {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 18px;
-  border-radius: var(--radius-container);
-  background: var(--color-background-muted);
-  border: 1px solid var(--ss-card-line);
-}
 
 /* Technique groups. They were a flat row of pills reading "Loops · 24", which
  * says the name and the number and nothing else — the techniques themselves,
@@ -280,11 +280,17 @@
   background: var(--color-background-surface);
   border: 1px solid var(--ss-card-line);
 }
-.cd-pane--task { gap: 14px; }
 .cd-pane { min-width: 0; }
 .cd-pane[hidden] { display: none; }
-.cd-pane--editor > div { display: flex; flex: 1; flex-direction: column; }
-.cd-pane--editor > div > div { display: flex; flex: 1; min-width: 0; }
+/* The code pane holds the whole task: the brief on top, the editor growing in
+   the middle, and the actions at its foot. */
+.cd-brief { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+.cd-brief__line { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 9px; color: var(--color-text-accent); font-family: var(--font-family-heading); font-size: 1.05rem; font-weight: 650; line-height: 1.35; }
+/* The rule before the name is the separator: it wraps with the name, so a
+   narrow screen never leaves a stray bar at the end of the line above. */
+.cd-page .cd-brief__title { margin: 0; padding-left: 9px; border-left: 2px solid color-mix(in srgb, currentColor 50%, transparent); font: inherit; font-weight: 800; color: inherit; overflow-wrap: anywhere; }
+.cd-brief__line .cd-tag { align-self: center; }
+.cd-editor-slot { display: flex; flex: 1 1 auto; flex-direction: column; min-width: 0; }
 .cd-pane--editor .cd-editor { flex: 1; background: var(--cd-editor-bg); }
 .cd-workbench .cd-panel pre, .cd-workbench .cd-console { max-height: none; }
 .cd-pane__head h1 { font-size: 1.5em; }
@@ -317,17 +323,20 @@
 
 .cd-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .cd-actions--end { justify-content: flex-end; }
-.cd-editor-actions { display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; gap: 16px 24px; }
-.cd-actions--commands { gap: 12px; }
-.cd-actions--utility { display: contents; }
-.cd-action-guidance { display: grid; gap: 6px; min-width: 0; text-align: right; }
-.cd-action-guidance p:empty { display: none; }
+.cd-editor-actions { min-width: 0; margin-top: 4px; }
+.cd-actions--commands { gap: 8px 12px; }
+/* Save and report sit at the far end of the row, apart from the task's own actions. */
+.cd-actions--utility { flex-wrap: nowrap; margin-left: auto; }
 @media (min-width: 1024px) {
-  .cd-editor-actions { grid-template-columns: minmax(max-content, 2.2fr) minmax(0, 1fr); }
-  .cd-actions--commands { flex-wrap: nowrap; gap: 12px; }
   .cd-actions--commands > .cd-btn { flex-shrink: 0; white-space: nowrap; }
 }
+/* Hints, confirmations and errors, under the code pane. On two columns they
+   take the row below it, full width, so the results pane keeps the editor's
+   height. */
 .cd-pane--controls { grid-column: 1 / -1; min-width: 0; }
+@media (min-width: 1024px) {
+  .cd-pane--controls { grid-row: 2; }
+}
 @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
   .cd-workbench .cd-btn { min-height: 32px; padding: 5px 7px; font-size: 0.78rem; line-height: 1.25; }
   .cd-workbench .cd-btn--icon { width: 32px; padding: 0; flex-shrink: 0; }
@@ -665,34 +674,6 @@
 .cd-tag--format { border-color: var(--brand-accent); color: var(--brand-accent); }
 .cd-hint-list { display: grid; gap: 12px; margin: 0; padding: 0; list-style-position: inside; }
 .cd-hint-list:empty { display: none; }
-
-/* Compact keyboard instructions: simultaneous chords, then the escape sequence. */
-.cd-keyboard-guide { display: grid; gap: 6px; }
-.cd-keyboard-guide__row, .cd-keyboard-guide__chord { display: flex; align-items: center; justify-content: flex-end; gap: 3px; white-space: nowrap; }
-.cd-keyboard-guide__row { gap: 6px; font-size: 0.72rem; }
-/* A keycap: glyph and printed name on a cap with a lip, like the key itself. */
-.cd-keycap {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  flex: none;
-  min-height: 20px;
-  padding: 1px 5px 2px;
-  border: 1px solid var(--color-border-strong);
-  border-bottom-width: 3px;
-  border-radius: 5px;
-  background: var(--color-background-muted);
-  color: var(--color-text-primary);
-  font-family: var(--font-family-body);
-  font-size: 0.68rem;
-  font-weight: 650;
-  line-height: 1;
-  letter-spacing: 0.02em;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 55%, transparent);
-}
-.cd-keycap svg { width: 11px; height: 11px; flex: none; overflow: visible; }
-.cd-keycap path { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.cd-keyboard-guide__chord > .cd-keycap + .cd-keycap { margin-left: 1px; }
 
 /* Keep 10–12 stage controls reachable without pushing the brief below a phone screen. */
 .cd-stage-nav { flex-wrap: nowrap; overflow-x: auto; padding: 4px 2px; }
