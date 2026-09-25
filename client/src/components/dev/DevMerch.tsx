@@ -552,4 +552,3 @@ function OrderCard({ order, items, onDone }: {
     </article>
   );
 }
-
