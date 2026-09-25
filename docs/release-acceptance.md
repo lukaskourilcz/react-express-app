@@ -968,3 +968,34 @@ Local evidence, all executed on the integration branch:
 | `git diff --check` | clean |
 
 Not verified here: production, where migrations 039 to 044 are not applied, and any signed-in check against the real Supabase and Stripe. These are owner items in `NEEDED.md`.
+
+## 2026-09-25 — the cleanup sweep (CLEAN, #231, #234, #235)
+
+What changed: five fixes from the audit report (#231), the markdown sweep (#234) and the dead-code sweep (#235).
+- The CSS purge keeps the runtime-composed `lp-state--*`, `lp-criterion--*` and `lp-trace__cell--*` classes, and the build fails if a listed runtime-composed class goes missing.
+- The CSP `connect-src` allows `https://*.ingest.de.sentry.io`, so browser errors can reach Sentry.
+- Submit returns only the visible checks' console output: `runInSandbox` starts hidden calls after the shown ones settle and cuts the logs there. The learning-path grader uses the same split.
+- Every segmented control shows the track through an unselected segment in both themes; the rule lives in Astryx's `astryx-base` layer.
+- Stale Markdown is corrected or deleted, `NEEDED.md` carries valid markers on every task, and the exports, scripts and the one file that nothing imports are gone.
+- Not ported: the Classroom rate-limit fix `fa884b7` from `claude/elegant-cori-h9cdgb`. `git cherry-pick -n fa884b7` conflicts in `lib/rate-limit.ts` (D2 already added an `identity` argument with another key scheme) and in `scripts/test-launch-contracts.ts`. `NEEDED.md` carries it as an agent task.
+
+Local evidence, all executed on the final tree:
+
+| Check | Result |
+| --- | --- |
+| Client build without `/^lp-/` in the safelist | exit 1, naming the ten `lp-` modifier classes |
+| Client build with it | exit 0; all ten ship in the ActivityViews stylesheet. Of 828 source classes, the 20 still missing from the build are dead CSS no TS or TSX file names |
+| `npm run check:security` with the old `vercel.json` | exit 1 on the Sentry ingest assertion; with the new one, exit 0 |
+| `npm run test:grading-integrity` | exit 0. New: without a split every log returns; with one, a hidden call prints nothing, whether it settles first or hangs; an anonymous Submit of `js-digit-sum` that logs its argument passes 3 of 3 hidden checks and returns the five visible inputs only. With `shownCalls` removed from `gradeCode` the Submit case fails |
+| `npm run test:coding` | exit 0; 695 tasks, every reference solution proven under the split grader |
+| `tests/browser/segmented.spec.ts` (`/roadmap`, `/leaderboard`, light and dark, 1280 px) | against the previous build the two `/roadmap` cases fail (unselected segments `rgb(239, 239, 239)` and `rgb(107, 107, 107)`); against this build 4 passed: transparent at rest, Astryx's hover still paints, axe color-contrast clean |
+| `tests/browser/segmented.spec.ts`, `evolving.spec.ts`, `public.spec.ts` against the final preview | 11 passed |
+| `npm run check:responsive` over `/`, `/quiz`, `/roadmap`, `/leaderboard`, `/premium`, `/coding` at 360, 390, 768 and 1280, light and dark, `--block-external` | exit 0 each; 24 probes, 0 issues |
+| `npm run typecheck:api`, `npm run test:launch`, `npm run test:paths`, `npm run test:coding-auth`, `npm run test:billing` (24 checks) | exit 0 each |
+| `npm run test:client` | exit 0; 18 files, 181 tests |
+| `npm run typecheck:tooling --prefix client`, `npm run check:unused` (1 reviewed finding left) | exit 0 each |
+| `npm run build`, `npm run check:public`, `npm run check:bundle` | exit 0; 13 public URLs; 218,305 of 243,000 gzip bytes |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client` | exit 0; 0 vulnerabilities |
+| `git diff --check` | clean, on the tree and on the step's range |
+
+Not verified here: Sentry receiving a real browser event after deploy, and anything signed in.
