@@ -26,8 +26,9 @@ npx @usebruno/cli run bruno --env Local
   needs a real session id).
 - **`Auth required (expect 401)/`** - the security-relevant half. Every
   auth-gated endpoint (`flashcards`, `user/*`, `roadmap?resource=progress`,
-  `play/*`, `admin/*`) is hit **without** a Bearer token / dev password and
-  asserts `res.status: eq 401`. This turns "this endpoint must reject
+  `play/*`) is hit **without** a Bearer token and asserts `res.status: eq 401`;
+  `admin/*` answers 403 `forbidden` (`requireAdmin` in `lib/admin-auth.ts`),
+  and its request asserts that. This turns "this endpoint must reject
   unauthenticated callers" from a hope into a runnable check - run it in CI or
   before a deploy to catch an accidentally-unguarded route.
 

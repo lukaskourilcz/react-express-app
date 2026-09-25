@@ -1,6 +1,6 @@
 # Activation measurement
 
-The homepage copy now explains guided lessons, quizzes and coding practice in English and Czech without promising a job or inventing outcomes. Public guides show an example and a misconception before offering a related quiz.
+The homepage copy now explains guided lessons, quizzes and coding practice in English (the only shipped language; the prerendered `/cs/topics/` guides are the one Czech surface left) without promising a job or inventing outcomes. Public guides show an example and a misconception before offering a related quiz.
 
 Use the existing PostHog project and `VITE_PUBLIC_POSTHOG_KEY`; no second analytics SDK is needed. In PostHog, create an ordered seven-day funnel for unique users:
 

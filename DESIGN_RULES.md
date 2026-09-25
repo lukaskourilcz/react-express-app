@@ -30,7 +30,7 @@ of a button or card is a bug.
 The whole kit reads a **single** accent variable. Never hard-code the accent's
 hex. Fins, waterlines, kickers, selected states, progress and primary CTAs all
 read `var(--brand-accent)` (and `var(--brand-accent-soft)` for tints).
-`ColorModeContext` writes these from `lib/subjects.ts`:
+`ColorModeContext` writes these from `client/src/lib/subjects.ts`:
 
 | Product  | Accent    | Bright (dark) |
 |----------|-----------|---------------|
@@ -95,11 +95,11 @@ mark as it has always looked.
 
 **What the bank does not touch.** The animated fin waterline
 (`WaterlineProgress` in `SharkFin.tsx`) has its own geometry and its own
-motion. The roadmap and landing connectors (`pathWave`, `Home.tsx`) already
-vary per segment under rule 4 above. The dialog
-surface reads `--ss-wave` as a background texture rather than as an underline.
-None of the three is part of this bank, and none of them should be routed
-through it.
+motion. The roadmap and landing connectors (the topic preview in
+`client/src/components/Home.tsx`) already vary per segment under rule 4
+above. The dialog surface reads `--ss-wave` as a background texture rather
+than as an underline. None of the three is part of this bank, and none of
+them should be routed through it.
 
 The variants are decoration: no accessible name, no focus target, nothing read
 out, and no animation — so the reduced-motion rules in section 5 have nothing
@@ -155,5 +155,5 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   swim. Keep a native button and an accessible name.
 - Reduced motion freezes all travel and ambient loops; opacity alone may
   reveal a fin. Feedback must remain understandable without animation.
-- Test narrow widths, both languages and themes, keyboard focus, disabled
+- Test narrow widths, both themes, keyboard focus, disabled
   controls, slow responses, failure/retry and reduced motion.

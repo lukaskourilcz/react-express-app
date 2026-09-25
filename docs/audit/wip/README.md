@@ -1,9 +1,10 @@
 # Content audit (#176) — work in progress
 
-This directory holds the interim artifacts of the devShark content audit while
-the branch `claude/qa-hints-audit-i0kh9t` is in progress. Nothing here is a
-result the product may quote yet. `docs/audit/HANDOFF-176-w1.md` says what is
-done, what is not, and the order to finish the first wave.
+Interim artifacts of the devShark content audit (#176). The question audit
+finished and merged on 2026-09-11; `docs/audit/devshark-content-audit.md` is
+the report and `docs/audit/devshark-content-ledger.json` the record. Nothing
+here is quoted by the product. Nobody has audited the coding catalogue yet, and
+the tools and briefs here stay for that pass.
 
 - `REVIEWER-BRIEF.md`, `CODING-BRIEF.md`, `CS-BRIEF.md` — the rubric and the
   output schema the item-level reviewers apply (the issue's rubric, verbatim
@@ -32,7 +33,8 @@ done, what is not, and the order to finish the first wave.
   helpers that validate reviews, enrich batches, build contexts, build Czech
   batches and summarise the ledger. The handoff shows how to bundle them.
 
-State when this snapshot was taken: the gate is live. 848 items are in the
+State when this snapshot was taken (2026-09-10, before the second readings
+landed): the gate is live. 848 items are in the
 ledger, CSS, JavaScript and TypeScript are enforced as complete categories,
 and 84 items are retired and 1 quarantined across five topics. Every one of
 the 2,128 served questions has a first-pass review; eleven topics are waiting

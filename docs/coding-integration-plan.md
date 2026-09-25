@@ -35,8 +35,8 @@ Retired, by owner decision (2026-09-03): the mock/runs mode and the AI coach. de
 | `shared/coding-catalog.ts` | yes | Types, track list, tier names, technique tags, the id → level map, XP constants, badge ids |
 | `lib/coding/tasks/javascript.ts`, `typescript.ts`, `react.ts` | prompt, starter, visible tests, hints: yes | Task definitions |
 | `lib/coding/solutions/*.ts` | never | Reference solutions, hidden tests |
-| `lib/coding/react-suites.ts`, `lib/coding/react-support.ts` | yes (per task) | Testing Library suites, fetch stub, fixtures |
-| `lib/coding/handlers.ts`, `lib/coding/grade.ts`, `lib/coding/sandbox.ts`, `lib/coding/ts-check.ts` | never | API resource handlers, grading, QuickJS sandbox, TypeScript type-test runner |
+| the `suite` field of each React task in `lib/coding/tasks/*.ts`, `shared/coding-react-support.ts` | yes (per task) | Testing Library suites, fetch stub, fixtures |
+| `lib/coding/handlers.ts`, `lib/coding/grade.ts`, `lib/coding/sandbox.ts`, `lib/coding/ts-check-node.ts` (with `shared/coding-ts-check.ts`), `lib/coding/react-isolated.ts` | never | API resource handlers, grading, QuickJS sandbox, TypeScript type-test runner, Vercel Sandbox React grader |
 | `client/src/coding/` | yes | Workbench, runner client, editor, section screens |
 | `client/sandbox/` | yes (separate entry) | Self-hosted React harness page |
 
@@ -82,7 +82,7 @@ interface CodingTask {
 | `src/challenges/react.js` (`r1`…) | 38 | `lib/coding/tasks/react.ts`; `verify: 'checklist'` tasks stay Coding-section only |
 | `src/challenges/capstones.js` (`c1`…) | 10 | `lib/coding/tasks/react.ts`, tier 5 |
 | `src/challenges/approaches/*.js` | — | `approach` field |
-| `src/challenges/reactTests.js`, `reactTestSupport.js` | — | `lib/coding/react-suites.ts`, `react-support.ts` |
+| `src/challenges/reactTests.js`, `reactTestSupport.js` | — | per-task `suite` fields, `shared/coding-react-support.ts` |
 | `src/lib/methodShapes.js` | — | `focus` tags and the technique index on `/coding` |
 
 Every ported task gets a `level` from its tags (the `techniquesFor` mapping in `methodShapes.js` is the starting point) and Czech copy. The node content test (`npm run test:coding`) asserts unique ids, that every reference solution passes its own visible and hidden tests (jsdom + esbuild for React, the real TypeScript compiler for `typeTests`), and that every Learn level of the three topics has at least one task.

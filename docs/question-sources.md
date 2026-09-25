@@ -3,7 +3,7 @@
 devShark is a dev-knowledge quiz, so the best raw material for new questions is
 the same set of open-source study repos learners already trust. These are
 **content sources**, not code dependencies - use them to draft questions in
-`/dev → Questions`, then edit for tone, difficulty weighting, and our category
+`/dev → Question bank`, then edit for tone, difficulty weighting, and our category
 taxonomy.
 
 > Licensing: each repo has its own license (mostly CC-BY-SA / MIT / CC0). You're
@@ -23,14 +23,18 @@ taxonomy.
 ## Workflow
 
 1. Pick a repo + a narrow topic (e.g. "caching strategies" from system-design-primer).
-2. Draft 5–10 questions in `/dev → Questions`, each with 4 options + an
+2. Draft 5–10 questions in `/dev → Question bank`, each with 4 options + an
    explanation. Prefer *conceptual* questions (why/when/trade-off) over trivia;
    they age better and are harder to Google mid-quiz.
 3. Set the `difficulty` weight and `category` to match our taxonomy
    (`client/src/lib/categories.ts`).
 4. Add a short source note in the explanation when you paraphrase closely.
-5. Use `/dev → Reports` to see which questions learners flag as unclear/outdated
-   and refine.
+5. Record a review for each new id in `docs/audit/devshark-content-ledger.json`
+   and run `npm run build:curation-registry`. Every roadmap category is in the
+   curation gate's scope, so a question without a record is withheld from
+   learners.
+6. Use `/dev → Learner flags` to see which questions learners flag as
+   unclear/outdated and refine.
 
 ## Why not auto-import?
 

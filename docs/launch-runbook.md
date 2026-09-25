@@ -36,9 +36,12 @@ Use `client/.env.example` as the complete key list. At minimum configure the
 Supabase URL, anon key, service-role key, a random `SESSION_SECRET` of at least
 32 characters, product identity, canonical URLs, and `ADMIN_EMAILS` (or an
 `admin` app-metadata role). Configure Upstash for distributed rate limiting.
-Never expose service, OpenAI, or Upstash credentials through a `VITE_` key.
+Never expose the service-role key, `SESSION_SECRET`, the Stripe secrets,
+`GITHUB_APP_PRIVATE_KEY`, the Upstash credentials or any other server secret
+through a `VITE_` key.
 
-Google OAuth must allow both production origins and their callback URLs.
+Google OAuth must allow the production origin (`https://devshark.app`) and its
+Supabase callback URL.
 Supabase Realtime must be enabled for multiplayer Broadcast channels. The app
 automatically uses a short polling fallback while Realtime is disconnected and
 a slow healing poll while connected.
@@ -84,6 +87,12 @@ for dependency snapshot preparation, isolation checks, resource limits and rollb
    SELECT policy or grant for `authenticated`. It holds grading material, and
    owning a row is not a reason to read it. The other four learning-path
    tables need both the owner policy and the matching `GRANT SELECT`.
+9. Apply `supabase/supabase-schema-027.sql` through
+   `supabase/supabase-schema-044.sql` in numeric order if the environment does
+   not already contain them; each file's header says what it adds and needs.
+   Production has 027–036 (2026-09-09), 037 (2026-09-18) and 038
+   (2026-09-21). 039 to 044 are the freemium migrations; `NEEDED.md` carries
+   applying them as owner items.
 
 Migrations 021–023 are idempotent. Legacy daily/challenge rows are assigned
 to `webdev`; no existing progress is deleted. Do not casually restore removed browser write
@@ -203,5 +212,5 @@ The in-app Privacy and Terms pages are implementation-ready templates, not a
 substitute for jurisdiction-specific legal review. Before public launch, the
 operator must confirm controller identity/contact, lawful bases, retention,
 processors, international transfers, age policy, analytics consent behavior,
-and the support provider’s terms. Keep optional analytics and AI off until the
-published disclosure matches their actual configuration.
+and the support provider’s terms. Keep optional analytics off until the
+published disclosure matches its actual configuration.
