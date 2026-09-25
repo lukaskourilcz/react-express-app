@@ -221,36 +221,56 @@ learner redeem coins for merchandise. Premium changes which content a learner
 may start. Grading, explanations, XP amounts, scores, streaks, ranks,
 leaderboards and matchmaking work the same on both tiers.
 
-Status on 2026-09-25: designed, not built. Issue #220 (step D1) builds the
-tiers and issue #221 (step D2) builds billing; each updates this line when it
-lands.
+Status on 2026-09-25: the tiers are built (issue #220, step D1); billing is
+designed, not built (issue #221, step D2, updates this line when it lands).
+Until billing exists, an admin opens Premium by hand with a manual grant.
+Migration 039 is proven on a local Postgres and waits for production.
 
 - **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
   and JavaScript in full, React levels 1 to 12 of 25 (`FREE_LEARN_LEVELS`),
   stage one of every evolving project and short path (`FREE_EVOLVING_STAGES`),
-  and the coding tasks flagged `free: true` in `lib/coding/tasks/*.ts`, about
+  and a starter set of standalone coding challenges listed once in
+  `FREE_CODING_TASK_IDS`. `npm run build:coding-index` projects that list and
+  stage one of every path into `shared/coding-index.ts` as `free: true`, about
   15 % of the catalogue (`FREE_CODING_SHARE`, held between 12 and 18 % by the
-  launch contracts). Quizzes, the daily challenge, the Biggest Shark
+  launch contracts; 70 of 480 today). Re-pick the list, not the task files,
+  when the catalogue grows. Quizzes, the daily challenge, the Biggest Shark
   Challenge, multiplayer, flashcards, the typing racer, leaderboards, streaks,
   friends and the token shop stay open (`QUIZ_FREE_CATEGORIES = 'all'`).
   `contentTier` and `isOpenTo` take a `GatedContent` value and pure index
   data. The module imports nothing from `lib/`, so the browser draws its locks
   and the server refuses with the same function. Signed-out visitors keep the
   landing sample question, "Try one, no signup" and stage one of a project.
-- **`lib/access.ts`** resolves the tier once per request (`resolveTier`), and
-  `assertOpen` throws `PremiumRequiredError` for locked content. The call sites
+- **`lib/access.ts`** resolves the tier once per request (`resolveTier`, one
+  `is_premium` call, only when the content is Premium), and `assertOpen`
+  throws `PremiumRequiredError` for locked content; `refuseLocked` is the
+  handler form. A tier the database cannot read answers 503
+  `entitlement_unavailable` rather than a guess. The call sites
   are existing branches: the Learn level, part-test and checkpoint seals and
   their answers, `coding-task`, `coding-submit`, `coding-reveal`, evolving
   stage two and up, `learning-path-start` and `learning-path-submit` in
   `api/quiz/roadmap.ts`, and `learning-path-enrollment` in `api/user/[op].ts`.
   Premium gates starting new content. Drafts, bookmarks, skips and reviews of
   cleared content stay open, a lapsed account keeps everything it passed, and
-  placement checks stay open.
-- **The 402 contract.** `jsonError` maps `PremiumRequiredError` to HTTP 402
-  with the body `{ error: 'premium_required', kind, ref }`. The API client in
-  `client/src/lib/api.ts` turns that one response into the upgrade sheet, so a
-  stale client never shows a raw error. `op=entitlement` (GET, signed in)
-  returns `{ tier, source, currentPeriodEnd, cancelAtPeriodEnd, inGrace }`.
+  placement checks stay open. A coding task issued inside a Learn level
+  follows that level, and pausing a learning path is never refused.
+- **The 402 contract.** `jsonPremiumRequired` in `lib/http.ts` (and
+  `withRequestContext` for anything thrown) answers `PremiumRequiredError`
+  with HTTP 402 in the standard error envelope:
+  `{ error: { code: 'premium_required', message, kind, ref, requestId } }`.
+  The API client in `client/src/lib/api.ts` turns that one response into the
+  upgrade sheet, so a stale client never shows a raw error. `op=entitlement`
+  (GET, signed in) returns `{ tier, source, currentPeriodEnd,
+  cancelAtPeriodEnd, inGrace, validUntil }` from `entitlement_summary`.
+- **The browser** mirrors the server. `useEntitlement()`
+  (`client/src/lib/entitlement.ts`) reads the plan; `useLocks()`
+  (`client/src/lib/locks.ts`) draws locks from `contentTier` in four states:
+  open, locked (a signed-in free account), preview (a signed-out visitor, who
+  keeps today's previews) and unknown (plan loading or offline, drawn as open
+  so the server decides). A Premium level, part test, coding row or evolving
+  stage stays focusable with `aria-disabled`, reads "Premium" in text and opens
+  the one `UpgradeSheet`. Today leaves Premium levels out, and the Profile
+  shows the plan line.
 - **Three billing tables** in `supabase/supabase-schema-039.sql`:
   `billing_customers` (one Stripe customer per user), `entitlement_grants`
   (provider, manual and promo grants; the webhook never touches a manual or
@@ -259,10 +279,17 @@ lands.
   manual or promo grant, an `active` or `trialing` provider grant, or a
   `past_due` one within seven days of `current_period_end`. RLS is on for all
   three, with an owner-scoped SELECT policy on the first two and none on
-  `billing_events`. The routines are SECURITY DEFINER, executable by
+  `billing_events`. The routines (`is_premium`, `entitlement_summary`,
+  `link_billing_customer`, `upsert_provider_entitlement`,
+  `grant_manual_entitlement`, `revoke_manual_entitlement`,
+  `record_billing_event`, `finish_billing_event`, `delete_entitlement_data`)
+  are SECURITY DEFINER with an empty `search_path`, executable by
   `service_role` only, and none of them reads or writes XP, stats, streak or
-  progress tables. Admins test Premium with manual grants through
-  `op=entitlements` in `api/admin/[op].ts`.
+  progress tables. A revoked provider grant stays revoked, and an account holds
+  at most one active manual grant. Admins test Premium with manual grants
+  through `op=entitlements` in `api/admin/[op].ts` (GET lists grants, or one
+  account's with `?userId=`; POST `{ action: 'grant', userId, validUntil,
+  note }` or `{ action: 'revoke', userId, grantId?, note? }`).
 - **Stripe** Checkout, Billing and the Customer Portal take the payments, with
   Managed Payments making Stripe the merchant of record; plain Stripe with
   Stripe Tax is the fallback if the eligibility review declines. The routes are
