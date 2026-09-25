@@ -11,6 +11,7 @@ import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { AuthError, requireAuth, type AuthResult } from './auth';
 import { SUBJECT_SCOPE_CATALOG } from '../shared/subject-catalog';
+import { gatedRef, PREMIUM_REQUIRED, type GatedContent, type GatedKind, type PremiumRequiredBody } from '../shared/tiers';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
 const ANON_KEY = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
@@ -23,7 +24,7 @@ const IS_PROD =
 
 // No browser session to persist or refresh in a serverless function.
 const SERVER_SIDE_AUTH = { auth: { persistSession: false, autoRefreshToken: false } } as const;
-const requestContext = new AsyncLocalStorage<{ requestId: string }>();
+const requestContext = new AsyncLocalStorage<{ requestId: string; memo?: Map<string, Promise<unknown>> }>();
 
 function incomingRequestId(req: VercelRequest): string {
   const raw = req.headers['x-request-id'] ?? req.headers['x-vercel-id'];
@@ -46,6 +47,8 @@ export function withRequestContext<T>(
     try {
       return await run();
     } catch (error) {
+      // A refusal of locked content is an answer, not a failure.
+      if (error instanceof PremiumRequiredError && !res.headersSent) return jsonPremiumRequired(res, error);
       logEvent('request', {
         level: 'error',
         method: req.method ?? 'UNKNOWN',
@@ -101,6 +104,45 @@ export function jsonError(res: VercelResponse, status: number, code: string, mes
   return res.status(status).json({
     error: { code, message, ...(requestContext.getStore()?.requestId ? { requestId: requestContext.getStore()!.requestId } : {}) },
   });
+}
+
+/** Thrown for content the caller's tier does not open (`lib/access.ts`).
+ * `jsonPremiumRequired` and `withRequestContext` answer it with HTTP 402. */
+export class PremiumRequiredError extends Error {
+  readonly kind: GatedKind;
+  readonly ref: string;
+  constructor(content: GatedContent) {
+    super('Premium opens this');
+    this.name = 'PremiumRequiredError';
+    this.kind = content.kind;
+    this.ref = gatedRef(content);
+  }
+}
+
+/** HTTP 402 in the standard error envelope, naming what was refused. */
+export function jsonPremiumRequired(res: VercelResponse, error: PremiumRequiredError) {
+  const requestId = requestContext.getStore()?.requestId;
+  const body: PremiumRequiredBody = {
+    error: { code: PREMIUM_REQUIRED, message: error.message, kind: error.kind, ref: error.ref, ...(requestId ? { requestId } : {}) },
+  };
+  res.setHeader('Cache-Control', 'private, no-store');
+  return res.status(402).json(body);
+}
+
+/** Compute a value once per request: a second call with the same key inside
+ * the same request gets the first promise back. Outside a request context
+ * (scripts, tests) it simply computes. */
+export function requestMemo<T>(key: string, compute: () => Promise<T>): Promise<T> {
+  const store = requestContext.getStore();
+  if (!store) return compute();
+  store.memo ??= new Map();
+  const existing = store.memo.get(key) as Promise<T> | undefined;
+  if (existing) return existing;
+  const pending = compute();
+  store.memo.set(key, pending);
+  // A failure is not remembered: the next caller in the request tries again.
+  pending.catch(() => store.memo?.delete(key));
+  return pending;
 }
 
 /** Emit one structured single-line JSON log entry (Vercel ingests this natively). */

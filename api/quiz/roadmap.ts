@@ -34,6 +34,7 @@ import {
   stepAlreadyPassed,
   eligibleTopics,
   nextEligibleStep,
+  type ProgressStep,
   type StepAvailability,
   type VerifiedProgress,
 } from '../../shared/progression';
@@ -95,6 +96,8 @@ import {
 import { itemReview, contentVersion } from '../../lib/curation';
 import { isRetiredTopic } from '../../shared/retired-content';
 import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
+import { refuseLocked } from '../../lib/access';
+import type { GatedContent } from '../../shared/tiers';
 
 // One function for the whole roadmap to stay within the Vercel Hobby
 // 12-function limit. It serves three things off the same route:
@@ -911,6 +914,34 @@ function attemptMatches(
   );
 }
 
+/** What a sealed Learn session starts, for the tier gate: a level, or the
+ * part test a checkpoint session stands for. */
+function sessionContent(session: NonNullable<ReturnType<typeof roadmapSession>>): { content: GatedContent; step: ProgressStep } {
+  return session.roadmapKind === 'level'
+    ? { content: { kind: 'learn-level', topic: session.topic!, level: session.ref! }, step: { kind: 'level', level: session.ref! } }
+    : { content: { kind: 'learn-part-test', topic: session.topic!, part: session.ref! }, step: { kind: 'checkpoint', checkpoint: session.ref! } };
+}
+
+/** The tier gate for answering and completing a Learn session. The seal
+ * already refused locked content when the session was issued; this catches a
+ * session issued while the account was Premium and used after it lapsed. A
+ * step the learner already passed stays open for review. */
+async function refuseLockedSession(
+  res: VercelResponse,
+  userId: string | null,
+  session: NonNullable<ReturnType<typeof roadmapSession>>,
+): Promise<boolean> {
+  const { content, step } = sessionContent(session);
+  return refuseLocked(res, userId, content, {
+    cleared: async () => {
+      if (!userId || !supabase) return false;
+      const row = await withTimeout(supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle());
+      if (row.error) return false;
+      return stepAlreadyPassed((row.data?.data as VerifiedProgress) ?? {}, session.topic!, step);
+    },
+  });
+}
+
 async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.roadmapAnswer))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning progress is not configured');
@@ -927,6 +958,7 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   if (!sessionQuestion) return jsonError(res, 400, 'bad_request', 'Question is not part of this learning session');
   const userId = await optionalAuthSub(req, res);
   if (userId === undefined) return;
+  if (await refuseLockedSession(res, userId, session)) return;
 
   const selectedIndex = Number(body.selectedIndex);
   const lang = normalizeLang(body.lang);
@@ -1014,6 +1046,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   if (!session) return jsonError(res, 400, 'invalid_session', 'Learning session expired or invalid');
   const userId = await optionalAuthSub(req, res);
   if (userId === undefined) return;
+  if (await refuseLockedSession(res, userId, session)) return;
   const attemptResult = await ensureAttempt(session, userId);
   if (attemptResult.error || !attemptResult.data) {
     if (isRpcMissing(attemptResult.error)) {
@@ -1368,6 +1401,16 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     jsonError(res, 403, refusal.code, refusal.message);
     return true;
   };
+  // The tier seal, after the progression one: a step the learner may reach is
+  // still refused with 402 when Premium opens it and the account is free. A
+  // step already passed stays open, so a lapsed account can review it.
+  const refusePremium = async (content: GatedContent, cleared: ProgressStep) => {
+    const refused = await refuseLocked(res, learner?.userId ?? null, content, {
+      cleared: async () => Boolean(learner && stepAlreadyPassed(learner.progress, topic, cleared)),
+    });
+    if (refused) logEvent({ status: res.statusCode, kind: 'premium_required', topic });
+    return refused;
+  };
 
   // ── Part test (a focused exam over one of the topic's 3 parts) ────────────
   // A part is a contiguous slice of the topic's (live) levels; the test samples
@@ -1382,6 +1425,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       return jsonError(res, 409, STEP_UNAVAILABLE.code, STEP_UNAVAILABLE.message);
     }
     if (refuse({ kind: 'test', from: range.startLevel, to: range.endLevel })) return;
+    if (await refusePremium({ kind: 'learn-part-test', topic, part }, { kind: 'checkpoint', checkpoint: part })) return;
 
     const pool: string[] = [];
     for (let l = range.startLevel; l <= range.endLevel; l++) {
@@ -1418,6 +1462,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       return jsonError(res, 409, STEP_UNAVAILABLE.code, STEP_UNAVAILABLE.message);
     }
     if (refuse({ kind: 'checkpoint', checkpoint })) return;
+    if (await refusePremium({ kind: 'learn-part-test', topic, part: checkpoint }, { kind: 'checkpoint', checkpoint })) return;
 
     const pool: string[] = [];
     for (let l = range.startLevel; l <= range.endLevel; l++) pool.push(...(live.levelIds[l - 1] ?? []));
@@ -1446,6 +1491,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 409, STEP_UNAVAILABLE.code, STEP_UNAVAILABLE.message);
   }
   if (refuse({ kind: 'level', level })) return;
+  if (await refusePremium({ kind: 'learn-level', topic, level }, { kind: 'level', level })) return;
 
   // The completion routine re-checks the prerequisite in SQL by level number,
   // so it is told the nearest *available* level before this one: an

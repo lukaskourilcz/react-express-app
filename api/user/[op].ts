@@ -36,6 +36,7 @@ import {
 } from '../../lib/learning-paths/handlers';
 import { handleGithub } from '../../lib/github-handlers';
 import { handleFriends } from '../../lib/friends-handlers';
+import { handleEntitlement } from '../../lib/entitlements';
 
 const supabase = createServiceClient();
 
@@ -86,6 +87,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'learning-path-progress') return handlePathProgress(req, res, supabase);
   if (op === 'learning-path-draft') return handlePathDraft(req, res, supabase);
   if (op === 'learning-path-reward') return handlePathReward(req, res, supabase);
+  if (op === 'entitlement') return handleEntitlement(req, res, supabase);
   if (op.startsWith('github-')) return handleGithub(op, req, res, supabase);
   if (op.startsWith('friends-')) return handleFriends(op, req, res, supabase);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
@@ -117,6 +119,14 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
         return jsonError(res, 503, 'migration_required', 'Account deletion is not configured yet');
       }
       logEvent('delete-account', { status: 500, reason: 'cleanup_failed', error: cleanup.error.message });
+      return jsonError(res, 500, 'db_error', 'Could not delete account data');
+    }
+
+    // Grants and the billing-customer link go with the account (migration 039).
+    // A separate routine, so no migration has to redefine delete_user_data.
+    const entitlements = await withTimeout(supabase!.rpc('delete_entitlement_data', { p_user_id: auth.sub }), 8000);
+    if (entitlements.error && !isRpcMissing(entitlements.error)) {
+      logEvent('delete-account', { status: 500, reason: 'entitlement_cleanup_failed' });
       return jsonError(res, 500, 'db_error', 'Could not delete account data');
     }
 

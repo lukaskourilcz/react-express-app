@@ -24,7 +24,9 @@ import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } fr
 import { classifyFailure, failureHint, jsonKind } from '../../shared/coding-failure';
 import { afterCodingPass } from '../github-garden';
 import { approachesFor } from './approaches';
-import { evolvingStage, evolvingUnlocked } from '../../shared/evolving';
+import { evolvingPassed, evolvingStage, evolvingUnlocked } from '../../shared/evolving';
+import { codingContent, type GatedContent } from '../../shared/tiers';
+import { refuseLocked } from '../access';
 import { prepareEvolvingDraft } from '../../shared/coding-fullstack-support';
 import { presentPuzzle, puzzleFor, resolvePuzzleOrder } from './puzzles';
 import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../../shared/coding-puzzle';
@@ -123,6 +125,29 @@ function sessionFrom(raw: unknown): CodingSession | null {
   return decodeCodingSession(raw);
 }
 
+/** What a coding session starts, for the tier gate. A task issued inside a
+ * Learn level (its session names the level attempt) belongs to that level,
+ * which the level seal already checked; any other task is itself, or the
+ * evolving stage it is. */
+function codingSessionContent(task: CodingTask, session: CodingSession): GatedContent {
+  return session.roadmapAttemptId && task.level > 0
+    ? { kind: 'learn-level', topic: task.topic, level: task.level }
+    : codingContent(task.id);
+}
+
+/** Whether the learner already passed a task (or the milestone that covers an
+ * evolving start stage): cleared content stays open for review on any tier. */
+async function taskCleared(supabase: SupabaseClient | null, userId: string, taskId: string): Promise<boolean> {
+  if (!supabase) return false;
+  const ids = taskId.endsWith('-start') ? [taskId, taskId.slice(0, -6)] : [taskId];
+  const { data, error } = await withTimeout(
+    supabase.from('coding_progress').select('task_id,status').eq('user_id', userId).in('task_id', ids),
+  );
+  if (error) return false;
+  const passed = new Set(((data ?? []) as { task_id: string; status: string }[]).filter((row) => row.status === 'passed').map((row) => row.task_id));
+  return evolvingPassed(taskId, passed);
+}
+
 const readLang = (value: unknown): 'en' | 'cs' => (value === 'cs' ? 'cs' : 'en');
 const codeHash = (code: string) => createHash('sha256').update(code, 'utf8').digest('base64url').slice(0, 32);
 
@@ -148,6 +173,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   let progress: CodingTaskProgress | null = null;
   let draft: string | null = null;
   let locked: CodingTaskResponse['locked'] = null;
+  let passedIds: ReadonlySet<string> = new Set();
   if (userId && supabase) {
     try {
       const [rows, cleared, draftRow] = await Promise.all([
@@ -156,6 +182,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
         withTimeout(supabase.from('coding_drafts').select('code').eq('user_id', userId).eq('task_id', task.id).maybeSingle()),
       ]);
       const passed = new Set(rows.filter((row) => row.status === 'passed').map((row) => row.task_id));
+      passedIds = passed;
       const mine = rows.find((row) => row.task_id === task.id);
       progress = mine ? toProgress(mine) : null;
       draft = typeof draftRow.data?.code === 'string' ? draftRow.data.code : null;
@@ -179,6 +206,9 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
     locked = tierLockReason({ track: task.track, tier: task.tier, progress: { passed: new Set() }, tasks: CODING_SUMMARIES, javascriptLevelsCleared: 0 });
     if (evolvingStage(task.id)) locked = evolvingUnlocked(task.id, new Set()) ? null : 'evolving';
   }
+  // Premium opens the rest of the catalogue to a signed-in account; a task
+  // already passed stays open for review whatever the tier.
+  if (await refuseLocked(res, userId, codingContent(task.id), { cleared: async () => evolvingPassed(task.id, passedIds) })) return;
 
   const play = playable(task);
   // What is known about this brief: the version of it, and the execution
@@ -486,6 +516,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   const userId = await optionalUser(req, res);
   if (userId === undefined) return;
   if (session.userId && session.userId !== userId) return jsonError(res, 403, 'invalid_session', 'Coding session belongs to another account');
+  if (await refuseLocked(res, userId, codingSessionContent(task, session), { cleared: () => taskCleared(supabase, userId!, task.id) })) return;
 
   let graded: Graded;
   let code: string | null = null;
@@ -594,6 +625,7 @@ export async function handleCodingReveal(req: VercelRequest, res: VercelResponse
   if (userId && supabase) {
     try { progress = await loadProgressRow(supabase, userId, task.id); } catch { return jsonError(res, 500, 'db_error', 'Could not load coding progress'); }
   }
+  if (progress?.status !== 'passed' && await refuseLocked(res, userId, codingSessionContent(task, session))) return;
   const allowed = progress?.status === 'passed' || hintsUsed >= giveUpAfter(ladderLength(task));
   if (!allowed) return jsonError(res, 403, 'reveal_locked', 'Take more of the hint ladder before revealing the solution');
 

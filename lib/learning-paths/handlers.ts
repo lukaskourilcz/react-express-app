@@ -17,6 +17,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomBytes } from 'node:crypto';
 import { AuthError, tryAuth } from '../auth';
 import { createLogger, isRpcMissing, jsonError, requireAuthSub, withTimeout } from '../http';
+import { refuseLocked } from '../access';
 import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
@@ -453,6 +454,8 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
     if (action === 'enroll' && availability(path) !== 'available') {
       return jsonError(res, 503, 'path_unavailable', 'That learning path is not open for enrollment yet');
     }
+    // Premium opens the learning paths. Pausing is never refused: it starts nothing.
+    if (action !== 'pause' && await refuseLocked(res, userId, { kind: 'learning-path', pathId: path.id })) return;
     // A skill path records no career context; a role specialization records the
     // base track it sat above, for recommendations only.
     const baseTrack = path.kind === 'role_specialization' && isBaseTrack(body.baseTrack) ? body.baseTrack : null;
@@ -567,6 +570,7 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   if (Number(row.curriculum_version) !== path.version) {
     return jsonError(res, 409, 'version_conflict', 'This enrollment follows an older curriculum version');
   }
+  if (await refuseLocked(res, userId, { kind: 'learning-path', pathId: path.id })) return;
 
   const found = activityIn(path, body.activityId);
   if (!found) return jsonError(res, 404, 'not_found', 'Unknown activity');
@@ -784,6 +788,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
 
   const path = pathById(session.pathId);
   if (!path) return jsonError(res, 404, 'not_found', 'Unknown learning path');
+  if (await refuseLocked(res, userId, { kind: 'learning-path', pathId: path.id })) return;
   if (session.curriculumVersion !== path.version) {
     return jsonError(res, 409, 'version_conflict', 'The curriculum changed while this attempt was open. Start it again.');
   }
