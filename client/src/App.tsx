@@ -65,6 +65,8 @@ const FdeModule = lazy(() => import('./components/paths/LearningPathScreens').th
 const DsaOverview = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.DsaOverview })));
 const DsaModule = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.DsaModule })));
 const NotFoundPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.NotFoundPage })));
+const PremiumSuccessPage = lazy(() => import('./components/PremiumBillingPages').then((m) => ({ default: m.PremiumSuccessPage })));
+const PremiumCancelPage = lazy(() => import('./components/PremiumBillingPages').then((m) => ({ default: m.PremiumCancelPage })));
 
 // Route-transition variants, hoisted so the m.div props keep a stable identity
 // across App re-renders (App re-renders on every navigation — hottest path).
@@ -641,6 +643,8 @@ function App() {
                 <Route path="/support" element={<SupportPage />} />
                 <Route path="/privacy" element={<PrivacyPage />} />
                 <Route path="/terms" element={<TermsPage />} />
+                <Route path="/premium/success" element={<PremiumSuccessPage />} />
+                <Route path="/premium/cancel" element={<PremiumCancelPage />} />
                 <Route path="/curation" element={<CurationPage />} />
                 <Route path="/classroom" element={<ClassroomPage />} />
                 <Route path="/topics/:slug" element={<TopicLandingPage />} />

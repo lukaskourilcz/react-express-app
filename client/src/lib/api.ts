@@ -120,6 +120,12 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   task_retired: 'error.taskRetired',
   premium_required: 'error.premiumRequired',
   entitlement_unavailable: 'error.entitlementUnavailable',
+  billing_unavailable: 'error.billingUnavailable',
+  billing_disabled: 'error.billingDisabled',
+  already_premium: 'error.alreadyPremium',
+  no_billing_account: 'error.noBillingAccount',
+  bad_email: 'error.badEmail',
+  billing_conflict: 'error.billingConflict',
 };
 
 // not_found spans several endpoints whose English server messages are more

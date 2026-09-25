@@ -69,7 +69,7 @@ const COPY = {
   },
 } as const;
 
-function Page({ kicker, title, lead, children }: { kicker?: string; title: string; lead: string; children: React.ReactNode }) {
+export function Page({ kicker, title, lead, children }: { kicker?: string; title: string; lead: string; children: React.ReactNode }) {
   return <article className="ss-info-page">
     <header className="ss-info-page__header">
       <SwimmingFin size={26} />

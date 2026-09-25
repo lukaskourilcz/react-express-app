@@ -36,6 +36,9 @@ export interface GameConfig {
   };
   /** One-liner dev tips shown on the full-page loading screen; empty = none. */
   devTips: string[];
+  /** Billing (#221): whether checkout sells Premium, and whether the
+   * cancellation page can reach Stripe. Both false until the server says so. */
+  billing: { enabled: boolean; cancellable: boolean };
 }
 
 const DEFAULT_QUIZ_CATEGORY_IDS = [
@@ -122,6 +125,7 @@ export const DEFAULT_CONFIG: GameConfig = {
     publicThanksEnabled: false,
   },
   devTips: [...DEFAULT_DEV_TIPS],
+  billing: { enabled: false, cancellable: false },
 };
 
 export const GAME_CONFIG_KEY = ['game-config'] as const;
@@ -136,19 +140,29 @@ async function fetchConfig(): Promise<GameConfig> {
     ...c,
     shop: c.shop ?? DEFAULT_CONFIG.shop,
     support: c.support ?? DEFAULT_CONFIG.support,
+    billing: c.billing ?? DEFAULT_CONFIG.billing,
   };
 }
 
+const CONFIG_QUERY = {
+  queryKey: GAME_CONFIG_KEY,
+  queryFn: fetchConfig,
+  // The config rarely changes within a session; fetch once and keep it.
+  staleTime: Infinity,
+  gcTime: Infinity,
+  placeholderData: DEFAULT_CONFIG,
+} as const;
+
 export function useGameConfig(): GameConfig {
-  const { data } = useQuery({
-    queryKey: GAME_CONFIG_KEY,
-    queryFn: fetchConfig,
-    // The config rarely changes within a session; fetch once and keep it.
-    staleTime: Infinity,
-    gcTime: Infinity,
-    placeholderData: DEFAULT_CONFIG,
-  });
+  const { data } = useQuery(CONFIG_QUERY);
   return data ?? DEFAULT_CONFIG;
+}
+
+/** The config plus whether it is the server's answer rather than the
+ * defaults, for a screen that must not act on a default (the billing pages). */
+export function useGameConfigStatus(): { config: GameConfig; fromServer: boolean } {
+  const { data, isPlaceholderData, isSuccess } = useQuery(CONFIG_QUERY);
+  return { config: data ?? DEFAULT_CONFIG, fromServer: isSuccess && !isPlaceholderData };
 }
 
 /** Imperative snapshot for non-React callers (e.g. shop purchase). */
