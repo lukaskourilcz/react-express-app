@@ -43,6 +43,7 @@ import { EASY_JAVASCRIPT_B_TASKS } from './tasks/easy-javascript-b';
 import { EASY_JAVASCRIPT_C_TASKS } from './tasks/easy-javascript-c';
 import { EASY_TYPESCRIPT_A_TASKS } from './tasks/easy-typescript-a';
 import { EASY_TYPESCRIPT_B_TASKS } from './tasks/easy-typescript-b';
+import { EASY_REACT_A_TASKS } from './tasks/easy-react-a';
 import { SPECS, buildEvolvingTasks } from './tasks/evolving';
 import { TYPESCRIPT_EVOLVING } from './tasks/evolving-typescript';
 import { REACT_EVOLVING } from './tasks/evolving-react';
@@ -65,6 +66,7 @@ const EASY_BAND: CodingTaskSource[][] = [
   EASY_JAVASCRIPT_C_TASKS,
   EASY_TYPESCRIPT_A_TASKS,
   EASY_TYPESCRIPT_B_TASKS,
+  EASY_REACT_A_TASKS,
 ];
 
 /** Ids of the Easy-band tasks; `tasksForLevel` in `./active` skips them. */
