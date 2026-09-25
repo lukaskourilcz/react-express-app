@@ -318,6 +318,9 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
     code: codeToRun,
     calls: [...tests.map((t) => t.call), ...hiddenTests.map((t) => t.call)],
     expectations: [...tests.map((t) => t.expected), ...hiddenTests.map((t) => t.expected)],
+    // Only the visible calls' console output comes back: a learner who logs
+    // inside their function must not read the hidden checks' inputs.
+    shownCalls: tests.length,
   });
   const visible: EvaluateResult = { results: run.results.slice(0, tests.length), logs: run.logs, codeError: run.codeError, timedOut: run.timedOut };
   const hiddenRun: EvaluateResult | null = hiddenTests.length > 0

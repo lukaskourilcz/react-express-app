@@ -255,6 +255,8 @@ export async function gradePathCode(
     code: runnableSource,
     calls: [...visible.map((test) => test.call), ...hidden.map((test) => test.call)],
     expectations: [...visible.map((test) => test.expected), ...hidden.map((test) => test.expected)],
+    // The console shows what the visible checks printed, never a hidden input.
+    shownCalls: visible.length,
   });
 
   const visibleRun: EvaluateResult = {

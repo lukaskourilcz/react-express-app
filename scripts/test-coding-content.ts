@@ -396,7 +396,7 @@ async function main() {
       }
       const run = await withTimeout(evaluateCalls({ code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, label);
       const serverTests = [...task.tests, ...solution.hiddenTests ?? []];
-      const sandbox = await runInSandbox({code, calls:serverTests.map(test=>test.call), expectations:serverTests.map(test=>test.expected)});
+      const sandbox = await runInSandbox({code, calls:serverTests.map(test=>test.call), expectations:serverTests.map(test=>test.expected), shownCalls:task.tests.length});
       if (!allPassed(sandbox)) fail(`${label}: solution fails the production QuickJS grader: ${JSON.stringify(sandbox).slice(0,500)}`);
       if (!allPassed(run)) {
         const wrong = run.results.map((r, i) => (r.pass ? null : `${task.tests![i].call} → ${r.error ?? r.actual}`)).filter(Boolean);

@@ -19,6 +19,11 @@ export interface SandboxInput {
   code: string;
   calls: string[];
   expectations: unknown[] | null;
+  /** How many leading calls the learner may see the console output of. The
+   * rest are hidden checks: they start only once the shown calls have settled,
+   * and nothing they print comes back, so a learner who logs inside a function
+   * never reads a hidden input. Defaults to every call. */
+  shownCalls?: number;
   /** CPU budget for the whole run. */
   deadlineMs?: number;
   memoryBytes?: number;
@@ -36,7 +41,7 @@ const STACK_MESSAGE = 'The call stack ran out of room: the recursion went too de
 // The learner is compiled in a separate strict function scope. This controller
 // stays in an inaccessible closure held by the host, never in VM globals.
 // Expected values and pass/fail comparison stay entirely outside QuickJS.
-function program(code: string, calls: string[]): string {
+function program(code: string, calls: string[], shownCalls: number): string {
   return `(() => {
 'use strict';
 const apply = Reflect.apply, keys = Object.keys, isArray = Array.isArray;
@@ -46,7 +51,7 @@ const string = String, number = Number, is = Object.is;
 const makeArray = () => setPrototype([], null);
 const packet = (...values) => setPrototype(values, null);
 let now = 0, nextId = 1, timers = makeArray(), logs = makeArray();
-let done = false, output = null;
+let done = false, output = null, shownLogs = -1;
 const encode = (value, depth = 0, seen = makeArray()) => {
   if (depth > 40) throw new Error('Result nesting limit exceeded');
   if (value === undefined) return packet('undefined');
@@ -97,22 +102,35 @@ globalThis.performance = { now: () => now };
 globalThis.console = (${CONSOLE_SOURCE})(emit, format, () => now);
 const evaluate = NativeFunction(${JSON.stringify('"use strict";\n' + code + '\n;return [' + calls.map(call => '() => (' + call.trim().replace(/;+$/, '') + '\n)').join(',') + '];')})();
 const outcomes = makeArray();
-let remaining = ${calls.length};
-if (!remaining) { output = stringify(outcomes); done = true; }
-for (let i = 0; i < ${calls.length}; i++) {
-  const invoke = async () => {
-    try { outcomes[i] = packet('value', encode(await evaluate[i]())); }
-    catch (error) { outcomes[i] = packet('error', message(error)); }
-  };
-  apply(nativeThen, invoke(), [() => {
-    remaining--;
-    if (!remaining) { output = stringify(outcomes); done = true; }
-  }]);
-}
+const launch = (from, to, next) => {
+  let remaining = to - from;
+  if (!remaining) { next(); return; }
+  for (let i = from; i < to; i++) {
+    const invoke = async () => {
+      try { outcomes[i] = packet('value', encode(await evaluate[i]())); }
+      catch (error) { outcomes[i] = packet('error', message(error)); }
+    };
+    apply(nativeThen, invoke(), [() => {
+      remaining--;
+      if (!remaining) next();
+    }]);
+  }
+};
+// The shown calls run together; the hidden ones start after they settle, so
+// every line printed before that point belongs to learner-visible work.
+launch(0, ${shownCalls}, () => {
+  shownLogs = logs.length;
+  launch(${shownCalls}, ${calls.length}, () => { output = stringify(outcomes); done = true; });
+});
 return {
   done: () => done,
   output: () => output,
-  logs: () => stringify(logs),
+  logs: () => {
+    if (shownLogs < 0) return stringify(logs);
+    const shown = makeArray();
+    for (let i = 0; i < shownLogs; i++) shown[i] = logs[i];
+    return stringify(shown);
+  },
   tick: () => {
     if (!timers.length) return false;
     let first = 0;
@@ -184,7 +202,8 @@ export async function runInSandbox(input: SandboxInput): Promise<EvaluateResult>
   const isStackOverflow = (message: string) => /stack overflow|maximum call stack|gc_obj_list/i.test(message);
 
   try {
-    const evaluated = vm.evalCode(program(input.code, input.calls), 'task.js');
+    const shownCalls = Math.max(0, Math.min(input.calls.length, Math.floor(input.shownCalls ?? input.calls.length)));
+    const evaluated = vm.evalCode(program(input.code, input.calls, shownCalls), 'task.js');
     if (evaluated.error) {
       const error = vm.dump(evaluated.error) as { message?: string; name?: string } | string;
       evaluated.error.dispose();
