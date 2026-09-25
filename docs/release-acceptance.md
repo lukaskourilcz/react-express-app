@@ -745,3 +745,29 @@ Local evidence, all executed on the branch head:
 | Built client in Chromium with every `GET /api` replayed against production | board loads ("No one has set a score yet"), a run shows a question with four options, the daily set shows its questions |
 | `npm run check:responsive` on `/challenge` and `/quiz`, 7 widths, then dark at 360, 390 and 1280 | 14 and 3 probes, 0 issues |
 | `git diff --check` | clean |
+
+## 2026-09-25 — the Custom paths join the sections, and every section gets its own
+
+The owner asked for the Custom category to be split into JavaScript, TypeScript, React, Algorithms and FullStack, with no path longer than five levels: a Map path first, then a Set path, then a new path that uses Map and Set together, and the Custom category gone.
+
+What changed:
+
+- `shared/evolving.ts` drops the `custom` category and gains short paths: five levels (`<path id>-1` to `-5`), no checkpoints, each level one function or feature added to the same code, with every earlier check run again.
+- JavaScript lists five: Map basics, Set basics, Map and Set together (new), Objects and grouping, and Lookups and crawling. The two ten-step Custom paths were split into the first, second, fourth and fifth. Three of their levels are new (`difference`, `duplicates`, `crawlDepths`); three small Custom steps were folded in or dropped (`countsToPairs` into `topK`, `firstUnique`, `totalRuns`).
+- New paths: two in TypeScript (Generic collection helpers; Unions and narrowing), two in React (State and lists; Effects and loading), two in Algorithms (Two pointers and windows; Stacks and queues), and a link shortener in FullStack that goes from a JavaScript input check through a typed API to a React client.
+- Each section page lists its paths between the header and the challenge list, and the FullStack screen puts the link shortener first. The Coding home loses the Custom block; its gallery keeps the ten longer projects. Short paths read "Level 2 of 5" where the longer projects read "Stage".
+- The FullStack React scaffold is appended at each path's own first React stage. Before, the first FullStack app's index was used for every app.
+- Progress on the removed `js-custom-*` stages, which existed for a day, no longer maps to a task. XP already earned stays.
+
+Local evidence, all executed on the branch head:
+
+| Check | Result |
+| --- | --- |
+| Every CI step: types (API and tooling), launch contracts, coding auth, grading integrity, coding content, paths, client tests, unused, security, devShark build, public HTML, bundle, both audits | pass; coding content 480 tasks, every solution proven; client tests 8 files, 61 tests; initial JS and CSS 203,781 gzip bytes of 243,000; 0 vulnerabilities in both audits |
+| Mutation check: 21 broken variants of reference solutions (a missing stale-answer guard, a missing JSON header, a duplicate guest still added, operands swapped, and so on) | 18 caught at once; two gaps closed with new visible checks (`twoSum([1, 1, 5], 6)`, a search with one unknown word); the last variant (`<` for `<=` in the sliding maximum) is still correct |
+| Reference solutions run in the browser's own runners on 17 levels from every kind of path (JavaScript, TypeScript, Algorithms, React, FullStack) | all pass; the first run failed Effects and loading level 5 (6 of 8) because the title effect lands a moment after the list, fixed by waiting for the title |
+| React levels in the browser, reference, junior and senior, three runs each (State and lists 5, Effects and loading 4 and 5, Link shortener 4 and 5) | all pass every run |
+| Built client in Chromium: `/coding`, the four section pages and `/coding/fullstack`, light and dark, 1280 and 390 | no Custom block; section paths in the requested order between the header and the filters; "0 of 5 levels completed"; the Link shortener first on FullStack; no overflow, no page errors |
+| Browser specs `public` and `evolving`, the harness check, Storybook, Lighthouse | pass; harness 141 assertions; Storybook 5 of 5; performance 0.86 mobile and 0.99 desktop, accessibility 1 |
+| `npm run check:responsive` on the CI routes at 7 widths and in dark Czech, then on `/coding`, the four sections and `/coding/fullstack` at 7 widths and in dark at 360, 390 and 1280 | 28, 6, 42 and 9 probes, 0 issues |
+| `git diff --check` | clean |
