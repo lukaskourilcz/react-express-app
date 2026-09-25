@@ -7,13 +7,18 @@
 //   Premium, complimentary until 12 Nov      a manual or promo grant
 //
 // Loading shows a skeleton rather than "Free", so a Premium account never
-// reads as free for a moment. A failure says so and offers a retry.
+// reads as free for a moment. A failure says so and offers a retry. A paid
+// subscription adds "Manage billing", which opens Stripe's Customer Portal
+// (card, invoices, plan switch, cancel at period end).
+import { useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Text } from '@astryxdesign/core/Text';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useEntitlement } from '../lib/entitlement';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
+import { openBillingPortal, useBilling } from '../lib/billing';
+import { friendlyError } from '../lib/api';
 import { FREE_LEARN_LEVELS, type EntitlementResponse } from '../../../shared/tiers';
 
 function formatDay(iso: string, lang: string): string {
@@ -41,9 +46,32 @@ export function planText(plan: EntitlementResponse, t: T, lang: string): string 
     : t('profile.plan.complimentary');
 }
 
+function ManageBilling() {
+  const { t } = useLanguage();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const open = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await openBillingPortal();
+    } catch (err) {
+      setError(friendlyError(err) || t('profile.plan.manageFailed'));
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <Button variant="secondary" size="sm" label={t('profile.plan.manage')} onClick={() => void open()} isLoading={busy} isDisabled={busy} />
+      {error && <Text type="supporting" color="secondary"><span role="alert">{error}</span></Text>}
+    </>
+  );
+}
+
 export default function PlanLine() {
   const { t, lang } = useLanguage();
   const { tier, data, loading, failed, refetch, signedIn } = useEntitlement();
+  const { cancellable } = useBilling();
   if (!signedIn) return null;
   const labelId = 'profile-plan-label';
   return (
@@ -69,6 +97,7 @@ export default function PlanLine() {
         <>
           <Text type="supporting" weight="semibold">{planText(data!, t, lang)}</Text>
           <Text type="supporting" color="secondary">{t('profile.plan.premiumBody')}</Text>
+          {cancellable && data?.source === 'provider' && <ManageBilling />}
         </>
       )}
     </div>

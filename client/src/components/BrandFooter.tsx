@@ -4,12 +4,16 @@ import type { Lang } from '../i18n/LanguageContext';
 import { useColorMode } from '../theme/ColorModeContext';
 import { useSettings } from '../lib/settings';
 import { savePreferredLanguage } from '../lib/languagePref';
+import { useBilling } from '../lib/billing';
 
 export default function BrandFooter() {
   const t = useT();
   const { lang, setLang } = useLanguage();
   const { mode, toggle } = useColorMode();
   const [settings, updateSettings] = useSettings();
+  // The public cancellation page is a legal link (§ 312k BGB): always one
+  // click away wherever a subscription can exist.
+  const billing = useBilling();
 
   // The footer carries the legal links and the appearance and sound controls.
   // devShark promotes no other product here.
@@ -22,6 +26,7 @@ export default function BrandFooter() {
           <Link to="/curation">{t('footer.curation')}</Link>
           <Link to="/privacy">{t('footer.privacy')}</Link>
           <Link to="/terms">{t('footer.terms')}</Link>
+          {billing.known && billing.cancellable && <Link to="/premium/cancel">{t('footer.cancelPremium')}</Link>}
         </nav>
         {/* The full versions of these live in Profile → Preferences. A visitor
             who has not signed in still needs to read the site in their own
