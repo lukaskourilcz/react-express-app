@@ -1,7 +1,9 @@
 # Rewards launch: what the code does, and what only you can do
 
-The shop sells four physical objects and one drawing. The drawing is finished.
-The four objects need a supplier, and no amount of code substitutes for one.
+The Rewards screen (`/shop`) sells four physical objects and one drawing for
+coins. The drawing is finished. The four objects need a supplier, and no amount
+of code substitutes for one. Coins are the product's name for the tokens of
+migration 028: the UI says coins, the tables, ops and code keep `token`.
 
 This document is the honest split: everything the repository can decide is
 decided and shipped; everything that needs a real quote, a real payment account
@@ -14,7 +16,9 @@ or an admin call. There is no placeholder price anywhere in the product.
 
 Nothing in the shop touches learning. Buying, owning and wearing anything
 changes no access, no content, no XP, no score, no streak, no rank, no
-leaderboard position and no prerequisite. The crown is a picture. This is
+leaderboard position and no prerequisite. The crown is a picture. Premium
+(`shared/tiers.ts`) decides which content a learner may start and, since #227,
+who may redeem coins for merchandise; it changes nothing else. This is
 enforced structurally: the rewards tables in migration 028 have no relationship
 to any learning table, and the launch contract asserts the separation.
 
@@ -29,10 +33,23 @@ and what it belongs to, and the learner can see the last twenty-five of them
 beside their balance — a wallet whose owner cannot account for it is exactly
 what this replaced.
 
-Credits come from XP the server itself verified, keyed to that award's own id.
-Replaying an award credits nothing. The sign-up grant is one ledger event
-derived from the account id, so a second device grants nothing and there is no
-`user_metadata` flag to forge.
+Credits come from XP the server itself verified, keyed to that award's own id:
+a quiz or daily result, a Biggest Shark Challenge run, a Learn level or part
+test passed for the first time, and a coding challenge passed for the first
+time. Every account earns 10 % of that XP, Premium earns double, and one
+account earns at most 400 coins a day from XP, counted after the doubling
+(migration 041, `credit_verified_xp_tokens`). Premium milestones pay on top of
+the cap, once per account: a live streak of 7, 30 and 100 days, a Learn topic
+finished, an evolving project or short path finished, and the top three of a
+finished month. Replaying an award or a milestone credits nothing. The welcome
+grant is one ledger event derived from the account id, paid on the account's
+first wallet read, so a second device grants nothing and there is no
+`user_metadata` flag to forge. The rates live in `shared/rewards.ts` and in
+`/dev` → Settings → Coins.
+
+**Redeeming is Premium only.** A free account sees the merchandise and the
+upgrade sheet; `op=orders` answers its redemption with 402 before it asks for
+an address. The crown and streak protection stay open to every account.
 
 **Legacy balances were not converted.** The old wallets were written by
 browsers, cannot be audited, and in some cases reflect a client that awarded
@@ -85,22 +102,28 @@ Each item needs, from an actual supplier, in writing:
 | `vendor` | Who supplies it |
 | `effectiveFrom` | The date these figures took effect |
 
-Enter them in `/dev` → Settings → Merchandise. An entry missing any field is
-dropped on read and the item goes back to **not on sale yet**: half a quote is
-not a quote. The readiness view shows the margin each quote implies, including
-when it is negative.
+Enter them in the game settings under `merch.pricing` (a `/dev` → Settings →
+Merchandise editor is planned for #229; until it exists this needs SQL on
+`app_settings`, and saving the `/dev` form keeps what is there). An entry
+missing any field is dropped on read and the item goes back to **not on sale
+yet**: half a quote is not a quote. The readiness view shows the margin each
+quote implies, including when it is negative.
 
 Also decide, and write into the policy page you link from `policyUrl`: the
 returns window, who pays return postage, the delivery estimate per region, and
 what happens to a parcel that goes missing.
 
-### 2. Derive token prices from what learners actually earn
+### 2. Derive coin prices from what learners actually earn
 
-Tokens accrue at 10% of verified XP. Before setting a `tokenPrice`, work out how
-many hours of study the number represents, and whether you are willing to post
-that object for that much study. A token price is a promise to give away a real
-object; the code will keep that promise exactly as many times as learners reach
-it.
+Only Premium members redeem, and the daily cap of 400 coins from XP applies
+after the Premium doubling. A heavy day earns 400; a steady Premium learner
+earns 100 to 200. So a sticker set at 1,500 coins is about two weeks of steady
+learning, a mug at 6,000 about six weeks and a t-shirt at 10,000 about ten
+weeks. A mug costs about 13.49 plus shipping, more than the net of several
+months of Premium, so the stock cap below is what keeps redemptions affordable:
+merchandise is a retention reward, not a margin line. `tokenPrice` is still the
+field name. A coin price is a promise to give away a real object; the code will
+keep that promise exactly as many times as learners reach it.
 
 ### 3. Configure a payment provider — only if you want cash checkout
 
@@ -120,12 +143,14 @@ paid — and `payment.refunded` may cancel a paid order.
 
 Token redemption works without any of this. Cash does not.
 
-### 4. Enter stock, and keep entering it
+### 4. Enter the monthly cap, and renew it every month
 
-`merch_stock` has no default figures — a default stock number is an invented
-one. Insert a row per SKU and variant with what you physically hold. Orders
-reserve against it, and an item with nothing free reports out of stock rather
-than taking an order you cannot fill.
+A print-on-demand item has no shelf, so `merch_stock` is a budget: the number of
+items of each SKU and variant you will post this month. Five mugs a month means
+`on_hand = 5` for `mug`. There are no default figures, because a default is an
+invented one. Redemptions reserve against it, and an item with nothing free
+reports out of stock rather than taking an order you will not fill. Raise
+`on_hand` again at the start of each month; shipped orders use it up.
 
 ### 5. Leave test mode last
 
