@@ -26,6 +26,7 @@ import { CODING_SUMMARIES } from '../../lib/coding/active';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
 import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
 import { handleCodingBookmarks, handleCodingSkip, handlePracticeSession } from '../../lib/coding/practice-handlers';
+import { deleteCoinData, settleMilestones } from '../../lib/rewards/coins';
 import { creditVerifiedXp, handleCosmetic, handleStreakProtection, handleFulfilment, handleOrders, handlePaymentWebhook, handleShopCatalogue, handleWallet } from '../../lib/rewards/handlers';
 import {
   handleEnrollment,
@@ -147,6 +148,12 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
     const entitlements = await withTimeout(supabase!.rpc('delete_entitlement_data', { p_user_id: auth.sub }), 8000);
     if (entitlements.error && !isRpcMissing(entitlements.error)) {
       logEvent('delete-account', { status: 500, reason: 'entitlement_cleanup_failed' });
+      return jsonError(res, 500, 'db_error', 'Could not delete account data');
+    }
+
+    // Coin credit records and any month's winner line (migration 041, #227).
+    if (!(await deleteCoinData(supabase!, auth.sub))) {
+      logEvent('delete-account', { status: 500, reason: 'coin_cleanup_failed' });
       return jsonError(res, 500, 'db_error', 'Could not delete account data');
     }
 
@@ -397,6 +404,9 @@ async function stats(req: VercelRequest, res: VercelResponse) {
             xp: receipt.questXp,
           });
         }
+        // A verified quiz moves the streak, so a Premium streak milestone may
+        // have just been reached (#227). Idempotent; a failure costs nothing.
+        if (data === true) await settleMilestones(supabase!, user_id, receipt.subject);
         const [row, xpRow] = await Promise.all([
           withTimeout(supabase!.from('user_stats').select(STATS_FIELDS).eq('user_id', user_id).maybeSingle()),
           withTimeout(supabase!.from('user_xp').select('quest_xp, quest_xp_by_subject').eq('user_id', user_id).maybeSingle()),

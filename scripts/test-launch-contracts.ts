@@ -505,6 +505,8 @@ async function tierContracts() {
   const tierReaders = new Set([
     'lib/access.ts', 'lib/http.ts', 'lib/entitlements.ts', 'lib/coding/catalog.ts', 'lib/coding/handlers.ts',
     'lib/learning-paths/handlers.ts', 'api/quiz/roadmap.ts',
+    // Redeeming coins for shipped merchandise is Premium only (#227).
+    'lib/rewards/handlers.ts',
   ]);
   const serverFiles = [...apiFiles(join(process.cwd(), 'api')), ...apiFiles(join(process.cwd(), 'lib'))]
     .map((path) => path.slice(process.cwd().length + 1));

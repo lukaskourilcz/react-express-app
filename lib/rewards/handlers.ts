@@ -12,7 +12,9 @@
  *   - an unconfigured item cannot be ordered by anyone, through any route,
  *     regardless of what the shop UI happens to be showing.
  *
- * None of it touches learning. A balance buys a picture or a mug. */
+ * None of it touches learning. A balance buys a picture or a mug. Product copy
+ * calls the balance coins; the code keeps the `token` spelling. What earns
+ * coins lives in `./coins.ts` (step D8, migration 041). */
 
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -22,9 +24,12 @@ import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { getGameSettings } from '../settings-store';
 import { requireAdmin } from '../admin-auth';
 import { deploymentSubjectIds } from '../product-scope';
+import { refuseLocked } from '../access';
 import { isScopeSubject } from '../../shared/subject-catalog';
+import { creditSocialVisit, settleFinishedMonth, settleMilestones, type MilestoneReport } from './coins';
 import {
   crownAvailable,
+  isSocialPlatform,
   streakProtectionAvailable,
   STREAK_PROTECTION_CAP,
   isMerchSku,
@@ -33,9 +38,14 @@ import {
   merchItem,
   merchMarginMinor,
   validateAddress,
+  type CoinSettings,
   type MerchAvailability,
   type MerchSku,
 } from '../../shared/rewards';
+
+// The XP credit moved to ./coins.ts; the handlers that record verified XP
+// still import it from here.
+export { creditVerifiedXp } from './coins';
 
 const logEvent = createLogger('rewards');
 
@@ -55,10 +65,17 @@ function walletSubject(req: VercelRequest): string | null {
 /* ── GET/POST ?op=wallet ───────────────────────────────────────────────── */
 
 /**
- * The balance, the recent ledger entries behind it, and what the learner owns.
+ * The balance, the recent ledger entries behind it, what the learner owns,
+ * and how to earn more.
  *
  * The entries are the point: a wallet whose owner cannot see why it holds what
  * it holds is the thing this replaced.
+ *
+ * A read also settles, before it answers, the three credits that have no
+ * request of their own: the one-time welcome grant (an event id derived from
+ * the account, so a second device grants nothing), the top three of a month
+ * that has just ended, and any Premium milestone the learner's verified
+ * progress has reached. Each is idempotent, so reading twice credits nothing.
  */
 export async function handleWallet(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   const userId = await requireAuthSub(req, res);
@@ -68,6 +85,19 @@ export async function handleWallet(req: VercelRequest, res: VercelResponse, supa
   if (!subject) return jsonError(res, 400, 'bad_request', 'Unknown subject');
 
   if (req.method === 'GET') {
+    const settings = await getGameSettings();
+    const coins = settings.coins;
+    const [welcome, , milestones] = await Promise.all([
+      coins.welcomeGrant > 0
+        ? withTimeout(
+            supabase.rpc('grant_signup_tokens', { p_user_id: userId, p_subject: subject, p_amount: coins.welcomeGrant }),
+          ).catch(() => null)
+        : Promise.resolve(null),
+      settleFinishedMonth(supabase, subject),
+      settleMilestones(supabase, userId, subject),
+    ]);
+    if (welcome?.error && isRpcMissing(welcome.error)) return migrationRequired(res);
+
     const [balance, entries, cosmetics] = await Promise.all([
       withTimeout(supabase.from('token_balances').select('balance').eq('user_id', userId).eq('subject', subject).maybeSingle()),
       withTimeout(
@@ -77,6 +107,7 @@ export async function handleWallet(req: VercelRequest, res: VercelResponse, supa
       withTimeout(supabase.from('cosmetic_entitlements').select('cosmetic_id,equipped').eq('user_id', userId)),
     ]);
     if (balance.error && isRpcMissing(balance.error)) return migrationRequired(res);
+    if (balance.error || entries.error) return jsonError(res, 500, 'db_error', 'Could not load your coins');
     res.setHeader('Cache-Control', 'private, no-store');
     return res.json({
       subject,
@@ -92,21 +123,34 @@ export async function handleWallet(req: VercelRequest, res: VercelResponse, supa
         id: String(row.cosmetic_id),
         equipped: row.equipped === true,
       })),
+      // True only on the read that granted it, so the browser can say so once.
+      welcome: { granted: welcome?.data === true, coins: coins.welcomeGrant },
+      earn: earnSummary(coins, milestones),
     });
   }
 
-  // POST claims the one-time sign-up grant. Idempotent by construction: the
-  // ledger event id is derived from the account, so a second device grants
-  // nothing. There is no user_metadata flag to forge.
+  // POST: the social click-through grant, when the owner has set one. The
+  // amount comes from settings and the event id from the account and the
+  // platform, so the request can only name which profile was opened. A body
+  // without a claim is the old sign-up claim and is answered the same way as
+  // before, from the same idempotent routine.
   if (req.method === 'POST') {
     if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
-    const { SIGNUP_TOKEN_GRANT } = await import('../../shared/rewards');
+    const body = (req.body || {}) as { claim?: unknown; platform?: unknown };
+    if (body.claim === 'social') {
+      if (!isSocialPlatform(body.platform)) return jsonError(res, 400, 'bad_request', 'Unknown profile');
+      const result = await creditSocialVisit(supabase, { userId, subject, platform: body.platform });
+      res.setHeader('Cache-Control', 'private, no-store');
+      return res.json(result);
+    }
+    if (body.claim !== undefined) return jsonError(res, 400, 'bad_request', 'Unknown claim');
+    const settings = await getGameSettings();
     const granted = await withTimeout(
-      supabase.rpc('grant_signup_tokens', { p_user_id: userId, p_subject: subject, p_amount: SIGNUP_TOKEN_GRANT }),
+      supabase.rpc('grant_signup_tokens', { p_user_id: userId, p_subject: subject, p_amount: settings.coins.welcomeGrant }),
     );
     if (granted.error) {
       if (isRpcMissing(granted.error)) return migrationRequired(res);
-      return jsonError(res, 500, 'db_error', 'Could not grant the sign-up tokens');
+      return jsonError(res, 500, 'db_error', 'Could not grant the welcome coins');
     }
     const balance = await withTimeout(
       supabase.from('token_balances').select('balance').eq('user_id', userId).eq('subject', subject).maybeSingle(),
@@ -119,35 +163,34 @@ export async function handleWallet(req: VercelRequest, res: VercelResponse, supa
   return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
 }
 
-/**
- * Credit tokens for XP the server itself awarded.
- *
- * Called from the paths that record verified XP, with that award's own id as
- * the ledger event. The browser is not involved and cannot be: it never sees
- * an award id it did not receive from a completed, server-graded activity, and
- * replaying one credits nothing.
- */
-export async function creditVerifiedXp(
-  supabase: SupabaseClient,
-  input: { userId: string; awardId: string; subject: string; xp: number },
-): Promise<void> {
-  const { tokensForVerifiedXp } = await import('../../shared/rewards');
-  const amount = tokensForVerifiedXp(input.xp);
-  if (amount <= 0) return;
-  const credited = await withTimeout(
-    supabase.rpc('credit_tokens', {
-      p_user_id: input.userId,
-      p_event_id: `xp:${input.awardId}`,
-      p_subject: input.subject,
-      p_amount: amount,
-      p_reason: 'verified-xp',
-      p_reference: input.awardId,
-    }),
-  );
-  // A missing migration must never fail the learning it rode along with.
-  if (credited.error && !isRpcMissing(credited.error)) {
-    logEvent({ status: 500, kind: 'credit_failed', reason: credited.error.code ?? 'unknown' });
-  }
+/** "How to earn" for the Rewards screen: the rules as configured, and the
+ * learner's progress toward each milestone. `progress` is null when migration
+ * 041 is not installed yet, and the screen then shows the rules alone. */
+function earnSummary(coins: CoinSettings, report: MilestoneReport | null) {
+  return {
+    rules: {
+      xpRate: coins.xpRate,
+      premiumMultiplier: coins.premiumMultiplier,
+      dailyXpCap: coins.dailyXpCap,
+      welcomeGrant: coins.welcomeGrant,
+      streakMilestones: coins.streakMilestones,
+      topicComplete: coins.topicComplete,
+      projectComplete: coins.projectComplete,
+      shortPathComplete: coins.shortPathComplete,
+      monthTop: coins.monthTop,
+      socialVisitGrant: coins.socialVisitGrant,
+    },
+    progress: report
+      ? {
+          premium: report.premium,
+          todayXpCoins: report.todayXpCoins,
+          streak: report.streak,
+          topics: report.topics,
+          projects: report.projects,
+          earned: report.earned,
+        }
+      : null,
+  };
 }
 
 /* ── GET ?op=shop ──────────────────────────────────────────────────────── */
@@ -297,6 +340,10 @@ export async function handleOrders(req: VercelRequest, res: VercelResponse, supa
     const body = (req.body || {}) as Record<string, unknown>;
     const lines = parseLines(body.items);
     if (!lines) return jsonError(res, 400, 'bad_request', 'Choose between one and ten valid items');
+    // Shipped merchandise is Premium only (handoff section 7.3): a free account
+    // is answered with the 402 that opens the upgrade sheet, before it is asked
+    // for an address. The crown and streak protection stay open to everyone.
+    if (await refuseLocked(res, userId, { kind: 'merch-redemption', sku: lines[0].sku })) return;
     const address = validateAddress(body.address);
     if (!address.ok) return jsonError(res, 400, 'bad_address', `Check the ${address.field} on your address`);
     const paymentKind = body.paymentKind === 'cash' ? 'cash' : 'tokens';
@@ -323,7 +370,7 @@ export async function handleOrders(req: VercelRequest, res: VercelResponse, supa
         return jsonError(res, 409, 'mixed_currency', 'Those items are priced in different currencies');
       }
       if (paymentKind === 'tokens' && !pricing.tokenPrice) {
-        return jsonError(res, 409, 'tokens_unavailable', 'That item cannot be redeemed with tokens');
+        return jsonError(res, 409, 'tokens_unavailable', 'That item cannot be redeemed with coins');
       }
       totalMinor += pricing.priceMinor * line.quantity;
       tokenTotal += (pricing.tokenPrice ?? 0) * line.quantity;
@@ -355,7 +402,7 @@ export async function handleOrders(req: VercelRequest, res: VercelResponse, supa
       if (isRpcMissing(created.error)) return migrationRequired(res);
       const message = created.error.message ?? '';
       if (/out_of_stock/i.test(message)) return jsonError(res, 409, 'out_of_stock', 'That is out of stock');
-      if (/insufficient_tokens/i.test(message)) return jsonError(res, 409, 'insufficient_tokens', 'You do not have enough tokens');
+      if (/insufficient_tokens/i.test(message)) return jsonError(res, 409, 'insufficient_tokens', 'You do not have enough coins');
       return jsonError(res, 500, 'db_error', 'Could not place the order');
     }
     logEvent({ status: 200, kind: 'order_created', paymentKind, testMode: merch.testMode });
@@ -439,7 +486,7 @@ export async function handleCosmetic(req: VercelRequest, res: VercelResponse, su
   if (bought.error) {
     if (isRpcMissing(bought.error)) return migrationRequired(res);
     if (/insufficient_tokens/i.test(bought.error.message ?? '')) {
-      return jsonError(res, 409, 'insufficient_tokens', 'You do not have enough tokens');
+      return jsonError(res, 409, 'insufficient_tokens', 'You do not have enough coins');
     }
     return jsonError(res, 500, 'db_error', 'Could not complete the purchase');
   }
@@ -490,7 +537,7 @@ export async function handleStreakProtection(req: VercelRequest, res: VercelResp
   if (bought.error) {
     if (isRpcMissing(bought.error)) return migrationRequired(res);
     if (/insufficient_tokens/i.test(bought.error.message ?? '')) {
-      return jsonError(res, 409, 'insufficient_tokens', 'You do not have enough tokens');
+      return jsonError(res, 409, 'insufficient_tokens', 'You do not have enough coins');
     }
     return jsonError(res, 500, 'db_error', 'Could not complete the purchase');
   }

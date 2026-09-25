@@ -27,6 +27,7 @@ import { approachesFor } from './approaches';
 import { evolvingPassed, evolvingStage, evolvingUnlocked } from '../../shared/evolving';
 import { codingContent, type GatedContent } from '../../shared/tiers';
 import { refuseLocked } from '../access';
+import { codingAwardId, creditVerifiedXp, settleMilestones } from '../rewards/coins';
 import { prepareEvolvingDraft } from '../../shared/coding-fullstack-support';
 import { presentPuzzle, puzzleFor, resolvePuzzleOrder } from './puzzles';
 import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../../shared/coding-puzzle';
@@ -464,6 +465,14 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     return null;
   }
   const data = (saved.data ?? {}) as { applied?: boolean; firstPass?: boolean; xpAwarded?: boolean; codeChanged?: boolean };
+  // Coins follow the XP the routine just awarded, under the same award id
+  // (#227). The last stage of a project or short path is a Premium milestone.
+  if (data.xpAwarded === true) {
+    await creditVerifiedXp(supabase, {
+      userId, awardId: codingAwardId(userId, task.id), subject: 'webdev', xp: CODING_TASK_XP[task.tier],
+    });
+  }
+  if (data.firstPass === true && evolvingStage(task.id)) await settleMilestones(supabase, userId, 'webdev');
   const progress = await loadProgressRow(supabase, userId, task.id);
   return {
     progress,

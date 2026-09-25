@@ -97,6 +97,7 @@ import { itemReview, contentVersion } from '../../lib/curation';
 import { isRetiredTopic } from '../../shared/retired-content';
 import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review';
 import { refuseLocked } from '../../lib/access';
+import { creditLearnPass, settleMilestones } from '../../lib/rewards/coins';
 import type { GatedContent } from '../../shared/tiers';
 
 // One function for the whole roadmap to stay within the Vercel Hobby
@@ -1038,6 +1039,24 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   });
 }
 
+/** Whether a verified progress blob records this session's level or part test
+ * as passed. */
+function progressStepPassed(data: unknown, session: NonNullable<ReturnType<typeof roadmapSession>>): boolean {
+  const topic = (data as Record<string, { levels?: Record<string, { passed?: unknown }>; checkpoints?: Record<string, { passed?: unknown }> }> | null)?.[session.topic ?? ''];
+  const steps = session.roadmapKind === 'level' ? topic?.levels : topic?.checkpoints;
+  return steps?.[String(session.ref)]?.passed === true;
+}
+
+/** The same question asked of the stored progress, or null when it cannot be
+ * read (then nothing is credited: a missed credit beats paying twice for a
+ * level passed before coins existed). */
+async function stepPassed(userId: string, session: NonNullable<ReturnType<typeof roadmapSession>>): Promise<boolean | null> {
+  if (!supabase) return null;
+  const row = await withTimeout(supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle()).catch(() => null);
+  if (!row || row.error) return null;
+  return progressStepPassed(row.data?.data, session);
+}
+
 async function handleComplete(req: VercelRequest, res: VercelResponse) {
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.roadmapComplete))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning progress is not configured');
@@ -1138,6 +1157,9 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       applied = true;
     }
   } else if (userId) {
+    // Only a first pass earns a step's learning XP, so only a first pass
+    // credits coins. Read before the completion writes the pass (#227).
+    const passedBefore = passed ? await stepPassed(userId, session) : null;
     const completed = await withTimeout(
       supabase.rpc('complete_verified_roadmap_attempt', {
         p_user_id: userId,
@@ -1163,6 +1185,17 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     );
     if (row.error) return jsonError(res, 500, 'db_error', 'Progress saved but could not be reloaded');
     progress = sanitize(row.data?.data);
+    if (applied && passedBefore === false && progressStepPassed(row.data?.data, session)) {
+      await creditLearnPass(supabase, {
+        userId,
+        subject: session.subject!,
+        topic: session.topic!,
+        kind: session.roadmapKind!,
+        ref: session.ref!,
+      });
+      // The last level of a topic is a Premium milestone.
+      if (session.roadmapKind === 'level') await settleMilestones(supabase, userId, session.subject!);
+    }
   } else if (!attempt.completed_at) {
     await withTimeout(
       supabase.from('roadmap_attempts').update({ completed_at: new Date().toISOString() }).eq('attempt_id', session.attemptId!),

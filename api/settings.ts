@@ -45,6 +45,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     features: s.features,
     leveling: s.leveling,
     shop: s.shop,
+    // What earns coins (#227): the welcome grant for the sign-in prompt and
+    // the social grant for "Find devShark elsewhere". Rates only, no balances.
+    coins: s.coins,
     support: publicSupport,
     devTips: s.devTips,
     // Per path, so DSA Foundations can open while FDE content is still being
