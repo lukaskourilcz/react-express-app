@@ -1,0 +1,15 @@
+/* The difficulty label sits inline with a title's meta line; it is never a
+ * control, so it keeps the badge's own height and leaves the 44 px target to
+ * the row or card around it. */
+.cd-difficulty { flex-shrink: 0; vertical-align: middle; }
+.cd-difficulty__prefix {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}

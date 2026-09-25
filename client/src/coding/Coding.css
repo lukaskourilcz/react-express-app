@@ -190,9 +190,14 @@
 .cd-chip[aria-pressed='true'] { background: var(--ss-ink); color: var(--color-background-surface); border-color: var(--ss-ink); }
 .cd-chip:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
 
+/* Track lists: Easy, Medium and Hard (#224), each holding the tiers that
+ * project onto it. The band is the heading a learner scans for; the tier is
+ * its sub-label and keeps its own lock line. */
+.cd-band { display: flex; flex-direction: column; gap: 14px; padding-top: 16px; border-top: 1px solid var(--ss-card-line); }
+.cd-band__title { margin: 0; font-size: 1.3rem; }
 .cd-tier { display: flex; flex-direction: column; gap: 10px; }
 .cd-tier__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 16px; }
-.cd-tier__head h2 { font-size: 1.05rem; }
+.cd-tier__head h3 { margin: 0; font-size: 0.95rem; font-weight: 650; color: var(--color-text-secondary); }
 .cd-tier__lock { margin: 0; color: var(--color-text-secondary); font-size: 0.9rem; }
 .cd-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .cd-row {
@@ -693,3 +698,8 @@
 /* Keep 10–12 stage controls reachable without pushing the brief below a phone screen. */
 .cd-stage-nav { flex-wrap: nowrap; overflow-x: auto; padding: 4px 2px; }
 .cd-stage-nav .cd-btn { flex: 0 0 auto; min-width: 44px; min-height: 44px; justify-content: center; }
+/* Stages under their difficulty: a text label opens each run of stages. */
+.cd-stage-group { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
+.cd-stage-group + .cd-stage-group { padding-left: 10px; border-left: 1px solid var(--ss-card-line); }
+.cd-stage-group__label { font-size: 0.8rem; font-weight: 650; color: var(--color-text-secondary); white-space: nowrap; }
+.cd-next__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

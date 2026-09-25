@@ -3,7 +3,8 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
 import { useCodingProgress } from '../../coding/api';
 import { CODING_INDEX } from '../../../../shared/coding-index';
-import { isCodingSectionTrack } from '../../../../shared/coding-catalog';
+import { difficultyOf, isCodingSectionTrack } from '../../../../shared/coding-catalog';
+import { DifficultyBadge } from '../../coding/DifficultyBadge';
 
 const SHOWN = 3;
 
@@ -44,15 +45,16 @@ export function CodingDueSection() {
         {rows.map((task) => {
           const title = (lang === 'cs' && task.title.cs) || task.title.en;
           const meta = `${t(`coding.track.${task.track}` as TranslationKey)} · ${title}`;
+          const difficulty = difficultyOf(task);
           return (
             <li key={task.id}>
-              <Link to={`/coding/${task.track}/${task.id}`} className="today-card ss-panel ss-lift" aria-label={`${actionLabel}: ${meta}`}>
+              <Link to={`/coding/${task.track}/${task.id}`} className="today-card ss-panel ss-lift" aria-label={`${actionLabel}: ${meta}, ${t(`coding.difficulty.${difficulty}`)}`}>
                 <span className="today-card__glyph" aria-hidden="true" style={{ color: 'var(--brand-accent)' }}>
                   <CodeGlyph size={22} />
                 </span>
                 <span className="today-card__body">
                   <span className="today-card__meta">{meta}</span>
-                  <span className="today-card__reason">{t('today.codingReason')}</span>
+                  <span className="today-card__reason"><DifficultyBadge difficulty={difficulty} /> {t('today.codingReason')}</span>
                 </span>
                 <span className="today-card__action" aria-hidden="true">
                   <span className="today-card__action-label">{actionLabel}</span>

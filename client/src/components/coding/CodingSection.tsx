@@ -10,6 +10,7 @@ import { Kicker } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
 import { CodingWorkbench } from '../../coding/CodingWorkbench';
+import { DifficultyBadge } from '../../coding/DifficultyBadge';
 import { DesignRunner } from '../../coding/DesignRunner';
 import { codingKeys, saveCodingDraft, useCodingProgress, useCodingTask } from '../../coding/api';
 import { useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
@@ -19,20 +20,26 @@ import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingTaskTrack, 
 import { prepareEvolvingDraft } from '../../../../shared/coding-fullstack-support';
 import { SwimCta } from '../landing/LandingKit';
 import {
+  CODING_DIFFICULTIES,
   CODING_SECTION_TRACKS,
   CODING_TECHNIQUE_GROUPS,
   CODING_TIERS,
+  TIER_DIFFICULTY,
   formatOf,
   hasLearnLevel,
   isCodingSectionTrack,
+  isCodingTier,
   isCodingTrack,
+  isDifficulty,
   isRetiredSectionTrack,
+  stageDifficulty,
   tierLockReason,
   tierUnlocked,
   type CodingTaskSummary,
   type CodingTechniqueGroup,
   type CodingTier,
   type CodingTrack,
+  type Difficulty,
 } from '../../../../shared/coding-catalog';
 import type { CodingProgressResponse, CodingTaskProgress, CodingVerdictResponse } from '../../../../shared/coding-api';
 import '../../coding/Coding.css';
@@ -46,6 +53,17 @@ const GROUPS = Object.keys(CODING_TECHNIQUE_GROUPS) as CodingTechniqueGroup[];
 // passed one keeps its record and the FDE specialization can still assign it;
 // they simply never appear in discovery, counts, filters or the review queue.
 const SECTION_INDEX = CODING_INDEX.filter((task) => isCodingSectionTrack(task.track) && !evolvingStage(task.id));
+const INDEX_BY_ID = new Map(CODING_INDEX.map((task) => [task.id, task]));
+const TIERS: readonly CodingTier[] = [1, 2, 3, 4, 5];
+
+/** The difficulty a track list is filtered to. `?difficulty=` is the filter;
+ * an older `?tier=` link still lands on the label its tier projects to. */
+function difficultyParam(params: URLSearchParams): Difficulty | 'all' {
+  const value = params.get('difficulty');
+  if (isDifficulty(value)) return value;
+  const tier = Number(params.get('tier'));
+  return isCodingTier(tier) ? TIER_DIFFICULTY[tier] : 'all';
+}
 
 /** Shown instead of a retired track's list or task. It explains where the
  * material went and links there — it never opens the exercise. */
@@ -222,7 +240,7 @@ export function CodingHome() {
         <div>
           <Kicker>{t('coding.discovery.next')}</Kicker>
           <h2>{next ? next.title[lang] || next.title.en : t('coding.allDone')}</h2>
-          {next && <p className="cd-lead">{t(`coding.track.${next.track}` as never)}</p>}
+          {next && <p className="cd-lead cd-next__meta">{t(`coding.track.${next.track}` as never)} <DifficultyBadge difficulty={next.difficulty} /></p>}
           {dueCount > 0 && <p style={{ margin: '4px 0 0' }}><Link className="cd-link" to="/coding/review">{t('coding.review.count', { n: dueCount })}</Link></p>}
         </div>
         {next && <SwimCta label={t('coding.continue')} onClick={()=>navigate(`/coding/${next.track}/${next.id}`)} />}
@@ -314,7 +332,7 @@ export function CodingTrackScreen() {
   // Every filter lives in the URL, so a filtered list is a link a learner can
   // keep, share with themselves on another device, or reload without losing.
   const query = params.get('q') ?? '';
-  const difficulty = params.get('tier') ?? 'all';
+  const difficulty = difficultyParam(params);
   const duration = params.get('time') ?? 'all';
   const format = params.get('format') ?? 'all';
   const savedOnly = params.get('saved') === '1';
@@ -338,7 +356,7 @@ export function CodingTrackScreen() {
       const haystack = `${task.title.en} ${task.title.cs} ${task.focus.join(' ')}`.toLowerCase();
       if (!haystack.includes(needle)) return false;
     }
-    if (difficulty !== 'all' && String(task.tier) !== difficulty) return false;
+    if (difficulty !== 'all' && task.difficulty !== difficulty) return false;
     if (duration === 'short' && task.estimatedMinutes > 10) return false;
     if (duration === 'medium' && (task.estimatedMinutes <= 10 || task.estimatedMinutes > 25)) return false;
     if (duration === 'long' && task.estimatedMinutes <= 25) return false;
@@ -359,10 +377,16 @@ export function CodingTrackScreen() {
   if (track && isRetiredSectionTrack(track)) return <RetiredTrackNotice track={track} />;
   if (!track) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p><Link className="cd-btn" to="/coding">{t('coding.verdict.back')}</Link></div>;
   const done = tasks.filter((task) => passed.has(task.id)).length;
-  const tiers = [1, 2, 3, 4, 5].filter((tier) => filtered.some((task) => task.tier === tier)) as CodingTier[];
+  // Easy, then Medium, then Hard; inside each, the tiers that fall in it, so
+  // a tier's lock line stays beside the challenges it locks.
+  const bands = CODING_DIFFICULTIES
+    .map((level) => ({ level, tiers: TIERS.filter((tier) => filtered.some((task) => task.difficulty === level && task.tier === tier)) }))
+    .filter((band) => band.tiers.length > 0);
   const setFilter = (key: string, value: string | null) => {
     const next = new URLSearchParams(params);
     if (value) next.set(key, value); else next.delete(key);
+    // The label filter replaces the old tier one; never leave both in a link.
+    if (key === 'difficulty') next.delete('tier');
     setParams(next, { replace: true });
   };
 
@@ -404,11 +428,11 @@ export function CodingTrackScreen() {
           placeholder={t('coding.filter.searchPlaceholder')}
           onChange={(event) => setFilter('q', event.target.value || null)}
         />
-        <label className="cd-visually-hidden" htmlFor={`${track}-tier`}>{t('coding.filter.difficulty')}</label>
-        <select id={`${track}-tier`} value={difficulty} onChange={(event) => setFilter('tier', event.target.value === 'all' ? null : event.target.value)}>
+        <label className="cd-visually-hidden" htmlFor={`${track}-difficulty`}>{t('coding.filter.difficulty')}</label>
+        <select id={`${track}-difficulty`} value={difficulty} onChange={(event) => setFilter('difficulty', event.target.value === 'all' ? null : event.target.value)}>
           <option value="all">{t('coding.filter.difficulty')}</option>
-          {([1, 2, 3, 4, 5] as CodingTier[]).map((tier) => (
-            <option key={tier} value={String(tier)}>{t(`coding.tier.${CODING_TIERS[tier]}` as never)}</option>
+          {CODING_DIFFICULTIES.map((level) => (
+            <option key={level} value={level}>{t(`coding.difficulty.${level}`)}</option>
           ))}
         </select>
         <label className="cd-visually-hidden" htmlFor={`${track}-time`}>{t('coding.filter.duration')}</label>
@@ -434,35 +458,84 @@ export function CodingTrackScreen() {
       <p className="cd-shortcuts" role="status">{t('coding.filter.count', { shown: filtered.length, total: tasks.length })}</p>
 
       {filtered.length === 0 && <p className="cd-note">{filtersOn ? t('coding.filter.empty') : t('coding.empty')}</p>}
-      {tiers.map((tier) => {
-        const reason = lockReason(track, tier);
-        return (
-          <section key={tier} className="cd-tier" aria-labelledby={`cd-tier-${tier}`}>
-            <div className="cd-tier__head">
-              <h2 id={`cd-tier-${tier}`}>{t(`coding.tier.${CODING_TIERS[tier]}` as never)}</h2>
-              {reason && <p className="cd-tier__lock">{t(`coding.lock.${reason}` as never)}</p>}
-            </div>
-            <ul className="cd-rows">
-              {filtered.filter((task) => task.tier === tier).map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  status={statusOf(task)}
-                  saved={savedIds.has(task.id)}
-                  onSave={isAuthenticated ? onSave : undefined}
-                  saving={save.isPending}
-                />
-              ))}
-            </ul>
-          </section>
-        );
-      })}
+      {bands.map(({ level, tiers }) => (
+        <section key={level} className="cd-band" aria-labelledby={`cd-band-${level}`}>
+          <h2 id={`cd-band-${level}`} className="cd-band__title">{t(`coding.difficulty.${level}`)}</h2>
+          {tiers.map((tier) => {
+            const reason = lockReason(track, tier);
+            return (
+              <section key={tier} className="cd-tier" aria-labelledby={`cd-tier-${level}-${tier}`}>
+                <div className="cd-tier__head">
+                  <h3 id={`cd-tier-${level}-${tier}`}>{t(`coding.tier.${CODING_TIERS[tier]}` as never)}</h3>
+                  {reason && <p className="cd-tier__lock">{t(`coding.lock.${reason}` as never)}</p>}
+                </div>
+                <ul className="cd-rows">
+                  {filtered.filter((task) => task.difficulty === level && task.tier === tier).map((task) => (
+                    <TaskRow
+                      key={task.id}
+                      task={task}
+                      status={statusOf(task)}
+                      saved={savedIds.has(task.id)}
+                      onSave={isAuthenticated ? onSave : undefined}
+                      saving={save.isPending}
+                    />
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+        </section>
+      ))}
       <p className="cd-shortcuts">{lang === 'cs' ? '' : ''}</p>
     </div>
   );
 }
 
 /* ── /coding/:track/:taskId ──────────────────────────────────────────── */
+/** The stages of the path the open task belongs to, numbered, under their
+ * difficulty. Consecutive stages with one label share a labelled group, so the
+ * order stays the path's order even when an authored label breaks a band. */
+function StageNav({ stages, short, currentId, passed }: { stages: readonly string[]; short: boolean; currentId: string; passed: ReadonlySet<string> }) {
+  const { t } = useLanguage();
+  const navRef = useRef<HTMLElement>(null);
+  // On a phone the list scrolls sideways; bring the open stage into view
+  // without moving the page.
+  useEffect(() => {
+    const nav = navRef.current;
+    const current = nav?.querySelector<HTMLElement>('[aria-current="step"]');
+    if (!nav || !current || nav.scrollWidth <= nav.clientWidth) return;
+    const navBox = nav.getBoundingClientRect();
+    const box = current.getBoundingClientRect();
+    nav.scrollLeft += box.left - navBox.left - (navBox.width - box.width) / 2;
+  }, [currentId]);
+  const groups: { level: Difficulty; entries: { id: string; index: number }[] }[] = [];
+  stages.forEach((id, index) => {
+    const level = INDEX_BY_ID.get(id)?.difficulty ?? stageDifficulty(index, stages.length);
+    const last = groups[groups.length - 1];
+    if (last && last.level === level) last.entries.push({ id, index });
+    else groups.push({ level, entries: [{ id, index }] });
+  });
+  return (
+    <nav ref={navRef} className="cd-actions cd-stage-nav" aria-label={t(short ? 'coding.evolving.levels' : 'coding.evolving.title')}>
+      {groups.map(({ level, entries }) => {
+        const labelId = `cd-stage-group-${entries[0].index}`;
+        return (
+          <div key={labelId} className="cd-stage-group" role="group" aria-labelledby={labelId}>
+            <span id={labelId} className="cd-stage-group__label">{t(`coding.difficulty.${level}`)}</span>
+            {entries.map(({ id, index }) => {
+              const label = t(short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: index + 1, total: stages.length });
+              const current = id === currentId;
+              return evolvingUnlocked(id, passed) || current
+                ? <Link key={id} className={`cd-btn${current ? ' cd-btn--primary' : ''}`} aria-label={label} title={label} aria-current={current ? 'step' : undefined} to={`/coding/${evolvingTaskTrack(id)}/${id}`}>{evolvingPassed(id, passed) ? '✓ ' : ''}{index + 1}</Link>
+                : <button key={id} type="button" className="cd-btn" aria-label={label} title={label} disabled>{index + 1}</button>;
+            })}
+          </div>
+        );
+      })}
+    </nav>
+  );
+}
+
 export function CodingTaskScreen() {
   const { t, lang } = useLanguage();
   const { track: trackParam, taskId } = useParams();
@@ -470,7 +543,7 @@ export function CodingTaskScreen() {
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
-  const { statusOf } = useStatuses(progress.data);
+  const { statusOf, passed: passedIds } = useStatuses(progress.data);
   const track = isCodingTrack(trackParam) ? trackParam : null;
   // A retired track's deep link explains where the material went. The task is
   // never fetched, so no session is issued and nothing is started.
@@ -567,16 +640,7 @@ export function CodingTaskScreen() {
         {runIndex >= 0 && activeRun && <Link className="cd-link" to="/coding">{t('coding.run.stage', { n: runIndex + 1, total: activeRun.queue.length })}</Link>}
       </div>}
       {(bookmarks.isError || save.isError) && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')} <button className="cd-btn" onClick={() => void bookmarks.refetch()}>{t('coding.retry')}</button></p>}
-      {stage && <nav className="cd-actions cd-stage-nav" aria-label={t(stage.challenge.short ? 'coding.evolving.levels' : 'coding.evolving.title')}>
-        {stage.challenge.stages.map((id, index) => {
-          const passed = new Set(Object.entries(progress.data?.tasks ?? {}).filter(([, task]) => task.status === 'passed').map(([id]) => id));
-          const available = evolvingUnlocked(id, passed);
-          const label = t(stage.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: index + 1, total: stage.challenge.stages.length });
-          return available || id === data.task.id
-            ? <Link key={id} className={`cd-btn${id === data.task.id ? ' cd-btn--primary' : ''}`} aria-label={label} title={label} aria-current={id === data.task.id ? 'step' : undefined} to={`/coding/${evolvingTaskTrack(id)}/${id}`}>{evolvingPassed(id, passed) ? '✓ ' : ''}{index + 1}</Link>
-            : <button key={id} className="cd-btn" aria-label={label} title={label} disabled>{index + 1}</button>;
-        })}
-      </nav>}
+      {stage && <StageNav stages={stage.challenge.stages} short={stage.challenge.short === true} currentId={data.task.id} passed={passedIds} />}
       {data.task.track === 'system-design'
         ? <DesignRunner key={`${data.task.id}-${attempt}`} task={data.task} session={data.session} locked={data.locked} signedIn={data.signedIn} mode="section" onVerdict={onVerdict} onRetry={onRetry} nextHref={nextHref} backHref={backHref} />
         : <CodingWorkbench

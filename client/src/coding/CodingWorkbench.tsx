@@ -27,7 +27,8 @@ import { useIsNarrowForEditor } from '../lib/useMediaQuery';
 import { SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint } from '../../../shared/coding-failure';
 import { revealCoding, submitCoding, useCodingApproaches } from './api';
-import { CODING_TIERS, formatOf, hasLearnLevel, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
+import { CODING_TIERS, difficultyOf, formatOf, hasLearnLevel, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
+import { DifficultyBadge } from './DifficultyBadge';
 import type { CodingLockReason, CodingSolutionPair, CodingTaskProgress, CodingVerdictResponse } from '../../../shared/coding-api';
 import './Coding.css';
 
@@ -785,11 +786,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             <div className="cd-pane__head">
               <Kicker>{evolution ? t(evolution.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: evolution.index + 1, total: evolution.challenge.stages.length }) : <>{trackLabel} · {tierLabel}{hasLearnLevel(task) ? ` · ${t('coding.level', { n: task.level })}` : ''}</>}</Kicker>
               {mode === 'section' ? <h1 id={`${baseId}-title`}>{L(task.title)}</h1> : <h2 id={`${baseId}-title`}>{L(task.title)}</h2>}
-              {formatOf(task) === 'debug' && (
-                <div className="cd-pane__meta">
-                  <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>
-                </div>
-              )}
+              <div className="cd-pane__meta">
+                <DifficultyBadge difficulty={difficultyOf(task)} />
+                {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
+              </div>
             </div>
             <Prompt className="cd-prompt" text={L(task.prompt)} />
             {/* Earlier briefs still apply, but they are context now, not the

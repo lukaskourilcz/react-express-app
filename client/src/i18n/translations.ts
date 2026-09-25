@@ -1317,6 +1317,11 @@ export const en = {
   'coding.tier.combine': 'Combine',
   'coding.tier.interview': 'Interview',
   'coding.tier.capstone': 'Capstones',
+  // D5 (#224): Easy, Medium and Hard, a label projected from the tiers above.
+  'coding.difficulty.easy': 'Easy',
+  'coding.difficulty.medium': 'Medium',
+  'coding.difficulty.hard': 'Hard',
+  'coding.difficulty.prefix': 'Difficulty',
   'coding.lock.foundations': 'Opens after Learn JavaScript levels 1–10, or after every task of the first two tiers in this track.',
   'coding.lock.tier3': 'Opens after 80 % of the Combine tier.',
   'coding.lock.tier4': 'Opens after 80 % of the Interview tier.',
