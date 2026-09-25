@@ -156,10 +156,12 @@ matching label).
 track: each `focus` tag on a Medium standalone challenge, and how many Easy
 ones carry it (`scripts/coding-coverage.ts`). The target is three Easy
 challenges per tag, so a learner who passes the Easy band has met every
-technique the Medium band combines. The run only reports gaps until the last
-Easy-authoring wave of #226 sets `COVERAGE_ENFORCED`; `CODING_COVERAGE_ENFORCED=1`
-previews the failures, and a probe in the test proves that removing an Easy
-challenge opens a gap.
+technique the Medium band combines. The Algorithms wave, the last Easy wave of
+#226, closed the last five gaps and set `COVERAGE_ENFORCED`, so the run now
+fails on a gap: a new Medium challenge needs three Easy challenges behind each
+of its tags. A probe in the test proves that removing an Easy challenge opens a
+gap, and taking the Algorithms wave out of `EASY_BAND` fails the run with the
+five gaps it closed.
 
 **Gaps.** The coverage matrix is the gap list: #226 authors Easy challenges
 against it, one track per wave.
@@ -176,6 +178,7 @@ prints is the live count.
 | TypeScript B (`ts-easy3-*`) | 25 | none were short; the fourteen tags at 3 rose to 5 or more: utility-types and spread to 7, filter and strings to 6, the other ten to 5; record, generics and tuples rose to 7 | JavaScript none; TypeScript none of its 24, fewest 5 Easy; React 11, Algorithms 5 |
 | React A (`react-easy2-*`) | 20 | all 11 short tags: custom-hook, pagination, abort, accessibility, splice, useContext and useRef from 0 to 3; effect-cleanup from 1 to 4, timers and slice from 1 to 3, derived-state from 2 to 3 | JavaScript, TypeScript and React none; React fewest 3 Easy of its 18; Algorithms 5 |
 | React B (`react-easy3-*`) | 20 | none were short; the ten tags at 3 rose to 6: useRef, useContext, custom-hook, timers, pagination, slice, abort, accessibility, derived-state and splice; effect-cleanup and useEffect from 4 to 5 | JavaScript, TypeScript and React none; React fewest 5 Easy of its 18; Algorithms 5 |
+| Algorithms A (`alg-easy2-*`) | 20 | all 5 short tags: recursion and for-of from 0 to 5, objects from 1 to 6, sort and while from 1 to 5; map-set rose to 8, two-pointer and for to 7, strings to 6 | none in any track; fewest Easy on a Medium tag: JavaScript 6, TypeScript 5, React 5, Algorithms 5 |
 
 JavaScript B also covers techniques the Coding home lists but no Medium
 challenge uses yet, so the matrix leaves them out. Regex went from 0 Easy
@@ -248,6 +251,24 @@ signal. And a harness that drives `/sandbox/index.html` in Chromium needs the
 workbench frame's `allow-forms` flag beside `allow-scripts`: without it a
 click on a submit button submits nothing, and every form challenge fails in the
 browser while it passes on the server.
+
+Algorithms A is twenty interview warm-ups in plain JavaScript, and each prompt
+ends with the cost an interviewer listens for, like the rest of the track.
+Recursion covers Euclid's `gcd`, a Fibonacci memo, every binary string of a
+length, a mirrored tree and a root-to-leaf path sum. Two checks hold the
+learner to the technique. The Fibonacci check reads the `memo` Map the learner
+passes down, and a hidden `fib(70)` times out without one. "First broken build"
+hands over an `isBroken` callback that counts its calls, and 1,000 builds allow
+11 checks, so a linear scan fails. The ids keep the `alg-` prefix, because
+`isCodingTaskId` and the garden paths accept no other for the track.
+
+Two points for authors. A product that can come out as 0 or -0 is a trap:
+`Math.max(0, -0)` gives 0, an `if (a > b)` comparison can hand back -0,
+`deepEqual` tells them apart with `Object.is`, and the results table prints 0
+for both. The largest-product checks avoid zeros for that reason. And
+`npm run test:coding` now runs each Algorithms starter against its checks, as
+it already did for JavaScript. Every existing Algorithms starter, path levels
+included, already failed its checks.
 
 A wave is one file per track under `lib/coding/tasks/easy-<track>-<wave>.ts`,
 its solutions under the same name in `lib/coding/solutions/`, and one line in
