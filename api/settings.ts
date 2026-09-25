@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
 import { jsonError, withRequestContext } from '../lib/http';
 import { getGameSettings } from '../lib/settings-store';
 import { learningPathCapability } from '../lib/learning-paths/handlers';
+import { publicBillingSettings } from '../lib/billing/config';
 
 // Public, read-only subset of the game settings, so the client can render the
 // configured count/time options and hide disabled features. Deliberately omits
@@ -50,6 +51,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     // authored. The client reads this to decide what to show; every write is
     // authorized on the server regardless of what the client believes.
     learningPaths: learningPathCapability(),
+    // Whether checkout sells Premium (BILLING_ENABLED and a complete Stripe
+    // configuration) and whether the cancellation page can reach Stripe.
+    billing: publicBillingSettings(),
   });
 }
 

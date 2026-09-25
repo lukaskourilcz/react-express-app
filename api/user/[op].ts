@@ -37,6 +37,13 @@ import {
 import { handleGithub } from '../../lib/github-handlers';
 import { handleFriends } from '../../lib/friends-handlers';
 import { handleEntitlement } from '../../lib/entitlements';
+import {
+  endBillingForDeletedAccount,
+  handleBillingCancel,
+  handleBillingCheckout,
+  handleBillingPortal,
+  handleBillingWebhook,
+} from '../../lib/billing/handlers';
 
 const supabase = createServiceClient();
 
@@ -52,8 +59,11 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
 
   const op = String(req.query.op || '').toLowerCase();
+  // Stripe's signature gates the billing webhook; a burst of retries must not
+  // meet a 429 meant for people.
   if (
     req.method !== 'GET' &&
+    op !== 'billing-webhook' &&
     !(await enforceRateLimit(
       req,
       res,
@@ -88,6 +98,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'learning-path-draft') return handlePathDraft(req, res, supabase);
   if (op === 'learning-path-reward') return handlePathReward(req, res, supabase);
   if (op === 'entitlement') return handleEntitlement(req, res, supabase);
+  if (op === 'billing-checkout') return handleBillingCheckout(req, res, supabase);
+  if (op === 'billing-portal') return handleBillingPortal(req, res, supabase);
+  if (op === 'billing-webhook') return handleBillingWebhook(req, res, supabase);
+  if (op === 'billing-cancel') return handleBillingCancel(req, res, supabase);
   if (op.startsWith('github-')) return handleGithub(op, req, res, supabase);
   if (op.startsWith('friends-')) return handleFriends(op, req, res, supabase);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
@@ -107,6 +121,12 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
   const body = (req.body || {}) as { confirmation?: unknown };
   if (body.confirmation !== 'DELETE') {
     return jsonError(res, 400, 'confirmation_required', 'Account deletion must be confirmed');
+  }
+
+  // End any Premium subscription first: a deleted account must never be
+  // charged again, so a Stripe outage stops the deletion here (#221).
+  if (!(await endBillingForDeletedAccount(supabase!, auth.sub))) {
+    return jsonError(res, 503, 'billing_unavailable', 'We could not cancel your Premium subscription. Try again in a few minutes.');
   }
 
   try {
