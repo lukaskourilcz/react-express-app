@@ -131,7 +131,9 @@ learner arrives at with a date in the diary, where a locked tier would withhold
 the very challenge they came for. Each challenge also carries Easy, Medium or
 Hard (`difficultyOf`), projected from its tier, or for a project stage from its
 position; the label gates and pays nothing (see
-`docs/interactive-content-manifest.md`). XP follows `CODING_TASK_XP` once per task, and
+`docs/interactive-content-manifest.md`). Of the 695 tasks in
+`shared/coding-index.ts`, 462 are Easy, 151 Medium and 82 Hard; by track,
+281 JavaScript, 146 TypeScript, 168 React, 55 Algorithms and 45 system design. XP follows `CODING_TASK_XP` once per task, and
 the five coding badges join the shared badge sync for `webdev`. All storage is
 in `supabase/supabase-schema-025.sql`, whose track constraints and routines
 `supabase/supabase-schema-038.sql` widens to admit `algorithms`. devShark ships no AI feature; the last

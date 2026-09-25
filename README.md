@@ -8,7 +8,7 @@ StudyShark, the general-subject product that shared this code, moved to its own 
 
 The web experience uses the Deep End shark identity across the landing page, Learn, Quiz, Challenge, Play, Profile, Flashcards, the career roadmap, dialogs, progress indicators, and the `/dev` control room. It ships in English, with light and dark themes, keyboard navigation, reduced motion, and responsive mobile/desktop layouts. The Czech dictionaries and translations are retained in the repository but are not offered in the UI; `ENABLED_LANGS` in `client/src/i18n/LanguageContext.tsx` is the single switch that brings them back.
 
-Current content: **2,447 authored questions**, of which 2,293 are served (the content audit retired the rest), and **440 coding tasks** — 170 JavaScript, 84 TypeScript, 116 React, 45 system design and 25 Algorithms.
+Current content: **2,447 authored questions**, of which 2,293 are served (the content audit retired the rest), and **695 coding tasks** — 281 JavaScript, 146 TypeScript, 168 React, 55 Algorithms and 45 system design; 462 of them Easy, 151 Medium and 82 Hard. The counts come from `shared/coding-index.ts` and include every stage of the evolving projects and every level of the short paths.
 
 ## What the app can do
 
