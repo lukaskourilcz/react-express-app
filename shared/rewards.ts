@@ -209,7 +209,7 @@ export const merchMarginMinor = (pricing: MerchPricing): number =>
 
 /** Why tokens moved. Every ledger entry carries one, and every entry is
  * attributable to something the server itself verified. `milestone` and
- * `social` arrived with migration 041. */
+ * `social` arrived with migration 041, `referral` with 042. */
 export const TOKEN_REASONS = [
   'signup',
   'verified-xp',
@@ -218,6 +218,7 @@ export const TOKEN_REASONS = [
   'adjustment',
   'milestone',
   'social',
+  'referral',
 ] as const;
 export type TokenReason = (typeof TOKEN_REASONS)[number];
 export const isTokenReason = (value: unknown): value is TokenReason =>
@@ -272,6 +273,12 @@ export interface CoinSettings {
    * "follow to earn".
    */
   socialVisitGrant: number;
+  /** Every account: coins to the inviter and to the invited friend, once,
+   * when the friend passes a first Learn level (step D8b, migration 042). 0
+   * turns invitations off. */
+  referralGrant: number;
+  /** Most friends one inviter is paid for. Past it the friend is still paid. */
+  referralCap: number;
 }
 
 export const DEFAULT_COIN_SETTINGS: CoinSettings = {
@@ -289,7 +296,21 @@ export const DEFAULT_COIN_SETTINGS: CoinSettings = {
   shortPathComplete: 50,
   monthTop: [300, 200, 100],
   socialVisitGrant: 0,
+  referralGrant: 100,
+  referralCap: 20,
 };
+
+/* ── invitations (step D8b, #228) ──────────────────────────────────────── */
+
+/** An invite code: eight letters of Crockford's base32 in lower case (no i,
+ * l, o or u). Migration 042 draws it; the invite link is `/?ref=<code>`. */
+export const REFERRAL_CODE_RE = /^[0-9a-hjkmnp-tv-z]{8}$/;
+export const isReferralCode = (value: unknown): value is string =>
+  typeof value === 'string' && REFERRAL_CODE_RE.test(value);
+
+/** A code binds only to an account Supabase Auth created this recently, so
+ * an invitation belongs to a sign-up and an older account cannot claim one. */
+export const REFERRAL_SIGNUP_WINDOW_HOURS = 48;
 
 /** The three profiles "Find devShark elsewhere" links to. The URLs live in
  * `client/product-catalog.ts` and nowhere else. */

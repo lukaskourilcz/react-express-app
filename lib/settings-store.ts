@@ -409,6 +409,9 @@ function cleanCoins(raw: unknown, fallback: CoinSettings): CoinSettings {
     shortPathComplete: clampInt(r.shortPathComplete, 0, 100_000, fallback.shortPathComplete),
     monthTop: monthTop.length === 3 ? monthTop : [...fallback.monthTop],
     socialVisitGrant: clampInt(r.socialVisitGrant, 0, 100_000, 0),
+    // Invitations (D8b, #228): 0 coins turns them off.
+    referralGrant: clampInt(r.referralGrant, 0, 100_000, fallback.referralGrant),
+    referralCap: clampInt(r.referralCap, 0, 1_000, fallback.referralCap),
   };
 }
 

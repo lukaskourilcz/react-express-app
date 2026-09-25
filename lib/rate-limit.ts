@@ -73,6 +73,8 @@ export const RATE_LIMITS = {
   billingPortal: { key: 'billing_portal', capacity: 10, refillPerSecond: 10 / 60 },
   billingSession: { key: 'billing_session', capacity: 20, refillPerSecond: 20 / 60 },
   billingCancel: { key: 'billing_cancel', capacity: 5, refillPerSecond: 5 / 3600 },
+  // An invite code is bound once, at sign-up (#228); keyed by account.
+  referralClaim: { key: 'referral_claim', capacity: 5, refillPerSecond: 5 / 3600 },
 } satisfies Record<string, RateLimitConfig>;
 
 const buckets = new Map<string, Bucket>();
