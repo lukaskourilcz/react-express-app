@@ -33,7 +33,7 @@ Check the route at 360, 390, 430, 768, 1024, 1280, and 1440 pixels where its lay
 Protect these constraints in every recommendation:
 
 - devShark is the only product here, with one subject, `webdev`. A build for any other product fails.
-- Learning is free; support and cosmetics never affect access, XP, scores, streaks, rank, or matchmaking.
+- devShark is freemium: `shared/tiers.ts` decides what is free, the server refuses locked content with 402, and locks read "Premium" in text. Premium, coins and cosmetics change which content a learner may start; they never affect XP, scores, streaks, rank, or matchmaking.
 - Counts, the accent, subject ownership, and URLs come from registries rather than component literals.
 - Server-authoritative answers, scores, product scope, and subject scope are not negotiable design tradeoffs.
 - The footer keeps its legal links and appearance and sound controls, and the fixed shell keeps its bottom-waterline clearance.

@@ -15,7 +15,7 @@ Read `docs/product-architecture.md`, `client/product-catalog.ts`, `shared/subjec
 
 ## Protected rules
 
-- All learning is free. Support and cosmetics never change access, questions, explanations, paths, AI availability, XP, scores, streaks, ranks, leaderboards, or matchmaking.
+- devShark is freemium. `shared/tiers.ts` is the only place that says what the free tier includes and what Premium opens; the server refuses locked content with 402 and the client only mirrors it with a text "Premium" lock and the upgrade sheet. Premium, coins and cosmetics change which content a learner may start and nothing else: never questions, explanations, AI availability, XP amounts, scores, streaks, ranks, leaderboards or matchmaking. Streak protection keeps its four bounds (see `shared/rewards.ts`). Merchandise is printed and shipped by Spreadshop; coins redeem items, never discounts.
 - devShark ships no AI feature. Coding hints are authored and end in documentation links.
 - The server owns product scope, subject scope, answers, grading, scores, XP, admin roles, and one-time claims. Never expose correct answers before submission.
 - Keep exactly 12 physical TypeScript handlers under `api/`; extend typed multiplexing rather than adding a handler.
