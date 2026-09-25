@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from './api';
 import { setRankThresholds, DEFAULT_RANK_THRESHOLDS } from './leveling';
 import { queryClient } from './queryClient';
+import { DEFAULT_COIN_SETTINGS, type CoinSettings } from '../../../shared/rewards';
 
 // Public, read-only game configuration (from /api/settings) that the UI uses to
 // render the configured count/time options and hide disabled features. Backed by
@@ -41,6 +42,8 @@ export interface GameConfig {
    * `seller` (#222) names the seller of record for the Terms: Stripe as Link
    * under Managed Payments, or the trader; null or absent means unsaid. */
   billing: { enabled: boolean; cancellable: boolean; seller?: 'link' | 'trader' | null };
+  /** What earns coins (#227): the rates, milestones and the social grant. */
+  coins: CoinSettings;
 }
 
 const DEFAULT_QUIZ_CATEGORY_IDS = [
@@ -128,6 +131,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   },
   devTips: [...DEFAULT_DEV_TIPS],
   billing: { enabled: false, cancellable: false, seller: null },
+  coins: DEFAULT_COIN_SETTINGS,
 };
 
 export const GAME_CONFIG_KEY = ['game-config'] as const;
@@ -143,6 +147,7 @@ async function fetchConfig(): Promise<GameConfig> {
     shop: c.shop ?? DEFAULT_CONFIG.shop,
     support: c.support ?? DEFAULT_CONFIG.support,
     billing: c.billing ?? DEFAULT_CONFIG.billing,
+    coins: c.coins ?? DEFAULT_CONFIG.coins,
   };
 }
 

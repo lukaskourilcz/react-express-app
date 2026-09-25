@@ -19,7 +19,7 @@ import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import { useAuth } from './lib/auth';
 import { useActiveSubject } from './lib/subjects';
-import { grantRegistrationBonusIfNew, SIGNUP_BONUS_TOKENS } from './lib/tokens';
+import { useWallet } from './lib/rewards';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m } from './lib/motion';
 import BrandFooter from './components/BrandFooter';
@@ -298,18 +298,15 @@ function App() {
     if (path && path !== window.location.pathname + window.location.search) navigate(path, { replace: true });
   }, [user, navigate]);
 
-  // One-time 200-token welcome bonus on first sign-in. Idempotent across
-  // devices via a user_metadata flag inside grantRegistrationBonusIfNew.
+  // The welcome coins: the server pays them on the account's first wallet
+  // read (the header reads the wallet for the crown) and says so once, on the
+  // read that paid them (#227). The ledger event is derived from the account,
+  // so no device can pay them twice.
+  const wallet = useWallet(Boolean(user));
+  const welcomeGranted = wallet.data?.welcome?.granted === true;
   useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    void grantRegistrationBonusIfNew(user).then((granted) => {
-      if (granted && !cancelled) setSignupBonusOpen(true);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [user]);
+    if (welcomeGranted) setSignupBonusOpen(true);
+  }, [welcomeGranted]);
 
   // Nav items for features that are currently enabled in /dev → Settings.
   const navItems = NAV_ITEMS.filter((item) => !item.feature || config.features[item.feature]);
@@ -747,7 +744,7 @@ function App() {
         onClose={() => setSignupBonusOpen(false)}
         severity="success"
         autoHideDuration={6000}
-        message={t('auth.signupBonusToast', { tokens: SIGNUP_BONUS_TOKENS, brand: CURRENT_PRODUCT.brand })}
+        message={t('auth.signupBonusToast', { tokens: wallet.data?.welcome?.coins ?? 0, brand: CURRENT_PRODUCT.brand })}
       />
     </div>
   );

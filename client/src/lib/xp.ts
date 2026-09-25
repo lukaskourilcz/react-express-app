@@ -23,7 +23,6 @@ import {
 } from './leveling';
 import { rankLabelKeyFor, getTrack } from './tracks';
 import type { TranslationKey } from '../i18n/translations';
-import { awardTokens, tokensFromXp } from './tokens';
 import { getSubject, useSubject, isSubjectId, topicSetForSubject, type SubjectId } from './subjects';
 
 // v1 held ONE global accumulator shared by every subject; v2 keys XP by subject.
@@ -170,16 +169,16 @@ export function awardQuestXp(amount: number, source: 'quiz' | 'practice'): void 
   if (add <= 0) return;
   const subject = getSubject();
   writeQuest(subject, readQuest(subject) + add);
-  awardTokens(tokensFromXp(add));
   emitToast({ kind: 'gain', amount: add, source });
   reconcileRank(true);
 }
 
-/** Announce an award already committed by the verified server mutation. */
+/** Announce an award already committed by the verified server mutation. The
+ * server credited its coins in the same request (#227); nothing is counted
+ * here. */
 export function announceVerifiedQuestXp(amount: number): void {
   const verified = clampXp(amount);
   if (verified <= 0) return;
-  awardTokens(tokensFromXp(verified));
   emitToast({ kind: 'gain', amount: verified, source: 'quiz' });
   reconcileRank(true);
 }
@@ -193,9 +192,8 @@ export function announceVerifiedQuestXp(amount: number): void {
 export function awardLearningOutcome(deltaLearningXp: number): void {
   if (deltaLearningXp > 0) {
     const rounded = Math.round(deltaLearningXp);
-    // Learning XP isn't stored — it's derived from progress — but tokens are a
-    // separate accumulator, so credit 10% of the learning gain here.
-    awardTokens(tokensFromXp(rounded));
+    // Learning XP isn't stored — it's derived from progress. Its coins are
+    // credited by the server when it records the first pass (#227).
     emitToast({ kind: 'gain', amount: rounded, source: 'learn' });
     reconcileRank(true);
   } else {

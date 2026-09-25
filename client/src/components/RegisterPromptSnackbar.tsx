@@ -16,7 +16,7 @@ import { m, AnimatePresence, useReducedMotion, stillIfReduced } from '../lib/mot
 import { useIsMobile } from '../lib/useMediaQuery';
 import { useAuth } from '../lib/auth';
 import { useT } from '../i18n/LanguageContext';
-import { SIGNUP_BONUS_TOKENS } from '../lib/tokens';
+import { useGameConfig } from '../lib/gameConfig';
 import { SharkFin } from './SharkFin';
 
 const SESSION_FLAG = 'devquiz:register-prompt:dismissed:v1';
@@ -49,6 +49,8 @@ function RegisterPromptSnackbar() {
   const reduce = useReducedMotion();
   const { isAuthenticated, isLoading, signInWithGoogle } = useAuth();
   const t = useT();
+  // The welcome coins as the owner configured them (#227); 0 drops the offer.
+  const welcomeCoins = useGameConfig().coins.welcomeGrant;
   const isMobile = useIsMobile();
   const location = useLocation();
   const [open, setOpen] = useState(false);
@@ -165,7 +167,7 @@ function RegisterPromptSnackbar() {
                   {t('register.title')}
                 </Text>
                 <Text as="div" type="supporting" color="secondary">
-                  {t('register.body', { tokens: String(SIGNUP_BONUS_TOKENS) })}
+                  {welcomeCoins > 0 ? t('register.body', { tokens: String(welcomeCoins) }) : t('register.bodyNoCoins')}
                 </Text>
               </div>
             </div>
