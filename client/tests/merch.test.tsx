@@ -78,10 +78,22 @@ describe('a merchandise tile', () => {
     expect(screen.getByText('10,000 coins')).toBeInTheDocument();
     const size = screen.getByLabelText('Size') as HTMLSelectElement;
     expect(Array.from(size.options).map((one) => one.value)).toEqual([...SHIRT_SIZES]);
+    expect(size.value).toBe('S');
     expect(Array.from(size.options).find((one) => one.value === 'XXL')?.disabled).toBe(true);
     fireEvent.change(size, { target: { value: 'L' } });
     fireEvent.click(screen.getByRole('button', { name: 'Redeem' }));
     expect(onOrder).toHaveBeenCalledWith('hoodie', 'L');
+  });
+
+  it('starts on a size that is left this month and cannot redeem a size with none', () => {
+    const scarce: ShopItem = { ...hoodie, variantStock: SHIRT_SIZES.map((variant) => ({ variant, free: variant === 'L' ? 1 : 0 })) };
+    render(card(scarce, { balance: 12000 }), { wrapper });
+    const size = screen.getByLabelText('Size') as HTMLSelectElement;
+    expect(size.value).toBe('L');
+    expect(screen.getByRole('button', { name: 'Redeem' })).toBeEnabled();
+    const none: ShopItem = { ...hoodie, variantStock: SHIRT_SIZES.map((variant) => ({ variant, free: 0 })) };
+    render(card(none, { balance: 12000 }), { wrapper });
+    expect(screen.getAllByRole('button', { name: 'Redeem' })[1]).toBeDisabled();
   });
 
   it('keeps the shop link open to a free account while Redeem opens the upgrade sheet', () => {

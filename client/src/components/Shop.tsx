@@ -370,8 +370,11 @@ export function MerchCard({
 }) {
   const t = useT();
   const coinsId = useId();
-  const [variant, setVariant] = useState(item.variants[0] ?? '');
+  const freeIn = (size: string) => item.variantStock.find((row) => row.variant === size)?.free ?? 0;
+  // Start on a size that can still be sent this month.
+  const [variant, setVariant] = useState(item.variants.find((size) => freeIn(size) > 0) ?? item.variants[0] ?? '');
   const orderable = item.availability === 'available';
+  const sizeGone = item.variants.length > 0 && freeIn(variant) <= 0;
   const tokenPrice = item.price?.tokenPrice ?? null;
   const short = orderable && balance !== null && tokenPrice !== null && balance < tokenPrice;
 
@@ -388,7 +391,7 @@ export function MerchCard({
         {productUrl && (
           <a className="rw-merch__buy" href={productUrl} target="_blank" rel="noopener noreferrer">
             {t('shop.buyAtShop')}
-            <span aria-hidden="true"> ↗</span>
+            <span aria-hidden="true">&nbsp;↗</span>
             <span className="rw-sr-only"> {t('rewards.social.newTab')}</span>
           </a>
         )}
@@ -411,14 +414,11 @@ export function MerchCard({
                 disabled={premiumLocked}
                 onChange={(event) => setVariant(event.target.value)}
               >
-                {item.variants.map((one) => {
-                  const free = item.variantStock.find((row) => row.variant === one)?.free ?? 0;
-                  return (
-                    <option key={one} value={one} disabled={free <= 0}>
-                      {one}{free <= 0 ? ` (${t('shop.availability.out_of_stock')})` : ''}
-                    </option>
-                  );
-                })}
+                {item.variants.map((one) => (
+                  <option key={one} value={one} disabled={freeIn(one) <= 0}>
+                    {one}{freeIn(one) <= 0 ? ` (${t('shop.availability.out_of_stock')})` : ''}
+                  </option>
+                ))}
               </select>
             </div>
           )}
@@ -442,7 +442,7 @@ export function MerchCard({
                 type="button"
                 id={`redeem-${item.sku}`}
                 className="rw-btn rw-btn--primary"
-                disabled={!orderable || busy || short || tokenPrice === null}
+                disabled={!orderable || busy || short || tokenPrice === null || sizeGone}
                 onClick={() => onOrder(item.sku, variant)}
               >
                 {t('shop.order')}
