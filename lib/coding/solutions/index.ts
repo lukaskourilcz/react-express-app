@@ -13,6 +13,7 @@ import { REACT_LOOP_SOLUTIONS } from './react-loops';
 import { JAVASCRIPT_DEBUG_SOLUTIONS } from './javascript-debug';
 import { ALGORITHM_SOLUTIONS } from './algorithms';
 import { EASY_JAVASCRIPT_A_SOLUTIONS } from './easy-javascript-a';
+import { EASY_JAVASCRIPT_B_SOLUTIONS } from './easy-javascript-b';
 import { EVOLVING_SOLUTIONS } from './evolving';
 import { DEBUG_EVOLVING_SOLUTIONS } from './evolving-debug';
 import { PATH_SOLUTIONS } from './paths';
@@ -28,6 +29,7 @@ const AUTHORED: Record<string, CodingSolution> = {
   ...ALGORITHM_SOLUTIONS,
   // The Easy-band waves of #226, in the order `EASY_BAND` lists them.
   ...EASY_JAVASCRIPT_A_SOLUTIONS,
+  ...EASY_JAVASCRIPT_B_SOLUTIONS,
 };
 
 // The junior and senior boards are read as code, so the authoring notes that
