@@ -67,6 +67,8 @@ const DEFAULT_ROUTES = [
   '/curation',
   '/privacy',
   '/terms',
+  '/premium/success',
+  '/premium/cancel',
   '/classroom',
   '/topics/javascript-closures',
   '/dev',

@@ -221,10 +221,11 @@ learner redeem coins for merchandise. Premium changes which content a learner
 may start. Grading, explanations, XP amounts, scores, streaks, ranks,
 leaderboards and matchmaking work the same on both tiers.
 
-Status on 2026-09-25: the tiers are built (issue #220, step D1); billing is
-designed, not built (issue #221, step D2, updates this line when it lands).
-Until billing exists, an admin opens Premium by hand with a manual grant.
-Migration 039 is proven on a local Postgres and waits for production.
+Status on 2026-09-25: the tiers (issue #220, step D1) and billing (issue #221,
+step D2) are built. Billing stays off until the owner's Stripe account, Prices
+and environment exist (`NEEDED.md`); until then an admin opens Premium by hand
+with a manual grant. Migration 039, including its billing section, is proven on
+a local Postgres and waits for production.
 
 - **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
   and JavaScript in full, React levels 1 to 12 of 25 (`FREE_LEARN_LEVELS`),
@@ -271,19 +272,22 @@ Migration 039 is proven on a local Postgres and waits for production.
   stage stays focusable with `aria-disabled`, reads "Premium" in text and opens
   the one `UpgradeSheet`. Today leaves Premium levels out, and the Profile
   shows the plan line.
-- **Three billing tables** in `supabase/supabase-schema-039.sql`:
+- **The billing tables** in `supabase/supabase-schema-039.sql`:
   `billing_customers` (one Stripe customer per user), `entitlement_grants`
   (provider, manual and promo grants; the webhook never touches a manual or
   promo row) and `billing_events` (provider event ids, so a repeated delivery
   changes nothing). `is_premium(p_user)` is true for an active, unexpired
   manual or promo grant, an `active` or `trialing` provider grant, or a
   `past_due` one within seven days of `current_period_end`. RLS is on for all
-  three, with an owner-scoped SELECT policy on the first two and none on
-  `billing_events`. The routines (`is_premium`, `entitlement_summary`,
+  of them, with an owner-scoped SELECT policy on every table but
+  `billing_events`, which has none. The routines (`is_premium`, `entitlement_summary`,
   `link_billing_customer`, `upsert_provider_entitlement`,
   `grant_manual_entitlement`, `revoke_manual_entitlement`,
-  `record_billing_event`, `finish_billing_event`, `delete_entitlement_data`)
-  are SECURITY DEFINER with an empty `search_path`, executable by
+  `record_billing_event`, `finish_billing_event`, `delete_entitlement_data`,
+  and from D2 `release_billing_event`, `billing_account`,
+  `billing_customer_owner` and `record_checkout_consent` for the fourth table,
+  `billing_checkout_consents`) are SECURITY DEFINER with an empty
+  `search_path`, executable by
   `service_role` only, and none of them reads or writes XP, stats, streak or
   progress tables. A revoked provider grant stays revoked, and an account holds
   at most one active manual grant. Admins test Premium with manual grants
@@ -291,19 +295,73 @@ Migration 039 is proven on a local Postgres and waits for production.
   account's with `?userId=`; POST `{ action: 'grant', userId, validUntil,
   note }` or `{ action: 'revoke', userId, grantId?, note? }`).
 - **Stripe** Checkout, Billing and the Customer Portal take the payments, with
-  Managed Payments making Stripe the merchant of record; plain Stripe with
-  Stripe Tax is the fallback if the eligibility review declines. The routes are
-  `op=` branches of `api/user/[op].ts`: `billing-checkout`, `billing-portal`,
-  `billing-webhook` (verifies `Stripe-Signature` over the raw body, records the
-  event id first, refetches the subscription and upserts), `billing-cancel`
-  (the public two-step cancellation and withdrawal page at `/premium/cancel`)
-  and `entitlement`. The handler count stays at twelve.
+  Managed Payments making Stripe (as Link) the merchant of record; plain Stripe
+  with Stripe Tax runs behind the same code when `STRIPE_MANAGED_PAYMENTS` is
+  `false`. The server alone talks to Stripe through the official `stripe`
+  package (API version `2026-08-26.dahlia`); the browser only visits Stripe's
+  hosted pages, so there is no Stripe.js, no iframe and no CSP change. The code
+  lives in `lib/billing/` (`config.ts`, `stripe.ts`, `sync.ts`, `cancel.ts`,
+  `handlers.ts`), and the routes are `op=` branches of `api/user/[op].ts`, so
+  the handler count stays at twelve:
+  - `billing-checkout` POST `{ plan: 'monthly' | 'annual' }` (signed in, 10 a
+    minute per account): gets or creates the account's Stripe customer, sends
+    an account with a live subscription to the portal instead (409
+    `already_premium`), and creates a subscription Checkout Session with
+    `client_reference_id`, `subscription_data.metadata.supabase_user_id`,
+    required terms consent whose text is the withdrawal waiver, the renewal and
+    cancellation sentence beside the order button, `submit_type: 'pay'`,
+    promotion codes and `locale: 'auto'`. GET `?session_id=` is the success
+    page's lookup: only the account's own completed session is applied, through
+    the same path as the webhook.
+  - `billing-portal` POST (signed in, 10 a minute): a Customer Portal session
+    that returns to `/profile`.
+  - `billing-webhook` POST: `Stripe-Signature` over the raw body (Vercel replays
+    the request bytes; the body string and the re-serialised body are
+    fallbacks), 400 when it does not verify, no rate limit. It records the
+    event first (`record_billing_event`: a processed duplicate answers 200 and
+    stops; a delivery that failed part-way is taken again once its 60-second
+    lease ends), then refetches the live subscription and upserts. An account
+    the server cannot resolve is recorded with its reason and answered 200;
+    anything else is handed back (`release_billing_event`) and answered 500 so
+    Stripe retries.
+  - `billing-cancel` POST, public: `{ email, action: 'cancel' | 'withdraw', step:
+    'request' | 'confirm' }`, five confirmations an hour per address, a 900 ms
+    floor. It acts on every live devShark subscription of the Stripe customers
+    with that email: cancel at period end, or, within 14 days of the first
+    payment, a full refund, an immediate end and a revoked grant. The answer
+    never says whether the email exists; Resend emails the details to the
+    subscription's address when `RESEND_API_KEY` is set, and only a signed-in
+    owner of the address sees them on screen.
+- **Event mapping.** `checkout.session.completed` links the customer and keeps
+  the consent (`billing_checkout_consents`, one row per session with the text
+  the buyer saw); subscription created, updated and deleted, `invoice.paid` and
+  `invoice.payment_failed` mirror the subscription, so `past_due` keeps Premium
+  for seven days after the period end and the plan line reads "Payment failed,
+  update your card". A full refund, a dispute and an early fraud warning (which
+  first refunds the charge) cancel the subscription at Stripe and write the
+  grant `revoked` with the reason in its note; a partial refund only logs.
+  Manual and promo grants are separate rows the webhook never reaches.
+  `npm run test:billing` proves all of it with signed fixture events for the
+  nine types (`scripts/fixtures/billing/`).
+- **Browser.** `/premium/success` reads the plan and, when the webhook is late,
+  asks the server to apply the session; `/premium/cancel` is the public two-step
+  cancellation and withdrawal page, linked from the footer whenever Stripe is
+  connected. `PremiumCheckoutButton` is the only way into Checkout: with billing
+  off it reads "Premium opens soon" and shows no button, signed out it signs in,
+  a paying account gets "Manage billing", anyone else continues to Stripe. The
+  `/premium` page (#222) uses it. The Profile plan line offers "Manage billing"
+  for a paid subscription. Deleting an account ends its subscriptions at Stripe
+  first and stops if Stripe cannot be reached.
 - **Stripe environment:** `BILLING_ENABLED`, `STRIPE_SECRET_KEY`,
   `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PREMIUM_MONTHLY`,
-  `STRIPE_PRICE_PREMIUM_ANNUAL`, `STRIPE_MANAGED_PAYMENTS` and
-  `PUBLIC_ORIGIN`. The secret key and the webhook secret stay on the server.
-  With `BILLING_ENABLED=false` the checkout entry points disappear and the
-  `/premium` button reads "Premium opens soon"; the locks still apply.
+  `STRIPE_PRICE_PREMIUM_ANNUAL`, `STRIPE_MANAGED_PAYMENTS` (`true` or `false`,
+  no default) and `PUBLIC_ORIGIN` (defaults to `https://devshark.app`), plus the
+  optional `RESEND_API_KEY` and `RESEND_FROM`. Checkout sells Premium only with
+  `BILLING_ENABLED=true` and every value present; `/api/settings` tells the
+  browser `billing.enabled` and `billing.cancellable` and nothing else. The
+  portal, the webhook and the cancel page need only the key, so people who
+  already pay keep them after sales are switched off. With billing off the
+  locks still apply.
 
 ## Deployment
 

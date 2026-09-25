@@ -780,3 +780,29 @@ In production after the deploy of `5f865a0`, whose "Product quality" run passed 
 | Anonymous submit of the reference solution to level 1 of a JavaScript, TypeScript, Algorithms, React and FullStack path (graded, never recorded) | all passed; React levels 1 of both React paths went through the isolated grader in about 5 s |
 | The same for a level above 1 | refused as designed: a signed-out visitor gets `locked: "evolving"` and no session |
 | Chromium on the deployed pages, with every GET replayed through curl | `/coding` has no Custom block; each section lists its paths in the requested order; the Link shortener leads FullStack; `js-path-mapset-1` loads as "Level 1 of 5"; no page errors |
+
+## 2026-09-25 — billing with Stripe (D2, #221)
+
+What changed: Premium can be sold once the owner's Stripe account exists. Checkout, the Customer Portal, the signed webhook and the public cancellation page are `op=` branches of `api/user/[op].ts` (`lib/billing/`), so the handler count stays at twelve. `/premium/success` and `/premium/cancel` ship in the client, with `PremiumCheckoutButton` for the `/premium` page (#222), "Manage billing" on the Profile plan line and "Cancel Premium" in the footer's legal links. Migration 039 gained section 5 (the consent table and four routines). Everything stays behind `BILLING_ENABLED`, off by default, and no test reaches Stripe. The design is in `docs/product-architecture.md` under "Tiers and billing".
+
+Local evidence, all executed on the lane branch head:
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api` | exit 0 |
+| `npm run test:launch` | exit 0; adds the billing structure: off by default, the canonical origin, four ops inside the twelve handlers, the webhook outside the limiter, no Stripe script or CSP host, no billing file touching learning, score or wallet data |
+| `npm run test:billing` | exit 0; 24 checks over the nine fixture event types signed with `stripe.webhooks.generateTestHeaderString` |
+| The same 24 checks against Postgres 16 with migrations 001 to 039, through a local PostgREST stand-in | passed; the real `is_premium`, upsert, event and consent routines |
+| Migration 039 on Postgres 16 | applied twice from scratch and twice over the D1 copy, exit 0 each; the D1 and D2 rolled-back exercises pass, nothing left after rollback |
+| `npm run test:client` | exit 0; 10 files, 86 tests (17 new in `client/tests/billing.test.tsx`) |
+| `npm run build`, `npm run check:bundle` | exit 0; 209,176 of 243,000 gzip bytes |
+| `npm run check:security` | exit 0; `vercel.json` unchanged |
+| `npm run check:public`, `npm run check:unused` | exit 0 |
+| `npm run check:responsive` at 360, 390, 768 and 1280, light and dark, with `/premium/success` and `/premium/cancel` added to the inventory | exit 0; 136 probes each, 0 issues |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client` | exit 0; 0 vulnerabilities (`stripe` 22.6.2 has no dependencies) |
+| `git diff --check` | clean |
+| Chromium, 360 and 1280, light and dark, the real handlers against the local database and a fake Stripe | the cancel page's form, email error, confirmation (focus on its heading) and receipt, generic for another address and exact for the signed-in owner; the success page done, pending, expired (two checkout buttons with the price) and signed out; Manage billing on the plan line; the footer link; no page errors and no horizontal overflow |
+
+Billing simulation, run locally rather than in Stripe: `npm run test:billing` moves one subscription through `invoice.payment_failed` with the live subscription `past_due` and its period three days past (Premium stays, the plan line's `inGrace` is true), then eight days past (Free), then `customer.subscription.deleted` (canceled). The run with a Stripe test clock against a sandbox needs the owner's account and is listed in `NEEDED.md`. So are the fixture payloads: they were written from Stripe's API reference for `2026-08-26.dahlia`, not captured, because no account exists yet.
+
+Not verified here: anything against Stripe itself (Checkout's rendering of the consent and the order-button text, Managed Payments approval, the portal configuration, real webhook delivery through Vercel's raw-body replay), and production. Each is an owner item in `NEEDED.md`.
