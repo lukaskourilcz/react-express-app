@@ -10,22 +10,37 @@ interface FinProps {
   size?: number;
   /** Fill colour; defaults to brand green. */
   color?: string;
+  /** Cut the base into a wave, so the fin breaks the surface. Only the logo in
+   * the navigation uses it: every other fin keeps a straight base on y=18,
+   * which reads cleanly on waterlines, cards and buttons. */
+  wave?: boolean;
 }
 
 // The swim/cruise/wake keyframes live in styles/app-shell.css (one static
 // copy) — previously each mount injected its own duplicate <style> tag.
 
-/**
- * A static dorsal shark fin. `aria-hidden` — it's decorative. The fin sweeps
- * back to a hooked tip, and its base is cut into a wave on y=18, so the fin
- * sits in the water. favicon.svg carries the same paths.
- */
-export function SharkFin({ size = 22, color = 'var(--brand-accent)' }: FinProps) {
+// The fin sweeps back to a hooked tip. `flat` sits on a straight base at y=18;
+// `wave` cuts the same base into a wave around that line for the logo.
+// favicon.svg repeats the logo's paths.
+const FIN_PATHS = {
+  flat: {
+    body: 'M2.4 18 C 4.5 11.4 9.5 4.1 18 2.1 C 15.2 6.1 15.4 12.2 21.6 18 Z',
+    shade: 'M18 2.1 C 15.2 6.1 15.4 12.2 21.6 18 L 16.9 18 C 14.3 14.2 13.6 7.2 18 2.1 Z',
+  },
+  wave: {
+    body: 'M2.4 18 C 4.5 11.4 9.5 4.1 18 2.1 C 15.2 6.1 15.4 12.2 21.6 18 Q 19.25 15.5 16.9 18 T 12.2 18 T 7.5 18 T 2.4 18 Z',
+    shade: 'M18 2.1 C 15.2 6.1 15.4 12.2 21.6 18 Q 19.25 15.5 16.9 18 C 14.3 14.2 13.6 7.2 18 2.1 Z',
+  },
+} as const;
+
+/** A static dorsal shark fin. `aria-hidden` — it's decorative. */
+export function SharkFin({ size = 22, color = 'var(--brand-accent)', wave = false }: FinProps) {
+  const paths = wave ? FIN_PATHS.wave : FIN_PATHS.flat;
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <path d="M2.4 18 C 4.5 11.4 9.5 4.1 18 2.1 C 15.2 6.1 15.4 12.2 21.6 18 Q 19.25 15.5 16.9 18 T 12.2 18 T 7.5 18 T 2.4 18 Z" style={{ fill: color }} />
+      <path d={paths.body} style={{ fill: color }} />
       {/* subtle inner shading down the trailing edge */}
-      <path d="M18 2.1 C 15.2 6.1 15.4 12.2 21.6 18 Q 19.25 15.5 16.9 18 C 14.3 14.2 13.6 7.2 18 2.1 Z" fill="#000" opacity="0.12" />
+      <path d={paths.shade} fill="#000" opacity="0.12" />
     </svg>
   );
 }
@@ -35,10 +50,10 @@ export function SharkFin({ size = 22, color = 'var(--brand-accent)' }: FinProps)
  * to the wordmark. Tiny, looping, and calm so it reads as a flourish, not a
  * distraction.
  */
-export function SwimmingFin({ size = 22, color = 'var(--brand-accent)' }: FinProps) {
+export function SwimmingFin({ size = 22, color = 'var(--brand-accent)', wave = false }: FinProps) {
   return (
     <span className="devshark-swim" style={{ display: 'inline-flex', transformOrigin: 'bottom center' }}>
-      <SharkFin size={size} color={color} />
+      <SharkFin size={size} color={color} wave={wave} />
     </span>
   );
 }

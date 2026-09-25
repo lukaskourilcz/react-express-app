@@ -158,7 +158,8 @@ const RouteLoader = () => {
   return <LoadingScreen label={t('common.loading')} size={28} tips={localizedDevTips(config.devTips, lang)} sx={{ minHeight: 'auto', py: 6 }} />;
 };
 
-// The header brand: the fin and the devShark wordmark, in the accent.
+// The header brand: the fin and the devShark wordmark, in the accent. The
+// logo is the one place the fin's base is cut into a wave.
 function HeaderBrand() {
   const subject = useActiveSubject();
   const t = useT();
@@ -169,7 +170,7 @@ function HeaderBrand() {
       className="ss-drawer-brand"
       style={{ padding: 0, color: subject.accent }}
     >
-      <SwimmingFin size={22} />
+      <SwimmingFin size={22} wave />
       {CURRENT_PRODUCT.brand}
     </Link>
   );
@@ -518,7 +519,7 @@ function App() {
                 className="ss-drawer-brand"
                 style={{ color: activeSubject.accent }}
               >
-                <SharkFin size={22} />
+                <SharkFin size={22} wave />
                 {CURRENT_PRODUCT.brand}
               </Link>
               <div style={{ height: 1, background: 'var(--color-border)' }} />
