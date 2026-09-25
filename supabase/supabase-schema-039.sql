@@ -13,7 +13,13 @@
 --     hand (and how Premium is tested before billing exists); a promo grant is
 --     the same thing issued by a campaign. The webhook never touches either.
 --   * billing_events records every provider event id once, so a repeated
---     delivery changes nothing.
+--     delivery of a processed event changes nothing.
+--   * billing_checkout_consents keeps the buyer's acceptance of the terms and
+--     of the withdrawal waiver with the Checkout Session id (step D2, #221).
+--
+-- Section 5 was added by step D2 (#221) before 039 reached production. It is
+-- additive: re-running this file on a database that holds the D1 copy adds the
+-- consent table, two billing_events columns and the section 5 routines.
 --
 -- is_premium() is the rule, written once:
 --   a manual or promo grant that is active and not past valid_until, or
@@ -73,19 +79,45 @@ CREATE TABLE IF NOT EXISTS public.billing_events (
   object_id    TEXT CHECK (object_id IS NULL OR LENGTH(object_id) <= 128),
   received_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   processed_at TIMESTAMPTZ,
-  error        TEXT CHECK (error IS NULL OR LENGTH(error) <= 500)
+  error        TEXT CHECK (error IS NULL OR LENGTH(error) <= 500),
+  -- When a delivery last started work on the event, and how many did. A
+  -- delivery that fails part-way leaves processed_at empty, so the provider's
+  -- retry can take the event again once the previous attempt's lease is over.
+  attempted_at TIMESTAMPTZ DEFAULT NOW(),
+  attempts     INTEGER NOT NULL DEFAULT 1 CHECK (attempts >= 0)
 );
+-- Added by step D2 (#221); a database that ran an earlier copy of 039 gains them here.
+ALTER TABLE public.billing_events ADD COLUMN IF NOT EXISTS attempted_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE public.billing_events ADD COLUMN IF NOT EXISTS attempts INTEGER NOT NULL DEFAULT 1 CHECK (attempts >= 0);
 CREATE INDEX IF NOT EXISTS billing_events_unprocessed_idx
   ON public.billing_events (received_at) WHERE processed_at IS NULL;
 
+-- The checkout consent: the terms and the waiver of the 14-day withdrawal
+-- right for digital content, as the provider recorded them on the Checkout
+-- Session. One row per session; the text is what the buyer saw.
+CREATE TABLE IF NOT EXISTS public.billing_checkout_consents (
+  session_id               TEXT PRIMARY KEY CHECK (session_id ~ '^[A-Za-z0-9_-]{1,255}$'),
+  user_id                  TEXT NOT NULL CHECK (LENGTH(user_id) BETWEEN 1 AND 128),
+  provider_subscription_id TEXT CHECK (
+                             provider_subscription_id IS NULL OR provider_subscription_id ~ '^[A-Za-z0-9_-]{1,128}$'),
+  terms_of_service         TEXT NOT NULL CHECK (terms_of_service IN ('accepted')),
+  waiver_text              TEXT NOT NULL CHECK (LENGTH(waiver_text) BETWEEN 1 AND 1200),
+  accepted_at              TIMESTAMPTZ NOT NULL,
+  recorded_at              TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS billing_checkout_consents_user_idx
+  ON public.billing_checkout_consents (user_id);
+
 -- ---------------------------------------------------------------------------
--- 2. Row-level security. An owner reads their own customer link and grants;
---    every write is a service-role routine. billing_events holds provider
---    data, not an account's, and has no policy at all. anon holds nothing.
+-- 2. Row-level security. An owner reads their own customer link, grants and
+--    checkout consents; every write is a service-role routine. billing_events
+--    holds provider data, not an account's, and has no policy at all. anon
+--    holds nothing.
 -- ---------------------------------------------------------------------------
 ALTER TABLE public.billing_customers  ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.entitlement_grants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.billing_events     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.billing_checkout_consents ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "billing_customers_select_own" ON public.billing_customers;
 CREATE POLICY "billing_customers_select_own"
@@ -97,13 +129,20 @@ CREATE POLICY "entitlement_grants_select_own"
   ON public.entitlement_grants FOR SELECT TO authenticated
   USING (user_id = (SELECT auth.uid()::TEXT));
 
+DROP POLICY IF EXISTS "billing_checkout_consents_select_own" ON public.billing_checkout_consents;
+CREATE POLICY "billing_checkout_consents_select_own"
+  ON public.billing_checkout_consents FOR SELECT TO authenticated
+  USING (user_id = (SELECT auth.uid()::TEXT));
+
 -- Supabase grants every privilege to anon and authenticated on a new table.
 -- RLS filters rows, not TRUNCATE, so revoke first and grant back SELECT only.
 REVOKE ALL ON public.billing_customers  FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON public.entitlement_grants FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON public.billing_events     FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.billing_checkout_consents FROM PUBLIC, anon, authenticated;
 GRANT SELECT ON public.billing_customers  TO authenticated;
 GRANT SELECT ON public.entitlement_grants TO authenticated;
+GRANT SELECT ON public.billing_checkout_consents TO authenticated;
 
 -- ---------------------------------------------------------------------------
 -- 3. The rule.
@@ -342,8 +381,11 @@ $$;
 REVOKE ALL ON FUNCTION public.revoke_manual_entitlement(TEXT, UUID, TEXT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.revoke_manual_entitlement(TEXT, UUID, TEXT) TO service_role;
 
--- Record a provider event before acting on it. FALSE means it was seen
--- already, and the caller stops.
+-- Record a provider event before acting on it. TRUE means this delivery
+-- should process it: the event is new, or an earlier delivery took it and
+-- failed before finishing, and that attempt's 60-second lease is over. FALSE
+-- means it was processed already (or is being processed right now), and the
+-- caller stops.
 CREATE OR REPLACE FUNCTION public.record_billing_event(
   p_event_id  TEXT,
   p_type      TEXT,
@@ -361,7 +403,14 @@ BEGIN
   VALUES (p_event_id, p_type, p_object_id)
   ON CONFLICT (id) DO NOTHING;
   GET DIAGNOSTICS v_applied = ROW_COUNT;
-  RETURN v_applied > 0;
+  IF v_applied > 0 THEN RETURN TRUE; END IF;
+
+  UPDATE public.billing_events
+     SET attempted_at = NOW(), attempts = attempts + 1
+   WHERE id = p_event_id
+     AND processed_at IS NULL
+     AND (attempted_at IS NULL OR attempted_at < NOW() - INTERVAL '60 seconds');
+  RETURN FOUND;
 END;
 $$;
 REVOKE ALL ON FUNCTION public.record_billing_event(TEXT, TEXT, TEXT) FROM PUBLIC, anon, authenticated;
@@ -400,7 +449,105 @@ AS $$
 BEGIN
   DELETE FROM public.entitlement_grants WHERE user_id = p_user_id;
   DELETE FROM public.billing_customers WHERE user_id = p_user_id;
+  DELETE FROM public.billing_checkout_consents WHERE user_id = p_user_id;
 END;
 $$;
 REVOKE ALL ON FUNCTION public.delete_entitlement_data(TEXT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.delete_entitlement_data(TEXT) TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 5. Billing (step D2, #221). What the Stripe routes in lib/billing/ need
+--    beyond the writers above. All service-role only.
+-- ---------------------------------------------------------------------------
+
+-- A delivery that failed part-way hands the event back: the error is kept for
+-- the operator, and the provider's next retry may take it at once.
+CREATE OR REPLACE FUNCTION public.release_billing_event(
+  p_event_id TEXT,
+  p_error    TEXT DEFAULT NULL
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  UPDATE public.billing_events
+     SET attempted_at = NULL, error = LEFT(p_error, 500)
+   WHERE id = p_event_id AND processed_at IS NULL;
+  RETURN FOUND;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.release_billing_event(TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.release_billing_event(TEXT, TEXT) TO service_role;
+
+-- What checkout and the portal need to know about an account: its provider
+-- customer, and whether a provider grant is live (a second subscription would
+-- charge twice, so checkout sends that account to the portal instead).
+CREATE OR REPLACE FUNCTION public.billing_account(p_user_id TEXT)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT jsonb_build_object(
+    'customerId', (SELECT c.provider_customer_id FROM public.billing_customers c WHERE c.user_id = p_user_id),
+    'providerLive', EXISTS (
+      SELECT 1 FROM public.entitlement_grants g
+       WHERE g.user_id = p_user_id
+         AND g.source = 'provider'
+         AND public.entitlement_grant_live(g.source, g.status, g.valid_until, g.current_period_end)
+    )
+  );
+$$;
+REVOKE ALL ON FUNCTION public.billing_account(TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.billing_account(TEXT) TO service_role;
+
+-- The account a provider customer belongs to, or NULL.
+CREATE OR REPLACE FUNCTION public.billing_customer_owner(p_provider_customer_id TEXT)
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT c.user_id FROM public.billing_customers c WHERE c.provider_customer_id = p_provider_customer_id;
+$$;
+REVOKE ALL ON FUNCTION public.billing_customer_owner(TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.billing_customer_owner(TEXT) TO service_role;
+
+-- Keep the buyer's acceptance of the terms and the waiver with the session id.
+-- Idempotent: the webhook and the success page may both record one session,
+-- and the first record stands. A session recorded for another account is
+-- refused.
+CREATE OR REPLACE FUNCTION public.record_checkout_consent(
+  p_session_id      TEXT,
+  p_user_id         TEXT,
+  p_subscription_id TEXT,
+  p_waiver_text     TEXT,
+  p_accepted_at     TIMESTAMPTZ
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_owner TEXT;
+BEGIN
+  SELECT user_id INTO v_owner FROM public.billing_checkout_consents WHERE session_id = p_session_id;
+  IF FOUND AND v_owner <> p_user_id THEN
+    RAISE EXCEPTION 'checkout_consent_conflict';
+  END IF;
+  INSERT INTO public.billing_checkout_consents AS c (
+    session_id, user_id, provider_subscription_id, terms_of_service, waiver_text, accepted_at
+  )
+  VALUES (p_session_id, p_user_id, p_subscription_id, 'accepted', p_waiver_text, COALESCE(p_accepted_at, NOW()))
+  ON CONFLICT (session_id) DO UPDATE
+    SET provider_subscription_id = COALESCE(c.provider_subscription_id, EXCLUDED.provider_subscription_id);
+  RETURN TRUE;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.record_checkout_consent(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_checkout_consent(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ) TO service_role;

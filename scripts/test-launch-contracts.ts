@@ -473,7 +473,12 @@ async function tierContracts() {
   for (const table of ['user_xp', 'user_stats', 'user_category_stats', 'user_streak', 'roadmap_progress', 'coding_progress', 'token_ledger', 'token_balances']) {
     assert.ok(!migration.includes(table), `migration 039 must not touch ${table}`);
   }
-  for (const routine of ['is_premium', 'entitlement_summary', 'upsert_provider_entitlement', 'grant_manual_entitlement', 'revoke_manual_entitlement', 'record_billing_event', 'finish_billing_event', 'link_billing_customer', 'delete_entitlement_data']) {
+  for (const routine of [
+    'is_premium', 'entitlement_summary', 'upsert_provider_entitlement', 'grant_manual_entitlement', 'revoke_manual_entitlement',
+    'record_billing_event', 'finish_billing_event', 'link_billing_customer', 'delete_entitlement_data',
+    // Billing (step D2, #221).
+    'release_billing_event', 'billing_account', 'billing_customer_owner', 'record_checkout_consent',
+  ]) {
     const start = migration.indexOf(`function public.${routine}(`);
     assert.ok(start >= 0, `migration 039 defines ${routine}`);
     const body = migration.slice(start, migration.indexOf('grant execute', start));
@@ -483,7 +488,7 @@ async function tierContracts() {
     assert.match(migration, new RegExp(`revoke all on function public\\.${routine}\\([^)]*\\) from public, anon, authenticated;`), `${routine} is revoked from browsers`);
   }
   assert.doesNotMatch(migration, /create or replace function public\.delete_user_data/, 'migration 039 redefines no earlier routine');
-  for (const table of ['billing_customers', 'entitlement_grants', 'billing_events']) {
+  for (const table of ['billing_customers', 'entitlement_grants', 'billing_events', 'billing_checkout_consents']) {
     assert.match(migration, new RegExp(`alter table public\\.${table}\\s+enable row level security`), `${table} has RLS`);
     assert.match(migration, new RegExp(`revoke all on public\\.${table}\\s+from public, anon, authenticated`), `${table} revokes browser privileges`);
   }
