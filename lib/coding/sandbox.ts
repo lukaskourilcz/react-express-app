@@ -10,6 +10,7 @@ import { newQuickJSWASMModuleFromVariant, shouldInterruptAfterDeadline, type Qui
 import variant from '@jitl/quickjs-singlefile-cjs-release-sync';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
 import { TIMEOUT_MESSAGE, deepEqual, displayValue } from '../../shared/coding-evaluate';
+import { CONSOLE_SOURCE } from '../../shared/coding-console';
 
 let modulePromise: Promise<QuickJSWASMModule> | null = null;
 const getModule = () => (modulePromise ??= newQuickJSWASMModuleFromVariant(variant));
@@ -66,14 +67,15 @@ const encode = (value, depth = 0, seen = makeArray()) => {
   return packet(names ? 'object' : 'array', entries);
 };
 const message = error => { try { return string(error && error.message || error); } catch { return 'Evaluation failed'; } };
+const emit = line => { if (logs.length < ${MAX_LOGS}) logs[logs.length] = line; };
+const format = value => {
+  if (typeof value === 'string') return value;
+  try { const text = stringify(value); return text === undefined ? string(value) : text; } catch { return '[unprintable]'; }
+};
 const record = args => {
-  if (logs.length >= ${MAX_LOGS}) return;
   let line = '';
-  for (let i = 0; i < args.length; i++) {
-    if (i) line += ' ';
-    try { line += typeof args[i] === 'string' ? args[i] : stringify(args[i]); } catch { line += '[unprintable]'; }
-  }
-  logs[logs.length] = line;
+  for (let i = 0; i < args.length; i++) line += (i ? ' ' : '') + format(args[i]);
+  emit(line);
 };
 const schedule = (fn, ms, interval, args) => {
   const id = nextId++, delay = number(ms) || 0;
@@ -92,7 +94,7 @@ const parse = JSON.parse;
 globalThis.structuredClone = value => parse(stringify(value));
 Date.now = () => 1700000000000 + now;
 globalThis.performance = { now: () => now };
-globalThis.console = { log: (...args) => record(args), info: (...args) => record(args), warn: (...args) => record(args), error: (...args) => record(args), debug: (...args) => record(args) };
+globalThis.console = (${CONSOLE_SOURCE})(emit, format, () => now);
 const evaluate = NativeFunction(${JSON.stringify('"use strict";\n' + code + '\n;return [' + calls.map(call => '() => (' + call.trim().replace(/;+$/, '') + '\n)').join(',') + '];')})();
 const outcomes = makeArray();
 let remaining = ${calls.length};

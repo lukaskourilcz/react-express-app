@@ -495,6 +495,35 @@ async function main() {
     assert.equal(starterPasses, false, `${task.id}: the broken starter must fail its own tests`);
   }
 
+  // ── the learner console ────────────────────────────────────────────────
+  // The Run button's worker and the grading sandbox print the same lines for
+  // every console method the debugging paths teach. Timings differ (the
+  // sandbox clock is virtual), so they are checked on their own.
+  const consoleProgram = [
+    'console.log({ total: 12 }, "label", [1, 2], undefined);',
+    'console.table([{ name: "tea", price: 3 }, { name: "cake", price: 2.5, qty: 1 }]);',
+    'console.table([1, "two"]);',
+    'console.group("checkout"); console.count("addPoints"); console.count("addPoints"); console.table({ a: { x: 1 } }); console.groupEnd();',
+    'console.countReset("addPoints"); console.count("addPoints"); console.count();',
+    'console.assert(false, "broken", 3); console.assert(true, "fine");',
+    'console.dir({ deep: { er: 1 } }); console.trace("here"); console.info("i"); console.warn("w"); console.error("e"); console.debug("d");',
+    'console.timeEnd("never"); console.time("t"); console.time("t"); console.groupCollapsed(); console.log("inside"); console.groupEnd();',
+  ].join('\n');
+  const inSandbox = await runInSandbox({ code: consoleProgram, calls: [], expectations: null });
+  const inWorker = await evaluateCalls({ code: consoleProgram, calls: [], expectations: null });
+  assert.equal(inSandbox.codeError, null, 'every taught console method exists in the sandbox');
+  assert.equal(inWorker.codeError, null, 'every taught console method exists in the worker');
+  assert.deepEqual(inWorker.logs, inSandbox.logs, 'both runners print the same lines');
+  assert.deepEqual(inSandbox.logs.slice(0, 5), [
+    '{"total":12} label [1,2] undefined',
+    '(index) | name   | price | qty\n--------+--------+-------+----\n0       | "tea"  | 3     |\n1       | "cake" | 2.5   | 1',
+    '(index) | Values\n--------+-------\n0       | 1\n1       | "two"',
+    'checkout',
+    '  addPoints: 1',
+  ], 'console.table draws rows under their index, and a group indents');
+  const timed = await runInSandbox({ code: 'console.time("wait"); setTimeout(() => console.timeEnd("wait"), 100);', calls: ['new Promise((done) => setTimeout(done, 150))'], expectations: null });
+  assert.deepEqual(timed.logs, ['wait: 100ms'], 'console.time reads the sandbox\'s virtual clock');
+
   const byLabel = CODING_DIFFICULTIES.map((label) => `${label} ${labelCounts.get(label) ?? 0}`).join(', ');
   console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}; ${byLabel}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
