@@ -330,16 +330,20 @@ function MerchCard({
   onOrder,
   busy,
   premiumLocked,
+  balance,
 }: {
   item: ShopItem;
   onOrder: (sku: MerchSku, variant: string) => void;
   busy: boolean;
   premiumLocked: boolean;
+  /** The learner's coins, or null while they are unknown (the server decides). */
+  balance: number | null;
 }) {
   const t = useT();
   const { lang } = useLanguage();
   const [variant, setVariant] = useState(item.variants[0] ?? '');
   const orderable = item.availability === 'available';
+  const short = orderable && balance !== null && item.price?.tokenPrice != null && balance < item.price.tokenPrice;
 
   return (
     <Card variant="default" padding={3} width="100%">
@@ -401,14 +405,17 @@ function MerchCard({
             <span className="rw-tag">{t('premium.badge')}</span>
           </div>
         ) : (
-          <button
-            type="button"
-            className="rw-btn rw-btn--primary"
-            disabled={!orderable || busy}
-            onClick={() => onOrder(item.sku, variant)}
-          >
-            {t('shop.order')}
-          </button>
+          <>
+            <button
+              type="button"
+              className="rw-btn rw-btn--primary"
+              disabled={!orderable || busy || short}
+              onClick={() => onOrder(item.sku, variant)}
+            >
+              {t('shop.order')}
+            </button>
+            {short && <Text type="supporting" size="xsm" color="secondary">{t('shop.insufficient')}</Text>}
+          </>
         )}
       </VStack>
     </Card>
@@ -521,6 +528,7 @@ function Shop() {
               item={item}
               busy={order.isPending}
               premiumLocked={merchLocked}
+              balance={isAuthenticated && wallet.data ? balance : null}
               onOrder={(sku, variant) => setCheckout({ sku, variant })}
             />
           ))}

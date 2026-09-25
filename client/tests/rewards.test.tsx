@@ -52,14 +52,23 @@ const shop = {
   protection: { available: true, tokenPrice: 250, cap: 2 },
 };
 
-function routes(opts: { plan?: unknown; wallet?: unknown; walletStatus?: number; social?: (body: unknown) => void } = {}) {
+const pricedShop = {
+  ...shop,
+  enabled: true,
+  items: [{
+    sku: 'mug', variants: [], availability: 'available', variantStock: [{ variant: '', free: 5 }],
+    price: { minor: 1799, currency: 'EUR', taxIncluded: true, tokenPrice: 6000, regions: ['CZ'] },
+  }],
+};
+
+function routes(opts: { plan?: unknown; wallet?: unknown; walletStatus?: number; social?: (body: unknown) => void; shop?: unknown } = {}) {
   server.use(
     http.get('*/api/settings', () => HttpResponse.json({ coins: DEFAULT_COIN_SETTINGS })),
     http.get('*/api/user/*', ({ request }) => {
       const op = new URL(request.url).searchParams.get('op');
       if (op === 'entitlement') return HttpResponse.json((opts.plan ?? FREE) as never);
       if (op === 'wallet') return HttpResponse.json((opts.wallet ?? wallet()) as never, { status: opts.walletStatus ?? 200 });
-      if (op === 'shop') return HttpResponse.json(shop);
+      if (op === 'shop') return HttpResponse.json((opts.shop ?? shop) as never);
       if (op === 'orders') return HttpResponse.json({ orders: [] });
       return undefined;
     }),
@@ -145,6 +154,25 @@ describe('the Rewards screen', () => {
     const headings = screen.getAllByRole('heading', { level: 2 }).map((one) => one.textContent);
     expect(headings.slice(0, 4)).toEqual(['Your coins', 'How to earn', 'Merchandise', 'Crown and streak protection']);
     expect(screen.queryByText('Premium members redeem coins for merchandise.')).toBeNull();
+  });
+
+  it('lets a Premium member redeem once the coins cover the price', async () => {
+    signIn();
+    const premiumWallet = (balance: number) => wallet({ balance, earn: { rules: DEFAULT_COIN_SETTINGS, progress: progress({ premium: true }) } });
+    routes({ plan: PREMIUM, shop: pricedShop, wallet: premiumWallet(264) });
+    const first = render(<Shop />, { wrapper });
+    const short = await screen.findByRole('button', { name: 'Redeem' });
+    await screen.findByText('Not enough coins');
+    expect(short).toBeDisabled();
+    first.unmount();
+    routes({ plan: PREMIUM, shop: pricedShop, wallet: premiumWallet(7000) });
+    render(<Shop />, { wrapper });
+    await screen.findByText('7,000');
+    const redeem = await screen.findByRole('button', { name: 'Redeem' });
+    await waitFor(() => expect(redeem).toBeEnabled());
+    fireEvent.click(redeem);
+    expect(await screen.findByRole('heading', { name: 'Redeem: Mug' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Postcode')).toBeInTheDocument();
   });
 
   it('shows the last lines of the ledger and the rest on request', async () => {

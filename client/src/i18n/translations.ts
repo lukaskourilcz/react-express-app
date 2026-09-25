@@ -220,7 +220,7 @@ export const en = {
   'shop.crownWear': 'Wear it',
   'shop.crownRemove': 'Take it off',
   'shop.crownBought': 'The crown is yours.',
-  'shop.checkoutTitle': 'Order: {item}',
+  'shop.checkoutTitle': 'Redeem: {item}',
   'shop.address.name': 'Name',
   'shop.address.line1': 'Address',
   'shop.address.line2': 'Address, second line (optional)',
