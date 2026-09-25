@@ -20,8 +20,9 @@
 
 import type { CodingTaskSource } from '../types';
 
-/** The opening every suite here shares; `names` adds named exports of App. */
-const header = (names = ''): string => `import './fetchStub';
+/** The opening every suite here shares; `names` adds named exports of App.
+ * Later React waves import it too. */
+export const header = (names = ''): string => `import './fetchStub';
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act, within } from '@testing-library/react';
 import App${names ? `, { ${names} }` : ''} from './App';
@@ -31,7 +32,7 @@ import App${names ? `, { ${names} }` : ''} from './App';
  * signal; an aborted signal rejects it with an AbortError, as the browser
  * does. The real stub comes back after each case, so the preview never gets
  * a request that waits forever. */
-const FAKE_FETCH = `
+export const FAKE_FETCH = `
 const withFetch = async (body) => {
   const calls = [];
   const real = globalThis.fetch;
