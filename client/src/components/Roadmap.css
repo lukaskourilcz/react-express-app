@@ -528,3 +528,14 @@
   font-size: 0.82rem;
   color: var(--color-text-secondary);
 }
+
+/* A Premium node's label (#220): sentence case and tight, so six of them fit a
+   360px row without running into each other. */
+.rm-premium-label {
+  font-size: 0.66rem;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

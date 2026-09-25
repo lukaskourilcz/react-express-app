@@ -1166,7 +1166,7 @@ function PremiumNode({ shape, label, title, cellW, onClick, t }: {
       >
         {title}
       </div>
-      <span className="ss-premium-label" aria-hidden="true">{t('premium.badge')}</span>
+      <span className="ss-premium-label rm-premium-label" aria-hidden="true" style={{ maxWidth: Math.max(40, cellW - 4) }}>{t('premium.badge')}</span>
     </div>
   );
 }
