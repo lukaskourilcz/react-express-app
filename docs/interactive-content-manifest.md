@@ -289,6 +289,61 @@ challenges to the Easy-band contract:
 
 The waves are English only, with no Czech overlay.
 
+**The Medium and Hard waves.** Every Easy wave has landed, and #226 now adds
+challenges that combine what the Easy band teaches. A wave is one file per
+track under `lib/coding/tasks/medium-hard-<track>-<wave>.ts`, its solutions
+under the same name, and one line in `MEDIUM_HARD_BAND` in
+`lib/coding/catalog.ts`. `npm run test:coding` holds each challenge to this
+contract:
+
+- It is standalone, issued, and reads Medium (tier 3) or Hard (tier 4, or 5
+  for a React capstone) from its tier, with no authored difficulty.
+- It combines two to four `focus` tags, and each tag is on at least three Easy
+  challenges of the same track. The coverage matrix already holds every Medium
+  challenge to that; this check holds the Hard ones of the waves to it too.
+- It takes longer than ten minutes and at most 45, and is graded by its tests.
+- Its hint ladder has a hint, at least three method steps and a skeleton, then
+  ends on the documentation page of its first tag.
+- It has at least five visible checks and four hidden ones.
+- Its reference, junior and senior solutions pass, and its starter fails.
+- It never enters a Learn level's quota. The quota takes a level's first tasks
+  in catalogue order, so without the skip JavaScript A would change eight
+  Learn levels; level 22 would ask for three of its challenges instead of its
+  own two tasks.
+
+JavaScript A (`js-mh-*`) is 15 Medium and 10 Hard challenges. The Medium ones
+fill a template with a `replace` callback, sort version numbers, read a quoted
+CSV line, split a download into lines across chunks, undo and redo, limit
+requests in a sliding window, curry a function, read a grid in a spiral, paint
+a region, check a sudoku, build a comment thread, share costs, compare deeply,
+upload in batches and let only the newest call answer. The Hard ones settle
+debts, diff two versions of a file, trace a word through a grid, list every
+arrangement of some letters, justify text, match a URL to a route, diff two
+settings objects, write JSON that survives a loop, batch requests into one and
+share one request between callers. The wave took the JavaScript matrix from 17
+tags on Medium challenges to 29, none of them short; every, pop, regex, shift
+and sort have three Easy challenges each, the minimum. The Hard challenges add
+two tags no Medium one uses: some, with three Easy challenges, and json, with
+four.
+
+Four points for authors:
+
+- Where more than one answer is right, a check can test a property instead of
+  one answer. A diff check counts the kept lines and rebuilds both versions
+  from the edit, so any longest common subsequence passes. Where a check does
+  need one answer, the prompt states the rule that picks it: the removal before
+  the addition, the order a word search tries its neighbours, the greedy rule
+  that settles debts.
+- A hidden check on a large input holds the learner to the technique. A diff
+  of two 60-line files and the arrangements of ten letters finish at once with
+  a table and with pruning, and brute force runs past the grader's CPU
+  deadline.
+- `undefined` inside an expected value belongs in a hidden check only. Visible
+  checks travel to the browser as JSON, which writes it as `null`.
+- The Node runner starts every call at once, so each async check builds its own
+  loader, limiter or history inside its call and shares nothing with the
+  others.
+
 ## What none of these change
 
 None of the four awards XP, completes a level, or opens anything. A puzzle pass

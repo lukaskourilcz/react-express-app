@@ -53,8 +53,9 @@ export const tasksForTrack = (track: CodingTrack): CodingTask[] => ACTIVE_CODING
  *
  * The Easy-band tasks of #226 stay out for the same reason: they carry the
  * Learn level of the technique they practise, and a tier 1 one would push the
- * level's own task out of its quota. So do its Medium and Hard waves: a tier 3
- * one sorts ahead of a level's own tier 4 task.
+ * level's own task out of its quota. So do its Medium and Hard waves: without
+ * this skip the first one would change eight JavaScript levels, and level 22
+ * would ask for three of its challenges instead of its own two tasks.
  */
 export function tasksForLevel(topic: CodingTask['topic'], level: number): CodingTask[] {
   return ACTIVE_CODING_TASKS.filter(

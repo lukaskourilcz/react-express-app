@@ -81,8 +81,9 @@ export const EASY_BAND_TASK_IDS: ReadonlySet<string> = new Set(EASY_BAND.flat().
  * solutions under the same name). Each challenge combines techniques the Easy
  * band taught: tier 3 reads Medium and tier 4 Hard (5 for a React capstone),
  * with no authored difficulty. They stay out of every Learn level's quota for
- * the same reason as the Easy band: a tier 3 task at a level whose own tasks
- * sit higher on the ladder would take their place. English only. */
+ * the same reason as the Easy band: the quota takes a level's first tasks in
+ * catalogue order, and a new challenge would take the seat of one the level
+ * has always asked for. English only. */
 const MEDIUM_HARD_BAND: CodingTaskSource[][] = [
   MEDIUM_HARD_JAVASCRIPT_A_TASKS,
 ];
