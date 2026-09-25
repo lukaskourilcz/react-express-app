@@ -1,9 +1,16 @@
 # devShark
 
 An English developer-learning product from one React/Vite client and twelve
-serverless handlers. All learning is free; the server owns answers, grading,
-scores, and XP. StudyShark, which shared this code, moved to its own repository
-(`lukaskourilcz/studyshark`) on 2026-09-24.
+serverless handlers. devShark is freemium: every account gets HTML, CSS and
+JavaScript, React levels 1 to 12 and a starter set of coding challenges, and
+Premium (3.99 EUR a month or 39.99 EUR a year, VAT included) opens the rest.
+`shared/tiers.ts` holds that split. The server owns answers, grading, scores,
+XP and what each account may open. Until 25 September 2026 this summary said
+all learning was free. StudyShark, which shared this code, moved to its own
+repository (`lukaskourilcz/studyshark`) on 2026-09-24.
+
+Content: 2,447 authored questions, 1,974 of them served, and 695 coding tasks,
+104 of them on the free tier.
 
 ## Learning features
 
@@ -37,11 +44,16 @@ scores, and XP. StudyShark, which shared this code, moved to its own repository
   multi-stage work, three of them debugging paths built on `console.log` and
   the habit of tracing before fixing; and a signed-in learner can shape a
   **challenge run** (track, count, order) and plan it for a date and time.
+- **Premium and coins**: Premium opens every Learn topic, every coding task and,
+  once their switches are on, the FDE and DSA paths. Coins, earned from verified learning, buy the crown
+  and streak protections for every account and merchandise for Premium; an
+  invite link pays both friends. Leaderboards rank the last 30 days by default.
 
 ## Tech stack
 
 - **Client:** React + Vite + TypeScript, React Router, TanStack Query
 - **API:** twelve Vercel serverless functions (TypeScript)
+- **Payments:** Stripe Checkout, Billing and the Customer Portal through the server-side `stripe` package; no Stripe script in the browser
 - **Design:** Astryx design system (`@astryxdesign/core` 0.1.6) with product CSS tokens in `client/src/styles/astryx-theme.css`
 - **Testing/build:** TypeScript, launch tests, content contract, responsive checks
 - **Coding runtime:** QuickJS (WebAssembly) sandbox on the server, the TypeScript
@@ -51,7 +63,9 @@ scores, and XP. StudyShark, which shared this code, moved to its own repository
 
 - **Supabase** — Postgres database, auth, and RLS; server-authoritative scores and grading.
 - **GitHub App (the garden)** — optional; commits passed coding tasks to the learner's own repository through installation tokens. No user token is stored, and the learner can disconnect from the profile.
-- **Stripe** — optional support and cosmetic shop; never changes access or gameplay.
+- **Stripe** — sells Premium through Checkout, Billing and the Customer Portal; under Managed Payments Stripe (as Link) is the seller of record. Off until `BILLING_ENABLED=true`. A payment changes which content an account may start, never grading or scores.
+- **Spreadshop (sprd.net AG)** — prints, sells and ships devShark merchandise; the app links to the shop, the owner orders coin redemptions there, and the server reads its monthly promotion when `SPREADSHOP_API_KEY` is set.
+- **Resend** — optional; sends the cancellation confirmation when `RESEND_API_KEY` is set.
 - **Upstash Redis** — rate limiting on API endpoints.
 - **Sentry** — client and server error monitoring.
 - **PostHog** — product analytics.
@@ -61,6 +75,7 @@ scores, and XP. StudyShark, which shared this code, moved to its own repository
 - `react-syntax-highlighter`, `devicon` — code and technology visuals (devShark).
 - `quickjs-emscripten`, `typescript`, `@codemirror/*`, `sucrase`, `prettier` — coding grading, type checks, editor, React harness, formatting (devShark).
 - `qrcode`, `motion` — sharing and restrained animation.
+- `stripe` — server-side Checkout, portal, webhook signature checks and subscription sync.
 
 ## Marketing
 
