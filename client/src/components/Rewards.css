@@ -181,6 +181,80 @@ a.rw-btn:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px
 .rw-invite__counts strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rw-invite__privacy { font-size: 0.88rem; }
 
+/* ── merchandise through Spreadshop (#229) ───────────────────────────── */
+.rw-merch-intro { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
+.rw-merch-intro p { flex: 1 1 20rem; max-width: 68ch; }
+.rw-promo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-inner);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-background-muted);
+}
+.rw-promo p { margin: 0; line-height: 1.5; overflow-wrap: anywhere; }
+.rw-promo p:first-child { font-weight: 650; }
+
+.rw-merch {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: var(--color-background-surface);
+}
+/* Mockups are square exports; a different shape is letterboxed, never cropped. */
+.rw-merch__media {
+  aspect-ratio: 1 / 1;
+  background: var(--color-background-muted);
+  border-bottom: 1px solid var(--ss-card-line);
+}
+.rw-merch__media img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.rw-merch__body { display: flex; flex: 1; flex-direction: column; gap: 0.6rem; padding: 1rem; min-width: 0; }
+.rw-merch__name { margin: 0; font-size: 1.15rem; line-height: 1.3; }
+.rw-merch__buy {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 44px;
+  font-weight: 650;
+  color: var(--color-text-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rw-merch__buy:hover { text-decoration-thickness: 2px; }
+.rw-merch__buy:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: 4px; }
+.rw-merch__coins {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--ss-card-line);
+}
+.rw-merch__price { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; }
+.rw-merch__price strong { font-variant-numeric: tabular-nums; }
+.rw-merch__coins .rw-btn { align-self: flex-start; }
+.rw-merch__note { font-size: 0.88rem; }
+
+.rw-checkout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid var(--color-border);
+  background: var(--color-background-muted);
+  scroll-margin-top: 1rem;
+}
+.rw-checkout__title { margin: 0; font-size: 1.15rem; scroll-margin-top: 1rem; }
+.rw-checkout__title:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 4px; border-radius: 4px; }
+.rw-checkout__field { max-width: 32rem; }
+.rw-checkout__note { font-size: 0.88rem; max-width: 68ch; }
+.rw-checkout__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
 /* ── find devShark elsewhere ─────────────────────────────────────────── */
 .rw-social { display: flex; flex-direction: column; gap: 0.6rem; width: 100%; min-width: 0; }
 .rw-social--card { padding: 24px; background: var(--color-background-surface); }

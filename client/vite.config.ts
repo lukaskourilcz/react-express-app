@@ -1,3 +1,4 @@
+import { readdirSync } from 'node:fs';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
@@ -12,6 +13,7 @@ import { PUBLIC_ORIGIN, PUBLIC_PAGES, premiumSchema, topicSchema } from './src/l
 import { TOPIC_LANDINGS } from './src/lib/topicCatalog';
 import { PremiumCancelStaticArticle, PremiumStaticArticle, type Translate } from './src/components/PremiumFacts';
 import { en } from './src/i18n/translations';
+import { MERCH_SKUS } from '../shared/rewards';
 
 /** The English dictionary for the static pages, with the app's {name} slots. */
 const translate: Translate = (key, vars) => en[key].replace(/\{(\w+)\}/g, (slot, name: string) => (vars && name in vars ? String(vars[name]) : slot));
@@ -191,9 +193,32 @@ function productMetadata(env: Record<string, string>): Plugin {
   };
 }
 
+/** The merchandise mockups the owner has exported from Spreadshop (#229):
+ * `public/merch/<sku>.webp` (or .avif, .png, .jpg). The Rewards tiles show an
+ * image only for a SKU listed here, so a missing file is never requested and
+ * no placeholder art stands in for it. Read when the config loads; restart
+ * the dev server after adding a file. */
+function merchImages(dir: string): Record<string, string> {
+  let files: string[];
+  try {
+    files = readdirSync(dir);
+  } catch {
+    return {};
+  }
+  const found: Record<string, string> = {};
+  for (const sku of MERCH_SKUS) {
+    const file = ['webp', 'avif', 'png', 'jpg', 'jpeg'].map((ext) => `${sku}.${ext}`).find((name) => files.includes(name));
+    if (file) found[sku] = `/merch/${file}`;
+  }
+  return found;
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   return {
+  define: {
+    __MERCH_IMAGES__: JSON.stringify(merchImages(path.resolve(__dirname, 'public/merch'))),
+  },
   plugins: [
     productMetadata(env),
     react(),

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from './api';
 import { setRankThresholds, DEFAULT_RANK_THRESHOLDS } from './leveling';
 import { queryClient } from './queryClient';
-import { DEFAULT_COIN_SETTINGS, type CoinSettings } from '../../../shared/rewards';
+import { DEFAULT_COIN_SETTINGS, type CoinSettings, type MerchPromo } from '../../../shared/rewards';
 
 // Public, read-only game configuration (from /api/settings) that the UI uses to
 // render the configured count/time options and hide disabled features. Backed by
@@ -44,6 +44,9 @@ export interface GameConfig {
   billing: { enabled: boolean; cancellable: boolean; seller?: 'link' | 'trader' | null };
   /** What earns coins (#227): the rates, milestones and the social grant. */
   coins: CoinSettings;
+  /** Spreadshop's own promotion in the devShark shop this month (#229), or
+   * null. Absent from a server that predates it. */
+  merchPromo?: MerchPromo | null;
 }
 
 const DEFAULT_QUIZ_CATEGORY_IDS = [
@@ -132,6 +135,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   devTips: [...DEFAULT_DEV_TIPS],
   billing: { enabled: false, cancellable: false, seller: null },
   coins: DEFAULT_COIN_SETTINGS,
+  merchPromo: null,
 };
 
 export const GAME_CONFIG_KEY = ['game-config'] as const;

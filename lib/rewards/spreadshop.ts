@@ -23,15 +23,7 @@
  * have nothing to do with it: they redeem whole items and never a discount. */
 
 import { DEFAULT_PUBLIC_ORIGIN, parseOrigin } from '../billing/config';
-
-export interface MerchPromo {
-  /** Spreadshop's own text, in the shop's language. */
-  description: string;
-  /** The code a buyer enters at the Spreadshop checkout, when it names one. */
-  code: string | null;
-  /** ISO-8601 in UTC: the last moment the promotion applies. */
-  validUntil: string;
-}
+import type { MerchPromo } from '../../shared/rewards';
 
 type Env = Record<string, string | undefined>;
 

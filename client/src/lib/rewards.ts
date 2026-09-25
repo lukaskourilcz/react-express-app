@@ -88,6 +88,9 @@ export interface OrderSummary {
   trackingRef: string | null;
   testMode: boolean;
   createdAt: string;
+  /** A claimed learning-path package rather than a redemption (#229). Absent
+   * from a server that predates it. */
+  package?: boolean;
   items: { sku: string; variant: string; quantity: number }[];
 }
 

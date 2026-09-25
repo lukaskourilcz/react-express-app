@@ -1,3 +1,5 @@
+import type { MerchSku } from '../shared/rewards';
+
 /** Build- and runtime-safe product identity. Vite, the PWA manifest and React
  * all read this one entry. This repository builds devShark only; StudyShark
  * was split into its own repository on 2026-09-24. */
@@ -45,6 +47,28 @@ export const SOCIAL_PROFILES: Readonly<Record<'linkedin' | 'instagram' | 'thread
   linkedin: null,
   instagram: null,
   threads: null,
+};
+
+/** The devShark shop on Spreadshop (sprd.net AG), which prints, sells and
+ * ships devShark merchandise (#229). `shopUrl` is the shop's front page and
+ * `products` the page of each item, as https URLs copied from the shop. Each
+ * stays null until the owner's shop sells that item (NEEDED.md), and a null
+ * link is not shown. Rewards links out and embeds nothing: no Spreadshop
+ * script, no iframe, no CSP change. No other file defines these URLs. */
+export interface MerchShopLinks {
+  shopUrl: string | null;
+  products: Readonly<Record<MerchSku, string | null>>;
+}
+
+export const MERCH_SHOP: MerchShopLinks = {
+  shopUrl: null,
+  products: {
+    'sticker-set': null,
+    mug: null,
+    't-shirt': null,
+    hoodie: null,
+    cap: null,
+  },
 };
 
 /** Resolve the product a build asks for. Only devShark resolves: a build or

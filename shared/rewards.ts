@@ -94,6 +94,18 @@ export const MERCH_CATALOGUE: readonly MerchItem[] = [
 export const merchItem = (sku: string): MerchItem | undefined =>
   MERCH_CATALOGUE.find((item) => item.sku === sku);
 
+/** Spreadshop's own promotion in the devShark shop (#229), as /api/settings
+ * reports it (lib/rewards/spreadshop.ts reads it). Spreadshop runs it on cash
+ * purchases in its shop; coins never buy a discount. */
+export interface MerchPromo {
+  /** Spreadshop's own text, in the shop's language. */
+  description: string;
+  /** The code a buyer enters at the Spreadshop checkout, when it names one. */
+  code: string | null;
+  /** ISO-8601 in UTC: the last moment the promotion applies. */
+  validUntil: string;
+}
+
 /* ── what a supplier has to tell us before anything can be sold ────────── */
 
 /**
