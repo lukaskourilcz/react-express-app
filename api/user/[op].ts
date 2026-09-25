@@ -119,6 +119,17 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
       logEvent('delete-account', { status: 500, reason: 'cleanup_failed', error: cleanup.error.message });
       return jsonError(res, 500, 'db_error', 'Could not delete account data');
     }
+    // The dated activity behind the 30-day board (migration 040) has its own
+    // erasure routine; the top of that migration says why. Before 040 is
+    // applied there is no such table and nothing to erase.
+    const activity = await withTimeout(
+      supabase!.rpc('delete_user_activity_days', { p_user_id: auth.sub }),
+      8000,
+    );
+    if (activity.error && !isRpcMissing(activity.error)) {
+      logEvent('delete-account', { status: 500, reason: 'activity_cleanup_failed', error: activity.error.message });
+      return jsonError(res, 500, 'db_error', 'Could not delete account data');
+    }
 
     const { error } = await withTimeout(supabase!.auth.admin.deleteUser(auth.sub), 8000);
     if (error) {

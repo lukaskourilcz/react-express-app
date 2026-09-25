@@ -573,12 +573,16 @@ GRANT EXECUTE ON FUNCTION public.record_challenge_completion(TEXT, TEXT, TEXT, I
 --
 -- Identity is the all-time board's too: the profile name from user_stats or a
 -- neutral label, and the profile picture. No handle, no country, no user id.
+-- p_viewer marks the caller's own row, so a signed-in learner sees "You" on
+-- the right line even when two people share a rank. The API passes it only on
+-- a personal, uncached request; the shared board is asked without it.
 
 CREATE OR REPLACE FUNCTION public.window_leaderboard(
   p_days        INTEGER,
   p_limit       INTEGER DEFAULT 100,
   p_category    TEXT    DEFAULT NULL,
-  p_min_answers INTEGER DEFAULT 5
+  p_min_answers INTEGER DEFAULT 5,
+  p_viewer      TEXT    DEFAULT NULL
 )
 RETURNS TABLE (
   rank         INTEGER,
@@ -586,7 +590,8 @@ RETURNS TABLE (
   picture      TEXT,
   correct      INTEGER,
   answered     INTEGER,
-  accuracy_pct INTEGER
+  accuracy_pct INTEGER,
+  is_viewer    BOOLEAN
 )
 LANGUAGE sql
 STABLE
@@ -616,7 +621,8 @@ AS $$
          r.answered,
          CASE WHEN r.answered > 0
               THEN ROUND(100.0 * r.correct / r.answered)::INT
-              ELSE 0 END
+              ELSE 0 END,
+         (p_viewer IS NOT NULL AND r.user_id = p_viewer)
     FROM ranked r
     LEFT JOIN public.user_stats u ON u.user_id = r.user_id
    ORDER BY r.rank ASC, r.user_id ASC
@@ -676,9 +682,9 @@ AS $$
     FROM mine m;
 $$;
 
-REVOKE ALL ON FUNCTION public.window_leaderboard(INTEGER, INTEGER, TEXT, INTEGER)
+REVOKE ALL ON FUNCTION public.window_leaderboard(INTEGER, INTEGER, TEXT, INTEGER, TEXT)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.window_leaderboard(INTEGER, INTEGER, TEXT, INTEGER)
+GRANT EXECUTE ON FUNCTION public.window_leaderboard(INTEGER, INTEGER, TEXT, INTEGER, TEXT)
   TO service_role;
 REVOKE ALL ON FUNCTION public.window_leaderboard_rank(TEXT, INTEGER, TEXT, INTEGER)
   FROM PUBLIC, anon, authenticated;

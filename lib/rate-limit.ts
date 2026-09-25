@@ -43,6 +43,9 @@ export const RATE_LIMITS = {
   quizSubmit: { key: 'quiz_submit', capacity: 12, refillPerSecond: 12 / 60 },
   challengeScore: { key: 'challenge_score', capacity: 3, refillPerSecond: 10 / 3600 },
   challengeComplete: { key: 'challenge_complete', capacity: 12, refillPerSecond: 12 / 3600 },
+  // A signed-in leaderboard read skips the CDN (it carries the learner's own
+  // rank), so it gets a bucket; the anonymous board is cached and needs none.
+  leaderboardPersonal: { key: 'leaderboard_personal', capacity: 30, refillPerSecond: 30 / 60 },
   questionReport: { key: 'question_report', capacity: 3, refillPerSecond: 20 / 3600 },
   userMutation: { key: 'user_mutation', capacity: 20, refillPerSecond: 20 / 60 },
   flashcardMutation: { key: 'flashcard_mutation', capacity: 20, refillPerSecond: 20 / 60 },

@@ -13,6 +13,8 @@ import {
   isDeploymentCategory,
   validateCategoryScope,
 } from '../lib/product-scope';
+import { AuthError, tryAuth } from '../lib/auth';
+import { enforceRateLimit, RATE_LIMITS } from '../lib/rate-limit';
 
 // Public responses are served by this scoped API, but leaderboard RPCs are
 // service-only so callers cannot bypass deployment/category validation through
@@ -20,6 +22,11 @@ import {
 const supabase = createServiceClient();
 
 const logEvent = createLogger('leaderboard');
+
+// The windowed boards (migration 040). 30 days is the default board; 7 days
+// costs nothing extra and is here for the weekly leagues that will build on it.
+const WINDOW_DAYS: Readonly<Record<string, number>> = { '30d': 30, '7d': 7 };
+const WINDOW_MIN_ANSWERS = 5;
 
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
@@ -36,6 +43,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 200) : 100;
 
   try {
+    if (Object.prototype.hasOwnProperty.call(WINDOW_DAYS, period)) {
+      return await windowBoard(req, res, period, limit);
+    }
+
     if (period === 'global') {
       // Per-subject (platform) scoping: ?categories=a,b,c sums each user's
       // per-category lifetime stats over exactly those categories. The client
@@ -122,12 +133,108 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       return res.json({ period: 'daily', date: dateParam, subject: scope.subject, entries: data });
     }
 
-    return jsonError(res, 400, 'bad_request', 'period must be "global", "daily", or "category"');
+    return jsonError(res, 400, 'bad_request', 'period must be "30d", "7d", "global", "daily", or "category"');
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
     logEvent({ status: 500, error: message });
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
+}
+
+/**
+ * A rolling window over user_activity_days: correct answers, then fewer
+ * answers, the same rule as the all-time board. `category` narrows it to one
+ * topic; without it every category this deployment writes is counted.
+ *
+ * Anonymous requests get the shared board and stay cacheable. A request that
+ * presents a Bearer token, or asks with `me=1`, is personal: it adds the
+ * caller's own line and is never stored by a shared cache. `me=1` gives the
+ * personal variant its own URL, so a CDN copy of the anonymous board cannot be
+ * served in its place. An expired or unverifiable token still gets the board;
+ * it just gets no `me`, because a public read is no place to fail a session.
+ */
+async function windowBoard(req: VercelRequest, res: VercelResponse, period: string, limit: number) {
+  const days = WINDOW_DAYS[period];
+  const categoryRaw = typeof req.query.category === 'string' ? req.query.category.trim() : '';
+  const category = categoryRaw || null;
+  if (category && (!STATS_CATEGORIES.has(category) || !isDeploymentCategory(category))) {
+    return jsonError(res, 400, 'bad_request', 'Invalid category');
+  }
+
+  const personal = hasBearer(req) || req.query.me === '1';
+  res.setHeader('Vary', 'Authorization');
+  if (personal && !(await enforceRateLimit(req, res, RATE_LIMITS.leaderboardPersonal))) return;
+
+  let userId: string | null = null;
+  if (hasBearer(req)) {
+    try {
+      userId = (await tryAuth(req))?.sub ?? null;
+    } catch (error) {
+      if (!(error instanceof AuthError)) throw error;
+      userId = null;
+    }
+  }
+
+  const [board, mine] = await Promise.all([
+    withTimeout(
+      supabase!.rpc('window_leaderboard', {
+        p_days: days,
+        p_limit: limit,
+        p_category: category,
+        p_min_answers: WINDOW_MIN_ANSWERS,
+        p_viewer: userId,
+      }),
+    ),
+    userId
+      ? withTimeout(
+          supabase!.rpc('window_leaderboard_rank', {
+            p_user: userId,
+            p_days: days,
+            p_category: category,
+            p_min_answers: WINDOW_MIN_ANSWERS,
+          }),
+        )
+      : Promise.resolve(null),
+  ]);
+
+  const failure = board.error ?? mine?.error ?? null;
+  if (failure) {
+    if (isRpcMissing(failure)) {
+      return jsonError(res, 503, 'rpc_missing', 'Run supabase/supabase-schema-040.sql to enable the 30-day leaderboard');
+    }
+    logEvent({ status: 500, error: failure.message });
+    return jsonError(res, 500, 'db_error', 'Could not load leaderboard');
+  }
+
+  const body: Record<string, unknown> = {
+    period,
+    days,
+    category,
+    min_answers: WINDOW_MIN_ANSWERS,
+    entries: board.data ?? [],
+  };
+  if (personal) {
+    const row = (Array.isArray(mine?.data) ? mine!.data[0] : null) as
+      | { rank?: unknown; correct?: unknown; answered?: unknown; accuracy_pct?: unknown }
+      | null;
+    body.me = userId
+      ? {
+          rank: typeof row?.rank === 'number' ? row.rank : null,
+          correct: Number(row?.correct ?? 0),
+          answered: Number(row?.answered ?? 0),
+          accuracy_pct: Number(row?.accuracy_pct ?? 0),
+        }
+      : null;
+    res.setHeader('Cache-Control', 'private, no-store');
+  } else {
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+  }
+  return res.json(body);
+}
+
+function hasBearer(req: VercelRequest): boolean {
+  const raw = req.headers.authorization;
+  return typeof raw === 'string' && /^Bearer\s+\S/i.test(raw);
 }
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
