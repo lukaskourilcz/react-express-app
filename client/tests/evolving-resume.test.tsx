@@ -7,7 +7,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingTaskScreen } from '../src/components/coding/CodingSection';
 import type { CodingWorkbenchProps } from '../src/coding/CodingWorkbench';
 import { EVOLVING_CHALLENGES, evolvingTaskTrack } from '../../shared/evolving';
-import { FULLSTACK_REACT_SCAFFOLD } from '../../shared/coding-fullstack-support';
+import { fullstackScaffold } from '../../shared/coding-fullstack-support';
 
 const mocks = vi.hoisted(() => ({ drafts: {} as Record<string, string>, save: vi.fn(async () => {}) }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ isAuthenticated: true }) }));
@@ -23,7 +23,7 @@ vi.mock('../src/coding/api', () => ({
   saveCodingDraft: mocks.save,
   useCodingProgress: () => ({ data: undefined }),
   useCodingTask: (id: string) => ({ data: {
-    task: { id, track: id.startsWith('js-') ? 'javascript' : id.startsWith('ts-') ? 'typescript' : 'react', starter: '// starter' },
+    task: { id, track: id.startsWith('js-') ? 'javascript' : id.startsWith('ts-') ? 'typescript' : id.startsWith('alg-') ? 'algorithms' : 'react', starter: '// starter' },
     draft: mocks.drafts[id] ?? null, signedIn: true, locked: null, session: 'session',
   } }),
 }));
@@ -56,7 +56,7 @@ it.each(EVOLVING_CHALLENGES.map(project => [project.id, project] as const))('fin
     if (index === project.stages.length - 1) break;
     fireEvent.click(screen.getByText('Next stage'));
     const crossesToReact = project.category === 'fullstack' && !id.startsWith('react-') && project.stages[index+1].startsWith('react-');
-    expect(screen.getByLabelText('Stage code')).toHaveValue(code + (crossesToReact ? FULLSTACK_REACT_SCAFFOLD : ''));
+    expect(screen.getByLabelText('Stage code')).toHaveValue(code + (crossesToReact ? fullstackScaffold(project.id) : ''));
   }
   expect(screen.queryByText('Next stage')).toBeNull();
 });
@@ -92,5 +92,5 @@ it.each(EVOLVING_CHALLENGES.filter(item => item.category === 'fullstack').map(pr
   fireEvent.change(screen.getByLabelText('Stage code'), { target: { value: '// my API implementation' } });
   fireEvent.click(screen.getByText('Pass stage'));
   fireEvent.click(screen.getByText('Next stage'));
-  expect(screen.getByLabelText('Stage code')).toHaveValue('// my API implementation' + FULLSTACK_REACT_SCAFFOLD);
+  expect(screen.getByLabelText('Stage code')).toHaveValue('// my API implementation' + fullstackScaffold(project.id));
 });

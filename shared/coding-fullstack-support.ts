@@ -24,8 +24,26 @@ export default function App({fetcher}) {
 }
 `;
 
+/** The Link shortener path exports its own API functions, so its first React
+ * level gets its own scaffold. */
+export const LINKS_REACT_SCAFFOLD = `
+import React, {useState, useEffect} from 'react';
+import {createLocalFetch} from './localFetch';
+export {normalizeLink, createApi};
+export default function App({fetcher}) {
+  // Keep one createLocalFetch(createApi(SEED)) per mounted app when fetcher is absent.
+  // Implement the current level here; your API code above remains yours.
+  return <main />;
+}
+`;
+
+/** The scaffold a FullStack path's first React stage appends to the API draft. */
+export function fullstackScaffold(projectId: string): string {
+  return projectId === 'fullstack-links' ? LINKS_REACT_SCAFFOLD : FULLSTACK_REACT_SCAFFOLD;
+}
+
 export function prepareEvolvingDraft(code: string, challenge: EvolvingChallenge | undefined, stageIndex: number): string {
   // Only append at the first React stage. Never rewrite an existing stage draft.
   if (challenge?.category !== 'fullstack') return code;
-  return stageIndex === challenge.stages.findIndex(id => id.startsWith('react-')) ? code + FULLSTACK_REACT_SCAFFOLD : code;
+  return stageIndex === challenge.stages.findIndex(id => id.startsWith('react-')) ? code + fullstackScaffold(challenge.id) : code;
 }

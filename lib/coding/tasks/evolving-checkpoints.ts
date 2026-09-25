@@ -8,6 +8,7 @@ import { EVOLVING_CHALLENGES } from '../../../shared/evolving';
 import { text, test } from './evolving';
 import { DEBUG_CHECKPOINTS } from './evolving-debug';
 import { FULLSTACK_APPS, fullstackSeed, fullstackSpec } from './fullstack';
+import { FULLSTACK_PATH_PRELUDES } from './paths-fullstack';
 
 interface Checkpoint {
   prompt: Localized;
@@ -585,7 +586,7 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
     }
     orderStageChecks(out, project.stages, fullstack
       ? fullstackSpec(FULLSTACK_APPS.find((app) => project.id === `fullstack-${app.slug}`)!).prelude
-      : REACT_HEADER);
+      : FULLSTACK_PATH_PRELUDES[project.id] ?? REACT_HEADER);
   }
   return out;
 }

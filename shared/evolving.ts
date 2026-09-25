@@ -29,6 +29,13 @@ const path = (id: string, track: CodingTrack, en: string): EvolvingChallenge => 
   id, track, short: true, title: { en, cs: '' }, stages: [1, 2, 3, 4, 5].map(level => `${id}-${level}`),
 });
 
+/** A short FullStack path: JavaScript first, then TypeScript, then React, one
+ * level each in the order `tracks` gives. */
+const fullstackPath = (slug: string, en: string, tracks: readonly ('js' | 'ts' | 'react')[]): EvolvingChallenge => ({
+  id: `fullstack-${slug}`, category: 'fullstack', track: 'react', short: true, title: { en, cs: '' },
+  stages: tracks.map((prefix, index) => `${prefix}-fullstack-${slug}-${index + 1}`),
+});
+
 const fullstack = (slug: string, en: string, cs: string): EvolvingChallenge => ({
   id: `fullstack-${slug}`, category: 'fullstack', track: 'react', title: {en,cs},
   stages: Array.from({length:8},(_,i)=>`${i===0?'js':i<4?'ts':'react'}-fullstack-${slug}-${i+1}`)
@@ -36,7 +43,7 @@ const fullstack = (slug: string, en: string, cs: string): EvolvingChallenge => (
 });
 
 export function evolvingTaskTrack(id: string): CodingTrack {
-  return id.startsWith('js-') ? 'javascript' : id.startsWith('ts-') ? 'typescript' : 'react';
+  return id.startsWith('js-') ? 'javascript' : id.startsWith('ts-') ? 'typescript' : id.startsWith('alg-') ? 'algorithms' : 'react';
 }
 
 /** A stage is an ordinary server-graded task. Stable task IDs give every stage
@@ -48,6 +55,13 @@ export const EVOLVING_CHALLENGES: readonly EvolvingChallenge[] = [
   path('js-path-mapset', 'javascript', 'Map and Set together'),
   path('js-path-objects', 'javascript', 'Objects and grouping'),
   path('js-path-lookups', 'javascript', 'Lookups and crawling'),
+  path('ts-path-generics', 'typescript', 'Generic collection helpers'),
+  path('ts-path-unions', 'typescript', 'Unions and narrowing'),
+  path('react-path-state', 'react', 'State and lists'),
+  path('react-path-effects', 'react', 'Effects and loading'),
+  path('alg-path-pointers', 'algorithms', 'Two pointers and windows'),
+  path('alg-path-stacks', 'algorithms', 'Stacks and queues'),
+  fullstackPath('links', 'Link shortener', ['js', 'ts', 'ts', 'react', 'react']),
   fullstack('planner', 'Team task planner', 'Týmový plánovač úkolů'),
   fullstack('stockroom', 'Stockroom manager', 'Správa skladu'),
   fullstack('workshops', 'Workshop booking', 'Rezervace workshopů'),

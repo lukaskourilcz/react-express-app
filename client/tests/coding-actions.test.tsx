@@ -5,7 +5,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import LoadingScreen from '../src/components/LoadingScreen';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
-import { FULLSTACK_REACT_SCAFFOLD, prepareEvolvingDraft } from '../../shared/coding-fullstack-support';
+import { FULLSTACK_REACT_SCAFFOLD, LINKS_REACT_SCAFFOLD, prepareEvolvingDraft } from '../../shared/coding-fullstack-support';
 import { EVOLVING_CHALLENGES, evolvingTaskTrack } from '../../shared/evolving';
 import { formatCode } from '../src/coding/runner/format';
 import { FinButton } from '../src/components/landing/LandingKit';
@@ -129,9 +129,14 @@ it('keeps FullStack routes on real graders and preserves code across the React t
     expect(project.stages).toHaveLength(12);
     expect(project.stages.map(evolvingTaskTrack)).toEqual(['javascript','typescript','typescript','typescript','typescript','react','react','react','react','react','react','react']);
   }
+  const links = EVOLVING_CHALLENGES.find(p=>p.id==='fullstack-links')!;
+  expect(links.stages.map(evolvingTaskTrack)).toEqual(['javascript','typescript','typescript','react','react']);
   const saved = 'function normalizeInput(value) { return null; }';
   expect(prepareEvolvingDraft(saved,apps[0],5)).toBe(saved+FULLSTACK_REACT_SCAFFOLD);
   expect(prepareEvolvingDraft(saved,apps[0],6)).toBe(saved);
+  // The short path's first React level is its fourth, and it brings its own exports.
+  expect(prepareEvolvingDraft(saved,links,3)).toBe(saved+LINKS_REACT_SCAFFOLD);
+  expect(prepareEvolvingDraft(saved,links,4)).toBe(saved);
   expect(prepareEvolvingDraft(saved,undefined,4)).toBe(saved);
   expect(prepareEvolvingDraft(saved,EVOLVING_CHALLENGES.find(p=>p.id==='js-path-map'),3)).toBe(saved);
 });
