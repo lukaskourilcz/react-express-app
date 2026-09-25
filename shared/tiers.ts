@@ -50,9 +50,16 @@ export const PREMIUM_PRICE = { currency: 'EUR', symbol: '€', monthly: '3.99', 
  * `FREE_EVOLVING_STAGES` rather than listed.
  *
  * The pick: every tier-1 technique group of every track has its first task
- * open, then the earliest Easy tasks after it. JavaScript 22, TypeScript 9,
- * React 9, Algorithms 4. When the catalogue grows, re-pick here so the share
- * stays near `FREE_CODING_SHARE.target`. */
+ * open. The rest are Easy standalone tasks chosen so each track's free set
+ * reaches the technique groups the track teaches (loops, array methods,
+ * strings, objects, functions and async in JavaScript; types, objects and
+ * array methods in TypeScript; rendering, hooks and async in React; loops,
+ * objects, sorting and recursion in Algorithms). JavaScript 36, TypeScript 16,
+ * React 16, Algorithms 7: with stage one of the 29 projects and short paths,
+ * 104 of the 695 tasks, 15.0 %. The second block of each track came with the
+ * Easy waves of #226. When the catalogue grows, re-pick here so the share
+ * stays near `FREE_CODING_SHARE.target`, and keep every task already listed:
+ * a learner on the free plan may have started it. */
 export const FREE_CODING_TASK_IDS: readonly string[] = [
   // JavaScript
   'js-digit-sum',
@@ -77,6 +84,20 @@ export const FREE_CODING_TASK_IDS: readonly string[] = [
   'js-find-user',
   'js-sum-array',
   'js-total-price',
+  'js-easy3-digits-only',
+  'js-easy2-flatten-once',
+  'js-easy2-keys-with-value',
+  'js-easy3-column-totals',
+  'js-easy4-letters-in-order',
+  'js-attempt-until',
+  'js-debug-tally',
+  'js-easy3-highest-score',
+  'js-easy2-factorial',
+  'js-easy2-sort-by-key',
+  'js-easy2-cancel-a-timer',
+  'js-easy2-double-later',
+  'js-easy2-await-both',
+  'js-easy4-post-json',
   // TypeScript
   'ts-typed-slug',
   'ts-inferred-total',
@@ -87,6 +108,13 @@ export const FREE_CODING_TASK_IDS: readonly string[] = [
   'ts-person-interface',
   'ts-shipping-speed',
   'ts-optional-nickname',
+  'ts-easy2-flip-a-pair',
+  'ts-easy3-pin-to-top',
+  'ts-total-expenses',
+  'ts-easy2-select-and-deselect',
+  'ts-easy3-check-the-json',
+  'ts-only-the-files',
+  'ts-easy3-alternate-playlists',
   // React
   'react-heading-and-intro',
   'react-greeting-component',
@@ -97,11 +125,21 @@ export const FREE_CODING_TASK_IDS: readonly string[] = [
   'react-guest-list',
   'react-search-a-list',
   'react-delayed-message',
+  'react-get-one-user',
+  'react-easy2-stop-the-download',
+  'react-memoised-total',
+  'react-undo-stack',
+  'react-easy3-radio-group',
+  'react-easy3-name-the-remove-buttons',
+  'react-easy2-page-of-photos',
   // Algorithms
   'alg-valid-palindrome',
   'alg-chunk-array',
   'alg-missing-number',
   'alg-two-sum',
+  'alg-easy2-count-jewels',
+  'alg-easy2-median',
+  'alg-easy2-greatest-common-divisor',
 ];
 const FREE_CODING_TASKS = new Set(FREE_CODING_TASK_IDS);
 

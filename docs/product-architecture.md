@@ -265,7 +265,7 @@ a local Postgres and waits for production.
   `FREE_CODING_TASK_IDS`. `npm run build:coding-index` projects that list and
   stage one of every path into `shared/coding-index.ts` as `free: true`, about
   15 % of the catalogue (`FREE_CODING_SHARE`, held between 12 and 18 % by the
-  launch contracts; 70 of 480 today). Re-pick the list, not the task files,
+  launch contracts; 104 of 695 today, re-picked after the Easy waves of #226). Re-pick the list, not the task files,
   when the catalogue grows. Quizzes, the daily challenge, the Biggest Shark
   Challenge, multiplayer, flashcards, the typing racer, leaderboards, streaks,
   friends and the token shop stay open (`QUIZ_FREE_CATEGORIES = 'all'`).
