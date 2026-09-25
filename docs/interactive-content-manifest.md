@@ -172,6 +172,7 @@ prints is the live count.
 | JavaScript A (`js-easy2-*`) | 30 | flat, for-in, promises, recursion, timers, callbacks, higher-order, nested-loops, two-pointer | JavaScript none of its 17; TypeScript 17, React 11, Algorithms 5 |
 | JavaScript B (`js-easy3-*`) | 30 | none were short; recursion, nested-loops and for-in rose from 3 to 5, flat and timers from 3 to 4, promises and async-await by 2 each | JavaScript none of its 17, fewest 4 Easy; TypeScript 17, React 11, Algorithms 5 |
 | JavaScript C (`js-easy4-*`) | 30 | none were short; callbacks, two-pointer, flat and timers rose from 4 to 6, and higher-order, nested-loops, push, for-in, recursion and slice from 5 to 6 | JavaScript none of its 17, fewest 6 Easy; TypeScript 17, React 11, Algorithms 5 |
+| TypeScript A (`ts-easy2-*`) | 25 | all 17 short tags: utility-types, constraints, destructuring, map-set and two-pointer from 0 to 3; filter, keyof, map, spread, while, sort, strings and type-guards from 1 to 3, reduce to 4; readonly from 2 to 5, literal-types and record to 4 | JavaScript none; TypeScript none of its 24, fewest 3 Easy; React 11, Algorithms 5 |
 
 JavaScript B also covers techniques the Coding home lists but no Medium
 challenge uses yet, so the matrix leaves them out. Regex went from 0 Easy
@@ -185,6 +186,15 @@ because the grader has no network. Pop, do...while and forEach went from 1 Easy
 challenge to 3, JSON from 2 to 4, and unshift, concat and join from 1 to 2.
 Shift, some, find, includes, indexOf, findIndex and default parameters
 (`functions`) went from 2 to 3.
+
+TypeScript A grades each challenge twice, like the rest of the track: the
+runtime checks run in the QuickJS sandbox, and the compiler runs the type
+checks. In several challenges the type is the exercise. The learner declares a
+`Pick`, an `Exclude`, a `Record<keyof Contact, string>`, a readonly `Note` or a
+type predicate, and a type check that assigns to it or reads through it passes
+only when the declaration is right. Hidden type checks (`hiddenTypeTests`)
+close the gaps the visible ones leave, such as a `Weekday` that still allows
+Saturday.
 
 A wave is one file per track under `lib/coding/tasks/easy-<track>-<wave>.ts`,
 its solutions under the same name in `lib/coding/solutions/`, and one line in
