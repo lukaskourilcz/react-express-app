@@ -34,7 +34,7 @@ import {
   streakProtectionAvailable,
   STREAK_PROTECTION_CAP,
   isMerchSku,
-  isShirtSize,
+  isOrderState,
   merchAvailability,
   merchItem,
   merchMarginMinor,
@@ -284,8 +284,9 @@ function parseLines(raw: unknown): RequestedLine[] | null {
     if (!isMerchSku(row.sku)) return null;
     const item = merchItem(row.sku)!;
     const variant = typeof row.variant === 'string' ? row.variant : '';
+    // The item's own sizes (t-shirt and hoodie), or none at all.
     if (item.variants.length > 0) {
-      if (!isShirtSize(variant)) return null;
+      if (!item.variants.includes(variant)) return null;
     } else if (variant !== '') return null;
     const quantity = Number(row.quantity);
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 5) return null;
@@ -310,9 +311,14 @@ export async function handleOrders(req: VercelRequest, res: VercelResponse, supa
       return jsonError(res, 500, 'db_error', 'Could not load your orders');
     }
     const ids = (orders.data ?? []).map((row) => String(row.order_id));
-    const items = ids.length
-      ? await withTimeout(supabase.from('merch_order_items').select('order_id,sku,variant,quantity').in('order_id', ids))
-      : { data: [], error: null };
+    const [items, claims] = ids.length
+      ? await Promise.all([
+          withTimeout(supabase.from('merch_order_items').select('order_id,sku,variant,quantity').in('order_id', ids)),
+          // A learning-path package is claimed, not paid for (#229).
+          withTimeout(supabase.from('path_reward_claims').select('order_id').eq('user_id', userId).in('order_id', ids)),
+        ])
+      : [{ data: [], error: null }, { data: [], error: null }];
+    const packages = new Set(((claims.data ?? []) as { order_id: string | null }[]).map((row) => String(row.order_id)));
     const byOrder = new Map<string, { sku: string; variant: string; quantity: number }[]>();
     for (const row of (items.data ?? []) as { order_id: string; sku: string; variant: string; quantity: number }[]) {
       const list = byOrder.get(row.order_id) ?? [];
@@ -333,6 +339,7 @@ export async function handleOrders(req: VercelRequest, res: VercelResponse, supa
         trackingRef: row.tracking_ref == null ? null : String(row.tracking_ref),
         testMode: row.test_mode === true,
         createdAt: String(row.created_at),
+        package: packages.has(String(row.order_id)),
         items: byOrder.get(String(row.order_id)) ?? [],
       })),
     });
@@ -701,9 +708,19 @@ export async function handlePaymentWebhook(req: VercelRequest, res: VercelRespon
 
 /* ── GET/POST ?op=fulfilment (admin) ───────────────────────────────────── */
 
+interface FulfilmentRow {
+  order_id: string;
+  state: string;
+  created_at: string;
+  [column: string]: unknown;
+}
+
 /**
  * Operations: read the orders waiting to go out, hand them to the supplier,
- * record a shipment, and cancel or refund one.
+ * record a shipment, and cancel or refund one. With Spreadshop (#229) the
+ * supplier step is the owner ordering the item at base price from the shop
+ * preview, shipped to the address below; `submit` records that, and `ship`
+ * records the carrier and tracking. The same op sets the monthly caps.
  *
  * Admin-only through the existing authorization, and deliberately narrow: it
  * shows an operator what they need to pack a parcel and nothing more. Addresses
@@ -715,24 +732,98 @@ export async function handleFulfilment(req: VercelRequest, res: VercelResponse, 
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account storage is not configured');
 
   if (req.method === 'GET') {
-    const state = typeof req.query.state === 'string' ? req.query.state : 'paid';
-    const rows = await withTimeout(
-      supabase.from('merch_orders').select('*').eq('state', state).order('created_at').limit(100),
-    );
-    if (rows.error) {
-      if (isRpcMissing(rows.error)) return migrationRequired(res);
+    // `queue` (the default) is the picking list: paid redemptions and claimed
+    // learning-path packages, which migration 035 leaves awaiting payment at
+    // a total of zero. Any other view is one order state.
+    const view = typeof req.query.state === 'string' ? req.query.state : 'queue';
+    if (view !== 'queue' && !isOrderState(view)) return jsonError(res, 400, 'bad_request', 'Unknown order state');
+    const columns = 'order_id,payment_kind,state,total_minor,currency,token_total,ship_name,ship_line1,ship_line2,'
+      + 'ship_city,ship_postal,ship_country,carrier,tracking_ref,test_mode,created_at,updated_at';
+    const [primary, unpaid, stock] = await Promise.all([
+      withTimeout(
+        supabase.from('merch_orders').select(columns).eq('state', view === 'queue' ? 'paid' : view)
+          .order('created_at').limit(100),
+      ),
+      view === 'queue'
+        ? withTimeout(
+            supabase.from('merch_orders').select(columns).eq('state', 'awaiting_payment').like('order_id', 'reward-%')
+              .order('created_at').limit(100),
+          )
+        : Promise.resolve({ data: [], error: null }),
+      withTimeout(supabase.from('merch_stock').select('sku,variant,on_hand,reserved,updated_at').order('sku').order('variant')),
+    ]);
+    const failed = primary.error ?? unpaid.error;
+    if (failed) {
+      if (isRpcMissing(failed)) return migrationRequired(res);
       return jsonError(res, 500, 'db_error', 'Could not load the queue');
     }
-    const ids = (rows.data ?? []).map((row) => String(row.order_id));
-    const items = ids.length
-      ? await withTimeout(supabase.from('merch_order_items').select('order_id,sku,variant,quantity').in('order_id', ids))
-      : { data: [], error: null };
+    const rows = [...((primary.data ?? []) as unknown as FulfilmentRow[]), ...((unpaid.data ?? []) as unknown as FulfilmentRow[])];
+    const ids = rows.map((row) => String(row.order_id));
+    const [items, claims] = ids.length
+      ? await Promise.all([
+          withTimeout(supabase.from('merch_order_items').select('order_id,sku,variant,quantity').in('order_id', ids)),
+          withTimeout(supabase.from('path_reward_claims').select('order_id').in('order_id', ids)),
+        ])
+      : [{ data: [], error: null }, { data: [], error: null }];
+    // A package is an order a path claim points at, never a guess from its id.
+    const packages = new Set(((claims.data ?? []) as { order_id: string | null }[]).map((row) => String(row.order_id)));
+    const orders = rows
+      .filter((row) => row.state !== 'awaiting_payment' || view !== 'queue' || packages.has(String(row.order_id)))
+      .map((row) => ({ ...row, package: packages.has(String(row.order_id)) }))
+      .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
     res.setHeader('Cache-Control', 'private, no-store');
-    return res.json({ orders: rows.data ?? [], items: items.data ?? [] });
+    return res.json({
+      orders,
+      items: items.data ?? [],
+      // The month's budget per SKU and size. Absent rows mean nothing may be
+      // redeemed; `stock.error` alone (028 missing) leaves the list empty.
+      stock: ((stock.data ?? []) as { sku: string; variant: string; on_hand: number; reserved: number; updated_at: string }[])
+        .map((row) => ({
+          sku: row.sku,
+          variant: row.variant,
+          onHand: Number(row.on_hand),
+          reserved: Number(row.reserved),
+          updatedAt: String(row.updated_at),
+        })),
+    });
   }
 
   if (req.method === 'POST') {
     const body = (req.body || {}) as Record<string, unknown>;
+
+    // The monthly cap: how many units of one SKU and size the owner will
+    // still post (migration 043). The database refuses a figure below what
+    // paid orders already reserve.
+    if (body.op === 'stock') {
+      const item = isMerchSku(body.sku) ? merchItem(body.sku) : undefined;
+      const variant = typeof body.variant === 'string' ? body.variant : '';
+      const onHand = Number(body.onHand);
+      if (!item) return jsonError(res, 400, 'bad_request', 'Unknown item');
+      if (item.variants.length > 0 ? !item.variants.includes(variant) : variant !== '') {
+        return jsonError(res, 400, 'bad_request', 'Unknown size for that item');
+      }
+      if (!Number.isInteger(onHand) || onHand < 0 || onHand > 100_000) {
+        return jsonError(res, 400, 'bad_request', 'The cap must be a whole number from 0 to 100000');
+      }
+      const set = await withTimeout(
+        supabase.rpc('set_merch_stock', { p_sku: item.sku, p_variant: variant, p_on_hand: onHand }),
+      );
+      if (set.error) {
+        if (isRpcMissing(set.error)) {
+          return jsonError(res, 503, 'migration_required', 'Merchandise migration 043 is not installed');
+        }
+        if (/below_reserved/i.test(set.error.message ?? '')) {
+          return jsonError(res, 409, 'below_reserved', 'Paid orders already hold more units than that');
+        }
+        return jsonError(res, 500, 'db_error', 'Could not save the cap');
+      }
+      const row = (set.data ?? {}) as { sku?: string; variant?: string; onHand?: number; reserved?: number };
+      logEvent({ status: 200, kind: 'merch_stock_set', sku: item.sku });
+      return res.json({
+        stock: { sku: row.sku ?? item.sku, variant: row.variant ?? variant, onHand: Number(row.onHand ?? onHand), reserved: Number(row.reserved ?? 0) },
+      });
+    }
+
     const orderId = typeof body.orderId === 'string' ? body.orderId : '';
     if (!/^[A-Za-z0-9_-]{16,64}$/.test(orderId)) return jsonError(res, 400, 'bad_request', 'An order is required');
 

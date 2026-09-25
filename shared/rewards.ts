@@ -1,7 +1,7 @@
 /** Rewards: the merchandise catalogue, the crown, and the rules that keep both
  * away from anything a learner earns.
  *
- * Four physical items and one cosmetic. The physical ones are real objects that
+ * Five physical items and one cosmetic. The physical ones are real objects that
  * cost real money to make and post, so this module describes them and refuses
  * to invent the parts nobody has supplied yet. A price, a currency, a shipping
  * region and a stock figure are **configuration**, entered once a supplier has
@@ -55,7 +55,9 @@
 
 /* ── the catalogue ─────────────────────────────────────────────────────── */
 
-export const MERCH_SKUS = ['sticker-set', 'mug', 't-shirt', 'cap'] as const;
+/** `hoodie` arrived with migration 043 (#229). `cap` stays in the catalogue
+ * unpriced: the owner's Spreadshop sells no cap yet. */
+export const MERCH_SKUS = ['sticker-set', 'mug', 't-shirt', 'hoodie', 'cap'] as const;
 export type MerchSku = (typeof MERCH_SKUS)[number];
 export const isMerchSku = (value: unknown): value is MerchSku =>
   typeof value === 'string' && (MERCH_SKUS as readonly string[]).includes(value);
@@ -66,8 +68,8 @@ export type CosmeticId = (typeof COSMETIC_IDS)[number];
 export const isCosmeticId = (value: unknown): value is CosmeticId =>
   typeof value === 'string' && (COSMETIC_IDS as readonly string[]).includes(value);
 
-/** T-shirt sizes. The only variant axis any item has, kept small on purpose:
- * every extra variant is stock somebody has to hold. */
+/** T-shirt and hoodie sizes. The only variant axis any item has, kept small on
+ * purpose: every extra variant is a monthly cap somebody has to set. */
 export const SHIRT_SIZES = ['S', 'M', 'L', 'XL', 'XXL'] as const;
 export type ShirtSize = (typeof SHIRT_SIZES)[number];
 export const isShirtSize = (value: unknown): value is ShirtSize =>
@@ -85,6 +87,7 @@ export const MERCH_CATALOGUE: readonly MerchItem[] = [
   { sku: 'sticker-set', variants: [], shipped: true },
   { sku: 'mug', variants: [], shipped: true },
   { sku: 't-shirt', variants: SHIRT_SIZES, shipped: true },
+  { sku: 'hoodie', variants: SHIRT_SIZES, shipped: true },
   { sku: 'cap', variants: [], shipped: true },
 ];
 
@@ -97,6 +100,11 @@ export const merchItem = (sku: string): MerchItem | undefined =>
  * The commercial facts for one item. Every field is owner-entered from a real
  * quote; none of it has a default, because a default here would be a made-up
  * price on a real product.
+ *
+ * With Spreadshop (#229): `unitCostMinor` is the base price the owner pays to
+ * order the item from the shop preview, print and packaging are inside it (0),
+ * `shippingCostMinor` is the postage the Spreadshop checkout shows, `priceMinor`
+ * is the retail price in the devShark shop, and `vendor` is `sprd.net AG`.
  */
 export interface MerchPricing {
   /** Minor units (cents, haléře) so no float ever holds money. */
