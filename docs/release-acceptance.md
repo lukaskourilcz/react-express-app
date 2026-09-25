@@ -937,3 +937,34 @@ In production after the deploy of `0910d1e`, whose "Product quality" run passed 
 | --- | --- |
 | Chromium on devshark.app with every GET replayed through curl, at 1440 and 390, bundle `main-Dkp2Rm6y.js` | 20 of 20 checks pass. The card reads "Your next challenge", the task and Continue, beside the heading on desktop and under it on the phone. The brief line reads "JavaScript · Foundations · Level 6", then "Largest number", in `rgb(45, 122, 45)` with no kicker wave. The brief and the actions sit in the pane that shows. No "Your code", no printed shortcuts. The footer holds Support, How we curate, Privacy, Terms and the two controls. No overflow, no page errors. |
 | Signed in | not checked here; the owner step is in `NEEDED.md` |
+
+## 2026-09-25 — the freemium lanes together (INT, #219 to #230)
+
+What changed: one branch now carries both freemium lanes and main. Lane A brings tiers and the 402 locks, Stripe billing, the public Premium copy, coins, invitations and Spreadshop merchandise (D0 to D3, D8, D8b, D9). Lane B brings the 30-day leaderboard, difficulty labels, the debugging paths and the Easy waves (D4 to D7). Main brings the kickoff, the webdev-bank contract and the Coding card and code pane. On top of the merges:
+- The free coding set is re-picked for 695 tasks: 75 standalone challenges plus stage one of the 29 projects and paths, 104 tasks or 15.0 %.
+- Migration 044 erases an account with one `delete_user_data` and adds the `question_edits` importance check.
+- `deleteAccount` calls the four later erasure routines in one loop that tolerates PostgREST's "Could not find the function" answer.
+- The Coding home's next-challenge card also waits for the plan.
+
+Local evidence, all executed on the integration branch:
+
+| Check | Result |
+| --- | --- |
+| Migrations 039 to 044 on Postgres 16 from the 001–038 chain | 039, 040, 041, 042, 043 and 044 applied in order with `ON_ERROR_STOP=1`, then 044 again, exit 0 each. This was done twice: once as the chain leaves `question_edits`, and once with its check dropped first, which is production's shape. The whole 039–044 chain applied a second time over the first database also exits 0. Both databases end with exactly one `question_edits_importance_check` |
+| Rolled-back exercise of 044, on both databases | exit 0, identical output. Importance NULL, 1 and 10 are stored; 0 and 11 are refused. `delete_user_data` is a definer with an empty `search_path`, executable by `service_role` only; `authenticated` and `anon` are refused. An account with rows in the 039–042 tables, the wallet, two merchandise orders and two package claims keeps no row under its id anywhere in the catalog, and a second account's rows are unchanged. A settled month keeps the rank as `deleted-account`, and a referral it made keeps the friend under `deleted-account`. Its never-sent order, the order's items and the order's claim are gone. Its order already with Spreadshop is redacted, and that claim reads `deleted-account:<order id>` and still ships through `advance_merch_order`. A second call and the four older routines afterwards delete nothing. Nothing is left after rollback |
+| Catalog coverage | every table in the 001–044 schema with an account column is named by `delete_user_data`; in the 001–038 chain, `path_reward_claims` (035) was not |
+| The real `api/user/[op].ts` deleting an account through a PostgREST/Auth stand-in that answers a missing routine as PostgREST does | 039 to 044: 200, no row left, the second account unchanged. 039 to 043 without 044: 200, only the two package claims left, which is what 044 adds. 039 and 041 to 043 without 040: 200. The code before this step on that last shape answers 500 after `delete_user_data` has run, because its calls for 040 and 039 did not recognise PGRST202 |
+| `npm run typecheck:api` | exit 0 |
+| `npm run test:launch` | exit 0. Adds `erasureContracts()`: the newest `delete_user_data` keeps 033's tables and erases every table a later migration creates with an account column; a settlement loses the person; the routine stays definer, pinned and service-role only; the importance check is guarded; the API ends billing first, calls `delete_user_data` and then the four later routines, and tolerates a missing one. Three mutations were checked to fail: dropping the 040 line, dropping the 035 lines, and `isRpcMissing` in the loop |
+| `npm run test:coding` | exit 0; 695 tasks: JavaScript 281, TypeScript 146, React 168, system design 45, Algorithms 55. Easy 462, Medium 151, Hard 82. Coverage is enforced |
+| `npm run test:paths`, `npm run test:grading-integrity`, `npm run test:billing` (24 checks), `npm run test:coding-auth` | exit 0 each |
+| `npm run test:client` | exit 0; 18 files, 181 tests. New: the Coding home card waits for a free account's plan and then names a free challenge; the stage list keeps its difficulty runs and draws later stages as Premium that open the sheet; a Premium row sits inside its difficulty band; the code pane's first line carries the difficulty. Each was checked to fail without its merged line |
+| `npm run typecheck:tooling --prefix client` | exit 0 |
+| `npm run check:security`, `npm run check:unused` | exit 0 |
+| `npm run build`, `npm run check:public`, `npm run check:bundle` | exit 0; 13 public URLs; 218,351 of 243,000 gzip bytes |
+| `npm run check:responsive` over `/coding`, `/coding/javascript`, a task page, `/leaderboard`, `/shop` and `/premium` at 360, 390, 768 and 1280, light and dark | exit 0; 24 probes each, 0 issues |
+| `tests/browser/evolving.spec.ts` against the built preview, light and dark | 2 passed, axe included; the code pane's first line shows the stage, the title "Form wizard · 2" and the Easy badge, and the stage list shows its Easy, Medium and Hard runs |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client` | exit 0; 0 vulnerabilities |
+| `git diff --check` | clean |
+
+Not verified here: production, where migrations 039 to 044 are not applied, and any signed-in check against the real Supabase and Stripe. These are owner items in `NEEDED.md`.
