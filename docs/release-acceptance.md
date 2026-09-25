@@ -722,3 +722,15 @@ At the owner's request StudyShark runs nowhere.
 - **Supabase.** A scan of every public table for StudyShark subjects, question ids and the product name found two sets of rows. The first was three multiplayer matches from July, stored as `webdev`, whose question lists held StudyShark questions: one all capitals, two mixed from before questions were scoped by subject. Deleting them removed five participants and eleven answers by cascade. The second was eight anonymous geography Learn attempts, with their 32 answers. Both sets were deleted from production and from the `devshark-recovery-20260915` copy. The same scan finds nothing afterwards in either project. No account held StudyShark rows, and none was deleted: production has two accounts.
 - **Unchanged.** devShark's own rows: 5 matches, 8 Learn attempts, 59 question-history rows, 60 coding awards and 12 progress rows. `/api/health` reports the database, service role and rate limiter healthy, and `/learn` answers 200. The schema's subject checks still list the six StudyShark subjects; the API's subject scope refuses them.
 - **StudyShark repository.** Its CI workflow is deleted at the owner's request; the checks run locally only.
+
+## 2026-09-25 — the Challenge and the daily set load again
+
+What was broken: on 2026-09-08 (`a132ba6`) Testing, Abbreviations and Code Snippets were retired as sections, and the server began refusing a retired category in any request for questions. One retired category gets the whole request refused with 400 `invalid_subject_scope`. The Challenge and the daily set built their requests from the full category catalogue, which keeps the retired sections so that old rows still resolve. From then on every challenge board, challenge run and daily set on devShark failed: the board said "Today's board could not be loaded", and "Enter the challenge" could not load a batch. Replayed against production, the client's 19-category list got 400 on all three requests. The 16 categories the server still serves got 200: 25 challenge questions, 5 daily questions and the board.
+
+What changed:
+
+- `shared/subject-catalog.ts` gains `deliveryCategories(subject)`: the catalogue without its retired sections. The server's default scope and the client's requests for questions both use it.
+- The Challenge, for its batch and its board, and the daily set send `deliveryCategoriesForSubject`.
+- The Quiz restores a saved or linked category only if the server still serves it. An old setup, or an old link naming a retired section, no longer gets the quiz refused.
+- The challenge board is validated as a read. A browser still running the old bundle gets its board back as soon as this deploys; its runs recover on the next reload.
+- A client test replays the three requests through the server's own check; it failed 3 of 3 against the old client. The launch contract asserts that the delivery list is requestable and that the full catalogue is not.
