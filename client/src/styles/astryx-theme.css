@@ -212,6 +212,17 @@ dialog.astryx-dialog .astryx-layout-footer {
   background-image: var(--ss-grain) !important;
   box-shadow: 0 16px 46px rgba(23,39,46,.18) !important;
 }
+/* Segmented controls. Astryx gives an unselected segment its hover rule in
+   place of its transparent base (both write background-color), so at rest the
+   <button> falls back to the browser's ButtonFace: #efefef in light mode and a
+   mid grey in dark mode, where the secondary label fails contrast (axe:
+   color-contrast). Let the track show through on every control. The rule sits
+   in Astryx's own layer, which astryx.css declared above: unlayered, it would
+   beat the hover wash too, and inside the layer Astryx's id-level hover and
+   selected rules still win on specificity. */
+@layer astryx-base {
+  .astryx-segmented-control-item:not([data-selected]) { background-color: transparent; }
+}
 @media (max-width: 560px) {
   dialog.astryx-dialog:not([data-variant='fullscreen']) {
     width: calc(100vw - 16px) !important;

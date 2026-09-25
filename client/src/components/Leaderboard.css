@@ -18,14 +18,6 @@
 }
 
 .lb-controls { display: flex; flex-direction: column; gap: 12px; }
-/* Astryx leaves an unselected segment's background to the browser, which
-   paints it ButtonFace: a mid grey in dark mode that the secondary label fails
-   against (axe: color-contrast). Let the track show through instead, and keep
-   Astryx's hover wash. The selected segment is untouched. */
-.lb-controls .astryx-segmented-control-item:not([data-selected]) { background-color: transparent; }
-@media (hover: hover) {
-  .lb-controls .astryx-segmented-control-item:not([data-selected]):hover { background-color: var(--color-overlay-hover); }
-}
 
 /* The topic filter. A native select: it is keyboard- and screen-reader-complete
    on every platform, and the label sits beside it rather than inside it. */
