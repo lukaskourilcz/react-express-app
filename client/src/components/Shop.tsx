@@ -7,10 +7,11 @@
 // it asks, and the server decides and records.
 //
 // Sections, in the order of the second handoff (section 7.4): the wallet with
-// its last 25 ledger lines, "How to earn" with live progress, merchandise,
-// the crown and streak protection, orders and claims, and "Find devShark
-// elsewhere". Merchandise is Premium only: a free account sees the items and
-// the upgrade sheet, and the server answers a redemption with 402.
+// its last 25 ledger lines, "How to earn" with live progress, "Invite a
+// friend" (#228), merchandise, the crown and streak protection, orders and
+// claims, and "Find devShark elsewhere". Merchandise is Premium only: a free
+// account sees the items and the upgrade sheet, and the server answers a
+// redemption with 402.
 //
 // Nothing here changes access, content, XP, scores, streaks, ranks,
 // leaderboards or what is unlocked.
@@ -29,6 +30,7 @@ import { AppToast } from './ui/AppToast';
 import { Crown } from './ui/Crown';
 import { Kicker } from './landing/LandingKit';
 import { SocialProfiles } from './SocialProfiles';
+import { ReferralInvite } from './ReferralInvite';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
@@ -98,6 +100,9 @@ export function ledgerLabel(entry: Pick<WalletEntry, 'reason' | 'reference'>, t:
     if (head === 'topic') return t('rewards.ledger.topic', { topic: t(categoryLabelKey(value)) });
     if (head === 'project') return t('rewards.ledger.project', { project: projectTitle(value) });
     if (head === 'month-top') return t('rewards.ledger.monthTop', { month: monthLabel(value) });
+  }
+  if (entry.reason === 'referral') {
+    return reference === 'referral:friend' ? t('rewards.ledger.referralFriend') : t('rewards.ledger.referralInvited');
   }
   if (entry.reason === 'purchase') {
     if (reference === 'crown') return t('rewards.ledger.crown');
@@ -500,6 +505,8 @@ function Shop() {
       <Wallet signedIn={isAuthenticated} rules={earn.rules} />
 
       <HowToEarn earn={earn} welcomeReceived={welcomeReceived} premium={premium} />
+
+      <ReferralInvite signedIn={isAuthenticated} />
 
       {shop.isLoading && <Text type="supporting" color="secondary" role="status">{t('common.loading')}</Text>}
       {shop.isError && (

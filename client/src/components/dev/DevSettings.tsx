@@ -79,6 +79,9 @@ interface FormState {
   /** "300, 200, 100" — ranks one to three. */
   coinsMonthTop: string;
   coinsSocial: string;
+  /** Invitations (#228): coins to each side, and the most friends one inviter is paid for. */
+  coinsReferral: string;
+  coinsReferralCap: string;
 }
 
 // Friendly labels for the configurable shop products (ids match the catalogue).
@@ -132,6 +135,8 @@ const toForm = (s: GameSettings): FormState => ({
   coinsShortPath: String(s.coins.shortPathComplete),
   coinsMonthTop: s.coins.monthTop.join(', '),
   coinsSocial: String(s.coins.socialVisitGrant),
+  coinsReferral: String(s.coins.referralGrant),
+  coinsReferralCap: String(s.coins.referralCap),
 });
 
 // "7:25, 30:100" → [{ days: 7, coins: 25 }, …]. The server re-validates and
@@ -218,6 +223,8 @@ const toSettings = (f: FormState, base: GameSettings): GameSettings => ({
     shortPathComplete: parseNum(f.coinsShortPath, base.coins.shortPathComplete),
     monthTop: parseList(f.coinsMonthTop),
     socialVisitGrant: parseNum(f.coinsSocial, 0),
+    referralGrant: parseNum(f.coinsReferral, base.coins.referralGrant),
+    referralCap: parseNum(f.coinsReferralCap, base.coins.referralCap),
   },
 });
 
@@ -485,6 +492,13 @@ export default function DevSettings() {
           profile. Keep it at 0 unless you have decided otherwise. Meta&apos;s spam rules forbid offering anything of
           monetary value for engagement, coins buy merchandise, and no platform tells us whether a click became a follow.
           Above 0 the app thanks the learner for visiting and never asks anyone to follow.
+        </span>
+        {num('coinsReferral', 'Invitation, coins to each side')}
+        {num('coinsReferralCap', 'Friends paid per inviter')}
+        <span style={{ ...captionStyle, width: '100%', marginTop: 4 }}>
+          Invitations: when a friend signs up through a learner&apos;s link and finishes a first Learn level, both
+          accounts get these coins once. The inviter is paid for at most the cap; past it the friend is still paid.
+          A code binds only within 48 hours of sign-up. Set the coins to 0 to turn invitations off.
         </span>
       </Section>
 

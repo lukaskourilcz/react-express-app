@@ -149,6 +149,38 @@
 .rw-merch-lock { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
 .rw-spend__action { margin-left: auto; }
 
+/* ── invite a friend (#228) ──────────────────────────────────────────── */
+a.rw-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+a.rw-btn:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
+.rw-invite__share { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+.rw-invite__field { display: flex; flex-wrap: wrap; gap: 0.5rem; min-width: 0; }
+.rw-invite__input {
+  flex: 1 1 16rem;
+  min-width: 0;
+  font-family: var(--font-family-mono, ui-monospace, monospace);
+  font-size: 0.9rem;
+}
+.rw-invite__status { margin: 0; min-height: 1.4em; font-size: 0.88rem; color: var(--color-text-secondary); }
+.rw-invite__counts {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--ss-card-line);
+}
+.rw-invite__counts li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  min-height: 44px;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid var(--ss-card-line);
+}
+.rw-invite__counts strong { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rw-invite__privacy { font-size: 0.88rem; }
+
 /* ── find devShark elsewhere ─────────────────────────────────────────── */
 .rw-social { display: flex; flex-direction: column; gap: 0.6rem; width: 100%; min-width: 0; }
 .rw-social--card { padding: 24px; background: var(--color-background-surface); }
