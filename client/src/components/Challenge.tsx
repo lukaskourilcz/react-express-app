@@ -480,7 +480,9 @@ export default function Challenge() {
               aria-checked={relaxedPace}
               className={`de-track-card${relaxedPace ? ' is-selected' : ''}`}
               onClick={() => setRelaxedPace((value) => !value)}
-              style={{ textAlign: 'left' }}
+              // The track-card flex basis is sized for a row of cards; in this
+              // column it became a 220px height with empty space below the text.
+              style={{ textAlign: 'left', flex: 'none' }}
             >
               <strong>{t('challenge.relaxedPace')}</strong>
               <span>{t('challenge.relaxedHint')}</span>
