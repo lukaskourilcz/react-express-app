@@ -1,8 +1,10 @@
 # Evolving challenges and Collection
 
-Ten optional projects, each with five cumulative stages, are listed on Coding.
-FullStack adds three applications with eight stages each, and the debugging
-path adds one more project of its own (84 evolving stages in all).
+Ten optional projects of ten stages each (five checkpoints and five
+milestones) are listed on the Coding home. FullStack adds three
+twelve-stage applications, and the debugging path adds one more project of
+its own. Twelve short paths of five levels each are listed on the pages of
+the sections they belong to; see [Short paths](#short-paths).
 Each stage has an individual EN/CS brief, targeted official reference links,
 and a collapsed list of the prior requirements, drawn smaller and lighter and
 numbered by the stage that set them. Tests are cumulative, and each stage
@@ -95,38 +97,65 @@ and `lib/coding/solutions/evolving-debug.ts`.
 | 4 | Write code in pieces, log between them | `trace` returns its value; `report` composes the pieces |
 | 5 | Stay calm with the bug you did not plant | `safeReport` reports bad lines instead of throwing |
 
-## The Custom category
+## Short paths
 
-Two short JavaScript paths in their own `custom` category, listed first on the
-Coding home. They cover the foundations for an algorithm screening interview.
-Each path has ten steps: a checkpoint (about 5 minutes) that adds one small
-function, then a milestone (about 10 minutes) that builds on it. Every step
-keeps the earlier functions and their checks, so the whole category fits into
-about two and a half hours. The copy is English only, with empty Czech fields.
-Source: `lib/coding/tasks/evolving-custom.ts` and
-`lib/coding/solutions/evolving-custom.ts`.
+Twelve paths of five levels each, with no checkpoints: every level adds one
+function or feature to the same code, and the checks of every earlier level
+run again. `shared/evolving.ts` marks them `short`; level ids are
+`<path id>-1` to `<path id>-5`. They are listed on their section's own page,
+between the section header and its challenge list (the FullStack one leads
+the FullStack screen), not on the Coding home, and the UI counts them in
+levels ("Level 2 of 5") rather than stages. They replace the Custom
+category of 2026-09-24, whose two ten-step paths were split into the first,
+second, fourth and fifth JavaScript paths below. The copy is English only,
+with empty Czech fields. Each level has a hint, method steps, visible and
+hidden checks, references, and reference, junior and senior solutions that
+`npm run test:coding` proves. Sources: `lib/coding/tasks/paths-*.ts` and
+`lib/coding/solutions/paths-*.ts`.
 
-| Stage | Map and Set basics (`js-custom-mapset`) | Objects and grouping (`js-custom-catalog`) |
+| Section | Path | Levels 1 → 5 |
 | --- | --- | --- |
-| 1 | `unique`, then `common` | `countByCategory`, then `groupByCategory` |
-| 2 | `countAll`, then `mostCommon` | `totalRuns`, then `summarize` |
-| 3 | `firstRepeat`, then `twoSum` | `sortActors`, then `topPerCategory` |
-| 4 | `countsToPairs`, then `topK` | `indexById`, then `diffCatalog` |
-| 5 | `firstUnique`, then `groupAnagrams` | `linksToGraph`, then `crawlOrder` (BFS) |
+| JavaScript | Map basics | `countAll` → `mostCommon` → `twoSum` → `topK` → `groupAnagrams` |
+| JavaScript | Set basics | `unique` → `common` → `difference` → `firstRepeat` → `duplicates` |
+| JavaScript | Map and Set together | `countWords` with stop words → `tagsByUser` (Map of Sets) → `isIsomorphic` → `buildIndex` (inverted index) → `search` |
+| JavaScript | Objects and grouping | `countByCategory` → `groupByCategory` → `summarize` → `sortActors` → `topPerCategory` |
+| JavaScript | Lookups and crawling | `indexById` → `diffCatalog` → `linksToGraph` → `crawlOrder` (BFS) → `crawlDepths` |
+| TypeScript | Generic collection helpers | `groupBy` → `countBy` → `uniqueBy` → `partition` with a type predicate → multi-key `sortBy` |
+| TypeScript | Unions and narrowing | `area` over a discriminated union → `perimeter` with `assertNever` → `parseAmount` (`typeof`) → `isShape` guard for `unknown` → `totalArea` |
+| React | State and lists | Guest list: add → count and remove → arrived checkboxes → derived filter → duplicate check |
+| React | Effects and loading | Load in an effect → error and retry → derived search → loader dependency with a stale-answer guard → tab title kept in step and restored |
+| Algorithms | Two pointers and windows | `pairWithSum` → `removeDuplicates` in place → `isSubsequence` → `minWindowSum` → `longestOnes` with k flips |
+| Algorithms | Stacks and queues | `simplifyPath` → `evalRPN` → `nextGreater` (monotonic stack) → `decodeString` → `slidingMax` (deque) |
+| FullStack | Link shortener | `normalizeLink` (JS) → typed API with GET/POST, 400/409/404 (TS) → visit and DELETE routes (TS) → React list, loading, retry, visits → create form with 409/400 handling |
+
+The Algorithms paths ask problems the section's single challenges do not,
+and each level shows about ten checks. The Link shortener follows the
+FullStack rules above: level 1 is graded as JavaScript, 2 and 3 by the
+TypeScript compiler and runtime, and 4 and 5 by the React suite, whose
+prelude re-runs every API check. Its first React level appends its own
+scaffold (`LINKS_REACT_SCAFFOLD`), which exports `normalizeLink` and
+`createApi`.
 
 ## Playground layout
 
-The task description spans the full width above the playground. Editor and
-results share one stretched grid row and scroll together with the page; the
-results panel is never sticky over the action bar. Hints start closed on each
-visit and are revealed only through Hint/Next hint, ignoring old saved counts.
+The brief opens the code pane. Its first line is green: where the task sits
+(track, tier and level, or the level of a path) and, after a rule, the task's
+name, which is the page heading. The prompt, earlier requirements and notes
+follow, then the editor, which fills the pane. The pane has no "Your code"
+label. Editor and results share one stretched grid row and scroll together with
+the page; the results panel is never sticky over the action bar. Hints start
+closed on each visit and are revealed only through Hint/Next hint, ignoring old
+saved counts.
 
-Run/Submit/Format/Reset and Hint/Next hint/Solution/Skip share a compact bottom
-action bar spanning the playground width. The save star and the report flag
-remain right-aligned; there is no focus mode. Revealed hints form an ordered
-list after the controls. The editor's desktop minimum height is 480px. Common
-learning controls remain reachable for narrow/puzzle layouts. The keyboard
-guide draws real keycaps, each with the key's glyph and printed name.
+Run/Submit/Format/Reset and Hint/Next hint/Solution/Skip form the action bar at
+the foot of the code pane. The save star and the report flag remain
+right-aligned; there is no focus mode. Revealed hints, the skip form,
+confirmations and errors follow in a full-width pane under the grid, and it
+exists only while it holds one of them. The editor's desktop minimum height is
+480px. Below 1024px the puzzle or the pending note takes the editor's place
+and carries the brief and the action bar. The keyboard shortcuts are not
+printed: Ctrl+Enter runs, Ctrl+Shift+Enter submits, and Escape then Tab leaves
+the editor, and the editor's accessible description says so.
 Stage-specific references are part of the existing Resources tab, alongside
 technique documentation. Hint labels are "Hint" before the first reveal and
 "Next hint" afterwards. When Hint or Solution is unavailable the button stays

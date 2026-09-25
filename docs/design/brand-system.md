@@ -6,7 +6,7 @@ devShark is a developer-learning product with one subject, `webdev`, and the onl
 
 ## Identity
 
-- Mark: a swept-back fin with a hooked tip, its base cut into a wave so it sits in the water. `SharkFin` (`client/src/components/SharkFin.tsx`) holds the paths and `client/public/favicon.svg` repeats them. Use these deterministic SVG primitives; do not redraw the fin elsewhere.
+- Mark: a swept-back fin with a hooked tip. In the logo (the navigation brand in the header and the mobile menu) its base is cut into a wave so it sits in the water: `<SharkFin wave />`, and `client/public/favicon.svg` repeats those paths. Every other fin on the page keeps a straight base, the `SharkFin` default. `SharkFin` (`client/src/components/SharkFin.tsx`) holds both sets of paths. Use these deterministic SVG primitives; do not redraw the fin elsewhere.
 - Neutrals: ocean ink, off-white paper, muted blue-green surfaces.
 - Surface: restrained grain, hairline edge, tactile bottom edge, quiet shadow.
 - Typography: Manrope for editorial headings, Inter for reading/UI/code metadata with system fallbacks.

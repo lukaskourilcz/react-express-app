@@ -254,6 +254,14 @@ it follows the tracing-before-fixing rhythm described in
 `docs/evolving-challenges.md`. Original task IDs retain their drafts and
 completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
-routes, unlocks and progress. The full catalogue contains 395 tasks, and every
+routes, unlocks and progress. The full catalogue contains 480 tasks, and every
 graded code task carries a reference, a junior and a senior solution on the
 server; the last two reach the browser only with a verified pass.
+
+Since 2026-09-25 the registry also holds twelve short paths of five levels
+each, marked `short`, with no checkpoints. Each is listed on the page of the
+section it belongs to: five on JavaScript, two each on TypeScript, React and
+Algorithms, and a link shortener that leads the FullStack screen. They
+replace the one-day-old Custom category; its two ten-step paths became four
+of the JavaScript paths. The longer projects stay where they were: ten and
+the debugging path on the Coding home, the three apps on the FullStack screen.

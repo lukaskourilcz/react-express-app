@@ -745,3 +745,65 @@ Local evidence, all executed on the branch head:
 | Built client in Chromium with every `GET /api` replayed against production | board loads ("No one has set a score yet"), a run shows a question with four options, the daily set shows its questions |
 | `npm run check:responsive` on `/challenge` and `/quiz`, 7 widths, then dark at 360, 390 and 1280 | 14 and 3 probes, 0 issues |
 | `git diff --check` | clean |
+
+## 2026-09-25 — the Custom paths join the sections, and every section gets its own
+
+The owner asked for the Custom category to be split into JavaScript, TypeScript, React, Algorithms and FullStack, with no path longer than five levels: a Map path first, then a Set path, then a new path that uses Map and Set together, and the Custom category gone.
+
+What changed:
+
+- `shared/evolving.ts` drops the `custom` category and gains short paths: five levels (`<path id>-1` to `-5`), no checkpoints, each level one function or feature added to the same code, with every earlier check run again.
+- JavaScript lists five: Map basics, Set basics, Map and Set together (new), Objects and grouping, and Lookups and crawling. The two ten-step Custom paths were split into the first, second, fourth and fifth. Three of their levels are new (`difference`, `duplicates`, `crawlDepths`); three small Custom steps were folded in or dropped (`countsToPairs` into `topK`, `firstUnique`, `totalRuns`).
+- New paths: two in TypeScript (Generic collection helpers; Unions and narrowing), two in React (State and lists; Effects and loading), two in Algorithms (Two pointers and windows; Stacks and queues), and a link shortener in FullStack that goes from a JavaScript input check through a typed API to a React client.
+- Each section page lists its paths between the header and the challenge list, and the FullStack screen puts the link shortener first. The Coding home loses the Custom block; its gallery keeps the ten longer projects. Short paths read "Level 2 of 5" where the longer projects read "Stage".
+- The FullStack React scaffold is appended at each path's own first React stage. Before, the first FullStack app's index was used for every app.
+- Progress on the removed `js-custom-*` stages, which existed for a day, no longer maps to a task. XP already earned stays.
+
+Local evidence, all executed on the branch head:
+
+| Check | Result |
+| --- | --- |
+| Every CI step: types (API and tooling), launch contracts, coding auth, grading integrity, coding content, paths, client tests, unused, security, devShark build, public HTML, bundle, both audits | pass; coding content 480 tasks, every solution proven; client tests 8 files, 61 tests; initial JS and CSS 203,781 gzip bytes of 243,000; 0 vulnerabilities in both audits |
+| Mutation check: 21 broken variants of reference solutions (a missing stale-answer guard, a missing JSON header, a duplicate guest still added, operands swapped, and so on) | 18 caught at once; two gaps closed with new visible checks (`twoSum([1, 1, 5], 6)`, a search with one unknown word); the last variant (`<` for `<=` in the sliding maximum) is still correct |
+| Reference solutions run in the browser's own runners on 17 levels from every kind of path (JavaScript, TypeScript, Algorithms, React, FullStack) | all pass; the first run failed Effects and loading level 5 (6 of 8) because the title effect lands a moment after the list, fixed by waiting for the title |
+| React levels in the browser, reference, junior and senior, three runs each (State and lists 5, Effects and loading 4 and 5, Link shortener 4 and 5) | all pass every run |
+| Built client in Chromium: `/coding`, the four section pages and `/coding/fullstack`, light and dark, 1280 and 390 | no Custom block; section paths in the requested order between the header and the filters; "0 of 5 levels completed"; the Link shortener first on FullStack; no overflow, no page errors |
+| Browser specs `public` and `evolving`, the harness check, Storybook, Lighthouse | pass; harness 141 assertions; Storybook 5 of 5; performance 0.86 mobile and 0.99 desktop, accessibility 1 |
+| `npm run check:responsive` on the CI routes at 7 widths and in dark Czech, then on `/coding`, the four sections and `/coding/fullstack` at 7 widths and in dark at 360, 390 and 1280 | 28, 6, 42 and 9 probes, 0 issues |
+| `git diff --check` | clean |
+
+In production after the deploy of `5f865a0`, whose "Product quality" run passed on GitHub:
+
+| Check | Result |
+| --- | --- |
+| `GET /api/quiz/roadmap?resource=coding-task` for new levels in every section, and for `js-custom-mapset-1` | 200 for the new levels; 404 for the Custom id |
+| Anonymous submit of the reference solution to level 1 of a JavaScript, TypeScript, Algorithms, React and FullStack path (graded, never recorded) | all passed; React levels 1 of both React paths went through the isolated grader in about 5 s |
+| The same for a level above 1 | refused as designed: a signed-out visitor gets `locked: "evolving"` and no session |
+| Chromium on the deployed pages, with every GET replayed through curl | `/coding` has no Custom block; each section lists its paths in the requested order; the Link shortener leads FullStack; `js-path-mapset-1` loads as "Level 1 of 5"; no page errors |
+
+## 2026-09-25 — the next challenge beside the Coding heading, the brief inside the code pane
+
+The owner asked why reloading `/coding` first showed "Your next challenge: Digit sum" and a second later "Largest number", and asked for that banner to become a small card to the right of the page heading holding only the next challenge and Continue. On a challenge page, the banner above the playground (track, tier, level, name, prompt) was to move into the code container in place of "Your code", with a green first line and no wave, the action buttons at the foot of that container, and the printed keyboard shortcuts removed. Then the footer was to lose "Learning stays free. Optional support never changes access, XP or rankings."
+
+The cause of the swap: the Coding home worked out the next task before the account and its progress had loaded. With no progress every task is open, so it named the first task in the catalogue until the progress request returned.
+
+What changed:
+
+- The next-challenge card waits for the account and the progress. While they load it shows a placeholder and a disabled Continue; if progress fails it says so and offers Try again; otherwise it names the challenge. It sits to the right of the heading and moves under it below 860px. The track line and the due count are gone; the count linked to `/coding/review`, which redirects to `/coding`. The sign-in hint waits for the account too.
+- The code pane opens with the green line (track, tier and level, or a path's level, then a rule and the task's name as the page heading), the prompt and the rest of the brief, then the editor, then the action bar. Hints, the skip form, confirmations and errors follow in a pane under the grid, only while they hold something. Below 1024px the puzzle or the pending note carries the brief and the actions.
+- The keyboard guide and its keycaps are gone. The shortcuts still work, and the editor's `aria-describedby` points at them.
+- The footer line is removed, and its key with it in English and in the retained Czech file, as the launch contract requires of an orphaned Czech key. The same goes for `coding.review.count` and `coding.shortcuts.leave`.
+
+Local evidence, all executed on the branch head:
+
+| Check | Result |
+| --- | --- |
+| Every CI step: types (API and tooling), launch contracts, coding auth, grading integrity, coding content, paths, client tests, unused, security, devShark build, public HTML, bundle, both audits | pass; coding content 480 tasks; client tests 9 files, 65 tests; initial JS and CSS 203,640 gzip bytes of 243,000; 0 vulnerabilities in both audits |
+| New `client/tests/coding-home.test.tsx`: progress loading, the account loading, a visitor, a failed progress request, the card's contents | 4 of 4 pass; while loading the card names no task and Continue is disabled |
+| Built client in Chromium with API fixtures: `/coding` and `js-largest-number`, `js-path-map-2`, `ts-path-generics-3`, light and dark, 1440 and 390 | the card beside the heading on desktop and under it on the phone; the green line, the prompt, the editor and the actions in one pane; no "Your code", no keyboard guide, no footer line; no overflow |
+| Run, Hint and Skip at 1024, 1180 and 1440 | the action bar is one row at the foot of the pane; the results pane ends level with it; the hint and the skip form open under the grid; Ctrl+Enter still runs; the editor's description reads the shortcuts |
+| A puzzle task (`js-sum-array`) at 390 | brief, puzzle and actions in one pane; ids unique; no overflow |
+| Browser specs `public` and `evolving`, the harness check, Storybook | pass; harness 141 assertions; Storybook 5 of 5 |
+| `npm run check:responsive` on the CI routes at 7 widths and in dark Czech, then `/coding`, `/coding/javascript`, two challenge pages and `/coding/fullstack` at 6 widths, and dark `/coding` and a challenge page at 3 widths | 0 issues (the sweep has no API, so there the challenge pages show their load-error state; the workbench itself is covered by the fixture runs above) |
+| Lighthouse on `/` | mobile 0.85, accessibility 1. Desktop varies on one build: 0.99 with CLS 0.066 in two of three repeat runs, 0.75 in the third, where `main#main-content` shifts (CLS 0.98). The July baseline recorded the same shift in production (0.959). This change touches the home page only through the footer line. |
+| `git diff --check` | clean |

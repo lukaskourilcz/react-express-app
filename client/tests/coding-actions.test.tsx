@@ -5,7 +5,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingWorkbench } from '../src/coding/CodingWorkbench';
 import LoadingScreen from '../src/components/LoadingScreen';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
-import { FULLSTACK_REACT_SCAFFOLD, prepareEvolvingDraft } from '../../shared/coding-fullstack-support';
+import { FULLSTACK_REACT_SCAFFOLD, LINKS_REACT_SCAFFOLD, prepareEvolvingDraft } from '../../shared/coding-fullstack-support';
 import { EVOLVING_CHALLENGES, evolvingTaskTrack } from '../../shared/evolving';
 import { formatCode } from '../src/coding/runner/format';
 import { FinButton } from '../src/components/landing/LandingKit';
@@ -96,7 +96,7 @@ it('uses a visible, accessible branded loading status', () => {
   expect(screen.getByText('Loading task…')).toBeVisible();
 });
 
-it('groups all learning controls below the editor with revealed hints after the bar', () => {
+it('keeps the brief, the editor and the actions in one pane, with revealed hints after it', () => {
   localStorage.setItem('devshark:coding:hints:js-test-editor', '1');
   render(<MemoryRouter><LanguageProvider><CodingWorkbench initialCode={null} task={task} session="test-session" locked={null} signedIn mode="section" /></LanguageProvider></MemoryRouter>);
   expect(screen.queryByText('Use a function.')).toBeNull();
@@ -111,26 +111,46 @@ it('groups all learning controls below the editor with revealed hints after the 
   // Focus mode is gone: nothing in the bar toggles the layout.
   expect(within(bar as HTMLElement).queryByRole('button',{name:'Focus'})).toBeNull();
   expect(within(bar as HTMLElement).getByRole('button',{name:/Skip/i})).toBeInTheDocument();
+  // One pane: the green line and the brief on top, the editor, the actions at its foot.
+  const pane = bar.closest('.cd-pane--editor')!;
+  const title = screen.getByRole('heading',{level:1,name:'Test task'});
+  expect(title.closest('.cd-pane--editor')).toBe(pane);
+  expect(title.closest('.cd-brief__line')?.querySelector('.cd-brief__meta')).toHaveTextContent('JavaScript · Foundations · Level 1');
+  expect(within(pane as HTMLElement).getByText('Return one.')).toBeInTheDocument();
+  expect(pane.firstElementChild).toHaveClass('cd-brief');
+  expect(pane.lastElementChild).toBe(bar);
+  expect(bar.compareDocumentPosition(screen.getByLabelText('Test editor')) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
+  // No visible editor label and no printed shortcuts; the editor still describes them.
+  expect(screen.queryByText('Your code')).toBeNull();
+  expect(screen.queryByText('Leave the editor')).toBeNull();
+  expect(screen.getByText(/Escape then Tab leaves the editor/)).toHaveClass('cd-visually-hidden');
   const hint = screen.getByText('Use a function.');
   expect(hint.closest('li')).toBeInTheDocument();
   expect(bar.compareDocumentPosition(hint) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(run.closest('.cd-pane--task')).toBeNull();
+  expect(hint.closest('.cd-pane--editor')).toBeNull();
   const grid = bar.closest('.cd-workbench__grid')!;
-  expect(grid.querySelector('.cd-pane--task')).toBeNull();
-  expect(grid.querySelector('.cd-pane--editor')?.parentElement).toBe(grid);
+  expect(pane.parentElement).toBe(grid);
   expect(grid.querySelector('.cd-pane--output')?.parentElement).toBe(grid);
   expect(screen.getByRole('button',{name:/Report a problem/}).closest('.cd-actions--utility')).toBeInTheDocument();
 });
 
 it('keeps FullStack routes on real graders and preserves code across the React transition', () => {
-  for (const project of EVOLVING_CHALLENGES.filter(p=>p.category==='fullstack')) {
+  const apps = EVOLVING_CHALLENGES.filter(p=>p.category==='fullstack' && !p.short);
+  expect(apps).toHaveLength(3);
+  for (const project of apps) {
     expect(project.stages).toHaveLength(12);
     expect(project.stages.map(evolvingTaskTrack)).toEqual(['javascript','typescript','typescript','typescript','typescript','react','react','react','react','react','react','react']);
   }
+  const links = EVOLVING_CHALLENGES.find(p=>p.id==='fullstack-links')!;
+  expect(links.stages.map(evolvingTaskTrack)).toEqual(['javascript','typescript','typescript','react','react']);
   const saved = 'function normalizeInput(value) { return null; }';
-  expect(prepareEvolvingDraft(saved,'fullstack',5)).toBe(saved+FULLSTACK_REACT_SCAFFOLD);
-  expect(prepareEvolvingDraft(saved,'fullstack',6)).toBe(saved);
+  expect(prepareEvolvingDraft(saved,apps[0],5)).toBe(saved+FULLSTACK_REACT_SCAFFOLD);
+  expect(prepareEvolvingDraft(saved,apps[0],6)).toBe(saved);
+  // The short path's first React level is its fourth, and it brings its own exports.
+  expect(prepareEvolvingDraft(saved,links,3)).toBe(saved+LINKS_REACT_SCAFFOLD);
+  expect(prepareEvolvingDraft(saved,links,4)).toBe(saved);
   expect(prepareEvolvingDraft(saved,undefined,4)).toBe(saved);
+  expect(prepareEvolvingDraft(saved,EVOLVING_CHALLENGES.find(p=>p.id==='js-path-map'),3)).toBe(saved);
 });
 
 it('formats TSX without discarding TypeScript annotations', async () => {
@@ -147,7 +167,7 @@ it('places authored stage links inside Resources, away from the task brief', () 
   const link=screen.getByRole('link',{name:reference.title.en});
   expect(link).toHaveAttribute('href',reference.url);
   expect(link.closest('[role="tabpanel"]')).toBeInTheDocument();
-  expect(link.closest('.cd-pane--task')).toBeNull();
+  expect(link.closest('.cd-brief')).toBeNull();
 });
 
 it('keeps a randomized fin stable across button updates without changing its accessible name', () => {

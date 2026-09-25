@@ -3,7 +3,7 @@
 // level (`mode="lesson"`). It never fetches on its own: the parent hands it a
 // playable task, its sealed session and the saved draft.
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
-import { Kicker, SwimCta, FinButton } from '../components/landing/LandingKit';
+import { SwimCta, FinButton } from '../components/landing/LandingKit';
 import { Link } from 'react-router-dom';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -73,25 +73,6 @@ const readLayout = (): WorkbenchLayout => {
     : SPLIT_DEFAULT;
   return { split };
 };
-
-/** A keycap drawn the way the key is printed: its glyph and its name, on a
- * cap with a lip, so "Ctrl" reads as the key and not as a word. */
-const KEYCAPS = {
-  control: { label: 'Ctrl', path: 'M7 14l5-5 5 5' },
-  enter: { label: 'Enter', path: 'M17 7v7H7m4-4-4 4 4 4' },
-  shift: { label: 'Shift', path: 'M8 18v-6H5l7-7 7 7h-3v6Z' },
-  escape: { label: 'Esc', path: 'M5 5l14 14M19 5 5 19' },
-  tab: { label: 'Tab', path: 'M4 12h12m-4-4 4 4-4 4m8-9v10' },
-} as const;
-function Keycap({ name }: { name: keyof typeof KEYCAPS }) {
-  const { label, path } = KEYCAPS[name];
-  return (
-    <kbd className="cd-keycap">
-      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d={path} /></svg>
-      <span>{label}</span>
-    </kbd>
-  );
-}
 
 /** The names a React suite gives its cases, in order, so Results can list them
  * before the first run. The suite is read, never executed, here. */
@@ -775,74 +756,238 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         ? reactRun?.status === 'done' ? t('coding.results.passing', { passed: reactRun.passed, total: reactRun.total }) : ''
         : run ? t('coding.results.passing', { passed: run.results.filter((one) => one.pass === true).length, total: run.results.length }) : '';
 
+  const titleId = `${baseId}-title`;
+  const Title = mode === 'section' ? 'h1' : 'h2';
+  const briefMeta = evolution
+    ? t(evolution.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: evolution.index + 1, total: evolution.challenge.stages.length })
+    : `${trackLabel} · ${tierLabel}${hasLearnLevel(task) ? ` · ${t('coding.level', { n: task.level })}` : ''}`;
+
+  // The brief opens the pane the learner works in, whichever pane that is: one
+  // green line with where the task sits and what it is called, then what it asks.
+  const brief = (
+    <div className="cd-brief">
+      <div className="cd-brief__line">
+        <span className="cd-brief__meta">{briefMeta}</span>
+        <Title id={titleId} className="cd-brief__title">{L(task.title)}</Title>
+        {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
+      </div>
+      <Prompt className="cd-prompt" text={L(task.prompt)} />
+      {/* Earlier briefs still apply, but they are context now, not the
+          task: smaller, lighter, and numbered by the stage that set them. */}
+      {Boolean(task.previousRequirements?.length) && <details className="cd-previous">
+        <summary>{t('coding.evolving.previous')}</summary>
+        <ol className="cd-previous__list">
+          {task.previousRequirements!.map((requirement, index) => (
+            <li key={index}>
+              <span className="cd-previous__stage">{t(evolution?.challenge.short ? 'coding.evolving.levelShort' : 'coding.evolving.stageShort', { n: index + 1 })}</span>
+              <Prompt className="cd-prompt cd-prompt--previous" text={L(requirement)} />
+            </li>
+          ))}
+        </ol>
+      </details>}
+      {/* Beside the brief, so nothing is injected into code the learner
+          is reading or about to run. */}
+      <TermsBar texts={[L(task.prompt), L(task.title)]} domain={glossaryDomainFor(task.track)} />
+      {formatOf(task) === 'debug' && <p className="cd-note">{t('coding.format.debugHint')}</p>}
+      {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{L(task.api.note)}</p>}
+      {locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}
+      {!signedIn && mode === 'section' && <p className="cd-note">{t('coding.signInHint')}</p>}
+    </div>
+  );
+
+  // Run, Submit and the rest close the same pane, under the code.
+  const actionBar = (
+    <div className="cd-editor-actions">
+      <div className="cd-actions cd-actions--commands">
+        {!puzzleMode && !pendingOnDesktop && <>
+        <FinButton type="button" className="cd-btn" onClick={() => void runLocal()} disabled={busy}>
+          {phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')}
+        </FinButton>
+        <SwimCta size="sm" dir={1} onClick={() => void submit()} disabled={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />
+        <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => void format()} disabled={formatDisabled}>{t('coding.format')}</FinButton>
+        <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => setConfirming('reset')} disabled={resetDisabled}>{t('coding.reset')}</FinButton>
+        </>}
+
+        <Tooltip content={hintUnavailable} placement="above" isEnabled={hintUnavailable !== ''}>
+          <FinButton type="button" className="cd-btn" onClick={takeHint} aria-disabled={hintUnavailable !== '' || undefined}>
+            {taken === 0 ? t('coding.hint') : t('coding.hintNext')}
+          </FinButton>
+        </Tooltip>
+        {session && !solution && !solutions && (
+          <Tooltip content={giveUpUnavailable} placement="above" isEnabled={giveUpUnavailable !== ''}>
+            <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => { if (!giveUpUnavailable) setConfirming('reveal'); }} aria-disabled={giveUpUnavailable !== '' || undefined} disabled={busy}>
+              {t('coding.giveUp')}
+            </FinButton>
+          </Tooltip>
+        )}
+        {signedIn && mode === 'section' && !skipResult && (
+          <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => setSkipping((open) => !open)} aria-expanded={skipping}>
+            {t('coding.skip.action')}
+          </FinButton>
+        )}
+        <div className="cd-actions cd-actions--utility">
+          {saveAction}
+          <FinButton
+            type="button"
+            className="cd-btn cd-btn--icon cd-btn--flag"
+            aria-label={t('coding.reportTask')}
+            title={t('coding.reportTask')}
+            onClick={() => setReportOpen(true)}
+          >
+            <FlagIcon size={18} />
+          </FinButton>
+        </div>
+      </div>
+    </div>
+  );
+
+  // What the actions open: hints, the skip form, confirmations and errors. It
+  // follows the pane in reading order and exists only while it holds something.
+  const hintsOpen = taken > 0 || skipping || skipResult !== null || confirming === 'reveal' || solution !== null;
+  const notesOpen = hintsOpen || confirming === 'reset' || !online || formatError !== null || (submitError !== null && !puzzleMode);
+
   return (
     <div
       className={`cd-workbench cd-workbench--${mode}`}
       onKeyDown={onKeyDown}
     >
       <span className="cd-visually-hidden" role="status" aria-live="polite">{announcement}</span>
-          <section className="cd-pane cd-pane--task" aria-labelledby={`${baseId}-title`}>
-            <div className="cd-pane__head">
-              <Kicker>{evolution ? t('coding.evolving.stage', { n: evolution.index + 1, total: evolution.challenge.stages.length }) : <>{trackLabel} · {tierLabel}{hasLearnLevel(task) ? ` · ${t('coding.level', { n: task.level })}` : ''}</>}</Kicker>
-              {mode === 'section' ? <h1 id={`${baseId}-title`}>{L(task.title)}</h1> : <h2 id={`${baseId}-title`}>{L(task.title)}</h2>}
-              {formatOf(task) === 'debug' && (
-                <div className="cd-pane__meta">
-                  <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>
-                </div>
-              )}
-            </div>
-            <Prompt className="cd-prompt" text={L(task.prompt)} />
-            {/* Earlier briefs still apply, but they are context now, not the
-                task: smaller, lighter, and numbered by the stage that set them. */}
-            {Boolean(task.previousRequirements?.length) && <details className="cd-previous">
-              <summary>{t('coding.evolving.previous')}</summary>
-              <ol className="cd-previous__list">
-                {task.previousRequirements!.map((brief, index) => (
-                  <li key={index}>
-                    <span className="cd-previous__stage">{t('coding.evolving.stageShort', { n: index + 1 })}</span>
-                    <Prompt className="cd-prompt cd-prompt--previous" text={L(brief)} />
-                  </li>
-                ))}
-              </ol>
-            </details>}
-            {/* Beside the brief, so nothing is injected into code the learner
-                is reading or about to run. */}
-            <TermsBar texts={[L(task.prompt), L(task.title)]} domain={glossaryDomainFor(task.track)} />
-            {formatOf(task) === 'debug' && <p className="cd-note">{t('coding.format.debugHint')}</p>}
-            {task.api && <p className="cd-api"><code>{task.api.method} {task.api.url}</code><br />{L(task.api.note)}</p>}
-            {locked && <p className="cd-note cd-note--warn">{t('coding.lockedTask')} {t(`coding.lock.${locked}` as never)}</p>}
-            {!signedIn && mode === 'section' && <p className="cd-note">{t('coding.signInHint')}</p>}
-          </section>
-
       <div className="cd-workbench__grid" style={{ ['--cd-split' as string]: `${layout.split}%` }}>
           {puzzleMode && task.puzzle && (
-            <section className="cd-pane cd-pane--editor">
+            <section className="cd-pane cd-pane--editor" aria-labelledby={titleId}>
+              {brief}
               {/* Keyed by the session: a re-issued task comes with a fresh
                   shuffle and a fresh translation, so the arrangement starts
                   over rather than being graded under the new one. */}
               <CodePuzzle key={session ?? task.id} puzzle={task.puzzle} busy={busy} onSubmit={(order) => void submitOrder(order)} />
               {submitError && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
+              {actionBar}
             </section>
           )}
 
           {pendingOnDesktop && (
-            <section className="cd-pane cd-pane--editor">
+            <section className="cd-pane cd-pane--editor" aria-labelledby={titleId}>
+              {brief}
               {/* No editor, no puzzle, and no pass: the task waits. The draft is
                   kept exactly as it is, and nothing about this marks it done. */}
               <p className="cd-note cd-note--warn" role="status">{t('coding.pendingDesktop')}</p>
               <p className="cd-shortcuts">{t('coding.pendingDesktopNote')}</p>
+              {actionBar}
             </section>
           )}
 
-          <section className="cd-pane cd-pane--editor" hidden={puzzleMode || pendingOnDesktop}>
-            <div>
-            <label className="cd-editor-label" htmlFor={`${baseId}-editor`}>{t('coding.editorLabel')}</label>
-            <div id={`${baseId}-editor`}>
-              <Editor minHeight={480} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} readOnly={Boolean(solution) && mode === 'lesson'} />
+          {/* Stays mounted while a puzzle or the pending note stands in for it,
+              so the code survives a resize. The brief and the actions go with
+              whichever pane is showing. */}
+          <section className="cd-pane cd-pane--editor" hidden={puzzleMode || pendingOnDesktop} aria-labelledby={puzzleMode || pendingOnDesktop ? undefined : titleId}>
+            {!puzzleMode && !pendingOnDesktop && brief}
+            <div className="cd-editor-slot">
+              <Editor minHeight={480} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
+              {/* The shortcuts are not printed on the page; a screen reader
+                  hears them with the editor, Escape then Tab included. */}
+              <span id={`${baseId}-keys`} className="cd-visually-hidden">{t('coding.shortcuts')}</span>
             </div>
-            </div>
-
+            {!puzzleMode && !pendingOnDesktop && actionBar}
           </section>
+
+          {notesOpen && (
+            <div className="cd-pane cd-pane--controls">
+              {hintsOpen && <div className="cd-hints" role="group" aria-label={t('coding.hint')}>
+                <ol className="cd-hint-list">
+                  {rungs.slice(0, taken).map((rung, index) => (
+                    <li key={index} className="cd-hint">
+                      <span className="cd-hint__label">
+                        {rung.kind === 'hint' ? t('coding.hint.hint', { n: rung.index + 1 }) : rung.kind === 'approach' ? t('coding.hint.approach', { n: rung.index + 1 }) : rung.kind === 'skeleton' ? t('coding.hint.skeleton') : t('coding.hint.docs')}
+                      </span>
+                      {rung.kind === 'skeleton' ? <pre>{rung.body}</pre>
+                        : rung.kind === 'docs' ? <><span>{t('coding.hint.docsBody', { tag: rung.tag })}</span><br /><a href={rung.url} target="_blank" rel="noreferrer">{t('coding.hint.docsLink', { tag: rung.tag })}</a></>
+                        : <Prompt text={rung.body} />}
+                    </li>
+                  ))}
+                </ol>
+                {/* Skipping records why, and nothing else. It is not a pass: a
+                    task the learner's level requires stays required and says so,
+                    and nothing here unlocks anything. */}
+                {skipping && !skipResult && (
+                  <form className="cd-skip-card" onSubmit={(event) => { event.preventDefault(); void confirmSkip(); }}>
+                    <h3>{t('coding.skip.title')}</h3>
+                    <fieldset className="cd-skip-reasons" disabled={skipSubmitting}>
+                      <legend>{t('coding.skip.reasonLabel')}</legend>
+                      {SKIP_REASONS.map((reason) => (
+                        <label key={reason} className="cd-skip-reason">
+                          <input
+                            type="radio"
+                            name={`${baseId}-skip-reason`}
+                            value={reason}
+                            checked={skipReason === reason}
+                            onChange={() => setSkipReason(reason)}
+                          />
+                          <span>{t(`coding.skip.${reason}` as never)}</span>
+                        </label>
+                      ))}
+                    </fieldset>
+                    <div className="cd-skip-field">
+                      <label htmlFor={`${baseId}-skip-note`}>{t('coding.skip.noteLabel')}</label>
+                      <textarea
+                        id={`${baseId}-skip-note`}
+                        className="cd-skip-note"
+                        maxLength={280}
+                        rows={3}
+                        value={skipNote}
+                        disabled={skipSubmitting}
+                        onChange={(event) => setSkipNote(event.target.value)}
+                      />
+                    </div>
+                    {skipError && <p className="cd-note cd-note--error" role="alert">{skipError}</p>}
+                    <div className="cd-actions cd-actions--end">
+                      <FinButton type="button" className="cd-btn cd-btn--quiet" disabled={skipSubmitting} onClick={() => setSkipping(false)}>{t('coding.skip.cancel')}</FinButton>
+                      <FinButton type="submit" className="cd-btn cd-btn--primary" disabled={skipSubmitting}>
+                        {t('coding.skip.confirm')}
+                      </FinButton>
+                    </div>
+                  </form>
+                )}
+                {skipResult && (
+                  <div className="cd-note" role="status">
+                    <p style={{ margin: '0 0 8px' }}>{t(skipResult.required ? 'coding.skip.required' : 'coding.skip.optional')}</p>
+                    {skipResult.next && (
+                      <a className="cd-btn" href={`/coding/${task.track}/${skipResult.next}`}>{t('coding.skip.next')}</a>
+                    )}
+                  </div>
+                )}
+
+                {confirming === 'reveal' && (
+                  <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.giveUp')}>
+                    <p style={{ margin: '0 0 8px' }}>{mode === 'lesson' ? t('coding.lesson.giveUpNote') : t('coding.giveUpConfirm')}</p>
+                    <div className="cd-actions">
+                      <FinButton type="button" className="cd-btn cd-btn--primary" onClick={() => void reveal()}>{t('coding.giveUp')}</FinButton>
+                      <FinButton type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('coding.retry')}</FinButton>
+                    </div>
+                  </div>
+                )}
+                {solution && (
+                  <div className="cd-hint cd-solution">
+                    <span className="cd-hint__label">{t('coding.solutionTitle')}</span>
+                    <pre>{solution}</pre>
+                    <p className="cd-shortcuts">{t('coding.solutionNote')}</p>
+                  </div>
+                )}
+              </div>}
+              {confirming === 'reset' && (
+                <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.reset')}>
+                  <p style={{ margin: '0 0 8px' }}>{t('coding.resetConfirm')}</p>
+                  <div className="cd-actions">
+                    <FinButton type="button" className="cd-btn cd-btn--primary" onClick={reset}>{t('coding.reset')}</FinButton>
+                    <FinButton type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('coding.retry')}</FinButton>
+                  </div>
+                </div>
+              )}
+              {!online && <p className="cd-note cd-note--warn" role="status">{t('coding.offline')}</p>}
+              {formatError && <p className="cd-note cd-note--error" role="status">{formatError}</p>}
+              {submitError && !puzzleMode && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
+            </div>
+          )}
+
         {/* A real separator: it takes focus, arrows move it, Home and End go to
             the limits and Enter restores the default. It is hidden below the
             two-column breakpoint, where there is nothing to split. */}
@@ -907,154 +1052,6 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             </div>
           )}
           </div>
-        </section>
-        <section className="cd-pane cd-pane--controls">
-            <div className="cd-editor-actions">
-              <div className="cd-actions cd-actions--commands">
-                {!puzzleMode && !pendingOnDesktop && <>
-                <FinButton type="button" className="cd-btn" onClick={() => void runLocal()} disabled={busy}>
-                  {phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')}
-                </FinButton>
-                <SwimCta size="sm" dir={1} onClick={() => void submit()} disabled={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />
-                <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => void format()} disabled={formatDisabled}>{t('coding.format')}</FinButton>
-                <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => setConfirming('reset')} disabled={resetDisabled}>{t('coding.reset')}</FinButton>
-                </>}
-
-                <Tooltip content={hintUnavailable} placement="above" isEnabled={hintUnavailable !== ''}>
-                  <FinButton type="button" className="cd-btn" onClick={takeHint} aria-disabled={hintUnavailable !== '' || undefined}>
-                    {taken === 0 ? t('coding.hint') : t('coding.hintNext')}
-                  </FinButton>
-                </Tooltip>
-                {session && !solution && !solutions && (
-                  <Tooltip content={giveUpUnavailable} placement="above" isEnabled={giveUpUnavailable !== ''}>
-                    <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => { if (!giveUpUnavailable) setConfirming('reveal'); }} aria-disabled={giveUpUnavailable !== '' || undefined} disabled={busy}>
-                      {t('coding.giveUp')}
-                    </FinButton>
-                  </Tooltip>
-                )}
-                {signedIn && mode === 'section' && !skipResult && (
-                  <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => setSkipping((open) => !open)} aria-expanded={skipping}>
-                    {t('coding.skip.action')}
-                  </FinButton>
-                )}
-                <div className="cd-actions cd-actions--utility">
-                  {saveAction}
-                  <FinButton
-                    type="button"
-                    className="cd-btn cd-btn--icon cd-btn--flag"
-                    aria-label={t('coding.reportTask')}
-                    title={t('coding.reportTask')}
-                    onClick={() => setReportOpen(true)}
-                  >
-                    <FlagIcon size={18} />
-                  </FinButton>
-                </div>
-              </div>
-              <div className="cd-action-guidance">
-                <div className="cd-shortcuts cd-keyboard-guide" role="img" aria-label={t('coding.shortcuts')}>
-                  <span className="cd-keyboard-guide__row" aria-hidden="true">
-                    <span className="cd-keyboard-guide__chord"><Keycap name="control" />+<Keycap name="enter" /> {t('coding.run')}</span>
-                    <span className="cd-keyboard-guide__chord"><Keycap name="control" />+<Keycap name="shift" />+<Keycap name="enter" /> {t('coding.submit')}</span>
-                  </span>
-                  <span className="cd-keyboard-guide__row" aria-hidden="true">
-                    <Keycap name="escape" /><span>→</span><Keycap name="tab" /> {t('coding.shortcuts.leave')}
-                  </span>
-                </div>
-              </div>
-            </div>
-            <div className="cd-hints" role="group" aria-label={t('coding.hint')}>
-              <ol className="cd-hint-list">
-              {rungs.slice(0, taken).map((rung, index) => (
-                <li key={index} className="cd-hint">
-                  <span className="cd-hint__label">
-                    {rung.kind === 'hint' ? t('coding.hint.hint', { n: rung.index + 1 }) : rung.kind === 'approach' ? t('coding.hint.approach', { n: rung.index + 1 }) : rung.kind === 'skeleton' ? t('coding.hint.skeleton') : t('coding.hint.docs')}
-                  </span>
-                  {rung.kind === 'skeleton' ? <pre>{rung.body}</pre>
-                    : rung.kind === 'docs' ? <><span>{t('coding.hint.docsBody', { tag: rung.tag })}</span><br /><a href={rung.url} target="_blank" rel="noreferrer">{t('coding.hint.docsLink', { tag: rung.tag })}</a></>
-                    : <Prompt text={rung.body} />}
-                </li>
-              ))}
-              </ol>
-              {/* Skipping records why, and nothing else. It is not a pass: a
-                  task the learner's level requires stays required and says so,
-                  and nothing here unlocks anything. */}
-              {skipping && !skipResult && (
-                <form className="cd-skip-card" onSubmit={(event) => { event.preventDefault(); void confirmSkip(); }}>
-                  <h3>{t('coding.skip.title')}</h3>
-                  <fieldset className="cd-skip-reasons" disabled={skipSubmitting}>
-                    <legend>{t('coding.skip.reasonLabel')}</legend>
-                    {SKIP_REASONS.map((reason) => (
-                      <label key={reason} className="cd-skip-reason">
-                        <input
-                          type="radio"
-                          name={`${baseId}-skip-reason`}
-                          value={reason}
-                          checked={skipReason === reason}
-                          onChange={() => setSkipReason(reason)}
-                        />
-                        <span>{t(`coding.skip.${reason}` as never)}</span>
-                      </label>
-                    ))}
-                  </fieldset>
-                  <div className="cd-skip-field">
-                    <label htmlFor={`${baseId}-skip-note`}>{t('coding.skip.noteLabel')}</label>
-                    <textarea
-                      id={`${baseId}-skip-note`}
-                      className="cd-skip-note"
-                      maxLength={280}
-                      rows={3}
-                      value={skipNote}
-                      disabled={skipSubmitting}
-                      onChange={(event) => setSkipNote(event.target.value)}
-                    />
-                  </div>
-                  {skipError && <p className="cd-note cd-note--error" role="alert">{skipError}</p>}
-                  <div className="cd-actions cd-actions--end">
-                    <FinButton type="button" className="cd-btn cd-btn--quiet" disabled={skipSubmitting} onClick={() => setSkipping(false)}>{t('coding.skip.cancel')}</FinButton>
-                    <FinButton type="submit" className="cd-btn cd-btn--primary" disabled={skipSubmitting}>
-                      {t('coding.skip.confirm')}
-                    </FinButton>
-                  </div>
-                </form>
-              )}
-              {skipResult && (
-                <div className="cd-note" role="status">
-                  <p style={{ margin: '0 0 8px' }}>{t(skipResult.required ? 'coding.skip.required' : 'coding.skip.optional')}</p>
-                  {skipResult.next && (
-                    <a className="cd-btn" href={`/coding/${task.track}/${skipResult.next}`}>{t('coding.skip.next')}</a>
-                  )}
-                </div>
-              )}
-
-              {confirming === 'reveal' && (
-                <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.giveUp')}>
-                  <p style={{ margin: '0 0 8px' }}>{mode === 'lesson' ? t('coding.lesson.giveUpNote') : t('coding.giveUpConfirm')}</p>
-                  <div className="cd-actions">
-                    <FinButton type="button" className="cd-btn cd-btn--primary" onClick={() => void reveal()}>{t('coding.giveUp')}</FinButton>
-                    <FinButton type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('coding.retry')}</FinButton>
-                  </div>
-                </div>
-              )}
-              {solution && (
-                <div className="cd-hint cd-solution">
-                  <span className="cd-hint__label">{t('coding.solutionTitle')}</span>
-                  <pre>{solution}</pre>
-                  <p className="cd-shortcuts">{t('coding.solutionNote')}</p>
-                </div>
-              )}
-            </div>
-            {confirming === 'reset' && (
-              <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.reset')}>
-                <p style={{ margin: '0 0 8px' }}>{t('coding.resetConfirm')}</p>
-                <div className="cd-actions">
-                  <FinButton type="button" className="cd-btn cd-btn--primary" onClick={reset}>{t('coding.reset')}</FinButton>
-                  <FinButton type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('coding.retry')}</FinButton>
-                </div>
-              </div>
-            )}
-            {!online && <p className="cd-note cd-note--warn" role="status">{t('coding.offline')}</p>}
-            {formatError && <p className="cd-note cd-note--error" role="status">{formatError}</p>}
-            {submitError && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
         </section>
       </div>
       {/* The same dialog the quiz uses, carrying the task id and the version of

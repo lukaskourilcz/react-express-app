@@ -11,7 +11,7 @@ export const FULLSTACK_APPS = [
 export type FullStackApp = typeof FULLSTACK_APPS[number];
 export const fullstackSeed = (app:FullStackApp) => [{id:1,name:app.first,[app.amount]:2,version:1},{id:2,name:app.second,[app.amount]:1,version:1},{id:3,name:app.third,[app.amount]:0,version:1}];
 const docs = (en:string,cs:string,url:string) => [{title:text(en,cs),url}];
-const runtimeSuite = (tests:CallTest[]) => `const canonicalJSON=value=>JSON.stringify(value,(_key,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);\n` + tests.map((t,i)=>`test('API contract ${i+1}',()=>{expect(canonicalJSON(${t.call})).toBe(canonicalJSON(${JSON.stringify(t.expected)}))});`).join('\n');
+export const runtimeSuite = (tests:CallTest[]) => `const canonicalJSON=value=>JSON.stringify(value,(_key,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);\n` + tests.map((t,i)=>`test('API contract ${i+1}',()=>{expect(canonicalJSON(${t.call})).toBe(canonicalJSON(${JSON.stringify(t.expected)}))});`).join('\n');
 
 export function fullstackSpec(app:FullStackApp) {
  const {endpoint,amount,action}=app, seed=fullstackSeed(app), row=seed[0];

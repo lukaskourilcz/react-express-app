@@ -13,8 +13,8 @@ swim-through fins, fade-in fins — the fin's **visual base must TOUCH the botto
 edge of its container**, never float above it.
 
 The fin glyph (a swept-back fin in a 24-unit box, from `SharkFin.tsx`) has a
-wave-cut base whose mean line sits at `y=18`, so **25% of the box is empty below
-the base**. To make the base ride the bottom edge, sink the fin downward by
+straight base on `y=18`, so **25% of the box is empty below the base**. Only the
+navigation logo cuts that base into a wave (`wave`), around the same line. To make the base ride the bottom edge, sink the fin downward by
 `size × 0.25`:
 
 - a `58px` fin needs `bottom: -15px` (58 × 0.25 ≈ 14.5)
