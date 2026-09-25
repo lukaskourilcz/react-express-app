@@ -63,4 +63,3 @@ export const TOPIC_LANDINGS: TopicLandingDefinition[] = [
     practice: { en: [['What does rebase rewrite?', 'Commit history.'], ['When is it safest?', 'On unpublished commits.'], ['How do you cancel it?', 'git rebase --abort']], cs: [['Co rebase přepisuje?', 'Historii commitů.'], ['Kdy je nejbezpečnější?', 'U nezveřejněných commitů.'], ['Jak ho zrušíš?', 'git rebase --abort']] },
   },
 ];
-

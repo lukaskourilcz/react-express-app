@@ -564,4 +564,3 @@ export const isPathContentId = (value: unknown): value is string =>
  * a v1 answer against a v2 activity: `dsa-v1-d07-binary-search`. */
 export const activityIdPrefix = (pathId: LearningPathId, version: number): string =>
   `${pathId === 'dsa-foundations' ? 'dsa' : pathId}-v${version}-`;
-

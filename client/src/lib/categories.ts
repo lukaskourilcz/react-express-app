@@ -107,4 +107,3 @@ export const visibleCategoryOptionsFor = (
       : scoped.filter((c) => !PRIVATE_CATEGORIES.includes(c.value));
   return opts.includePlayOnly ? base : base.filter((c) => !PLAY_ONLY_CATEGORIES.includes(c.value));
 };
-
