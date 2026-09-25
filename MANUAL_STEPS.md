@@ -3,7 +3,7 @@
 Each step is owner-only (accounts, credentials, licensing, or a physical smoke test). Do them in order of **importance**: `[imp:5]` blocks a safe public launch. Where the step ends with **→ tell me** you can hand a fact back to me and I can continue from there.
 
 Supabase project ref: `rvlybcjdpafwyeuojvhl`
-Vercel project: devShark at `https://devshark.app`. The StudyShark project that also built this repository is to be removed (issue #214); StudyShark now lives in `lukaskourilcz/studyshark` and is not deployed.
+Vercel project: devShark at `https://devshark.app`. The StudyShark project that also built this repository was paused on 2026-09-25 and is to be deleted (issue #214); StudyShark now lives in `lukaskourilcz/studyshark` and is not deployed.
 
 Resolved on 2026-07-28 (do not repeat): migration 024 applied, Google OAuth enabled and working, Supabase Auth Site URL + Redirect URLs allowlist fixed, Upstash Redis provisioned and wired, admin ACL env vars set on both projects, Sentry + PostHog live on both projects with EU regions and privacy-forward defaults, Supabase leaked-password protection enabled. Admin-ACL end-to-end verification and legal/privacy review were dropped from this tracked list by owner decision; see "Recorded decisions (2026-07-28)" in `NEEDED.md` for context on both.
 

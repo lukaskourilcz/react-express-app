@@ -713,3 +713,12 @@ Local evidence, all executed on the branch head:
 | `git diff --check` | clean |
 
 Not exercised here: anything account-bound, since no Supabase project is reachable from the build container, and nothing on Vercel, since the Vercel connector needs re-authorizing.
+
+## 2026-09-25 — StudyShark off Vercel and out of the database
+
+At the owner's request StudyShark runs nowhere.
+
+- **Vercel.** The `studyshark-app` project is paused; `https://studyshark-app.vercel.app/` and its `/api/health` answer 503 `DEPLOYMENT_PAUSED`. It had no custom domain. The connector can pause a project but not delete one, so deletion is an owner step in #214. Before it, the StudyShark URL has to leave the Supabase Auth redirect list, because a deleted project's `vercel.app` subdomain can be claimed by anyone.
+- **Supabase.** A scan of every public table for StudyShark subjects, question ids and the product name found two sets of rows. The first was three multiplayer matches from July, stored as `webdev`, whose question lists held StudyShark questions: one all capitals, two mixed from before questions were scoped by subject. Deleting them removed five participants and eleven answers by cascade. The second was eight anonymous geography Learn attempts, with their 32 answers. Both sets were deleted from production and from the `devshark-recovery-20260915` copy. The same scan finds nothing afterwards in either project. No account held StudyShark rows, and none was deleted: production has two accounts.
+- **Unchanged.** devShark's own rows: 5 matches, 8 Learn attempts, 59 question-history rows, 60 coding awards and 12 progress rows. `/api/health` reports the database, service role and rate limiter healthy, and `/learn` answers 200. The schema's subject checks still list the six StudyShark subjects; the API's subject scope refuses them.
+- **StudyShark repository.** Its CI workflow is deleted at the owner's request; the checks run locally only.

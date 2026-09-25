@@ -8,8 +8,9 @@ tokens and the database are keyed by subject.
 StudyShark, the general-subject product (geography, mathematics, history,
 biology, chess and poker), shared this code until 2026-09-24 and now lives in
 its own repository, `lukaskourilcz/studyshark`. Nothing here builds, links to or
-serves it. The production database still holds StudyShark's rows; devShark reads
-none of them (see issue #215 for what happens to them).
+serves it. StudyShark's rows were deleted from the production database on
+2026-09-25 (issue #215). The subject checks in the schema still accept its six
+subjects; the API's subject scope refuses them.
 
 ## Sources of truth
 
