@@ -1,6 +1,6 @@
 ---
 name: full-app-audit
-description: Run a full audit of the quiz app across UX, accessibility, performance, scalability, security, and reliability. Spawns specialized auditor agents in parallel and produces a single consolidated, prioritized report. Use when the user asks for "audit the app", "find improvements", "what should we fix", or any holistic review.
+description: Run a full audit of the devShark web app across UX, accessibility, performance, scalability, security, and reliability. Spawns specialized auditor agents in parallel and produces a single consolidated, prioritized report. Use when the user asks for "audit the app", "find improvements", "what should we fix", or any holistic review.
 ---
 
 # Full app audit
@@ -13,14 +13,14 @@ Goal: produce one prioritized punch-list covering UX, a11y, performance, scalabi
 
 2. **Spawn all six auditor agents in parallel** (single message, six `Agent` tool calls). Each gets a self-contained prompt — they do not share context.
 
-   - `ux-reviewer` — "Audit UX of all components in `client/src/components/`. Cover loading/empty/error states, mobile, MUI consistency, microcopy."
+   - `ux-reviewer` — "Audit UX of all components in `client/src/components/`. Cover loading/empty/error states, mobile, Astryx/Deep End consistency (DESIGN_RULES.md), microcopy."
    - `accessibility-auditor` — "Audit WCAG 2.1 AA across all components and routes. Cover semantic HTML, ARIA, keyboard, focus, contrast, SPA route changes."
    - `performance-optimizer` — "Audit frontend perf — bundle, code splitting (Quiz/Profile lazy), `react-syntax-highlighter` weight, Vite manualChunks, render perf in Quiz.tsx."
-   - `scalability-auditor` — "Audit `api/`, `server/`, `supabase-schema.sql`. Cover cold starts, indexes, RLS-as-scan-risk, counter races, caching, rate limits, two-stack drift."
+   - `scalability-auditor` — "Audit `api/`, `lib/` and `supabase/supabase-schema*.sql`. Cover cold starts, indexes, RLS-as-scan-risk, counter races, caching, rate limits and the twelve-handler budget."
    - `security-auditor` — "Audit the Supabase Auth (Google OAuth) flow, RLS policies, API input validation, client-supplied trust, secrets, CORS, headers, deps."
    - `reliability-auditor` — "Audit failure modes — Supabase / Supabase Auth down, mid-quiz network drop, refresh, concurrent tabs, error boundaries, observability, idempotency."
 
-3. **Consolidate the six reports** into one document. Deduplicate findings that show up in multiple lenses (e.g. RLS `USING (true)` is both security and scalability — list once under security, cross-ref scalability).
+3. **Consolidate the six reports** into one document. Deduplicate findings that show up in multiple lenses (e.g. a missing index behind an RLS policy is both security and scalability — list once under security, cross-ref scalability).
 
 4. **Re-rank globally** using this rubric:
 

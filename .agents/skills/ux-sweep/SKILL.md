@@ -1,6 +1,6 @@
 ---
 name: ux-sweep
-description: Run a focused UX + accessibility + frontend-performance sweep on the quiz app. Use when the user asks to "improve UX", "make it feel better", "polish the app", or "audit the frontend". Lighter than full-app-audit — only the three user-facing lenses.
+description: Run a focused UX + accessibility + frontend-performance sweep on the devShark web app. Use when the user asks to "improve UX", "make it feel better", "polish the app", or "audit the frontend". Lighter than full-app-audit — only the three user-facing lenses.
 ---
 
 # UX sweep
@@ -9,9 +9,9 @@ description: Run a focused UX + accessibility + frontend-performance sweep on th
 
 1. **Spawn three agents in parallel:**
 
-   - `ux-reviewer` — "Audit all components in `client/src/components/`. Cover loading/empty/error states, mobile (`maxWidth: 500px`), interaction states, microcopy, MUI consistency."
-   - `accessibility-auditor` — "Audit WCAG 2.1 AA across all components and routes. Special attention: icon-only `IconButton`s in `App.tsx` (Instagram/GitHub) need `aria-label`; quiz answer choices need fieldset/legend; route-change focus management."
-   - `performance-optimizer` — "Audit frontend perf. Special attention: `react-syntax-highlighter` (~1MB+) — should be lazy-loaded only when a code block renders; route-level code splitting for Quiz/Profile; Vite `manualChunks` for vendor caching."
+   - `ux-reviewer` — "Audit all components in `client/src/components/`. Cover loading/empty/error states, widths 360–1440, interaction states, microcopy, Astryx/Deep End consistency (DESIGN_RULES.md)."
+   - `accessibility-auditor` — "Audit WCAG 2.1 AA across all components and routes. Special attention: icon-only `AxIconButton`s in `client/src/App.tsx` (menu, leaderboard, Premium and shop) need accessible names; quiz answer choices need fieldset/legend; route-change focus management."
+   - `performance-optimizer` — "Audit frontend perf. Special attention: confirm Prism Light stays lazy, route chunks stay split, and `npm run check:bundle` stays within budget."
 
 2. **Merge into one report:**
 

@@ -41,4 +41,4 @@ node scripts/check-responsive.mjs
 git diff --check
 ```
 
-The responsive script expects a client preview on `http://localhost:4173`; start `npm run preview --prefix client` after a successful build. Save temporary screenshots outside tracked source unless a test fixture is intentionally part of the change. Document verified matrix coverage in `docs/design/visual-qa-checklist.md` only when the caller asks for repository documentation. Do not call static inspection a browser pass.
+The responsive script expects a client preview on `http://localhost:4173`; start `npm run preview --prefix client` after a successful build. In the Claude Code cloud environment set `CHROME_BIN=/opt/pw-browsers/chromium`: the browser is preinstalled there and `npx playwright install` is disabled. Save temporary screenshots outside tracked source unless a test fixture is intentionally part of the change. Document verified matrix coverage in `docs/design/visual-qa-checklist.md` only when the caller asks for repository documentation. Do not call static inspection a browser pass.

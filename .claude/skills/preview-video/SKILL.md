@@ -10,7 +10,11 @@ Generates a smooth-scroll recording of the deployed project (Refero-style) and s
 ## Prerequisites
 
 - `ffmpeg` available on PATH (`ffmpeg -version`)
-- Playwright Chromium installed: `npx playwright install chromium` (once per machine)
+- Playwright Chromium. In the Claude Code cloud environment the browser is preinstalled
+  under `/opt/pw-browsers` and `npx playwright install` is disabled: run the capture with
+  `CAPTURE_EXECUTABLE_PATH=/opt/pw-browsers/chromium`, because the preinstalled build is
+  not the one Playwright 1.63 expects. Elsewhere install it once per machine with
+  `npx playwright install chromium`.
 
 ## Steps
 
@@ -53,6 +57,8 @@ proxy):
 - `CAPTURE_INSECURE=1` — ignore TLS certificate errors. Only meaningful together with a
   re-signing MITM proxy; never needed for a direct connection.
 - `CAPTURE_EXTRA_ARGS` — extra comma-separated Chromium flags.
+- `CAPTURE_EXECUTABLE_PATH` — launch this Chromium binary instead of the one the installed
+  Playwright expects, e.g. `/opt/pw-browsers/chromium` in the Claude Code cloud environment.
 
 `--no-sandbox` is added automatically when the script runs as root (required by Chromium),
 and `--disable-quic` is always set to keep HTTP-proxy captures reliable.

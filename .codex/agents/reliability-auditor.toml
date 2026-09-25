@@ -12,10 +12,10 @@ Process:
    - Network drops between question N and N+1 of a quiz
    - User refreshes mid-quiz (state preserved? lost?)
    - Two tabs open submitting concurrently (counters racing)
-2. **Client error handling** (`client/src/components/*.tsx`, `lib/supabase.ts`):
+2. **Client error handling** (`client/src/components/*.tsx`, `client/src/lib/supabase.ts`):
    - Every `await fetch` / supabase call wrapped in try/catch?
    - Errors surfaced to UI (snackbar, error boundary) vs silently swallowed?
-   - React error boundary at the route level? (Currently none — flag.)
+   - React error boundary at the route level? (`client/src/components/ErrorBoundary.tsx`)
    - Loading states tied to actual request lifecycle, not booleans set imperatively?
 3. **API resilience** (`api/*.ts`):
    - Timeouts on outbound DB calls?
@@ -26,14 +26,13 @@ Process:
    - Counter updates atomic? `total_quizzes++` over read-modify-write is racy → recommend Postgres function or `UPDATE ... SET total_quizzes = total_quizzes + 1`.
    - Streak logic on `last_quiz_date` boundary — what about timezones?
 5. **Observability:**
-   - Error tracking (Sentry, etc.)? Currently none.
+   - Error tracking: Sentry is optional and DSN-gated — confirm failures reach it.
    - Structured logs in `api/`? `console.log` strings vs JSON?
    - Health-check endpoint?
 6. **Deployment safety:**
    - `vercel.json` — function regions, max duration set?
-   - Env var documentation (`.env.example` covers all required vars)?
-   - Migration story for `supabase-schema.sql` changes?
-7. **Two-stack drift** (`server/` Express vs `api/` Vercel functions): same routes return same shapes? CI guard?
+   - Env var documentation (`client/.env.example` covers all required vars)?
+   - Migration story for `supabase/supabase-schema*.sql` changes?
 
 **Output:**
 

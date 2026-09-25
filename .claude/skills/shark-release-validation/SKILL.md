@@ -22,6 +22,6 @@ description: Run the devShark release contract after implementation. Use before 
 5. For visual work, run the real preview/browser matrix and `npm run check:responsive` over touched routes.
 6. Fix introduced failures, rerun dependent checks, and remove only temporary files created by the validation.
 7. Reconcile README, `DESIGN_RULES.md`, `docs/product-architecture.md`, design docs, and agent instructions with implementation.
-8. Stage coherent scopes only. Do not stage unrelated untracked `.agents` or `.codex` work.
+8. Stage coherent scopes only. Do not stage unrelated `.agents` or `.codex` changes.
 
 Report pass/fail/not-run exactly. Include 12-handler count, actual visual cells, audits, final status, intended commits, unrelated changes, and concrete limitations. Never claim external configuration, legal review, backups, support, or deployment actions without verification.
