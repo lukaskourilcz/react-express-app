@@ -98,6 +98,22 @@ describe('/premium', () => {
     expect(screen.queryByRole('button', { name: /Continue with|Sign in to continue/ })).toBeNull();
   });
 
+  it('says so when the settings cannot be read, and tries again', async () => {
+    let calls = 0;
+    server.use(http.get('*/api/settings', () => {
+      calls += 1;
+      return calls === 1
+        ? HttpResponse.json({ error: { code: 'server_error', message: 'Down' } }, { status: 500 })
+        : HttpResponse.json({ billing: { enabled: true, cancellable: true, seller: 'link' } });
+    }));
+    renderAt('/premium', <PremiumPage />);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('We could not reach devShark to check whether checkout is open.');
+    expect(screen.queryByRole('button', { name: 'Sign in to continue' })).toBeNull();
+    fireEvent.click(within(alert).getByRole('button', { name: 'Try again' }));
+    expect(await screen.findAllByRole('button', { name: 'Sign in to continue' })).toHaveLength(2);
+  });
+
   it('answers six questions in native disclosures', () => {
     serve();
     const { container } = renderAt('/premium', <PremiumPage />);

@@ -572,6 +572,16 @@
     min-height: 44px !important;
     min-width: 44px !important;
   }
+  /* The Astryx text field is 32px at its default size and 36px at its
+     largest. On a phone the box grows to 44px and the input stretches to
+     fill it, so a tap anywhere in the box lands in the field (the email on
+     /premium/cancel measured 23px, #222). */
+  .astryx-text-input {
+    min-height: 44px !important;
+  }
+  .astryx-text-input > input {
+    align-self: stretch;
+  }
 
   .ss-footer-settings button,
   .ss-drawer-brand,

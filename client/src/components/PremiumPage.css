@@ -27,6 +27,7 @@
 .ss-info-card .ss-premium-plan__terms { margin: 0.25rem 0 0; font-size: 0.9rem; line-height: 1.5; }
 .ss-premium-plan__action { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; margin-top: auto; padding-top: 0.75rem; }
 .ss-premium-plan__action > * { max-width: 100%; }
+.ss-premium-unreachable { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; }
 .ss-premium-plans > .ss-info-note,
 .ss-premium-plans > .ss-premium-note { margin-top: 0.85rem; }
 

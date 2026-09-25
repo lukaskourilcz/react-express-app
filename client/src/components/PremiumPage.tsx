@@ -7,6 +7,7 @@
 //                        second checkout
 //   complimentary grant  "Your plan" says so; buying stays possible
 //   billing switched off one "Premium opens soon" line instead of buttons
+//   settings unreachable one line that says so, with "Try again"
 //
 // No urgency copy, no countdowns and no scarcity. The price always carries
 // "VAT included", and the renewal, the waiver sentence and the refund sit next
@@ -14,6 +15,7 @@
 // only reads it.
 import { useEffect, useId } from 'react';
 import { Link } from 'react-router-dom';
+import { Button } from '@astryxdesign/core/Button';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
@@ -78,6 +80,9 @@ export default function PremiumPage() {
   // charge twice, and the server refuses it anyway.
   const paying = premium && plan.data?.source === 'provider';
   const closed = billing.known && !billing.enabled;
+  // Offline or the API is down: the buttons cannot know what to do, so the
+  // page says so rather than spinning.
+  const unreachable = billing.failed;
 
   return (
     <Page kicker={t('billing.kicker')} title={t('premium.page.title', vars)} lead={t('premium.page.lead')}>
@@ -92,11 +97,17 @@ export default function PremiumPage() {
         <section className="ss-premium-plans" aria-labelledby={ids.plans}>
           <h2 id={ids.plans} className="ss-premium-section-title">{t('premium.page.plansTitle')}</h2>
           <div className="ss-premium-plan-grid">
-            <PlanCard plan="monthly" showAction={!paying && !closed} />
-            <PlanCard plan="annual" showAction={!paying && !closed} />
+            <PlanCard plan="monthly" showAction={!paying && !closed && !unreachable} />
+            <PlanCard plan="annual" showAction={!paying && !closed && !unreachable} />
           </div>
           {closed && <p className="ss-info-note" role="status">{t('billing.checkout.soon')}</p>}
-          {!closed && !authLoading && !isAuthenticated && <p className="ss-premium-note">{t('premium.page.signedOut')}</p>}
+          {unreachable && (
+            <div className="ss-info-note ss-premium-unreachable" role="alert">
+              <span>{t('premium.page.unreachable')}</span>
+              <Button variant="secondary" size="sm" label={t('profile.plan.retry')} onClick={billing.retry} />
+            </div>
+          )}
+          {!closed && !unreachable && !authLoading && !isAuthenticated && <p className="ss-premium-note">{t('premium.page.signedOut')}</p>}
           <PremiumSmallPrint t={t} link={routerLink} headingId={ids.smallPrint} />
         </section>
 

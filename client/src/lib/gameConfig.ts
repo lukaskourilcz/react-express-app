@@ -162,9 +162,16 @@ export function useGameConfig(): GameConfig {
 
 /** The config plus whether it is the server's answer rather than the
  * defaults, for a screen that must not act on a default (the billing pages). */
-export function useGameConfigStatus(): { config: GameConfig; fromServer: boolean } {
-  const { data, isPlaceholderData, isSuccess } = useQuery(CONFIG_QUERY);
-  return { config: data ?? DEFAULT_CONFIG, fromServer: isSuccess && !isPlaceholderData };
+export function useGameConfigStatus(): { config: GameConfig; fromServer: boolean; failed: boolean; retry: () => void } {
+  const { data, isPlaceholderData, isSuccess, isError, refetch } = useQuery(CONFIG_QUERY);
+  return {
+    config: data ?? DEFAULT_CONFIG,
+    fromServer: isSuccess && !isPlaceholderData,
+    // The settings never arrived (offline, or the API is down): a screen
+    // that waits on them says so instead of waiting for ever.
+    failed: isError,
+    retry: () => { void refetch(); },
+  };
 }
 
 /** Imperative snapshot for non-React callers (e.g. shop purchase). */

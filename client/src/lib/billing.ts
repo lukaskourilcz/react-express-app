@@ -13,11 +13,25 @@ const USER = (op: string) => `/api/user/${op}`;
 
 /** Whether checkout sells Premium, whether cancellation can reach Stripe,
  * and who sells it. All read false or null until the server's settings
- * arrive; `known` says they have. */
-export function useBilling(): { enabled: boolean; cancellable: boolean; seller: 'link' | 'trader' | null; known: boolean } {
-  const { config, fromServer } = useGameConfigStatus();
+ * arrive; `known` says they have, `failed` that they could not be read. */
+export function useBilling(): {
+  enabled: boolean;
+  cancellable: boolean;
+  seller: 'link' | 'trader' | null;
+  known: boolean;
+  failed: boolean;
+  retry: () => void;
+} {
+  const { config, fromServer, failed, retry } = useGameConfigStatus();
   const { enabled, cancellable, seller } = config.billing;
-  return { enabled, cancellable, seller: seller === 'link' || seller === 'trader' ? seller : null, known: fromServer };
+  return {
+    enabled,
+    cancellable,
+    seller: seller === 'link' || seller === 'trader' ? seller : null,
+    known: fromServer,
+    failed: failed && !fromServer,
+    retry,
+  };
 }
 
 /** Stripe's hosted pages, and nothing else, may receive the learner. */

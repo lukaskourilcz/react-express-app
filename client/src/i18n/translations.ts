@@ -1446,6 +1446,7 @@ export const en = {
   'premium.page.monthlyRenews': 'VAT included. Renews every month until you cancel.',
   'premium.page.annualRenews': 'VAT included. Renews every year until you cancel.',
   'premium.page.signedOut': 'Sign in with Google first. You come back here to choose a plan.',
+  'premium.page.unreachable': 'We could not reach devShark to check whether checkout is open. Check your connection and try again.',
   'premium.page.yourPlan': 'Your plan',
   'premium.page.smallPrintTitle': 'Before you pay',
   'premium.page.smallPrint.price': 'Both prices include VAT. Stripe may show the amount in your local currency at checkout, and that amount is what you pay.',
