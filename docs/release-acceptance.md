@@ -734,3 +734,14 @@ What changed:
 - The Quiz restores a saved or linked category only if the server still serves it. An old setup, or an old link naming a retired section, no longer gets the quiz refused.
 - The challenge board is validated as a read. A browser still running the old bundle gets its board back as soon as this deploys; its runs recover on the next reload.
 - A client test replays the three requests through the server's own check; it failed 3 of 3 against the old client. The launch contract asserts that the delivery list is requestable and that the full catalogue is not.
+- The relaxed-pace option on the Challenge intro is its natural height. It borrowed the track-card flex basis, which in a column made it a 220px box with empty space under the text.
+
+Local evidence, all executed on the branch head:
+
+| Check | Result |
+| --- | --- |
+| Every CI step: types, launch contracts, coding auth, grading integrity, coding content, paths, client tests, unused, security, devShark build, public HTML, bundle, both audits | pass; client tests 8 files, 48 tests; coding content 440 tasks |
+| `client/tests/delivery-scope.test.ts` against the old client | fails 3 of 3, as it should |
+| Built client in Chromium with every `GET /api` replayed against production | board loads ("No one has set a score yet"), a run shows a question with four options, the daily set shows its questions |
+| `npm run check:responsive` on `/challenge` and `/quiz`, 7 widths, then dark at 360, 390 and 1280 | 14 and 3 probes, 0 issues |
+| `git diff --check` | clean |
