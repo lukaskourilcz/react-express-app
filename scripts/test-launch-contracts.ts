@@ -168,6 +168,8 @@ import {
 } from '../shared/rewards';
 import { learnCheckpointXp, learnLevelXp } from '../shared/progression';
 import { accountKey, codingAwardId, learnAwardId, milestoneConfig, previousMonth } from '../lib/rewards/coins';
+import { REFERRAL_SIGNUP_WINDOW_HOURS, isReferralCode } from '../shared/rewards';
+import { accountCreatedAt, handleReferral } from '../lib/rewards/referral';
 
 function apiFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -687,6 +689,8 @@ function coinsContracts() {
     shortPathComplete: 50,
     monthTop: [300, 200, 100],
     socialVisitGrant: 0,
+    referralGrant: 100,
+    referralCap: 20,
   });
   assert.equal(coinsForVerifiedXp(100, false), 10, 'every account earns 10 % of verified XP');
   assert.equal(coinsForVerifiedXp(100, true), 20, 'Premium doubles it');
@@ -820,6 +824,143 @@ function coinsContracts() {
   assert.equal(STREAK_PROTECTION_CAP, 2);
   assert.doesNotMatch(read('shared/rewards.ts'), /streakProtection(Price|Cash|Minor)/);
   assert.match(read('shared/rewards.ts'), /No money buys a\s+\*\s+protection/);
+}
+
+/** Invitations (#228, handoff section 7.2). 100 coins to each side, once,
+ * after the friend's first Learn level; self-referral and a second completion
+ * credit nothing; the cap holds; the grant routine writes only ledger tables;
+ * the inviter never learns who a friend is. The behaviour against a real
+ * database is proven by the migration 042 proof (docs/release-acceptance.md). */
+async function referralContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const listFiles = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    return statSync(path).isDirectory() ? listFiles(path) : [path];
+  });
+
+  // 1. The rules: 100 to each side, 20 friends per inviter, a 48-hour sign-up
+  // window, and the settings mirror clamps them.
+  assert.equal(DEFAULT_COIN_SETTINGS.referralGrant, 100);
+  assert.equal(DEFAULT_COIN_SETTINGS.referralCap, 20);
+  assert.equal(REFERRAL_SIGNUP_WINDOW_HOURS, 48);
+  assert.equal(normalizeSettings({ coins: { referralGrant: 'lots' } }).coins.referralGrant, 100, 'a malformed grant falls back');
+  assert.equal(normalizeSettings({ coins: { referralGrant: -5 } }).coins.referralGrant, 0, 'a negative grant clamps to off');
+  assert.equal(normalizeSettings({ coins: { referralCap: 5000 } }).coins.referralCap, 1000, 'the cap is clamped');
+  assert.equal(normalizeSettings({ coins: { referralGrant: 0 } }).coins.referralGrant, 0, '0 turns invitations off');
+  assert.ok(isReferralCode('ge04xtw4'));
+  for (const bad of ['GE04XTW4', 'ge04xtw', 'ge04xtwil', 'ge04xtwl', 'ge04-tw4', '', null]) {
+    assert.equal(isReferralCode(bad), false, `${String(bad)} is not a code`);
+  }
+
+  // 2. The migration: service-role routines, RLS on, no browser read of who
+  // invited whom, and the ledger reasons of 041 kept.
+  const migration = read('supabase/supabase-schema-042.sql');
+  const routine = (name: string) => {
+    const start = migration.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`);
+    assert.ok(start >= 0, `migration 042 defines ${name}`);
+    return migration.slice(start, migration.indexOf('$$;', start));
+  };
+  assert.match(migration, /CHECK \(reason IN \('signup', 'verified-xp', 'purchase', 'refund', 'adjustment', 'milestone', 'social', 'referral'\)\)/,
+    '042 adds referral and keeps milestone and social');
+  for (const name of ['referral_summary', 'record_referral', 'credit_referral', 'delete_referral_data']) {
+    assert.match(migration, new RegExp(`REVOKE ALL ON FUNCTION public\\.${name}\\([^;]*\\) FROM PUBLIC, anon, authenticated;`), `${name} is revoked from browsers`);
+    assert.match(migration, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${name}\\([^;]*\\) TO service_role;`), `${name} is service-role only`);
+    assert.match(routine(name), /SECURITY DEFINER\s*SET search_path = ''/, `${name} pins its search_path`);
+  }
+  assert.match(migration, /ALTER TABLE public\.referrals\s+ENABLE ROW LEVEL SECURITY;/);
+  assert.match(migration, /ALTER TABLE public\.referral_codes ENABLE ROW LEVEL SECURITY;/);
+  assert.doesNotMatch(migration, /CREATE POLICY[^;]*ON public\.referrals\b/, 'no browser policy reads who invited whom');
+  assert.doesNotMatch(migration, /GRANT [A-Z, ]+ ON public\.referrals TO/, 'no browser grant on referrals');
+  assert.match(migration, /CHECK \(invitee_user_id <> referrer_user_id\)/, 'a row can never refer an account to itself');
+
+  // 3. The grant routine writes only ledger tables: the referral row, and the
+  // wallet through credit_tokens, which writes token_ledger and token_balances.
+  const credit = routine('credit_referral');
+  const writes = (body: string) => [...new Set([...body.matchAll(/(?:INSERT INTO|UPDATE|DELETE FROM)\s+public\.([a-z_]+)/g)].map((m) => m[1]))].sort();
+  assert.deepEqual(writes(credit), ['referrals'], 'credit_referral writes only the referral row directly');
+  assert.deepEqual([...new Set([...credit.slice(credit.indexOf('AS $$')).matchAll(/public\.([a-z_]+)\(/g)].map((m) => m[1]))].sort(), ['credit_tokens', 'token_account_key'],
+    'credit_referral calls only the ledger routine');
+  const ledger = read('supabase/supabase-schema-028.sql');
+  const creditTokens = ledger.slice(ledger.indexOf('CREATE OR REPLACE FUNCTION public.credit_tokens('), ledger.indexOf('$$;', ledger.indexOf('CREATE OR REPLACE FUNCTION public.credit_tokens(')));
+  assert.deepEqual(writes(creditTokens), ['token_balances', 'token_ledger'], 'credit_tokens writes the wallet and nothing else');
+  assert.deepEqual(writes(routine('record_referral')), ['referrals']);
+  assert.deepEqual(writes(routine('referral_summary')), ['referral_codes']);
+  // Once per friend, both sides; nothing before a passed Learn level.
+  assert.match(credit, /FROM public\.referrals WHERE invitee_user_id = p_invitee FOR UPDATE;/, 'the friend\'s row is locked while it settles');
+  assert.match(credit, /IF v_row\.credited_at IS NOT NULL THEN RETURN 'already';/, 'a second completion credits nothing');
+  assert.match(credit, /jsonb_path_exists\(v_data, '\$\.\*\.levels\.\*\.passed \? \(@ == true\)'\)/, 'the grant waits for a passed Learn level');
+  assert.ok(credit.includes("'referral:' || public.token_account_key(p_invitee)"), 'the friend\'s event is referral:<invitee>');
+  assert.ok(credit.includes("'referral:friend:' || v_row.credit_key"), 'the inviter\'s event carries a random key, never the friend\'s id');
+  // The cap counts the inviter's own ledger, one friend at a time.
+  assert.match(credit, /pg_advisory_xact_lock\(hashtextextended\('referral:' \|\| v_row\.referrer_user_id, 0\)\)/);
+  assert.match(credit, /IF v_paid < p_cap THEN/, 'the inviter is paid only under the cap');
+  // Self-referral and a sign-up window are decided when the code is bound.
+  const record = routine('record_referral');
+  assert.match(record, /IF v_referrer = p_invitee THEN RETURN 'self';/, 'the account\'s own code binds nothing');
+  assert.match(record, /p_account_created_at < NOW\(\) - make_interval\(hours => p_window_hours\)/, 'only a new account binds a code');
+
+  // 4. The server: credits ride on verified work, and the code's creation time
+  // comes from the verified token.
+  assert.match(read('api/user/[op].ts'), /if \(op === 'referral'\) return handleReferral\(req, res, supabase\);/);
+  assert.match(read('api/user/[op].ts'), /deleteReferralData\(supabase!, auth\.sub\)/, 'account deletion removes the referral data');
+  assert.match(read('api/quiz/roadmap.ts'), /await creditReferral\(supabase, userId, session\.subject!\);/, 'a first Learn pass settles an invitation');
+  assert.match(read('lib/rewards/handlers.ts'), /creditReferral\(supabase, userId, subject\)/, 'the wallet read settles an invitation');
+  assert.equal(accountCreatedAt({ created_at: '2026-09-25T10:00:00Z' }), '2026-09-25T10:00:00.000Z');
+  assert.equal(accountCreatedAt({}), null);
+  assert.equal(accountCreatedAt({ created_at: 'yesterday' }), null);
+  for (const file of listFiles(join(process.cwd(), 'client/src')).filter((path) => /\.tsx?$/.test(path))) {
+    assert.doesNotMatch(read(file.slice(process.cwd().length + 1)), /credit_referral|record_referral|referral_summary/, `${file} calls no referral routine`);
+  }
+  assert.match(read('client/src/lib/referral.ts'), /body: JSON\.stringify\(\{ code \}\)/, 'the browser sends the code and nothing else');
+
+  // 5. The handler, against a stand-in database: the GET sends counts and no
+  // account id, the POST takes the creation time from the token and never from
+  // the body, and it asks for no amount.
+  if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+    const calls: { fn: string; args: Record<string, unknown> }[] = [];
+    const fake = {
+      rpc: async (fn: string, args: Record<string, unknown>) => {
+        calls.push({ fn, args });
+        if (fn === 'referral_summary') {
+          return { data: { code: 'abcd2345', credited: 3, pending: 1, invited: null, invitee_user_id: 'leak', friends: ['someone'] }, error: null };
+        }
+        if (fn === 'record_referral') return { data: 'recorded', error: null };
+        if (fn === 'credit_referral') return { data: 'waiting', error: null };
+        return { data: null, error: { message: `function public.${fn} does not exist` } };
+      },
+    };
+    const request = (method: string, body?: Record<string, unknown>) => ({
+      method, headers: {}, query: { op: 'referral', user_id: 'contract-referral-account' },
+      body: body ? { ...body, user_id: 'contract-referral-account' } : undefined,
+    });
+    const get = mockResponse();
+    await handleReferral(request('GET') as never, get as never, fake as never);
+    assert.equal(get.statusCode, 200);
+    assert.deepEqual(get.body, { enabled: true, code: 'abcd2345', coins: 100, cap: 20, credited: 3, pending: 1, invited: null },
+      'the invite summary carries counts and no account id');
+    calls.length = 0;
+    const post = mockResponse();
+    await handleReferral(request('POST', { code: ' ABCD2345 ', created_at: new Date().toISOString(), amount: 5000 }) as never, post as never, fake as never);
+    assert.equal(post.statusCode, 200);
+    assert.deepEqual(post.body, { status: 'recorded', coins: 100 });
+    const recorded = calls.find((call) => call.fn === 'record_referral');
+    assert.equal(recorded?.args.p_code, 'abcd2345');
+    assert.equal(recorded?.args.p_account_created_at, null, 'a creation time in the body is ignored');
+    assert.equal(recorded?.args.p_window_hours, 48);
+    const settled = calls.find((call) => call.fn === 'credit_referral');
+    assert.deepEqual(settled?.args, { p_invitee: 'contract-referral-account', p_subject: 'webdev', p_amount: 100, p_cap: 20 },
+      'the amount comes from settings, never from the request');
+    calls.length = 0;
+    const bad = mockResponse();
+    await handleReferral(request('POST', { code: 'nope' }) as never, bad as never, fake as never);
+    assert.equal(bad.statusCode, 400);
+    assert.equal(calls.length, 0, 'a malformed code reaches no routine');
+  }
+
+  // 6. Copy: the ledger line the issue names, and the unit is coins.
+  assert.equal(ENGLISH['rewards.ledger.referralFriend'], 'Referral: a friend finished their first level');
+  assert.equal(ENGLISH['shop.reason.referral'], 'Referral');
+  assert.match(read('client/src/components/Shop.tsx'), /reference === 'referral:friend' \? t\('rewards\.ledger\.referralFriend'\)/);
 }
 
 async function main() {
@@ -2186,8 +2327,9 @@ async function main() {
   billingContracts();
   publicCopyContracts();
   coinsContracts();
+  await referralContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, and coins.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, and invitations.');
 }
 
 void main().catch((error) => {

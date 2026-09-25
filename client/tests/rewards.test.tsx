@@ -61,10 +61,14 @@ const pricedShop = {
   }],
 };
 
-function routes(opts: { plan?: unknown; wallet?: unknown; walletStatus?: number; social?: (body: unknown) => void; shop?: unknown } = {}) {
+// The invite section (#228) reads op=referral; its own tests are in referral.test.tsx.
+const REFERRAL = { enabled: true, code: 'abcd2345', coins: 100, cap: 20, credited: 0, pending: 0, invited: null };
+
+function routes(opts: { plan?: unknown; wallet?: unknown; walletStatus?: number; social?: (body: unknown) => void; shop?: unknown; referral?: unknown } = {}) {
   server.use(
     http.get('*/api/settings', () => HttpResponse.json({ coins: DEFAULT_COIN_SETTINGS })),
     http.get('*/api/user/*', ({ request }) => {
+      if (new URL(request.url).pathname.endsWith('/referral')) return HttpResponse.json((opts.referral ?? REFERRAL) as never);
       const op = new URL(request.url).searchParams.get('op');
       if (op === 'entitlement') return HttpResponse.json((opts.plan ?? FREE) as never);
       if (op === 'wallet') return HttpResponse.json((opts.wallet ?? wallet()) as never, { status: opts.walletStatus ?? 200 });
@@ -125,6 +129,8 @@ describe('ledger lines', () => {
     expect(ledgerLabel({ reason: 'milestone', reference: 'month-top:2026-08' }, t)).toBe('Top three, August 2026');
     expect(ledgerLabel({ reason: 'purchase', reference: 'streak-protection' }, t)).toBe('Streak protection');
     expect(ledgerLabel({ reason: 'signup', reference: null }, t)).toBe('Welcome');
+    expect(ledgerLabel({ reason: 'referral', reference: 'referral:friend' }, t)).toBe('Referral: a friend finished their first level');
+    expect(ledgerLabel({ reason: 'referral', reference: 'referral:invited' }, t)).toBe('Referral: you finished your first level');
   });
 });
 
@@ -152,7 +158,7 @@ describe('the Rewards screen', () => {
     await screen.findByText('1,240');
     await screen.findByRole('heading', { name: 'Crown and streak protection' });
     const headings = screen.getAllByRole('heading', { level: 2 }).map((one) => one.textContent);
-    expect(headings.slice(0, 4)).toEqual(['Your coins', 'How to earn', 'Merchandise', 'Crown and streak protection']);
+    expect(headings.slice(0, 5)).toEqual(['Your coins', 'How to earn', 'Invite a friend', 'Merchandise', 'Crown and streak protection']);
     expect(screen.queryByText('Premium members redeem coins for merchandise.')).toBeNull();
   });
 
