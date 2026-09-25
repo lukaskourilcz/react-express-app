@@ -43,6 +43,7 @@ import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../shared/co
 import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { runReactSuite } from '../lib/coding/react-runner';
+import { HIDDEN_CASE_PREFIX, splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
 import { renderCodingIndex } from './build-coding-index';
 import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, listedChallenges } from '../shared/evolving';
 
@@ -66,6 +67,10 @@ const nodeRequire = createRequire(import.meta.url);
 
 const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
   Promise.race([promise, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label}: timed out after ${ms} ms`)), ms))]);
+
+// The cases a hidden React suite declares, counted from its source. The React
+// proofs below check the count against the cases the run registered.
+const hiddenCaseCount = (hiddenSuite: string | undefined): number => (hiddenSuite?.match(/^\s*(?:test|it)\(/gm) ?? []).length;
 
 async function main() {
   const failures: string[] = [];
@@ -341,7 +346,8 @@ async function main() {
     const [page] = taskResources(task.focus);
     if (!page || page.tag !== task.focus[0] || docsFor(task.focus).url !== page.url) fail(`${id}: the first focus tag must have a documentation page to end the hint ladder`);
     if (task.hints.en.length === 0 || (task.approach?.en.length ?? 0) < 2) fail(`${id}: a hint and at least two method steps before the documentation`);
-    if ((solutionFor(id)?.hiddenTests?.length ?? 0) < 3) fail(`${id}: at least three hidden checks`);
+    const hiddenChecks = task.track === 'react' ? hiddenCaseCount(solutionFor(id)?.hiddenSuite) : (solutionFor(id)?.hiddenTests?.length ?? 0);
+    if (hiddenChecks < 3) fail(`${id}: at least three hidden checks`);
     if (tasksForLevel(task.topic, task.level).some((one) => one.id === id)) fail(`${id}: an Easy-band task never enters a Learn level's quota`);
   }
 
@@ -414,11 +420,18 @@ async function main() {
     const solution = solutionFor(task.id);
     if (!solution) continue;
     const where = `${task.id}`;
+    // Hidden cases are test blocks appended to the visible suite; the server
+    // runs both, and every solution has to pass both.
+    if (task.suite.includes(HIDDEN_CASE_PREFIX)) fail(`${where}: a visible suite never uses the hidden case prefix`);
+    if (solution.hiddenSuite !== undefined && /^\s*import\s/m.test(solution.hiddenSuite)) fail(`${where}: a hidden suite shares the visible suite's imports and declares none`);
+    const suite = withHiddenCases(task.suite, solution.hiddenSuite);
     for (const [name, source] of variants(solution, where)) {
-      const run = await withTimeout(runReactSuite({ suite: task.suite, appSource: source }), 20_000, `${where} (${name})`);
+      const run = await withTimeout(runReactSuite({ suite, appSource: source }), 20_000, `${where} (${name})`);
       if (run.compileError || run.failed > 0) {
         fail(`${where} (${name}): solution fails its suite: ${run.compileError ?? run.cases.filter((c) => c.status === 'fail').map((c) => `${c.name}: ${c.error}`).join('; ')}`);
       }
+      const { hidden } = splitHiddenCases(run.cases);
+      if (hidden.length !== hiddenCaseCount(solution.hiddenSuite)) fail(`${where} (${name}): the hidden suite declares ${hiddenCaseCount(solution.hiddenSuite)} case(s) and ran ${hidden.length}`);
     }
     const starter = await withTimeout(runReactSuite({ suite: task.suite, appSource: task.starter }), 20_000, where);
     if (!starter.compileError && starter.failed === 0) fail(`${where}: the untouched starter already passes its suite`);

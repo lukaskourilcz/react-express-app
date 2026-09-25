@@ -91,7 +91,9 @@ and an externally enforced command deadline. The dependency-only snapshot is
 selected by `REACT_RUNNER_SNAPSHOT_ID`; the current grader bundle is uploaded
 on each run. `lib/coding/react-runner.ts` is trusted test/guest code only and
 must never evaluate learner code inside an API process. Both Coding and
-learning-path React submissions use this boundary. See
+learning-path React submissions use this boundary. A React challenge can keep
+hidden test cases beside its solution; Submit runs them after the visible suite
+and returns only their count. See
 [`react-grading-operations.md`](./react-grading-operations.md). The
 self-hosted `client/sandbox/` iframe stays for the preview and for the Run
 button's immediate feedback, but the verdict of record is the server's.

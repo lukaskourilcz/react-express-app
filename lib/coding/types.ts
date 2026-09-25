@@ -129,6 +129,9 @@ export interface CodingSolution {
   senior?: string;
   hiddenTests?: SourceCallTest[];
   hiddenTypeTests?: SourceTypeTest[];
+  /** React only: more Testing Library cases, test blocks with no imports,
+   * which the server runs after the visible suite (`./react-hidden`). */
+  hiddenSuite?: string;
 }
 
 const loc = (en: string, cs: string | undefined): Localized => ({ en, cs: cs ?? '' });

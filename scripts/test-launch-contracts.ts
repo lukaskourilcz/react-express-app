@@ -36,6 +36,7 @@ import { solutionFor } from '../lib/coding/solutions';
 import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
 import { runInSandbox } from '../lib/coding/sandbox';
 import { runReactSuite } from '../lib/coding/react-runner';
+import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
@@ -622,6 +623,27 @@ async function main() {
     appSource: 'function App() { return null; }',
   });
   assert.equal(reactStuck.timedOut, true, 'a case that never settles is reported as a timeout');
+  // Hidden React cases (#226) decide the verdict but reach the learner only as
+  // a count: Submit appends them to the visible suite and splits them out.
+  const reactHidden = await runReactSuite({
+    suite: withHiddenCases(reactTask!.suite!, "test('a hidden case', () => { expect(1).toBe(2); });"),
+    appSource: reactSolution!,
+  });
+  const reactSplit = splitHiddenCases(reactHidden.cases);
+  assert.equal(reactSplit.hidden.length, 1, 'the hidden case runs after the visible suite');
+  assert.ok(reactSplit.visible.length === reactPass.total && reactSplit.visible.every((one) => one.status === 'pass'), 'the visible cases keep their names and verdicts');
+  assert.ok(reactHidden.failed > 0, 'a failing hidden case fails the run');
+  const codingHandlersSource = readFileSync(join(process.cwd(), 'lib', 'coding', 'handlers.ts'), 'utf8');
+  const gradeReactSource = codingHandlersSource.slice(codingHandlersSource.indexOf('async function gradeReact'), codingHandlersSource.indexOf('function gradeDesignTask'));
+  assert.match(gradeReactSource, /withHiddenCases\(task\.suite, solutionFor\(task\.id\)\?\.hiddenSuite\)/, 'Submit runs the hidden React cases');
+  assert.match(gradeReactSource, /const results = visible\.map/, 'only the visible React cases go back with names and errors');
+  // A rejection the component leaves unhandled only logs in the browser; the
+  // server runner must reach a verdict too instead of ending the process.
+  const reactRejected = await runReactSuite({
+    suite: "import React from 'react';\nimport { render } from '@testing-library/react';\nimport App from './App';\ntest('renders', async () => { render(<App />); await new Promise((resolve) => setTimeout(resolve, 20)); });",
+    appSource: "const App = () => { useEffect(() => { Promise.reject(new Error('left unhandled')); }, []); return null; };",
+  });
+  assert.equal(reactRejected.failed, 0, 'an unhandled rejection in the component does not end the React runner');
 
   const qualityIssues = inspectQuestionQuality([{
     ...reviewQuestions[0],

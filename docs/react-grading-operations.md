@@ -38,6 +38,13 @@ rollout; retain the previous one while rollback remains possible.
 - The existing roadmap function allows 45 seconds, leaving room for database
   persistence and response delivery. Coding Submit waits up to 50 seconds.
 - Returned data is size/shape checked and pass counts are recomputed.
+- A challenge may keep hidden test cases beside its solution (`hiddenSuite`).
+  Submit appends them to the visible suite (`lib/coding/react-hidden.ts`); they
+  decide the verdict, and the response carries only their count. They run in
+  the same VM as the learner's component, so they stay out of the page, not out
+  of reach of a component written to go looking for them.
+- A promise rejection the component leaves unhandled is ignored while a suite
+  runs, as the browser does, instead of ending the grader process.
 - This boundary protects the application host and credentials. It is not a
   claim of comprehensive adversarial grading integrity or platform penetration
   testing. The suites execute alongside learner code inside the guest.
