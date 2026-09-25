@@ -1005,3 +1005,145 @@ Local evidence, all executed on the final tree:
 | `git diff --check` | clean, on the tree and on the step's range |
 
 Not verified here: Sentry receiving a real browser event after deploy, and anything signed in.
+
+## 2026-09-25 — the freemium steps without a section of their own (D0, D1, D4 to D7)
+
+D2, D3, D8, D8b, D9, INT and CLEAN have sections above. This one records the rest from the step reports of the lane sessions: lane A ran D0 to D3, D8, D8b and D9 on `wip/dev-lane-a`, lane B ran D4 to D7 on `wip/dev-lane-b`, and INT merged both. Each result is the command's exit code on that lane's head at the end of the step.
+
+### D0 (#219): the protected invariant
+
+`CLAUDE.md`, `AGENTS.md`, the header of `shared/rewards.ts` and `docs/product-architecture.md` ("Tiers and billing") state the freemium rule (`a0a9843`, `438e724`). The permission classifier of that session refused three edits (the product-context skill, the design auditor, the implement-screen command); `4dded3d` made them before INT.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run test:launch` | exit 0 each |
+| `git diff --check e668c67 HEAD` | exit 0 |
+| D0's acceptance grep over `CLAUDE.md`, `AGENTS.md`, `shared/rewards.ts` and `.claude/` | one match at the end of D0 (the product-context skill, line 18); no match after `4dded3d` (exit 1, run by INT) |
+
+Not run: the build, the responsive sweep and the audits; D0 changed documentation and comments only.
+
+### D1 (#220): tiers, the 402 locks and manual grants
+
+`shared/tiers.ts`, migration 039 (three tables, one private live-grant helper and the service-role routines around it), `lib/access.ts` with a 402 at every call site that starts content, `op=entitlement`, admin `op=entitlements`, and the client locks and upgrade sheet. At the time 70 of 480 coding tasks were free; INT re-picked 104 of 695.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run test:launch`, `npm run test:paths`, `npm run test:coding-auth` | exit 0 each |
+| `npm run test:coding` | exit 0; 480 tasks, index fresh |
+| `npm run test:client` | exit 0; 9 files, 69 tests (8 new) |
+| `npm run build`, `npm run check:bundle` | exit 0; 207,057 of 243,000 gzip bytes |
+| `npm run check:responsive` at 360, 390, 768 and 1280, light and dark | exit 0; 128 probes each, 0 issues |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client`, `git diff --check` | exit 0 each |
+| Migration 039 on Postgres 16 from the 001–038 chain | applied twice with `ON_ERROR_STOP=1`, exit 0 both times; the rolled-back exercise covered grant and regrant, revoke, an expired promotion, a provider grant from active through `past_due` in and past the seven-day grace to canceled, a sticky revoke, a manual revoke that leaves provider grants, owner conflicts, a duplicate event, a customer link and its conflict, a past `validUntil` refused, owner-only reads, refused writes for `authenticated` and `anon`, and deletion; nothing left after rollback |
+| Real `api/quiz/roadmap.ts`, `api/user/[op].ts` and `api/admin/[op].ts` through a PostgREST/Auth stand-in | 37/37: 402 `premium_required` with the right `kind` and `ref` from every locked call site, 200 for open content, cleared content of a lapsed account, a paused path and guest previews; a manual grant opens the same account without a restart and a revoke closes it again |
+| Chromium, a free account signed in, 360 and 1280, light and dark | 15 Premium nodes on React parts 2 and 3 read "…, Premium" with `aria-disabled`; Enter opens the sheet with the price and VAT; 75 Premium rows on the JavaScript track; the locked task page and stage notes; the plan line reads "Free". The 360 px map label crowding it showed was fixed in `23d7bd3` |
+
+### D4 (#223): the 30-day leaderboard
+
+Migration 040 dates every verified answer in `user_activity_days`, `window_leaderboard` ranks the last 30 days, and the rebuilt `/leaderboard` opens on that board.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run test:launch`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:client` | exit 0; 8 files, 71 tests |
+| `npm run build`, `npm run build:storybook` | exit 0 each |
+| `npm run test:browser` (Storybook and the local preview) | exit 0; 13 passed. An earlier run failed once on `evolving.spec.ts` after a partial build had dropped `dist/sandbox`; after a full build the spec passed twice alone and in the suite |
+| An axe sweep of every leaderboard story in dark mode at 360 and 1280 | 10 tests, 0 violations |
+| `npm run check:responsive -- --routes /leaderboard` at 360, 390, 768 and 1280, light and dark | exit 0 each |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client`, `git diff --check e668c67..HEAD` | exit 0 each |
+| Migration 040 on Postgres 16 from the 001–038 chain | applied twice, exit 0; the rolled-back exercise: a quiz receipt counts once, a daily retry adds nothing, a Learn answer counts once and an anonymous one not at all, a challenge run counts once and a zero-XP run not at all, the 30-day edge, the category filter, the five-answer minimum, ties sharing a rank, `friend_list` ordered by correct answers, eight definer routines for `service_role` only, owner-only reads and erasure |
+
+Not done in D4: the country flag on each row (an owner decision in `NEEDED.md`), a pinned own row on All time and Today, and folding the erasure into `delete_user_data` (INT did that in 044).
+
+### D5 (#224): Easy, Medium and Hard
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run test:launch`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:coding` | exit 0; 480 tasks: 257 Easy, 142 Medium, 81 Hard |
+| The coverage matrix with enforcement switched on (`CODING_COVERAGE_ENFORCED=1`) | exit 1 as intended, 42 Easy-band gaps; D7 closed them and switched enforcement on |
+| `npm run test:client` | exit 0; 9 files, 80 tests |
+| `npm run build` | exit 0 |
+| `npm run check:responsive` over seven coding routes at 360 and 1280, light and dark | exit 0; 14 probes each, 0 issues |
+| `tests/browser/evolving.spec.ts` and `public.spec.ts` | exit 1 on the first run (the dark React harness case timed out at a load average near 7 on 4 CPUs), then `evolving.spec.ts` alone exit 0 twice |
+| A one-off axe pass over `/coding`, a track, a Hard stage and a task page, 360 and 1280, light and dark | 0 violations |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client`, `git diff --check` | exit 0 each |
+
+Not run: `tests/browser/storybook.spec.ts` (no Storybook build; D5 changed no story), so `npm run test:browser` as a whole did not run.
+
+### D6 (#225): the debugging paths
+
+| Check | Result |
+| --- | --- |
+| `npm run test:coding` | exit 0; 495 tasks, every solution proven; 262 Easy, 151 Medium, 82 Hard |
+| `npm run typecheck:api`, `npm run test:launch`, `npm run test:grading-integrity`, `npm run test:paths` | exit 0 each |
+| `npm run test:client` | exit 0; 10 files, 93 tests (10 new) |
+| `npm run build`, `npm run check:bundle`, `npm run check:unused`, `npm run check:security` | exit 0 each; 204,176 of 243,000 gzip bytes |
+| `npm run check:responsive` over `/coding` and Log it right level 1 at 360 and 1280, light and dark | exit 0; 4 probes each, 0 issues |
+| The shared console in a real Chromium worker and in the QuickJS sandbox | the same table, groups and counts in both |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client`, `git diff --check` | exit 0 each |
+
+Not run: `npm run test:browser` (no browser spec covers these screens). Found and left for later: the Console could show the inputs of hidden checks after Submit; CLEAN fixed it in `ed5ce6f`.
+
+### D7 (#226): the Easy band doubled
+
+Eight waves on `wip/dev-lane-b`, each checked on its own head. In every wave `npm run test:coding`, `npm run build:coding-index`, `npm run typecheck:api`, `npm run test:launch`, `npm run test:client` (10 files, 93 tests), `npm run build`, `npm run check:bundle`, `npm run test:grading-integrity`, `npm run test:coding-auth`, `npm run check:unused`, both production audits and `git diff --check` exited 0, and a planted break of the content contract exited 1 as intended.
+
+| Wave | Commits | Tasks after it | Also |
+| --- | --- | --- | --- |
+| JavaScript 1 | `8c69515`, `797037e`, `6c603f0` | 525 (292 Easy) | one content contract for every Easy wave |
+| JavaScript 2 | `8dc24c7`, `ead21fb` | 555 (322 Easy) | |
+| JavaScript 3 | `da7241d`, `230fc80` | 585 (352 Easy) | |
+| TypeScript 1 | `fb202df`, `4f8be82` | 610 (377 Easy) | the enforcement preview listed no TypeScript gap |
+| TypeScript 2 | `1f2cea8`, `e94e5f9` | 635 (402 Easy) | |
+| React 1 | `a16e547`, `d3b9002`, `8ca2b4e` | 655 | React challenges gain hidden cases; two `test:launch` bites exit 1 as intended |
+| React 2 | `d1caa9a`, `04759e0` | 675 | |
+| Algorithms | `ac200a5`, `143d1d2`, `77e6285` | 695 (462 Easy, 151 Medium, 82 Hard) | coverage enforced; removing the wave exits 1; a one-off run of 103 wrong answers and 10 correct alternatives against the 20 starters exits 0 |
+
+Not run in the waves: `npm run check:responsive` and `npm run test:browser` (no layout, component or story changed; React 1 added one `<small>` to the results summary), `npm run build:curation-registry` (`CODING_TASKS_AUDITED` is false), and `npm run test:react-isolation` for the React waves (it needs Vercel Sandbox credentials).
+
+A ninth wave, twenty-five Medium and Hard JavaScript challenges (`af8df50`, `3933db9`, `5f08ecd`, 720 tasks), sits on `wip/dev-c`. Its checks exit 0 there; once, between two of ten complete runs of its one-off wrong-answer harness, QuickJS aborted on a GC assertion and the process exited before its summary. It is not merged into this integration branch, whose index holds 695 tasks.
+
+## 2026-09-25 — the freemium sweep (D10, #230)
+
+What changed: the files that still called devShark free now describe the free tier and Premium, and the history documents keep their words with a line dated 25 September 2026. The brand system's rule, the design thesis, three September plans, the UX audit, the visual QA checklist, the runbook, the growth notes and one paragraph above were swept; `README.md` states both tiers in one paragraph; `about-project.md` makes its Stripe row true; `monetization.md` records Premium as the decision with the handoff's fee arithmetic; `scaling.md` adds Stripe's fees and the base cost of a merchandise redemption. `NEEDED.md` carries each owner item of the handoff's section 11 and of every step report once. `HANDOFF.md` was already gone (CLEAN, `acb91fa`). In code:
+
+- The quiz prompt that asked for voluntary support after every tenth good quiz is gone with its module; `test:launch` now fails if any client file links to `/support`.
+- The Rewards fairness note said no purchase changes streaks, while the same page sells a streak protection; it now says what a protection changes. The `quiz.support*` values (unrendered, kept for the Czech parity rule), the Rewards subtitle and the comments in `Shop.tsx`, `lib/topic-grants.ts` and migration 035 (a dated note; the SQL is unchanged) say the same.
+- The landing printed "2,487 questions", a count set on 3 September. The bank holds 2,447 authored questions; the audit's gate withholds 154 and the three retired sections hold 319 that the server refuses to deliver, which leaves 1,974. `questionCount` is 1,974 and `test:launch` recomputes it.
+
+Local evidence, on `2abfd35` (the commit after it adds this section only):
+
+| Check | Result |
+| --- | --- |
+| The #230 acceptance grep over every Markdown file | three lines: the dated history lines in `docs/design/brand-system.md` and `docs/design/design-thesis.md`, and line 389 of `SECOND-HANDOFF-25-9-2026.md`, the dated handoff that orders this sweep and names the old heading |
+| `npm run typecheck:api` | exit 0 |
+| `npm run test:launch` | exit 0; with a planted `navigate('/support')` in `Quiz.tsx` exit 1, and with `questionCount` back at 2487 exit 1 |
+| `npm run build`, `npm run check:bundle` | exit 0; 218,282 of 243,000 gzip bytes |
+| `npm run check:public` | exit 0; 13 URLs |
+| `npm run check:security`, `npm run check:unused`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:client` | exit 0; 18 files, 181 tests |
+| `npm run check:responsive` over `/`, `/quiz`, `/shop` and `/premium` at 360, 390, 768 and 1280, light and dark (vite preview, `--block-external`) | exit 0; 16 probes each, 0 issues |
+| Headless Chromium on the preview | the landing stat reads "1,974 questions"; `/shop` shows the new subtitle and fairness note |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client` | exit 0; 0 vulnerabilities |
+| `git diff --check`, and over `94102c6..2abfd35` | exit 0 each |
+| `needed_lint.py` (the own-dashboard marker parser) over `NEEDED.md` | 75 open, 20 ticked, 0 violations |
+| The month settlement of 041 against 040's real table: Postgres 16, `rea_base` plus 039 to 044 in order (exit 0 each), then a rolled-back exercise | exit 0: 040's upsert sums two writes for one day; the open month reports `open`; August settles once with ranks Q (Premium, 300 coins), P (Premium, 200) and F (free, nothing), an account under five answers is left out, and a second call answers `already`; 044's erasure leaves rank 1 as `deleted-account` and no row of the erased account in 040's table or the ledger. D8 had proved this only against a stand-in table |
+
+Not run for D10: `npm run test:coding`, `npm run test:paths`, `npm run test:billing` and `npm run test:browser`; D10 changed no coding content, path, billing code or story. The markdown checkup covered the four root files and the documents above; CLEAN's whole-repository pass of the same day stands for the rest.
+
+## 2026-09-25 — freemium checks that could not run here
+
+Every row below is **not run**, and each has an owner item in `NEEDED.md`.
+
+| Check | Why it could not run | What runs it |
+| --- | --- | --- |
+| Migrations 039 to 044 in production, and their rolled-back exercises there | the steps may not write to production | the owner, through the Supabase connector, in the order 039, 040, 041, 042, 043, 044 |
+| Every signed-in flow against production: the locks and a manual grant, Rewards and coins, an invitation, the fulfilment queue, the 30-day board, the debugging paths | production has 001–038 only and no test account session exists here | the owner's checks in `NEEDED.md` |
+| A Stripe test-clock simulation, fixtures captured with `stripe trigger`, Checkout's rendering of the consent and order-button text, Managed Payments approval, the Customer Portal, and real webhook delivery through Vercel's raw-body replay | no Stripe account exists; the webhook tests use fixtures written from the API reference | the owner's Stripe sandbox |
+| A live call to Spreadshop's Public Shop API, and a real sample order | no API key and no shop yet | the owner's Spreadshop account |
+| A Google sign-up carrying an invite code through the OAuth redirect | the browser check restored a session instead of running Google's consent screen | production |
+| `npm run test:react-isolation` | needs Vercel Sandbox credentials and a snapshot id | CI or a machine with those credentials |
+| `npm run build:curation-registry` for coding tasks | `CODING_TASKS_AUDITED` is false, so coding tasks are outside the audit's scope | a coding audit |
+| Sentry receiving a browser error after the CSP change | needs a deploy | the owner, after the next deploy |
+| The lawyer's review of the Terms, the privacy policy, the checkout wording and the public cancel page | legal advice | the owner's lawyer |
