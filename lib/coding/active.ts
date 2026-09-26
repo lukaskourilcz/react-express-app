@@ -17,7 +17,7 @@ import type { CodingTask, CodingTaskSummary, CodingTrack } from '../../shared/co
 import { formatOf } from '../../shared/coding-catalog';
 import type { EligibilityReason } from '../../shared/curation';
 import { codingTaskEligibility } from '../curation';
-import { CODING_TASKS, EASY_BAND_TASK_IDS, levelTaskQuota, summarize } from './catalog';
+import { CODING_TASKS, EASY_BAND_TASK_IDS, MEDIUM_HARD_BAND_TASK_IDS, levelTaskQuota, summarize } from './catalog';
 import { solutionFor } from './solutions';
 import { evolvingStage } from '../../shared/evolving';
 
@@ -53,7 +53,9 @@ export const tasksForTrack = (track: CodingTrack): CodingTask[] => ACTIVE_CODING
  *
  * The Easy-band tasks of #226 stay out for the same reason: they carry the
  * Learn level of the technique they practise, and a tier 1 one would push the
- * level's own task out of its quota.
+ * level's own task out of its quota. So do its Medium and Hard waves: without
+ * this skip the first one would change eight JavaScript levels, and level 22
+ * would ask for three of its challenges instead of its own two tasks.
  */
 export function tasksForLevel(topic: CodingTask['topic'], level: number): CodingTask[] {
   return ACTIVE_CODING_TASKS.filter(
@@ -63,7 +65,8 @@ export function tasksForLevel(topic: CodingTask['topic'], level: number): Coding
       task.level === level &&
       task.verify !== 'checklist' &&
       formatOf(task) !== 'debug' &&
-      !EASY_BAND_TASK_IDS.has(task.id),
+      !EASY_BAND_TASK_IDS.has(task.id) &&
+      !MEDIUM_HARD_BAND_TASK_IDS.has(task.id),
   );
 }
 

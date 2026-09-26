@@ -47,6 +47,11 @@ import { EASY_TYPESCRIPT_B_TASKS } from './tasks/easy-typescript-b';
 import { EASY_REACT_A_TASKS } from './tasks/easy-react-a';
 import { EASY_REACT_B_TASKS } from './tasks/easy-react-b';
 import { EASY_ALGORITHMS_A_TASKS } from './tasks/easy-algorithms-a';
+import { MEDIUM_HARD_JAVASCRIPT_A_TASKS } from './tasks/medium-hard-javascript-a';
+import { MEDIUM_HARD_TYPESCRIPT_A_TASKS } from './tasks/medium-hard-typescript-a';
+import { MEDIUM_HARD_REACT_A_TASKS } from './tasks/medium-hard-react-a';
+import { MEDIUM_HARD_ALGORITHMS_A_TASKS } from './tasks/medium-hard-algorithms-a';
+import { MEDIUM_HARD_JAVASCRIPT_B_TASKS } from './tasks/medium-hard-javascript-b';
 import { SPECS, buildEvolvingTasks } from './tasks/evolving';
 import { TYPESCRIPT_EVOLVING } from './tasks/evolving-typescript';
 import { REACT_EVOLVING } from './tasks/evolving-react';
@@ -77,6 +82,24 @@ const EASY_BAND: CodingTaskSource[][] = [
 /** Ids of the Easy-band tasks; `tasksForLevel` in `./active` skips them. */
 export const EASY_BAND_TASK_IDS: ReadonlySet<string> = new Set(EASY_BAND.flat().map((task) => task.id));
 
+/** The Medium and Hard waves of #226 (`tasks/medium-hard-<track>-<wave>.ts`,
+ * solutions under the same name). Each challenge combines techniques the Easy
+ * band taught: tier 3 reads Medium and tier 4 Hard (5 for a React capstone),
+ * with no authored difficulty. They stay out of every Learn level's quota for
+ * the same reason as the Easy band: the quota takes a level's first tasks in
+ * catalogue order, and a new challenge would take the seat of one the level
+ * has always asked for. English only. */
+const MEDIUM_HARD_BAND: CodingTaskSource[][] = [
+  MEDIUM_HARD_JAVASCRIPT_A_TASKS,
+  MEDIUM_HARD_TYPESCRIPT_A_TASKS,
+  MEDIUM_HARD_REACT_A_TASKS,
+  MEDIUM_HARD_ALGORITHMS_A_TASKS,
+  MEDIUM_HARD_JAVASCRIPT_B_TASKS,
+];
+
+/** Ids of the Medium and Hard waves; `tasksForLevel` in `./active` skips them. */
+export const MEDIUM_HARD_BAND_TASK_IDS: ReadonlySet<string> = new Set(MEDIUM_HARD_BAND.flat().map((task) => task.id));
+
 const sources: { tasks: CodingTaskSource[]; cs: Record<string, CodingTaskCs> }[] = [
   { tasks: JAVASCRIPT_TASKS, cs: JAVASCRIPT_TASKS_CS },
   { tasks: JAVASCRIPT_LOOP_TASKS, cs: JAVASCRIPT_LOOP_TASKS_CS },
@@ -88,6 +111,7 @@ const sources: { tasks: CodingTaskSource[]; cs: Record<string, CodingTaskCs> }[]
   { tasks: SYSTEM_DESIGN_TASKS, cs: SYSTEM_DESIGN_TASKS_CS },
   { tasks: ALGORITHM_TASKS, cs: ALGORITHM_TASKS_CS },
   ...EASY_BAND.map((tasks) => ({ tasks, cs: {} })),
+  ...MEDIUM_HARD_BAND.map((tasks) => ({ tasks, cs: {} })),
 ];
 
 /** Every task: tracks in catalogue order, then level, tier, and authored order

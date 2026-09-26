@@ -289,6 +289,215 @@ challenges to the Easy-band contract:
 
 The waves are English only, with no Czech overlay.
 
+**The Medium and Hard waves.** Every Easy wave has landed, and #226 now adds
+challenges that combine what the Easy band teaches. A wave is one file per
+track under `lib/coding/tasks/medium-hard-<track>-<wave>.ts`, its solutions
+under the same name, and one line in `MEDIUM_HARD_BAND` in
+`lib/coding/catalog.ts`. `npm run test:coding` holds each challenge to this
+contract:
+
+- It is standalone, issued, and reads Medium (tier 3) or Hard (tier 4, or 5
+  for a React capstone) from its tier, with no authored difficulty.
+- It combines two to four `focus` tags, and each tag is on at least three Easy
+  challenges of the same track. The coverage matrix already holds every Medium
+  challenge to that; this check holds the Hard ones of the waves to it too.
+- It takes longer than ten minutes and at most 45, and is graded by its tests.
+- Its hint ladder has a hint, at least three method steps and a skeleton, then
+  ends on the documentation page of its first tag.
+- It has at least five visible checks and four hidden ones.
+- Its reference, junior and senior solutions pass, and its starter fails.
+- It never enters a Learn level's quota. The quota takes a level's first tasks
+  in catalogue order, so without the skip JavaScript A would change eight
+  Learn levels; level 22 would ask for three of its challenges instead of its
+  own two tasks.
+
+JavaScript A (`js-mh-*`) is 15 Medium and 10 Hard challenges. The Medium ones
+fill a template with a `replace` callback, sort version numbers, read a quoted
+CSV line, split a download into lines across chunks, undo and redo, limit
+requests in a sliding window, curry a function, read a grid in a spiral, paint
+a region, check a sudoku, build a comment thread, share costs, compare deeply,
+upload in batches and let only the newest call answer. The Hard ones settle
+debts, diff two versions of a file, trace a word through a grid, list every
+arrangement of some letters, justify text, match a URL to a route, diff two
+settings objects, write JSON that survives a loop, batch requests into one and
+share one request between callers. The wave took the JavaScript matrix from 17
+tags on Medium challenges to 29, none of them short; every, pop, regex, shift
+and sort have three Easy challenges each, the minimum. The Hard challenges add
+two tags no Medium one uses: some, with three Easy challenges, and json, with
+four.
+
+Four points for authors:
+
+- Where more than one answer is right, a check can test a property instead of
+  one answer. A diff check counts the kept lines and rebuilds both versions
+  from the edit, so any longest common subsequence passes. Where a check does
+  need one answer, the prompt states the rule that picks it: the removal before
+  the addition, the order a word search tries its neighbours, the greedy rule
+  that settles debts.
+- A hidden check on a large input holds the learner to the technique. A diff
+  of two 60-line files and the arrangements of ten letters finish at once with
+  a table and with pruning, and brute force runs past the grader's CPU
+  deadline.
+- `undefined` inside an expected value belongs in a hidden check only. Visible
+  checks travel to the browser as JSON, which writes it as `null`.
+- The Node runner starts every call at once, so each async check builds its own
+  loader, limiter or history inside its call and shares nothing with the
+  others.
+
+TypeScript A (`ts-mh-*`) is 6 Medium and 4 Hard challenges, and the first
+TypeScript challenges at tier 4. The Medium ones apply discounts told apart by
+a union tag, with a `never` check for a kind nobody handled; hand out the page
+after a cursor; group chat messages into bubbles by sender; check a form whose
+rules are typed per field through a mapped type; sort commit subjects into
+release notes behind a type guard; and fill in the missing days of a chart. The
+Hard ones print a text table whose formats receive each column's own type, pick
+an order from three warehouses, import tab-separated rows through a schema of
+parsers typed with `ReturnType`, and apply a formatter's edits given against
+the original text. Each one has visible and hidden type tests beside its
+runtime checks. The wave took the TypeScript matrix from 24 tags on Medium
+challenges to 25, none of them short: slice joins, with three Easy challenges.
+The Hard challenges add one tag no Medium one uses, optional, with three.
+
+React A (`react-mh-*`) is 9 Medium challenges, 4 Hard ones at tier 4 and 2
+capstones at tier 5, beside the track's ten checklist capstones. The Medium
+ones share a basket through context and a reducer, load photos page by page,
+sort a table by any column with `aria-sort`, show notices that dismiss
+themselves, turn typed text into tags, select all or some messages with an
+indeterminate box, bind keyboard shortcuts through a hook that keeps the newest
+handler in a ref, rename a file in place and hand the focus back, and ask about
+an export job until it is done. The Hard ones build a menu button and a city
+combobox the way the ARIA Authoring Practices describe them, a sign-up form
+that shows an error once its field has been left, and a carousel that stops for
+the pointer, the focus and its Pause button. The capstones search as you type,
+with a debounce, an abort and a cache, and autosave a note one save at a time,
+with a last save when the page closes. The wave took the React matrix from 18
+tags on Medium challenges to 20, none of them short: useReducer, with three
+Easy challenges, and conditional, with four.
+
+Without the quota skip the two waves would change eleven Learn levels, six in
+TypeScript and five in React. React level 21 would ask for the basket and the
+shortcut challenges instead of the useFetch and useLocalStorage hooks, and
+TypeScript level 15 would drop `ts-write-reduce` for the cursor page.
+
+Six more points for authors:
+
+- A React starter must not leave a timer or listener running once the suite
+  unmounts it. The first carousel starter started a `setInterval` with no
+  cleanup: every proof passed, and then `npm run test:coding` never exited,
+  because the interval kept Node alive. The starter now clears its interval and
+  is still wrong in the ways the checks look for.
+- A check that means "this notice" must pick one that is not also the oldest.
+  The first notices suite only ever dismissed the oldest notice, so a list that
+  removed the oldest on every Dismiss and every timeout passed it. The visible
+  check now dismisses the newer one.
+- A hidden case that watches timers filters by the delay the prompt names (300
+  ms for the notices, 200 ms for the carousel), so Testing Library's own waits
+  never count, and patches both `globalThis` and `window`, because a component
+  may call either. `timersClearedOnUnmount` in the React A solutions builds that
+  case.
+- In production a React submission runs in a microVM whose whole command,
+  loading jsdom and React included, has 10 seconds
+  (`lib/coding/react-isolated.ts`). The slowest suite before this wave took 3.2
+  seconds against its reference solution in the Node runner. The first drafts of four React A suites took 3.4
+  to 5.9, so their prompts now name shorter delays (a 100 ms debounce, a 150 ms
+  autosave wait, 200 ms slides, 300 ms notices) and say that a real app would
+  wait longer. Every check keeps a margin of at least 50 ms on each side of a
+  timer.
+- Each type test is one line appended to the answer, so two type tests that
+  declare the same name collide. A destructured `__value` and a later
+  `const __value` in one list failed with "Cannot redeclare" before either could
+  test anything. Give every type-test variable a name of its own.
+- An `<input type="email">` strips the spaces around its value, as HTML's value
+  sanitization requires, so jsdom hands the change handler a trimmed email. With
+  that field type a check cannot tell a solution that trims from one that does
+  not; the sign-up checks accept both.
+
+Algorithms A (`alg-mh-*`) is the track's first Medium and Hard wave: 8 Medium
+and 7 Hard challenges. The Medium ones find every triple that adds up to zero,
+count the meeting rooms a day needs, search a rotated list, remove the nth node
+from the end of a linked list, count the stretches of account movements that
+add up to a target, list every balanced string of brackets, check a binary
+search tree, and pay an amount in the fewest coins where the largest coin first
+goes wrong. The Hard ones measure the rain trapped between walls, find the
+fastest route between stations with Dijkstra's method, find the longest rising
+run of scores in O(n log n), write a tree as text and read it back, find the
+smallest window of a text that holds every letter, merge contacts that share an
+email, and split a text into dictionary words. Only nine tags have three Easy
+Algorithms challenges behind them (map-set, two-pointer, for, objects, strings,
+for-of, sort, while and recursion), and the wave uses no other. It took the
+Algorithms matrix from 10 Medium challenges to 18, still on those 9 tags, none
+short; the fewest Easy challenges behind a tag is still 5. The ids keep the
+`alg-` prefix, like the Easy wave.
+
+JavaScript B (`js-mh2-*`) is 10 Medium challenges: colour the letters of a
+word-game guess with repeated letters, build a table of contents from Markdown
+headings, read a log of JSON lines, print a folder tree the way `tree` does,
+score a bowling card, keep a leaderboard through a closure, check role
+permissions with inheritance and wildcards, take one step of the Game of Life,
+find the best block of seats in a cinema, and show results in order as their
+promises settle. JavaScript A left eleven tags with three or more Easy
+challenges on no Medium challenge, and this wave puts nine of them on one:
+json, filter, indexOf, findIndex, splice, some, includes, forEach and
+functions. It took the JavaScript matrix from 31 Medium challenges and 29 tags
+to 41 and 38, none short. Eleven tags now have exactly three Easy challenges
+behind them, and find and do-while are still on no Medium challenge.
+
+Both waves were proven against wrong answers as well as right ones: 69
+plausible wrong answers to the Algorithms challenges and 47 to the JavaScript
+ones went through the QuickJS grader against the visible and hidden checks
+together. All were rejected, 21 and 8 of them by the hidden checks only. That
+battery found two gaps the solution proofs could not. A scorecard with no
+ten-frame limit passed every check until a hidden one gave a tenth-frame strike
+two ordinary bonus rolls. And a recursive answer to "Remove the nth node from
+the end" overflowed the stack on the hidden 5,000-node list while the prompt
+did not say recursion was out; the prompt now says so.
+
+Five points for authors:
+
+- Size a brute-force check from the grader's speed. QuickJS runs about ten
+  million simple loop steps a second here (1e7 additions took 0.9 seconds, and
+  1e8 ran into the 2.5-second deadline), and that deadline covers the visible
+  and hidden checks together. A hidden check that rejects brute force needs a
+  brute-force cost well above 25 million steps and a reference cost in the
+  hundreds of thousands: 800 numbers for three-sum, 20,000 amounts or scores,
+  50,000 walls or characters, 11 pairs of brackets. Every reference solution of
+  both waves ran all its checks in the grader in under 150 ms.
+- The grader's stack holds about 2,000 simple frames: a recursion 2,000 deep
+  passes, and one 5,000 deep overflows. A hidden check deeper than that turns
+  every recursive answer into a stack overflow, so the prompt must say that
+  recursion is out. The deep checks that should accept recursion stay far under
+  it: a 300-node tree and a chain of 300 contacts.
+- A check can count what a solution reads. The rotated-search check puts its
+  65,536 values behind a `Proxy` that counts index reads and allows 200, so a
+  linear scan fails and a binary search passes, however many values it reads
+  per step.
+- A check that rejects a promise on purpose marks it handled
+  (`settled.catch(() => {})`). The untouched starter of "Show results in order
+  as they arrive" attaches no handler, and the unhandled rejection ended the
+  whole Node content run, although the QuickJS grader ignores it. The checks'
+  `later` helper marks its own rejections handled.
+- The -0 trap that Algorithms A describes reaches three-sum. An answer that
+  computes the third value as `-(a + b)` returns `[0, -0, 0]` for three zeros,
+  which `Object.is` rejects while the results table prints `[0,0,0]`. The
+  prompt's two-pointer method pushes the list's own values and avoids it. And
+  since QuickJS compares strings in `localeCompare` by code unit, as `sort()`
+  does, no hidden check can tell the two apart: the folder tree asks for
+  `sort()`'s default order and accepts both.
+
+**A timer check that fails in the long content run.** On 2026-09-26, five of
+eight full runs of `npm run test:coding` failed on one React A check, "typing
+is saved 150 ms after the last key" of `react-mh-autosave`, against its junior
+solution. One of them also failed a hidden interval check of
+`react-easy2-countdown`. The autosave check passes when it runs alone, with
+only the React proofs, or with only the JavaScript, TypeScript and Algorithms
+proofs, and it fails at the commit before the third wave too, so the third wave
+did not cause it. A GC trace of a failing run shows a 64 ms collector pause
+near the end of the React proofs, and the check allows 50 ms on each side of a
+real 150 ms timer, so a pause there lets the save fire before the check that
+expects none. In production each React submission runs in a microVM of its own
+(`lib/coding/react-isolated.ts`); the content run and CI (`quality.yml`) run
+every suite in one Node process. `NEEDED.md` carries the fix.
+
 ## What none of these change
 
 None of the four awards XP, completes a level, or opens anything. A puzzle pass

@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { CODING_TASKS, EASY_BAND_TASK_IDS, playable } from '../lib/coding/catalog';
+import { CODING_TASKS, EASY_BAND_TASK_IDS, MEDIUM_HARD_BAND_TASK_IDS, playable } from '../lib/coding/catalog';
 import { CODING_SUMMARIES, levelCodingTasks, tasksForLevel } from '../lib/coding/active';
 import { solutionFor, solutionIds } from '../lib/coding/solutions';
 import { stripComments } from '../lib/coding/solutions/strip-comments';
@@ -349,6 +349,47 @@ async function main() {
     const hiddenChecks = task.track === 'react' ? hiddenCaseCount(solutionFor(id)?.hiddenSuite) : (solutionFor(id)?.hiddenTests?.length ?? 0);
     if (hiddenChecks < 3) fail(`${id}: at least three hidden checks`);
     if (tasksForLevel(task.topic, task.level).some((one) => one.id === id)) fail(`${id}: an Easy-band task never enters a Learn level's quota`);
+  }
+
+  /* ── the Medium and Hard waves (#226) ───────────────────────────────── */
+  // What every Medium and Hard wave promises: a standalone challenge that
+  // combines two to four techniques, each one taught by at least
+  // COVERAGE_MIN_EASY Easy challenges of the same track. The coverage matrix
+  // above holds every Medium challenge to that; this holds the Hard ones of
+  // the waves to it too. The label comes from the tier (3 Medium, 4 Hard, 5
+  // for a React capstone), the hint ladder has a skeleton and ends in the
+  // documentation page of the first tag, the visible checks come with hidden
+  // ones, and the challenge takes no seat in a Learn level's quota.
+  assert.ok(MEDIUM_HARD_BAND_TASK_IDS.size > 0, 'the Medium and Hard waves are registered');
+  const easyPerTag = new Map<string, number>();
+  for (const summary of CODING_SUMMARIES) {
+    if (evolvingStage(summary.id) || summary.difficulty !== 'easy') continue;
+    for (const tag of summary.focus) easyPerTag.set(`${summary.track}:${tag}`, (easyPerTag.get(`${summary.track}:${tag}`) ?? 0) + 1);
+  }
+  for (const id of MEDIUM_HARD_BAND_TASK_IDS) {
+    const task = byId.get(id);
+    if (!task) { fail(`${id}: a Medium or Hard band id with no task`); continue; }
+    if (!summarized.has(id)) fail(`${id}: a Medium or Hard band task must be issued`);
+    if (EASY_BAND_TASK_IDS.has(id)) fail(`${id}: listed in the Easy band as well`);
+    if (evolvingStage(id)) fail(`${id}: a Medium or Hard band task is standalone`);
+    const label = difficultyOf(task);
+    if (task.difficulty !== undefined || (label !== 'medium' && label !== 'hard')) fail(`${id}: a Medium or Hard band task reads its label from its tier`);
+    if (task.tier === 5 && task.track !== 'react') fail(`${id}: tier 5 is for React capstones`);
+    if (task.focus.length < 2 || task.focus.length > 4) fail(`${id}: combines two to four techniques`);
+    for (const tag of task.focus) {
+      const easy = easyPerTag.get(`${task.track}:${tag}`) ?? 0;
+      if (easy < COVERAGE_MIN_EASY) fail(`${id}: ${tag} is on only ${easy} Easy ${task.track} challenge(s); a Medium or Hard challenge needs ${COVERAGE_MIN_EASY} behind each tag`);
+    }
+    if (!(task.estimatedMinutes > 10 && task.estimatedMinutes <= 45)) fail(`${id}: takes longer than an Easy challenge and at most 45 minutes`);
+    if (task.verify !== 'tests') fail(`${id}: a Medium or Hard band task is graded by its tests`);
+    const [page] = taskResources(task.focus);
+    if (!page || page.tag !== task.focus[0] || docsFor(task.focus).url !== page.url) fail(`${id}: the first focus tag must have a documentation page to end the hint ladder`);
+    if (task.hints.en.length === 0 || (task.approach?.en.length ?? 0) < 3 || !task.skeleton) fail(`${id}: a hint, at least three method steps and a skeleton before the documentation`);
+    const visibleChecks = task.track === 'react' ? hiddenCaseCount(task.suite) : (task.tests?.length ?? 0);
+    const hiddenChecks = task.track === 'react' ? hiddenCaseCount(solutionFor(id)?.hiddenSuite) : (solutionFor(id)?.hiddenTests?.length ?? 0);
+    if (visibleChecks < 5) fail(`${id}: at least five visible checks`);
+    if (hiddenChecks < 4) fail(`${id}: at least four hidden checks`);
+    if (tasksForLevel(task.topic, task.level).some((one) => one.id === id)) fail(`${id}: a Medium or Hard band task never enters a Learn level's quota`);
   }
 
   /* ── JavaScript and TypeScript solutions ────────────────────────────── */
