@@ -2,7 +2,7 @@
 // sheet while checkout is off, the plan line of a promo grant, and what the
 // Terms and the privacy policy say about them.
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -62,11 +62,19 @@ function Where() {
   return <p data-testid="where">{location.pathname + location.hash}</p>;
 }
 
+// Every render is a visit of its own, with a key that stays put while a held
+// first render is retried (lib/routeData.ts keys its wait by the visit).
+let visits = 0;
+function visit(path: string) {
+  const url = new URL(path, 'http://localhost');
+  return { pathname: url.pathname, search: url.search, hash: url.hash, key: `visit-${++visits}` };
+}
+
 function renderAt(path: string, node: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
+      <MemoryRouter initialEntries={[visit(path)]}>
         <LanguageProvider>
           <Routes>
             <Route path="*" element={<>{node}<Where /></>} />
@@ -76,6 +84,10 @@ function renderAt(path: string, node: ReactNode) {
     </QueryClientProvider>,
   );
 }
+
+// Signed in, /premium holds its first render for the plan (lib/routeData.ts);
+// a render that suspends has to start inside an awaited act.
+const mountAt = (path: string, node: ReactNode) => act(async () => renderAt(path, node));
 
 const voucherSection = () => screen.getByRole('region', { name: 'Have a voucher?' });
 const typeAndRedeem = async (code: string) => {
@@ -118,7 +130,7 @@ describe('/premium while checkout is off', () => {
     signIn();
     const plans = serve({ plans: [FREE, VOUCHER_PLAN] });
     const sent = redeemAnswers(() => HttpResponse.json({ status: 'redeemed', validUntil: THIS_YEAR_END }));
-    renderAt('/premium', <PremiumPage />);
+    await mountAt('/premium', <PremiumPage />);
     expect(screen.queryByRole('region', { name: 'Your plan' })).toBeNull();
     await typeAndRedeem(' k7q2-abcd 1234 ');
     const heading = await within(voucherSection()).findByRole('heading', { level: 3, name: 'Premium is open' });
@@ -138,7 +150,7 @@ describe('/premium while checkout is off', () => {
     signIn();
     serve({ plans: [FREE, { ...VOUCHER_PLAN, validUntil: null }] });
     redeemAnswers(() => HttpResponse.json({ status: 'redeemed', validUntil: null }));
-    renderAt('/premium', <PremiumPage />);
+    await mountAt('/premium', <PremiumPage />);
     await typeAndRedeem('OPENOPEN0001');
     expect(await within(voucherSection()).findByText('Your voucher opened Premium, with no end date.')).toBeInTheDocument();
     expect(await screen.findByText('Premium from a voucher, with no end date')).toBeInTheDocument();
@@ -148,7 +160,7 @@ describe('/premium while checkout is off', () => {
     signIn();
     serve();
     redeemAnswers(() => HttpResponse.json({ error: { code: 'voucher_invalid', message: 'This code does not open Premium. Check it and try again.' } }, { status: 400 }));
-    renderAt('/premium', <PremiumPage />);
+    await mountAt('/premium', <PremiumPage />);
     const field = await typeAndRedeem('NOSUCHCODE01');
     expect(await within(voucherSection()).findByRole('alert')).toHaveTextContent('This code does not open Premium. Check it and try again.');
     expect(field).toHaveAttribute('aria-invalid', 'true');
@@ -162,7 +174,7 @@ describe('/premium while checkout is off', () => {
     signIn();
     serve();
     redeemAnswers(() => HttpResponse.json({ error: { code: 'voucher_already_redeemed', message: 'You already redeemed this voucher.' } }, { status: 409 }));
-    renderAt('/premium', <PremiumPage />);
+    await mountAt('/premium', <PremiumPage />);
     await typeAndRedeem('K7Q2-ABCD-1234');
     expect(await within(voucherSection()).findByRole('alert')).toHaveTextContent('You already redeemed this voucher on this account.');
   });
@@ -177,7 +189,7 @@ describe('/premium while checkout is off', () => {
     signIn();
     serve();
     redeemAnswers(answer);
-    renderAt('/premium', <PremiumPage />);
+    await mountAt('/premium', <PremiumPage />);
     const field = await typeAndRedeem('K7Q2-ABCD-1234');
     expect(await within(voucherSection()).findByRole('alert')).toHaveTextContent(message);
     expect(field).toHaveValue('K7Q2-ABCD-1234');
@@ -189,7 +201,7 @@ describe('/premium while checkout is off', () => {
     signIn();
     serve();
     const sent = redeemAnswers(() => HttpResponse.json({ status: 'redeemed', validUntil: null }));
-    renderAt('/premium', <PremiumPage />);
+    await mountAt('/premium', <PremiumPage />);
     await typeAndRedeem('');
     expect(await within(voucherSection()).findByRole('alert')).toHaveTextContent('Enter your voucher code.');
     await typeAndRedeem('K7Q!');
@@ -200,7 +212,7 @@ describe('/premium while checkout is off', () => {
   it('lands on the field when it comes from the upgrade sheet', async () => {
     signIn();
     serve();
-    renderAt('/premium#voucher', <PremiumPage />);
+    await mountAt('/premium#voucher', <PremiumPage />);
     await waitFor(() => expect(screen.getByRole('textbox', { name: /Voucher code/ })).toHaveFocus());
   });
 });
