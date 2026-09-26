@@ -58,25 +58,37 @@ export const PRIVATE_CATEGORIES: CategoryType[] = [];
 // hidden from the solo Quiz picker and have no Learn path.
 export const PLAY_ONLY_CATEGORIES: CategoryType[] = ['cool-stuff'];
 
-// Categories whose logo color is light, so they need dark text for contrast.
-// Text colour for content sitting on a category's brand hex. Computed from
-// WCAG relative luminance instead of a hand-kept allowlist, which drifted and
-// failed the 4.5:1 contrast bar (e.g. white on Node green #339933 = 3.66:1).
+// Text colour for content sitting on a fill whose hex is known in code: a
+// category's brand hex, the checkpoint gold, a dev-tool score colour. Computed
+// from WCAG relative luminance instead of a hand-kept allowlist, which drifted
+// and failed the 4.5:1 contrast bar (e.g. white on Node green #339933 = 3.66:1).
+// The dark choice is the ocean ink #0b141b, the dark theme's
+// --brand-on-accent; it clears 4.5:1 on fills where the old #1a1a1a did not
+// (HTML's #e34c26: 4.71:1, up from 4.42:1). A mid-tone fill that neither white
+// nor the ink reaches 4.5:1 on gets black, which always does.
+const ON_COLOR_INK = '#0b141b';
 const onColorTextCache = new Map<string, string>();
-function textOnColor(hex: string): string {
-  const cached = onColorTextCache.get(hex);
-  if (cached) return cached;
+function relativeLuminance(hex: string): number {
   const h = hex.replace('#', '');
   const full = h.length === 3 ? h.split('').map((c) => c + c).join('') : h;
   const chan = (i: number) => {
     const v = parseInt(full.slice(i, i + 2), 16) / 255;
     return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
   };
-  const lum = 0.2126 * chan(0) + 0.7152 * chan(2) + 0.0722 * chan(4);
-  // Contrast vs white = (1.05)/(lum+0.05); vs near-black #1a1a1a ≈ (lum+0.05)/(0.0602).
-  const white = 1.05 / (lum + 0.05);
-  const dark = (lum + 0.05) / 0.0602;
-  const result = white >= dark ? '#fff' : '#1a1a1a';
+  return 0.2126 * chan(0) + 0.7152 * chan(2) + 0.0722 * chan(4);
+}
+export function contrastRatio(a: string, b: string): number {
+  const la = relativeLuminance(a);
+  const lb = relativeLuminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+export function textOnColor(hex: string): string {
+  const cached = onColorTextCache.get(hex);
+  if (cached) return cached;
+  const white = contrastRatio(hex, '#ffffff');
+  const ink = contrastRatio(hex, ON_COLOR_INK);
+  const best = white >= ink ? '#fff' : ON_COLOR_INK;
+  const result = Math.max(white, ink) >= 4.5 ? best : '#000';
   onColorTextCache.set(hex, result);
   return result;
 }

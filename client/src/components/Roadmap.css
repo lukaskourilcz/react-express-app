@@ -347,10 +347,12 @@
   background-color: var(--color-background-muted);
 }
 
-/* Accent-filled action buttons (intro start, continue, finish next/retry). */
+/* Accent-filled action buttons (intro start, continue, finish next/retry).
+   The fill is set inline, with --rm-on-accent as its readable text colour;
+   a button on the brand accent falls back to --brand-on-accent. */
 .rm-accent-btn {
   border: none;
-  color: #fff;
+  color: var(--rm-on-accent, var(--brand-on-accent));
   border-radius: var(--radius-element);
   font-weight: 700;
   font-size: 0.9rem;

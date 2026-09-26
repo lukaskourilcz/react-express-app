@@ -115,7 +115,7 @@ export default function XpToaster() {
                   role="status"
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 999,
-                    color: '#fff', fontWeight: 700,
+                    color: 'var(--ss-on-success-strong)', fontWeight: 700,
                     background: 'var(--ss-success-strong)',
                     boxShadow: 'var(--shadow-med)',
                   }}

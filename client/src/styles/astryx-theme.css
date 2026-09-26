@@ -94,6 +94,10 @@
        everywhere (quiz review, lesson feedback, toasts). — */
   --ss-success: light-dark(#16803c, #4ade80);
   --ss-success-strong: light-dark(#166534, #22c55e);
+  /* Text on a --ss-success-strong fill (the XP toast): white on the light
+     theme's #166534 is 7.13:1, but on the dark theme's bright #22c55e only
+     2.28:1, so the dark theme uses the ocean ink (8.16:1). */
+  --ss-on-success-strong: light-dark(#ffffff, #0b141b);
   --ss-success-soft: light-dark(rgba(22, 128, 60, 0.08), rgba(74, 222, 128, 0.12));
   --ss-error: light-dark(#dc2626, #f87171);
   --ss-error-text: light-dark(#b91c1c, #fca5a5);

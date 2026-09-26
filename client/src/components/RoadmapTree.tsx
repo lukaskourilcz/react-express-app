@@ -73,12 +73,13 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 10 }}>
             <div
               aria-hidden
+              data-stage-dot
               style={{
                 width: 22,
                 height: 22,
                 borderRadius: '50%',
                 backgroundColor: 'var(--brand-accent)',
-                color: '#fff',
+                color: 'var(--brand-on-accent)',
                 fontSize: '0.72rem',
                 fontWeight: 800,
                 display: 'grid',
