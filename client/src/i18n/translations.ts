@@ -1488,6 +1488,7 @@ export const en = {
   'billing.success.pendingTitle': 'Your payment is still processing',
   'billing.success.pendingBody': 'Some payment methods take a minute to confirm. Premium opens as soon as Stripe confirms the payment.',
   'billing.success.pendingStatus': 'Not confirmed yet. We check again every few seconds.',
+  'billing.success.pendingStopped': 'Still not confirmed. Press Check again, or open your profile in a few minutes.',
   'billing.success.checkAgain': 'Check again',
   'billing.success.expiredTitle': 'This checkout expired',
   'billing.success.expiredBody': 'The checkout closed before payment, so nothing was charged.',

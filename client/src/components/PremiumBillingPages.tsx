@@ -133,7 +133,11 @@ export function PremiumSuccessPage() {
             </>
           )}
           {view.kind === 'done' && <strong>{t('billing.success.doneStatus', { plan: planText(view.plan, t, lang) })}</strong>}
-          {view.kind === 'pending' && <span>{t('billing.success.pendingStatus')}</span>}
+          {view.kind === 'pending' && (
+            // After the last automatic check nothing checks again until the
+            // button is pressed, so the line stops promising that it will.
+            <span>{t(rechecks.current >= RECHECKS ? 'billing.success.pendingStopped' : 'billing.success.pendingStatus')}</span>
+          )}
           {view.kind === 'expired' && (
             <span>{t('billing.success.expiredStatus')} {t('premium.sheet.price', { symbol: PREMIUM_PRICE.symbol, monthly: PREMIUM_PRICE.monthly, annual: PREMIUM_PRICE.annual })}</span>
           )}

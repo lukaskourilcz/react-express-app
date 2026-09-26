@@ -95,6 +95,30 @@ describe('/premium/success', () => {
     expect(screen.getByRole('button', { name: 'Check again' })).toBeInTheDocument();
   });
 
+  it('stops promising another check after the last automatic one', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      signIn();
+      serve();
+      let looked = 0;
+      server.use(http.get('*/api/user/billing-checkout', () => {
+        looked += 1;
+        return HttpResponse.json({ status: 'pending', entitlement: FREE });
+      }));
+      renderAt(`/premium/success?session_id=${SESSION}`, <PremiumSuccessPage />);
+      expect(await screen.findByText('Not confirmed yet. We check again every few seconds.')).toBeInTheDocument();
+      for (let check = 2; check <= 6; check++) {
+        await vi.advanceTimersByTimeAsync(4000);
+        await waitFor(() => expect(looked).toBe(check));
+      }
+      expect(await screen.findByText('Still not confirmed. Press Check again, or open your profile in a few minutes.')).toBeInTheDocument();
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(looked).toBe(6);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('offers to start again after an expired checkout, with the price', async () => {
     signIn();
     serve();
