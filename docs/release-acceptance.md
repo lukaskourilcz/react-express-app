@@ -1575,8 +1575,9 @@ Causes:
 | `38aeb7c` | `tests/browser/navigation.spec.ts` holds every chunk back for 600ms and records each frame of eight section visits and a phone drawer visit; it fails on `4f93988` and passes here. CI runs it |
 | `cd56c46` | Merge of `origin/main` at `2e6b8ba`; the one conflict, in `quality.yml`, keeps both browser specs |
 | `6d59a96` | Collection imports Flashcards (2KB gzipped) directly |
-| `4dfec56` | This record and the navigation rule in `DESIGN_RULES.md` §8 |
+| `4dfec56`, `0402391` | This record and the navigation rule in `DESIGN_RULES.md` §8 |
 | `7ee97e5` | The Rewards and merchandise tests take the render result from `act` itself; `npm run typecheck:tooling`, which covers the tests, had failed on their helper with TS2322 twice |
+| `938c29c` | Merge of `origin/main` at `47a7ee2` (the three `[owner:ai]` items); the one conflict, at the end of this file, keeps both sections |
 
 The loader, the empty page and the footer jump were the same on every section, so the measurements below are medians of the first visit to each section in a fresh page load, at 1280 and 390px, light and dark (signed in: light only). "Empty frames" count animation frames whose route box held nothing; "content states" count the distinct texts the new page showed in the 3 seconds after the click. The last column is when the new page first drew: before, after the empty beat and the loader; after, when the old page gave way to the complete new one.
 
@@ -1646,27 +1647,27 @@ Still drawn in two steps after this change, each a page's own loading state rath
 - The route box still fades in from opacity 0 over 140ms, with each page's `ss-pop` on top, so the first frame after the swap is almost empty. That entrance is the existing design.
 - A chunk that fails to load still replaces the whole app with the root error screen. It happened once on devshark.app during the measurements, when the proxy aborted `objectWithoutPropertiesLoose-*.js`.
 
-Checks on `7ee97e5`, every step of `quality.yml` that needs no secret:
+Checks on `938c29c`, the second merge, covering every step of `quality.yml` that needs no secret:
 
 | Check | Result |
 | --- | --- |
 | `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 and exit 0. The tooling typecheck failed on `4dfec56` with two TS2322 in the Shop test helper that `5419ea2` added; `7ee97e5` fixes it |
 | `npm run test:launch` | exit 0; the twelve-function budget holds |
 | `test:coding-auth`, `test:grading-integrity`, `test:coding`, `test:paths`, `test:billing`, `test:fallbacks` | exit 0 each |
-| `npm run test:client` | exit 0; 23 files, 236 tests, 10 of them new in `route-loading.test.tsx` |
+| `npm run test:client` | exit 0; 24 files, 238 tests, 10 of them new in `route-loading.test.tsx` |
 | `npm run check:unused`, `npm run check:security` | exit 0 and exit 0 |
-| `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build`, then `check:public` and `check:bundle` | exit 0 three times; 13 public URLs; 221,937 of 243,000 gzip bytes (`4f93988` built the same way: 221,047) |
+| `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build`, then `check:public` and `check:bundle` | exit 0 three times; 13 public URLs; 221,847 of 243,000 gzip bytes (`4f93988` built the same way: 221,047) |
 | `npm audit --omit=dev`, root and client | exit 0 twice; 0 vulnerabilities |
 | Browser specs `navigation`, `public`, `evolving`, `segmented`, `on-accent` against `vite preview` | exit 0 each; 2, 5, 2, 4 and 12 passed |
 | `npm run check:responsive` with CI's routes and widths, light, then dark with `RESPONSIVE_LOCALE=cs` | exit 0 twice; 28 and 6 probes, no issues |
 | `npm run check:responsive -- --routes` the twelve sections plus `/coding/javascript`, `/coding/javascript/js-double-numbers` and `/coding/fullstack` `--widths 360,390,768,1280 --block-external`, light and dark | exit 0 twice; 60 probes each, no issues |
 | `npm run test:harness` | exit 0; 196 assertions in Chromium |
-| `npm run audit:performance` with `CHROME_PATH` set to the local Chromium | exit 0; performance 0.79 on the phone profile, 0.75 on desktop (lab numbers) |
+| `npm run audit:performance` with `CHROME_PATH` set to the local Chromium | exit 0; performance 0.58 on the phone profile and 0.98 on desktop, lab numbers that swing with the first-load shift below |
 | `git diff --check`, the worktree and `origin/main` against `HEAD` | exit 0 twice |
-| Each of the six commits before the merge, checked out alone: client `tsc -b` and `vitest run` | exit 0 each; 220, 225, 230, 230, 230 and 230 tests. `tsc -b` leaves the tests out, so it missed the helper's typing |
+| Each of the six commits before the first merge, checked out alone: client `tsc -b` and `vitest run` | exit 0 each; 220, 225, 230, 230, 230 and 230 tests. `tsc -b` leaves the tests out, so it missed the helper's typing |
 
 Not run: the Storybook build and its spec. No story imports a module this change touches.
 
-Lighthouse found a layout shift on the first load of the landing page that predates this change. Three runs per profile against `vite preview` of each build: on `origin/main` (`2e6b8ba`) the whole `<main>` moved by almost a viewport, a CLS of 0.979 in two of three desktop runs and 0.959 in all three phone runs. On this branch it scored 0.979 in one desktop run, and 0.014 or less in the phone runs. The other desktop runs scored 0.066. Its cause is untraced. It happens before any navigation, so this change does not address it.
+Lighthouse found a layout shift on the first load of the landing page that predates this change: the whole `<main>` moves by almost a viewport. Against `vite preview`, `origin/main` at `2e6b8ba` scored a CLS of 0.979 in two of three desktop runs and 0.959 in all three phone runs. This branch (`7ee97e5`, then `938c29c`) scored 0.979 in two of five desktop runs and 0.959 in one of five phone runs; every other run stayed at 0.066 or below. Its cause is untraced. It happens before any navigation, so this change does not address it.
 
 Not verified: this change on devshark.app (not deployed), a real Supabase session (the signed-in runs used a fake session and fixtures), and physical phones. The measurement harness stayed out of the repository; `tests/browser/navigation.spec.ts` is the regression check that remains.
