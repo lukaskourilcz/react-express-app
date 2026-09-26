@@ -1,5 +1,5 @@
-// Premium vouchers (migration 045): "Have a voucher?" on /premium and the plan
-// line of a promo grant.
+// Premium vouchers (migration 045): "Have a voucher?" on /premium, the upgrade
+// sheet while checkout is off, and the plan line of a promo grant.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -213,6 +213,29 @@ describe('/premium with checkout on', () => {
       expect(headings.indexOf('Choose a plan')).toBeLessThan(headings.indexOf('Have a voucher?'));
     });
     expect(within(voucherSection()).getByText('Enter the code you were given, and Premium opens on your account.')).toBeInTheDocument();
+  });
+});
+
+describe('the upgrade sheet', () => {
+  // jsdom has no <dialog> behaviour; the sheet is an Astryx dialog.
+  const proto = HTMLDialogElement.prototype as unknown as { showModal?: () => void; close?: () => void };
+  proto.showModal ??= function (this: HTMLDialogElement) { this.setAttribute('open', ''); };
+  proto.close ??= function (this: HTMLDialogElement) { this.removeAttribute('open'); };
+  it('points to the voucher while checkout is off', async () => {
+    serve();
+    renderAt('/learn', <UpgradeSheet request={{ id: 1, kind: 'learn-level', ref: 'react:13' }} />);
+    expect(await screen.findByText('Premium is not on sale yet. A voucher opens it now.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Redeem a voucher' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('/premium#voucher');
+  });
+
+  it('keeps "Go Premium" while checkout is on', async () => {
+    serve({ billing: ON });
+    renderAt('/learn', <UpgradeSheet request={{ id: 2, kind: 'coding-task', ref: 'js-palindrome' }} />);
+    const cta = await screen.findByRole('button', { name: 'Go Premium' });
+    expect(screen.queryByText('Premium is not on sale yet. A voucher opens it now.')).toBeNull();
+    fireEvent.click(cta);
+    expect(screen.getByTestId('where')).toHaveTextContent('/premium');
   });
 });
 

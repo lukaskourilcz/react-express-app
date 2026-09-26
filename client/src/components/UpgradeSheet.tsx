@@ -2,6 +2,8 @@
 // client when the server answers 402. It says what Premium includes, what it
 // costs with VAT, and offers "Go Premium" or "Not now". No urgency copy and no
 // countdowns: the learner asked to open something, and this answers why not.
+// While checkout is switched off it says so and offers "Redeem a voucher",
+// which lands on the voucher field of /premium (migration 045).
 import { Dialog, DialogHeader } from '@astryxdesign/core/Dialog';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -11,6 +13,8 @@ import { useNavigate } from 'react-router-dom';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { closeUpgradeSheet, type UpgradeRequest } from '../lib/upgradeSheet';
+import { useBilling } from '../lib/billing';
+import { VOUCHER_PATH } from '../lib/voucher';
 import { PREMIUM_INCLUDES, premiumVars } from './PremiumFacts';
 
 export default function UpgradeSheet({ request }: { request: UpgradeRequest }) {
@@ -19,6 +23,9 @@ export default function UpgradeSheet({ request }: { request: UpgradeRequest }) {
   // The same list and numbers as /premium (PremiumFacts.tsx).
   const vars = premiumVars();
   const reason = request.kind ? t(`premium.sheet.kind.${request.kind}` as TranslationKey) : null;
+  const billing = useBilling();
+  // Nobody can buy yet, so the way in is a voucher.
+  const voucher = billing.known && !billing.enabled;
   return (
     <Dialog
       isOpen
@@ -42,12 +49,13 @@ export default function UpgradeSheet({ request }: { request: UpgradeRequest }) {
         </div>
         <Text type="body" weight="semibold">{t('premium.sheet.price', vars)}</Text>
         <Text type="supporting" color="secondary">{t('premium.sheet.fair')}</Text>
+        {voucher && <Text type="body">{t('premium.sheet.voucherNote')}</Text>}
         <HStack gap={1.5} justify="end" width="100%" wrap="wrap">
           <Button variant="ghost" label={t('premium.sheet.later')} onClick={closeUpgradeSheet} />
           <Button
             variant="primary"
-            label={t('premium.sheet.cta')}
-            onClick={() => { closeUpgradeSheet(); navigate('/premium'); }}
+            label={t(voucher ? 'premium.sheet.voucherCta' : 'premium.sheet.cta')}
+            onClick={() => { closeUpgradeSheet(); navigate(voucher ? VOUCHER_PATH : '/premium'); }}
           />
         </HStack>
       </VStack>

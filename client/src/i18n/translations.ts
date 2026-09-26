@@ -1458,6 +1458,10 @@ export const en = {
   'premium.sheet.fair': 'Premium never changes how an answer is graded, how much XP it gives or how the boards rank.',
   'premium.sheet.cta': 'Go Premium',
   'premium.sheet.later': 'Not now',
+  // While Stripe is off (BILLING_ENABLED unset) the sheet sends a learner to
+  // the voucher on /premium instead of to plans nobody can buy yet.
+  'premium.sheet.voucherNote': 'Premium is not on sale yet. A voucher opens it now.',
+  'premium.sheet.voucherCta': 'Redeem a voucher',
   'error.premiumRequired': 'Premium opens this. HTML, CSS, JavaScript and the first half of React stay free.',
   'error.entitlementUnavailable': 'We could not check your plan. Try again in a moment.',
   'profile.plan.title': 'Plan',
