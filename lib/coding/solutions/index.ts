@@ -23,6 +23,7 @@ import { EASY_ALGORITHMS_A_SOLUTIONS } from './easy-algorithms-a';
 import { MEDIUM_HARD_JAVASCRIPT_A_SOLUTIONS } from './medium-hard-javascript-a';
 import { MEDIUM_HARD_TYPESCRIPT_A_SOLUTIONS } from './medium-hard-typescript-a';
 import { MEDIUM_HARD_REACT_A_SOLUTIONS } from './medium-hard-react-a';
+import { MEDIUM_HARD_ALGORITHMS_A_SOLUTIONS } from './medium-hard-algorithms-a';
 import { EVOLVING_SOLUTIONS } from './evolving';
 import { DEBUG_EVOLVING_SOLUTIONS } from './evolving-debug';
 import { PATH_SOLUTIONS } from './paths';
@@ -49,6 +50,7 @@ const AUTHORED: Record<string, CodingSolution> = {
   ...MEDIUM_HARD_JAVASCRIPT_A_SOLUTIONS,
   ...MEDIUM_HARD_TYPESCRIPT_A_SOLUTIONS,
   ...MEDIUM_HARD_REACT_A_SOLUTIONS,
+  ...MEDIUM_HARD_ALGORITHMS_A_SOLUTIONS,
 };
 
 // The junior and senior boards are read as code, so the authoring notes that
