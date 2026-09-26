@@ -9,8 +9,8 @@ XP and what each account may open. Until 25 September 2026 this summary said
 all learning was free. StudyShark, which shared this code, moved to its own
 repository (`lukaskourilcz/studyshark`) on 2026-09-24.
 
-Content: 2,447 authored questions, 1,974 of them served, and 695 coding tasks,
-104 of them on the free tier.
+Content: 2,447 authored questions, 1,974 of them served, and 770 coding tasks,
+116 of them on the free tier.
 
 ## Learning features
 
@@ -33,7 +33,7 @@ Content: 2,447 authored questions, 1,974 of them served, and 695 coding tasks,
   the existing server sandbox, keep verified checks visibly apart from
   self-reviewed writing, and award no XP — so a task reused from the coding
   catalogue is never rewarded twice. Neither claims a certification.
-- A devShark **Coding** section: 695 tasks across JavaScript, TypeScript, React,
+- A devShark **Coding** section: 770 tasks across JavaScript, TypeScript, React,
   Algorithms and system design, labelled Easy, Medium or Hard, graded on the
   server (QuickJS sandbox, TypeScript compiler, an isolated Vercel Sandbox for
   React, sealed design keys), with authored hint ladders that end in
