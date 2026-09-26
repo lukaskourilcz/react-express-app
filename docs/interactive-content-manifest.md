@@ -522,10 +522,11 @@ the old countdown checks failed with correct solutions too: two ticks ran
 before React rendered the first, the count read -1, and it never met 0 again.
 A wrong solution for each converted check still fails it (a wait that does
 not restart, no debounce, an interval kept to the end, a click that does not
-restart the slide, a second question after 50 ms, index keys). The other
-timer checks only assert that a timer has fired, or that a cleared timer
-stays quiet, and a later timer never fires before an earlier one, so they stay
-on real time. Running each React proof in a process of its own was the other
+restart the slide, a second question after 50 ms, index keys), and five
+consecutive full runs of `npm run test:coding` passed on the change (`d53f4ce`,
+215 to 219 s each). The other timer checks only assert that a timer has fired,
+or that a cleared timer stays quiet, and a later timer never fires before an
+earlier one, so they stay on real time. Running each React proof in a process of its own was the other
 option; it would have cost a Node start per suite and still left the checks
 to the machine's speed.
 
