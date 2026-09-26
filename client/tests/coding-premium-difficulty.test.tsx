@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
+import { preloadPath } from '../src/lib/routePreload';
 import { CodingTaskScreen, CodingTrackScreen } from '../src/components/coding/CodingSection';
 import { CODING_INDEX } from '../../shared/coding-index';
 import { EVOLVING_CHALLENGES } from '../../shared/evolving';
@@ -48,6 +49,9 @@ function mount(path: string, element: ReactNode, route: string) {
   );
 }
 
+// The task screen loads its editor beside the task; load it once up front
+// so each screen draws the (mocked) workbench on its first render.
+beforeAll(() => preloadPath('/coding/javascript/js-digit-sum'));
 beforeEach(() => {
   sheet.open.mockReset();
   plan.value = { ...FREE_PLAN };

@@ -9,7 +9,7 @@ import { readString, removeStored, writeString } from '../../lib/storage';
 import { Kicker } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
-import { CodingWorkbench } from '../../coding/CodingWorkbench';
+import type { CodingWorkbench as CodingWorkbenchView } from '../../coding/CodingWorkbench';
 import { DesignRunner } from '../../coding/DesignRunner';
 import { codingKeys, codingProgressQuery, saveCodingDraft, useCodingProgress, useCodingTask } from '../../coding/api';
 import { bookmarksQuery, practiceSessionQuery, useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
@@ -46,6 +46,7 @@ import { isPremiumRequired } from '../../lib/api';
 import { isBarred, useLocks, type LockState } from '../../lib/locks';
 import { entitlementQuery } from '../../lib/entitlement';
 import { readOnce, settled, useFirstData } from '../../lib/routeData';
+import { routeChunk } from '../../lib/routePreload';
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
 import { codingContent, gatedRef } from '../../../../shared/tiers';
 import '../../coding/Coding.css';
@@ -59,6 +60,55 @@ const askForPremium = (taskId: string) => {
 };
 
 const draftKey = (id: string) => `devshark:coding:draft:${id}`;
+
+// The editor, the test runner and the hint ladder serve a task and nothing
+// else, and with CodeMirror they are most of the section's code. The lists no
+// longer wait for them: a task screen loads them beside its task, a pointer on
+// a task link starts them, and a list on screen warms them once it is idle.
+let workbenchView: typeof CodingWorkbenchView | null = null;
+const loadWorkbench = routeChunk(
+  (pathname) => /^\/coding\/(?!system-design\/)[^/]+\/[^/]+$/.test(pathname),
+  () => import('../../coding/CodingWorkbench').then((module) => {
+    // Loaded once, drawn at once by every task screen after it.
+    workbenchView = module.CodingWorkbench;
+    return module;
+  }),
+);
+
+/** The workbench once its code is in (null while it loads), and whether the
+ * load failed. `attempt` asks again after a failure. */
+function useWorkbench(needed: boolean, attempt: number) {
+  const [View, setView] = useState(() => workbenchView);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!needed || View) return;
+    let live = true;
+    loadWorkbench().then((module) => {
+      if (live) { setFailed(false); setView(() => module.CodingWorkbench); }
+    }, () => { if (live) setFailed(true); });
+    return () => { live = false; };
+  }, [needed, View, attempt]);
+  return { View, failed };
+}
+
+/** Fetch the workbench's code when the browser has nothing else to do, so a
+ * task opened from a list finds it ready. It is the same download the section
+ * used to make up front, off the path of the first paint. */
+function useWarmWorkbench() {
+  useEffect(() => {
+    if (workbenchView) return;
+    const warm = () => { loadWorkbench().catch(() => undefined); };
+    // Safari has no requestIdleCallback; a short timer stands in for it.
+    const host = window as Pick<Window, 'cancelIdleCallback'> & { requestIdleCallback?: Window['requestIdleCallback'] };
+    if (host.requestIdleCallback) {
+      const id = host.requestIdleCallback(warm, { timeout: 3000 });
+      return () => host.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(warm, 1500);
+    return () => window.clearTimeout(id);
+  }, []);
+}
+
 const GROUPS = Object.keys(CODING_TECHNIQUE_GROUPS) as CodingTechniqueGroup[];
 
 // Everything the section offers. System design tasks stay in CODING_INDEX so a
@@ -293,6 +343,7 @@ function NextChallenge({ next, state, onRetry }: { next: CodingTaskSummary | nul
 
 export function CodingHome() {
   useCodingFirstData('session');
+  useWarmWorkbench();
   const { t } = useLanguage();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
@@ -376,6 +427,7 @@ export function CodingHome() {
 
 export function FullStackScreen() {
   useCodingFirstData(null);
+  useWarmWorkbench();
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
@@ -392,6 +444,7 @@ export function FullStackScreen() {
 /* ── /coding/:track ──────────────────────────────────────────────────── */
 export function CodingTrackScreen() {
   useCodingFirstData('bookmarks');
+  useWarmWorkbench();
   const { t, lang } = useLanguage();
   const { track: trackParam } = useParams();
   const [params, setParams] = useSearchParams();
@@ -636,6 +689,8 @@ export function CodingTaskScreen() {
   const retired = track !== null && isRetiredSectionTrack(track);
   const task = useCodingTask(retired ? undefined : taskId);
   const [attempt, setAttempt] = useState(0);
+  // System design tasks run in the DesignRunner, which ships with the section.
+  const workbench = useWorkbench(!retired && trackParam !== 'system-design', attempt);
   const bookmarks = useBookmarks(isAuthenticated);
   const save = useSaveChallenge();
   // An active challenge run carries the learner from one queued task to the
@@ -687,7 +742,10 @@ export function CodingTaskScreen() {
 
   if (retired && track) return <RetiredTrackNotice track={track} />;
   if (!track || !taskId) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p></div>;
-  if (task.isLoading) return <LoadingScreen label={t('coding.loading')} />;
+  // One loading state until the task and, for a code task, its editor are both in.
+  if (task.isLoading || (!task.isError && task.data?.task.track !== 'system-design' && !workbench.View && !workbench.failed)) {
+    return <LoadingScreen label={t('coding.loading')} />;
+  }
   // Premium opens this task and the account holds the free plan. The API
   // client already opened the upgrade sheet; the page says the same thing in
   // words, and keeps a way back that does not depend on the sheet.
@@ -706,12 +764,13 @@ export function CodingTaskScreen() {
       </div>
     );
   }
-  if (task.isError || !task.data) {
+  const CodingWorkbench = workbench.View;
+  if (task.isError || !task.data || (task.data.task.track !== 'system-design' && !CodingWorkbench)) {
     return (
       <div className="cd-page">
         <p className="cd-note cd-note--error" role="alert">{t('coding.loadError')}</p>
         <div className="cd-actions">
-          <button type="button" className="cd-btn cd-btn--primary" onClick={() => void task.refetch()}>{t('coding.retry')}</button>
+          <button type="button" className="cd-btn cd-btn--primary" onClick={onRetry}>{t('coding.retry')}</button>
           <Link className="cd-btn" to={`/coding/${track}`}>{t('coding.verdict.back')}</Link>
         </div>
       </div>
@@ -750,7 +809,7 @@ export function CodingTaskScreen() {
       {stage && <StageNav stages={stage.challenge.stages} short={stage.challenge.short === true} currentId={data.task.id} passed={passedIds} premiumOf={premiumOf} />}
       {data.task.track === 'system-design'
         ? <DesignRunner key={`${data.task.id}-${attempt}`} task={data.task} session={data.session} locked={data.locked} signedIn={data.signedIn} mode="section" onVerdict={onVerdict} onRetry={onRetry} nextHref={nextHref} backHref={backHref} />
-        : <CodingWorkbench
+        : CodingWorkbench && <CodingWorkbench
             key={`${data.task.id}-${attempt}`}
             task={data.task}
             session={data.session}

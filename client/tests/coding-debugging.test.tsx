@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
+import { preloadPath } from '../src/lib/routePreload';
 import { CodingHome, CodingTaskScreen, CodingTrackScreen } from '../src/components/coding/CodingSection';
 import Collection from '../src/components/Collection';
 import { CODING_INDEX } from '../../shared/coding-index';
@@ -12,6 +13,9 @@ import { EVOLVING_CHALLENGES, listedChallenges } from '../../shared/evolving';
 // The debugging trio (#225): three short paths on the Coding home in place of
 // the café-orders project, whose ten stages still open, count and resolve.
 const state = vi.hoisted(() => ({ signedIn: false, saved: [] as string[], passed: [] as string[] }));
+// The task screen loads its editor beside the task; load it once up front
+// so each screen draws the (mocked) workbench on its first render.
+beforeAll(() => preloadPath('/coding/javascript/js-digit-sum'));
 beforeEach(() => { state.signedIn = false; state.saved = []; state.passed = []; });
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ isAuthenticated: state.signedIn, signInWithGoogle: vi.fn() }) }));
 vi.mock('../src/coding/practice', () => ({
