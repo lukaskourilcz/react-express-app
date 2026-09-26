@@ -301,6 +301,9 @@ export interface PremiumRequiredBody {
   error: { code: typeof PREMIUM_REQUIRED; message: string; kind: GatedKind; ref: string; requestId?: string };
 }
 
+/** Where a grant comes from: `provider`, a Stripe subscription; `manual`, an
+ * admin's grant through op=entitlements; `promo`, a redeemed Premium voucher
+ * (migration 045). */
 export type EntitlementSource = 'provider' | 'manual' | 'promo';
 
 /** GET /api/user?op=entitlement. */

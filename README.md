@@ -2,7 +2,7 @@
 
 devShark is a learning platform for web developers: guided Learn paths, quizzes, coding challenges, learning paths and a career roadmap across frontend, backend, databases, DevOps, testing, security, system design and AI.
 
-devShark has been freemium since 25 September 2026. Every signed-in account gets HTML, CSS and JavaScript in full, React levels 1 to 12, stage one of every coding project and short path, and a starter set of challenges (116 of the 770 coding tasks together), plus every quiz, the daily challenge, the Biggest Shark Challenge, multiplayer rooms, flashcards, the typing racer, leaderboards, streaks, friends and the coin shop. Premium costs 3.99 EUR a month or 39.99 EUR a year, VAT included, and opens every Learn topic and coding task, the FDE and DSA learning paths once their switches are on, and redeeming coins for merchandise. `shared/tiers.ts` holds both lists, the server answers locked content with 402, and Premium leaves grading, XP amounts, scores, streaks and rankings alone. Checkout stays off until the owner's Stripe account is connected (`BILLING_ENABLED`).
+devShark has been freemium since 25 September 2026. Every signed-in account gets HTML, CSS and JavaScript in full, React levels 1 to 12, stage one of every coding project and short path, and a starter set of challenges (116 of the 770 coding tasks together), plus every quiz, the daily challenge, the Biggest Shark Challenge, multiplayer rooms, flashcards, the typing racer, leaderboards, streaks, friends and the coin shop. Premium costs 3.99 EUR a month or 39.99 EUR a year, VAT included, and opens every Learn topic and coding task, the FDE and DSA learning paths once their switches are on, and redeeming coins for merchandise. `shared/tiers.ts` holds both lists, the server answers locked content with 402, and Premium leaves grading, XP amounts, scores, streaks and rankings alone. Checkout stays off until the owner's Stripe account is connected (`BILLING_ENABLED`); until then Premium opens through a voucher code the owner creates in `/dev` and a learner redeems on `/premium` (migration 045).
 
 Production: [devShark](https://devshark.app) deploys from `main` to Vercel, with Supabase for data and identity.
 
@@ -151,8 +151,8 @@ The twelve physical handlers multiplex related operations to stay within the dep
 | `/api/play/[action]` | Multiplayer and classroom lifecycle |
 | `/api/leaderboard` | 30-day, all-time, daily, and category boards |
 | `/api/flashcards` | Flashcard CRUD |
-| `/api/user/[op]` | Stats, category stats, XP, streaks, badges, streak freezes, Shark Cards, study advisor, auth events, deletion; the plan (`entitlement`), Stripe checkout, portal, webhook and public cancellation; the coin wallet, shop, orders, invitations and merchandise fulfilment; coding progress and drafts; learning preference, path enrollment, progress and drafts; GitHub garden connection, repository, sync, disconnect |
-| `/api/admin/[op]` | Role-gated control-room operations |
+| `/api/user/[op]` | Stats, category stats, XP, streaks, badges, streak freezes, Shark Cards, study advisor, auth events, deletion; the plan (`entitlement`), voucher redemption (`voucher`), Stripe checkout, portal, webhook and public cancellation; the coin wallet, shop, orders, invitations and merchandise fulfilment; coding progress and drafts; learning preference, path enrollment, progress and drafts; GitHub garden connection, repository, sync, disconnect |
+| `/api/admin/[op]` | Role-gated control-room operations, including manual Premium grants (`entitlements`) and Premium vouchers (`vouchers`) |
 | `/api/settings` | Public safe configuration |
 | `/api/health` | Database, service-role migration, and limiter readiness |
 

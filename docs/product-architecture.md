@@ -262,9 +262,10 @@ leaderboards and matchmaking work the same on both tiers.
 Status on 2026-09-25: the tiers (issue #220, step D1), billing (issue #221,
 step D2) and the public copy, `/premium` and the legal pages (issue #222, step
 D3) are built. Billing stays off until the owner's Stripe account, Prices
-and environment exist (`NEEDED.md`); until then an admin opens Premium by hand
-with a manual grant. Migration 039, including its billing section, is proven on
-a local Postgres and waits for production.
+and environment exist (`NEEDED.md`); until then Premium opens through a manual
+grant or a voucher (below). Migrations 039 to 044 reached production on
+2026-09-26; the voucher migration, 045, is proven on a local Postgres and waits
+for production.
 
 - **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
   and JavaScript in full, React levels 1 to 12 of 25 (`FREE_LEARN_LEVELS`),
@@ -352,6 +353,48 @@ a local Postgres and waits for production.
   through `op=entitlements` in `api/admin/[op].ts` (GET lists grants, or one
   account's with `?userId=`; POST `{ action: 'grant', userId, validUntil,
   note }` or `{ action: 'revoke', userId, grantId?, note? }`).
+- **Premium vouchers (migration 045).** Premium has three sources, each a row
+  of `entitlement_grants`: `provider` (a Stripe subscription), `manual` (an
+  admin's grant through `op=entitlements`) and `promo`, which a voucher opens.
+  While billing is off, a voucher is how Premium opens for a learner.
+  - *Creating.* The owner works in `/dev` → Vouchers (`op=vouchers` in
+    `api/admin/[op].ts`, behind `requireAdmin`): a note, Premium for a number
+    of days counted from the redemption or with no end, how many accounts may
+    redeem it (one by default), an optional last day, and an optional custom
+    code of 6 to 32 letters and digits for a campaign. A generated code is
+    twelve characters of Crockford base32 from `crypto.randomBytes`, shown
+    once as `XXXX-XXXX-XXXX`; GET lists vouchers and POST `{ action: 'revoke',
+    voucherId }` stops one.
+  - *Storing.* `premium_vouchers` keeps the SHA-256 of the normalised code
+    (upper case, no spaces or dashes, `shared/vouchers.ts`) and its first four
+    characters, never the code. `premium_voucher_redemptions` keeps the
+    account, the voucher, the grant and the time, one row per voucher and
+    account. Both have RLS on, no policy and no browser grant; the routines
+    (`create_premium_voucher`, `list_premium_vouchers`,
+    `revoke_premium_voucher`, `redeem_premium_voucher` and the private
+    `premium_voucher_json`) are SECURITY DEFINER with an empty `search_path`
+    and `service_role`-only. No log line carries a code, its hash or its hint.
+  - *Redeeming.* A signed-in learner types the code on `/premium` (`op=voucher`
+    POST in `api/user/[op].ts`). Five attempts an hour per account and ten
+    per address count every try, a success included. An unknown, expired,
+    used-up, revoked or malformed code gets one answer, 400
+    `voucher_invalid`; only 409 `voucher_already_redeemed` is told apart, and
+    before 045 is installed the answer is 503 `voucher_unavailable`.
+    `redeem_premium_voucher` locks the voucher row, so the last use goes to
+    one account, and writes a `promo` grant noted "Voucher <hint>" with
+    `valid_until` = now + the days, or none. `is_premium` and
+    `entitlement_summary` read it as they read every promo grant, and the
+    browser refetches the plan, so the locks open without a reload.
+  - *Limits.* A voucher's days start when it is redeemed; two vouchers do not
+    add up, and the plan line shows the grant that lasts longest. Revoking a
+    voucher stops new redemptions: Premium it already opened stays until its
+    end, and an admin ends one grant with `op=entitlements`. Like every other
+    grant, a voucher changes which content a learner may start and nothing
+    else.
+  - *Screens.* While billing is off `/premium` leads with "Have a voucher?"
+    (after "Your plan" for an account that holds Premium), the upgrade sheet
+    offers "Redeem a voucher", and the Profile's plan line reads "Premium from
+    a voucher, until …". With billing on, the voucher follows the plans.
 - **Stripe** Checkout, Billing and the Customer Portal take the payments, with
   Managed Payments making Stripe (as Link) the merchant of record; plain Stripe
   with Stripe Tax runs behind the same code when `STRIPE_MANAGED_PAYMENTS` is
@@ -572,10 +615,12 @@ production (issue #227, step D8).
 `DELETE /api/user/delete-account` ends any live Stripe subscription first and
 stops with 503 if Stripe cannot be reached. It then calls `delete_user_data`,
 which since migration 044 erases every table that holds an account id in one
-routine, including the ones 035 and 039 to 042 added. A few rows stay without
-the person: a merchandise order already with Spreadshop and its package claim
-(the claim's account part becomes `deleted-account:<order id>`), a settled
-month's ranks, and a referral the account made (`deleted-account`). Until 044
+routine, including the ones 035 and 039 to 042 added; 045 restates it with the
+voucher redemptions. A few rows stay without the person: a merchandise order
+already with Spreadshop and its package claim (the claim's account part becomes
+`deleted-account:<order id>`), a settled month's ranks, a referral the account
+made (`deleted-account`), and a voucher the account created as an admin, which
+keeps its counts (`created_by` becomes `deleted-account`). Until 044
 is in production the handler also calls the four routines those migrations
 shipped (`delete_user_activity_days`, `delete_entitlement_data`,
 `delete_coin_data`, `delete_referral_data`); after 044 they delete nothing,
