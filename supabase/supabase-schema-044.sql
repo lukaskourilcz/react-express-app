@@ -18,6 +18,38 @@
 -- No table gains a policy and no routine reads or writes a learning table
 -- beyond deleting the account's own rows. delete_user_data stays SECURITY
 -- DEFINER with an empty search_path and executable by service_role only.
+--
+-- The body of delete_user_data names tables from 035 and 039 to 042, and
+-- plpgsql resolves them only when the routine runs. Applied early, this file
+-- would install cleanly and then fail every account deletion, so section 0
+-- refuses to run until every one of those tables exists (review finding
+-- data-4). Production receives 039, 040, 041, 042, 043 and 044 in one sitting,
+-- in that order, before the code that calls them deploys.
+
+-- ---------------------------------------------------------------------------
+-- 0. Refuse to run before the migrations this one depends on.
+-- ---------------------------------------------------------------------------
+DO $$
+DECLARE
+  v_table   TEXT;
+  v_missing TEXT[] := ARRAY[]::TEXT[];
+BEGIN
+  FOREACH v_table IN ARRAY ARRAY[
+    'path_reward_claims',                                                    -- 035
+    'entitlement_grants', 'billing_customers', 'billing_checkout_consents',  -- 039
+    'user_activity_days',                                                    -- 040
+    'token_xp_credits', 'token_month_settlements',                           -- 041
+    'referral_codes', 'referrals'                                            -- 042
+  ] LOOP
+    IF to_regclass('public.' || v_table) IS NULL THEN
+      v_missing := v_missing || v_table;
+    END IF;
+  END LOOP;
+  IF array_length(v_missing, 1) > 0 THEN
+    RAISE EXCEPTION 'migration 044 needs 035 and 039 to 042 first; missing: %', array_to_string(v_missing, ', ');
+  END IF;
+END;
+$$;
 
 -- ---------------------------------------------------------------------------
 -- 1. question_edits.importance is 1 to 10 or empty, as 014 intended. On
@@ -162,6 +194,19 @@ $$;
 
 REVOKE ALL ON FUNCTION public.delete_user_data(TEXT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.delete_user_data(TEXT) TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 3. Catch up an erasure that ran between 040 and this file.
+--
+--    040 restates the verified answer routines that the code before the
+--    freemium programme already calls, so with 040 applied and that code
+--    live, dated answers are written, and that code's account deletion (the
+--    033 body) leaves them behind. An account deleted in that window keeps
+--    its rows and its place on the 30-day board. Applied in one sitting with
+--    040, as NEEDED.md says, this deletes nothing.
+-- ---------------------------------------------------------------------------
+DELETE FROM public.user_activity_days d
+ WHERE NOT EXISTS (SELECT 1 FROM auth.users u WHERE u.id::TEXT = d.user_id);
 
 -- ---------------------------------------------------------------------------
 -- Rollback (manual): restate delete_user_data from migration 033 and keep

@@ -1195,11 +1195,18 @@ function erasureContracts() {
     assert.ok(covered.has(table), `delete_user_data still erases ${table}`);
   }
   // Every table a later migration created with an account column is erased or anonymised.
-  for (const name of migrations.filter((one) => one > 'supabase-schema-033.sql')) {
+  // And the restating file refuses to run until each of those tables exists:
+  // plpgsql resolves a table only when the routine runs, so an early copy
+  // would install cleanly and then fail every deletion (review finding data-4).
+  const guard = latestSql.slice(0, latestSql.indexOf('CREATE OR REPLACE FUNCTION public.delete_user_data('));
+  assert.match(guard, /IF to_regclass\('public\.' \|\| v_table\) IS NULL THEN/, 'the restating migration checks its tables first');
+  assert.match(guard, /RAISE EXCEPTION 'migration 044 needs 035 and 039 to 042 first; missing: %'/);
+  for (const name of migrations.filter((one) => one > 'supabase-schema-033.sql' && one < latest!)) {
     const sql = read(`supabase/${name}`);
     for (const match of sql.matchAll(/CREATE TABLE IF NOT EXISTS public\.([a-z_]+) \(([\s\S]*?)\n\);/g)) {
       if (!/\b(user_id|invitee_user_id|referrer_user_id)\b/.test(match[2])) continue;
       assert.ok(covered.has(match[1]), `${name} created ${match[1]} with an account column and delete_user_data does not erase it`);
+      assert.ok(guard.includes(`'${match[1]}'`), `${latest} checks that ${match[1]} (${name}) exists before it restates delete_user_data`);
     }
   }
   // A settled month keeps its ranks and loses the person.
