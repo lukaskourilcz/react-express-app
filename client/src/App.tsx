@@ -18,6 +18,7 @@ import { primeRankMarker } from './lib/xp';
 import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import ReferralBinder from './components/ReferralBinder';
+import SignInButton from './components/SignInButton';
 import { useAuth } from './lib/auth';
 import { useActiveSubject } from './lib/subjects';
 import { useWallet } from './lib/rewards';
@@ -33,7 +34,8 @@ import { installIntentPreloading, routeChunk } from './lib/routePreload';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
 // modules — heavy for the initial bundle. Lazy-load it so the app shell
-// (logo, nav, theme/sound toggles) paints first.
+// (logo, nav, theme/sound toggles) paints first. Only a session needs it: a
+// signed-out visitor gets SignInButton, which ships with the shell.
 const AuthButton = lazy(() => import('./components/AuthButton'));
 
 // Each page's chunk, registered with the paths that render it so a link can
@@ -240,7 +242,7 @@ function App() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const activeSubject = useActiveSubject();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [signupBonusOpen, setSignupBonusOpen] = useState(false);
   const mobile = useIsMobile();
   const analyticsIdentified = useRef(false);
@@ -601,11 +603,20 @@ function App() {
                   icon={<ShopNavIcon />}
                 />
               </span>
-              {/* Fallback reserves the avatar footprint so the toolbar
-                  doesn't reflow when the chunk lands. */}
-              <Suspense fallback={<span aria-hidden style={{ width: 56, height: 56, flexShrink: 0 }} />}>
-                <AuthButton />
-              </Suspense>
+              {/* The header draws at its final height in its first frame. A
+                  signed-out visitor, known at the first render, gets the
+                  sign-in button with the shell. The 56px placeholder, the
+                  height of the avatar row and of the widget's own skeleton,
+                  is only for a session: under it a signed-out header stood
+                  73px tall and shrank to 57px (61px on touch) when the chunk
+                  landed, pulling <main> up with it. */}
+              {user || authLoading ? (
+                <Suspense fallback={<span aria-hidden style={{ width: 56, height: 56, flexShrink: 0 }} />}>
+                  <AuthButton />
+                </Suspense>
+              ) : (
+                <SignInButton />
+              )}
             </div>
           </div>
         </header>
