@@ -20,7 +20,11 @@
 --     as it adds nothing to user_category_stats.
 --   * record_roadmap_answer_v2 (Learn) adds one answer the first time a
 --     signed-in learner answers a question in an attempt. Restated from 034;
---     the answer row is the receipt.
+--     the answer row is the receipt. It counts only while the attempt's level
+--     or part test is not yet passed, and a question counts at most once per
+--     learner and UTC day: a level's questions never change and every answer
+--     returns the correct option, so a replayed level would otherwise add
+--     unlimited correct answers (review finding integrity-5).
 --   * record_challenge_completion (new, the Biggest Shark Challenge) applies the
 --     run's XP through record_verified_activity_xp under the same award id the
 --     handler has always used, `challenge:<run id>`, and adds the run's answers
@@ -380,7 +384,7 @@ GRANT EXECUTE ON FUNCTION public.record_verified_quiz_result_v2(
 -- 4. Learn answers
 -- ---------------------------------------------------------------------------
 --
--- Restated in full from 034. The only changes are v_first and the block after
+-- Restated in full from 034. The only changes are the new declarations and the block after
 -- the answer insert.
 
 CREATE OR REPLACE FUNCTION public.record_roadmap_answer_v2(
@@ -406,9 +410,11 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_attempt public.roadmap_attempts%ROWTYPE;
-  v_answer  public.roadmap_attempt_answers%ROWTYPE;
-  v_first   INTEGER;
+  v_attempt   public.roadmap_attempts%ROWTYPE;
+  v_answer    public.roadmap_attempt_answers%ROWTYPE;
+  v_first     INTEGER;
+  v_progress  JSONB;
+  v_day_start TIMESTAMPTZ;
 BEGIN
   IF p_attempt_id !~ '^[A-Za-z0-9_-]{16,64}$' OR
      p_question_id !~ '^[A-Za-z0-9_-]{1,64}$' OR
@@ -464,15 +470,41 @@ BEGIN
   -- New in 040: a signed-in learner's first answer to this question counts
   -- once toward the windowed boards. The answer row is the receipt, so a
   -- second tap on the same question adds nothing, and an anonymous learner
-  -- (no user id) is never counted.
+  -- (no user id) is never counted. A step the learner already passed adds
+  -- nothing, and neither does a question this learner already answered in
+  -- another attempt today (UTC): replaying a level is review, not new answers.
   IF v_first = 1 AND p_user_id IS NOT NULL THEN
-    PERFORM public.add_activity_day(
-      p_user_id,
-      (NOW() AT TIME ZONE 'UTC')::DATE,
-      v_attempt.topic,
-      CASE WHEN p_selected_index = p_correct_index THEN 1 ELSE 0 END,
-      1
-    );
+    SELECT data INTO v_progress FROM public.roadmap_progress WHERE user_id = p_user_id;
+    IF NOT COALESCE(
+         v_progress #> ARRAY[
+           v_attempt.topic,
+           CASE WHEN v_attempt.kind = 'level' THEN 'levels' ELSE 'checkpoints' END,
+           v_attempt.ref::TEXT,
+           'passed'
+         ] = 'true'::JSONB,
+         FALSE
+       ) THEN
+      v_day_start := ((NOW() AT TIME ZONE 'UTC')::DATE)::TIMESTAMP AT TIME ZONE 'UTC';
+      -- An attempt lives two hours, so one opened before midnight can hold an
+      -- answer given after it.
+      PERFORM 1
+        FROM public.roadmap_attempts t
+        JOIN public.roadmap_attempt_answers a ON a.attempt_id = t.attempt_id
+       WHERE t.user_id = p_user_id
+         AND t.created_at >= v_day_start - INTERVAL '2 hours'
+         AND t.attempt_id <> p_attempt_id
+         AND a.question_id = p_question_id
+         AND a.answered_at >= v_day_start;
+      IF NOT FOUND THEN
+        PERFORM public.add_activity_day(
+          p_user_id,
+          (NOW() AT TIME ZONE 'UTC')::DATE,
+          v_attempt.topic,
+          CASE WHEN p_selected_index = p_correct_index THEN 1 ELSE 0 END,
+          1
+        );
+      END IF;
+    END IF;
   END IF;
 
   -- The stored answer, not the submitted one: a second attempt at the same

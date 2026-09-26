@@ -1765,6 +1765,17 @@ async function main() {
     for (const name of ['record_verified_quiz_result_v2', 'record_roadmap_answer_v2', 'record_challenge_completion']) {
       assert.match(routineOf(name), /PERFORM public\.add_activity_day\(/, `${name} must date its answers`);
     }
+    // A replayed Learn level is review, not new answers (review finding
+    // integrity-5): a passed step adds nothing, and a question counts at most
+    // once per learner and UTC day across attempts.
+    const learnAnswer = routineOf('record_roadmap_answer_v2');
+    const dating = learnAnswer.indexOf('PERFORM public.add_activity_day(');
+    const passedCheck = learnAnswer.indexOf("CASE WHEN v_attempt.kind = 'level' THEN 'levels' ELSE 'checkpoints' END");
+    const sameDay = learnAnswer.indexOf('AND a.question_id = p_question_id');
+    assert.ok(passedCheck > 0 && passedCheck < dating, 'a Learn answer on a passed step is not dated');
+    assert.ok(sameDay > 0 && sameDay < dating, 'a question answered in another attempt today is not dated again');
+    assert.match(learnAnswer, /AND t\.attempt_id <> p_attempt_id/);
+    assert.match(learnAnswer, /AND a\.answered_at >= v_day_start;/);
     assert.doesNotMatch(migration, /FUNCTION public\.record_coding/, 'a coding pass must not reach the dated boards');
     for (const file of apiFiles(join(process.cwd(), 'api'))) {
       const source = readFileSync(file, 'utf8');

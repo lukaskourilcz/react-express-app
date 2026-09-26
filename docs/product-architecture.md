@@ -69,7 +69,11 @@ does: `record_verified_quiz_result_v2` for quizzes and the daily challenge,
 `record_roadmap_answer_v2` for a signed-in learner's first answer to a Learn
 question, and `record_challenge_completion` for a finished Biggest Shark
 Challenge run. Each write sits behind the receipt that already makes its routine
-idempotent. Coding passes are not answers and are not counted.
+idempotent. A Learn answer counts only while its level or part test is not yet
+passed, and a question counts at most once per learner and UTC day: a level's
+questions never change and each answer returns the correct option, so a replayed
+level would otherwise add correct answers without limit. Coding passes are not
+answers and are not counted.
 `window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
 fewer answers for the same number correct, and equal results share a rank. The
 all-time board keeps its sources (`subject_leaderboard`, `category_leaderboard`
