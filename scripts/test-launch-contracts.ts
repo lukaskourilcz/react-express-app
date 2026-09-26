@@ -30,6 +30,7 @@ import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS } from '../l
 import { buildQueue, parseScheduledFor } from '../lib/coding/practice-handlers';
 import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
+import settingsHandler from '../api/settings';
 import roadmapHandler from '../api/quiz/roadmap';
 import { selectPersonalizedReview, selectDueItems, DUE_SHARE } from '../lib/review-selection';
 import { defaultDeploymentCategories, validateCategoryScope } from '../lib/product-scope';
@@ -98,7 +99,7 @@ import {
   tokensForVerifiedXp,
   validateAddress,
 } from '../shared/rewards';
-import { normalizeSettings } from '../lib/settings-store';
+import { DEFAULT_SETTINGS, normalizeSettings } from '../lib/settings-store';
 import { taskResources, CODING_DOC_LINKS } from '../shared/coding-docs';
 import { STREAK_PROTECTION_CAP } from '../shared/rewards';
 import {
@@ -191,6 +192,16 @@ function mockResponse() {
     end() { return this; },
     headers,
   };
+}
+
+/** Every script and source file under `dir` (relative to the repository),
+ * node_modules left out. */
+function codeFiles(dir: string): string[] {
+  return readdirSync(join(process.cwd(), dir), { withFileTypes: true }).flatMap((entry) => {
+    const path = `${dir}/${entry.name}`;
+    if (entry.isDirectory()) return entry.name === 'node_modules' ? [] : codeFiles(path);
+    return /\.(ts|tsx|mjs|js)$/.test(entry.name) ? [path] : [];
+  });
 }
 
 /** Corrupt a sealed token in a way that always changes its authentication tag,
@@ -806,6 +817,46 @@ function publicCopyContracts() {
   }
   // The EU ODR platform closed on 20 July 2025; linking to it now misleads.
   assert.doesNotMatch(read('client/src/components/LegalPages.tsx'), /ec\.europa\.eu\/consumers\/odr/, 'no link to the closed ODR platform');
+}
+
+/* ── the retired support settings (#222, #230) ────────────────────────────
+ *
+ * The voluntary-support page and the quiz prompt are gone, and so are the
+ * settings behind them: the SUPPORT_ENABLED flag, the `support` block of the
+ * game settings and its fields in /dev → Settings. Rows saved before
+ * 2026-09-26 may still carry the block, so reading one drops it and a save
+ * from /dev writes the row without it. */
+async function retiredSupportContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const legacy = {
+    enabled: true, kofiUrl: 'https://ko-fi.com/devshark', githubSponsorsUrl: 'https://github.com/sponsors/devshark',
+    monthlyTarget: 40, amountCovered: 12, lastUpdatedAt: '2026-09-01', costBreakdown: [{ label: 'Hosting', amount: 20 }],
+    publicThanksEnabled: true,
+  };
+  assert.equal('support' in DEFAULT_SETTINGS, false, 'the game settings have no support block');
+  const stored = normalizeSettings({ ...DEFAULT_SETTINGS, support: legacy });
+  assert.equal('support' in stored, false, 'a stored support block is dropped when the row is read');
+  assert.deepEqual(stored, normalizeSettings(DEFAULT_SETTINGS), 'a row with the old block reads exactly like one without it');
+  assert.deepEqual(normalizeSettings({ ...stored, support: legacy }), stored, 'a save that still sends the block stores the row without it');
+
+  const publicSettings = mockResponse();
+  await settingsHandler({ method: 'GET', headers: {}, query: {} } as never, publicSettings as never);
+  assert.equal(publicSettings.statusCode, 200);
+  assert.equal('support' in (publicSettings.body as Record<string, unknown>), false, '/api/settings answers without a support block');
+
+  // The files that held the flag, the block and the /dev fields keep none of them.
+  for (const file of ['api/settings.ts', 'lib/settings-store.ts', 'client/src/lib/gameConfig.ts', 'client/src/lib/devApi.ts',
+                      'client/src/components/dev/DevSettings.tsx', 'client/.env.example', 'README.md']) {
+    const source = read(file);
+    assert.doesNotMatch(source, /SUPPORT_ENABLED/, `${file} still names SUPPORT_ENABLED`);
+    assert.doesNotMatch(source, /^\s*support\s*[:?]/m, `${file} still declares a support block`);
+    assert.doesNotMatch(source, /kofi|githubSponsors|publicThanks|costBreakdown|monthlyTarget|amountCovered/i, `${file} still has a support field`);
+    assert.doesNotMatch(source, /Enable public support links|Voluntary support \(disabled by default\)/, `${file} still shows the /dev support fields`);
+  }
+  // And no other server or client source reads the switch.
+  for (const file of ['api', 'lib', 'shared', 'client/src'].flatMap(codeFiles)) {
+    assert.doesNotMatch(read(file), /SUPPORT_ENABLED|\bsupportEnabled\b|\.support\.enabled/, `${file} reads the retired support switch`);
+  }
 }
 
 /** Coins (#227, handoff section 7). Replays credit nothing, only
@@ -1676,12 +1727,7 @@ function erasureContracts() {
     'deleting an account calls delete_user_data and no other routine');
   assert.ok(deletion.indexOf("rpc('delete_user_data'") < deletion.indexOf('auth.admin.deleteUser'), 'the sign-in identity goes last');
   // No code calls a dropped routine.
-  const sourceFiles = (dir: string): string[] => readdirSync(join(process.cwd(), dir), { withFileTypes: true }).flatMap((entry) => {
-    const path = `${dir}/${entry.name}`;
-    if (entry.isDirectory()) return entry.name === 'node_modules' ? [] : sourceFiles(path);
-    return /\.(ts|tsx|mjs|js)$/.test(entry.name) ? [path] : [];
-  });
-  for (const file of ['api', 'lib', 'shared', 'client/src'].flatMap(sourceFiles)) {
+  for (const file of ['api', 'lib', 'shared', 'client/src'].flatMap(codeFiles)) {
     const source = read(file);
     for (const name of FOLDED) assert.doesNotMatch(source, new RegExp(`\\b${name}\\b`), `${file} still names ${name}, which 046 drops`);
   }
@@ -3197,6 +3243,7 @@ async function main() {
   await tierContracts();
   billingContracts();
   publicCopyContracts();
+  await retiredSupportContracts();
   coinsContracts();
   await referralContracts();
   await merchContracts();
@@ -3204,7 +3251,7 @@ async function main() {
   await voucherContracts();
   await webdevBankContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, and the webdev-bank contract BoardlessAI imports.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, and the webdev-bank contract BoardlessAI imports.');
 }
 
 void main().catch((error) => {
