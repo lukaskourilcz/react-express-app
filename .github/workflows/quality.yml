@@ -23,7 +23,7 @@ jobs:
             client/package-lock.json
       - run: npm ci && npm ci --prefix client
       - run: npm run typecheck:api && npm run typecheck:tooling --prefix client
-      - run: npm run test:launch && npm run test:coding-auth && npm run test:grading-integrity && npm run test:coding && npm run test:paths && npm run test:client
+      - run: npm run test:launch && npm run test:coding-auth && npm run test:grading-integrity && npm run test:coding && npm run test:paths && npm run test:billing && npm run test:fallbacks && npm run test:client
       - run: npm run check:unused && npm run check:security
       - run: npm run build && npm run check:public && npm run check:bundle
         id: build
