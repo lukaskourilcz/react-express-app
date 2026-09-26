@@ -58,9 +58,6 @@ Content: 2,447 authored questions, 1,974 of them served, and 770 coding tasks,
 - **Testing/build:** TypeScript, launch tests, content contract, responsive checks
 - **Coding runtime:** QuickJS (WebAssembly) sandbox on the server, the TypeScript
   compiler for type tests, CodeMirror in the browser, a self-hosted React harness
-
-## Connected third parties
-
 - **Supabase** — Postgres database, auth, and RLS; server-authoritative scores and grading.
 - **GitHub App (the garden)** — optional; commits passed coding tasks to the learner's own repository through installation tokens. No user token is stored, and the learner can disconnect from the profile.
 - **Stripe** — sells Premium through Checkout, Billing and the Customer Portal; under Managed Payments Stripe (as Link) is the seller of record. Off until `BILLING_ENABLED=true`. A payment changes which content an account may start, never grading or scores.
@@ -70,7 +67,7 @@ Content: 2,447 authored questions, 1,974 of them served, and 770 coding tasks,
 - **Sentry** — client and server error monitoring.
 - **PostHog** — product analytics.
 
-## Key libraries
+## Third-party libraries
 
 - `react-syntax-highlighter`, `devicon` — code and technology visuals (devShark).
 - `quickjs-emscripten`, `typescript`, `@codemirror/*`, `sucrase`, `prettier` — coding grading, type checks, editor, React harness, formatting (devShark).
