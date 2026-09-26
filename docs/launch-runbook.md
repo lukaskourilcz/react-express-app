@@ -154,12 +154,15 @@ Test in English, desktop and a narrow mobile viewport:
 9. Request `/api/health`; production must return 200 only when its public
    database check and service-role migration-023 check succeed. Confirm the
    response reports distributed rate limiting as configured and alert on 503.
-10. With a free account, confirm React level 13, a Premium coding challenge and
-    stage 2 of a project each open the upgrade sheet. If `BILLING_ENABLED=true`,
-    buy Premium in Stripe test mode, confirm the plan line and
-    `/premium/success`, then cancel at `/premium/cancel` and check the end date.
-11. Walk one learning path end to end with the deployment switch
-    on: read the outline signed out, sign in, start the path, open an activity,
+10. With a free account, and again signed out, confirm React level 13, a
+    Premium coding challenge and stage 2 of a project each open the upgrade
+    sheet. If `BILLING_ENABLED=true`, buy Premium in Stripe test mode, confirm
+    the plan line and `/premium/success`, then cancel at `/premium/cancel`
+    signed out: open the link the page emails, confirm, and check the end
+    date.
+11. Walk one learning path end to end with the deployment switch on and
+    Premium on the account (a free account is refused a path with the upgrade
+    sheet): read the outline signed out, sign in, start the path, open an activity,
     submit a wrong answer and a right one, close the tab mid-draft and reopen
     it, then submit the same idempotency key twice and confirm the second call
     replays the stored result rather than grading again. Confirm a paused path

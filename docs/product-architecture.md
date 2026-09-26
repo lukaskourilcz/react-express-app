@@ -307,7 +307,9 @@ a local Postgres and waits for production.
   The API client in `client/src/lib/api.ts` turns that one response into the
   upgrade sheet, so a stale client never shows a raw error. `op=entitlement`
   (GET, signed in) returns `{ tier, source, currentPeriodEnd,
-  cancelAtPeriodEnd, inGrace, validUntil }` from `entitlement_summary`.
+  cancelAtPeriodEnd, inGrace, validUntil, billingAccount, subscriptionLive }`
+  from `entitlement_summary`; the last two say whether the account has a
+  Stripe customer and a live subscription, whichever grant wins the plan line.
 - **The browser** mirrors the server. `useEntitlement()`
   (`client/src/lib/entitlement.ts`) reads the plan; `useLocks()`
   (`client/src/lib/locks.ts`) draws locks from `contentTier` in four states:
@@ -326,18 +328,26 @@ a local Postgres and waits for production.
   promo row) and `billing_events` (provider event ids, so a repeated delivery
   changes nothing). `is_premium(p_user)` is true for an active, unexpired
   manual or promo grant, an `active` or `trialing` provider grant, or a
-  `past_due` one within seven days of `current_period_end`. RLS is on for all
-  of them, with an owner-scoped SELECT policy on every table but
+  `past_due` one within seven days of the failed renewal (`past_due_since`,
+  set from the unpaid period's start and never moved forward: Stripe opens the
+  next period when it creates the renewal invoice, so counting from the period
+  end would keep Premium open through the whole unpaid period). RLS is on for
+  all of them, with an owner-scoped SELECT policy on every table but
   `billing_events`, which has none. The routines (`is_premium`, `entitlement_summary`,
   `link_billing_customer`, `upsert_provider_entitlement`,
   `grant_manual_entitlement`, `revoke_manual_entitlement`,
   `record_billing_event`, `finish_billing_event`, `delete_entitlement_data`,
   and from D2 `release_billing_event`, `billing_account`,
   `billing_customer_owner` and `record_checkout_consent` for the fourth table,
-  `billing_checkout_consents`) are SECURITY DEFINER with an empty
+  `billing_checkout_consents`, and from the review of 2026-09-26
+  `claim_voluntary_refund` and the four routines of the fifth table,
+  `billing_cancel_requests`) are SECURITY DEFINER with an empty
   `search_path`, executable by
   `service_role` only, and none of them reads or writes XP, stats, streak or
-  progress tables. A revoked provider grant stays revoked, and an account holds
+  progress tables. `billing_cancel_requests` has RLS on, no policy and no
+  browser grant: it holds the SHA-256 of each emailed link, the address typed
+  on the page, the action and the times, never a token or an account id, and
+  each new request purges rows a day past their expiry. A revoked provider grant stays revoked, and an account holds
   at most one active manual grant. Admins test Premium with manual grants
   through `op=entitlements` in `api/admin/[op].ts` (GET lists grants, or one
   account's with `?userId=`; POST `{ action: 'grant', userId, validUntil,
@@ -373,33 +383,62 @@ a local Postgres and waits for production.
     anything else is handed back (`release_billing_event`) and answered 500 so
     Stripe retries.
   - `billing-cancel` POST, public: `{ email, action: 'cancel' | 'withdraw', step:
-    'request' | 'confirm' }`, five confirmations an hour per address, a 900 ms
-    floor. It acts on every live devShark subscription of the Stripe customers
-    with that email: cancel at period end, or, within 14 days of the first
-    payment, a full refund, an immediate end and a revoked grant. The answer
-    never says whether the email exists; Resend emails the details to the
-    subscription's address when `RESEND_API_KEY` is set, and only a signed-in
-    owner of the address sees them on screen.
+    'request' | 'confirm' }`, then `{ step: 'review' | 'execute', token }` from
+    the emailed link. `request` only checks the form. `confirm` (five an hour
+    per address) acts at once for a signed-in account whose confirmed email is
+    that address; for anyone else it records the request
+    (`create_billing_cancel_request`, three links an hour per address) and
+    emails a single-use link, valid 60 minutes, to the typed address. That
+    answer makes no Stripe call and keeps a 900 ms floor, so it is the same
+    whether or not the address has a subscription; without Resend it asks for
+    the sign-in instead. The link opens `/premium/cancel#confirm=<token>`:
+    `review` reads what it asks for, and `execute` uses it
+    (`consume_billing_cancel_request`) and carries the request out with the
+    time it was first made, handing the link back if Stripe cannot be reached.
+    It acts on every live devShark subscription of the Stripe customers with
+    that email: cancel at period end, or a withdrawal. Within 14 days of the
+    account's first payment (the earliest paid invoice of every customer with
+    the address) and once per account (`claim_voluntary_refund`, plus a
+    `devshark_voluntary_refund` mark on the Stripe customer), a withdrawal
+    refunds every payment of the subscription, ends it at once and revokes the
+    grant; otherwise it cancels at period end. Resend emails the receipt to the
+    subscription's address.
 - **Event mapping.** `checkout.session.completed` links the customer and keeps
   the consent (`billing_checkout_consents`, one row per session with the text
   the buyer saw); subscription created, updated and deleted, `invoice.paid` and
   `invoice.payment_failed` mirror the subscription, so `past_due` keeps Premium
-  for seven days after the period end and the plan line reads "Payment failed,
-  update your card". A full refund, a dispute and an early fraud warning (which
-  first refunds the charge) cancel the subscription at Stripe and write the
-  grant `revoked` with the reason in its note; a partial refund only logs.
-  Manual and promo grants are separate rows the webhook never reaches.
+  for seven days from the failed renewal and the plan line reads "Payment
+  failed, update your card". Only a subscription that bills a devShark Premium
+  Price, or an earlier one listed in `STRIPE_PRICE_PREMIUM_LEGACY`, opens
+  Premium: one that devShark's checkout created and that now bills another
+  product is written `canceled`, and any other is recorded as
+  `not_devshark_price` (the Stripe account may sell other things). A full
+  refund, a dispute, an early fraud warning (which first refunds the charge)
+  and a withdrawal cancel the subscription at Stripe and write the grant
+  `revoked` with the reason in its note; a partial refund only logs. Then
+  `revoke_premium_benefits` (migration 041) takes back what Premium paid out
+  while that grant existed: coin redemptions not yet sent are cancelled and
+  their coins returned, and the milestone coins and the doubled share of XP
+  credits are debited once, as far as the balance reaches. It does nothing
+  while another grant keeps the account Premium. Manual and promo grants are
+  separate rows the webhook never reaches.
   `npm run test:billing` proves all of it with signed fixture events for the
   nine types (`scripts/fixtures/billing/`).
 - **Browser.** `/premium/success` reads the plan and, when the webhook is late,
-  asks the server to apply the session; `/premium/cancel` is the public two-step
-  cancellation and withdrawal page, linked from the footer whenever Stripe is
-  connected. `PremiumCheckoutButton` is the only way into Checkout: with billing
+  asks the server to apply the session, and after its last automatic check
+  says to press Check again; `/premium/cancel` is the public cancellation and
+  withdrawal page, linked from the footer whenever Stripe is connected. It
+  takes the token of an emailed link out of the address bar before it asks
+  anything, and states the real effect of a withdrawal before the last press. `PremiumCheckoutButton` is the only way into Checkout: with billing
   off it reads "Premium opens soon" and shows no button, signed out it signs in
-  and comes back to the same page (`client/src/lib/authReturn.ts`), a paying
-  account gets "Manage billing", anyone else continues to Stripe. The Profile
-  plan line offers "Manage billing" for a paid subscription. Deleting an account
-  ends its subscriptions at Stripe first and stops if Stripe cannot be reached.
+  and comes back to the same page (`client/src/lib/authReturn.ts`), an account
+  with a live subscription gets "Manage billing" (under a longer complimentary
+  grant too), anyone else continues to Stripe. The Profile plan line offers
+  "Manage billing" to every account with a Stripe customer, on Free as well,
+  so the card, the plan and the invoices stay reachable. Deleting an account
+  ends its subscriptions at Stripe first, at once and without a refund, and
+  stops if Stripe cannot be reached; the deletion card says so to a paying
+  account and links the withdrawal.
 - **Public copy and legal pages (#222).** `/premium` (`PremiumPage.tsx`) shows
   the two plans with "VAT included", the renewal, the waiver sentence and the
   14-day refund beside the buttons (`PremiumFacts.tsx`), what Premium opens,
@@ -417,10 +456,14 @@ a local Postgres and waits for production.
 - **Stripe environment:** `BILLING_ENABLED`, `STRIPE_SECRET_KEY`,
   `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PREMIUM_MONTHLY`,
   `STRIPE_PRICE_PREMIUM_ANNUAL`, `STRIPE_MANAGED_PAYMENTS` (`true` or `false`,
-  no default) and `PUBLIC_ORIGIN` (defaults to `https://devshark.app`), plus the
-  optional `RESEND_API_KEY` and `RESEND_FROM`. Checkout sells Premium only with
+  no default) and `PUBLIC_ORIGIN` (defaults to `https://devshark.app`), plus
+  `STRIPE_PRICE_PREMIUM_LEGACY` (optional, earlier Premium Prices still
+  billed) and `RESEND_API_KEY` with `RESEND_FROM`, which the cancel page needs
+  to email its link: without them only a signed-in owner of the address can
+  cancel there. Checkout sells Premium only with
   `BILLING_ENABLED=true` and every value present; `/api/settings` tells the
-  browser `billing.enabled`, `billing.cancellable` and `billing.seller` (`link`
+  browser `billing.enabled`, `billing.cancellable`, `billing.cancelByEmail`
+  and `billing.seller` (`link`
   under Managed Payments, `trader` with plain Stripe, `null` until both the key
   and `STRIPE_MANAGED_PAYMENTS` are set) and nothing else. The
   portal, the webhook and the cancel page need only the key, so people who
@@ -459,6 +502,13 @@ production (issue #227, step D8).
   `token_month_settlements`), `grant_signup_tokens` (`signup:<account>`) and
   `credit_social_visit` (`social:<platform>:<account>`). The routines read
   `is_premium()` themselves; none writes a learning, score or streak table.
+  `settle_coin_milestones` asks `is_premium()` when it settles, so a new
+  subscriber's first wallet read pays milestones reached on the free plan
+  (an owner decision in `NEEDED.md`). When a subscription is refunded,
+  withdrawn or disputed, `revoke_premium_benefits` debits that grant's
+  milestone and doubled coins once (`revoke:<grant>`, reason `adjustment`) and
+  cancels its unsent redemptions; a milestone taken back stays in the ledger,
+  so it is never paid twice.
 - **Where credits happen.** `lib/rewards/coins.ts` is the server side. A quiz
   or daily result and a Biggest Shark Challenge run credit their XP award as
   before; a Learn level or part test passed for the first time credits

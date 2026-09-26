@@ -62,7 +62,7 @@ Content: 2,447 authored questions, 1,974 of them served, and 770 coding tasks,
 - **GitHub App (the garden)** — optional; commits passed coding tasks to the learner's own repository through installation tokens. No user token is stored, and the learner can disconnect from the profile.
 - **Stripe** — sells Premium through Checkout, Billing and the Customer Portal; under Managed Payments Stripe (as Link) is the seller of record. Off until `BILLING_ENABLED=true`. A payment changes which content an account may start, never grading or scores.
 - **Spreadshop (sprd.net AG)** — prints, sells and ships devShark merchandise; the app links to the shop, the owner orders coin redemptions there, and the server reads its monthly promotion when `SPREADSHOP_API_KEY` is set.
-- **Resend** — optional; sends the cancellation confirmation when `RESEND_API_KEY` is set.
+- **Resend** — sends the cancellation page's single-use confirmation link and its receipt when `RESEND_API_KEY` is set; without it only someone signed in with the subscription's address can cancel there.
 - **Upstash Redis** — rate limiting on API endpoints.
 - **Sentry** — client and server error monitoring.
 - **PostHog** — product analytics.
