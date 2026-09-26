@@ -29,46 +29,75 @@ import { CloseIcon } from './components/ui/icons';
 import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
 import { takeAuthReturn } from './lib/authReturn';
+import { installIntentPreloading, routeChunk } from './lib/routePreload';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
 // modules — heavy for the initial bundle. Lazy-load it so the app shell
 // (logo, nav, theme/sound toggles) paints first.
 const AuthButton = lazy(() => import('./components/AuthButton'));
 
-const Home = lazy(() => import('./components/Home'));
-const Quiz = lazy(() => import('./components/Quiz'));
-const Roadmap = lazy(() => import('./components/Roadmap'));
-const CareerRoadmap = lazy(() => import('./components/CareerRoadmap'));
-const Profile = lazy(() => import('./components/Profile'));
-const Leaderboard = lazy(() => import('./components/Leaderboard'));
-const Flashcards = lazy(() => import('./components/Flashcards'));
-const Shop = lazy(() => import('./components/Shop'));
-const PlayLanding = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayLanding })));
-const PlayMatch = lazy(() => import('./components/Play').then((m) => ({ default: m.PlayMatch })));
-const Challenge = lazy(() => import('./components/Challenge'));
-const DevPage = lazy(() => import('./components/dev/DevPage'));
-const PrivacyPage = lazy(() => import('./components/LegalPages').then((m) => ({ default: m.PrivacyPage })));
-const TermsPage = lazy(() => import('./components/LegalPages').then((m) => ({ default: m.TermsPage })));
-const CurationPage = lazy(() => import('./components/CurationPage').then((m) => ({ default: m.CurationPage })));
-const ClassroomPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.ClassroomPage })));
-const TopicLandingPage = lazy(() => import('./components/TopicLandingPage'));
-const Today = lazy(() => import('./components/Today'));
-const Collection = lazy(() => import('./components/Collection'));
-const TypingRacer = lazy(() => import('./components/TypingRacer'));
-const CodingHome = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.CodingHome })));
-const CodingTrackScreen = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.CodingTrackScreen })));
-const FullStackScreen = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.FullStackScreen })));
-const CodingTaskScreen = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.CodingTaskScreen })));
-const CodingReviewScreen = lazy(() => import('./components/coding/CodingSection').then((m) => ({ default: m.CodingReviewScreen })));
-const GithubSettingsPage = lazy(() => import('./components/coding/GithubSettingsPage').then((m) => ({ default: m.GithubSettingsPage })));
-const FdeOverview = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.FdeOverview })));
-const FdeModule = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.FdeModule })));
-const DsaOverview = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.DsaOverview })));
-const DsaModule = lazy(() => import('./components/paths/LearningPathScreens').then((m) => ({ default: m.DsaModule })));
-const NotFoundPage = lazy(() => import('./components/PublicInfoPages').then((m) => ({ default: m.NotFoundPage })));
-const PremiumPage = lazy(() => import('./components/PremiumPage'));
-const PremiumSuccessPage = lazy(() => import('./components/PremiumBillingPages').then((m) => ({ default: m.PremiumSuccessPage })));
-const PremiumCancelPage = lazy(() => import('./components/PremiumBillingPages').then((m) => ({ default: m.PremiumCancelPage })));
+// Each page's chunk, registered with the paths that render it so a link can
+// start loading its page before the click lands (lib/routePreload.ts).
+const exact = (...paths: string[]) => (pathname: string) => paths.includes(pathname);
+const under = (...prefixes: string[]) => (pathname: string) => prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+const loadHome = routeChunk(exact('/'), () => import('./components/Home'));
+const loadQuiz = routeChunk(exact('/quiz'), () => import('./components/Quiz'));
+const loadRoadmap = routeChunk(exact('/learn'), () => import('./components/Roadmap'));
+const loadCareerRoadmap = routeChunk(exact('/roadmap'), () => import('./components/CareerRoadmap'));
+const loadProfile = routeChunk(exact('/profile'), () => import('./components/Profile'));
+const loadLeaderboard = routeChunk(exact('/leaderboard'), () => import('./components/Leaderboard'));
+const loadFlashcards = routeChunk(exact('/cards'), () => import('./components/Flashcards'));
+const loadShop = routeChunk(exact('/shop'), () => import('./components/Shop'));
+const loadPlay = routeChunk(under('/play'), () => import('./components/Play'));
+const loadChallenge = routeChunk(exact('/challenge'), () => import('./components/Challenge'));
+const loadDev = routeChunk(under('/dev'), () => import('./components/dev/DevPage'));
+const loadLegal = routeChunk(exact('/privacy', '/terms'), () => import('./components/LegalPages'));
+const loadCuration = routeChunk(exact('/curation'), () => import('./components/CurationPage'));
+const loadPublicInfo = routeChunk(exact('/classroom'), () => import('./components/PublicInfoPages'));
+const loadTopic = routeChunk(under('/topics', '/cs/topics'), () => import('./components/TopicLandingPage'));
+const loadToday = routeChunk(exact('/today'), () => import('./components/Today'));
+const loadCollection = routeChunk(exact('/collection'), () => import('./components/Collection'));
+const loadTyping = routeChunk(exact('/typing'), () => import('./components/TypingRacer'));
+const loadCoding = routeChunk(under('/coding'), () => import('./components/coding/CodingSection'));
+const loadGithubSettings = routeChunk(exact('/settings/github'), () => import('./components/coding/GithubSettingsPage'));
+const loadPaths = routeChunk(under('/roadmap/specializations', '/roadmap/paths'), () => import('./components/paths/LearningPathScreens'));
+const loadPremium = routeChunk(exact('/premium'), () => import('./components/PremiumPage'));
+const loadBilling = routeChunk(exact('/premium/success', '/premium/cancel'), () => import('./components/PremiumBillingPages'));
+
+const Home = lazy(loadHome);
+const Quiz = lazy(loadQuiz);
+const Roadmap = lazy(loadRoadmap);
+const CareerRoadmap = lazy(loadCareerRoadmap);
+const Profile = lazy(loadProfile);
+const Leaderboard = lazy(loadLeaderboard);
+const Flashcards = lazy(loadFlashcards);
+const Shop = lazy(loadShop);
+const PlayLanding = lazy(() => loadPlay().then((m) => ({ default: m.PlayLanding })));
+const PlayMatch = lazy(() => loadPlay().then((m) => ({ default: m.PlayMatch })));
+const Challenge = lazy(loadChallenge);
+const DevPage = lazy(loadDev);
+const PrivacyPage = lazy(() => loadLegal().then((m) => ({ default: m.PrivacyPage })));
+const TermsPage = lazy(() => loadLegal().then((m) => ({ default: m.TermsPage })));
+const CurationPage = lazy(() => loadCuration().then((m) => ({ default: m.CurationPage })));
+const ClassroomPage = lazy(() => loadPublicInfo().then((m) => ({ default: m.ClassroomPage })));
+const TopicLandingPage = lazy(loadTopic);
+const Today = lazy(loadToday);
+const Collection = lazy(loadCollection);
+const TypingRacer = lazy(loadTyping);
+const CodingHome = lazy(() => loadCoding().then((m) => ({ default: m.CodingHome })));
+const CodingTrackScreen = lazy(() => loadCoding().then((m) => ({ default: m.CodingTrackScreen })));
+const FullStackScreen = lazy(() => loadCoding().then((m) => ({ default: m.FullStackScreen })));
+const CodingTaskScreen = lazy(() => loadCoding().then((m) => ({ default: m.CodingTaskScreen })));
+const CodingReviewScreen = lazy(() => loadCoding().then((m) => ({ default: m.CodingReviewScreen })));
+const GithubSettingsPage = lazy(() => loadGithubSettings().then((m) => ({ default: m.GithubSettingsPage })));
+const FdeOverview = lazy(() => loadPaths().then((m) => ({ default: m.FdeOverview })));
+const FdeModule = lazy(() => loadPaths().then((m) => ({ default: m.FdeModule })));
+const DsaOverview = lazy(() => loadPaths().then((m) => ({ default: m.DsaOverview })));
+const DsaModule = lazy(() => loadPaths().then((m) => ({ default: m.DsaModule })));
+const NotFoundPage = lazy(() => loadPublicInfo().then((m) => ({ default: m.NotFoundPage })));
+const PremiumPage = lazy(loadPremium);
+const PremiumSuccessPage = lazy(() => loadBilling().then((m) => ({ default: m.PremiumSuccessPage })));
+const PremiumCancelPage = lazy(() => loadBilling().then((m) => ({ default: m.PremiumCancelPage })));
 
 // Route-transition variants, hoisted so the m.div props keep a stable identity
 // across App re-renders (App re-renders on every navigation — hottest path).
@@ -219,6 +248,10 @@ function App() {
   // Remember the learner's current rank on load so we don't re-celebrate a
   // rank-up earned in a previous session.
   useEffect(() => primeRankMarker(), []);
+
+  // A pointer resting on a link, a focus or a first touch starts loading the
+  // page behind it, so most clicks find their page ready.
+  useEffect(() => installIntentPreloading(), []);
 
   // A click pushes the new address at once, while the router renders the next
   // page in a transition that keeps this one on screen until the next can
@@ -545,6 +578,7 @@ function App() {
                     label={t('nav.leaderboard')}
                     tooltip={t('nav.leaderboard')}
                     onClick={() => navigate('/leaderboard')}
+                    data-route="/leaderboard"
                     icon={<TrophyNavIcon />}
                   />
                 )}
@@ -554,6 +588,7 @@ function App() {
                   label={t('nav.premium')}
                   tooltip={t('nav.premium')}
                   onClick={() => navigate('/premium')}
+                  data-route="/premium"
                   icon={<PremiumNavIcon />}
                 />
                 <AxIconButton
@@ -562,6 +597,7 @@ function App() {
                   label={t('nav.shop')}
                   tooltip={t('nav.shop')}
                   onClick={() => navigate('/shop')}
+                  data-route="/shop"
                   icon={<ShopNavIcon />}
                 />
               </span>
