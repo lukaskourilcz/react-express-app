@@ -361,7 +361,7 @@
   font-family: inherit;
   transition: filter 0.15s ease;
 }
-.rm-accent-btn:hover { filter: brightness(0.92); }
+.rm-accent-btn:hover { filter: var(--rm-accent-hover, brightness(0.92)); }
 
 /* Outlined retry (passed) button. */
 .rm-outline-btn {

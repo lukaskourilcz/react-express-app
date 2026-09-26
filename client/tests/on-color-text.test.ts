@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { CATEGORY_OPTIONS, contrastRatio, textOnColor } from '../src/lib/categories';
+import { CATEGORY_OPTIONS, contrastRatio, hoverFilterOn, textOnColor } from '../src/lib/categories';
 
 // P1.3 (docs/design/product-ux-audit.md): text on a coloured fill must reach
 // WCAG AA's 4.5:1 in both themes, so no fill may carry a fixed white label.
@@ -17,6 +17,19 @@ describe('text on a coloured fill', () => {
     for (const fill of fills) {
       expect(contrastRatio(fill, textOnColor(fill)), fill).toBeGreaterThanOrEqual(4.5);
     }
+  });
+
+  it('keeps 4.5:1 on hover, where the filter darkens under white text and lightens under dark text', () => {
+    // CSS brightness() scales each sRGB channel and clips at 255.
+    const filtered = (hex: string, factor: number) => '#' + [1, 3, 5]
+      .map((i) => Math.min(255, Math.round(parseInt(hex.slice(i, i + 2), 16) * factor)).toString(16).padStart(2, '0'))
+      .join('');
+    for (const fill of [...CATEGORY_OPTIONS.map((category) => category.color), CHECKPOINT_GOLD]) {
+      const factor = Number(hoverFilterOn(fill).match(/[\d.]+/)?.[0]);
+      expect(contrastRatio(filtered(fill, factor), textOnColor(fill)), fill).toBeGreaterThanOrEqual(4.5);
+    }
+    expect(hoverFilterOn('#e34c26')).toBe('brightness(1.08)');
+    expect(hoverFilterOn('#264de4')).toBe('brightness(0.92)');
   });
 
   it('keeps white where white reads and uses the ocean ink on light fills', () => {

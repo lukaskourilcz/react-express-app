@@ -67,7 +67,7 @@ import { useRoadmapStructure } from '../lib/queries';
 import { apiFetch } from '../lib/api';
 import { awardLearningOutcome, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp } from '../lib/leveling';
-import { getCategoryHexColor, categoryLabelKey, onCategoryColorText, textOnColor } from '../lib/categories';
+import { getCategoryHexColor, categoryLabelKey, hoverFilterOn, onCategoryColorText, textOnColor } from '../lib/categories';
 import { BRAND } from '../theme/MuiTheme';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
@@ -1216,8 +1216,12 @@ function LessonRunner({
   const accent = isCheckpoint ? CHECKPOINT_GOLD : topicColor;
   // Accent-filled buttons take their text colour from the fill: topic hues run
   // from CSS blue to JavaScript yellow and checkpoints use gold, so no single
-  // colour reads on all of them.
-  const accentFill = { backgroundColor: accent, ['--rm-on-accent']: textOnColor(accent) } as CSSProperties;
+  // colour reads on all of them. The hover filter follows the text colour.
+  const accentFill = {
+    backgroundColor: accent,
+    ['--rm-on-accent']: textOnColor(accent),
+    ['--rm-accent-hover']: hoverFilterOn(accent),
+  } as CSSProperties;
   // A level opens with a short info panel (what this section is about + a core
   // principle) before the first question. Checkpoints/part-tests skip it, as do
   // levels with no authored intro.

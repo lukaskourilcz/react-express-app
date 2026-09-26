@@ -92,6 +92,12 @@ export function textOnColor(hex: string): string {
   onColorTextCache.set(hex, result);
   return result;
 }
+// The hover filter for a fill that carries textOnColor() text: darken it
+// under white text and lighten it under dark text, so the label never reads
+// worse on hover than at rest (a uniform brightness(0.92) took HTML orange's
+// ink from 4.71:1 to 4.08:1).
+export const hoverFilterOn = (hex: string): string =>
+  textOnColor(hex) === '#fff' ? 'brightness(0.92)' : 'brightness(1.08)';
 export const onCategoryColorText = (cat: string) => textOnColor(getCategoryHexColor(cat));
 export const getCategoryHexColor = (category: string) =>
   CATEGORY_LOOKUP.get(category as CategoryType)?.color || '#666';
