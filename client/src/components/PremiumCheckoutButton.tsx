@@ -41,7 +41,10 @@ export default function PremiumCheckoutButton({ plan }: { plan: BillingPlan }) {
   if (billing.known && !billing.enabled) return <p className="ss-premium-note">{t('billing.checkout.soon')}</p>;
 
   const waiting = !billing.known || authLoading || (isAuthenticated && entitlement.loading);
-  const paying = entitlement.tier === 'premium' && entitlement.data?.source === 'provider';
+  // A live subscription, even under a longer complimentary grant: the server
+  // would refuse a second checkout, so this is the portal instead.
+  const paying = entitlement.data?.subscriptionLive === true
+    || (entitlement.tier === 'premium' && entitlement.data?.source === 'provider');
   const label = !isAuthenticated
     ? t('billing.checkout.signIn')
     : paying

@@ -253,12 +253,24 @@ describe('the plan line and the footer', () => {
     }
   });
 
-  it('keeps Manage billing away from a complimentary grant', async () => {
+  it('keeps Manage billing away from a complimentary grant without billing', async () => {
     signIn();
     serve({ plan: { ...PREMIUM, source: 'manual', currentPeriodEnd: null } });
     renderAt('/profile', <PlanLine />);
     expect(await screen.findByText('Premium, complimentary')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Manage billing' })).toBeNull();
+  });
+
+  it('keeps Manage billing for a subscription under a longer grant, and after it ended', async () => {
+    signIn();
+    serve({ plan: { ...PREMIUM, source: 'manual', currentPeriodEnd: null, billingAccount: true, subscriptionLive: true } });
+    renderAt('/profile', <PlanLine />);
+    expect(await screen.findByText('Premium, complimentary')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Manage billing' })).toBeInTheDocument();
+    serve({ plan: { ...FREE, billingAccount: true, subscriptionLive: false } });
+    renderAt('/profile', <PlanLine />);
+    expect(await screen.findByText('Free')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Manage billing' }).length).toBeGreaterThan(0);
   });
 
   it('links the cancellation page from the footer when billing exists', async () => {
@@ -322,5 +334,13 @@ describe('the checkout button', () => {
     serve({ plan: PREMIUM });
     renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
     expect(await screen.findByRole('button', { name: 'Manage billing' })).toBeInTheDocument();
+  });
+
+  it('sends a subscriber under a complimentary grant to the portal, not to a second checkout', async () => {
+    signIn();
+    serve({ plan: { ...PREMIUM, source: 'promo', currentPeriodEnd: null, billingAccount: true, subscriptionLive: true } });
+    renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
+    expect(await screen.findByRole('button', { name: 'Manage billing' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue with monthly' })).toBeNull();
   });
 });

@@ -7,9 +7,11 @@
 //   Premium, complimentary until 12 Nov      a manual or promo grant
 //
 // Loading shows a skeleton rather than "Free", so a Premium account never
-// reads as free for a moment. A failure says so and offers a retry. A paid
-// subscription adds "Manage billing", which opens Stripe's Customer Portal
-// (card, invoices, plan switch, cancel at period end).
+// reads as free for a moment. A failure says so and offers a retry. An
+// account with a billing customer gets "Manage billing", which opens Stripe's
+// Customer Portal (card, invoices, plan switch, cancel at period end), whichever
+// grant wins the line: a complimentary grant longer than the subscription
+// under it, or a subscription that has ended and left its invoices.
 import { useState } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
@@ -92,12 +94,13 @@ export default function PlanLine() {
           <Text type="supporting" weight="semibold">{t('profile.plan.free')}</Text>
           <Text type="supporting" color="secondary">{t('profile.plan.freeBody', { level: FREE_LEARN_LEVELS.react ?? 0 })}</Text>
           <Button variant="ghost" size="sm" label={t('profile.plan.see')} onClick={() => openUpgradeSheet()} />
+          {cancellable && data?.billingAccount === true && <ManageBilling />}
         </>
       ) : (
         <>
           <Text type="supporting" weight="semibold">{planText(data!, t, lang)}</Text>
           <Text type="supporting" color="secondary">{t('profile.plan.premiumBody')}</Text>
-          {cancellable && data?.source === 'provider' && <ManageBilling />}
+          {cancellable && (data?.billingAccount === true || data?.source === 'provider') && <ManageBilling />}
         </>
       )}
     </div>
