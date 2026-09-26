@@ -1102,7 +1102,7 @@ Eight waves on `wip/dev-lane-b`, each checked on its own head. In every wave `np
 
 Not run in the waves: `npm run check:responsive` and `npm run test:browser` (no layout, component or story changed; React 1 added one `<small>` to the results summary), `npm run build:curation-registry` (`CODING_TASKS_AUDITED` is false), and `npm run test:react-isolation` for the React waves (it needs Vercel Sandbox credentials).
 
-A ninth wave, twenty-five Medium and Hard JavaScript challenges (`af8df50`, `3933db9`, `5f08ecd`, 720 tasks), sits on `wip/dev-c`. Its checks exit 0 there; once, between two of ten complete runs of its one-off wrong-answer harness, QuickJS aborted on a GC assertion and the process exited before its summary. It is not merged into this integration branch, whose index holds 695 tasks.
+A ninth wave, twenty-five Medium and Hard JavaScript challenges (`af8df50`, `3933db9`, `5f08ecd`, 720 tasks), sits on `wip/dev-c`. Its checks exit 0 there; once, between two of ten complete runs of its one-off wrong-answer harness, QuickJS aborted on a GC assertion and the process exited before its summary. It is not merged into this integration branch, whose index holds 695 tasks. MERGE-C merged it on 2026-09-26 with the two waves that followed it; see the section after this one.
 
 ## 2026-09-25 — the freemium sweep (D10, #230)
 
@@ -1147,3 +1147,32 @@ Every row below is **not run**, and each has an owner item in `NEEDED.md`.
 | `npm run build:curation-registry` for coding tasks | `CODING_TASKS_AUDITED` is false, so coding tasks are outside the audit's scope | a coding audit |
 | Sentry receiving a browser error after the CSP change | needs a deploy | the owner, after the next deploy |
 | The lawyer's review of the Terms, the privacy policy, the checkout wording and the public cancel page | legal advice | the owner's lawyer |
+
+## 2026-09-26 — the Medium and Hard waves merged (MERGE-C, #226)
+
+What changed: `wip/dev-c` is merged into the integration branch (`0a72de1`). It carries the three Medium and Hard waves of #226: JavaScript A (`js-mh-*`, 15 Medium and 10 Hard), TypeScript A (`ts-mh-*`, 6 and 4) with React A (`react-mh-*`, 9 Medium, 4 Hard and 2 tier 5 capstones), and Algorithms A (`alg-mh-*`, 8 and 7) with JavaScript B (`js-mh2-*`, 10 Medium). On top of the merge:
+
+- `shared/coding-index.ts` was regenerated rather than merged by hand: 770 tasks.
+- The free coding set was re-picked (`5fcf196`). The waves added 75 tasks and no Easy one, so the share had fallen to 104 of 770 (13.5 %). Twelve Easy standalone tasks joined `FREE_CODING_TASK_IDS`, each on a technique the new challenges combine most and the free set had least of. 116 of 770 tasks are free, 15.1 %; every earlier pick stays.
+- README, `about-project.md` and the architecture restate the counts from the index (`8e9c789`).
+- `NEEDED.md` takes the lane's three items into the D4 to D7 block: the extended tier-ladder decision, a preview check of the two slowest React challenges, and the React timer item.
+
+Where #226 ended: 549 standalone tasks, which is the issue's "about 550". The Easy standalone challenges of the four section tracks went from 73, 26, 33 and 11 to 163 (JavaScript), 76 (TypeScript), 73 (React) and 31 (Algorithms), exactly the +90, +50, +40 and +20 it asked for. The Medium and Hard waves added 75. Coverage is enforced and passes in all four tracks with no short tag. The fewest Easy challenges behind a tag on a Medium challenge is 3 in JavaScript, TypeScript and React, and 5 in Algorithms.
+
+Local evidence:
+
+| Check | Result |
+| --- | --- |
+| `npm run build:coding-index` | exit 0; 770 tasks. Regenerated after the merge and again after the re-pick |
+| `npm run test:coding`, three full runs (the tree of `8e9c789`, then `8e9c789` twice) | exit 0 each, 4 min 2 s, 4 min 9 s and 4 min 2 s. 770 tasks: JavaScript 316, TypeScript 156, React 183, system design 45, Algorithms 70; Easy 462, Medium 199, Hard 109. The matrix: JavaScript 163 Easy, 41 Medium, 38 tags; TypeScript 76, 22, 25; React 73, 26, 20; Algorithms 31, 18, 9; 0 short. The React timer check that failed five of eight runs on the lane did not fail here |
+| Coverage bite: one Easy challenge taken out of its task file, with `CODING_ONLY='^zzz' CODING_SKIP_INDEX=1` | exit 1 in each track. JavaScript without `js-easy3-form-complete`: `every` has 2 Easy, and `js-mh-sudoku-check`, `js-mh-deep-equal` and `js-mh-match-route` fail the band check. TypeScript without `ts-chunk-a-list`: `slice`, and `ts-mh-page-after-cursor`. React without `react-easy3-dispatch-through-context`: `useReducer`, and `react-mh-basket-context`. Algorithms has at least five Easy challenges behind every tag, so three had to go (`alg-easy2-binary-strings`, `alg-easy2-mirror-tree`, `alg-easy2-path-sum`): `recursion`, and six `alg-mh-*` challenges. Each file was restored with `git checkout`; the tree was clean after each |
+| One-off count check: every task count in README, `about-project.md` and the architecture against the index | exit 0; 8 of 8 statements match |
+| `npm run typecheck:api` | exit 0, after the merge and on the final head |
+| `npm run test:launch` | exit 0, after the merge (104 free), after the re-pick and on the final head |
+| `npm run build` | exit 0 (the existing warning about chunks over 500 kB) |
+| `npm run check:bundle` | exit 0; 218,390 of 243,000 gzip bytes |
+| `npm run test:client` | exit 0; 18 files, 181 tests |
+| `npm run test:coding-auth`, `npm run test:grading-integrity`, `npm run test:paths`, `npm run check:unused` | exit 0 each |
+| `git diff --check` | clean, for the tree and for `214c2f4..HEAD` |
+
+Not run: `npm run test:react-isolation` (needs Vercel Sandbox credentials; the two slowest new React suites have an owner check in `NEEDED.md`), `npm run build:curation-registry` (`CODING_TASKS_AUDITED` is false), `npm run check:responsive` and `npm run test:browser` (no layout, component or story changed), and the dependency audits (no dependency changed).

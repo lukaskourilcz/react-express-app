@@ -498,6 +498,21 @@ expects none. In production each React submission runs in a microVM of its own
 (`lib/coding/react-isolated.ts`); the content run and CI (`quality.yml`) run
 every suite in one Node process. `NEEDED.md` carries the fix.
 
+**Where #226 ended.** The three Medium and Hard waves reached the integration
+branch on 2026-09-26 (MERGE-C). The catalogue holds 770 tasks, 549 of them
+standalone. The Easy standalone challenges went from 73 to 163 in JavaScript,
+26 to 76 in TypeScript, 33 to 73 in React and 11 to 31 in Algorithms, and the
+Medium and Hard waves added 75. Every track passes the coverage contract with no
+short tag; the fewest Easy challenges behind a Medium tag is three in
+JavaScript, TypeScript and React and five in Algorithms. Taking one Easy
+challenge away from a tag at three (`every`, `slice`, `useReducer`), or three
+from `recursion` in Algorithms, fails the run on that tag and on every Medium
+or Hard challenge that carries it. The free set was re-picked for the larger
+catalogue: 116 of 770 tasks, 15.1 % (`FREE_CODING_TASK_IDS` in
+`shared/tiers.ts`). Three full content runs on the merged branch passed,
+including the autosave check above; the item in `NEEDED.md` stays open until
+that check has a margin wider than a collector pause.
+
 ## What none of these change
 
 None of the four awards XP, completes a level, or opens anything. A puzzle pass
