@@ -1468,6 +1468,9 @@ export const en = {
   'profile.plan.cancelled': 'Premium until {date} (cancelled)',
   'profile.plan.complimentaryUntil': 'Premium, complimentary until {date}',
   'profile.plan.complimentary': 'Premium, complimentary',
+  // A promo grant, which a Premium voucher opens (migration 045).
+  'profile.plan.voucherUntil': 'Premium from a voucher, until {date}',
+  'profile.plan.voucher': 'Premium from a voucher, with no end date',
   'profile.plan.grace': 'Premium. Payment failed, update your card.',
   'profile.plan.premiumBody': 'Every Learn topic, every coding challenge and every project stage.',
   'profile.plan.see': 'See what Premium includes',

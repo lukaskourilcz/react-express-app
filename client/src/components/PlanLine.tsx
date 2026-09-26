@@ -4,7 +4,9 @@
 //   Premium, renews 12 Nov                   a subscription
 //   Premium until 12 Nov (cancelled)         cancelled at period end
 //   Premium. Payment failed, update your card.   inside the grace window
-//   Premium, complimentary until 12 Nov      a manual or promo grant
+//   Premium, complimentary until 12 Nov      a manual grant
+//   Premium from a voucher, until 12 Nov     a promo grant, which a voucher
+//                                            opens (migration 045)
 //
 // Loading shows a skeleton rather than "Free", so a Premium account never
 // reads as free for a moment. A failure says so and offers a retry. An
@@ -42,6 +44,11 @@ export function planText(plan: EntitlementResponse, t: T, lang: string): string 
       return plan.cancelAtPeriodEnd ? t('profile.plan.cancelled', { date }) : t('profile.plan.renews', { date });
     }
     return t('profile.plan.premium');
+  }
+  if (plan.source === 'promo') {
+    return plan.validUntil
+      ? t('profile.plan.voucherUntil', { date: formatDay(plan.validUntil, lang) })
+      : t('profile.plan.voucher');
   }
   return plan.validUntil
     ? t('profile.plan.complimentaryUntil', { date: formatDay(plan.validUntil, lang) })
