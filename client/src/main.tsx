@@ -20,9 +20,14 @@ import { initAnalytics } from './lib/analytics';
 import { MotionProvider } from './lib/motion';
 import { installScrollbarActivity } from './lib/scrollbarActivity';
 import { captureReferralFromUrl } from './lib/referral';
+import { installChunkErrorTracking } from './lib/routeRecovery';
 
 const disposeScrollbarActivity = installScrollbarActivity();
 if (import.meta.hot) import.meta.hot.dispose(disposeScrollbarActivity);
+// Before anything imports a chunk: the route boundary tells a chunk that did
+// not load from a page that threw by the errors Vite announced.
+const disposeChunkErrorTracking = installChunkErrorTracking();
+if (import.meta.hot) import.meta.hot.dispose(disposeChunkErrorTracking);
 
 // Start error/performance reporting before anything renders (no-op without a DSN).
 initSentry();

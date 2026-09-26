@@ -156,6 +156,12 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   (`lib/routeData.ts`, capped at 1.2s) instead of drawing defaults and
   redrawing. Never mount a route's `Suspense` boundary inside an element keyed
   by the path: a fresh boundary shows its fallback even in a transition.
+- A page that fails keeps the shell. `RouteErrorBoundary` sits inside the
+  route `Suspense` and inside the keyed route box; outside the `Suspense`,
+  catching would remount it and bring the blank beat back. Its panel is the
+  root error screen's card and copy. Routed pages are `lazyPage`, not `lazy`:
+  React.lazy keeps a failed load for good (`lib/routeRecovery.ts`). Do not
+  reload on `vite:preloadError`: a preload started by a hover fires it too.
 - The shell's first frame has its final geometry. A placeholder takes the
   exact box of what replaces it; a larger or smaller one moves everything
   under it when the chunk lands. The header knows at its first render whether

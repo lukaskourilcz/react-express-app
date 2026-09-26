@@ -1,6 +1,6 @@
 # Product and UX audit
 
-Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, 25 September 2026 for the free tier and Premium (`/shop`, `/premium` and `/support` rows), and 26 September 2026 for Premium vouchers (`/premium` and `/dev` rows).
+Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, 25 September 2026 for the free tier and Premium (`/shop`, `/premium` and `/support` rows), and 26 September 2026 for Premium vouchers (`/premium` and `/dev` rows) and the route error panel (P1.9).
 
 ## Executive summary
 
@@ -64,6 +64,7 @@ Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, 25 Se
 6. Fast-path auth loading and sign-in/sign-out errors can hang or disappear. Add bounded, user-readable states without exposing environment names.
 7. Multiplayer state refresh is approximately quadratic in room size. This is a documented scaling constraint; a safe fix requires a forward API/RPC design and is outside the visual-only migration.
 8. On `/learn`'s topic rail, an unselected topic's progress line ("0/6") is 0.66rem text at `opacity: 0.72`, which blends to `#809098` on the light theme's white: axe measures 3.3:1, below 4.5:1. The dark theme passes. Found on 26 September 2026 while checking P1.3; not yet fixed.
+9. ~~A page whose code failed to load replaced the whole app, header, nav and footer included, with the root error screen, whose Try again could not help because React.lazy keeps the failure.~~ Closed 2026-09-26. `RouteErrorBoundary` draws the root screen's card inside the shell, and the nav leaves the failed page without a retry. Try again renders the page again and reloads the address when the browser kept the failed fetch; a newer build on the server reloads at most once a minute; offline, the panel waits for the connection. `tests/browser/route-errors.spec.ts` checks it in Chromium, and `docs/release-acceptance.md` (ERRBOUND) records the browser support.
 
 ### P2 — consistency and performance
 

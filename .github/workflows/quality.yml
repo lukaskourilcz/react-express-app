@@ -49,6 +49,7 @@ jobs:
           npm run test:browser -- tests/browser/on-accent.spec.ts
           npm run test:browser -- tests/browser/navigation.spec.ts
           npm run test:browser -- tests/browser/lazy-auth.spec.ts
+          npm run test:browser -- tests/browser/route-errors.spec.ts
           npm run test:browser -- tests/browser/first-load.spec.ts
           export CHROME_BIN=$(node -e "console.log(require('@playwright/test').chromium.executablePath())")
           TOPIC=javascript-closures
