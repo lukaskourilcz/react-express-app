@@ -67,7 +67,7 @@ import { useRoadmapStructure, useRoadmapStructureFirst } from '../lib/queries';
 import { apiFetch } from '../lib/api';
 import { awardLearningOutcome, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp } from '../lib/leveling';
-import { getCategoryHexColor, categoryLabelKey, onCategoryColorText } from '../lib/categories';
+import { getCategoryHexColor, categoryLabelKey, hoverFilterOn, onCategoryColorText, textOnColor } from '../lib/categories';
 import { BRAND } from '../theme/MuiTheme';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
@@ -1215,6 +1215,14 @@ function LessonRunner({
   const isMobile = useIsMobile();
   const isCheckpoint = playable.kind === 'checkpoint';
   const accent = isCheckpoint ? CHECKPOINT_GOLD : topicColor;
+  // Accent-filled buttons take their text colour from the fill: topic hues run
+  // from CSS blue to JavaScript yellow and checkpoints use gold, so no single
+  // colour reads on all of them. The hover filter follows the text colour.
+  const accentFill = {
+    backgroundColor: accent,
+    ['--rm-on-accent']: textOnColor(accent),
+    ['--rm-accent-hover']: hoverFilterOn(accent),
+  } as CSSProperties;
   // A level opens with a short info panel (what this section is about + a core
   // principle) before the first question. Checkpoints/part-tests skip it, as do
   // levels with no authored intro.
@@ -1431,7 +1439,7 @@ function LessonRunner({
           type="button"
           className="rm-accent-btn"
           onClick={() => setShowIntro(false)}
-          style={{ marginTop: 20, width: '100%', backgroundColor: accent }}
+          style={{ marginTop: 20, width: '100%', ...accentFill }}
         >
           {t('roadmap.introStart')}
         </button>
@@ -1495,7 +1503,7 @@ function LessonRunner({
           {t('roadmap.invalidatedBody')}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
-          <button type="button" className="rm-accent-btn" onClick={onReplay} style={{ backgroundColor: accent }}>
+          <button type="button" className="rm-accent-btn" onClick={onReplay} style={accentFill}>
             {t('roadmap.retryLevel')}
           </button>
           <button type="button" className="rm-text-btn" onClick={onExit}>
@@ -1569,11 +1577,11 @@ function LessonRunner({
         )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
           {passed && hasNext && (
-            <button type="button" className="rm-accent-btn" onClick={onNext} style={{ backgroundColor: accent }}>
+            <button type="button" className="rm-accent-btn" onClick={onNext} style={accentFill}>
               {nextLabel}
             </button>
           )}
-          <button type="button" className={passed ? 'rm-outline-btn' : 'rm-accent-btn'} onClick={onReplay} style={passed ? undefined : { backgroundColor: accent }}>
+          <button type="button" className={passed ? 'rm-outline-btn' : 'rm-accent-btn'} onClick={onReplay} style={passed ? undefined : accentFill}>
             {t('roadmap.retryLevel')}
           </button>
           <button type="button" className="rm-text-btn" onClick={onExit}>
@@ -1730,7 +1738,7 @@ function LessonRunner({
                   className="rm-accent-btn"
                   onClick={() => revealed ? void advance() : selected !== null ? void choose(selected) : undefined}
                   disabled={grading || completing || (!revealed && selected === null)}
-                  style={{ marginTop: 16, width: '100%', backgroundColor: accent }}
+                  style={{ marginTop: 16, width: '100%', ...accentFill }}
                 >
                   {t('roadmap.retry')}
                 </button>
@@ -1748,7 +1756,7 @@ function LessonRunner({
                   className="rm-accent-btn"
                   onClick={() => void advance()}
                   disabled={completing}
-                  style={{ marginTop: 16, width: '100%', backgroundColor: accent }}
+                  style={{ marginTop: 16, width: '100%', ...accentFill }}
                 >
                   {outOfHearts ? t('roadmap.seeResult') : qIndex < total - 1 ? t('roadmap.continue') : t('roadmap.finish')}
                 </button>

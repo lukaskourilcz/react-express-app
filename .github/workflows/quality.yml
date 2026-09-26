@@ -39,6 +39,7 @@ jobs:
           npm run test:browser -- tests/browser/public.spec.ts
           npm run test:browser -- tests/browser/evolving.spec.ts
           npm run test:browser -- tests/browser/segmented.spec.ts
+          npm run test:browser -- tests/browser/on-accent.spec.ts
           npm run test:browser -- tests/browser/navigation.spec.ts
           export CHROME_BIN=$(node -e "console.log(require('@playwright/test').chromium.executablePath())")
           TOPIC=javascript-closures

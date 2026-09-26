@@ -51,16 +51,21 @@ Content: 2,447 authored questions, 1,974 of them served, and 770 coding tasks,
 
 ## Tech stack
 
-- **Client:** React + Vite + TypeScript, React Router, TanStack Query
-- **API:** twelve Vercel serverless functions (TypeScript)
-- **Payments:** Stripe Checkout, Billing and the Customer Portal through the server-side `stripe` package; no Stripe script in the browser
-- **Design:** Astryx design system (`@astryxdesign/core` 0.1.6) with product CSS tokens in `client/src/styles/astryx-theme.css`
-- **Testing/build:** TypeScript, launch tests, content contract, responsive checks
-- **Coding runtime:** QuickJS (WebAssembly) sandbox on the server, the TypeScript
-  compiler for type tests, CodeMirror in the browser, a self-hosted React harness
+- **React** — the learning client's interface.
+- **React Router** — the client's routes.
+- **TanStack Query** — caches the client's server data.
+- **Vite** — builds and serves the client.
+- **TypeScript** — the client, the twelve API handlers and the shared code; its compiler also runs the type tests of TypeScript challenges.
+- **Vercel** — hosts the client and the twelve serverless API functions, and deploys from `main`.
+- **Astryx** — the design system (`@astryxdesign/core` 0.1.6); the product's CSS tokens live in `client/src/styles/astryx-theme.css`.
+- **QuickJS** — a WebAssembly sandbox that runs submitted JavaScript and TypeScript on the server.
+- **Vercel Sandbox** — an isolated VM, restored from a snapshot with no network, that runs React challenges in the self-hosted React harness.
+- **CodeMirror** — the code editor in the browser.
+- **Vitest** — the client's unit tests.
+- **Playwright** — the responsive and browser checks in CI.
 - **Supabase** — Postgres database, auth, and RLS; server-authoritative scores and grading.
 - **GitHub App (the garden)** — optional; commits passed coding tasks to the learner's own repository through installation tokens. No user token is stored, and the learner can disconnect from the profile.
-- **Stripe** — sells Premium through Checkout, Billing and the Customer Portal; under Managed Payments Stripe (as Link) is the seller of record. Off until `BILLING_ENABLED=true`. A payment changes which content an account may start, never grading or scores.
+- **Stripe** — sells Premium through Checkout, Billing and the Customer Portal, all through the server-side `stripe` package with no Stripe script in the browser; under Managed Payments Stripe (as Link) is the seller of record. Off until `BILLING_ENABLED=true`. A payment changes which content an account may start, never grading or scores.
 - **Spreadshop (sprd.net AG)** — prints, sells and ships devShark merchandise; the app links to the shop, the owner orders coin redemptions there, and the server reads its monthly promotion when `SPREADSHOP_API_KEY` is set.
 - **Resend** — sends the cancellation page's single-use confirmation link and its receipt when `RESEND_API_KEY` is set; without it only someone signed in with the subscription's address can cancel there.
 - **Upstash Redis** — rate limiting on API endpoints.

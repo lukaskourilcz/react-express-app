@@ -21,7 +21,7 @@ import { useQuery } from '@tanstack/react-query';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
 import { AppToast } from '../ui/AppToast';
-import { getCategoryLabel } from '../../lib/categories';
+import { getCategoryLabel, textOnColor } from '../../lib/categories';
 import { friendlyError } from '../../lib/api';
 import { listQuestions, setQuestionDeleted, type AdminQuestion } from '../../lib/devApi';
 import { loadTriageVerdicts, GATE_LABEL, type TriageVerdict } from '../../lib/triageApi';
@@ -301,7 +301,7 @@ export default function DevTriage() {
                   <span title="Mean of the 4 axes" style={{
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                     minWidth: 34, height: 24, padding: '0 4px', borderRadius: 8, fontWeight: 700, fontSize: '0.8rem',
-                    color: '#fff', backgroundColor: meanColor(v.mean),
+                    color: textOnColor(meanColor(v.mean)), backgroundColor: meanColor(v.mean),
                   }}>
                     {v.mean.toFixed(2)}
                   </span>

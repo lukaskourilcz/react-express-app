@@ -8,7 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
 import { AppToast } from '../ui/AppToast';
-import { getCategoryLabel } from '../../lib/categories';
+import { getCategoryLabel, textOnColor } from '../../lib/categories';
 import { friendlyError } from '../../lib/api';
 import { importanceBand, IMPORTANCE_BAND_LABEL, type ImportanceBand } from '../../lib/importance';
 import {
@@ -664,7 +664,7 @@ export default function DevQuestions() {
                       borderRadius: 'var(--radius-inner)',
                       fontWeight: 700,
                       fontSize: '0.8rem',
-                      color: '#fff',
+                      color: textOnColor(SCORE_COLOR[importanceBand(q.importance)]),
                       backgroundColor: SCORE_COLOR[importanceBand(q.importance)],
                     }}
                   >
