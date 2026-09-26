@@ -49,11 +49,13 @@ export type LeaderboardRequest =
   | { period: 'category'; category: string }
   | { period: 'daily'; date: string; categories: string[] };
 
-/** A leaderboard board. The key holds only the inputs that change the result,
- *  plus the viewer on the 30-day board, whose response carries their own line. */
-export function useLeaderboard(request: LeaderboardRequest) {
+/** One board, as one set of options the hook and the page's first-data
+ *  prefetch share, so the two cannot ask for different keys. The key holds only
+ *  the inputs that change the result, plus the viewer on the 30-day board,
+ *  whose response carries their own line. */
+export function leaderboardQuery(request: LeaderboardRequest) {
   const period: LeaderboardPeriod = request.period;
-  return useQuery({
+  return queryOptions({
     queryKey: [
       'leaderboard',
       period,
@@ -72,6 +74,11 @@ export function useLeaderboard(request: LeaderboardRequest) {
       }),
     staleTime: 30_000,
   });
+}
+
+/** A leaderboard board. */
+export function useLeaderboard(request: LeaderboardRequest) {
+  return useQuery(leaderboardQuery(request));
 }
 
 export const profileStatsQueryKey = (userId: string | undefined) =>

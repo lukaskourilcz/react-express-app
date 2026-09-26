@@ -13,6 +13,7 @@
 
 import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { Button } from '@astryxdesign/core/Button';
@@ -24,7 +25,8 @@ import { useLanguage, useT } from '../i18n/LanguageContext';
 import { useIsMobile, useMediaQuery } from '../lib/useMediaQuery';
 import { getUserProfile, useAuth } from '../lib/auth';
 import { ApiError, friendlyError } from '../lib/api';
-import { useLeaderboard, type LeaderboardRequest } from '../lib/queries';
+import { leaderboardQuery, useLeaderboard, type LeaderboardRequest } from '../lib/queries';
+import { readOnce, settled, useFirstData } from '../lib/routeData';
 import type {
   CategoryLeaderboardEntry,
   LeaderboardDailyEntry,
@@ -92,7 +94,21 @@ function isOffline(error: unknown): boolean {
   return typeof navigator !== 'undefined' && navigator.onLine === false;
 }
 
+/** The board this screen opens on, in the cache before the first render, so
+ *  the screen draws the board rather than a skeleton that the board replaces.
+ *  Signed in, that board carries the learner's own line. Offline the screen
+ *  draws at once and shows the last board it loaded. */
+function useBoardFirstData() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const viewer = user?.id ?? null;
+  useFirstData(`leaderboard ${viewer ?? ''}`, () => settled([
+    readOnce(queryClient, leaderboardQuery({ period: '30d', category: null, viewer })),
+  ]));
+}
+
 function Leaderboard() {
+  useBoardFirstData();
   const t = useT();
   const { lang } = useLanguage();
   const navigate = useNavigate();
