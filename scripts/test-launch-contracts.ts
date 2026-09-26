@@ -48,6 +48,7 @@ import { contentVersion, contentHash, translationHash, itemReview, codingTaskRev
 import { AUDITED_CATEGORIES, REVIEW_REGISTRY } from '../lib/curation-registry';
 import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH } from './build-curation-registry';
 import { webdevBankContracts } from './webdev-bank-contract';
+import { vercelRoutingContracts } from './vercel-routing-contract';
 import { applyEligibility, getEffectiveQuestions, getQuestionsForHistoryById } from '../lib/questions-store';
 import { buildLiveTopic, liveAvailability, MIN_LEVEL_QUESTIONS, unavailablePartsOf, partRanges as roadmapPartRanges } from '../lib/roadmap';
 import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRanges } from '../shared/progression';
@@ -2226,21 +2227,9 @@ async function main() {
     assert.doesNotMatch(text, /lib\/coding/, `client/src/${file} must not import lib/coding`);
     assert.doesNotMatch(text, /lib\/learning-paths/, `client/src/${file} must not import lib/learning-paths`);
   }
-  // The sandbox frame has an opaque origin, so its module script is a CORS
-  // load: without Access-Control-Allow-Origin on its assets the harness never
-  // starts, and no React task can run. Keep the header rule in vercel.json.
-  const vercelConfig = JSON.parse(readFileSync(join(process.cwd(), 'vercel.json'), 'utf8')) as {
-    headers: { source: string; headers: { key: string; value: string }[] }[];
-  };
-  const allowsOrigin = (source: string) =>
-    vercelConfig.headers.some((rule) =>
-      rule.source === source && rule.headers.some((header) => header.key === 'Access-Control-Allow-Origin'));
-  assert.ok(allowsOrigin('/sandbox/(.*)'), 'the sandbox frame needs Access-Control-Allow-Origin on /sandbox/');
-  const sandboxCsp = vercelConfig.headers
-    .find((rule) => rule.source === '/sandbox/(.*)')?.headers
-    .find((header) => header.key === 'Content-Security-Policy')?.value ?? '';
-  assert.match(sandboxCsp, /script-src [^;]*'unsafe-eval'/, 'the sandbox compiles and runs code with new Function');
-  assert.match(sandboxCsp, /default-src 'none'/, 'the sandbox frame stays network-less');
+  // The sandbox frame's own headers (Access-Control-Allow-Origin for its CORS
+  // module load, its network-less CSP) are asserted with the rest of
+  // vercel.json in vercelRoutingContracts() (scripts/vercel-routing-contract.ts).
 
   const sandboxDir = join(process.cwd(), 'client', 'sandbox');
   if (statSync(sandboxDir, { throwIfNoEntry: false })?.isDirectory()) {
@@ -3131,32 +3120,10 @@ async function main() {
     // new URL, so an old URL can be cached forever. Production was serving them
     // `max-age=0, must-revalidate` instead — a round trip per chunk on every
     // visit, for files that cannot change. The entry documents are the opposite
-    // case and must stay revalidated, or a deploy would never reach anyone.
-    {
-      const vercel = JSON.parse(readFileSync(join(process.cwd(), 'vercel.json'), 'utf8')) as {
-        headers?: { source: string; headers: { key: string; value: string }[] }[];
-      };
-      const cacheFor = (source: string) =>
-        vercel.headers
-          ?.find((rule) => rule.source === source)
-          ?.headers.find((one) => one.key.toLowerCase() === 'cache-control')?.value ?? null;
-
-      for (const source of ['/assets/(.*)', '/sandbox/assets/(.*)']) {
-        const value = cacheFor(source);
-        assert.ok(value, `${source} needs a Cache-Control header; hashed files should not be revalidated`);
-        assert.match(value!, /immutable/, `${source} serves content-hashed files and should be immutable`);
-        assert.match(value!, /max-age=\d{6,}/, `${source} should be cached for a long time, not seconds`);
-      }
-      // Nothing that serves a document may be immutable.
-      for (const rule of vercel.headers ?? []) {
-        const value = rule.headers.find((one) => one.key.toLowerCase() === 'cache-control')?.value;
-        if (!value || !/immutable/.test(value)) continue;
-        assert.ok(
-          rule.source.includes('assets/'),
-          `${rule.source} is cached immutably but does not look like a hashed-asset path`,
-        );
-      }
-    }
+    // case and must stay revalidated, or a deploy would never reach anyone. A
+    // URL with no file behind it is the third case: it answers 404 and no cache
+    // keeps it (HARDEN).
+    vercelRoutingContracts();
 
     // The app ships English only (`ENABLED_LANGS`), so the Czech dictionary is
   // retained work rather than a live surface and a new English key is not

@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 const config = JSON.parse(readFileSync('vercel.json', 'utf8'));
-const app = config.headers.find(rule => rule.source.startsWith('/((?!'));
-const header = (rule, name) => rule.headers.find(item => item.key.toLowerCase() === name.toLowerCase())?.value;
+// The header rules are `routes` that run before the filesystem check
+// (scripts/vercel-routing-contract.ts says why they are not `headers`).
+const headerRoutes = config.routes.slice(0, config.routes.findIndex(route => route.handle));
+const app = headerRoutes.find(route => route.src.startsWith('^/(?!'));
+const header = (route, name) => Object.entries(route.headers).find(([key]) => key.toLowerCase() === name.toLowerCase())?.[1];
 const csp = header(app, 'Content-Security-Policy');
 const boot = readFileSync('client/index.html', 'utf8').match(/<script>([\s\S]*?)<\/script>/)[1];
 const hash = `'sha256-${createHash('sha256').update(boot).digest('base64')}'`;
@@ -18,7 +21,7 @@ assert(!connections.some(source => source === '*' || source === 'https:' || sour
 assert.equal(header(app, 'X-Content-Type-Options'), 'nosniff');
 assert.equal(header(app, 'X-Frame-Options'), 'DENY');
 assert.match(header(app, 'Strict-Transport-Security'), /max-age=63072000/);
-const sandbox = config.headers.find(rule => rule.source === '/sandbox/(.*)');
+const sandbox = headerRoutes.find(route => route.src === '^/sandbox/.*$');
 assert(header(sandbox, 'Content-Security-Policy').includes("frame-ancestors 'self'"), 'The isolated exercise frame must still be embeddable by the app');
 const sandboxCsp = header(sandbox, 'Content-Security-Policy');
 const connectionPolicy = sandboxCsp.split(';').map(part => part.trim()).find(part => part.startsWith('connect-src '));

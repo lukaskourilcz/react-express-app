@@ -178,18 +178,25 @@ test('offline: no reload, and the page comes back with the connection, without a
   test.info().annotations.push({ type: 'recovery', description: documents.length > 1 ? 'reloaded the address' : 'drew the page in place' });
 });
 
-test('a newer build on the server reloads once; the loop guard then keeps the panel until Try again', async ({ page }) => {
+// How a server answers the address of a chunk a deploy removed: devshark.app
+// with a 404 that no cache keeps (vercel.json), `vite preview` with index.html,
+// as devshark.app did before HARDEN.
+const GONE = [
+  { answer: 'a 404 that no cache keeps', fulfill: () => ({ status: 404, contentType: 'text/plain; charset=utf-8', headers: { 'cache-control': 'no-store' }, body: 'The page could not be found\n\nNOT_FOUND\n' }) },
+  { answer: 'index.html', fulfill: (index: string) => ({ status: 200, contentType: 'text/html; charset=utf-8', body: index }) },
+];
+
+for (const { answer, fulfill } of GONE) test(`a newer build on the server reloads once when the old chunk answers ${answer}; the loop guard then keeps the panel until Try again`, async ({ page }) => {
   const { documents } = await prepare(page);
   const index = await (await page.request.get('/')).text();
   const entry = index.match(/\/assets\/main-[\w-]+\.js/)?.[0];
   expect(entry, 'the entry script in index.html').toBeTruthy();
 
-  // A deploy replaced the build. The old Coding chunk is gone, and the server
-  // answers its address with index.html, as devshark.app does; a fresh
+  // A deploy replaced the build. The old Coding chunk is gone, and a fresh
   // index.html names another entry script.
   let deployed = true;
   await page.route(CODING_PAGE, (route) => (deployed
-    ? route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: index })
+    ? route.fulfill(fulfill(index))
     : route.continue()));
   await page.route((url) => url.pathname === '/', (route) => (deployed && route.request().resourceType() === 'fetch'
     ? route.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: index.replace(entry!, '/assets/main-NEWBUILD.js') })

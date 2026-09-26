@@ -2,11 +2,13 @@
 //
 // Every page is a lazy chunk (App.tsx). A chunk fails to load for two reasons:
 // the network dropped the request, or a deploy replaced the hashed file this
-// build still names. devshark.app answers a missing asset with index.html as
-// `200 text/html`, which a module script refuses, so a stale deploy fails the
+// build still names. devshark.app answers a missing asset with a 404 that no
+// cache keeps (vercel.json). `vite preview` answers it with index.html as
+// `200 text/html`, as devshark.app did before HARDEN (docs/release-acceptance.md),
+// and a module script refuses that too. Either way a stale deploy fails the
 // same way a dropped request does. The route error boundary
-// (components/RouteErrorBoundary.tsx) catches either inside the shell; this
-// module decides how to get the page back.
+// (components/RouteErrorBoundary.tsx) catches it inside the shell; this module
+// decides how to get the page back.
 //
 // Asking for the same import again is not enough everywhere. Until July 2026
 // the HTML standard kept a failed module fetch in the document's module map,
