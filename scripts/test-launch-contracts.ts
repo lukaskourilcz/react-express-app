@@ -1295,7 +1295,8 @@ function erasureContracts() {
   // would install cleanly and then fail every deletion (review finding data-4).
   const guard = latestSql.slice(0, latestSql.indexOf('CREATE OR REPLACE FUNCTION public.delete_user_data('));
   assert.match(guard, /IF to_regclass\('public\.' \|\| v_table\) IS NULL THEN/, 'the restating migration checks its tables first');
-  assert.match(guard, /RAISE EXCEPTION 'migration 044 needs 035 and 039 to 042 first; missing: %'/);
+  assert.match(guard, new RegExp(`RAISE EXCEPTION 'migration ${latest!.slice(16, 19)} needs 035 and 039 to 042 first; missing: %'`),
+    'the guard names the migration that restates delete_user_data');
   for (const name of migrations.filter((one) => one > 'supabase-schema-033.sql' && one < latest!)) {
     const sql = read(`supabase/${name}`);
     for (const match of sql.matchAll(/CREATE TABLE IF NOT EXISTS public\.([a-z_]+) \(([\s\S]*?)\n\);/g)) {
