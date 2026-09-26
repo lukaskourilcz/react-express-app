@@ -30,6 +30,8 @@ import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
 import { takeAuthReturn } from './lib/authReturn';
 import { installIntentPreloading, routeChunk } from './lib/routePreload';
+import { lazyPage } from './lib/routeRecovery';
+import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
 // modules — heavy for the initial bundle. Lazy-load it so the app shell
@@ -37,7 +39,9 @@ import { installIntentPreloading, routeChunk } from './lib/routePreload';
 const AuthButton = lazy(() => import('./components/AuthButton'));
 
 // Each page's chunk, registered with the paths that render it so a link can
-// start loading its page before the click lands (lib/routePreload.ts).
+// start loading its page before the click lands (lib/routePreload.ts). Pages
+// are `lazyPage`, not `lazy`: React.lazy keeps a failed load for good, and a
+// page whose code failed must be able to ask again (lib/routeRecovery.ts).
 const exact = (...paths: string[]) => (pathname: string) => paths.includes(pathname);
 const under = (...prefixes: string[]) => (pathname: string) => prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 const loadHome = routeChunk(exact('/'), () => import('./components/Home'));
@@ -64,40 +68,40 @@ const loadPaths = routeChunk(under('/roadmap/specializations', '/roadmap/paths')
 const loadPremium = routeChunk(exact('/premium'), () => import('./components/PremiumPage'));
 const loadBilling = routeChunk(exact('/premium/success', '/premium/cancel'), () => import('./components/PremiumBillingPages'));
 
-const Home = lazy(loadHome);
-const Quiz = lazy(loadQuiz);
-const Roadmap = lazy(loadRoadmap);
-const CareerRoadmap = lazy(loadCareerRoadmap);
-const Profile = lazy(loadProfile);
-const Leaderboard = lazy(loadLeaderboard);
-const Flashcards = lazy(loadFlashcards);
-const Shop = lazy(loadShop);
-const PlayLanding = lazy(() => loadPlay().then((m) => ({ default: m.PlayLanding })));
-const PlayMatch = lazy(() => loadPlay().then((m) => ({ default: m.PlayMatch })));
-const Challenge = lazy(loadChallenge);
-const DevPage = lazy(loadDev);
-const PrivacyPage = lazy(() => loadLegal().then((m) => ({ default: m.PrivacyPage })));
-const TermsPage = lazy(() => loadLegal().then((m) => ({ default: m.TermsPage })));
-const CurationPage = lazy(() => loadCuration().then((m) => ({ default: m.CurationPage })));
-const ClassroomPage = lazy(() => loadPublicInfo().then((m) => ({ default: m.ClassroomPage })));
-const TopicLandingPage = lazy(loadTopic);
-const Today = lazy(loadToday);
-const Collection = lazy(loadCollection);
-const TypingRacer = lazy(loadTyping);
-const CodingHome = lazy(() => loadCoding().then((m) => ({ default: m.CodingHome })));
-const CodingTrackScreen = lazy(() => loadCoding().then((m) => ({ default: m.CodingTrackScreen })));
-const FullStackScreen = lazy(() => loadCoding().then((m) => ({ default: m.FullStackScreen })));
-const CodingTaskScreen = lazy(() => loadCoding().then((m) => ({ default: m.CodingTaskScreen })));
-const CodingReviewScreen = lazy(() => loadCoding().then((m) => ({ default: m.CodingReviewScreen })));
-const GithubSettingsPage = lazy(() => loadGithubSettings().then((m) => ({ default: m.GithubSettingsPage })));
-const FdeOverview = lazy(() => loadPaths().then((m) => ({ default: m.FdeOverview })));
-const FdeModule = lazy(() => loadPaths().then((m) => ({ default: m.FdeModule })));
-const DsaOverview = lazy(() => loadPaths().then((m) => ({ default: m.DsaOverview })));
-const DsaModule = lazy(() => loadPaths().then((m) => ({ default: m.DsaModule })));
-const NotFoundPage = lazy(() => loadPublicInfo().then((m) => ({ default: m.NotFoundPage })));
-const PremiumPage = lazy(loadPremium);
-const PremiumSuccessPage = lazy(() => loadBilling().then((m) => ({ default: m.PremiumSuccessPage })));
-const PremiumCancelPage = lazy(() => loadBilling().then((m) => ({ default: m.PremiumCancelPage })));
+const Home = lazyPage(loadHome);
+const Quiz = lazyPage(loadQuiz);
+const Roadmap = lazyPage(loadRoadmap);
+const CareerRoadmap = lazyPage(loadCareerRoadmap);
+const Profile = lazyPage(loadProfile);
+const Leaderboard = lazyPage(loadLeaderboard);
+const Flashcards = lazyPage(loadFlashcards);
+const Shop = lazyPage(loadShop);
+const PlayLanding = lazyPage(() => loadPlay().then((m) => ({ default: m.PlayLanding })));
+const PlayMatch = lazyPage(() => loadPlay().then((m) => ({ default: m.PlayMatch })));
+const Challenge = lazyPage(loadChallenge);
+const DevPage = lazyPage(loadDev);
+const PrivacyPage = lazyPage(() => loadLegal().then((m) => ({ default: m.PrivacyPage })));
+const TermsPage = lazyPage(() => loadLegal().then((m) => ({ default: m.TermsPage })));
+const CurationPage = lazyPage(() => loadCuration().then((m) => ({ default: m.CurationPage })));
+const ClassroomPage = lazyPage(() => loadPublicInfo().then((m) => ({ default: m.ClassroomPage })));
+const TopicLandingPage = lazyPage(loadTopic);
+const Today = lazyPage(loadToday);
+const Collection = lazyPage(loadCollection);
+const TypingRacer = lazyPage(loadTyping);
+const CodingHome = lazyPage(() => loadCoding().then((m) => ({ default: m.CodingHome })));
+const CodingTrackScreen = lazyPage(() => loadCoding().then((m) => ({ default: m.CodingTrackScreen })));
+const FullStackScreen = lazyPage(() => loadCoding().then((m) => ({ default: m.FullStackScreen })));
+const CodingTaskScreen = lazyPage(() => loadCoding().then((m) => ({ default: m.CodingTaskScreen })));
+const CodingReviewScreen = lazyPage(() => loadCoding().then((m) => ({ default: m.CodingReviewScreen })));
+const GithubSettingsPage = lazyPage(() => loadGithubSettings().then((m) => ({ default: m.GithubSettingsPage })));
+const FdeOverview = lazyPage(() => loadPaths().then((m) => ({ default: m.FdeOverview })));
+const FdeModule = lazyPage(() => loadPaths().then((m) => ({ default: m.FdeModule })));
+const DsaOverview = lazyPage(() => loadPaths().then((m) => ({ default: m.DsaOverview })));
+const DsaModule = lazyPage(() => loadPaths().then((m) => ({ default: m.DsaModule })));
+const NotFoundPage = lazyPage(() => loadPublicInfo().then((m) => ({ default: m.NotFoundPage })));
+const PremiumPage = lazyPage(loadPremium);
+const PremiumSuccessPage = lazyPage(() => loadBilling().then((m) => ({ default: m.PremiumSuccessPage })));
+const PremiumCancelPage = lazyPage(() => loadBilling().then((m) => ({ default: m.PremiumCancelPage })));
 
 // Route-transition variants, hoisted so the m.div props keep a stable identity
 // across App re-renders (App re-renders on every navigation — hottest path).
@@ -722,7 +726,17 @@ function App() {
               300ms reveal throttle and only then drew the page. Outside it, the
               boundary has already revealed content, so the router's transition
               keeps the current page until the next one can render whole. The
-              fallback remains for the first page of a visit. */}
+              fallback remains for the first page of a visit.
+              RouteErrorBoundary catches a page that fails, whether its code
+              did not load or it threw. It sits inside this Suspense so that
+              catching never unmounts the Suspense: a remounted one shows its
+              fallback at once (the blank beat above), while this revealed one
+              lets a transition keep the error panel up until Try again or the
+              next page can draw. It sits inside the keyed box so that each
+              path mounts a fresh boundary, and leaving a failed page needs no
+              retry. It renders no element of its own, so the route box stays
+              this wrapper's first child; the header, the nav and the footer
+              stay outside it. */}
           <Suspense fallback={<div style={ROUTE_BOX_STYLE}><RouteLoader /></div>}>
             <m.div
               key={location.pathname}
@@ -733,49 +747,52 @@ function App() {
               {...ROUTE_ANIM}
               transition={ROUTE_TRANSITION}
             >
-              <Routes location={location}>
-                <Route path="/" element={<Home />} />
-                <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
-                <Route path="/learn" element={<Roadmap />} />
-                <Route path="/today" element={<Today />} />
-                <Route path="/collection" element={<Collection />} />
-                <Route path="/typing" element={<TypingRacer />} />
-                <Route path="/roadmap" element={<CareerRoadmap />} />
-                <Route path="/coding" element={<CodingHome />} />
-                <Route path="/coding/review" element={<CodingReviewScreen />} />
-                <Route path="/coding/fullstack" element={<FullStackScreen />} />
-                <Route path="/coding/:track" element={<CodingTrackScreen />} />
-                <Route path="/coding/:track/:taskId" element={<CodingTaskScreen />} />
-                {/* Learning paths are devShark-only, like /coding and /roadmap.
-                    The role specialization and the standalone skill path get
-                    separate entry routes so the career flow and the focused
-                    paths stay visibly apart, though they share one workspace. */}
-                <Route path="/roadmap/specializations/fde" element={<FdeOverview />} />
-                <Route path="/roadmap/specializations/fde/:moduleId" element={<FdeModule />} />
-                <Route path="/roadmap/paths/dsa-foundations" element={<DsaOverview />} />
-                <Route path="/roadmap/paths/dsa-foundations/:moduleId" element={<DsaModule />} />
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/settings/github" element={<GithubSettingsPage />} />
-                <Route path="/leaderboard" element={<Leaderboard />} />
-                <Route path="/cards" element={<Flashcards />} />
-                <Route path="/shop" element={<Shop />} />
-                <Route path="/play" element={<PlayLanding />} />
-                <Route path="/play/:code" element={<PlayMatch />} />
-                <Route path="/challenge" element={<Challenge />} />
-                {/* The voluntary-support page is retired (#222): Premium replaced it. */}
-                <Route path="/support" element={<Navigate to="/premium" replace />} />
-                <Route path="/privacy" element={<PrivacyPage />} />
-                <Route path="/terms" element={<TermsPage />} />
-                <Route path="/premium" element={<PremiumPage />} />
-                <Route path="/premium/success" element={<PremiumSuccessPage />} />
-                <Route path="/premium/cancel" element={<PremiumCancelPage />} />
-                <Route path="/curation" element={<CurationPage />} />
-                <Route path="/classroom" element={<ClassroomPage />} />
-                <Route path="/topics/:slug" element={<TopicLandingPage />} />
-                <Route path="/cs/topics/:slug" element={<TopicLandingPage />} />
-                <Route path="/dev" element={<DevPage />} />
-                <Route path="*" element={<NotFoundPage />} />
-              </Routes>
+              {/* An active quiz hides the chrome; a page that fails brings it back. */}
+              <RouteErrorBoundary onError={() => setQuizActive(false)}>
+                <Routes location={location}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
+                  <Route path="/learn" element={<Roadmap />} />
+                  <Route path="/today" element={<Today />} />
+                  <Route path="/collection" element={<Collection />} />
+                  <Route path="/typing" element={<TypingRacer />} />
+                  <Route path="/roadmap" element={<CareerRoadmap />} />
+                  <Route path="/coding" element={<CodingHome />} />
+                  <Route path="/coding/review" element={<CodingReviewScreen />} />
+                  <Route path="/coding/fullstack" element={<FullStackScreen />} />
+                  <Route path="/coding/:track" element={<CodingTrackScreen />} />
+                  <Route path="/coding/:track/:taskId" element={<CodingTaskScreen />} />
+                  {/* Learning paths are devShark-only, like /coding and /roadmap.
+                      The role specialization and the standalone skill path get
+                      separate entry routes so the career flow and the focused
+                      paths stay visibly apart, though they share one workspace. */}
+                  <Route path="/roadmap/specializations/fde" element={<FdeOverview />} />
+                  <Route path="/roadmap/specializations/fde/:moduleId" element={<FdeModule />} />
+                  <Route path="/roadmap/paths/dsa-foundations" element={<DsaOverview />} />
+                  <Route path="/roadmap/paths/dsa-foundations/:moduleId" element={<DsaModule />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/settings/github" element={<GithubSettingsPage />} />
+                  <Route path="/leaderboard" element={<Leaderboard />} />
+                  <Route path="/cards" element={<Flashcards />} />
+                  <Route path="/shop" element={<Shop />} />
+                  <Route path="/play" element={<PlayLanding />} />
+                  <Route path="/play/:code" element={<PlayMatch />} />
+                  <Route path="/challenge" element={<Challenge />} />
+                  {/* The voluntary-support page is retired (#222): Premium replaced it. */}
+                  <Route path="/support" element={<Navigate to="/premium" replace />} />
+                  <Route path="/privacy" element={<PrivacyPage />} />
+                  <Route path="/terms" element={<TermsPage />} />
+                  <Route path="/premium" element={<PremiumPage />} />
+                  <Route path="/premium/success" element={<PremiumSuccessPage />} />
+                  <Route path="/premium/cancel" element={<PremiumCancelPage />} />
+                  <Route path="/curation" element={<CurationPage />} />
+                  <Route path="/classroom" element={<ClassroomPage />} />
+                  <Route path="/topics/:slug" element={<TopicLandingPage />} />
+                  <Route path="/cs/topics/:slug" element={<TopicLandingPage />} />
+                  <Route path="/dev" element={<DevPage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </RouteErrorBoundary>
             </m.div>
           </Suspense>
           {showChrome && <BrandFooter />}

@@ -156,6 +156,12 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   (`lib/routeData.ts`, capped at 1.2s) instead of drawing defaults and
   redrawing. Never mount a route's `Suspense` boundary inside an element keyed
   by the path: a fresh boundary shows its fallback even in a transition.
+- A page that fails keeps the shell. `RouteErrorBoundary` sits inside the
+  route `Suspense` and inside the keyed route box; outside the `Suspense`,
+  catching would remount it and bring the blank beat back. Its panel is the
+  root error screen's card and copy. Routed pages are `lazyPage`, not `lazy`:
+  React.lazy keeps a failed load for good (`lib/routeRecovery.ts`). Do not
+  reload on `vite:preloadError`: a preload started by a hover fires it too.
 - In-place mutations keep their control visible, disable duplicate actions,
   and use a translated action/status label. Do not replace a whole editor
   with a page loader during submission or draft saving.
