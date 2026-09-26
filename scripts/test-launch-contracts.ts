@@ -1641,7 +1641,7 @@ function erasureContracts() {
 
   // The four routines 039 to 042 shipped do nothing the newest
   // delete_user_data does not: each of their statements is in its body, word
-  // for word. So the API calls delete_user_data alone.
+  // for word. So the API calls delete_user_data alone, and 046 drops the four.
   const FOLDED_FROM: Array<[string, string]> = [
     ['delete_entitlement_data', '039'], ['delete_user_activity_days', '040'], ['delete_coin_data', '041'], ['delete_referral_data', '042'],
   ];
@@ -1675,7 +1675,7 @@ function erasureContracts() {
   assert.deepEqual([...deletion.matchAll(/\.rpc\(\s*([^,)]+)/g)].map((match) => match[1]), ["'delete_user_data'"],
     'deleting an account calls delete_user_data and no other routine');
   assert.ok(deletion.indexOf("rpc('delete_user_data'") < deletion.indexOf('auth.admin.deleteUser'), 'the sign-in identity goes last');
-  // No code calls one of the four.
+  // No code calls a dropped routine.
   const sourceFiles = (dir: string): string[] => readdirSync(join(process.cwd(), dir), { withFileTypes: true }).flatMap((entry) => {
     const path = `${dir}/${entry.name}`;
     if (entry.isDirectory()) return entry.name === 'node_modules' ? [] : sourceFiles(path);
@@ -1683,7 +1683,30 @@ function erasureContracts() {
   });
   for (const file of ['api', 'lib', 'shared', 'client/src'].flatMap(sourceFiles)) {
     const source = read(file);
-    for (const name of FOLDED) assert.doesNotMatch(source, new RegExp(`\\b${name}\\b`), `${file} still names ${name}, which delete_user_data replaced`);
+    for (const name of FOLDED) assert.doesNotMatch(source, new RegExp(`\\b${name}\\b`), `${file} still names ${name}, which 046 drops`);
+  }
+
+  // Migration 046 drops the four, and refuses to until 045's delete_user_data
+  // erases every table they touched and nothing else calls them.
+  const migration046 = read('supabase/supabase-schema-046.sql');
+  const guard046 = migration046.slice(0, migration046.indexOf('DROP FUNCTION'));
+  for (const name of FOLDED) {
+    assert.match(migration046, new RegExp(`\\nDROP FUNCTION IF EXISTS public\\.${name}\\(TEXT\\);`), `046 drops ${name}`);
+    assert.doesNotMatch(guard046, new RegExp(`DROP FUNCTION[^;]*${name}`), `046 drops ${name} only after its guard`);
+  }
+  assert.doesNotMatch(migration046, /\bCASCADE\b/, '046 drops nothing that depends on a routine');
+  assert.doesNotMatch(migration046, /CREATE OR REPLACE FUNCTION public\.delete_user_data/, '046 keeps 045\'s delete_user_data');
+  assert.match(guard046, /RAISE EXCEPTION 'migration 046 needs 045 first; missing: %'/, 'the guard names the migration it needs');
+  for (const table of [...foldedTables, 'premium_voucher_redemptions']) {
+    assert.ok(guard046.includes(`'${table}'`), `046 checks that delete_user_data erases ${table} before it drops anything`);
+  }
+  for (const table of ['premium_vouchers', 'premium_voucher_redemptions']) assert.ok(guard046.includes(`'${table}'`), `046 checks that 045 created ${table}`);
+  assert.match(guard046, /WHERE p\.prosrc ~ v_pattern/, '046 refuses while another routine names one of the four');
+  assert.match(guard046, /FROM cron\.job WHERE command ~ \$1/, '046 refuses while a cron job names one of the four');
+  for (const name of migrations.filter((one) => one > 'supabase-schema-046.sql')) {
+    for (const routine of FOLDED) {
+      assert.doesNotMatch(read(`supabase/${name}`), new RegExp(`FUNCTION public\\.${routine}\\(`), `${name} brings back ${routine}`);
+    }
   }
 }
 

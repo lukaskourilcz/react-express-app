@@ -16,8 +16,11 @@
  * routines of 039, production's shape after 044 and before 045, and runs the
  * real `api/user/[op].ts` and `api/admin/[op].ts`: a voucher redemption answers
  * 503 `voucher_unavailable`, the owner's list names the missing migration, and
- * the plan and the tier gate work as before. Sign-in is answered by the same
- * stand-in. Nothing leaves the machine. */
+ * the plan and the tier gate work as before. Last, production's shape after
+ * 046: `delete_user_data` is there, the four erasure routines of 039 to 042
+ * are gone, and deleting an account asks for `delete_user_data` alone. Sign-in
+ * and the deletion of the sign-in identity are answered by the same stand-in.
+ * Nothing leaves the machine. */
 
 import assert from 'node:assert/strict';
 import { createServer, type IncomingMessage } from 'node:http';
@@ -42,10 +45,16 @@ const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
   req.on('end', () => resolve(text));
 });
 
-async function startStandIn(calls: Call[]) {
+async function startStandIn(calls: Call[], deletedUsers: string[]) {
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://stand-in');
     res.setHeader('content-type', 'application/json');
+    const adminUser = /^\/auth\/v1\/admin\/users\/([^/]+)$/.exec(url.pathname);
+    if (adminUser && req.method === 'DELETE') {
+      deletedUsers.push(decodeURIComponent(adminUser[1]));
+      res.end(JSON.stringify({ ...USER, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }));
+      return;
+    }
     if (url.pathname === '/auth/v1/user') {
       const token = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
       if (token !== TOKEN && token !== ADMIN_TOKEN) {
@@ -115,7 +124,8 @@ function mockResponse() {
 
 async function main() {
   const calls: Call[] = [];
-  const server = await startStandIn(calls);
+  const deletedUsers: string[] = [];
+  const server = await startStandIn(calls, deletedUsers);
   try {
     const [{ default: leaderboard }, { default: challenge }, tokens, access] = await Promise.all([
       import('../api/leaderboard'),
@@ -211,10 +221,30 @@ async function main() {
     const stillLocked = mockResponse();
     assert.equal(await access.refuseLocked(stillLocked as never, USER.id, level, { cleared: async () => false }), true);
     assert.equal(stillLocked.statusCode, 402, 'the tier gate reads is_premium and still answers 402');
+
+    // After 046: delete_user_data is there and the four erasure routines of
+    // 039 to 042 are gone, so PostgREST answers PGRST202 for each. Deleting an
+    // account asks for delete_user_data alone, then deletes the sign-in
+    // identity.
+    INSTALLED.delete_user_data = null;
+    calls.length = 0;
+    const erased = mockResponse();
+    await userOps({
+      method: 'DELETE',
+      headers: { authorization: `Bearer ${TOKEN}`, 'x-forwarded-for': '10.20.0.5' },
+      query: { op: 'delete-account' },
+      url: '/api/user/delete-account',
+      body: { confirmation: 'DELETE' },
+    } as never, erased as never);
+    assert.equal(erased.statusCode, 200, `an account deletion after 046 answers 200 (${JSON.stringify(erased.body)})`);
+    assert.deepEqual(erased.body, { ok: true });
+    assert.deepEqual(calls.map((call) => call.name), ['delete_user_data'], 'the deletion asks for delete_user_data and no dropped routine');
+    assert.equal(calls[0].args.p_user_id, USER.id);
+    assert.deepEqual(deletedUsers, [USER.id], 'the sign-in identity goes last');
   } finally {
     server.close();
   }
-  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; against a stand-in that answers PGRST202 as PostgREST 12 does.');
+  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; against a stand-in that answers PGRST202 as PostgREST 12 does.');
 }
 
 main().catch((error) => {
