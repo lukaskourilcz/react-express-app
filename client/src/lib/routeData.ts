@@ -9,9 +9,10 @@
 // a slow or failing request lets the page draw its own loading or error state,
 // exactly as before. A part of the page that loads its own code (`lazyPart`)
 // loads inside the same wait, so it draws with the page too.
-import { createElement, lazy, Suspense, use, useState, type ComponentType } from 'react';
+import { createElement, Suspense, use, useState, type ComponentType } from 'react';
 import { useLocation } from 'react-router-dom';
 import { onlineManager, type EnsureQueryDataOptions, type QueryClient, type QueryKey } from '@tanstack/react-query';
+import { lazyPage } from './routeRecovery';
 
 /** Longest a page holds its first render for data. */
 export const FIRST_DATA_WAIT_MS = 1200;
@@ -73,7 +74,9 @@ export function useFirstData(key: string | null, load: () => Promise<unknown>): 
  * awaits `load`, so the part draws in the same frame as the page. `Part` draws
  * a loaded part at once; one the hold did not wait for (offline, or past the
  * cap) loads on mount and draws nothing until it arrives, as a lazy component
- * inside `Suspense fallback={null}` did.
+ * inside `Suspense fallback={null}` did. A part whose code fails to load
+ * fails its page the way a page's own chunk does: the route error boundary
+ * shows it, and Try again asks for the part afresh (`lazyPage`).
  */
 export function lazyPart<P extends object>(importPart: () => Promise<ComponentType<P>>): {
   load: () => Promise<ComponentType<P>>;
@@ -94,7 +97,7 @@ export function lazyPart<P extends object>(importPart: () => Promise<ComponentTy
     }
     return pending;
   };
-  const Lazy = lazy(() => load().then((component) => ({ default: component })));
+  const Lazy = lazyPage(() => load().then((component) => ({ default: component })));
   function Part(props: P) {
     // Decided once per mount, so a part never swaps one tree for the other.
     const [Loaded] = useState(() => ready);

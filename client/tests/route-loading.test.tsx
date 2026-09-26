@@ -1,11 +1,14 @@
 import { Suspense, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, onlineManager, queryOptions } from '@tanstack/react-query';
 import { installIntentPreloading, preloadPath, routeChunk } from '../src/lib/routePreload';
 import { FIRST_DATA_WAIT_MS, lazyPart, readOnce, settled, useFirstData } from '../src/lib/routeData';
 import { firstDraw, headings } from './firstDraw';
+import { RouteErrorBoundary } from '../src/components/RouteErrorBoundary';
+import { server } from './mocks/server';
 
 // The two halves of a navigation that draws once: the next page's code starts
 // loading on intent, and a page can hold its first render for its data.
@@ -249,6 +252,31 @@ describe('lazy parts', () => {
     await act(async () => arrive(Section));
     expect(await screen.findByRole('heading', { level: 2, name: 'Arrives later' })).toBeInTheDocument();
     expect(importPart).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails its page as a page chunk does, and Try again asks for it afresh', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    // The build check a failed chunk makes before the error shows: the same build.
+    server.use(http.get('*/', () => new HttpResponse('<!doctype html><html><head></head><body></body></html>', { headers: { 'content-type': 'text/html' } })));
+    const importPart = vi.fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch dynamically imported module: http://localhost:3000/assets/Part.js'))
+      .mockResolvedValueOnce(Section);
+    const part = lazyPart<{ label: string }>(importPart);
+    const recovery = { checkServedBuild: vi.fn(async () => 'same' as const), reload: vi.fn() };
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <RouteErrorBoundary recovery={recovery}>
+            <main><h1>Page</h1><part.Part label="Asked again" /></main>
+          </RouteErrorBoundary>
+        </MemoryRouter>,
+      );
+    });
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Try again' })));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Asked again' })).toBeInTheDocument();
+    expect(importPart).toHaveBeenCalledTimes(2);
+    expect(recovery.reload).not.toHaveBeenCalled();
   });
 
   it('asks the network again after a part failed to load', async () => {
