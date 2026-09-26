@@ -50,6 +50,7 @@ import { MEDIUM_HARD_JAVASCRIPT_A_TASKS } from './tasks/medium-hard-javascript-a
 import { MEDIUM_HARD_TYPESCRIPT_A_TASKS } from './tasks/medium-hard-typescript-a';
 import { MEDIUM_HARD_REACT_A_TASKS } from './tasks/medium-hard-react-a';
 import { MEDIUM_HARD_ALGORITHMS_A_TASKS } from './tasks/medium-hard-algorithms-a';
+import { MEDIUM_HARD_JAVASCRIPT_B_TASKS } from './tasks/medium-hard-javascript-b';
 import { SPECS, buildEvolvingTasks } from './tasks/evolving';
 import { TYPESCRIPT_EVOLVING } from './tasks/evolving-typescript';
 import { REACT_EVOLVING } from './tasks/evolving-react';
@@ -92,6 +93,7 @@ const MEDIUM_HARD_BAND: CodingTaskSource[][] = [
   MEDIUM_HARD_TYPESCRIPT_A_TASKS,
   MEDIUM_HARD_REACT_A_TASKS,
   MEDIUM_HARD_ALGORITHMS_A_TASKS,
+  MEDIUM_HARD_JAVASCRIPT_B_TASKS,
 ];
 
 /** Ids of the Medium and Hard waves; `tasksForLevel` in `./active` skips them. */
