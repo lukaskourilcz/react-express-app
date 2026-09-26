@@ -999,32 +999,34 @@ const App = () => {
 };
 
 export default App;`,
-    hiddenSuite: `test('dismissing one notice leaves the timers of the others running', async () => {
+    // On the hand-moved clock of the visible suite: with real timers a pause
+    // of 60 ms let the newer notice leave before the check that expects it.
+    hiddenSuite: `test('dismissing one notice leaves the timers of the others running', () => withClock(async clock => {
   render(<App />);
   press('Save');
-  await wait(120);
+  await clock.tick(120);
   press('Delete');
   press('Dismiss Saved');
-  await wait(240);
+  await clock.tick(240);
   expect(texts()).toEqual(['Deleted']);
-  await wait(150);
+  await clock.tick(150);
   expect(texts()).toEqual([]);
-});
+}));
 
-test('a notice pushed out early takes no newer notice with it', async () => {
+test('a notice pushed out early takes no newer notice with it', () => withClock(async clock => {
   render(<App />);
   press('Save');
   press('Save');
   press('Save');
   press('Save');
-  await wait(120);
+  await clock.tick(120);
   press('Delete');
   expect(texts()).toEqual(['Saved', 'Saved', 'Deleted']);
-  await wait(240);
+  await clock.tick(240);
   expect(texts()).toEqual(['Deleted']);
-  await wait(150);
+  await clock.tick(150);
   expect(texts()).toEqual([]);
-});
+}));
 
 test('the status region is there before any notice', () => {
   render(<App />);
@@ -3521,43 +3523,45 @@ const App = () => {
 };
 
 export default App;`,
-    hiddenSuite: `test('a click starts the wait over', async () => {
+    // On the hand-moved clock of the visible suite: with real timers a pause
+    // of 70 ms let the old timer turn the slide before the click restarted it.
+    hiddenSuite: `test('a click starts the wait over', () => withClock(async clock => {
   render(<App />);
-  await wait(130);
+  await clock.tick(130);
   press('Next');
-  await wait(130);
+  await clock.tick(130);
   expect(slide().textContent).toBe('Slide 2 of 4: New arrivals');
-  await wait(130);
+  await clock.tick(130);
   expect(slide().textContent).toBe('Slide 3 of 4: Free delivery');
-});
+}));
 
-test('the focus inside the carousel stops it until the focus leaves', async () => {
+test('the focus inside the carousel stops it until the focus leaves', () => withClock(async clock => {
   render(<App />);
   act(() => { screen.getByRole('button', { name: 'Next' }).focus(); });
   expect(slide().getAttribute('aria-live')).toBe('polite');
-  await wait(300);
+  await clock.tick(300);
   expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
   act(() => { screen.getByRole('button', { name: 'Next' }).blur(); });
-  await wait(270);
+  await clock.tick(270);
   expect(slide().textContent).toBe('Slide 2 of 4: New arrivals');
-});
+}));
 
-test('a paused carousel stays paused when the pointer leaves', async () => {
+test('a paused carousel stays paused when the pointer leaves', () => withClock(async clock => {
   render(<App />);
   press('Pause');
   fireEvent.mouseEnter(carousel());
   fireEvent.mouseLeave(carousel());
-  await wait(300);
+  await clock.tick(300);
   expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
   expect(slide().getAttribute('aria-live')).toBe('polite');
-});
+}));
 
-test('it goes on round from the last slide to the first', async () => {
+test('it goes on round from the last slide to the first', () => withClock(async clock => {
   render(<App />);
   press('Previous');
-  await wait(270);
+  await clock.tick(270);
   expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
-});
+}));
 
 ${timersClearedOnUnmount('leaving the page clears the timer', 200, `    press('Next');`)}`,
   },

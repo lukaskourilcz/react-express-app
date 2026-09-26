@@ -401,8 +401,11 @@ Six more points for authors:
   seconds against its reference solution in the Node runner. The first drafts of four React A suites took 3.4
   to 5.9, so their prompts now name shorter delays (a 100 ms debounce, a 150 ms
   autosave wait, 200 ms slides, 300 ms notices) and say that a real app would
-  wait longer. Every check keeps a margin of at least 50 ms on each side of a
-  timer.
+  wait longer. A check that a timer has already fired may wait on a real
+  timer: a later timer never fires before an earlier one. A check that a timer
+  has not fired yet runs on `FAKE_CLOCK` (`lib/coding/tasks/easy-react-a.ts`)
+  instead, because no real margin survives a busy machine; see "A timer check
+  that fails in the long content run" below.
 - Each type test is one line appended to the answer, so two type tests that
   declare the same name collide. A destructured `__value` and a later
   `const __value` in one list failed with "Cannot redeclare" before either could
@@ -496,7 +499,35 @@ near the end of the React proofs, and the check allows 50 ms on each side of a
 real 150 ms timer, so a pause there lets the save fire before the check that
 expects none. In production each React submission runs in a microVM of its own
 (`lib/coding/react-isolated.ts`); the content run and CI (`quality.yml`) run
-every suite in one Node process. `NEEDED.md` carries the fix.
+every suite in one Node process.
+
+The fix (FIX step, 2026-09-26) keeps what each check asserts and takes the
+machine's speed out of it. `FAKE_CLOCK` puts `setTimeout`, `clearTimeout`,
+`setInterval`, `clearInterval` (on `globalThis` and `window`) and `Date.now` on
+a clock the case moves with `clock.tick(ms)`. Each timer that falls due fires
+inside `act()`, in time order, so React renders and runs the effects of one
+timer before the next fires, as on an idle page, and the real timers come back
+when the case ends. A stress probe that blocks the event loop for up to 70 ms
+every 40 ms (`docs/release-acceptance.md`, FIX) failed the autosave check in
+5 of 90 runs and found the same flaw
+in the search. Reading every React suite for a check that expects a timer not
+to have fired yet found four more, so the clock now runs all of them: the
+autosave's "typing is saved 150 ms after the last key" (a 50 ms margin), the
+search's "nothing is asked until the typing stops" (50 ms), the export's "the
+next question waits 200 ms after the answer" (100 ms), the carousel's three
+visible and four hidden timing checks (70 ms in "a click starts the wait
+over"), the notices' two visible and two hidden timing checks (60 ms in the
+hidden pair) and the countdown's three hidden checks. Under blocks of 120 ms
+the old countdown checks failed with correct solutions too: two ticks ran
+before React rendered the first, the count read -1, and it never met 0 again.
+A wrong solution for each converted check still fails it (a wait that does
+not restart, no debounce, an interval kept to the end, a click that does not
+restart the slide, a second question after 50 ms, index keys). The other
+timer checks only assert that a timer has fired, or that a cleared timer
+stays quiet, and a later timer never fires before an earlier one, so they stay
+on real time. Running each React proof in a process of its own was the other
+option; it would have cost a Node start per suite and still left the checks
+to the machine's speed.
 
 **Where #226 ended.** The three Medium and Hard waves reached the integration
 branch on 2026-09-26 (MERGE-C). The catalogue holds 770 tasks, 549 of them
@@ -510,8 +541,8 @@ from `recursion` in Algorithms, fails the run on that tag and on every Medium
 or Hard challenge that carries it. The free set was re-picked for the larger
 catalogue: 116 of 770 tasks, 15.1 % (`FREE_CODING_TASK_IDS` in
 `shared/tiers.ts`). Three full content runs on the merged branch passed,
-including the autosave check above; the item in `NEEDED.md` stays open until
-that check has a margin wider than a collector pause.
+including the autosave check above; the FIX step then moved that check and
+the others like it onto the hand-moved clock described above.
 
 ## What none of these change
 

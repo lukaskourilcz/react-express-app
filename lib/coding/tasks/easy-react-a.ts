@@ -60,6 +60,78 @@ const withFetch = async (body) => {
 };
 `;
 
+/** A clock the suite moves by hand, for a check that counts milliseconds.
+ * While `withClock` runs, `setTimeout`, `clearTimeout`, `setInterval` and
+ * `clearInterval` (on `globalThis` and `window`, because a component may call
+ * either) and `Date.now` run on it. A timer then fires when the clock passes
+ * its time and never because the machine was busy: a collector pause or a
+ * loaded CI runner cannot make a save fire before a check that expects none.
+ * `clock.tick(ms)` fires the timers that fall due in the order a browser
+ * would, each inside `act()`, so React renders and runs the effects one timer
+ * causes before the next timer fires, as it does on an idle page. The real
+ * timers come back when the case ends, whether it passed or failed. */
+export const FAKE_CLOCK = `
+const withClock = async (body) => {
+  const hosts = typeof window !== 'undefined' && window !== globalThis ? [globalThis, window] : [globalThis];
+  const names = ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'];
+  const real = hosts.map(host => names.map(name => host[name]));
+  const realNow = Date.now;
+  const epoch = realNow();
+  const timers = new Map();
+  let now = 0;
+  let serial = 0;
+  // Ids far above a real timer's, so a component that clears one after the
+  // case has ended clears nothing else.
+  const start = (callback, ms, args, repeat) => {
+    serial += 1;
+    const delay = Math.max(0, Number(ms) || 0);
+    timers.set(1000000000 + serial, { at: now + delay, order: serial, every: repeat ? Math.max(1, delay) : 0, callback, args });
+    return 1000000000 + serial;
+  };
+  const stop = id => { timers.delete(id); };
+  const fake = {
+    setTimeout: (callback, ms, ...args) => start(callback, ms, args, false),
+    clearTimeout: stop,
+    setInterval: (callback, ms, ...args) => start(callback, ms, args, true),
+    clearInterval: stop,
+  };
+  hosts.forEach(host => names.forEach(name => { host[name] = fake[name]; }));
+  Date.now = () => epoch + now;
+  const clock = {
+    tick: async ms => {
+      const end = now + ms;
+      for (;;) {
+        let id = null;
+        let due = null;
+        for (const [key, timer] of timers) {
+          if (timer.at <= end && (!due || timer.at < due.at || (timer.at === due.at && timer.order < due.order))) {
+            id = key;
+            due = timer;
+          }
+        }
+        if (!due) break;
+        now = due.at;
+        if (due.every) {
+          serial += 1;
+          due.at += due.every;
+          due.order = serial;
+        } else {
+          timers.delete(id);
+        }
+        await act(async () => { if (typeof due.callback === 'function') due.callback(...due.args); });
+      }
+      now = end;
+    },
+  };
+  try {
+    await body(clock);
+  } finally {
+    hosts.forEach((host, index) => names.forEach((name, n) => { host[name] = real[index][n]; }));
+    Date.now = realNow;
+  }
+};
+`;
+
 export const EASY_REACT_A_TASKS: CodingTaskSource[] = [
   /* ── useRef ───────────────────────────────────────────────────────── */
   {

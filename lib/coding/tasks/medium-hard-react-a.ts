@@ -14,7 +14,10 @@
 // each request, so it brings a fake fetch of its own. Timers are real and
 // short, 100 to 300 milliseconds, so no suite takes longer than the slowest
 // suite already in the catalogue: in production the whole run, loading jsdom
-// and React included, has ten seconds. Solutions live in
+// and React included, has ten seconds. The one check that needs a timer not to
+// have fired yet, the autosave's "150 ms after the last key", runs on the
+// hand-moved clock of `FAKE_CLOCK` instead: with a real clock a collector pause
+// of 50 ms let the save fire before the check that expects none. Solutions live in
 // `../solutions/medium-hard-react-a.ts`, and `MEDIUM_HARD_BAND` in
 // `../catalog.ts` lists this file, which keeps these challenges out of every
 // Learn level's quota. English only: there is no Czech overlay.
@@ -22,7 +25,7 @@
 // Task bodies only: prompts, starters, visible tests, hints. No solutions.
 
 import type { CodingTaskSource } from '../types';
-import { FAKE_FETCH, header } from './easy-react-a';
+import { FAKE_CLOCK, FAKE_FETCH, header } from './easy-react-a';
 
 export const MEDIUM_HARD_REACT_A_TASKS: CodingTaskSource[] = [
   /* ── Medium ───────────────────────────────────────────────────────── */
@@ -485,7 +488,7 @@ const dismiss = (id) => /* remove the notice with that id */;
     ],
     verify: 'tests',
     estimatedMinutes: 25,
-    suite: `${header()}
+    suite: `${header()}${FAKE_CLOCK}
 const wait = ms => act(() => new Promise(resolve => setTimeout(resolve, ms)));
 const press = label => fireEvent.click(screen.getAllByRole('button', { name: label })[0]);
 const texts = () => [...screen.getByRole('status').querySelectorAll('li span')].map(span => span.textContent);
@@ -496,14 +499,16 @@ test('a notice appears in the status region', () => {
   expect(texts()).toEqual(['Saved']);
 });
 
-test('a notice leaves by itself after 300 ms', async () => {
+// The timing checks run on the hand-moved clock, so a busy machine cannot
+// make a notice leave before the check that expects it still there.
+test('a notice leaves by itself after 300 ms', () => withClock(async clock => {
   render(<App />);
   press('Save');
-  await wait(180);
+  await clock.tick(180);
   expect(texts()).toEqual(['Saved']);
-  await wait(210);
+  await clock.tick(210);
   expect(texts()).toEqual([]);
-});
+}));
 
 test('Dismiss removes its own notice at once', () => {
   render(<App />);
@@ -522,16 +527,16 @@ test('a fourth notice pushes out the oldest', () => {
   expect(texts()).toEqual(['Deleted', 'Saved', 'Deleted']);
 });
 
-test('each notice keeps its own 300 ms', async () => {
+test('each notice keeps its own 300 ms', () => withClock(async clock => {
   render(<App />);
   press('Save');
-  await wait(180);
+  await clock.tick(180);
   press('Delete');
-  await wait(180);
+  await clock.tick(180);
   expect(texts()).toEqual(['Deleted']);
-  await wait(180);
+  await clock.tick(180);
   expect(texts()).toEqual([]);
-});
+}));
 `,
   },
   {
@@ -1061,7 +1066,7 @@ export default App;
     ],
     verify: 'tests',
     estimatedMinutes: 25,
-    suite: `${header()}${FAKE_FETCH}
+    suite: `${header()}${FAKE_FETCH}${FAKE_CLOCK}
 const wait = ms => act(() => new Promise(resolve => setTimeout(resolve, ms)));
 const exportButton = () => screen.getByRole('button', { name: 'Export' });
 const begin = async (calls, id = 'x1') => {
@@ -1084,16 +1089,18 @@ test('the progress shows while the job runs', () => withFetch(async calls => {
   expect(screen.getByText('Preparing… 40%')).toBeTruthy();
 }));
 
-test('the next question waits 200 ms after the answer', () => withFetch(async calls => {
+// On the hand-moved clock, so a busy machine cannot bring the next question
+// before the check that expects none yet.
+test('the next question waits 200 ms after the answer', () => withFetch(calls => withClock(async clock => {
   render(<App />);
   await begin(calls);
   await act(async () => { calls[1].respond({ status: 'running', progress: 10 }); });
-  await wait(100);
+  await clock.tick(100);
   expect(calls).toHaveLength(2);
-  await wait(200);
+  await clock.tick(200);
   expect(calls).toHaveLength(3);
   expect(calls[2].url).toBe('/api/exports/x1');
-}));
+})));
 
 test('done shows the download link and ends the asking', () => withFetch(async calls => {
   render(<App />);
@@ -1572,19 +1579,21 @@ const go = (step) => setIndex((current) => (current + step + SLIDES.length) % SL
     ],
     verify: 'tests',
     estimatedMinutes: 30,
-    suite: `${header()}
+    suite: `${header()}${FAKE_CLOCK}
 const wait = ms => act(() => new Promise(resolve => setTimeout(resolve, ms)));
 const slide = () => screen.getByText(/^Slide \\d of 4/);
 const press = label => fireEvent.click(screen.getByRole('button', { name: label }));
 const carousel = () => screen.getByRole('region', { name: 'Featured' });
 
-test('the first slide shows, and the next one follows by itself', async () => {
+// The timing checks run on the hand-moved clock: with a real one, a busy
+// machine could bring the slide after the one a check expects.
+test('the first slide shows, and the next one follows by itself', () => withClock(async clock => {
   render(<App />);
   expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
   expect(carousel().getAttribute('aria-roledescription')).toBe('carousel');
-  await wait(270);
+  await clock.tick(270);
   expect(slide().textContent).toBe('Slide 2 of 4: New arrivals');
-});
+}));
 
 test('Previous and Next wrap around', () => {
   render(<App />);
@@ -1594,26 +1603,26 @@ test('Previous and Next wrap around', () => {
   expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
 });
 
-test('Pause stops the autoplay, and Play starts it again', async () => {
+test('Pause stops the autoplay, and Play starts it again', () => withClock(async clock => {
   render(<App />);
   press('Pause');
   expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy();
-  await wait(300);
+  await clock.tick(300);
   expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
   press('Play');
-  await wait(270);
+  await clock.tick(270);
   expect(slide().textContent).toBe('Slide 2 of 4: New arrivals');
-});
+}));
 
-test('the pointer over the carousel stops it until it leaves', async () => {
+test('the pointer over the carousel stops it until it leaves', () => withClock(async clock => {
   render(<App />);
   fireEvent.mouseEnter(carousel());
-  await wait(300);
+  await clock.tick(300);
   expect(slide().textContent).toBe('Slide 1 of 4: Spring sale');
   fireEvent.mouseLeave(carousel());
-  await wait(270);
+  await clock.tick(270);
   expect(slide().textContent).toBe('Slide 2 of 4: New arrivals');
-});
+}));
 
 test('aria-live is off while it plays and polite while it does not', () => {
   render(<App />);
@@ -1689,25 +1698,27 @@ useEffect(() => {
     ],
     verify: 'tests',
     estimatedMinutes: 45,
-    suite: `${header()}${FAKE_FETCH}
+    suite: `${header()}${FAKE_FETCH}${FAKE_CLOCK}
 const field = () => screen.getByLabelText('Search books');
 const type = value => fireEvent.change(field(), { target: { value } });
 const wait = ms => act(() => new Promise(resolve => setTimeout(resolve, ms)));
 const titles = () => screen.queryAllByRole('listitem').map(li => li.textContent);
 const DUNE = [{ id: 1, title: 'Dune' }, { id: 2, title: 'Dune Messiah' }];
 
-test('nothing is asked until the typing stops', () => withFetch(async calls => {
+// The clock moves only when the check moves it, so a busy machine cannot let
+// the request go out before the check that expects none.
+test('nothing is asked until the typing stops', () => withFetch(calls => withClock(async clock => {
   render(<App />);
   type('du');
   type('dun');
   type('dune');
-  await wait(50);
+  await clock.tick(50);
   expect(calls).toHaveLength(0);
   expect(screen.queryByText('Searching…')).toBeNull();
-  await wait(100);
+  await clock.tick(100);
   expect(calls).toHaveLength(1);
   expect(calls[0].url).toBe('/api/books?q=dune');
-}));
+})));
 
 test('the text is trimmed and encoded', () => withFetch(async calls => {
   render(<App />);
@@ -1824,7 +1835,7 @@ useEffect(() => () => {
     ],
     verify: 'tests',
     estimatedMinutes: 45,
-    suite: `${header()}
+    suite: `${header()}${FAKE_CLOCK}
 const withSaves = async (body) => {
   const calls = [];
   const real = globalThis.fetch;
@@ -1857,19 +1868,21 @@ test('it starts with everything saved', () => withSaves(async calls => {
   expect(calls).toHaveLength(0);
 }));
 
-test('typing is saved 150 ms after the last key', () => withSaves(async calls => {
+// The clock moves only when the check moves it, so a busy machine cannot let
+// the save fire early.
+test('typing is saved 150 ms after the last key', () => withSaves(calls => withClock(async clock => {
   render(<App />);
   type('Buy milk and eggs');
   expect(status()).toBe('Unsaved changes');
-  await wait(100);
+  await clock.tick(100);
   type('Buy milk and bread');
-  await wait(100);
+  await clock.tick(100);
   expect(calls).toHaveLength(0);
-  await wait(100);
+  await clock.tick(100);
   expect(calls).toHaveLength(1);
   expect([calls[0].url, calls[0].method, calls[0].body]).toEqual(['/api/notes/1', 'PUT', 'Buy milk and bread']);
   expect(status()).toBe('Saving…');
-}));
+})));
 
 test('the answer marks the text as saved', () => withSaves(async calls => {
   render(<App />);

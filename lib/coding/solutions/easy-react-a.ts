@@ -7,6 +7,7 @@
 // case the technique exists for.
 
 import type { CodingSolution } from '../types';
+import { FAKE_CLOCK } from '../tasks/easy-react-a';
 
 export const EASY_REACT_A_SOLUTIONS: Record<string, CodingSolution> = {
   /* ── useRef ───────────────────────────────────────────────────────── */
@@ -284,32 +285,44 @@ const App = () => {
 };
 
 export default App;`,
-    hiddenSuite: `test('it stays at Liftoff! after reaching zero', async () => {
-  const { container } = render(<App />);
-  await waitFor(() => expect(container.textContent).toContain('Liftoff!'), { timeout: 2000 });
-  await act(() => new Promise(resolve => setTimeout(resolve, 350)));
-  expect(container.querySelector('p').textContent).toBe('Liftoff!');
-});
+    // These checks run on the hand-moved clock of FAKE_CLOCK. With real timers
+    // a busy machine could run two ticks before React rendered the first, so a
+    // correct countdown read -1, or the check looked before the effect that
+    // clears the interval at zero had run.
+    hiddenSuite: `${FAKE_CLOCK}
+// Moves the clock 10 ms at a time until "Liftoff!" shows, for at most the
+// two seconds the visible check waits.
+const tickToLiftoff = async (clock, container) => {
+  for (let waited = 0; waited < 2000 && !container.textContent.includes('Liftoff!'); waited += 10) await clock.tick(10);
+  expect(container.textContent).toContain('Liftoff!');
+};
 
-test('the interval is cleared at zero, while the countdown is still on the page', async () => {
+test('it stays at Liftoff! after reaching zero', () => withClock(async clock => {
+  const { container } = render(<App />);
+  await tickToLiftoff(clock, container);
+  await clock.tick(350);
+  expect(container.querySelector('p').textContent).toBe('Liftoff!');
+}));
+
+test('the interval is cleared at zero, while the countdown is still on the page', () => withClock(async clock => {
   const spy = watchIntervals();
   try {
     const { container } = render(<App />);
     spy.stopRecording();
-    await waitFor(() => expect(container.textContent).toContain('Liftoff!'), { timeout: 2000 });
+    await tickToLiftoff(clock, container);
     expect(spy.allCleared()).toBe(true);
   } finally {
     spy.restore();
   }
-});
+}));
 
-test('a second countdown starts from 3 again', async () => {
+test('a second countdown starts from 3 again', () => withClock(async clock => {
   const first = render(<App />);
-  await waitFor(() => expect(first.container.textContent).toContain('Liftoff!'), { timeout: 2000 });
+  await tickToLiftoff(clock, first.container);
   first.unmount();
   const second = render(<App />);
   expect(second.container.querySelector('p').textContent).toBe('3');
-});`,
+}));`,
   },
 
   /* ── useContext ───────────────────────────────────────────────────── */
