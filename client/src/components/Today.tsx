@@ -18,8 +18,6 @@ import { conceptDueQuery, roadmapStructureQuery, useRoadmapStructure } from '../
 import { entitlementQuery } from '../lib/entitlement';
 import { enrollmentsQuery, pathCatalogQuery, pathProgressQuery } from '../lib/learningPaths';
 import { lazyPart, readOnce, settled, useFirstData } from '../lib/routeData';
-import { codingProgressQuery } from '../coding/api';
-import { practiceSessionQuery } from '../coding/practice';
 import { ApiError } from '../lib/api';
 import { buildToday, type TodayItem, type TodayKind } from '../lib/today';
 import { masteryDayKey, type LevelMasteryEntry } from '../../../shared/mastery';
@@ -118,7 +116,9 @@ function doneToday(progress: RoadmapProgress, subject: SubjectId, target: number
 /** The structure and, signed in, the plan, the four sections' code and what
  * they read, in the cache before the first render. The sections used to
  * arrive under the plan after it, one by one. A path's next activity needs its
- * enrollment first, so that read waits for the list. */
+ * enrollment first, so that read waits for the list. The run's and the coding
+ * progress's query options load beside the sections' code, so a visitor, who
+ * reads neither, never downloads them. */
 function useTodayFirstData() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -129,8 +129,8 @@ function useTodayFirstData() {
           readOnce(queryClient, entitlementQuery(user.id)),
           ...SIGNED_IN_PARTS.map((part) => part.load()),
           readOnce(queryClient, conceptDueQuery),
-          readOnce(queryClient, practiceSessionQuery),
-          readOnce(queryClient, codingProgressQuery),
+          import('../coding/practice').then(({ practiceSessionQuery }) => readOnce(queryClient, practiceSessionQuery)),
+          import('../coding/api').then(({ codingProgressQuery }) => readOnce(queryClient, codingProgressQuery)),
           readOnce(queryClient, enrollmentsQuery(user.id)).then(({ enrollments }) => {
             const active = enrollments.filter((one) => one.status === 'active');
             return settled(active.length
