@@ -57,7 +57,9 @@ export const PLAN_ROWS: readonly PlanRow[] = [
   { labelKey: 'landing.compare.rowPaths', free: NO, premium: { mark: 'yes', key: 'landing.compare.premiumPaths' } },
   { labelKey: 'landing.compare.rowQuizzes', free: YES, premium: YES },
   { labelKey: 'landing.compare.rowLeaderboards', free: YES, premium: YES },
-  { labelKey: 'landing.compare.rowCoins', free: NO, premium: YES },
+  // Redemption ships closed until the owner opens it, so the claim says so,
+  // as the paths row does (review finding product-6).
+  { labelKey: 'landing.compare.rowCoins', free: NO, premium: { mark: 'yes', key: 'landing.compare.premiumCoins' } },
   { labelKey: 'landing.compare.rowNoAds', free: NONE, premium: NONE },
   { labelKey: 'landing.compare.rowNoCard', free: { mark: 'yes', key: 'landing.compare.othersNoCard' }, premium: { mark: 'partial', key: 'landing.compare.premiumNoCard' } },
 ];

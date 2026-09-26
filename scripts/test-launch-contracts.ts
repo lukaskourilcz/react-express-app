@@ -704,6 +704,20 @@ function publicCopyContracts() {
   for (const key of ['home.pledge', 'landing.compare.premiumCaption', 'premium.page.monthlyRenews', 'premium.page.annualRenews', 'premium.sheet.price'] as const) {
     assert.match(ENGLISH[key], /VAT included/, `${key} states the price with VAT`);
   }
+  // Redemption ships closed (DEFAULT_MERCH_SETTINGS.enabled is false), so
+  // every place that sells Premium with merchandise says it depends on
+  // redemption opening, and the Terms name the coin and merchandise benefit
+  // (review finding product-6).
+  assert.equal(DEFAULT_MERCH_SETTINGS.enabled, false);
+  for (const key of ['premium.sheet.include6', 'landing.compare.premiumCoins'] as const) {
+    assert.match(ENGLISH[key], /once redemption opens/, `${key} qualifies the merchandise claim`);
+  }
+  assert.match(read('client/src/components/landing/ComparisonTable.tsx'), /labelKey: 'landing\.compare\.rowCoins', free: NO, premium: \{ mark: 'yes', key: 'landing\.compare\.premiumCoins' \}/);
+  assert.match(ENGLISH['legal.terms.plans.premium'], /redeem coins for devShark merchandise once redemption opens/);
+  // Coding hints are authored text that nobody has reviewed yet; the privacy
+  // policy must not say people wrote them by hand (review finding product-8).
+  assert.doesNotMatch(ENGLISH['legal.privacy.ai.body'], /by hand|people write/i);
+  assert.match(ENGLISH['legal.privacy.ai.body'], /no AI feature/);
   // No urgency, countdowns or fake scarcity on the pages that sell.
   for (const [key, value] of Object.entries(ENGLISH)) {
     if (!/^(premium\.|landing\.compare\.|landing\.founder\.|home\.pledge|billing\.checkout\.)/.test(key)) continue;
