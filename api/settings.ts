@@ -15,19 +15,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
 
   const [s, merchPromo] = await Promise.all([getGameSettings(), getMerchPromo()]);
-  // This server-only flag is the production master switch. An administrator
-  // may prepare truthful amounts and provider URLs in app_settings, but no
-  // financial link can become public until the deployment explicitly opts in.
-  const supportMasterEnabled = process.env.SUPPORT_ENABLED === 'true';
-  const publicSupport = {
-    ...s.support,
-    enabled: supportMasterEnabled && s.support.enabled,
-    ...(!supportMasterEnabled ? {
-      kofiUrl: '',
-      githubSponsorsUrl: '',
-      publicThanksEnabled: false,
-    } : {}),
-  };
   res.setHeader('Cache-Control', 'public, s-maxage=15, stale-while-revalidate=60');
   return res.json({
     quiz: {
@@ -49,7 +36,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     // What earns coins (#227): the welcome grant for the sign-in prompt and
     // the social grant for "Find devShark elsewhere". Rates only, no balances.
     coins: s.coins,
-    support: publicSupport,
     devTips: s.devTips,
     // Per path, so DSA Foundations can open while FDE content is still being
     // authored. The client reads this to decide what to show; every write is

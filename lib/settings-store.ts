@@ -78,17 +78,6 @@ export interface GameSettings {
    * tunes them in /dev → Settings → Coins. `socialVisitGrant` stays 0 unless
    * the owner decides otherwise: see the policy note on CoinSettings. */
   coins: CoinSettings;
-  support: {
-    /** Hard production guard: provider links stay hidden unless explicitly enabled. */
-    enabled: boolean;
-    kofiUrl: string;
-    githubSponsorsUrl: string;
-    monthlyTarget: number;
-    amountCovered: number;
-    lastUpdatedAt: string;
-    costBreakdown: Array<{ label: string; amount: number }>;
-    publicThanksEnabled: boolean;
-  };
   /**
    * One-liner "dev tips" surfaced on the full-page loading screen (under the
    * swimming shark) on longer loads. Editable from /dev → Settings. An empty
@@ -179,16 +168,6 @@ export const DEFAULT_SETTINGS: GameSettings = {
   // from a real quote through /dev, or the item stays unavailable.
   merch: { ...DEFAULT_MERCH_SETTINGS, pricing: {} },
   coins: { ...DEFAULT_COIN_SETTINGS, streakMilestones: DEFAULT_COIN_SETTINGS.streakMilestones.map((one) => ({ ...one })), monthTop: [...DEFAULT_COIN_SETTINGS.monthTop] },
-  support: {
-    enabled: false,
-    kofiUrl: '',
-    githubSponsorsUrl: '',
-    monthlyTarget: 0,
-    amountCovered: 0,
-    lastUpdatedAt: '',
-    costBreakdown: [],
-    publicThanksEnabled: false,
-  },
   devTips: [...DEFAULT_DEV_TIPS],
   ownerEmail: (process.env.OWNER_EMAIL || 'kouril.lukas@gmail.com').toLowerCase(),
 };
@@ -219,19 +198,6 @@ const cleanPublicUrl = (v: unknown): string => {
   } catch {
     return '';
   }
-};
-
-const cleanCostBreakdown = (v: unknown): Array<{ label: string; amount: number }> => {
-  if (!Array.isArray(v)) return [];
-  return v.slice(0, 12).flatMap((item) => {
-    if (!item || typeof item !== 'object') return [];
-    const row = item as Record<string, unknown>;
-    const label = typeof row.label === 'string' ? row.label.trim().slice(0, 80) : '';
-    const amount = typeof row.amount === 'number' && Number.isFinite(row.amount)
-      ? Math.max(0, Math.min(1_000_000, Math.round(row.amount * 100) / 100))
-      : 0;
-    return label ? [{ label, amount }] : [];
-  });
 };
 
 // Category-id list: strings only, de-duplicated, capped at 40 entries. We don't
@@ -416,14 +382,17 @@ function cleanCoins(raw: unknown, fallback: CoinSettings): CoinSettings {
 }
 
 // Coerce arbitrary stored/posted JSON into a valid GameSettings, clamping every
-// field so a bad value can never break the endpoints that consume it.
+// field so a bad value can never break the endpoints that consume it. Only the
+// fields below survive: a key nothing reads any more, such as the `support`
+// block that rows saved before 2026-09-26 still carry from the retired
+// voluntary-support page, is dropped here, and the next save writes the row
+// without it.
 export function normalizeSettings(raw: unknown): GameSettings {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const quiz = (r.quiz ?? {}) as Record<string, unknown>;
   const daily = (r.daily ?? {}) as Record<string, unknown>;
   const play = (r.play ?? {}) as Record<string, unknown>;
   const features = (r.features ?? {}) as Record<string, unknown>;
-  const support = (r.support ?? {}) as Record<string, unknown>;
   const d = DEFAULT_SETTINGS;
 
   return {
@@ -468,19 +437,6 @@ export function normalizeSettings(raw: unknown): GameSettings {
         1_000_000,
         d.shop.pathUnlockPrice,
       ),
-    },
-    support: {
-      enabled: bool(support.enabled, d.support.enabled),
-      kofiUrl: cleanPublicUrl(support.kofiUrl),
-      githubSponsorsUrl: cleanPublicUrl(support.githubSponsorsUrl),
-      monthlyTarget: clampInt(support.monthlyTarget, 0, 1_000_000, d.support.monthlyTarget),
-      amountCovered: clampInt(support.amountCovered, 0, 1_000_000, d.support.amountCovered),
-      lastUpdatedAt:
-        typeof support.lastUpdatedAt === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(support.lastUpdatedAt)
-          ? support.lastUpdatedAt
-          : '',
-      costBreakdown: cleanCostBreakdown(support.costBreakdown),
-      publicThanksEnabled: bool(support.publicThanksEnabled, d.support.publicThanksEnabled),
     },
     devTips: cleanTips(r.devTips, d.devTips),
     ownerEmail:
