@@ -1,10 +1,8 @@
 import { apiFetch } from './api';
 import { getSubject, deliveryCategoriesForSubject } from './subjects';
 
-// Re-export the shared browser client so existing importers (e.g. realtime.ts)
-// keep working. The client itself lives in supabaseClient.ts to avoid an
-// import cycle with api.ts.
-export { supabase } from './supabaseClient';
+// API calls for stats, the daily challenge and question reports. The browser
+// Supabase client itself lives in supabaseClient.ts, which loads it on demand.
 
 export interface UserStats {
   id: string;

@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { getSupabaseSession, mayHaveSession } from './supabaseClient';
 import { getStoredLang, translateStatic } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { openUpgradeSheet } from './upgradeSheet';
@@ -20,15 +20,18 @@ type Options = RequestInit & { timeoutMs?: number; signal?: AbortSignal };
 
 // Attach the current user's Supabase access token to API requests so the
 // server can verify identity. Read directly from the Supabase session, which
-// is refreshed and persisted by the supabase-js client.
+// is refreshed and persisted by the supabase-js client. A visitor without a
+// session sends no token and never downloads that client
+// (lib/supabaseClient.ts); for a returning visitor whose download is still
+// running, the same four-second limit covers it.
 async function getAccessToken(): Promise<string | null> {
-  if (!supabase) return null;
+  if (!mayHaveSession()) return null;
   try {
-    const { data } = await Promise.race([
-      supabase.auth.getSession(),
+    const session = await Promise.race([
+      getSupabaseSession(),
       new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('auth_timeout')), 4_000)),
     ]);
-    return data.session?.access_token ?? null;
+    return session?.access_token ?? null;
   } catch {
     return null;
   }

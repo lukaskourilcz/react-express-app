@@ -1,6 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { supabase } from './supabaseClient';
+import {
+  getSupabaseSession,
+  loadSupabase,
+  mayHaveSession,
+  onSupabaseAuthStateChange,
+  supabaseForSession,
+} from './supabaseClient';
 import { apiFetch } from './api';
 import { registerAccessTokenReader } from './roadmap';
 import { clearAuthReturn, rememberAuthReturn } from './authReturn';
@@ -68,16 +74,36 @@ const AuthContext = createContext<AuthContextValue>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  // No stored session and no OAuth return: the visitor is signed out from the
+  // first render, and supabase-js is never downloaded (lib/supabaseClient.ts).
+  const [isLoading, setIsLoading] = useState(mayHaveSession);
 
   useEffect(() => {
-    if (!supabase) {
+    // A sign-in is a SIGNED_IN after INITIAL_SESSION; INITIAL_SESSION and
+    // TOKEN_REFRESHED are never reported, so the log records real logins.
+    // supabase-js also sends SIGNED_IN for a session it restores from storage,
+    // while it initializes and before INITIAL_SESSION. The eager client sent
+    // that before this effect ran; a client loaded on demand can attach this
+    // listener first, and the order keeps the restore out of the log.
+    let initialized = false;
+    const unsubscribe = onSupabaseAuthStateChange((event, session) => {
+      cachedAccessToken = session?.access_token ?? null;
+      setUser(session?.user ?? null);
       setIsLoading(false);
-      return;
+      if (event === 'INITIAL_SESSION') initialized = true;
+      if (event === 'SIGNED_IN' && initialized && session?.user) reportSignIn();
+      if (event === 'SIGNED_OUT') clearSignInReport();
+    });
+
+    if (!mayHaveSession()) {
+      setIsLoading(false);
+      return unsubscribe;
     }
 
-    void withDeadline(supabase.auth.getSession(), AUTH_BOOT_TIMEOUT_MS)
-      .then(({ data: { session } }) => {
+    // The deadline covers the download too: a stalled chunk settles as signed
+    // out, like a stalled session read always has.
+    void withDeadline(getSupabaseSession(), AUTH_BOOT_TIMEOUT_MS)
+      .then((session) => {
         cachedAccessToken = session?.access_token ?? null;
         setUser(session?.user ?? null);
       })
@@ -87,26 +113,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .finally(() => setIsLoading(false));
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      cachedAccessToken = session?.access_token ?? null;
-      setUser(session?.user ?? null);
-      setIsLoading(false);
-      // Only a genuine sign-in emits SIGNED_IN; INITIAL_SESSION (restored on page
-      // load) and TOKEN_REFRESHED are ignored so the log records real logins.
-      if (event === 'SIGNED_IN' && session?.user) reportSignIn();
-      if (event === 'SIGNED_OUT') clearSignInReport();
-    });
-
-    return () => subscription.unsubscribe();
+    return unsubscribe;
   }, []);
 
   const signInWithGoogle = async (returnTo?: string) => {
     // A sign-in from anywhere else must not inherit an older page's return.
     clearAuthReturn();
     if (returnTo) rememberAuthReturn(returnTo);
-    if (!supabase) {
+    // Signing in is when a signed-out visitor downloads supabase-js.
+    const client = await loadSupabase().catch((error: unknown) => {
+      clearAuthReturn();
+      throw error;
+    });
+    if (!client) {
       clearAuthReturn();
       throw new Error('Sign-in is not available in this deployment.');
     }
@@ -114,7 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // provider isn't enabled, or the redirect URL isn't allow-listed) it
     // returns an error instead of navigating — surface it so the click isn't
     // a silent no-op.
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { error } = await client.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: window.location.origin },
     });
@@ -125,8 +144,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    if (!supabase) return;
-    const { error } = await supabase.auth.signOut();
+    const client = await supabaseForSession();
+    if (!client) return;
+    const { error } = await client.auth.signOut();
     if (error) throw error;
   };
 
