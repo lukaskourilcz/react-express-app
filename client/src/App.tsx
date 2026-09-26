@@ -116,7 +116,7 @@ const ROUTE_TRANSITION = { duration: 0.14, ease: 'easeOut' } as const;
 // the wrapper's bottom reserve lands below the content. With basis 0 the box
 // stayed viewport-sized, tall cards overflowed straight through every padding,
 // and page ends slid under the waterline overlay. The first-load fallback gets
-// the same box, so the footer sits where a page will put it.
+// the same box, so the loader has the page's room.
 const ROUTE_BOX_STYLE = { flex: '1 0 auto', minWidth: 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' } as const;
 
 const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
@@ -733,7 +733,12 @@ function App() {
               300ms reveal throttle and only then drew the page. Outside it, the
               boundary has already revealed content, so the router's transition
               keeps the current page until the next one can render whole. The
-              fallback remains for the first page of a visit. */}
+              fallback remains for the first page of a visit.
+              The footer is inside the boundary too, so it arrives with the
+              first page. Under the fallback it sat at the bottom of the empty
+              box, and the landing page threw it below the fold: a move longer
+              than the viewport, which scored 0.05 of CLS on a desktop and 0.15
+              on a phone, and 0.98 when the header settled in the same frame. */}
           <Suspense fallback={<div style={ROUTE_BOX_STYLE}><RouteLoader /></div>}>
             <m.div
               key={location.pathname}
@@ -788,8 +793,8 @@ function App() {
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
             </m.div>
+            {showChrome && <BrandFooter />}
           </Suspense>
-          {showChrome && <BrandFooter />}
         </div>
       </main>
 
