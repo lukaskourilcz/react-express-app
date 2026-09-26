@@ -11,6 +11,7 @@ import { entitlementQuery } from './entitlement';
 import { readOnce, settled, useFirstData } from './routeData';
 import { fetchLeaderboard, type LeaderboardPeriod } from './play';
 import { getUserStats, createOrUpdateUserStats, type UserStats } from './supabase';
+import { apiFetch } from './api';
 import { listFlashcards } from './flashcards';
 import { getChallengeLeaderboard } from './challengeApi';
 import { useSubject, type SubjectId } from './subjects';
@@ -123,3 +124,19 @@ export function useChallengeLeaderboard() {
   const [subject] = useSubject();
   return useQuery(challengeLeaderboardQuery(subject));
 }
+
+/** Concepts whose spaced review is due, for Today's review card. */
+interface ConceptDueResponse {
+  due: { conceptId: string; overdueHours: number; stage: number }[];
+  estimatedMinutes: number;
+}
+
+/** The signed-in learner's due concepts, as one set of options the Today card
+ * and Today's first-data prefetch share. A failure only hides the card, so it
+ * is not retried. */
+export const conceptDueQuery = queryOptions({
+  queryKey: ['concept-due'],
+  queryFn: () => apiFetch<ConceptDueResponse>('/api/quiz/questions?resource=due'),
+  staleTime: 60_000,
+  retry: false,
+});

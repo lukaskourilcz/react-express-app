@@ -13,8 +13,8 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from '../i18n/LanguageContext';
-import { apiFetch } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { conceptDueQuery } from '../lib/queries';
 import { conceptById } from '../../../shared/concepts';
 
 const NAMED = 3;
@@ -31,22 +31,11 @@ const ArrowGlyph = ({ size = 16 }: { size?: number }) => (
   </svg>
 );
 
-interface DueResponse {
-  due: { conceptId: string; overdueHours: number; stage: number }[];
-  estimatedMinutes: number;
-}
-
 export function ConceptDueSection() {
   const { t, lang } = useLanguage();
   const { isAuthenticated } = useAuth();
 
-  const { data } = useQuery<DueResponse>({
-    queryKey: ['concept-due'],
-    queryFn: () => apiFetch<DueResponse>('/api/quiz/questions?resource=due'),
-    enabled: isAuthenticated,
-    staleTime: 60 * 1000,
-    retry: false,
-  });
+  const { data } = useQuery({ ...conceptDueQuery, enabled: isAuthenticated });
 
   const due = data?.due ?? [];
   if (due.length === 0) return null;
