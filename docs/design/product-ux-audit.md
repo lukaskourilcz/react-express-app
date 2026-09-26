@@ -54,7 +54,7 @@ Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, and 2
 
 1. The registration nudge is mounted globally and can interrupt a focused route. Restrict it to the landing experience.
 2. Live-room refresh and distribution failures are swallowed. Preserve the last snapshot but show a disconnected/stale state with retry.
-3. Bright dark-mode accents are paired with fixed white text. Add a theme-aware on-accent token and semantic warning/info colors.
+3. Bright dark-mode accents are paired with fixed white text. Add a theme-aware on-accent token and semantic warning/info colors. Partly done: `--brand-on-accent`, `--ss-warning` and `--ss-info` exist, and since 26 September 2026 Astryx's `--color-on-accent` follows `--brand-on-accent`, so an Astryx primary button, checked box or selected radio in dark mode reads at 6.69:1 instead of 2.77:1. Fixed white on the accent remains in `Today.css`, `Roadmap.css`, `DeepEndScreens.css` and `RoadmapTree.tsx`.
 4. Hard-coded red, green, and gold feedback colors fail on dark or light surfaces. Route them through semantic tokens.
 5. The active quiz/question container can clip multiline answers on short viewports. Allow controlled internal scrolling.
 6. Fast-path auth loading and sign-in/sign-out errors can hang or disappear. Add bounded, user-readable states without exposing environment names.

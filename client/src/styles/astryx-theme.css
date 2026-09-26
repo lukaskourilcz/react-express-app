@@ -60,6 +60,14 @@
   --color-border-accent: var(--brand-accent, #2d7a2d);
   /* ColorModeContext selects the readable foreground for each accent/theme. */
   --brand-on-accent: #ffffff;
+  /* Astryx paints on the accent with --color-on-accent: a primary button's
+     label, a checked box, a selected radio's dot. Its default is white in
+     both themes; the neutral theme's darker value applies only under
+     [data-astryx-theme], which the app does not set. axe measured white on
+     the bright dark-mode accent at 2.77:1, below WCAG AA's 4.5:1. The dark
+     theme's --brand-on-accent ink gives 6.69:1, and light mode keeps white
+     at 5.34:1. */
+  --color-on-accent: var(--brand-on-accent);
   --ss-focus: color-mix(in srgb, var(--brand-accent) 72%, var(--ss-ink));
   --ss-selected: var(--brand-accent-soft, rgba(45, 122, 45, 0.12));
   --ss-overlay: light-dark(rgba(23, 39, 46, 0.58), rgba(3, 8, 12, 0.74));
