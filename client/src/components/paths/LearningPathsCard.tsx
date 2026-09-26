@@ -30,7 +30,7 @@ import {
   useEnrollments,
   usePathCatalog,
 } from '../../lib/learningPaths';
-import { useLoc } from './ActivityViews';
+import { useLoc } from './localized';
 import type { LearningPathId } from '../../../../shared/learning-paths';
 import './LearningPaths.css';
 

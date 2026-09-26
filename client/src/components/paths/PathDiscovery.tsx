@@ -15,7 +15,7 @@ import { Link } from 'react-router-dom';
 import { useT } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
 import { entryFor, isOpen, pathHref, useEnrollments, usePathCatalog } from '../../lib/learningPaths';
-import { useLoc } from './ActivityViews';
+import { useLoc } from './localized';
 import type { LearningPathId } from '../../../../shared/learning-paths';
 import './LearningPaths.css';
 

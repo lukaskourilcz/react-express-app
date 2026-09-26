@@ -29,10 +29,9 @@ import {
   Feedback,
   LessonActivity,
   StateBadge,
-  useLoc,
-  useLocList,
   type DraftStatus,
 } from './ActivityViews';
+import { useLoc, useLocList } from './localized';
 import {
   activityHref,
   changeEnrollment,
